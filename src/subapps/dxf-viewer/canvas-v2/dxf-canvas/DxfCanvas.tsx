@@ -10,6 +10,8 @@ import { DxfRenderer } from './DxfRenderer';
 import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
 // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Mouse handlers τώρα από το centralized system
 import { useCentralizedMouseHandlers } from '../../systems/cursor/useCentralizedMouseHandlers';
+// ✅ FIX: Import HILITE_EVENT για layer card selection
+import { HILITE_EVENT } from '../../events/selection-bus';
 import { useCursor } from '../../systems/cursor/CursorSystem';
 import { LegacyCrosshairAdapter } from '../../rendering/ui/crosshair/LegacyCrosshairAdapter';
 import { LegacyCursorAdapter } from '../../rendering/ui/cursor/LegacyCursorAdapter';
@@ -83,6 +85,11 @@ export const DxfCanvas = React.forwardRef<DxfCanvasRef, DxfCanvasProps>(({
   // ✅ ADD: Grid and Ruler renderer refs για independent UI
   const gridRendererRef = useRef<GridRenderer | null>(null);
   const rulerRendererRef = useRef<RulerRenderer | null>(null);
+
+  // 🎯 ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Get selectedEntityIds από Canvas Context για grips
+  const { useCanvasContext } = require('../../contexts/CanvasContext');
+  const canvasContext = useCanvasContext();
+  const contextSelectedEntityIds = canvasContext?.selectedEntityIds || [];
   // ✅ CENTRALIZED VIEWPORT: Use prop if provided AND valid, otherwise calculate internally
   const [internalViewport, setInternalViewport] = useState<Viewport>({ width: 0, height: 0 });
   // Use prop viewport only if it has valid dimensions (not 0x0)
@@ -268,7 +275,14 @@ export const DxfCanvas = React.forwardRef<DxfCanvasRef, DxfCanvasProps>(({
 
       // 1️⃣ RENDER SCENE FIRST
       console.log('🎨 DxfCanvas: 1️⃣ Rendering SCENE...');
-      renderer.render(scene, transform, viewport, renderOptions);
+
+      // 🎯 ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Merge renderOptions με selectedEntityIds από Context
+      const finalRenderOptions = {
+        ...renderOptions,
+        selectedEntityIds: contextSelectedEntityIds
+      };
+
+      renderer.render(scene, transform, viewport, finalRenderOptions);
 
       // 2️⃣ RENDER GRID (after scene, so it's on top)
       if (gridRendererRef.current && gridSettings?.enabled) {
@@ -376,6 +390,32 @@ export const DxfCanvas = React.forwardRef<DxfCanvasRef, DxfCanvasProps>(({
     activeTool,
     viewport
   ]);
+
+  // ✅ FIX: HILITE_EVENT listener για layer card selection → grips
+  useEffect(() => {
+    const onHighlight = (ev: Event) => {
+      const { ids = [], mode = 'select' } = (ev as CustomEvent).detail || {};
+
+      console.log('🎯 [DxfCanvas] HILITE_EVENT received:', { ids, mode, count: ids.length });
+
+      // ✅ Update Canvas Context με selected IDs
+      if (canvasContext && Array.isArray(ids)) {
+        canvasContext.setSelectedEntityIds(ids);
+        console.log('🎯 [DxfCanvas] Updated Canvas Context selectedEntityIds:', ids.length);
+      }
+
+      // ✅ Trigger re-render με updated selectedEntityIds
+      // Note: Re-render will happen automatically via context update + scene rendering effect
+    };
+
+    window.addEventListener(HILITE_EVENT, onHighlight as EventListener);
+    console.log('✅ [DxfCanvas] HILITE_EVENT listener registered');
+
+    return () => {
+      window.removeEventListener(HILITE_EVENT, onHighlight as EventListener);
+      console.log('🧹 [DxfCanvas] HILITE_EVENT listener cleaned up');
+    };
+  }, [canvasContext]); // ✅ Dependency: canvasContext για updates
 
   // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Όλα τα mouse events τώρα διαχειρίζονται από τους centralized handlers
   // Απλά wrapper functions που καλούν τους κεντρικοποιημένους handlers

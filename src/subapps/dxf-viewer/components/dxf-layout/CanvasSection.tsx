@@ -76,6 +76,21 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     }
   }, [zoomSystem.zoomManager, canvasContext]);
 
+  // 🎯 ENTITY SELECTION: Wrapper που μετατρέπει single entityId σε array και ενημερώνει Context + Props
+  const handleEntitySelect = React.useCallback((entityId: string | null) => {
+    const selectedIds = entityId ? [entityId] : [];
+
+    // ✅ FIX: Update Context για grips rendering
+    if (canvasContext) {
+      canvasContext.setSelectedEntityIds(selectedIds);
+    }
+
+    // ✅ FIX: Update Props callback (από DXFViewerLayoutProps)
+    if (props.setSelectedEntityIds) {
+      props.setSelectedEntityIds(selectedIds);
+    }
+  }, [canvasContext, props.setSelectedEntityIds]);
+
   // ✅ CENTRALIZED VIEWPORT: Update viewport από canvas dimensions
   React.useEffect(() => {
     const updateViewport = () => {
@@ -742,6 +757,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
               colorLayers={colorLayers} // ✅ FIX: Pass color layers για fit to view bounds
               crosshairSettings={crosshairSettings} // ✅ CONNECT TO EXISTING CURSOR SYSTEM
               gridSettings={gridSettings} // ✅ FIX: Enable grid rendering in DxfCanvas
+              onEntitySelect={handleEntitySelect} // 🎯 FIX: Connect entity selection from canvas clicks
               rulerSettings={{
                 enabled: globalRulerSettings.horizontal.enabled && globalRulerSettings.vertical.enabled,
                 visible: true,

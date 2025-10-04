@@ -222,19 +222,14 @@ export function useLayersCallbacks({
   // Color Group click handler (for grips) - ✅ ένα event – όχι χιλιάδες
   const handleColorGroupClick = useCallback((colorName: string, layerNames: string[]) => {
     if (!scene || !onEntitySelectionChange) return;
-    
+
     // ✅ Μάζεψε πρώτα όλα τα IDs και στείλε μία φορά
     const ids = scene.entities
       .filter(e => layerNames.includes(e.layer) && scene.layers[e.layer]?.visible !== false && e.visible !== false)
       .map(e => e.id);
 
-    // ✅ ένα event – όχι καταιγισμό
-    publishHighlight({ ids, mode: 'select' });
-    
-    // Update local selection state
-    if (onEntitySelectionChange) {
-      onEntitySelectionChange(ids);
-    }
+    // ✅ Use setSelection helper to ensure grips are activated
+    setSelection(ids, { onEntitySelectionChange });
   }, [scene, onEntitySelectionChange]);
 
   // Merge functions

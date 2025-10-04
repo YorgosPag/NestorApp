@@ -75,6 +75,17 @@ export class CoordinateTransforms {
 
   /**
    * Υπολογισμός νέου transform για zoom
+   *
+   * 🏢 ENTERPRISE FIX (2025-10-04): Zoom-to-Cursor με Margins Adjustment
+   *
+   * Το πρόβλημα: Το zoomCenter είναι canvas-relative (0,0 = top-left του canvas),
+   * αλλά το world (0,0) εμφανίζεται στο (MARGINS.left, MARGINS.top) του canvas.
+   *
+   * Η λύση: Adjust το zoomCenter για margins πριν εφαρμόσουμε τη zoom formula.
+   * Αυτό εξασφαλίζει ότι το σημείο κάτω από τον cursor παραμένει σταθερό.
+   *
+   * @see https://stackoverflow.com/questions/2916081/zoom-in-on-a-point-using-scale-and-translate
+   * @see CAD Systems: Translate → Scale → Translate back pattern
    */
   static calculateZoomTransform(
     currentTransform: ViewTransform,
@@ -84,10 +95,18 @@ export class CoordinateTransforms {
   ): ViewTransform {
     const newScale = currentTransform.scale * zoomFactor;
 
+    // 🎯 ENTERPRISE: Adjust zoomCenter για margins
+    // Το zoomCenter είναι canvas-relative, αλλά πρέπει να γίνει viewport-relative
+    const { left, top } = COORDINATE_LAYOUT.MARGINS;
+    const adjustedCenterX = zoomCenter.x - left;
+    const adjustedCenterY = zoomCenter.y - top;
+
+    // ✅ CLASSIC CAD FORMULA: offsetNew = center - (center - offsetOld) * zoomFactor
+    // Με adjusted center, το world point κάτω από το zoomCenter παραμένει σταθερό
     return {
       scale: newScale,
-      offsetX: zoomCenter.x - (zoomCenter.x - currentTransform.offsetX) * zoomFactor,
-      offsetY: zoomCenter.y - (zoomCenter.y - currentTransform.offsetY) * zoomFactor
+      offsetX: adjustedCenterX - (adjustedCenterX - currentTransform.offsetX) * zoomFactor,
+      offsetY: adjustedCenterY - (adjustedCenterY - currentTransform.offsetY) * zoomFactor
     };
   }
 

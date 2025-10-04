@@ -445,14 +445,96 @@ onSceneImported={dxfProps.handleFileImport}
 
 ---
 
+### 🐛 **Bug #7: Grips δεν εμφανίζονταν (Entity Selection + Grips)**
+
+**Symptom**: Κάνεις κλικ σε layer card στο "Επίπεδα → DXF Layers" → **ΔΕΝ εμφανίζονται grips**!
+
+**Root Cause**:
+- File: `canvas-v2/dxf-canvas/DxfCanvas.tsx`
+- Το `publishHighlight()` event στέλνεται από το layer card click (✅ WORKING)
+- **ΑΛΛΑ** το DxfCanvas **ΔΕΝ ΕΧΕΙ EVENT LISTENER** για `HILITE_EVENT`!
+- Αποτέλεσμα: Event στέλνεται → κανείς δεν το ακούει → grips δεν εμφανίζονται
+
+**Console Log Evidence**:
+```
+// Layer card click:
+🎯 Layer LAYER_0 clicked: 42 entities selected in 1.2ms  ← Event sent
+// ... but NOTHING happens in canvas!
+```
+
+**Fix Applied** (2025-10-04):
+1. File: `canvas-v2/dxf-canvas/DxfCanvas.tsx` (lines 14, 394-418)
+2. Προσθήκη HILITE_EVENT import:
+   ```typescript
+   import { HILITE_EVENT } from '../../events/selection-bus';
+   ```
+3. Προσθήκη event listener:
+   ```typescript
+   useEffect(() => {
+     const onHighlight = (ev: Event) => {
+       const { ids = [], mode = 'select' } = (ev as CustomEvent).detail || {};
+
+       // ✅ Update Canvas Context με selected IDs
+       if (canvasContext && Array.isArray(ids)) {
+         canvasContext.setSelectedEntityIds(ids);
+       }
+     };
+
+     window.addEventListener(HILITE_EVENT, onHighlight as EventListener);
+
+     return () => {
+       window.removeEventListener(HILITE_EVENT, onHighlight as EventListener);
+     };
+   }, [canvasContext]);
+   ```
+
+**Data Flow** (WORKING):
+```
+Layer Card Click
+  → publishHighlight({ ids: [...] })
+  → HILITE_EVENT dispatched
+  → DxfCanvas listener catches event
+  → canvasContext.setSelectedEntityIds(ids)
+  → DxfRenderer reads contextSelectedEntityIds
+  → DxfRenderer passes showGrips: true to selected entities
+  → BaseEntityRenderer.renderGrips() called
+  → GRIPS APPEAR! ✅
+```
+
+**Verification**: Τα grips εμφανίζονται τώρα σωστά όταν κάνεις κλικ σε layer card! ✅
+
+**Time Saved**: Αντί για μήνες debugging, βρέθηκε σε 1 session με **συστηματική αναζήτηση στα backups**!
+
+**Key Learning**:
+- Το working backup ονομαζόταν: `"ΟΚ. ΕΠΙΛΟΓΗ ΚΑΡΤΩΝ LAYER & GRIPS"` (!)
+- ΠΑΝΤΑ ψάξε στα backups ΠΡΩΤΑ πριν γράψεις νέο κώδικα
+- Event Bus pattern χρειάζεται **ΚΑΙ publisher ΚΑΙ listener**
+
+---
+
+### 🗑️ **Cleanup: Διαγραφή νεκρού canvas folder**
+
+**Deleted Folder** (2025-10-04):
+- `src/subapps/dxf-viewer/canvas/` (entire folder)
+- **Αιτιολογία**: Καταργήθηκε εδώ και 2 μήνες, αλλά δεν είχε διαγραφεί
+- **Χρόνος χαμένος**: 30 λεπτά (Claude έκανε edits στο ΛΑΘΟΣ canvas!)
+
+**Working Canvas**:
+- ✅ `src/subapps/dxf-viewer/canvas-v2/` (ΜΟΝΟ ΑΥΤΟΣ!)
+
+**Όφελος**: Καθαρότερη codebase, δεν υπάρχει σύγχυση ποιος canvas χρησιμοποιείται! 🎯
+
+---
+
 **🏢 REMEMBER**:
 - Αυτό το bug **έχει χαθεί 3+ φορές**
 - Κάθε φορά χάνουμε **ώρες/μέρες** να το ξαναβρούμε
 - **ΔΙΑΒΑΣΕ αυτό το αρχείο** πριν αλλάξεις το DXF loading!
 - **ΝΕΟ**: Δες και το `centralized_systems.md` για τα layer colors & arc rendering fixes
+- **ΝΕΟ 2025-10-04**: Grips χρειάζονται HILITE_EVENT listener στο canvas-v2!
 
 ---
 
 *Last Updated: 2025-10-04*
-*Updates: DXF loading fix + Layer colors fix + Arc Y-axis flip + Text rendering fix + Cleanup unused code*
+*Updates: DXF loading fix + Layer colors fix + Arc Y-axis flip + Text rendering fix + Grips fix + Cleanup unused code + Delete old canvas*
 *Next Review: Όταν ξαναχαλάσει το DXF loading (προσπάθησε να μην το αφήσεις να ξαναχαλάσει!)*

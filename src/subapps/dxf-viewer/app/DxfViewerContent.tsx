@@ -73,8 +73,8 @@ import { FloatingPanelsSection } from '../layout/FloatingPanelsSection';
 
 // ✅ ENTERPRISE ARCHITECTURE: Transform Context (Single Source of Truth)
 import { TransformProvider, useTransform } from '../contexts/TransformContext';
-// 🏢 ENTERPRISE: Canvas Context (Centralized Zoom System)
-import { CanvasProvider } from '../contexts/CanvasContext';
+// 🏢 ENTERPRISE: Canvas Context (Centralized Zoom System + Grips)
+import { CanvasProvider, useCanvasContext } from '../contexts/CanvasContext';
 
 // 🧪 UNIFIED TEST RUNNER - Import modal (test functions moved to DebugToolbar)
 import { TestResultsModal } from '../debug/TestResultsModal';
@@ -197,6 +197,20 @@ export function DxfViewerContent(props: DxfViewerAppProps) {
 
   // Get canvas operations hook
   const canvasOps = useCanvasOperations();
+
+  // 🎯 ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Get Canvas Context για grips
+  const canvasContext = useCanvasContext();
+
+  // 🔧 FIX: Wrapper callback που ενημερώνει ΚΑΙ local state ΚΑΙ Canvas Context
+  const handleEntitySelection = React.useCallback((ids: string[]) => {
+    // Update local React state (για backward compatibility)
+    setSelectedEntityIds(ids);
+
+    // 🎯 CRITICAL: Update Canvas Context για grips rendering
+    if (canvasContext) {
+      canvasContext.setSelectedEntityIds(ids);
+    }
+  }, [setSelectedEntityIds, canvasContext]);
 
   // Use overlay drawing hook
   const {
@@ -785,7 +799,7 @@ Check console for detailed metrics`;
         floatingRef={floatingRef}
         currentScene={currentScene}
         selectedEntityIds={selectedEntityIds}
-        setSelectedEntityIds={setSelectedEntityIds}
+        setSelectedEntityIds={handleEntitySelection}
         currentZoom={currentZoom}
         activeTool={activeTool}
       />

@@ -148,7 +148,7 @@ export class DxfRenderer {
       phase: isSelected ? 'selected' : 'normal',
       transform,
       viewport,
-      showGrips: false, // Θα ενεργοποιηθεί σε επόμενη φάση
+      showGrips: isSelected, // ✅ FIX: Show grips for selected entities
       alpha: entity.visible ? 1.0 : 0.3
     };
 

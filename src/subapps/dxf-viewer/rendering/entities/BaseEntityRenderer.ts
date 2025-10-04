@@ -290,7 +290,7 @@ export abstract class BaseEntityRenderer {
     
     // 6. Draw grips with phase-appropriate colors
     // ✅ ΚΡΙΣΙΜΗ ΔΙΟΡΘΩΣΗ: Επιτρέπουμε grips σε preview entities!
-    if (options.grips) {
+    if (options.showGrips) {
       this.renderGrips(entity, options);
     }
     
@@ -537,7 +537,7 @@ export abstract class BaseEntityRenderer {
   protected finalizeRendering(entity: EntityModel, options: RenderOptions): void {
     // Draw grips if needed
     // ✅ ΚΡΙΣΙΜΗ ΔΙΟΡΘΩΣΗ: Επιτρέπουμε grips σε preview entities!
-    if (options.grips) {
+    if (options.showGrips) {
       this.renderGrips(entity);
     }
 

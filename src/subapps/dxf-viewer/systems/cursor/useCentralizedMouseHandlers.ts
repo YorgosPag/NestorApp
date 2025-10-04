@@ -453,14 +453,18 @@ export function useCentralizedMouseHandlers({
       onWheelZoom(e.deltaY, zoomCenter, undefined, modifiers);
     } else {
       // ⚠️ FALLBACK: Basic wheel zoom for backwards compatibility
+      // 🏢 ENTERPRISE (2025-10-04): Use centralized CoordinateTransforms instead of duplicate formula
       const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
       const newScale = Math.max(0.1, Math.min(50, transform.scale * zoomFactor));
 
-      const newTransform = {
-        scale: newScale,
-        offsetX: zoomCenter.x - (zoomCenter.x - transform.offsetX) * (newScale / transform.scale),
-        offsetY: zoomCenter.y - (zoomCenter.y - transform.offsetY) * (newScale / transform.scale)
-      };
+      // ✅ CENTRALIZED: CoordinateTransforms handles margins adjustment automatically
+      const canvas = e.currentTarget;
+      const newTransform = CoordinateTransforms.calculateZoomTransform(
+        transform,
+        zoomFactor,
+        zoomCenter,
+        { width: canvas?.width || 0, height: canvas?.height || 0 }
+      );
 
       onTransformChange?.(newTransform);
 
