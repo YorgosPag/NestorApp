@@ -59,7 +59,7 @@ export const ToolbarSection: React.FC<ToolbarSectionProps> = (props) => {
           showCursorSettings={dxfProps.showCursorSettings}
           currentZoom={dxfProps.currentZoom}
           commandCount={0}
-          onSceneImported={dxfProps.onFileImport}
+          onSceneImported={dxfProps.handleFileImport}
         />
       </div>
 

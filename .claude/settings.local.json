@@ -144,7 +144,8 @@
       "Bash(git checkout:*)",
       "Bash(do echo \"=== $dir ===\")",
       "Bash(do echo \"=== $dir%/ ===\")",
-      "Bash(du:*)"
+      "Bash(du:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nCleanup: Remove empty backups & add *.zip to gitignore\n\nThis commit includes project cleanup and organization:\n\n🗑️ Deleted empty backup folders (7 folders):\n- legacy-cleanup-20250920_200000\n- reports-cleanup-20250921_210000\n- component-props-phase1-3-20250923_011952\n- todo-cleanup-20250923_103339\n- advanced-features-20250923_112319\n- phase2-dxfrenderer-backup-20250926_214500\n- legacy-renderers-removal-20250926_225141\n- temp_packages/ (in dxf-viewer)\n\n✅ Kept all backups with actual content (16 folders, 44MB)\n\n🛡️ Added *.zip to .gitignore to prevent zip files from being tracked\n\n🎯 Result: Cleaner project structure, no data loss\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
     ],
     "deny": [],
     "ask": []
