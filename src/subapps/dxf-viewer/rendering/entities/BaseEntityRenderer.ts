@@ -452,23 +452,30 @@ export abstract class BaseEntityRenderer {
    */
     // 🔺 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΗ ΜΕΘΟΔΟΣ ΓΙΑ ΚΥΚΛΑ/ΤΟΞΑ (χωρίς γωνίες)
   protected drawCentralizedArc(
-    centerX: number, 
-    centerY: number, 
-    radius: number, 
-    startAngle: number, 
+    centerX: number,
+    centerY: number,
+    radius: number,
+    startAngle: number,
     endAngle: number
   ): void {
     this.ctx.save();
     this.applyArcStyle();
-    
+
     const screenCenter = this.worldToScreen({ x: centerX, y: centerY });
     const screenRadius = radius * this.transform.scale;
-    
-    // Για κύκλα/τόξα χωρίς γωνίες, χρησιμοποιούμε απλή λογική
+
+    // 🔧 CRITICAL FIX: Y-axis flip για DXF arcs
+    // DXF: Y αυξάνεται προς τα ΠΑΝΩ, γωνίες counter-clockwise
+    // Canvas: Y αυξάνεται προς τα ΚΑΤΩ, γωνίες clockwise
+    // Λύση: Αντιστρέφουμε τις γωνίες (2π - angle) για να διορθώσουμε το flip
+    const canvasStartAngle = -startAngle;  // Flip Y-axis
+    const canvasEndAngle = -endAngle;      // Flip Y-axis
+
     this.ctx.beginPath();
-    this.ctx.arc(screenCenter.x, screenCenter.y, screenRadius, startAngle, endAngle, false);
+    // Swap start/end επειδή οι γωνίες αντιστράφηκαν
+    this.ctx.arc(screenCenter.x, screenCenter.y, screenRadius, canvasEndAngle, canvasStartAngle, false);
     this.ctx.stroke();
-    
+
     this.ctx.restore();
   }
 

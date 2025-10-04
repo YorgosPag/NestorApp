@@ -152,19 +152,12 @@ export class PhaseManager {
         break;
         
       case 'normal':
-        // 🔧 ΔΙΟΡΘΩΣΗ: Χρησιμοποίησε γενικές ρυθμίσεις αντί για completion settings
-        // ✅ ΔΙΟΡΘΩΣΗ: Χρήση WithOverride και για NORMAL phase!
-        const generalStyleForNormal = getLinePreviewStyleWithOverride();
-        if (generalStyleForNormal.enabled) {
-          this.ctx.lineWidth = generalStyleForNormal.lineWidth;  // Ίδιο πάχος με γενικές ρυθμίσεις
-          this.ctx.setLineDash([]);  // Αλλά solid γραμμή (όχι dashed)
-          this.ctx.strokeStyle = generalStyleForNormal.strokeColor;  // Ίδιο χρώμα με γενικές ρυθμίσεις
-          this.ctx.globalAlpha = generalStyleForNormal.opacity;  // Ίδια διαφάνεια
-
-        } else {
-          // Αν disabled, χρησιμοποίησε transparent styling για να μην φαίνεται
-          this.ctx.globalAlpha = 0;
-        }
+        // 🎨 CRITICAL FIX: Use entity layer color for normal phase
+        // Entities MUST show their layer colors, not general preview settings!
+        this.ctx.strokeStyle = entity.color || CAD_UI_COLORS.entity.default;
+        this.ctx.lineWidth = entity.lineWeight || 1;
+        this.ctx.setLineDash([]);  // Solid line for normal entities
+        this.ctx.globalAlpha = 1.0;  // Full opacity for normal entities
         break;
         
       case 'interactive':
