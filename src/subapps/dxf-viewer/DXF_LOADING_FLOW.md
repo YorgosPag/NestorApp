@@ -333,12 +333,89 @@ onSceneImported={dxfProps.handleFileImport}
 
 ---
 
+## 🎨 ΕΠΙΠΛΕΟΝ BUGS ΒΡΕΘΗΚΑΝ (2025-10-04)
+
+Μετά την διόρθωση του DXF loading bug, βρέθηκαν **2 επιπλέον προβλήματα** που επηρέαζαν την εμφάνιση των DXF entities:
+
+### 🐛 **Bug #4: Layer Colors δεν εμφανίζονταν**
+
+**Symptom**: Όλα τα DXF entities ήταν **ΛΕΥΚΑ**, αγνοούσαν τα layer colors που φαίνονταν σωστά στο panel.
+
+**Root Cause #1**:
+- File: `utils/dxf-scene-builder.ts`
+- Entities δεν είχαν `color` property κατά την δημιουργία τους
+- Το layer color υπήρχε μόνο στο `layers[]` object, ΟΧΙ στο entity
+
+**Root Cause #2**:
+- File: `systems/phase-manager/PhaseManager.ts`
+- Το rendering (normal phase) χρησιμοποιούσε generic preview settings
+- Αγνοούσε εντελώς το `entity.color`
+
+**Fix Applied**:
+1. `dxf-scene-builder.ts` (lines 31-41): Προσθήκη layer color σε κάθε entity
+   ```typescript
+   const layerColor = layers[entity.layer]?.color || DEFAULT_LAYER_COLOR;
+   (entity as any).color = layerColor;
+   ```
+
+2. `PhaseManager.ts` (lines 154-161): Χρήση entity.color για rendering
+   ```typescript
+   case 'normal':
+     this.ctx.strokeStyle = entity.color || CAD_UI_COLORS.entity.default;
+   ```
+
+**Verification**: Τα layer colors εμφανίζονται τώρα σωστά! ✅
+
+---
+
+### 🐛 **Bug #5: Τεταρτημόρια πορτών ανάποδα (Y-axis flip)**
+
+**Symptom**: Τα arc entities (τεταρτημόρια πορτών) ήταν **ανάποδα** (flipped).
+
+**Root Cause**:
+- DXF coordinate system: Y αυξάνεται προς τα **ΠΑΝΩ** (CAD standard)
+- Canvas coordinate system: Y αυξάνεται προς τα **ΚΑΤΩ**
+- Οι γωνίες περνιούνταν όπως ήταν από το DXF → λάθος orientation
+
+**Fix Applied**:
+- File: `rendering/entities/BaseEntityRenderer.ts` (lines 467-476)
+- Αντιστροφή γωνιών για canvas coordinate system:
+  ```typescript
+  const canvasStartAngle = -startAngle;  // Flip Y-axis
+  const canvasEndAngle = -endAngle;      // Flip Y-axis
+  this.ctx.arc(..., canvasEndAngle, canvasStartAngle, false);
+  ```
+
+**Verification**: Τα τεταρτημόρια πορτών εμφανίζονται σωστά! ✅
+
+---
+
+### 🗑️ **Cleanup: Διαγραφή unused rendering system**
+
+Κατά την έρευνα βρέθηκε **διπλότυπο rendering system** (~800 γραμμές) που ΠΟΤΕ δεν χρησιμοποιήθηκε:
+
+**Deleted Files**:
+- `rendering/passes/EntityPass.ts` (438 lines)
+- `rendering/passes/BackgroundPass.ts`
+- `rendering/passes/OverlayPass.ts`
+- `rendering/passes/index.ts`
+- `rendering/core/RenderPipeline.ts` (~300 lines)
+
+**Αιτιολογία**: Experimental/unused code. Το actual rendering χρησιμοποιεί:
+`DxfRenderer` → `EntityRendererComposite` → `BaseEntityRenderer` → `PhaseManager`
+
+**Όφελος**: ~800 γραμμές λιγότερες, μηδέν διπλότυπα, καθαρότερη codebase! 🎯
+
+---
+
 **🏢 REMEMBER**:
 - Αυτό το bug **έχει χαθεί 3+ φορές**
 - Κάθε φορά χάνουμε **ώρες/μέρες** να το ξαναβρούμε
 - **ΔΙΑΒΑΣΕ αυτό το αρχείο** πριν αλλάξεις το DXF loading!
+- **ΝΕΟ**: Δες και το `centralized_systems.md` για τα layer colors & arc rendering fixes
 
 ---
 
 *Last Updated: 2025-10-04*
+*Updates: DXF loading fix + Layer colors fix + Arc Y-axis flip + Cleanup unused code*
 *Next Review: Όταν ξαναχαλάσει το DXF loading (προσπάθησε να μην το αφήσεις να ξαναχαλάσει!)*

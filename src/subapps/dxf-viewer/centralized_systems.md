@@ -182,6 +182,9 @@
 | **Distance** | `calculateDistance` | `rendering/entities/shared/geometry-rendering-utils.ts` | Single source of truth για distance calculations |
 | **Bounds Utilities** | `getBoundsCenter` | `systems/zoom/utils/bounds.ts` | Κεντρικό bounds utilities |
 | **Transform Constants** | `TRANSFORM_CONFIG` | `config/transform-config.ts` | All transform/zoom/pan constants centralized |
+| **Layer Colors** | `getLayerColor` | `config/color-config.ts` | DXF layer color assignment (hash-based) |
+| **Entity Rendering** | `PhaseManager` | `systems/phase-manager/PhaseManager.ts` | 3-phase rendering system (preview/normal/interactive) |
+| **Arc Rendering** | `drawCentralizedArc` | `rendering/entities/BaseEntityRenderer.ts` | Y-axis flip για DXF arcs |
 
 ---
 
@@ -280,6 +283,52 @@ src/subapps/dxf-viewer/
 
 ---
 
+## 🔧 CRITICAL FIXES (2025-10-04)
+
+### 🎨 **Layer Colors Fix**
+**Πρόβλημα**: DXF entities εμφανίζονταν ΟΛΕΣ λευκές, αγνοούσαν τα layer colors
+
+**Root Cause**:
+1. Entities δεν είχαν `color` property → **Fixed in**: `dxf-scene-builder.ts`
+2. PhaseManager αγνοούσε το `entity.color` → **Fixed in**: `PhaseManager.ts`
+
+**Λύση**:
+- `DxfSceneBuilder`: Προσθήκη layer color σε κάθε entity κατά την δημιουργία
+- `PhaseManager`: Χρήση `entity.color` για normal phase rendering
+
+**Files Changed**:
+- `utils/dxf-scene-builder.ts` (lines 31-41)
+- `systems/phase-manager/PhaseManager.ts` (lines 154-161)
+
+### 🔄 **Arc Y-Axis Flip Fix**
+**Πρόβλημα**: Τα τεταρτημόρια πορτών ήταν ανάποδα
+
+**Root Cause**: DXF coordinate system (Y πάνω) vs Canvas (Y κάτω)
+
+**Λύση**: Αντιστροφή γωνιών για canvas rendering
+```typescript
+const canvasStartAngle = -startAngle;  // Flip Y-axis
+const canvasEndAngle = -endAngle;
+```
+
+**Files Changed**:
+- `rendering/entities/BaseEntityRenderer.ts` (lines 467-476)
+
+### 🗑️ **Cleanup: Unused Rendering System**
+**Διαγραφή**: ~800 γραμμές διπλότυπου/unused code
+
+**Deleted**:
+- `rendering/passes/EntityPass.ts` (438 lines)
+- `rendering/passes/BackgroundPass.ts`
+- `rendering/passes/OverlayPass.ts`
+- `rendering/passes/index.ts`
+- `rendering/core/RenderPipeline.ts` (~300 lines)
+
+**Αιτιολογία**: Experimental code που ΠΟΤΕ δεν χρησιμοποιήθηκε. Το actual rendering χρησιμοποιεί:
+`DxfRenderer` → `EntityRendererComposite` → `BaseEntityRenderer` → `PhaseManager`
+
+---
+
 *Ημερομηνία δημιουργίας modular docs: 2025-10-03*
-*Τελευταία ενημέρωση: 2025-10-03 - Geometry utilities centralization*
+*Τελευταία ενημέρωση: 2025-10-04 - Layer colors fix, Arc flip fix, Cleanup unused code*
 *Αρχείο υπενθύμισης κεντρικοποίησης - Μη διαγράψεις!*

@@ -8,11 +8,12 @@ export * from './core/EntityRenderer';
 export * from './core/IRenderContext';
 export * from './core/RendererRegistry';
 export * from './core/CoordinateTransforms';
-
-// ===== ΦΑΣΗ 4: RENDER PIPELINE =====
-export * from './core/RenderPipeline';
-export * from './passes';
 export * from './adapters/canvas2d/Canvas2DContext';
+
+// 🗑️ REMOVED: Unused RenderPipeline and passes system
+// The actual rendering uses DxfRenderer → EntityRendererComposite → BaseEntityRenderer
+// export * from './core/RenderPipeline';  // DELETED - unused experimental code
+// export * from './passes';                // DELETED - entire passes/ directory removed
 
 // ===== ENTITY RENDERERS =====
 export * from './entities/BaseEntityRenderer';
