@@ -139,7 +139,12 @@
       "Bash(test:*)",
       "Bash(git log:*)",
       "Bash(git stash push:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nInitial commit - DXF Viewer current state (before zoom fixes)\n\nThis commit captures the current state of the codebase before applying\nzoom-to-cursor fixes. This allows us to track changes and rollback if needed.\n\n🔍 Status:\n- Color layers NOT rendering (pre-existing issue)\n- Zoom-to-cursor NOT working (mouse wheel zoom shifts point)\n- All files previously untracked, now under version control\n\n🎯 Generated with Claude Code\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git checkout:*)",
+      "Bash(do echo \"=== $dir ===\")",
+      "Bash(do echo \"=== $dir%/ ===\")",
+      "Bash(du:*)"
     ],
     "deny": [],
     "ask": []
