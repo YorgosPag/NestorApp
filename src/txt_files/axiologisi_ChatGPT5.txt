@@ -1,261 +1,48 @@
-Θέλω να κάνεις μία βαθιά βουτιά στο διαδίκτυο και να δεις πώς οι μεγάλοι προγραμματιστές, οι μεγάλες εταιρείες προγραμματιστών, οι εταιρείες AutoCAD, Rhino και τα λοιπά, πώς χειρίζονται το Zoom. Θέλω να μου πεις αν αυτό το δικό μου το Zoom είναι πλήρες ή όχι. Θέλω να το κάνω Enterprise. Τι χρειάζεται για να γίνει Enterprise. Θέλω μία πολύ καλή, σοβαρή ανάλυση και σοβαρές προτάσεις.
-Το ChatGPT είπε:
-Σκέφτηκε
-Σκέφτηκε
+Όχι με τα δεδομένα που έχω. Είναι “Enterprise” μόνο αν ισχύουν ΟΛΑ τα κάτωθι· αν λείπει έστω ένα, δεν είναι ολοκληρωμένο.
 
-Συμπέρασμα: το useZoom.ts σου καλύπτει τα βασικά (wheel, in/out, fit, window, scale, prev/next, keyboard), αλλά δεν είναι “Enterprise” ακόμη. Λείπουν pinch-zoom/πολυ-άγγιγμα, σαφής κλιμάκωση ορίων, zoom-to-selection, επιλογές συμπεριφοράς τύπου “zoom to mouse”, animation ομαλής μετάβασης, πλήρες πληκτρολόγιο, συγχρονισμός πολλαπλών viewports, και δοκιμές/τηλεμετρία σε βάθος.
+Jest (μονάδες)
 
-Τι κάνουν οι “μεγάλοι”
+jsdom περιβάλλον (header ή config).
 
-AutoCAD: πλήρες σετ εντολών Zoom [All, Center, Dynamic, Extents, Previous, Scale, Window], “real-time” wheel, extents, previous. Πρότυπο για CAD. 
-help.autodesk.com
-+2
-autodesk.com
-+2
+Ονομαστικοί listeners + σωστό removeEventListener.
 
-Rhino: Zoom Extents, Zoom Selected, Zoom 1:1, Zoom Window, Dolly/Lens. Προσφέρει zoom-selected και API για zoom extents σε όλες τις προβολές. 
-docs.mcneel.com
-+1
+Σταθερό event schema: { ids: string[], mode: 'replace|add|remove' }.
 
-Blender: επιλογές ζουμ με ρόδα, Ctrl-MMB, discrete βήματα, “Zoom Region” (παράθυρο), προτίμηση “Zoom to Mouse Position”. 
-docs.blender.org
-+2
-docs.blender.org
-+2
+Deterministic timers: jest.useFakeTimers() + jest.advanceTimersByTime().
 
-Figma/λευκοπίνακες: zoom to fit, zoom to selection, ποσοστιαίο zoom, πλήρη shortcuts. Χρήσιμο benchmark για web UX. 
-help.figma.com
-+2
-help.figma.com
-+2
+DOM-ορατές assertions (π.χ. μετρητής grips).
 
-Τι έχει σήμερα το useZoom.ts
+jest-axe χωρίς παραβιάσεις.
 
-Βλέπω:
+Perf test σε pure selection.
 
-Συναρτήσεις: zoomIn|Out, zoomToFit, zoomToFitUnified (DXF + color layers), zoomToScale, zoomToWindow, zoomPrevious|Next|clearHistory, handleWheelZoom, handleKeyboardZoom, getCurrentTransform, setTransform.
+Playwright (E2E “ό,τι βλέπει ο χρήστης”)
 
-Αρχιτεκτονική: wrapper γύρω από ZoomManager και FitToViewService.
+Το spec του canvas υπάρχει και περνά.
 
-Keyboard: +/-, p για προηγούμενο, placeholder για 0 fit.
+Visual snapshots committed και σταθεροποιημένα.
 
-Κενά για Enterprise:
+Traces/videos on-failure ενεργά.
 
-Καθόλου pinch/touch ή pointer events.
+axe scan σε βασικά flows.
 
-Δεν φαίνονται min/max κλίμακα, clamping σε όρια, ή pan-constraints.
+Multi-browser projects (Chromium/Firefox/WebKit).
 
-Δεν φαίνεται animation/easing ή inertia.
+CI workflow με retries και artifacts.
 
-Δεν υπάρχει “zoom to selection” και “zoom to 100% / named views”.
+CI πολιτικές
 
-Ελλιπές keyboard parity με κλάδο (Ctrl/Cmd+±, Shift+1/2 κ.λπ.).
+Coverage threshold ορισμένο.
 
-Άγνωστη εξομάλυνση wheelDelta και αγκύρωση στο cursor για όλα τα input.
+Flaky quarantine ή τουλάχιστον retries per-test.
 
-Καμία αναφορά σε stress-tests, telemetry, ή multi-viewport sync.
+PR gate που μπλοκάρει αν αποτύχει Jest ή Playwright.
 
-Πρότυπο Enterprise (στόχος)
+Γρήγορος αυτοέλεγχος
+npm test                    # όλα πράσινα και axe 0 violations
+npx playwright test         # περνούν όλα τα browsers
+ls playwright-report        # υπάρχει report
+ls test-results             # υπάρχουν traces/videos
 
-Κάλυψη εισόδων
-Mouse wheel, trackpad pinch, touch pinch-zoom, stylus. Pointer Events, passive listeners, ακύρωση default όπου πρέπει. Normalization deltaY/deltaMode για όλα τα browsers.
 
-Συμπεριφορά ζουμ
-Zoom-to-cursor από προεπιλογή, ρυθμιζόμενο zoom factor, γραμμικό ή λογαριθμικό scaling, διπλό-κλικ για εστίαση, zoom-window με drag, zoom-to-selection, zoom-previous/next στο history.
-
-Όρια και μαθηματικά
-minScale, maxScale, clamp εκτός περιεχομένου με margin, προστασία από NaN/∞, διπλή ακρίβεια για μεγάλες συντεταγμένες CAD, σταθερός μετασχηματισμός (scale, tx, ty) χωρίς σωρευτικό σφάλμα.
-
-Απόδοση
-rAF batching, wheel throttling, render μόνο στις τελικές τιμές ή με μικρό easing, LOD/tiling για βαριές σκηνές, OffscreenCanvas/ WebGL όπου γίνεται, αποφυγή layout thrash.
-
-Λειτουργίες CAD-κλάσης
-Zoom Extents, Zoom Window, Zoom Previous, Zoom Scale (π.χ. 2x, 0.5x), Zoom 1:1 με DPI, Zoom Selected, Named Views/Bookmarks, multi-viewport sync. Αυτά είναι στάνταρ σε AutoCAD/Rhino/Blender. 
-help.autodesk.com
-+2
-docs.mcneel.com
-+2
-
-UX και πρόσβαση
-Πλήρη shortcuts: Ctrl/Cmd +/-, Shift+1 fit, Shift+2 selection, Shift+0 100%. Ορατό ποσοστό zoom, επιλογές αντιστροφής τροχού, ρυθμιζόμενη ταχύτητα. 
-help.figma.com
-+1
-
-Αξιοπιστία
-Deterministic history με όριο μεγέθους, αποθήκευση/επαναφορά view state, safeguard σε ακραία bounds και άδειες σκηνές.
-
-Δοκιμές και telemetry
-Unit tests για math, simulated input tests για wheel/pinch/keyboard, cross-browser matrix, metrics για zoom latency, rate, ακύρωση, σφάλματα.
-
-Συγκεκριμένες προτάσεις βημάτων
-
-Είσοδοι: Πρόσθεσε χειρισμό Pointer Events για pinch-zoom και panning. Διατήρησε touch-action: none στο canvas. Normalization wheelDelta με μετατροπή σε scale s = exp(k * delta).
-
-Όρια: Επέκτεινε το ZoomConstraints ώστε ο ZoomManager να εφαρμόζει clamp σε scale και pan. Πρόσθεσε “content bounds” + margin.
-
-Συμπεριφορά:
-
-zoomToSelection(bounds) και zoomTo100() με DPI-aware 1:1.
-
-Anchor στο cursor για wheel, pinch, και keyboard.
-
-Προαιρετικό easing 120–180 ms για in/out, ακυρώσιμο σε νέο input.
-
-Keyboard parity: Map: Ctrl/Cmd+± in/out, Shift+1 fit, Shift+2 selection, Shift+0 100%, Alt+Wheel για zoom-to-cursor εάν ζητηθεί. 
-help.figma.com
-+1
-
-Απόδοση: Batch μετασχηματισμούς με rAF, throttle wheels, και redraw μόνο στο rAF tick. Για βαριές DXF, ενεργοποίησε LOD και culling.
-
-Ισχυρό history: stack με cap, συγχώνευση διαδοχικών μικρο-zoom, previous/next όπως AutoCAD/Rhino. 
-help.autodesk.com
-+1
-
-Multi-viewport: Προαιρετικός συγχρονισμός transform ανά ομάδα.
-
-Τεκμηρίωση + tests: Συμβόλαιο API του ZoomManager, πίνακας shortcuts, και playwright/pointer-events tests σε Chrome/Firefox/Safari.
-
-Αξιολόγηση πληρότητας του δικού σου
-
-Υπάρχει: wheel, in/out, fit (και unified για DXF+layers), window, scale, history prev/next, βασικό keyboard, εκτεθειμένος ZoomManager.
-
-Λείπει/Αβέβαιο: pinch/touch, σφιχτά constraints, zoom-to-selection, 100%/named views, animation, πλήρες keyboard parity, normalization deltaMode, multi-viewport, telemetry/tests.
-Άρα: λειτουργικό για “prototyping/advanced”, όχι ακόμη “Enterprise”.
-
-Αν θες, δίνω checklist 40 σημείων και προτεραιοποίηση εργασιών για 2 σπριντ, με ρυθμίσεις και δοκιμές ανά browser.
-
-Είπες:
-
-Αν θες, δίνω checklist 40 σημείων και προτεραιοποίηση εργασιών για 2 σπριντ, με ρυθμίσεις και δοκιμές ανά browser.
-
-ΝΑΙ ΕΥΧΑΡΙΣΤΩ
-Το ChatGPT είπε:
-
-Checklist 40 σημείων για Enterprise Zoom (2 σπριντ)
-
-Sprint 1 – Βασικές Διορθώσεις και Κάλυψη Εισόδων
-
-A. Είσοδοι
-
-Υποστήριξη Pointer Events.
-
-Υποστήριξη pinch-zoom touch.
-
-Σωστό touch-action: none.
-
-Κανονικοποίηση wheel deltaMode.
-
-Διπλό-κλικ για zoom-in/out.
-
-Alt+Wheel → pan/zoom επιλογές.
-
-Διαχείριση stylus events.
-
-Κλιμάκωση anchor στο cursor.
-
-Τεκμηρίωση όλων input modes.
-
-Cross-browser matrix (Chrome/Firefox/Safari/Edge).
-
-B. Συμπεριφορά Ζουμ
-11. zoomToSelection(bounds).
-12. zoomTo100%() με DPI-aware.
-13. Zoom-to-fit (βελτιωμένο, margin).
-14. Zoom-to-window με animation.
-15. Zoom-to-previous/next stack.
-16. Scale με factor (2x, 0.5x).
-17. Option “Zoom to Mouse Position”.
-18. Configurable zoom speed factor.
-19. Ρύθμιση αντιστροφής wheel.
-20. Ομαλό easing (120–180 ms).
-
-C. Constraints
-21. Ορισμός minScale/maxScale.
-22. Clamp pan σε content bounds.
-23. Προστασία NaN/∞ στο transform.
-24. Προστασία σε άδειο περιεχόμενο.
-25. Ακρίβεια double για μεγάλα CAD.
-
-Sprint 2 – Απόδοση, UX, Ισχυρό History
-
-D. Απόδοση
-26. rAF batching zoom/pan.
-27. Wheel throttling.
-28. Draw μόνο στο animation frame.
-29. Level-of-Detail για βαριές σκηνές.
-30. Culling αντικειμένων εκτός view.
-
-E. Ιστορικό και Views
-31. Σταθερό stack history.
-32. Merge διαδοχικών micro-zoom.
-33. Named views/bookmarks.
-34. Multi-viewport sync.
-35. Export/import view state.
-
-F. Shortcuts και UX
-36. Ctrl/Cmd+± → zoom.
-37. Shift+1 → fit.
-38. Shift+2 → selection.
-39. Shift+0 → 100%.
-40. Εμφάνιση τρέχοντος zoom % στο UI.
-
-Αυτό το 40-σημείο checklist καλύπτει είσοδο, συμπεριφορά, όρια, απόδοση, ιστορικό, UX.
-Προτεραιοποίηση:
-
-Sprint 1 → input + core behavior + constraints.
-
-Sprint 2 → performance + advanced UX + history.
-
-Θέλεις να το αναπτύξω και σε πίνακα με “Priority / Effort / Status” ώστε να λειτουργεί σαν Kanban για την ομάδα;
-
-Είπες:
-
-Θέλεις να το αναπτύξω και σε **πίνακα με “Priority / Effort / Status”** ώστε να λειτουργεί σαν Kanban για την ομάδα;
-
-ΝΑΙ ΕΥΧΑΡΙΣΤΩ
-Το ChatGPT είπε:
-
-Πίνακας τύπου Kanban με στήλες Task / Priority / Effort / Status.
-(Scale: Priority → High/Med/Low, Effort → S/M/L, Status → Todo/In-Progress/Done)
-
-Task	Priority	Effort	Status
-Pointer Events υποστήριξη	High	M	Todo
-Pinch-zoom touch	High	M	Todo
-touch-action: none	High	S	Todo
-Κανονικοποίηση wheel delta	High	S	Todo
-Διπλό-κλικ zoom	Med	S	Todo
-Alt+Wheel mapping	Low	S	Todo
-Stylus events	Low	M	Todo
-Cursor anchor σε όλα	High	M	Todo
-Input modes τεκμηρίωση	Med	S	Todo
-Cross-browser matrix	High	M	Todo
-Zoom-to-selection	High	M	Todo
-Zoom-to-100% (DPI)	High	S	Todo
-Zoom-to-fit (βελτιωμένο)	High	M	Todo
-Zoom-to-window animation	Med	M	Todo
-Zoom prev/next stack	High	S	Todo
-Scale factors (2x, 0.5x)	Med	S	Todo
-Option “Zoom to Mouse”	Med	S	Todo
-Config zoom speed	Med	S	Todo
-Invert wheel option	Low	S	Todo
-Smooth easing (120–180ms)	Med	M	Todo
-Min/max scale clamp	High	S	Todo
-Pan clamp σε bounds	High	M	Todo
-Guard NaN/∞	High	S	Todo
-Empty content guard	Med	S	Todo
-Double precision	High	M	Todo
-rAF batching	High	M	Todo
-Wheel throttling	High	S	Todo
-Redraw on rAF only	High	S	Todo
-LOD για βαριά σκηνή	High	L	Todo
-Culling εκτός view	Med	M	Todo
-Stable history stack	High	S	Todo
-Merge micro-zooms	Med	M	Todo
-Named views/bookmarks	Med	M	Todo
-Multi-viewport sync	High	L	Todo
-Export/import view state	Low	M	Todo
-Ctrl/Cmd+± shortcuts	High	S	Todo
-Shift+1 → fit	High	S	Todo
-Shift+2 → selection	High	S	Todo
-Shift+0 → 100%	High	S	Todo
-Zoom % στο UI	High	S	Todo
+Αν έχεις αντικαταστήσει το Jest αρχείο με το grips-selection.enterprise.test.ts και έχεις προσθέσει τα Playwright αρχεία του canvas και το CI, τότε ναι· αλλιώς, λείπουν πράγματα.

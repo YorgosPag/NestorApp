@@ -1,6 +1,6 @@
 /** @type {import('jest').Config} */
 const config = {
-  testEnvironment: 'jsdom',
+  testEnvironment: './jest-minimal-dom-environment.js',
   testMatch: [
     '**/__tests__/**/*.test.[jt]s?(x)',
     '**/?(*.)+(spec|test).[jt]s?(x)'
@@ -21,7 +21,7 @@ const config = {
     '!**/node_modules/**',
     '!**/.next/**'
   ],
-  coverageThresholds: {
+  coverageThreshold: {
     global: {
       branches: 60,
       functions: 60,
