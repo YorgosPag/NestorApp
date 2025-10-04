@@ -7,7 +7,7 @@ import type { Config } from 'jest';
 const config: Config = {
   // Basic configuration
   preset: 'ts-jest',
-  testEnvironment: 'jsdom',
+  testEnvironment: 'jsdom', // ✅ ChatGPT-5 Requirement #1: Real jsdom environment
   setupFilesAfterEnv: [
     '<rootDir>/test/setupCanvas.ts',
     '<rootDir>/test/setupTests.ts'
@@ -71,30 +71,31 @@ const config: Config = {
   // Reporters για enterprise-level reporting
   reporters: [
     'default',
-    [
-      'jest-junit',
-      {
-        outputDirectory: 'reports/junit',
-        outputName: 'jest-junit.xml',
-        ancestorSeparator: ' › ',
-        uniqueOutputName: 'false',
-        includeConsoleOutput: 'true',
-        includeShortConsoleOutput: 'true'
-      }
-    ],
-    [
-      'jest-html-reporters',
-      {
-        publicPath: 'reports/html',
-        filename: 'test-report.html',
-        expand: true,
-        hideIcon: false,
-        pageTitle: 'DXF Viewer Test Report',
-        logoImgPath: undefined,
-        includeFailureMsg: true,
-        includeSuiteFailure: true
-      }
-    ]
+    // TODO: Install jest-junit και jest-html-reporters
+    // [
+    //   'jest-junit',
+    //   {
+    //     outputDirectory: 'reports/junit',
+    //     outputName: 'jest-junit.xml',
+    //     ancestorSeparator: ' › ',
+    //     uniqueOutputName: 'false',
+    //     includeConsoleOutput: 'true',
+    //     includeShortConsoleOutput: 'true'
+    //   }
+    // ],
+    // [
+    //   'jest-html-reporters',
+    //   {
+    //     publicPath: 'reports/html',
+    //     filename: 'test-report.html',
+    //     expand: true,
+    //     hideIcon: false,
+    //     pageTitle: 'DXF Viewer Test Report',
+    //     logoImgPath: undefined,
+    //     includeFailureMsg: true,
+    //     includeSuiteFailure: true
+    //   }
+    // ]
   ],
 
   // TypeScript configuration
@@ -131,8 +132,8 @@ const config: Config = {
         '**/*.test.tsx'
       ],
       testPathIgnorePatterns: [
-        '**/*visual-regression*',
-        '**/*.prop.test.ts'
+        'visual-regression',
+        '\\.prop\\.test\\.ts$'
       ],
       testTimeout: 30000
     },
@@ -158,7 +159,7 @@ const config: Config = {
   ],
 
   // Module resolution
-  moduleNameMapping: {
+  moduleNameMapper: {
     // Path mapping για cleaner imports στα tests
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@debug/(.*)$': '<rootDir>/debug/$1',

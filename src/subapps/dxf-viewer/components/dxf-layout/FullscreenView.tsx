@@ -38,9 +38,9 @@ export const FullscreenView: React.FC<DXFViewerLayoutProps> = (props) => (
       </div>
       
       <div className="flex gap-2 items-center">
-        {props.currentScene && (
+        {props.scene && (
           <Badge variant="secondary" className="bg-green-600 text-white">
-            ✅ DXF Active ({props.currentScene.entities.length} entities)
+            ✅ DXF Active ({props.scene.entities.length} entities)
           </Badge>
         )}
         

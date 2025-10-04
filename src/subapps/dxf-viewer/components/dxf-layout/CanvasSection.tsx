@@ -31,6 +31,8 @@ import { useZoom } from '../../systems/zoom';
 import { serviceRegistry } from '../../services';
 // 🎯 DEBUG: Import canvas alignment tester
 import { CanvasAlignmentTester } from '../../debug/canvas-alignment-test';
+// ✅ FIX: Import publishHighlight για entity selection → grips
+import { publishHighlight } from '../../events/selection-bus';
 
 /**
  * Renders the main canvas area, including the renderer and floating panels.
@@ -89,6 +91,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     if (props.setSelectedEntityIds) {
       props.setSelectedEntityIds(selectedIds);
     }
+
+    // ✅ FIX: Στείλε HILITE_EVENT για να εμφανιστούν τα grips στο DxfCanvas
+    publishHighlight({ ids: selectedIds, mode: 'select' });
   }, [canvasContext, props.setSelectedEntityIds]);
 
   // ✅ CENTRALIZED VIEWPORT: Update viewport από canvas dimensions
@@ -374,10 +379,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   }, [currentOverlays.length, levelManager.currentLevelId]); // Dependency only on counts, not objects - removed colorLayers to prevent infinite loop
 
   // === CONVERT SCENE TO CANVAS V2 FORMAT ===
-  const dxfScene: DxfScene | null = props.currentScene ? {
-    entities: props.currentScene.entities?.map((entity): DxfEntityUnion | null => {
+  const dxfScene: DxfScene | null = props.scene ? {
+    entities: props.scene.entities?.map((entity): DxfEntityUnion | null => {
       // Get layer color information
-      const layerInfo = props.currentScene?.layers?.[entity.layer];
+      const layerInfo = props.scene?.layers?.[entity.layer];
 
       // Convert SceneEntity to DxfEntityUnion
       const base = {
@@ -414,8 +419,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
           return null;
       }
     }).filter(Boolean) as DxfEntityUnion[] || [], // ✅ FIX: Convert and filter entities!
-    layers: Object.keys(props.currentScene.layers || {}), // ✅ FIX: Convert layers object to array
-    bounds: props.currentScene.bounds // ✅ FIX: Use actual bounds from scene
+    layers: Object.keys(props.scene.layers || {}), // ✅ FIX: Convert layers object to array
+    bounds: props.scene.bounds // ✅ FIX: Use actual bounds from scene
   } : null;
 
   // 🔍 DEBUG - Check if DXF scene has entities and auto-fit to view
@@ -452,7 +457,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     } else if (dxfScene) {
       // console.log('🔍 DxfScene loaded but NO entities:', { dxfScene });
     }
-  }, [props.currentScene]); // Use props instead of derived state to prevent infinite loop
+  }, [props.scene]); // ✅ FIX: Use props.scene instead of props.currentScene
 
   // Use shared overlay handlers to eliminate duplicate code
   const { handleOverlaySelect, handleOverlayEdit, handleOverlayDelete, handleOverlayUpdate } =
