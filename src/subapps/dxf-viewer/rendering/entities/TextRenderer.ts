@@ -30,25 +30,36 @@ export class TextRenderer extends BaseEntityRenderer {
     } else {
       // Normal text rendering
       const screenPos = this.worldToScreen(position);
+
+      // 🔧 CRITICAL FIX: DXF text height calculation
+      // BUG WAS: renderStyledTextWithOverride() ignores our screenHeight and uses textStyleStore.fontSize!
+      // SOLUTION: Use ctx.fillText() directly with DXF entity height
       const screenHeight = height * this.transform.scale;
-      
+
+      // 🐛 DEBUG: Log text height values
+      if (Math.random() < 0.05) {  // Log 5% of texts to avoid spam
+        console.log(`📝 TEXT: "${text.substring(0, 20)}", DXF height=${height}, scale=${this.transform.scale.toFixed(2)}, screenHeight=${screenHeight.toFixed(1)}px`);
+      }
+
       this.ctx.save();
-      
-      // Apply text properties
+
+      // Apply text properties - USE DXF ENTITY HEIGHT, NOT GLOBAL SETTINGS!
       this.ctx.font = `${screenHeight}px Arial`;
       this.ctx.fillStyle = entity.color || UI_COLORS.DEFAULT_ENTITY;
       this.ctx.textAlign = 'left';
       this.ctx.textBaseline = 'bottom';
-      
+
       // Apply rotation if needed
       if (rotation !== 0) {
         this.ctx.translate(screenPos.x, screenPos.y);
         this.ctx.rotate((rotation * Math.PI) / 180);
-        renderStyledTextWithOverride(this.ctx, text, 0, 0);
+        // 🔧 FIX: Use ctx.fillText directly, NOT renderStyledTextWithOverride
+        this.ctx.fillText(text, 0, 0);
       } else {
-        renderStyledTextWithOverride(this.ctx, text, screenPos.x, screenPos.y);
+        // 🔧 FIX: Use ctx.fillText directly, NOT renderStyledTextWithOverride
+        this.ctx.fillText(text, screenPos.x, screenPos.y);
       }
-      
+
       this.ctx.restore();
     }
     

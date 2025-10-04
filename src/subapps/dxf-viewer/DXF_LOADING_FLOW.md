@@ -408,6 +408,43 @@ onSceneImported={dxfProps.handleFileImport}
 
 ---
 
+---
+
+### 🐛 **Bug #6: Τα κείμενα εμφανίζονται πολύ μικρά (Text Rendering)**
+
+**Symptom**: Τα text entities από DXF φαίνονται **πολύ μικρά** (4 μήνες debugging!)
+
+**Root Cause**:
+- `TextRenderer.ts` υπολόγιζε σωστά `screenHeight = height * scale` από DXF entity
+- **ΑΛΛΑ** καλούσε `renderStyledTextWithOverride()` που:
+  - **ΑΓΝΟΟΥΣΕ** το `screenHeight`
+  - **ΧΡΗΣΙΜΟΠΟΙΟΥΣΕ** `textStyleStore.fontSize` (default 12px)
+- Αποτέλεσμα: DXF text heights (π.χ. 0.132 units) → **ΑΓΝΟΟΥΝΤΑΝ ΕΝΤΕΛΩΣ!**
+
+**Console Log Evidence**:
+```
+📝 TEXT: "www.pagonis.com.gr", height=0.10575, scale=50.00, screenHeight=5.3px  ← ΠΟΛΥ ΜΙΚΡΟ!
+```
+
+**Fix Applied**:
+- File: `rendering/entities/TextRenderer.ts` (lines 34-63)
+- Αντικατέστησα `renderStyledTextWithOverride()` με άμεση χρήση `ctx.fillText()`:
+  ```typescript
+  // ΠΡΙΝ (ΛΑΘΟΣ):
+  this.ctx.font = `${screenHeight}px Arial`;
+  renderStyledTextWithOverride(this.ctx, text, x, y);  // ΑΓΝΟΟΥΣΕ το font!
+
+  // ΤΩΡΑ (ΣΩΣΤΟ):
+  this.ctx.font = `${screenHeight}px Arial`;
+  this.ctx.fillText(text, screenPos.x, screenPos.y);  // ✅ Χρησιμοποιεί DXF height!
+  ```
+
+**Verification**: Τα κείμενα εμφανίζονται με το **σωστό μέγεθος**! ✅
+
+**Time Lost**: ~4 μήνες (on/off debugging)
+
+---
+
 **🏢 REMEMBER**:
 - Αυτό το bug **έχει χαθεί 3+ φορές**
 - Κάθε φορά χάνουμε **ώρες/μέρες** να το ξαναβρούμε
@@ -417,5 +454,5 @@ onSceneImported={dxfProps.handleFileImport}
 ---
 
 *Last Updated: 2025-10-04*
-*Updates: DXF loading fix + Layer colors fix + Arc Y-axis flip + Cleanup unused code*
+*Updates: DXF loading fix + Layer colors fix + Arc Y-axis flip + Text rendering fix + Cleanup unused code*
 *Next Review: Όταν ξαναχαλάσει το DXF loading (προσπάθησε να μην το αφήσεις να ξαναχαλάσει!)*

@@ -327,8 +327,37 @@ const canvasEndAngle = -endAngle;
 **Αιτιολογία**: Experimental code που ΠΟΤΕ δεν χρησιμοποιήθηκε. Το actual rendering χρησιμοποιεί:
 `DxfRenderer` → `EntityRendererComposite` → `BaseEntityRenderer` → `PhaseManager`
 
+### 📝 **Text Rendering Fix (2025-10-04)**
+**Πρόβλημα**: Τα κείμενα από DXF εμφανίζονταν **πολύ μικρά** (4 μήνες debugging!)
+
+**Root Cause**: `renderStyledTextWithOverride()` αγνοούσε το DXF entity height
+- TextRenderer υπολόγιζε σωστά `screenHeight = height * scale`
+- **ΑΛΛΑ** το `renderStyledTextWithOverride()` χρησιμοποιούσε `textStyleStore.fontSize` (default 12px)
+- Αποτέλεσμα: DXF text heights (0.132 units) → ΑΓΝΟΟΥΝΤΑΝ!
+
+**Λύση**: Άμεση χρήση `ctx.fillText()` με το DXF entity height
+```typescript
+// ΠΡΙΝ (ΛΑΘΟΣ):
+this.ctx.font = `${screenHeight}px Arial`;
+renderStyledTextWithOverride(this.ctx, text, x, y);  // ΑΓΝΟΟΥΣΕ το font!
+
+// ΤΩΡΑ (ΣΩΣΤΟ):
+this.ctx.font = `${screenHeight}px Arial`;
+this.ctx.fillText(text, screenPos.x, screenPos.y);  // ✅ Χρησιμοποιεί DXF height!
+```
+
+**Files Changed**:
+- `rendering/entities/TextRenderer.ts` (lines 34-63)
+
+**Console Log Evidence**:
+```
+📝 TEXT: "www.pagonis.com.gr", height=0.10575, scale=50.00, screenHeight=5.3px  ← ΠΟΛΥ ΜΙΚΡΟ!
+```
+
+**Αποτέλεσμα**: Τα κείμενα τώρα εμφανίζονται με το **σωστό μέγεθος** από το DXF! ✅
+
 ---
 
 *Ημερομηνία δημιουργίας modular docs: 2025-10-03*
-*Τελευταία ενημέρωση: 2025-10-04 - Layer colors fix, Arc flip fix, Cleanup unused code*
+*Τελευταία ενημέρωση: 2025-10-04 - Layer colors, Arc flip, Text rendering fix*
 *Αρχείο υπενθύμισης κεντρικοποίησης - Μη διαγράψεις!*
