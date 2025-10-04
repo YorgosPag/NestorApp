@@ -158,11 +158,28 @@
 - ❌ ΟΧΙ "μάλλον δουλεύει" manual testing
 - ✅ ΜΟΝΟ `npm test` πριν από κάθε commit
 - ✅ Regression tests για κάθε bug που βρίσκουμε
+
+📍 **ARCHITECTURE**:
+- 🏗️ **[TEST_INFRASTRUCTURE.md](./TEST_INFRASTRUCTURE.md)** - Test architecture & centralization
+  - Test inventory (113+ tests σε 4 επίπεδα)
+  - Centralization issues & action plan (6 fixes needed)
+  - Directory structure (scattered → centralized)
+  - Quality standards (CAD, A11y, Performance)
+  - Known bugs registry & regression prevention
+
+📍 **HOW-TO GUIDE**:
+- 📖 **[__tests__/TESTING_GUIDE.md](./__tests__/TESTING_GUIDE.md)** - Practical workflows
+  - How to write tests (TDD workflow)
+  - Regression prevention workflow
+  - Bug history & fixes (Bug #7, #8)
+  - Quick commands & examples
+
 - 📍 **Κεντρικοποίηση 2025-10-04**:
-  - Integration test suite για Grips & Selection (12 tests)
+  - Integration test suite για Grips & Selection (25 tests)
   - Custom DOM environment (jest-minimal-dom-environment.js)
-  - TESTING_GUIDE.md με workflows & best practices
-  - Bug #7 regression test (Layer card click → Grips show)
+  - Property-based tests (coord transforms - 1000+ cases)
+  - Visual regression tests (Playwright - CAD precision)
+
 - 📍 **Πώς χρησιμοποιείς**:
   ```bash
   # Πριν κάνεις αλλαγή
@@ -174,7 +191,6 @@
   # Αν περνάει → ✅ Safe to commit!
   # Αν σπάει → 🔥 Fix it before commit!
   ```
-- 📖 **ΔΙΑΒΑΣΕ**: `__tests__/TESTING_GUIDE.md` - Πλήρης οδηγός testing workflow
 - 🎯 **ΑΠΟΤΕΛΕΣΜΑ**: Τέλος οι 4 μήνες debugging - Ξέρουμε ΑΜΕΣΑ τι σπάει!
 
 ---
@@ -209,7 +225,7 @@
 | **Layer Colors** | `getLayerColor` | `config/color-config.ts` | DXF layer color assignment (hash-based) |
 | **Entity Rendering** | `PhaseManager` | `systems/phase-manager/PhaseManager.ts` | 3-phase rendering system (preview/normal/interactive) |
 | **Arc Rendering** | `drawCentralizedArc` | `rendering/entities/BaseEntityRenderer.ts` | Y-axis flip για DXF arcs |
-| **Testing** | `TESTING_GUIDE.md` | `__tests__/TESTING_GUIDE.md` | Integration tests, regression prevention, workflows |
+| **Testing** | `TEST_INFRASTRUCTURE.md` + `TESTING_GUIDE.md` | Root + `__tests__/` | Architecture & workflows, 113+ tests, regression prevention |
 
 ---
 
@@ -226,7 +242,7 @@
 - **...enable/disable snap** → `SnapContext` → [state-management.md](./docs/architecture/state-management.md#f-snapcontext-κεντρικο---2025-10-03)
 - **...υπολογίσω απόσταση** → `calculateDistance()` από `geometry-rendering-utils.ts`
 - **...υπολογίσω bounds center** → `getBoundsCenter()` από `systems/zoom/utils/bounds.ts`
-- **...γράψω test** → `TESTING_GUIDE.md` → `__tests__/TESTING_GUIDE.md`
+- **...γράψω test** → `TEST_INFRASTRUCTURE.md` (architecture) → `__tests__/TESTING_GUIDE.md` (how-to)
 - **...τρέξω tests** → `npm test -- grips-selection`
 
 ---

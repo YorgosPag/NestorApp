@@ -155,7 +155,13 @@
       "Bash(powershell.exe:*)",
       "Read(//c/Users/user/Downloads/BuckUps/Zip_BuckUps-2/**)",
       "Bash(unzip:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(curl -s \"http://localhost:3001/dxf/viewer\")",
+      "Bash(npm i:*)",
+      "Bash(curl:*)",
+      "Bash(npx playwright install:*)",
+      "Bash(npx playwright test:*)",
+      "Bash(npx playwright:*)"
     ],
     "deny": [],
     "ask": []

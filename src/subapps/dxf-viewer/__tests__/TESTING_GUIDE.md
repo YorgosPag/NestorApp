@@ -4,6 +4,12 @@
 **Τελευταία Ενημέρωση:** 2025-10-04
 **Στόχος:** Να σταματήσουμε να χάνουμε ισορροπία - Τέλος στους 4 μήνες debugging!
 
+> 📖 **Αυτό το guide:** Practical workflows & how-to
+>
+> 🏗️ **Για architecture & centralization:** Δες [TEST_INFRASTRUCTURE.md](../TEST_INFRASTRUCTURE.md)
+>
+> 📋 **Για κεντρικοποιημένα συστήματα:** Δες [centralized_systems.md](../centralized_systems.md) - Rule #10
+
 ---
 
 ## 🎯 ΓΙΑ ΤΙ ΥΠΑΡΧΕΙ ΑΥΤΟ ΤΟ GUIDE
@@ -460,6 +466,14 @@ npm test -- grips-selection
 - [ ] Code coverage δεν έπεσε
 - [ ] TESTING_GUIDE.md ενημερωμένο
 - [ ] Git commit με σαφές μήνυμα
+
+---
+
+## 📚 RELATED DOCUMENTATION
+
+- 🏗️ **[TEST_INFRASTRUCTURE.md](../TEST_INFRASTRUCTURE.md)** - Architecture, centralization, quality standards
+- 📋 **[centralized_systems.md](../centralized_systems.md)** - Rule #10: Testing & Regression Prevention
+- 📖 **[docs/](../docs/)** - Full enterprise documentation
 
 ---
 
