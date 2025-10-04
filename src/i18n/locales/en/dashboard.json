@@ -1,0 +1,43 @@
+{
+  "welcome": {
+    "title": "Welcome back! 👋",
+    "subtitle": "Manage your contacts in the most efficient way. You have {count} active contacts today.",
+    "actions": {
+      "newContact": "New Contact",
+      "search": "Search"
+    }
+  },
+  "stats": {
+    "totalContacts": "Total Contacts",
+    "newContacts": "New Contacts",
+    "favorites": "Favorites",
+    "activeToday": "Active Today",
+    "periods": {
+      "thisMonth": "This month",
+      "lastMonth": "from last month",
+      "last24h": "Last 24 hours"
+    },
+    "quickAccess": "Quick access"
+  },
+  "quickActions": {
+    "title": "Quick Actions",
+    "subtitle": "Create new contacts with one click",
+    "individual": {
+      "title": "Individual",
+      "description": "Add person"
+    },
+    "company": {
+      "title": "Company", 
+      "description": "Add company"
+    },
+    "service": {
+      "title": "Public Service",
+      "description": "Add service"
+    }
+  },
+  "recentActivities": {
+    "title": "Recent Activities",
+    "subtitle": "Latest actions in the system",
+    "viewAll": "View all"
+  }
+}

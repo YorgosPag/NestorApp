@@ -1,0 +1,108 @@
+{
+  "overview": {
+    "stats": {
+      "newLeads": "Νέα Leads",
+      "activeOpportunities": "Ενεργές Ευκαιρίες", 
+      "scheduledViewings": "Προγραμματισμένες Ξεναγήσεις",
+      "pendingTasks": "Εκκρεμείς Εργασίες"
+    }
+  },
+  "opportunities": {
+    "stages": {
+      "initial_contact": "Αρχική Επαφή",
+      "qualification": "Αξιολόγηση",
+      "viewing": "Ξενάγηση",
+      "proposal": "Πρόταση",
+      "negotiation": "Διαπραγμάτευση",
+      "contract": "Συμβόλαιο",
+      "closed_won": "Κλειστό (Επιτυχία)",
+      "closed_lost": "Κλειστό (Αποτυχία)"
+    },
+    "status": {
+      "active": "Ενεργό",
+      "inactive": "Ανενεργό",
+      "pending": "Εκκρεμές"
+    },
+    "actions": {
+      "edit": "Επεξεργασία",
+      "delete": "Διαγραφή",
+      "view": "Προβολή"
+    }
+  },
+  "dashboard": {
+    "tabs": {
+      "overview": "Επισκόπηση",
+      "contacts": "Επαφές",
+      "pipeline": "Pipeline",
+      "tasks": "Εργασίες",
+      "calendar": "Ημερολόγιο",
+      "communications": "Επικοινωνίες"
+    }
+  },
+  "tasks": {
+    "title": "Εργασίες & Ραντεβού",
+    "newTask": "Νέα Εργασία",
+    "noTasks": "Δεν βρέθηκαν εργασίες",
+    "loading": "Φόρτωση...",
+    "searchPlaceholder": "Αναζήτηση...",
+    "clearFilters": "Καθαρισμός",
+    "noDate": "Χωρίς ημερομηνία",
+    "today": "Σήμερα",
+    "tomorrow": "Αύριο",
+    "overdue": "Εκπρόθεσμη",
+    "status": {
+      "all": "Όλες καταστάσεις",
+      "pending": "Εκκρεμεί",
+      "in_progress": "Σε εξέλιξη",
+      "completed": "Ολοκληρώθηκε",
+      "cancelled": "Ακυρώθηκε"
+    },
+    "priority": {
+      "all": "Όλες προτεραιότητες",
+      "urgent": "Επείγουσα",
+      "high": "Υψηλή",
+      "medium": "Μεσαία",
+      "low": "Χαμηλή"
+    },
+    "type": {
+      "all": "Όλοι τύποι",
+      "call": "Κλήση",
+      "meeting": "Συνάντηση",
+      "viewing": "Ξενάγηση",
+      "follow_up": "Παρακολούθηση",
+      "email": "Email",
+      "document": "Έγγραφο",
+      "other": "Άλλο"
+    },
+    "timeframe": {
+      "all": "Όλες οι ημερομηνίες",
+      "overdue": "Εκπρόθεσμες",
+      "today": "Σήμερα",
+      "tomorrow": "Αύριο",
+      "week": "Αυτή την εβδομάδα"
+    },
+    "actions": {
+      "complete": "Ολοκλήρωση",
+      "edit": "Επεξεργασία",
+      "delete": "Διαγραφή"
+    },
+    "messages": {
+      "completed": "✅ Η εργασία \"{{title}}\" ολοκληρώθηκε!",
+      "deleted": "✅ Η εργασία \"{{title}}\" διαγράφηκε!",
+      "completeError": "❌ Σφάλμα κατά την ολοκλήρωση εργασίας",
+      "deleteError": "❌ Σφάλμα κατά τη διαγραφή εργασίας",
+      "loadError": "Σφάλμα κατά τη φόρτωση εργασιών",
+      "deleteConfirm": "Είστε σίγουροι ότι θέλετε να διαγράψετε την εργασία \"{{title}}\"?"
+    }
+  },
+  "errors": {
+    "contactNotFound": "Η επαφή δεν βρέθηκε",
+    "invalidStage": "Μη έγκυρο στάδιο ευκαιρίας",
+    "deadlinePassed": "Η προθεσμία έχει παρέλθει"
+  },
+  "success": {
+    "contactCreated": "Η επαφή δημιουργήθηκε επιτυχώς",
+    "contactUpdated": "Η επαφή ενημερώθηκε επιτυχώς",
+    "contactDeleted": "Η επαφή διαγράφηκε επιτυχώς"
+  }
+}

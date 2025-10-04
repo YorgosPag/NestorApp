@@ -1,0 +1,142 @@
+{
+  "building": {
+    "toolbar": {
+      "actions": {
+        "new": "Νέο Κτίριο (Ctrl+N)",
+        "edit": "Επεξεργασία Επιλεγμένου (Ctrl+E)",
+        "delete": "Διαγραφή Επιλεγμένου (Delete)",
+        "export": "Εξαγωγή Δεδομένων"
+      },
+      "filters": {
+        "active": "Ενεργά φίλτρα:",
+        "clearAll": "Καθαρισμός όλων"
+      },
+      "export": {
+        "title": "Εξαγωγή σε:",
+        "pdf": "PDF Αναφορά",
+        "stats": "Στατιστικά Dashboard", 
+        "timeline": "Χρονοδιάγραμμα"
+      },
+      "delete": {
+        "title": "Επιβεβαίωση Διαγραφής",
+        "message": "Είστε σίγουροι ότι θέλετε να διαγράψετε {count} κτίριο/α;",
+        "warning": "Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.",
+        "cancel": "Ακύρωση",
+        "confirm": "Διαγραφή"
+      }
+    },
+  "toolbar": {
+    "actions": {
+      "new": "Νέο Κτίριο (Ctrl+N)",
+      "edit": "Επεξεργασία Επιλεγμένου (Ctrl+E)",
+      "delete": "Διαγραφή Επιλεγμένου (Delete)"
+    }
+  },
+  "dialog": {
+    "deleteConfirmation": {
+      "title": "Επιβεβαίωση Διαγραφής",
+      "message": "Είστε σίγουροι ότι θέλετε να διαγράψετε {{count}} κτίριο/α;",
+      "warning": "Αυτή η ενέργεια δεν μπορεί να αναιρεθεί."
+    },
+    "cancel": "Ακύρωση",
+    "delete": "Διαγραφή"
+  },
+    "storage": {
+      "types": {
+        "storage": "Αποθήκη",
+        "parking": "Πάρκινγκ"
+      },
+      "status": {
+        "available": "Διαθέσιμο",
+        "reserved": "Κρατημένο", 
+        "sold": "Πωληθέν",
+        "owner": "Ιδιοκτήτη",
+        "maintenance": "Συντήρηση"
+      },
+      "form": {
+        "basicInfo": "Βασικές Πληροφορίες",
+        "code": "Κωδικός",
+        "status": "Κατάσταση", 
+        "description": "Περιγραφή",
+        "area": "Επιφάνεια",
+        "price": "Τιμή",
+        "floor": "Όροφος",
+        "auto": "Auto",
+        "placeholders": {
+          "codeStorage": "π.χ. A_B01",
+          "codeParking": "π.χ. P_01",
+          "descriptionStorage": "Περιγραφή για την αποθήκη...",
+          "descriptionParking": "Περιγραφή για τη θέση στάθμευσης..."
+        }
+      }
+    }
+  },
+  "units": {
+    "types": {
+      "studio": "Στούντιο",
+      "apartment_1br": "Γκαρσονιέρα",
+      "apartment_2br": "Διαμέρισμα 2Δ",
+      "apartment_3br": "Διαμέρισμα 3Δ",
+      "maisonette": "Μεζονέτα",
+      "shop": "Κατάστημα",
+      "storage": "Αποθήκη"
+    }
+  },
+  "search": {
+    "results": {
+      "found": "Βρέθηκαν {count} ακίνητα.",
+      "error": "Σφάλμα αναζήτησης."
+    },
+    "terms": {
+      "thousands": "χιλιάδες",
+      "available": "διαθέσιμ",
+      "sold": "πωλημένα",
+      "reserved": "κρατημένα",
+      "apartment": "διαμέρισμα",
+      "maisonette": "μεζονέτα",
+      "shop": "κατάστημα",
+      "parking": "πάρκινγκ",
+      "storage": "αποθήκη"
+    }
+  },
+  "filters": {
+    "advanced": {
+      "show": "Περισσότερα Φίλτρα",
+      "hide": "Απόκρυψη Φίλτρα",
+      "features": {
+        "parking": "Parking",
+        "storage": "Αποθήκη",
+        "fireplace": "Τζάκι",
+        "view": "Θέα",
+        "pool": "Πισίνα"
+      }
+    }
+  },
+  "projects": {
+    "buildingData": {
+      "title": "Επιτρεπόμενα Στοιχεία Δόμησης",
+      "fields": {
+        "maxAllowedConstruction": "Μέγιστη Επιτρεπόμενη Δόμηση",
+        "maxCoveragePercentage": "Μέγιστο Ποσοστό Κάλυψης",
+        "maxPlotCoverage": "Μέγιστη Κάλυψη Οικοπέδου",
+        "maxSemiOutdoorPercentage": "Μέγιστο Ποσοστό Η/Χ",
+        "maxAllowedSemiOutdoorArea": "Μέγιστη Επιτρεπόμενη Επιφάνεια Η/Χ",
+        "maxBalconyPercentage": "Μέγιστο Ποσοστό Εξωστών",
+        "maxBalconyArea": "Μέγιστη Επιφάνεια Εξωστών",
+        "maxCombinedPercentage": "Μέγ. Ποσοστό Επιτρεπ. Η/Χ + Εξωστών",
+        "maxCombinedArea": "Μέγ. Επιτρεπόμενη Επιφ. Η/Χ & Εξωστών",
+        "maxVolumeCoefficient": "Μέγιστος Συντελεστής Όγκου (Σ.Ο.)",
+        "maxVolumeExploitation": "Μέγιστη Κατ' Όγκο Εκμετάλλευση",
+        "maxAllowedHeight": "Μέγιστο Επιτρεπόμενο Ύψος"
+      },
+      "formulas": {
+        "construction": "Συντελεστής Δόμησης (Τελικός) * Εμβαδό Οικοπέδου (Ε.Ο.)",
+        "plotCoverage": "Μέγιστο Ποσοστό Κάλυψης * Εμβαδό Οικοπέδου (Ε.Ο.)",
+        "semiOutdoor": "Μέγιστο Ποσοστό Η/Χ * Μέγιστη Επιτρεπόμενη Δόμηση",
+        "balcony": "Μέγιστο Ποσοστό Εξωστών * Μέγιστη Επιτρεπόμενη Δόμηση",
+        "combined": "Μέγ. Ποσοστό Επιτρεπ. Επιφ. Η/Χ Εξωστών * Μέγιστη Επιτρεπ. Δόμηση",
+        "volume": "Εμβαδόν Οικοπέδου (Ε.Ο.) * Μέγιστος Συντελεστής Όγκου (Σ.Ο.)"
+      }
+    }
+  }
+}

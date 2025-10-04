@@ -1,0 +1,37 @@
+{
+  "menu": {
+    "main": "Main Menu",
+    "tools": "Tools",
+    "settings": "Settings"
+  },
+  "pages": {
+    "home": "Home",
+    "properties": "Property Directory",
+    "contacts": "Contacts",
+    "projects": "Projects",
+    "buildings": "Buildings",
+    "units": "Units",
+    "crm": "CRM",
+    "login": "Login"
+  },
+  "crm": {
+    "dashboard": "Dashboard",
+    "customers": "Customer Management",
+    "communications": "Communications",
+    "leads": "Leads & Opportunities",
+    "tasks": "Tasks & Appointments",
+    "pipeline": "Sales Pipeline",
+    "teams": "Teams & Roles",
+    "notifications": "Notifications"
+  },
+  "tools": {
+    "legal": "Legal Documents",
+    "obligations": "Obligations Drafting",
+    "dxf": "DXF Panel",
+    "shortcuts": "Shortcuts"
+  },
+  "badges": {
+    "new": "New",
+    "pro": "PRO"
+  }
+}

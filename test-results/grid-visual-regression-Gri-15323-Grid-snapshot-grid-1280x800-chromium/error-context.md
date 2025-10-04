@@ -1,0 +1,101 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e7]:
+      - img [ref=e12]
+      - generic [ref=e15]:
+        - generic [ref=e16]:
+          - generic [ref=e17]: menu.main
+          - list [ref=e19]:
+            - listitem [ref=e20]:
+              - link "Αρχική" [ref=e21] [cursor=pointer]:
+                - /url: /
+                - img [ref=e22] [cursor=pointer]
+                - generic [ref=e25] [cursor=pointer]: Αρχική
+            - listitem [ref=e26]:
+              - link "Ευρετήριο Ακινήτων Νέο" [ref=e27] [cursor=pointer]:
+                - /url: /properties
+                - img [ref=e28] [cursor=pointer]
+                - generic [ref=e30] [cursor=pointer]: Ευρετήριο Ακινήτων
+                - generic [ref=e31] [cursor=pointer]: Νέο
+            - listitem [ref=e32]:
+              - link "Επαφές" [ref=e33] [cursor=pointer]:
+                - /url: /contacts
+                - img [ref=e34] [cursor=pointer]
+                - generic [ref=e39] [cursor=pointer]: Επαφές
+            - listitem [ref=e40]:
+              - link "Έργα" [ref=e41] [cursor=pointer]:
+                - /url: /audit
+                - img [ref=e42] [cursor=pointer]
+                - generic [ref=e45] [cursor=pointer]: Έργα
+            - listitem [ref=e46]:
+              - link "Κτίρια" [ref=e47] [cursor=pointer]:
+                - /url: /buildings
+                - img [ref=e48] [cursor=pointer]
+                - generic [ref=e51] [cursor=pointer]: Κτίρια
+            - listitem [ref=e52]:
+              - link "Μονάδες (Units)" [ref=e53] [cursor=pointer]:
+                - /url: /units
+                - img [ref=e54] [cursor=pointer]
+                - generic [ref=e57] [cursor=pointer]: Μονάδες (Units)
+            - listitem [ref=e58]:
+              - button "CRM PRO" [ref=e59] [cursor=pointer]:
+                - img [ref=e60] [cursor=pointer]
+                - generic [ref=e62] [cursor=pointer]: CRM
+                - generic [ref=e63] [cursor=pointer]: PRO
+                - img [ref=e64] [cursor=pointer]
+        - generic [ref=e66]:
+          - generic [ref=e67]: menu.tools
+          - list [ref=e69]:
+            - listitem [ref=e70]:
+              - button "Νομικά Έγγραφα" [ref=e71] [cursor=pointer]:
+                - img [ref=e72] [cursor=pointer]
+                - generic [ref=e75] [cursor=pointer]: Νομικά Έγγραφα
+                - img [ref=e76] [cursor=pointer]
+        - list [ref=e80]:
+          - listitem [ref=e81]:
+            - link "DXF Panel" [ref=e82] [cursor=pointer]:
+              - /url: /dxf/viewer
+              - img [ref=e83] [cursor=pointer]
+              - generic [ref=e88] [cursor=pointer]: DXF Panel
+          - listitem [ref=e89]:
+            - button "Ρυθμίσεις" [ref=e90] [cursor=pointer]:
+              - img [ref=e91] [cursor=pointer]
+              - generic [ref=e94] [cursor=pointer]: Ρυθμίσεις
+              - img [ref=e95] [cursor=pointer]
+          - listitem [ref=e97]:
+            - link "Login" [ref=e98] [cursor=pointer]:
+              - /url: /login
+              - img [ref=e99] [cursor=pointer]
+              - generic [ref=e102] [cursor=pointer]: Login
+      - list [ref=e104]:
+        - listitem [ref=e105]:
+          - button "ΧΡ Χρήστης user@example.com" [ref=e106] [cursor=pointer]:
+            - generic [ref=e108] [cursor=pointer]: ΧΡ
+            - generic [ref=e109] [cursor=pointer]:
+              - generic [ref=e110] [cursor=pointer]: Χρήστης
+              - generic [ref=e111] [cursor=pointer]: user@example.com
+      - button "Toggle Sidebar" [ref=e112]
+    - main [ref=e113]:
+      - generic [ref=e115]:
+        - button "Toggle Sidebar" [ref=e116] [cursor=pointer]:
+          - img [ref=e117] [cursor=pointer]
+          - generic [ref=e119] [cursor=pointer]: Toggle Sidebar
+        - generic [ref=e120]:
+          - button "🇬🇷 Ελληνικά" [ref=e121] [cursor=pointer]:
+            - img [ref=e122] [cursor=pointer]
+            - generic [ref=e125] [cursor=pointer]: 🇬🇷 Ελληνικά
+          - button "Αλλαγή θέματος" [ref=e126] [cursor=pointer]:
+            - img [ref=e127] [cursor=pointer]
+            - img
+            - generic [ref=e133] [cursor=pointer]: Αλλαγή θέματος
+          - button "ΧΡ" [ref=e134] [cursor=pointer]:
+            - generic [ref=e136] [cursor=pointer]: ΧΡ
+      - main [ref=e137]:
+        - paragraph [ref=e141]: Έλεγχος δικαιωμάτων...
+  - region "Notifications (F8)":
+    - list
+  - region "Notifications alt+T"
+```

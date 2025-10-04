@@ -1,0 +1,17 @@
+{
+  "success": {
+    "saved": "Saved successfully",
+    "deleted": "Deleted successfully",
+    "updated": "Updated successfully"
+  },
+  "error": {
+    "general": "An error occurred",
+    "network": "Network error",
+    "validation": "Validation error"
+  },
+  "loading": {
+    "saving": "Saving...",
+    "loading": "Loading...",
+    "deleting": "Deleting..."
+  }
+}

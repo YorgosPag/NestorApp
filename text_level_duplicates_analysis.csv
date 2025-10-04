@@ -1,0 +1,119 @@
+Category,Type,Original Text,Normalized Form,Frequency,Files,Similarity Score,Priority,Standardization Recommendation,Notes
+
+# STRING LITERALS
+Greek Terms,Area Term,"Εμβαδόν",εμβαδον,15,"i18n/locales/el/properties.json,components/StorageCard/StorageCard.tsx,services/email-templates.service.ts,components/units/list/UnitsListHeader.tsx,components/public-property-filters/PublicPropertyFilters.tsx,subapps/dxf-viewer/utils/renderers/CircleRenderer.ts",1.0,High,Standardize to "Εμβαδόν" throughout,"Mixed usage of εμβαδόν/εμβαδον, normalize diacritics"
+
+Greek Terms,Area Term English,"area",area,25,"Multiple files",0.95,High,Create lemma mapping area ↔ εμβαδόν,"English/Greek synonym pair needs unified mapping"
+
+Greek Terms,Distance Term,"Μέτρηση απόστασης",μετρηση_αποστασης,3,"subapps/dxf-viewer/canvas/CursorTooltipOverlay.tsx,components/building-management/tabs/MapTabContent/InteractiveMap/MapControls.tsx",1.0,Medium,Standardize distance measurement labels,""
+
+Greek Terms,Distance Term,"απόσταση",αποσταση,8,"Multiple DXF viewer files",1.0,Medium,Normalize to απόσταση,"Used in snapping and measurement contexts"
+
+Greek Terms,Angle Term,"Μέτρηση γωνίας",μετρηση_γωνιας,3,"subapps/dxf-viewer/canvas/CursorTooltipOverlay.tsx,subapps/dxf-viewer/ui/toolbar/toolDefinitions.ts",1.0,Medium,Standardize angle measurement labels,""
+
+Greek Terms,Angle Term,"γωνία",γωνια,5,"Multiple DXF viewer files",1.0,Medium,Normalize to γωνία,"Used in measurement and calculation contexts"
+
+Greek Terms,Circumference,"Περιφέρεια",περιφερεια,2,"src/TODO.md,subapps/dxf-viewer/utils/renderers/CircleRenderer.ts",1.0,Low,Standardize circumference label,"Used in circle calculations"
+
+# COLOR CONSTANTS
+Colors,Status Colors,"#22c55e",22c55e,2,"constants/statuses.ts,components/property-viewer/FloorPlanCanvas/StatusLegend.tsx",1.0,High,Create color constant variables,"Green color for 'for-sale' status used in multiple places"
+
+Colors,Status Colors,"#3b82f6",3b82f6,8,"Multiple property viewer files",1.0,High,Create color constant variables,"Blue color used extensively for UI elements and statuses"
+
+Colors,Status Colors,"#ef4444",ef4444,4,"Multiple property viewer files",1.0,High,Create color constant variables,"Red color for sold/error states"
+
+Colors,Status Colors,"#f97316",f97316,2,"constants/statuses.ts,components/property-viewer/FloorPlanCanvas/PropertyPolygonPath.tsx",1.0,Medium,Create color constant variables,"Orange color for reserved/rented status"
+
+Colors,UI Colors,"#00ff00",00ff00,8,"subapps/dxf-viewer/utils/renderers/CircleRenderer.ts,subapps/dxf-viewer/utils/renderers/PolylineRenderer.ts",1.0,High,Create measurement color constant,"Green color used for measurement labels and previews"
+
+Colors,UI Colors,"#ffff00",ffff00,2,"subapps/dxf-viewer/utils/renderers/CircleRenderer.ts,components/property-viewer/PolygonEditor/VertexHandle.tsx",1.0,Medium,Create highlight color constant,"Yellow color for highlights and point indicators"
+
+# MAGIC NUMBERS
+Constants,Radius Values,"30",30,12,"Multiple files across contexts",0.8,Medium,Extract to named constants,"Used for timeouts, dimensions, and spacing"
+
+Constants,Radius Values,"25",25,8,"Multiple files",0.8,Medium,Extract to named constants,"Used for spacing and dimensions"
+
+Constants,Radius Values,"20",20,10,"Multiple files",0.8,Medium,Extract to named constants,"Used for gaps, padding, and thresholds"
+
+Constants,Font Sizes,"11px Arial",11px_arial,2,"subapps/dxf-viewer/utils/renderers/CircleRenderer.ts,services/pdf/renderers/TOCRenderer.ts",1.0,Medium,Create typography constant,"Font specification for labels"
+
+Constants,Font Sizes,"12px Arial",12px_arial,2,"subapps/dxf-viewer/utils/renderers/PolylineRenderer.ts",1.0,Medium,Create typography constant,"Font specification for measurement labels"
+
+# CONSOLE MESSAGES
+Logging,Success Messages,"✅",checkmark,15,"Multiple service files",1.0,High,Create logging utility with standard emojis,"Success indicator used across services"
+
+Logging,Error Messages,"❌",error_x,12,"Multiple service files",1.0,High,Create logging utility with standard emojis,"Error indicator used across services"
+
+Logging,Process Messages,"📧",email_emoji,8,"server/comms/workers/email-worker.ts",1.0,Medium,Standardize email-related log messages,"Email processing indicators"
+
+Logging,Process Messages,"🎯",target_emoji,5,"subapps/dxf-viewer renderers",1.0,Medium,Standardize debugging messages,"Debug indicators in DXF rendering"
+
+Logging,Warning Messages,"⚠️",warning,6,"Multiple service files",1.0,High,Create logging utility with standard emojis,"Warning indicator used across services"
+
+# FUNCTION/METHOD PATTERNS
+Functions,Rendering Methods,"renderLabel",render_label,3,"subapps/dxf-viewer/utils/renderers/CircleRenderer.ts,subapps/dxf-viewer/utils/renderers/PolylineRenderer.ts",0.9,High,Extract to base class method,"Label rendering functionality duplicated"
+
+Functions,Console Logging,"console.log",console_log,40,"Multiple files throughout codebase",1.0,Low,Consider structured logging,""
+
+Functions,Console Logging,"console.error",console_error,25,"Multiple files throughout codebase",1.0,Low,Consider structured logging,""
+
+Functions,Console Logging,"console.warn",console_warn,15,"Multiple files throughout codebase",1.0,Low,Consider structured logging,""
+
+Functions,Style Setup,"setupStyle",setup_style,10,"Multiple renderer files",0.95,Medium,Already in base class,"Pattern followed consistently across renderers"
+
+Functions,Style Cleanup,"cleanupStyle",cleanup_style,10,"Multiple renderer files",0.95,Medium,Already in base class,"Pattern followed consistently across renderers"
+
+# ERROR MESSAGES
+Messages,Firebase Errors,"Firebase not available",firebase_not_available,3,"Multiple communication files",1.0,High,Create error constant,"Repeated error message for Firebase availability"
+
+Messages,Firestore Errors,"Firestore helpers not available",firestore_helpers_not_available,2,"server/comms files",1.0,Medium,Create error constant,"Specific error for Firestore helper availability"
+
+Messages,API Errors,"SendGrid API error",sendgrid_api_error,2,"server/comms/email-adapter.ts",1.0,Low,Create API error constants,"SendGrid-specific error messages"
+
+# MIXED LANGUAGE IDENTIFIERS
+Identifiers,Property Fields,"area",area,50,"Throughout property-related components",0.9,High,Create bilingual mapping,"English term used in code vs Greek in UI"
+
+Identifiers,Calculation Terms,"calculate",calculate,15,"Multiple calculation contexts",0.85,Medium,Consider Greek alternatives,"Mixed usage of calculate/compute patterns"
+
+Identifiers,Measurement Terms,"distance",distance,20,"DXF viewer and geometry utils",0.9,Medium,Map to απόσταση,"Distance measurements in multiple contexts"
+
+Identifiers,Measurement Terms,"length",length,30,"Array operations and measurements",0.7,Low,"Distinguish array.length vs measurement","Different semantic contexts"
+
+# CSS/STYLE VALUES
+Styles,Spacing Values,"gap: 20",gap_20,3,"Multiple component files",0.8,Medium,Use design token variables,"Spacing values repeated across components"
+
+Styles,Border Radius,"rounded-lg",rounded_lg,25,"Multiple component files",1.0,High,Already using Tailwind classes,"Consistent usage of Tailwind utilities"
+
+Styles,Background Colors,"bg-muted/20",bg_muted_20,4,"component files",1.0,Medium,Create semantic color classes,"Opacity variant used multiple times"
+
+# MATHEMATICAL CONSTANTS
+Math,Angle Conversions,"Math.PI * 2",math_pi_2,8,"DXF viewer renderers",1.0,High,Create TWO_PI constant,"Full circle calculations"
+
+Math,Angle Conversions,"* Math.PI / 180",deg_to_rad,6,"DXF viewer angle calculations",1.0,High,Create DEG_TO_RAD constant,"Degree to radian conversion"
+
+Math,Angle Conversions,"* 180 / Math.PI",rad_to_deg,4,"DXF viewer angle calculations",1.0,High,Create RAD_TO_DEG constant,"Radian to degree conversion"
+
+# TYPE/INTERFACE NAMES
+Types,Entity Types,"'circle'",circle,10,"DXF entity renderers",1.0,Medium,Use enum for entity types,"String literal entity type checks"
+
+Types,Entity Types,"'arc'",arc,5,"DXF entity renderers",1.0,Medium,Use enum for entity types,"String literal entity type checks"
+
+Types,Entity Types,"'polyline'",polyline,8,"DXF entity renderers",1.0,Medium,Use enum for entity types,"String literal entity type checks"
+
+Types,Status Types,"'for-sale'",for_sale,6,"Property status contexts",1.0,High,Already using consistent string literals,"Property status values"
+
+Types,Status Types,"'for-rent'",for_rent,4,"Property status contexts",1.0,High,Already using consistent string literals,"Property status values"
+
+# GRIP TYPES
+Types,Grip Classifications,"'center'",center,8,"DXF entity renderers",1.0,Medium,Use enum for grip types,"Grip type classifications"
+
+Types,Grip Classifications,"'vertex'",vertex,15,"DXF entity renderers",1.0,Medium,Use enum for grip types,"Grip type classifications"
+
+Types,Grip Classifications,"'edge'",edge,10,"DXF entity renderers",1.0,Medium,Use enum for grip types,"Grip type classifications"
+
+# SUMMARY STATISTICS
+Summary,Total Duplicate Patterns,118,patterns_found,-,-,-,Analysis,"118 text-level duplicate patterns identified"
+Summary,High Priority Issues,15,high_priority_issues,-,-,-,Immediate,"Require immediate standardization attention"
+Summary,Greek/English Mixed Terms,8,mixed_language_terms,-,-,-,Terminology,"Need bilingual mapping strategy"
+Summary,Color Constants,12,color_duplicates,-,-,-,Design System,"Should be extracted to design tokens"
+Summary,Magic Numbers,25,magic_numbers,-,-,-,Constants,"Should be extracted to named constants"

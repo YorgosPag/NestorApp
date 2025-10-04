@@ -1,0 +1,43 @@
+{
+  "welcome": {
+    "title": "Węłȼøɱę ƀⱥȼƙ! 👋",
+    "subtitle": "Ɱⱥŋⱥǥę ɏøųȓ ȼøŋŧⱥȼŧś ɨŋ ŧȟę ɱøśŧ ęƒƒɨȼɨęŋŧ wⱥɏ. Ɏøų ȟⱥvę {count} ⱥȼŧɨvę ȼøŋŧⱥȼŧś ŧøđⱥɏ.",
+    "actions": {
+      "newContact": "Ŋęw Ȼøŋŧⱥȼŧ",
+      "search": "Șęⱥȓȼȟ"
+    }
+  },
+  "stats": {
+    "totalContacts": "Ŧøŧⱥł Ȼøŋŧⱥȼŧś",
+    "newContacts": "Ŋęw Ȼøŋŧⱥȼŧś",
+    "favorites": "Fⱥvøȓɨŧęś",
+    "activeToday": "Ⱥȼŧɨvę Ŧøđⱥɏ",
+    "periods": {
+      "thisMonth": "Ŧȟɨś ɱøŋŧȟ",
+      "lastMonth": "ƒȓøɱ łⱥśŧ ɱøŋŧȟ",
+      "last24h": "Łⱥśŧ 24 ȟøųȓś"
+    },
+    "quickAccess": "Qųɨȼƙ ⱥȼȼęśś"
+  },
+  "quickActions": {
+    "title": "Qųɨȼƙ Ⱥȼŧɨøŋś",
+    "subtitle": "Ȼȓęⱥŧę ŋęw ȼøŋŧⱥȼŧś wɨŧȟ øŋę ȼłɨȼƙ",
+    "individual": {
+      "title": "Ɨŋđɨvɨđųⱥł",
+      "description": "Ⱥđđ ᵽęȓśøŋ"
+    },
+    "company": {
+      "title": "Ȼøɱᵽⱥŋɏ", 
+      "description": "Ⱥđđ ȼøɱᵽⱥŋɏ"
+    },
+    "service": {
+      "title": "Ᵽųƀłɨȼ Șęȓvɨȼę",
+      "description": "Ⱥđđ śęȓvɨȼę"
+    }
+  },
+  "recentActivities": {
+    "title": "Řęȼęŋŧ Ⱥȼŧɨvɨŧɨęś",
+    "subtitle": "Łⱥŧęśŧ ⱥȼŧɨøŋś ɨŋ ŧȟę śɏśŧęɱ",
+    "viewAll": "Vɨęw ⱥłł"
+  }
+}

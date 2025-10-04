@@ -1,0 +1,2308 @@
+{
+  "files": [
+    {
+      "path": "app\\DxfViewerContent.tsx",
+      "imports": [
+        "react",
+        "../canvas/DxfCanvas",
+        "../hooks/useDxfViewerState",
+        "../types",
+        "../types/scene",
+        "../ui/FloatingPanelContainer",
+        "../ui/toolbar",
+        "../ui/OverlayToolbar",
+        "../canvas/DxfCanvas",
+        "../canvas/OverlayCanvasCore",
+        "../overlays/overlay-store",
+        "../overlays/overlay-adapter",
+        "../overlays/snap-adapter",
+        "../systems/levels/useLevels",
+        "../providers/GripProvider",
+        "../ui/CursorSettingsPanel",
+        "../systems/cursor",
+        "../snapping/hooks/useSnapManager",
+        "../snapping/context/SnapContext",
+        "../ui/components/ProSnapToolbar",
+        "../components/StorageStatus",
+        "../contexts/GlobalTextSettingsContext",
+        "../contexts/LineSettingsContext",
+        "../overlays/types",
+        "../hooks/useKeyboardControls",
+        "../hooks/useColorPicker",
+        "../hooks/useCanvasSync",
+        "../hooks/useOverlayDrawing",
+        "../utils/entity-manipulation",
+        "../components/ColorPickerPopover"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "zoom": 2
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": false
+    },
+    {
+      "path": "canvas\\CoordinateCalibrationOverlay.tsx",
+      "imports": [
+        "react",
+        "./calibration/types",
+        "./calibration/useCoordinateCalibrationIntegration"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "zoom": 1
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": false
+    },
+    {
+      "path": "canvas\\CursorTooltipOverlay.tsx",
+      "imports": [
+        "react",
+        "../systems/cursor"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "zoom": 2
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": false
+    },
+    {
+      "path": "canvas\\DxfCanvasOverlayIntegration.tsx",
+      "imports": [
+        "react",
+        "./overlay-renderer",
+        "../utils/devlog"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "canvas\\ZoomWindowOverlay.tsx",
+      "imports": [
+        "react",
+        "../hooks/useZoomWindow"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "zoom": 2
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": false
+    },
+    {
+      "path": "canvas\\OverlayCanvasCore.tsx",
+      "imports": [
+        "react",
+        "./overlay-renderer",
+        "../providers/GripProvider",
+        "./interaction/useGripInteraction",
+        "../contexts/LayersContext",
+        "../systems/coordinates/CoordinateSystem",
+        "../config/feature-flags",
+        "../systems/coordinates/CoordinateSystem",
+        "../types/overlay",
+        "./utils/region-hit-testing",
+        "./hooks/useOverlayCanvasState",
+        "./hooks/useGripSystemIntegration",
+        "./hooks/useOverlayMouseHandlers"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "canvas\\SnapIndicatorOverlay.tsx",
+      "imports": [
+        "react",
+        "../utils/feedback-utils",
+        "./hooks/useCanvasSetup",
+        "../snapping/extended-types",
+        "../types/scene",
+        "../systems/coordinates/CoordinateSystem",
+        "../systems/coordinates/CoordinateSystem",
+        "../config/color-config"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "canvas\\renderer.ts",
+      "imports": [
+        "../systems/coordinates/CoordinateSystem",
+        "../systems/coordinates/CoordinateSystem"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "canvas\\overlay-renderer.ts",
+      "imports": [
+        "../types/overlay",
+        "../systems/coordinates/CoordinateSystem",
+        "../types/gripSettings",
+        "../systems/coordinates/CoordinateSystem",
+        "../utils/overlay-drawing"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "canvas\\OverlayMouseHandler.tsx",
+      "imports": [
+        "react",
+        "../types/overlay",
+        "../systems/coordinates/CoordinateSystem",
+        "../utils/unified-entity-selection"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "canvas\\CanvasOverlays.tsx",
+      "imports": [
+        "react",
+        "./CrosshairOverlay",
+        "./ZoomWindowOverlay",
+        "./SelectionMarqueeOverlay",
+        "./CoordinateCalibrationOverlay",
+        "./SnapIndicatorOverlay",
+        "./SnapModeIndicator",
+        "../systems/dynamic-input",
+        "./CursorTooltipOverlay",
+        "../systems/cursor",
+        "../types/scene",
+        "../types/scene",
+        "../snapping/extended-types",
+        "../systems/coordinates/CoordinateSystem"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "canvas\\DxfCanvasCore.tsx",
+      "imports": [
+        "react",
+        "../types/scene",
+        "../utils/entity-renderer",
+        "../systems/coordinates/CoordinateSystem",
+        "../providers/GripProvider",
+        "../contexts/EntitySettingsContext",
+        "../contexts/GlobalTextSettingsContext",
+        "../types",
+        "../utils/renderers",
+        "./engine/createCanvasRenderer",
+        "./interaction/useHoverAndSelect",
+        "./interaction/useGripInteraction",
+        "../events/selection-bus",
+        "../utils/unified-entity-selection",
+        "../systems/rulers-grid/useRulersGrid"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "canvas\\DxfCanvasRefactored.tsx",
+      "imports": [
+        "react",
+        "./DxfCanvasCore",
+        "./CanvasOverlays",
+        "./hooks/useCanvasRenderer",
+        "./hooks/useCanvasTools",
+        "./hooks/useCanvasPanZoom",
+        "./hooks/useCanvasMarquee",
+        "../systems/dynamic-input",
+        "./hooks/useMousePosition",
+        "./hooks/useSyncRendererRefs",
+        "./hooks/useCanvasImperativeApi",
+        "./hooks/useSelectionWiring",
+        "./hooks/useSceneRender",
+        "../providers/GripProvider",
+        "./utils/selection-helpers",
+        "./hooks/useCanvasMouseEvents",
+        "./hooks/useCanvasState",
+        "./components/dxf-viewer/hooks/useSnapIntegration",
+        "../hooks/common/useProSnapIntegration",
+        "./interaction/useGripInteraction",
+        "../contexts/CanvasContext",
+        "../mouse/useCentralizedMouse",
+        "../types/scene",
+        "../types/scene",
+        "../hooks/drawing/useUnifiedDrawing",
+        "../types",
+        "../systems/coordinates/CoordinateSystem"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "zoom": 1,
+        "zoomIn": 2,
+        "zoomOut": 2,
+        "zoomAtScreenPoint": 3,
+        "fitToView": 3,
+        "activateZoomWindow": 1,
+        "deactivateZoomWindow": 1
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "collaboration\\CollaborationManager.ts",
+      "imports": [],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "zoom": 2
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": false
+    },
+    {
+      "path": "collaboration\\CollaborationOverlay.tsx",
+      "imports": [
+        "react",
+        "./CollaborationManager"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "zoom": 7
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": false
+    },
+    {
+      "path": "config\\tolerance-config.ts",
+      "imports": [],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "zoom": 2
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": false
+    },
+    {
+      "path": "handlers\\useToolbarActions.ts",
+      "imports": [
+        "../systems/levels",
+        "../snapping/pro-snap-engine",
+        "../utils/renderers",
+        "../hooks/useViewState",
+        "../types"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "zoom": 4,
+        "zoomIn": 3,
+        "zoomOut": 3,
+        "setZoom": 3
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": false
+    },
+    {
+      "path": "hooks\\useViewState.ts",
+      "imports": [
+        "react",
+        "./useZoomWindow"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [
+        "zoomIn",
+        "zoomOut",
+        "setZoom"
+      ],
+      "func_uses": {
+        "zoom": 11,
+        "zoomIn": 2,
+        "zoomOut": 2,
+        "setZoom": 2
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": false
+    },
+    {
+      "path": "hooks\\useKeyboardControls.ts",
+      "imports": [
+        "react",
+        "../canvas/DxfCanvas"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "zoom": 6,
+        "zoomIn": 1,
+        "zoomOut": 1,
+        "zoomAtScreenPoint": 1
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": false
+    },
+    {
+      "path": "hooks\\useCanvasSync.ts",
+      "imports": [
+        "react",
+        "../canvas/DxfCanvas",
+        "../types/scene"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "hooks\\useOverlayDrawing.ts",
+      "imports": [
+        "react",
+        "../overlays/types",
+        "../overlays/types",
+        "../utils/renderers/shared/geometry-rendering-utils"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "zoom": 1
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": false
+    },
+    {
+      "path": "hooks\\useDxfViewerState.ts",
+      "imports": [
+        "react",
+        "../canvas/DxfCanvas",
+        "../ui/toolbar/types",
+        "./drawing/useUnifiedDrawing",
+        "../providers/GripProvider",
+        "./common/useToolbarState",
+        "./canvas/useCanvasActions",
+        "./scene/useSceneState",
+        "./drawing/useDrawingHandlers"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "zoom": 5,
+        "zoomIn": 1,
+        "zoomOut": 1,
+        "fitToView": 1
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": false
+    },
+    {
+      "path": "keyboard\\useKeyboardShortcuts.ts",
+      "imports": [
+        "react",
+        "../ui/toolbar/types"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "zoom": 3
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": false
+    },
+    {
+      "path": "patches\\FitToView_BoundsOnly.ts",
+      "imports": [
+        "react"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "fitToView": 8
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": false
+    },
+    {
+      "path": "patches\\QuickFitToViewFix.ts",
+      "imports": [
+        "react"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "fitToView": 4
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": false
+    },
+    {
+      "path": "patches\\QuickRAFMouseThrottle.ts",
+      "imports": [
+        "react"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "snapping\\ProSnapEngineV2.ts",
+      "imports": [
+        "./SnapEngineCore",
+        "./SnapDebugLogger",
+        "./SnapPresets"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "snapping\\SnapEngineCore.ts",
+      "imports": [
+        "./orchestrator/SnapOrchestrator"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "types\\dxf-modules.d.ts",
+      "imports": [
+        "react",
+        "react",
+        "react",
+        "react",
+        "react",
+        "react",
+        "react",
+        "react",
+        "react"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "zoomIn": 1,
+        "zoomOut": 1
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": false
+    },
+    {
+      "path": "types\\index.ts",
+      "imports": [],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "zoom": 4
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": false
+    },
+    {
+      "path": "utils\\overlay-drawing.ts",
+      "imports": [
+        "../types/overlay",
+        "../canvas/renderer",
+        "../types/gripSettings",
+        "../types/overlay",
+        "../config/color-config",
+        "./renderers/shared/geometry-rendering-utils"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "utils\\SmartBoundsManager.ts",
+      "imports": [
+        "./OptimizedLogger",
+        "./renderers/shared/geometry-rendering-utils"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "fitToView": 6
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": false
+    },
+    {
+      "path": "utils\\overlay-utils.ts",
+      "imports": [
+        "../types"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "zoom": 1
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": false
+    },
+    {
+      "path": "utils\\entity-renderer.ts",
+      "imports": [
+        "./renderers/EntityRendererComposite",
+        "../systems/coordinates/CoordinateSystem",
+        "../types/gripSettings",
+        "../contexts/EntitySettingsContext",
+        "../contexts/GlobalTextSettingsContext"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "utils\\marquee-selection.ts",
+      "imports": [
+        "../systems/coordinates/CoordinateSystem",
+        "../types/scene",
+        "../systems/coordinates/CoordinateSystem"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "utils\\geometry-utils.ts",
+      "imports": [
+        "../systems/coordinates/CoordinateSystem"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "zoom": 1,
+        "zoomIn": 2,
+        "zoomOut": 2,
+        "fitToView": 2
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": false
+    },
+    {
+      "path": "utils\\canvas-core.ts",
+      "imports": [
+        "../systems/coordinates/CoordinateSystem"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "utils\\hover\\index.ts",
+      "imports": [
+        "./line-renderer",
+        "./polyline-renderer",
+        "./shape-renderers",
+        "./text-spline-renderers",
+        "./types",
+        "../../contexts/GlobalTextSettingsContext"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "utils\\hover\\line-renderer.ts",
+      "imports": [
+        "./config",
+        "./types",
+        "../../contexts/GlobalTextSettingsContext",
+        "./edge-utils"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "utils\\hover\\polyline-renderer.ts",
+      "imports": [
+        "./config",
+        "../geometry-utils",
+        "./render-utils",
+        "./edge-utils",
+        "./angle-utils",
+        "./types"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "utils\\hover\\shape-renderers.ts",
+      "imports": [
+        "./config",
+        "./polyline-renderer",
+        "./render-utils",
+        "./radius-utils",
+        "./types",
+        "../renderers/shared/geometry-rendering-utils",
+        "../renderers/shared/entity-validation-utils",
+        "../renderers/shared/geometry-rendering-utils",
+        "../../config/color-config"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "utils\\hover\\text-spline-renderers.ts",
+      "imports": [
+        "./render-utils",
+        "./polyline-renderer",
+        "./types",
+        "../renderers/shared/geometry-rendering-utils"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "utils\\hover\\types.ts",
+      "imports": [
+        "../../systems/coordinates/CoordinateSystem",
+        "../../types",
+        "../../contexts/GlobalTextSettingsContext"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "utils\\renderers\\BaseEntityRenderer.ts",
+      "imports": [
+        "../../systems/coordinates/CoordinateSystem",
+        "../../types/shared",
+        "../entity-renderer",
+        "../../config/color-config",
+        "../../types/gripSettings",
+        "../../systems/phase-manager/PhaseManager",
+        "../../types",
+        "./shared/line-utils",
+        "../../config/tolerance-config",
+        "../../config/color-config",
+        "./shared/geometry-rendering-utils",
+        "../../contexts/EntitySettingsContext",
+        "../../contexts/GlobalTextSettingsContext",
+        "./BaseRenderer_TextStyling",
+        "./BaseRenderer_PhaseRender",
+        "./BaseRenderer_GeometryUtils",
+        "./BaseRenderer_GripSystem",
+        "./BaseRenderer_ArcRendering",
+        "./mixin-utils"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "utils\\renderers\\BaseRenderer_ArcRendering.ts",
+      "imports": [
+        "../../systems/coordinates/CoordinateSystem",
+        "../../config/color-config"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "utils\\renderers\\BaseRenderer_GripSystem.ts",
+      "imports": [
+        "../../systems/coordinates/CoordinateSystem",
+        "../../systems/coordinates/CoordinateSystem",
+        "../../types/gripSettings",
+        "../../systems/phase-manager/PhaseManager",
+        "../../config/tolerance-config",
+        "../../config/color-config",
+        "./shared/geometry-rendering-utils"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "utils\\renderers\\BaseRenderer_GeometryUtils.ts",
+      "imports": [
+        "../../systems/coordinates/CoordinateSystem",
+        "../../contexts/GlobalTextSettingsContext",
+        "./shared/line-utils",
+        "../../systems/phase-manager/PhaseManager"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "utils\\renderers\\SplineRenderer.ts",
+      "imports": [
+        "./BaseEntityRenderer",
+        "../../types",
+        "../../systems/coordinates/CoordinateSystem",
+        "../hover",
+        "../geometry-utils"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "utils\\renderers\\RectangleRenderer.ts",
+      "imports": [
+        "./BaseEntityRenderer",
+        "../../types",
+        "../../systems/coordinates/CoordinateSystem",
+        "../geometry-utils",
+        "./shared/line-utils",
+        "./shared/geometry-rendering-utils",
+        "../../systems/selection/utils"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "utils\\renderers\\TextRenderer.ts",
+      "imports": [
+        "./BaseEntityRenderer",
+        "../../types",
+        "../../systems/coordinates/CoordinateSystem",
+        "../hover",
+        "../../config/color-config"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "utils\\renderers\\PolylineRenderer.ts",
+      "imports": [
+        "./BaseEntityRenderer",
+        "../../types",
+        "../../systems/coordinates/CoordinateSystem",
+        "../geometry-utils",
+        "../../config/tolerance-config",
+        "./shared/line-utils",
+        "./shared/geometry-rendering-utils"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "utils\\renderers\\EllipseRenderer.ts",
+      "imports": [
+        "./BaseEntityRenderer",
+        "../../types",
+        "../../systems/coordinates/CoordinateSystem",
+        "../hover",
+        "./shared/dot-rendering-utils",
+        "./shared/grip-utils",
+        "./shared/entity-validation-utils",
+        "./shared/geometry-rendering-utils"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "utils\\renderers\\ArcRenderer.ts",
+      "imports": [
+        "./BaseEntityRenderer",
+        "../../types",
+        "../../systems/coordinates/CoordinateSystem",
+        "../hover"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "utils\\renderers\\AngleMeasurementRenderer.ts",
+      "imports": [
+        "./BaseEntityRenderer",
+        "../../types",
+        "../../systems/coordinates/CoordinateSystem",
+        "../geometry-utils",
+        "./shared"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "utils\\renderers\\EntityRendererComposite.ts",
+      "imports": [
+        "./BaseEntityRenderer",
+        "../../types",
+        "./LineRenderer",
+        "./CircleRenderer",
+        "./PolylineRenderer",
+        "./ArcRenderer",
+        "./TextRenderer",
+        "./RectangleRenderer",
+        "./EllipseRenderer",
+        "./SplineRenderer",
+        "./AngleMeasurementRenderer",
+        "../../config/color-config",
+        "../../contexts/EntitySettingsContext",
+        "../../contexts/GlobalTextSettingsContext",
+        "../../systems/coordinates/CoordinateSystem",
+        "../../types/gripSettings"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "utils\\renderers\\LineRenderer.ts",
+      "imports": [
+        "./BaseEntityRenderer",
+        "../../types",
+        "../../systems/coordinates/CoordinateSystem",
+        "../hover",
+        "../geometry-utils",
+        "./shared/line-utils",
+        "./shared/geometry-rendering-utils"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "zoom": 1
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "utils\\renderers\\CircleRenderer.ts",
+      "imports": [
+        "./BaseEntityRenderer",
+        "../../types",
+        "../../systems/coordinates/CoordinateSystem",
+        "../hover",
+        "./shared/grip-utils",
+        "./shared/circle-text-utils",
+        "./shared/line-rendering-utils",
+        "./shared/phase-text-utils",
+        "../../config/color-config"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "utils\\renderers\\shared\\line-utils.ts",
+      "imports": [
+        "../../../systems/coordinates/CoordinateSystem",
+        "../../../types",
+        "../../geometry-utils",
+        "./geometry-rendering-utils"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "utils\\renderers\\shared\\dot-rendering-utils.ts",
+      "imports": [
+        "../../../systems/coordinates/CoordinateSystem"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "ui\\components\\CanvasSettings.tsx",
+      "imports": [
+        "react"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "zoom": 1
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": false
+    },
+    {
+      "path": "ui\\icons\\iconRegistry.tsx",
+      "imports": [
+        "react"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "zoom": 8
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": false
+    },
+    {
+      "path": "ui\\toolbar\\EnhancedDXFToolbar.tsx",
+      "imports": [
+        "react",
+        "./types",
+        "./toolDefinitions",
+        "../../keyboard/useKeyboardShortcuts",
+        "../../hooks/common/useProSnapIntegration",
+        "./ZoomControls",
+        "./ScaleControls",
+        "./ToolButton",
+        "./ToolbarStatusBar",
+        "../components/ProSnapToolbar",
+        "../UploadDxfButton",
+        "../../components/SimpleProjectDialog",
+        "../../types/scene"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "zoom": 7
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": false
+    },
+    {
+      "path": "ui\\toolbar\\ScaleControls.tsx",
+      "imports": [
+        "react",
+        "lucide-react",
+        "./shared/input-validation"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "zoom": 6
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": false
+    },
+    {
+      "path": "ui\\toolbar\\toolDefinitions.ts",
+      "imports": [
+        "./icons/AngleIcon",
+        "./icons/AngleLineArcIcon",
+        "./icons/AngleTwoArcsIcon",
+        "./icons/AngleMeasureGeomIcon",
+        "./icons/AngleConstraintIcon",
+        "./types"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "zoom": 4
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": false
+    },
+    {
+      "path": "ui\\toolbar\\types.ts",
+      "imports": [],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "zoom": 4
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": false
+    },
+    {
+      "path": "ui\\toolbar\\ZoomControls.tsx",
+      "imports": [
+        "react",
+        "lucide-react",
+        "./shared/input-validation"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "zoom": 4
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": false
+    },
+    {
+      "path": "ui\\components\\dxf-settings\\settings\\CanvasSettings.tsx",
+      "imports": [
+        "react",
+        "../../../../contexts/CanvasContext"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "zoom": 1
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": false
+    },
+    {
+      "path": "systems\\drawing-orchestrator\\DrawingOrchestrator.ts",
+      "imports": [
+        "react",
+        "../../hooks/drawing/useUnifiedDrawing",
+        "../dynamic-input/hooks/useDynamicInputHandler",
+        "../../hooks/drawing/useUnifiedDrawing",
+        "../../types/scene"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "systems\\grip-interaction\\GripInteractionManager.ts",
+      "imports": [
+        "../rulers-grid/config",
+        "../../types",
+        "../phase-manager/PhaseManager"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "systems\\interaction\\InteractionEngine.ts",
+      "imports": [
+        "react",
+        "../../types/scene",
+        "../../ui/toolbar/types"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [
+        "wheel",
+        "wheel"
+      ],
+      "has_transform_terms": true
+    },
+    {
+      "path": "systems\\phase-manager\\PhaseManager.ts",
+      "imports": [
+        "../rulers-grid/config",
+        "../../types",
+        "../../config/color-config",
+        "../selection/shared/selection-duplicate-utils",
+        "../../utils/renderers/shared/geometry-rendering-utils",
+        "../../stores/ToolStyleStore",
+        "../../contexts/EntitySettingsContext",
+        "../../types/gripSettings",
+        "../../contexts/LineSettingsContext"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "systems\\rulers-grid\\RulersGridSystem.tsx",
+      "imports": [
+        "react",
+        "./config",
+        "./utils",
+        "./useRulersGrid",
+        "./types",
+        "./useRulerManagement",
+        "./useGridManagement",
+        "./useSnapManagement",
+        "./useRenderingCalculations"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "systems\\rulers-grid\\useRulersGrid.ts",
+      "imports": [
+        "react",
+        "./config"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "systems\\rulers-grid\\types.ts",
+      "imports": [
+        "react",
+        "./config"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "systems\\rulers-grid\\useSnapManagement.ts",
+      "imports": [
+        "react",
+        "./config",
+        "./config",
+        "./utils"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "systems\\rulers-grid\\useRenderingCalculations.ts",
+      "imports": [
+        "react",
+        "./config",
+        "./utils"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "systems\\rulers-grid\\config.ts",
+      "imports": [
+        "../../types/shared"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "systems\\rulers-grid\\utils.ts",
+      "imports": [
+        "./config",
+        "../coordinates/CoordinateSystem"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "zoom": 1
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "systems\\selection\\utils.ts",
+      "imports": [
+        "../coordinates/CoordinateSystem",
+        "../../types/scene",
+        "../../utils/geometry-utils",
+        "./shared/selection-duplicate-utils",
+        "../../utils/renderers/shared/geometry-rendering-utils"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "systems\\toolbars\\config.ts",
+      "imports": [],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "zoom": 7
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": false
+    },
+    {
+      "path": "systems\\tools\\ToolStateManager.ts",
+      "imports": [
+        "react",
+        "../../ui/toolbar/types",
+        "../../hooks/drawing/useUnifiedDrawing"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "zoom": 16
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": false
+    },
+    {
+      "path": "systems\\coordinates\\useCoordinateTransforms.ts",
+      "imports": [
+        "react"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "systems\\coordinates\\CoordinateSystem.ts",
+      "imports": [
+        "../../types/shared"
+      ],
+      "const_defs": [],
+      "const_uses": {
+        "ZOOM_FACTOR": 1,
+        "MIN_SCALE": 1,
+        "MAX_SCALE": 1
+      },
+      "func_defs": [],
+      "func_uses": {
+        "zoom": 3
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "snapping\\engines\\BaseSnapEngine.ts",
+      "imports": [
+        "../../systems/coordinates/CoordinateSystem",
+        "../../types",
+        "../../utils/renderers/shared/geometry-rendering-utils"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "snapping\\hooks\\useSnapManager.tsx",
+      "imports": [
+        "react",
+        "../ProSnapEngineV2",
+        "../context/SnapContext",
+        "../extended-types",
+        "../../types/scene"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "snapping\\orchestrator\\SnapContextManager.ts",
+      "imports": [
+        "../extended-types",
+        "../shared/BaseSnapEngine"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "snapping\\orchestrator\\SnapEngineRegistry.ts",
+      "imports": [
+        "../extended-types",
+        "../shared/BaseSnapEngine",
+        "../engines/EndpointSnapEngine",
+        "../engines/MidpointSnapEngine",
+        "../engines/IntersectionSnapEngine",
+        "../engines/CenterSnapEngine",
+        "../engines/QuadrantSnapEngine",
+        "../engines/NearestSnapEngine",
+        "../engines/TangentSnapEngine",
+        "../engines/ParallelSnapEngine",
+        "../engines/ExtensionSnapEngine",
+        "../engines/NodeSnapEngine",
+        "../engines/InsertionSnapEngine",
+        "../engines/NearSnapEngine",
+        "../engines/PerpendicularSnapEngine",
+        "../engines/OrthoSnapEngine"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "snapping\\orchestrator\\SnapOrchestrator.ts",
+      "imports": [
+        "../extended-types",
+        "./SnapEngineRegistry",
+        "./SnapCandidateProcessor",
+        "./SnapContextManager"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "mouse\\handlers\\GripDragHandler.ts",
+      "imports": [
+        "react",
+        "../MouseStateManager",
+        "../MouseStateManager",
+        "../../utils/renderers/shared/geometry-rendering-utils",
+        "../../types/scene",
+        "../../systems/grip-interaction/GripInteractionManager",
+        "../../systems/phase-manager/PhaseManager"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "hooks\\canvas\\useCanvasActions.ts",
+      "imports": [
+        "react",
+        "../../canvas/DxfCanvas",
+        "../../types/scene",
+        "../../snapping/context/SnapContext",
+        "../../utils/geometry-utils"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "zoom": 6,
+        "zoomIn": 3,
+        "zoomOut": 3,
+        "fitToView": 3
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "hooks\\common\\useToolbarState.ts",
+      "imports": [
+        "react",
+        "../../ui/toolbar/types",
+        "../../types",
+        "../drawing/useUnifiedDrawing"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "zoom": 9
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": false
+    },
+    {
+      "path": "hooks\\drawing\\useDrawingHandlers.ts",
+      "imports": [
+        "react",
+        "../../canvas/DxfCanvas",
+        "../../ui/toolbar/types",
+        "./useUnifiedDrawing",
+        "../../snapping/context/SnapContext",
+        "../../snapping/hooks/useSnapManager",
+        "../../systems/drawing",
+        "../../systems/coordinates/CoordinateSystem"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "hooks\\grips\\useUnifiedGripsSystem.ts",
+      "imports": [
+        "react",
+        "../../types/overlay",
+        "../../types/scene",
+        "../../systems/coordinates/CoordinateSystem",
+        "../../types/gripSettings",
+        "./useGripDragging",
+        "./useGripDetection",
+        "./useGripSettings",
+        "./useEntityGripInteraction"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "hooks\\grips\\useGripDragging.ts",
+      "imports": [
+        "react",
+        "../../types/overlay",
+        "../../systems/coordinates/CoordinateSystem",
+        "../../types/gripSettings"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "hooks\\scene\\useSceneState.ts",
+      "imports": [
+        "react",
+        "../../canvas/DxfCanvas",
+        "../../types/scene",
+        "../../config/color-config",
+        "../../systems/levels",
+        "../../canvas/useDxfImport"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "fitToView": 1
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": false
+    },
+    {
+      "path": "components\\dxf-layout\\CanvasSection.tsx",
+      "imports": [
+        "react",
+        "../../canvas/DxfCanvas",
+        "../../ui/FloatingPanelContainer",
+        "../../ui/OverlayList",
+        "../../ui/OverlayProperties",
+        "../../overlays/overlay-store",
+        "../../systems/levels",
+        "../../integration/types",
+        "../../overlays/types",
+        "../../overlays/types",
+        "../../utils/renderers/shared/geometry-rendering-utils"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "zoom": 1
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": false
+    },
+    {
+      "path": "components\\dxf-layout\\StatusBar.tsx",
+      "imports": [
+        "react",
+        "../../../../components/ui/button",
+        "../../../../components/ui/badge",
+        "lucide-react",
+        "../../integration/types"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "zoom": 1
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": false
+    },
+    {
+      "path": "canvas\\calibration\\useCoordinateCalibrationIntegration.ts",
+      "imports": [
+        "react",
+        "../../types/scene",
+        "./types",
+        "./useCalibrationState",
+        "./useCoordinateCalculations",
+        "./useTestEntity"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "canvas\\calibration\\useCoordinateCalculations.ts",
+      "imports": [
+        "react",
+        "../../types/scene",
+        "../../config/tolerance-config",
+        "./types"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "canvas\\engine\\createCanvasRenderer.ts",
+      "imports": [
+        "react",
+        "../../types/scene",
+        "../../systems/coordinates/CoordinateSystem",
+        "../../systems/coordinates/CoordinateSystem",
+        "../../utils/unified-entity-selection",
+        "./scene-render",
+        "./transforms",
+        "../../utils/entity-renderer",
+        "../../types/gripSettings",
+        "../../systems/coordinates/CoordinateSystem"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "zoom": 5,
+        "zoomIn": 2,
+        "zoomOut": 2,
+        "fitToView": 2,
+        "activateZoomWindow": 2,
+        "deactivateZoomWindow": 2
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "canvas\\engine\\scene-render.ts",
+      "imports": [
+        "../../types/scene",
+        "../../systems/coordinates/CoordinateSystem",
+        "../../types",
+        "../../utils/renderers",
+        "../../utils/entity-renderer",
+        "../../types/gripSettings",
+        "../../config/color-config",
+        "../../systems/rulers-grid/utils",
+        "../../systems/coordinates/CoordinateSystem"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "canvas\\engine\\transforms.ts",
+      "imports": [
+        "../../systems/coordinates/CoordinateSystem"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "canvas\\hooks\\useCanvasMarquee.ts",
+      "imports": [
+        "react",
+        "../../types/scene",
+        "../../types/scene",
+        "../../utils/marquee-selection"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "canvas\\hooks\\useCanvasRenderer.ts",
+      "imports": [
+        "react",
+        "../../types/scene"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "zoom": 3,
+        "zoomIn": 3,
+        "zoomOut": 3,
+        "fitToView": 7
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "canvas\\hooks\\useOverlayMouseHandlers.ts",
+      "imports": [
+        "react",
+        "../utils/region-hit-testing",
+        "../../systems/coordinates/CoordinateSystem",
+        "../../types/overlay",
+        "./useOverlayCanvasState"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "canvas\\hooks\\useGripSystemIntegration.ts",
+      "imports": [
+        "react",
+        "../interaction/useGripInteraction",
+        "../../systems/coordinates/CoordinateSystem",
+        "../../types/overlay",
+        "../../types/gripSettings",
+        "./useOverlayCanvasState"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "canvas\\hooks\\useMousePosition.ts",
+      "imports": [
+        "react",
+        "../../types/scene",
+        "../../systems/coordinates/CoordinateSystem"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "zoom": 1
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "canvas\\hooks\\useSyncRendererRefs.ts",
+      "imports": [
+        "react",
+        "../../systems/coordinates/CoordinateSystem"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "canvas\\hooks\\useCanvasMouseHandling.ts",
+      "imports": [
+        "react",
+        "../../types/scene",
+        "../../snapping/extended-types",
+        "../../utils/canvas-core",
+        "../../systems/coordinates/CoordinateSystem"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "canvas\\hooks\\useCanvasSelection.ts",
+      "imports": [
+        "react",
+        "../../utils/unified-entity-selection",
+        "../../events/selection-bus",
+        "../../utils/canvas-core",
+        "../../systems/coordinates/CoordinateSystem",
+        "../../types/scene",
+        "../../types/scene"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "canvas\\hooks\\useCanvasTools.ts",
+      "imports": [
+        "react",
+        "../../utils/unified-entity-selection",
+        "../../events/selection-bus",
+        "../../utils/canvas-core",
+        "../../types/scene",
+        "../../types/scene",
+        "../../hooks/drawing/useUnifiedDrawing",
+        "./shared/canvas-callback-types"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "canvas\\hooks\\useCanvasInteractions.ts",
+      "imports": [
+        "react",
+        "./useCanvasMouseHandling",
+        "./useCanvasSelection",
+        "../../systems/coordinates/CoordinateSystem",
+        "../../types/scene",
+        "../../types/scene",
+        "./shared/canvas-callback-types",
+        "../../hooks/drawing/useUnifiedDrawing"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "zoom": 1
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "canvas\\hooks\\useCanvasImperativeApi.ts",
+      "imports": [
+        "react",
+        "../../types/scene",
+        "../../types/scene",
+        "../../systems/coordinates/CoordinateSystem"
+      ],
+      "const_defs": [],
+      "const_uses": {
+        "ZOOM_FACTOR": 3
+      },
+      "func_defs": [],
+      "func_uses": {
+        "zoomIn": 1,
+        "zoomOut": 1,
+        "zoomAtScreenPoint": 6,
+        "fitToView": 6,
+        "activateZoomWindow": 2,
+        "deactivateZoomWindow": 2
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "canvas\\hooks\\useCanvasPanZoom.ts",
+      "imports": [
+        "react",
+        "../../types/scene",
+        "../../utils/canvas-core",
+        "../../systems/coordinates/CoordinateSystem"
+      ],
+      "const_defs": [],
+      "const_uses": {
+        "ZOOM_FACTOR": 4,
+        "MIN_SCALE": 1,
+        "MAX_SCALE": 1
+      },
+      "func_defs": [],
+      "func_uses": {
+        "zoom": 4,
+        "zoomAtScreenPoint": 5
+      },
+      "wheel_handlers": [
+        "wheel"
+      ],
+      "has_transform_terms": true
+    },
+    {
+      "path": "canvas\\interaction\\useGripInteraction.ts",
+      "imports": [
+        "react",
+        "../../systems/coordinates/CoordinateSystem",
+        "../../systems/coordinates/CoordinateSystem",
+        "../../utils/geometry-utils",
+        "../../types/scene",
+        "../../utils/entity-renderer",
+        "../../types/gripSettings",
+        "../../systems/phase-manager/PhaseManager",
+        "../../utils/renderers/shared/geometry-rendering-utils"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "canvas\\interaction\\useHoverAndSelect.ts",
+      "imports": [
+        "react",
+        "../../events/selection-bus",
+        "../../utils/unified-entity-selection",
+        "../../systems/coordinates/CoordinateSystem",
+        "../../types/scene"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "canvas\\interaction\\hit-test.ts",
+      "imports": [
+        "../../utils/unified-entity-selection",
+        "../../systems/coordinates/CoordinateSystem",
+        "../../types/scene",
+        "../../config/tolerance-config"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "canvas\\utils\\selection-helpers.ts",
+      "imports": [
+        "../../types/scene",
+        "../../types/scene",
+        "../../utils/unified-entity-selection",
+        "../../events/selection-bus",
+        "../../config/tolerance-config"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "canvas\\utils\\region-hit-testing.ts",
+      "imports": [
+        "../../types/overlay",
+        "../../systems/coordinates/CoordinateSystem"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "canvas\\components\\dxf-viewer\\components\\DxfViewerCanvas.tsx",
+      "imports": [
+        "react",
+        "../../../DxfCanvas",
+        "../../../DxfCanvasOverlayIntegration",
+        "../../../DxfCanvas",
+        "../../../../types/scene",
+        "../../../../types/scene",
+        "../../../../ui/toolbar/types",
+        "../../../../snapping/extended-types"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {},
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    },
+    {
+      "path": "canvas\\components\\dxf-viewer\\hooks\\useToolActions.ts",
+      "imports": [
+        "react",
+        "../../../../ui/toolbar/types"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "zoom": 2
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": false
+    },
+    {
+      "path": "canvas\\components\\dxf-viewer\\hooks\\useUnifiedActions.ts",
+      "imports": [
+        "react",
+        "../../../../ui/toolbar/types"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "zoom": 6,
+        "zoomIn": 4,
+        "zoomOut": 4,
+        "setZoom": 4,
+        "fitToView": 4
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": false
+    },
+    {
+      "path": "canvas\\components\\dxf-viewer\\hooks\\useFileActions.ts",
+      "imports": [
+        "react",
+        "../../../useDxfImport",
+        "../../../../types/scene",
+        "../../../../DxfCanvas"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "fitToView": 1
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": false
+    },
+    {
+      "path": "canvas\\components\\dxf-viewer\\hooks\\useZoomIntegration.ts",
+      "imports": [
+        "react",
+        "../../../DxfCanvas",
+        "../../../../types/scene",
+        "../../../../utils/geometry-utils"
+      ],
+      "const_defs": [],
+      "const_uses": {},
+      "func_defs": [],
+      "func_uses": {
+        "zoom": 6,
+        "zoomIn": 2,
+        "zoomOut": 2,
+        "setZoom": 2,
+        "fitToView": 4,
+        "activateZoomWindow": 3,
+        "deactivateZoomWindow": 3
+      },
+      "wheel_handlers": [],
+      "has_transform_terms": true
+    }
+  ],
+  "summary": {
+    "constant_definitions": {},
+    "buckets": {
+      "other": [
+        "app\\DxfViewerContent.tsx",
+        "canvas\\CoordinateCalibrationOverlay.tsx",
+        "canvas\\CursorTooltipOverlay.tsx",
+        "canvas\\DxfCanvasOverlayIntegration.tsx",
+        "canvas\\OverlayCanvasCore.tsx",
+        "canvas\\SnapIndicatorOverlay.tsx",
+        "canvas\\renderer.ts",
+        "canvas\\overlay-renderer.ts",
+        "canvas\\OverlayMouseHandler.tsx",
+        "canvas\\CanvasOverlays.tsx",
+        "canvas\\DxfCanvasCore.tsx",
+        "canvas\\DxfCanvasRefactored.tsx",
+        "collaboration\\CollaborationManager.ts",
+        "collaboration\\CollaborationOverlay.tsx",
+        "config\\tolerance-config.ts",
+        "handlers\\useToolbarActions.ts",
+        "hooks\\useViewState.ts",
+        "hooks\\useKeyboardControls.ts",
+        "hooks\\useCanvasSync.ts",
+        "hooks\\useOverlayDrawing.ts",
+        "hooks\\useDxfViewerState.ts",
+        "keyboard\\useKeyboardShortcuts.ts",
+        "patches\\FitToView_BoundsOnly.ts",
+        "patches\\QuickFitToViewFix.ts",
+        "patches\\QuickRAFMouseThrottle.ts",
+        "snapping\\ProSnapEngineV2.ts",
+        "snapping\\SnapEngineCore.ts",
+        "types\\dxf-modules.d.ts",
+        "types\\index.ts",
+        "utils\\overlay-drawing.ts",
+        "utils\\SmartBoundsManager.ts",
+        "utils\\overlay-utils.ts",
+        "utils\\entity-renderer.ts",
+        "utils\\marquee-selection.ts",
+        "utils\\geometry-utils.ts",
+        "utils\\canvas-core.ts",
+        "utils\\hover\\index.ts",
+        "utils\\hover\\line-renderer.ts",
+        "utils\\hover\\polyline-renderer.ts",
+        "utils\\hover\\shape-renderers.ts",
+        "utils\\hover\\text-spline-renderers.ts",
+        "utils\\hover\\types.ts",
+        "utils\\renderers\\BaseEntityRenderer.ts",
+        "utils\\renderers\\BaseRenderer_ArcRendering.ts",
+        "utils\\renderers\\BaseRenderer_GripSystem.ts",
+        "utils\\renderers\\BaseRenderer_GeometryUtils.ts",
+        "utils\\renderers\\SplineRenderer.ts",
+        "utils\\renderers\\RectangleRenderer.ts",
+        "utils\\renderers\\TextRenderer.ts",
+        "utils\\renderers\\PolylineRenderer.ts",
+        "utils\\renderers\\EllipseRenderer.ts",
+        "utils\\renderers\\ArcRenderer.ts",
+        "utils\\renderers\\AngleMeasurementRenderer.ts",
+        "utils\\renderers\\EntityRendererComposite.ts",
+        "utils\\renderers\\LineRenderer.ts",
+        "utils\\renderers\\CircleRenderer.ts",
+        "utils\\renderers\\shared\\line-utils.ts",
+        "utils\\renderers\\shared\\dot-rendering-utils.ts",
+        "ui\\components\\CanvasSettings.tsx",
+        "ui\\icons\\iconRegistry.tsx",
+        "ui\\toolbar\\EnhancedDXFToolbar.tsx",
+        "ui\\toolbar\\ScaleControls.tsx",
+        "ui\\toolbar\\toolDefinitions.ts",
+        "ui\\toolbar\\types.ts",
+        "ui\\toolbar\\ZoomControls.tsx",
+        "ui\\components\\dxf-settings\\settings\\CanvasSettings.tsx",
+        "systems\\drawing-orchestrator\\DrawingOrchestrator.ts",
+        "systems\\grip-interaction\\GripInteractionManager.ts",
+        "systems\\interaction\\InteractionEngine.ts",
+        "systems\\phase-manager\\PhaseManager.ts",
+        "systems\\rulers-grid\\RulersGridSystem.tsx",
+        "systems\\rulers-grid\\useRulersGrid.ts",
+        "systems\\rulers-grid\\types.ts",
+        "systems\\rulers-grid\\useSnapManagement.ts",
+        "systems\\rulers-grid\\useRenderingCalculations.ts",
+        "systems\\rulers-grid\\config.ts",
+        "systems\\rulers-grid\\utils.ts",
+        "systems\\selection\\utils.ts",
+        "systems\\toolbars\\config.ts",
+        "systems\\tools\\ToolStateManager.ts",
+        "systems\\coordinates\\useCoordinateTransforms.ts",
+        "systems\\coordinates\\CoordinateSystem.ts",
+        "snapping\\engines\\BaseSnapEngine.ts",
+        "snapping\\hooks\\useSnapManager.tsx",
+        "snapping\\orchestrator\\SnapContextManager.ts",
+        "snapping\\orchestrator\\SnapEngineRegistry.ts",
+        "snapping\\orchestrator\\SnapOrchestrator.ts",
+        "mouse\\handlers\\GripDragHandler.ts",
+        "hooks\\canvas\\useCanvasActions.ts",
+        "hooks\\common\\useToolbarState.ts",
+        "hooks\\drawing\\useDrawingHandlers.ts",
+        "hooks\\grips\\useUnifiedGripsSystem.ts",
+        "hooks\\grips\\useGripDragging.ts",
+        "hooks\\scene\\useSceneState.ts",
+        "components\\dxf-layout\\CanvasSection.tsx",
+        "components\\dxf-layout\\StatusBar.tsx",
+        "canvas\\calibration\\useCoordinateCalibrationIntegration.ts",
+        "canvas\\calibration\\useCoordinateCalculations.ts",
+        "canvas\\engine\\createCanvasRenderer.ts",
+        "canvas\\engine\\scene-render.ts",
+        "canvas\\engine\\transforms.ts",
+        "canvas\\hooks\\useCanvasMarquee.ts",
+        "canvas\\hooks\\useCanvasRenderer.ts",
+        "canvas\\hooks\\useOverlayMouseHandlers.ts",
+        "canvas\\hooks\\useGripSystemIntegration.ts",
+        "canvas\\hooks\\useMousePosition.ts",
+        "canvas\\hooks\\useSyncRendererRefs.ts",
+        "canvas\\hooks\\useCanvasMouseHandling.ts",
+        "canvas\\hooks\\useCanvasSelection.ts",
+        "canvas\\hooks\\useCanvasTools.ts",
+        "canvas\\hooks\\useCanvasInteractions.ts",
+        "canvas\\hooks\\useCanvasImperativeApi.ts",
+        "canvas\\hooks\\useCanvasPanZoom.ts",
+        "canvas\\interaction\\useGripInteraction.ts",
+        "canvas\\interaction\\useHoverAndSelect.ts",
+        "canvas\\interaction\\hit-test.ts",
+        "canvas\\utils\\selection-helpers.ts",
+        "canvas\\utils\\region-hit-testing.ts",
+        "canvas\\components\\dxf-viewer\\components\\DxfViewerCanvas.tsx",
+        "canvas\\components\\dxf-viewer\\hooks\\useToolActions.ts",
+        "canvas\\components\\dxf-viewer\\hooks\\useUnifiedActions.ts",
+        "canvas\\components\\dxf-viewer\\hooks\\useFileActions.ts",
+        "canvas\\components\\dxf-viewer\\hooks\\useZoomIntegration.ts"
+      ],
+      "zoom_window": [
+        "canvas\\ZoomWindowOverlay.tsx"
+      ]
+    }
+  },
+  "duplicates": {
+    "wheel_handlers": [
+      "systems\\interaction\\InteractionEngine.ts",
+      "canvas\\hooks\\useCanvasPanZoom.ts"
+    ],
+    "constants": [],
+    "api_names": []
+  }
+}

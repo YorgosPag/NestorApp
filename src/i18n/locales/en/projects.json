@@ -1,0 +1,94 @@
+{
+  "title": "Projects",
+  "description": "Manage projects and construction sites",
+  "toolbar": {
+    "new": "New Project",
+    "edit": "Edit",
+    "delete": "Delete",
+    "export": "Export",
+    "import": "Import",
+    "refresh": "Refresh",
+    "archive": "Archive",
+    "favorite": "Favorites",
+    "share": "Share",
+    "mapView": "Map View",
+    "help": "Help",
+    "search": {
+      "placeholder": "Search projects..."
+    },
+    "filters": {
+      "status": {
+        "label": "Status",
+        "inProgress": "In Progress",
+        "planning": "Planning",
+        "completed": "Completed",
+        "onHold": "On Hold"
+      },
+      "type": {
+        "label": "Type",
+        "residential": "Residential",
+        "commercial": "Commercial",
+        "infrastructure": "Infrastructure"
+      },
+      "sort": {
+        "label": "Sort",
+        "ascending": "Ascending (A-Z)",
+        "descending": "Descending (Z-A)",
+        "byDate": "By start date",
+        "byCompletion": "By progress",
+        "byPriority": "By priority"
+      }
+    },
+    "selection": {
+      "selected": "selected projects",
+      "deleteConfirm": "Are you sure you want to delete {{count}} project(s)?"
+    },
+    "shortcuts": {
+      "newProject": "Create new project (Ctrl+N)",
+      "editProject": "Edit selected project (Ctrl+E)",
+      "refresh": "Refresh projects list (F5)",
+      "help": "Help and instructions (F1)"
+    }
+  },
+  "card": {
+    "status": {
+      "planning": "Planning",
+      "inProgress": "In Progress",
+      "completed": "Completed",
+      "onHold": "On Hold",
+      "cancelled": "Cancelled"
+    },
+    "priority": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "urgent": "Urgent"
+    },
+    "details": {
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "budget": "Budget",
+      "progress": "Progress",
+      "team": "Team",
+      "location": "Location",
+      "description": "Description"
+    },
+    "actions": {
+      "view": "View",
+      "edit": "Edit",
+      "duplicate": "Duplicate",
+      "delete": "Delete",
+      "archive": "Archive",
+      "addToFavorites": "Add to Favorites"
+    }
+  },
+  "messages": {
+    "created": "Project created successfully",
+    "updated": "Project updated successfully",
+    "deleted": "Project deleted successfully",
+    "archived": "Project archived successfully",
+    "exported": "Projects exported successfully",
+    "noProjects": "No projects found",
+    "loadingError": "Error loading projects"
+  }
+}

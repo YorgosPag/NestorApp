@@ -1,0 +1,389 @@
+====================================================================
+🎯 ΣΧΕΔΙΟ ΕΝΟΠΟΙΗΣΗΣ AUTOSAVE ΣΥΣΤΗΜΑΤΟΣ
+====================================================================
+Ημερομηνία: 2025-09-24
+Στόχος: Κεντρικοποίηση και ενοποίηση autosave συστημάτων
+Κωδικοποίηση: UTF-8 με υποστήριξη ελληνικών χαρακτήρων
+====================================================================
+
+🔍 ΑΝΑΛΥΣΗ ΥΠΑΡΧΟΝΤΟΣ ΣΥΣΤΗΜΑΤΟΣ
+====================================================================
+
+📋 ΕΝΤΟΠΙΣΜΕΝΑ AUTOSAVE PATTERNS:
+
+1. DxfSettingsProvider (Κεντρικό σύστημα):
+   📍 Τοποθεσία: src/subapps/dxf-viewer/providers/DxfSettingsProvider.tsx:334
+   🔧 Συμπεριφορά: 500ms debounced save με status indicators
+   🗂️ Storage Keys:
+      - 'dxf-line-general-settings'
+      - 'dxf-text-general-settings'
+      - 'dxf-grip-general-settings'
+   ✅ Χαρακτηριστικά: metadata, error handling, unified pattern
+
+2. CursorSystem (Ειδικό σύστημα - Cursor):
+   📍 Τοποθεσία: src/subapps/dxf-viewer/systems/cursor/config.ts:264
+   🔧 Συμπεριφορά: Immediate save (χωρίς debounce)
+   🗂️ Storage Key: 'autocad_cursor_settings'
+   ⚠️ Προβλήματα: Διαφορετικό pattern, δεν έχει status indicators
+
+3. RulersGridSystem (Ειδικό σύστημα - Grid/Rulers):
+   📍 Τοποθεσία: src/subapps/dxf-viewer/systems/rulers-grid/usePersistence.ts
+   🔧 Συμπεριφορά: useEffect-based immediate save
+   ⚠️ Προβλήματα: Διαφορετικό pattern, δεν έχει debounce
+
+4. Selection/Mock Components (Ειδικό σύστημα):
+   📍 Κατάσταση: Unclear/Mock implementations, ασυνεπής ή άγνωστη persistence
+
+🚨 ΕΝΤΟΠΙΣΜΕΝΑ ΠΡΟΒΛΗΜΑΤΑ:
+- Τέσσερα storage patterns (4 διαφορετικά συστήματα)
+- Διαφορετικές debounce behaviors (500ms vs immediate vs useEffect)
+- Inconsistent save status indicators
+- Διαφορετικά storage keys
+- Mock implementations χωρίς σαφή persistence
+
+====================================================================
+🎯 ΣΧΕΔΙΟ ΕΝΟΠΟΙΗΣΗΣ - ΦΑΣΕΙΣ ΥΛΟΠΟΙΗΣΗΣ
+====================================================================
+
+🎯 ΓΕΝΙΚΕΣ ΑΡΧΕΣ:
+✓ Δεν δημιουργούμε διπλότυπα
+✓ Αντικαταστάσεις in-place στα υπάρχοντα συστήματα
+✓ Ζητάω άδεια για νέα αρχεία (αν χρειαστεί)
+✓ Backward compatibility για τα παλιά
+✓ Μόνο εσύ κάνεις ελέγχους και backup
+
+====================================================================
+ΦΑΣΗ 1: ΕΠΕΚΤΑΣΗ DXFSETTINGSPROVIDER (ΚΕΝΤΡΙΚΟ FOUNDATION)
+====================================================================
+
+🎯 Στόχος: Επέκταση του υπάρχοντος DxfSettingsProvider για υποστήριξη
+          ειδικών συστημάτων χωρίς breaking changes
+
+✅ ΒΗΜΑ 1.1: Ανάλυση υπάρχοντος DxfSettingsProvider - ΟΛΟΚΛΗΡΩΜΕΝΟ ✅
+   📍 Τοποθεσία: src/subapps/dxf-viewer/providers/DxfSettingsProvider.tsx
+
+   Υπάρχον Interface:
+   interface DxfSettingsState {
+     line: LineSettings;
+     text: TextSettings;
+     grip: GripSettings;
+     saveStatus: 'idle' | 'saving' | 'saved' | 'error';
+   }
+
+✅ ΒΗΜΑ 1.2: Επέκταση του DxfSettingsState Interface - ΟΛΟΚΛΗΡΩΜΕΝΟ ✅
+   Εξελιγμένο σχήμα (in-place):
+
+   interface ExtendedDxfSettingsState {
+     // Υπάρχοντα (διατήρηση)
+     line: LineSettings;
+     text: TextSettings;
+     grip: GripSettings;
+
+     // ΝΕΑ: Ειδικά συστήματα
+     specific: {
+       cursor: CursorSettings;
+       selection: SelectionSettings;
+       grid: GridSettings;
+       rulers: RulerSettings;
+     };
+
+     // Unified save status
+     saveStatus: 'idle' | 'saving' | 'saved' | 'error';
+     specificSaveStatus: 'idle' | 'saving' | 'saved' | 'error';
+   }
+
+✅ ΒΗΜΑ 1.3: Επέκταση Storage Keys και loadAllSettings - ΟΛΟΚΛΗΡΩΜΕΝΟ ✅
+   Υπάρχοντα:
+   const STORAGE_KEYS = {
+     line: 'dxf-line-general-settings',
+     text: 'dxf-text-general-settings',
+     grip: 'dxf-grip-general-settings'
+   };
+
+   Εξελιγμένη επέκταση:
+   const UNIFIED_STORAGE_KEYS = {
+     general: {
+       line: 'dxf-line-general-settings',
+       text: 'dxf-text-general-settings',
+       grip: 'dxf-grip-general-settings'
+     },
+     specific: {
+       cursor: 'dxf-cursor-specific-settings',
+       selection: 'dxf-selection-specific-settings',
+       grid: 'dxf-grid-specific-settings',
+       rulers: 'dxf-rulers-specific-settings'
+     }
+   };
+
+✅ ΒΗΜΑ 1.4: Migration Support για υπάρχοντα Settings - ΟΛΟΚΛΗΡΩΜΕΝΟ ✅
+
+   ✓ Δημιουργία LEGACY_STORAGE_KEYS για παλιά keys
+   ✓ Δημιουργία MigrationResult interface για type safety
+   ✓ Δημιουργία attemptMigrationFromLegacyKey() - Generic migration function
+   ✓ Δημιουργία performComprehensiveMigration() - Comprehensive migration system
+   ✓ Δημιουργία cleanupLegacyKeys() - Αυτόματη διαγραφή παλιών keys
+   ✓ Δημιουργία getMigrationDiagnostics() - Diagnostic utilities
+   ✓ Ενσωμάτωση στο loadAllSettings() με automatic trigger
+   ✓ Προσθήκη migrationUtils στο Context για external access
+   ✓ Enhanced logging με migration tracking
+   ✓ Automatic cleanup 1 δευτερόλεπτο μετά τη migration
+
+   🔧 TECHNICAL IMPLEMENTATION:
+   - Legacy keys: autocad_cursor_settings -> dxf-cursor-specific-settings
+   - Migration metadata: __migration_source για tracking
+   - Error handling με fallback σε defaults
+   - Type-safe migration results
+   - Extensible για μελλοντικά migrations
+
+====================================================================
+✅ ΦΑΣΗ 2: INTEGRATION ΤΩΝ CURSOR SETTINGS - ΟΛΟΚΛΗΡΩΜΕΝΟ ✅
+====================================================================
+
+🎯 Στόχος: Συγχώνευση του CursorSystem στο unified autosave - ✅ ΕΠΙΤΥΧΕΣ
+
+✅ ΒΗΜΑ 2.1: Ανάλυση υπάρχοντος CursorSystem - ΟΛΟΚΛΗΡΩΜΕΝΟ ✅
+   📍 Τοποθεσία: src/subapps/dxf-viewer/systems/cursor/config.ts
+
+   ✓ Αναλύθηκε Singleton pattern με BaseConfigurationManager
+   ✓ Εντοπίστηκε immediate save με localStorage.setItem()
+   ✓ Εντοπίστηκε Storage key: 'autocad_cursor_settings'
+   ✓ Καταλήφθηκε η αρχιτεκτονική updateSettings() → saveSettings()
+
+✅ ΒΗΜΑ 2.2: Αντικατάσταση saveSettings() Method - ΟΛΟΚΛΗΡΩΜΕΝΟ ✅
+
+   🔧 TECHNICAL IMPLEMENTATION:
+   ✓ Αντικαταστάθηκε η direct localStorage με event-driven integration
+   ✓ Δημιουργήθηκε delegateToUnifiedAutosave() method
+   ✓ Προστέθηκε CustomEvent 'dxf-cursor-settings-update'
+   ✓ Υλοποιήθηκε fallback mechanism σε περίπτωση αποτυχίας
+   ✓ Προστέθηκε comprehensive error handling
+
+✅ ΒΗΜΑ 2.3: Bidirectional Integration και Testing - ΟΛΟΚΛΗΡΩΜΕΝΟ ✅
+
+   🔄 BIDIRECTIONAL SYNC SYSTEM:
+   ✓ DxfSettingsProvider → CursorConfiguration συγχρονισμός
+   ✓ CursorConfiguration → DxfSettingsProvider συγχρονισμός
+   ✓ Event-driven communication με CustomEvents
+   ✓ Loop prevention με isSyncingFromProvider flag
+   ✓ Timeout-based sync με 10ms και 100ms delays
+
+   📡 EVENTS IMPLEMENTED:
+   ✓ 'dxf-cursor-settings-update' - CursorConfig → Provider
+   ✓ 'dxf-provider-cursor-sync' - Provider → CursorConfig
+   ✓ Event listeners με proper cleanup
+   ✓ Comprehensive logging για debugging
+
+   🧪 TESTING RESULTS:
+   ✅ TypeScript compilation successful
+   ✅ Next.js build successful
+   ✅ DXF Viewer loads without errors
+   ✅ No breaking changes detected
+   ✅ Migration system compatible με νέα integration
+
+====================================================================
+✅ ΦΑΣΗ 3: INTEGRATION ΤΩΝ RULERS/GRID SETTINGS - ΟΛΟΚΛΗΡΩΜΕΝΟ ✅
+====================================================================
+
+🎯 Στόχος: Συγχώνευση του RulersGridSystem στο unified autosave - ✅ ΕΠΙΤΥΧΕΣ
+
+✅ ΒΗΜΑ 3.1: Ανάλυση usePersistence Hook - ΟΛΟΚΛΗΡΩΜΕΝΟ ✅
+   📍 Τοποθεσία: src/subapps/dxf-viewer/systems/rulers-grid/usePersistence.ts
+
+   ✓ Ανακαλύφθηκε ότι το usePersistence hook είναι dead code
+   ✓ Εντοπίστηκε ότι δεν υπήρχε ενεργό persistence στο RulersGridSystem
+   ✓ Καταλήφθηκε η αρχιτεκτονική με useState + event delegation
+   ✓ Εντοπίστηκαν τα DEFAULT_RULER_SETTINGS και DEFAULT_GRID_SETTINGS
+
+✅ ΒΗΜΑ 3.2: Αντικατάσταση Persistence Logic - ΟΛΟΚΛΗΡΩΜΕΝΟ ✅
+
+   🔧 TECHNICAL IMPLEMENTATION:
+   ✓ Αντικαταστάθηκαν τα useState με wrapped setters (setGrid, setRulers)
+   ✓ Δημιουργήθηκαν CustomEvents: 'dxf-grid-settings-update', 'dxf-ruler-settings-update'
+   ✓ Προστέθηκε event delegation στο DxfSettingsProvider
+   ✓ Υλοποιήθηκε comprehensive error handling
+   ✓ Προστέθηκε timeout-based async event dispatch για performance
+
+✅ ΒΗΜΑ 3.3: Bidirectional Integration και Testing - ΟΛΟΚΛΗΡΩΜΕΝΟ ✅
+
+   🔄 BIDIRECTIONAL SYNC SYSTEM:
+   ✓ DxfSettingsProvider → RulersGridSystem συγχρονισμός
+   ✓ RulersGridSystem → DxfSettingsProvider συγχρονισμός
+   ✓ Event-driven communication με CustomEvents
+   ✓ Comprehensive logging για debugging
+   ✓ Proper cleanup με event listener removal
+
+   📡 EVENTS IMPLEMENTED:
+   ✓ 'dxf-grid-settings-update' - RulersGrid → Provider
+   ✓ 'dxf-ruler-settings-update' - RulersGrid → Provider
+   ✓ 'dxf-provider-grid-sync' - Provider → RulersGrid
+   ✓ 'dxf-provider-ruler-sync' - Provider → RulersGrid
+   ✓ Event listeners με proper cleanup στα useEffect hooks
+
+   🧪 TESTING RESULTS:
+   ✅ TypeScript compilation successful
+   ✅ Next.js build successful
+   ✅ DXF Viewer loads without errors
+   ✅ No breaking changes detected
+   ✅ Migration system compatible με νέα integration
+   ✅ ColorPalettePanel χρησιμοποιεί unified grid/ruler settings
+
+====================================================================
+ΦΑΣΗ 4: UNIFIED SAVE STATUS INDICATORS
+====================================================================
+
+🎯 Στόχος: Ενοποίηση των save status indicators σε ένα κεντρικό
+
+📋 ΒΗΜΑ 4.1: Επέκταση CentralizedAutoSaveStatus
+   Θέσεις: src/subapps/dxf-viewer/ui/components/CentralizedAutoSaveStatus.tsx
+
+   Νέο interface:
+   interface UnifiedSaveStatus {
+     general: {
+       status: SaveStatusType;
+       lastSaved: Date | null;
+     };
+     specific: {
+       status: SaveStatusType;
+       lastSaved: Date | null;
+       activeCategory: 'cursor' | 'selection' | 'grid' | 'rulers';
+     };
+   }
+
+📋 ΒΗΜΑ 4.2: Update ColorPalettePanel UI
+   Θέσεις: src/subapps/dxf-viewer/ui/components/ColorPalettePanel.tsx
+
+   Προσθήκη unified save indicators:
+   - Κεντροποιημένα save spinners
+   - Consistent "✓ Αποθηκεύτηκε" messages
+   - Error handling indicators
+
+====================================================================
+ΦΑΣΗ 5: TESTING ΚΑΙ VALIDATION
+====================================================================
+
+📋 ΒΗΜΑ 5.1: Automated Testing Plan
+   Δημιουργία comprehensive tests:
+   - Unit tests για unified provider
+   - Integration tests για migration logic
+   - E2E tests για UI save indicators
+
+📋 ΒΗΜΑ 5.2: Manual Testing Checklist
+   Browser testing με:
+   - localStorage monitoring scripts
+   - Persistence testing (refresh browser)
+   - Cross-tab synchronization
+   - Error scenarios (disabled localStorage)
+
+📋 ΒΗΜΑ 5.3: Performance Testing
+   Επιθεώρηση για:
+   - Debounce effectiveness (500ms)
+   - localStorage write frequency
+   - Re-render optimization
+   - Memory leaks
+
+====================================================================
+🚀 ΧΡΟΝΟΔΙΑΓΡΑΜΜΑ - ΠΡΟΤΕΡΑΙΟΤΗΤΕΣ
+====================================================================
+
+🏁 ΠΡΩΤΗ ΦΑΣΗ (Εβδομάδα 1):
+1. ✅ Επέκταση DxfSettingsProvider interface
+2. ✅ Δημιουργία migration utilities
+3. ✅ Testing και αρχική 1
+
+🔧 ΔΕΥΤΕΡΗ ΦΑΣΗ (Εβδομάδες 2-3):
+4. Integration CursorSystem
+5. Integration RulersGridSystem
+6. Unified UI indicators
+
+🎯 ΤΡΙΤΗ ΦΑΣΗ (Εβδομάδα 4):
+7. Comprehensive testing
+8. Performance optimization
+9. Documentation update
+10. Production deployment
+
+====================================================================
+⚠️ ΔΙΑΧΕΙΡΙΣΗ ΚΑΙ MITIGATION STRATEGIES
+====================================================================
+
+🚨 ΚΥΡΙΟΣ ΚΙΝΔΥΝΟΣ - Data Loss:
+   Mitigation: Comprehensive migration με fallbacks
+   Testing: Εκτενή tests με πραγματικά data
+
+⚡ ΔΕΥΤΕΡΟΣ ΚΙΝΔΥΝΟΣ - Performance Issues:
+   Mitigation: Debounced saves, batch operations
+   Testing: Performance benchmarks
+
+🎨 ΤΡΙΤΟΣ ΚΙΝΔΥΝΟΣ - UI Inconsistencies:
+   Mitigation: Unified components, consistent styling
+   Testing: Cross-browser UI testing
+
+====================================================================
+🔧 ΤΕΧΝΙΚΕΣ ΛΕΠΤΟΜΕΡΕΙΕΣ
+====================================================================
+
+🏗️ ΤΕΛΙΚΗ UNIFIED PROVIDER STRUCTURE:
+
+interface UnifiedAutosaveProvider {
+  // General settings (υπάρχον DxfSettingsProvider)
+  updateGeneralSettings(category: 'line'|'text'|'grip', settings: any): void;
+
+  // Specific settings (νέα functionality)
+  updateSpecificSettings(category: 'cursor'|'selection'|'grid'|'rulers', settings: any): void;
+
+  // Unified save status
+  getGeneralSaveStatus(): SaveStatus;
+  getSpecificSaveStatus(): SaveStatus;
+
+  // Migration support
+  migrateOldSettings(): boolean;
+}
+
+🗂️ STORAGE ARCHITECTURE:
+
+localStorage keys:
+ ✓ dxf-line-general-settings     (υπάρχον)
+ ✓ dxf-text-general-settings     (υπάρχον)
+ ✓ dxf-grip-general-settings     (υπάρχον)
+ ✓ dxf-cursor-specific-settings  (ΝΕΟ - migrate από autocad_cursor_settings)
+ ✓ dxf-selection-specific-settings (ΝΕΟ)
+ ✓ dxf-grid-specific-settings    (ΝΕΟ - migrate από rulers-grid key)
+ ✓ dxf-rulers-specific-settings  (ΝΕΟ)
+
+🏷️ METADATA STRUCTURE:
+Κάθε setting με έχει:
+{
+  ...actualSettingsData,
+  __autosave_timestamp: number,
+  __autosave_key: string,
+  __standards_version: string,
+  __migration_source?: string  // για tracking migrations
+}
+
+====================================================================
+🎯 ΤΕΛΙΚΟΣ ΣΤΟΧΟΣ
+====================================================================
+
+Επίτευξη κεντρικοποίησης και σε ίσχυ λειτουργία.
+
+Εξελιγμένα που οδηγεί σε συνοχή:
+1. 🔧 Κεντρικοποίηση συστημάτων στο υπάρχουσα
+2. 🏗️ Εβδομάδα φάσης 1 - Επέκταση DxfSettingsProvider
+3. 🧪 Testing κάθε βήμα για μονάδα και συνάφειες
+4. 🚀 Monitoring performance για την λειτουργία
+
+Αρχική: Ενόπωση σε βήμα για βήμα όλων κάθε ο φάσης 1, βήμα 1.1;
+
+====================================================================
+🔚 ΤΕΛΙΚΕΣ ΠΑΡΑΤΗΡΗΣΕΙΣ
+====================================================================
+
+- Όλες οι αλλαγές θα γίνουν in-place
+- Δεν θα δημιουργηθούν περιττά αρχεία
+- Backup προβλέπεται συνολικά
+- Υπάρχον και διατήρησε διαφανεια των συστημάτων
+- Μόνο εσύ κάνεις ελέγχους και δίνεις εντολή για συνέχεια
+
+Τελευταία ενημέρωση: 2025-09-24
+Κατάσταση: ΦΑΣΗ 1 ΟΛΟΚΛΗΡΩΜΕΝΗ
+Κωδικοποίηση: UTF-8
+Επιπλέον σχολιασμός: ✓ Επιτυχημένα

@@ -1,0 +1,41 @@
+🆕 ΕΝΗΜΕΡΩΣΗ - ΠΛΗΡΗΣ DEBUG LOG CHAIN (24/09/2025):
+════════════════════════════════════════════════
+
+Έχω προσθέσει πλήρη αλυσίδα debug logs για να παρακολουθώ την ροή του mouse position:
+
+1️⃣ DxfCanvasCore.tsx:450 - Mouse Event Detection
+   🖱️ [DxfCanvasCore] handleMove calling onMouseMove with point: [pt] activeTool: [tool]
+
+2️⃣ DxfCanvasRefactored.tsx:319 - Event Reception
+   🖱️ [DxfCanvasRefactored] handleMouseMove called with point: [pt] activeTool: [tool]
+
+3️⃣ DxfCanvasRefactored.tsx:344 - Position Update Call
+   🖱️ [DxfCanvasRefactored] Updating mouse position: [pt]
+
+4️⃣ useMousePosition.ts:32 - Hook Processing
+   🖱️ [useMousePosition] updateMousePosition called with: [screenPoint]
+
+5️⃣ useMousePosition.ts:62 - Hook Final State
+   🖱️ [useMousePosition] Final state - mouseCss: [pt] mouseWorld: [worldPt]
+
+6️⃣ CanvasOverlays.tsx:56 - State Change Detection
+   🖱️ [CanvasOverlays] Mouse position updated: {mouseCss, mouseWorld}
+
+7️⃣ CanvasOverlays.tsx:95 - CrosshairOverlay Props
+   🎯 [CanvasOverlays] Rendering CrosshairOverlay with: {isActive, cursorPosition, activeTool}
+
+8️⃣ CrosshairOverlay.tsx:50 - Final Render
+   🎯 [CrosshairOverlay] renderCrosshair called
+   🎯 [CrosshairOverlay] isActive: [boolean]
+   🎯 [CrosshairOverlay] cursorPosition: [point]
+
+🔍 ΟΔΗΓΙΕΣ ΔΟΚΙΜΗΣ:
+1. Άνοιξε F12 Console
+2. Πήγαινε στο layering mode (κεντρική εργαλειοθήκη > layering)
+3. Κίνησε τον κέρσορα στον καμβά
+4. Παρακολούθησε τα logs στη σειρά 1️⃣ → 8️⃣
+5. Εντόπισε που σταματάει η αλυσίδα αν δεν φαίνεται ο crosshair
+
+🎯 ΣΤΟΧΟΣ:
+Να εντοπίσω ακριβώς που σπάει η ροή του mouse position tracking στο layering mode
+και να διορθώσω το πρόβλημα που κάνει το CrosshairOverlay να έχει isActive: false.

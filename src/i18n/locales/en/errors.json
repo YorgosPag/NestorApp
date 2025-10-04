@@ -1,0 +1,49 @@
+{
+  "http": {
+    "400": "Bad request",
+    "401": "Unauthorized access",
+    "403": "Forbidden access", 
+    "404": "Not found",
+    "500": "Server error"
+  },
+  "auth": {
+    "tokenExpired": "Session has expired. Please log in again.",
+    "invalidCredentials": "Invalid credentials",
+    "accessDenied": "Access denied"
+  },
+  "storage": {
+    "quotaExceeded": "Storage quota exceeded",
+    "insufficientSpace": "Insufficient storage space",
+    "fileNotFound": "File not found"
+  },
+  "network": {
+    "connectionFailed": "Connection to server failed",
+    "timeout": "Request timeout",
+    "offline": "No internet connection"
+  },
+  "file": {
+    "tooLarge": "File is too large",
+    "invalidFormat": "Invalid file format",
+    "parseError": "File parsing error",
+    "uploadFailed": "File upload failed"
+  },
+  "validation": {
+    "required": "Required field",
+    "invalid": "Invalid value",
+    "tooShort": "Too short",
+    "tooLong": "Too long",
+    "failed": "Data validation error",
+    "invalidEmail": "Invalid email address",
+    "passwordWeak": "Password is too weak"
+  },
+  "general": {
+    "unknown": "Unknown error",
+    "error": "Error",
+    "tryAgain": "Try again",
+    "contact": "Contact support"
+  },
+  "generic": {
+    "unknown": "An unknown error occurred",
+    "permissionDenied": "Permission denied"
+  }
+}

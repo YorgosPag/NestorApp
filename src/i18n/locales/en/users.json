@@ -1,0 +1,76 @@
+{
+  "title": "Users",
+  "description": "Manage users and profiles",
+  "roles": {
+    "admin": "Administrator",
+    "manager": "Manager",
+    "agent": "Agent",
+    "user": "User",
+    "viewer": "Viewer"
+  },
+  "status": {
+    "active": "Active",
+    "inactive": "Inactive",
+    "pending": "Pending",
+    "suspended": "Suspended"
+  },
+  "card": {
+    "sections": {
+      "contact": "Contact",
+      "location": "Location",
+      "activity": "Activity",
+      "statistics": "Statistics",
+      "specialties": "Specialties"
+    },
+    "details": {
+      "email": "Email",
+      "phone": "Phone",
+      "company": "Company",
+      "location": "Location",
+      "department": "Department",
+      "lastActive": "Last active",
+      "joinedDate": "Joined date",
+      "bio": "Bio",
+      "tasksCompleted": "Completed tasks",
+      "projectsAssigned": "Assigned projects",
+      "achievements": "Achievements"
+    },
+    "activity": {
+      "lastActive": "Last active",
+      "joinedDate": "Joined",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "daysAgo": "{{count}} days ago",
+      "weeksAgo": "{{count}} weeks ago",
+      "never": "Never",
+      "notSet": "Not set"
+    },
+    "stats": {
+      "tasks": "Tasks",
+      "projects": "Projects",
+      "achievements": "Achievements"
+    },
+    "actions": {
+      "view": "View",
+      "message": "Message",
+      "edit": "Edit",
+      "deactivate": "Deactivate",
+      "activate": "Activate",
+      "delete": "Delete",
+      "resetPassword": "Reset Password",
+      "addToFavorites": "Add to Favorites"
+    }
+  },
+  "messages": {
+    "created": "User created successfully",
+    "updated": "User updated successfully",
+    "deleted": "User deleted successfully",
+    "activated": "User activated successfully",
+    "deactivated": "User deactivated successfully",
+    "passwordReset": "Password reset successfully",
+    "messageSent": "Message sent successfully",
+    "noUsers": "No users found",
+    "loadingError": "Error loading users",
+    "saveError": "Error saving user"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "details": {
+    "contactInfo": {
+      "title": "Contact Information",
+      "noContactInfo": "No contact information available."
+    },
+    "taxInfo": {
+      "title": "Tax Information",
+      "vatNumber": "VAT Number:",
+      "notSet": "Not set"
+    }
+  }
+}

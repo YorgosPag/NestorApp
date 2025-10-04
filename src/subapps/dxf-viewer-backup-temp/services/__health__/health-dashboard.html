@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🏥 Service Health Dashboard</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+      min-height: 100vh;
+      padding: 30px;
+      color: #fff;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 10px;
+      font-size: 2.5rem;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .subtitle {
+      text-align: center;
+      font-size: 1.1rem;
+      opacity: 0.9;
+      margin-bottom: 30px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      padding: 12px 24px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .btn-primary { background: #4CAF50; color: white; }
+    .btn-danger { background: #f44336; color: white; }
+    .btn-secondary { background: #2196F3; color: white; }
+    .btn-info { background: #FF9800; color: white; }
+
+    .status-bar {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 12px;
+      padding: 25px;
+      margin-bottom: 30px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      color: #333;
+    }
+
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+    }
+
+    .status-card {
+      text-align: center;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .status-card h3 {
+      font-size: 2.5rem;
+      margin-bottom: 8px;
+    }
+
+    .status-card p {
+      font-size: 0.9rem;
+      opacity: 0.8;
+    }
+
+    .status-healthy { background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); color: white; }
+    .status-degraded { background: linear-gradient(135deg, #FF9800 0%, #f57c00 100%); color: white; }
+    .status-unhealthy { background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%); color: white; }
+    .status-info { background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%); color: white; }
+
+    .services-table {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      color: #333;
+      overflow-x: auto;
+    }
+
+    .services-table h2 {
+      color: #1e3c72;
+      margin-bottom: 20px;
+      border-bottom: 3px solid #1e3c72;
+      padding-bottom: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead {
+      background: #1e3c72;
+      color: white;
+    }
+
+    th, td {
+      padding: 15px;
+      text-align: left;
+    }
+
+    th {
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.85rem;
+      letter-spacing: 0.5px;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid #e0e0e0;
+      transition: background 0.2s;
+    }
+
+    tbody tr:hover {
+      background: #f5f5f5;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .badge-healthy { background: #4CAF50; color: white; }
+    .badge-degraded { background: #FF9800; color: white; }
+    .badge-unhealthy { background: #f44336; color: white; }
+    .badge-unknown { background: #9e9e9e; color: white; }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      font-size: 1.1rem;
+      color: #666;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 30px;
+      height: 30px;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #1e3c72;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-right: 10px;
+      vertical-align: middle;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .timestamp {
+      text-align: center;
+      opacity: 0.7;
+      font-size: 0.9rem;
+      margin-top: 15px;
+    }
+
+    .auto-refresh {
+      display: inline-block;
+      margin-left: 10px;
+      padding: 4px 10px;
+      background: #4CAF50;
+      color: white;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🏥 Service Health Dashboard</h1>
+    <p class="subtitle">Enterprise-grade Service Monitoring & Health Checks</p>
+
+    <div class="controls">
+      <button class="btn-primary" onclick="startMonitoring()">
+        ▶️ Start Auto-Refresh
+      </button>
+      <button class="btn-danger" onclick="stopMonitoring()">
+        ⏸️ Stop Auto-Refresh
+      </button>
+      <button class="btn-secondary" onclick="checkNow()">
+        🔄 Check Now
+      </button>
+      <button class="btn-info" onclick="exportReport()">
+        📊 Export Report
+      </button>
+    </div>
+
+    <div class="status-bar" id="statusBar">
+      <div class="loading">
+        <div class="spinner"></div>
+        <span>Loading health data...</span>
+      </div>
+    </div>
+
+    <div class="services-table" id="servicesTable">
+      <h2>📋 Service Details</h2>
+      <div class="loading">
+        <p>Run health check to see service details</p>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import {
+      serviceHealthMonitor,
+      HealthStatus
+    } from '../ServiceHealthMonitor.js';
+
+    let isMonitoring = false;
+
+    window.startMonitoring = function() {
+      serviceHealthMonitor.start();
+      isMonitoring = true;
+      updateDisplay();
+      console.log('🏥 Auto-refresh started');
+    };
+
+    window.stopMonitoring = function() {
+      serviceHealthMonitor.stop();
+      isMonitoring = false;
+      console.log('🏥 Auto-refresh stopped');
+    };
+
+    window.checkNow = async function() {
+      showLoading();
+      const report = await serviceHealthMonitor.checkAllServices();
+      updateDisplay(report);
+    };
+
+    window.exportReport = async function() {
+      const report = await serviceHealthMonitor.checkAllServices();
+      const json = JSON.stringify(report, null, 2);
+
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `health-report-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      console.log('📊 Report exported');
+    };
+
+    function showLoading() {
+      document.getElementById('statusBar').innerHTML = `
+        <div class="loading">
+          <div class="spinner"></div>
+          <span>Checking service health...</span>
+        </div>
+      `;
+    }
+
+    function updateDisplay(report) {
+      if (!report) {
+        report = serviceHealthMonitor.getLastReport();
+      }
+
+      if (!report) {
+        showLoading();
+        return;
+      }
+
+      // Update status bar
+      const statusBarHtml = `
+        <div class="status-grid">
+          <div class="status-card ${getStatusClass(report.overallStatus)}">
+            <h3>${getStatusIcon(report.overallStatus)}</h3>
+            <p>Overall Status</p>
+            <p style="font-weight: 600; margin-top: 8px;">${report.overallStatus.toUpperCase()}</p>
+          </div>
+
+          <div class="status-card status-healthy">
+            <h3>${report.healthyServices}</h3>
+            <p>Healthy Services</p>
+          </div>
+
+          <div class="status-card status-degraded">
+            <h3>${report.degradedServices}</h3>
+            <p>Degraded Services</p>
+          </div>
+
+          <div class="status-card status-unhealthy">
+            <h3>${report.unhealthyServices}</h3>
+            <p>Unhealthy Services</p>
+          </div>
+
+          <div class="status-card status-info">
+            <h3>${report.totalServices}</h3>
+            <p>Total Services</p>
+          </div>
+        </div>
+
+        <div class="timestamp">
+          Last checked: ${new Date(report.timestamp).toLocaleTimeString()}
+          ${isMonitoring ? '<span class="auto-refresh">● Auto-refresh ON</span>' : ''}
+        </div>
+      `;
+
+      document.getElementById('statusBar').innerHTML = statusBarHtml;
+
+      // Update services table
+      const tableHtml = `
+        <h2>📋 Service Details</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Service</th>
+              <th>Status</th>
+              <th>Response Time</th>
+              <th>Last Checked</th>
+              <th>Error</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${report.services.map(service => `
+              <tr>
+                <td><strong>${service.service}</strong></td>
+                <td>
+                  <span class="status-badge badge-${service.status}">
+                    ${service.status}
+                  </span>
+                </td>
+                <td>${service.responseTime.toFixed(2)}ms</td>
+                <td>${new Date(service.lastChecked).toLocaleTimeString()}</td>
+                <td>${service.error || '-'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+
+      document.getElementById('servicesTable').innerHTML = tableHtml;
+    }
+
+    function getStatusClass(status) {
+      switch (status) {
+        case HealthStatus.HEALTHY: return 'status-healthy';
+        case HealthStatus.DEGRADED: return 'status-degraded';
+        case HealthStatus.UNHEALTHY: return 'status-unhealthy';
+        default: return 'status-info';
+      }
+    }
+
+    function getStatusIcon(status) {
+      switch (status) {
+        case HealthStatus.HEALTHY: return '✅';
+        case HealthStatus.DEGRADED: return '⚠️';
+        case HealthStatus.UNHEALTHY: return '❌';
+        default: return '❓';
+      }
+    }
+
+    // Subscribe to health updates
+    serviceHealthMonitor.subscribe(report => {
+      updateDisplay(report);
+    });
+
+    // Initial check
+    checkNow();
+
+    console.log('🏥 Health Dashboard loaded!');
+    console.log('Available commands:');
+    console.log('  startMonitoring() - Start auto-refresh');
+    console.log('  stopMonitoring() - Stop auto-refresh');
+    console.log('  checkNow() - Manual health check');
+    console.log('  exportReport() - Export JSON report');
+  </script>
+</body>
+</html>

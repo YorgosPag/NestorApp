@@ -1,0 +1,449 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e7]:
+      - generic [ref=e9]:
+        - img [ref=e12]
+        - generic [ref=e16]: Nestor Pagonis
+      - generic [ref=e17]:
+        - generic [ref=e18]:
+          - generic [ref=e19]: menu.main
+          - list [ref=e21]:
+            - listitem [ref=e22]:
+              - link "Αρχική" [ref=e23] [cursor=pointer]:
+                - /url: /
+                - img [ref=e24] [cursor=pointer]
+                - generic [ref=e27] [cursor=pointer]: Αρχική
+            - listitem [ref=e28]:
+              - link "Ευρετήριο Ακινήτων Νέο" [ref=e29] [cursor=pointer]:
+                - /url: /properties
+                - img [ref=e30] [cursor=pointer]
+                - generic [ref=e32] [cursor=pointer]: Ευρετήριο Ακινήτων
+                - generic [ref=e33] [cursor=pointer]: Νέο
+            - listitem [ref=e34]:
+              - link "Επαφές" [ref=e35] [cursor=pointer]:
+                - /url: /contacts
+                - img [ref=e36] [cursor=pointer]
+                - generic [ref=e41] [cursor=pointer]: Επαφές
+            - listitem [ref=e42]:
+              - link "Έργα" [ref=e43] [cursor=pointer]:
+                - /url: /audit
+                - img [ref=e44] [cursor=pointer]
+                - generic [ref=e47] [cursor=pointer]: Έργα
+            - listitem [ref=e48]:
+              - link "Κτίρια" [ref=e49] [cursor=pointer]:
+                - /url: /buildings
+                - img [ref=e50] [cursor=pointer]
+                - generic [ref=e53] [cursor=pointer]: Κτίρια
+            - listitem [ref=e54]:
+              - link "Μονάδες (Units)" [ref=e55] [cursor=pointer]:
+                - /url: /units
+                - img [ref=e56] [cursor=pointer]
+                - generic [ref=e59] [cursor=pointer]: Μονάδες (Units)
+            - listitem [ref=e60]:
+              - button "CRM PRO" [ref=e61] [cursor=pointer]:
+                - img [ref=e62] [cursor=pointer]
+                - generic [ref=e64] [cursor=pointer]: CRM
+                - generic [ref=e65] [cursor=pointer]: PRO
+                - img [ref=e66] [cursor=pointer]
+        - generic [ref=e68]:
+          - generic [ref=e69]: menu.tools
+          - list [ref=e71]:
+            - listitem [ref=e72]:
+              - button "Νομικά Έγγραφα" [ref=e73] [cursor=pointer]:
+                - img [ref=e74] [cursor=pointer]
+                - generic [ref=e77] [cursor=pointer]: Νομικά Έγγραφα
+                - img [ref=e78] [cursor=pointer]
+        - list [ref=e82]:
+          - listitem [ref=e83]:
+            - link "DXF Panel" [ref=e84] [cursor=pointer]:
+              - /url: /dxf/viewer
+              - img [ref=e85] [cursor=pointer]
+              - generic [ref=e90] [cursor=pointer]: DXF Panel
+          - listitem [ref=e91]:
+            - button "Ρυθμίσεις" [ref=e92] [cursor=pointer]:
+              - img [ref=e93] [cursor=pointer]
+              - generic [ref=e96] [cursor=pointer]: Ρυθμίσεις
+              - img [ref=e97] [cursor=pointer]
+          - listitem [ref=e99]:
+            - link "Login" [ref=e100] [cursor=pointer]:
+              - /url: /login
+              - img [ref=e101] [cursor=pointer]
+              - generic [ref=e104] [cursor=pointer]: Login
+      - list [ref=e106]:
+        - listitem [ref=e107]:
+          - button "Χρήστης user@example.com" [ref=e108] [cursor=pointer]:
+            - img [ref=e110] [cursor=pointer]
+            - generic [ref=e111] [cursor=pointer]:
+              - generic [ref=e112] [cursor=pointer]: Χρήστης
+              - generic [ref=e113] [cursor=pointer]: user@example.com
+      - button "Toggle Sidebar" [ref=e114]
+    - main [ref=e115]:
+      - generic [ref=e117]:
+        - button "Toggle Sidebar" [ref=e118] [cursor=pointer]:
+          - img [ref=e119] [cursor=pointer]
+          - generic [ref=e121] [cursor=pointer]: Toggle Sidebar
+        - generic [ref=e122]:
+          - button "🇺🇸 English" [ref=e123] [cursor=pointer]:
+            - img [ref=e124] [cursor=pointer]
+            - generic [ref=e127] [cursor=pointer]: 🇺🇸 English
+          - button "Αλλαγή θέματος" [ref=e128] [cursor=pointer]:
+            - img [ref=e129] [cursor=pointer]
+            - img
+            - generic [ref=e135] [cursor=pointer]: Αλλαγή θέματος
+          - button "Χρήστης" [ref=e136] [cursor=pointer]:
+            - img "Χρήστης" [ref=e138] [cursor=pointer]
+      - main [ref=e139]:
+        - generic [ref=e140]:
+          - generic [ref=e141]:
+            - generic [ref=e143]:
+              - generic [ref=e145]:
+                - generic [ref=e147]:
+                  - generic [ref=e148]:
+                    - button "📊 Levels" [ref=e149] [cursor=pointer]:
+                      - generic [ref=e150] [cursor=pointer]: 📊
+                      - generic [ref=e151] [cursor=pointer]: Levels
+                    - button "🏗️ Hierarchy" [ref=e152] [cursor=pointer]:
+                      - generic [ref=e153] [cursor=pointer]: 🏗️
+                      - generic [ref=e154] [cursor=pointer]: Hierarchy
+                  - generic [ref=e155]:
+                    - button "🗺️ Overlay" [ref=e156] [cursor=pointer]:
+                      - generic [ref=e157] [cursor=pointer]: 🗺️
+                      - generic [ref=e158] [cursor=pointer]: Overlay
+                    - button "⚙️ Ρυθμίσεις DXF" [ref=e159] [cursor=pointer]:
+                      - generic [ref=e160] [cursor=pointer]: ⚙️
+                      - generic [ref=e161] [cursor=pointer]: Ρυθμίσεις DXF
+                - generic [ref=e165]:
+                  - generic [ref=e166]:
+                    - heading "Πληροφορίες Σκηνής" [level=3] [ref=e167]
+                    - generic [ref=e168]:
+                      - generic [ref=e169]:
+                        - generic [ref=e170]: "Στοιχεία:"
+                        - generic [ref=e171]: "0"
+                      - generic [ref=e172]:
+                        - generic [ref=e173]: "Επίπεδα:"
+                        - generic [ref=e174]: "0"
+                      - generic [ref=e175]:
+                        - generic [ref=e176]: "Μονάδες:"
+                        - generic [ref=e177]: mm
+                      - generic [ref=e178]:
+                        - generic [ref=e179]: "Μέγεθος:"
+                        - generic [ref=e180]: 0.0 × 0.0
+                  - heading "Επίπεδα Έργου" [level=3] [ref=e182]:
+                    - img [ref=e183]
+                    - text: Επίπεδα Έργου
+                  - generic [ref=e187]:
+                    - generic [ref=e189]:
+                      - generic [ref=e190] [cursor=pointer]:
+                        - generic [ref=e191] [cursor=pointer]: Ισόγειο
+                        - generic [ref=e192] [cursor=pointer]: Κενό επίπεδο
+                      - generic [ref=e193]:
+                        - button "Μετονομασία επιπέδου" [ref=e194] [cursor=pointer]:
+                          - img [ref=e195] [cursor=pointer]
+                        - button "Διαγραφή επιπέδου" [ref=e198] [cursor=pointer]:
+                          - img [ref=e199] [cursor=pointer]
+                    - generic [ref=e203]:
+                      - generic [ref=e204] [cursor=pointer]:
+                        - generic [ref=e205] [cursor=pointer]: 1ος Όροφος
+                        - generic [ref=e206] [cursor=pointer]: Κενό επίπεδο
+                      - generic [ref=e207]:
+                        - button "Μετονομασία επιπέδου" [ref=e208] [cursor=pointer]:
+                          - img [ref=e209] [cursor=pointer]
+                        - button "Διαγραφή επιπέδου" [ref=e212] [cursor=pointer]:
+                          - img [ref=e213] [cursor=pointer]
+                    - generic [ref=e217]:
+                      - generic [ref=e218] [cursor=pointer]:
+                        - generic [ref=e219] [cursor=pointer]: Επίπεδο 2
+                        - generic [ref=e220] [cursor=pointer]: Κενό επίπεδο
+                      - generic [ref=e221]:
+                        - button "Μετονομασία επιπέδου" [ref=e222] [cursor=pointer]:
+                          - img [ref=e223] [cursor=pointer]
+                        - button "Διαγραφή επιπέδου" [ref=e226] [cursor=pointer]:
+                          - img [ref=e227] [cursor=pointer]
+                  - generic [ref=e231]:
+                    - textbox "Όνομα νέου επιπέδου..." [ref=e232]
+                    - button [ref=e233] [cursor=pointer]:
+                      - img [ref=e234] [cursor=pointer]
+                  - generic [ref=e236]:
+                    - generic [ref=e237]:
+                      - generic [ref=e238]:
+                        - heading "Overlays" [level=3] [ref=e239]
+                        - generic [ref=e240]: "7"
+                      - generic [ref=e241]:
+                        - img [ref=e242]
+                        - textbox "Αναζήτηση..." [ref=e245]
+                    - generic [ref=e250]:
+                      - generic [ref=e251] [cursor=pointer]:
+                        - button [ref=e252] [cursor=pointer]:
+                          - img [ref=e253] [cursor=pointer]
+                        - generic [ref=e257] [cursor=pointer]:
+                          - generic [ref=e258] [cursor=pointer]: Οικοπεδούχου Αποτύπωμα
+                          - generic [ref=e259] [cursor=pointer]: For Sale 1758741420445
+                        - generic [ref=e260] [cursor=pointer]:
+                          - button "Επεξεργασία" [ref=e261] [cursor=pointer]:
+                            - img [ref=e262] [cursor=pointer]
+                          - button "Διαγραφή" [ref=e264] [cursor=pointer]:
+                            - img [ref=e265] [cursor=pointer]
+                      - generic [ref=e268] [cursor=pointer]:
+                        - button [ref=e269] [cursor=pointer]:
+                          - img [ref=e270] [cursor=pointer]
+                        - generic [ref=e274] [cursor=pointer]:
+                          - generic [ref=e275] [cursor=pointer]: Δεσμευμένο Μονάδα
+                          - generic [ref=e276] [cursor=pointer]: For Sale 1758741705782
+                        - generic [ref=e277] [cursor=pointer]:
+                          - button "Επεξεργασία" [ref=e278] [cursor=pointer]:
+                            - img [ref=e279] [cursor=pointer]
+                          - button "Διαγραφή" [ref=e281] [cursor=pointer]:
+                            - img [ref=e282] [cursor=pointer]
+                      - generic [ref=e285] [cursor=pointer]:
+                        - button [ref=e286] [cursor=pointer]:
+                          - img [ref=e287] [cursor=pointer]
+                        - generic [ref=e291] [cursor=pointer]:
+                          - generic [ref=e292] [cursor=pointer]: Προς Πώληση Μονάδα
+                          - generic [ref=e293] [cursor=pointer]: For Sale 1758742401806
+                        - generic [ref=e294] [cursor=pointer]:
+                          - button "Επεξεργασία" [ref=e295] [cursor=pointer]:
+                            - img [ref=e296] [cursor=pointer]
+                          - button "Διαγραφή" [ref=e298] [cursor=pointer]:
+                            - img [ref=e299] [cursor=pointer]
+                      - generic [ref=e302] [cursor=pointer]:
+                        - button [ref=e303] [cursor=pointer]:
+                          - img [ref=e304] [cursor=pointer]
+                        - generic [ref=e308] [cursor=pointer]:
+                          - generic [ref=e309] [cursor=pointer]: Πουλημένο Μονάδα
+                          - generic [ref=e310] [cursor=pointer]: For Sale 1758742762659
+                        - generic [ref=e311] [cursor=pointer]:
+                          - button "Επεξεργασία" [ref=e312] [cursor=pointer]:
+                            - img [ref=e313] [cursor=pointer]
+                          - button "Διαγραφή" [ref=e315] [cursor=pointer]:
+                            - img [ref=e316] [cursor=pointer]
+                      - generic [ref=e319] [cursor=pointer]:
+                        - button [ref=e320] [cursor=pointer]:
+                          - img [ref=e321] [cursor=pointer]
+                        - generic [ref=e325] [cursor=pointer]:
+                          - generic [ref=e326] [cursor=pointer]: Προς Ενοικίαση Μονάδα
+                          - generic [ref=e327] [cursor=pointer]: For Sale 1758743127157
+                        - generic [ref=e328] [cursor=pointer]:
+                          - button "Επεξεργασία" [ref=e329] [cursor=pointer]:
+                            - img [ref=e330] [cursor=pointer]
+                          - button "Διαγραφή" [ref=e332] [cursor=pointer]:
+                            - img [ref=e333] [cursor=pointer]
+                      - generic [ref=e336] [cursor=pointer]:
+                        - button [ref=e337] [cursor=pointer]:
+                          - img [ref=e338] [cursor=pointer]
+                        - generic [ref=e342] [cursor=pointer]:
+                          - generic [ref=e343] [cursor=pointer]: Προς Πώληση Μονάδα
+                          - generic [ref=e344] [cursor=pointer]: For Sale 1758743616340
+                        - generic [ref=e345] [cursor=pointer]:
+                          - button "Επεξεργασία" [ref=e346] [cursor=pointer]:
+                            - img [ref=e347] [cursor=pointer]
+                          - button "Διαγραφή" [ref=e349] [cursor=pointer]:
+                            - img [ref=e350] [cursor=pointer]
+                      - generic [ref=e353] [cursor=pointer]:
+                        - button [ref=e354] [cursor=pointer]:
+                          - img [ref=e355] [cursor=pointer]
+                        - generic [ref=e359] [cursor=pointer]:
+                          - generic [ref=e360] [cursor=pointer]: Προς Πώληση Μονάδα
+                          - generic [ref=e361] [cursor=pointer]: For Sale 1758744503299
+                        - generic [ref=e362] [cursor=pointer]:
+                          - button "Επεξεργασία" [ref=e363] [cursor=pointer]:
+                            - img [ref=e364] [cursor=pointer]
+                          - button "Διαγραφή" [ref=e366] [cursor=pointer]:
+                            - img [ref=e367] [cursor=pointer]
+              - generic [ref=e370]:
+                - generic [ref=e371]:
+                  - img [ref=e373]
+                  - generic [ref=e376]: Αναμονή αλλαγών... [L:true T:true G:true C:true GR:true R:true]
+                - generic [ref=e384]:
+                  - generic [ref=e385]: Αριστερό Container Status
+                  - generic [ref=e386]: "Zoom: %"
+                - generic [ref=e387]: Storage Status (προσωρινά απενεργοποιημένο)
+            - generic [ref=e388]:
+              - generic [ref=e389]:
+                - button "🎯 Test Canvas" [ref=e390] [cursor=pointer]
+                - button "🔄 Test Layering (Ctrl+F2)" [ref=e391] [cursor=pointer]
+                - button "🔍 Inspect DOM" [ref=e392] [cursor=pointer]
+                - button "🟢 DXF ON" [ref=e393] [cursor=pointer]
+                - button "🔵 LAYER ON" [ref=e394] [cursor=pointer]
+                - button "🏢 Enterprise Test (F3)" [ref=e395] [cursor=pointer]
+                - button "🎯 Origin (0,0)" [ref=e396] [cursor=pointer]
+                - button "📏 Rulers" [ref=e397] [cursor=pointer]
+                - button "📐 Grid TEST" [ref=e398] [cursor=pointer]
+                - generic [ref=e399]: Canvas Debug Tools
+              - generic [ref=e405]:
+                - generic [ref=e406]:
+                  - generic [ref=e407]:
+                    - button "Upload DXF File (Legacy)" [ref=e408] [cursor=pointer]:
+                      - img [ref=e409] [cursor=pointer]
+                    - button "🔺" [ref=e412] [cursor=pointer]
+                    - generic [ref=e414]:
+                      - button "Επιλογή (S)" [ref=e415] [cursor=pointer]:
+                        - img [ref=e416] [cursor=pointer]
+                      - button "Μετακίνηση (P)" [ref=e419] [cursor=pointer]:
+                        - img [ref=e420] [cursor=pointer]
+                    - generic [ref=e426]:
+                      - button "Γραμμή (L)" [ref=e427] [cursor=pointer]:
+                        - img [ref=e428] [cursor=pointer]
+                      - button "Ορθογώνιο (R)" [ref=e429] [cursor=pointer]:
+                        - img [ref=e430] [cursor=pointer]
+                      - generic [ref=e433]:
+                        - button "Κύκλος (Ακτίνα) (C)" [ref=e434] [cursor=pointer]:
+                          - img [ref=e435] [cursor=pointer]
+                        - button "Περισσότερες επιλογές" [ref=e438] [cursor=pointer]:
+                          - img [ref=e439] [cursor=pointer]
+                      - button "Πολυγραμμή (Y)" [ref=e441] [cursor=pointer]:
+                        - img [ref=e442] [cursor=pointer]
+                      - button "Πολύγωνο (G)" [ref=e444] [cursor=pointer]:
+                        - img [ref=e445] [cursor=pointer]
+                      - button "Layering (O)" [ref=e447] [cursor=pointer]:
+                        - img [ref=e448] [cursor=pointer]
+                    - generic [ref=e451]:
+                      - button "Επεξεργασία (G)" [ref=e452] [cursor=pointer]:
+                        - img [ref=e453] [cursor=pointer]
+                      - button "Μετακίνηση (M)" [ref=e456] [cursor=pointer]:
+                        - img [ref=e457] [cursor=pointer]
+                      - button "Αντιγραφή (Ctrl+C)" [ref=e462] [cursor=pointer]:
+                        - img [ref=e463] [cursor=pointer]
+                      - button "Διαγραφή (Del)" [ref=e466] [cursor=pointer]:
+                        - img [ref=e467] [cursor=pointer]
+                    - generic [ref=e471]:
+                      - button "Μέτρηση Απόστασης (D)" [ref=e472] [cursor=pointer]:
+                        - img [ref=e473] [cursor=pointer]
+                      - button "Μέτρηση Εμβαδού (A)" [ref=e479] [cursor=pointer]:
+                        - img [ref=e480] [cursor=pointer]
+                      - generic [ref=e483]:
+                        - button "Μέτρηση Γωνίας (T)" [ref=e484] [cursor=pointer]:
+                          - img [ref=e485] [cursor=pointer]
+                        - button "Περισσότερες επιλογές" [ref=e491] [cursor=pointer]:
+                          - img [ref=e492] [cursor=pointer]
+                    - generic [ref=e495]:
+                      - button "Zoom In (+)" [ref=e496] [cursor=pointer]:
+                        - img [ref=e497] [cursor=pointer]
+                      - button "Zoom Out (-)" [ref=e500] [cursor=pointer]:
+                        - img [ref=e501] [cursor=pointer]
+                      - button "Zoom Window (W)" [ref=e504] [cursor=pointer]:
+                        - img [ref=e505] [cursor=pointer]
+                      - button "Zoom Extents (F)" [ref=e510] [cursor=pointer]:
+                        - img [ref=e511] [cursor=pointer]
+                    - generic [ref=e517]:
+                      - 'button "Zoom Out (-10%) - Πληκτρολόγιο: -" [ref=e518] [cursor=pointer]':
+                        - img [ref=e519] [cursor=pointer]
+                      - textbox "Zoom percentage (1-99999%, δεκαδικά με . ή ,) - Press Enter or click away to apply" [ref=e520]: NaN
+                      - generic [ref=e521]: "%"
+                      - 'button "Zoom In (+10%) - Πληκτρολόγιο: +" [ref=e522] [cursor=pointer]':
+                        - img [ref=e523] [cursor=pointer]
+                    - button "Αναίρεση (Ctrl+Z)" [disabled] [ref=e525]:
+                      - img [ref=e526]
+                    - button "Επανάληψη (Ctrl+Y)" [disabled] [ref=e529]:
+                      - img [ref=e530]
+                    - button "Βαθμονόμηση (B)" [ref=e533] [cursor=pointer]:
+                      - img [ref=e534] [cursor=pointer]
+                    - button "Ρυθμίσεις Cursor (Ctrl+Shift+C)" [ref=e536] [cursor=pointer]:
+                      - img [ref=e537] [cursor=pointer]
+                    - button "Απόκρυψη Πλέγματος (G)" [ref=e539] [cursor=pointer]:
+                      - img [ref=e540] [cursor=pointer]
+                    - button "Auto-Crop OFF (A)" [ref=e542] [cursor=pointer]:
+                      - img [ref=e543] [cursor=pointer]
+                    - button "Fit to View (F)" [ref=e546] [cursor=pointer]:
+                      - img [ref=e547] [cursor=pointer]
+                    - button "Export (Ctrl+E)" [ref=e553] [cursor=pointer]:
+                      - img [ref=e554] [cursor=pointer]
+                  - generic [ref=e558]:
+                    - button "SNAP (1)" [ref=e559] [cursor=pointer]:
+                      - img [ref=e560] [cursor=pointer]
+                      - generic [ref=e564] [cursor=pointer]: SNAP
+                      - generic [ref=e565] [cursor=pointer]: (1)
+                    - generic [ref=e566]:
+                      - button "Αυτόματο" [ref=e567] [cursor=pointer]:
+                        - generic [ref=e568] [cursor=pointer]: Αυτόματο
+                      - button "Άκρο" [ref=e569] [cursor=pointer]:
+                        - generic [ref=e570] [cursor=pointer]: Άκρο
+                      - button "Μέσο" [ref=e571] [cursor=pointer]:
+                        - generic [ref=e572] [cursor=pointer]: Μέσο
+                      - button "Κέντρο" [ref=e573] [cursor=pointer]:
+                        - generic [ref=e574] [cursor=pointer]: Κέντρο
+                      - button "Τομή" [ref=e575] [cursor=pointer]:
+                        - generic [ref=e576] [cursor=pointer]: Τομή
+                    - button "Εμφάνιση προχωρημένων λειτουργιών" [ref=e578] [cursor=pointer]:
+                      - img [ref=e579] [cursor=pointer]
+                    - button "Ενεργοποίηση βασικών λειτουργιών" [ref=e582] [cursor=pointer]:
+                      - img [ref=e583] [cursor=pointer]
+                - generic [ref=e586]:
+                  - generic [ref=e587]:
+                    - generic [ref=e588]:
+                      - text: "Tool:"
+                      - strong [ref=e589]: Select
+                    - generic [ref=e590]: "|"
+                    - generic [ref=e591]:
+                      - text: "Zoom:"
+                      - strong [ref=e592]: NaN%
+                    - generic [ref=e593]: "|"
+                    - generic [ref=e594]:
+                      - text: "Snap:"
+                      - strong [ref=e595]: "ON"
+                  - generic [ref=e597]: 🔺 D=Ruler | W=ZoomWindow | +/-=Zoom | F9=Grid | ESC=Cancel
+            - generic:
+              - generic:
+                - generic:
+                  - text: top-left
+                  - text: (0,0)
+              - generic:
+                - generic:
+                  - text: top-right
+                  - text: (3840,0)
+              - generic:
+                - generic:
+                  - text: bottom-left
+                  - text: (0,2160)
+              - generic:
+                - generic:
+                  - text: bottom-right
+                  - text: (3840,2160)
+              - generic:
+                - generic: 🎯 LAYOUT DEBUGGING
+                - generic: "Viewport: 3840x2160"
+                - generic:
+                  - generic: Κίτρινη γραμμή
+                  - text: (πάνω)
+                  - generic: Y = 0px
+                - generic:
+                  - generic: Κόκκινη γραμμή
+                  - text: (κάτω)
+                  - generic: Y = 2160px
+                - generic:
+                  - generic: Πράσινη γραμμή
+                  - text: (αριστερά)
+                  - generic: X = 0px
+                - generic:
+                  - generic: Μπλε γραμμή
+                  - text: (δεξιά)
+                  - generic: X = 3840px
+                - generic: "Όλες οι γραμμές: 2px πάχος"
+            - generic [ref=e603]: Press Ctrl+Shift+L για Layout Debug
+            - generic:
+              - generic:
+                - generic: 🎯 LIVE COORDINATES
+                - generic:
+                  - generic: "Screen:"
+                  - generic: "X: 0, Y: 0"
+                - generic:
+                  - generic: "World:"
+                  - generic: "X: 0.00, Y: 0.00"
+                - generic:
+                  - generic: TRANSFORM
+                  - generic: "Scale: 1.000"
+                  - generic: "Offset: (0.0, 0.0)"
+                - generic:
+                  - generic: 📋 COPY SHORTCUTS
+                  - generic: "F1: All data"
+                  - generic: "F2: Screen coords"
+                  - generic: "F3: World coords"
+                  - generic: "F4: Transform"
+          - region "Notifications alt+T"
+  - region "Notifications (F8)":
+    - list
+  - region "Notifications alt+T"
+  - alert [ref=e604]
+```

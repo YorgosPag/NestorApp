@@ -1,0 +1,111 @@
+{
+  "title": "Συνθέσεις",
+  "description": "Σύνθετα components και showcase",
+  "showcase": {
+    "title": "Component Composition Showcase",
+    "subtitle": "Demonstration των νέων composition components που χρησιμοποιούν το BaseCard system",
+    "sections": {
+      "cards": "Card Components",
+      "toolbars": "Toolbar Components",
+      "integration": "Integration Demo",
+      "benefits": "Design System Benefits"
+    }
+  },
+  "cards": {
+    "task": {
+      "title": "TaskCard",
+      "description": "Κάρτες εργασιών για CRM διαχείριση"
+    },
+    "user": {
+      "title": "UserCard",
+      "description": "Κάρτες χρηστών με στατιστικά"
+    },
+    "building": {
+      "title": "BuildingCard",
+      "description": "Κάρτες κτιρίων με πληροφορίες"
+    },
+    "project": {
+      "title": "ProjectCard",
+      "description": "Κάρτες έργων με πρόοδο"
+    },
+    "contact": {
+      "title": "ContactCard",
+      "description": "Κάρτες επαφών με στοιχεία"
+    },
+    "storage": {
+      "title": "StorageCard",
+      "description": "Κάρτες χώρων αποθήκευσης"
+    },
+    "property": {
+      "title": "PropertyCard", 
+      "description": "Κάρτες ακινήτων με λεπτομέρειες"
+    },
+    "notification": {
+      "title": "NotificationCard",
+      "description": "Κάρτες ειδοποιήσεων"
+    }
+  },
+  "toolbars": {
+    "building": {
+      "title": "BuildingToolbar",
+      "description": "Εργαλειοθήκη διαχείρισης κτιρίων"
+    },
+    "project": {
+      "title": "ProjectToolbar",
+      "description": "Εργαλειοθήκη διαχείρισης έργων"
+    },
+    "contacts": {
+      "title": "ContactsToolbar",
+      "description": "Εργαλειοθήκη διαχείρισης επαφών"
+    }
+  },
+  "demo": {
+    "state": "Demo State",
+    "selected": "Selected",
+    "search": "Search",
+    "filters": "Filters",
+    "none": "None",
+    "simulate": "Simulate Selection",
+    "items": "items"
+  },
+  "integration": {
+    "title": "Integration Demo",
+    "description": "Χρήση στην εφαρμογή",
+    "examples": {
+      "buildings": "Building management page",
+      "projects": "Projects page",
+      "contacts": "Contacts page"
+    }
+  },
+  "benefits": {
+    "title": "Design System Benefits",
+    "consistency": {
+      "title": "Consistency",
+      "description": "Όλα τα cards χρησιμοποιούν το ίδιο BaseCard system για unified look & feel"
+    },
+    "modularity": {
+      "title": "Modularity",
+      "description": "Composition pattern επιτρέπει εύκολη customization και reusability"
+    },
+    "typeSafety": {
+      "title": "Type Safety",
+      "description": "Full TypeScript support με validated props και design system integration"
+    },
+    "performance": {
+      "title": "Performance",
+      "description": "Optimized rendering και semantic color system με zero runtime overhead"
+    },
+    "unifiedInterface": {
+      "title": "Unified Interface",
+      "description": "Όλα τα toolbars χρησιμοποιούν το ίδιο BaseToolbar system για consistent behavior και styling"
+    },
+    "configurable": {
+      "title": "Configurable",
+      "description": "Flexible configuration με actions, filters, search και custom content sections"
+    },
+    "accessible": {
+      "title": "Accessible",
+      "description": "Built-in accessibility με keyboard shortcuts, tooltips και ARIA support"
+    }
+  }
+}

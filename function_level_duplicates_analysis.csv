@@ -1,0 +1,102 @@
+Function Name,Normalized Name,File 1,Lines 1,File 2,Lines 2,File 3,Lines 3,Function Signature 1,Function Signature 2,Function Signature 3,Similarity Score,Duplicate Type,Consolidation Recommendation,Priority
+
+Distance Calculations:
+calculateDistance,calculate_distance,src/subapps/dxf-viewer/utils/geometry-utils.ts,49-53,src/subapps/dxf-viewer/utils/geometry/GeometryUtils.ts,54-56,src/subapps/dxf-viewer/snapping/shared/GeometricCalculations.ts,22-26,"export function calculateDistance(point1: Point2D, point2: Point2D): number","export function distance(p: Point2D, q: Point2D): number","static calculateDistance(p1: Point2D, p2: Point2D): number",100%,Exact Duplicate,Consolidate into single utility function in geometry-utils.ts,HIGH
+
+pointToLineDistance,point_to_line_distance,src/subapps/dxf-viewer/utils/geometry-utils.ts,12-43,src/subapps/dxf-viewer/systems/selection/utils.ts,11-41,src/subapps/dxf-viewer/snapping/shared/GeometricCalculations.ts,34-66,"export function pointToLineDistance(point: Point2D, lineStart: Point2D, lineEnd: Point2D): number","function distanceToLineSegment(point: Point2D, lineStart: Point2D, lineEnd: Point2D): number","static distancePointToLine(point: Point2D, lineStart: Point2D, lineEnd: Point2D): number",95%,Near Exact Duplicate,Consolidate into single function with consistent naming,HIGH
+
+distanceSq,distance_sq,,,,src/subapps/dxf-viewer/snapping/shared/GeometricCalculations.ts,28-32,,,"static distanceSq(p1: Point2D, p2: Point2D): number",,Unique Implementation,No action needed - optimization variant,LOW
+
+Area Calculations:
+calculatePolygonArea,calculate_polygon_area,src/subapps/dxf-viewer/utils/geometry-utils.ts,59-69,backups/layering-systems-cleanup-*/LayerStatusManager.ts,441-451,,"export function calculatePolygonArea(vertices: Point2D[]): number","private calculatePolygonArea(points: Array<[number, number]>): number",,90%,Function Signature Difference,Use standard geometry-utils implementation,MEDIUM
+
+calculatePolygonCentroid,calculate_polygon_centroid,src/subapps/dxf-viewer/utils/geometry-utils.ts,75-88,backups/layering-systems-cleanup-*/StatusLayerRenderer.ts,286-295,,"export function calculatePolygonCentroid(vertices: Point2D[]): Point2D","private calculateCentroid(points: Array<[number, number]>): [number, number] | null",,85%,Different Return Types,Standardize return type and consolidate,MEDIUM
+
+getCentroid,get_centroid,src/lib/geometry.ts,6-15,,,,"export const getCentroid = (vertices: Array<{ x: number; y: number }>): { x: number; y: number }",,,,Separate Implementation,Consider consolidation with calculatePolygonCentroid,LOW
+
+Angle Calculations:
+calculateAngle,calculate_angle,src/subapps/dxf-viewer/systems/entity-creation/utils.ts,60-62,backups/dxf-enhancements-*/MeasurementCalculator.ts,87-*,,"export function calculateAngle(p1: Point2D, p2: Point2D): number","static calculateAngle(...): AngleMeasurement",,75%,Different Purpose,Keep separate - different measurement contexts,LOW
+
+calculateAngleDegrees,calculate_angle_degrees,src/subapps/dxf-viewer/systems/entity-creation/utils.ts,67-69,,,,"export function calculateAngleDegrees(p1: Point2D, p2: Point2D): number",,,,Wrapper Function,Consider adding to geometry-utils as utility,LOW
+
+calculateAngleBetweenPoints,calculate_angle_between_points,src/subapps/dxf-viewer/systems/dynamic-input/hooks/useDynamicInputMultiPoint.ts,144-172,,,,"export function calculateAngleBetweenPoints(p1: Point2D, vertex: Point2D, p3: Point2D): number",,,,Three-Point Angle,Add to geometry-utils for reuse,MEDIUM
+
+formatAngle,format_angle,src/subapps/dxf-viewer/systems/entity-creation/utils.ts,254-257,src/subapps/dxf-viewer/systems/dynamic-input/hooks/useDynamicInputMultiPoint.ts,178-181,,"export function formatAngle(angleRadians: number, precision: number = 1): string","export function formatAngle(angle: number): string",,80%,Parameter Difference,Consolidate with optional precision parameter,LOW
+
+Entity Property Extractors:
+getEntityEndpoints,get_entity_endpoints,src/subapps/dxf-viewer/snapping/shared/GeometricCalculations.ts,70-115,,,,"static getEntityEndpoints(entity: Entity): Point2D[]",,,,Complex Entity Parser,No duplicates found - unique implementation,LOW
+
+getEntityMidpoints,get_entity_midpoints,src/subapps/dxf-viewer/snapping/shared/GeometricCalculations.ts,117-165,,,,"static getEntityMidpoints(entity: Entity): Point2D[]",,,,Complex Entity Parser,No duplicates found - unique implementation,LOW
+
+getEntityMidpoint,get_entity_midpoint,src/subapps/dxf-viewer/snapping/shared/GeometricCalculations.ts,167-204,,,,"static getEntityMidpoint(entity: Entity): Point2D | null",,,,Single Midpoint,Related to getEntityMidpoints - consider consolidation,LOW
+
+getEntityCenter,get_entity_center,src/subapps/dxf-viewer/snapping/shared/GeometricCalculations.ts,206-240,,,,"static getEntityCenter(entity: Entity): Point2D | null",,,,Center Calculator,No duplicates found - unique implementation,LOW
+
+Rendering Functions:
+renderAreaLabel,render_area_label,src/subapps/dxf-viewer/utils/hover/render-utils.ts,9-24,src/subapps/dxf-viewer/utils/renderers/PolylineRenderer.ts,~550-570,,"export function renderAreaLabel(ctx: CanvasRenderingContext2D, x: number, y: number, area: number): void","private renderAreaLabel(x: number, y: number, area: number): void",,85%,Access Modifier Difference,Use centralized render utility,MEDIUM
+
+renderText,render_text,"Multiple renderer files",Various,"Multiple files",Various,,"Multiple implementations for text rendering",,,"Various","Similar Logic","Create centralized text rendering utility",MEDIUM
+
+renderHoverEdgeWithDistance,render_hover_edge_with_distance,src/subapps/dxf-viewer/utils/hover/edge-utils.ts,*,src/subapps/dxf-viewer/utils/renderers/PolylineRenderer.ts,463-*,,"renderHoverEdgeWithDistance(...)","private renderHoverEdgeWithDistance(...): void",,90%,Near Duplicate,Use hover utility consistently,HIGH
+
+Coordinate Transformations:
+worldToScreen,world_to_screen,src/subapps/dxf-viewer/constants.ts,24-26,"Multiple renderer files",Various,,"worldToScreen(p: Point, t: ViewTransform, rect: RectLike): Point","Multiple implementations in base renderers",,80%,Wrapper Function,All renderers inherit from BaseEntityRenderer - consistency good,LOW
+
+screenToWorld,screen_to_world,src/subapps/dxf-viewer/constants.ts,29-31,"Multiple files",Various,,"screenToWorld(p: Point, t: ViewTransform, rect: RectLike): Point | null","Various implementations",,80%,Wrapper Function,Consistent usage through inheritance,LOW
+
+Mathematical Utilities:
+approximatelyEqual,approximately_equal,src/subapps/dxf-viewer/utils/geometry/GeometryUtils.ts,32-34,,,,"export function approximatelyEqual(a: number, b: number, tolerance = GEOMETRY_CONSTANTS.EPS): boolean",,,,Tolerance Checker,Could be moved to geometry-utils for wider use,LOW
+
+samePoint,same_point,src/subapps/dxf-viewer/utils/geometry/GeometryUtils.ts,39-41,,,,"export function samePoint(p: Point2D, q: Point2D): boolean",,,,Point Equality,Could be useful in other geometry contexts,LOW
+
+nearPoint,near_point,src/subapps/dxf-viewer/utils/geometry/GeometryUtils.ts,46-49,,,,"export function nearPoint(p: Point2D, q: Point2D): boolean",,,,Proximity Check,Related to point distance calculations,LOW
+
+Line Intersection Functions:
+getLineIntersection,get_line_intersection,src/subapps/dxf-viewer/snapping/shared/GeometricCalculations.ts,293-313,,,,"static getLineIntersection(p1: Point2D, p2: Point2D, p3: Point2D, p4: Point2D): Point2D | null",,,,Line-Line Intersection,Complex geometry - no duplicates found,LOW
+
+getLineCircleIntersections,get_line_circle_intersections,src/subapps/dxf-viewer/snapping/shared/GeometricCalculations.ts,315-349,,,,"static getLineCircleIntersections(lineStart: Point2D, lineEnd: Point2D, center: Point2D, radius: number): Point2D[]",,,,Line-Circle Intersection,Complex geometry - no duplicates found,LOW
+
+getCircleIntersections,get_circle_intersections,src/subapps/dxf-viewer/snapping/shared/GeometricCalculations.ts,351-380,,,,"static getCircleIntersections(center1: Point2D, radius1: number, center2: Point2D, radius2: number): Point2D[]",,,,Circle-Circle Intersection,Complex geometry - no duplicates found,LOW
+
+Rectangle Utilities:
+getRectangleCorners,get_rectangle_corners,src/subapps/dxf-viewer/snapping/shared/GeometricCalculations.ts,244-265,,,,"static getRectangleCorners(rectangle: any): Point2D[]",,,,Rectangle Parser,Specialized for entities - no duplicates found,LOW
+
+getRectangleLines,get_rectangle_lines,src/subapps/dxf-viewer/snapping/shared/GeometricCalculations.ts,267-277,,,,"static getRectangleLines(rectangle: any): RectangleLine[]",,,,Rectangle Line Generator,Specialized utility - no duplicates found,LOW
+
+rotatePoint,rotate_point,src/subapps/dxf-viewer/snapping/shared/GeometricCalculations.ts,279-289,,,,"static rotatePoint(point: Point2D, center: Point2D, angle: number): Point2D",,,,Point Rotation,Could be useful in geometry-utils for general use,LOW
+
+Hit Testing Functions:
+isEntityNearPoint,is_entity_near_point,src/subapps/dxf-viewer/snapping/shared/GeometricCalculations.ts,384-421,"Multiple renderer files",Various,,"static isEntityNearPoint(entity: Entity, point: Point2D, radius: number): boolean","Various hit testing implementations in renderers",,75%,Similar Logic,Could extract common hit testing logic,MEDIUM
+
+hitTest,hit_test,"Multiple renderer files",Various,,,,"Multiple hitTest implementations in renderer classes",,,"Consistent Pattern","Each renderer has entity-specific logic","Current architecture is appropriate",LOW
+
+Arc Conversion:
+arcToPolyline,arc_to_polyline,src/subapps/dxf-viewer/utils/geometry/GeometryUtils.ts,61-104,,,,"export function arcToPolyline(arc: Arc, segments: number = GEOMETRY_CONSTANTS.DEFAULT_ARC_SEGMENTS): Point2D[]",,,,Arc Tessellation,Complex geometry - no duplicates found,LOW
+
+Entity Conversion:
+entityToSegments,entity_to_segments,src/subapps/dxf-viewer/utils/geometry/GeometryUtils.ts,109-141,,,,"export function entityToSegments(entity: any): Segment[]",,,,Entity Segmentation,Specialized utility - no duplicates found,LOW
+
+CONSOLIDATION SUMMARY:
+
+HIGH PRIORITY (Immediate Action Required):
+1. Distance calculation functions - 3 exact duplicates across files
+2. Point-to-line distance functions - 3 near-exact implementations
+3. Hover edge rendering functions - duplicated logic
+
+MEDIUM PRIORITY (Should Address):
+1. Area calculation functions - signature differences need standardization
+2. Centroid calculation functions - different return types
+3. Text/label rendering functions - scattered implementations
+4. Angle calculation between three points - useful for reuse
+
+LOW PRIORITY (Consider for Cleanup):
+1. Mathematical utility functions - could be centralized
+2. Formatting functions - minor parameter differences
+3. Entity property extraction - mostly unique implementations
+
+RECOMMENDATIONS:
+1. Create unified geometry-utils.ts with all distance, area, and angle functions
+2. Standardize Point2D type usage across all utilities
+3. Create centralized rendering utilities for common operations
+4. Move specialized geometric calculations to shared utilities where appropriate
+5. Establish consistent naming conventions (prefer full names over abbreviations)

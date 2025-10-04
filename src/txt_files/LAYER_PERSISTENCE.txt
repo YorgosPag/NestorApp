@@ -1,0 +1,78 @@
+# LAYER PERSISTENCE - ΑΝΑΦΟΡΑ ΕΡΕΥΝΑΣ & ΒΗΜΑΤΙΣΜΟΣ
+
+## 📋 ΚΥΡΙΟΙ ΚΑΝΟΝΕΣ ΔΕΚΑΛΟΓΟΥ:
+1. **ΑΠΑΓΟΡΕΥΣΗ ΔΙΠΛΟΤΥΠΩΝ** - Ολες οι αλλαγες IN PLACE
+2. **COMPILATION ΕΛΕΓΧΟΣ** - Δεν θα κανω εγω compilation checks
+3. **ΜΙΚΡΕΣ TODO ΛΙΣΤΕΣ** - Αποφευγω μεγαλες TODO λιστες
+4. **ΠΡΟΣΕΚΤΙΚΗ ΠΡΟΣΕΓΓΙΣΗ** - Προτιμω καθυστερηση απο βιασυνη που δημιουργει προβληματα
+5. **ΣΥΣΤΗΜΑΤΙΚΗ ΕΡΕΥΝΑ** - Καθε προβλημα απαιτει πληρη ερευνα της βασης κωδικα
+
+---
+
+## 🔍 ΑΝΑΛΥΣΗ ΠΡΟΒΛΗΜΑΤΟΣ
+
+### ΤΡΕΧΟΥΣΑ ΣΥΜΠΕΡΙΦΟΡΑ (ΛΑΘΟΣ):
+- Layers εμφανιζονται μονο οταν activeTool === 'layering'
+- Οταν αλλαζεις σε αλλο tool (π.χ. pan), τα layers εξαφανιζονται
+- Layer visibility ειναι εξαρτημενη απο το active tool
+
+### ΕΠΙΘΥΜΗΤΗ ΣΥΜΠΕΡΙΦΟΡΑ (PROFESSIONAL CAD):
+- Layer visibility ειναι persistent state (ON/OFF toggle)
+- Layers παραμενουν εμφανη οταν αλλαζεις tools
+- Μπορεις να χρησιμοποιεις pan/zoom/draw ενω layers ειναι εμφανη
+- Layers κρυβονται ΜΟΝΟ οταν πατας ξανα το layering button
+
+### ΚΩΔΙΚΑΣ ΠΟΥ ΠΡΟΚΑΛΕΙ ΤΟ ΠΡΟΒΛΗΜΑ:
+```typescript
+// LayerCanvas.tsx γραμμη 266-267
+const isLayeringActive = activeTool === 'layering';
+const filteredLayers = isLayeringActive ? layers : []; // ❌ ΛΑΘΟΣ LOGIC
+```
+
+## 🎯 ΒΗΜΑΤΙΣΜΟΣ ΥΛΟΠΟΙΗΣΗΣ
+
+### ΒΗΜΑ 1: ΔΗΜΙΟΥΡΓΙΑ LAYER STATE MANAGEMENT
+- [ ] Προσθηκη layersVisible state στο CanvasSection.tsx
+- [ ] Toggle function για layering button
+- [ ] Persistent layer visibility ανεξαρτητα απο activeTool
+- [ ] **ΣΤΟΠ**: Ελεγχος εφαρμογης + backup αν χρειαζεται
+- [ ] **ΑΝΑΜΟΝΗ**: Εγκριση για συνεχεια στο ΒΗΜΑ 2
+
+### ΒΗΜΑ 2: ΑΛΛΑΓΗ FILTERING LOGIC
+- [ ] Αλλαγη LayerCanvas.tsx filtering απο activeTool σε layersVisible
+- [ ] Layers εμφανιζονται οταν layersVisible === true
+- [ ] Layers κρυβονται οταν layersVisible === false
+- [ ] **ΣΤΟΠ**: Ελεγχος εφαρμογης + backup αν χρειαζεται
+- [ ] **ΑΝΑΜΟΝΗ**: Εγκριση για συνεχεια στο ΒΗΜΑ 3
+
+### ΒΗΜΑ 3: INTEGRATION ΜΕ LAYERING BUTTON
+- [ ] Αλλαγη layering button behavior απο tool switch σε toggle
+- [ ] Πρωτο κλικ: layersVisible = true, layers εμφανιζονται
+- [ ] Δευτερο κλικ: layersVisible = false, layers κρυβονται
+- [ ] **ΣΤΟΠ**: Ελεγχος εφαρμογης + backup αν χρειαζεται
+- [ ] **ΑΝΑΜΟΝΗ**: Εγκριση για συνεχεια στο ΒΗΜΑ 4
+
+### ΒΗΜΑ 4: TESTING & VERIFICATION
+- [ ] Test: Ανανεωση → Layers OFF
+- [ ] Test: Layering button → Layers ON
+- [ ] Test: Pan tool → Layers παραμενουν ON
+- [ ] Test: Layering button ξανα → Layers OFF
+- [ ] Test: Ολα τα tools δουλευουν με layers ON
+- [ ] **ΤΕΛΟΣ**: Τελικος ελεγχος + backup ολοκληρωμενης υλοποιησης
+
+## 📁 ΑΡΧΕΙΑ ΠΡΟΣ ΕΠΕΞΕΡΓΑΣΙΑ
+
+1. **CanvasSection.tsx**: Layer state management
+2. **LayerCanvas.tsx**: Filtering logic update
+3. **OverlayToolbar.tsx**: Layering button behavior (αν χρειαστει)
+
+## 🎯 ΑΝΑΜΕΝΟΜΕΝΟ ΑΠΟΤΕΛΕΣΜΑ
+
+**Professional CAD behavior:**
+- Layering button = Toggle switch για layer visibility
+- Tools (pan/zoom/draw/etc) = Independent απο layer visibility
+- Layer state = Persistent μεχρι explicit toggle OFF
+- Unified workflow = Δουλευεις με ολα τα tools ενω layers εμφανη
+
+---
+**STATUS: READY TO IMPLEMENT**

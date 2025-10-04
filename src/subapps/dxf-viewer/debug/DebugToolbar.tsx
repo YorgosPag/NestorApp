@@ -1,0 +1,507 @@
+'use client';
+
+import React from 'react';
+import type { SceneModel } from '../types/scene';
+import type { ToolType } from '../ui/toolbar/types';
+import { runAllTests, formatReportForCopy, type UnifiedTestReport } from './unified-test-runner';
+
+interface DebugToolbarProps {
+  showCopyableNotification: (message: string, type?: 'success' | 'info' | 'warning' | 'error') => void;
+  showGrid: boolean;
+  currentScene: SceneModel | null;
+  activeTool: ToolType;
+  handleToolChange: (tool: ToolType) => void;
+  testModalOpen: boolean;
+  setTestModalOpen: (open: boolean) => void;
+  testReport: UnifiedTestReport | null;
+  setTestReport: (report: UnifiedTestReport | null) => void;
+  formattedTestReport: string;
+  setFormattedTestReport: (report: string) => void;
+  dxfCanvasVisible: boolean;
+  setDxfCanvasVisible: (visible: boolean) => void;
+  layerCanvasVisible: boolean;
+  setLayerCanvasVisible: (visible: boolean) => void;
+  panToWorldOrigin: () => void;
+  showCalibration: boolean;
+  handleCalibrationToggle: () => void;
+}
+
+export const DebugToolbar: React.FC<DebugToolbarProps> = ({
+  showCopyableNotification,
+  showGrid,
+  currentScene,
+  activeTool,
+  handleToolChange,
+  testModalOpen,
+  setTestModalOpen,
+  testReport,
+  setTestReport,
+  formattedTestReport,
+  setFormattedTestReport,
+  dxfCanvasVisible,
+  setDxfCanvasVisible,
+  layerCanvasVisible,
+  setLayerCanvasVisible,
+  panToWorldOrigin,
+  showCalibration,
+  handleCalibrationToggle
+}) => {
+  // Keyboard shortcuts for testing (F2, F3, F12)
+  React.useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      console.log('🎯 DEBUG KEY EVENT:', { key: event.key, ctrlKey: event.ctrlKey, keyCode: event.keyCode });
+
+      // 🎯 Ctrl+F2: Layering Workflow Test
+      const isCtrlF2 = (event.key === 'F2' && event.ctrlKey) ||
+                       (event.keyCode === 113 && event.ctrlKey) ||
+                       (event.code === 'F2' && event.ctrlKey);
+
+      if (isCtrlF2) {
+        event.preventDefault();
+        event.stopPropagation();
+        console.log('🎯 Ctrl+F2 SHORTCUT: LAYERING WORKFLOW TEST TRIGGERED');
+
+        // Direct call to window function
+        if ((window as any).runLayeringWorkflowTest) {
+          (window as any).runLayeringWorkflowTest().then((result: any) => {
+            console.log('📊 LAYERING WORKFLOW RESULT:', result);
+            const successSteps = result.steps.filter((s: any) => s.status === 'success').length;
+            const totalSteps = result.steps.length;
+            const summary = `Workflow: ${result.success ? '✅ SUCCESS' : '❌ FAILED'}\nSteps: ${successSteps}/${totalSteps}\nLayer Displayed: ${result.layerDisplayed ? '✅ YES' : '❌ NO'}`;
+            showCopyableNotification(summary, result.success ? 'success' : 'error');
+          });
+        } else {
+          // Fallback to import
+          import('./layering-workflow-test').then(module => {
+            const runLayeringWorkflowTest = module.runLayeringWorkflowTest;
+            runLayeringWorkflowTest().then((result: any) => {
+              console.log('📊 LAYERING WORKFLOW RESULT:', result);
+              const successSteps = result.steps.filter((s: any) => s.status === 'success').length;
+              const totalSteps = result.steps.length;
+              const summary = `Workflow: ${result.success ? '✅ SUCCESS' : '❌ FAILED'}\nSteps: ${successSteps}/${totalSteps}\nLayer Displayed: ${result.layerDisplayed ? '✅ YES' : '❌ NO'}`;
+              showCopyableNotification(summary, result.success ? 'success' : 'error');
+            });
+          });
+        }
+        return;
+      }
+
+      // 🎯 F12: Layering Workflow Test (alternative shortcut)
+      if (event.key === 'F12') {
+        event.preventDefault();
+        console.log('🎯 F12 SHORTCUT: LAYERING WORKFLOW TEST TRIGGERED');
+        if ((window as any).runLayeringWorkflowTest) {
+          (window as any).runLayeringWorkflowTest().then((result: any) => {
+            console.log('📊 LAYERING WORKFLOW RESULT:', result);
+            const successSteps = result.steps.filter((s: any) => s.status === 'success').length;
+            const totalSteps = result.steps.length;
+            const summary = `Workflow: ${result.success ? '✅ SUCCESS' : '❌ FAILED'}\nSteps: ${successSteps}/${totalSteps}\nLayer Displayed: ${result.layerDisplayed ? '✅ YES' : '❌ NO'}`;
+            showCopyableNotification(summary, result.success ? 'success' : 'error');
+          });
+        }
+        return;
+      }
+
+      // 🎯 F3: Cursor-Crosshair Alignment Test
+      const isF3 = event.key === 'F3' || event.keyCode === 114 || event.code === 'F3';
+      if (isF3) {
+        event.preventDefault();
+        event.stopPropagation();
+        console.log('🎯 F3 SHORTCUT: CURSOR-CROSSHAIR ALIGNMENT TEST TRIGGERED');
+
+        import('./enterprise-cursor-crosshair-test').then(module => {
+          const { runEnterpriseMouseCrosshairTests, startEnterpriseInteractiveTest } = module.default;
+
+          console.log('🔍 Running enterprise cursor-crosshair alignment tests...');
+          const results = runEnterpriseMouseCrosshairTests();
+
+          const summary = `Enterprise Test: ${results.overallStatus}
+Scenarios: ${results.passedScenarios}/${results.totalScenarios} passed
+Avg Performance: ${results.avgPerformance.toFixed(1)}ms
+Max Error: ${results.maxError.toFixed(3)}px
+Min Pass Rate: ${(results.minPassRate * 100).toFixed(1)}%
+
+Check console for detailed metrics`;
+
+          console.log('🎮 Starting enterprise interactive test - Move mouse over canvas, press ESC to stop');
+          startEnterpriseInteractiveTest();
+
+          showCopyableNotification(summary, results.overallStatus === 'PASS' ? 'success' : 'warning');
+        }).catch(error => {
+          console.error('Failed to load enterprise cursor-crosshair test:', error);
+          showCopyableNotification('Failed to load enterprise cursor-crosshair test module', 'error');
+        });
+        return;
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown, true);
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown, true);
+      window.removeEventListener('keydown', handleKeyDown, true);
+    };
+  }, [showCopyableNotification]);
+
+  return (
+    <div className="flex gap-2 p-2 bg-gray-800 border-b border-gray-700">
+      {/* Run All Tests Button */}
+      <button
+        onClick={async () => {
+          console.log('🧪 RUN ALL TESTS TRIGGERED FROM HEADER');
+
+          // Show loading notification
+          showCopyableNotification('Running all tests... Please wait.', 'info');
+
+          try {
+            // Run all tests
+            const report = await runAllTests();
+            const formatted = formatReportForCopy(report);
+
+            // Store results in state
+            setTestReport(report);
+            setFormattedTestReport(formatted);
+
+            // Open modal
+            setTestModalOpen(true);
+
+            // Show quick summary notification
+            const passRate = ((report.passed / report.totalTests) * 100).toFixed(0);
+            showCopyableNotification(
+              `Tests Complete: ${report.passed}✅ / ${report.failed}❌ (${passRate}% pass rate)\nClick modal for details`,
+              report.failed === 0 ? 'success' : 'warning'
+            );
+          } catch (error) {
+            console.error('Failed to run all tests:', error);
+            showCopyableNotification('Failed to run all tests', 'error');
+          }
+        }}
+        className="px-3 py-1 text-xs font-bold rounded shadow-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-500 hover:to-pink-500 transition-all"
+      >
+        🧪 Run All Tests
+      </button>
+
+      {/* Canvas Alignment Test Button */}
+      <button
+        onClick={() => {
+          console.log('🎯 MANUAL CANVAS ALIGNMENT TEST TRIGGERED FROM HEADER');
+          import('./canvas-alignment-test').then(module => {
+            const CanvasAlignmentTester = module.CanvasAlignmentTester;
+            const alignmentResult = CanvasAlignmentTester.testCanvasAlignment();
+            const zIndexResult = CanvasAlignmentTester.testCanvasZIndex();
+            const greenBorder = CanvasAlignmentTester.findGreenBorder();
+
+            console.log('🔍 DETAILED Z-INDEX DEBUG:', {
+              alignmentResult,
+              zIndexResult,
+              greenBorder: !!greenBorder
+            });
+
+            // Direct DOM inspection
+            const dxfEl = document.querySelector('canvas[data-canvas-type="dxf"]');
+            const layerEl = document.querySelector('canvas[data-canvas-type="layer"]');
+            console.log('🔍 DIRECT DOM INSPECTION:', {
+              dxfCanvas: dxfEl ? {
+                inlineStyle: (dxfEl as HTMLElement).style.cssText,
+                computedZIndex: window.getComputedStyle(dxfEl).zIndex,
+                computedPosition: window.getComputedStyle(dxfEl).position
+              } : 'NOT FOUND',
+              layerCanvas: layerEl ? {
+                inlineStyle: (layerEl as HTMLElement).style.cssText,
+                computedZIndex: window.getComputedStyle(layerEl).zIndex,
+                computedPosition: window.getComputedStyle(layerEl).position
+              } : 'NOT FOUND'
+            });
+
+            const testMessage = `Canvas Alignment: ${alignmentResult.isAligned ? '✅ OK' : '❌ MISALIGNED'}\nZ-Index Order: ${zIndexResult.isCorrectOrder ? '✅ OK' : '❌ WRONG'}\nGreen Border Found: ${greenBorder ? '✅ YES' : '❌ NO'}`;
+            const allTestsPass = alignmentResult.isAligned && zIndexResult.isCorrectOrder && greenBorder;
+            showCopyableNotification(testMessage, allTestsPass ? 'success' : 'warning');
+          }).catch(err => {
+            console.error('Failed to load CanvasAlignmentTester:', err);
+            showCopyableNotification('Failed to load test module', 'error');
+          });
+        }}
+        className="px-3 py-1 text-xs font-bold rounded shadow-lg bg-yellow-500 text-black hover:bg-yellow-400 transition-all"
+      >
+        🎯 Canvas Test
+      </button>
+
+      {/* Layering Workflow Test Button */}
+      <button
+        onClick={() => {
+          console.log('🎯 LAYERING WORKFLOW TEST TRIGGERED FROM HEADER');
+          import('./layering-workflow-test').then(module => {
+            const runLayeringWorkflowTest = module.runLayeringWorkflowTest;
+            runLayeringWorkflowTest().then(result => {
+              console.log('📊 LAYERING WORKFLOW RESULT:', result);
+              const successSteps = result.steps.filter(s => s.status === 'success').length;
+              const totalSteps = result.steps.length;
+              const summary = `Workflow: ${result.success ? '✅ SUCCESS' : '❌ FAILED'}\nSteps: ${successSteps}/${totalSteps}\nLayer Displayed: ${result.layerDisplayed ? '✅ YES' : '❌ NO'}`;
+
+              showCopyableNotification(summary, result.success ? 'success' : 'error');
+            }).catch(err => {
+              console.error('Failed to run layering workflow test:', err);
+              showCopyableNotification('Failed to run workflow test', 'error');
+            });
+          }).catch(err => {
+            console.error('Failed to load layering workflow test:', err);
+            showCopyableNotification('Failed to load workflow test module', 'error');
+          });
+        }}
+        className="px-3 py-1 text-xs font-bold rounded shadow-lg bg-green-500 text-white hover:bg-green-400 transition-all"
+      >
+        🔄 Layering Test (Ctrl+F2)
+      </button>
+
+      {/* DOM Inspector Button */}
+      <button
+        onClick={() => {
+          console.log('🔍 DOM INSPECTOR TRIGGERED FROM HEADER');
+          import('./dom-inspector').then(module => {
+            const { inspectDOMElements, findFloatingPanelAdvanced, showDetailedDOMInfo } = module;
+
+            console.log('📋 Running complete DOM inspection...');
+            const inspection = inspectDOMElements();
+
+            console.log('🔍 Trying advanced floating panel detection...');
+            const panel = findFloatingPanelAdvanced();
+
+            console.log('📊 Showing detailed DOM info...');
+            showDetailedDOMInfo();
+
+            const summary = `DOM Inspection Complete!\n\n` +
+              `Floating Panels Found: ${inspection.floatingPanels.filter((p: any) => p.found).length}\n` +
+              `Tabs Found: ${inspection.tabs.length}\n` +
+              `Cards Found: ${inspection.cards.length}\n` +
+              `Canvases Found: ${inspection.canvases.length}\n` +
+              `Advanced Panel Detection: ${panel ? '✅ SUCCESS' : '❌ FAILED'}\n\n` +
+              `Check console for detailed results.`;
+
+            showCopyableNotification(summary, 'info');
+          }).catch(err => {
+            console.error('Failed to load DOM inspector:', err);
+            showCopyableNotification('Failed to load DOM inspector', 'error');
+          });
+        }}
+        className="px-3 py-1 text-xs font-bold rounded shadow-lg bg-blue-500 text-white hover:bg-blue-400 transition-all"
+      >
+        🔍 DOM Inspector
+      </button>
+
+      {/* Enterprise Cursor Test Button */}
+      <button
+        onClick={() => {
+          console.log('🏢 ENTERPRISE CURSOR-CROSSHAIR ALIGNMENT TEST TRIGGERED');
+          import('./enterprise-cursor-crosshair-test').then(module => {
+            const { runEnterpriseMouseCrosshairTests, startEnterpriseInteractiveTest } = module.default;
+
+            console.log('🔍 Running enterprise cursor-crosshair alignment tests...');
+            const results = runEnterpriseMouseCrosshairTests();
+
+            const summary = `Enterprise Test: ${results.overallStatus}
+Scenarios: ${results.passedScenarios}/${results.totalScenarios} passed
+Avg Performance: ${results.avgPerformance.toFixed(1)}ms
+Max Error: ${results.maxError.toFixed(3)}px
+Min Pass Rate: ${(results.minPassRate * 100).toFixed(1)}%
+
+Check console for detailed metrics`;
+
+            console.log('🎮 Starting enterprise interactive test - Move mouse over canvas, press ESC to stop');
+            startEnterpriseInteractiveTest();
+
+            showCopyableNotification(summary, results.overallStatus === 'PASS' ? 'success' : 'warning');
+          }).catch(error => {
+            console.error('Failed to load enterprise cursor-crosshair test:', error);
+            showCopyableNotification('Failed to load enterprise cursor-crosshair test module', 'error');
+          });
+        }}
+        className="px-3 py-1 text-xs font-bold rounded shadow-lg bg-purple-500 text-white hover:bg-purple-400 transition-all"
+      >
+        🏢 Enterprise Test (F3)
+      </button>
+
+      {/* Origin Markers Debug Button */}
+      <button
+        onClick={() => {
+          console.log('🛠️ ORIGIN MARKERS DEBUG TOGGLE TRIGGERED');
+          import('./OriginMarkersDebugOverlay').then(module => {
+            const { originMarkersDebug } = module;
+
+            const enabled = originMarkersDebug.toggle();
+
+            if (typeof window !== 'undefined') {
+              setTimeout(() => {
+                window.dispatchEvent(new CustomEvent('origin-markers-toggle', {
+                  detail: { enabled }
+                }));
+              }, 50);
+            }
+
+            const originMessage = `Origin Markers: ${enabled ? 'ENABLED ✅' : 'DISABLED ❌'}\n\nMarkers ${enabled ? 'are now visible!' : 'are now hidden!'}`;
+            showCopyableNotification(originMessage, enabled ? 'success' : 'info');
+          }).catch(error => {
+            console.error('Failed to load origin markers debug:', error);
+            showCopyableNotification('Failed to load origin markers debug module', 'error');
+          });
+        }}
+        className="px-3 py-1 text-xs font-bold rounded shadow-lg bg-orange-500 text-white hover:bg-orange-400 transition-all"
+      >
+        🎯 Origin (0,0)
+      </button>
+
+      {/* Ruler Debug Button */}
+      <button
+        onClick={() => {
+          console.log('🛠️ RULER DEBUG TOGGLE TRIGGERED');
+          import('./RulerDebugOverlay').then(module => {
+            const { rulerDebugOverlay } = module;
+
+            const enabled = rulerDebugOverlay.toggle();
+
+            if (typeof window !== 'undefined') {
+              setTimeout(() => {
+                window.dispatchEvent(new CustomEvent('ruler-debug-toggle', {
+                  detail: { enabled }
+                }));
+              }, 50);
+            }
+
+            const diagnostics = rulerDebugOverlay.getDiagnostics();
+            const shortMessage = `Ruler Debug: ${enabled ? 'ENABLED ✅' : 'DISABLED ❌'}\n\n${enabled ? '🎯 Tick Markers: RED (major) / GREEN (minor)\n📐 Calibration Grid: CYAN 100mm grid\n🔍 Auto-verification: ACTIVE' : 'All debug overlays hidden'}`;
+
+            showCopyableNotification(shortMessage, enabled ? 'success' : 'info');
+            console.log(diagnostics);
+          });
+        }}
+        className="px-3 py-1 text-xs font-bold rounded shadow-lg bg-blue-500 text-white hover:bg-blue-400 transition-all"
+      >
+        📏 Rulers
+      </button>
+
+      {/* Calibration Toggle Button */}
+      <button
+        onClick={() => {
+          console.log('🛠️ CALIBRATION TOGGLE TRIGGERED');
+          handleCalibrationToggle();
+          const status = showCalibration ? 'DISABLED' : 'ENABLED';
+          showCopyableNotification(`Calibration panel ${status} ✅`, 'info');
+        }}
+        className={`px-3 py-1 text-xs font-bold rounded shadow-lg transition-all ${
+          showCalibration
+            ? 'bg-cyan-500 text-white hover:bg-cyan-400'
+            : 'bg-gray-500 text-white hover:bg-gray-400'
+        }`}
+      >
+        🎯 Calibration {showCalibration ? 'ON' : 'OFF'}
+      </button>
+
+      {/* Cursor-Snap Alignment Debug Button */}
+      <button
+        onClick={() => {
+          console.log('🎯 CURSOR-SNAP ALIGNMENT DEBUG TOGGLE');
+          import('./CursorSnapAlignmentDebugOverlay').then(module => {
+            const { cursorSnapAlignmentDebug } = module;
+            const enabled = cursorSnapAlignmentDebug.toggle();
+
+            const diagnostics = cursorSnapAlignmentDebug.getDiagnostics();
+            console.log('📊 Alignment Diagnostics:', diagnostics);
+
+            const message = enabled
+              ? '🎯 Alignment Debug: ENABLED\n\n🔵 Blue = Cursor\n🟢 Green = Crosshair\n🔴 Red = Snap Marker\n\nΜετακίνησε τον cursor κοντά σε entity για snap,\nμετά ΚΑΝΕ CLICK για να καταγράψεις μετρήσεις!'
+              : '🎯 Alignment Debug: DISABLED';
+
+            showCopyableNotification(message, enabled ? 'success' : 'info');
+          }).catch(error => {
+            console.error('Failed to load alignment debug:', error);
+            showCopyableNotification('Failed to load alignment debug module', 'error');
+          });
+        }}
+        className="px-3 py-1 text-xs font-bold rounded shadow-lg bg-indigo-500 text-white hover:bg-indigo-400 transition-all"
+      >
+        🎯 Alignment
+      </button>
+
+      {/* Grid Enterprise Test Button */}
+      <button
+        onClick={() => {
+          console.log('🎯 GRID ENTERPRISE TEST TRIGGERED FROM HEADER');
+          import('./grid-enterprise-test').then(module => {
+            const { runGridEnterpriseTests } = module;
+
+            runGridEnterpriseTests().then(report => {
+              console.log('📊 GRID ENTERPRISE TEST REPORT:', report);
+
+              const summary = `Grid Enterprise Tests Complete!\n\n` +
+                `✅ Passed: ${report.passed}/${report.totalTests}\n` +
+                `❌ Failed: ${report.failed}\n` +
+                `⚠️ Warnings: ${report.warnings}\n\n` +
+                `🏗️ Topological Integrity: ${report.topologicalIntegrity.percentage.toFixed(0)}%\n` +
+                `📏 Coordinate Precision: ${report.coordinatePrecision.withinTolerance ? '✅ OK' : '⚠️ WARNING'}\n` +
+                `🎨 Grid Pixels Detected: ${report.canvasState.gridPixelsDetected}\n\n` +
+                `Check console for detailed report.`;
+
+              showCopyableNotification(
+                summary,
+                report.success ? 'success' : (report.failed > 0 ? 'error' : 'info')
+              );
+            }).catch(err => {
+              console.error('Failed to run grid enterprise tests:', err);
+              showCopyableNotification('Failed to run grid tests', 'error');
+            });
+          }).catch(err => {
+            console.error('Failed to load grid enterprise test:', err);
+            showCopyableNotification('Failed to load grid test module', 'error');
+          });
+        }}
+        className={`px-3 py-1 text-xs font-bold rounded shadow-lg transition-all ${
+          showGrid
+            ? 'bg-green-500 text-white hover:bg-green-400'
+            : 'bg-gray-500 text-white hover:bg-gray-400'
+        }`}
+      >
+        {showGrid ? '📐 Grid TEST' : '📐 Grid TEST'}
+      </button>
+
+      {/* Canvas Visibility Toggle Buttons */}
+      <button
+        onClick={() => {
+          setDxfCanvasVisible(!dxfCanvasVisible);
+          console.log('🎯 DxfCanvas visibility toggled:', !dxfCanvasVisible);
+        }}
+        className={`px-3 py-1 text-xs font-bold rounded shadow-lg transition-all ${
+          dxfCanvasVisible
+            ? 'bg-green-500 text-white hover:bg-green-400'
+            : 'bg-red-500 text-white hover:bg-red-400'
+        }`}
+      >
+        {dxfCanvasVisible ? '🟢 DXF ON' : '🔴 DXF OFF'}
+      </button>
+
+      <button
+        onClick={() => {
+          setLayerCanvasVisible(!layerCanvasVisible);
+          console.log('🎯 LayerCanvas visibility toggled:', !layerCanvasVisible);
+        }}
+        className={`px-3 py-1 text-xs font-bold rounded shadow-lg transition-all ${
+          layerCanvasVisible
+            ? 'bg-blue-500 text-white hover:bg-blue-400'
+            : 'bg-red-500 text-white hover:bg-red-400'
+        }`}
+      >
+        {layerCanvasVisible ? '🔵 LAYER ON' : '🔴 LAYER OFF'}
+      </button>
+
+      {/* Pan to Origin (0,0) Button */}
+      <button
+        onClick={panToWorldOrigin}
+        className="px-3 py-1 text-xs font-bold rounded shadow-lg bg-purple-500 text-white hover:bg-purple-400 transition-all"
+      >
+        🏠 Pan to (0,0)
+      </button>
+
+      <div className="text-xs bg-gray-700 text-white px-2 py-1 rounded">
+        Debug Tools (Development Only)
+      </div>
+    </div>
+  );
+};

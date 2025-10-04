@@ -1,0 +1,26 @@
+{
+  "$schema": "https://unpkg.com/knip@latest/schema.json",
+  "workspaces": {
+    ".": {
+      "entry": [
+        "./**/*.{ts,tsx,js,jsx}"
+      ],
+      "project": [
+        "./**/*.{ts,tsx,js,jsx}"
+      ]
+    }
+  },
+  "ignore": [
+    "**/node_modules/**",
+    "dist/**",
+    "build/**",
+    "coverage/**",
+    ".git/**",
+    "reports/**",
+    "backups/**",
+    "**/*.d.ts",
+    "**/*.ps1",
+    "**/*.md"
+  ],
+  "ignoreDependencies": []
+}

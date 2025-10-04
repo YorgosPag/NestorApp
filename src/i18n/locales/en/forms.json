@@ -1,0 +1,73 @@
+{
+  "labels": {
+    "name": "Name",
+    "email": "Email",
+    "phone": "Phone",
+    "address": "Address",
+    "description": "Description",
+    "company": "Company",
+    "position": "Position",
+    "area": "Area",
+    "price": "Price",
+    "floor": "Floor",
+    "status": "Status",
+    "salePricePerSqm": "Sale Price per Sq.m.",
+    "costPerSqm": "Cost per Sq.m. of Construction",
+    "realizedValue": "Realized Project Value",
+    "completionAmount": "Required Completion Amount",
+    "financing": "Project Financing"
+  },
+  "placeholders": {
+    "enterName": "Enter name",
+    "enterEmail": "Enter email",
+    "selectOption": "Select...",
+    "enterDescription": "Enter description",
+    "enterPrice": "Enter price",
+    "enterArea": "Enter area"
+  },
+  "validation": {
+    "required": "This field is required",
+    "invalidEmail": "Invalid email",
+    "invalidPhone": "Invalid phone number",
+    "invalidUrl": "Invalid URL",
+    "minLength": "Minimum {min} characters",
+    "maxLength": "Maximum {max} characters",
+    "exactLength": "Exactly {length} characters",
+    "invalidNumber": "Invalid number",
+    "notInteger": "Must be an integer",
+    "minValue": "Minimum value: {min}",
+    "maxValue": "Maximum value: {max}",
+    "positiveNumber": "Must be a positive number",
+    "nonNegativeNumber": "Cannot be negative",
+    "greaterThan": "Must be greater than {value}",
+    "lessThan": "Must be less than {value}",
+    "invalidFormat": "Invalid format",
+    "invalidDate": "Invalid date",
+    "pastDate": "Date must be in the past",
+    "futureDate": "Date must be in the future",
+    "invalidSelection": "Invalid selection",
+    "fieldError": "Field error",
+    "fillAllRequired": "Please fill all required fields",
+    "invalidCode": "Code must be unique",
+    "areaRequired": "Area must be greater than 0",
+    "priceRequired": "Price must be greater than 0",
+    "confirmPassword": "Passwords do not match"
+  },
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "submit": "Submit",
+    "reset": "Reset",
+    "edit": "Edit",
+    "delete": "Delete",
+    "add": "Add",
+    "update": "Update"
+  },
+  "tooltips": {
+    "salePricePerSqm": "The sale price per square meter.",
+    "costPerSqm": "The construction cost per square meter of building.",
+    "realizedValue": "The current value of the completed project.",
+    "completionAmount": "Calculated automatically: Estimated Cost - Realized Value",
+    "financing": "The financing amount for the project."
+  }
+}

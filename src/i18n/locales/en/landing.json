@@ -1,0 +1,63 @@
+{
+  "hero": {
+    "findIdeal": "Find the Ideal",
+    "property": "Property",
+    "subtitle": "Discover exceptional properties in premium locations. From studios to maisonettes, find your dream home."
+  },
+  "search": {
+    "propertyType": "Property Type",
+    "location": "Location",
+    "priceRange": "Price Range",
+    "areaRange": "Area Range",
+    "allTypes": "All types",
+    "locationPlaceholder": "Area...",
+    "searchButton": "Search",
+    "types": {
+      "studio": "Studio",
+      "studio2": "1 Bedroom",
+      "apartment": "Apartment",
+      "maisonette": "Maisonette",
+      "storage": "Storage"
+    },
+    "priceRanges": {
+      "up50k": "Up to €50,000",
+      "50k100k": "€50,000 - €100,000",
+      "100k200k": "€100,000 - €200,000",
+      "200k500k": "€200,000 - €500,000",
+      "above500k": "Above €500,000"
+    },
+    "areaRanges": {
+      "up50": "Up to 50 sq.m.",
+      "50to100": "50 - 100 sq.m.",
+      "100to150": "100 - 150 sq.m.",
+      "above150": "Above 150 sq.m."
+    }
+  },
+  "features": {
+    "title": "Why Choose Us",
+    "subtitle": "Our experience and expertise in the real estate industry guarantees the best possible service.",
+    "professionalService": {
+      "title": "Professional Service",
+      "description": "Team of specialists with years of experience in the real estate industry."
+    },
+    "premiumLocations": {
+      "title": "Premium Locations",
+      "description": "Selected properties in the best areas of the city."
+    },
+    "trustedPartner": {
+      "title": "Trusted Partner",
+      "description": "Thousands of satisfied clients trust our services."
+    }
+  },
+  "stats": {
+    "properties": "Properties",
+    "clients": "Clients",
+    "years": "Years of Experience"
+  },
+  "cta": {
+    "title": "Start Your Search Today",
+    "description": "Contact us to find the ideal property for you together.",
+    "contactUs": "Contact Us",
+    "exploreProperties": "Explore Properties"
+  }
+}

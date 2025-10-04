@@ -1,0 +1,61 @@
+
+'use client';
+
+import React from 'react';
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Eye, EyeOff, Lock, Unlock, ChevronDown, ChevronRight, Home } from "lucide-react";
+import { cn } from "@/lib/utils";
+import type { Property } from '@/types/property-viewer';
+import type { LayerState } from '../useLayerStates';
+import { PROPERTY_STATUS_CONFIG, PROPERTY_TYPE_ICONS } from "@/lib/property-utils";
+
+interface PropertyLayerHeaderProps {
+  property: Property;
+  isExpanded: boolean;
+  layerState: LayerState;
+  onToggleExpand: () => void;
+  onSelect: (isShiftClick: boolean) => void;
+  onToggleVisibility: () => void;
+  onToggleLock: () => void;
+}
+
+export function PropertyLayerHeader({
+  property,
+  isExpanded,
+  layerState,
+  onToggleExpand,
+  onSelect,
+  onToggleVisibility,
+  onToggleLock,
+}: PropertyLayerHeaderProps) {
+  const statusInfo = PROPERTY_STATUS_CONFIG[property.status] || PROPERTY_STATUS_CONFIG.default;
+  const IconComponent = PROPERTY_TYPE_ICONS[property.type] || Home;
+
+  return (
+    <div>
+      <div className="flex items-center gap-2">
+        <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={onToggleExpand}>
+          {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+        </Button>
+        <div className="flex items-center gap-2 flex-1 cursor-pointer" onClick={(e) => onSelect(e.shiftKey)}>
+          <IconComponent className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm font-medium truncate">{property.name}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={onToggleVisibility}>
+            {layerState.visible ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3 text-muted-foreground" />}
+          </Button>
+          <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={onToggleLock}>
+            {layerState.locked ? <Lock className="h-3 w-3 text-muted-foreground" /> : <Unlock className="h-3 w-3" />}
+          </Button>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between text-xs pl-7">
+        <span className="text-muted-foreground">{property.type}</span>
+        <Badge variant="outline" className={cn("text-xs", statusInfo.color)}>{statusInfo.label}</Badge>
+      </div>
+    </div>
+  );
+}

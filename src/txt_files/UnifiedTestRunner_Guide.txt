@@ -1,0 +1,243 @@
+🧪 UNIFIED TEST RUNNER - ΟΔΗΓΟΣ ΧΡΗΣΗΣ
+========================================
+
+## 📍 ΤΙ ΔΗΜΙΟΥΡΓΗΘΗΚΕ
+
+Δημιουργήθηκε ένα **enterprise-grade debugging system** που εκτελεί όλα τα debug tests
+αυτόματα σε ένα κλικ και εμφανίζει τα αποτελέσματα σε professional modal με copy button.
+
+---
+
+## 📂 ΝΕΑ ΑΡΧΕΙΑ
+
+1️⃣ **debug/unified-test-runner.ts** (380 γραμμές)
+   - Orchestrator που εκτελεί όλα τα tests σειριακά
+   - 10 διαφορετικά tests (Canvas, Grid, Layering, DOM, κλπ)
+   - Timeout protection (30s ανά test)
+   - Consolidated reporting με statistics
+
+2️⃣ **debug/TestResultsModal.tsx** (350 γραμμές)
+   - Professional modal component
+   - 3 tabs: Summary / Details / Raw Output
+   - Copy to clipboard button
+   - Download as JSON button
+   - Pass rate statistics
+
+3️⃣ **app/DxfViewerContent.tsx** (UPDATED)
+   - Προστέθηκε "🧪 Run All Tests" button στο header
+   - Integrated modal state management
+   - Auto-open modal με αποτελέσματα
+
+---
+
+## 🎯 ΠΩΣ ΤΟ ΧΡΗΣΙΜΟΠΟΙΕΙΣ
+
+### Βήμα 1: Άνοιξε το DXF Viewer
+```
+http://localhost:3001/dxf/viewer
+```
+
+### Βήμα 2: Πάτησε το "🧪 Run All Tests" button
+- Βρίσκεται στο header, δίπλα στα άλλα debug buttons
+- Έχει gradient purple-pink χρώμα
+
+### Βήμα 3: Περίμενε τα αποτελέσματα
+- Εμφανίζεται notification "Running all tests..."
+- Όλα τα tests τρέχουν σειριακά (10-30 seconds total)
+- Modal ανοίγει αυτόματα με τα αποτελέσματα
+
+### Βήμα 4: Δες τα αποτελέσματα
+- **Summary Tab**: Grid view με όλα τα tests (pass/fail)
+- **Details Tab**: Expandable details για κάθε test
+- **Raw Tab**: Formatted text output για copy/paste
+
+### Βήμα 5: Αντίγραψε τα αποτελέσματα
+- Πάτησε "📋 Copy All" για να αντιγράψεις όλα τα αποτελέσματα
+- Ή πάτησε "💾 Download JSON" για export σε αρχείο
+- Στείλε μου (Claude) τα αποτελέσματα για analysis!
+
+---
+
+## 📊 ΤΙ TESTS ΕΚΤΕΛΟΥΝΤΑΙ
+
+1️⃣  **Canvas Alignment Test**
+    - Ελέγχει alignment των 2 canvas (DXF + Layer)
+    - Z-index verification
+    - Green border detection
+
+2️⃣  **Layering Workflow Test**
+    - End-to-end layering workflow simulation
+    - Layer display verification
+    - Step-by-step validation
+
+3️⃣  **DOM Inspector Test**
+    - Floating panels detection
+    - Tabs & cards counting
+    - Canvas elements verification
+
+4️⃣  **Enterprise Cursor-Crosshair Test**
+    - Cursor-crosshair alignment accuracy
+    - Multiple scenarios testing
+    - Performance metrics
+
+5️⃣  **Grid Enterprise Test**
+    - Grid rendering validation
+    - Topological integrity check
+    - Coordinate precision (CAD-level)
+
+6️⃣  **Origin Markers Status**
+    - Origin markers debug status
+    - Registered canvases count
+
+7️⃣  **Ruler Debug Status**
+    - Ruler debug overlay status
+    - Diagnostics retrieval
+
+8️⃣  **Canvas Visibility Status**
+    - DXF Canvas visibility check
+    - Layer Canvas visibility check
+
+9️⃣  **Transform & Viewport Status**
+    - Current transform state
+    - Viewport dimensions
+    - Zoom level
+
+🔟  **System Information**
+    - Browser info
+    - Viewport size
+    - Timestamp
+
+---
+
+## 📋 ΠΑΡΑΔΕΙΓΜΑ OUTPUT
+
+```
+🧪 ============================================
+🧪 UNIFIED TEST RUNNER - FULL REPORT
+🧪 ============================================
+
+📅 Timestamp: 2025-10-02 10:30:45
+⏱️ Total Duration: 2340ms
+📊 Results: 8✅ / 0❌ / 2⚠️ (10 total)
+
+🖥️ SYSTEM INFO:
+  • Viewport: 1920×1080
+  • User Agent: Mozilla/5.0...
+
+📋 TEST RESULTS:
+
+1. ✅ Canvas Alignment Test
+   Duration: 120ms
+   Summary: All checks passed
+
+2. ✅ Layering Workflow Test
+   Duration: 450ms
+   Summary: 5/5 steps passed
+
+... (8 more tests)
+```
+
+---
+
+## 💡 ΧΡΗΣΕΙΣ
+
+### Για Debugging με Claude
+1. Πατάς "Run All Tests"
+2. Αντιγράφεις όλα τα αποτελέσματα
+3. Τα στέλνεις σε εμένα (Claude)
+4. Βλέπω ολοκληρωμένη εικόνα της κατάστασης!
+
+### Για Regression Testing
+- Πριν από μεγάλες αλλαγές: Run tests → Save baseline
+- Μετά από αλλαγές: Run tests → Compare
+- Διασφάλιση ότι δεν έσπασε κάτι
+
+### Για Performance Monitoring
+- Παρακολούθηση duration κάθε test
+- Εντοπισμός performance regressions
+
+---
+
+## 🎨 MODAL FEATURES
+
+### Header
+- Test timestamp
+- Total duration
+- Close button
+
+### Stats Bar
+- ✅ Passed count (green)
+- ❌ Failed count (red)
+- ⚠️ Warnings count (yellow)
+- 📊 Pass rate percentage (blue)
+
+### Action Buttons
+- 📋 Copy All: Αντιγραφή σε clipboard
+- 💾 Download JSON: Export σε αρχείο
+
+### Tabs
+- 📊 Summary: Grid view με όλα τα tests
+- 🔍 Details: Expandable details ανά test
+- 📝 Raw Output: Plain text για copy/paste
+
+### Footer
+- Viewport dimensions
+- Close button
+
+---
+
+## 🔧 TECHNICAL DETAILS
+
+### Architecture
+- **Modular Design**: Κάθε test είναι ξεχωριστή async function
+- **Safe Execution**: Timeout protection (30s), error handling
+- **Type-Safe**: Full TypeScript typing
+- **Zero Dependencies**: Χρησιμοποιεί μόνο υπάρχοντα debug files
+
+### Error Handling
+- Κάθε test wrapped σε try-catch
+- Timeout protection για hanging tests
+- Detailed error reporting
+
+### Performance
+- Tests run serially (όχι parallel) για accurate results
+- Total time: 10-30 seconds (depends on tests)
+- Modal opens instantly με cached results
+
+---
+
+## ✅ STATUS
+
+✅ Όλα τα αρχεία δημιουργήθηκαν
+✅ Button προστέθηκε στο header
+✅ Modal integrated στο DxfViewerContent
+✅ TypeScript types OK
+✅ Build OK
+✅ Dev server OK
+
+---
+
+## 🚀 ΕΠΟΜΕΝΑ ΒΗΜΑΤΑ
+
+1. **Δοκίμασε το!**
+   - Άνοιξε http://localhost:3001/dxf/viewer
+   - Πάτησε "🧪 Run All Tests"
+   - Δες το modal
+
+2. **Στείλε μου αποτελέσματα**
+   - Πάτησε "Copy All"
+   - Στείλε μου το output
+   - Θα δω ολοκληρωμένη εικόνα!
+
+3. **Feedback**
+   - Πες μου αν θες αλλαγές στο UI
+   - Πες μου αν θέλεις extra tests
+   - Πες μου αν χρειάζεται κάτι άλλο!
+
+---
+
+## 📞 SUPPORT
+
+Για οποιαδήποτε ερώτηση ή πρόβλημα, απλά στείλε μου το output του test runner!
+
+Καλή δουλειά! 🚀

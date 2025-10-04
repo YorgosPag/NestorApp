@@ -1,0 +1,40 @@
+{
+  "buttons": {
+    "save": "[Ŝάνέ_]",
+    "cancel": "[Ćάńćέł_]",
+    "delete": "[Ðέłέţέ_]",
+    "edit": "[Éðīţ_]",
+    "add": "[Άðð_]",
+    "search": "[Ŝέάŕćĥ_]",
+    "export": "[Éхρόŕţ_]",
+    "import": "[Īɱρόŕţ_]",
+    "refresh": "[Ŕέƒŕέŝĥ_]",
+    "close": "[Ćłόŝέ_]"
+  },
+  "status": {
+    "loading": "[Łόάðīńģ..._]",
+    "error": "[Éŕŕόŕ_]",
+    "success": "[Ŝūććέŝŝ_]",
+    "pending": "[Ρέńðīńģ_]",
+    "completed": "[Ćόɱρłέţέð_]"
+  },
+  "placeholders": {
+    "search": "[Ŝέάŕćĥ..._]",
+    "selectOption": "[Ŝέłέćţ άń όρţīόń_]",
+    "enterText": "[Éńţέŕ ţέхţ_]"
+  },
+  "navigation": {
+    "home": "Ȟøɱę",
+    "properties": "Ᵽȓøᵽęȓŧɨęs", 
+    "crm": "ĈŘɃ",
+    "admin": "Ⱥđɱɨn"
+  },
+  "actions": {
+    "save": "Șⱥⱱę",
+    "cancel": "Ȼⱥnȼęł", 
+    "delete": "Đęłęŧę",
+    "edit": "Ęđɨŧ",
+    "close": "Ȼłøsę",
+    "confirm": "Ȼønfɨȓɱ"
+  }
+}

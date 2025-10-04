@@ -1,0 +1,111 @@
+{
+  "title": "Compositions",
+  "description": "Composite components and showcases",
+  "showcase": {
+    "title": "Component Composition Showcase",
+    "subtitle": "Demonstration of new composition components using the BaseCard system",
+    "sections": {
+      "cards": "Card Components",
+      "toolbars": "Toolbar Components",
+      "integration": "Integration Demo",
+      "benefits": "Design System Benefits"
+    }
+  },
+  "cards": {
+    "task": {
+      "title": "TaskCard",
+      "description": "Task cards for CRM management"
+    },
+    "user": {
+      "title": "UserCard",
+      "description": "User cards with statistics"
+    },
+    "building": {
+      "title": "BuildingCard",
+      "description": "Building cards with information"
+    },
+    "project": {
+      "title": "ProjectCard",
+      "description": "Project cards with progress"
+    },
+    "contact": {
+      "title": "ContactCard",
+      "description": "Contact cards with details"
+    },
+    "storage": {
+      "title": "StorageCard",
+      "description": "Storage space cards"
+    },
+    "property": {
+      "title": "PropertyCard",
+      "description": "Property cards with details"
+    },
+    "notification": {
+      "title": "NotificationCard",
+      "description": "Notification cards"
+    }
+  },
+  "toolbars": {
+    "building": {
+      "title": "BuildingToolbar",
+      "description": "Building management toolbar"
+    },
+    "project": {
+      "title": "ProjectToolbar", 
+      "description": "Project management toolbar"
+    },
+    "contacts": {
+      "title": "ContactsToolbar",
+      "description": "Contacts management toolbar"
+    }
+  },
+  "demo": {
+    "state": "Demo State",
+    "selected": "Selected",
+    "search": "Search",
+    "filters": "Filters",
+    "none": "None",
+    "simulate": "Simulate Selection",
+    "items": "items"
+  },
+  "integration": {
+    "title": "Integration Demo",
+    "description": "Usage in application",
+    "examples": {
+      "buildings": "Building management page",
+      "projects": "Projects page",
+      "contacts": "Contacts page"
+    }
+  },
+  "benefits": {
+    "title": "Design System Benefits",
+    "consistency": {
+      "title": "Consistency",
+      "description": "All cards use the same BaseCard system for unified look & feel"
+    },
+    "modularity": {
+      "title": "Modularity",
+      "description": "Composition pattern allows easy customization and reusability"
+    },
+    "typeSafety": {
+      "title": "Type Safety",
+      "description": "Full TypeScript support with validated props and design system integration"
+    },
+    "performance": {
+      "title": "Performance",
+      "description": "Optimized rendering and semantic color system with zero runtime overhead"
+    },
+    "unifiedInterface": {
+      "title": "Unified Interface",
+      "description": "All toolbars use the same BaseToolbar system for consistent behavior and styling"
+    },
+    "configurable": {
+      "title": "Configurable",
+      "description": "Flexible configuration with actions, filters, search and custom content sections"
+    },
+    "accessible": {
+      "title": "Accessible",
+      "description": "Built-in accessibility with keyboard shortcuts, tooltips and ARIA support"
+    }
+  }
+}

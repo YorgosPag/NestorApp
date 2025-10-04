@@ -1,0 +1,42 @@
+{
+  "floors": {
+    "ground": "Ισόγειο",
+    "basement": "Υπόγειο {{number}}",
+    "floor": "{{number}}ος όροφος",
+    "firstFloor": "1ος όροφος",
+    "secondFloor": "2ος όροφος",
+    "thirdFloor": "3ος όροφος"
+  },
+  "categories": {
+    "residential": "Κατοικίες",
+    "commercial": "Εμπορικό",
+    "mixed": "Μικτή Χρήση",
+    "industrial": "Βιομηχανικό"
+  },
+  "status": {
+    "active": "Ενεργό",
+    "construction": "Υπό Κατασκευή",
+    "planned": "Σχεδιασμένο",
+    "completed": "Ολοκληρωμένο"
+  },
+  "units": {
+    "pricePerSqm": "€/τμ",
+    "sqm": "τ.μ."
+  },
+  "filters": {
+    "title": "Φίλτρα Κτιρίων",
+    "tooltip": "Φίλτρα και Προβολή",
+    "clearAll": "Καθαρισμός Φίλτρων",
+    "states": {
+      "active": "Ενεργά Κτίρια",
+      "construction": "Υπό Κατασκευή",
+      "planned": "Σχεδιασμένα",
+      "completed": "Ολοκληρωμένα"
+    },
+    "types": {
+      "residential": "Κατοικίες",
+      "commercial": "Εμπορικά",
+      "mixed": "Μικτής Χρήσης"
+    }
+  }
+}

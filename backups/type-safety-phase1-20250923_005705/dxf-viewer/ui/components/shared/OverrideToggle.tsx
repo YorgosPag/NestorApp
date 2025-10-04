@@ -1,0 +1,108 @@
+/**
+ * OVERRIDE TOGGLE SHARED COMPONENT
+ * Unified component για όλα τα override checkbox patterns
+ * ΒΗΜΑ 7 του FloatingPanelContainer refactoring
+ */
+
+import React from 'react';
+
+/**
+ * Props for the OverrideToggle component
+ */
+interface OverrideToggleProps {
+  /** Current checked state of the toggle */
+  checked: boolean;
+  /** Callback fired when the toggle state changes */
+  onChange: (checked: boolean) => void;
+  /** Main label text for the toggle */
+  label: string;
+  /** Optional description text shown below the label */
+  description?: string;
+  /** Additional CSS classes to apply to the container */
+  className?: string;
+  /** Whether the toggle is disabled */
+  disabled?: boolean;
+  /** Whether to show the status badge */
+  showStatusBadge?: boolean;
+  /** Custom text for the status badge */
+  statusText?: string;
+}
+
+/**
+ * Unified Override Toggle Component
+ *
+ * Reusable checkbox component that replaces all duplicate override patterns
+ * across the DXF viewer settings. Provides consistent styling and behavior
+ * for enable/disable functionality with optional status badges.
+ *
+ * @component
+ * @example
+ * ```tsx
+ * <OverrideToggle
+ *   checked={isEnabled}
+ *   onChange={setIsEnabled}
+ *   label="Enable Custom Settings"
+ *   description="Override default behavior"
+ *   showStatusBadge={true}
+ * />
+ * ```
+ *
+ * Performance optimizations:
+ * - React.memo prevents unnecessary re-renders
+ * - useCallback optimizes event handlers
+ *
+ * @since ΒΗΜΑ 7 του FloatingPanelContainer refactoring
+ */
+export const OverrideToggle = React.memo<OverrideToggleProps>(function OverrideToggle({
+  checked,
+  onChange,
+  label,
+  description,
+  className = '',
+  disabled = false,
+  showStatusBadge = false,
+  statusText
+}) {
+
+  const handleChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    onChange(e.target.checked);
+  }, [onChange]);
+
+  return (
+    <div className={`flex items-center justify-between p-3 bg-gray-800 rounded-lg ${className}`}>
+      <div className="flex-1">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={checked}
+            onChange={handleChange}
+            disabled={disabled}
+            className="rounded border-gray-600 text-blue-600 focus:ring-blue-500 focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          />
+          <div className="flex flex-col">
+            <span className="text-sm text-gray-300 font-medium">
+              {label}
+            </span>
+            {description && (
+              <span className="text-xs text-gray-500 mt-1">
+                {description}
+              </span>
+            )}
+          </div>
+        </label>
+      </div>
+
+      {showStatusBadge && (
+        <div className="ml-3">
+          <span className={`px-2 py-1 rounded text-xs font-medium ${
+            checked
+              ? 'bg-orange-900/50 text-orange-300 border border-orange-600'
+              : 'bg-gray-700 text-gray-400 border border-gray-600'
+          }`}>
+            {statusText || (checked ? 'Ενεργό' : 'Ανενεργό')}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+});

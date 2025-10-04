@@ -1,0 +1,38 @@
+Category,Item,Count,Status,Priority,Notes
+Type Imports,Point2D imports,138,Consistent,Low,All from rendering/types/Types.ts
+Type Imports,ViewTransform imports,80,Consistent,Low,All from rendering/types/Types.ts
+Type Imports,Viewport imports,50,Consistent,Low,All from rendering/types/Types.ts
+React Imports,Default imports (React from 'react'),160,Mixed,Medium,Preferred for JSX components
+React Imports,Named imports ({ useState } from 'react'),100,Mixed,Medium,Preferred for hooks-only files
+React Imports,Namespace imports (* as React),2,Antipattern,High,Replace with named/default imports
+Critical Bugs,Missing React import,1,Broken,Critical,utils/performance.ts line 14
+Re-exports,Total re-export statements,147,Review,Medium,Mostly legitimate (index.ts files)
+Re-exports,Questionable re-exports,5,Warning,High,systems/rulers-grid/config.ts line 9
+Path Patterns,../../rendering/types/Types,126,Normal,Low,Files 2 levels deep
+Path Patterns,../rendering/types/Types,171,Normal,Low,Files 1 level deep
+Context Usage,CanvasContext imports,9,Good,Low,Centralized pattern
+Hook Usage,useCanvasOperations imports,6,Good,Low,Well abstracted
+ServiceRegistry,V2 usage,5,Pending,Low,Migration in progress (incremental)
+Total Files,TypeScript files,561,N/A,N/A,Project scope
+Total Statements,Import statements,2000,N/A,N/A,Approximate count
+
+FILE PATH,LINE,ISSUE TYPE,SEVERITY,DESCRIPTION,RECOMMENDATION
+F:\Pagonis_Nestor\src\subapps\dxf-viewer\utils\performance.ts,14,Missing Import,Critical,Uses React.useState without importing React,Add React import or use named import
+F:\Pagonis_Nestor\src\subapps\dxf-viewer\systems\rulers-grid\config.ts,9,Redundant Re-export,High,Re-exports ViewTransform from rendering/types/Types,Remove re-export
+F:\Pagonis_Nestor\src\subapps\dxf-viewer\debug\TestResultsModal.tsx,1,Antipattern,Medium,Uses import * as React,Replace with named imports
+F:\Pagonis_Nestor\src\subapps\dxf-viewer\utils\performance.ts,7,Inconsistent Pattern,Low,Partial React imports without default,Standardize to named imports
+
+RECOMMENDATION,PRIORITY,EFFORT,IMPACT,TIMEFRAME
+Fix utils/performance.ts React import,Critical,5 minutes,High,Immediate
+Remove redundant re-export in rulers-grid/config.ts,High,2 minutes,Medium,Today
+Standardize React imports to named pattern,Medium,Incremental,Medium,This week
+Review and replace import * as React usages,Medium,30 minutes,Low,This week
+Consider path aliases (@/rendering),Low,2 hours,Medium,Future
+Audit barrel exports for circular dependencies,Low,1 hour,Low,Future
+
+METRIC,BEFORE,AFTER,IMPROVEMENT
+Critical Bugs,1,0,100%
+Antipattern Imports (React),2,0,100%
+Redundant Re-exports,1,0,100%
+Consistent Type Imports,138/138,138/138,Maintained
+Consistent React Imports,160/260,260/260,100%

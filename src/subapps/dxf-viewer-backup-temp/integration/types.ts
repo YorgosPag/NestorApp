@@ -1,0 +1,38 @@
+
+'use client';
+
+import React from 'react';
+import type { DXFEntity, Layer, ToolType, ViewMode, Status, Point, Measurement } from '../types';
+import type { DrawingState } from '../hooks/drawing/useUnifiedDrawing';
+import type { useDxfViewerState } from '../hooks/useDxfViewerState';
+import type { SceneModel } from '../types/scene';
+import type { ViewTransform } from '../rendering/types/Types';
+
+export type DxfViewerState = ReturnType<typeof useDxfViewerState>;
+
+export interface DXFViewerLayoutProps extends DxfViewerState {
+  // DXFViewerApp specific props
+  dxfFile: File | null;
+  status: Status;
+  onClear: () => void;
+  onViewModeChange: (mode: ViewMode) => void;
+  onCanvasMouseDown: (worldPoint: Point, event: React.MouseEvent) => void;
+  onCanvasMouseMove: (worldPoint: Point, event: React.MouseEvent) => void;
+
+  // Props from useDxfViewerState that need to be passed down
+  className?: string;
+  entities: DXFEntity[];
+  layers: Layer[];
+  scene: SceneModel;
+  handleTransformChange: (transform: ViewTransform) => void;
+  handleSceneChange: (scene: SceneModel) => void;
+  handleCalibrationToggle: (show: boolean) => void;
+  canvasTransform?: { scale: number; offsetX: number; offsetY: number };
+  setSelectedEntityIds: (ids: string[]) => void;
+  onSceneImported?: (file: File, encoding?: string) => void;
+  handleFileImport: (file: File) => Promise<void>;
+
+  // 🎯 Canvas visibility controls για debug
+  dxfCanvasVisible?: boolean;
+  layerCanvasVisible?: boolean;
+}

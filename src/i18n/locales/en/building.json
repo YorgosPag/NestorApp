@@ -1,0 +1,42 @@
+{
+  "floors": {
+    "ground": "Ground Floor",
+    "basement": "Basement {{number}}",
+    "floor": "{{number}}th Floor",
+    "firstFloor": "1st Floor",
+    "secondFloor": "2nd Floor",
+    "thirdFloor": "3rd Floor"
+  },
+  "categories": {
+    "residential": "Residential",
+    "commercial": "Commercial",
+    "mixed": "Mixed Use",
+    "industrial": "Industrial"
+  },
+  "status": {
+    "active": "Active",
+    "construction": "Under Construction",
+    "planned": "Planned",
+    "completed": "Completed"
+  },
+  "units": {
+    "pricePerSqm": "€/sq.m",
+    "sqm": "sq.m"
+  },
+  "filters": {
+    "title": "Building Filters",
+    "tooltip": "Filters and View",
+    "clearAll": "Clear Filters",
+    "states": {
+      "active": "Active Buildings",
+      "construction": "Under Construction",
+      "planned": "Planned",
+      "completed": "Completed"
+    },
+    "types": {
+      "residential": "Residential",
+      "commercial": "Commercial",
+      "mixed": "Mixed Use"
+    }
+  }
+}

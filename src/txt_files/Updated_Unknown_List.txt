@@ -1,0 +1,80 @@
+32 αποτελέσματα - 23 αρχεία (Ενημερωμένη λίστα μετά τις διορθώσεις)
+
+src\subapps\dxf-viewer\hooks\useDxfViewerState.ts:
+  69:   const handleAction = useCallback((action: string, data?: number | string | Record<string, unknown>) => {
+
+src\subapps\dxf-viewer\mouse\MouseStateManager.ts:
+  20:   metadata?: Record<string, unknown>;
+  185:  forceMode(mode: MouseMode, dragData?: unknown): void {
+
+src\subapps\dxf-viewer\managers\SceneValidator.ts:
+  13:   metadata?: Record<string, unknown>;
+  14:   [key: string]: unknown;
+
+src\subapps\dxf-viewer\managers\SceneStatistics.ts:
+  12:   metadata?: Record<string, unknown>;
+  13:   [key: string]: unknown;
+
+src\subapps\dxf-viewer\managers\SceneUpdateManager.ts:
+  16:   metadata?: Record<string, unknown>;
+  17:   [key: string]: unknown;
+  60:       source = 'unknown',
+
+src\subapps\dxf-viewer\collaboration\CollaborationManager.ts:
+  22:   data: unknown;
+  75:     this.wsService.addEventListener('dxf_collaboration', (message: WebSocketMessage<unknown>) => {
+  80:     this.wsService.addEventListener('user_online', (message: WebSocketMessage<unknown>) => {
+  84:     this.wsService.addEventListener('user_offline', (message: WebSocketMessage<unknown>) => {
+  244:  private broadcastEvent(type: CollaborationEvent['type'], data: unknown) {
+  294:  private emit(event: string, data: unknown) {
+
+src\subapps\dxf-viewer\snapping\extended-types.ts:
+  38:   data?: Record<string, unknown>;
+
+src\subapps\dxf-viewer\snapping\engines\shared\snap-engine-utils.ts:
+  245:           entityId: entity.id || 'unknown',
+
+src\subapps\dxf-viewer\types\entities.ts:
+  22:   metadata?: Record<string, unknown>;
+  129:  metadata?: Record<string, unknown>;
+
+src\subapps\dxf-viewer\canvas\interaction\useGripInteraction.ts:
+  28:   [key: string]: unknown;
+
+src\subapps\dxf-viewer\canvas\hooks\useSceneRender.ts:
+  8:   renderSceneInternal: (scene: SceneModel, options?: unknown) => void;
+
+src\subapps\dxf-viewer\canvas\hooks\useCanvasRenderer.ts:
+  103:  const renderScene = useCallback((scene: SceneModel, renderOptions?: unknown) => {
+
+src\subapps\dxf-viewer\canvas\components\dxf-viewer\components\DxfViewerToolbar.tsx:
+  10:   onAction: (action: string, data?: unknown) => void;
+
+src\subapps\dxf-viewer\app\DxfViewerContent.tsx:
+  41:   onAction: (action: string, data?: number | string | Record<string, unknown>) => void;
+
+src\subapps\dxf-viewer\workers\dxf-parser.worker.ts:
+  85:     const result = parseDxfContent(fileContent, filename || 'unknown.dxf');
+
+src\subapps\dxf-viewer\utils\SmartBoundsManager.ts:
+  155:         // Generic fallback για unknown entity types
+
+src\subapps\dxf-viewer\utils\dxf-entity-parser.ts:
+  82:         // Log unknown entity types
+
+src\subapps\dxf-viewer\utils\canvas-core.ts:
+  104:       const errorMsg = result.error || 'Import failed - unknown reason';
+  111:   handleImportError: (err: unknown, onError?: (error: string) => void) => {
+
+src\subapps\dxf-viewer\utils\renderers\EntityRendererComposite.ts:
+  148:   // Fallback renderer for unknown entity types
+  150:     // Safely handle unknown entity types without causing infinite loops
+
+src\subapps\dxf-viewer\settings-core\__tests__\validation.test.ts:
+  115:         lineType: 'unknown' as any,
+
+===== ΕΠΙΤΥΧΗΜΕΝΕΣ ΔΙΟΡΘΩΣΕΙΣ =====
+✅ src\subapps\dxf-viewer\app\DxfViewerContent.tsx (γραμμή 41)
+✅ src\subapps\dxf-viewer\canvas\OverlayCanvasCore.tsx (4 διορθώσεις)
+✅ src\subapps\dxf-viewer\hooks\useKeyboardShortcuts.ts (3 διορθώσεις)
+✅ src\subapps\dxf-viewer\hooks\useOverlayDrawing.ts (5 διορθώσεις)

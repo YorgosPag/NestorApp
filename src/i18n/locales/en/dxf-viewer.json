@@ -1,0 +1,97 @@
+{
+  "layers": {
+    "title": "DXF Layers ({count})",
+    "clickToSelect": "Click to select",
+    "delete": {
+      "confirm": "{count, plural, =0 {Delete layer \"{name}\"} one {Delete # element from layer \"{name}\"} other {Delete # elements from layer \"{name}\"}}",
+      "success": "Layer deleted successfully!",
+      "error": "Error deleting layer",
+      "tooltip": "Delete layer \"{name}\" ({count, plural, =0 {empty} one {# element} other {# elements}})"
+    },
+    "colorPicker": {
+      "title": "Select color:",
+      "close": "Close"
+    },
+    "actions": {
+      "select": "Select",
+      "hide": "Hide", 
+      "show": "Show",
+      "rename": "Rename"
+    },
+    "info": {
+      "layer": "Layer",
+      "elements": "Elements",
+      "visible": "Visible",
+      "selected": "selected elements"
+    }
+  },
+  "confirmations": {
+    "confirmed": "Action confirmed",
+    "cancelled": "Action cancelled", 
+    "irreversible": "⚠️ This action cannot be undone!",
+    "delete": {
+      "confirm": "Delete",
+      "layer": {
+        "title": "Delete Layer",
+        "message": "You are about to delete layer \"{name}\".\n\n{count, plural, =0 {The layer is empty.} one {# entity will be deleted.} other {# entities will be deleted.}}\n\nAll entities in this layer will be permanently lost."
+      },
+      "entity": {
+        "title": "Delete Entity",
+        "message": "You are about to delete entity \"{name}\".\n\nThe entity will be permanently removed from the drawing."
+      },
+      "colorGroup": {
+        "title": "Delete Color Group",
+        "message": "You are about to delete color group \"{name}\".\n\n{count, plural, =0 {No layers exist in this group.} one {# layer will be deleted.} other {# layers will be deleted.}}\n\nAll layers and entities in this color group will be permanently lost."
+      }
+    },
+    "merge": {
+      "confirm": "Merge",
+      "entities": {
+        "title": "Merge Entities",
+        "message": "You are about to merge {count} entities into \"{target}\".\n\nSources for merging: {sources}\n\nThe source entities will be deleted and all their properties will be transferred to the target entity."
+      },
+      "layers": {
+        "title": "Merge Layers",
+        "message": "You are about to merge {count} layers into \"{target}\".\n\nSources for merging: {sources}\n\nAll entities from the source layers will be moved to the target layer and the source layers will be deleted."
+      },
+      "colorGroups": {
+        "title": "Hierarchical Color Groups Merge",
+        "message": "You are about to merge {count} color groups into \"{target}\".\n\nSources for merging: {sources}\n\nAll layers from the source color groups will be moved to the target color group. The source color groups will disappear but layers and entities will be preserved."
+      }
+    }
+  },
+  "common": {
+    "confirm": "Confirm",
+    "cancel": "Cancel"
+  },
+  "panels": {
+    "properties": {
+      "title": "Properties",
+      "description": "{{selectedCount}} selected elements{{layerCount, plural, =0 {} other { | {{layerCount}} DXF layers}}"
+    },
+    "overlay": {
+      "title": "Overlay",
+      "description": "{{regionCount, plural, =0 {} other {{{regionCount}} overlay regions}}"
+    },
+    "levels": {
+      "title": "Levels",
+      "description": "Management Levels"
+    },
+    "hierarchy": {
+      "title": "Hierarchy",
+      "description": "Project Hierarchy & Destinations"
+    },
+    "layers": {
+      "title": "Layers",
+      "description": "Layer Drawing & Status Management"
+    }
+  },
+  "toolbar": {
+    "select": "Select",
+    "pan": "Pan",
+    "line": "Line",
+    "rectangle": "Rectangle",
+    "circle": "Circle",
+    "polyline": "Polyline"
+  }
+}

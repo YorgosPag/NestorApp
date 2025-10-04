@@ -1,0 +1,108 @@
+{
+  "overview": {
+    "stats": {
+      "newLeads": "New Leads",
+      "activeOpportunities": "Active Opportunities", 
+      "scheduledViewings": "Scheduled Viewings",
+      "pendingTasks": "Pending Tasks"
+    }
+  },
+  "opportunities": {
+    "stages": {
+      "initial_contact": "Initial Contact",
+      "qualification": "Qualification",
+      "viewing": "Viewing",
+      "proposal": "Proposal",
+      "negotiation": "Negotiation",
+      "contract": "Contract",
+      "closed_won": "Closed Won",
+      "closed_lost": "Closed Lost"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "pending": "Pending"
+    },
+    "actions": {
+      "edit": "Edit",
+      "delete": "Delete",
+      "view": "View"
+    }
+  },
+  "dashboard": {
+    "tabs": {
+      "overview": "Overview",
+      "contacts": "Contacts",
+      "pipeline": "Pipeline",
+      "tasks": "Tasks",
+      "calendar": "Calendar",
+      "communications": "Communications"
+    }
+  },
+  "tasks": {
+    "title": "Tasks & Appointments",
+    "newTask": "New Task",
+    "noTasks": "No tasks found",
+    "loading": "Loading...",
+    "searchPlaceholder": "Search...",
+    "clearFilters": "Clear",
+    "noDate": "No date",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "overdue": "Overdue",
+    "status": {
+      "all": "All statuses",
+      "pending": "Pending",
+      "in_progress": "In Progress",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "priority": {
+      "all": "All priorities",
+      "urgent": "Urgent",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "type": {
+      "all": "All types",
+      "call": "Call",
+      "meeting": "Meeting",
+      "viewing": "Viewing",
+      "follow_up": "Follow Up",
+      "email": "Email",
+      "document": "Document",
+      "other": "Other"
+    },
+    "timeframe": {
+      "all": "All dates",
+      "overdue": "Overdue",
+      "today": "Today",
+      "tomorrow": "Tomorrow",
+      "week": "This week"
+    },
+    "actions": {
+      "complete": "Complete",
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "messages": {
+      "completed": "✅ Task \"{{title}}\" completed!",
+      "deleted": "✅ Task \"{{title}}\" deleted!",
+      "completeError": "❌ Error completing task",
+      "deleteError": "❌ Error deleting task",
+      "loadError": "Error loading tasks",
+      "deleteConfirm": "Are you sure you want to delete task \"{{title}}\"?"
+    }
+  },
+  "errors": {
+    "contactNotFound": "Contact not found",
+    "invalidStage": "Invalid opportunity stage",
+    "deadlinePassed": "Deadline has passed"
+  },
+  "success": {
+    "contactCreated": "Contact created successfully",
+    "contactUpdated": "Contact updated successfully",
+    "contactDeleted": "Contact deleted successfully"
+  }
+}

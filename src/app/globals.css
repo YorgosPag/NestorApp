@@ -1,0 +1,113 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 212 22% 95%; /* Adjusted for a very light grey */
+    --foreground: 222.2 47.4% 11.2%;
+    
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 47.4% 11.2%;
+    
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 47.4% 11.2%;
+    
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+    
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 47.4% 11.2%;
+    
+    --radius: 0.5rem;
+
+    /* Semantic Status Colors */
+    --status-success: 142 71% 45%;    /* Green for success/available */
+    --status-info: 221 83% 53%;       /* Blue for info/active */
+    --status-warning: 32 95% 44%;     /* Orange for warning/reserved */
+    --status-error: 0 72% 51%;        /* Red for error/sold */
+    --status-purple: 271 76% 53%;     /* Purple for special states */
+
+    /* Sidebar Variables */
+    --sidebar-background: 212 22% 95%;
+    --sidebar-foreground: 222.2 47.4% 11.2%;
+    --sidebar-accent: 210 40% 96.1%;
+    --sidebar-accent-foreground: 222.2 47.4% 11.2%;
+    --sidebar-border: 214.3 31.8% 91.4%;
+    --sidebar-ring: 222.2 47.4% 11.2%;
+  }
+
+  .dark {
+    --background: 220 20% 11%; /* #1e293b */
+    --foreground: 210 40% 98%;
+
+    --card: 217 33% 17%; /* #293345 */
+    --card-foreground: 210 40% 98%;
+
+    --popover: 220 20% 11%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    
+    --secondary: 217 33% 25%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217 33% 25%; /* Same as secondary */
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217 33% 25%;
+    --accent-foreground: 210 40% 98%;
+    
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    
+    --border: 217 33% 25%;
+    --input: 217 33% 25%;
+    --ring: 210 40% 98%;
+
+    /* Semantic Status Colors - Dark Mode */
+    --status-success: 142 76% 36%;    /* Darker green for dark mode */
+    --status-info: 221 83% 53%;       /* Same blue works in dark */
+    --status-warning: 32 95% 44%;     /* Same orange works in dark */
+    --status-error: 0 72% 51%;        /* Same red works in dark */
+    --status-purple: 271 76% 53%;     /* Same purple works in dark */
+
+    /* Sidebar Variables - Dark Mode */
+    --sidebar-background: 220 20% 11%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-accent: 217 33% 17%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217 33% 25%;
+    --sidebar-ring: 210 40% 98%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+}
+
+/* ΔΟΛΟΦΟΝΟΣ CURSOR για τον viewer */
+.dxf-viewer-root,
+.dxf-viewer-root * {
+  cursor: none !important;
+}

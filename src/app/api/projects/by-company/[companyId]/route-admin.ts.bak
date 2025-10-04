@@ -1,0 +1,47 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { FirestoreProjectsRepository } from '@/services/projects/repositories/FirestoreProjectsRepository';
+import { db, isFirebaseAvailable } from '@/lib/firebase-admin';
+
+// Create a simple repository instance
+const projectsRepo = new FirestoreProjectsRepository();
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { companyId: string } }
+) {
+  try {
+    console.log('🔥 Firebase Admin available:', isFirebaseAvailable());
+    console.log(`🏗️ API: Loading projects for companyId: "${params.companyId}"`);
+    
+    if (!isFirebaseAvailable()) {
+      return NextResponse.json({
+        success: false,
+        error: 'Firebase Admin is not properly configured. Check your environment variables.',
+        projects: [],
+        companyId: params.companyId
+      }, { status: 500 });
+    }
+    
+    const projects = await projectsRepo.getProjectsByCompanyId(params.companyId);
+    
+    console.log(`🏗️ API: Found ${projects.length} projects for companyId: "${params.companyId}"`);
+    
+    return NextResponse.json({ 
+      success: true, 
+      projects,
+      companyId: params.companyId
+    });
+    
+  } catch (error) {
+    console.error('🏗️ API: Error loading projects:', error);
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        projects: [],
+        companyId: params.companyId
+      },
+      { status: 500 }
+    );
+  }
+}

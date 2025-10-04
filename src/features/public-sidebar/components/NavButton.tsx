@@ -1,0 +1,30 @@
+'use client';
+
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import type { LucideIcon } from 'lucide-react';
+
+export function NavButton({
+  item,
+  active,
+}: {
+  item: { title: string; href: string; icon: LucideIcon; description: string };
+  active: boolean;
+}) {
+  const Icon = item.icon;
+  return (
+    <Link href={item.href}>
+      <Button
+        variant={active ? 'secondary' : 'ghost'}
+        className={cn('w-full justify-start h-12 text-left px-3', active && 'bg-blue-50 text-blue-700 border-blue-200')}
+      >
+        <Icon className="mr-3 h-4 w-4" />
+        <div className="flex flex-col items-start">
+          <span className="text-sm font-medium">{item.title}</span>
+          <span className="text-xs text-muted-foreground">{item.description}</span>
+        </div>
+      </Button>
+    </Link>
+  );
+}

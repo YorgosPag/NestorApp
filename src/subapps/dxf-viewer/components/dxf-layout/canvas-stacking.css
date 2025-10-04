@@ -1,0 +1,22 @@
+/* 🎯 CANVAS Z-INDEX FIX - Following ChatGPT5 recommendation */
+
+/* Canvas stack container */
+.canvas-stack {
+  position: relative;
+}
+
+/* All canvas elements in stack */
+.canvas-stack > canvas,
+.canvas-stack > [data-canvas-type] {
+  position: absolute;
+  inset: 0;
+}
+
+/* Force z-index order with !important */
+[data-canvas-type="dxf"] {
+  z-index: 0 !important;
+}
+
+[data-canvas-type="layer"] {
+  z-index: 10 !important; /* overlay πάνω */
+}

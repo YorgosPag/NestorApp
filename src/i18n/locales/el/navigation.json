@@ -1,0 +1,37 @@
+{
+  "menu": {
+    "main": "Κύριο Μενού",
+    "tools": "Εργαλεία",
+    "settings": "Ρυθμίσεις"
+  },
+  "pages": {
+    "home": "Αρχική",
+    "properties": "Ευρετήριο Ακινήτων",
+    "contacts": "Επαφές",
+    "projects": "Έργα",
+    "buildings": "Κτίρια",
+    "units": "Μονάδες (Units)",
+    "crm": "CRM",
+    "login": "Login"
+  },
+  "crm": {
+    "dashboard": "Dashboard",
+    "customers": "Διαχείριση Πελατών",
+    "communications": "Επικοινωνίες",
+    "leads": "Leads & Ευκαιρίες",
+    "tasks": "Εργασίες & Ραντεβού",
+    "pipeline": "Πωλήσεις Pipeline",
+    "teams": "Ομάδες & Ρόλοι",
+    "notifications": "Ειδοποιήσεις"
+  },
+  "tools": {
+    "legal": "Νομικά Έγγραφα",
+    "obligations": "Συγγραφή Υποχρεώσεων",
+    "dxf": "DXF Panel",
+    "shortcuts": "Συντομεύσεις"
+  },
+  "badges": {
+    "new": "Νέο",
+    "pro": "PRO"
+  }
+}

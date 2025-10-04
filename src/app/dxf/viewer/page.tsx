@@ -1,0 +1,81 @@
+'use client';
+
+import { useUserRole } from '@/contexts/UserRoleContext';
+import dynamic from 'next/dynamic';
+import { Suspense } from 'react';
+import { UnifiedProviders } from '@/subapps/dxf-viewer/providers/UnifiedProviders';
+
+// Dynamic import to avoid SSR issues with localStorage
+// 🔧 FIXED: Import DxfViewerApp (with all providers) instead of DxfViewerContent directly
+const DxfViewerApp = dynamic(
+  () => import('@/subapps/dxf-viewer/DxfViewerApp').then(mod => ({ default: mod.DxfViewerApp })),
+  {
+    loading: () => (
+      <div className="w-full h-full flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Φόρτωση DXF Viewer...</p>
+        </div>
+      </div>
+    ),
+    ssr: false // Disable SSR to avoid localStorage issues
+  }
+);
+
+function AdminGuard({ children }: { children: React.ReactNode }) {
+  const { isAdmin, isLoading } = useUserRole();
+
+  if (isLoading) {
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Έλεγχος δικαιωμάτων...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <div className="text-center max-w-md p-6">
+          <div className="text-red-500 text-6xl mb-4">🔒</div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            Πρόσβαση Μόνο για Διαχειριστές
+          </h1>
+          <p className="text-gray-600 mb-4">
+            Δεν έχετε τα απαραίτητα δικαιώματα για πρόσβαση στον DXF Viewer.
+          </p>
+          <p className="text-sm text-gray-500">
+            Παρακαλώ συνδεθείτε με λογαριασμό διαχειριστή.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}
+
+export default function DxfViewerPage() {
+  return (
+    <AdminGuard>
+      {/* UnifiedProviders includes all required contexts: Levels, Overlay, Selection, Cursor, etc. */}
+      <UnifiedProviders enableLegacyMode={true}>
+        <div className="w-full h-full">
+          <Suspense fallback={
+            <div className="w-full h-full flex items-center justify-center">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-gray-600">Φόρτωση DXF Viewer...</p>
+              </div>
+            </div>
+          }>
+            <DxfViewerApp className="w-full h-full" />
+          </Suspense>
+        </div>
+      </UnifiedProviders>
+    </AdminGuard>
+  );
+}

@@ -1,0 +1,6 @@
+// This file now acts as a barrel file to re-export from the new structure,
+// ensuring that no other part of the application needs to change its import paths.
+// This maintains the public API and avoids breaking changes.
+
+export * from './contacts/contracts';
+export * from './contacts/helpers';

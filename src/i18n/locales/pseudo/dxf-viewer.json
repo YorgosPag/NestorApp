@@ -1,0 +1,75 @@
+{
+  "layers": {
+    "title": "ĐXF Łⱥɏęȓs ({{count}})",
+    "clickToSelect": "Ȼłɨȼk ŧø sęłęȼŧ",
+    "delete": {
+      "confirm": "{count, plural, =0 {Đęłęŧę łⱥɏęȓ \"{name}\"} one {Đęłęŧę # ęłęɱęnŧ fȓøɱ łⱥɏęȓ \"{name}\"} other {Đęłęŧę # ęłęɱęnŧs fȓøɱ łⱥɏęȓ \"{name}\"}}",
+      "success": "Łⱥɏęȓ đęłęŧęđ sųȼȼęssfųłłɏ!",
+      "error": "Ęȓȓøȓ đęłęŧɨnǥ łⱥɏęȓ",
+      "tooltip": "Đęłęŧę łⱥɏęȓ \"{name}\" ({count, plural, =0 {ęɱᵽŧɏ} one {# ęłęɱęnŧ} other {# ęłęɱęnŧs}})"
+    },
+    "colorPicker": {
+      "title": "Șęłęȼŧ ȼøłøȓ:",
+      "close": "Ȼłøsę"
+    },
+    "actions": {
+      "select": "Șęłęȼŧ",
+      "hide": "Ȟɨđę", 
+      "show": "Șȟøw",
+      "rename": "Ɍęnⱥɱę"
+    },
+    "info": {
+      "layer": "Łⱥɏęȓ",
+      "elements": "Ęłęɱęnŧs",
+      "visible": "Ỽɨsɨƀłę",
+      "selected": "sęłęȼŧęđ ęłęɱęnŧs"
+    }
+  },
+  "confirmations": {
+    "confirmed": "Ⱥȼŧɨøn ȼønfɨȓɱęđ",
+    "cancelled": "Ⱥȼŧɨøn ȼⱥnȼęłłęđ",
+    "irreversible": "⚠️ Ŧħɨs ⱥȼŧɨøn ȼⱥnnøŧ ƀę undønę!",
+    "delete": {
+      "confirm": "Đęłęŧę",
+      "layer": {
+        "title": "Đęłęŧę Łⱥɏęȓ",
+        "message": "Ɏøᵾ ⱥȓę ⱥƀøᵾŧ ŧø đęłęŧę łⱥɏęȓ \"{name}\".\n\n{count, plural, =0 {Ŧħę łⱥɏęȓ ɨs ęɱᵽŧɏ.} one {# ęnŧɨŧɏ wɨłł ƀę đęłęŧęđ.} other {# ęnŧɨŧɨęs wɨłł ƀę đęłęŧęđ.}}\n\nȂłł ęnŧɨŧɨęs ɨn ŧħɨs łⱥɏęȓ wɨłł ƀę ᵽęȓɱⱥnęnŧłɏ łøsŧ."
+      },
+      "entity": {
+        "title": "Đęłęŧę Ęnŧɨŧɏ",
+        "message": "Ɏøᵾ ⱥȓę ⱥƀøᵾŧ ŧø đęłęŧę ęnŧɨŧɏ \"{name}\".\n\nŦħę ęnŧɨŧɏ wɨłł ƀę ᵽęȓɱⱥnęnŧłɏ ȓęɱøvęđ fȓøɱ ŧħę đȓⱥwɨnǥ."
+      },
+      "colorGroup": {
+        "title": "Đęłęŧę Ȼøłøȓ Ǥȓøᵾᵽ",
+        "message": "Ɏøᵾ ⱥȓę ⱥƀøᵾŧ ŧø đęłęŧę ȼøłøȓ ǥȓøᵾᵽ \"{name}\".\n\n{count, plural, =0 {Nø łⱥɏęȓs ęxɨsŧ ɨn ŧħɨs ǥȓøᵾᵽ.} one {# łⱥɏęȓ wɨłł ƀę đęłęŧęđ.} other {# łⱥɏęȓs wɨłł ƀę đęłęŧęđ.}}\n\nȂłł łⱥɏęȓs ⱥnđ ęnŧɨŧɨęs ɨn ŧħɨs ȼøłøȓ ǥȓøᵾᵽ wɨłł ƀę ᵽęȓɱⱥnęnŧłɏ łøsŧ."
+      }
+    },
+    "merge": {
+      "confirm": "Ɱęȓǥę",
+      "entities": {
+        "title": "Ɱęȓǥę Ęnŧɨŧɨęs",
+        "message": "Ɏøᵾ ⱥȓę ⱥƀøᵾŧ ŧø ɱęȓǥę {count} ęnŧɨŧɨęs ɨnŧø \"{target}\".\n\nȘøᵾȓȼęs føȓ ɱęȓǥɨnǥ: {sources}\n\nŦħę søᵾȓȼę ęnŧɨŧɨęs wɨłł ƀę đęłęŧęđ ⱥnđ ⱥłł ŧħęɨȓ ᵽȓøᵽęȓŧɨęs wɨłł ƀę ŧȓⱥnsfęȓȓęđ ŧø ŧħę ŧⱥȓǥęŧ ęnŧɨŧɏ."
+      },
+      "layers": {
+        "title": "Ɱęȓǥę Łⱥɏęȓs",
+        "message": "Ɏøᵾ ⱥȓę ⱥƀøᵾŧ ŧø ɱęȓǥę {count} łⱥɏęȓs ɨnŧø \"{target}\".\n\nȘøᵾȓȼęs føȓ ɱęȓǥɨnǥ: {sources}\n\nȂłł ęnŧɨŧɨęs fȓøɱ ŧħę søᵾȓȼę łⱥɏęȓs wɨłł ƀę ɱøvęđ ŧø ŧħę ŧⱥȓǥęŧ łⱥɏęȓ ⱥnđ ŧħę søᵾȓȼę łⱥɏęȓs wɨłł ƀę đęłęŧęđ."
+      },
+      "colorGroups": {
+        "title": "Ħɨęȓⱥȓȼħɨȼⱥł Ȼøłøȓ Ǥȓøᵾᵽs Ɱęȓǥę",
+        "message": "Ɏøᵾ ⱥȓę ⱥƀøᵾŧ ŧø ɱęȓǥę {count} ȼøłøȓ ǥȓøᵾᵽs ɨnŧø \"{target}\".\n\nȘøᵾȓȼęs føȓ ɱęȓǥɨnǥ: {sources}\n\nȂłł łⱥɏęȓs fȓøɱ ŧħę søᵾȓȼę ȼøłøȓ ǥȓøᵾᵽs wɨłł ƀę ɱøvęđ ŧø ŧħę ŧⱥȓǥęŧ ȼøłøȓ ǥȓøᵾᵽ. Ŧħę søᵾȓȼę ȼøłøȓ ǥȓøᵾᵽs wɨłł đɨsⱥᵽᵽęⱥȓ ƀᵾŧ łⱥɏęȓs ⱥnđ ęnŧɨŧɨęs wɨłł ƀę ᵽȓęsęȓvęđ."
+      }
+    }
+  },
+  "common": {
+    "confirm": "Ȼønfɨȓɱ",
+    "cancel": "Ȼⱥnȼęł"
+  },
+  "toolbar": {
+    "select": "Șęłęȼŧ",
+    "pan": "Ᵽⱥn",
+    "line": "Łɨnę",
+    "rectangle": "Ɍęȼŧⱥnǥłę",
+    "circle": "Ȼɨȓȼłę",
+    "polyline": "Ᵽøłɏłɨnę"
+  }
+}

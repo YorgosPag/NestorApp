@@ -1,0 +1,950 @@
+F:\Pagonis_Nestor\src\constants\statuses.ts:27 - getStatusLabel
+F:\Pagonis_Nestor\src\constants\statuses.ts:32 - getStatusColor
+F:\Pagonis_Nestor\src\constants\statuses.ts:37 - getStatusClasses
+F:\Pagonis_Nestor\src\constants\statuses.ts:60 - getAllStatuses
+F:\Pagonis_Nestor\src\lib\firebase.ts:19 - auth
+F:\Pagonis_Nestor\src\lib\firebase.ts:20 - functions
+F:\Pagonis_Nestor\src\lib\firebase.ts:21 - storage
+F:\Pagonis_Nestor\src\lib\firebase.ts:22 - default
+F:\Pagonis_Nestor\src\i18n\lazy-config.ts:80 - initI18n
+F:\Pagonis_Nestor\src\i18n\lazy-config.ts:139 - preloadCriticalNamespaces (used in module)
+F:\Pagonis_Nestor\src\i18n\lazy-config.ts:150 - changeLanguage (used in module)
+F:\Pagonis_Nestor\src\i18n\lazy-config.ts:163 - getLanguageDisplayName
+F:\Pagonis_Nestor\src\i18n\lazy-config.ts:176 - clearTranslationCache
+F:\Pagonis_Nestor\src\i18n\lazy-config.ts:11 - SUPPORTED_LANGUAGES (used in module)
+F:\Pagonis_Nestor\src\i18n\lazy-config.ts:12 - Language (used in module)
+F:\Pagonis_Nestor\src\i18n\lazy-config.ts:15 - SUPPORTED_NAMESPACES (used in module)
+F:\Pagonis_Nestor\src\i18n\lazy-config.ts:181 - default (used in module)
+F:\Pagonis_Nestor\src\providers\NotificationProvider.tsx:28 - NotificationProvider
+F:\Pagonis_Nestor\src\providers\NotificationProvider.tsx:273 - useErrorHandler
+F:\Pagonis_Nestor\src\services\companies.service.ts:13 - CompaniesService (used in module)
+F:\Pagonis_Nestor\src\services\companies.service.ts:70 - companiesService (used in module)
+F:\Pagonis_Nestor\src\services\companies.service.ts:74 - getCompanyById (used in module)
+F:\Pagonis_Nestor\src\services\projects.service.ts:7 - getProjectCustomers
+F:\Pagonis_Nestor\src\services\projects.service.ts:8 - getProjectStats
+F:\Pagonis_Nestor\src\services\projects.service.ts:9 - debugProjectData
+F:\Pagonis_Nestor\src\services\projects.service.ts:12 - ProjectStructure
+F:\Pagonis_Nestor\src\types\contacts.ts:216 - isIndividualContact
+F:\Pagonis_Nestor\src\types\contacts.ts:220 - isCompanyContact
+F:\Pagonis_Nestor\src\types\contacts.ts:224 - isServiceContact
+F:\Pagonis_Nestor\src\types\contacts.ts:3 - FirestoreishTimestamp
+F:\Pagonis_Nestor\src\types\contacts.ts:6 - ContactType
+F:\Pagonis_Nestor\src\types\contacts.ts:7 - ContactStatus
+F:\Pagonis_Nestor\src\types\contacts.ts:10 - BaseContact
+F:\Pagonis_Nestor\src\types\contacts.ts:25 - IndividualContact
+F:\Pagonis_Nestor\src\types\contacts.ts:99 - ServiceContact
+F:\Pagonis_Nestor\src\types\contacts.ts:135 - EmailInfo
+F:\Pagonis_Nestor\src\types\contacts.ts:142 - PhoneInfo
+F:\Pagonis_Nestor\src\types\contacts.ts:150 - AddressInfo
+F:\Pagonis_Nestor\src\types\contacts.ts:166 - WebsiteInfo
+F:\Pagonis_Nestor\src\types\contacts.ts:172 - SocialMediaInfo
+F:\Pagonis_Nestor\src\types\contacts.ts:179 - ContactPerson
+F:\Pagonis_Nestor\src\types\contacts.ts:188 - ResponsiblePerson
+F:\Pagonis_Nestor\src\types\contacts.ts:193 - OperatingHours
+F:\Pagonis_Nestor\src\types\contacts.ts:204 - DayHours
+F:\Pagonis_Nestor\src\types\contacts.ts:213 - Contact
+F:\Pagonis_Nestor\src\types\contacts.ts:24 - getContactDisplayName
+F:\Pagonis_Nestor\src\types\contacts.ts:34 - getContactInitials
+F:\Pagonis_Nestor\src\types\contacts.ts:44 - getPrimaryEmail
+F:\Pagonis_Nestor\src\types\contacts.ts:50 - getPrimaryPhone
+F:\Pagonis_Nestor\src\types\contacts.ts:56 - getPrimaryAddress
+F:\Pagonis_Nestor\src\types\contacts.ts:4 - contactValidationRules
+F:\Pagonis_Nestor\src\contexts\FloorplanContext.tsx:24 - FloorplanProvider
+\constants.ts:24 - worldToScreen (used in module)
+\constants.ts:29 - screenToWorld (used in module)
+\constants.ts:19 - Point (used in module)
+\constants.ts:20 - RectLike (used in module)
+\constants.ts:35 - coordTransforms (used in module)
+\constants.ts:42 - RULER_SIZE (used in module)
+\constants.ts:45 - MARGINS (used in module)
+\constants.ts:50 - HIT_TEST_RADIUS_PX (used in module)
+F:\Pagonis_Nestor\src\components\ui\badge.tsx:26 - BadgeProps (used in module)
+F:\Pagonis_Nestor\src\components\ui\badge.tsx:36 - badgeVariants (used in module)
+F:\Pagonis_Nestor\src\components\ui\button.tsx:36 - ButtonProps (used in module)
+F:\Pagonis_Nestor\src\components\ui\button.tsx:56 - buttonVariants (used in module)
+F:\Pagonis_Nestor\src\components\ui\card.tsx:79 - CardFooter (used in module)
+F:\Pagonis_Nestor\src\components\ui\scroll-area.tsx:48 - ScrollBar (used in module)
+F:\Pagonis_Nestor\src\components\ui\select.tsx:151 - SelectGroup (used in module)
+F:\Pagonis_Nestor\src\components\ui\select.tsx:155 - SelectLabel (used in module)
+F:\Pagonis_Nestor\src\components\ui\select.tsx:157 - SelectSeparator (used in module)
+F:\Pagonis_Nestor\src\components\ui\select.tsx:158 - SelectScrollUpButton (used in module)
+F:\Pagonis_Nestor\src\components\ui\select.tsx:159 - SelectScrollDownButton (used in module)
+F:\Pagonis_Nestor\src\i18n\hooks\useTranslationLazy.ts:54 - default
+F:\Pagonis_Nestor\src\services\floorplans\BuildingFloorplanService.ts:6 - BuildingFloorplanData (used in module)
+F:\Pagonis_Nestor\src\services\floorplans\FloorplanService.ts:7 - FloorplanData (used in module)
+F:\Pagonis_Nestor\src\services\floorplans\UnitFloorplanService.ts:6 - UnitFloorplanData (used in module)
+\app\DxfViewerContent.tsx:26 - ToolbarWithCursorCoordinates (used in module)
+\app\DxfViewerContent.tsx:38 - DxfViewerContent
+\canvas\CrosshairOverlay.tsx:204 - CrosshairOverlay (used in module)
+\canvas\CursorTooltipOverlay.tsx:84 - CursorTooltipOverlay (used in module)
+\canvas\DxfCanvas.tsx:2 - default
+\canvas\DxfCanvasOverlayIntegration.tsx:18 - useOverlaySystem
+\canvas\DxfCanvasOverlayIntegration.tsx:149 - OverlayCanvas
+\canvas\DxfCanvasRefactored.tsx:505 - default
+\canvas\EntityCanvasIntegration.tsx:24 - EntityCanvasIntegration
+\canvas\GridOverlay.tsx:24 - GridOverlay (used in module)
+\canvas\GridOverlay.tsx:132 - default
+\canvas\overlay-constants.ts:5 - CANVAS_STATUS_COLORS
+\canvas\overlay-utils.ts:6 - worldToScreen
+\canvas\overlay-utils.ts:13 - screenToWorld
+\canvas\OverlayMouseHandler.tsx:20 - useOverlayMouseHandler
+\canvas\renderer.ts:4 - Renderer (used in module)
+\canvas\renderer.ts:46 - default
+\canvas\SelectionMarqueeOverlay.tsx:60 - SelectionOverlayState (used in module)
+\canvas\SelectionMarqueeOverlay.tsx:60 - MarqueeKind (used in module)
+\canvas\SnapIndicatorOverlay.tsx:228 - SnapIndicatorOverlay (used in module)
+\collaboration\CollaborationManager.ts:15 - CollaborationEvent (used in module)
+\collaboration\CollaborationManager.ts:23 - ViewportState (used in module)
+\collaboration\CollaborationManager.ts:330 - default
+\collaboration\CollaborationOverlay.tsx:17 - CollaborationOverlay
+\components\DestinationWizard.tsx:17 - DestinationWizard
+\components\EnhancedImportWizard.tsx:18 - EnhancedImportWizard
+\components\ErrorBoundary.tsx:15 - DxfViewerErrorBoundary (used in module)
+\components\ErrorBoundary.tsx:62 - default
+\components\StorageErrorBoundary.tsx:24 - StorageErrorBoundary
+\components\StorageStatus.tsx:127 - StorageStatusIndicator
+\config\color-config.ts:70 - OPACITY
+\config\color-config.ts:80 - withOpacity
+\config\color-config.ts:101 - getContrastColor
+\config\color-config.ts:110 - COLOR_SCHEMES
+\config\color-config.ts:131 - LEGACY_COLORS
+\config\feature-flags.ts:6 - FeatureFlags (used in module)
+\config\feature-flags.ts:23 - FEATURE_FLAGS (used in module)
+\config\feature-flags.ts:45 - enableFeature
+\config\feature-flags.ts:49 - disableFeature
+\config\tolerance-config.ts:37 - HoverToleranceConfig (used in module)
+\config\tolerance-config.ts:42 - HOVER_TOLERANCE_CONFIG
+\config\tolerance-config.ts:57 - getScaledTolerance
+\config\unified-grid-configuration.ts:18 - GRID_LAYOUT
+\config\unified-grid-configuration.ts:109 - updateGridSettings
+\config\unified-grid-configuration.ts:110 - subscribeToGridSettings
+\config\unified-grid-configuration.ts:23 - BoundingBox
+\config\unified-grid-configuration.ts:29 - COORDINATE_LAYOUT (used in module)
+\config\unified-grid-configuration.ts:84 - GridSettings
+\config\unified-grid-configuration.ts:90 - DEFAULT_GRID_SETTINGS
+\config\unified-grid-configuration.ts:107 - gridConfig
+\config\unified-grid-configuration.ts:13 - calculateGridSpacing
+\config\unified-grid-configuration.ts:37 - getVisibleGridBounds
+\config\unified-grid-configuration.ts:60 - isPointInBounds
+\config\unified-grid-configuration.ts:72 - getDistance
+\config\unified-grid-configuration.ts:77 - normalizePoint
+\config\unified-grid-configuration.ts:90 - roundCoordinates
+\contexts\ProjectHierarchyContext.tsx:92 - ProjectHierarchyProvider
+\contexts\ProjectHierarchyContext.tsx:16 - Unit (used in module)
+\contexts\ProjectHierarchyContext.tsx:47 - ParkingSpot (used in module)
+\contexts\ProjectHierarchyContext.tsx:55 - ProjectHierarchy (used in module)
+\contexts\ProjectHierarchyContext.tsx:66 - ProjectHierarchyActions (used in module)
+\contexts\ProjectHierarchyContext.tsx:77 - DestinationOption (used in module)
+\contexts\ProjectHierarchyContext.tsx:368 - default
+\events\selection-bus.ts:3 - HighlightPayload (used in module)
+\grips\grip-bus.ts:38 - gripBus
+\grips\Grips.ts:6 - Grips
+\grips\resolveTarget.ts:4 - resolveGripTarget
+\handlers\useToolbarActions.ts:31 - useToolbarActions
+\hooks\useSelectionSystem.ts:21 - useSelectionSystem
+\hooks\useSelectionSystem.ts:18 - SelectionState (used in module)
+\hooks\useSelectionSystem.ts:18 - FilterState (used in module)
+\hooks\useSelectionSystem.ts:18 - SelectionActions (used in module)
+\hooks\useSelectionSystem.ts:18 - FilterActions (used in module)
+\hooks\useSelectionSystem.ts:18 - ViewActions (used in module)
+\hooks\useViewState.ts:17 - useViewState
+\hooks\useWizardNavigation.ts:6 - WizardStep (used in module)
+\hooks\useWizardNavigation.ts:8 - WizardNavigationActions (used in module)
+\integration\DXFViewerLayout.tsx:11 - DXFViewerLayout
+\integration\types.ts:9 - DxfViewerState (used in module)
+\io\dxf-import.ts:3 - DxfImportService (used in module)
+\keyboard\useProSnapShortcuts.ts:12 - useProSnapShortcuts
+\layout\CadDock.tsx:170 - default
+\managers\SceneUpdateManager.ts:252 - setScene (used in module)
+\managers\SceneUpdateManager.ts:256 - getCurrentScene (used in module)
+\managers\SceneUpdateManager.ts:260 - updateEntity (used in module)
+\managers\SceneUpdateManager.ts:264 - getSceneStats (used in module)
+\managers\SceneUpdateManager.ts:24 - SceneUpdateManager (used in module)
+\managers\SceneUpdateManager.ts:248 - unifiedSceneManager (used in module)
+\mouse\MouseStateManager.ts:36 - MouseStateManager (used in module)
+\mouse\useCentralizedMouse.ts:42 - useCentralizedMouse
+\mouse\useCentralizedMouse.ts:13 - CentralizedMouseOptions (used in module)
+\overlays\overlay-store.tsx:31 - OverlayStoreProvider
+\overlays\types.ts:7 - Scope
+\overlays\types.ts:17 - OverlayStyle (used in module)
+\overlays\types.ts:72 - OVERLAY_ALPHA_FILL
+\overlays\types.ts:73 - OVERLAY_STROKE_WIDTH
+\overlays\types.ts:74 - OVERLAY_SELECTED_STROKE_WIDTH
+\overlays\types.ts:82 - MIN_POLY_AREA (used in module)
+\overlays\types.ts:82 - VERTEX_HANDLE_SIZE (used in module)
+\overlays\types.ts:92 - OverlayActionType (used in module)
+\overlays\types.ts:94 - OverlayAction
+\overlays\types.ts:105 - HitTestResult
+\overlays\types.ts:117 - BoundingBox
+\overlays\types.ts:127 - DEFAULT_STATUS
+\overlays\types.ts:128 - DEFAULT_KIND
+\overlays\types.ts:129 - AUTOSAVE_DEBOUNCE_MS
+\overlays\types.ts:130 - UNDO_STACK_SIZE
+\overlays\types.ts:135 - OVERLAY_COLLECTION_PREFIX
+\patches\FitToView_BoundsOnly.ts:178 - forceFitToView (used in module)
+\patches\FitToView_BoundsOnly.ts:179 - fitToViewStats (used in module)
+\patches\FitToView_BoundsOnly.ts:180 - sceneBounds (used in module)
+\patches\FitToView_BoundsOnly.ts:181 - boundsKey (used in module)
+\patches\QuickFitToViewFix.ts:79 - smartFitToView (used in module)
+\patches\QuickFitToViewFix.ts:79 - calculateBoundsHash (used in module)
+\patches\QuickRAFMouseThrottle.ts:122 - handleMouseMove (used in module)
+\pipeline\types.ts:39 - LayerInfo (used in module)
+\providers\GripProvider.tsx:130 - default
+\providers\GripProvider.tsx:131 - GripContextType (used in module)
+\providers\StableFirestoreProvider.tsx:157 - StableFirestoreProvider
+\providers\StableFirestoreProvider.tsx:204 - useStableFirestore (used in module)
+\providers\StableFirestoreProvider.tsx:214 - useStableFirestoreSubscription
+\providers\StableFirestoreProvider.tsx:267 - getFirestoreSubscriptionStats (used in module)
+\providers\StableFirestoreProvider.tsx:271 - debugFirestoreSubscriptions (used in module)
+\services\dxf-firestore.service.ts:5 - DxfFileRecord (used in module)
+\services\EntityMergeService.ts:11 - MergeResult (used in module)
+\services\EntityMergeService.ts:18 - MergeOptions (used in module)
+\services\LayerOperationsService.ts:15 - LayerOperationResult (used in module)
+\services\LayerOperationsService.ts:22 - LayerCreateOptions (used in module)
+\snapping\index.ts:7 - ProSnapEngineV2 (used in module)
+\snapping\index.ts:8 - snapSystem
+\snapping\index.ts:11 - SnapOrchestrator
+\snapping\index.ts:12 - EndpointSnapEngine
+\snapping\index.ts:13 - MidpointSnapEngine
+\snapping\index.ts:14 - IntersectionSnapEngine
+\snapping\index.ts:15 - CenterSnapEngine
+\snapping\index.ts:18 - GeometricCalculations
+\snapping\index.ts:19 - SpatialIndex
+\snapping\index.ts:20 - BaseSnapEngine
+\snapping\index.ts:20 - SnapEngineContext
+\snapping\index.ts:20 - SnapEngineResult
+\snapping\index.ts:26 - useSnapManager
+\snapping\index.ts:31 - createSnapEngine
+\snapping\index.ts:38 - ENABLE_MODULAR_SNAP_ENGINE
+\snapping\index.ts:9 - ExtendedSnapType
+\snapping\index.ts:33 - Entity
+\snapping\index.ts:50 - SnapCandidate
+\snapping\index.ts:59 - ProSnapResult
+\snapping\index.ts:70 - PerModeTolerance
+\snapping\index.ts:72 - ProSnapSettings
+\snapping\index.ts:88 - DEFAULT_PRO_SNAP_SETTINGS
+\snapping\index.ts:138 - SnapEngineInterface
+\statusbar\CadStatusBar.tsx:15 - default
+\stores\ToolStyleStore.ts:38 - useToolStyle
+\stores\ToolStyleStore.ts:6 - ToolStyle (used in module)
+\types\index.ts:2 - ToolType (used in module)
+\types\index.ts:8 - LineType (used in module)
+\types\index.ts:10 - TextAlignment (used in module)
+\types\index.ts:12 - DimensionType
+\types\index.ts:20 - DXFEntity (used in module)
+\types\index.ts:53 - Layer
+\types\index.ts:71 - Block
+\types\index.ts:80 - TextStyle
+\types\index.ts:92 - DimensionStyle
+\types\index.ts:103 - Viewport (used in module)
+\types\index.ts:114 - SnapSettings (used in module)
+\types\index.ts:137 - Measurement
+\types\index.ts:147 - BoundingBox
+\types\index.ts:162 - DrawingState (used in module)
+\types\index.ts:174 - SelectionState (used in module)
+\types\index.ts:184 - ToolState
+\types\index.ts:192 - Command
+\types\index.ts:202 - ViewMode
+\types\index.ts:203 - Status
+\types\index.ts:204 - PanelType
+\types\index.ts:205 - DxfViewerAppProps
+\types\overlay.ts:6 - RegionStyle (used in module)
+\types\scene.ts:3 - SceneEntity (used in module)
+\types\scene.ts:31 - ArcEntity (used in module)
+\types\scene.ts:39 - TextEntity (used in module)
+\types\scene.ts:47 - BlockEntity (used in module)
+\types\shared.ts:14 - Bounds
+\types\shared.ts:21 - Rectangle
+\types\shared.ts:29 - Color
+\types\shared.ts:36 - StyleProps
+\types\shared.ts:59 - Point
+\ui\FloatingPanelContainer.tsx:21 - SideTab (used in module)
+\ui\ImportWizard.tsx:17 - ImportWizard
+\ui\OverlayPanel.tsx:26 - OverlayPanel
+\ui\PropertiesPanel.tsx:20 - PropertiesPanel
+\utils\canvas-core.ts:5 - ViewTransform (used in module)
+\utils\canvas-core.ts:11 - CanvasCore (used in module)
+\utils\canvas-core.ts:123 - createWizardUtils
+\utils\canvas-core.ts:174 - default
+\utils\devlog.ts:7 - DXF_DEBUG (used in module)
+\utils\devlog.ts:19 - dwarn
+\utils\devlog.ts:25 - derr
+\utils\devlog.ts:30 - dinfo
+\utils\devlog.ts:39 - dperflog
+\utils\devlog.ts:47 - drenderlog
+\utils\devlog.ts:68 - dbatchlog
+\utils\devlog.ts:88 - enableDxfDebug (used in module)
+\utils\devlog.ts:93 - disableDxfDebug (used in module)
+\utils\devlog.ts:98 - getDxfDebugStatus (used in module)
+\utils\devlog.ts:103 - resetPerfCounter (used in module)
+\utils\devlog.ts:108 - getPerfStats (used in module)
+\utils\dxf-loader.ts:14 - readFileAsText
+\utils\dxf-loader.ts:80 - parseDxfToScene
+\utils\dxf-units.ts:1 - insunitsToMeters
+\utils\dynamicSystemImports.ts:9 - DynamicToolbarsSystem
+\utils\dynamicSystemImports.ts:17 - DynamicRulersGridSystem
+\utils\dynamicSystemImports.ts:25 - DynamicConstraintsSystem
+\utils\dynamicSystemImports.ts:36 - preloadCriticalSystems
+\utils\dynamicSystemImports.ts:47 - SYSTEM_LOAD_PRIORITIES
+\utils\entity-conversion.ts:187 - openPolyline (used in module)
+\utils\entity-renderer.ts:10 - EntityModel (used in module)
+\utils\entity-renderer.ts:18 - GripInfo (used in module)
+\utils\entity-renderer.ts:118 - EntityRendererComposite (used in module)
+\utils\entity-renderer.ts:118 - createEntityRenderer
+\utils\entity-renderer.ts:119 - RenderOptions
+\utils\entity-validation-utils.ts:46 - validateEllipseEntity
+\utils\entity-validation-utils.ts:11 - ValidatedArc (used in module)
+\utils\entity-validation-utils.ts:21 - ValidatedEllipse (used in module)
+\utils\feedback-utils.ts:9 - SoundFeedback (used in module)
+\utils\feedback-utils.ts:67 - HapticFeedback (used in module)
+\utils\OptimizedLogger.ts:21 - enableEmergencySilence (used in module)
+\utils\OptimizedLogger.ts:37 - disableEmergencySilence (used in module)
+\utils\OptimizedLogger.ts:45 - isEmergencySilenced
+\utils\OptimizedLogger.ts:138 - getLoggerStats (used in module)
+\utils\OptimizedLogger.ts:150 - resetLogCounters (used in module)
+\utils\OptimizedLogger.ts:162 - setRenderLogFrequency
+\utils\OptimizedLogger.ts:8 - DXF_DEBUG (used in module)
+\utils\OptimizedLogger.ts:12 - DXF_RENDER_DEBUG (used in module)
+\utils\OptimizedLogger.ts:73 - drender (used in module)
+\utils\OptimizedLogger.ts:88 - dperf (used in module)
+\utils\OptimizedLogger.ts:103 - dhot (used in module)
+\utils\OptimizedLogger.ts:118 - dbatch (used in module)
+\utils\OptimizedLogger.ts:186 - dlogOriginal
+\utils\OptimizedLogger.ts:187 - dwarnOriginal
+\utils\OptimizedLogger.ts:188 - derrOriginal
+\utils\OptimizedLogger.ts:192 - dhotlog
+\utils\OptimizedLogger.ts:193 - dperflog
+\utils\OptimizedLogger.ts:194 - drenderlog
+\utils\OptimizedLogger.ts:195 - dbatchlog
+\utils\region-operations.ts:7 - RegionGeometry (used in module)
+\utils\SmartBoundsManager.ts:306 - shouldFitToView (used in module)
+\utils\SmartBoundsManager.ts:310 - requestSmartFitToView
+\utils\SmartBoundsManager.ts:314 - fitToViewOnImport
+\utils\SmartBoundsManager.ts:318 - getBoundsStats
+\utils\SmartBoundsManager.ts:302 - smartBoundsManager (used in module)
+\utils\unified-entity-selection.ts:15 - getRectangleVertices
+\utils\unified-entity-selection.ts:249 - createSelectionResult
+\utils\unified-entity-selection.ts:257 - isValidSelection
+\utils\unified-entity-selection.ts:243 - SelectionResult
+\canvas\calibration\useCalibrationState.ts:4 - CalibrationStateHook (used in module)
+\canvas\calibration\useCoordinateCalculations.ts:6 - CoordinateCalculationsHook (used in module)
+\canvas\calibration\useGridRendering.tsx:5 - GridRenderingHook (used in module)
+\canvas\calibration\useTestEntity.ts:5 - TestEntityHook (used in module)
+\canvas\engine\createCanvasRenderer.ts:18 - normalizeEmptyBounds (used in module)
+\canvas\engine\createCanvasRenderer.ts:12 - Bounds (used in module)
+\canvas\hooks\useCanvasInteractions.ts:27 - useCanvasInteractions
+\canvas\interaction\hit-test.ts:6 - findEntityAtPoint (used in module)
+\canvas\selection-marquee\types.ts:10 - MarqueeState (used in module)
+\canvas\selection-marquee\types.ts:17 - LassoState (used in module)
+\components\dxf-layout\index.ts:2 - CanvasSection
+\components\dxf-layout\index.ts:3 - FullscreenView
+\components\dxf-layout\index.ts:4 - NormalView
+\components\dxf-layout\index.ts:5 - ToolbarSection
+\components\dxf-layout\StatusBar.tsx:18 - StatusBar
+\components\shared\BaseButton.tsx:12 - ButtonVariant (used in module)
+\components\shared\BaseButton.tsx:13 - ButtonSize (used in module)
+\components\shared\BaseButton.tsx:127 - ToolButton (used in module)
+\components\shared\BaseButton.tsx:133 - TabButton (used in module)
+\components\shared\BaseButton.tsx:139 - ActionButton (used in module)
+\components\shared\BaseModal.tsx:44 - BaseModal (used in module)
+\components\shared\BaseModal.tsx:196 - ConfirmModal
+\components\shared\BaseModal.tsx:239 - LoadingModal
+\hooks\common\useCadToggles.ts:3 - CadToggle (used in module)
+\hooks\common\useCadToggles.ts:9 - CadToggles (used in module)
+\hooks\common\useCadToggles.ts:18 - useCadToggles
+\hooks\common\useEffectOnceDevSafe.ts:8 - useEffectOnceDevSafe (used in module)
+\hooks\common\useEffectOnceDevSafe.ts:56 - useEffectStable
+\hooks\common\useEffectOnceDevSafe.ts:98 - useResourceOnce
+\hooks\common\useImportWizard.ts:15 - ImportWizardActions (used in module)
+\hooks\drawing\useDrawingSystem.ts:4 - DrawingState (used in module)
+\hooks\drawing\useDrawingSystem.ts:10 - DrawingActions (used in module)
+\hooks\drawing\useEntityCreation.ts:9 - DrawingState (used in module)
+\hooks\scene\useAutoSaveSceneManager.ts:6 - AutoSaveSceneManagerState (used in module)
+\mouse\handlers\GripDragHandler.ts:16 - GripDragData (used in module)
+\mouse\handlers\GripDragHandler.ts:23 - GripDragHandlerOptions (used in module)
+\mouse\handlers\HoverHandler.ts:12 - HoverData (used in module)
+\mouse\handlers\HoverHandler.ts:17 - HoverHandlerOptions (used in module)
+\mouse\handlers\MarqueeSelectionHandler.ts:12 - MarqueeSelectionData (used in module)
+\mouse\handlers\MarqueeSelectionHandler.ts:18 - MarqueeSelectionHandlerOptions (used in module)
+\snapping\context\SnapContext.tsx:43 - SnapProvider
+\snapping\engines\BaseSnapEngine.ts:5 - SnapResult (used in module)
+\snapping\engines\BaseSnapEngine.ts:11 - BaseSnapEngine
+\snapping\shared\BaseSnapEngine.ts:116 - SnapEngineOptions
+\snapping\shared\GeometricCalculations.ts:15 - RectangleLine (used in module)
+\snapping\shared\SpatialIndex.ts:8 - EndpointReference (used in module)
+\snapping\shared\SpatialIndex.ts:13 - MidpointReference (used in module)
+\snapping\shared\SpatialIndex.ts:18 - CenterReference (used in module)
+\systems\constraints\index.ts:14 - useConstraints
+\systems\constraints\index.ts:15 - useOrthoConstraints
+\systems\constraints\index.ts:16 - usePolarConstraints
+\systems\constraints\index.ts:17 - useConstraintApplication
+\systems\constraints\index.ts:18 - useConstraintManagement
+\systems\constraints\index.ts:19 - useCoordinateConversion
+\systems\constraints\index.ts:20 - useConstraintSettings
+\systems\constraints\index.ts:21 - useConstraintInput
+\systems\constraints\index.ts:22 - useConstraintVisualization
+\systems\constraints\index.ts:24 - useOrtho
+\systems\constraints\index.ts:25 - usePolar
+\systems\constraints\index.ts:26 - useOrthoPolar
+\systems\constraints\index.ts:33 - ConstraintsSystem
+\systems\constraints\index.ts:33 - useConstraintsContext
+\systems\constraints\index.ts:9 - ConstraintType
+\systems\constraints\index.ts:10 - ConstraintMode
+\systems\constraints\index.ts:11 - AngleUnit
+\systems\constraints\index.ts:14 - OrthoConstraintSettings
+\systems\constraints\index.ts:41 - PolarConstraintSettings
+\systems\constraints\index.ts:73 - ConstraintDefinition
+\systems\constraints\index.ts:87 - ConstraintContext
+\systems\constraints\index.ts:106 - ConstraintFeedback
+\systems\constraints\index.ts:159 - ConstraintResult
+\systems\constraints\index.ts:172 - ConstraintsState
+\systems\constraints\index.ts:185 - ConstraintsSettings
+\systems\constraints\index.ts:219 - DEFAULT_ORTHO_SETTINGS
+\systems\constraints\index.ts:245 - DEFAULT_POLAR_SETTINGS
+\systems\constraints\index.ts:276 - DEFAULT_CONSTRAINTS_SETTINGS
+\systems\constraints\index.ts:315 - CONSTRAINTS_CONFIG
+\systems\constraints\index.ts:358 - ConstraintOperation
+\systems\constraints\index.ts:369 - ConstraintOperationResult
+\systems\constraints\index.ts:378 - PolarCoordinates
+\systems\constraints\index.ts:384 - CartesianCoordinates
+\systems\constraints\index.ts:389 - ConstraintValidation
+\systems\constraints\index.ts:396 - ConstraintPreset
+\systems\constraints\index.ts:405 - DEFAULT_CONSTRAINT_PRESETS
+\systems\constraints\index.ts:449 - ConstraintManagementInterface
+\systems\constraints\index.ts:464 - PolarConstraintsInterface
+\systems\constraints\index.ts:476 - Point2D
+\systems\constraints\index.ts:477 - ConstraintSettings
+\systems\constraints\index.ts:47 - AngleUtils
+\systems\constraints\index.ts:136 - DistanceUtils
+\systems\constraints\index.ts:165 - CoordinateUtils
+\systems\constraints\index.ts:238 - OrthoUtils
+\systems\constraints\index.ts:335 - PolarUtils
+\systems\constraints\index.ts:452 - ConstraintApplicationUtils
+\systems\constraints\index.ts:545 - ValidationUtils
+\systems\constraints\index.ts:611 - ConstraintUtils
+\systems\constraints\useConstraintApplication.ts:16 - ConstraintApplicationHook (used in module)
+\systems\constraints\useConstraintContext.ts:5 - ConstraintContextHook (used in module)
+\systems\constraints\useConstraintManagement.ts:4 - ConstraintManagementHook (used in module)
+\systems\constraints\useConstraintOperations.ts:17 - ConstraintOperationsHook (used in module)
+\systems\constraints\useConstraintsSystemState.ts:18 - ConstraintsSystemStateProps (used in module)
+\systems\constraints\useConstraintsSystemState.ts:29 - ConstraintsSystemStateReturn (used in module)
+\systems\constraints\useCoordinateConversion.ts:6 - CoordinateConversionHook (used in module)
+\systems\constraints\useOrthoConstraints.ts:4 - OrthoConstraintsHook (used in module)
+\systems\constraints\usePolarConstraints.ts:5 - PolarConstraintsHook (used in module)
+\systems\coordinates\CoordinateSystem.tsx:33 - useCoordinates (used in module)
+\systems\coordinates\CoordinateSystem.tsx:16 - CoordinateContext (used in module)
+\systems\coordinates\CoordinateSystem.tsx:43 - useCoord
+\systems\coordinates\index.ts:13 - useCoordinates
+\systems\coordinates\index.ts:13 - useCoord
+\systems\coordinates\index.ts:19 - CoordinateSystem
+\systems\coordinates\index.ts:19 - useCoordinatesContext
+\systems\coordinates\index.ts:19 - CoordProvider
+\systems\coordinates\index.ts:42 - worldToScreen
+\systems\coordinates\index.ts:58 - screenToWorld
+\systems\coordinates\index.ts:108 - getGridSettings
+\systems\coordinates\index.ts:109 - updateGridSettings
+\systems\coordinates\index.ts:110 - subscribeToGridSettings
+\systems\coordinates\index.ts:12 - ViewTransform
+\systems\coordinates\index.ts:18 - CanvasRect
+\systems\coordinates\index.ts:23 - BoundingBox
+\systems\coordinates\index.ts:29 - COORDINATE_LAYOUT
+\systems\coordinates\index.ts:75 - RULER_SIZE
+\systems\coordinates\index.ts:76 - MARGINS
+\systems\coordinates\index.ts:78 - coordTransforms
+\systems\coordinates\index.ts:84 - GridSettings
+\systems\coordinates\index.ts:90 - DEFAULT_GRID_SETTINGS
+\systems\coordinates\index.ts:107 - gridConfig
+\systems\coordinates\index.ts:13 - calculateGridSpacing
+\systems\coordinates\index.ts:37 - getVisibleGridBounds
+\systems\coordinates\index.ts:60 - isPointInBounds
+\systems\coordinates\index.ts:72 - getDistance
+\systems\coordinates\index.ts:77 - normalizePoint
+\systems\coordinates\index.ts:90 - roundCoordinates
+\systems\cursor\CursorSystem.tsx:124 - useCursor (used in module)
+\systems\cursor\CursorSystem.tsx:133 - CursorProvider
+\systems\cursor\CursorSystem.tsx:134 - useCursorContext
+\systems\cursor\index.ts:13 - useCursor
+\systems\cursor\index.ts:13 - useCursorState
+\systems\cursor\index.ts:13 - useCursorSettings
+\systems\cursor\index.ts:13 - useCursorActions
+\systems\cursor\index.ts:13 - useCursorContext
+\systems\cursor\index.ts:19 - CursorSystem
+\systems\cursor\index.ts:19 - useCursorSystemContext
+\systems\cursor\index.ts:158 - getCursorSettings
+\systems\cursor\index.ts:162 - updateCursorSettings
+\systems\cursor\index.ts:166 - subscribeToCursorSettings
+\systems\cursor\index.ts:9 - CursorSettings
+\systems\cursor\index.ts:37 - CursorState
+\systems\cursor\index.ts:47 - DEFAULT_CURSOR_SETTINGS
+\systems\cursor\index.ts:75 - CursorConfiguration
+\systems\cursor\index.ts:155 - cursorConfig
+\systems\cursor\index.ts:173 - CAD_UI_CURSOR
+\systems\cursor\index.ts:21 - calculateCrosshairSize
+\systems\cursor\index.ts:33 - isPointNearCursor
+\systems\cursor\index.ts:46 - throttleMouseEvents
+\systems\cursor\index.ts:78 - getDevicePixelRatio
+\systems\cursor\index.ts:85 - scaleCrosshairForDPR
+\systems\cursor\index.ts:92 - createCursorAnimationLoop
+\systems\cursor\index.ts:129 - isValidCursorState
+\systems\cursor\index.ts:141 - createDefaultCursorState
+\systems\cursor\index.ts:155 - formatCursorCoordinates
+\systems\cursor\index.ts:166 - validateCursorSettings
+\systems\cursor\index.ts:10 - CursorUtils
+\systems\drawing\index.ts:11 - drawingSystem
+\systems\drawing\index.ts:28 - DrawingTool
+\systems\drawing\index.ts:28 - DrawingState
+\systems\drawing\index.ts:29 - useUnifiedDrawing (used in module)
+\systems\drawing-orchestrator\index.ts:5 - useDrawingOrchestrator
+\systems\drawing-orchestrator\index.ts:6 - DrawingTool
+\systems\dynamic-input\index.ts:6 - DynamicInputSystem
+\systems\dynamic-input\index.ts:10 - DynamicInputOverlay
+\systems\dynamic-input\index.ts:11 - DynamicInputContainer
+\systems\dynamic-input\index.ts:12 - DynamicInputHeader
+\systems\dynamic-input\index.ts:13 - DynamicInputFooter
+\systems\dynamic-input\index.ts:14 - DynamicInputField
+\systems\dynamic-input\index.ts:8 - useDynamicInputState
+\systems\dynamic-input\index.ts:9 - useDynamicInputKeyboard
+\systems\dynamic-input\index.ts:10 - useDynamicInputPhase
+\systems\dynamic-input\index.ts:11 - useDynamicInputLayout
+\systems\dynamic-input\index.ts:12 - useDynamicInputRealtime
+\systems\dynamic-input\index.ts:13 - useDynamicInputAnchoring
+\systems\dynamic-input\index.ts:14 - useDynamicInputToolReset
+\systems\dynamic-input\index.ts:15 - useDynamicInputHandler
+\systems\dynamic-input\index.ts:9 - FieldValueActions
+\systems\dynamic-input\index.ts:24 - FieldStateActions
+\systems\dynamic-input\index.ts:34 - CoordinateActions
+\systems\dynamic-input\index.ts:42 - PhaseActions
+\systems\dynamic-input\index.ts:51 - InputRefActions
+\systems\dynamic-input\index.ts:59 - ValidationActions
+\systems\dynamic-input\index.ts:67 - FeedbackActions
+\systems\dynamic-input\index.ts:76 - ResetActions
+\systems\dynamic-input\index.ts:8 - Field
+\systems\dynamic-input\index.ts:8 - Phase
+\systems\dynamic-input\index.ts:8 - Point
+\systems\dynamic-input\index.ts:23 - DynamicInputOverlayProps
+\systems\dynamic-input\index.ts:34 - DynamicInputFieldProps
+\systems\dynamic-input\index.ts:8 - dispatchDynamicSubmit
+\systems\dynamic-input\index.ts:8 - normalizeNumber
+\systems\dynamic-input\index.ts:15 - isValidNumber
+\systems\entity-creation\EntityCreationSystem.tsx:85 - DrawingProvider
+\systems\entity-creation\EntityCreationSystem.tsx:86 - DrawingSystem
+\systems\entity-creation\index.ts:14 - useEntityCreation
+\systems\entity-creation\index.ts:15 - useEntityCreationMethods
+\systems\entity-creation\index.ts:16 - useDrawingState
+\systems\entity-creation\index.ts:17 - useDrawingInteraction
+\systems\entity-creation\index.ts:18 - useDrawing
+\systems\entity-creation\index.ts:19 - useDrawingSystem
+\systems\entity-creation\index.ts:23 - useUnifiedDrawing
+\systems\entity-creation\index.ts:29 - EntityCreationSystem
+\systems\entity-creation\index.ts:29 - useEntityCreationContext
+\systems\entity-creation\index.ts:7 - DrawingTool
+\systems\entity-creation\index.ts:7 - DrawingState
+\systems\entity-creation\index.ts:10 - EntityCreationConfig
+\systems\entity-creation\index.ts:47 - DEFAULT_ENTITY_CREATION_CONFIG
+\systems\entity-creation\index.ts:84 - DrawingConstraints
+\systems\entity-creation\index.ts:91 - DEFAULT_DRAWING_CONSTRAINTS
+\systems\entity-creation\index.ts:109 - EntityValidationRules
+\systems\entity-creation\index.ts:116 - DEFAULT_VALIDATION_RULES
+\systems\entity-creation\index.ts:124 - DrawingFeedbackConfig
+\systems\entity-creation\index.ts:133 - DEFAULT_FEEDBACK_CONFIG
+\systems\entity-creation\index.ts:51 - calculateAngleDegrees
+\systems\entity-creation\index.ts:58 - generateEntityId
+\systems\entity-creation\index.ts:65 - validateEntityPoints
+\systems\entity-creation\index.ts:92 - createEntityFromPoints
+\systems\entity-creation\index.ts:146 - calculateEntityBounds
+\systems\entity-creation\index.ts:185 - isMultiPointTool
+\systems\entity-creation\index.ts:192 - isClosedShapeTool
+\systems\entity-creation\index.ts:199 - getMinimumPoints
+\systems\entity-creation\index.ts:214 - formatCoordinates
+\systems\entity-creation\index.ts:221 - formatDistance
+\systems\entity-creation\index.ts:228 - formatAngle
+\systems\entity-creation\index.ts:236 - snapToGrid
+\systems\entity-creation\index.ts:246 - pointsEqual
+\systems\entity-creation\index.ts:253 - createPreviewEntity
+\systems\entity-creation\index.ts:14 - BaseEntity
+\systems\entity-creation\index.ts:21 - LineEntity
+\systems\entity-creation\index.ts:27 - RectangleEntity
+\systems\entity-creation\index.ts:33 - CircleEntity
+\systems\entity-creation\index.ts:39 - PolylineEntity
+\systems\entity-creation\index.ts:45 - CreatedEntity
+\systems\entity-creation\useEntityCreation.ts:7 - useUnifiedDrawing (used in module)
+\systems\entity-creation\useEntityCreation.ts:8 - useEntityCreationContext (used in module)
+\systems\events\index.ts:6 - EventBus
+\systems\events\index.ts:7 - useEventBus
+\systems\events\index.ts:8 - DrawingEventMap
+\systems\events\index.ts:9 - DrawingEventType
+\systems\events\index.ts:10 - DrawingEventPayload
+\systems\grip-interaction\GripInteractionManager.ts:16 - GripInteractionState (used in module)
+\systems\grips\GripsSystem.tsx:7 - useGripContext
+\systems\grips\GripsSystem.tsx:19 - GripProvider (used in module)
+\systems\grips\GripsSystem.tsx:20 - GripSystem
+\systems\grips\index.ts:13 - useGrips
+\systems\grips\index.ts:13 - useGripSettings
+\systems\grips\index.ts:13 - useGripInteraction
+\systems\grips\index.ts:13 - useGrip
+\systems\grips\index.ts:13 - useGripSystem
+\systems\grips\index.ts:16 - useUnifiedGripsSystem
+\systems\grips\index.ts:17 - GripProvider
+\systems\grips\index.ts:23 - GripsSystem
+\systems\grips\index.ts:23 - useGripsContext
+\systems\grips\index.ts:13 - calculateGripDistance
+\systems\grips\index.ts:22 - isWithinGripTolerance
+\systems\grips\index.ts:33 - getGripVisualSize
+\systems\grips\index.ts:50 - getGripVisualColor
+\systems\grips\index.ts:60 - createGripIdentifier
+\systems\grips\index.ts:71 - areGripsEquivalent
+\systems\grips\index.ts:88 - filterVisibleGrips
+\systems\grips\index.ts:120 - sortGripsByDistance
+\systems\grips\index.ts:134 - findClosestGrip
+\systems\grips\index.ts:156 - isValidGripState
+\systems\grips\index.ts:171 - formatGripCoordinates
+\systems\grips\index.ts:181 - calculateGripBounds
+\systems\interaction\index.ts:6 - useInteractionEngine
+\systems\interaction\index.ts:7 - InteractionState
+\systems\interaction\index.ts:8 - InteractionHandlers
+\systems\interaction\index.ts:9 - InteractionOptions
+\systems\levels\index.ts:14 - useLevels
+\systems\levels\index.ts:15 - useLevelManager
+\systems\levels\index.ts:16 - useLevelSystem
+\systems\levels\index.ts:17 - useLevelOperations
+\systems\levels\index.ts:18 - useFloorplanOperations
+\systems\levels\index.ts:19 - useImportWizard
+\systems\levels\index.ts:20 - useLevelState
+\systems\levels\index.ts:21 - useLevelSelection
+\systems\levels\index.ts:22 - useLevelSettings
+\systems\levels\index.ts:24 - LevelsHookReturn
+\systems\levels\index.ts:25 - LevelSystemState
+\systems\levels\index.ts:26 - LevelSystemActions
+\systems\levels\index.ts:33 - LevelsSystem
+\systems\levels\index.ts:33 - useLevelsContext
+\systems\levels\index.ts:6 - Level
+\systems\levels\index.ts:14 - FloorplanDoc
+\systems\levels\index.ts:35 - CalibrationData
+\systems\levels\index.ts:48 - ImportWizardState
+\systems\levels\index.ts:57 - LevelSystemConfig
+\systems\levels\index.ts:65 - DEFAULT_LEVEL_CONFIG
+\systems\levels\index.ts:76 - LevelSystemSettings
+\systems\levels\index.ts:84 - DEFAULT_LEVEL_SETTINGS
+\systems\levels\index.ts:96 - ImportWizardActions
+\systems\levels\index.ts:8 - LevelOperations
+\systems\levels\index.ts:106 - FloorplanOperations
+\systems\levels\index.ts:196 - CalibrationOperations
+\systems\levels\LevelsSystem.tsx:41 - LevelsSystemProps (used in module)
+\systems\rulers-grid\index.ts:14 - useRulersGrid
+\systems\rulers-grid\index.ts:15 - useRulerState
+\systems\rulers-grid\index.ts:16 - useGridState
+\systems\rulers-grid\index.ts:17 - useSnapState
+\systems\rulers-grid\index.ts:18 - useOriginState
+\systems\rulers-grid\index.ts:19 - useRulersGridCalculations
+\systems\rulers-grid\index.ts:20 - useRulersGridDisplay
+\systems\rulers-grid\index.ts:21 - useRulersGridSettings
+\systems\rulers-grid\index.ts:23 - useRulers
+\systems\rulers-grid\index.ts:24 - useGrid
+\systems\rulers-grid\index.ts:25 - useRulersAndGrid
+\systems\rulers-grid\index.ts:32 - RulersGridSystem
+\systems\rulers-grid\index.ts:32 - useRulersGridContext
+\systems\rulers-grid\index.ts:9 - RulerSettings
+\systems\rulers-grid\index.ts:49 - GridSettings
+\systems\rulers-grid\index.ts:83 - RulersGridState
+\systems\rulers-grid\index.ts:99 - DEFAULT_RULER_SETTINGS
+\systems\rulers-grid\index.ts:139 - DEFAULT_GRID_SETTINGS
+\systems\rulers-grid\index.ts:174 - RULERS_GRID_CONFIG
+\systems\rulers-grid\index.ts:214 - UnitType
+\systems\rulers-grid\index.ts:215 - RulerPosition
+\systems\rulers-grid\index.ts:218 - GridLine
+\systems\rulers-grid\index.ts:227 - RulerTick
+\systems\rulers-grid\index.ts:235 - GridBounds
+\systems\rulers-grid\index.ts:244 - SnapResult
+\systems\rulers-grid\index.ts:252 - RulersGridOperation
+\systems\rulers-grid\index.ts:263 - RulersGridOperationResult
+\systems\rulers-grid\index.ts:271 - RulersLayoutInfo
+\systems\rulers-grid\index.ts:299 - RenderPerformance
+\systems\rulers-grid\index.ts:308 - SettingsValidation
+\systems\rulers-grid\index.ts:322 - RulerSettingsUpdate
+\systems\rulers-grid\index.ts:328 - GridSettingsUpdate
+\systems\rulers-grid\index.ts:77 - UnitConversion
+\systems\rulers-grid\index.ts:117 - GridCalculations
+\systems\rulers-grid\index.ts:245 - RulerCalculations
+\systems\rulers-grid\index.ts:424 - PerformanceUtilities
+\systems\rulers-grid\index.ts:462 - RulersGridUtils
+\systems\rulers-grid\useGridManagement.ts:5 - GridManagementHook (used in module)
+\systems\rulers-grid\usePersistence.ts:33 - usePersistence
+\systems\rulers-grid\usePersistence.ts:13 - PersistenceHook (used in module)
+\systems\rulers-grid\useRenderingCalculations.ts:15 - RenderingCalculationsHook (used in module)
+\systems\rulers-grid\useRulerManagement.ts:4 - RulerManagementHook (used in module)
+\systems\rulers-grid\useSnapManagement.ts:13 - SnapManagementHook (used in module)
+\systems\selection\index.ts:13 - useSelection
+\systems\selection\index.ts:13 - useSelectionContext
+\systems\selection\index.ts:19 - SelectionSystem
+\systems\selection\index.ts:11 - SELECTION_CONFIG
+\systems\selection\index.ts:20 - SelectionMode
+\systems\selection\index.ts:21 - MarqueeKind
+\systems\selection\index.ts:24 - SelectionState
+\systems\selection\index.ts:33 - FilterState
+\systems\selection\index.ts:39 - MarqueeState
+\systems\selection\index.ts:47 - LassoState
+\systems\selection\index.ts:54 - SelectionOverlayState
+\systems\selection\index.ts:60 - SelectionActions
+\systems\selection\index.ts:74 - FilterActions
+\systems\selection\index.ts:85 - ViewActions
+\systems\selection\index.ts:95 - DEFAULT_SELECTION_STATE
+\systems\selection\index.ts:108 - DEFAULT_FILTER_STATE
+\systems\selection\index.ts:114 - SelectionPreferences
+\systems\selection\index.ts:122 - DEFAULT_SELECTION_PREFERENCES
+\systems\selection\index.ts:15 - getRectangleVertices
+\systems\selection\index.ts:249 - createSelectionResult
+\systems\selection\index.ts:257 - isValidSelection
+\systems\selection\index.ts:35 - UnifiedEntitySelection
+\systems\selection\index.ts:243 - SelectionResult
+\systems\selection\SelectionSystem.tsx:7 - SelectionContext (used in module)
+\systems\selection\SelectionSystem.tsx:31 - SelectionContextType (used in module)
+\systems\selection\useFilterActions.ts:6 - FilterActionsHook (used in module)
+\systems\selection\useSelectionActions.ts:5 - SelectionActionsHook (used in module)
+\systems\selection\useSelectionSystemState.ts:16 - SelectionSystemStateReturn (used in module)
+\systems\selection\useViewActions.ts:5 - ViewActionsHook (used in module)
+\systems\toolbars\index.ts:14 - useToolbars
+\systems\toolbars\index.ts:15 - useActiveTool
+\systems\toolbars\index.ts:16 - useToolRunner
+\systems\toolbars\index.ts:17 - useToolbarConfig
+\systems\toolbars\index.ts:18 - useToolDefinitions
+\systems\toolbars\index.ts:19 - useToolStates
+\systems\toolbars\index.ts:20 - useHotkeys
+\systems\toolbars\index.ts:21 - useToolbarCustomization
+\systems\toolbars\index.ts:22 - useToolbarSettings
+\systems\toolbars\index.ts:24 - useToolbar
+\systems\toolbars\index.ts:25 - useTools
+\systems\toolbars\index.ts:26 - useToolSystem
+\systems\toolbars\index.ts:33 - ToolbarsSystem
+\systems\toolbars\index.ts:33 - useToolbarsContext
+\systems\toolbars\index.ts:7 - ToolType
+\systems\toolbars\index.ts:56 - ToolCategory
+\systems\toolbars\index.ts:68 - ToolbarPosition
+\systems\toolbars\index.ts:69 - ToolbarOrientation
+\systems\toolbars\index.ts:70 - ToolbarSize
+\systems\toolbars\index.ts:73 - ToolDefinition
+\systems\toolbars\index.ts:103 - ActionDefinition
+\systems\toolbars\index.ts:122 - ToolbarConfig
+\systems\toolbars\index.ts:144 - ToolbarStyle
+\systems\toolbars\index.ts:166 - ToolbarBehavior
+\systems\toolbars\index.ts:179 - ToolbarLayout
+\systems\toolbars\index.ts:191 - ToolbarState
+\systems\toolbars\index.ts:214 - ToolbarSettings
+\systems\toolbars\index.ts:246 - ToolbarCustomization
+\systems\toolbars\index.ts:263 - ToolRunner
+\systems\toolbars\index.ts:276 - ToolStep
+\systems\toolbars\index.ts:288 - ToolContext
+\systems\toolbars\index.ts:308 - DEFAULT_TOOLBAR_STYLE
+\systems\toolbars\index.ts:330 - DEFAULT_TOOLBAR_BEHAVIOR
+\systems\toolbars\index.ts:343 - DEFAULT_TOOLBAR_LAYOUT
+\systems\toolbars\index.ts:352 - DEFAULT_TOOLBAR_SETTINGS
+\systems\toolbars\index.ts:384 - TOOLBAR_CONFIG
+\systems\toolbars\index.ts:440 - ToolbarOperation
+\systems\toolbars\index.ts:455 - ToolbarOperationResult
+\systems\toolbars\index.ts:464 - ToolEvents
+\systems\toolbars\index.ts:479 - ToolState
+\systems\toolbars\index.ts:480 - ActionState
+\systems\toolbars\index.ts:22 - ToolUtils
+\systems\toolbars\index.ts:114 - ActionUtils
+\systems\toolbars\index.ts:181 - ToolbarUtils
+\systems\toolbars\index.ts:336 - ToolRunnerUtils
+\systems\toolbars\index.ts:429 - CustomizationUtils
+\systems\toolbars\index.ts:515 - HotkeyUtils
+\systems\toolbars\index.ts:572 - HookPatternUtils
+\systems\toolbars\index.ts:641 - ToolbarSystemUtils
+\systems\tools\index.ts:6 - useToolStateManager
+\systems\tools\index.ts:7 - ToolCategory
+\systems\tools\index.ts:8 - ToolInfo
+\systems\tools\index.ts:9 - ToolTransition
+\systems\tools\index.ts:10 - ToolStateManagerOptions
+\systems\zoom\index.ts:14 - useZoom
+\systems\zoom\index.ts:15 - useZoomLevel
+\systems\zoom\index.ts:16 - useZoomOperations
+\systems\zoom\index.ts:17 - useZoomWindowControl
+\systems\zoom\index.ts:18 - useZoomState
+\systems\zoom\index.ts:19 - useZoomSystem
+\systems\zoom\index.ts:23 - useZoomWindow
+\systems\zoom\index.ts:26 - ZoomControls
+\systems\zoom\index.ts:27 - ZoomWindowOverlay
+\systems\zoom\index.ts:33 - ZoomSystem
+\systems\zoom\index.ts:33 - useZoomContext
+\systems\zoom\index.ts:7 - ZoomWindowState
+\systems\zoom\index.ts:10 - ZoomConfig
+\systems\zoom\index.ts:23 - DEFAULT_ZOOM_CONFIG
+\systems\zoom\index.ts:37 - ZoomWindowConfig
+\systems\zoom\index.ts:48 - DEFAULT_ZOOM_WINDOW_CONFIG
+\systems\zoom\index.ts:60 - ZoomLimits
+\systems\zoom\index.ts:68 - ZOOM_PRESETS
+\systems\zoom\index.ts:77 - ZoomShortcuts
+\systems\zoom\index.ts:86 - DEFAULT_ZOOM_SHORTCUTS
+\systems\zoom\index.ts:96 - ZoomAnimationConfig
+\systems\zoom\index.ts:103 - DEFAULT_ZOOM_ANIMATION_CONFIG
+\systems\zoom\index.ts:111 - ZoomFeedbackConfig
+\systems\zoom\index.ts:119 - DEFAULT_ZOOM_FEEDBACK_CONFIG
+\systems\zoom\index.ts:128 - ZoomSystemConfig
+\systems\zoom\index.ts:136 - DEFAULT_ZOOM_SYSTEM_CONFIG
+\systems\zoom\index.ts:28 - clampZoom
+\systems\zoom\index.ts:35 - calculateFitZoom
+\systems\zoom\index.ts:54 - calculateRegionZoom
+\systems\zoom\index.ts:65 - screenToWorld
+\systems\zoom\index.ts:79 - worldToScreen
+\systems\zoom\index.ts:93 - scaleToZoomLevel
+\systems\zoom\index.ts:100 - zoomLevelToScale
+\systems\zoom\index.ts:107 - getZoomCategory
+\systems\zoom\index.ts:121 - formatZoomPercentage
+\systems\zoom\index.ts:129 - formatZoomScale
+\systems\zoom\index.ts:136 - parseZoomInput
+\systems\zoom\index.ts:155 - calculateZoomIncrement
+\systems\zoom\index.ts:172 - isZoomPerformant
+\systems\zoom\index.ts:180 - calculateOptimalZoomStep
+\systems\zoom\index.ts:190 - isValidZoomRegion
+\systems\zoom\index.ts:204 - getRegionCenter
+\systems\zoom\index.ts:214 - createZoomRegion
+\systems\zoom\index.ts:226 - interpolateZoom
+\systems\zoom\index.ts:245 - calculateWheelZoom
+\systems\zoom\index.ts:259 - calculateEntityBounds
+\systems\zoom\index.ts:12 - ZoomRegion
+\systems\zoom\index.ts:20 - ViewportDimensions
+\systems\zoom\useZoom.ts:7 - useZoomWindow (used in module)
+\systems\zoom\useZoom.ts:8 - useZoomContext (used in module)
+\systems\zoom\ZoomSystem.tsx:106 - ZoomProvider
+\systems\zoom\ZoomSystem.tsx:107 - DEFAULT_ZOOM_CONFIG (used in module)
+\systems\zoom\ZoomSystem.tsx:108 - ZoomSystemConfig (used in module)
+\systems\zoom\ZoomSystem.tsx:108 - ZoomContextType (used in module)
+\ui\components\ProSnapToolbar.tsx:210 - default
+\ui\components\WizardProgress.tsx:53 - getDefaultStepLabels
+\ui\icons\iconRegistry.tsx:16 - CommandId (used in module)
+\ui\icons\iconRegistry.tsx:30 - SnapMode (used in module)
+\ui\icons\iconRegistry.tsx:34 - CommandIcons (used in module)
+\ui\icons\iconRegistry.tsx:104 - SnapIcons (used in module)
+\ui\icons\iconRegistry.tsx:119 - iconProps (used in module)
+\ui\icons\iconRegistry.tsx:128 - getCommandIcon
+\ui\icons\iconRegistry.tsx:129 - getSnapIcon
+\ui\toolbar\index.ts:2 - EnhancedDXFToolbar
+\ui\toolbar\index.ts:5 - ToolButton
+\ui\toolbar\index.ts:5 - ActionButton
+\ui\toolbar\index.ts:6 - ZoomControls
+\ui\toolbar\index.ts:7 - ToolbarStatusBar
+\ui\toolbar\index.ts:10 - ToolType
+\ui\toolbar\index.ts:10 - ToolDefinition
+\ui\toolbar\index.ts:10 - ActionDefinition
+\ui\toolbar\index.ts:10 - ToolbarState
+\ui\toolbar\index.ts:11 - toolGroups
+\ui\toolbar\index.ts:11 - createActionButtons
+\ui\toolbar\types.ts:70 - MeasurementTool (used in module)
+\ui\toolbar\types.ts:82 - ExtendedToolType
+\ui\toolbar\types.ts:84 - MeasurementToolConfig (used in module)
+\ui\toolbar\types.ts:93 - MEASUREMENT_TOOL_CONFIGS
+\ui\utils\selection-update-utils.ts:9 - updateSelectionAfterDeletion (used in module)
+\utils\geometry\GeometryUtils.ts:31 - approximatelyEqual (used in module)
+\utils\geometry\GeometryUtils.ts:53 - distance
+\utils\geometry\GeometryUtils.ts:60 - arcToPolyline (used in module)
+\utils\geometry\GeometryUtils.ts:8 - GEOMETRY_CONSTANTS (used in module)
+\utils\geometry\GeometryUtils.ts:21 - Arc (used in module)
+\utils\geometry\SegmentChaining.ts:185 - tryForceConnect (used in module)
+\utils\geometry\SegmentChaining.ts:7 - ChainResult
+\utils\hover\index.ts:12 - HoverManager
+\utils\hover\index.ts:6 - HoverConfig
+\utils\hover\index.ts:28 - HOVER_CONFIG
+\utils\hover\index.ts:9 - Point2D (used in module)
+\utils\hover\index.ts:10 - EntityModel (used in module)
+\utils\hover\index.ts:10 - RenderOptions (used in module)
+\utils\hover\index.ts:12 - WorldToScreenFn
+\utils\hover\index.ts:14 - HoverRenderContext
+\utils\hover\text-labeling-utils.ts:11 - EdgeTextPosition (used in module)
+\utils\renderers\index.ts:23 - createEntityRenderer
+\utils\renderers\index.ts:5 - BaseEntityRenderer
+\utils\renderers\index.ts:6 - EntityModel
+\utils\renderers\index.ts:6 - GripInfo
+\utils\renderers\index.ts:6 - RenderOptions
+\utils\renderers\index.ts:9 - LineRenderer
+\utils\renderers\index.ts:10 - CircleRenderer
+\utils\renderers\index.ts:11 - PolylineRenderer
+\utils\renderers\index.ts:12 - ArcRenderer
+\utils\renderers\index.ts:13 - TextRenderer
+\utils\renderers\index.ts:14 - RectangleRenderer
+\utils\renderers\index.ts:15 - EllipseRenderer
+\utils\renderers\index.ts:16 - SplineRenderer
+\utils\renderers\index.ts:17 - AngleMeasurementRenderer
+\utils\renderers\index.ts:20 - EntityRendererComposite (used in module)
+\utils\shared\feedback-message-utils.ts:30 - createCoordinateFeedback
+\utils\shared\feedback-message-utils.ts:43 - createDistanceFeedback
+\utils\shared\feedback-message-utils.ts:55 - createEntityFeedback
+\snapping\engines\shared\snap-engine-utils.ts:14 - createSnapCandidate
+\snapping\engines\shared\snap-engine-utils.ts:67 - getPerpendicularFoot
+\snapping\engines\shared\snap-engine-utils.ts:92 - isPointOnSegment
+\snapping\engines\shared\snap-engine-utils.ts:109 - sortCandidatesByDistance
+\snapping\engines\shared\snap-engine-utils.ts:144 - processSnapCandidates
+\systems\dynamic-input\components\index.ts:5 - DynamicInputOverlay
+\systems\dynamic-input\components\index.ts:6 - DynamicInputContainer
+\systems\dynamic-input\components\index.ts:7 - DynamicInputHeader
+\systems\dynamic-input\components\index.ts:8 - DynamicInputFooter
+\systems\dynamic-input\components\index.ts:9 - DynamicInputField
+\systems\dynamic-input\hooks\index.ts:5 - useDynamicInputState
+\systems\dynamic-input\hooks\index.ts:6 - useDynamicInputKeyboard
+\systems\dynamic-input\hooks\index.ts:7 - useDynamicInputPhase
+\systems\dynamic-input\hooks\index.ts:8 - useDynamicInputLayout
+\systems\dynamic-input\hooks\index.ts:9 - useDynamicInputRealtime
+\systems\dynamic-input\hooks\index.ts:10 - useDynamicInputAnchoring
+\systems\dynamic-input\hooks\index.ts:11 - useDynamicInputToolReset
+\systems\dynamic-input\hooks\index.ts:12 - useDynamicInputHandler
+\systems\dynamic-input\hooks\index.ts:9 - FieldValueActions
+\systems\dynamic-input\hooks\index.ts:24 - FieldStateActions
+\systems\dynamic-input\hooks\index.ts:34 - CoordinateActions
+\systems\dynamic-input\hooks\index.ts:42 - PhaseActions
+\systems\dynamic-input\hooks\index.ts:51 - InputRefActions
+\systems\dynamic-input\hooks\index.ts:59 - ValidationActions
+\systems\dynamic-input\hooks\index.ts:67 - FeedbackActions
+\systems\dynamic-input\hooks\index.ts:76 - ResetActions
+\systems\dynamic-input\hooks\useDynamicInputMultiPoint.ts:144 - calculateAngleBetweenPoints
+\systems\dynamic-input\hooks\useDynamicInputMultiPoint.ts:170 - formatDistance
+\systems\dynamic-input\hooks\useDynamicInputMultiPoint.ts:178 - formatAngle
+\systems\dynamic-input\types\common-interfaces.ts:8 - Field (used in module)
+\systems\dynamic-input\types\common-interfaces.ts:9 - Phase
+\systems\dynamic-input\types\common-interfaces.ts:10 - Point (used in module)
+\systems\dynamic-input\types\common-interfaces.ts:39 - FieldStateManagement (used in module)
+\systems\dynamic-input\types\common-interfaces.ts:48 - CommonDynamicInputActions
+\systems\dynamic-input\utils\field-value-utils.ts:6 - Field (used in module)
+\systems\dynamic-input\utils\field-value-utils.ts:8 - FieldSetters (used in module)
+\systems\dynamic-input\utils\field-value-utils.ts:17 - PhaseResetActions (used in module)
+\systems\selection\shared\selection-duplicate-utils.ts:13 - calculateBoundingBox
+\systems\selection\shared\selection-duplicate-utils.ts:67 - isPointInBounds
+\systems\selection\shared\selection-duplicate-utils.ts:80 - filterVisibleEntities
+\systems\selection\shared\selection-duplicate-utils.ts:93 - isEntitySelectable
+\ui\components\layer-manager\useLayerFiltering.ts:4 - LayerFilteringHook (used in module)
+\ui\components\layer-manager\useLayerManagerState.ts:4 - LayerManagerStateHook (used in module)
+\ui\components\layer-manager\useLayerStatistics.ts:4 - LayerStatisticsHook (used in module)
+\ui\toolbar\icons\AngleConstraintIcon.tsx:33 - default
+\ui\toolbar\icons\AngleIcon.tsx:26 - default
+\ui\toolbar\icons\AngleLineArcIcon.tsx:29 - default
+\ui\toolbar\icons\AngleMeasureGeomIcon.tsx:25 - default
+\ui\toolbar\icons\AngleTwoArcsIcon.tsx:42 - default
+\ui\toolbar\icons\CircleIcon.tsx:3 - CircleVariant (used in module)
+\ui\toolbar\icons\CircleIcon.tsx:17 - CircleIcon (used in module)
+\ui\toolbar\shared\input-validation.ts:5 - ValidationOptions (used in module)
+\ui\toolbar\ui\ToolbarButton.tsx:15 - default
+\ui\wizard\utils\calibration-utils.ts:6 - CalibrationData (used in module)
+\utils\renderers\shared\entity-validation-utils.ts:12 - validateLineEntity
+\utils\renderers\shared\entity-validation-utils.ts:29 - validateCircleEntity
+\utils\renderers\shared\entity-validation-utils.ts:67 - validateRectangleEntity
+\utils\renderers\shared\entity-validation-utils.ts:86 - isValidPoint
+\utils\renderers\shared\geometry-rendering-utils.ts:73 - getPerpendicularDirection
+\utils\renderers\shared\geometry-rendering-utils.ts:95 - shouldApplySpecialRendering
+\canvas\components\dxf-viewer\components\DxfViewerCanvas.tsx:51 - DxfViewerCanvas
+\canvas\components\dxf-viewer\components\DxfViewerSidebar.tsx:16 - DxfViewerSidebar
+\canvas\components\dxf-viewer\components\DxfViewerToolbar.tsx:22 - DxfViewerToolbar
+\canvas\components\dxf-viewer\hooks\useCanvasActions.ts:14 - useCanvasActions
+\canvas\components\dxf-viewer\hooks\useDrawingIntegration.ts:14 - useDrawingIntegration
+\canvas\components\dxf-viewer\hooks\useDxfViewerState.ts:8 - useDxfViewerState
+\canvas\components\dxf-viewer\hooks\useFileActions.ts:15 - useFileActions
+\canvas\components\dxf-viewer\hooks\useLevelIntegration.ts:19 - useLevelIntegration
+\canvas\components\dxf-viewer\hooks\useToolActions.ts:16 - useToolActions
+\canvas\components\dxf-viewer\hooks\useUIActions.ts:16 - useUIActions
+\canvas\components\dxf-viewer\hooks\useUnifiedActions.ts:27 - useUnifiedActions
+\canvas\components\dxf-viewer\hooks\useZoomIntegration.ts:15 - useZoomIntegration
+\ui\components\layers\hooks\selection.ts:39 - selectRangeForMerge
+\ui\toolbar\icons\shared\AngleIconBase.tsx:65 - default
+\ui\toolbar\icons\shared\BaseIcon.tsx:40 - createIcon
+\ui\toolbar\icons\shared\BaseIcon.tsx:54 - createVariantIcon
+\ui\toolbar\icons\shared\BaseIcon.tsx:3 - BaseIconProps (used in module)
+\ui\toolbar\icons\shared\BaseIcon.tsx:8 - IconVariant (used in module)
+\ui\toolbar\icons\shared\BaseIcon.tsx:13 - BaseIconConfig (used in module)

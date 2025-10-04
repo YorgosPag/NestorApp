@@ -1,0 +1,118 @@
+{
+  "title": "Εργαλειοθήκες",
+  "description": "Εργαλεία διαχείρισης και φίλτρων",
+  "common": {
+    "actions": {
+      "new": "Νέο",
+      "edit": "Επεξεργασία",
+      "delete": "Διαγραφή",
+      "export": "Εξαγωγή",
+      "import": "Εισαγωγή",
+      "refresh": "Ανανέωση",
+      "archive": "Αρχειοθέτηση",
+      "favorite": "Αγαπημένα",
+      "share": "Κοινοποίηση",
+      "help": "Βοήθεια"
+    },
+    "search": {
+      "placeholder": "Αναζήτηση...",
+      "clear": "Καθαρισμός αναζήτησης"
+    },
+    "filters": {
+      "label": "Φίλτρα",
+      "clear": "Καθαρισμός",
+      "clearAll": "Καθαρισμός όλων",
+      "active": "ενεργά φίλτρα"
+    },
+    "sort": {
+      "label": "Ταξινόμηση",
+      "ascending": "Αύξουσα",
+      "descending": "Φθίνουσα",
+      "byName": "Κατά όνομα",
+      "byDate": "Κατά ημερομηνία",
+      "byStatus": "Κατά κατάσταση"
+    },
+    "selection": {
+      "selected": "επιλεγμένα στοιχεία",
+      "selectAll": "Επιλογή όλων",
+      "deselectAll": "Αποεπιλογή όλων"
+    },
+    "shortcuts": {
+      "newItem": "(Ctrl+N)",
+      "editItem": "(Ctrl+E)",
+      "deleteItem": "(Delete)",
+      "refresh": "(F5)",
+      "help": "(F1)"
+    }
+  },
+  "buildings": {
+    "title": "Κτίρια",
+    "search": {
+      "placeholder": "Αναζήτηση κτιρίων..."
+    },
+    "filters": {
+      "status": {
+        "label": "Κατάσταση κτιρίου",
+        "active": "Ενεργά",
+        "inactive": "Ανενεργά",
+        "maintenance": "Συντήρηση"
+      },
+      "type": {
+        "label": "Τύπος κτιρίου",
+        "residential": "Οικιστικό",
+        "commercial": "Επαγγελματικό",
+        "mixed": "Μεικτό"
+      }
+    },
+    "actions": {
+      "newBuilding": "Νέο Κτίριο",
+      "editBuilding": "Επεξεργασία Κτιρίου",
+      "deleteBuilding": "Διαγραφή Κτιρίου"
+    },
+    "selection": {
+      "selected": "επιλεγμένα κτίρια"
+    }
+  },
+  "contacts": {
+    "title": "Επαφές", 
+    "search": {
+      "placeholder": "Αναζήτηση επαφών..."
+    },
+    "filters": {
+      "type": {
+        "label": "Τύπος επαφής",
+        "individual": "Άτομο",
+        "company": "Εταιρεία",
+        "organization": "Οργανισμός"
+      },
+      "status": {
+        "label": "Κατάσταση επαφής",
+        "active": "Ενεργές",
+        "inactive": "Ανενεργές",
+        "potential": "Πιθανοί πελάτες"
+      }
+    },
+    "actions": {
+      "newContact": "Νέα Επαφή",
+      "editContact": "Επεξεργασία Επαφής",
+      "deleteContact": "Διαγραφή Επαφής",
+      "call": "Κλήση",
+      "email": "Email"
+    },
+    "selection": {
+      "selected": "επιλεγμένες επαφές"
+    }
+  },
+  "validation": {
+    "required": "Το πεδίο είναι υποχρεωτικό",
+    "invalidSelection": "Μη έγκυρη επιλογή",
+    "noItemsSelected": "Δεν έχουν επιλεγεί στοιχεία"
+  },
+  "messages": {
+    "actionSuccess": "Η ενέργεια ολοκληρώθηκε επιτυχώς",
+    "actionError": "Σφάλμα κατά την εκτέλεση της ενέργειας",
+    "exportSuccess": "Η εξαγωγή ολοκληρώθηκε επιτυχώς",
+    "importSuccess": "Η εισαγωγή ολοκληρώθηκε επιτυχώς",
+    "refreshSuccess": "Τα δεδομένα ανανεώθηκαν επιτυχώς"
+  }
+}

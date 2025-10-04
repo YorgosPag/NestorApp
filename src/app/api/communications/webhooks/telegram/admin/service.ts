@@ -1,0 +1,118 @@
+// src/app/api/communications/webhooks/telegram/admin/service.ts
+
+import { ADMIN_CONFIG, isConfigured } from './config';
+import { formatAdminMessage } from './format';
+import { getAdminKeyboard } from './keyboard';
+import { sendMessageToTelegram } from './client';
+import type { AdminNotification, UserMessage, Priority } from './types';
+
+/**
+ * Main function to orchestrate sending a notification to the admin.
+ */
+export async function sendAdminNotification(notification: AdminNotification): Promise<boolean> {
+    if (!isConfigured()) {
+        console.log('Admin notifications disabled or not configured.');
+        return false;
+    }
+
+    try {
+        const text = formatAdminMessage(notification);
+        const reply_markup = getAdminKeyboard(notification.userInfo);
+
+        const result = await sendMessageToTelegram(ADMIN_CONFIG.adminChatId, text, reply_markup);
+
+        if (result.success) {
+            console.log('✅ Admin notification sent successfully.');
+        } else {
+            console.error('Failed to send admin notification:', result.error);
+        }
+        
+        return result.success;
+
+    } catch (error) {
+        console.error('Error sending admin notification:', error);
+        return false;
+    }
+}
+
+/**
+ * Quick notification helpers for common events.
+ */
+
+export async function notifyNewMessage(userMessage: UserMessage): Promise<boolean> {
+    const notification: AdminNotification = {
+        type: 'new_message',
+        priority: userMessage.queryType === 'contact' ? 'high' : 'medium',
+        message: 'Νέο μήνυμα από πελάτη',
+        userInfo: userMessage,
+        timestamp: new Date().toISOString()
+    };
+    return sendAdminNotification(notification);
+}
+
+export async function notifySecurityAlert(userMessage: UserMessage, reason: string): Promise<boolean> {
+    const notification: AdminNotification = {
+        type: 'security_alert',
+        priority: 'urgent',
+        message: `Security Alert: ${reason}`,
+        userInfo: userMessage,
+        timestamp: new Date().toISOString()
+    };
+    return sendAdminNotification(notification);
+}
+
+export async function notifySystemEvent(event: string, priority: Priority = 'medium'): Promise<boolean> {
+    const notification: AdminNotification = {
+        type: 'system_event',
+        priority,
+        message: event,
+        timestamp: new Date().toISOString()
+    };
+    return sendAdminNotification(notification);
+}
+
+/**
+ * Sends a daily summary notification to the admin.
+ */
+export async function sendDailySummary(stats: {
+    totalMessages: number;
+    uniqueUsers: number;
+    propertySearches: number;
+    contactRequests: number;
+    securityAlerts: number;
+}): Promise<boolean> {
+    const message = `📊 <b>Ημερήσια Αναφορά Bot</b>
+
+📈 <b>Στατιστικά:</b>
+- Συνολικά μηνύματα: ${stats.totalMessages}
+- Μοναδικοί χρήστες: ${stats.uniqueUsers}
+- Αναζητήσεις ακινήτων: ${stats.propertySearches}
+- Αιτήματα επικοινωνίας: ${stats.contactRequests}
+- Security alerts: ${stats.securityAlerts}
+
+📅 Ημερομηνία: ${new Date().toLocaleString('el-GR')}`;
+
+    return await sendAdminNotification({
+        type: 'system_event',
+        priority: 'low',
+        message: message,
+        timestamp: new Date().toISOString()
+    });
+}
+
+/**
+ * Sends a test message to the admin chat to verify configuration.
+ */
+export async function testAdminNotifications(): Promise<boolean> {
+    console.log('Sending test admin notification...');
+    const testMessage: UserMessage = {
+        userId: '123456789',
+        username: 'test_user',
+        firstName: 'Test',
+        lastName: 'User',
+        messageText: 'Αυτό είναι ένα test message! <b>Hello</b>',
+        timestamp: new Date().toISOString(),
+        queryType: 'general',
+    };
+    return notifyNewMessage(testMessage);
+}

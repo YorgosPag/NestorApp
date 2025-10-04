@@ -1,0 +1,118 @@
+{
+  "title": "Toolbars",
+  "description": "Management tools and filters",
+  "common": {
+    "actions": {
+      "new": "New",
+      "edit": "Edit",
+      "delete": "Delete",
+      "export": "Export",
+      "import": "Import",
+      "refresh": "Refresh",
+      "archive": "Archive",
+      "favorite": "Favorites",
+      "share": "Share",
+      "help": "Help"
+    },
+    "search": {
+      "placeholder": "Search...",
+      "clear": "Clear search"
+    },
+    "filters": {
+      "label": "Filters",
+      "clear": "Clear",
+      "clearAll": "Clear all",
+      "active": "active filters"
+    },
+    "sort": {
+      "label": "Sort",
+      "ascending": "Ascending",
+      "descending": "Descending",
+      "byName": "By name",
+      "byDate": "By date",
+      "byStatus": "By status"
+    },
+    "selection": {
+      "selected": "selected items",
+      "selectAll": "Select All",
+      "deselectAll": "Deselect All"
+    },
+    "shortcuts": {
+      "newItem": "(Ctrl+N)",
+      "editItem": "(Ctrl+E)",
+      "deleteItem": "(Delete)",
+      "refresh": "(F5)",
+      "help": "(F1)"
+    }
+  },
+  "buildings": {
+    "title": "Buildings",
+    "search": {
+      "placeholder": "Search buildings..."
+    },
+    "filters": {
+      "status": {
+        "label": "Building status",
+        "active": "Active",
+        "inactive": "Inactive",
+        "maintenance": "Maintenance"
+      },
+      "type": {
+        "label": "Building type",
+        "residential": "Residential",
+        "commercial": "Commercial",
+        "mixed": "Mixed"
+      }
+    },
+    "actions": {
+      "newBuilding": "New Building",
+      "editBuilding": "Edit Building",
+      "deleteBuilding": "Delete Building"
+    },
+    "selection": {
+      "selected": "selected buildings"
+    }
+  },
+  "contacts": {
+    "title": "Contacts",
+    "search": {
+      "placeholder": "Search contacts..."
+    },
+    "filters": {
+      "type": {
+        "label": "Contact type",
+        "individual": "Individual",
+        "company": "Company",
+        "organization": "Organization"
+      },
+      "status": {
+        "label": "Contact status",
+        "active": "Active",
+        "inactive": "Inactive",
+        "potential": "Potential clients"
+      }
+    },
+    "actions": {
+      "newContact": "New Contact",
+      "editContact": "Edit Contact",
+      "deleteContact": "Delete Contact",
+      "call": "Call",
+      "email": "Email"
+    },
+    "selection": {
+      "selected": "selected contacts"
+    }
+  },
+  "validation": {
+    "required": "Field is required",
+    "invalidSelection": "Invalid selection",
+    "noItemsSelected": "No items selected"
+  },
+  "messages": {
+    "actionSuccess": "Action completed successfully",
+    "actionError": "Error executing action",
+    "exportSuccess": "Export completed successfully",
+    "importSuccess": "Import completed successfully",
+    "refreshSuccess": "Data refreshed successfully"
+  }
+}

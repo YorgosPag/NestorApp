@@ -1,0 +1,135 @@
+{
+  "layers": {
+    "title": "DXF Layers ({{count}})",
+    "clickToSelect": "Κλικ για επιλογή",
+    "delete": {
+      "confirm": "{count, plural, =0 {Διαγραφή layer \"{name}\"} one {Διαγραφή # στοιχείου από το layer \"{name}\"} other {Διαγραφή # στοιχείων από το layer \"{name}\"}}",
+      "success": "Layer διαγράφηκε επιτυχώς!",
+      "error": "Σφάλμα κατά τη διαγραφή του layer",
+      "tooltip": "Διαγραφή layer \"{name}\" ({count, plural, =0 {κενό} one {# στοιχείο} other {# στοιχεία}})"
+    },
+    "colorPicker": {
+      "title": "Επιλογή χρώματος:",
+      "close": "Κλείσιμο"
+    },
+    "actions": {
+      "select": "Επιλογή",
+      "hide": "Απόκρυψη", 
+      "show": "Εμφάνιση",
+      "rename": "Μετονομασία"
+    },
+    "info": {
+      "layer": "Layer",
+      "elements": "Στοιχεία",
+      "visible": "Ορατά",
+      "selected": "επιλεγμένα στοιχεία"
+    }
+  },
+  "confirmations": {
+    "confirmed": "Ενέργεια επιβεβαιώθηκε",
+    "cancelled": "Ενέργεια ακυρώθηκε",
+    "irreversible": "⚠️ Αυτή η ενέργεια δεν μπορεί να αναιρεθεί!",
+    "delete": {
+      "confirm": "Διαγραφή",
+      "layer": {
+        "title": "Διαγραφή Layer",
+        "message": "Πρόκειται να διαγράψετε το layer \"{name}\".\n\n{count, plural, =0 {Το layer είναι κενό.} one {Θα διαγραφεί # οντότητα.} other {Θα διαγραφούν # οντότητες.}}\n\nΌλες οι οντότητες αυτού του layer θα χαθούν οριστικά."
+      },
+      "entity": {
+        "title": "Διαγραφή Οντότητας",
+        "message": "Πρόκειται να διαγράψετε την οντότητα \"{name}\".\n\nΗ οντότητα θα αφαιρεθεί οριστικά από το σχέδιο."
+      },
+      "colorGroup": {
+        "title": "Διαγραφή Color Group",
+        "message": "Πρόκειται να διαγράψετε το color group \"{name}\".\n\n{count, plural, =0 {Δεν υπάρχουν layers σε αυτό το group.} one {Θα διαγραφεί # layer.} other {Θα διαγραφούν # layers.}}\n\nΌλα τα layers και οι οντότητες αυτού του color group θα χαθούν οριστικά."
+      }
+    },
+    "merge": {
+      "confirm": "Συγχώνευση",
+      "entities": {
+        "title": "Συγχώνευση Οντοτήτων",
+        "message": "Πρόκειται να συγχωνεύσετε {count} οντότητες στην \"{target}\".\n\nΠηγές για συγχώνευση: {sources}\n\nΟι πηγαίες οντότητες θα διαγραφούν και όλα τα χαρακτηριστικά τους θα μεταφερθούν στην οντότητα-στόχο."
+      },
+      "layers": {
+        "title": "Συγχώνευση Layers",
+        "message": "Πρόκειται να συγχωνεύσετε {count} layers στο \"{target}\".\n\nΠηγές για συγχώνευση: {sources}\n\nΌλες οι οντότητες από τα πηγαία layers θα μεταφερθούν στο layer-στόχο και τα πηγαία layers θα διαγραφούν."
+      },
+      "colorGroups": {
+        "title": "Ιεραρχική Συγχώνευση Color Groups",
+        "message": "Πρόκειται να συγχωνεύσετε {count} color groups στο \"{target}\".\n\nΠηγές για συγχώνευση: {sources}\n\nΌλα τα layers από τα πηγαία color groups θα μεταφερθούν στο color group-στόχο. Τα πηγαία color groups θα εξαφανιστούν αλλά τα layers και οι οντότητες θα διατηρηθούν."
+      }
+    }
+  },
+  "common": {
+    "confirm": "Επιβεβαίωση",
+    "cancel": "Ακύρωση"
+  },
+  "panels": {
+    "properties": {
+      "title": "Ιδιότητες",
+      "description": "{{selectedCount}} επιλεγμένα στοιχεία{{layerCount, plural, =0 {} other { | {{layerCount}} DXF layers}}"
+    },
+    "overlay": {
+      "title": "Overlay",
+      "description": "{{regionCount, plural, =0 {} other {{{regionCount}} overlay regions}}"
+    },
+    "levels": {
+      "title": "Επίπεδα",
+      "description": "Επίπεδα διαχείρισης"
+    },
+    "hierarchy": {
+      "title": "Ιεραρχία",
+      "description": "Project Hierarchy & Destinations",
+      "projectHierarchy": "🏗️ Ιεραρχία Έργων",
+      "loading": "Φόρτωση έργων...",
+      "error": "Ιεραρχία Έργων - Σφάλμα",
+      "retry": "Ξαναδοκιμή",
+      "companies": "Εταιρείες",
+      "noCompanies": "Δεν βρέθηκαν εταιρείες",
+      "projects": "Έργα",
+      "noProjects": "Δεν βρέθηκαν έργα",
+      "buildings": "Κτίρια",
+      "floors": "Όροφοι",
+      "availableDestinations": "🎯 Διαθέσιμοι Προορισμοί DXF",
+      "buildingsCount": "{count, plural, =0 {κτίρια} one {κτίριο} other {κτίρια}}",
+      "floorsCount": "{count, plural, =0 {ορόφους} one {όροφο} other {ορόφους}}",
+      "unitsCount": "{count, plural, =0 {μονάδες} one {μονάδα} other {μονάδες}}",
+      "parkingSpots": "🅿️ {count} θέσεις στάθμευσης",
+      "storageAreas": "📦 {count} αποθήκες"
+    },
+    "layers": {
+      "title": "Layers",
+      "description": "Layer Drawing & Status Management"
+    }
+  },
+  "toolbar": {
+    "select": "Επιλογή",
+    "pan": "Μετακίνηση",
+    "line": "Γραμμή",
+    "rectangle": "Ορθογώνιο",
+    "circle": "Κύκλος",
+    "polyline": "Πολυγραμμή"
+  },
+  "import": {
+    "fileDialog": {
+      "title": "Εισαγωγή DXF",
+      "choose": "Επιλογή αρχείου DXF",
+      "hint": "Κάνε κλικ για επιλογή .dxf από τον υπολογιστή σου",
+      "supported": "Υποστηριζόμενοι τύποι: DXF (Drawing Exchange Format)"
+    },
+    "mode": {
+      "title": "Επιλογή τρόπου εισαγωγής",
+      "file": "Αρχείο: {filename}",
+      "enhancedTitle": "Σύγχρονο Pipeline (Προτείνεται)",
+      "enhancedDesc": "Αυτόματη διανομή σε έργα/κτίρια/ορόφους με διαχείριση layer.",
+      "enhancedDisabled": "Δεν υπάρχουν διαθέσιμοι προορισμοί. Δημιούργησε έργα πρώτα.",
+      "legacyTitle": "Κλασική Εισαγωγή",
+      "legacyDesc": "Άμεση εισαγωγή στο τρέχον επίπεδο (κλασική συμπεριφορά DXF Viewer)."
+    },
+    "common": {
+      "cancel": "Ακύρωση",
+      "destinations": "{count} διαθέσιμοι προορισμοί",
+      "close": "×"
+    }
+  }
+}

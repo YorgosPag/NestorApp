@@ -1,0 +1,33 @@
+{
+  "management": {
+    "title": "Unit Management",
+    "subtitle": "Visual management and analysis of properties on floor plans."
+  },
+  "tooltips": {
+    "dashboard": "Show/Hide Dashboard",
+    "listView": "List View",
+    "gridView": "Grid View",
+    "groupByType": "Group buildings by type (e.g. Residential, Commercial).",
+    "groupByStatus": "Group buildings by status (e.g. Active, Under Construction)."
+  },
+  "actions": {
+    "groupByType": "Group by Type",
+    "groupByStatus": "Group by Status",
+    "newUnit": "New Unit"
+  },
+  "types": {
+    "studio": "Studio",
+    "apartment_1br": "1 Bedroom Apartment",
+    "apartment_2br": "2 Bedroom Apartment",
+    "apartment_3br": "3 Bedroom Apartment",
+    "maisonette": "Maisonette",
+    "shop": "Shop",
+    "storage": "Storage"
+  },
+  "status": {
+    "available": "Available",
+    "reserved": "Reserved",
+    "sold": "Sold",
+    "owner": "Owner"
+  }
+}

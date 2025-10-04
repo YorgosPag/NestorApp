@@ -1,0 +1,104 @@
+
+"use client";
+
+import Link from "next/link";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MoreVertical, Eye, Edit, Copy, Trash2, Download } from "lucide-react";
+import { ObligationDocument } from "@/types/obligations";
+import { getStatusColor, getStatusLabel, formatDate } from "@/lib/obligations-utils";
+
+interface ObligationListItemProps {
+  obligation: ObligationDocument;
+  onDelete: (id: string, title: string) => void;
+  onDuplicate: (id: string) => void;
+}
+
+export function ObligationListItem({ obligation, onDelete, onDuplicate }: ObligationListItemProps) {
+  const safeLocation = obligation.projectDetails?.location ?? 'N/A';
+  const safeOwners = Array.isArray(obligation.owners) ? obligation.owners.map(o => o.name).join(", ") : 'N/A';
+  
+  const createdDate = formatDate(new Date(obligation.createdAt));
+  const updatedDate = formatDate(new Date(obligation.updatedAt));
+
+  return (
+    <Card className="hover:shadow-md transition-shadow">
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between">
+          <div className="space-y-2 flex-1">
+            <div className="flex items-center gap-3">
+              <CardTitle className="text-lg">{obligation.title}</CardTitle>
+              <Badge variant="secondary" className={getStatusColor(obligation.status)}>
+                {getStatusLabel(obligation.status)}
+              </Badge>
+            </div>
+            <CardDescription className="text-sm text-gray-600">
+              <div className="space-y-1">
+                <div><strong>Έργο:</strong> {obligation.projectName}</div>
+                <div><strong>Εργολάβος:</strong> {obligation.contractorCompany}</div>
+                <div><strong>Τοποθεσία:</strong> {safeLocation}</div>
+                <div><strong>Ιδιοκτήτες:</strong> {safeOwners}</div>
+              </div>
+            </CardDescription>
+          </div>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem asChild>
+                <Link href={`/obligations/${obligation.id}`} className="flex items-center gap-2 cursor-pointer">
+                  <Eye className="h-4 w-4" />
+                  Προβολή
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href={`/obligations/${obligation.id}/edit`} className="flex items-center gap-2 cursor-pointer">
+                  <Edit className="h-4 w-4" />
+                  Επεξεργασία
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                className="flex items-center gap-2 cursor-pointer"
+                onClick={() => onDuplicate(obligation.id)}
+              >
+                <Copy className="h-4 w-4" />
+                Δημιουργία Αντιγράφου
+              </DropdownMenuItem>
+              <DropdownMenuItem className="flex items-center gap-2 cursor-pointer">
+                <Download className="h-4 w-4" />
+                Εξαγωγή PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                className="flex items-center gap-2 text-red-600 cursor-pointer"
+                onClick={() => onDelete(obligation.id, obligation.title)}
+              >
+                <Trash2 className="h-4 w-4" />
+                Διαγραφή
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </CardHeader>
+      
+      <CardContent className="pt-0">
+        <div className="flex justify-between text-sm text-gray-500">
+          <span>Δημιουργήθηκε: {createdDate}</span>
+          <span>Τελευταία ενημέρωση: {updatedDate}</span>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+    

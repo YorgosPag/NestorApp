@@ -1,0 +1,112 @@
+15 results - 6 files
+
+src\subapps\dxf-viewer\canvas-v2\layer-canvas\LayerRenderer.ts:
+  441        screenVertices: screenVertices.slice(0, 3),
+  442:       marginsOffset: { left: COORDINATE_LAYOUT.MARGINS.left, bottom: COORDINATE_LAYOUT.MARGINS.bottom }, // ✅ CENTRALIZED
+  443        isOnScreen: screenVertices.some(v => v.x >= 0 && v.x <= viewport.width && v.y >= 0 && v.y <= viewport.height),
+  444:       isInRenderArea: screenVertices.some(v => v.x >= COORDINATE_LAYOUT.MARGINS.left && v.x <= viewport.width && v.y >= 0 && v.y <= viewport.height - COORDINATE_LAYOUT.MARGINS.top)
+  445      });
+
+  559        // Horizontal lines - ✅ UNIFIED WITH COORDINATETRANSFORMS
+  560:       const baseY = viewport.height - COORDINATE_LAYOUT.MARGINS.top;
+  561        const startY = ((baseY - transform.offsetY) % gridSize);
+
+  572        const startX = (transform.offsetX % gridSize);
+  573:       const baseY = viewport.height - COORDINATE_LAYOUT.MARGINS.top;
+  574        const startY = ((baseY - transform.offsetY) % gridSize);
+
+  707      // ✅ UNIFIED WITH COORDINATETRANSFORMS
+  708:     const baseY = viewport.height - COORDINATE_LAYOUT.MARGINS.top;
+  709      const startY = ((baseY - transform.offsetY) % step);
+
+src\subapps\dxf-viewer\rendering\core\CoordinateTransforms.ts:
+  22  // Legacy exports for compatibility
+  23: export const MARGINS = COORDINATE_LAYOUT.MARGINS;
+  24  
+
+  35      // ✅ RESTORED: Margins για σωστή τοποθέτηση relative σε rulers
+  36:     const { left, top } = COORDINATE_LAYOUT.MARGINS;
+  37      if (!worldPoint) {
+
+  60      // ✅ RESTORED: Margins για σωστή μετατροπή relative από rulers
+  61:     const { left, top } = COORDINATE_LAYOUT.MARGINS;
+  62      if (!screenPoint) {
+
+  88      // The zoomCenter is in screen coordinates, but we need to adjust for ruler margins
+  89:     const { left, top } = COORDINATE_LAYOUT.MARGINS;
+  90  
+
+src\subapps\dxf-viewer\rendering\ui\ruler\RulerRenderer.ts:
+  278  
+  279:     const minY = COORDINATE_LAYOUT.MARGINS.top; // 30px - for labels only
+  280  
+
+src\subapps\dxf-viewer\systems\cursor\utils.ts:
+  212    const rulerLeftWidth = COORDINATE_LAYOUT.RULER_LEFT_WIDTH;
+  213:   const rulerBottomHeight = COORDINATE_LAYOUT.MARGINS.bottom;
+  214  
+
+src\subapps\dxf-viewer\systems\rulers-grid\config.ts:
+  390  /** @deprecated Import MARGINS from rendering/core/CoordinateTransforms.ts instead */
+  391: export const MARGINS = CORE_COORDINATE_LAYOUT.MARGINS;
+
+src\subapps\dxf-viewer\systems\rulers-grid\utils.ts:
+  685          const worldY = tick.position;
+  686:         const { bottom } = COORDINATE_LAYOUT.MARGINS;
+  687          
+15 results - 6 files
+
+src\subapps\dxf-viewer\canvas-v2\layer-canvas\LayerRenderer.ts:
+  441        screenVertices: screenVertices.slice(0, 3),
+  442:       marginsOffset: { left: COORDINATE_LAYOUT.MARGINS.left, bottom: COORDINATE_LAYOUT.MARGINS.bottom }, // ✅ CENTRALIZED
+  443        isOnScreen: screenVertices.some(v => v.x >= 0 && v.x <= viewport.width && v.y >= 0 && v.y <= viewport.height),
+  444:       isInRenderArea: screenVertices.some(v => v.x >= COORDINATE_LAYOUT.MARGINS.left && v.x <= viewport.width && v.y >= 0 && v.y <= viewport.height - COORDINATE_LAYOUT.MARGINS.top)
+  445      });
+
+  559        // Horizontal lines - ✅ UNIFIED WITH COORDINATETRANSFORMS
+  560:       const baseY = viewport.height - COORDINATE_LAYOUT.MARGINS.top;
+  561        const startY = ((baseY - transform.offsetY) % gridSize);
+
+  572        const startX = (transform.offsetX % gridSize);
+  573:       const baseY = viewport.height - COORDINATE_LAYOUT.MARGINS.top;
+  574        const startY = ((baseY - transform.offsetY) % gridSize);
+
+  707      // ✅ UNIFIED WITH COORDINATETRANSFORMS
+  708:     const baseY = viewport.height - COORDINATE_LAYOUT.MARGINS.top;
+  709      const startY = ((baseY - transform.offsetY) % step);
+
+src\subapps\dxf-viewer\rendering\core\CoordinateTransforms.ts:
+  22  // Legacy exports for compatibility
+  23: export const MARGINS = COORDINATE_LAYOUT.MARGINS;
+  24  
+
+  35      // ✅ RESTORED: Margins για σωστή τοποθέτηση relative σε rulers
+  36:     const { left, top } = COORDINATE_LAYOUT.MARGINS;
+  37      if (!worldPoint) {
+
+  60      // ✅ RESTORED: Margins για σωστή μετατροπή relative από rulers
+  61:     const { left, top } = COORDINATE_LAYOUT.MARGINS;
+  62      if (!screenPoint) {
+
+  88      // The zoomCenter is in screen coordinates, but we need to adjust for ruler margins
+  89:     const { left, top } = COORDINATE_LAYOUT.MARGINS;
+  90  
+
+src\subapps\dxf-viewer\rendering\ui\ruler\RulerRenderer.ts:
+  278  
+  279:     const minY = COORDINATE_LAYOUT.MARGINS.top; // 30px - for labels only
+  280  
+
+src\subapps\dxf-viewer\systems\cursor\utils.ts:
+  212    const rulerLeftWidth = COORDINATE_LAYOUT.RULER_LEFT_WIDTH;
+  213:   const rulerBottomHeight = COORDINATE_LAYOUT.MARGINS.bottom;
+  214  
+
+src\subapps\dxf-viewer\systems\rulers-grid\config.ts:
+  390  /** @deprecated Import MARGINS from rendering/core/CoordinateTransforms.ts instead */
+  391: export const MARGINS = CORE_COORDINATE_LAYOUT.MARGINS;
+
+src\subapps\dxf-viewer\systems\rulers-grid\utils.ts:
+  685          const worldY = tick.position;
+  686:         const { bottom } = COORDINATE_LAYOUT.MARGINS;
+  687          

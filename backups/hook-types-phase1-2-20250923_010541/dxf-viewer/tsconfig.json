@@ -1,0 +1,55 @@
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "composite": false,
+    "tsBuildInfoFile": ".next/cache/tsconfig.tsbuildinfo",
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ],
+      "@/systems/*": [
+        "./src/subapps/dxf-viewer/systems/*"
+      ]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    "src/subapps/dxf-viewer/types/dxf-modules.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    ".next",
+    "src/subapps/dxf-viewer/patches/**",
+    "src/subapps/dxf-viewer/archive/**",
+    "src/subapps/dxf-viewer-10-backup/**",
+    "src/app/test.BACK/**",
+    "src/subapps/dxf-viewer/test.BACK/**",
+    "src/ai/**",
+    "src/ai.back/**",
+    "DxfViewerApp.tsx"
+  ]
+}

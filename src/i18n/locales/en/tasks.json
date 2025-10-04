@@ -1,0 +1,105 @@
+{
+  "title": "Tasks",
+  "description": "Manage CRM tasks and activities",
+  "types": {
+    "call": "Call",
+    "email": "Email", 
+    "meeting": "Meeting",
+    "viewing": "Viewing",
+    "followup": "Follow-up",
+    "research": "Research",
+    "documentation": "Documentation",
+    "other": "Other"
+  },
+  "status": {
+    "pending": "Pending",
+    "in_progress": "In Progress",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "overdue": "Overdue"
+  },
+  "priority": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "urgent": "Urgent"
+  },
+  "card": {
+    "details": {
+      "assignedTo": "Assigned to",
+      "dueDate": "Due date",
+      "createdAt": "Created",
+      "updatedAt": "Updated",
+      "completedAt": "Completed",
+      "estimatedTime": "Estimated time",
+      "actualTime": "Actual time"
+    },
+    "viewing": {
+      "location": "Location",
+      "units": "Units",
+      "attendees": "Attendees",
+      "notes": "Notes"
+    },
+    "actions": {
+      "view": "View",
+      "edit": "Edit",
+      "complete": "Complete",
+      "delete": "Delete",
+      "duplicate": "Duplicate",
+      "addToFavorites": "Add to Favorites"
+    }
+  },
+  "time": {
+    "overdue": "Overdue",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "thisWeek": "This week",
+    "nextWeek": "Next week",
+    "daysAgo": "{{count}} days ago",
+    "hoursAgo": "{{count}} hours ago",
+    "minutesAgo": "{{count}} minutes ago",
+    "justNow": "Just now"
+  },
+  "messages": {
+    "created": "Task created successfully",
+    "updated": "Task updated successfully",
+    "completed": "Task completed successfully",
+    "deleted": "Task deleted successfully",
+    "assigned": "Task assigned successfully",
+    "duplicated": "Task duplicated successfully",
+    "noTasks": "No tasks found",
+    "loadingError": "Error loading tasks",
+    "saveError": "Error saving task"
+  },
+  "form": {
+    "title": "Task title",
+    "description": "Description",
+    "type": "Task type",
+    "priority": "Priority",
+    "assignee": "Assign to",
+    "dueDate": "Due date",
+    "contact": "Related contact",
+    "project": "Related project", 
+    "tags": "Tags",
+    "notes": "Notes",
+    "attachments": "Attachments",
+    "reminders": "Reminders"
+  },
+  "filters": {
+    "all": "All tasks",
+    "myTasks": "My tasks",
+    "pending": "Pending",
+    "overdue": "Overdue",
+    "completed": "Completed", 
+    "highPriority": "High priority",
+    "dueToday": "Due today",
+    "dueThisWeek": "Due this week"
+  },
+  "notifications": {
+    "reminder": "Task reminder",
+    "overdue": "Task overdue",
+    "assigned": "Task assigned",
+    "completed": "Task completed",
+    "dueSoon": "Task due soon"
+  }
+}

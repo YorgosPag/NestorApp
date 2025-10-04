@@ -1,0 +1,303 @@
+// Design system utilities για consistent styling
+import { type ClassValue, clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+import { designTokens } from '@/styles/design-tokens';
+
+// Enhanced cn function με design system support
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
+// Status color utilities
+export const getStatusColor = (status: string, variant: 'bg' | 'text' | 'border' = 'text') => {
+  const statusColorMap: Record<string, string> = {
+    // Property statuses
+    'for-sale': 'status-success',
+    'available': 'status-success',
+    'active': 'status-success',
+    
+    'for-rent': 'status-info',
+    'planned': 'status-info',
+    'pending': 'status-info',
+    
+    'reserved': 'status-warning',
+    'construction': 'status-warning',
+    'in_progress': 'status-warning',
+    
+    'sold': 'status-error',
+    'cancelled': 'status-error',
+    'error': 'status-error',
+    
+    'landowner': 'status-purple',
+    'completed': 'status-purple',
+    'owner': 'status-purple',
+  };
+
+  const colorVar = statusColorMap[status] || 'status-info';
+  
+  switch (variant) {
+    case 'bg':
+      return `bg-[hsl(var(--${colorVar}))]`;
+    case 'border':
+      return `border-[hsl(var(--${colorVar}))]`;
+    case 'text':
+    default:
+      return `text-[hsl(var(--${colorVar}))]`;
+  }
+};
+
+// Typography utilities
+export const getTypographyClass = (
+  size: keyof typeof designTokens.typography.fontSize,
+  weight: keyof typeof designTokens.typography.fontWeight = 'normal',
+  leading: keyof typeof designTokens.typography.lineHeight = 'normal'
+) => {
+  const sizeMap = {
+    xs: 'text-xs',
+    sm: 'text-sm',
+    base: 'text-base',
+    lg: 'text-lg',
+    xl: 'text-xl',
+    '2xl': 'text-2xl',
+    '3xl': 'text-3xl',
+    '4xl': 'text-4xl',
+  };
+
+  const weightMap = {
+    normal: 'font-normal',
+    medium: 'font-medium',
+    semibold: 'font-semibold',
+    bold: 'font-bold',
+  };
+
+  const leadingMap = {
+    tight: 'leading-tight',
+    snug: 'leading-snug',
+    normal: 'leading-normal',
+    relaxed: 'leading-relaxed',
+    loose: 'leading-loose',
+  };
+
+  return cn(sizeMap[size], weightMap[weight], leadingMap[leading]);
+};
+
+// Spacing utilities
+export const getSpacingClass = (
+  type: 'p' | 'm' | 'gap',
+  size: keyof typeof designTokens.spacing.component.padding,
+  direction?: 'x' | 'y' | 't' | 'r' | 'b' | 'l'
+) => {
+  const sizeMap = {
+    xs: '2',
+    sm: '3',
+    md: '4',
+    lg: '6',
+    xl: '8',
+  };
+
+  const base = direction ? `${type}${direction}` : type;
+  return `${base}-${sizeMap[size]}`;
+};
+
+// Component size utilities
+export const getComponentSizeClass = (
+  component: keyof typeof designTokens.componentSizes,
+  size: string
+) => {
+  const componentSizes = designTokens.componentSizes[component];
+  return componentSizes[size as keyof typeof componentSizes] || componentSizes.md;
+};
+
+// Interactive state utilities
+export const getInteractiveStateClass = (
+  type: keyof typeof designTokens.interactiveStates
+) => {
+  return designTokens.interactiveStates[type].full;
+};
+
+// Grid pattern utilities
+export const getGridClass = (
+  pattern: keyof typeof designTokens.gridPatterns
+) => {
+  return designTokens.gridPatterns[pattern].full;
+};
+
+// Shadow utilities
+export const getShadowClass = (size: keyof typeof designTokens.shadows) => {
+  const shadowMap = {
+    none: 'shadow-none',
+    sm: 'shadow-sm',
+    default: 'shadow',
+    md: 'shadow-md',
+    lg: 'shadow-lg',
+    xl: 'shadow-xl',
+    '2xl': 'shadow-2xl',
+    inner: 'shadow-inner',
+  };
+
+  return shadowMap[size] || shadowMap.default;
+};
+
+// Border radius utilities
+export const getBorderRadiusClass = (size: keyof typeof designTokens.borderRadius) => {
+  const radiusMap = {
+    none: 'rounded-none',
+    sm: 'rounded-sm',
+    default: 'rounded',
+    md: 'rounded-md',
+    lg: 'rounded-lg',
+    xl: 'rounded-xl',
+    '2xl': 'rounded-2xl',
+    full: 'rounded-full',
+  };
+
+  return radiusMap[size] || radiusMap.default;
+};
+
+// Responsive utilities
+export const getResponsiveClass = (
+  breakpoint: keyof typeof designTokens.breakpoints,
+  className: string
+) => {
+  if (breakpoint === 'sm') return `sm:${className}`;
+  if (breakpoint === 'md') return `md:${className}`;
+  if (breakpoint === 'lg') return `lg:${className}`;
+  if (breakpoint === 'xl') return `xl:${className}`;
+  if (breakpoint === '2xl') return `2xl:${className}`;
+  return className;
+};
+
+// Color scheme utilities για theming
+export const colorScheme = {
+  light: {
+    background: 'bg-background',
+    foreground: 'text-foreground',
+    card: 'bg-card text-card-foreground',
+    muted: 'bg-muted text-muted-foreground',
+    accent: 'bg-accent text-accent-foreground',
+  },
+  dark: {
+    background: 'dark:bg-background',
+    foreground: 'dark:text-foreground',
+    card: 'dark:bg-card dark:text-card-foreground',
+    muted: 'dark:bg-muted dark:text-muted-foreground',
+    accent: 'dark:bg-accent dark:text-accent-foreground',
+  },
+  responsive: {
+    background: 'bg-background dark:bg-background',
+    foreground: 'text-foreground dark:text-foreground',
+    card: 'bg-card text-card-foreground dark:bg-card dark:text-card-foreground',
+    muted: 'bg-muted text-muted-foreground dark:bg-muted dark:text-muted-foreground',
+    accent: 'bg-accent text-accent-foreground dark:bg-accent dark:text-accent-foreground',
+  }
+};
+
+// Preset class combinations για common patterns
+export const presets = {
+  // Card presets
+  card: {
+    default: cn(
+      'rounded-lg border bg-card text-card-foreground shadow-sm',
+      getInteractiveStateClass('card')
+    ),
+    interactive: cn(
+      'rounded-lg border bg-card text-card-foreground shadow-sm cursor-pointer',
+      getInteractiveStateClass('card')
+    ),
+    elevated: cn(
+      'rounded-lg border-0 bg-card text-card-foreground shadow-lg',
+      getInteractiveStateClass('card')
+    ),
+  },
+
+  // Button presets
+  button: {
+    primary: cn(
+      'inline-flex items-center justify-center rounded-md text-sm font-medium',
+      'bg-primary text-primary-foreground',
+      getComponentSizeClass('button', 'md'),
+      getInteractiveStateClass('button')
+    ),
+    secondary: cn(
+      'inline-flex items-center justify-center rounded-md text-sm font-medium',
+      'bg-secondary text-secondary-foreground',
+      getComponentSizeClass('button', 'md'),
+      getInteractiveStateClass('button')
+    ),
+    outline: cn(
+      'inline-flex items-center justify-center rounded-md text-sm font-medium',
+      'border border-input bg-background',
+      getComponentSizeClass('button', 'md'),
+      getInteractiveStateClass('button')
+    ),
+  },
+
+  // Layout presets
+  layout: {
+    container: 'container mx-auto px-4',
+    section: 'py-8 px-4',
+    grid: getGridClass('cards'),
+    toolbar: 'flex items-center justify-between p-4 bg-background border-b',
+  },
+
+  // Text presets
+  text: {
+    title: getTypographyClass('2xl', 'semibold', 'tight'),
+    subtitle: getTypographyClass('lg', 'medium', 'normal'),
+    body: getTypographyClass('base', 'normal', 'normal'),
+    caption: getTypographyClass('sm', 'normal', 'normal'),
+    muted: cn(getTypographyClass('sm', 'normal', 'normal'), 'text-muted-foreground'),
+  }
+};
+
+// Status badge utilities
+export const getStatusBadgeClass = (status: string, variant: 'default' | 'outline' = 'default') => {
+  const baseClass = 'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium';
+  const statusColor = getStatusColor(status, 'bg');
+  const textColor = 'text-white';
+  
+  if (variant === 'outline') {
+    return cn(
+      baseClass,
+      'border',
+      getStatusColor(status, 'border'),
+      getStatusColor(status, 'text'),
+      'bg-transparent'
+    );
+  }
+  
+  return cn(baseClass, statusColor, textColor);
+};
+
+// Form field utilities
+export const getFormFieldClass = (hasError: boolean = false, disabled: boolean = false) => {
+  return cn(
+    'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm',
+    'ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium',
+    'placeholder:text-muted-foreground',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+    'disabled:cursor-not-allowed disabled:opacity-50',
+    {
+      'border-red-500 focus-visible:ring-red-500': hasError,
+      'cursor-not-allowed opacity-50': disabled,
+    }
+  );
+};
+
+// Export all utilities
+export const designSystem = {
+  cn,
+  getStatusColor,
+  getTypographyClass,
+  getSpacingClass,
+  getComponentSizeClass,
+  getInteractiveStateClass,
+  getGridClass,
+  getShadowClass,
+  getBorderRadiusClass,
+  getResponsiveClass,
+  getStatusBadgeClass,
+  getFormFieldClass,
+  colorScheme,
+  presets,
+} as const;

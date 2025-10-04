@@ -1,0 +1,142 @@
+{
+  "building": {
+    "toolbar": {
+      "actions": {
+        "new": "New Building (Ctrl+N)",
+        "edit": "Edit Selected (Ctrl+E)",
+        "delete": "Delete Selected (Delete)",
+        "export": "Export Data"
+      },
+      "filters": {
+        "active": "Active filters:",
+        "clearAll": "Clear all"
+      },
+      "export": {
+        "title": "Export to:",
+        "pdf": "PDF Report",
+        "stats": "Statistics Dashboard", 
+        "timeline": "Timeline"
+      },
+      "delete": {
+        "title": "Confirm Deletion",
+        "message": "Are you sure you want to delete {count} building(s)?",
+        "warning": "This action cannot be undone.",
+        "cancel": "Cancel",
+        "confirm": "Delete"
+      }
+    },
+  "toolbar": {
+    "actions": {
+      "new": "New Building (Ctrl+N)",
+      "edit": "Edit Selected (Ctrl+E)",
+      "delete": "Delete Selected (Delete)"
+    }
+  },
+  "dialog": {
+    "deleteConfirmation": {
+      "title": "Confirm Deletion",
+      "message": "Are you sure you want to delete {{count}} building(s)?",
+      "warning": "This action cannot be undone."
+    },
+    "cancel": "Cancel",
+    "delete": "Delete"
+  },
+    "storage": {
+      "types": {
+        "storage": "Storage",
+        "parking": "Parking"
+      },
+      "status": {
+        "available": "Available",
+        "reserved": "Reserved", 
+        "sold": "Sold",
+        "owner": "Owner",
+        "maintenance": "Maintenance"
+      },
+      "form": {
+        "basicInfo": "Basic Information",
+        "code": "Code",
+        "status": "Status", 
+        "description": "Description",
+        "area": "Area",
+        "price": "Price",
+        "floor": "Floor",
+        "auto": "Auto",
+        "placeholders": {
+          "codeStorage": "e.g. A_B01",
+          "codeParking": "e.g. P_01",
+          "descriptionStorage": "Description for the storage...",
+          "descriptionParking": "Description for the parking space..."
+        }
+      }
+    }
+  },
+  "units": {
+    "types": {
+      "studio": "Studio",
+      "apartment_1br": "1 Bedroom Apartment",
+      "apartment_2br": "2 Bedroom Apartment",
+      "apartment_3br": "3 Bedroom Apartment",
+      "maisonette": "Maisonette",
+      "shop": "Shop",
+      "storage": "Storage"
+    }
+  },
+  "search": {
+    "results": {
+      "found": "Found {count} properties.",
+      "error": "Search error."
+    },
+    "terms": {
+      "thousands": "thousands",
+      "available": "available",
+      "sold": "sold",
+      "reserved": "reserved",
+      "apartment": "apartment",
+      "maisonette": "maisonette",
+      "shop": "shop",
+      "parking": "parking",
+      "storage": "storage"
+    }
+  },
+  "filters": {
+    "advanced": {
+      "show": "More Filters",
+      "hide": "Hide Filters",
+      "features": {
+        "parking": "Parking",
+        "storage": "Storage",
+        "fireplace": "Fireplace",
+        "view": "View",
+        "pool": "Pool"
+      }
+    }
+  },
+  "projects": {
+    "buildingData": {
+      "title": "Allowed Building Elements",
+      "fields": {
+        "maxAllowedConstruction": "Maximum Allowed Construction",
+        "maxCoveragePercentage": "Maximum Coverage Percentage",
+        "maxPlotCoverage": "Maximum Plot Coverage",
+        "maxSemiOutdoorPercentage": "Maximum Semi-Outdoor Percentage",
+        "maxAllowedSemiOutdoorArea": "Maximum Allowed Semi-Outdoor Area",
+        "maxBalconyPercentage": "Maximum Balcony Percentage",
+        "maxBalconyArea": "Maximum Balcony Area",
+        "maxCombinedPercentage": "Max. Allowed Semi-Outdoor + Balcony %",
+        "maxCombinedArea": "Max. Allowed Semi-Outdoor & Balcony Area",
+        "maxVolumeCoefficient": "Maximum Volume Coefficient (V.C.)",
+        "maxVolumeExploitation": "Maximum Volume Exploitation",
+        "maxAllowedHeight": "Maximum Allowed Height"
+      },
+      "formulas": {
+        "construction": "Building Coefficient (Final) * Plot Area (P.A.)",
+        "plotCoverage": "Maximum Coverage Percentage * Plot Area (P.A.)",
+        "semiOutdoor": "Maximum Semi-Outdoor % * Maximum Allowed Construction",
+        "balcony": "Maximum Balcony % * Maximum Allowed Construction",
+        "combined": "Max. Allowed Semi-Outdoor Balcony % * Max. Allowed Construction",
+        "volume": "Plot Area (P.A.) * Maximum Volume Coefficient (V.C.)"
+      }
+    }
+  }
+}
