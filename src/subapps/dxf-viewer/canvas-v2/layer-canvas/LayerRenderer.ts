@@ -434,15 +434,16 @@ export class LayerRenderer {
     );
 
     // 🚨 MARGINS DEBUG - Check if layers are offset due to margins
-    console.log('🚨 MARGINS IMPACT DEBUG:', {
-      layerId: layer.id,
-      polygonId: polygon.id,
-      worldVertices: polygon.vertices.slice(0, 3),
-      screenVertices: screenVertices.slice(0, 3),
-      marginsOffset: { left: COORDINATE_LAYOUT.MARGINS.left, bottom: COORDINATE_LAYOUT.MARGINS.bottom }, // ✅ CENTRALIZED
-      isOnScreen: screenVertices.some(v => v.x >= 0 && v.x <= viewport.width && v.y >= 0 && v.y <= viewport.height),
-      isInRenderArea: screenVertices.some(v => v.x >= COORDINATE_LAYOUT.MARGINS.left && v.x <= viewport.width && v.y >= 0 && v.y <= viewport.height - COORDINATE_LAYOUT.MARGINS.top)
-    });
+    const isOnScreen = screenVertices.some(v => v.x >= 0 && v.x <= viewport.width && v.y >= 0 && v.y <= viewport.height);
+    const isInRenderArea = screenVertices.some(v => v.x >= COORDINATE_LAYOUT.MARGINS.left && v.x <= viewport.width && v.y >= 0 && v.y <= viewport.height - COORDINATE_LAYOUT.MARGINS.top);
+
+    console.log(`🚨 LAYER DEBUG [${layer.id.slice(0,8)}]:`,
+      `worldVert[0]=(${polygon.vertices[0].x.toFixed(1)},${polygon.vertices[0].y.toFixed(1)})`,
+      `screenVert[0]=(${screenVertices[0].x.toFixed(1)},${screenVertices[0].y.toFixed(1)})`,
+      `isOnScreen=${isOnScreen}`,
+      `isInRenderArea=${isInRenderArea}`,
+      `margins=(${COORDINATE_LAYOUT.MARGINS.left},${COORDINATE_LAYOUT.MARGINS.top})`
+    );
 
     // Debug logs disabled to prevent infinite re-render
     // console.log('🔍 Rendering polygon:', { layerId: layer.id, polygonId: polygon.id });

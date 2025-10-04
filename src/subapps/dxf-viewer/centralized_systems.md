@@ -19,6 +19,9 @@
 ### 🗺️ **Ξεκίνα από εδώ:**
 → **[docs/README.md](./docs/README.md)** - Navigation index
 
+### 🚨 **ΚΟΙΝΑ BUGS & ΛΥΣΕΙΣ:**
+→ **[DXF_LOADING_FLOW.md](./DXF_LOADING_FLOW.md)** - DXF Loading Bug Fix Guide (4 μήνες lost time!)
+
 ### 🏗️ **Architecture (Πώς λειτουργεί το σύστημα):**
 
 1. **[docs/architecture/overview.md](./docs/architecture/overview.md)**
@@ -77,14 +80,16 @@
   - Αφαιρέθηκε duplicate `calculateZoomTransform()` από `systems/zoom/utils/calculations.ts`
   - ZoomManager χρησιμοποιεί πλέον `CoordinateTransforms.calculateZoomTransform()` (single source of truth)
   - Εξάλειψη διπλότυπης zoom-to-cursor formula (2 διαφορετικές formulas → 1 centralized)
-- 🎯 **CRITICAL FIX (2025-10-04)**: Zoom-to-Cursor Mathematical Precision
-  - `CoordinateTransforms.calculateZoomTransform()` χρησιμοποιεί **ακριβή αντίστροφη** μαθηματική formula
+- 🎯 **CRITICAL FIX (2025-10-04)**: Zoom-to-Cursor με Margins Adjustment
+  - **Το Πρόβλημα**: zoomCenter είναι canvas-relative (0,0 = top-left), αλλά world (0,0) εμφανίζεται στο (80, 30)
+  - **Η Λύση**: Adjust zoomCenter για MARGINS πριν εφαρμόσουμε CAD zoom formula
   - **Αλγόριθμος**:
-    1. Μετατροπή `zoomCenter` (screen coords) → world coords χρησιμοποιώντας **ακριβή** screenToWorld inverse
-    2. Υπολογισμός νέων offsets ώστε το ίδιο world point να εμφανίζεται στο zoomCenter με newScale
-    3. Λαμβάνει υπόψη `COORDINATE_LAYOUT.MARGINS` (left: 80, top: 30) και Y-axis flip
-  - **Formula**: `worldY = ((height - top) - screenY - offsetY) / scale` (ακριβής inverse του worldToScreen)
-  - **Αποτέλεσμα**: Το σημείο κάτω από τον cursor παραμένει **μαθηματικά σταθερό** κατά το zoom! 🎯
+    1. Adjust zoomCenter: `adjustedCenter = zoomCenter - MARGINS`
+    2. Classic CAD formula: `offsetNew = adjustedCenter - (adjustedCenter - offsetOld) * zoomFactor`
+    3. Το world point κάτω από cursor παραμένει σταθερό! ✅
+  - **Based on**: StackOverflow CAD best practices & FreeCAD implementation pattern
+  - **Αποτέλεσμα**: Zoom-to-cursor δουλεύει σωστά με margins! 🎯
+  - **Duplicate Removed**: Fallback zoom formula στο `useCentralizedMouseHandlers.ts` → Uses CoordinateTransforms
   - Fixed hardcoded margins στο `LayerRenderer.ts` (line 442, 444)
 - 📍 Δες: `docs/systems/zoom-pan.md`
 - 📍 **Fix 2025-10-04**: Enterprise viewport injection + centralized zoom calculations + margins adjustment για accurate zoom-to-cursor
