@@ -20,15 +20,18 @@ import { test, expect } from '@playwright/test';
 
 test.describe('DXF Entity Selection - E2E Flow', () => {
 
+  // 🎯 Set longer timeout for slow Next.js compilation (first load)
+  test.setTimeout(120000); // 2 minutes
+
   test.beforeEach(async ({ page }) => {
     // Navigate to DXF Viewer
-    await page.goto('/dxf/viewer');
+    await page.goto('/dxf/viewer', { timeout: 90000 }); // 90s for initial compilation
 
-    // Wait for page to be fully loaded
-    await page.waitForLoadState('networkidle');
+    // Wait for page to be fully loaded (longer timeout for first compilation)
+    await page.waitForLoadState('networkidle', { timeout: 90000 });
 
     // Wait for canvas to be visible (DxfCanvas or LayerCanvas)
-    await page.waitForSelector('canvas', { timeout: 10000 });
+    await page.waitForSelector('canvas', { timeout: 30000 });
   });
 
   test('✅ DXF Viewer loads without runtime errors', async ({ page }) => {
