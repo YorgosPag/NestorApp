@@ -25,13 +25,14 @@ test.describe('DXF Entity Selection - E2E Flow', () => {
 
   test.beforeEach(async ({ page }) => {
     // Navigate to DXF Viewer
-    await page.goto('/dxf/viewer', { timeout: 90000 }); // 90s for initial compilation
-
-    // Wait for page to be fully loaded (longer timeout for first compilation)
-    await page.waitForLoadState('networkidle', { timeout: 90000 });
+    await page.goto('/dxf/viewer', {
+      timeout: 90000,
+      waitUntil: 'domcontentloaded' // Don't wait for networkidle - Next.js keeps polling
+    });
 
     // Wait for canvas to be visible (DxfCanvas or LayerCanvas)
-    await page.waitForSelector('canvas', { timeout: 30000 });
+    // This is the real indicator that the page is ready
+    await page.waitForSelector('canvas', { timeout: 60000 }); // 60s for first compilation
   });
 
   test('✅ DXF Viewer loads without runtime errors', async ({ page }) => {
