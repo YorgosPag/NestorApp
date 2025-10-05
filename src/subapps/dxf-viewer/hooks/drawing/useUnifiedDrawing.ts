@@ -89,6 +89,7 @@ import { useLevels } from '../../systems/levels';
 import { useSnapContext } from '../../snapping/context/SnapContext';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { usePreviewMode } from '../usePreviewMode';
+import { useEntityStyles } from '../useEntityStyles';
 
 export type DrawingTool = 'select' | 'line' | 'rectangle' | 'circle' | 'circle-diameter' | 'circle-2p-diameter' | 'polyline' | 'polygon' | 'measure-distance' | 'measure-area' | 'measure-angle';
 
@@ -101,7 +102,7 @@ export interface DrawingState {
   isOverlayMode?: boolean; // 🔺 ΝΕΟ: Flag για overlay mode
 }
 
-export function useUnifiedDrawing(onEntityCreated?: (entity: any) => void) {
+export function useUnifiedDrawing() {
   const [state, setState] = useState<DrawingState>({
     currentTool: 'select',
     isDrawing: false,
@@ -117,6 +118,10 @@ export function useUnifiedDrawing(onEntityCreated?: (entity: any) => void) {
 
   // ===== ΠΡΟΣΘΗΚΗ PREVIEW MODE INTEGRATION =====
   const { setMode } = usePreviewMode();
+
+  // ===== ENTITY STYLES FOR PREVIEW & COMPLETION PHASES =====
+  const linePreviewStyles = useEntityStyles('line', 'preview');
+  const lineCompletionStyles = useEntityStyles('line', 'completion');
 
   const nextEntityIdRef = useRef(1);
 
@@ -310,9 +315,9 @@ export function useUnifiedDrawing(onEntityCreated?: (entity: any) => void) {
   }, []);
 
   const addPoint = useCallback((worldPoint: Point2D, transform: { worldToScreen: (point: Point2D) => Point2D; screenToWorld: (point: Point2D) => Point2D }) => {
-    console.log('🚀 addPoint called - state.isDrawing:', state.isDrawing, 'state:', state);
+
     if (!state.isDrawing) {
-      console.error('❌ addPoint BLOCKED - isDrawing is FALSE!');
+
       return;
     }
 
@@ -342,30 +347,29 @@ export function useUnifiedDrawing(onEntityCreated?: (entity: any) => void) {
     };
 
     if (isComplete(state.currentTool, newTempPoints)) {
-      console.log('✅ Drawing COMPLETE!', { tool: state.currentTool, pointsCount: newTempPoints.length });
       const newEntity = createEntityFromTool(state.currentTool, newTempPoints);
-      console.log('🎨 Entity created:', { newEntity, currentLevelId });
       if (newEntity && currentLevelId) {
+        // Apply completion settings from ColorPalettePanel (for line entities only)
+        if (newEntity.type === 'line' && state.currentTool === 'line') {
+          (newEntity as any).color = lineCompletionStyles.settings.color;
+          (newEntity as any).lineweight = lineCompletionStyles.settings.lineWidth;
+          (newEntity as any).opacity = lineCompletionStyles.settings.opacity;
+          (newEntity as any).lineType = lineCompletionStyles.settings.lineType;
+          (newEntity as any).dashScale = lineCompletionStyles.settings.dashScale;
+          (newEntity as any).lineCap = lineCompletionStyles.settings.lineCap;
+          (newEntity as any).lineJoin = lineCompletionStyles.settings.lineJoin;
+          (newEntity as any).dashOffset = lineCompletionStyles.settings.dashOffset;
+          (newEntity as any).breakAtCenter = lineCompletionStyles.settings.breakAtCenter;
+        }
+
         const scene = getLevelScene(currentLevelId);
-        console.log('📦 Scene for level:', { levelId: currentLevelId, scene });
         if (scene) {
           const updatedScene = { ...scene, entities: [...scene.entities, newEntity] };
           setLevelScene(currentLevelId, updatedScene);
-          console.log('✅ Entity added to scene!');
-
-          // 🔥 FIX: Call callback to update parent component
-          if (onEntityCreated) {
-            console.log('📢 Calling onEntityCreated callback with entity:', newEntity);
-            onEntityCreated(newEntity);
-          }
-        } else {
-          console.error('❌ No scene found for level:', currentLevelId);
         }
-      } else {
-        console.error('❌ Cannot add entity:', { hasEntity: !!newEntity, hasLevelId: !!currentLevelId });
       }
-
       // Return to normal mode after entity completion
+
       setMode('normal');
 
       // FIXED: Reset temp points for continuous drawing
@@ -427,7 +431,7 @@ export function useUnifiedDrawing(onEntityCreated?: (entity: any) => void) {
         previewEntity: partialPreview
       }));
     }
-  }, [state, createEntityFromTool, currentLevelId, getLevelScene, setLevelScene, setMode]);
+  }, [state, createEntityFromTool, currentLevelId, getLevelScene, setLevelScene, setMode, lineCompletionStyles.settings]);
 
   const updatePreview = useCallback((mousePoint: Point2D, transform: { worldToScreen: (point: Point2D) => Point2D; screenToWorld: (point: Point2D) => Point2D }) => {
     if (!state.isDrawing) {
@@ -484,6 +488,17 @@ export function useUnifiedDrawing(onEntityCreated?: (entity: any) => void) {
         extendedLine.showPreviewGrips = true;
         extendedLine.isOverlayPreview = state.isOverlayMode === true;
 
+        // Apply preview settings from ColorPalettePanel
+        (extendedLine as any).color = linePreviewStyles.settings.color;
+        (extendedLine as any).lineweight = linePreviewStyles.settings.lineWidth;
+        (extendedLine as any).opacity = linePreviewStyles.settings.opacity;
+        (extendedLine as any).lineType = linePreviewStyles.settings.lineType;
+        (extendedLine as any).dashScale = linePreviewStyles.settings.dashScale;
+        (extendedLine as any).lineCap = linePreviewStyles.settings.lineCap;
+        (extendedLine as any).lineJoin = linePreviewStyles.settings.lineJoin;
+        (extendedLine as any).dashOffset = linePreviewStyles.settings.dashOffset;
+        (extendedLine as any).breakAtCenter = linePreviewStyles.settings.breakAtCenter;
+
         // Add grip points for line preview
         if (state.currentTool === 'line' && worldPoints.length >= 2) {
           extendedLine.previewGripPoints = [
@@ -537,10 +552,10 @@ export function useUnifiedDrawing(onEntityCreated?: (entity: any) => void) {
     }
 
     setState(prev => ({ ...prev, previewEntity }));
-  }, [state, createEntityFromTool]);
+  }, [state, createEntityFromTool, linePreviewStyles.settings]);
 
   const startDrawing = useCallback((tool: DrawingTool) => {
-    console.log('🎯 startDrawing called with tool:', tool);
+
     // Set preview mode when drawing starts
 
     setMode('preview');
@@ -554,7 +569,7 @@ export function useUnifiedDrawing(onEntityCreated?: (entity: any) => void) {
         previewEntity: null,
         isOverlayMode: false // ✅ ΔΙΟΡΘΩΣΗ: Reset overlay mode για κανονικές σχεδιάσεις
       };
-      console.log('✅ startDrawing - NEW STATE:', newState);
+
       return newState;
     });
   }, [setMode]);
