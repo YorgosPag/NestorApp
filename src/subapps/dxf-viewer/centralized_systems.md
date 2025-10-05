@@ -199,6 +199,7 @@
 | **Distance** | `calculateDistance` | `rendering/entities/shared/geometry-rendering-utils.ts` | Single source of truth για distance calculations |
 | **Bounds Utilities** | `getBoundsCenter` | `systems/zoom/utils/bounds.ts` | Κεντρικό bounds utilities |
 | **Transform Constants** | `TRANSFORM_CONFIG` | `config/transform-config.ts` | All transform/zoom/pan constants centralized |
+| **Line Drawing** | `useUnifiedDrawing` | `hooks/drawing/` | [line-drawing/README.md](./docs/features/line-drawing/README.md) - Preview/Completion phases, Settings integration |
 
 ---
 
@@ -215,6 +216,8 @@
 - **...enable/disable snap** → `SnapContext` → [state-management.md](./docs/architecture/state-management.md#f-snapcontext-κεντρικο---2025-10-03)
 - **...υπολογίσω απόσταση** → `calculateDistance()` από `geometry-rendering-utils.ts`
 - **...υπολογίσω bounds center** → `getBoundsCenter()` από `systems/zoom/utils/bounds.ts`
+- **...σχεδιάσω γραμμή/κύκλο/πολύγωνο** → `useUnifiedDrawing` από `useDrawingHandlers` → [line-drawing/README.md](./docs/features/line-drawing/README.md)
+- **...εφαρμόσω settings (Γενικές/Ειδικές)** → `useEntityStyles` + `PhaseManager` → [line-drawing/lifecycle.md](./docs/features/line-drawing/lifecycle.md)
 
 ---
 

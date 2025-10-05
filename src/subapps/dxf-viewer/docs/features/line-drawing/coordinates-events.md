@@ -1,6 +1,13 @@
 # Line Drawing System - Coordinate Systems & Mouse Events
 
-**Part of:** [Line Drawing System Documentation](README.md)
+---
+
+**📚 Part of:** [LINE_DRAWING_SYSTEM.md](../../LINE_DRAWING_SYSTEM.md)
+**📂 Documentation Hub:** [README.md](README.md)
+**🔗 Related Docs:** [architecture.md](architecture.md), [rendering-dependencies.md](rendering-dependencies.md), [implementation.md](implementation.md)
+
+---
+
 **Last Updated:** 2025-10-05
 **Status:** ✅ WORKING
 

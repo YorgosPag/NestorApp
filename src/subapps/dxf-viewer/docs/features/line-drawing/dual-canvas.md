@@ -1,118 +1,25 @@
-# Line Drawing System - Architecture & Core Components
+# 🎨 Dual Canvas Architecture
 
 ---
 
 **📚 Part of:** [LINE_DRAWING_SYSTEM.md](../../LINE_DRAWING_SYSTEM.md)
 **📂 Documentation Hub:** [README.md](README.md)
-**🔗 Related Docs:** [lifecycle.md](lifecycle.md), [rendering-dependencies.md](rendering-dependencies.md), [coordinates-events.md](coordinates-events.md)
+**🔗 Related Docs:** [architecture.md](architecture.md), [rendering-dependencies.md](rendering-dependencies.md), [troubleshooting.md](troubleshooting.md)
 
 ---
 
 **Last Updated:** 2025-10-05
-**Status:** ✅ WORKING
+**Status:** ✅ WORKING (After 6 critical bug fixes)
 
 ---
 
-## 📚 Navigation
-
-| Document | Purpose |
-|----------|---------|
-| [← README](README.md) | Documentation index & quick start |
-| **[architecture.md](architecture.md)** | **← YOU ARE HERE** |
-| [coordinates-events.md](coordinates-events.md) | Coordinate systems & mouse events |
-| [rendering-dependencies.md](rendering-dependencies.md) | Rendering pipeline & file dependencies |
-| [status-report.md](status-report.md) | Current implementation status |
-| [root-cause.md](root-cause.md) | Why settings were never applied |
-| [lifecycle.md](lifecycle.md) | Preview/Completion phases |
-| [implementation.md](implementation.md) | Code changes needed |
-| [testing.md](testing.md) | Test scenarios & verification |
-
----
-
-## 1. SYSTEM OVERVIEW
-
-### What is the Line Drawing System?
-
-The Line Drawing System allows users to draw CAD entities (Line, Circle, Rectangle, Polyline, Polygon, Arc) on the DXF canvas by clicking points. It's a core CAD functionality compatible with **AutoCAD/BricsCAD/ZWCAD** standards.
-
-### How it Works (High-Level)
-
-```
-1. User clicks "Line" tool in toolbar
-2. System enters drawing mode
-3. User clicks on canvas (point 1)
-4. User clicks on canvas (point 2)
-5. Line entity is created
-6. Line is added to scene
-7. Canvas re-renders with new line
-```
-
-### Key Components
-
-- **CanvasSection.tsx** - Main orchestrator, handles clicks
-- **useUnifiedDrawing** - Drawing state machine, creates entities
-- **useDrawingHandlers** - Event handlers (click, hover, cancel)
-- **DxfCanvas** - Renders entities on screen
-- **useCentralizedMouseHandlers** - Mouse event routing
-
----
-
-## 2. ARCHITECTURE & DATA FLOW
-
-### Component Hierarchy
-
-```
-DXFViewerLayout (props.handleSceneChange)
-  ↓
-NormalView (passes handleSceneChange)
-  ↓
-CanvasSection (orchestrates drawing)
-  ├→ useDrawingHandlers (event handlers)
-  │   └→ useUnifiedDrawing (drawing logic)
-  │       └→ onEntityCreated callback ✅
-  └→ DxfCanvas (renders entities)
-      └→ useCentralizedMouseHandlers (mouse events)
-```
-
-### Data Flow - Entity Creation
-
-```
-1. User clicks canvas
-   ↓
-2. useCentralizedMouseHandlers.handleMouseUp
-   ↓
-3. CanvasSection.handleCanvasClick (via onCanvasClick prop)
-   ↓
-4. drawingHandlersRef.current.onDrawingPoint(worldPoint)
-   ↓
-5. useDrawingHandlers.onDrawingPoint
-   ↓
-6. useUnifiedDrawing.addPoint
-   ↓
-7. createEntityFromTool (creates entity)
-   ↓
-8. setLevelScene (adds to scene)
-   ↓
-9. onEntityCreated(entity) callback ✅
-   ↓
-10. CanvasSection receives callback
-    ↓
-11. props.handleSceneChange(newScene)
-    ↓
-12. props.currentScene updates
-    ↓
-13. DxfCanvas re-renders with new entity
-```
-
----
-
-## 3. DUAL CANVAS ARCHITECTURE
-
-### ⚠️ CRITICAL: Two Separate Canvas Elements
+## ⚠️ CRITICAL: Two Separate Canvas Elements
 
 The DXF Viewer uses **TWO canvas elements stacked on top of each other**. Understanding which canvas does what is ESSENTIAL for drawing to work!
 
-#### 🎨 Canvas #1: DxfCanvas (Bottom Layer, z-index: 5)
+---
+
+## 🎨 Canvas #1: DxfCanvas (Bottom Layer, z-index: 5)
 
 **Purpose:** Renders DXF entities (lines, circles, etc.)
 **File:** `src/subapps/dxf-viewer/canvas-v2/dxf-canvas/DxfCanvas.tsx`
@@ -139,7 +46,7 @@ The DXF Viewer uses **TWO canvas elements stacked on top of each other**. Unders
 
 ---
 
-#### 🌈 Canvas #2: LayerCanvas (Top Layer, z-index: 10)
+## 🌈 Canvas #2: LayerCanvas (Top Layer, z-index: 10)
 
 **Purpose:** Renders colored layer overlays (visual layers)
 **File:** `src/subapps/dxf-viewer/canvas-v2/layer-canvas/LayerCanvas.tsx`
@@ -167,7 +74,7 @@ The DXF Viewer uses **TWO canvas elements stacked on top of each other**. Unders
 
 ---
 
-### 🚨 THE CRITICAL PROBLEM: LayerCanvas Blocks Clicks!
+## 🚨 THE CRITICAL PROBLEM: LayerCanvas Blocks Clicks!
 
 **Why this is a problem:**
 
@@ -209,7 +116,7 @@ Drawing doesn't work! ❌
 
 ---
 
-### 📐 Canvas Stacking Visual
+## 📐 Canvas Stacking Visual
 
 ```
 ┌─────────────────────────────────────┐
@@ -231,7 +138,7 @@ Drawing doesn't work! ❌
 
 ---
 
-### 🎯 Which Canvas for Which Task?
+## 🎯 Which Canvas for Which Task?
 
 | Task | Canvas | Why |
 |------|--------|-----|
@@ -245,9 +152,9 @@ Drawing doesn't work! ❌
 
 ---
 
-### ⚠️ Common Mistakes
+## ⚠️ Common Mistakes
 
-#### Mistake #1: Drawing on LayerCanvas
+### Mistake #1: Drawing on LayerCanvas
 ```typescript
 // ❌ WRONG - LayerCanvas is for visual layers, NOT entities!
 <LayerCanvas
@@ -262,7 +169,7 @@ Drawing doesn't work! ❌
 />
 ```
 
-#### Mistake #2: Forgetting pointerEvents
+### Mistake #2: Forgetting pointerEvents
 ```typescript
 // ❌ WRONG - LayerCanvas will block clicks
 <LayerCanvas
@@ -279,7 +186,7 @@ Drawing doesn't work! ❌
 />
 ```
 
-#### Mistake #3: Wrong z-index
+### Mistake #3: Wrong z-index
 ```typescript
 // ❌ WRONG - DxfCanvas on top blocks LayerCanvas
 <DxfCanvas style={{ zIndex: 15 }} />
@@ -294,7 +201,7 @@ Drawing doesn't work! ❌
 
 ---
 
-### 📋 Canvas Architecture Checklist
+## 📋 Canvas Architecture Checklist
 
 **For Drawing Tools to Work:**
 
@@ -308,7 +215,7 @@ Drawing doesn't work! ❌
 
 ---
 
-### 🔍 How to Debug Canvas Issues
+## 🔍 How to Debug Canvas Issues
 
 **Problem: Clicks not working**
 
@@ -338,7 +245,7 @@ Drawing doesn't work! ❌
 
 ---
 
-### 🎓 Key Takeaways
+## 🎓 Key Takeaways
 
 1. **DxfCanvas = Entity Geometry** (lines, circles, DXF entities)
 2. **LayerCanvas = Visual Layers** (colored backgrounds, level highlights)
@@ -348,19 +255,3 @@ Drawing doesn't work! ❌
 6. **If drawing doesn't work → Check LayerCanvas pointerEvents!**
 
 ---
-
-## 🔗 NEXT STEPS
-
-**Continue Learning:**
-- **[coordinates-events.md](coordinates-events.md)** - Understand coordinate systems & mouse event flow
-- **[rendering-dependencies.md](rendering-dependencies.md)** - Learn rendering pipeline & file structure
-
-**Jump to Implementation:**
-- **[implementation.md](implementation.md)** - See exact code changes needed
-- **[testing.md](testing.md)** - Know how to verify it works
-
----
-
-**Last Updated:** 2025-10-05
-**Part of:** Line Drawing System Documentation
-**Next:** [Coordinate Systems & Mouse Events →](coordinates-events.md)

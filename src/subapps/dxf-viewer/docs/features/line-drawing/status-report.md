@@ -1,6 +1,13 @@
 # Line Drawing System - Current Status Report
 
-**Part of:** [Line Drawing System Documentation](README.md)
+---
+
+**📚 Part of:** [LINE_DRAWING_SYSTEM.md](../../LINE_DRAWING_SYSTEM.md)
+**📂 Documentation Hub:** [README.md](README.md)
+**🔗 Related Docs:** [root-cause.md](root-cause.md), [implementation.md](implementation.md), [testing.md](testing.md)
+
+---
+
 **Last Updated:** 2025-10-05
 **Status:** ❌ NON-FUNCTIONAL (95% complete, missing settings connection)
 

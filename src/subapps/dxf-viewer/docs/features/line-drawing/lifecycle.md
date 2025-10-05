@@ -1,6 +1,13 @@
 # Line Drawing System - Entity Drawing Lifecycle
 
-**Part of:** [Line Drawing System Documentation](README.md)
+---
+
+**📚 Part of:** [LINE_DRAWING_SYSTEM.md](../../LINE_DRAWING_SYSTEM.md)
+**📂 Documentation Hub:** [README.md](README.md)
+**🔗 Related Docs:** [architecture.md](architecture.md), [implementation.md](implementation.md), [testing.md](testing.md)
+
+---
+
 **Last Updated:** 2025-10-05
 **Focus:** Preview & Completion phases (Enterprise CAD Standard)
 

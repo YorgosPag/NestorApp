@@ -1,5 +1,12 @@
 # Line Drawing System - Complete Documentation
 
+---
+
+**📚 Part of:** [LINE_DRAWING_SYSTEM.md](../../LINE_DRAWING_SYSTEM.md)
+**📂 Documentation Hub:** This file (README.md)
+
+---
+
 **Last Updated:** 2025-10-05
 **Status:** ✅ WORKING (After 6 critical bug fixes)
 **Purpose:** Enterprise-grade documentation for the Line Drawing System in DXF Viewer
@@ -15,11 +22,17 @@ This documentation is organized following **Microsoft/Google/Stripe best practic
 | Document | Purpose | When to Read |
 |----------|---------|--------------|
 | **[architecture.md](architecture.md)** | System architecture, components, data flow, rendering pipeline | Understanding how the system works |
+| **[dual-canvas.md](dual-canvas.md)** | Dual canvas architecture, DxfCanvas vs LayerCanvas, click blocking fix | Understanding canvas layers |
+| **[coordinates-events.md](coordinates-events.md)** | Coordinate systems, mouse events, transformations | Working with coordinates |
+| **[rendering-dependencies.md](rendering-dependencies.md)** | Rendering pipeline, critical bugs fixed, dependencies | Understanding rendering |
 | **[status-report.md](status-report.md)** | Current implementation status, verified features, CLAUDE.md compliance | Checking what's implemented |
 | **[root-cause.md](root-cause.md)** | Why settings were never applied, historical analysis | Understanding the problem |
 | **[lifecycle.md](lifecycle.md)** | Preview/Completion phases, grips, distance labels, phase transitions | Implementing drawing phases |
 | **[implementation.md](implementation.md)** | Exact code changes needed, implementation requirements | Writing code |
 | **[testing.md](testing.md)** | Test scenarios, enterprise checklist, verification steps | Testing features |
+| **[configuration.md](configuration.md)** | Required props chain, state management, canvas refs | Setting up the system |
+| **[settings.md](settings.md)** | Debug flags, tool detection, entity completion rules | Configuring settings |
+| **[troubleshooting.md](troubleshooting.md)** | Common issues, debugging checklist, solutions | Fixing problems |
 
 ---
 
@@ -32,20 +45,34 @@ This documentation is organized following **Microsoft/Google/Stripe best practic
 - Learn data flow (click → entity creation)
 - Grasp dual canvas architecture
 
-**Step 2:** Read [lifecycle.md](lifecycle.md) - Preview/Completion phases (30 min)
+**Step 2:** Read [dual-canvas.md](dual-canvas.md) - Canvas layers (15 min)
+- Understand DxfCanvas vs LayerCanvas
+- Learn why LayerCanvas blocks clicks
+- See the pointerEvents fix
+
+**Step 3:** Read [lifecycle.md](lifecycle.md) - Preview/Completion phases (30 min)
 - Understand preview phase (dynamic drawing with grips)
 - Learn completion phase (final entity persistence)
 - See how settings flow (Ειδικές → Γενικές fallback)
 
-**Step 3:** Read [implementation.md](implementation.md) - Code changes (15 min)
+**Step 4:** Read [configuration.md](configuration.md) - Setup requirements (15 min)
+- Required props chain (DXFViewerLayout → CanvasSection)
+- State management integration
+- Canvas refs setup
+
+**Step 5:** Read [implementation.md](implementation.md) - Code changes (15 min)
 - See exact changes needed in `useUnifiedDrawing.ts`
 - Understand settings application (preview vs completion)
 
-**Step 4:** Read [testing.md](testing.md) - Verification (15 min)
+**Step 6:** Read [testing.md](testing.md) - Verification (15 min)
 - Know what to test (5 scenarios)
 - Understand acceptance criteria
 
-**Total Onboarding Time:** ~2 hours to full understanding
+**Optional - When Problems Occur:**
+- [troubleshooting.md](troubleshooting.md) - Common issues & solutions
+- [settings.md](settings.md) - Debug flags & configuration
+
+**Total Onboarding Time:** ~2.5 hours to full understanding
 
 ---
 

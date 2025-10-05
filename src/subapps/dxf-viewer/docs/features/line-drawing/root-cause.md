@@ -1,6 +1,13 @@
 # Line Drawing System - Root Cause Analysis
 
-**Part of:** [Line Drawing System Documentation](README.md)
+---
+
+**📚 Part of:** [LINE_DRAWING_SYSTEM.md](../../LINE_DRAWING_SYSTEM.md)
+**📂 Documentation Hub:** [README.md](README.md)
+**🔗 Related Docs:** [status-report.md](status-report.md), [implementation.md](implementation.md), [architecture.md](architecture.md)
+
+---
+
 **Last Updated:** 2025-10-05
 **Investigation:** Why settings were never applied to entities
 

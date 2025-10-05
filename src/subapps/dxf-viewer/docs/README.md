@@ -1,7 +1,7 @@
 # 📚 DXF Viewer - Enterprise Documentation
 
 > **Comprehensive documentation for the Pagonis Nestor DXF Viewer application**
-> Last Updated: 2025-10-03
+> Last Updated: 2025-10-05
 
 ---
 
@@ -25,6 +25,16 @@ Detailed documentation για κάθε κεντρικοποιημένο σύστ
 - [Hit Testing](./systems/hit-testing.md) - Spatial indexing και hit detection
 - [Bounds & Fitting](./systems/bounds-fitting.md) - Viewport bounds calculation
 
+### ✏️ [Features](./features/)
+Complete feature documentation με modular architecture
+- **[Line Drawing System](./features/line-drawing/README.md)** - ✅ WORKING (After 6 critical bug fixes)
+  - Enterprise-grade CAD drawing functionality (Line, Circle, Rectangle, Polyline, Polygon, Arc)
+  - Preview/Completion phases με grips και distance labels
+  - Settings integration (Γενικές/Ειδικές Ρυθμίσεις)
+  - Dual canvas architecture (DxfCanvas + LayerCanvas)
+  - AutoCAD/BricsCAD/ZWCAD compatible
+  - **13 modular docs**: architecture, dual-canvas, coordinates, rendering, status, root-cause, lifecycle, implementation, testing, configuration, settings, troubleshooting
+
 ### 📖 [Reference](./reference/)
 API reference και class listings
 - [Class Index](./reference/class-index.md) - Όλες οι κλάσεις alphabetically
@@ -38,7 +48,14 @@ API reference και class listings
 ### Για Developers
 1. Ξεκίνα με το [Architecture Overview](./architecture/overview.md)
 2. Διάβασε το [Zoom & Pan System](./systems/zoom-pan.md) για Enterprise patterns
-3. Δες το [Class Index](./reference/class-index.md) για available APIs
+3. Δες το [Line Drawing System](./features/line-drawing/README.md) για CAD functionality
+4. Δες το [Class Index](./reference/class-index.md) για available APIs
+
+### Για Line Drawing Development
+1. Ξεκίνα με το [Line Drawing README](./features/line-drawing/README.md) - Navigation hub
+2. Διάβασε το [architecture.md](./features/line-drawing/architecture.md) - System overview
+3. Δες το [dual-canvas.md](./features/line-drawing/dual-canvas.md) - Critical canvas layers
+4. Για problems: [troubleshooting.md](./features/line-drawing/troubleshooting.md)
 
 ### Για Contributors
 - Όλα τα systems είναι **κεντρικοποιημένα** - NO duplicates!
@@ -61,6 +78,8 @@ API reference και class listings
 | **Services** | 15+ | ✅ Centralized |
 | **React Hooks** | 30+ | ✅ Unified |
 | **Context Providers** | 10+ | ✅ Enterprise |
+| **Feature Modules** | 1 (Line Drawing) | ✅ Complete (13 docs) |
+| **Total Documentation Files** | 23+ | ✅ Modular |
 
 ---
 

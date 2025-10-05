@@ -1,6 +1,13 @@
 # Line Drawing System - Implementation Guide
 
-**Part of:** [Line Drawing System Documentation](README.md)
+---
+
+**📚 Part of:** [LINE_DRAWING_SYSTEM.md](../../LINE_DRAWING_SYSTEM.md)
+**📂 Documentation Hub:** [README.md](README.md)
+**🔗 Related Docs:** [root-cause.md](root-cause.md), [architecture.md](architecture.md), [lifecycle.md](lifecycle.md)
+
+---
+
 **Last Updated:** 2025-10-05
 **Focus:** Exact code changes to connect settings
 
