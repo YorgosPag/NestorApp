@@ -91,11 +91,11 @@ export class DxfRenderer {
     this.ctx.fillText('DXF', originX - 45, originY - 10);
     this.ctx.restore();
 
-    // Early return if no scene - but origin marker is already drawn above!
-    if (!scene || !scene.entities.length) {
-      console.warn('🚨 DxfRenderer: No scene or no entities to render');
-      return;
-    }
+// Early return if no scene - but origin marker is already drawn above!
+      if (!scene || !scene.entities.length) {
+        // Silent: No scene or no entities to render (avoid React stack noise)
+        return;
+      }
 
     this.ctx.save();
 
