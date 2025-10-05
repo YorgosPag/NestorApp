@@ -541,23 +541,20 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const handleDxfCanvasClick = (screenPos: Point2D) => {
     console.log('🔥 handleDxfCanvasClick called!', { screenPos, activeTool });
 
-    // ✅ STEP 1: Get canvas element (HTMLCanvasElement, not React ref!)
-    const canvasElement = dxfCanvasRef.current;
+    // ✅ STEP 1: Get canvas element via DxfCanvasRef.getCanvas() method
+    const canvasElement = dxfCanvasRef.current?.getCanvas ? dxfCanvasRef.current.getCanvas() : null;
     if (!canvasElement) {
       console.error('❌ DXF Canvas element not found!');
       return;
     }
 
-    // ✅ STEP 2: Get canvas bounding rect for accurate offset
-    const rect = canvasElement.getBoundingClientRect();
-
-    // ✅ STEP 3: Convert canvas coords to world coords
-    const viewport = { width: canvasElement.clientWidth, height: canvasElement.clientHeight };
+    // ✅ STEP 2: Convert screen coords to world coords (no need for getBoundingClientRect)
+    // screenPos is already canvas-relative from useCentralizedMouseHandlers
     const worldPoint = CoordinateTransforms.screenToWorld(screenPos, transform, viewport);
 
     console.log('🌍 worldPoint:', worldPoint);
 
-    // ✅ STEP 4: Pass world coordinates to drawing handler
+    // ✅ STEP 3: Pass world coordinates to drawing handler
     if (drawingHandlersRef.current?.onDrawingPoint) {
       drawingHandlersRef.current.onDrawingPoint(worldPoint);
     }
