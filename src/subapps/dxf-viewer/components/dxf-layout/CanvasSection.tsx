@@ -10,6 +10,7 @@ import type { CrosshairSettings } from '../../rendering/ui/crosshair/CrosshairTy
 import type { CursorSettings } from '../../systems/cursor/config';
 import { useCanvasOperations } from '../../hooks/interfaces/useCanvasOperations';
 import { useCanvasContext } from '../../contexts/CanvasContext';
+import { useDrawingHandlers } from '../../hooks/drawing/useDrawingHandlers';
 // CanvasProvider removed - not needed for Canvas V2
 // OverlayCanvas import removed - it was dead code
 import { FloatingPanelContainer } from '../../ui/FloatingPanelContainer';
@@ -27,6 +28,7 @@ import { createOverlayHandlers } from '../../overlays/types';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 import type { ViewTransform, Point2D } from '../../rendering/types/Types';
 import { useZoom } from '../../systems/zoom';
+import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 // ✅ ENTERPRISE MIGRATION: Using ServiceRegistry
 import { serviceRegistry } from '../../services';
 // 🎯 DEBUG: Import canvas alignment tester
@@ -335,6 +337,48 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
   const colorLayers = convertToColorLayers(currentOverlays);
 
+  // === 🎨 DRAWING SYSTEM ===
+  // useDrawingHandlers για DXF entity drawing (Line, Circle, Rectangle, etc.)
+  const drawingHandlers = useDrawingHandlers(
+    activeTool,
+    (entity) => {
+      // Callback όταν δημιουργηθεί entity
+      if (props.handleSceneChange && props.currentScene) {
+        const updatedScene = {
+          ...props.currentScene,
+          entities: [...(props.currentScene.entities || []), entity]
+        };
+        props.handleSceneChange(updatedScene);
+      }
+    },
+    (tool) => {
+      // Tool change callback
+      if (props.onToolChange) {
+        props.onToolChange(tool);
+      }
+    },
+    props.currentScene
+  );
+
+  // === 🎯 DRAWING HANDLERS REF ===
+  // Χρήση ref pattern για να αποφύγουμε infinite loops (Bug #1 fix)
+  const drawingHandlersRef = React.useRef(drawingHandlers);
+  React.useEffect(() => {
+    drawingHandlersRef.current = drawingHandlers;
+  }, [drawingHandlers]);
+
+  // === 🚀 AUTO-START DRAWING ===
+  // Όταν επιλέγεται drawing tool, ξεκινά αυτόματα το drawing mode
+  React.useEffect(() => {
+    const isDrawingTool = activeTool === 'line' || activeTool === 'polyline' ||
+                          activeTool === 'polygon' || activeTool === 'circle' ||
+                          activeTool === 'rectangle' || activeTool === 'arc';
+    if (isDrawingTool && drawingHandlersRef.current?.startDrawing) {
+      console.log('🎯 Auto-starting drawing for tool:', activeTool);
+      drawingHandlersRef.current.startDrawing(activeTool as any);
+    }
+  }, [activeTool]);
+
   // 🔍 DEBUG - Check current overlays and colorLayers (LIMITED to prevent infinite re-render)
   React.useEffect(() => {
     // Only log if we actually have overlays or if it's been a while
@@ -490,6 +534,32 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         // console.log('🔍 Now calling fitToOverlay:', overlayId);
         fitToOverlay(overlayId);
       }, 100); // Small delay to ensure selection state updates
+    }
+  };
+
+  // === 🎯 DXF CANVAS CLICK HANDLER (FOR DRAWING ENTITIES) ===
+  const handleDxfCanvasClick = (screenPos: Point2D) => {
+    console.log('🔥 handleDxfCanvasClick called!', { screenPos, activeTool });
+
+    // ✅ STEP 1: Get canvas element (HTMLCanvasElement, not React ref!)
+    const canvasElement = dxfCanvasRef.current;
+    if (!canvasElement) {
+      console.error('❌ DXF Canvas element not found!');
+      return;
+    }
+
+    // ✅ STEP 2: Get canvas bounding rect for accurate offset
+    const rect = canvasElement.getBoundingClientRect();
+
+    // ✅ STEP 3: Convert canvas coords to world coords
+    const viewport = { width: canvasElement.clientWidth, height: canvasElement.clientHeight };
+    const worldPoint = CoordinateTransforms.screenToWorld(screenPos, transform, viewport);
+
+    console.log('🌍 worldPoint:', worldPoint);
+
+    // ✅ STEP 4: Pass world coordinates to drawing handler
+    if (drawingHandlersRef.current?.onDrawingPoint) {
+      drawingHandlersRef.current.onDrawingPoint(worldPoint);
     }
   };
 
@@ -704,7 +774,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
               layersVisible={showLayers} // ✅ ΥΠΑΡΧΟΝ SYSTEM: Existing layer visibility
               enableUnifiedCanvas={true} // ✅ ΕΝΕΡΓΟΠΟΙΗΣΗ: Unified event system για debugging
               data-canvas-type="layer" // 🎯 DEBUG: Identifier για alignment test
-              className="z-10" // 🎯 Z-INDEX: LayerCanvas πάνω
               onTransformChange={(newTransform) => {
                 setTransform(newTransform); // ✅ SYNC: Κοινό transform state για LayerCanvas
                 zoomSystem.setTransform(newTransform);
@@ -789,6 +858,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
                   props.onMouseMove(screenPos);
                 }
               }}
+              onCanvasClick={handleDxfCanvasClick} // 🎯 CRITICAL: Drawing tools handler
               style={{
                 backgroundColor: 'transparent',
                 touchAction: 'none', // 🔥 QUICK WIN #1: Prevent browser touch gestures
