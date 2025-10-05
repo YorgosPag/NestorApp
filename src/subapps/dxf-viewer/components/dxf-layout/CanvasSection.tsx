@@ -38,7 +38,8 @@ import { CanvasAlignmentTester } from '../../debug/canvas-alignment-test';
  * Renders the main canvas area, including the renderer and floating panels.
  */
 export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: OverlayEditorMode, currentStatus: Status, currentKind: OverlayKind }> = (props) => {
-  const dxfCanvasRef = useRef<HTMLCanvasElement>(null);
+  // ✅ FIX: Use DxfCanvasRef type για getCanvas() method access
+  const dxfCanvasRef = useRef<any>(null); // DxfCanvasRef type (με getCanvas() method)
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
 
   // === NEW ZOOM SYSTEM ===
@@ -537,38 +538,57 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     }
   };
 
-  // === 🎯 DXF CANVAS CLICK HANDLER (FOR DRAWING ENTITIES) ===
-  const handleDxfCanvasClick = (screenPos: Point2D) => {
-    console.log('🔥 handleDxfCanvasClick called!', { screenPos, activeTool });
+  const handleCanvasClick = (point: Point2D) => {
+    console.log('🔍 Canvas Click:', {
+      overlayMode,
+      activeTool,
+      point,
+      transform,
+      draftPolygonLength: draftPolygon.length
+    });
 
-    // ✅ STEP 1: Get canvas element via DxfCanvasRef.getCanvas() method
-    const canvasElement = dxfCanvasRef.current?.getCanvas ? dxfCanvasRef.current.getCanvas() : null;
-    if (!canvasElement) {
-      console.error('❌ DXF Canvas element not found!');
+    // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Route click to unified drawing system for drawing tools
+    const isDrawingTool = activeTool === 'line' || activeTool === 'polyline' || activeTool === 'polygon'
+      || activeTool === 'rectangle' || activeTool === 'circle' || activeTool === 'arc';
+
+    if (isDrawingTool && drawingHandlersRef.current) {
+      // ✅ UNIFIED DRAWING ENGINE: Route click to centralized drawing system
+      console.log('🎨 Routing click to unified drawing system (drawing tool):', {
+        activeTool,
+        point
+      });
+
+      // 🔥 FIX: Use ONLY dxfCanvasRef for drawing tools (NOT overlayCanvasRef!)
+      // Drawing tools (Line/Circle/Rectangle) draw on DxfCanvas
+      // Color layers draw on LayerCanvas (overlayCanvasRef)
+      const canvasElement = dxfCanvasRef.current?.getCanvas?.();
+      if (!canvasElement) {
+        console.error('❌ DXF Canvas element not found - cannot draw!');
+        return;
+      }
+
+      const viewport = { width: canvasElement.clientWidth, height: canvasElement.clientHeight };
+      console.log('🔥 VIEWPORT:', {
+        canvasClientWidth: canvasElement.clientWidth,
+        canvasClientHeight: canvasElement.clientHeight,
+        viewport,
+        viewportWidth: viewport.width,
+        viewportHeight: viewport.height
+      });
+      console.log('🔥 screenToWorld INPUT:', { point, transform, viewport });
+      const worldPoint = CoordinateTransforms.screenToWorld(point, transform, viewport);
+      console.log('🔥 screenToWorld OUTPUT:', { worldPoint });
+
+      console.log('🔥 About to call onDrawingPoint:', { worldPoint, drawingHandlers: !!drawingHandlersRef.current, onDrawingPoint: !!drawingHandlersRef.current?.onDrawingPoint });
+      // Call the centralized drawing handler - USE REF!
+      drawingHandlersRef.current.onDrawingPoint(worldPoint);
+      console.log('✅ onDrawingPoint called successfully');
       return;
     }
 
-    // ✅ STEP 2: Convert screen coords to world coords (no need for getBoundingClientRect)
-    // screenPos is already canvas-relative from useCentralizedMouseHandlers
-    const worldPoint = CoordinateTransforms.screenToWorld(screenPos, transform, viewport);
-
-    console.log('🌍 worldPoint:', worldPoint);
-
-    // ✅ STEP 3: Pass world coordinates to drawing handler
-    if (drawingHandlersRef.current?.onDrawingPoint) {
-      drawingHandlersRef.current.onDrawingPoint(worldPoint);
-    }
-  };
-
-  const handleCanvasClick = (point: Point2D) => {
-    // console.log('🔍 Canvas Click:', {
-    //   overlayMode,
-    //   point,
-    //   transform,
-    //   draftPolygonLength: draftPolygon.length
-    // });
-
+    // ✅ OVERLAY MODE: Use legacy overlay system with draftPolygon
     if (overlayMode === 'draw') {
+      console.log('🎨 Legacy overlay mode - using draftPolygon:', { overlayMode, point });
       // 🔧 Use UNIFIED CoordinateTransforms για consistency
       const canvas = dxfCanvasRef.current || overlayCanvasRef.current;
       if (!canvas) return;
@@ -855,7 +875,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
                   props.onMouseMove(screenPos);
                 }
               }}
-              onCanvasClick={handleDxfCanvasClick} // 🎯 CRITICAL: Drawing tools handler
+              onCanvasClick={handleCanvasClick} // 🔥 FIX: Connect canvas clicks για drawing tools!
               style={{
                 backgroundColor: 'transparent',
                 touchAction: 'none', // 🔥 QUICK WIN #1: Prevent browser touch gestures
