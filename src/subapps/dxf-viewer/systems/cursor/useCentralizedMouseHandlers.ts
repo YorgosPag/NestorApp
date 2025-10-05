@@ -34,7 +34,6 @@ interface CentralizedMouseHandlersProps {
   colorLayers?: ColorLayer[];
   onLayerSelected?: (layerId: string, position: Point2D) => void;
   canvasRef?: React.RefObject<HTMLCanvasElement>; // ✅ ADD: Canvas reference για getBoundingClientRect
-  onCanvasClick?: (point: Point2D) => void; // ✅ FIX: Add canvas click callback για overlay drawing
 }
 
 /**
@@ -53,8 +52,7 @@ export function useCentralizedMouseHandlers({
   hitTestCallback,
   colorLayers,
   onLayerSelected,
-  canvasRef,
-  onCanvasClick
+  canvasRef
 }: CentralizedMouseHandlersProps) {
   const cursor = useCursor();
 
@@ -180,9 +178,10 @@ export function useCentralizedMouseHandlers({
     }
 
     // Handle selection start (left button) - disable in pan mode AND drawing tools
-    // 🔥 FIX: Don't start selection for drawing tools (line, circle, etc)
-    const isDrawingTool = activeTool === 'line' || activeTool === 'polyline' || activeTool === 'polygon'
-      || activeTool === 'rectangle' || activeTool === 'circle' || activeTool === 'arc';
+    // 🎯 BUG #2 FIX: Skip selection when drawing tools are active
+    const isDrawingTool = activeTool === 'line' || activeTool === 'polyline' ||
+                          activeTool === 'polygon' || activeTool === 'circle' ||
+                          activeTool === 'rectangle' || activeTool === 'arc';
 
     if (e.button === 0 && !e.shiftKey && activeTool !== 'pan' && !isDrawingTool) {
       cursor.startSelection(screenPos);
@@ -315,7 +314,6 @@ export function useCentralizedMouseHandlers({
 
   // 🚀 MOUSE UP HANDLER - CAD-style release with pan cleanup
   const handleMouseUp = useCallback((e: React.MouseEvent) => {
-    console.log('🔥 handleMouseUp CALLED!', { cursorPosition: cursor.position, isSelecting: cursor.isSelecting, isPanning: panStateRef.current.isPanning });
     // ✅ UPDATE CENTRALIZED STATE
     cursor.setMouseDown(false);
 
@@ -389,14 +387,7 @@ export function useCentralizedMouseHandlers({
     } else {
       // Selection debug disabled for performance
     }
-
-    // ✅ FIX: Call onCanvasClick for overlay drawing
-    // This is needed for overlay mode drawing (Layering → Σχεδίαση)
-    if (onCanvasClick && cursor.position && !cursor.isSelecting && !panState.isPanning) {
-      console.log('🎯 CENTRALIZED: Calling onCanvasClick:', cursor.position);
-      onCanvasClick(cursor.position);
-    }
-  }, [cursor, onTransformChange, viewport, hitTestCallback, scene, transform, onEntitySelect, colorLayers, onLayerSelected, canvasRef, onCanvasClick]);
+  }, [cursor, onTransformChange, viewport, hitTestCallback, scene, transform, onEntitySelect, colorLayers, onLayerSelected, canvasRef]);
 
   // 🚀 MOUSE LEAVE HANDLER - CAD-style area detection with pan cleanup
   const handleMouseLeave = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
