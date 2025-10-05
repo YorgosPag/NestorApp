@@ -13,8 +13,9 @@ import { ScaleControls } from './ScaleControls';
 import { ToolButton, ActionButton } from './ToolButton';
 import { ToolbarStatusBar } from './ToolbarStatusBar';
 import { ProSnapToolbar } from '../components/ProSnapToolbar';
-import UploadDxfButton from '../UploadDxfButton';
-import { SimpleProjectDialog } from '../../components/SimpleProjectDialog';
+// REMOVED: UploadDxfButton and SimpleProjectDialog - moved to ColorPalettePanel Import tab
+// import UploadDxfButton from '../UploadDxfButton';
+// import { SimpleProjectDialog } from '../../components/SimpleProjectDialog';
 import type { SceneModel } from '../../types/scene';
 
 interface EnhancedDXFToolbarProps {
@@ -31,7 +32,8 @@ interface EnhancedDXFToolbarProps {
   currentZoom: number;
   commandCount?: number;
   className?: string;
-  onSceneImported?: (file: File, encoding?: string) => void;
+  // REMOVED: onSceneImported - moved to ColorPalettePanel Import tab
+  // onSceneImported?: (file: File, encoding?: string) => void;
   mouseCoordinates?: Point2D | null;
   showCoordinates?: boolean;
 }
@@ -50,11 +52,12 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarProps> = ({
   currentZoom,
   commandCount,
   className = '',
-  onSceneImported,
+  // REMOVED: onSceneImported - moved to ColorPalettePanel Import tab
   mouseCoordinates,
   showCoordinates = false,
 }) => {
-  const [showSimpleDialog, setShowSimpleDialog] = React.useState(false);
+  // REMOVED: showSimpleDialog state - moved to ColorPalettePanel Import tab
+  // const [showSimpleDialog, setShowSimpleDialog] = React.useState(false);
 
   // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Tool shortcuts (inline - local functionality)
   // Zoom shortcuts μετακόμισαν στο hooks/useKeyboardShortcuts.ts
@@ -223,21 +226,8 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarProps> = ({
     <div className={`border border-gray-600 rounded-lg bg-gray-800 shadow-lg ${className}`}>
       <div className="flex flex-wrap gap-1 p-2">
         <div className="flex gap-1 flex-1">
-          <UploadDxfButton 
-            className="h-8 w-8 p-0 rounded-md border transition-colors duration-150 flex items-center justify-center bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-500"
-            title="Upload DXF File (Legacy)"
-            onFileSelect={onSceneImported}
-          />
-
-          <button
-            onClick={() => setShowSimpleDialog(true)}
-            className="h-8 w-8 p-0 rounded-md border transition-colors duration-150 flex items-center justify-center bg-blue-700 hover:bg-blue-600 text-white border-blue-500"
-            title="Enhanced DXF Import with Project Management"
-          >
-            🔺
-          </button>
-          
-          <div className="w-px bg-gray-600 mx-1 my-1" />
+          {/* REMOVED: Upload DXF buttons - moved to ColorPalettePanel Import tab */}
+          {/* Import buttons are now in the floating panel under the 'Import' tab */}
 
           {toolGroups.map((group, groupIndex) => (
             <div key={group.name} className="flex gap-1">
@@ -295,12 +285,7 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarProps> = ({
         showCoordinates={showCoordinates}
       />
 
-      {/* Simple Project Dialog */}
-      <SimpleProjectDialog
-        isOpen={showSimpleDialog}
-        onClose={() => setShowSimpleDialog(false)}
-        onFileImport={onSceneImported}
-      />
+      {/* REMOVED: Simple Project Dialog - moved to ColorPalettePanel Import tab */}
     </div>
   );
 };

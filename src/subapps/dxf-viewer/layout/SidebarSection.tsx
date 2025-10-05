@@ -25,6 +25,7 @@ interface SidebarSectionProps {
   setSelectedEntityIds: (ids: string[]) => void;
   currentZoom: number;
   activeTool: string;
+  onSceneImported?: (file: File, encoding?: string) => void;
 }
 
 /**
@@ -40,6 +41,7 @@ export const SidebarSection = React.memo<SidebarSectionProps>(({
   setSelectedEntityIds,
   currentZoom,
   activeTool,
+  onSceneImported,
 }) => {
   return (
     <div
@@ -87,6 +89,7 @@ export const SidebarSection = React.memo<SidebarSectionProps>(({
             onEntitySelect={setSelectedEntityIds}
             zoomLevel={currentZoom}
             currentTool={activeTool}
+            onSceneImported={onSceneImported}
           />
         </div>
 

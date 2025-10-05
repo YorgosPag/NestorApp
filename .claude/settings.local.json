@@ -161,7 +161,11 @@
       "Bash(curl:*)",
       "Bash(npx playwright install:*)",
       "Bash(npx playwright test:*)",
-      "Bash(npx playwright:*)"
+      "Bash(npx playwright:*)",
+      "Bash(netstat:*)",
+      "Bash(copy:*)",
+      "Bash(cp:*)",
+      "Bash(cmd /c taskkill:*)"
     ],
     "deny": [],
     "ask": []

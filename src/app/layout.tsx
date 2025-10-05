@@ -13,6 +13,10 @@ import { UserRoleProvider } from "@/contexts/UserRoleContext";
 import { FloorplanProvider } from "@/contexts/FloorplanContext";
 import { cn } from "@/lib/utils";
 import { I18nProvider } from '@/components/providers/I18nProvider';
+import { initStackSuppression } from '@/subapps/dxf-viewer/utils/suppress-react-stacks';
+
+// 🚫 Initialize React stack trace suppression (controlled by .env.local)
+initStackSuppression();
 
 const roboto = Roboto({
   subsets: ["latin", "greek"],

@@ -1,0 +1,828 @@
+'use client';
+import React, { useRef, useState } from 'react';
+// 🎯 CANVAS Z-INDEX FIX - CSS with !important
+import './canvas-stacking.css';
+// 🐛 DEBUG LOGGER
+import { debugLog } from '../../utils/debug-logger';
+// === CANVAS V2 IMPORTS ===
+import { DxfCanvas, LayerCanvas, type ColorLayer, type SnapSettings, type GridSettings, type RulerSettings, type SelectionSettings, type DxfScene, type DxfEntityUnion } from '../../canvas-v2';
+import { createCombinedBounds } from '../../systems/zoom/utils/bounds';
+import type { CrosshairSettings } from '../../rendering/ui/crosshair/CrosshairTypes';
+// ✅ CURSOR SETTINGS: Import από κεντρικό system αντί για duplicate
+import type { CursorSettings } from '../../systems/cursor/config';
+import { useCanvasOperations } from '../../hooks/interfaces/useCanvasOperations';
+import { useCanvasContext } from '../../contexts/CanvasContext';
+// CanvasProvider removed - not needed for Canvas V2
+// OverlayCanvas import removed - it was dead code
+import { FloatingPanelContainer } from '../../ui/FloatingPanelContainer';
+import { OverlayList } from '../../ui/OverlayList';
+import { OverlayProperties } from '../../ui/OverlayProperties';
+import { useOverlayStore } from '../../overlays/overlay-store';
+import { useLevels } from '../../systems/levels';
+import { useRulersGridContext } from '../../systems/rulers-grid/RulersGridSystem';
+import { useCursorSettings } from '../../systems/cursor';
+import { globalRulerStore } from '../../providers/DxfSettingsProvider';
+import type { DXFViewerLayoutProps } from '../../integration/types';
+import type { OverlayEditorMode, Status, OverlayKind } from '../../overlays/types';
+import { getStatusColors } from '../../config/color-mapping';
+import { createOverlayHandlers } from '../../overlays/types';
+import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
+import type { ViewTransform, Point2D } from '../../rendering/types/Types';
+import { useZoom } from '../../systems/zoom';
+// ✅ ENTERPRISE MIGRATION: Using ServiceRegistry
+import { serviceRegistry } from '../../services';
+// 🎯 DEBUG: Import canvas alignment tester
+import { CanvasAlignmentTester } from '../../debug/canvas-alignment-test';
+// ✅ FIX: Import publishHighlight για entity selection → grips
+import { publishHighlight } from '../../events/selection-bus';
+
+/**
+ * Renders the main canvas area, including the renderer and floating panels.
+ */
+export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: OverlayEditorMode, currentStatus: Status, currentKind: OverlayKind }> = (props) => {
+  const dxfCanvasRef = useRef<HTMLCanvasElement>(null);
+  const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
+
+  // === NEW ZOOM SYSTEM ===
+  const initialTransform: ViewTransform = { scale: 1, offsetX: 0, offsetY: 0 };
+  const [transform, setTransform] = useState<ViewTransform>(initialTransform);
+
+  // ✅ CENTRALIZED VIEWPORT: Single source of truth για viewport dimensions
+  const [viewport, setViewport] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
+
+  const zoomSystem = useZoom({
+    initialTransform,
+    onTransformChange: (newTransform) => {
+      setTransform(newTransform); // ✅ SYNC WITH STATE
+    },
+    // 🏢 ENTERPRISE: Inject viewport για accurate zoom-to-cursor
+    viewport
+  });
+  const [canvasRect, setCanvasRect] = useState<DOMRect | null>(null);
+  const [mouseCss, setMouseCss] = useState<Point2D | null>(null);
+  const [mouseWorld, setMouseWorld] = useState<Point2D | null>(null);
+
+  // 🎯 Canvas visibility από parent props (με fallback στα defaults)
+  const showDxfCanvas = props.dxfCanvasVisible ?? true;
+  const showLayerCanvasDebug = props.layerCanvasVisible ?? true;
+
+
+  const overlayStore = useOverlayStore();
+  const levelManager = useLevels();
+  const [draftPolygon, setDraftPolygon] = useState<Array<[number, number]>>([]);
+
+  // 🏢 ENTERPRISE: Provide zoom system to context
+  const canvasContext = useCanvasContext();
+  React.useEffect(() => {
+    // Set the zoom manager in context when it's initialized
+    if (canvasContext?.setZoomManager && zoomSystem.zoomManager) {
+      canvasContext.setZoomManager(zoomSystem.zoomManager);
+    }
+  }, [zoomSystem.zoomManager, canvasContext]);
+
+  // 🎯 ENTITY SELECTION: Wrapper που μετατρέπει single entityId σε array και ενημερώνει Context + Props
+  const handleEntitySelect = React.useCallback((entityId: string | null) => {
+    const selectedIds = entityId ? [entityId] : [];
+
+    // ✅ FIX: Update Context για grips rendering
+    if (canvasContext) {
+      canvasContext.setSelectedEntityIds(selectedIds);
+    }
+
+    // ✅ FIX: Update Props callback (από DXFViewerLayoutProps)
+    if (props.setSelectedEntityIds) {
+      props.setSelectedEntityIds(selectedIds);
+    }
+
+    // ✅ FIX: Στείλε HILITE_EVENT για να εμφανιστούν τα grips στο DxfCanvas
+    publishHighlight({ ids: selectedIds, mode: 'select' });
+  }, [canvasContext, props.setSelectedEntityIds]);
+
+  // ✅ CENTRALIZED VIEWPORT: Update viewport από canvas dimensions
+  React.useEffect(() => {
+    const updateViewport = () => {
+      // Use DxfCanvas ref as primary (LayerCanvas should have same dimensions)
+      const canvas = dxfCanvasRef.current || overlayCanvasRef.current;
+      if (canvas && canvas instanceof HTMLCanvasElement) {
+        const rect = canvas.getBoundingClientRect();
+        // Only update if dimensions are valid (not 0x0)
+        if (rect.width > 0 && rect.height > 0) {
+          setViewport({ width: rect.width, height: rect.height });
+        }
+      }
+    };
+
+    // Initial update with delay to ensure canvas is mounted
+    const timer = setTimeout(updateViewport, 100);
+
+    // Update on resize
+    window.addEventListener('resize', updateViewport);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', updateViewport);
+    };
+  }, [dxfCanvasRef.current, overlayCanvasRef.current]);
+
+  // ✅ AUTO FIT TO VIEW: Trigger existing fit-to-view event after canvas mount
+  // ⚠️ DISABLED: Αφαιρέθηκε γιατί προκαλούσε issues με origin marker visibility
+  // Ο χρήστης μπορεί να πατήσει manual "Ευθυγράμμιση" όταν χρειάζεται
+  /*
+  const hasTriggeredAutoFit = React.useRef(false);
+  React.useEffect(() => {
+    // Only trigger ONCE after viewport is ready
+    if (!hasTriggeredAutoFit.current && viewport.width > 0 && viewport.height > 0) {
+      const timer = setTimeout(() => {
+        console.log('🎯 AUTO FIT TO VIEW: Dispatching canvas-fit-to-view event');
+        // ✅ ZERO DUPLICATES: Χρησιμοποιώ το ΥΠΑΡΧΟΝ event system
+        document.dispatchEvent(new CustomEvent('canvas-fit-to-view', {
+          detail: { viewport }
+        }));
+        hasTriggeredAutoFit.current = true; // Mark as triggered
+      }, 200); // Small delay to ensure all canvas setup is complete
+
+      return () => clearTimeout(timer);
+    }
+  }, [viewport.width, viewport.height]); // ✅ FIX: Only depend on viewport, not colorLayers
+  */
+
+  // Get rulers and grid settings from RulersGridSystem
+  const {
+    state: { grid: gridContextSettings, rulers: rulerContextSettings }
+  } = useRulersGridContext();
+
+  // 🔧 FIX: React state hook για GlobalRulerStore reactivity
+  const [globalRulerSettings, setGlobalRulerSettings] = React.useState(globalRulerStore.settings);
+
+  React.useEffect(() => {
+    const unsubscribe = globalRulerStore.subscribe((newSettings) => {
+      setGlobalRulerSettings(newSettings);
+    });
+    return unsubscribe;
+  }, []);
+
+  // Get cursor settings from CursorSystem
+  const { settings: cursorSettings } = useCursorSettings();
+
+  // 🔺 CURSOR SYSTEM INTEGRATION - Σύνδεση με floating panel
+  const crosshairSettings: CrosshairSettings = {
+    enabled: cursorSettings.crosshair.enabled,
+    color: cursorSettings.crosshair.color,
+    size: cursorSettings.crosshair.size_percent,
+    opacity: cursorSettings.crosshair.opacity,
+    style: cursorSettings.crosshair.line_style,
+    // Extended properties από CursorSystem
+    lineWidth: cursorSettings.crosshair.line_width,
+    useCursorGap: cursorSettings.crosshair.use_cursor_gap,
+    centerGapPx: cursorSettings.crosshair.center_gap_px
+  };
+
+  // 🔺 CURSOR SETTINGS INTEGRATION - Σύνδεση cursor/pickbox με floating panel (ΑΥΤΟΝΟΜΕΣ ΡΥΘΜΙΣΕΙΣ)
+  const cursorCanvasSettings: CursorSettings = {
+    enabled: cursorSettings.cursor.enabled,
+    color: cursorSettings.cursor.color,
+    size: cursorSettings.cursor.size,
+    opacity: cursorSettings.cursor.opacity,
+    style: cursorSettings.cursor.line_style,
+    shape: cursorSettings.cursor.shape,
+    // 🔺 AUTONOMOUS CURSOR SETTINGS - Αυτόνομες ρυθμίσεις κέρσορα
+    lineWidth: cursorSettings.cursor.line_width,
+    fillEnabled: false,
+    fillColor: cursorSettings.cursor.color,
+    fillOpacity: cursorSettings.cursor.opacity
+  };
+
+  const snapSettings: SnapSettings = {
+    enabled: true,
+    types: ['endpoint', 'midpoint', 'center'],
+    tolerance: 10
+  };
+
+  // Convert RulersGridSystem settings to Canvas V2 format
+  const rulerSettings: RulerSettings = {
+    enabled: true, // ✅ FORCE ENABLE RULERS
+    unit: (rulerContextSettings?.units as 'mm' | 'cm' | 'm') ?? 'mm',
+    color: rulerContextSettings?.horizontal?.color ?? '#ffffff', // ✅ WHITE για visibility
+    backgroundColor: rulerContextSettings?.horizontal?.backgroundColor ?? '#333333', // ✅ DARK BACKGROUND για contrast
+    fontSize: rulerContextSettings?.horizontal?.fontSize ?? 12,
+    // Extended properties από RulersGridSystem
+    textColor: rulerContextSettings?.horizontal?.textColor ?? '#ffffff', // ✅ WHITE TEXT για visibility
+    showLabels: rulerContextSettings?.horizontal?.showLabels ?? true,
+    showUnits: rulerContextSettings?.horizontal?.showUnits ?? true,
+    showBackground: rulerContextSettings?.horizontal?.showBackground ?? true,
+    showMajorTicks: rulerContextSettings?.horizontal?.showMajorTicks ?? true,
+    showMinorTicks: rulerContextSettings?.horizontal?.showMinorTicks ?? true,
+    majorTickColor: rulerContextSettings?.horizontal?.majorTickColor ?? '#ffffff', // ✅ WHITE TICKS
+    minorTickColor: rulerContextSettings?.horizontal?.minorTickColor ?? '#cccccc', // ✅ LIGHT GRAY MINOR TICKS
+    majorTickLength: rulerContextSettings?.horizontal?.majorTickLength ?? 10,
+    minorTickLength: rulerContextSettings?.horizontal?.minorTickLength ?? 5,
+    height: rulerContextSettings?.horizontal?.height ?? 30,
+    width: rulerContextSettings?.vertical?.width ?? 30,
+    position: rulerContextSettings?.horizontal?.position ?? 'bottom',
+    // 🔺 MISSING UNITS SETTINGS - Σύνδεση με floating panel
+    unitsFontSize: rulerContextSettings?.horizontal?.unitsFontSize ?? 10,
+    unitsColor: rulerContextSettings?.horizontal?.unitsColor ?? '#ffffff' // ✅ WHITE UNITS TEXT
+  };
+
+  const {
+    activeTool,
+    showGrid,
+    showLayers, // ✅ ΥΠΑΡΧΟΝ SYSTEM: Layer visibility απο useDxfViewerState
+    overlayMode = 'select',
+    currentStatus = 'for-sale',
+    currentKind = 'unit',
+    ...restProps
+  } = props;
+
+  // ✅ LAYER VISIBILITY: Show LayerCanvas controlled by debug toggle
+  const showLayerCanvas = showLayerCanvasDebug; // Debug toggleable
+
+  // ✅ CONVERT RulersGridSystem grid settings to Canvas V2 GridSettings format
+  // RulersGridSystem uses: gridSettings.visual.color
+  // Canvas GridRenderer uses: gridSettings.color
+  const gridSettings: GridSettings = {
+    // Enabled state: ΠΡΩΤΑ από panel, μετά toolbar fallback
+    enabled: gridContextSettings?.visual?.enabled ?? showGrid,
+    visible: gridContextSettings?.visual?.enabled ?? true,
+
+    // ✅ SIZE: Από panel settings
+    size: gridContextSettings?.visual?.step ?? 10,
+
+    // ✅ COLORS: Από panel settings (NOT hardcoded!)
+    color: gridContextSettings?.visual?.color ?? '#4444ff', // Default blue από panel
+    majorGridColor: gridContextSettings?.visual?.majorGridColor ?? '#888888',
+    minorGridColor: gridContextSettings?.visual?.minorGridColor ?? '#bbbbbb',
+
+    // ✅ OPACITY: Από panel settings
+    opacity: gridContextSettings?.visual?.opacity ?? 0.6,
+
+    // ✅ LINE WIDTHS: Από panel settings
+    lineWidth: gridContextSettings?.visual?.minorGridWeight ?? 0.5,
+    majorGridWeight: gridContextSettings?.visual?.majorGridWeight ?? 1,
+    minorGridWeight: gridContextSettings?.visual?.minorGridWeight ?? 0.5,
+
+    // ✅ GRID STYLE: Από panel settings (lines/dots/crosses)
+    style: gridContextSettings?.visual?.style ?? 'lines',
+    majorInterval: gridContextSettings?.visual?.subDivisions ?? 5,
+    showMajorGrid: true,
+    showMinorGrid: true,
+    adaptiveOpacity: false, // ❌ DISABLE για να φαίνεται πάντα
+    minVisibleSize: 0 // ✅ ALWAYS SHOW regardless of zoom
+  };
+
+  // 🔺 SELECTION SETTINGS INTEGRATION - Σύνδεση selection boxes με floating panel
+  const selectionSettings: SelectionSettings = {
+    window: {
+      fillColor: cursorSettings.selection.window.fillColor,
+      fillOpacity: cursorSettings.selection.window.fillOpacity,
+      borderColor: cursorSettings.selection.window.borderColor,
+      borderOpacity: cursorSettings.selection.window.borderOpacity,
+      borderStyle: cursorSettings.selection.window.borderStyle,
+      borderWidth: cursorSettings.selection.window.borderWidth
+    },
+    crossing: {
+      fillColor: cursorSettings.selection.crossing.fillColor,
+      fillOpacity: cursorSettings.selection.crossing.fillOpacity,
+      borderColor: cursorSettings.selection.crossing.borderColor,
+      borderOpacity: cursorSettings.selection.crossing.borderOpacity,
+      borderStyle: cursorSettings.selection.crossing.borderStyle,
+      borderWidth: cursorSettings.selection.crossing.borderWidth
+    }
+  };
+
+  // Get overlays for current level
+  const currentOverlays = levelManager.currentLevelId
+    ? overlayStore.getByLevel(levelManager.currentLevelId)
+    : [];
+
+  const selectedOverlay = overlayStore.getSelectedOverlay();
+
+  // 🔍 DEBUG: Log overlay rendering state
+  React.useEffect(() => {
+    debugLog('CanvasSection', '🎨 CANVAS OVERLAY RENDERING STATE:', {
+      currentLevelId: levelManager.currentLevelId,
+      currentOverlaysCount: currentOverlays.length,
+      selectedOverlay: selectedOverlay ? {
+        id: selectedOverlay.id,
+        levelId: selectedOverlay.levelId,
+        hasPolygon: !!selectedOverlay.polygon
+      } : null,
+      allOverlaysInStore: Object.keys(overlayStore.overlays).length
+    });
+  }, [levelManager.currentLevelId, currentOverlays.length, selectedOverlay?.id, overlayStore.overlays]);
+
+  // === CONVERT OVERLAYS TO CANVAS V2 FORMAT ===
+  const convertToColorLayers = (overlays: any[]): ColorLayer[] => {
+    // Simple debug - only log count and first overlay sample (no infinite re-render)
+    if (overlays.length > 0) {
+      // // console.log('🔍 Converting overlays:', {
+      //   count: overlays.length,
+      //   sample: { id: overlays[0].id, hasPolygon: !!overlays[0].polygon }
+      // });
+    }
+
+    return overlays
+      .filter(overlay => overlay.polygon && Array.isArray(overlay.polygon) && overlay.polygon.length >= 3)
+      .map((overlay, index) => {
+        const vertices = overlay.polygon.map((point: [number, number]) => ({ x: point[0], y: point[1] }));
+
+        // Debug για το πρώτο overlay
+        if (index === 0) {
+          // // console.log('🔍 convertToColorLayers - First overlay conversion:', {
+          //   overlayId: overlay.id,
+          //   originalPolygon: overlay.polygon.slice(0, 3), // Τα πρώτα 3 points
+          //   convertedVertices: vertices.slice(0, 3), // Τα πρώτα 3 vertices
+          //   color: overlay.color || '#ff6b6b'
+          // });
+        }
+
+        return {
+          id: overlay.id,
+          name: `Layer ${index + 1}`,
+          color: overlay.color || getStatusColors(overlay.status)?.fill || '#3b82f6',
+          opacity: overlay.opacity || 0.7,  // Slightly transparent so we can see them
+          visible: overlay.visible !== false,
+          zIndex: index,
+          polygons: [{
+            id: `polygon_${overlay.id}`,
+            vertices,
+            fillColor: overlay.color || getStatusColors(overlay.status)?.fill || '#3b82f6',  // Use κεντρικά STATUS_COLORS
+            strokeColor: overlay.selected ? '#ff0000' : '#000000',  // Black stroke for visibility
+            strokeWidth: overlay.selected ? 3 : 2,  // Thicker stroke
+            selected: overlay.id === overlayStore.selectedOverlayId
+          }]
+        };
+      });
+  };
+
+  const colorLayers = convertToColorLayers(currentOverlays);
+
+  // 🔍 DEBUG - Check current overlays and colorLayers (LIMITED to prevent infinite re-render)
+  React.useEffect(() => {
+    // Only log if we actually have overlays or if it's been a while
+    if (currentOverlays.length > 0 || colorLayers.length > 0) {
+      // console.log('🔍 CanvasSection Overlays State:', {
+      //   overlaysCount: currentOverlays.length,
+      //   colorLayersCount: colorLayers.length,
+      //   currentLevelId: levelManager.currentLevelId,
+      //   sampleOverlay: currentOverlays.length > 0 ? {
+      //     id: currentOverlays[0].id,
+      //     hasPolygon: !!currentOverlays[0].polygon,
+      //     polygonLength: currentOverlays[0].polygon?.length
+      //   } : null,
+      //   sampleColorLayer: colorLayers.length > 0 ? {
+      //     id: colorLayers[0].id,
+      //     name: colorLayers[0].name,
+      //     color: colorLayers[0].color,
+      //     polygonsCount: colorLayers[0].polygons?.length
+      //   } : null
+      // });
+    }
+  }, [currentOverlays.length, levelManager.currentLevelId]); // Dependency only on counts, not objects - removed colorLayers to prevent infinite loop
+
+  // === CONVERT SCENE TO CANVAS V2 FORMAT ===
+  const dxfScene: DxfScene | null = props.scene ? {
+    entities: props.scene.entities?.map((entity): DxfEntityUnion | null => {
+      // Get layer color information
+      const layerInfo = props.scene?.layers?.[entity.layer];
+
+      // Convert SceneEntity to DxfEntityUnion
+      const base = {
+        id: entity.id,
+        layer: entity.layer,
+        color: entity.color || layerInfo?.color || '#ffffff', // Use layer color if entity has no color
+        lineWidth: entity.lineweight || 1,
+        visible: entity.visible
+      };
+
+      switch (entity.type) {
+        case 'line': {
+          const lineEntity = entity as any;
+          return { ...base, type: 'line' as const, start: lineEntity.start, end: lineEntity.end };
+        }
+        case 'circle': {
+          const circleEntity = entity as any;
+          return { ...base, type: 'circle' as const, center: circleEntity.center, radius: circleEntity.radius };
+        }
+        case 'polyline': {
+          const polylineEntity = entity as any;
+          return { ...base, type: 'polyline' as const, vertices: polylineEntity.vertices, closed: polylineEntity.closed };
+        }
+        case 'arc': {
+          const arcEntity = entity as any;
+          return { ...base, type: 'arc' as const, center: arcEntity.center, radius: arcEntity.radius, startAngle: arcEntity.startAngle, endAngle: arcEntity.endAngle };
+        }
+        case 'text': {
+          const textEntity = entity as any;
+          return { ...base, type: 'text' as const, position: textEntity.position, text: textEntity.text, height: textEntity.height, rotation: textEntity.rotation };
+        }
+        default:
+          console.warn('🔍 Unsupported entity type for DxfCanvas:', entity.type);
+          return null;
+      }
+    }).filter(Boolean) as DxfEntityUnion[] || [], // ✅ FIX: Convert and filter entities!
+    layers: Object.keys(props.scene.layers || {}), // ✅ FIX: Convert layers object to array
+    bounds: props.scene.bounds // ✅ FIX: Use actual bounds from scene
+  } : null;
+
+  // 🔍 DEBUG - Check if DXF scene has entities and auto-fit to view
+  React.useEffect(() => {
+    if (dxfScene && dxfScene.entities.length > 0) {
+      // DxfScene loaded with entities - debug disabled for performance
+
+      // ✅ AUTO-FIT TO VIEW - Using new zoom system with DYNAMIC VIEWPORT
+      if (dxfScene.bounds) {
+        // Auto-fitting DXF to view - debug disabled for performance
+
+        // Get actual canvas dimensions instead of hardcoded values
+        const canvas = dxfCanvasRef.current || overlayCanvasRef.current;
+        if (canvas && canvas instanceof HTMLCanvasElement) {
+          // ✅ ENTERPRISE MIGRATION: Get service from registry
+          const canvasBounds = serviceRegistry.get('canvas-bounds');
+          const rect = canvasBounds.getBounds(canvas);
+          const viewport = { width: rect.width, height: rect.height };
+
+          // Use professional zoom system for fit-to-view with actual viewport
+          // 🎯 ENTERPRISE: alignToOrigin=true to position world (0,0) at bottom-left ruler intersection
+          zoomSystem.zoomToFit(dxfScene.bounds, viewport, true);
+        } else {
+          // Fallback to container dimensions if canvas not ready
+          const container = document.querySelector('.relative.w-full.h-full.overflow-hidden');
+          if (container) {
+            // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση CanvasBoundsService (works with any element)
+            const rect = container.getBoundingClientRect();
+            // 🎯 ENTERPRISE: alignToOrigin=true to position world (0,0) at bottom-left ruler intersection
+            zoomSystem.zoomToFit(dxfScene.bounds, { width: rect.width, height: rect.height }, true);
+          }
+        }
+      }
+    } else if (dxfScene) {
+      // console.log('🔍 DxfScene loaded but NO entities:', { dxfScene });
+    }
+  }, [props.scene]); // ✅ FIX: Use props.scene instead of props.currentScene
+
+  // Use shared overlay handlers to eliminate duplicate code
+  const { handleOverlaySelect, handleOverlayEdit, handleOverlayDelete, handleOverlayUpdate } =
+    createOverlayHandlers({
+      setSelectedOverlay: overlayStore.setSelectedOverlay,
+      remove: overlayStore.remove,
+      update: overlayStore.update,
+      getSelectedOverlay: overlayStore.getSelectedOverlay,
+      overlays: overlayStore.overlays
+    }, undefined);  // ✅ CanvasSection δεν έχει levelSwitcher, άρα περνάω undefined
+
+  // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: FIT TO OVERLAY - Χρήση κεντρικής υπηρεσίας αντί για διάσπαρτη logic
+  const fitToOverlay = (overlayId: string) => {
+    const overlay = currentOverlays.find(o => o.id === overlayId);
+    if (!overlay || !overlay.polygon || overlay.polygon.length < 3) {
+      return;
+    }
+
+    // Calculate bounding box of overlay polygon
+    const xs = overlay.polygon.map(([x]) => x);
+    const ys = overlay.polygon.map(([, y]) => y);
+    const bounds = {
+      min: { x: Math.min(...xs), y: Math.min(...ys) },
+      max: { x: Math.max(...xs), y: Math.max(...ys) }
+    };
+
+    // ✅ ENTERPRISE MIGRATION: Get service from registry
+    const fitToView = serviceRegistry.get('fit-to-view');
+    const viewport = { width: 800, height: 600 }; // Default fallback - should get from actual canvas
+    const result = fitToView.calculateFitToViewFromBounds(bounds, viewport, { padding: 0.1 });
+
+    if (result.success && result.transform) {
+      // Apply transform to zoom system
+      zoomSystem.setTransform(result.transform);
+    }
+  };
+
+
+  // Drawing logic
+  const handleOverlayClick = (overlayId: string, point: Point2D) => {
+    // console.log('🔍 handleOverlayClick called:', { overlayId, point, overlayMode, activeTool });
+
+    // 🚀 PROFESSIONAL CAD: Αυτόματη επιλογή layers όταν layering tool είναι ενεργό
+    if (activeTool === 'layering' || overlayMode === 'select') {
+      // console.log('🔍 Selecting overlay:', overlayId);
+      handleOverlaySelect(overlayId);
+      // 🔧 AUTO FIT TO VIEW - Zoom to selected overlay
+      // console.log('🔍 Calling fitToOverlay in 100ms...');
+      setTimeout(() => {
+        // console.log('🔍 Now calling fitToOverlay:', overlayId);
+        fitToOverlay(overlayId);
+      }, 100); // Small delay to ensure selection state updates
+    }
+  };
+
+  const handleCanvasClick = (point: Point2D) => {
+    // console.log('🔍 Canvas Click:', {
+    //   overlayMode,
+    //   point,
+    //   transform,
+    //   draftPolygonLength: draftPolygon.length
+    // });
+
+    if (overlayMode === 'draw') {
+      // 🔧 Use UNIFIED CoordinateTransforms για consistency
+      const canvas = dxfCanvasRef.current || overlayCanvasRef.current;
+      if (!canvas) return;
+
+      const viewport = { width: canvas.clientWidth, height: canvas.clientHeight };
+      const worldPoint = CoordinateTransforms.screenToWorld(point, transform, viewport);
+      const worldPointArray: [number, number] = [worldPoint.x, worldPoint.y];
+
+      // console.log('🔍 Adding point to draft polygon:', {
+      //   screenPoint: point,
+      //   worldPoint,
+      //   currentDraftLength: draftPolygon.length
+      // });
+
+      setDraftPolygon(prev => {
+        const newPolygon = [...prev, worldPointArray];
+        // console.log('🔍 Draft polygon updated:', {
+        //   oldLength: prev.length,
+        //   newLength: newPolygon.length,
+        //   newPolygon: newPolygon.slice(0, 3) // First 3 points
+        // });
+        return newPolygon;
+      });
+
+      // Close polygon if clicking near first point
+      if (draftPolygon.length >= 3) {
+        const firstPoint = draftPolygon[0];
+        const distance = calculateDistance(
+          { x: worldPointArray[0], y: worldPointArray[1] },
+          { x: firstPoint[0], y: firstPoint[1] }
+        );
+
+        // console.log('🔍 Checking polygon close:', {
+        //   distance,
+        //   threshold: 20 / transform.scale,
+        //   shouldClose: distance < (20 / transform.scale)
+        // });
+
+        if (distance < (20 / transform.scale)) { // Close threshold adjusted for scale
+          // console.log('🔍 Closing polygon - finishing drawing');
+          finishDrawing();
+          return;
+        }
+      }
+    } else {
+      // Clicked on empty space - deselect
+      // console.log('🔍 Deselecting overlay (clicked empty space)');
+      handleOverlaySelect(null);
+    }
+  };
+
+  const finishDrawing = async () => {
+    // Debug disabled to prevent console spam
+
+    if (draftPolygon.length >= 3 && levelManager.currentLevelId) {
+      try {
+        const newOverlay = await overlayStore.add({
+          levelId: levelManager.currentLevelId,
+          kind: currentKind,
+          polygon: draftPolygon,
+          status: currentStatus,
+          label: `Overlay ${Date.now()}`, // Temporary label
+        });
+
+        // console.log('🔍 New Overlay Created:', newOverlay);
+
+      } catch (error) {
+        console.error('Failed to create overlay:', error);
+      }
+    }
+    setDraftPolygon([]);
+  };
+
+  // Handle fit-to-view event from useCanvasOperations fallback
+  React.useEffect(() => {
+    const handleFitToView = (e: CustomEvent) => {
+      // 🚀 USE COMBINED BOUNDS - DXF + overlays
+      const combinedBounds = createCombinedBounds(dxfScene, colorLayers);
+
+      if (combinedBounds) {
+        const viewport = e.detail?.viewport || { width: 800, height: 600 };
+
+        try {
+          // 🎯 ENTERPRISE: alignToOrigin = true → (0,0) at axis intersection (bottom-left)
+          const zoomResult = zoomSystem.zoomToFit(combinedBounds, viewport, true);
+
+          // 🔥 ΚΡΙΣΙΜΟ: Εφαρμογή του νέου transform με null checks + NaN guards
+          if (zoomResult && zoomResult.transform) {
+            const { scale, offsetX, offsetY } = zoomResult.transform;
+
+            // 🛡️ GUARD: Check for NaN values before applying transform
+            if (isNaN(scale) || isNaN(offsetX) || isNaN(offsetY)) {
+              console.error('🚨 Shift+1 failed: Invalid transform (NaN values)');
+              return;
+            }
+
+            setTransform(zoomResult.transform);
+          }
+        } catch (error) {
+          console.error('🚨 Shift+1 failed:', error);
+        }
+      }
+    };
+
+    document.addEventListener('canvas-fit-to-view', handleFitToView as EventListener);
+    return () => document.removeEventListener('canvas-fit-to-view', handleFitToView as EventListener);
+  }, [dxfScene, colorLayers, zoomSystem]); // 🚀 Include colorLayers για combined bounds
+
+  // Handle keyboard shortcuts for drawing and zoom
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Prevent shortcuts when typing in inputs
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true') {
+        return;
+      }
+
+      // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Zoom shortcuts μετακόμισαν στο hooks/useKeyboardShortcuts.ts
+      // Εδώ κρατάμε ΜΟΝΟ local shortcuts για drawing mode (Escape, Enter)
+
+      switch (e.key) {
+        case 'Escape':
+          setDraftPolygon([]);
+          break;
+        case 'Enter':
+          if (draftPolygon.length >= 3) {
+            finishDrawing();
+          }
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [draftPolygon, finishDrawing]);
+
+  // 🎯 CANVAS ALIGNMENT TEST: Auto-test when layering is activated
+  React.useEffect(() => {
+    if (activeTool === 'layering' && showDxfCanvas && showLayerCanvas) {
+      // Delay να φορτώσουν τα canvas πρώτα
+      const testTimeout = setTimeout(() => {
+        console.log('🎯 LAYERING ACTIVATED - RUNNING CANVAS ALIGNMENT TEST');
+
+        const alignmentResult = CanvasAlignmentTester.testCanvasAlignment();
+        const zIndexResult = CanvasAlignmentTester.testCanvasZIndex();
+        const greenBorder = CanvasAlignmentTester.findGreenBorder();
+
+        console.log('🎯 LAYERING CANVAS TESTS COMPLETED:', {
+          alignment: alignmentResult,
+          zIndex: zIndexResult,
+          greenBorderFound: !!greenBorder,
+          greenBorderElement: greenBorder
+        });
+
+        // 🔍 EXTRA DEBUG: Manual z-index check
+        const dxfCanvasEl = document.querySelector('canvas[data-canvas-type="dxf"]');
+        const layerCanvasEl = document.querySelector('canvas[data-canvas-type="layer"]');
+        // Manual z-index check disabled for performance
+
+        if (!alignmentResult.isAligned) {
+          console.warn('⚠️ CANVAS MISALIGNMENT DETECTED DURING LAYERING!', alignmentResult.differences);
+        }
+
+        if (!zIndexResult.isCorrectOrder) {
+          console.warn('⚠️ INCORRECT CANVAS Z-INDEX ORDER DURING LAYERING!', zIndexResult);
+        }
+      }, 1000); // 1 second delay για να φορτώσουν τα canvas
+
+      return () => clearTimeout(testTimeout);
+    }
+  }, [activeTool, showDxfCanvas, showLayerCanvas]);
+
+  // ❌ REMOVED: Duplicate zoom handlers - now using centralized zoomSystem.handleKeyboardZoom()
+  // All keyboard zoom is handled through the unified system in the keyboard event handler above
+
+  return (
+    <>
+      {/* Left Sidebar - REMOVED - FloatingPanelContainer handles this */}
+
+      {/* Main Canvas Area */}
+      <div className="flex-1 relative">
+        {/* DEBUG BUTTONS MOVED TO HEADER */}
+
+        <div className="canvas-stack relative w-full h-full overflow-hidden">
+          {/* 🔺 CANVAS V2: Layer Canvas - Background Overlays (Semi-transparent colored layers) */}
+          {/* 🔍 DEBUG: Check why LayerCanvas not rendering */}
+          {debugLog('CanvasSection', '🔍 CanvasSection DEBUG:', {
+            showLayerCanvas,
+            showLayers,
+            colorLayersCount: colorLayers.length,
+            showDxfCanvas
+          })}
+          {showLayerCanvas && (
+            <LayerCanvas
+              ref={overlayCanvasRef}
+              layers={colorLayers}
+              transform={transform}
+              viewport={viewport} // ✅ CENTRALIZED: Pass centralized viewport
+              activeTool={activeTool} // 🔥 ΚΡΙΣΙΜΟ: Pass activeTool για pan cursor
+              layersVisible={showLayers} // ✅ ΥΠΑΡΧΟΝ SYSTEM: Existing layer visibility
+              enableUnifiedCanvas={true} // ✅ ΕΝΕΡΓΟΠΟΙΗΣΗ: Unified event system για debugging
+              data-canvas-type="layer" // 🎯 DEBUG: Identifier για alignment test
+              className="z-10" // 🎯 Z-INDEX: LayerCanvas πάνω
+              onTransformChange={(newTransform) => {
+                setTransform(newTransform); // ✅ SYNC: Κοινό transform state για LayerCanvas
+                zoomSystem.setTransform(newTransform);
+              }}
+              onWheelZoom={zoomSystem.handleWheelZoom} // ✅ CONNECT ZOOM SYSTEM
+              crosshairSettings={crosshairSettings} // Crosshair μόνο για layers
+              cursorSettings={cursorCanvasSettings}
+              snapSettings={snapSettings}
+              gridSettings={{ ...gridSettings, enabled: false }} // 🔧 FIX: Disable grid in LayerCanvas (now in DxfCanvas)
+              rulerSettings={{ ...rulerSettings, enabled: false }} // 🔧 FIX: Disable rulers in LayerCanvas (now in DxfCanvas)
+              selectionSettings={selectionSettings}
+              onLayerClick={handleOverlayClick}
+              onCanvasClick={handleCanvasClick}
+              onMouseMove={(point) => {
+                setMouseCss(point);
+                setMouseWorld(point); // TODO: Transform CSS to world coordinates
+                // ✅ ΔΙΟΡΘΩΣΗ: Καλώ και το props.onMouseMove για cursor-centered zoom
+                if (props.onMouseMove) {
+                  props.onMouseMove(point);
+                }
+              }}
+              className="absolute inset-0 w-full h-full"
+              style={{ touchAction: 'none' }} // 🔥 QUICK WIN #1: Prevent browser touch gestures
+            />
+          )}
+
+          {/* 🔺 CANVAS V2: DXF Canvas - Foreground DXF Drawing (Over colored layers) */}
+          {showDxfCanvas && (
+            <DxfCanvas
+              ref={dxfCanvasRef}
+              scene={dxfScene}
+              transform={transform}
+              viewport={viewport} // ✅ CENTRALIZED: Pass centralized viewport
+              activeTool={activeTool} // 🔥 ΚΡΙΣΙΜΟ: Pass activeTool για pan cursor
+              colorLayers={colorLayers} // ✅ FIX: Pass color layers για fit to view bounds
+              crosshairSettings={crosshairSettings} // ✅ CONNECT TO EXISTING CURSOR SYSTEM
+              gridSettings={gridSettings} // ✅ FIX: Enable grid rendering in DxfCanvas
+              onEntitySelect={handleEntitySelect} // 🎯 FIX: Connect entity selection from canvas clicks
+              rulerSettings={{
+                enabled: globalRulerSettings.horizontal.enabled && globalRulerSettings.vertical.enabled,
+                visible: true,
+                opacity: 1.0,
+                unit: globalRulerSettings.units as 'mm' | 'cm' | 'm',
+                color: globalRulerSettings.horizontal.color,
+                backgroundColor: globalRulerSettings.horizontal.backgroundColor,
+                fontSize: globalRulerSettings.horizontal.fontSize,
+                textColor: globalRulerSettings.horizontal.textColor,
+                height: 30,
+                width: 30,
+                showLabels: globalRulerSettings.horizontal.showLabels,
+                showUnits: globalRulerSettings.horizontal.showUnits,
+                showBackground: globalRulerSettings.horizontal.showBackground,
+                showMajorTicks: globalRulerSettings.horizontal.showMajorTicks,
+                showMinorTicks: true,
+                majorTickColor: globalRulerSettings.horizontal.color,
+                minorTickColor: '#666666',
+                majorTickLength: 10,
+                minorTickLength: 5,
+                tickInterval: gridSettings.size * gridSettings.majorInterval, // ✅ SYNC WITH GRID: Use major grid interval!
+                unitsFontSize: 10,
+                unitsColor: globalRulerSettings.horizontal.textColor,
+                labelPrecision: 1,
+                borderColor: globalRulerSettings.horizontal.color,
+                borderWidth: 1
+              }}
+              data-canvas-type="dxf" // 🎯 DEBUG: Identifier για alignment test
+              className="z-0" // 🎯 Z-INDEX: DxfCanvas κάτω
+              onTransformChange={(newTransform) => {
+                setTransform(newTransform); // ✅ SYNC: Κοινό transform state για DxfCanvas
+                zoomSystem.setTransform(newTransform);
+              }}
+              onWheelZoom={zoomSystem.handleWheelZoom} // ✅ CONNECT ZOOM SYSTEM
+              onMouseMove={(screenPos, worldPos) => {
+                // ✅ ΔΙΟΡΘΩΣΗ: Περνάω το screenPos στο props.onMouseMove για cursor-centered zoom
+                if (props.onMouseMove) {
+                  props.onMouseMove(screenPos);
+                }
+              }}
+              className="absolute inset-0 w-full h-full"
+              style={{
+                backgroundColor: 'transparent',
+                touchAction: 'none' // 🔥 QUICK WIN #1: Prevent browser touch gestures
+              }}
+              onLoad={() => {
+                // DXF Canvas loaded - debug disabled for performance
+              }}
+              onMouseEnter={() => {
+                // DXF Canvas mouse enter - debug disabled for performance
+              }}
+            />
+          )}
+        </div>
+      </div>
+
+
+      {/* Right Sidebar - MOVED TO DxfViewerContent */}
+    </>
+  );
+};

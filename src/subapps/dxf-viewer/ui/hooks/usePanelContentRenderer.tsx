@@ -30,6 +30,7 @@ interface UsePanelContentRendererParams {
   expandedKeys: Set<string>;
   setExpandedKeys: (keys: Set<string>) => void;
   layerOperations: LayerOperationsCallbacks;
+  onSceneImported?: (file: File, encoding?: string) => void;
 }
 
 /**
@@ -44,7 +45,8 @@ export function usePanelContentRenderer({
   onEntitySelect,
   expandedKeys,
   setExpandedKeys,
-  layerOperations
+  layerOperations,
+  onSceneImported
 }: UsePanelContentRendererParams) {
 
   const renderPanelContent = () => {
@@ -109,7 +111,7 @@ export function usePanelContentRenderer({
         return (
           <div>
             <LazyPanelWrapper loadingText="Φόρτωση παλέτας χρωμάτων...">
-              <ColorPalettePanel />
+              <ColorPalettePanel onSceneImported={onSceneImported} />
             </LazyPanelWrapper>
           </div>
         );

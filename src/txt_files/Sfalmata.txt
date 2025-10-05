@@ -1,7 +1,16 @@
-⚠️
-DXF Viewer Error
-Κάτι πήγε στραβά στη φόρτωση του DXF Viewer.
+Build Error
+Failed to compile
 
-function is not iterable (cannot read property Symbol(Symbol.iterator))
+Next.js (14.2.32) is outdated (learn more) (turbo)
+./src/subapps/dxf-viewer/hooks/drawing/useUnifiedDrawing.ts:372:7
+Parsing ecmascript source code failed
+  370 |         previewEntity: null
+  371 |       }));
+> 372 |     } else {
+      |       ^^^^
+  373 |       // Create a partial preview after adding the point
+  374 |       let partialPreview: ExtendedSceneEntity | null = null;
+  375 |
 
-Επαναφόρτωση
+Expected ',', got 'else'
+This error occurred during the build process and can only be dismissed by fixing the error.

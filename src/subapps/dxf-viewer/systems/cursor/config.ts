@@ -229,16 +229,23 @@ export class CursorConfiguration extends BaseConfigurationManager<CursorSettings
   // Override notifyListeners to include legacy compatibility
   protected notifyListeners(settings: CursorSettings): void {
     super.notifyListeners(settings);
-    
+
     // Legacy compatibility - dispatch global event
-    window.dispatchEvent(new CustomEvent('autocad-cursor-change', {
-      detail: settings
-    }));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('autocad-cursor-change', {
+        detail: settings
+      }));
+    }
   }
 
   // Storage operations
   private loadSettings(): CursorSettings {
     try {
+      // 🔒 SSR PROTECTION: localStorage is only available in browser
+      if (typeof window === 'undefined') {
+        return { ...DEFAULT_CURSOR_SETTINGS };
+      }
+
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
@@ -292,7 +299,9 @@ export class CursorConfiguration extends BaseConfigurationManager<CursorSettings
 
           // Save the migrated settings to localStorage
           try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(migratedSettings));
+            if (typeof window !== 'undefined') {
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(migratedSettings));
+            }
           } catch (error) {
             console.warn('Failed to save migrated cursor settings:', error);
           }
@@ -321,8 +330,9 @@ export class CursorConfiguration extends BaseConfigurationManager<CursorSettings
       console.warn('Failed to save cursor settings:', error);
       // 🔄 FALLBACK: Αν αποτύχει το unified system, χρησιμοποιούμε το παλιό
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(this.settings));
-
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(this.settings));
+        }
       } catch (fallbackError) {
         console.error('❌ [CursorSystem] Both unified and fallback saves failed:', fallbackError);
       }
@@ -352,24 +362,35 @@ export class CursorConfiguration extends BaseConfigurationManager<CursorSettings
 }
 
 // ===== SINGLETON INSTANCE =====
-export const cursorConfig = CursorConfiguration.getInstance();
+// 🔒 SSR PROTECTION: Only initialize in browser environment
+export const cursorConfig = typeof window !== 'undefined'
+  ? CursorConfiguration.getInstance()
+  : null as unknown as CursorConfiguration; // Type assertion for SSR compatibility
 
 // ===== UTILITY FUNCTIONS =====
 export function getCursorSettings(): CursorSettings {
+  if (typeof window === 'undefined') {
+    return { ...DEFAULT_CURSOR_SETTINGS };
+  }
   return cursorConfig.getSettings();
 }
 
 export function updateCursorSettings(updates: Partial<CursorSettings>): void {
+  if (typeof window === 'undefined') return;
   cursorConfig.updateSettings(updates);
 }
 
 export function subscribeToCursorSettings(
   listener: (settings: CursorSettings) => void
 ): () => void {
+  if (typeof window === 'undefined') {
+    return () => {}; // No-op unsubscribe for SSR
+  }
   return cursorConfig.subscribe(listener);
 }
 
 export function resetCursorSettings(): void {
+  if (typeof window === 'undefined') return;
   cursorConfig.resetToDefaults();
 }
 

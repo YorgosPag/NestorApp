@@ -153,46 +153,6 @@
   - ✅ `systems/zoom/ZoomManager.ts` → Auto-updated via re-exports
   - ✅ `ui/toolbar/ZoomControls.tsx` → Using ZOOM_FACTORS.BUTTON_IN (20%)
 
-### 🔟 **TESTING & REGRESSION PREVENTION (2025-10-04)**
-- ❌ ΟΧΙ αλλαγές χωρίς tests
-- ❌ ΟΧΙ "μάλλον δουλεύει" manual testing
-- ✅ ΜΟΝΟ `npm test` πριν από κάθε commit
-- ✅ Regression tests για κάθε bug που βρίσκουμε
-
-📍 **ARCHITECTURE**:
-- 🏗️ **[TEST_INFRASTRUCTURE.md](./TEST_INFRASTRUCTURE.md)** - Test architecture & centralization
-  - Test inventory (113+ tests σε 4 επίπεδα)
-  - Centralization issues & action plan (6 fixes needed)
-  - Directory structure (scattered → centralized)
-  - Quality standards (CAD, A11y, Performance)
-  - Known bugs registry & regression prevention
-
-📍 **HOW-TO GUIDE**:
-- 📖 **[__tests__/TESTING_GUIDE.md](./__tests__/TESTING_GUIDE.md)** - Practical workflows
-  - How to write tests (TDD workflow)
-  - Regression prevention workflow
-  - Bug history & fixes (Bug #7, #8)
-  - Quick commands & examples
-
-- 📍 **Κεντρικοποίηση 2025-10-04**:
-  - Integration test suite για Grips & Selection (25 tests)
-  - Custom DOM environment (jest-minimal-dom-environment.js)
-  - Property-based tests (coord transforms - 1000+ cases)
-  - Visual regression tests (Playwright - CAD precision)
-
-- 📍 **Πώς χρησιμοποιείς**:
-  ```bash
-  # Πριν κάνεις αλλαγή
-  npm test -- grips-selection
-
-  # Μετά την αλλαγή
-  npm test -- grips-selection
-
-  # Αν περνάει → ✅ Safe to commit!
-  # Αν σπάει → 🔥 Fix it before commit!
-  ```
-- 🎯 **ΑΠΟΤΕΛΕΣΜΑ**: Τέλος οι 4 μήνες debugging - Ξέρουμε ΑΜΕΣΑ τι σπάει!
-
 ---
 
 ## 🚨 ΠΡΙΝ ΓΡΑΨΕΙΣ ΚΩΔΙΚΑ
@@ -225,7 +185,6 @@
 | **Layer Colors** | `getLayerColor` | `config/color-config.ts` | DXF layer color assignment (hash-based) |
 | **Entity Rendering** | `PhaseManager` | `systems/phase-manager/PhaseManager.ts` | 3-phase rendering system (preview/normal/interactive) |
 | **Arc Rendering** | `drawCentralizedArc` | `rendering/entities/BaseEntityRenderer.ts` | Y-axis flip για DXF arcs |
-| **Testing** | `TEST_INFRASTRUCTURE.md` + `TESTING_GUIDE.md` | Root + `__tests__/` | Architecture & workflows, 113+ tests, regression prevention |
 
 ---
 
@@ -242,8 +201,6 @@
 - **...enable/disable snap** → `SnapContext` → [state-management.md](./docs/architecture/state-management.md#f-snapcontext-κεντρικο---2025-10-03)
 - **...υπολογίσω απόσταση** → `calculateDistance()` από `geometry-rendering-utils.ts`
 - **...υπολογίσω bounds center** → `getBoundsCenter()` από `systems/zoom/utils/bounds.ts`
-- **...γράψω test** → `TEST_INFRASTRUCTURE.md` (architecture) → `__tests__/TESTING_GUIDE.md` (how-to)
-- **...τρέξω tests** → `npm test -- grips-selection`
 
 ---
 
@@ -402,32 +359,5 @@ this.ctx.fillText(text, screenPos.x, screenPos.y);  // ✅ Χρησιμοποι�
 ---
 
 *Ημερομηνία δημιουργίας modular docs: 2025-10-03*
-*Τελευταία ενημέρωση: 2025-10-04 - Testing infrastructure, Layer colors, Arc flip, Text rendering fix*
+*Τελευταία ενημέρωση: 2025-10-04 - Layer colors, Arc flip, Text rendering fix*
 *Αρχείο υπενθύμισης κεντρικοποίησης - Μη διαγράψεις!*
-
----
-
-## 🧪 TESTING (2025-10-04)
-
-**ΣΗΜΑΝΤΙΚΟ**: Από σήμερα, **ΟΛΑ** τα features έχουν tests!
-
-### Διαβάστε:
-📖 **[__tests__/TESTING_GUIDE.md](./__tests__/TESTING_GUIDE.md)** - Πλήρης οδηγός
-
-### Quick Start:
-```bash
-# Τρέξε integration tests
-npm test -- grips-selection
-
-# Αποτέλεσμα που θέλουμε να βλέπουμε:
-# Test Suites: 1 passed
-# Tests:       12 passed
-# Time:        2.596 s
-```
-
-### Αρχή:
-> **Πριν από κάθε commit** → Τρέξε tests
-> **Αν σπάνε** → ΜΗΝ κάνεις commit
-> **Νέο bug** → Γράψε regression test
-
-**Τέλος οι 4 μήνες debugging!** 🚀

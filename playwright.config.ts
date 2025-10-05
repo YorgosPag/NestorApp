@@ -4,7 +4,7 @@ import { defineConfig, devices } from '@playwright/test';
  * @see https://playwright.dev/docs/test-configuration
  */
 export default defineConfig({
-  testDir: './e2e',
+  testDir: './src/subapps/dxf-viewer/__tests__/e2e',
   /* Run tests in files in parallel */
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
@@ -22,7 +22,7 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: 'http://localhost:3002',
+    baseURL: 'http://localhost:3001',
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'retain-on-failure',
@@ -80,8 +80,8 @@ export default defineConfig({
   /* Run your local dev server before starting the tests */
   webServer: {
     command: 'npm run dev:fast',
-    url: 'http://localhost:3002',
-    reuseExistingServer: true, // ✅ Use existing server (already running on 3002)
+    url: 'http://localhost:3001',
+    reuseExistingServer: true, // ✅ Use existing server (already running on 3001)
     timeout: 120 * 1000, // 2 minutes timeout for server startup
     stderr: 'pipe',
     stdout: 'pipe',

@@ -802,6 +802,7 @@ Check console for detailed metrics`;
         setSelectedEntityIds={handleEntitySelection}
         currentZoom={currentZoom}
         activeTool={activeTool}
+        onSceneImported={handleFileImportWithEncoding}
       />
 
       {/* ✅ PHASE 5: Main Content Section */}
