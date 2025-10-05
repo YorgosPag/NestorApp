@@ -63,6 +63,23 @@
    - Quick lookup by feature
    - "I want to..." guide
 
+### ✏️ **Features (Λειτουργικότητες):**
+
+1. **[docs/features/line-drawing/README.md](./docs/features/line-drawing/README.md)**
+   - Line Drawing System (Complete Documentation)
+   - Preview/Completion Phases (Προσχεδίαση/Ολοκλήρωση)
+   - Settings Integration (Γενικές/Ειδικές Ρυθμίσεις)
+   - Enterprise CAD Standard (AutoCAD/BricsCAD compatible)
+   - **Files:**
+     - [architecture.md](./docs/features/line-drawing/architecture.md) - Core architecture & dual canvas
+     - [coordinates-events.md](./docs/features/line-drawing/coordinates-events.md) - Coordinate systems & mouse events
+     - [rendering-dependencies.md](./docs/features/line-drawing/rendering-dependencies.md) - Rendering pipeline & bug fixes
+     - [status-report.md](./docs/features/line-drawing/status-report.md) - Current implementation status (13/14 components working)
+     - [root-cause.md](./docs/features/line-drawing/root-cause.md) - Why settings were never applied
+     - [lifecycle.md](./docs/features/line-drawing/lifecycle.md) - Preview/Completion lifecycle
+     - [implementation.md](./docs/features/line-drawing/implementation.md) - Exact code changes needed
+     - [testing.md](./docs/features/line-drawing/testing.md) - Test scenarios & enterprise checklist
+
 ---
 
 ## ✅ ΚΑΝΟΝΕΣ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗΣ
@@ -182,9 +199,6 @@
 | **Distance** | `calculateDistance` | `rendering/entities/shared/geometry-rendering-utils.ts` | Single source of truth για distance calculations |
 | **Bounds Utilities** | `getBoundsCenter` | `systems/zoom/utils/bounds.ts` | Κεντρικό bounds utilities |
 | **Transform Constants** | `TRANSFORM_CONFIG` | `config/transform-config.ts` | All transform/zoom/pan constants centralized |
-| **Layer Colors** | `getLayerColor` | `config/color-config.ts` | DXF layer color assignment (hash-based) |
-| **Entity Rendering** | `PhaseManager` | `systems/phase-manager/PhaseManager.ts` | 3-phase rendering system (preview/normal/interactive) |
-| **Arc Rendering** | `drawCentralizedArc` | `rendering/entities/BaseEntityRenderer.ts` | Y-axis flip για DXF arcs |
 
 ---
 
@@ -283,81 +297,6 @@ src/subapps/dxf-viewer/
 
 ---
 
-## 🔧 CRITICAL FIXES (2025-10-04)
-
-### 🎨 **Layer Colors Fix**
-**Πρόβλημα**: DXF entities εμφανίζονταν ΟΛΕΣ λευκές, αγνοούσαν τα layer colors
-
-**Root Cause**:
-1. Entities δεν είχαν `color` property → **Fixed in**: `dxf-scene-builder.ts`
-2. PhaseManager αγνοούσε το `entity.color` → **Fixed in**: `PhaseManager.ts`
-
-**Λύση**:
-- `DxfSceneBuilder`: Προσθήκη layer color σε κάθε entity κατά την δημιουργία
-- `PhaseManager`: Χρήση `entity.color` για normal phase rendering
-
-**Files Changed**:
-- `utils/dxf-scene-builder.ts` (lines 31-41)
-- `systems/phase-manager/PhaseManager.ts` (lines 154-161)
-
-### 🔄 **Arc Y-Axis Flip Fix**
-**Πρόβλημα**: Τα τεταρτημόρια πορτών ήταν ανάποδα
-
-**Root Cause**: DXF coordinate system (Y πάνω) vs Canvas (Y κάτω)
-
-**Λύση**: Αντιστροφή γωνιών για canvas rendering
-```typescript
-const canvasStartAngle = -startAngle;  // Flip Y-axis
-const canvasEndAngle = -endAngle;
-```
-
-**Files Changed**:
-- `rendering/entities/BaseEntityRenderer.ts` (lines 467-476)
-
-### 🗑️ **Cleanup: Unused Rendering System**
-**Διαγραφή**: ~800 γραμμές διπλότυπου/unused code
-
-**Deleted**:
-- `rendering/passes/EntityPass.ts` (438 lines)
-- `rendering/passes/BackgroundPass.ts`
-- `rendering/passes/OverlayPass.ts`
-- `rendering/passes/index.ts`
-- `rendering/core/RenderPipeline.ts` (~300 lines)
-
-**Αιτιολογία**: Experimental code που ΠΟΤΕ δεν χρησιμοποιήθηκε. Το actual rendering χρησιμοποιεί:
-`DxfRenderer` → `EntityRendererComposite` → `BaseEntityRenderer` → `PhaseManager`
-
-### 📝 **Text Rendering Fix (2025-10-04)**
-**Πρόβλημα**: Τα κείμενα από DXF εμφανίζονταν **πολύ μικρά** (4 μήνες debugging!)
-
-**Root Cause**: `renderStyledTextWithOverride()` αγνοούσε το DXF entity height
-- TextRenderer υπολόγιζε σωστά `screenHeight = height * scale`
-- **ΑΛΛΑ** το `renderStyledTextWithOverride()` χρησιμοποιούσε `textStyleStore.fontSize` (default 12px)
-- Αποτέλεσμα: DXF text heights (0.132 units) → ΑΓΝΟΟΥΝΤΑΝ!
-
-**Λύση**: Άμεση χρήση `ctx.fillText()` με το DXF entity height
-```typescript
-// ΠΡΙΝ (ΛΑΘΟΣ):
-this.ctx.font = `${screenHeight}px Arial`;
-renderStyledTextWithOverride(this.ctx, text, x, y);  // ΑΓΝΟΟΥΣΕ το font!
-
-// ΤΩΡΑ (ΣΩΣΤΟ):
-this.ctx.font = `${screenHeight}px Arial`;
-this.ctx.fillText(text, screenPos.x, screenPos.y);  // ✅ Χρησιμοποιεί DXF height!
-```
-
-**Files Changed**:
-- `rendering/entities/TextRenderer.ts` (lines 34-63)
-
-**Console Log Evidence**:
-```
-📝 TEXT: "www.pagonis.com.gr", height=0.10575, scale=50.00, screenHeight=5.3px  ← ΠΟΛΥ ΜΙΚΡΟ!
-```
-
-**Αποτέλεσμα**: Τα κείμενα τώρα εμφανίζονται με το **σωστό μέγεθος** από το DXF! ✅
-
----
-
 *Ημερομηνία δημιουργίας modular docs: 2025-10-03*
-*Τελευταία ενημέρωση: 2025-10-04 - Layer colors, Arc flip, Text rendering fix*
+*Τελευταία ενημέρωση: 2025-10-03 - Geometry utilities centralization*
 *Αρχείο υπενθύμισης κεντρικοποίησης - Μη διαγράψεις!*
