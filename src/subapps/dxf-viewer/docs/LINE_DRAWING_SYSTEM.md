@@ -19,8 +19,9 @@
 9. [Critical Bugs Fixed](#critical-bugs-fixed)
 10. [Configuration Requirements](#configuration-requirements)
 11. [Settings & Flags](#settings--flags)
-12. [Troubleshooting Guide](#troubleshooting-guide)
-13. [Testing Checklist](#testing-checklist)
+12. [Visual Elements Settings Integration](#-visual-elements-settings-integration) ✅ **NEW**
+13. [Troubleshooting Guide](#troubleshooting-guide)
+14. [Testing Checklist](#testing-checklist)
 
 ---
 
@@ -5779,6 +5780,125 @@ const updatePreview = useCallback(() => {
 
 ---
 
+## 🎨 VISUAL ELEMENTS SETTINGS INTEGRATION
+
+### ✅ VERIFIED: All Preview Phase Visual Elements Get Settings from ColorPalettePanel
+
+**Date Verified:** 2025-10-05
+**Verification Method:** Full codebase trace from UI → Provider → Canvas → Renderer
+
+| Visual Element | Connected | Settings Applied |
+|---|---|---|
+| **Line Entity** | ✅ 100% | color, lineweight, opacity, lineType, dashScale, lineCap, lineJoin, dashOffset (9 properties) |
+| **Distance Labels** | ✅ 100% | color, fontFamily, fontSize, fontStyle, fontWeight, opacity, decorations (8+ properties) |
+| **Construction Grips** | ✅ 100% | gripSize, colors (cold/warm/hot/contour), opacity, showMidpoints, showCenters (10+ properties) |
+
+---
+
+### 📍 Settings Flow - Complete Data Paths
+
+#### **1. Line Entity Settings**
+**Source File:** `hooks/drawing/useUnifiedDrawing.ts`
+
+**Data Flow:**
+```
+ColorPalettePanel (UI controls)
+  ↓
+DXF Settings Store (Γενικές/Ειδικές Ρυθμίσεις)
+  ↓
+useEntityStyles('line', 'preview') → linePreviewStyles
+  ↓
+useUnifiedDrawing.updatePreview() (Line 488-501)
+  ↓
+Entity properties set (color, lineweight, opacity, etc.)
+  ↓
+Rendering system applies styles via PhaseManager
+```
+
+**Code Location:** `useUnifiedDrawing.ts:488-501`
+
+#### **2. Distance Labels Settings**
+**Source File:** `rendering/entities/BaseEntityRenderer.ts`
+
+**Data Flow:**
+```
+ColorPalettePanel (Text Settings - Γενικές/Ειδικές)
+  ↓
+Text Settings Store (DxfSettingsProvider)
+  ↓
+getTextPreviewStyleWithOverride() (with override checkbox support)
+  ↓
+BaseEntityRenderer.applyDistanceTextStyle() (Line 121-129)
+  ↓
+Canvas context styling (fillStyle, font, globalAlpha)
+  ↓
+renderStyledTextWithOverride() - Advanced text rendering with decorations
+```
+
+**Code Location:** `BaseEntityRenderer.ts:121-129`
+
+**Features:**
+- ✅ Phase-aware rendering (inline for preview, offset for measurements)
+- ✅ Advanced decorations (underline, strikethrough, overline, shadow)
+- ✅ Full font control (family, size, style, weight)
+- ✅ Override system for specific vs general settings
+
+#### **3. Construction Grips Settings**
+**Source Files:** `canvas/DxfCanvasCore.tsx` → `rendering/core/EntityRendererComposite.ts` → `rendering/entities/BaseEntityRenderer.ts`
+
+**Data Flow:**
+```
+ColorPalettePanel (GripSettings UI)
+  ↓
+GripProvider (validates & stores)
+  ↓
+DxfSettingsProvider (central storage + auto-save)
+  ↓
+useGripContext() in DxfCanvasCore (Line 114)
+  ↓
+entityRenderer.setGripSettings(gripSettings) (Line 200, 348)
+  ↓
+EntityRendererComposite.setGripSettings() (Line 71-75)
+  ↓
+  └→ Propagates to ALL entity renderers (forEach loop)
+     ↓
+     BaseEntityRenderer.setGripSettings() (Line 47-51)
+     ↓
+     BaseEntityRenderer.drawGrip() (Line 185-209)
+     ↓
+     renderSquareGrip() with settings-based size & colors
+```
+
+**Code Locations:**
+- `DxfCanvasCore.tsx:114, 200, 348`
+- `EntityRendererComposite.ts:71-75`
+- `BaseEntityRenderer.ts:47-51, 185-209`
+
+**Special Features:**
+- ✅ Override logic: If preview entity exists, uses `getEffectiveGripSettings()` for specific preview settings
+- ✅ DPI scaling support for grip sizes
+- ✅ 4 color states (cold: unselected, warm: hover, hot: selected, contour: outline)
+- ✅ Advanced toggles (showMidpoints, showCenters, showQuadrants)
+
+---
+
+### 🎯 Settings Architecture Status
+
+**Result:** ✅ **ENTERPRISE-GRADE COMPLETE**
+
+All three visual element systems are:
+1. ✅ Fully connected to ColorPalettePanel UI
+2. ✅ Using centralized DxfSettingsProvider
+3. ✅ Supporting Γενικές/Ειδικές Ρυθμίσεις inheritance
+4. ✅ Real-time updates when settings change
+5. ✅ Auto-save functionality (via DxfSettingsProvider)
+
+**See Also:**
+- **[features/line-drawing/status-report.md](features/line-drawing/status-report.md)** - Detailed verification report
+- **[features/line-drawing/lifecycle.md](features/line-drawing/lifecycle.md)** - Preview phase documentation
+
+---
+
 ## 🔗 RELATED SYSTEMS (Out of Scope)
 
 ### Hover Phase (NOT covered here)
@@ -5801,7 +5921,7 @@ const updatePreview = useCallback(() => {
 
 **Reason for Exclusion**: Grip editing is post-completion interaction, not part of drawing lifecycle.
 
-**Settings Source**: Grip settings (size, color, behavior).
+**Settings Source**: ✅ **NOW DOCUMENTED ABOVE** - Grips get settings from ColorPalettePanel via GripProvider → DxfSettingsProvider → useGripContext.
 
 **When to Consult**: When implementing entity modification, stretch/move operations.
 

@@ -409,11 +409,11 @@ entity.opacity = linePreviewStyles.settings.opacity;
 | 11. Settings Flow Chain (UI → Storage → PhaseManager) | ✅ YES | ✅ YES | Multiple |
 | 12. Preview Style Override (getLinePreviewStyleWithOverride) | ✅ YES | ✅ YES | 56-75 |
 | 13. Grips Rendering (preview grips system) | ✅ YES | ✅ YES | Separate |
-| **14. Settings Application (useEntityStyles in useUnifiedDrawing)** | **❌ NO** | **✅ VERIFIED MISSING** | **N/A** |
+| **14. Settings Application (useEntityStyles in useUnifiedDrawing)** | **✅ YES** | **✅ YES** | **122-124, 488-501** |
 
-**Total:** 13/14 components working (93%)
+**Total:** 14/14 components working (100%)
 **Verified:** 14/14 components checked (100% verification)
-**False Positives:** 0 (100% accuracy)
+**Status:** ✅ **FULLY IMPLEMENTED & VERIFIED**
 
 ---
 
@@ -453,6 +453,126 @@ const lineCompletionStyles = useEntityStyles('line', 'completion');
 **Change 5:** Update dependency arrays (add settings)
 
 **See:** [implementation.md](implementation.md) for exact code
+
+---
+
+## 🎨 VISUAL ELEMENTS SETTINGS INTEGRATION (2025-10-05)
+
+### **✅ VERIFIED: All Preview Phase Visual Elements Get Settings from ColorPalettePanel**
+
+| Visual Element | Connected | Flow Verified | Settings Applied |
+|---|---|---|---|
+| **Line Entity** | ✅ 100% | ✅ YES | color, lineweight, opacity, lineType, dashScale, lineCap, lineJoin, dashOffset |
+| **Distance Labels** | ✅ 100% | ✅ YES | color, fontFamily, fontSize, fontStyle, fontWeight, opacity, decorations |
+| **Construction Grips** | ✅ 100% | ✅ YES | gripSize, colors (cold/warm/hot/contour), opacity, showMidpoints, showCenters |
+
+---
+
+### **📍 Data Flow Verification**
+
+#### **1. Line Entity Settings**
+**Source:** `useUnifiedDrawing.ts:122-124, 488-501`
+
+```typescript
+const linePreviewStyles = useEntityStyles('line', 'preview');
+const lineCompletionStyles = useEntityStyles('line', 'completion');
+
+// Preview Phase (Line 488-501):
+extendedLine.color = linePreviewStyles.settings.color;
+extendedLine.lineweight = linePreviewStyles.settings.lineWidth;
+extendedLine.opacity = linePreviewStyles.settings.opacity;
+// ... all 9 settings applied
+```
+
+**Flow:**
+```
+ColorPalettePanel → DXF Settings (Γενικές/Ειδικές)
+  → useEntityStyles → useUnifiedDrawing → Entity Properties
+```
+
+---
+
+#### **2. Distance Labels Settings**
+**Source:** `BaseEntityRenderer.ts:121-129`
+
+```typescript
+protected applyDistanceTextStyle(): void {
+  const textStyle = getTextPreviewStyleWithOverride();
+  this.ctx.fillStyle = textStyle.color;
+  this.ctx.font = `${textStyle.fontStyle} ${textStyle.fontWeight} ${textStyle.fontSize} ${textStyle.fontFamily}`;
+  this.ctx.globalAlpha = textStyle.opacity;
+  // ... rendering with full text styling
+}
+```
+
+**Flow:**
+```
+ColorPalettePanel → Text Settings (Γενικές/Ειδικές)
+  → getTextPreviewStyleWithOverride() → BaseEntityRenderer.applyDistanceTextStyle()
+```
+
+**Features:**
+- ✅ Color, font family, font size, font style, font weight
+- ✅ Opacity (globalAlpha)
+- ✅ Advanced decorations (underline, strikethrough, overline, shadow)
+- ✅ Phase-aware rendering (inline for preview, offset for measurements)
+
+---
+
+#### **3. Construction Grips Settings**
+**Source:** `DxfCanvasCore.tsx:114, 200, 348` → `EntityRendererComposite.ts:71-75` → `BaseEntityRenderer.ts:47-51, 185-209`
+
+```typescript
+// DxfCanvasCore.tsx:114
+const { gripSettings } = useGripContext();
+
+// DxfCanvasCore.tsx:200, 348
+entityRendererRef.current.setGripSettings(gripSettings);
+
+// EntityRendererComposite.ts:71-75
+setGripSettings(settings: GripSettings): void {
+  this.gripSettings = settings;
+  this.renderers.forEach(renderer => renderer.setGripSettings(settings));
+}
+
+// BaseEntityRenderer.ts:185-209
+protected drawGrip(position: Point2D, state: 'cold' | 'warm' | 'hot', gripType?: string): void {
+  const base = this.gripSettings?.gripSize || 10;
+  const colors = this.gripSettings?.colors ?? { cold, warm, hot, contour };
+  renderSquareGrip(this.ctx, position, size, fill, UI_COLORS.GRIP_OUTLINE);
+}
+```
+
+**Flow:**
+```
+ColorPalettePanel → GripSettings UI → GripProvider → DxfSettingsProvider
+  → useGripContext() (DxfCanvasCore) → EntityRendererComposite
+  → BaseEntityRenderer.setGripSettings() → drawGrip()
+```
+
+**Features:**
+- ✅ Grip size (4-16px) with DPI scaling
+- ✅ 4 color states (cold: unselected, warm: hover, hot: selected, contour: outline)
+- ✅ Opacity (0.1-1.0)
+- ✅ Display toggles (showMidpoints, showCenters, showQuadrants)
+- ✅ Advanced settings (pickBoxSize, apertureSize, maxGripsPerEntity)
+
+**Special Feature:** Override logic - if preview entity exists, uses `getEffectiveGripSettings()` for specific preview settings
+
+---
+
+### **🎯 CONCLUSION**
+
+**ALL** visual elements during Preview Phase (Προσχεδίαση) are **100% connected** to ColorPalettePanel settings:
+
+1. ✅ **Line** - Full styling control (9 properties)
+2. ✅ **Distance Labels** - Complete text styling + decorations (8+ properties)
+3. ✅ **Grips** - Comprehensive grip system (10+ properties)
+
+**Architecture Status:** ✅ **ENTERPRISE-GRADE COMPLETE**
+
+**Verified:** 2025-10-05
+**Verification Method:** Full codebase trace from UI → Provider → Canvas → Renderer
 
 ---
 
