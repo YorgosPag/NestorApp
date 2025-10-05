@@ -8,15 +8,14 @@ import { UserMenu } from "@/components/header/user-menu"
 import { LanguageSwitcher } from "@/components/header/language-switcher"
 import { NotificationBell } from "@/components/NotificationBell.enterprise"
 import { NotificationDrawer } from "@/components/NotificationDrawer.enterprise"
-import { useNotificationStream } from "@/hooks/useNotificationStream"
+import { useFirestoreNotifications } from "@/hooks/useFirestoreNotifications"
 
 export function AppHeader() {
-  // ✅ ENTERPRISE: Initialize notification stream (initial fetch + WebSocket/SSE)
-  useNotificationStream({
-    baseUrl: '/api/notifications',
-    // wsUrl: 'wss://example.com/ws', // TODO: Configure production WS URL
-    // sseUrl: '/api/notifications/stream', // TODO: Configure SSE endpoint
-    pageSize: 50
+  // ✅ FIRESTORE: Real-time notifications με onSnapshot
+  // User ID από UserRoleContext (auto-login: user@example.com)
+  useFirestoreNotifications({
+    userId: 'user@example.com',
+    enabled: true
   });
 
   return (
