@@ -34,6 +34,7 @@ interface CentralizedMouseHandlersProps {
   colorLayers?: ColorLayer[];
   onLayerSelected?: (layerId: string, position: Point2D) => void;
   canvasRef?: React.RefObject<HTMLCanvasElement>; // ✅ ADD: Canvas reference για getBoundingClientRect
+  onCanvasClick?: (point: Point2D) => void; // 🎯 DRAWING TOOLS: Click handler for drawing entities
 }
 
 /**
@@ -52,7 +53,8 @@ export function useCentralizedMouseHandlers({
   hitTestCallback,
   colorLayers,
   onLayerSelected,
-  canvasRef
+  canvasRef,
+  onCanvasClick
 }: CentralizedMouseHandlersProps) {
   const cursor = useCursor();
 
@@ -317,6 +319,13 @@ export function useCentralizedMouseHandlers({
     // ✅ UPDATE CENTRALIZED STATE
     cursor.setMouseDown(false);
 
+    console.log('🔥 handleMouseUp CALLED!', {
+      cursorPosition: cursor.position,
+      isSelecting: cursor.isSelecting,
+      isPanning: panStateRef.current.isPanning,
+      activeTool
+    });
+
     // 🚀 CLEANUP PAN STATE for high-performance panning
     const panState = panStateRef.current;
     if (panState.isPanning) {
@@ -339,6 +348,12 @@ export function useCentralizedMouseHandlers({
         cancelAnimationFrame(panState.animationId);
         panState.animationId = null;
       }
+    }
+
+    // 🎯 DRAWING TOOLS: Call onCanvasClick if provided (for drawing tools like Line, Circle, etc.)
+    if (onCanvasClick && !cursor.isSelecting && !panState.isPanning && cursor.position) {
+      console.log('✅ Calling onCanvasClick with:', cursor.position);
+      onCanvasClick(cursor.position);
     }
 
     // 🎯 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΟ MARQUEE SELECTION - Χρήση UniversalMarqueeSelector
@@ -387,7 +402,7 @@ export function useCentralizedMouseHandlers({
     } else {
       // Selection debug disabled for performance
     }
-  }, [cursor, onTransformChange, viewport, hitTestCallback, scene, transform, onEntitySelect, colorLayers, onLayerSelected, canvasRef]);
+  }, [cursor, onTransformChange, viewport, hitTestCallback, scene, transform, onEntitySelect, colorLayers, onLayerSelected, canvasRef, onCanvasClick, activeTool]);
 
   // 🚀 MOUSE LEAVE HANDLER - CAD-style area detection with pan cleanup
   const handleMouseLeave = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
