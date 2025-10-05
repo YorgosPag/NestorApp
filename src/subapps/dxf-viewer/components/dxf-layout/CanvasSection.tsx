@@ -10,8 +10,6 @@ import type { CrosshairSettings } from '../../rendering/ui/crosshair/CrosshairTy
 import type { CursorSettings } from '../../systems/cursor/config';
 import { useCanvasOperations } from '../../hooks/interfaces/useCanvasOperations';
 import { useCanvasContext } from '../../contexts/CanvasContext';
-// ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Import drawing handlers για polygon/polyline drawing
-import { useDrawingHandlers } from '../../hooks/drawing/useDrawingHandlers';
 // CanvasProvider removed - not needed for Canvas V2
 // OverlayCanvas import removed - it was dead code
 import { FloatingPanelContainer } from '../../ui/FloatingPanelContainer';
@@ -28,7 +26,6 @@ import { getStatusColors } from '../../config/color-mapping';
 import { createOverlayHandlers } from '../../overlays/types';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 import type { ViewTransform, Point2D } from '../../rendering/types/Types';
-import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { useZoom } from '../../systems/zoom';
 // ✅ ENTERPRISE MIGRATION: Using ServiceRegistry
 import { serviceRegistry } from '../../services';
@@ -78,21 +75,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       canvasContext.setZoomManager(zoomSystem.zoomManager);
     }
   }, [zoomSystem.zoomManager, canvasContext]);
-
-  // 🎯 ENTITY SELECTION: Wrapper που μετατρέπει single entityId σε array και ενημερώνει Context + Props
-  const handleEntitySelect = React.useCallback((entityId: string | null) => {
-    const selectedIds = entityId ? [entityId] : [];
-
-    // ✅ FIX: Update Context για grips rendering
-    if (canvasContext) {
-      canvasContext.setSelectedEntityIds(selectedIds);
-    }
-
-    // ✅ FIX: Update Props callback (από DXFViewerLayoutProps)
-    if (props.setSelectedEntityIds) {
-      props.setSelectedEntityIds(selectedIds);
-    }
-  }, [canvasContext, props.setSelectedEntityIds]);
 
   // ✅ CENTRALIZED VIEWPORT: Update viewport από canvas dimensions
   React.useEffect(() => {
@@ -229,64 +211,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     currentKind = 'unit',
     ...restProps
   } = props;
-
-  // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Drawing handlers για polygon/polyline drawing
-  const drawingHandlers = useDrawingHandlers(
-    activeTool,
-    (entity) => {
-      // Callback when entity is created via drawing
-      console.log('🎨 Entity created via drawing:', entity);
-      // Add entity to scene via handleSceneChange
-      if (props.handleSceneChange && props.currentScene) {
-        const updatedScene = {
-          ...props.currentScene,
-          entities: [...(props.currentScene.entities || []), entity]
-        };
-        props.handleSceneChange(updatedScene);
-      }
-    },
-    (tool) => {
-      // Callback when tool changes via drawing system
-      if (props.onToolChange) {
-        props.onToolChange(tool);
-      }
-    },
-    props.currentScene
-  );
-
-  // 🔥 FIX: Auto-start drawing when a drawing tool is selected
-  // ⚠️ USE useRef to avoid infinite loop (drawingHandlers changes every render)
-  const drawingHandlersRef = React.useRef(drawingHandlers);
-  React.useEffect(() => {
-    drawingHandlersRef.current = drawingHandlers;
-  }, [drawingHandlers]);
-
-  React.useEffect(() => {
-    const isDrawingTool = activeTool === 'line' || activeTool === 'polyline' || activeTool === 'polygon'
-      || activeTool === 'rectangle' || activeTool === 'circle' || activeTool === 'arc';
-
-    if (isDrawingTool && drawingHandlersRef.current?.startDrawing) {
-      console.log('🎨 Auto-starting drawing for tool:', activeTool);
-      // Map ToolType to DrawingTool
-      const drawingToolMap: Record<string, any> = {
-        'line': 'line',
-        'polyline': 'polyline',
-        'polygon': 'polygon',
-        'rectangle': 'rectangle',
-        'circle': 'circle',
-        'arc': 'arc'
-      };
-      const drawingTool = drawingToolMap[activeTool];
-      if (drawingTool) {
-        drawingHandlersRef.current.startDrawing(drawingTool);
-      }
-    }
-  }, [activeTool]); // ✅ ONLY activeTool - no drawingHandlers!
-
-  // ❌ REMOVED: useUnifiedOverlayCreation instance here causes duplicate instances
-  // The OverlayToolbar already has its own instance that calls startPolygon
-  // We cannot have two separate instances as they don't share state
-  // Instead, we use the legacy draftPolygon state for overlay mode
 
   // ✅ LAYER VISIBILITY: Show LayerCanvas controlled by debug toggle
   const showLayerCanvas = showLayerCanvasDebug; // Debug toggleable
@@ -570,62 +494,14 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   };
 
   const handleCanvasClick = (point: Point2D) => {
-    console.log('🔍 Canvas Click:', {
-      overlayMode,
-      activeTool,
-      point,
-      transform,
-      draftPolygonLength: draftPolygon.length
-    });
+    // console.log('🔍 Canvas Click:', {
+    //   overlayMode,
+    //   point,
+    //   transform,
+    //   draftPolygonLength: draftPolygon.length
+    // });
 
-    // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Route click to unified drawing system for drawing tools
-    // NOTE: For overlay mode, we use the EXISTING useUnifiedOverlayCreation system
-    // which has its own instance of useUnifiedDrawing with overlay-specific callbacks
-    const isDrawingTool = activeTool === 'line' || activeTool === 'polyline' || activeTool === 'polygon'
-      || activeTool === 'rectangle' || activeTool === 'circle' || activeTool === 'arc';
-
-    if (isDrawingTool && drawingHandlersRef.current) {
-      // ✅ UNIFIED DRAWING ENGINE: Route click to centralized drawing system
-      console.log('🎨 Routing click to unified drawing system (drawing tool):', {
-        activeTool,
-        point
-      });
-
-      // 🔥 FIX: Use ONLY dxfCanvasRef for drawing tools (NOT overlayCanvasRef!)
-      // Drawing tools (Line/Circle/Rectangle) draw on DxfCanvas
-      // Color layers draw on LayerCanvas (overlayCanvasRef)
-      const canvasElement = dxfCanvasRef.current?.getCanvas();
-      if (!canvasElement) {
-        console.error('❌ DXF Canvas element not found - cannot draw!');
-        return;
-      }
-
-      const viewport = { width: canvasElement.clientWidth, height: canvasElement.clientHeight };
-      console.log('🔥 VIEWPORT:', {
-        canvasClientWidth: canvasElement.clientWidth,
-        canvasClientHeight: canvasElement.clientHeight,
-        viewport,
-        viewportWidth: viewport.width,
-        viewportHeight: viewport.height
-      });
-      console.log('🔥 screenToWorld INPUT:', { point, transform, viewport });
-      const worldPoint = CoordinateTransforms.screenToWorld(point, transform, viewport);
-      console.log('🔥 screenToWorld OUTPUT:', { worldPoint });
-
-      console.log('🔥 About to call onDrawingPoint:', { worldPoint, drawingHandlers: !!drawingHandlersRef.current, onDrawingPoint: !!drawingHandlersRef.current?.onDrawingPoint });
-      // Call the centralized drawing handler - USE REF!
-      drawingHandlersRef.current.onDrawingPoint(worldPoint);
-      console.log('✅ onDrawingPoint called successfully');
-      return;
-    }
-
-    // ✅ OVERLAY MODE: Use legacy overlay system with draftPolygon
-    // NOTE: The OverlayToolbar calls startPolygon from useUnifiedOverlayCreation
-    // But we cannot use the same instance here (separate React hooks = separate state)
-    // So we keep using the legacy draftPolygon state for now
     if (overlayMode === 'draw') {
-      console.log('🎨 Legacy overlay mode - using draftPolygon:', { overlayMode, point });
-
       // 🔧 Use UNIFIED CoordinateTransforms για consistency
       const canvas = dxfCanvasRef.current || overlayCanvasRef.current;
       if (!canvas) return;
@@ -634,19 +510,19 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       const worldPoint = CoordinateTransforms.screenToWorld(point, transform, viewport);
       const worldPointArray: [number, number] = [worldPoint.x, worldPoint.y];
 
-      console.log('🎨 Adding point to draftPolygon:', {
-        screenPoint: point,
-        worldPoint,
-        currentDraftLength: draftPolygon.length
-      });
+      // console.log('🔍 Adding point to draft polygon:', {
+      //   screenPoint: point,
+      //   worldPoint,
+      //   currentDraftLength: draftPolygon.length
+      // });
 
       setDraftPolygon(prev => {
         const newPolygon = [...prev, worldPointArray];
-        console.log('🎨 Draft polygon updated:', {
-          oldLength: prev.length,
-          newLength: newPolygon.length,
-          newPolygon: newPolygon.slice(0, 3) // First 3 points
-        });
+        // console.log('🔍 Draft polygon updated:', {
+        //   oldLength: prev.length,
+        //   newLength: newPolygon.length,
+        //   newPolygon: newPolygon.slice(0, 3) // First 3 points
+        // });
         return newPolygon;
       });
 
@@ -658,24 +534,23 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
           { x: firstPoint[0], y: firstPoint[1] }
         );
 
-        console.log('🎨 Checking polygon close:', {
-          distance,
-          threshold: 20 / transform.scale,
-          shouldClose: distance < (20 / transform.scale)
-        });
+        // console.log('🔍 Checking polygon close:', {
+        //   distance,
+        //   threshold: 20 / transform.scale,
+        //   shouldClose: distance < (20 / transform.scale)
+        // });
 
         if (distance < (20 / transform.scale)) { // Close threshold adjusted for scale
-          console.log('🎨 Closing polygon - finishing drawing');
+          // console.log('🔍 Closing polygon - finishing drawing');
           finishDrawing();
           return;
         }
       }
-      return;
+    } else {
+      // Clicked on empty space - deselect
+      // console.log('🔍 Deselecting overlay (clicked empty space)');
+      handleOverlaySelect(null);
     }
-
-    // Clicked on empty space - deselect
-    console.log('🔍 Deselecting overlay (clicked empty space)');
-    handleOverlaySelect(null);
   };
 
   const finishDrawing = async () => {
@@ -735,25 +610,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     return () => document.removeEventListener('canvas-fit-to-view', handleFitToView as EventListener);
   }, [dxfScene, colorLayers, zoomSystem]); // 🚀 Include colorLayers για combined bounds
 
-  // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Handle double-click for polygon/polyline finish
-  React.useEffect(() => {
-    const handleDoubleClick = (e: MouseEvent) => {
-      // Only handle if we're in a drawing tool
-      const isDrawingTool = activeTool === 'line' || activeTool === 'polyline' || activeTool === 'polygon'
-        || activeTool === 'rectangle' || activeTool === 'circle' || activeTool === 'arc';
-
-      if (isDrawingTool && drawingHandlers?.onDrawingDoubleClick) {
-        console.log('🎨 Double-click detected - finishing drawing');
-        e.preventDefault();
-        e.stopPropagation();
-        drawingHandlersRef.current?.onDrawingDoubleClick();
-      }
-    };
-
-    window.addEventListener('dblclick', handleDoubleClick);
-    return () => window.removeEventListener('dblclick', handleDoubleClick);
-  }, [activeTool]); // 🔥 FIX: Remove drawingHandlers from deps, use ref instead
-
   // Handle keyboard shortcuts for drawing and zoom
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -769,18 +625,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       switch (e.key) {
         case 'Escape':
           setDraftPolygon([]);
-          // ✅ UNIFIED DRAWING: Also cancel via centralized system
-          if (drawingHandlersRef.current?.onDrawingCancel) {
-            drawingHandlersRef.current.onDrawingCancel();
-          }
           break;
         case 'Enter':
           if (draftPolygon.length >= 3) {
             finishDrawing();
-          }
-          // ✅ UNIFIED DRAWING: Also finish via centralized system
-          if (drawingHandlersRef.current?.onDrawingDoubleClick) {
-            drawingHandlersRef.current.onDrawingDoubleClick();
           }
           break;
       }
@@ -788,7 +636,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [draftPolygon, finishDrawing, drawingHandlers]);
+  }, [draftPolygon, finishDrawing]);
 
   // 🎯 CANVAS ALIGNMENT TEST: Auto-test when layering is activated
   React.useEffect(() => {
@@ -881,7 +729,11 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
               className="absolute inset-0 w-full h-full"
               style={{
                 touchAction: 'none', // 🔥 QUICK WIN #1: Prevent browser touch gestures
-                pointerEvents: (activeTool === 'line' || activeTool === 'polyline' || activeTool === 'polygon' || activeTool === 'rectangle' || activeTool === 'circle' || activeTool === 'arc') ? 'none' : 'auto' // 🔥 FIX: Disable clicks on LayerCanvas for drawing tools
+                pointerEvents: (activeTool === 'line' || activeTool === 'polyline' ||
+                                activeTool === 'polygon' || activeTool === 'circle' ||
+                                activeTool === 'rectangle')
+                                ? 'none'  // 🎯 CRITICAL: Disable clicks for drawing tools (let DxfCanvas handle)
+                                : 'auto'  // Enable clicks for selection/other modes
               }}
             />
           )}
@@ -897,7 +749,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
               colorLayers={colorLayers} // ✅ FIX: Pass color layers για fit to view bounds
               crosshairSettings={crosshairSettings} // ✅ CONNECT TO EXISTING CURSOR SYSTEM
               gridSettings={gridSettings} // ✅ FIX: Enable grid rendering in DxfCanvas
-              onEntitySelect={handleEntitySelect} // 🎯 FIX: Connect entity selection from canvas clicks
               rulerSettings={{
                 enabled: globalRulerSettings.horizontal.enabled && globalRulerSettings.vertical.enabled,
                 visible: true,
@@ -926,7 +777,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
                 borderWidth: 1
               }}
               data-canvas-type="dxf" // 🎯 DEBUG: Identifier για alignment test
-              className="z-0" // 🎯 Z-INDEX: DxfCanvas κάτω
+              className="absolute inset-0 w-full h-full z-0" // 🎯 Z-INDEX: DxfCanvas κάτω (z-0)
               onTransformChange={(newTransform) => {
                 setTransform(newTransform); // ✅ SYNC: Κοινό transform state για DxfCanvas
                 zoomSystem.setTransform(newTransform);
@@ -938,12 +789,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
                   props.onMouseMove(screenPos);
                 }
               }}
-              onCanvasClick={handleCanvasClick} // 🔥 FIX: Connect canvas clicks για drawing tools!
-              className="absolute inset-0 w-full h-full"
               style={{
-                pointerEvents: activeTool === 'layering' ? 'none' : 'auto',
                 backgroundColor: 'transparent',
-                touchAction: 'none' // 🔥 QUICK WIN #1: Prevent browser touch gestures
+                touchAction: 'none', // 🔥 QUICK WIN #1: Prevent browser touch gestures
+                pointerEvents: 'auto' // ✅ ALWAYS enable for DxfCanvas (drawing canvas)
               }}
               onLoad={() => {
                 // DXF Canvas loaded - debug disabled for performance
