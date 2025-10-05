@@ -72,13 +72,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
   // 🏢 ENTERPRISE: Provide zoom system to context
   const canvasContext = useCanvasContext();
-  React.useEffect(() => {
-    // Set the zoom manager in context when it's initialized
-    if (canvasContext?.setZoomManager && zoomSystem.zoomManager) {
-      canvasContext.setZoomManager(zoomSystem.zoomManager);
-    }
-  }, [zoomSystem.zoomManager, canvasContext]);
-
   // ✅ CENTRALIZED VIEWPORT: Update viewport από canvas dimensions
   React.useEffect(() => {
     const updateViewport = () => {
@@ -148,6 +141,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // 🔺 CURSOR SYSTEM INTEGRATION - Σύνδεση με floating panel
   const crosshairSettings: CrosshairSettings = {
     enabled: cursorSettings.crosshair.enabled,
+    visible: cursorSettings.crosshair.enabled, // visible follows enabled state
     color: cursorSettings.crosshair.color,
     size: cursorSettings.crosshair.size_percent,
     opacity: cursorSettings.crosshair.opacity,
@@ -155,23 +149,14 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     // Extended properties από CursorSystem
     lineWidth: cursorSettings.crosshair.line_width,
     useCursorGap: cursorSettings.crosshair.use_cursor_gap,
-    centerGapPx: cursorSettings.crosshair.center_gap_px
+    centerGapPx: cursorSettings.crosshair.center_gap_px,
+    showCenterDot: true,  // Default: show center dot
+    centerDotSize: 2      // Default: 2px center dot
   };
 
-  // 🔺 CURSOR SETTINGS INTEGRATION - Σύνδεση cursor/pickbox με floating panel (ΑΥΤΟΝΟΜΕΣ ΡΥΘΜΙΣΕΙΣ)
-  const cursorCanvasSettings: CursorSettings = {
-    enabled: cursorSettings.cursor.enabled,
-    color: cursorSettings.cursor.color,
-    size: cursorSettings.cursor.size,
-    opacity: cursorSettings.cursor.opacity,
-    style: cursorSettings.cursor.line_style,
-    shape: cursorSettings.cursor.shape,
-    // 🔺 AUTONOMOUS CURSOR SETTINGS - Αυτόνομες ρυθμίσεις κέρσορα
-    lineWidth: cursorSettings.cursor.line_width,
-    fillEnabled: false,
-    fillColor: cursorSettings.cursor.color,
-    fillOpacity: cursorSettings.cursor.opacity
-  };
+  // 🔺 CURSOR SETTINGS INTEGRATION - Pass complete cursor settings to LayerCanvas
+  // LayerCanvas expects the full CursorSettings object from systems/cursor/config.ts
+  const cursorCanvasSettings: CursorSettings = cursorSettings;
 
   const snapSettings: SnapSettings = {
     enabled: true,
@@ -224,7 +209,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const gridSettings: GridSettings = {
     // Enabled state: ΠΡΩΤΑ από panel, μετά toolbar fallback
     enabled: gridContextSettings?.visual?.enabled ?? showGrid,
-    visible: gridContextSettings?.visual?.enabled ?? true,
+    visible: gridContextSettings?.visual?.enabled ?? true, // ✅ VISIBILITY: Controls grid rendering
 
     // ✅ SIZE: Από panel settings
     size: gridContextSettings?.visual?.step ?? 10,
@@ -244,12 +229,15 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
     // ✅ GRID STYLE: Από panel settings (lines/dots/crosses)
     style: gridContextSettings?.visual?.style ?? 'lines',
-    majorInterval: gridContextSettings?.visual?.subDivisions ?? 5,
+    majorInterval: gridContextSettings?.visual?.subDivisions ?? 5, // Extended property for grid subdivisions
     showMajorGrid: true,
     showMinorGrid: true,
     adaptiveOpacity: false, // ❌ DISABLE για να φαίνεται πάντα
     minVisibleSize: 0 // ✅ ALWAYS SHOW regardless of zoom
   };
+
+  // 🔧 Grid major interval for ruler tick calculations
+  const gridMajorInterval = gridContextSettings?.visual?.subDivisions ?? 5;
 
   // 🔺 SELECTION SETTINGS INTEGRATION - Σύνδεση selection boxes με floating panel
   const selectionSettings: SelectionSettings = {
@@ -347,7 +335,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       if (props.handleSceneChange && props.currentScene) {
         const updatedScene = {
           ...props.currentScene,
-          entities: [...(props.currentScene.entities || []), entity]
+          entities: [...(props.currentScene.entities || []), entity] as any // ✅ Type assertion for entity union compatibility
         };
         props.handleSceneChange(updatedScene);
       }
@@ -358,7 +346,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         props.onToolChange(tool);
       }
     },
-    props.currentScene
+    props.currentScene ?? undefined // ✅ Convert null to undefined for type compatibility
   );
 
   // === 🎯 DRAWING HANDLERS REF ===
@@ -373,7 +361,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   React.useEffect(() => {
     const isDrawingTool = activeTool === 'line' || activeTool === 'polyline' ||
                           activeTool === 'polygon' || activeTool === 'circle' ||
-                          activeTool === 'rectangle' || activeTool === 'arc';
+                          activeTool === 'rectangle'; // ✅ Removed 'arc' - not in ToolType union
     if (isDrawingTool && drawingHandlersRef.current?.startDrawing) {
       console.log('🎯 Auto-starting drawing for tool:', activeTool);
       drawingHandlersRef.current.startDrawing(activeTool as any);
@@ -549,7 +537,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
     // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Route click to unified drawing system for drawing tools
     const isDrawingTool = activeTool === 'line' || activeTool === 'polyline' || activeTool === 'polygon'
-      || activeTool === 'rectangle' || activeTool === 'circle' || activeTool === 'arc';
+      || activeTool === 'rectangle' || activeTool === 'circle'; // ✅ Removed 'arc' - not in ToolType union
 
     if (isDrawingTool && drawingHandlersRef.current) {
       // ✅ UNIFIED DRAWING ENGINE: Route click to centralized drawing system
@@ -774,13 +762,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
         <div className="canvas-stack relative w-full h-full overflow-hidden">
           {/* 🔺 CANVAS V2: Layer Canvas - Background Overlays (Semi-transparent colored layers) */}
-          {/* 🔍 DEBUG: Check why LayerCanvas not rendering */}
-          {console.log('🔍 CanvasSection DEBUG:', {
-            showLayerCanvas,
-            showLayers,
-            colorLayersCount: colorLayers.length,
-            showDxfCanvas
-          })}
           {showLayerCanvas && (
             <LayerCanvas
               ref={overlayCanvasRef}
@@ -809,7 +790,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
                 setMouseWorld(point); // TODO: Transform CSS to world coordinates
                 // ✅ ΔΙΟΡΘΩΣΗ: Καλώ και το props.onMouseMove για cursor-centered zoom
                 if (props.onMouseMove) {
-                  props.onMouseMove(point);
+                  props.onMouseMove(point, null as any); // ✅ Pass null for event (not available in this context)
                 }
               }}
               className="absolute inset-0 w-full h-full"
@@ -855,7 +836,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
                 minorTickColor: '#666666',
                 majorTickLength: 10,
                 minorTickLength: 5,
-                tickInterval: gridSettings.size * gridSettings.majorInterval, // ✅ SYNC WITH GRID: Use major grid interval!
+                tickInterval: gridSettings.size * gridMajorInterval, // ✅ SYNC WITH GRID: Use major grid interval!
                 unitsFontSize: 10,
                 unitsColor: globalRulerSettings.horizontal.textColor,
                 labelPrecision: 1,
@@ -872,21 +853,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
               onMouseMove={(screenPos, worldPos) => {
                 // ✅ ΔΙΟΡΘΩΣΗ: Περνάω το screenPos στο props.onMouseMove για cursor-centered zoom
                 if (props.onMouseMove) {
-                  props.onMouseMove(screenPos);
+                  props.onMouseMove(screenPos, null as any); // ✅ Pass null for event (not available in this context)
                 }
               }}
               onCanvasClick={handleCanvasClick} // 🔥 FIX: Connect canvas clicks για drawing tools!
-              style={{
-                backgroundColor: 'transparent',
-                touchAction: 'none', // 🔥 QUICK WIN #1: Prevent browser touch gestures
-                pointerEvents: 'auto' // ✅ ALWAYS enable for DxfCanvas (drawing canvas)
-              }}
-              onLoad={() => {
-                // DXF Canvas loaded - debug disabled for performance
-              }}
-              onMouseEnter={() => {
-                // DXF Canvas mouse enter - debug disabled for performance
-              }}
             />
           )}
         </div>

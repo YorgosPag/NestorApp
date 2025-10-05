@@ -45,6 +45,83 @@ Claude, εκτιμώ απεριόριστα τη βοήθειά σου! Έχω �
 
 ---
 
+## 🔄 GIT WORKFLOW & BACKUP PROTOCOL
+
+### 📦 Διαδικασία Μετά από Επιτυχημένη Προσπάθεια
+
+**ΚΡΙΣΙΜΟΣ ΚΑΝΟΝΑΣ**: Μετά από κάθε **επιτυχημένη προσπάθεια**, ακολουθώ **ΥΠΟΧΡΕΩΤΙΚΑ** τα παρακάτω βήματα με τη σειρά:
+
+#### ✅ ΒΗΜΑ 1: ΕΡΩΤΗΣΗ ΣΤΟΝ ΓΙΩΡΓΟ
+```
+Γιώργο, η εργασία ολοκληρώθηκε επιτυχώς!
+
+✅ Τι έγινε: [σύντομη περιγραφή]
+✅ Αποτέλεσμα: [τι δουλεύει τώρα]
+
+Να κάνουμε commit στο τοπικό repository; (Ναι/Όχι)
+```
+
+**ΣΗΜΕΙΩΣΗ**: ΔΕΝ κάνω ΠΟΤΕ commit χωρίς την έγκριση του Γιώργου!
+
+#### ✅ ΒΗΜΑ 2: GIT COMMIT (μόνο αν ο Γιώργος πει ΝΑΙ)
+```bash
+# Δημιουργώ git commit με όλες τις αλλαγές
+git add [files]
+git commit -m "..."
+```
+
+#### ✅ ΒΗΜΑ 3: BACKUP_SUMMARY.json
+Δημιουργώ **πλήρες** BACKUP_SUMMARY.json με:
+- `category`: FIX / FEATURE / REFACTOR / STABLE / WIP / CLEANUP / etc.
+- `shortDescription`: Σύντομη περιγραφή (1 γραμμή)
+- `problem`: Τι ήταν το πρόβλημα
+- `cause`: Γιατί συνέβη
+- `filesChanged`: Array με όλα τα αρχεία που άλλαξαν
+- `solution`: Πώς το λύσαμε (5 φάσεις αν χρειάζεται)
+- `testing`: Τι testing έγινε
+- `notes`: Κρίσιμες παρατηρήσεις
+- `contributors`: { user, assistant, sessionDate }
+- `relatedBackups`: Working references
+- `commits`: Array με commit hashes και messages
+
+#### ✅ ΒΗΜΑ 4: ΤΡΕΞΙΜΟ auto-backup.ps1
+```bash
+# Τρέχω το PowerShell script που:
+# 1. Διαβάζει το BACKUP_SUMMARY.json
+# 2. Δημιουργεί CHANGELOG.md αυτόματα
+# 3. Ζιπάρει τον dxf-viewer folder
+# 4. Αποθηκεύει στο: C:\Users\user\Downloads\BuckUps\Zip_BuckUps-2
+
+powershell.exe -ExecutionPolicy Bypass -File "F:\Pagonis_Nestor\auto-backup.ps1"
+```
+
+#### ✅ ΒΗΜΑ 5: ΕΠΙΒΕΒΑΙΩΣΗ
+```
+✅ BACKUP ΟΛΟΚΛΗΡΩΘΗΚΕ!
+
+📦 ZIP: [timestamp] - [CATEGORY] - [description].zip
+📍 Location: C:\Users\user\Downloads\BuckUps\Zip_BuckUps-2
+📋 Περιεχόμενα: CHANGELOG.md + dxf-viewer/
+
+Έτοιμοι για το επόμενο!
+```
+
+### 🚫 ΤΙ ΔΕΝ ΚΑΝΩ:
+- ❌ ΔΕΝ κάνω commit χωρίς έγκριση Γιώργου
+- ❌ ΔΕΝ κάνω backup αν η προσπάθεια **ΑΠΟΤΥΧΕ**
+- ❌ ΔΕΝ ξεχνώ να τρέξω το auto-backup.ps1 μετά το commit
+- ❌ ΔΕΝ κάνω push στο remote repository (μόνο local commits)
+
+### 📝 ΠΑΡΑΔΕΙΓΜΑ ΡΟΗΣ:
+
+1. **Επιτυχία!** → Ερώτηση στον Γιώργο
+2. **Γιώργος: "Ναι"** → Git commit
+3. **Commit done** → Δημιουργία BACKUP_SUMMARY.json
+4. **JSON ready** → Τρέξιμο auto-backup.ps1
+5. **ZIP created** → Επιβεβαίωση & συνέχεια!
+
+---
+
 ## 📌 PENDING TASKS REMINDER
 
 ### ⚠️ ServiceRegistry V2 Migration (Low Priority - No Rush!)

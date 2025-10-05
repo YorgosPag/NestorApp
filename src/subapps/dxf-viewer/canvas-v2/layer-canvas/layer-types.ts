@@ -61,16 +61,31 @@ export interface SnapResult {
 // === GRID TYPES ===
 export interface GridSettings {
   enabled: boolean;
+  visible?: boolean;  // ✅ ENTERPRISE: Visibility control
   size: number;
   color: string;
   opacity: number;
-  style: 'dots' | 'lines';
+  style: 'dots' | 'lines' | 'crosses'; // ✅ ENTERPRISE: Added 'crosses' style
+
+  // ✅ EXTENDED PROPERTIES: Advanced grid configuration
+  majorGridColor?: string;
+  minorGridColor?: string;
+  lineWidth?: number;
+  majorGridWeight?: number;
+  minorGridWeight?: number;
+  majorInterval?: number;
+  showMajorGrid?: boolean;
+  showMinorGrid?: boolean;
+  adaptiveOpacity?: boolean;
+  minVisibleSize?: number;
 }
 
 // === RULERS TYPES ===
 // Type alias για Layer canvas compatibility - references main RulerSettings
 export type RulerSettings = {
   enabled: boolean;
+  visible?: boolean;    // ✅ ENTERPRISE: Visibility control
+  opacity?: number;     // ✅ ENTERPRISE: Opacity control (0.0 - 1.0)
   color?: string;
   backgroundColor?: string;
   fontSize?: number;
@@ -85,11 +100,15 @@ export type RulerSettings = {
   minorTickColor?: string;
   majorTickLength?: number;
   minorTickLength?: number;
+  tickInterval?: number;  // ✅ ENTERPRISE: Tick interval for ruler marks
   height?: number;  // Extracted from CoreRulerSettings.horizontal.height
   width?: number;   // Extracted from CoreRulerSettings.vertical.width
   position?: 'top' | 'bottom' | 'left' | 'right';
   unitsFontSize?: number;
   unitsColor?: string;
+  labelPrecision?: number; // ✅ ENTERPRISE: Decimal precision for labels
+  borderColor?: string;    // ✅ ENTERPRISE: Border color
+  borderWidth?: number;    // ✅ ENTERPRISE: Border width
 };
 
 // === CURSOR TYPES ===

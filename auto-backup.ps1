@@ -10,6 +10,10 @@
 # 4. ZERO ερωτήσεις - ΠΛΗΡΩΣ ΑΥΤΟΜΑΤΟ!
 # ===================================================================
 
+# Set UTF-8 encoding for PowerShell console and output
+$OutputEncoding = [System.Text.Encoding]::UTF8
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
 $Host.UI.RawUI.ForegroundColor = "White"
 
 Write-Host ""
@@ -45,7 +49,7 @@ if (-not (Test-Path $summaryFile)) {
 Write-Host "📋 Reading BACKUP_SUMMARY.json..." -ForegroundColor Cyan
 
 try {
-    $summary = Get-Content -Path $summaryFile -Raw | ConvertFrom-Json
+    $summary = Get-Content -Path $summaryFile -Raw -Encoding UTF8 | ConvertFrom-Json
     Write-Host "   ✅ Summary loaded successfully" -ForegroundColor Green
 }
 catch {
@@ -221,10 +225,9 @@ New-Item -ItemType Directory -Path $tempFolder -Force | Out-Null
 Write-Host "   📁 Copying source files..." -ForegroundColor White
 Copy-Item -Path $sourcePath -Destination (Join-Path $tempFolder "dxf-viewer") -Recurse -Force
 
-# Create CHANGELOG.md
+# Create CHANGELOG.md with UTF-8 encoding (using Out-File for Greek character support)
 $changelogPath = Join-Path $tempFolder "CHANGELOG.md"
-$utf8BOM = New-Object System.Text.UTF8Encoding $true
-[System.IO.File]::WriteAllText($changelogPath, $changelogContent, $utf8BOM)
+$changelogContent | Out-File -FilePath $changelogPath -Encoding UTF8 -NoNewline
 
 Write-Host "   ✅ Files ready" -ForegroundColor Green
 
