@@ -253,8 +253,8 @@ export class CursorRenderer implements UIRenderer {
    * Extract mouse position από UI context (if available)
    */
   private getMousePosition(context: UIRenderContext): Point2D | null {
-    // Enhanced: Check for mousePosition στο context
-    const uiContextWithMouse = context as any;
+    // 🎯 TYPE-SAFE: Check for mousePosition using type guard
+    const uiContextWithMouse = context as import('../core/UIRenderer').UIRenderContextWithMouse;
     if (uiContextWithMouse.mousePosition) {
       return uiContextWithMouse.mousePosition;
     }

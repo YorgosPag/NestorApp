@@ -43,6 +43,48 @@ export interface UIRenderContext {
 }
 
 /**
+ * 🔺 EXTENDED UI RENDER CONTEXT - With World Transform
+ * Για UI elements που χρειάζονται world coordinate transformation
+ */
+export interface UIRenderContextWithWorld extends UIRenderContext {
+  readonly worldTransform: import('../../types/Types').ViewTransform;
+}
+
+/**
+ * 🔺 EXTENDED UI RENDER CONTEXT - With Mouse Position
+ * Για UI elements που χρειάζονται mouse tracking (cursor, crosshair)
+ */
+export interface UIRenderContextWithMouse extends UIRenderContext {
+  readonly mousePosition: Point2D | null;
+}
+
+/**
+ * 🔺 EXTENDED UI RENDER CONTEXT - With Snap Data
+ * Για UI elements που χρειάζονται snap information
+ */
+export interface UIRenderContextWithSnap extends UIRenderContext {
+  readonly snapData: Array<{
+    point: Point2D;
+    type: string;
+    entity?: { id: string; type: string };
+  }>;
+}
+
+/**
+ * 🔺 FULL EXTENDED UI RENDER CONTEXT
+ * Combination όλων των extended properties
+ */
+export interface ExtendedUIRenderContext extends UIRenderContext {
+  readonly worldTransform?: import('../../types/Types').ViewTransform;
+  readonly mousePosition?: Point2D | null;
+  readonly snapData?: Array<{
+    point: Point2D;
+    type: string;
+    entity?: { id: string; type: string };
+  }>;
+}
+
+/**
  * 🔺 UI TRANSFORM
  * UI-specific transformations (different from world transforms)
  */

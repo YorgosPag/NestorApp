@@ -23,8 +23,8 @@ export class SelectionRenderer implements UIRenderer {
   render(context: UIRenderContext, viewport: Viewport, settings: UIElementSettings): void {
     const startTime = performance.now();
 
-    // Cast to SelectionSettings (same pattern as other renderers)
-    const selectionSettings = settings as any as SelectionSettings;
+    // 🎯 TYPE-SAFE: Type assertion with proper interface extension
+    const selectionSettings = settings as UIElementSettings & SelectionSettings;
 
     // Get selection data from context
     const selectionData = this.getSelectionData(context);
@@ -49,9 +49,9 @@ export class SelectionRenderer implements UIRenderer {
    * Get selection data από UIRenderContext
    */
   private getSelectionData(context: UIRenderContext): { selectionBox: SelectionBox | null } | null {
-    // Temporary implementation - θα ενημερωθεί στο ΒΗΜΑ 6
-    const contextData = (context as any).selectionData;
-    return contextData || null;
+    // 🎯 TYPE-SAFE: Use type guard for extended context
+    const extendedContext = context as UIRenderContext & { selectionData?: { selectionBox: SelectionBox | null } };
+    return extendedContext.selectionData || null;
   }
 
   /**

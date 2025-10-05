@@ -50,7 +50,8 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const overlays: Record<string, Overlay> = {};
       snapshot.docs.forEach(doc => {
-        const data = doc.data() as any;
+        // 🎯 TYPE-SAFE: Firestore returns DocumentData - cast to expected structure
+        const data = doc.data() as Record<string, unknown>;
         let polygon = data.polygon;
 
         // 🔍 FIX: Normalize polygon format - convert flat array to coordinate pairs
@@ -105,12 +106,13 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
     const docRef = doc(db, `${COLLECTION_PREFIX}/${state.currentLevelId}/items`, id);
 
     // Filter out undefined values to prevent Firebase errors
+    // 🎯 TYPE-SAFE: Build clean patch object without undefined values
     const cleanPatch = Object.entries(patch).reduce((acc, [key, value]) => {
       if (value !== undefined) {
         acc[key] = value;
       }
       return acc;
-    }, {} as any);
+    }, {} as Record<string, unknown>);
 
     await updateDoc(docRef, { ...cleanPatch, updatedAt: serverTimestamp() });
   }, [state.currentLevelId]);

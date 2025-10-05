@@ -25,8 +25,10 @@ export class CalibrationGridRenderer implements UIRenderer {
     }
 
     const ctx = context.ctx;
-    const transform = (context as any).worldTransform as ViewTransform | undefined;
-    if (!transform) return;
+    // 🎯 TYPE-SAFE: Use UIRenderContextWithWorld for worldTransform
+    const extendedContext = context as import('../rendering/ui/core/UIRenderer').UIRenderContextWithWorld;
+    if (!extendedContext.worldTransform) return;
+    const transform = extendedContext.worldTransform;
 
     const gridSettings = settings.calibrationGrid;
 

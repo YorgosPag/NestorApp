@@ -53,13 +53,15 @@ declare module './canvas-v2/dxf-canvas/DxfCanvas' {
     onMeasurementPoint: (point: Point2D) => void;
     onMeasurementHover: (point: Point2D | null) => void;
     onMeasurementCancel: () => void;
-    drawingState: any; // Keep as any for now - complex drawing state
+    // 🎯 TYPE-SAFE: Use proper DrawingState type from useUnifiedDrawing
+    drawingState: import('../hooks/drawing/useUnifiedDrawing').DrawingState;
     onDrawingPoint: (point: Point2D) => void;
     onDrawingHover: (point: Point2D | null) => void;
     onDrawingCancel: () => void;
     onDrawingDoubleClick: (point: Point2D) => void;
     gripSettings: GripSettings;
-    onEntityCreated: (entity: any) => void; // Keep as any - complex entity structure
+    // 🎯 TYPE-SAFE: Use proper entity union type
+    onEntityCreated: (entity: import('./scene').AnySceneEntity) => void;
     className?: string;
   }
   // DxfCanvasRef interface removed - using DxfCanvasImperativeAPI instead

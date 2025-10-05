@@ -34,12 +34,13 @@ export class OriginMarkersRenderer implements UIRenderer {
 
     const ctx = context.ctx;
 
-    // Get world transform από context (για να βρούμε το screen position του (0,0))
-    const transform = (context as any).worldTransform as ViewTransform | undefined;
-    if (!transform) {
+    // 🎯 TYPE-SAFE: Get world transform από extended context
+    const extendedContext = context as import('../core/UIRenderer').UIRenderContextWithWorld;
+    if (!extendedContext.worldTransform) {
       console.warn('🎯 OriginMarkersRenderer: No world transform in context');
       return;
     }
+    const transform = extendedContext.worldTransform;
 
     // Calculate screen position of world origin (0,0)
     // ✅ CORRECT: Use CoordinateTransforms.worldToScreen for ACTUAL world (0,0)

@@ -280,8 +280,8 @@ export class SnapRenderer implements UIRenderer {
    * Extract snap data από UI context (if available)
    */
   private getSnapData(context: UIRenderContext): SnapResult[] | null {
-    // Enhanced: Check for snapData στο context
-    const uiContextWithSnap = context as any;
+    // 🎯 TYPE-SAFE: Check for snapData using type guard
+    const uiContextWithSnap = context as import('../core/UIRenderer').UIRenderContextWithSnap;
     if (uiContextWithSnap.snapData && Array.isArray(uiContextWithSnap.snapData)) {
       return uiContextWithSnap.snapData;
     }

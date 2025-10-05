@@ -129,9 +129,11 @@ export class CenterSnapEngine extends BaseSnapEngine {
     entitiesChecked: number;
   } {
     const stats = this.spatialIndex?.getStats() || { totalItems: 0, queryCount: 0, averageItemsPerQuery: 0 };
+    // 🎯 TYPE-SAFE: Spatial index stats may have optional centerCount/gridCells properties
+    const extendedStats = stats as typeof stats & { centerCount?: number; gridCells?: number };
     return {
-      centerCount: (stats as any).centerCount || 0,
-      gridCells: (stats as any).gridCells || 0,
+      centerCount: extendedStats.centerCount || 0,
+      gridCells: extendedStats.gridCells || 0,
       entitiesChecked: this.maxEntitiesCheck
     };
   }

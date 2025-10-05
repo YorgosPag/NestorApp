@@ -19,6 +19,8 @@ interface AlignmentDebugState {
   snapPos: Point2D | null;
   canvasEl: HTMLCanvasElement | null;
   overlayEl: HTMLCanvasElement | null;
+  // 🎯 TYPE-SAFE: Document click handler for cleanup
+  documentClickHandler?: ((event: MouseEvent) => void) | null;
 }
 
 class CursorSnapAlignmentDebugger {
@@ -210,7 +212,7 @@ class CursorSnapAlignmentDebugger {
     document.addEventListener('click', documentClickHandler);
 
     // Store handler for cleanup
-    (this.state as any).documentClickHandler = documentClickHandler;
+    this.state.documentClickHandler = documentClickHandler;
 
     // RAF loop for crosshair and snap tracking
     const rafLoop = () => {
@@ -449,10 +451,9 @@ class CursorSnapAlignmentDebugger {
     }
 
     // Remove document click listener if exists
-    const documentClickHandler = (this.state as any).documentClickHandler;
-    if (documentClickHandler) {
-      document.removeEventListener('click', documentClickHandler);
-      (this.state as any).documentClickHandler = null;
+    if (this.state.documentClickHandler) {
+      document.removeEventListener('click', this.state.documentClickHandler);
+      this.state.documentClickHandler = null;
     }
 
     this.state.cursorPos = null;

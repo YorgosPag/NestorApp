@@ -129,6 +129,9 @@ export class DxfRenderer {
     const isSelected = options.selectedEntityIds.includes(entity.id);
 
     // Convert DxfEntityUnion to EntityModel για compatibility
+    // Type guard: Τα DXF entities μπορεί να έχουν optional lineType property
+    const entityWithLineType = entity as typeof entity & { lineType?: string };
+
     const entityModel: EntityModel = {
       id: entity.id,
       type: entity.type,
@@ -136,7 +139,7 @@ export class DxfRenderer {
       selected: isSelected,
       layer: entity.layer,
       color: entity.color,
-      lineType: (entity as any).lineType || 'solid',
+      lineType: entityWithLineType.lineType || 'solid',
       lineWeight: entity.lineWidth,
 
       // Geometry mapping βάσει τύπου
@@ -174,26 +177,29 @@ export class DxfRenderer {
           radius: entity.radius
         };
 
-      case 'polyline':
+      case 'polyline': {
+        // Type guard: Polyline entities έχουν vertices property
+        const polyline = entity as typeof entity & { vertices?: Point2D[]; points?: Point2D[] };
         return {
-          points: (entity as any).points || (entity as any).vertices || []
+          points: polyline.points || polyline.vertices || []
         };
+      }
 
       case 'arc':
+        // Arc entities ήδη έχουν τα properties στο DxfArc type
         return {
           center: entity.center,
           radius: entity.radius,
-          // Arc-specific properties θα πρέπει να προστεθούν στο EntityModel
-          startAngle: (entity as any).startAngle,
-          endAngle: (entity as any).endAngle
+          startAngle: entity.startAngle,
+          endAngle: entity.endAngle
         };
 
       case 'text':
+        // Text entities ήδη έχουν τα properties στο DxfText type
         return {
           position: entity.position,
-          // Text-specific properties
-          text: (entity as any).text,
-          height: (entity as any).height
+          text: entity.text,
+          height: entity.height
         };
 
       default:

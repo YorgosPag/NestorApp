@@ -333,9 +333,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     (entity) => {
       // Callback όταν δημιουργηθεί entity
       if (props.handleSceneChange && props.currentScene) {
+        // 🎯 TYPE-SAFE: Entity is already properly typed from useDrawingHandlers
         const updatedScene = {
           ...props.currentScene,
-          entities: [...(props.currentScene.entities || []), entity] as any // ✅ Type assertion for entity union compatibility
+          entities: [...(props.currentScene.entities || []), entity]
         };
         props.handleSceneChange(updatedScene);
       }
@@ -364,7 +365,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
                           activeTool === 'rectangle'; // ✅ Removed 'arc' - not in ToolType union
     if (isDrawingTool && drawingHandlersRef.current?.startDrawing) {
       console.log('🎯 Auto-starting drawing for tool:', activeTool);
-      drawingHandlersRef.current.startDrawing(activeTool as any);
+      // 🎯 TYPE-SAFE: activeTool is already narrowed to drawing tools by if statement
+      drawingHandlersRef.current.startDrawing(activeTool);
     }
   }, [activeTool]);
 
@@ -393,45 +395,80 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
   // === CONVERT SCENE TO CANVAS V2 FORMAT ===
   const dxfScene: DxfScene | null = props.currentScene ? {
-    entities: props.currentScene.entities?.map((entity): DxfEntityUnion | null => {
-      // Get layer color information
-      const layerInfo = props.currentScene?.layers?.[entity.layer];
+    entities: [
+      ...(props.currentScene.entities?.map((entity): DxfEntityUnion | null => {
+        // Get layer color information
+        const layerInfo = props.currentScene?.layers?.[entity.layer];
 
-      // Convert SceneEntity to DxfEntityUnion
-      const base = {
-        id: entity.id,
-        layer: entity.layer,
-        color: entity.color || layerInfo?.color || '#ffffff', // Use layer color if entity has no color
-        lineWidth: entity.lineweight || 1,
-        visible: entity.visible
-      };
+        // Convert SceneEntity to DxfEntityUnion
+        const base = {
+          id: entity.id,
+          layer: entity.layer,
+          color: entity.color || layerInfo?.color || '#ffffff', // Use layer color if entity has no color
+          lineWidth: entity.lineweight || 1,
+          visible: entity.visible
+        };
 
-      switch (entity.type) {
-        case 'line': {
-          const lineEntity = entity as any;
-          return { ...base, type: 'line' as const, start: lineEntity.start, end: lineEntity.end };
+        switch (entity.type) {
+          case 'line': {
+            // Type guard: Entity με type 'line' έχει start & end
+            const lineEntity = entity as typeof entity & { start: Point2D; end: Point2D };
+            return { ...base, type: 'line' as const, start: lineEntity.start, end: lineEntity.end };
+          }
+          case 'circle': {
+            // Type guard: Entity με type 'circle' έχει center & radius
+            const circleEntity = entity as typeof entity & { center: Point2D; radius: number };
+            return { ...base, type: 'circle' as const, center: circleEntity.center, radius: circleEntity.radius };
+          }
+          case 'polyline': {
+            // Type guard: Entity με type 'polyline' έχει vertices & closed
+            const polylineEntity = entity as typeof entity & { vertices: Point2D[]; closed: boolean };
+            return { ...base, type: 'polyline' as const, vertices: polylineEntity.vertices, closed: polylineEntity.closed };
+          }
+          case 'arc': {
+            // Type guard: Entity με type 'arc' έχει center, radius, startAngle, endAngle
+            const arcEntity = entity as typeof entity & { center: Point2D; radius: number; startAngle: number; endAngle: number };
+            return { ...base, type: 'arc' as const, center: arcEntity.center, radius: arcEntity.radius, startAngle: arcEntity.startAngle, endAngle: arcEntity.endAngle };
+          }
+          case 'text': {
+            // Type guard: Entity με type 'text' έχει position, text, height, rotation
+            const textEntity = entity as typeof entity & { position: Point2D; text: string; height: number; rotation?: number };
+            return { ...base, type: 'text' as const, position: textEntity.position, text: textEntity.text, height: textEntity.height, rotation: textEntity.rotation };
+          }
+          default:
+            console.warn('🔍 Unsupported entity type for DxfCanvas:', entity.type);
+            return null;
         }
-        case 'circle': {
-          const circleEntity = entity as any;
-          return { ...base, type: 'circle' as const, center: circleEntity.center, radius: circleEntity.radius };
+      }).filter(Boolean) as DxfEntityUnion[] || []),
+      // 🎯 ADD PREVIEW ENTITY: Include preview entity from drawing state for real-time rendering
+      ...(drawingHandlers.drawingState.previewEntity ? (() => {
+        const preview = drawingHandlers.drawingState.previewEntity;
+
+        // Type-safe preview entity mapping based on entity type
+        if (preview.type === 'line') {
+          const linePreview = preview as typeof preview & {
+            start: Point2D;
+            end: Point2D;
+            color?: string;
+            lineweight?: number
+          };
+          return [{
+            id: linePreview.id,
+            type: 'line' as const,
+            layer: linePreview.layer || '0',
+            color: linePreview.color || '#00ff00', // Green for preview
+            lineWidth: linePreview.lineweight || 1,
+            visible: true,
+            start: linePreview.start,
+            end: linePreview.end
+          }] as DxfEntityUnion[];
         }
-        case 'polyline': {
-          const polylineEntity = entity as any;
-          return { ...base, type: 'polyline' as const, vertices: polylineEntity.vertices, closed: polylineEntity.closed };
-        }
-        case 'arc': {
-          const arcEntity = entity as any;
-          return { ...base, type: 'arc' as const, center: arcEntity.center, radius: arcEntity.radius, startAngle: arcEntity.startAngle, endAngle: arcEntity.endAngle };
-        }
-        case 'text': {
-          const textEntity = entity as any;
-          return { ...base, type: 'text' as const, position: textEntity.position, text: textEntity.text, height: textEntity.height, rotation: textEntity.rotation };
-        }
-        default:
-          console.warn('🔍 Unsupported entity type for DxfCanvas:', entity.type);
-          return null;
-      }
-    }).filter(Boolean) as DxfEntityUnion[] || [], // ✅ FIX: Convert and filter entities!
+
+        // Note: DxfEntityUnion δεν υποστηρίζει 'point', 'rectangle', etc - skip για τώρα
+        // Αν χρειαστεί, θα πρέπει να επεκταθεί το DxfEntityUnion type
+        return [];
+      })() : [])
+    ],
     layers: Object.keys(props.currentScene.layers || {}), // ✅ FIX: Convert layers object to array
     bounds: props.currentScene.bounds // ✅ FIX: Use actual bounds from scene
   } : null;
@@ -790,7 +827,14 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
                 setMouseWorld(point); // TODO: Transform CSS to world coordinates
                 // ✅ ΔΙΟΡΘΩΣΗ: Καλώ και το props.onMouseMove για cursor-centered zoom
                 if (props.onMouseMove) {
-                  props.onMouseMove(point, null as any); // ✅ Pass null for event (not available in this context)
+                  // 🎯 TYPE-SAFE: Create proper mock event (event not available in this context)
+                  const mockEvent = {
+                    clientX: point.x,
+                    clientY: point.y,
+                    preventDefault: () => {},
+                    stopPropagation: () => {}
+                  } as React.MouseEvent;
+                  props.onMouseMove(point, mockEvent);
                 }
               }}
               className="absolute inset-0 w-full h-full"
@@ -851,9 +895,24 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
               }}
               onWheelZoom={zoomSystem.handleWheelZoom} // ✅ CONNECT ZOOM SYSTEM
               onMouseMove={(screenPos, worldPos) => {
-                // ✅ ΔΙΟΡΘΩΣΗ: Περνάω το screenPos στο props.onMouseMove για cursor-centered zoom
-                if (props.onMouseMove) {
-                  props.onMouseMove(screenPos, null as any); // ✅ Pass null for event (not available in this context)
+                // ✅ ΔΙΟΡΘΩΣΗ: Περνάω το worldPos στο props.onMouseMove για cursor-centered zoom
+                // Note: event is not available in this context, so we create a minimal mock event
+                if (props.onMouseMove && worldPos) {
+                  const mockEvent = {
+                    clientX: screenPos.x,
+                    clientY: screenPos.y,
+                    preventDefault: () => {},
+                    stopPropagation: () => {}
+                  } as React.MouseEvent;
+                  props.onMouseMove(worldPos, mockEvent);
+                }
+
+                // 🎯 FIX: Call onDrawingHover για preview phase rendering
+                const isDrawingTool = activeTool === 'line' || activeTool === 'polyline' || activeTool === 'polygon'
+                  || activeTool === 'rectangle' || activeTool === 'circle';
+
+                if (isDrawingTool && worldPos && drawingHandlersRef.current?.onDrawingHover) {
+                  drawingHandlersRef.current.onDrawingHover(worldPos);
                 }
               }}
               onCanvasClick={handleCanvasClick} // 🔥 FIX: Connect canvas clicks για drawing tools!

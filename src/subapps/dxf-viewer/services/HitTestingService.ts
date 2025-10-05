@@ -139,6 +139,9 @@ export class HitTestingService {
    * Κεντρικοποιημένη conversion logic
    */
   private convertToEntityModel(entity: DxfEntityUnion): EntityModel {
+    // Type guard: Τα DXF entities μπορεί να έχουν optional lineType property
+    const entityWithLineType = entity as typeof entity & { lineType?: string };
+
     const baseModel: EntityModel = {
       id: entity.id,
       type: entity.type,
@@ -146,7 +149,7 @@ export class HitTestingService {
       selected: false,
       layer: entity.layer || 'default',
       color: entity.color,
-      lineType: (entity as any).lineType || 'solid',
+      lineType: entityWithLineType.lineType || 'solid',
       lineWeight: entity.lineWidth,
       ...this.mapEntityGeometry(entity)
     };
@@ -172,24 +175,29 @@ export class HitTestingService {
           radius: entity.radius
         };
 
-      case 'polyline':
+      case 'polyline': {
+        // Type guard: Polyline entities έχουν vertices property
+        const polyline = entity as typeof entity & { vertices?: Point2D[]; points?: Point2D[] };
         return {
-          points: (entity as any).points || (entity as any).vertices || []
+          points: polyline.points || polyline.vertices || []
         };
+      }
 
       case 'arc':
+        // Arc entities ήδη έχουν τα properties στο DxfArc type
         return {
           center: entity.center,
           radius: entity.radius,
-          startAngle: (entity as any).startAngle,
-          endAngle: (entity as any).endAngle
+          startAngle: entity.startAngle,
+          endAngle: entity.endAngle
         };
 
       case 'text':
+        // Text entities ήδη έχουν τα properties στο DxfText type
         return {
           position: entity.position,
-          text: (entity as any).text,
-          height: (entity as any).height
+          text: entity.text,
+          height: entity.height
         };
 
       default:
