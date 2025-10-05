@@ -1,0 +1,57 @@
+%% TestsModal - Component Hierarchy Diagram
+%% This diagram shows how components are nested and connected
+%% Render with: https://mermaid.live or VS Code Mermaid extension
+
+graph TD
+    TM[TestsModal<br/>Main Component] --> TS[useTestState<br/>Test State Hook]
+    TM --> DM[useDraggableModal<br/>Drag Hook]
+    TM --> AT[useApiTests<br/>API Tests Hook]
+    TM --> TE[useTestExecution<br/>Execution Hook]
+    TM --> ST[useStandaloneTests<br/>Standalone Hook]
+
+    TM --> TAB[TestTabs<br/>Tab Navigation]
+    TM --> AUTO[AutomatedTestsTab<br/>Automated Tests]
+    TM --> UNIT[UnitTestsTab<br/>Unit & E2E Tests]
+    TM --> STAND[StandaloneTestsTab<br/>Standalone Tests]
+
+    AUTO --> TB1[TestButton ×10<br/>Automated Tests]
+    AUTO --> TB2[TestButton ×5<br/>Debug Tools]
+
+    UNIT --> TB3[TestButton<br/>Vitest]
+    UNIT --> TB4[TestButton<br/>Jest]
+    UNIT --> TB5[TestButton<br/>Playwright]
+
+    STAND --> TB6[TestButton<br/>Coordinate Test]
+    STAND --> TB7[TestButton<br/>Grid Test]
+
+    TM --> AUTOT[getAutomatedTests<br/>Factory Function]
+    TM --> DEBUG[getDebugTools<br/>Factory Function]
+
+    %% Styling
+    style TM fill:#e1f5ff,stroke:#01579b,stroke-width:4px
+
+    %% Hooks (Orange)
+    style TS fill:#fff4e1,stroke:#e65100,stroke-width:2px
+    style DM fill:#fff4e1,stroke:#e65100,stroke-width:2px
+    style AT fill:#fff4e1,stroke:#e65100,stroke-width:2px
+    style TE fill:#fff4e1,stroke:#e65100,stroke-width:2px
+    style ST fill:#fff4e1,stroke:#e65100,stroke-width:2px
+
+    %% Components (Green)
+    style TAB fill:#c8e6c9,stroke:#1b5e20,stroke-width:2px
+    style AUTO fill:#c8e6c9,stroke:#1b5e20,stroke-width:2px
+    style UNIT fill:#c8e6c9,stroke:#1b5e20,stroke-width:2px
+    style STAND fill:#c8e6c9,stroke:#1b5e20,stroke-width:2px
+
+    %% TestButton (Reusable - Highlighted)
+    style TB1 fill:#a5d6a7,stroke:#2e7d32,stroke-width:2px
+    style TB2 fill:#a5d6a7,stroke:#2e7d32,stroke-width:2px
+    style TB3 fill:#a5d6a7,stroke:#2e7d32,stroke-width:2px
+    style TB4 fill:#a5d6a7,stroke:#2e7d32,stroke-width:2px
+    style TB5 fill:#a5d6a7,stroke:#2e7d32,stroke-width:2px
+    style TB6 fill:#a5d6a7,stroke:#2e7d32,stroke-width:2px
+    style TB7 fill:#a5d6a7,stroke:#2e7d32,stroke-width:2px
+
+    %% Factory Functions (Purple)
+    style AUTOT fill:#e1bee7,stroke:#4a148c,stroke-width:2px
+    style DEBUG fill:#e1bee7,stroke:#4a148c,stroke-width:2px

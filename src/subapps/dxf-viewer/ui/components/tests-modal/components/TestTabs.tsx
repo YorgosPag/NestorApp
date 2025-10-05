@@ -1,0 +1,50 @@
+/**
+ * 🗂️ TestTabs Component
+ *
+ * Tab navigation για το TestsModal (Automated, Unit & E2E, Standalone)
+ */
+
+import React from 'react';
+import type { TabType } from '../types/tests.types';
+
+interface TestTabsProps {
+  activeTab: TabType;
+  onTabChange: (tab: TabType) => void;
+}
+
+export const TestTabs: React.FC<TestTabsProps> = ({ activeTab, onTabChange }) => {
+  return (
+    <div className="flex border-b border-gray-700 px-4">
+      <button
+        onClick={() => onTabChange('automated')}
+        className={`px-4 py-3 text-sm font-medium transition-colors relative ${
+          activeTab === 'automated'
+            ? 'text-purple-400 border-b-2 border-purple-400'
+            : 'text-gray-400 hover:text-gray-300'
+        }`}
+      >
+        📋 Automated Tests
+      </button>
+      <button
+        onClick={() => onTabChange('unit')}
+        className={`px-4 py-3 text-sm font-medium transition-colors relative ${
+          activeTab === 'unit'
+            ? 'text-purple-400 border-b-2 border-purple-400'
+            : 'text-gray-400 hover:text-gray-300'
+        }`}
+      >
+        🧪 Unit & E2E Tests
+      </button>
+      <button
+        onClick={() => onTabChange('standalone')}
+        className={`px-4 py-3 text-sm font-medium transition-colors relative ${
+          activeTab === 'standalone'
+            ? 'text-purple-400 border-b-2 border-purple-400'
+            : 'text-gray-400 hover:text-gray-300'
+        }`}
+      >
+        📊 Standalone Tests
+      </button>
+    </div>
+  );
+};

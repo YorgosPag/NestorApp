@@ -1,0 +1,81 @@
+%% TestsModal - Data Flow Sequence Diagram
+%% This diagram shows how data flows through the system when a test is executed
+%% Render with: https://mermaid.live or VS Code Mermaid extension
+
+sequenceDiagram
+    participant User
+    participant TestsModal
+    participant useTestState
+    participant TestButton
+    participant TestDefinition
+    participant NotificationSystem
+
+    %% Opening Modal
+    User->>TestsModal: Click "Run Tests" button
+    activate TestsModal
+    TestsModal->>TestsModal: Set isOpen = true
+    TestsModal->>useTestState: Initialize state
+    activate useTestState
+    useTestState-->>TestsModal: { runningTests: Set(), completedTests: Set() }
+    deactivate useTestState
+    TestsModal->>TestsModal: Load test definitions via getAutomatedTests()
+    TestsModal-->>User: Show modal
+    deactivate TestsModal
+
+    %% Running a Test
+    User->>TestButton: Click test button
+    activate TestButton
+    TestButton->>useTestState: startTest(testId)
+    activate useTestState
+    useTestState->>useTestState: Add testId to runningTests
+    useTestState-->>TestButton: State updated (isRunning = true)
+    deactivate useTestState
+
+    TestButton->>TestButton: Update UI (show spinner ⏳)
+    TestButton->>TestDefinition: Execute test.action()
+    activate TestDefinition
+
+    TestDefinition->>NotificationSystem: notify("Test started", "info")
+    activate NotificationSystem
+    NotificationSystem-->>User: Show notification
+    deactivate NotificationSystem
+
+    TestDefinition->>TestDefinition: Run test logic (async)
+
+    alt Test Passed
+        TestDefinition->>NotificationSystem: notify("Test passed ✅", "success")
+        activate NotificationSystem
+        NotificationSystem-->>User: Show success notification
+        deactivate NotificationSystem
+        TestDefinition-->>TestButton: Test completed successfully
+        TestButton->>useTestState: completeTest(testId)
+        activate useTestState
+        useTestState->>useTestState: Remove from runningTests
+        useTestState->>useTestState: Add to completedTests
+        useTestState-->>TestButton: State updated (isCompleted = true)
+        deactivate useTestState
+    else Test Failed
+        TestDefinition->>NotificationSystem: notify("Test failed ❌", "error")
+        activate NotificationSystem
+        NotificationSystem-->>User: Show error notification
+        deactivate NotificationSystem
+        TestDefinition-->>TestButton: Test failed
+        TestButton->>useTestState: failTest(testId)
+        activate useTestState
+        useTestState->>useTestState: Remove from runningTests
+        useTestState-->>TestButton: State updated (isRunning = false)
+        deactivate useTestState
+    end
+
+    deactivate TestDefinition
+    TestButton->>TestButton: Update UI (show checkmark ✅ or error)
+    TestButton-->>User: Show final test state
+    deactivate TestButton
+
+    %% Closing Modal
+    User->>TestsModal: Click close button (X)
+    activate TestsModal
+    TestsModal->>TestsModal: Call onClose()
+    TestsModal->>TestsModal: Set isOpen = false
+    TestsModal-->>User: Hide modal
+    deactivate TestsModal

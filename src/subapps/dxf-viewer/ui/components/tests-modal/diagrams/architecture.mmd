@@ -1,0 +1,48 @@
+%% TestsModal - High-Level Architecture Diagram
+%% This diagram shows the overall system structure
+%% Render with: https://mermaid.live or VS Code Mermaid extension
+
+graph TB
+    A[TestsModal.tsx<br/>Main Container<br/>137 lines] --> B[State Management<br/>5 Custom Hooks]
+    A --> C[UI Components<br/>5 React Components]
+    A --> D[Test Definitions<br/>2 Factory Functions]
+
+    B --> B1[useTestState<br/>44 lines<br/>Test execution state]
+    B --> B2[useDraggableModal<br/>64 lines<br/>Drag & drop logic]
+    B --> B3[useApiTests<br/>108 lines<br/>Server-side tests]
+    B --> B4[useTestExecution<br/>56 lines<br/>Test execution logic]
+    B --> B5[useStandaloneTests<br/>63 lines<br/>Standalone handlers]
+
+    C --> C1[TestTabs<br/>50 lines<br/>Tab navigation]
+    C --> C2[AutomatedTestsTab<br/>96 lines<br/>Automated tests UI]
+    C --> C3[UnitTestsTab<br/>120 lines<br/>Unit/E2E tests UI]
+    C --> C4[StandaloneTestsTab<br/>91 lines<br/>Standalone tests UI]
+    C --> C5[TestButton<br/>55 lines<br/>Reusable button ⭐]
+
+    D --> D1[automatedTests.ts<br/>153 lines<br/>10 tests]
+    D --> D2[debugTools.ts<br/>158 lines<br/>5 tools]
+
+    %% Styling
+    style A fill:#e1f5ff,stroke:#01579b,stroke-width:3px
+    style B fill:#fff4e1,stroke:#e65100,stroke-width:2px
+    style C fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
+    style D fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+
+    style B1 fill:#fff9c4
+    style B2 fill:#fff9c4
+    style B3 fill:#fff9c4
+    style B4 fill:#fff9c4
+    style B5 fill:#fff9c4
+
+    style C1 fill:#c8e6c9
+    style C2 fill:#c8e6c9
+    style C3 fill:#c8e6c9
+    style C4 fill:#c8e6c9
+    style C5 fill:#a5d6a7,stroke:#2e7d32,stroke-width:2px
+
+    style D1 fill:#e1bee7
+    style D2 fill:#e1bee7
+
+    %% Notes
+    classDef reusable fill:#a5d6a7,stroke:#2e7d32,stroke-width:2px
+    class C5 reusable
