@@ -51,6 +51,7 @@ interface DxfCanvasProps {
   onEntitySelect?: (entityId: string | null) => void;
   onMouseMove?: (screenPos: Point2D, worldPos: Point2D) => void;
   onWheelZoom?: (wheelDelta: number, center: Point2D) => void; // ✅ ZOOM SYSTEM INTEGRATION
+  onCanvasClick?: (point: Point2D) => void; // 🔥 FIX: Add canvas click handler for drawing tools
 }
 
 export interface DxfCanvasRef {
@@ -75,6 +76,7 @@ export const DxfCanvas = React.forwardRef<DxfCanvasRef, DxfCanvasProps>(({
   onEntitySelect,
   onMouseMove,
   onWheelZoom,
+  onCanvasClick, // 🔥 FIX: Extract onCanvasClick prop
   ...props // 🎯 PASS THROUGH: Περνάω όλα τα extra props (όπως data-canvas-type)
 }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -146,6 +148,7 @@ export const DxfCanvas = React.forwardRef<DxfCanvasRef, DxfCanvasProps>(({
     onEntitySelect,
     onMouseMove,
     onWheelZoom,
+    onCanvasClick, // 🔥 FIX: Pass onCanvasClick για drawing tools!
     hitTestCallback: (scene, screenPos, transform, viewport) => {
       try {
         // ✅ ENTERPRISE MIGRATION: Get service from registry

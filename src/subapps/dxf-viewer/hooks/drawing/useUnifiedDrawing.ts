@@ -101,7 +101,7 @@ export interface DrawingState {
   isOverlayMode?: boolean; // 🔺 ΝΕΟ: Flag για overlay mode
 }
 
-export function useUnifiedDrawing() {
+export function useUnifiedDrawing(onEntityCreated?: (entity: any) => void) {
   const [state, setState] = useState<DrawingState>({
     currentTool: 'select',
     isDrawing: false,
@@ -310,9 +310,9 @@ export function useUnifiedDrawing() {
   }, []);
 
   const addPoint = useCallback((worldPoint: Point2D, transform: { worldToScreen: (point: Point2D) => Point2D; screenToWorld: (point: Point2D) => Point2D }) => {
-
+    console.log('🚀 addPoint called - state.isDrawing:', state.isDrawing, 'state:', state);
     if (!state.isDrawing) {
-
+      console.error('❌ addPoint BLOCKED - isDrawing is FALSE!');
       return;
     }
 
@@ -342,16 +342,30 @@ export function useUnifiedDrawing() {
     };
 
     if (isComplete(state.currentTool, newTempPoints)) {
+      console.log('✅ Drawing COMPLETE!', { tool: state.currentTool, pointsCount: newTempPoints.length });
       const newEntity = createEntityFromTool(state.currentTool, newTempPoints);
+      console.log('🎨 Entity created:', { newEntity, currentLevelId });
       if (newEntity && currentLevelId) {
         const scene = getLevelScene(currentLevelId);
+        console.log('📦 Scene for level:', { levelId: currentLevelId, scene });
         if (scene) {
           const updatedScene = { ...scene, entities: [...scene.entities, newEntity] };
           setLevelScene(currentLevelId, updatedScene);
-        }
-      }
-      // Return to normal mode after entity completion
+          console.log('✅ Entity added to scene!');
 
+          // 🔥 FIX: Call callback to update parent component
+          if (onEntityCreated) {
+            console.log('📢 Calling onEntityCreated callback with entity:', newEntity);
+            onEntityCreated(newEntity);
+          }
+        } else {
+          console.error('❌ No scene found for level:', currentLevelId);
+        }
+      } else {
+        console.error('❌ Cannot add entity:', { hasEntity: !!newEntity, hasLevelId: !!currentLevelId });
+      }
+
+      // Return to normal mode after entity completion
       setMode('normal');
 
       // FIXED: Reset temp points for continuous drawing
@@ -526,7 +540,7 @@ export function useUnifiedDrawing() {
   }, [state, createEntityFromTool]);
 
   const startDrawing = useCallback((tool: DrawingTool) => {
-
+    console.log('🎯 startDrawing called with tool:', tool);
     // Set preview mode when drawing starts
 
     setMode('preview');
@@ -540,7 +554,7 @@ export function useUnifiedDrawing() {
         previewEntity: null,
         isOverlayMode: false // ✅ ΔΙΟΡΘΩΣΗ: Reset overlay mode για κανονικές σχεδιάσεις
       };
-
+      console.log('✅ startDrawing - NEW STATE:', newState);
       return newState;
     });
   }, [setMode]);

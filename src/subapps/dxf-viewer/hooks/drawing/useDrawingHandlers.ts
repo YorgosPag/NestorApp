@@ -6,7 +6,7 @@
 'use client';
 
 // DEBUG FLAG
-const DEBUG_DRAWING_HANDLERS = false;
+const DEBUG_DRAWING_HANDLERS = true; // 🔥 ENABLED για debugging!
 
 import { useCallback } from 'react';
 import type { ToolType } from '../../ui/toolbar/types';
@@ -37,7 +37,7 @@ export function useDrawingHandlers(
     finishPolyline,
     cancelDrawing,
     updatePreview
-  } = useUnifiedDrawing();
+  } = useUnifiedDrawing(onEntityCreated); // 🔥 FIX: Pass onEntityCreated callback!
 
   // Snap functionality
   const { snapEnabled, enabledModes } = useSnapContext();
@@ -74,12 +74,14 @@ export function useDrawingHandlers(
 
   // Drawing handlers
   const onDrawingPoint = useCallback((p: Pt) => {
-
+    console.log('🔥 onDrawingPoint called:', p);
     const snappedPoint = applySnap(p);
+    console.log('🔥 snappedPoint:', snappedPoint);
     const transform = canvasOps.getTransform();
+    console.log('🔥 transform:', transform);
     addPoint(snappedPoint, transform);
-
-  }, [addPoint, canvasOps, applySnap]);
+    console.log('🔥 addPoint called - drawingState:', drawingState);
+  }, [addPoint, canvasOps, applySnap, drawingState]);
   
   const onDrawingHover = useCallback((p: Pt | null) => {
     if (p) {

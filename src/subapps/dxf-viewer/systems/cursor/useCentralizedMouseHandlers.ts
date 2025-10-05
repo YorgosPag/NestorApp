@@ -5,7 +5,7 @@
  * 🚀 OPTIMIZED FOR HIGH PERFORMANCE PANNING - uses requestAnimationFrame
  */
 
-import { useCallback, useRef, useState, useEffect } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useCursor } from './CursorSystem';
 import { isPointInRulerArea } from './utils';
 import { CoordinateTransforms, COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
@@ -16,8 +16,6 @@ import type { ColorLayer } from '../../canvas-v2/layer-canvas/layer-types';
 import { UniversalMarqueeSelector } from '../selection/UniversalMarqueeSelection';
 // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Canvas bounds service για performance optimization
 import { canvasBoundsService } from '../../services/CanvasBoundsService';
-// ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Hit testing service
-import { hitTestingService } from '../../services/HitTestingService';
 // ✅ SNAP DETECTION: Import snap context and manager
 import { useSnapContext } from '../../snapping/context/SnapContext';
 import { useSnapManager } from '../../snapping/hooks/useSnapManager';
@@ -36,6 +34,7 @@ interface CentralizedMouseHandlersProps {
   colorLayers?: ColorLayer[];
   onLayerSelected?: (layerId: string, position: Point2D) => void;
   canvasRef?: React.RefObject<HTMLCanvasElement>; // ✅ ADD: Canvas reference για getBoundingClientRect
+  onCanvasClick?: (point: Point2D) => void; // ✅ FIX: Add canvas click callback για overlay drawing
 }
 
 /**
@@ -54,7 +53,8 @@ export function useCentralizedMouseHandlers({
   hitTestCallback,
   colorLayers,
   onLayerSelected,
-  canvasRef
+  canvasRef,
+  onCanvasClick
 }: CentralizedMouseHandlersProps) {
   const cursor = useCursor();
 
@@ -73,11 +73,6 @@ export function useCentralizedMouseHandlers({
 
   // ✅ SNAP RESULTS STATE: Store snap detection results
   const [snapResults, setSnapResults] = useState<any[]>([]);
-
-  // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Update hit testing service με το scene
-  useEffect(() => {
-    hitTestingService.updateScene(scene);
-  }, [scene]);
 
   // 🚀 HIGH PERFORMANCE PANNING - requestAnimationFrame approach
   const panStateRef = useRef<{
@@ -178,11 +173,21 @@ export function useCentralizedMouseHandlers({
     const worldPos = CoordinateTransforms.screenToWorld(screenPos, transform, viewport);
     cursor.updateWorldPosition(worldPos);
 
-    // Handle selection start (left button) - disable in pan mode
-    if (e.button === 0 && !e.shiftKey && activeTool !== 'pan') { // 🔥 No selection in pan mode
+    // Hit test for entity selection using provided callback
+    if (hitTestCallback && onEntitySelect) {
+      const hitEntityId = hitTestCallback(scene, screenPos, transform, viewport);
+      onEntitySelect(hitEntityId);
+    }
+
+    // Handle selection start (left button) - disable in pan mode AND drawing tools
+    // 🔥 FIX: Don't start selection for drawing tools (line, circle, etc)
+    const isDrawingTool = activeTool === 'line' || activeTool === 'polyline' || activeTool === 'polygon'
+      || activeTool === 'rectangle' || activeTool === 'circle' || activeTool === 'arc';
+
+    if (e.button === 0 && !e.shiftKey && activeTool !== 'pan' && !isDrawingTool) {
       cursor.startSelection(screenPos);
     }
-  }, [transform, viewport, cursor, activeTool]);
+  }, [scene, transform, viewport, onEntitySelect, hitTestCallback, cursor, activeTool]);
 
   // 🚀 MOUSE MOVE HANDLER - HIGH PERFORMANCE CAD-style tracking
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -310,6 +315,7 @@ export function useCentralizedMouseHandlers({
 
   // 🚀 MOUSE UP HANDLER - CAD-style release with pan cleanup
   const handleMouseUp = useCallback((e: React.MouseEvent) => {
+    console.log('🔥 handleMouseUp CALLED!', { cursorPosition: cursor.position, isSelecting: cursor.isSelecting, isPanning: panStateRef.current.isPanning });
     // ✅ UPDATE CENTRALIZED STATE
     cursor.setMouseDown(false);
 
@@ -372,20 +378,25 @@ export function useCentralizedMouseHandlers({
       }
 
       cursor.endSelection();
-    } else if (cursor.position && onEntitySelect) {
-      // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Single point hit-test για entity/layer selection (only when no marquee)
-      // Χρήση κεντρικής υπηρεσίας αντί για callback
-      const hitResult = hitTestingService.hitTest(cursor.position, transform, viewport, {
-        tolerance: 5, // CAD-standard tolerance (pixels)
-        maxResults: 1
-      });
+    } else if (cursor.position && hitTestCallback) {
+      // Single point hit-test for entity/layer selection (only when no marquee)
+      const hitResult = hitTestCallback(scene, cursor.position, transform, viewport);
+      // Hit-test debug disabled for performance
 
-      onEntitySelect(hitResult.entityId);
-      console.log('🎯 Entity Click:', hitResult.entityId ? `Selected ${hitResult.entityId}` : 'No entity at cursor');
+      if (onEntitySelect) {
+        onEntitySelect(hitResult);
+      }
     } else {
       // Selection debug disabled for performance
     }
-  }, [cursor, onTransformChange, viewport, transform, onEntitySelect, colorLayers, onLayerSelected, canvasRef]);
+
+    // ✅ FIX: Call onCanvasClick for overlay drawing
+    // This is needed for overlay mode drawing (Layering → Σχεδίαση)
+    if (onCanvasClick && cursor.position && !cursor.isSelecting && !panState.isPanning) {
+      console.log('🎯 CENTRALIZED: Calling onCanvasClick:', cursor.position);
+      onCanvasClick(cursor.position);
+    }
+  }, [cursor, onTransformChange, viewport, hitTestCallback, scene, transform, onEntitySelect, colorLayers, onLayerSelected, canvasRef, onCanvasClick]);
 
   // 🚀 MOUSE LEAVE HANDLER - CAD-style area detection with pan cleanup
   const handleMouseLeave = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
