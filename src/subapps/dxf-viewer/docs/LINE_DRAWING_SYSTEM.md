@@ -10,16 +10,17 @@
 
 1. [System Overview](#system-overview)
 2. [Architecture & Data Flow](#architecture--data-flow)
-3. [Coordinate Systems & Transformations](#coordinate-systems--transformations)
-4. [Mouse Events & Canvas Interaction](#mouse-events--canvas-interaction)
-5. [Rendering Pipeline](#rendering-pipeline)
-6. [File Dependencies](#file-dependencies)
-7. [Event Flow - Click to Rendering](#event-flow---click-to-rendering)
-8. [Critical Bugs Fixed](#critical-bugs-fixed)
-9. [Configuration Requirements](#configuration-requirements)
-10. [Settings & Flags](#settings--flags)
-11. [Troubleshooting Guide](#troubleshooting-guide)
-12. [Testing Checklist](#testing-checklist)
+3. [Dual Canvas Architecture](#dual-canvas-architecture) ⚠️ **CRITICAL**
+4. [Coordinate Systems & Transformations](#coordinate-systems--transformations)
+5. [Mouse Events & Canvas Interaction](#mouse-events--canvas-interaction)
+6. [Rendering Pipeline](#rendering-pipeline)
+7. [File Dependencies](#file-dependencies)
+8. [Event Flow - Click to Rendering](#event-flow---click-to-rendering)
+9. [Critical Bugs Fixed](#critical-bugs-fixed)
+10. [Configuration Requirements](#configuration-requirements)
+11. [Settings & Flags](#settings--flags)
+12. [Troubleshooting Guide](#troubleshooting-guide)
+13. [Testing Checklist](#testing-checklist)
 
 ---
 
@@ -100,7 +101,248 @@ CanvasSection (orchestrates drawing)
 
 ---
 
-## 3. COORDINATE SYSTEMS & TRANSFORMATIONS
+## 3. DUAL CANVAS ARCHITECTURE
+
+### ⚠️ CRITICAL: Two Separate Canvas Elements
+
+The DXF Viewer uses **TWO canvas elements stacked on top of each other**. Understanding which canvas does what is ESSENTIAL for drawing to work!
+
+#### 🎨 Canvas #1: DxfCanvas (Bottom Layer, z-index: 5)
+
+**Purpose:** Renders DXF entities (lines, circles, etc.)
+**File:** `src/subapps/dxf-viewer/canvas-v2/dxf-canvas/DxfCanvas.tsx`
+**Z-Index:** 5 (bottom canvas)
+**What it renders:**
+- ✅ DXF entities (Line, Circle, Rectangle, Arc, Polyline, Polygon)
+- ✅ Entity geometry from DXF files
+- ✅ User-drawn entities (when drawing tools active)
+
+**When to use:**
+- Drawing new entities (Line, Circle, etc.)
+- Importing DXF files
+- Rendering entity geometry
+
+**Key Props:**
+```typescript
+<DxfCanvas
+  scene={props.currentScene}        // Entities to render
+  onCanvasClick={handleCanvasClick} // For drawing tools ✅
+  transform={transform}              // Pan/zoom
+/>
+```
+
+---
+
+#### 🌈 Canvas #2: LayerCanvas (Top Layer, z-index: 10)
+
+**Purpose:** Renders colored layer overlays (visual layers)
+**File:** `src/subapps/dxf-viewer/canvas-v2/layer-canvas/LayerCanvas.tsx`
+**Z-Index:** 10 (top canvas, ABOVE DxfCanvas!)
+**What it renders:**
+- ✅ Colored layer fills (background colors for levels)
+- ✅ Layer boundaries
+- ✅ Visual overlays (NOT entities!)
+
+**When to use:**
+- Showing level/layer visual representation
+- Colored backgrounds for levels
+- Layer highlighting
+
+**Key Props:**
+```typescript
+<LayerCanvas
+  // ... layer props
+  style={{
+    pointerEvents: isDrawingTool ? 'none' : 'auto' // ✅ CRITICAL!
+  }}
+/>
+```
+
+---
+
+### 🚨 THE CRITICAL PROBLEM: LayerCanvas Blocks Clicks!
+
+**Why this is a problem:**
+
+```
+User clicks to draw line
+         ↓
+LayerCanvas (z-index: 10) is on TOP
+         ↓
+Click intercepted by LayerCanvas ❌
+         ↓
+DxfCanvas (z-index: 5) NEVER receives click ❌
+         ↓
+Drawing doesn't work! ❌
+```
+
+**The Solution (Bug #3 Fix):**
+
+```typescript
+// CanvasSection.tsx (line 871)
+<LayerCanvas
+  style={{
+    touchAction: 'none',
+    pointerEvents: (activeTool === 'line' || activeTool === 'polyline' ||
+                    activeTool === 'polygon' || activeTool === 'circle' ||
+                    activeTool === 'rectangle' || activeTool === 'arc')
+                    ? 'none'  // ✅ Disable clicks when drawing tools active
+                    : 'auto'  // Enable clicks for selection/other modes
+  }}
+/>
+```
+
+**How it works:**
+1. User selects Line tool
+2. `activeTool` becomes `'line'`
+3. `pointerEvents: 'none'` applied to LayerCanvas
+4. LayerCanvas becomes **click-transparent** (clicks pass through!)
+5. DxfCanvas receives clicks ✅
+6. Drawing works! ✅
+
+---
+
+### 📐 Canvas Stacking Visual
+
+```
+┌─────────────────────────────────────┐
+│      LayerCanvas (z-index: 10)      │  ← TOP
+│  [pointerEvents: 'none' when drawing]│
+│  - Colored layers                    │
+│  - Visual overlays                   │
+│  - Background fills                  │
+└─────────────────────────────────────┘
+         ↓ (clicks pass through when drawing)
+┌─────────────────────────────────────┐
+│      DxfCanvas (z-index: 5)         │  ← BOTTOM
+│  [Receives clicks for drawing]      │
+│  - DXF entities                      │
+│  - User drawings                     │
+│  - Entity geometry                   │
+└─────────────────────────────────────┘
+```
+
+---
+
+### 🎯 Which Canvas for Which Task?
+
+| Task | Canvas | Why |
+|------|--------|-----|
+| Draw Line/Circle/Arc | DxfCanvas | Entity geometry |
+| Import DXF file | DxfCanvas | DXF entities |
+| Render entities | DxfCanvas | Entity rendering |
+| Show colored layers | LayerCanvas | Visual layers |
+| Highlight level | LayerCanvas | Visual overlay |
+| Select entities | DxfCanvas | Entity selection |
+| Pan/Zoom | Both | Both transform together |
+
+---
+
+### ⚠️ Common Mistakes
+
+#### Mistake #1: Drawing on LayerCanvas
+```typescript
+// ❌ WRONG - LayerCanvas is for visual layers, NOT entities!
+<LayerCanvas
+  onCanvasClick={handleEntityDrawing} // Wrong canvas!
+/>
+```
+
+```typescript
+// ✅ CORRECT - DxfCanvas is for entities
+<DxfCanvas
+  onCanvasClick={handleCanvasClick} // Correct canvas!
+/>
+```
+
+#### Mistake #2: Forgetting pointerEvents
+```typescript
+// ❌ WRONG - LayerCanvas will block clicks
+<LayerCanvas
+  // Missing pointerEvents control!
+/>
+```
+
+```typescript
+// ✅ CORRECT - Disable clicks when drawing
+<LayerCanvas
+  style={{
+    pointerEvents: isDrawingTool ? 'none' : 'auto'
+  }}
+/>
+```
+
+#### Mistake #3: Wrong z-index
+```typescript
+// ❌ WRONG - DxfCanvas on top blocks LayerCanvas
+<DxfCanvas style={{ zIndex: 15 }} />
+<LayerCanvas style={{ zIndex: 10 }} />
+```
+
+```typescript
+// ✅ CORRECT - LayerCanvas on top, but click-transparent when needed
+<DxfCanvas style={{ zIndex: 5 }} />
+<LayerCanvas style={{ zIndex: 10, pointerEvents: ... }} />
+```
+
+---
+
+### 📋 Canvas Architecture Checklist
+
+**For Drawing Tools to Work:**
+
+- [ ] ✅ DxfCanvas has `onCanvasClick` prop
+- [ ] ✅ LayerCanvas has `pointerEvents: 'none'` when drawing tool active
+- [ ] ✅ DxfCanvas z-index = 5 (bottom)
+- [ ] ✅ LayerCanvas z-index = 10 (top)
+- [ ] ✅ Both canvases receive same transform (pan/zoom)
+- [ ] ✅ Scene prop passed to DxfCanvas (NOT LayerCanvas)
+- [ ] ✅ Drawing handlers connected to DxfCanvas (NOT LayerCanvas)
+
+---
+
+### 🔍 How to Debug Canvas Issues
+
+**Problem: Clicks not working**
+
+1. **Check which canvas is on top:**
+   ```javascript
+   // In browser DevTools:
+   document.querySelectorAll('canvas').forEach(c => {
+     console.log(c.className, window.getComputedStyle(c).zIndex);
+   });
+   // Should show:
+   // LayerCanvas: 10
+   // DxfCanvas: 5
+   ```
+
+2. **Check pointerEvents:**
+   ```javascript
+   const layerCanvas = document.querySelector('.layer-canvas');
+   console.log(window.getComputedStyle(layerCanvas).pointerEvents);
+   // Should be 'none' when drawing tool active
+   ```
+
+3. **Check event handlers:**
+   ```javascript
+   const dxfCanvas = document.querySelector('.dxf-canvas');
+   console.log(dxfCanvas.onclick); // Should have handler
+   ```
+
+---
+
+### 🎓 Key Takeaways
+
+1. **DxfCanvas = Entity Geometry** (lines, circles, DXF entities)
+2. **LayerCanvas = Visual Layers** (colored backgrounds, level highlights)
+3. **LayerCanvas is ON TOP** (z-index 10 > 5)
+4. **LayerCanvas MUST be click-transparent during drawing** (pointerEvents: 'none')
+5. **Drawing tools ONLY work with DxfCanvas** (NOT LayerCanvas!)
+6. **If drawing doesn't work → Check LayerCanvas pointerEvents!**
+
+---
+
+## 4. COORDINATE SYSTEMS & TRANSFORMATIONS
 
 ### 🎯 Critical Concept: 3 Coordinate Systems
 
@@ -2443,14 +2685,16 @@ const width = canvas.clientWidth;
 
 ### 🎓 Key Learnings from 2-Day Debug
 
-1. **useRef prevents infinite loops** - Don't put object handlers in useEffect deps
-2. **Canvas coords ≠ Screen coords** - Must subtract getBoundingClientRect offset
-3. **React ref ≠ DOM element** - Use getCanvas() to get HTMLCanvasElement
-4. **Stale closures are real** - Use ref.current for latest values
-5. **Pointer events matter** - LayerCanvas can block DxfCanvas clicks
-6. **Selection blocks drawing** - Must check tool type before starting selection
-7. **Callback chain is critical** - Global store update ≠ React props update
-8. **Y-axis flips in CAD** - Screen Y down, World Y up, must negate
+1. **Dual canvas architecture** - DxfCanvas (entities) ≠ LayerCanvas (visual layers)
+2. **LayerCanvas blocks clicks** - MUST set pointerEvents: 'none' when drawing
+3. **useRef prevents infinite loops** - Don't put object handlers in useEffect deps
+4. **Canvas coords ≠ Screen coords** - Must subtract getBoundingClientRect offset
+5. **React ref ≠ DOM element** - Use getCanvas() to get HTMLCanvasElement
+6. **Stale closures are real** - Use ref.current for latest values
+7. **Pointer events matter** - LayerCanvas can block DxfCanvas clicks
+8. **Selection blocks drawing** - Must check tool type before starting selection
+9. **Callback chain is critical** - Global store update ≠ React props update
+10. **Y-axis flips in CAD** - Screen Y down, World Y up, must negate
 
 ---
 
