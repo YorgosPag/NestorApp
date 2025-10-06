@@ -178,6 +178,35 @@
   - ✅ `systems/zoom/ZoomManager.ts` → Auto-updated via re-exports
   - ✅ `ui/toolbar/ZoomControls.tsx` → Using ZOOM_FACTORS.BUTTON_IN (20%)
 
+### 🔟 **SETTINGS HOOKS (2025-10-06 - ENTERPRISE REFACTORING)**
+- ❌ ΟΧΙ `useConsolidatedSettings` (deprecated - local useState)
+- ❌ ΟΧΙ local state για mode-specific settings
+- ✅ ΜΟΝΟ Provider Hooks από `DxfSettingsProvider`
+- 📍 **Κεντρικοποίηση 2025-10-06 (Phase 6)**:
+  - 6 νέα Provider Hooks για direct access σε specific settings
+  - Direct connection με centralized Provider state (zero local state)
+  - Auto-save persistence με 500ms debounce
+  - Type-safe με discriminated union actions
+  - 3-layer effective settings calculation (General → Specific → Overrides)
+- 🏢 **ENTERPRISE HOOKS** (Draft/Hover/Selection/Completion modes):
+  - `useLineDraftSettings()` - Προσχεδίαση γραμμής
+  - `useLineHoverSettings()` - Αιώρηση γραμμής
+  - `useLineSelectionSettings()` - Επιλογή γραμμής
+  - `useLineCompletionSettings()` - Ολοκλήρωση γραμμής
+  - `useTextDraftSettings()` - Προσχεδίαση κειμένου
+  - `useGripDraftSettings()` - Προσχεδίαση grips
+- 📄 **Hook API** (consistent across all):
+  ```typescript
+  const draft = useLineDraftSettings();
+  draft.settings                    // Current mode settings
+  draft.updateSettings({ color })   // Update mode settings
+  draft.getEffectiveSettings()      // Get effective (specific → general)
+  draft.isOverrideEnabled           // Override flag status
+  draft.toggleOverride(true)        // Toggle override
+  ```
+- 📍 Δες: `docs/settings-system/00-INDEX.md` - Complete settings documentation (10 chapters)
+- 📍 **Enterprise Refactoring**: `docs/ENTERPRISE_REFACTORING_PLAN.md` - 10-phase plan (60% complete)
+
 ---
 
 ## 🚨 ΠΡΙΝ ΓΡΑΨΕΙΣ ΚΩΔΙΚΑ
@@ -207,6 +236,7 @@
 | **Distance** | `calculateDistance` | `rendering/entities/shared/geometry-rendering-utils.ts` | Single source of truth για distance calculations |
 | **Bounds Utilities** | `getBoundsCenter` | `systems/zoom/utils/bounds.ts` | Κεντρικό bounds utilities |
 | **Transform Constants** | `TRANSFORM_CONFIG` | `config/transform-config.ts` | All transform/zoom/pan constants centralized |
+| **Settings Hooks** 🆕 | Provider Hooks | `providers/DxfSettingsProvider.tsx` | [settings-system/00-INDEX.md](./docs/settings-system/00-INDEX.md) - 6 hooks για draft/hover/selection/completion modes |
 | **Line Drawing** | `useUnifiedDrawing` | `hooks/drawing/` | [line-drawing/README.md](./docs/features/line-drawing/README.md) - Preview/Completion phases, Settings integration |
 
 ---
@@ -226,6 +256,7 @@
 - **...υπολογίσω bounds center** → `getBoundsCenter()` από `systems/zoom/utils/bounds.ts`
 - **...σχεδιάσω γραμμή/κύκλο/πολύγωνο** → `useUnifiedDrawing` από `useDrawingHandlers` → [line-drawing/README.md](./docs/features/line-drawing/README.md)
 - **...εφαρμόσω settings (Γενικές/Ειδικές)** → `useEntityStyles` + `PhaseManager` → [line-drawing/lifecycle.md](./docs/features/line-drawing/lifecycle.md)
+- **...διαχειριστώ settings (Draft/Hover/Selection/Completion)** → Provider Hooks (useLineDraftSettings, κλπ.) → [settings-system/00-INDEX.md](./docs/settings-system/00-INDEX.md)
 
 ---
 
@@ -309,5 +340,5 @@ src/subapps/dxf-viewer/
 ---
 
 *Ημερομηνία δημιουργίας modular docs: 2025-10-03*
-*Τελευταία ενημέρωση: 2025-10-03 - Geometry utilities centralization*
+*Τελευταία ενημέρωση: 2025-10-06 - Settings Hooks centralization (Phase 6)*
 *Αρχείο υπενθύμισης κεντρικοποίησης - Μη διαγράψεις!*
