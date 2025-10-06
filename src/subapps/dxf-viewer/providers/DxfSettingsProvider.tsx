@@ -1711,15 +1711,19 @@ export function useTextSettingsFromProvider() {
     return {
       settings: defaultTextSettings,
       updateSettings: () => {},
-      resetToDefaults: () => {}
+      resetToDefaults: () => {},
+      resetToFactory: () => {}  // 🏭 Factory reset (ISO 3098 standards)
     };
   }
 
   const { settings, updateTextSettings } = dxfSettings;
+  const resetToFactory = () => updateTextSettings(defaultTextSettings);
+
   return {
     settings: settings.text,
     updateSettings: updateTextSettings,
-    resetToDefaults: () => updateTextSettings(defaultTextSettings)
+    resetToDefaults: resetToFactory,  // Same as factory for text
+    resetToFactory  // 🏭 Factory reset to ISO 3098 standards
   };
 }
 
@@ -1729,15 +1733,19 @@ export function useGripSettingsFromProvider() {
     return {
       settings: defaultGripSettings,
       updateSettings: () => {},
-      resetToDefaults: () => {}
+      resetToDefaults: () => {},
+      resetToFactory: () => {}  // 🏭 Factory reset (AutoCAD standards)
     };
   }
 
   const { settings, updateGripSettings } = dxfSettings;
+  const resetToFactory = () => updateGripSettings(defaultGripSettings);
+
   return {
     settings: settings.grip,
     updateSettings: updateGripSettings,
-    resetToDefaults: () => updateGripSettings(defaultGripSettings)
+    resetToDefaults: resetToFactory,  // Same as factory for grips
+    resetToFactory  // 🏭 Factory reset to AutoCAD standards
   };
 }
 

@@ -43,9 +43,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useUnifiedTextPreview } from '../../../../hooks/useUnifiedSpecificSettings';
+import { createPortal } from 'react-dom';
+import { useTextSettingsFromProvider } from '../../../../../providers/DxfSettingsProvider';
 import { AccordionSection, useAccordion } from '../shared/AccordionSection';
 import type { TextSettings } from '../../../../contexts/TextSettingsContext';
+import { BaseModal } from '../../../../../components/shared/BaseModal';
+import { useNotifications } from '../../../../../../../providers/NotificationProvider';
 
 // Simple SVG icons for text
 const DocumentTextIcon = ({ className }: { className?: string }) => (
@@ -189,8 +192,16 @@ function ScriptStyleButtons({ settings, onSuperscriptChange, onSubscriptChange }
 }
 
 export function TextSettings() {
-  // 🔺 ΔΙΟΡΘΩΣΗ: Χρήση unified hook αντί για γενικό για override λειτουργικότητα
-  const { settings: { textSettings }, updateTextSettings, resetToDefaults } = useUnifiedTextPreview();
+  // 🔥 FIX: Use Global Text Settings από provider, ΟΧΙ Preview-specific settings!
+  // Το useUnifiedTextPreview() ενημερώνει localStorage 'dxf-text-preview-settings' (WRONG!)
+  // Θέλουμε να ενημερώσουμε το 'dxf-text-general-settings' (CORRECT!)
+  const { settings: textSettings, updateSettings: updateTextSettings, resetToDefaults, resetToFactory } = useTextSettingsFromProvider();
+
+  // Notifications for factory reset feedback
+  const notifications = useNotifications();
+
+  // Factory reset modal state
+  const [showFactoryResetModal, setShowFactoryResetModal] = useState(false);
 
   // Accordion state management
   const { toggleSection, isOpen } = useAccordion('basic');
@@ -202,6 +213,48 @@ export function TextSettings() {
   const [sizeSearch, setSizeSearch] = useState('');
   const [showFontDropdown, setShowFontDropdown] = useState(false);
   const [showSizeDropdown, setShowSizeDropdown] = useState(false);
+
+  // 🔥 FIX: Refs για dropdown positioning (escape accordion overflow-hidden)
+  const fontInputRef = React.useRef<HTMLInputElement>(null);
+  const sizeInputRef = React.useRef<HTMLInputElement>(null);
+  const [fontDropdownPos, setFontDropdownPos] = React.useState({ top: 0, left: 0, width: 0 });
+  const [sizeDropdownPos, setSizeDropdownPos] = React.useState({ top: 0, left: 0, width: 0 });
+
+  // 🔥 FIX: Calculate dropdown position (for fixed positioning) - useCallback
+  const updateFontDropdownPosition = React.useCallback(() => {
+    if (fontInputRef.current) {
+      const rect = fontInputRef.current.getBoundingClientRect();
+      setFontDropdownPos({
+        top: rect.bottom + window.scrollY,
+        left: rect.left + window.scrollX,
+        width: rect.width
+      });
+    }
+  }, []);
+
+  const updateSizeDropdownPosition = React.useCallback(() => {
+    if (sizeInputRef.current) {
+      const rect = sizeInputRef.current.getBoundingClientRect();
+      setSizeDropdownPos({
+        top: rect.bottom + window.scrollY,
+        left: rect.left + window.scrollX,
+        width: rect.width
+      });
+    }
+  }, []);
+
+  // 🔥 FIX: Update positions when dropdowns open
+  React.useEffect(() => {
+    if (showFontDropdown) {
+      updateFontDropdownPosition();
+    }
+  }, [showFontDropdown, updateFontDropdownPosition]);
+
+  React.useEffect(() => {
+    if (showSizeDropdown) {
+      updateSizeDropdownPosition();
+    }
+  }, [showSizeDropdown, updateSizeDropdownPosition]);
 
   // Handlers
   const handleFontFamilyChange = (fontFamily: string) => {
@@ -246,11 +299,13 @@ export function TextSettings() {
   const handleFontSearchChange = (value: string) => {
     setFontSearch(value);
     setShowFontDropdown(true);
+    updateFontDropdownPosition();
   };
 
   const handleSizeSearchChange = (value: string) => {
     setSizeSearch(value);
     setShowSizeDropdown(true);
+    updateSizeDropdownPosition();
   };
 
   const selectFont = (fontValue: string) => {
@@ -273,6 +328,38 @@ export function TextSettings() {
   const decreaseFontSize = () => {
     const newSize = Math.max(6, textSettings.fontSize - 1);
     handleFontSizeChange(newSize);
+  };
+
+  // Factory reset handlers
+  const handleFactoryResetClick = () => {
+    setShowFactoryResetModal(true);
+  };
+
+  const handleFactoryResetConfirm = () => {
+    if (resetToFactory) {
+      resetToFactory();
+      console.log('🏭 [TextSettings] Factory reset confirmed - resetting to ISO 3098 defaults');
+
+      // Close modal
+      setShowFactoryResetModal(false);
+
+      // Toast notification για επιτυχία
+      notifications.success(
+        '🏭 Εργοστασιακές ρυθμίσεις επαναφέρθηκαν!',
+        {
+          description: 'Όλες οι ρυθμίσεις κειμένου επέστρεψαν στα πρότυπα ISO 3098.',
+          duration: 5000
+        }
+      );
+    }
+  };
+
+  const handleFactoryResetCancel = () => {
+    console.log('🏭 [TextSettings] Factory reset cancelled by user');
+    setShowFactoryResetModal(false);
+
+    // Toast notification για ακύρωση
+    notifications.info('❌ Ακυρώθηκε η επαναφορά εργοστασιακών ρυθμίσεων');
   };
 
   // Generate preview text style
@@ -300,12 +387,24 @@ export function TextSettings() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-medium text-white">Ρυθμίσεις Κειμένου</h3>
-        <button
-          onClick={resetToDefaults}
-          className="px-3 py-1 text-xs bg-gray-600 hover:bg-gray-500 text-white rounded transition-colors"
-        >
-          Επαναφορά
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={resetToDefaults}
+            className="px-3 py-1 text-xs bg-gray-600 hover:bg-gray-500 text-white rounded transition-colors"
+            title="Επαναφορά στις προεπιλεγμένες ρυθμίσεις"
+          >
+            Επαναφορά
+          </button>
+          {resetToFactory && (
+            <button
+              onClick={handleFactoryResetClick}
+              className="px-3 py-1 text-xs bg-red-700 hover:bg-red-600 text-white rounded transition-colors font-semibold"
+              title="Επαναφορά στις εργοστασιακές ρυθμίσεις (ISO 3098)"
+            >
+              🏭 Εργοστασιακές
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Enable/Disable Text Display */}
@@ -343,6 +442,7 @@ export function TextSettings() {
           onToggle={() => toggleSection('basic')}
           disabled={!textSettings.enabled}
           badge={4}
+          className="overflow-visible"
         >
           <div className="space-y-4">
             {/* Font Family Selection with Search */}
@@ -352,31 +452,45 @@ export function TextSettings() {
         </label>
         <div className="relative">
           <input
+            ref={fontInputRef}
             type="text"
             placeholder={TEXT_LABELS.SEARCH_FONTS}
             value={fontSearch || FREE_FONTS.find(f => f.value === textSettings.fontFamily)?.label || ''}
             onChange={(e) => handleFontSearchChange(e.target.value)}
-            onFocus={() => setShowFontDropdown(true)}
-            onClick={() => setShowFontDropdown(!showFontDropdown)}
+            onFocus={() => { setShowFontDropdown(true); updateFontDropdownPosition(); }}
+            onClick={() => { setShowFontDropdown(!showFontDropdown); updateFontDropdownPosition(); }}
             onBlur={() => setTimeout(() => setShowFontDropdown(false), 150)}
-            className="w-full px-3 py-2 pr-8 bg-gray-700 border border-gray-600 rounded-md text-white text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="w-full px-3 py-2 pr-8 bg-gray-700 border border-gray-600 rounded-md text-white text-sm focus:outline-none focus:ring-2 focus:ring-green-500 cursor-text"
             style={{ fontFamily: textSettings.fontFamily }}
           />
-          {/* Dropdown Arrow */}
-          <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
+          {/* Dropdown Arrow - 🔥 FIX: Added cursor-pointer for hand icon */}
+          <div
+            className="absolute right-2 top-1/2 transform -translate-y-1/2 cursor-pointer"
+            onClick={() => setShowFontDropdown(!showFontDropdown)}
+          >
             <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
           </div>
-          {showFontDropdown && (
-            <div className="absolute bottom-full left-0 right-0 mb-1 bg-gray-900 border-2 border-gray-400 rounded-md shadow-2xl max-h-48 overflow-y-auto backdrop-blur-sm" style={{ zIndex: 99999 }}>
+          {showFontDropdown && typeof document !== 'undefined' && createPortal(
+            <div
+              className="fixed bg-gray-900 border-2 border-gray-400 rounded-md shadow-2xl overflow-y-scroll backdrop-blur-sm"
+              style={{
+                zIndex: 999999,
+                maxHeight: '300px',
+                top: `${fontDropdownPos.top}px`,
+                left: `${fontDropdownPos.left}px`,
+                width: `${fontDropdownPos.width}px`
+              }}
+              onMouseDown={(e) => e.preventDefault()}
+            >
               {filteredFonts.length > 0 ? (
                 filteredFonts.map((font) => (
                   <button
                     key={font.value}
                     onClick={() => selectFont(font.value)}
                     className="w-full text-left px-3 py-2 text-sm text-white hover:bg-gray-700 transition-colors first:rounded-t-md last:rounded-b-md border-b border-gray-600 last:border-b-0"
-                    style={{ fontFamily: font.value, zIndex: 99999 }}
+                    style={{ fontFamily: font.value }}
                   >
                     {font.label}
                   </button>
@@ -386,7 +500,8 @@ export function TextSettings() {
                   Δεν βρέθηκαν γραμματοσειρές
                 </div>
               )}
-            </div>
+            </div>,
+            document.body
           )}
         </div>
       </div>
@@ -400,30 +515,43 @@ export function TextSettings() {
           {/* Size Input with Dropdown */}
           <div className="flex-1 relative">
             <input
+              ref={sizeInputRef}
               type="text"
               placeholder={TEXT_LABELS.SEARCH_SIZE}
               value={sizeSearch || `${textSettings.fontSize}pt`}
               onChange={(e) => handleSizeSearchChange(e.target.value.replace('pt', ''))}
-              onFocus={() => setShowSizeDropdown(true)}
-              onClick={() => setShowSizeDropdown(!showSizeDropdown)}
+              onFocus={() => { setShowSizeDropdown(true); updateSizeDropdownPosition(); }}
+              onClick={() => { setShowSizeDropdown(!showSizeDropdown); updateSizeDropdownPosition(); }}
               onBlur={() => setTimeout(() => setShowSizeDropdown(false), 150)}
-              className="w-full px-3 py-2 pr-8 bg-gray-700 border border-gray-600 rounded-md text-white text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full px-3 py-2 pr-8 bg-gray-700 border border-gray-600 rounded-md text-white text-sm focus:outline-none focus:ring-2 focus:ring-green-500 cursor-text"
             />
-            {/* Dropdown Arrow */}
-            <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
+            {/* Dropdown Arrow - 🔥 FIX: Added cursor-pointer for hand icon */}
+            <div
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 cursor-pointer"
+              onClick={() => setShowSizeDropdown(!showSizeDropdown)}
+            >
               <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </div>
-            {showSizeDropdown && (
-              <div className="absolute bottom-full left-0 right-0 mb-1 bg-gray-900 border-2 border-gray-400 rounded-md shadow-2xl max-h-48 overflow-y-auto backdrop-blur-sm" style={{ zIndex: 99999 }}>
+            {showSizeDropdown && typeof document !== 'undefined' && createPortal(
+              <div
+                className="fixed bg-gray-900 border-2 border-gray-400 rounded-md shadow-2xl overflow-y-scroll backdrop-blur-sm"
+                style={{
+                  zIndex: 999999,
+                  maxHeight: '300px',
+                  top: `${sizeDropdownPos.top}px`,
+                  left: `${sizeDropdownPos.left}px`,
+                  width: `${sizeDropdownPos.width}px`
+                }}
+                onMouseDown={(e) => e.preventDefault()}
+              >
                 {filteredSizes.length > 0 ? (
                   filteredSizes.map((size) => (
                     <button
                       key={size}
                       onClick={() => selectSize(size)}
                       className="w-full text-left px-3 py-2 text-sm text-white hover:bg-gray-700 transition-colors first:rounded-t-md last:rounded-b-md border-b border-gray-600 last:border-b-0"
-                      style={{ zIndex: 99999 }}
                     >
                       {size}pt
                     </button>
@@ -438,12 +566,12 @@ export function TextSettings() {
                   <button
                     onClick={() => selectSize(Number(sizeSearch))}
                     className="w-full text-left px-3 py-2 text-sm text-green-400 hover:bg-gray-700 transition-colors border-t border-gray-600 rounded-b-md"
-                    style={{ zIndex: 99999 }}
                   >
                     {sizeSearch}{TEXT_LABELS.FONT_SIZE_UNIT} ({TEXT_LABELS.CUSTOM_SIZE})
                   </button>
                 )}
-              </div>
+              </div>,
+              document.body
             )}
           </div>
 
@@ -588,6 +716,63 @@ export function TextSettings() {
         </AccordionSection>
 
       </div> {/* Κλείσιμο accordion wrapper */}
+
+      {/* 🆕 ENTERPRISE FACTORY RESET CONFIRMATION MODAL */}
+      <BaseModal
+        isOpen={showFactoryResetModal}
+        onClose={handleFactoryResetCancel}
+        title="⚠️ Επαναφορά Εργοστασιακών Ρυθμίσεων"
+        size="md"
+        closeOnBackdrop={false}
+        zIndex={10000}
+      >
+        <div className="space-y-4">
+          {/* Warning Message */}
+          <div className="bg-red-900 bg-opacity-20 border-l-4 border-red-500 p-4 rounded">
+            <p className="text-red-200 font-semibold mb-2">
+              ⚠️ ΠΡΟΕΙΔΟΠΟΙΗΣΗ: Θα χάσετε ΟΛΑ τα δεδομένα σας!
+            </p>
+          </div>
+
+          {/* Loss List */}
+          <div className="space-y-2">
+            <p className="text-gray-300 font-medium">Θα χάσετε:</p>
+            <ul className="list-disc list-inside space-y-1 text-gray-400 text-sm">
+              <li>Όλες τις προσαρμοσμένες ρυθμίσεις κειμένου</li>
+              <li>Όλα τα templates που έχετε επιλέξει</li>
+              <li>Όλες τις αλλαγές που έχετε κάνει</li>
+            </ul>
+          </div>
+
+          {/* Reset Info */}
+          <div className="bg-blue-900 bg-opacity-20 border-l-4 border-blue-500 p-4 rounded">
+            <p className="text-blue-200 text-sm">
+              <strong>Επαναφορά:</strong> Οι ρυθμίσεις θα επανέλθουν στα πρότυπα ISO 3098
+            </p>
+          </div>
+
+          {/* Confirmation Question */}
+          <p className="text-white font-medium text-center pt-2">
+            Είστε σίγουροι ότι θέλετε να συνεχίσετε;
+          </p>
+
+          {/* Action Buttons */}
+          <div className="flex gap-3 justify-end pt-4 border-t border-gray-700">
+            <button
+              onClick={handleFactoryResetCancel}
+              className="px-4 py-2 text-sm bg-gray-600 hover:bg-gray-500 text-white rounded transition-colors"
+            >
+              Ακύρωση
+            </button>
+            <button
+              onClick={handleFactoryResetConfirm}
+              className="px-4 py-2 text-sm bg-red-700 hover:bg-red-600 text-white rounded transition-colors font-semibold"
+            >
+              🏭 Επαναφορά Εργοστασιακών
+            </button>
+          </div>
+        </div>
+      </BaseModal>
 
     </div>
   );

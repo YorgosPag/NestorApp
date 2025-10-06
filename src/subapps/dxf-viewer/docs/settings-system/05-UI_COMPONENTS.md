@@ -316,6 +316,186 @@ interface LineTemplate {
 
 ---
 
+### 🏭 Factory Reset Feature
+
+**✅ IMPLEMENTED (2025-10-06)** - Enterprise-grade factory reset functionality
+
+**Affected Components**:
+- ✅ **LineSettings** → Resets to ISO 128 & AutoCAD 2024
+- ✅ **TextSettings** → Resets to ISO 3098
+- ✅ **GripSettings** → Resets to AutoCAD Standards
+
+**UI Pattern** (Identical across all 3 components):
+
+```typescript
+// Button in header (next to "Επαναφορά")
+{resetToFactory && (
+  <button
+    onClick={handleFactoryResetClick}
+    className="px-3 py-1 text-xs bg-red-700 hover:bg-red-600 text-white rounded transition-colors font-semibold"
+    title="Επαναφορά στις εργοστασιακές ρυθμίσεις"
+  >
+    🏭 Εργοστασιακές
+  </button>
+)}
+
+// Modal structure (BaseModal)
+<BaseModal
+  isOpen={showFactoryResetModal}
+  onClose={handleFactoryResetCancel}
+  title="⚠️ Επαναφορά Εργοστασιακών Ρυθμίσεων"
+  size="md"
+  closeOnBackdrop={false}
+  zIndex={10000}
+>
+  <div className="space-y-4">
+    {/* Warning Message */}
+    <div className="bg-red-900 bg-opacity-20 border-l-4 border-red-500 p-4 rounded">
+      <p className="text-red-200 font-semibold mb-2">
+        ⚠️ ΠΡΟΕΙΔΟΠΟΙΗΣΗ: Θα χάσετε ΟΛΑ τα δεδομένα σας!
+      </p>
+    </div>
+
+    {/* Loss List */}
+    <div className="space-y-2">
+      <p className="text-gray-300 font-medium">Θα χάσετε:</p>
+      <ul className="list-disc list-inside space-y-1 text-gray-400 text-sm">
+        <li>Όλες τις προσαρμοσμένες ρυθμίσεις [γραμμών/κειμένου/grips]</li>
+        <li>Όλα τα templates που έχετε επιλέξει</li>
+        <li>Όλες τις αλλαγές που έχετε κάνει</li>
+      </ul>
+    </div>
+
+    {/* Reset Info */}
+    <div className="bg-blue-900 bg-opacity-20 border-l-4 border-blue-500 p-4 rounded">
+      <p className="text-blue-200 text-sm">
+        <strong>Επαναφορά:</strong> Οι ρυθμίσεις θα επανέλθουν στα πρότυπα [ISO 128 & AutoCAD 2024 / ISO 3098 / AutoCAD]
+      </p>
+    </div>
+
+    {/* Confirmation Question */}
+    <p className="text-white font-medium text-center pt-2">
+      Είστε σίγουροι ότι θέλετε να συνεχίσετε;
+    </p>
+
+    {/* Action Buttons */}
+    <div className="flex gap-3 justify-end pt-4 border-t border-gray-700">
+      <button onClick={handleFactoryResetCancel}>Ακύρωση</button>
+      <button onClick={handleFactoryResetConfirm}>🏭 Επαναφορά Εργοστασιακών</button>
+    </div>
+  </div>
+</BaseModal>
+```
+
+**Handler Implementation**:
+
+```typescript
+// State
+const [showFactoryResetModal, setShowFactoryResetModal] = useState(false);
+const notifications = useNotifications();
+
+// Handlers
+const handleFactoryResetClick = () => {
+  setShowFactoryResetModal(true);
+};
+
+const handleFactoryResetConfirm = () => {
+  if (resetToFactory) {
+    resetToFactory();
+    console.log('🏭 Factory reset confirmed - resetting to [standard] defaults');
+
+    setShowFactoryResetModal(false);
+
+    notifications.success(
+      '🏭 Εργοστασιακές ρυθμίσεις επαναφέρθηκαν!',
+      {
+        description: 'Όλες οι ρυθμίσεις επέστρεψαν στα πρότυπα [ISO 128 & AutoCAD 2024 / ISO 3098 / AutoCAD].',
+        duration: 5000
+      }
+    );
+  }
+};
+
+const handleFactoryResetCancel = () => {
+  console.log('🏭 Factory reset cancelled by user');
+  setShowFactoryResetModal(false);
+  notifications.info('❌ Ακυρώθηκε η επαναφορά εργοστασιακών ρυθμίσεων');
+};
+```
+
+**Provider Hook Updates** (DxfSettingsProvider.tsx):
+
+```typescript
+// All 3 provider hooks now export resetToFactory
+export function useLineSettingsFromProvider() {
+  // ...
+  return {
+    settings: settings.line,
+    updateSettings: updateLineSettings,
+    resetToDefaults,  // From template system
+    resetToFactory,   // 🆕 Factory reset to DEFAULT_LINE_SETTINGS
+    // ...
+  };
+}
+
+export function useTextSettingsFromProvider() {
+  const resetToFactory = () => updateTextSettings(DEFAULT_TEXT_SETTINGS);
+  return {
+    settings: settings.text,
+    updateSettings: updateTextSettings,
+    resetToDefaults: resetToFactory,  // Same as factory for text
+    resetToFactory  // 🆕 Factory reset to DEFAULT_TEXT_SETTINGS (ISO 3098)
+  };
+}
+
+export function useGripSettingsFromProvider() {
+  const resetToFactory = () => updateGripSettings(DEFAULT_GRIP_SETTINGS);
+  return {
+    settings: settings.grip,
+    updateSettings: updateGripSettings,
+    resetToDefaults: resetToFactory,  // Same as factory for grips
+    resetToFactory  // 🆕 Factory reset to DEFAULT_GRIP_SETTINGS (AutoCAD)
+  };
+}
+```
+
+**Standards Reference**:
+
+| Component | Factory Reset Target | Source File |
+|-----------|---------------------|-------------|
+| LineSettings | `DEFAULT_LINE_SETTINGS` | `settings-core/defaults.ts:12` |
+| | ISO 128 Standards (line widths, types) | |
+| | AutoCAD 2024 (ACI colors, conventions) | |
+| TextSettings | `DEFAULT_TEXT_SETTINGS` | `settings-core/defaults.ts:43` |
+| | ISO 3098 (3.5mm font height, Arial) | |
+| GripSettings | `DEFAULT_GRIP_SETTINGS` | `settings-core/defaults.ts:80` |
+| | AutoCAD GRIPSIZE (5 DIP) | |
+| | AutoCAD PICKBOX (3 DIP) | |
+| | AutoCAD APERTURE (10 pixels) | |
+| | AutoCAD ACI Colors (Blue/Pink/Red) | |
+
+**⚠️ CRITICAL PATTERN - ΜΗΔΕΝΙΚΗ ΑΝΟΧΗ ΣΕ ΑΛΛΑΓΕΣ!**
+
+**🚨 Factory Reset Modal Structure MUST BE IDENTICAL 🚨**
+
+All 3 components (LineSettings, TextSettings, GripSettings) MUST use the **exact same modal structure**:
+1. ⚠️ Warning banner (red background)
+2. Loss list (3 items)
+3. Reset info box (blue background with standard reference)
+4. Confirmation question
+5. Action buttons (Cancel + Confirm)
+
+**Modal Props** (MUST be identical):
+- `size="md"`
+- `closeOnBackdrop={false}` (prevent accidental close)
+- `zIndex={10000}` (ensure it appears on top)
+
+**Toast Notifications**:
+- Success: 5000ms duration, green toast
+- Cancel: Info toast, 3000ms duration
+
+---
+
 ## 📝 TEXTSETTINGS COMPONENT
 
 **Location**: `ui/components/dxf-settings/settings/core/TextSettings.tsx` (552 lines)
