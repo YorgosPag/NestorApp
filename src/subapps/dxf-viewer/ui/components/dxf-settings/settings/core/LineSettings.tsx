@@ -64,6 +64,7 @@ import type { LineTemplate } from '../../../../../contexts/LineSettingsContext';
 import { SharedColorPicker } from '../../../shared/SharedColorPicker';
 import { useSettingsUpdater, commonValidators } from '../../../../hooks/useSettingsUpdater';
 import { useNotifications } from '../../../../../../../providers/NotificationProvider';
+import { BaseModal } from '../../../../../components/shared/BaseModal';
 import {
   LINE_TYPE_LABELS,
   LINE_CAP_LABELS,
@@ -211,6 +212,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
   const [showCapDropdown, setShowCapDropdown] = useState(false);
   const [showJoinDropdown, setShowJoinDropdown] = useState(false);
   const [showTemplateDropdown, setShowTemplateDropdown] = useState(false);
+  const [showFactoryResetModal, setShowFactoryResetModal] = useState(false); // 🆕 ENTERPRISE MODAL
 
   // Keyboard navigation state
   const [highlightedTemplateIndex, setHighlightedTemplateIndex] = useState(-1);
@@ -377,36 +379,36 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
     }
   };
 
-  // 🆕 TEMPLATE SYSTEM: Factory reset με confirmation dialog
-  const handleFactoryReset = () => {
-    const confirmed = window.confirm(
-      '⚠️ ΕΠΑΝΑΦΟΡΑ ΕΡΓΟΣΤΑΣΙΑΚΩΝ ΡΥΘΜΙΣΕΩΝ\n\n' +
-      'Θα χάσετε ΟΛΑ τα εξής:\n' +
-      '• Όλες τις προσαρμοσμένες ρυθμίσεις γραμμών\n' +
-      '• Όλα τα templates που έχετε επιλέξει\n' +
-      '• Όλες τις αλλαγές που έχετε κάνει\n\n' +
-      'Οι ρυθμίσεις θα επανέλθουν στα πρότυπα ISO 128 & AutoCAD 2024.\n\n' +
-      'Είστε σίγουροι ότι θέλετε να συνεχίσετε;'
-    );
+  // 🆕 TEMPLATE SYSTEM: Factory reset με enterprise confirmation modal
+  const handleFactoryResetClick = () => {
+    setShowFactoryResetModal(true);
+  };
 
-    if (confirmed && resetToFactory) {
+  const handleFactoryResetConfirm = () => {
+    if (resetToFactory) {
       resetToFactory();
       console.log('🏭 [LineSettings] Factory reset confirmed - resetting to ISO/AutoCAD defaults');
 
+      // Close modal
+      setShowFactoryResetModal(false);
+
       // Toast notification για επιτυχία
       notifications.success(
-        '🏭 Εργοστασιακές ρυθμίσεις επαναφέρθηκαν!\n' +
-        'Όλες οι ρυθμίσεις γραμμών επέστρεψαν στα πρότυπα ISO 128 & AutoCAD 2024.',
-        { duration: 5000 }
+        '🏭 Εργοστασιακές ρυθμίσεις επαναφέρθηκαν!',
+        {
+          description: 'Όλες οι ρυθμίσεις γραμμών επέστρεψαν στα πρότυπα ISO 128 & AutoCAD 2024.',
+          duration: 5000
+        }
       );
-    } else {
-      console.log('🏭 [LineSettings] Factory reset cancelled by user');
-
-      // Toast notification για ακύρωση
-      if (confirmed === false) {
-        notifications.info('❌ Ακυρώθηκε η επαναφορά εργοστασιακών ρυθμίσεων');
-      }
     }
+  };
+
+  const handleFactoryResetCancel = () => {
+    console.log('🏭 [LineSettings] Factory reset cancelled by user');
+    setShowFactoryResetModal(false);
+
+    // Toast notification για ακύρωση
+    notifications.info('❌ Ακυρώθηκε η επαναφορά εργοστασιακών ρυθμίσεων');
   };
 
   // Accordion state management
@@ -427,7 +429,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           </button>
           {resetToFactory && !contextType && (
             <button
-              onClick={handleFactoryReset}
+              onClick={handleFactoryResetClick}
               className="px-3 py-1 text-xs bg-red-700 hover:bg-red-600 text-white rounded transition-colors font-semibold"
               title="Επαναφορά στις εργοστασιακές ρυθμίσεις (ISO 128 & AutoCAD 2024)"
             >
@@ -1065,6 +1067,63 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
         </AccordionSection>
 
       </div>
+
+      {/* 🆕 ENTERPRISE FACTORY RESET CONFIRMATION MODAL */}
+      <BaseModal
+        isOpen={showFactoryResetModal}
+        onClose={handleFactoryResetCancel}
+        title="⚠️ Επαναφορά Εργοστασιακών Ρυθμίσεων"
+        size="md"
+        closeOnBackdrop={false}
+        zIndex={10000}
+      >
+        <div className="space-y-4">
+          {/* Warning Message */}
+          <div className="bg-red-900 bg-opacity-20 border-l-4 border-red-500 p-4 rounded">
+            <p className="text-red-200 font-semibold mb-2">
+              ⚠️ ΠΡΟΕΙΔΟΠΟΙΗΣΗ: Θα χάσετε ΟΛΑ τα δεδομένα σας!
+            </p>
+          </div>
+
+          {/* Loss List */}
+          <div className="space-y-2">
+            <p className="text-gray-300 font-medium">Θα χάσετε:</p>
+            <ul className="list-disc list-inside space-y-1 text-gray-400 text-sm">
+              <li>Όλες τις προσαρμοσμένες ρυθμίσεις γραμμών</li>
+              <li>Όλα τα templates που έχετε επιλέξει</li>
+              <li>Όλες τις αλλαγές που έχετε κάνει</li>
+            </ul>
+          </div>
+
+          {/* Reset Info */}
+          <div className="bg-blue-900 bg-opacity-20 border-l-4 border-blue-500 p-4 rounded">
+            <p className="text-blue-200 text-sm">
+              <strong>Επαναφορά:</strong> Οι ρυθμίσεις θα επανέλθουν στα πρότυπα ISO 128 & AutoCAD 2024
+            </p>
+          </div>
+
+          {/* Confirmation Question */}
+          <p className="text-white font-medium text-center pt-2">
+            Είστε σίγουροι ότι θέλετε να συνεχίσετε;
+          </p>
+
+          {/* Action Buttons */}
+          <div className="flex gap-3 justify-end pt-4 border-t border-gray-700">
+            <button
+              onClick={handleFactoryResetCancel}
+              className="px-4 py-2 text-sm bg-gray-600 hover:bg-gray-500 text-white rounded transition-colors"
+            >
+              Ακύρωση
+            </button>
+            <button
+              onClick={handleFactoryResetConfirm}
+              className="px-4 py-2 text-sm bg-red-700 hover:bg-red-600 text-white rounded transition-colors font-semibold"
+            >
+              🏭 Επαναφορά Εργοστασιακών
+            </button>
+          </div>
+        </div>
+      </BaseModal>
     </div>
   );
 }
