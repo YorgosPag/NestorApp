@@ -5,7 +5,8 @@ import type { GripSettings } from '../types/gripSettings';
 import { validateGripSettings, DEFAULT_GRIP_SETTINGS } from '../types/gripSettings';
 import { gripStyleStore } from '../stores/GripStyleStore';
 // ===== ΝΕΑ UNIFIED PROVIDERS (για internal use) =====
-import { useViewerConfig } from './ConfigurationProvider';
+// 🗑️ REMOVED (2025-10-06): ConfigurationProvider - MERGED into DxfSettingsProvider
+// import { useViewerConfig } from './ConfigurationProvider';
 import { useDxfSettings, useGripSettingsFromProvider } from './DxfSettingsProvider';
 
 // === CONTEXT TYPE ===
@@ -55,33 +56,22 @@ export function GripProvider({ children }: GripProviderProps) {
     centralGripHook = null;
   }
 
-  // ===== LEGACY UNIFIED CONFIG (για backwards compatibility) =====
-  let unifiedConfig = null;
-  try {
-    unifiedConfig = useViewerConfig();
-  } catch (error) {
-    // Fallback to old approach if unified providers not available
-  }
+  // 🗑️ REMOVED (2025-10-06): Legacy unified config - ConfigurationProvider deleted
+  // Now only using centralGripHook from DxfSettingsProvider
 
   // Fallback state για backwards compatibility
   const [fallbackSettings, setFallbackSettings] = useState<GripSettings>(DEFAULT_GRIP_SETTINGS);
 
-  // Smart settings: ΚΕΝΤΡΙΚΟ hook > Unified config > Fallback
+  // Smart settings: ΚΕΝΤΡΙΚΟ hook > Fallback
   const gripSettings = useMemo(() => {
     // 1. ✅ ΠΡΩΤΗ προτεραιότητα στο κεντρικό hook
     if (centralGripHook?.settings) {
       return validateGripSettings(centralGripHook.settings);
     }
 
-    // 2. Fallback στο unified config
-    if (unifiedConfig) {
-      const effectiveSettings = unifiedConfig.getEffectiveSettings();
-      return effectiveSettings?.grip ? validateGripSettings(effectiveSettings.grip) : DEFAULT_GRIP_SETTINGS;
-    }
-
-    // 3. Local fallback
+    // 2. Local fallback
     return fallbackSettings;
-  }, [centralGripHook?.settings, unifiedConfig, fallbackSettings]);
+  }, [centralGripHook?.settings, fallbackSettings]);
   const renderCount = useRef(0);
   renderCount.current++;
 
@@ -113,35 +103,7 @@ export function GripProvider({ children }: GripProviderProps) {
       return;
     }
 
-    // 2. Fallback στο unified config
-    if (unifiedConfig) {
-      // Χρήση νέου unified system
-      const currentSettings = unifiedConfig.config.entities.grip.general;
-      const next = validateGripSettings({ ...currentSettings, ...updates });
-
-      // === CRITICAL: Object stability check ===
-      if (deepEqual(currentSettings, next)) {
-        return;
-      }
-
-      unifiedConfig.updateEntityConfig('grip', {
-        general: next
-      });
-
-      // ✅ ΝΕΟ: Ενημέρωση του GripStyleStore για συνεπή πρόσβαση χωρίς context
-      gripStyleStore.set({
-        enabled: next.showGrips,
-        colors: next.colors,
-        gripSize: next.gripSize,
-        pickBoxSize: next.pickBoxSize,
-        apertureSize: next.apertureSize,
-        showGrips: next.showGrips,
-        opacity: next.opacity || 1.0
-      });
-      return;
-    }
-
-    // 3. Local fallback
+    // 2. Local fallback
     setFallbackSettings(prev => {
       const next = validateGripSettings({ ...prev, ...updates });
 
@@ -161,7 +123,7 @@ export function GripProvider({ children }: GripProviderProps) {
 
       return next;
     });
-  }, [centralGripHook, unifiedConfig]);
+  }, [centralGripHook]);
 
   // === RESET TO DEFAULTS FUNCTION ===
   const resetToDefaults = useCallback(() => {
@@ -172,17 +134,9 @@ export function GripProvider({ children }: GripProviderProps) {
       return;
     }
 
-    // 2. Fallback στο unified config
-    if (unifiedConfig) {
-      // Χρήση νέου unified system
-      unifiedConfig.updateEntityConfig('grip', {
-        general: DEFAULT_GRIP_SETTINGS
-      });
-    } else {
-      // 3. Local fallback
-      setFallbackSettings(DEFAULT_GRIP_SETTINGS);
-    }
-  }, [centralGripHook, unifiedConfig]);
+    // 2. Local fallback
+    setFallbackSettings(DEFAULT_GRIP_SETTINGS);
+  }, [centralGripHook]);
 
   // === STABLE HELPER FUNCTIONS ===
   const getGripSize = useCallback((state: 'cold' | 'warm' | 'hot') => {

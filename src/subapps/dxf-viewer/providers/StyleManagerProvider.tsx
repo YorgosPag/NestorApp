@@ -9,7 +9,9 @@ import type {
   EntityType,
   EffectiveSettings
 } from '../types/viewerConfiguration';
-import { useViewerConfig } from './ConfigurationProvider';
+// 🗑️ REMOVED (2025-10-06): ConfigurationProvider - Using DxfSettingsProvider instead
+// import { useViewerConfig } from './ConfigurationProvider';
+import { useDxfSettings } from './DxfSettingsProvider';
 import { toolStyleStore } from '../stores/ToolStyleStore';
 import { textStyleStore } from '../stores/TextStyleStore';
 import { gripStyleStore } from '../stores/GripStyleStore';
@@ -75,41 +77,58 @@ const syncGripStore = (settings: EffectiveSettings) => {
 // ===== PROVIDER COMPONENT =====
 
 export function StyleManagerProvider({ children }: { children: React.ReactNode }) {
-  const { getEffectiveSettings, config } = useViewerConfig();
+  // 🔄 MIGRATION (2025-10-06): Χρησιμοποιούμε το unified DxfSettingsProvider
+  const dxfSettings = useDxfSettings();
+
+  if (!dxfSettings) {
+    // Fallback if context not available
+    return <StyleManagerContext.Provider value={{ syncStores: () => {}, updateStore: () => {} }}>
+      {children}
+    </StyleManagerContext.Provider>;
+  }
+
+  const { getEffectiveLineSettings, getEffectiveTextSettings, getEffectiveGripSettings } = dxfSettings;
 
   // ===== STORE SYNCHRONIZATION =====
 
-  const syncStores = useCallback((settings: EffectiveSettings) => {
-    syncLineStore(settings.line);
-    syncTextStore(settings.text);
-    syncGripStore(settings.grip);
-  }, []);
+  const syncStores = useCallback(() => {
+    // Παίρνουμε τα effective settings για κάθε entity type
+    const lineSettings = getEffectiveLineSettings();
+    const textSettings = getEffectiveTextSettings();
+    const gripSettings = getEffectiveGripSettings();
 
-  const updateStore = useCallback((entityType: EntityType, settings: EffectiveSettings) => {
+    // Συγχρονίζουμε τα stores
+    syncLineStore(lineSettings);
+    syncTextStore(textSettings);
+    syncGripStore(gripSettings);
+  }, [getEffectiveLineSettings, getEffectiveTextSettings, getEffectiveGripSettings]);
+
+  const updateStore = useCallback((entityType: EntityType) => {
     switch (entityType) {
       case 'line':
-        syncLineStore(settings);
+        syncLineStore(getEffectiveLineSettings());
         break;
       case 'text':
-        syncTextStore(settings);
+        syncTextStore(getEffectiveTextSettings());
         break;
       case 'grip':
-        syncGripStore(settings);
+        syncGripStore(getEffectiveGripSettings());
         break;
     }
-  }, []);
+  }, [getEffectiveLineSettings, getEffectiveTextSettings, getEffectiveGripSettings]);
 
   // ===== AUTO-SYNC EFFECT =====
   // 🚨 ΠΡΟΣΩΡΙΝΑ ΑΠΕΝΕΡΓΟΠΟΙΗΜΕΝΟ: Διπλός συγχρονισμός με DxfSettingsProvider
   // Το DxfSettingsProvider ήδη συγχρονίζει τα stores σωστά με τις γενικές ρυθμίσεις
 
   // useEffect(() => {
-  //   const effectiveSettings = getEffectiveSettings();
-  //   syncStores(effectiveSettings);
-
+  //   syncStores();
+  //
   //   // DEBUG: Force log για να δούμε τι συμβαίνει
-  //   if (DEBUG_STYLE_MANAGER_PROVIDER) 
-  // }, [getEffectiveSettings, syncStores, config.mode]); // Προσθήκη config.mode dependency
+  //   if (DEBUG_STYLE_MANAGER_PROVIDER) {
+  //     console.log('[StyleManager] Auto-sync triggered');
+  //   }
+  // }, [syncStores]); // Simplified dependencies - syncStores already has all needed deps
 
   // ===== CONTEXT VALUE =====
 

@@ -98,42 +98,119 @@ export const globalRulerStore = createRulerStore();
 
 // ===== TYPES =====
 
+// 🆕 MERGE: Mode type from ConfigurationProvider
+export type ViewerMode = 'normal' | 'preview' | 'completion';
+
+// 🆕 MERGE: Specific settings structure (from ConfigurationProvider)
+interface SpecificSettings {
+  line: {
+    preview?: Partial<LineSettings>;
+    completion?: Partial<LineSettings>;
+  };
+  text: {
+    preview?: Partial<TextSettings>;
+  };
+  grip: {
+    preview?: Partial<GripSettings>;
+  };
+}
+
+// 🆕 MERGE: Override settings structure (from ConfigurationProvider)
+interface OverrideSettings {
+  line: {
+    preview?: Partial<LineSettings>;
+    completion?: Partial<LineSettings>;
+  };
+  text: {
+    preview?: Partial<TextSettings>;
+  };
+  grip: {
+    preview?: Partial<GripSettings>;
+  };
+}
+
+// 🆕 MERGE: Override enabled flags
+interface OverrideEnabledFlags {
+  line: boolean;
+  text: boolean;
+  grip: boolean;
+}
+
 interface DxfSettingsState {
+  // ===== EXISTING SETTINGS (General) =====
   line: LineSettings;
   text: TextSettings;
   grip: GripSettings;
   grid: GridSettings;           // 🆕 ΠΡΟΣΘΗΚΗ: Grid settings
   ruler: RulerSettings;         // 🆕 ΠΡΟΣΘΗΚΗ: Ruler settings
   cursor: CursorSettings;       // 🆕 ΠΡΟΣΘΗΚΗ: Cursor settings
+
+  // ===== NEW: MODE-BASED SETTINGS (from ConfigurationProvider) =====
+  mode: ViewerMode;                      // 🆕 MERGE: Current viewer mode (normal/preview/completion)
+  specific: SpecificSettings;            // 🆕 MERGE: Mode-specific settings (preview/completion overrides)
+  overrides: OverrideSettings;           // 🆕 MERGE: User overrides per mode
+  overrideEnabled: OverrideEnabledFlags; // 🆕 MERGE: Which entities have override enabled
+
+  // ===== EXISTING META =====
   isLoaded: boolean;
   lastSaved: Date | null;
   saveStatus: 'idle' | 'saving' | 'saved' | 'error';
 }
 
 type SettingsAction =
+  // ===== EXISTING ACTIONS =====
   | { type: 'LOAD_ALL_SETTINGS'; payload: Partial<DxfSettingsState> }
   | { type: 'UPDATE_LINE_SETTINGS'; payload: Partial<LineSettings> }
   | { type: 'UPDATE_TEXT_SETTINGS'; payload: Partial<TextSettings> }
   | { type: 'UPDATE_GRIP_SETTINGS'; payload: Partial<GripSettings> }
-  | { type: 'UPDATE_GRID_SETTINGS'; payload: Partial<GridSettings> }  // 🆕 ΠΡΟΣΘΗΚΗ: Grid action
-  | { type: 'UPDATE_RULER_SETTINGS'; payload: Partial<RulerSettings> } // 🆕 ΠΡΟΣΘΗΚΗ: Ruler action
-  | { type: 'UPDATE_CURSOR_SETTINGS'; payload: Partial<CursorSettings> } // 🆕 ΠΡΟΣΘΗΚΗ: Cursor action
+  | { type: 'UPDATE_GRID_SETTINGS'; payload: Partial<GridSettings> }
+  | { type: 'UPDATE_RULER_SETTINGS'; payload: Partial<RulerSettings> }
+  | { type: 'UPDATE_CURSOR_SETTINGS'; payload: Partial<CursorSettings> }
   | { type: 'SET_SAVE_STATUS'; payload: DxfSettingsState['saveStatus'] }
   | { type: 'MARK_SAVED'; payload: Date }
-  | { type: 'RESET_TO_DEFAULTS' };
+  | { type: 'RESET_TO_DEFAULTS' }
+
+  // ===== NEW: MODE-BASED ACTIONS (from ConfigurationProvider) =====
+  | { type: 'SET_MODE'; payload: ViewerMode }
+  | { type: 'UPDATE_SPECIFIC_LINE_SETTINGS'; payload: { mode: 'preview' | 'completion'; settings: Partial<LineSettings> } }
+  | { type: 'UPDATE_SPECIFIC_TEXT_SETTINGS'; payload: { mode: 'preview'; settings: Partial<TextSettings> } }
+  | { type: 'UPDATE_SPECIFIC_GRIP_SETTINGS'; payload: { mode: 'preview'; settings: Partial<GripSettings> } }
+  | { type: 'UPDATE_LINE_OVERRIDES'; payload: { mode: 'preview' | 'completion'; settings: Partial<LineSettings> } }
+  | { type: 'UPDATE_TEXT_OVERRIDES'; payload: { mode: 'preview'; settings: Partial<TextSettings> } }
+  | { type: 'UPDATE_GRIP_OVERRIDES'; payload: { mode: 'preview'; settings: Partial<GripSettings> } }
+  | { type: 'TOGGLE_LINE_OVERRIDE'; payload: boolean }
+  | { type: 'TOGGLE_TEXT_OVERRIDE'; payload: boolean }
+  | { type: 'TOGGLE_GRIP_OVERRIDE'; payload: boolean };
 
 interface DxfSettingsContextType {
   // State
   settings: DxfSettingsState;
 
-  // Actions
+  // ===== EXISTING ACTIONS =====
   updateLineSettings: (updates: Partial<LineSettings>) => void;
   updateTextSettings: (updates: Partial<TextSettings>) => void;
   updateGripSettings: (updates: Partial<GripSettings>) => void;
-  updateGridSettings: (updates: Partial<GridSettings>) => void;  // 🆕 ΠΡΟΣΘΗΚΗ: Grid method
-  updateRulerSettings: (updates: Partial<RulerSettings>) => void; // 🆕 ΠΡΟΣΘΗΚΗ: Ruler method
-  updateCursorSettings: (updates: Partial<CursorSettings>) => void; // 🆕 ΠΡΟΣΘΗΚΗ: Cursor method
+  updateGridSettings: (updates: Partial<GridSettings>) => void;
+  updateRulerSettings: (updates: Partial<RulerSettings>) => void;
+  updateCursorSettings: (updates: Partial<CursorSettings>) => void;
   resetToDefaults: () => void;
+
+  // ===== NEW: MODE-BASED ACTIONS (from ConfigurationProvider) =====
+  setMode: (mode: ViewerMode) => void;
+  updateSpecificLineSettings: (mode: 'preview' | 'completion', settings: Partial<LineSettings>) => void;
+  updateSpecificTextSettings: (mode: 'preview', settings: Partial<TextSettings>) => void;
+  updateSpecificGripSettings: (mode: 'preview', settings: Partial<GripSettings>) => void;
+  updateLineOverrides: (mode: 'preview' | 'completion', settings: Partial<LineSettings>) => void;
+  updateTextOverrides: (mode: 'preview', settings: Partial<TextSettings>) => void;
+  updateGripOverrides: (mode: 'preview', settings: Partial<GripSettings>) => void;
+  toggleLineOverride: (enabled: boolean) => void;
+  toggleTextOverride: (enabled: boolean) => void;
+  toggleGripOverride: (enabled: boolean) => void;
+
+  // ===== NEW: EFFECTIVE SETTINGS CALCULATION (from ConfigurationProvider) =====
+  getEffectiveLineSettings: (mode?: ViewerMode) => LineSettings;
+  getEffectiveTextSettings: (mode?: ViewerMode) => TextSettings;
+  getEffectiveGripSettings: (mode?: ViewerMode) => GripSettings;
 
   // Computed
   isAutoSaving: boolean;
@@ -208,12 +285,67 @@ const defaultGripSettings: GripSettings = {
 };
 
 const initialState: DxfSettingsState = {
+  // ===== EXISTING GENERAL SETTINGS =====
   line: defaultLineSettings,
   text: defaultTextSettings,
   grip: defaultGripSettings,
-  grid: DEFAULT_GRID_SETTINGS,    // 🆕 ΠΡΟΣΘΗΚΗ: Grid default settings
-  ruler: DEFAULT_RULER_SETTINGS,  // 🆕 ΠΡΟΣΘΗΚΗ: Ruler default settings
-  cursor: DEFAULT_CURSOR_SETTINGS, // 🆕 ΠΡΟΣΘΗΚΗ: Cursor default settings
+  grid: DEFAULT_GRID_SETTINGS,
+  ruler: DEFAULT_RULER_SETTINGS,
+  cursor: DEFAULT_CURSOR_SETTINGS,
+
+  // ===== NEW: MODE-BASED SETTINGS (from ConfigurationProvider) =====
+  mode: 'normal',  // 🆕 MERGE: Default mode is 'normal'
+  specific: {      // 🆕 MERGE: Specific settings per mode
+    line: {
+      preview: {
+        lineType: 'dashed',
+        color: '#FFFF00',    // Yellow for preview (AutoCAD standard)
+        opacity: 0.7
+      },
+      completion: {
+        lineType: 'solid',
+        color: '#00FF00',    // Green for completion (AutoCAD standard)
+        opacity: 1.0
+      }
+    },
+    text: {
+      preview: {
+        color: '#FFFF00',    // Yellow for text preview
+        opacity: 0.8
+      }
+    },
+    grip: {
+      preview: {
+        colors: {
+          cold: '#0000FF',   // Blue - unselected
+          warm: '#FF69B4',   // Hot Pink - hover
+          hot: '#FF0000',    // Red - selected
+          contour: '#000000' // Black contour
+        },
+        gripSize: 8,
+        showGrips: true
+      }
+    }
+  },
+  overrides: {     // 🆕 MERGE: User overrides (empty by default)
+    line: {
+      preview: {},
+      completion: {}
+    },
+    text: {
+      preview: {}
+    },
+    grip: {
+      preview: {}
+    }
+  },
+  overrideEnabled: { // 🆕 MERGE: Override flags (disabled by default)
+    line: false,
+    text: false,
+    grip: false
+  },
+
+  // ===== EXISTING META =====
   isLoaded: false,
   lastSaved: null,
   saveStatus: 'idle'
@@ -285,9 +417,134 @@ function settingsReducer(state: DxfSettingsState, action: SettingsAction): DxfSe
         line: defaultLineSettings,
         text: defaultTextSettings,
         grip: defaultGripSettings,
-        grid: DEFAULT_GRID_SETTINGS,     // 🆕 ΠΡΟΣΘΗΚΗ: Grid reset
-        ruler: DEFAULT_RULER_SETTINGS,   // 🆕 ΠΡΟΣΘΗΚΗ: Ruler reset
-        cursor: DEFAULT_CURSOR_SETTINGS  // 🆕 ΠΡΟΣΘΗΚΗ: Cursor reset
+        grid: DEFAULT_GRID_SETTINGS,
+        ruler: DEFAULT_RULER_SETTINGS,
+        cursor: DEFAULT_CURSOR_SETTINGS
+      };
+
+    // ===== NEW: MODE-BASED REDUCER CASES (from ConfigurationProvider) =====
+
+    case 'SET_MODE':
+      return {
+        ...state,
+        mode: action.payload
+      };
+
+    case 'UPDATE_SPECIFIC_LINE_SETTINGS':
+      return {
+        ...state,
+        specific: {
+          ...state.specific,
+          line: {
+            ...state.specific.line,
+            [action.payload.mode]: {
+              ...state.specific.line[action.payload.mode],
+              ...action.payload.settings
+            }
+          }
+        }
+      };
+
+    case 'UPDATE_SPECIFIC_TEXT_SETTINGS':
+      return {
+        ...state,
+        specific: {
+          ...state.specific,
+          text: {
+            ...state.specific.text,
+            [action.payload.mode]: {
+              ...state.specific.text[action.payload.mode],
+              ...action.payload.settings
+            }
+          }
+        }
+      };
+
+    case 'UPDATE_SPECIFIC_GRIP_SETTINGS':
+      return {
+        ...state,
+        specific: {
+          ...state.specific,
+          grip: {
+            ...state.specific.grip,
+            [action.payload.mode]: {
+              ...state.specific.grip[action.payload.mode],
+              ...action.payload.settings
+            }
+          }
+        }
+      };
+
+    case 'UPDATE_LINE_OVERRIDES':
+      return {
+        ...state,
+        overrides: {
+          ...state.overrides,
+          line: {
+            ...state.overrides.line,
+            [action.payload.mode]: {
+              ...state.overrides.line[action.payload.mode],
+              ...action.payload.settings
+            }
+          }
+        }
+      };
+
+    case 'UPDATE_TEXT_OVERRIDES':
+      return {
+        ...state,
+        overrides: {
+          ...state.overrides,
+          text: {
+            ...state.overrides.text,
+            [action.payload.mode]: {
+              ...state.overrides.text[action.payload.mode],
+              ...action.payload.settings
+            }
+          }
+        }
+      };
+
+    case 'UPDATE_GRIP_OVERRIDES':
+      return {
+        ...state,
+        overrides: {
+          ...state.overrides,
+          grip: {
+            ...state.overrides.grip,
+            [action.payload.mode]: {
+              ...state.overrides.grip[action.payload.mode],
+              ...action.payload.settings
+            }
+          }
+        }
+      };
+
+    case 'TOGGLE_LINE_OVERRIDE':
+      return {
+        ...state,
+        overrideEnabled: {
+          ...state.overrideEnabled,
+          line: action.payload
+        }
+      };
+
+    case 'TOGGLE_TEXT_OVERRIDE':
+      return {
+        ...state,
+        overrideEnabled: {
+          ...state.overrideEnabled,
+          text: action.payload
+        }
+      };
+
+    case 'TOGGLE_GRIP_OVERRIDE':
+      return {
+        ...state,
+        overrideEnabled: {
+          ...state.overrideEnabled,
+          grip: action.payload
+        }
       };
 
     default:
@@ -600,8 +857,8 @@ export function DxfSettingsProvider({ children }: { children: React.ReactNode })
   const saveTimeoutRef = React.useRef<NodeJS.Timeout>();
 
   // ===== PREVIEW SETTINGS INTEGRATION =====
-  // Hook για να παίρνουμε τις ειδικές ρυθμίσεις προσχεδίασης
-  const { settings: linePreviewSettings, getEffectiveLineSettings } = useUnifiedLinePreview();
+  // 🗑️ REMOVED: useUnifiedLinePreview() - Replaced by getEffectiveLineSettings() method
+  // const { settings: linePreviewSettings, getEffectiveLineSettings } = useUnifiedLinePreview();
 
   // Load settings on mount - ΜΟΝΟ ΜΙΑ ΦΟΡΑ
   useEffect(() => {
@@ -825,6 +1082,101 @@ export function DxfSettingsProvider({ children }: { children: React.ReactNode })
     dispatch({ type: 'RESET_TO_DEFAULTS' });
   }, []);
 
+  // ===== NEW: MODE-BASED METHODS (from ConfigurationProvider) =====
+
+  const setMode = useCallback((mode: ViewerMode) => {
+    dispatch({ type: 'SET_MODE', payload: mode });
+  }, []);
+
+  const updateSpecificLineSettings = useCallback((mode: 'preview' | 'completion', settings: Partial<LineSettings>) => {
+    dispatch({ type: 'UPDATE_SPECIFIC_LINE_SETTINGS', payload: { mode, settings } });
+  }, []);
+
+  const updateSpecificTextSettings = useCallback((mode: 'preview', settings: Partial<TextSettings>) => {
+    dispatch({ type: 'UPDATE_SPECIFIC_TEXT_SETTINGS', payload: { mode, settings } });
+  }, []);
+
+  const updateSpecificGripSettings = useCallback((mode: 'preview', settings: Partial<GripSettings>) => {
+    dispatch({ type: 'UPDATE_SPECIFIC_GRIP_SETTINGS', payload: { mode, settings } });
+  }, []);
+
+  const updateLineOverrides = useCallback((mode: 'preview' | 'completion', settings: Partial<LineSettings>) => {
+    dispatch({ type: 'UPDATE_LINE_OVERRIDES', payload: { mode, settings } });
+  }, []);
+
+  const updateTextOverrides = useCallback((mode: 'preview', settings: Partial<TextSettings>) => {
+    dispatch({ type: 'UPDATE_TEXT_OVERRIDES', payload: { mode, settings } });
+  }, []);
+
+  const updateGripOverrides = useCallback((mode: 'preview', settings: Partial<GripSettings>) => {
+    dispatch({ type: 'UPDATE_GRIP_OVERRIDES', payload: { mode, settings } });
+  }, []);
+
+  const toggleLineOverride = useCallback((enabled: boolean) => {
+    dispatch({ type: 'TOGGLE_LINE_OVERRIDE', payload: enabled });
+  }, []);
+
+  const toggleTextOverride = useCallback((enabled: boolean) => {
+    dispatch({ type: 'TOGGLE_TEXT_OVERRIDE', payload: enabled });
+  }, []);
+
+  const toggleGripOverride = useCallback((enabled: boolean) => {
+    dispatch({ type: 'TOGGLE_GRIP_OVERRIDE', payload: enabled });
+  }, []);
+
+  // ===== NEW: EFFECTIVE SETTINGS CALCULATION (from ConfigurationProvider) =====
+
+  const getEffectiveLineSettings = useCallback((mode?: ViewerMode): LineSettings => {
+    const currentMode = mode || state.mode;
+    let settings = state.line; // Start with general
+
+    // Apply specific settings for current mode
+    if (currentMode !== 'normal' && state.specific.line[currentMode]) {
+      settings = { ...settings, ...state.specific.line[currentMode] };
+    }
+
+    // Apply user overrides if enabled
+    if (state.overrideEnabled.line && state.overrides.line[currentMode]) {
+      settings = { ...settings, ...state.overrides.line[currentMode] };
+    }
+
+    return settings;
+  }, [state.mode, state.line, state.specific.line, state.overrides.line, state.overrideEnabled.line]);
+
+  const getEffectiveTextSettings = useCallback((mode?: ViewerMode): TextSettings => {
+    const currentMode = mode || state.mode;
+    let settings = state.text; // Start with general
+
+    // Apply specific settings for current mode
+    if (currentMode !== 'normal' && state.specific.text[currentMode]) {
+      settings = { ...settings, ...state.specific.text[currentMode] };
+    }
+
+    // Apply user overrides if enabled
+    if (state.overrideEnabled.text && state.overrides.text[currentMode]) {
+      settings = { ...settings, ...state.overrides.text[currentMode] };
+    }
+
+    return settings;
+  }, [state.mode, state.text, state.specific.text, state.overrides.text, state.overrideEnabled.text]);
+
+  const getEffectiveGripSettings = useCallback((mode?: ViewerMode): GripSettings => {
+    const currentMode = mode || state.mode;
+    let settings = state.grip; // Start with general
+
+    // Apply specific settings for current mode
+    if (currentMode !== 'normal' && state.specific.grip[currentMode]) {
+      settings = { ...settings, ...state.specific.grip[currentMode] };
+    }
+
+    // Apply user overrides if enabled
+    if (state.overrideEnabled.grip && state.overrides.grip[currentMode]) {
+      settings = { ...settings, ...state.overrides.grip[currentMode] };
+    }
+
+    return settings;
+  }, [state.mode, state.grip, state.specific.grip, state.overrides.grip, state.overrideEnabled.grip]);
+
   // Computed values
   const isAutoSaving = state.saveStatus === 'saving';
   const hasUnsavedChanges = state.saveStatus === 'idle' && state.lastSaved === null;
@@ -838,28 +1190,58 @@ export function DxfSettingsProvider({ children }: { children: React.ReactNode })
 
   const contextValue = useMemo(() => ({
     settings: state,
+    // ===== EXISTING METHODS =====
     updateLineSettings,
     updateTextSettings,
     updateGripSettings,
-    updateGridSettings,        // 🆕 ΠΡΟΣΘΗΚΗ: Grid στο context value
-    updateRulerSettings,       // 🆕 ΠΡΟΣΘΗΚΗ: Ruler στο context value
-    updateCursorSettings,      // 🆕 ΠΡΟΣΘΗΚΗ: Cursor στο context value
+    updateGridSettings,
+    updateRulerSettings,
+    updateCursorSettings,
     resetToDefaults,
+    // ===== NEW: MODE-BASED METHODS (from ConfigurationProvider) =====
+    setMode,
+    updateSpecificLineSettings,
+    updateSpecificTextSettings,
+    updateSpecificGripSettings,
+    updateLineOverrides,
+    updateTextOverrides,
+    updateGripOverrides,
+    toggleLineOverride,
+    toggleTextOverride,
+    toggleGripOverride,
+    // ===== NEW: EFFECTIVE SETTINGS (from ConfigurationProvider) =====
+    getEffectiveLineSettings,
+    getEffectiveTextSettings,
+    getEffectiveGripSettings,
+    // ===== EXISTING COMPUTED =====
     isAutoSaving,
     hasUnsavedChanges,
-    migrationUtils             // 🆕 ΠΡΟΣΘΗΚΗ: Migration utilities στο context
+    migrationUtils
   }), [
     state,
     updateLineSettings,
     updateTextSettings,
     updateGripSettings,
-    updateGridSettings,        // 🆕 ΠΡΟΣΘΗΚΗ: Grid στο dependency array
-    updateRulerSettings,       // 🆕 ΠΡΟΣΘΗΚΗ: Ruler στο dependency array
-    updateCursorSettings,      // 🆕 ΠΡΟΣΘΗΚΗ: Cursor στο dependency array
+    updateGridSettings,
+    updateRulerSettings,
+    updateCursorSettings,
     resetToDefaults,
+    setMode,
+    updateSpecificLineSettings,
+    updateSpecificTextSettings,
+    updateSpecificGripSettings,
+    updateLineOverrides,
+    updateTextOverrides,
+    updateGripOverrides,
+    toggleLineOverride,
+    toggleTextOverride,
+    toggleGripOverride,
+    getEffectiveLineSettings,
+    getEffectiveTextSettings,
+    getEffectiveGripSettings,
     isAutoSaving,
     hasUnsavedChanges,
-    migrationUtils             // 🆕 ΠΡΟΣΘΗΚΗ: Migration utilities στο dependency array
+    migrationUtils
   ]);
 
   // ===== ΣΥΓΧΡΟΝΙΣΜΟΣ TEXTSTYLESTORE =====
@@ -893,9 +1275,9 @@ export function DxfSettingsProvider({ children }: { children: React.ReactNode })
   useEffect(() => {
     if (!state.isLoaded) return; // Μόνο όταν έχουν φορτωθεί οι ρυθμίσεις
 
-    // ✅ ΔΙΟΡΘΩΣΗ: Ελέγχουμε αν υπάρχει override για ειδικές ρυθμίσεις
+    // ✅ MERGE: Χρησιμοποιούμε την κεντρική getEffectiveLineSettings()
     const effectiveLineSettings = getEffectiveLineSettings();
-    const isOverrideActive = linePreviewSettings.overrideGlobalSettings;
+    // const isOverrideActive = state.overrideEnabled.line; // 🗑️ Not used
 
     // Μετατρέπουμε τις effective ρυθμίσεις σε format για το toolStyleStore
     toolStyleStore.set({
@@ -907,7 +1289,7 @@ export function DxfSettingsProvider({ children }: { children: React.ReactNode })
       fillColor: '#00000000' // Default transparent fill
     });
 
-  }, [state.line, state.isLoaded, linePreviewSettings.overrideGlobalSettings, getEffectiveLineSettings]);
+  }, [state.line, state.isLoaded, state.mode, state.specific.line, state.overrides.line, state.overrideEnabled.line, getEffectiveLineSettings]);
 
   // ===== ΣΥΓΧΡΟΝΙΣΜΟΣ GRID SETTINGS =====
   // Συγχρονίζει το globalGridStore με τις ρυθμίσεις από το DxfSettingsProvider
@@ -1056,3 +1438,167 @@ export function useRulerSettingsFromProvider() {    // 🆕 ΠΡΟΣΘΗΚΗ: Ru
     resetToDefaults: () => updateRulerSettings(DEFAULT_RULER_SETTINGS)
   };
 }
+
+// ===== NEW: MODE-AWARE HOOKS (Replacement for useEntityStyles from ConfigurationProvider) =====
+
+/**
+ * 🆕 MERGE: Unified hook για Line settings με mode support
+ * Αντικαθιστά το useEntityStyles('line', mode) από ConfigurationProvider
+ *
+ * @param mode - Viewer mode (normal, preview, completion)
+ * @returns Effective line settings για το συγκεκριμένο mode
+ */
+export function useLineStyles(mode?: ViewerMode) {
+  const dxfSettings = useDxfSettingsSafe();
+
+  if (!dxfSettings) {
+    return {
+      settings: defaultLineSettings,
+      isOverridden: false,
+      update: () => {},
+      reset: () => {}
+    };
+  }
+
+  const {
+    getEffectiveLineSettings,
+    updateLineSettings,
+    updateSpecificLineSettings,
+    updateLineOverrides,
+    toggleLineOverride,
+    settings: state
+  } = dxfSettings;
+
+  const currentMode = mode || state.mode;
+  const effectiveSettings = getEffectiveLineSettings(currentMode);
+  const isOverridden = state.overrideEnabled.line;
+
+  return {
+    settings: effectiveSettings,
+    isOverridden,
+    update: (updates: Partial<LineSettings>) => {
+      if (isOverridden && currentMode !== 'normal') {
+        // Update overrides
+        updateLineOverrides(currentMode as 'preview' | 'completion', updates);
+      } else if (currentMode === 'normal') {
+        // Update general settings
+        updateLineSettings(updates);
+      } else {
+        // Update specific settings
+        updateSpecificLineSettings(currentMode as 'preview' | 'completion', updates);
+      }
+    },
+    reset: () => {
+      if (isOverridden) {
+        toggleLineOverride(false);
+      }
+    }
+  };
+}
+
+/**
+ * 🆕 MERGE: Unified hook για Text settings με mode support
+ * Αντικαθιστά το useEntityStyles('text', mode) από ConfigurationProvider
+ */
+export function useTextStyles(mode?: ViewerMode) {
+  const dxfSettings = useDxfSettingsSafe();
+
+  if (!dxfSettings) {
+    return {
+      settings: defaultTextSettings,
+      isOverridden: false,
+      update: () => {},
+      reset: () => {}
+    };
+  }
+
+  const {
+    getEffectiveTextSettings,
+    updateTextSettings,
+    updateSpecificTextSettings,
+    updateTextOverrides,
+    toggleTextOverride,
+    settings: state
+  } = dxfSettings;
+
+  const currentMode = mode || state.mode;
+  const effectiveSettings = getEffectiveTextSettings(currentMode);
+  const isOverridden = state.overrideEnabled.text;
+
+  return {
+    settings: effectiveSettings,
+    isOverridden,
+    update: (updates: Partial<TextSettings>) => {
+      if (isOverridden && currentMode !== 'normal') {
+        // Update overrides
+        updateTextOverrides(currentMode as 'preview', updates);
+      } else if (currentMode === 'normal') {
+        // Update general settings
+        updateTextSettings(updates);
+      } else {
+        // Update specific settings
+        updateSpecificTextSettings(currentMode as 'preview', updates);
+      }
+    },
+    reset: () => {
+      if (isOverridden) {
+        toggleTextOverride(false);
+      }
+    }
+  };
+}
+
+/**
+ * 🆕 MERGE: Unified hook για Grip settings με mode support
+ * Αντικαθιστά το useEntityStyles('grip', mode) από ConfigurationProvider
+ */
+export function useGripStyles(mode?: ViewerMode) {
+  const dxfSettings = useDxfSettingsSafe();
+
+  if (!dxfSettings) {
+    return {
+      settings: defaultGripSettings,
+      isOverridden: false,
+      update: () => {},
+      reset: () => {}
+    };
+  }
+
+  const {
+    getEffectiveGripSettings,
+    updateGripSettings,
+    updateSpecificGripSettings,
+    updateGripOverrides,
+    toggleGripOverride,
+    settings: state
+  } = dxfSettings;
+
+  const currentMode = mode || state.mode;
+  const effectiveSettings = getEffectiveGripSettings(currentMode);
+  const isOverridden = state.overrideEnabled.grip;
+
+  return {
+    settings: effectiveSettings,
+    isOverridden,
+    update: (updates: Partial<GripSettings>) => {
+      if (isOverridden && currentMode !== 'normal') {
+        // Update overrides
+        updateGripOverrides(currentMode as 'preview', updates);
+      } else if (currentMode === 'normal') {
+        // Update general settings
+        updateGripSettings(updates);
+      } else {
+        // Update specific settings
+        updateSpecificGripSettings(currentMode as 'preview', updates);
+      }
+    },
+    reset: () => {
+      if (isOverridden) {
+        toggleGripOverride(false);
+      }
+    }
+  };
+}
+
+// ===== ViewerMode TYPE ALREADY EXPORTED at line 102 =====
+// export type { ViewerMode }; // ❌ Duplicate - Already exported above

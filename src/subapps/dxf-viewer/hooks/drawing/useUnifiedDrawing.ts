@@ -89,7 +89,10 @@ import { useLevels } from '../../systems/levels';
 import { useSnapContext } from '../../snapping/context/SnapContext';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { usePreviewMode } from '../usePreviewMode';
-import { useEntityStyles } from '../useEntityStyles';
+// 🗑️ REMOVED: useEntityStyles from ConfigurationProvider
+// import { useEntityStyles } from '../useEntityStyles';
+// 🆕 MERGE: Χρησιμοποιούμε το νέο useLineStyles από DxfSettingsProvider
+import { useLineStyles } from '../../providers/DxfSettingsProvider';
 
 export type DrawingTool = 'select' | 'line' | 'rectangle' | 'circle' | 'circle-diameter' | 'circle-2p-diameter' | 'polyline' | 'polygon' | 'measure-distance' | 'measure-area' | 'measure-angle';
 
@@ -120,10 +123,26 @@ export function useUnifiedDrawing() {
   const { setMode } = usePreviewMode();
 
   // ===== ENTITY STYLES FOR PREVIEW & COMPLETION PHASES =====
-  const linePreviewStyles = useEntityStyles('line', 'preview');
-  const lineCompletionStyles = useEntityStyles('line', 'completion');
+  // 🆕 MERGE: Χρησιμοποιούμε το νέο useLineStyles από DxfSettingsProvider (merged)
+  const linePreviewStyles = useLineStyles('preview');
+  const lineCompletionStyles = useLineStyles('completion');
 
   const nextEntityIdRef = useRef(1);
+
+  // ===== ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΗ HELPER FUNCTION ΓΙΑ PREVIEW SETTINGS =====
+  // Applies ColorPalettePanel settings (DXF Settings → General + Specific Preview)
+  // Used by: line, polyline, circle, rectangle entities
+  const applyPreviewSettings = useCallback((entity: any) => {
+    entity.color = linePreviewStyles.settings.color;
+    entity.lineweight = linePreviewStyles.settings.lineWidth;
+    entity.opacity = linePreviewStyles.settings.opacity;
+    entity.lineType = linePreviewStyles.settings.lineType;
+    entity.dashScale = linePreviewStyles.settings.dashScale;
+    entity.lineCap = linePreviewStyles.settings.lineCap;
+    entity.lineJoin = linePreviewStyles.settings.lineJoin;
+    entity.dashOffset = linePreviewStyles.settings.dashOffset;
+    entity.breakAtCenter = linePreviewStyles.settings.breakAtCenter;
+  }, [linePreviewStyles]);
 
   // Snap functionality moved to DxfCanvas level
 
@@ -351,15 +370,16 @@ export function useUnifiedDrawing() {
       if (newEntity && currentLevelId) {
         // Apply completion settings from ColorPalettePanel (for line entities only)
         if (newEntity.type === 'line' && state.currentTool === 'line') {
-          (newEntity as any).color = lineCompletionStyles.settings.color;
-          (newEntity as any).lineweight = lineCompletionStyles.settings.lineWidth;
-          (newEntity as any).opacity = lineCompletionStyles.settings.opacity;
-          (newEntity as any).lineType = lineCompletionStyles.settings.lineType;
-          (newEntity as any).dashScale = lineCompletionStyles.settings.dashScale;
-          (newEntity as any).lineCap = lineCompletionStyles.settings.lineCap;
-          (newEntity as any).lineJoin = lineCompletionStyles.settings.lineJoin;
-          (newEntity as any).dashOffset = lineCompletionStyles.settings.dashOffset;
-          (newEntity as any).breakAtCenter = lineCompletionStyles.settings.breakAtCenter;
+          // ✅ Type-safe property assignment (no 'as any' needed!)
+          newEntity.color = lineCompletionStyles.settings.color;
+          newEntity.lineweight = lineCompletionStyles.settings.lineWidth;
+          newEntity.opacity = lineCompletionStyles.settings.opacity;
+          newEntity.lineType = lineCompletionStyles.settings.lineType;
+          newEntity.dashScale = lineCompletionStyles.settings.dashScale;
+          newEntity.lineCap = lineCompletionStyles.settings.lineCap;
+          newEntity.lineJoin = lineCompletionStyles.settings.lineJoin;
+          newEntity.dashOffset = lineCompletionStyles.settings.dashOffset;
+          newEntity.breakAtCenter = lineCompletionStyles.settings.breakAtCenter;
         }
 
         const scene = getLevelScene(currentLevelId);
@@ -481,23 +501,14 @@ export function useUnifiedDrawing() {
         extendedPolyline.showEdgeDistances = true;
         extendedPolyline.showPreviewGrips = true;
         extendedPolyline.isOverlayPreview = state.isOverlayMode === true;
+        applyPreviewSettings(extendedPolyline); // ✅ Κεντρικοποιημένο
       } else if (previewEntity.type === 'line') {
         const extendedLine = previewEntity as ExtendedLineEntity;
         extendedLine.preview = true;
         extendedLine.showEdgeDistances = true;
         extendedLine.showPreviewGrips = true;
         extendedLine.isOverlayPreview = state.isOverlayMode === true;
-
-        // Apply preview settings from ColorPalettePanel
-        (extendedLine as any).color = linePreviewStyles.settings.color;
-        (extendedLine as any).lineweight = linePreviewStyles.settings.lineWidth;
-        (extendedLine as any).opacity = linePreviewStyles.settings.opacity;
-        (extendedLine as any).lineType = linePreviewStyles.settings.lineType;
-        (extendedLine as any).dashScale = linePreviewStyles.settings.dashScale;
-        (extendedLine as any).lineCap = linePreviewStyles.settings.lineCap;
-        (extendedLine as any).lineJoin = linePreviewStyles.settings.lineJoin;
-        (extendedLine as any).dashOffset = linePreviewStyles.settings.dashOffset;
-        (extendedLine as any).breakAtCenter = linePreviewStyles.settings.breakAtCenter;
+        applyPreviewSettings(extendedLine); // ✅ Κεντρικοποιημένο
 
         // Add grip points for line preview
         if (state.currentTool === 'line' && worldPoints.length >= 2) {
@@ -510,6 +521,12 @@ export function useUnifiedDrawing() {
         const extendedCircle = previewEntity as ExtendedCircleEntity;
         extendedCircle.preview = true;
         extendedCircle.showPreviewGrips = true;
+        applyPreviewSettings(extendedCircle); // ✅ Κεντρικοποιημένο
+      } else if (previewEntity.type === 'rectangle') {
+        const extendedRectangle = previewEntity as any; // Rectangle uses polyline internally
+        extendedRectangle.preview = true;
+        extendedRectangle.showPreviewGrips = true;
+        applyPreviewSettings(extendedRectangle); // ✅ Κεντρικοποιημένο
       }
 
       if (DEBUG_UNIFIED_DRAWING) {

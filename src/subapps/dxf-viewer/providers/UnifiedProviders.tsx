@@ -7,8 +7,10 @@
 'use client';
 
 import React from 'react';
-import { ConfigurationProvider } from './ConfigurationProvider';
+// 🗑️ REMOVED (2025-10-06): ConfigurationProvider - MERGED into DxfSettingsProvider
+// import { ConfigurationProvider } from './ConfigurationProvider';
 import { StyleManagerProvider } from './StyleManagerProvider';
+import { DxfSettingsProvider } from './DxfSettingsProvider';
 
 // Import των υπαρχόντων providers για backward compatibility
 import { ProjectHierarchyProvider } from '../contexts/ProjectHierarchyContext';
@@ -33,11 +35,12 @@ export function UnifiedProviders({
       <ProjectHierarchyProvider>
         <GripProvider>
           <SnapProvider>
-            <ConfigurationProvider>
+            {/* 🗑️ REMOVED: ConfigurationProvider - Now using DxfSettingsProvider */}
+            <DxfSettingsProvider>
               <StyleManagerProvider>
                 {children}
               </StyleManagerProvider>
-            </ConfigurationProvider>
+            </DxfSettingsProvider>
           </SnapProvider>
         </GripProvider>
       </ProjectHierarchyProvider>
@@ -47,13 +50,14 @@ export function UnifiedProviders({
   // FUTURE MODE: Μόνο νέα unified providers
   return (
     <ProjectHierarchyProvider>
-      <ConfigurationProvider>
+      {/* 🗑️ REMOVED: ConfigurationProvider - Now using DxfSettingsProvider */}
+      <DxfSettingsProvider>
         <StyleManagerProvider>
           <SnapProvider>
             {children}
           </SnapProvider>
         </StyleManagerProvider>
-      </ConfigurationProvider>
+      </DxfSettingsProvider>
     </ProjectHierarchyProvider>
   );
 }

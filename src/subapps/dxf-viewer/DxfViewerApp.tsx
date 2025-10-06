@@ -22,7 +22,8 @@ import { DxfViewerContent } from './app/DxfViewerContent';
 import { CanvasProvider } from './contexts/CanvasContext';
 import type { DxfViewerAppProps } from './types';
 // ===== ΝΕΑ UNIFIED PROVIDERS (για internal refactoring) =====
-import { ConfigurationProvider } from './providers/ConfigurationProvider';
+// 🗑️ REMOVED (2025-10-06): ConfigurationProvider - MERGED into DxfSettingsProvider
+// import { ConfigurationProvider } from './providers/ConfigurationProvider';
 import { StyleManagerProvider } from './providers/StyleManagerProvider';
 // ===== ΚΕΝΤΡΙΚΟΣ AUTO-SAVE PROVIDER =====
 import { DxfSettingsProvider } from './providers/DxfSettingsProvider';
@@ -34,7 +35,7 @@ export function DxfViewerApp(props: DxfViewerAppProps) {
       <StorageErrorBoundary>
         <DxfViewerErrorBoundary>
           {/* ===== ΝΕΑ UNIFIED PROVIDERS (για internal use από contexts) ===== */}
-          <ConfigurationProvider>
+          {/* 🗑️ REMOVED: ConfigurationProvider - MERGED into DxfSettingsProvider */}
             <StyleManagerProvider>
               <ProjectHierarchyProvider>
                 {/* ===== ΚΕΝΤΡΙΚΟΣ AUTO-SAVE PROVIDER (πρώτα από όλα) ===== */}
@@ -67,7 +68,7 @@ export function DxfViewerApp(props: DxfViewerAppProps) {
               </DxfSettingsProvider>
             </ProjectHierarchyProvider>
           </StyleManagerProvider>
-        </ConfigurationProvider>
+          {/* 🗑️ REMOVED: ConfigurationProvider closing tag */}
       </DxfViewerErrorBoundary>
     </StorageErrorBoundary>
     </NotificationProvider>

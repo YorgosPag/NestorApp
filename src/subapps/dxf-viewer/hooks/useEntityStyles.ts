@@ -1,14 +1,22 @@
 /**
- * UNIFIED ENTITY STYLES HOOK
- * Αντικαθιστά όλα τα διαφορετικά style hooks με ένα unified approach
+ * UNIFIED ENTITY STYLES HOOK - COMPATIBILITY WRAPPER
+ *
+ * 🔄 MIGRATION NOTE (2025-10-06):
+ * This file is now a WRAPPER around DxfSettingsProvider hooks.
+ * ConfigurationProvider has been MERGED into DxfSettingsProvider.
+ *
+ * All functionality now comes from:
+ * - useLineStyles() from DxfSettingsProvider
+ * - useTextStyles() from DxfSettingsProvider
+ * - useGripStyles() from DxfSettingsProvider
+ *
+ * This wrapper exists for BACKWARD COMPATIBILITY ONLY.
+ * New code should use the DxfSettingsProvider hooks directly.
  */
 
-import { useCallback, useMemo } from 'react';
-import { useViewerConfig } from '../providers/ConfigurationProvider';
-import { useStyleManager } from '../providers/StyleManagerProvider';
+import { useLineStyles, useTextStyles, useGripStyles, type ViewerMode } from '../providers/DxfSettingsProvider';
 import type {
   EntityType,
-  ViewerMode,
   EntityStylesHookResult
 } from '../types/viewerConfiguration';
 import type { LineSettings } from '../types/lineSettings';
@@ -23,153 +31,32 @@ type EntitySettingsMap = {
   grip: GripSettings;
 };
 
-// Type for override updates
-type OverrideUpdate = {
-  [K in EntityType]?: {
-    [M in ViewerMode]?: Partial<EntitySettingsMap[K]>;
-  };
-};
+// ===== MAIN HOOK (WRAPPER) =====
 
-// ===== MAIN HOOK =====
-
+/**
+ * 🔄 COMPATIBILITY WRAPPER
+ * Delegates to DxfSettingsProvider hooks based on entity type
+ *
+ * @deprecated Use useLineStyles(), useTextStyles(), or useGripStyles() directly
+ */
 export function useEntityStyles<T extends EntityType>(
   entityType: T,
   mode?: ViewerMode,
   userOverrides?: Partial<EntitySettingsMap[T]>
 ): EntityStylesHookResult<EntitySettingsMap[T]> {
 
-  const { config, updateEntityConfig, updateOverrides } = useViewerConfig();
-  const { updateStore } = useStyleManager();
+  // Delegate to the appropriate hook from DxfSettingsProvider
+  if (entityType === 'line') {
+    return useLineStyles(mode) as EntityStylesHookResult<EntitySettingsMap[T]>;
+  } else if (entityType === 'text') {
+    return useTextStyles(mode) as EntityStylesHookResult<EntitySettingsMap[T]>;
+  } else if (entityType === 'grip') {
+    return useGripStyles(mode) as EntityStylesHookResult<EntitySettingsMap[T]>;
+  }
 
-  // ===== CURRENT STATE =====
-
-  const entityConfig = config.entities[entityType];
-  const currentMode = mode || config.mode;
-  const isOverridden = entityConfig.overrideEnabled;
-
-  // ===== EFFECTIVE SETTINGS CALCULATION =====
-
-  const settings = useMemo((): EntitySettingsMap[T] => {
-    let baseSettings = entityConfig.general;
-
-    // Εφαρμογή specific settings για το τρέχον mode
-    if (currentMode !== 'normal' && entityConfig.specific[currentMode]) {
-      baseSettings = {
-        ...baseSettings,
-        ...entityConfig.specific[currentMode]
-      };
-    }
-
-    // Εφαρμογή user overrides αν είναι enabled το override
-    if (isOverridden && config.overrides[entityType][currentMode]) {
-      baseSettings = {
-        ...baseSettings,
-        ...config.overrides[entityType][currentMode]
-      };
-    }
-
-    // Εφαρμογή runtime user overrides (αν υπάρχουν)
-    if (userOverrides) {
-      baseSettings = {
-        ...baseSettings,
-        ...userOverrides
-      };
-    }
-
-    return baseSettings as EntitySettingsMap[T];
-  }, [
-    entityConfig,
-    currentMode,
-    isOverridden,
-    config.overrides,
-    entityType,
-    userOverrides
-  ]);
-
-  // ===== UPDATE METHODS =====
-
-  const update = useCallback((updates: Partial<EntitySettingsMap[T]>) => {
-    if (isOverridden) {
-      // Ενημέρωση user overrides
-      updateOverrides({
-        [entityType]: {
-          [currentMode]: updates
-        }
-      } as OverrideUpdate);
-    } else {
-      // Ενημέρωση general ή specific settings
-      if (currentMode === 'normal') {
-        updateEntityConfig(entityType, {
-          general: { ...entityConfig.general, ...updates }
-        });
-      } else {
-        updateEntityConfig(entityType, {
-          specific: {
-            ...entityConfig.specific,
-            [currentMode]: {
-              ...entityConfig.specific[currentMode],
-              ...updates
-            }
-          }
-        });
-      }
-    }
-
-    // Άμεση ενημέρωση του αντίστοιχου store
-    const updatedSettings = { ...settings, ...updates };
-    updateStore(entityType, updatedSettings);
-  }, [
-    isOverridden,
-    entityType,
-    currentMode,
-    updateOverrides,
-    updateEntityConfig,
-    entityConfig,
-    settings,
-    updateStore
-  ]);
-
-  const reset = useCallback(() => {
-    if (isOverridden) {
-      // Reset user overrides
-      updateOverrides({
-        [entityType]: {
-          [currentMode]: {}
-        }
-      } as OverrideUpdate);
-    } else {
-      // Reset to default settings
-      if (currentMode === 'normal') {
-        updateEntityConfig(entityType, {
-          general: entityConfig.general // Reset to original
-        });
-      } else {
-        updateEntityConfig(entityType, {
-          specific: {
-            ...entityConfig.specific,
-            [currentMode]: {}
-          }
-        });
-      }
-    }
-  }, [
-    isOverridden,
-    entityType,
-    currentMode,
-    updateOverrides,
-    updateEntityConfig,
-    entityConfig
-  ]);
-
-  // ===== RETURN VALUE =====
-
-  return {
-    settings,
-    isOverridden,
-    update,
-    reset
-  };
+  // Fallback (should never happen)
+  throw new Error(`useEntityStyles: Unknown entity type "${entityType}"`);
 }
 
-// ✅ REMOVED: Περιττές wrapper convenience hooks
-// Χρησιμοποιήστε απευθείας το κεντρικό useEntityStyles('line'|'text'|'grip', mode, overrides)
+// ===== RE-EXPORT TYPES =====
+export type { ViewerMode, EntityType, EntityStylesHookResult };
