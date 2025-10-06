@@ -1,3 +1,43 @@
+/**
+ * GripSettings Component
+ *
+ * @description
+ * Grip settings UI component για Preview mode.
+ * Διαχειρίζεται grip size, colors (cold/warm/hot), show/hide toggles.
+ *
+ * @features
+ * - 📏 Grip size control (2-20 pixel range)
+ * - 🎨 AutoCAD ACI color standards (Cold/Warm/Hot states)
+ * - 👁️ Show/hide toggles (showGrips, showEdgeGrips, showCenterGrips)
+ * - 🔄 Accordion sections (Basic/Colors/Visibility/Advanced)
+ * - ✅ AutoCAD-compatible color system
+ *
+ * @accordion_sections
+ * 1. **Basic Settings** - Grip size (2-20 pixels)
+ * 2. **Grip Colors** - Cold (unselected), Warm (hover), Hot (selected)
+ * 3. **Visibility** - Show Grips, Edge Grips, Center Grips toggles
+ * 4. **Advanced** - Opacity, Border width
+ *
+ * @autocad_color_standards
+ * - **Cold (Unselected)**: AutoCAD ACI 5 (Blue #0000FF)
+ * - **Warm (Hover)**: AutoCAD ACI 2 (Yellow #FFFF00)
+ * - **Hot (Selected)**: AutoCAD ACI 1 (Red #FF0000)
+ *
+ * @usage
+ * ```tsx
+ * // In EntitiesSettings - Preview tab
+ * <GripSettings />
+ * ```
+ *
+ * @see {@link docs/settings-system/05-UI_COMPONENTS.md#gripsettings-component} - Full documentation
+ * @see {@link docs/settings-system/02-COLORPALETTEPANEL.md} - Parent component
+ * @see {@link ui/hooks/useUnifiedSpecificSettings.ts} - useUnifiedGripPreview hook
+ *
+ * @author Γιώργος Παγώνης + Claude Code (Anthropic AI)
+ * @since 2025-10-06
+ * @version 1.0.0
+ */
+
 'use client';
 
 import React, { useState } from 'react';

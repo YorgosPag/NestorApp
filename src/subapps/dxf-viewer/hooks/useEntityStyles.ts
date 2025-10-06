@@ -1,17 +1,49 @@
 /**
- * UNIFIED ENTITY STYLES HOOK - COMPATIBILITY WRAPPER
+ * useEntityStyles - Legacy Compatibility Wrapper
  *
- * 🔄 MIGRATION NOTE (2025-10-06):
- * This file is now a WRAPPER around DxfSettingsProvider hooks.
- * ConfigurationProvider has been MERGED into DxfSettingsProvider.
+ * @deprecated
+ * ⚠️ LEGACY HOOK - Use unified hooks instead:
+ * - `useLineStyles(mode)` - For line entities
+ * - `useTextStyles(mode)` - For text entities
+ * - `useGripStyles(mode)` - For grip entities
  *
- * All functionality now comes from:
- * - useLineStyles() from DxfSettingsProvider
- * - useTextStyles() from DxfSettingsProvider
- * - useGripStyles() from DxfSettingsProvider
+ * @description
+ * Compatibility wrapper around DxfSettingsProvider hooks.
+ * ConfigurationProvider has been MERGED into DxfSettingsProvider (2025-10-06).
  *
- * This wrapper exists for BACKWARD COMPATIBILITY ONLY.
- * New code should use the DxfSettingsProvider hooks directly.
+ * @migration_history
+ * - **Before**: ConfigurationProvider (mode-based, NO persistence)
+ * - **After**: DxfSettingsProvider (mode-based + auto-save + localStorage)
+ * - **This file**: Backward compatibility wrapper ONLY
+ *
+ * @architecture
+ * ```
+ * useEntityStyles('line', 'preview') [LEGACY]
+ *   ↓
+ * useLineStyles('preview') [DxfSettingsProvider]
+ *   ↓
+ * Effective Settings (General → Specific → Overrides)
+ * ```
+ *
+ * @usage_legacy
+ * ```tsx
+ * // ❌ OLD (still works, but deprecated)
+ * const { settings } = useEntityStyles('line', 'preview');
+ * ```
+ *
+ * @usage_new
+ * ```tsx
+ * // ✅ NEW (recommended)
+ * const { settings } = useLineStyles('preview');
+ * ```
+ *
+ * @see {@link docs/settings-system/04-HOOKS_REFERENCE.md#legacy-hooks} - Legacy hooks section
+ * @see {@link docs/settings-system/10-MIGRATION_GUIDE.md} - Migration guide
+ * @see {@link providers/DxfSettingsProvider.tsx} - New unified provider
+ *
+ * @author Γιώργος Παγώνης + Claude Code (Anthropic AI)
+ * @since 2025-10-06 (Migration completed)
+ * @version 1.0.0 (Compatibility wrapper)
  */
 
 import { useLineStyles, useTextStyles, useGripStyles, type ViewerMode } from '../providers/DxfSettingsProvider';

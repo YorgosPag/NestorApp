@@ -1,3 +1,55 @@
+/**
+ * Unified Specific Settings Hooks
+ *
+ * @description
+ * Κεντρικοποιημένα hooks για mode-based settings (Preview/Completion).
+ * Χρησιμοποιούν το consolidated pattern για effective settings calculation.
+ *
+ * @hooks
+ * - `useUnifiedLinePreview()` - Preview line settings
+ * - `useUnifiedLineCompletion()` - Completion line settings
+ * - `useUnifiedTextPreview()` - Preview text settings
+ * - `useLineStyles(mode)` - Unified line settings για οποιοδήποτε mode
+ * - `useTextStyles(mode)` - Unified text settings για οποιοδήποτε mode
+ * - `useGripStyles(mode)` - Unified grip settings για οποιοδήποτε mode
+ *
+ * @architecture
+ * ```
+ * useLineStyles('preview')
+ *   ↓
+ * useConsolidatedSettings (pattern)
+ *   ↓
+ * DxfSettingsProvider (effective settings)
+ *   ↓
+ * General → Specific → Overrides (hierarchy)
+ * ```
+ *
+ * @effective_settings_calculation
+ * ```typescript
+ * Effective = General Settings
+ *           + Specific Settings (mode-based)
+ *           + Overrides (if enabled)
+ * ```
+ *
+ * @usage
+ * ```tsx
+ * // In drawing system
+ * const linePreview = useLineStyles('preview');
+ * previewEntity.color = linePreview.settings.color; // Yellow
+ *
+ * const lineCompletion = useLineStyles('completion');
+ * finalEntity.color = lineCompletion.settings.color; // Green
+ * ```
+ *
+ * @see {@link docs/settings-system/04-HOOKS_REFERENCE.md} - Complete hooks documentation
+ * @see {@link docs/settings-system/08-LINE_DRAWING_INTEGRATION.md} - Hooks in action
+ * @see {@link docs/settings-system/07-MODE_SYSTEM.md} - Mode-based settings
+ *
+ * @author Γιώργος Παγώνης + Claude Code (Anthropic AI)
+ * @since 2025-10-06
+ * @version 1.0.0
+ */
+
 import { useConsolidatedSettings } from './useConsolidatedSettings';
 import { useLineSettingsFromProvider, useTextSettingsFromProvider } from '../../providers/DxfSettingsProvider';
 import type { LineSettings } from '../../settings-core/types';

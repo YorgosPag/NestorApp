@@ -1,3 +1,45 @@
+/**
+ * TextSettings Component
+ *
+ * @description
+ * Text settings UI component για Preview mode.
+ * Διαχειρίζεται font family, size, color, style (bold/italic/underline/strikethrough/super/sub).
+ *
+ * @features
+ * - 📝 Font system (family, size με ISO 3098 standards)
+ * - 🎨 Color picker (με SharedColorPicker)
+ * - 🔤 Text decorations (Bold, Italic, Underline, Strikethrough)
+ * - 📐 Text positioning (Superscript, Subscript)
+ * - 🔄 Accordion sections (Basic/Font/Appearance/Decorations)
+ * - ✅ ISO 3098 compliance (Technical drawings text standards)
+ *
+ * @accordion_sections
+ * 1. **Basic Settings** - Font family, Font size
+ * 2. **Font Appearance** - Color, Style buttons (B/I/U/S)
+ * 3. **Text Decorations** - Underline, Strikethrough
+ * 4. **Text Positioning** - Superscript, Subscript
+ *
+ * @iso_3098_standards
+ * - Font: Sans-serif (Arial recommended)
+ * - Standard heights: 1.8, 2.5, 3.5, 5, 7, 10, 14, 20 mm
+ * - Weight: Normal (400) default, Bold (700) για emphasis
+ * - Orientation: Upright (no italic) recommended
+ *
+ * @usage
+ * ```tsx
+ * // In EntitiesSettings - Preview tab
+ * <TextSettings />
+ * ```
+ *
+ * @see {@link docs/settings-system/05-UI_COMPONENTS.md#textsettings-component} - Full documentation
+ * @see {@link docs/settings-system/02-COLORPALETTEPANEL.md} - Parent component
+ * @see {@link ui/hooks/useUnifiedSpecificSettings.ts} - useUnifiedTextPreview hook
+ *
+ * @author Γιώργος Παγώνης + Claude Code (Anthropic AI)
+ * @since 2025-10-06
+ * @version 1.0.0
+ */
+
 'use client';
 
 import React, { useState } from 'react';

@@ -1,6 +1,47 @@
 /**
- * Line Entity Renderer
- * Handles rendering of line entities
+ * LineRenderer - Line Entity Renderer
+ *
+ * @description
+ * Renders line entities με 3-phase system (geometry → measurements → endpoint dots).
+ * Υποστηρίζει ISO 128 line types, AutoCAD ACI colors, split lines, hover effects.
+ *
+ * @features
+ * - 📐 ISO 128 line types (Solid, Dashed, Dotted, DashDot, Center)
+ * - 🎨 AutoCAD ACI color system
+ * - 🔍 Hover detection με tolerance
+ * - 📏 Measurement rendering (distance text με split line)
+ * - 🟡 Endpoint dots για start/end points
+ * - ✅ 3-phase rendering (geometry → measurements → dots)
+ *
+ * @rendering_phases
+ * 1. **Geometry Phase** - Line rendering (solid/dashed/split)
+ * 2. **Measurements Phase** - Distance text με gap
+ * 3. **Endpoint Dots Phase** - Yellow/Green dots στα endpoints
+ *
+ * @line_types
+ * - `solid` - Continuous line (ISO 128)
+ * - `dashed` - Dashed line [10, 5] pattern
+ * - `dotted` - Dotted line [2, 3] pattern
+ * - `dashdot` - Dash-dot line [10, 5, 2, 5] pattern
+ * - `center` - Center line [20, 5, 2, 5] pattern
+ *
+ * @usage
+ * ```tsx
+ * const renderer = new LineRenderer(ctx, renderContext);
+ * renderer.render(lineEntity, {
+ *   isMeasurement: false,
+ *   showMeasurements: true,
+ *   isHovered: false
+ * });
+ * ```
+ *
+ * @see {@link docs/LINE_DRAWING_SYSTEM.md} - Complete line drawing documentation
+ * @see {@link docs/settings-system/08-LINE_DRAWING_INTEGRATION.md} - Settings integration
+ * @see {@link rendering/entities/BaseEntityRenderer.ts} - Base renderer
+ *
+ * @author Γιώργος Παγώνης + Claude Code (Anthropic AI)
+ * @since 2025-10-06
+ * @version 1.0.0
  */
 
 import { BaseEntityRenderer } from './BaseEntityRenderer';

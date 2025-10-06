@@ -1,18 +1,61 @@
 /**
- * ΚΕΝΤΡΙΚΟΣ DXF SETTINGS PROVIDER
- * Αντικαθιστά το διάσπαρτο auto-save system με κεντρικοποιημένη διαχείριση
+ * DxfSettingsProvider - Central Settings Provider
  *
- * Προβλήματα που λύνει:
- * - Κυκλικά loops στο auto-save
- * - Διάσπαρτη λογική αποθήκευσης
+ * @description
+ * Κεντρικός React Context Provider που διαχειρίζεται ΟΛΑ τα settings του DXF Viewer.
+ * Single source of truth για Line, Text, Grip, Grid, Ruler, Cursor settings.
+ *
+ * @features
+ * - 🎯 Central settings storage (Single source of truth)
+ * - 💾 Auto-save to localStorage (500ms debounce)
+ * - 🔄 Mode-based settings (normal/preview/completion)
+ * - 📊 Effective settings calculation (General → Specific → Overrides)
+ * - ✅ Settings validation & migration system
+ * - 🔧 Automatic legacy settings migration
+ *
+ * @problem_solved
+ * Αντικαθιστά:
+ * - ConfigurationProvider (mode-based, NO persistence)
+ * - Διάσπαρτα auto-save systems (κυκλικά loops)
  * - Πολλαπλές φορτώσεις από localStorage
- * - Δύσκολο debugging
+ * - Δύο providers χωρίς συγχρονισμό
  *
- * Χαρακτηριστικά:
- * - Ενιαίος manager για όλες τις ρυθμίσεις
- * - Single source of truth
- * - Batch updates
- * - Centralized persistence
+ * @architecture
+ * ```
+ * DxfSettingsProvider (Root)
+ *   ├── State: { line, text, grip, grid, ruler, cursor, mode, specific, overrides }
+ *   ├── Reducer: settingsReducer (handles all actions)
+ *   ├── Auto-Save: 500ms debounce → localStorage
+ *   ├── Context: DxfSettingsContext
+ *   └── Hooks: useDxfSettings(), getEffectiveSettings()
+ * ```
+ *
+ * @usage
+ * ```tsx
+ * // Wrap your app
+ * <DxfSettingsProvider>
+ *   <DxfViewerContent />
+ * </DxfSettingsProvider>
+ *
+ * // Access settings
+ * const { settings, updateLineSettings } = useDxfSettings();
+ * const effectiveSettings = getEffectiveLineSettings('preview');
+ * ```
+ *
+ * @see {@link docs/settings-system/03-DXFSETTINGSPROVIDER.md} - Complete documentation (1,006 lines)
+ * @see {@link docs/settings-system/01-ARCHITECTURE_OVERVIEW.md} - Architecture diagrams
+ * @see {@link docs/settings-system/06-SETTINGS_FLOW.md} - Settings lifecycle flow
+ * @see {@link docs/SETTINGS_ARCHITECTURE.md} - Overview
+ *
+ * @migration
+ * Automatically migrates from legacy keys:
+ * - 'line-settings' → 'dxf-settings-v1'.line
+ * - 'text-settings' → 'dxf-settings-v1'.text
+ * - 'grip-settings' → 'dxf-settings-v1'.grip
+ *
+ * @author Γιώργος Παγώνης + Claude Code (Anthropic AI)
+ * @since 2025-10-06
+ * @version 1.0.0
  */
 
 import React, { createContext, useContext, useReducer, useEffect, useCallback, useMemo } from 'react';

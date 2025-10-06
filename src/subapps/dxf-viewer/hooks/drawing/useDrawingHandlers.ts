@@ -1,12 +1,54 @@
 /**
- * useDrawingHandlers
- * Manages drawing and measurement interaction handlers
+ * useDrawingHandlers - Drawing Interaction Handlers
+ *
+ * @description
+ * Κεντρικό hook που διαχειρίζεται όλα τα drawing και measurement interaction handlers.
+ * Συνδυάζει unified drawing, snap system, και canvas operations.
+ *
+ * @features
+ * - 🖱️ Mouse event handlers (click, move, right-click)
+ * - 🔄 Drawing state management (useUnifiedDrawing)
+ * - 📍 Snap system integration (grid, endpoint, midpoint, intersection)
+ * - 📏 Measurement tools (distance, area, radius)
+ * - 🎨 Settings integration (preview/completion colors)
+ * - ✅ Entity creation & lifecycle
+ *
+ * @handlers
+ * - `handleCanvasClick(point)` - Main click handler (snap + drawing)
+ * - `handleMouseMove(point)` - Preview update handler
+ * - `handleRightClick()` - Finish polyline / Cancel drawing
+ * - `handleKeyPress(key)` - ESC to cancel, Enter to finish
+ *
+ * @integration
+ * ```
+ * useDrawingHandlers (THIS)
+ *   ├── useUnifiedDrawing (drawing state + settings)
+ *   ├── useSnapManager (snap point detection)
+ *   └── useCanvasOperations (canvas queries)
+ * ```
+ *
+ * @usage
+ * ```tsx
+ * const {
+ *   handleCanvasClick,
+ *   handleMouseMove,
+ *   handleRightClick
+ * } = useDrawingHandlers(activeTool, onEntityCreated, onToolChange, currentScene);
+ * ```
+ *
+ * @see {@link docs/LINE_DRAWING_SYSTEM.md} - Complete line drawing documentation
+ * @see {@link docs/settings-system/08-LINE_DRAWING_INTEGRATION.md} - Settings integration
+ * @see {@link hooks/drawing/useUnifiedDrawing.ts} - Drawing state hook
+ *
+ * @author Γιώργος Παγώνης + Claude Code (Anthropic AI)
+ * @since 2025-10-06
+ * @version 1.0.0
  */
 
 'use client';
 
 // DEBUG FLAG
-const DEBUG_DRAWING_HANDLERS = true; // 🔥 ENABLED για debugging!
+const DEBUG_DRAWING_HANDLERS = false;
 
 import { useCallback } from 'react';
 import type { ToolType } from '../../ui/toolbar/types';
@@ -37,7 +79,7 @@ export function useDrawingHandlers(
     finishPolyline,
     cancelDrawing,
     updatePreview
-  } = useUnifiedDrawing(onEntityCreated); // 🔥 FIX: Pass onEntityCreated callback!
+  } = useUnifiedDrawing();
 
   // Snap functionality
   const { snapEnabled, enabledModes } = useSnapContext();
@@ -74,14 +116,12 @@ export function useDrawingHandlers(
 
   // Drawing handlers
   const onDrawingPoint = useCallback((p: Pt) => {
-    console.log('🔥 onDrawingPoint called:', p);
+
     const snappedPoint = applySnap(p);
-    console.log('🔥 snappedPoint:', snappedPoint);
     const transform = canvasOps.getTransform();
-    console.log('🔥 transform:', transform);
     addPoint(snappedPoint, transform);
-    console.log('🔥 addPoint called - drawingState:', drawingState);
-  }, [addPoint, canvasOps, applySnap, drawingState]);
+
+  }, [addPoint, canvasOps, applySnap]);
   
   const onDrawingHover = useCallback((p: Pt | null) => {
     if (p) {

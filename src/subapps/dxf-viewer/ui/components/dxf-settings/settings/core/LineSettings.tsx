@@ -1,3 +1,59 @@
+/**
+ * LineSettings Component
+ *
+ * @description
+ * Context-aware line settings UI component που χρησιμοποιεί διαφορετικά hooks
+ * ανάλογα με το context (General/Preview/Completion).
+ *
+ * @features
+ * - 🎨 Context-aware hook selection (General/Preview/Completion)
+ * - 📐 ISO 128 + AutoCAD standards (line types, widths, caps, joins)
+ * - 🎭 Template system (Construction/Hidden/Center/Break lines)
+ * - 🔄 Accordion sections (Basic/Advanced/Hover/Final/Templates)
+ * - ✅ Validation με commonValidators
+ * - 🎨 Color picker integration (SharedColorPicker)
+ *
+ * @context_types
+ * - `'general'` - Γενικές Ρυθμίσεις (useLineSettingsFromProvider)
+ * - `'preview'` - Preview Ρυθμίσεις (useUnifiedLinePreview)
+ * - `'completion'` - Completion Ρυθμίσεις (useUnifiedLineCompletion)
+ *
+ * @accordion_sections
+ * 1. **Basic Settings** - Type, Width, Color, Opacity
+ * 2. **Advanced Settings** - Dash Scale/Offset, Line Cap/Join, Break at Center
+ * 3. **Hover Appearance** - Hover Color, Type, Width, Opacity
+ * 4. **Final Appearance** - Final Color, Type, Width, Opacity
+ * 5. **Templates** - Construction, Hidden, Center, Break lines
+ *
+ * @props
+ * - `contextType?: 'general' | 'preview' | 'completion'` - Settings context
+ *
+ * @usage
+ * ```tsx
+ * // In ColorPalettePanel - General tab
+ * <LineSettings contextType="general" />
+ *
+ * // In EntitiesSettings - Preview tab
+ * <LineSettings contextType="preview" />
+ *
+ * // In EntitiesSettings - Completion tab
+ * <LineSettings contextType="completion" />
+ * ```
+ *
+ * @iso_standards
+ * - ISO 128: Line types (Continuous, Dashed, Dotted, etc.)
+ * - ISO 128: Standard widths (0.13, 0.18, 0.25, 0.35, 0.5, 0.7, 1.0, 1.4, 2.0 mm)
+ * - AutoCAD ACI: Color standards (7=White, 2=Yellow, 3=Green, etc.)
+ *
+ * @see {@link docs/settings-system/05-UI_COMPONENTS.md#linesettings-component} - Full documentation
+ * @see {@link docs/settings-system/02-COLORPALETTEPANEL.md} - Parent component
+ * @see {@link ui/hooks/useUnifiedSpecificSettings.ts} - Hook implementations
+ *
+ * @author Γιώργος Παγώνης + Claude Code (Anthropic AI)
+ * @since 2025-10-06
+ * @version 1.0.0
+ */
+
 'use client';
 
 import React, { useState } from 'react';
