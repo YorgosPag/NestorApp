@@ -755,14 +755,30 @@ function settingsReducer(state: DxfSettingsState, action: SettingsAction): DxfSe
 // ===== PERSISTENCE UTILITIES =====
 
 const STORAGE_KEYS = {
+  // ===== GENERAL SETTINGS =====
   line: 'dxf-line-general-settings',
   text: 'dxf-text-general-settings',
   grip: 'dxf-grip-general-settings',
-  grid: 'dxf-grid-specific-settings',     // 🆕 ΠΡΟΣΘΗΚΗ: Grid storage key
-  ruler: 'dxf-ruler-specific-settings',   // 🆕 ΠΡΟΣΘΗΚΗ: Ruler storage key
-  cursor: 'dxf-cursor-specific-settings', // 🆕 ΠΡΟΣΘΗΚΗ: Cursor storage key (will migrate from 'autocad_cursor_settings')
-  templateOverrides: 'dxf-template-overrides',  // 🆕 TEMPLATE SYSTEM: User overrides
-  activeTemplates: 'dxf-active-templates'       // 🆕 TEMPLATE SYSTEM: Selected templates
+  grid: 'dxf-grid-specific-settings',
+  ruler: 'dxf-ruler-specific-settings',
+  cursor: 'dxf-cursor-specific-settings',
+
+  // ===== SPECIFIC SETTINGS (2025-10-06) =====
+  // 🆕 ENTERPRISE: Per-mode specific settings (draft/hover/selection/completion)
+  specificLine: 'dxf-line-specific-settings',     // Line draft/hover/selection/completion
+  specificText: 'dxf-text-specific-settings',     // Text draft
+  specificGrip: 'dxf-grip-specific-settings',     // Grip draft
+
+  // ===== OVERRIDES (2025-10-06) =====
+  // 🆕 ENTERPRISE: User overrides per mode
+  overridesLine: 'dxf-line-overrides',
+  overridesText: 'dxf-text-overrides',
+  overridesGrip: 'dxf-grip-overrides',
+  overrideEnabled: 'dxf-override-enabled-flags',  // Which modes have override enabled
+
+  // ===== TEMPLATE SYSTEM =====
+  templateOverrides: 'dxf-template-overrides',
+  activeTemplates: 'dxf-active-templates'
 } as const;
 
 // ✅ ΔΙΕΘΝΗ ΠΡΟΤΥΠΑ VERSION - αν αλλάξει αυτό, τα παλιά localStorage settings θα επανεγκατασταθούν
@@ -1016,6 +1032,113 @@ function loadAllSettings(): Partial<DxfSettingsState> {
       }
     }
 
+    // ===== SPECIFIC SETTINGS (2025-10-06 ENTERPRISE) =====
+    // Load Line specific settings (draft/hover/selection/completion)
+    const specificLineStr = localStorage.getItem(STORAGE_KEYS.specificLine);
+    if (specificLineStr) {
+      try {
+        const parsed = JSON.parse(specificLineStr);
+        const { __autosave_timestamp, __autosave_key, __standards_version, ...actualData } = parsed;
+        if (__standards_version === INTERNATIONAL_STANDARDS_VERSION) {
+          result.specific = { ...result.specific, line: actualData };
+          console.log(`✅ [DEBUG] Specific line settings loaded (${Object.keys(actualData).length} modes)`);
+        }
+      } catch (e) {
+        console.error('❌ [DEBUG] Failed to parse specific line settings:', e);
+      }
+    }
+
+    // Load Text specific settings (draft)
+    const specificTextStr = localStorage.getItem(STORAGE_KEYS.specificText);
+    if (specificTextStr) {
+      try {
+        const parsed = JSON.parse(specificTextStr);
+        const { __autosave_timestamp, __autosave_key, __standards_version, ...actualData } = parsed;
+        if (__standards_version === INTERNATIONAL_STANDARDS_VERSION) {
+          result.specific = { ...result.specific, text: actualData };
+          console.log('✅ [DEBUG] Specific text settings loaded');
+        }
+      } catch (e) {
+        console.error('❌ [DEBUG] Failed to parse specific text settings:', e);
+      }
+    }
+
+    // Load Grip specific settings (draft)
+    const specificGripStr = localStorage.getItem(STORAGE_KEYS.specificGrip);
+    if (specificGripStr) {
+      try {
+        const parsed = JSON.parse(specificGripStr);
+        const { __autosave_timestamp, __autosave_key, __standards_version, ...actualData } = parsed;
+        if (__standards_version === INTERNATIONAL_STANDARDS_VERSION) {
+          result.specific = { ...result.specific, grip: actualData };
+          console.log('✅ [DEBUG] Specific grip settings loaded');
+        }
+      } catch (e) {
+        console.error('❌ [DEBUG] Failed to parse specific grip settings:', e);
+      }
+    }
+
+    // ===== OVERRIDES (2025-10-06 ENTERPRISE) =====
+    // Load Line overrides
+    const overridesLineStr = localStorage.getItem(STORAGE_KEYS.overridesLine);
+    if (overridesLineStr) {
+      try {
+        const parsed = JSON.parse(overridesLineStr);
+        const { __autosave_timestamp, __autosave_key, __standards_version, ...actualData } = parsed;
+        if (__standards_version === INTERNATIONAL_STANDARDS_VERSION) {
+          result.overrides = { ...result.overrides, line: actualData };
+          console.log('✅ [DEBUG] Line overrides loaded');
+        }
+      } catch (e) {
+        console.error('❌ [DEBUG] Failed to parse line overrides:', e);
+      }
+    }
+
+    // Load Text overrides
+    const overridesTextStr = localStorage.getItem(STORAGE_KEYS.overridesText);
+    if (overridesTextStr) {
+      try {
+        const parsed = JSON.parse(overridesTextStr);
+        const { __autosave_timestamp, __autosave_key, __standards_version, ...actualData } = parsed;
+        if (__standards_version === INTERNATIONAL_STANDARDS_VERSION) {
+          result.overrides = { ...result.overrides, text: actualData };
+          console.log('✅ [DEBUG] Text overrides loaded');
+        }
+      } catch (e) {
+        console.error('❌ [DEBUG] Failed to parse text overrides:', e);
+      }
+    }
+
+    // Load Grip overrides
+    const overridesGripStr = localStorage.getItem(STORAGE_KEYS.overridesGrip);
+    if (overridesGripStr) {
+      try {
+        const parsed = JSON.parse(overridesGripStr);
+        const { __autosave_timestamp, __autosave_key, __standards_version, ...actualData } = parsed;
+        if (__standards_version === INTERNATIONAL_STANDARDS_VERSION) {
+          result.overrides = { ...result.overrides, grip: actualData };
+          console.log('✅ [DEBUG] Grip overrides loaded');
+        }
+      } catch (e) {
+        console.error('❌ [DEBUG] Failed to parse grip overrides:', e);
+      }
+    }
+
+    // ===== OVERRIDE ENABLED FLAGS (2025-10-06 ENTERPRISE) =====
+    const overrideEnabledStr = localStorage.getItem(STORAGE_KEYS.overrideEnabled);
+    if (overrideEnabledStr) {
+      try {
+        const parsed = JSON.parse(overrideEnabledStr);
+        const { __autosave_timestamp, __autosave_key, __standards_version, ...actualData } = parsed;
+        if (__standards_version === INTERNATIONAL_STANDARDS_VERSION) {
+          result.overrideEnabled = actualData;
+          console.log('✅ [DEBUG] Override enabled flags loaded');
+        }
+      } catch (e) {
+        console.error('❌ [DEBUG] Failed to parse override enabled flags:', e);
+      }
+    }
+
     // 🆕 TEMPLATE SYSTEM: Load templateOverrides
     const templateOverridesStr = localStorage.getItem(STORAGE_KEYS.templateOverrides);
     if (templateOverridesStr) {
@@ -1075,20 +1198,20 @@ function loadAllSettings(): Partial<DxfSettingsState> {
   }
 }
 
-function saveAllSettings(settings: Pick<DxfSettingsState, 'line' | 'text' | 'grip' | 'grid' | 'ruler' | 'cursor' | 'templateOverrides' | 'activeTemplates'>) {
+function saveAllSettings(settings: Pick<DxfSettingsState, 'line' | 'text' | 'grip' | 'grid' | 'ruler' | 'cursor' | 'specific' | 'overrides' | 'overrideEnabled' | 'templateOverrides' | 'activeTemplates'>) {
   try {
     const timestamp = Date.now();
     console.log('🔍 [DEBUG] saveAllSettings called with keys:', Object.keys(settings));
 
+    // ===== GENERAL SETTINGS =====
     // Save basic settings (line, text, grip, grid, ruler, cursor)
     ['line', 'text', 'grip', 'grid', 'ruler', 'cursor'].forEach((key) => {
       const storageKey = STORAGE_KEYS[key as keyof typeof STORAGE_KEYS];
       const data = settings[key as keyof typeof settings];
 
-      // 🚨 DEBUG: Check if data exists
       if (!data) {
         console.warn(`⚠️ [DxfSettings] Missing data for ${key}, skipping...`);
-        return; // Skip this iteration
+        return;
       }
 
       const dataWithMetadata = {
@@ -1098,20 +1221,102 @@ function saveAllSettings(settings: Pick<DxfSettingsState, 'line' | 'text' | 'gri
         __standards_version: INTERNATIONAL_STANDARDS_VERSION
       };
 
-      console.log(`🔍 [DEBUG] Writing to localStorage:`, {
-        key: storageKey,
-        dataSize: JSON.stringify(dataWithMetadata).length,
-        hasData: !!data
-      });
-
       localStorage.setItem(storageKey, JSON.stringify(dataWithMetadata));
-
-      // 🔍 Verify write immediately
       const readBack = localStorage.getItem(storageKey);
       console.log(`🔍 [DEBUG] Verified write for ${storageKey}:`, readBack ? '✅ Success' : '❌ Failed');
     });
 
-    // 🆕 TEMPLATE SYSTEM: Save templateOverrides
+    // ===== SPECIFIC SETTINGS (2025-10-06 ENTERPRISE) =====
+    if (settings.specific) {
+      // Save Line specific settings (draft/hover/selection/completion)
+      if (settings.specific.line) {
+        const specificLineWithMetadata = {
+          ...settings.specific.line,
+          __autosave_timestamp: timestamp,
+          __autosave_key: STORAGE_KEYS.specificLine,
+          __standards_version: INTERNATIONAL_STANDARDS_VERSION
+        };
+        localStorage.setItem(STORAGE_KEYS.specificLine, JSON.stringify(specificLineWithMetadata));
+        console.log(`🔍 [DEBUG] Saved specific line settings (${Object.keys(settings.specific.line).length} modes)`);
+      }
+
+      // Save Text specific settings (draft)
+      if (settings.specific.text) {
+        const specificTextWithMetadata = {
+          ...settings.specific.text,
+          __autosave_timestamp: timestamp,
+          __autosave_key: STORAGE_KEYS.specificText,
+          __standards_version: INTERNATIONAL_STANDARDS_VERSION
+        };
+        localStorage.setItem(STORAGE_KEYS.specificText, JSON.stringify(specificTextWithMetadata));
+        console.log(`🔍 [DEBUG] Saved specific text settings`);
+      }
+
+      // Save Grip specific settings (draft)
+      if (settings.specific.grip) {
+        const specificGripWithMetadata = {
+          ...settings.specific.grip,
+          __autosave_timestamp: timestamp,
+          __autosave_key: STORAGE_KEYS.specificGrip,
+          __standards_version: INTERNATIONAL_STANDARDS_VERSION
+        };
+        localStorage.setItem(STORAGE_KEYS.specificGrip, JSON.stringify(specificGripWithMetadata));
+        console.log(`🔍 [DEBUG] Saved specific grip settings`);
+      }
+    }
+
+    // ===== OVERRIDES (2025-10-06 ENTERPRISE) =====
+    if (settings.overrides) {
+      // Save Line overrides
+      if (settings.overrides.line) {
+        const overridesLineWithMetadata = {
+          ...settings.overrides.line,
+          __autosave_timestamp: timestamp,
+          __autosave_key: STORAGE_KEYS.overridesLine,
+          __standards_version: INTERNATIONAL_STANDARDS_VERSION
+        };
+        localStorage.setItem(STORAGE_KEYS.overridesLine, JSON.stringify(overridesLineWithMetadata));
+        console.log(`🔍 [DEBUG] Saved line overrides`);
+      }
+
+      // Save Text overrides
+      if (settings.overrides.text) {
+        const overridesTextWithMetadata = {
+          ...settings.overrides.text,
+          __autosave_timestamp: timestamp,
+          __autosave_key: STORAGE_KEYS.overridesText,
+          __standards_version: INTERNATIONAL_STANDARDS_VERSION
+        };
+        localStorage.setItem(STORAGE_KEYS.overridesText, JSON.stringify(overridesTextWithMetadata));
+        console.log(`🔍 [DEBUG] Saved text overrides`);
+      }
+
+      // Save Grip overrides
+      if (settings.overrides.grip) {
+        const overridesGripWithMetadata = {
+          ...settings.overrides.grip,
+          __autosave_timestamp: timestamp,
+          __autosave_key: STORAGE_KEYS.overridesGrip,
+          __standards_version: INTERNATIONAL_STANDARDS_VERSION
+        };
+        localStorage.setItem(STORAGE_KEYS.overridesGrip, JSON.stringify(overridesGripWithMetadata));
+        console.log(`🔍 [DEBUG] Saved grip overrides`);
+      }
+    }
+
+    // ===== OVERRIDE ENABLED FLAGS (2025-10-06 ENTERPRISE) =====
+    if (settings.overrideEnabled) {
+      const overrideEnabledWithMetadata = {
+        ...settings.overrideEnabled,
+        __autosave_timestamp: timestamp,
+        __autosave_key: STORAGE_KEYS.overrideEnabled,
+        __standards_version: INTERNATIONAL_STANDARDS_VERSION
+      };
+      localStorage.setItem(STORAGE_KEYS.overrideEnabled, JSON.stringify(overrideEnabledWithMetadata));
+      console.log(`🔍 [DEBUG] Saved override enabled flags`);
+    }
+
+    // ===== TEMPLATE SYSTEM =====
     if (settings.templateOverrides) {
       const overridesWithMetadata = {
         ...settings.templateOverrides,
@@ -1123,7 +1328,6 @@ function saveAllSettings(settings: Pick<DxfSettingsState, 'line' | 'text' | 'gri
       console.log(`🔍 [DEBUG] Saved templateOverrides to localStorage`);
     }
 
-    // 🆕 TEMPLATE SYSTEM: Save activeTemplates
     if (settings.activeTemplates) {
       const templatesWithMetadata = {
         ...settings.activeTemplates,
@@ -1326,8 +1530,11 @@ export function DxfSettingsProvider({ children }: { children: React.ReactNode })
         grid: settingsRef.current.grid,
         ruler: settingsRef.current.ruler,
         cursor: settingsRef.current.cursor,
-        templateOverrides: settingsRef.current.templateOverrides,  // 🆕 TEMPLATE SYSTEM
-        activeTemplates: settingsRef.current.activeTemplates       // 🆕 TEMPLATE SYSTEM
+        specific: settingsRef.current.specific,               // 🆕 ENTERPRISE (2025-10-06)
+        overrides: settingsRef.current.overrides,             // 🆕 ENTERPRISE (2025-10-06)
+        overrideEnabled: settingsRef.current.overrideEnabled, // 🆕 ENTERPRISE (2025-10-06)
+        templateOverrides: settingsRef.current.templateOverrides,
+        activeTemplates: settingsRef.current.activeTemplates
       });
 
       if (success) {
