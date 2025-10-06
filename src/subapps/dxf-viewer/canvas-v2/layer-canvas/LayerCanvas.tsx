@@ -206,8 +206,7 @@ export const LayerCanvas = React.forwardRef<HTMLCanvasElement, LayerCanvasProps>
     // 🎯 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΟ MARQUEE SELECTION
     colorLayers: layers,
     onLayerSelected: onLayerClick, // 🎯 USE onLayerClick για marquee selection
-    canvasRef: canvasRef, // 🔧 FIX: Pass canvas ref για getBoundingClientRect
-    onCanvasClick // ✅ FIX: Pass onCanvasClick για overlay drawing
+    canvasRef: canvasRef // 🔧 FIX: Pass canvas ref για getBoundingClientRect
   });
 
   // ✅ SNAP FIX STEP 5: Extract snap results from mouse handlers

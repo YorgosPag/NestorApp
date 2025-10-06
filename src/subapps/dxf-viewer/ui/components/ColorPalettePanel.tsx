@@ -33,12 +33,9 @@ import {
   EntitiesIcon,
   LightingIcon
 } from './dxf-settings/icons/DxfSettingsIcons';
-import UploadDxfButton from '../UploadDxfButton';
-import { SimpleProjectDialog } from '../../components/SimpleProjectDialog';
 
 export interface ColorPalettePanelProps {
   className?: string;
-  onSceneImported?: (file: File, encoding?: string) => void;
 }
 
 type ColorCategory = 'cursor' | 'selection' | 'grid' | 'grips' | 'layers' | 'entities' | 'lighting';
@@ -51,19 +48,16 @@ interface CategoryConfig {
   comingSoon?: boolean;
 }
 
-type MainTab = 'general' | 'specific' | 'import';
+type MainTab = 'general' | 'specific';
 type GeneralTab = 'lines' | 'text' | 'grips';
 
-export function ColorPalettePanel({ className = '', onSceneImported }: ColorPalettePanelProps) {
+export function ColorPalettePanel({ className = '' }: ColorPalettePanelProps) {
 
   // Main tabs state
   const [activeMainTab, setActiveMainTab] = useState<MainTab>('specific');
 
   // General settings sub-tabs state
   const [activeGeneralTab, setActiveGeneralTab] = useState<GeneralTab>('lines');
-
-  // Import tab state
-  const [showSimpleDialog, setShowSimpleDialog] = useState(false);
 
   // Use cursor settings hook για live connection
   let cursorHookResult;
@@ -2101,7 +2095,7 @@ export function ColorPalettePanel({ className = '', onSceneImported }: ColorPale
   return (
     <div className={`bg-gray-800 text-white ${className}`}>
 
-      {/* Main Tabs - General/Specific/Import */}
+      {/* Main Tabs - General/Specific */}
       <div className="border-b border-gray-600 mb-4">
         <nav className="flex gap-1 p-2">
           <button
@@ -2123,16 +2117,6 @@ export function ColorPalettePanel({ className = '', onSceneImported }: ColorPale
             }`}
           >
             Ειδικές Ρυθμίσεις
-          </button>
-          <button
-            onClick={() => setActiveMainTab('import')}
-            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-              activeMainTab === 'import'
-                ? 'bg-blue-600 text-white'
-                : 'text-gray-400 hover:text-white hover:bg-gray-700'
-            }`}
-          >
-            Import
           </button>
         </nav>
       </div>
@@ -2249,54 +2233,6 @@ export function ColorPalettePanel({ className = '', onSceneImported }: ColorPale
           </div>
         </div>
       )}
-
-      {/* Import Tab Content */}
-      {activeMainTab === 'import' && (
-        <div className="p-6 space-y-4">
-          <h3 className="text-lg font-semibold text-white mb-4">Εισαγωγή Αρχείων DXF</h3>
-
-          {/* Upload DXF Button - Larger Version */}
-          <div className="space-y-2">
-            <label className="text-sm text-gray-400">Legacy Upload (Γρήγορη Εισαγωγή)</label>
-            <UploadDxfButton
-              className="w-full h-16 rounded-lg border-2 transition-all duration-200 flex items-center justify-center gap-3 bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-500 hover:border-gray-400 text-lg font-medium"
-              title="Upload DXF File (Legacy)"
-              onFileSelect={onSceneImported}
-            />
-            <p className="text-xs text-gray-500">Γρήγορη εισαγωγή αρχείου DXF χωρίς διαχείριση έργου</p>
-          </div>
-
-          {/* Enhanced Import Button - Larger Version */}
-          <div className="space-y-2">
-            <label className="text-sm text-gray-400">Enhanced Import (Με Διαχείριση Έργου)</label>
-            <button
-              onClick={() => setShowSimpleDialog(true)}
-              className="w-full h-16 rounded-lg border-2 transition-all duration-200 flex items-center justify-center gap-3 bg-blue-700 hover:bg-blue-600 text-white border-blue-500 hover:border-blue-400 text-lg font-medium"
-              title="Enhanced DXF Import with Project Management"
-            >
-              <span className="text-2xl">🔺</span>
-              <span>Enhanced DXF Import</span>
-            </button>
-            <p className="text-xs text-gray-500">Εισαγωγή με πλήρη διαχείριση έργου, επίπεδα και ιεραρχία</p>
-          </div>
-
-          {/* Info Section */}
-          <div className="mt-6 p-4 bg-gray-700 rounded-lg border border-gray-600">
-            <h4 className="text-sm font-semibold text-white mb-2">ℹ️ Πληροφορίες</h4>
-            <ul className="text-xs text-gray-300 space-y-1">
-              <li>• <strong>Legacy Upload:</strong> Γρήγορη εισαγωγή χωρίς επιπλέον ρυθμίσεις</li>
-              <li>• <strong>Enhanced Import:</strong> Πλήρης διαχείριση έργου με επίπεδα και οργάνωση</li>
-            </ul>
-          </div>
-        </div>
-      )}
-
-      {/* Simple Project Dialog */}
-      <SimpleProjectDialog
-        isOpen={showSimpleDialog}
-        onClose={() => setShowSimpleDialog(false)}
-        onFileImport={onSceneImported}
-      />
 
     </div>
   );

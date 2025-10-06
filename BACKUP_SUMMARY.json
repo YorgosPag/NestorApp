@@ -1,37 +1,28 @@
 {
-  "timestamp": "2025-10-06T15:30:00Z",
-  "category": "FEATURE",
-  "shortDescription": "Template Overrides System - Enterprise Implementation",
-  "problem": "Όταν ο χρήστης επιλέγει template, κάνει custom changes, και μετά επιλέγει ΔΙΑΦΟΡΕΤΙΚΟ template, όλες οι custom αλλαγές χάνονται. Η παλιά υλοποίηση: applyTemplate() αντικαθιστούσε ΟΛΕΣ τις ρυθμίσεις με τις default του template. Ο χρήστης ζήτησε: 'Επιλογή B - User customizations να παραμένουν όταν αλλάζει templates' + Factory Reset με confirmation dialog + ISO/AutoCAD 2024 standards.",
-  "cause": "Δεν υπήρχε διαχωρισμός μεταξύ template base και user overrides. Η state structure δεν υποστήριζε: (1) Tracking ποιο template είναι active (2) Αποθήκευση user customizations ξεχωριστά από το template (3) Merge logic που να κρατάει τα overrides όταν αλλάζει template. Επίσης έλειπε: (1) Factory reset functionality (2) Confirmation dialog για data loss (3) Integration με το useLineSettingsFromProvider.",
+  "timestamp": "2025-10-06T15:45:00Z",
+  "category": "HOTFIX",
+  "shortDescription": "Factory Reset Button Visibility + Toast Notifications",
+  "problem": "Το 🏭 'Εργοστασιακές' button δεν εμφανιζόταν όταν ο χρήστης άνοιγε το Line Settings panel. Bug: Η conditional rendering συνθήκη ήταν contextType === 'general', αλλά όταν δεν περνάει contextType parameter (default usage), η τιμή είναι undefined, όχι 'general'. Επίσης, δεν υπήρχε feedback όταν ο χρήστης πάταγε το button - κανένα toast notification για επιτυχία ή ακύρωση.",
+  "cause": "Λανθασμένη conditional logic: contextType === 'general' αντί για !contextType (check for undefined). Το component LineSettings({ contextType }) έχει optional parameter που defaults σε undefined. Επίσης έλειπε integration με το NotificationProvider (sonner toast library) για user feedback.",
   "filesChanged": [
-    "src/subapps/dxf-viewer/providers/DxfSettingsProvider.tsx (MAJOR - 200+ lines)",
-    "src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/LineSettings.tsx (UI updates)",
-    "src/subapps/dxf-viewer/docs/settings-system/03-DXFSETTINGSPROVIDER.md (Documentation)",
-    "src/subapps/dxf-viewer/centralized_systems.md (Navigation pointer)"
+    "src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/LineSettings.tsx (Bug fix + toast integration)"
   ],
   "solution": {
-    "phase1": "State Architecture - Προσθήκη TemplateOverrides & ActiveTemplates interfaces στο DxfSettingsState. Separation of concerns: state.line = template base, state.templateOverrides.line = user customizations",
-    "phase2": "Actions & Reducer - Υλοποίηση 4 νέων actions: APPLY_LINE_TEMPLATE (επιλογή template + reset overrides), UPDATE_LINE_TEMPLATE_OVERRIDES (user changes πάνω σε template), CLEAR_LINE_TEMPLATE_OVERRIDES (καθαρισμός), RESET_LINE_TO_FACTORY (εργοστασιακή επαναφορά)",
-    "phase3": "Persistence Layer - localStorage integration με 2 νέα STORAGE_KEYS (templateOverrides, activeTemplates). Auto-save με version checking (INTERNATIONAL_STANDARDS_VERSION). Metadata tracking με __autosave_timestamp",
-    "phase4": "Effective Settings Calculation - Ενημέρωση getEffectiveLineSettings() με νέα σειρά merge: Template base → Template overrides (persist!) → Mode-specific → User overrides. Προσθήκη state.templateOverrides.line στα useMemo dependencies",
-    "phase5": "Context Integration - Προσθήκη 4 μεθόδων στο DxfSettingsContextType (applyLineTemplate, updateLineTemplateOverrides, clearLineTemplateOverrides, resetLineToFactory). Update useLineSettingsFromProvider με smart updateSettings που ξέρει αν υπάρχει active template",
-    "phase6": "UI Implementation - Confirmation dialog για factory reset: 'Θα χάσετε ΟΛΑ...' με λίστα data loss. Νέο button 🏭 'Εργοστασιακές' (red background, conditional render για general context only). Integration με resetToFactory method"
+    "phase1": "Fixed Conditional Rendering - Changed από contextType === 'general' σε !contextType. Τώρα το button εμφανίζεται όταν δεν υπάρχει contextType (general settings usage)",
+    "phase2": "Added useNotifications Hook - Import από NotificationProvider για access στο toast API. Sonner library already in use across application",
+    "phase3": "Success Toast - Μετά την επιβεβαίωση factory reset, εμφανίζεται success toast: '🏭 Εργοστασιακές ρυθμίσεις επαναφέρθηκαν! Όλες οι ρυθμίσεις γραμμών επέστρεψαν στα πρότυπα ISO 128 & AutoCAD 2024.' Duration: 5000ms",
+    "phase4": "Cancellation Toast - Αν ο χρήστης κάνει Cancel στο confirmation dialog, εμφανίζεται info toast: '❌ Ακυρώθηκε η επαναφορά εργοστασιακών ρυθμίσεων'"
   },
-  "testing": "✅ Application compiles successfully. Development server running on http://localhost:3001. Template system integrated with existing auto-save (500ms debounce). Console logging για debugging: template selection, override updates, factory reset confirmation. Testing instructions: (1) Select 'Κύρια Γραμμή' template (2) Change color to red (3) Select 'Λεπτή Γραμμή' template (4) Expected: Red color persists! ✅ (5) Click 🏭 button → confirmation → reset to ISO/AutoCAD defaults.",
+  "testing": "✅ Button τώρα εμφανίζεται στο header του Line Settings panel (Γενικές Ρυθμίσεις). ✅ Click → Confirmation dialog → OK → Success toast appears (5 seconds). ✅ Click → Confirmation dialog → Cancel → Info toast appears. Testing instructions: (1) Open Settings Panel → Line Settings (2) Βλέπεις 2 buttons: 'Επαναφορά' (gray) και '🏭 Εργοστασιακές' (red) (3) Click 🏭 → Dialog → OK → Green toast (4) Click 🏭 → Dialog → Cancel → Blue toast",
   "notes": [
-    "🎯 ENTERPRISE ARCHITECTURE: Ο Γιώργος ζήτησε ρητά 'πλήρες template overrides system, ΟΧΙ shortcuts, με προσοχή γιατί κάνουμε enterprise system'",
-    "✅ Template Overrides Persistence: User customizations παραμένουν όταν αλλάζει templates - core requirement επιτεύχθηκε!",
-    "✅ Multi-Layer Settings Hierarchy: Template base → Template overrides → Mode-specific → User overrides (4 layers, σωστή σειρά)",
-    "✅ ISO 128 & AutoCAD 2024 Standards: Factory defaults follow international standards (0.25mm line width, ACI color 7, continuous line type)",
-    "✅ Confirmation Dialog: Native window.confirm() με ελληνικό κείμενο + emoji ⚠️ + detailed data loss warning",
-    "🏭 Factory Reset Button: Conditional rendering (μόνο για general context), κόκκινο background, font-semibold για emphasis",
-    "💾 localStorage Keys: 2 νέα keys (dxf-template-overrides, dxf-active-templates) με version checking για backward compatibility",
-    "📚 Documentation Updated: 03-DXFSETTINGSPROVIDER.md (state structure, actions, effective settings hierarchy), centralized_systems.md (navigation pointer)",
-    "🎨 Smart Update Logic: useLineSettingsFromProvider.updateSettings() checks hasActiveTemplate → dispatch σωστό action type",
-    "🔄 Backward Compatible: Existing code που δεν χρησιμοποιεί templates συνεχίζει να λειτουργεί κανονικά (undefined checks)",
-    "⚡ Performance: useMemo dependencies updated properly - αποφυγή unnecessary re-renders",
-    "🐛 No Breaking Changes: Pre-existing TypeScript errors (JSX, override.ts, etc.) δεν σχετίζονται με αυτή την υλοποίηση"
+    "🐛 BUG FIX: Conditional rendering ήταν λάθος - contextType === 'general' vs !contextType",
+    "✅ Enterprise UX: Following industry standards (AutoCAD, Revit, SolidWorks) - confirmation + feedback",
+    "🎨 Toast Library: Sonner (already in use) - notifications.success(), notifications.info()",
+    "⏱️ Toast Duration: 5000ms (5 seconds) για success toast - χρήστης να προλάβει να διαβάσει το μήνυμα",
+    "🎯 User Feedback: Τώρα ο χρήστης ξέρει αν η ενέργεια πέτυχε (success toast) ή ακυρώθηκε (info toast)",
+    "🏭 Button Visibility: Εμφανίζεται ΜΟΝΟ στο general context (όχι σε preview/completion contexts)",
+    "🔴 Button Style: bg-red-700 hover:bg-red-600 - κόκκινο για destructive action (industry standard)",
+    "📱 Responsive: Toast notifications positioned στο top-right (NotificationProvider default)"
   ],
   "contributors": {
     "user": "Γιώργος Παγώνης",
@@ -39,14 +30,14 @@
     "sessionDate": "2025-10-06"
   },
   "relatedBackups": [
-    "settings-autosave-fix-20251006",
-    "template-selection-ux-20251006"
+    "template-overrides-system-20251006"
   ],
   "commits": [
     {
-      "message": "Feature: Template Overrides System - Enterprise Implementation",
-      "files": 4,
-      "description": "Multi-layer settings hierarchy with template overrides that persist across template changes. Factory reset with ISO/AutoCAD standards. Full documentation updates."
+      "hash": "d50f940",
+      "message": "Fix: Factory Reset Button Visibility + Toast Notifications",
+      "files": 1,
+      "description": "Fixed button not appearing (contextType bug). Added success/cancel toast notifications using sonner library. Enterprise UX following industry standards."
     }
   ]
 }

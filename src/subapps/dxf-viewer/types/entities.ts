@@ -20,6 +20,19 @@ export interface BaseEntity {
   visible?: boolean;
   locked?: boolean;
   metadata?: Record<string, unknown>;
+
+  // Line styling properties (CAD Standard)
+  lineweight?: number;        // Line thickness (ISO 128 standard)
+  opacity?: number;           // 0.0 to 1.0
+  lineType?: 'solid' | 'dashed' | 'dotted' | 'dashdot';  // Line pattern
+  dashScale?: number;         // Dash pattern scale factor
+  lineCap?: 'butt' | 'round' | 'square';  // Line cap style
+  lineJoin?: 'miter' | 'round' | 'bevel'; // Line join style
+  dashOffset?: number;        // Dash pattern offset
+
+  // Preview/Completion flags
+  breakAtCenter?: boolean;    // Split line at center for distance label
+  showEdgeDistances?: boolean; // Show distance labels on preview
 }
 
 // Supported entity types

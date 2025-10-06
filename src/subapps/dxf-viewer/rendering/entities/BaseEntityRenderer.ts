@@ -290,7 +290,7 @@ export abstract class BaseEntityRenderer {
     
     // 6. Draw grips with phase-appropriate colors
     // ✅ ΚΡΙΣΙΜΗ ΔΙΟΡΘΩΣΗ: Επιτρέπουμε grips σε preview entities!
-    if (options.showGrips) {
+    if (options.grips) {
       this.renderGrips(entity, options);
     }
     
@@ -452,30 +452,23 @@ export abstract class BaseEntityRenderer {
    */
     // 🔺 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΗ ΜΕΘΟΔΟΣ ΓΙΑ ΚΥΚΛΑ/ΤΟΞΑ (χωρίς γωνίες)
   protected drawCentralizedArc(
-    centerX: number,
-    centerY: number,
-    radius: number,
-    startAngle: number,
+    centerX: number, 
+    centerY: number, 
+    radius: number, 
+    startAngle: number, 
     endAngle: number
   ): void {
     this.ctx.save();
     this.applyArcStyle();
-
+    
     const screenCenter = this.worldToScreen({ x: centerX, y: centerY });
     const screenRadius = radius * this.transform.scale;
-
-    // 🔧 CRITICAL FIX: Y-axis flip για DXF arcs
-    // DXF: Y αυξάνεται προς τα ΠΑΝΩ, γωνίες counter-clockwise
-    // Canvas: Y αυξάνεται προς τα ΚΑΤΩ, γωνίες clockwise
-    // Λύση: Αντιστρέφουμε τις γωνίες (2π - angle) για να διορθώσουμε το flip
-    const canvasStartAngle = -startAngle;  // Flip Y-axis
-    const canvasEndAngle = -endAngle;      // Flip Y-axis
-
+    
+    // Για κύκλα/τόξα χωρίς γωνίες, χρησιμοποιούμε απλή λογική
     this.ctx.beginPath();
-    // Swap start/end επειδή οι γωνίες αντιστράφηκαν
-    this.ctx.arc(screenCenter.x, screenCenter.y, screenRadius, canvasEndAngle, canvasStartAngle, false);
+    this.ctx.arc(screenCenter.x, screenCenter.y, screenRadius, startAngle, endAngle, false);
     this.ctx.stroke();
-
+    
     this.ctx.restore();
   }
 
@@ -537,7 +530,7 @@ export abstract class BaseEntityRenderer {
   protected finalizeRendering(entity: EntityModel, options: RenderOptions): void {
     // Draw grips if needed
     // ✅ ΚΡΙΣΙΜΗ ΔΙΟΡΘΩΣΗ: Επιτρέπουμε grips σε preview entities!
-    if (options.showGrips) {
+    if (options.grips) {
       this.renderGrips(entity);
     }
 

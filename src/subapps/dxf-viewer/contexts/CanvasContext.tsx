@@ -10,8 +10,6 @@ interface CanvasContextType {
   overlayRef: React.RefObject<OverlayCanvasImperativeAPI>;
   transform: ViewTransform;
   setTransform: (transform: ViewTransform) => void;
-  selectedEntityIds: string[];
-  setSelectedEntityIds: (ids: string[]) => void;
 }
 
 const CanvasContext = createContext<CanvasContextType | null>(null);
@@ -33,10 +31,9 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
   const dxfRef = useRef<DxfCanvasImperativeAPI>(null);
   const overlayRef = useRef<OverlayCanvasImperativeAPI>(null);
   const [transform, setTransform] = useState<ViewTransform>({ scale: 1, offsetX: 0, offsetY: 0 });
-  const [selectedEntityIds, setSelectedEntityIds] = useState<string[]>([]);
 
   return (
-    <CanvasContext.Provider value={{ dxfRef, overlayRef, transform, setTransform, selectedEntityIds, setSelectedEntityIds }}>
+    <CanvasContext.Provider value={{ dxfRef, overlayRef, transform, setTransform }}>
       {children}
     </CanvasContext.Provider>
   );

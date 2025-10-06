@@ -115,7 +115,8 @@ export const MainContentSection = React.memo<MainContentSectionProps>(({
       }}
     >
       {/* DEBUG TOOLBAR - Development only */}
-      {process.env.NODE_ENV === 'development' && (
+      {/* ✅ HIDDEN: Moved to Tests modal in toolbar (Ctrl+Shift+T) */}
+      {/* {process.env.NODE_ENV === 'development' && (
         <DebugToolbar
           showCopyableNotification={showCopyableNotification}
           showGrid={showGrid}
@@ -136,12 +137,14 @@ export const MainContentSection = React.memo<MainContentSectionProps>(({
           showCalibration={showCalibration}
           handleCalibrationToggle={handleCalibrationToggle}
         />
-      )}
+      )} */}
 
       {/* CANVAS AREA - Main DXF Viewer Layout */}
       <div className="canvas-area relative flex-1 overflow-hidden">
         <DXFViewerLayout
           {...state}
+          handleAction={state.handleAction}
+          onAction={state.onAction}
           dxfFile={null}
           status={'idle' as AppStatus}
           onClear={() => {}}

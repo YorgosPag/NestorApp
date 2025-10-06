@@ -151,12 +151,12 @@ export default function CornerMarkers() {
         }}
       />
 
-      {/* 🎯 INFO PANEL - ΚΑΤΩ ΑΡΙΣΤΕΡΗ ΓΩΝΙΑ ΑΚΡΙΒΩΣ ΣΤΟ (0, 1080) */}
+      {/* 🎯 INFO PANEL - ΚΑΤΩ ΑΡΙΣΤΕΡΗ ΓΩΝΙΑ */}
       <div
         style={{
           position: 'fixed', // FIXED για ακριβή θέση
           left: '0px', // X = 0 ΑΚΡΙΒΩΣ
-          bottom: `${viewport.height - 1080}px`, // ΚΑΤΩ ΓΩΝΙΑ στο Y=1080 ακριβώς
+          bottom: '0px', // ΚΑΤΩ ΓΩΝΙΑ
           width: '250px',
           backgroundColor: 'rgba(0, 0, 0, 0.95)',
           color: 'rgb(74, 222, 128)', // text-green-400
@@ -164,7 +164,8 @@ export default function CornerMarkers() {
           fontSize: '12px',
           fontFamily: 'monospace',
           border: '1px solid #666',
-          pointerEvents: 'none'
+          pointerEvents: 'none',
+          zIndex: 2147483647 // Πάνω από όλα
         }}
       >
         <div style={{ color: 'rgb(34, 211, 238)', fontWeight: 'bold', marginBottom: '4px' }}>🎯 LAYOUT DEBUGGING</div>

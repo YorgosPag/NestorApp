@@ -31,7 +31,6 @@ interface FloatingPanelContainerProps {
   onEntitySelect: (ids: string[]) => void;
   zoomLevel: number;
   currentTool: ToolType;
-  onSceneImported?: (file: File, encoding?: string) => void;
 }
 
 const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, FloatingPanelContainerProps>(function FloatingPanelContainer({
@@ -39,8 +38,7 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
   selectedEntityIds,
   onEntitySelect,
   zoomLevel,
-  currentTool,
-  onSceneImported
+  currentTool
 }, ref) {
   // Debug logging removed for performance - was causing excessive console output on every render
   const { t, ready, isLoading } = useTranslationLazy('dxf-viewer');
@@ -84,8 +82,7 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
     onEntitySelect,
     expandedKeys,
     setExpandedKeys,
-    layerOperations,
-    onSceneImported
+    layerOperations
   });
 
   // ✅ ΒΗΜΑ 6: Extracted panel description logic to custom hook

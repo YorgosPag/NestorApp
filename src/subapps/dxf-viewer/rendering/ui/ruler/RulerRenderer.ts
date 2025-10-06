@@ -356,17 +356,17 @@ export class RulerRenderer implements UIRenderer {
    * Extract transform data από UI context (if available)
    */
   private getTransformData(context: UIRenderContext): { scale: number; offsetX: number; offsetY: number } | null {
-    // Enhanced: Check for transform data στο context
-    const uiContextWithTransform = context as any;
+    // 🎯 TYPE-SAFE: Check for worldTransform using extended context type
+    const extendedContext = context as import('../core/UIRenderer').ExtendedUIRenderContext;
 
     // ✅ FIX: Check for worldTransform first (passed by UIRendererComposite)
-    if (uiContextWithTransform.worldTransform) {
-      return uiContextWithTransform.worldTransform;
+    if (extendedContext.worldTransform) {
+      return extendedContext.worldTransform;
     }
 
-    // Fallback to transform
-    if (uiContextWithTransform.transform) {
-      return uiContextWithTransform.transform;
+    // Fallback to transform (always available in base UIRenderContext)
+    if (context.transform) {
+      return context.transform;
     }
 
     return null;

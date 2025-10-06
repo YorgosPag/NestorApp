@@ -165,7 +165,17 @@
       "Bash(netstat:*)",
       "Bash(copy:*)",
       "Bash(cp:*)",
-      "Bash(cmd /c taskkill:*)"
+      "Bash(cmd /c taskkill:*)",
+      "Bash(do if [ -d \"$backup/dxf-viewer/hooks/drawing\" ])",
+      "Bash(then echo \"=== $backup ===\")",
+      "Bash(fi)",
+      "mcp__ide__getDiagnostics",
+      "Read(//c/Users/user/Downloads/BuckUps/**)",
+      "Bash(cmd /c:*)",
+      "Bash(tasklist:*)",
+      "Bash(git restore:*)",
+      "Bash(/dev/null)",
+      "Bash(npm run test:validate-line-drawing:*)"
     ],
     "deny": [],
     "ask": []

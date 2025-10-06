@@ -4,12 +4,13 @@ import React, { createContext, useContext, useState, useCallback, useRef, useEff
 import { toast, Toaster } from 'sonner';
 import { CheckCircle, AlertCircle, AlertTriangle, Info, Loader2, X } from 'lucide-react';
 import { useTranslation } from '@/i18n';
-import type { 
-  NotificationContextValue, 
-  NotificationOptions, 
-  NotificationType, 
+import type {
+  NotificationContextValue,
+  NotificationOptions,
+  NotificationType,
   NotificationData,
-  NotificationQueue
+  NotificationQueue,
+  NotificationPosition
 } from '@/types/notifications';
 
 const NotificationContext = createContext<NotificationContextValue | null>(null);
@@ -33,9 +34,14 @@ export function NotificationProvider({
 }: NotificationProviderProps) {
   const { t } = useTranslation('common');
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
-  const [settings, setSettings] = useState({
+  const [settings, setSettings] = useState<{
+    defaultDuration: number;
+    defaultPosition: NotificationPosition;
+    maxNotifications: number;
+    enableSounds: boolean;
+  }>({
     defaultDuration,
-    defaultPosition: 'top-right' as const,
+    defaultPosition: 'top-right',
     maxNotifications,
     enableSounds
   });
@@ -125,8 +131,10 @@ export function NotificationProvider({
       onCancel
     } = options;
 
-    // Rate limiting
-    if (!canShowNotification(message)) {
+    // Rate limiting - SKIP για μεγάλα μηνύματα (test results)
+    const skipRateLimiting = message.length > 500; // Large messages are likely test results
+    if (!skipRateLimiting && !canShowNotification(message)) {
+      console.log('⏭️ RATE LIMITED: Skipping duplicate notification');
       return ''; // Return empty ID for rate-limited notifications
     }
 
@@ -172,49 +180,20 @@ export function NotificationProvider({
         }
       }) : undefined,
       className: `notification-${type}`,
-      description: content ? (typeof content === 'string' ? content : undefined) : undefined,
+      description: content
+        ? (
+            <div className="max-h-[60vh] overflow-y-auto overflow-x-hidden whitespace-pre-wrap break-words">
+              {content}
+            </div>
+          )
+        : undefined,
       onDismiss: () => {
         setNotifications(prev => prev.filter(n => n.id !== notificationId));
       }
     });
 
-    // 🎯 CAD-PRECISION RUNTIME POSITIONING - Force exact coordinates
-    // Πολλαπλές προσπάθειες για να βρούμε το notification element
-    const applyPositioning = () => {
-      // Προσπαθούμε με διάφορους selectors
-      const toastElement = (
-        document.querySelector(`[data-sonner-toast][data-toast-id="${notificationId}"]`) ||
-        document.querySelector(`[data-sonner-toast]`) ||
-        document.querySelector(`[data-sonner-toast]:last-child`)
-      ) as HTMLElement;
-
-      if (toastElement) {
-        console.log('🎯 APPLYING NOTIFICATION POSITIONING:', notificationId);
-        // ΑΚΡΙΒΕΙΣ ΣΥΝΤΕΤΑΓΜΕΝΕΣ: Πάνω δεξιά γωνία στο (1756, 4)
-        toastElement.style.position = 'fixed !important';
-        toastElement.style.top = '4px !important';
-        toastElement.style.left = '1756px !important';
-        toastElement.style.right = 'auto !important';
-        toastElement.style.bottom = 'auto !important';
-        toastElement.style.transform = 'translateX(-100%) !important';
-        toastElement.style.margin = '0 !important';
-        return true;
-      }
-      return false;
-    };
-
-    // Προσπάθεια 1: Αμέσως
-    setTimeout(() => {
-      if (!applyPositioning()) {
-        // Προσπάθεια 2: Μετά από 10ms
-        setTimeout(() => {
-          if (!applyPositioning()) {
-            // Προσπάθεια 3: Μετά από 50ms
-            setTimeout(applyPositioning, 50);
-          }
-        }, 10);
-      }
-    }, 0);
+    // ❌ REMOVED: Custom positioning code was creating duplicate toasts
+    // CSS handles all positioning and scrolling now (see <style> section below)
 
     return notificationId;
   }, [settings, canShowNotification, announceToScreenReader, getNotificationIcon, t]);
@@ -306,17 +285,46 @@ export function NotificationProvider({
           z-index: 2147483647 !important;
         }
 
-        /* ΚΑΘΕ NOTIFICATION: ΑΚΡΙΒΕΙΣ ΣΥΝΤΕΤΑΓΜΕΝΕΣ χωρίς calc() */
+        /* ΚΑΘΕ NOTIFICATION: MINIMAL positioning - let Sonner handle layout */
         [data-sonner-toaster][data-position="top-right"] [data-sonner-toast] {
-          position: absolute !important;
-          top: 4px !important;
-          right: auto !important;
-          left: 1756px !important;
-          bottom: auto !important;
+          /* ❌ REMOVED: position, top, left, transform - Sonner handles these */
+          /* ❌ REMOVED: overflow rules - now handled in content wrapper */
           margin: 0 !important;
           padding: 16px !important;
-          transform: translateX(-100%) !important; /* Εκτείνεται προς τα αριστερά */
           pointer-events: auto !important;
+        }
+
+        /* ✅ SCROLLBAR STYLING: Όμορφο scrollbar για dark theme (στο content wrapper) */
+        [data-sonner-toaster][data-position="top-right"] [data-sonner-toast] .max-h-\[60vh\]::-webkit-scrollbar {
+          width: 8px;
+        }
+
+        [data-sonner-toaster][data-position="top-right"] [data-sonner-toast] .max-h-\[60vh\]::-webkit-scrollbar-track {
+          background: rgba(0, 0, 0, 0.2);
+          border-radius: 4px;
+        }
+
+        [data-sonner-toaster][data-position="top-right"] [data-sonner-toast] .max-h-\[60vh\]::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.3);
+          border-radius: 4px;
+        }
+
+        [data-sonner-toaster][data-position="top-right"] [data-sonner-toast] .max-h-\[60vh\]::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.5);
+        }
+
+        /* ✅ MESSAGE TEXT: Preserve formatting για ΟΛΑ τα text elements */
+        [data-sonner-toaster][data-position="top-right"] [data-sonner-toast],
+        [data-sonner-toaster][data-position="top-right"] [data-sonner-toast] *,
+        [data-sonner-toaster][data-position="top-right"] [data-sonner-toast] div {
+          white-space: pre-wrap !important; /* Διατήρηση line breaks και wrapping */
+          word-wrap: break-word !important; /* Break long words */
+          word-break: break-word !important;
+        }
+
+        /* ✅ BUTTONS: Don't inherit white-space */
+        [data-sonner-toaster][data-position="top-right"] [data-sonner-toast] button {
+          white-space: nowrap !important; /* Buttons should NOT wrap */
         }
       `}</style>
     </NotificationContext.Provider>

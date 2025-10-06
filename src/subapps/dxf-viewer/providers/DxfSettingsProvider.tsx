@@ -1640,10 +1640,13 @@ export function useLineSettingsFromProvider() {
     };
   }
 
-  const { settings, updateLineSettings, applyLineTemplate, updateLineTemplateOverrides, resetLineToFactory } = dxfSettings;
+  const { settings, updateLineSettings, applyLineTemplate, updateLineTemplateOverrides, resetLineToFactory, getEffectiveLineSettings } = dxfSettings;
+
+  // 🆕 TEMPLATE SYSTEM: Get effective settings (template base + template overrides)
+  const effectiveLineSettings = getEffectiveLineSettings();
 
   const getCurrentDashPattern = () => {
-    return getDashArray(settings.line.lineType, settings.line.dashScale);
+    return getDashArray(effectiveLineSettings.lineType, effectiveLineSettings.dashScale);
   };
 
   const applyTemplate = (template: LineTemplate) => {
@@ -1693,7 +1696,7 @@ export function useLineSettingsFromProvider() {
   };
 
   return {
-    settings: settings.line,
+    settings: effectiveLineSettings,  // ✅ FIX: Return effective settings (template base + overrides)
     updateSettings,
     resetToDefaults: () => updateLineSettings(defaultLineSettings),
     resetToFactory: resetLineToFactory,  // 🆕 TEMPLATE SYSTEM: Reset to ISO/AutoCAD factory defaults

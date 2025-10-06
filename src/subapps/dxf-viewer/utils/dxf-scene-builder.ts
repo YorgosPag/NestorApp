@@ -27,17 +27,11 @@ export class DxfSceneBuilder {
       if (entity) {
         // Register layer first
         DxfSceneBuilder.registerLayer(layers, entity.layer);
-
-        // 🎨 CRITICAL FIX: Apply layer color to entity
-        // Entities MUST have color property for rendering!
-        const layerColor = layers[entity.layer]?.color || DEFAULT_LAYER_COLOR;
-        (entity as any).color = layerColor;
-
         entities.push(entity);
-
+        
         // Debug first 3 entities
         if (entities.length <= 3) {
-          console.log(`🎨 Entity ${index}: layer="${entity.layer}", color="${(entity as any).color}"`);
+
         }
       }
     });

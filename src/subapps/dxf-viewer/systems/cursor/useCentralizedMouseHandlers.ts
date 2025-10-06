@@ -162,7 +162,15 @@ export function useCentralizedMouseHandlers({
 
     // 🚀 INITIALIZE PAN STATE for high-performance panning
     // ✅ CAD STANDARD: Middle mouse button (wheel click) OR pan tool with left button
-    if ((e.button === 1) || (activeTool === 'pan' && e.button === 0)) {
+    // 🐛 FIX: Do NOT pan when drawing tools are active (prevents conflict)
+    const isDrawingTool = activeTool === 'line' || activeTool === 'polyline' ||
+                          activeTool === 'polygon' || activeTool === 'circle' ||
+                          activeTool === 'rectangle' || activeTool === 'arc' ||
+                          activeTool === 'circle-diameter' || activeTool === 'circle-2p-diameter' ||
+                          activeTool === 'measure-distance' || activeTool === 'measure-area' ||
+                          activeTool === 'measure-angle';
+
+    if ((e.button === 1 && !isDrawingTool) || (activeTool === 'pan' && e.button === 0)) {
       panStateRef.current.isPanning = true;
       panStateRef.current.lastMousePos = screenPos;
       panStateRef.current.pendingTransform = { ...transform };
@@ -180,11 +188,7 @@ export function useCentralizedMouseHandlers({
     }
 
     // Handle selection start (left button) - disable in pan mode AND drawing tools
-    // 🎯 BUG #2 FIX: Skip selection when drawing tools are active
-    const isDrawingTool = activeTool === 'line' || activeTool === 'polyline' ||
-                          activeTool === 'polygon' || activeTool === 'circle' ||
-                          activeTool === 'rectangle' || activeTool === 'arc';
-
+    // 🎯 BUG #2 FIX: Skip selection when drawing tools are active (reuse isDrawingTool from above)
     if (e.button === 0 && !e.shiftKey && activeTool !== 'pan' && !isDrawingTool) {
       cursor.startSelection(screenPos);
     }

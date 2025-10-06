@@ -61,14 +61,17 @@ export class LegacyCursorAdapter {
     } : DEFAULT_UI_TRANSFORM;
 
     // Convert legacy call to new UIRenderer interface με actual transform
-    const uiContext = createUIRenderContext(
+    // 🎯 TYPE-SAFE CONTEXT EXTENSION: Use UIRenderContextWithMouse
+    const baseContext = createUIRenderContext(
       this.ctx,
       viewport,
       uiTransform
     );
 
-    // Add position to context
-    (uiContext as any).mousePosition = position;
+    const uiContext: import('../core/UIRenderer').UIRenderContextWithMouse = {
+      ...baseContext,
+      mousePosition: position
+    };
 
     this.coreRenderer.render(uiContext, viewport, flatSettings);
   }

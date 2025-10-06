@@ -335,10 +335,9 @@ export class GridRenderer implements UIRenderer {
    * Extract transform data από UI context (if available)
    */
   private getTransformData(context: UIRenderContext): { scale: number; offsetX: number; offsetY: number } | null {
-    // Enhanced: Check for transform data στο context
-    const uiContextWithTransform = context as any;
-    if (uiContextWithTransform.transform) {
-      return uiContextWithTransform.transform;
+    // 🎯 TYPE-SAFE: Context ήδη έχει transform property από UIRenderContext interface
+    if (context.transform) {
+      return context.transform;
     }
 
     return null;

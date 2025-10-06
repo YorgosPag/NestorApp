@@ -5,17 +5,8 @@ const DEBUG_DXF_VIEWER_CONTENT = false;
 
 import { useNotifications } from '../../../providers/NotificationProvider';
 
-// 🧹 CLEAN CONSOLE: Αφαίρεση React development noise
-if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
-  // Disable React DevTools για μείωση noise
-  (window as any).__REACT_DEVTOOLS_GLOBAL_HOOK__ = {
-    isDisabled: true,
-    supportsFiber: true,
-    inject: () => {},
-    onCommitFiberRoot: () => {},
-    onCommitFiberUnmount: () => {},
-  };
-}
+// ✅ React stack suppression handled globally in layout.tsx via public/suppress-console.js
+
 
 import React from 'react';
 
@@ -52,6 +43,7 @@ import { EnhancedDXFToolbar } from '../ui/toolbar';
 import { OverlayToolbar } from '../ui/OverlayToolbar';
 import { ColorManager } from '../ui/components/ColorManager';
 import { ProSnapToolbar } from '../ui/components/ProSnapToolbar';
+import { TestsModal } from '../ui/components/TestsModal';
 import CursorSettingsPanel from '../ui/CursorSettingsPanel';
 import CoordinateCalibrationOverlay from '../ui/CoordinateCalibrationOverlay';
 import { AutoSaveStatus } from '../ui/components/AutoSaveStatus';
@@ -73,8 +65,8 @@ import { FloatingPanelsSection } from '../layout/FloatingPanelsSection';
 
 // ✅ ENTERPRISE ARCHITECTURE: Transform Context (Single Source of Truth)
 import { TransformProvider, useTransform } from '../contexts/TransformContext';
-// 🏢 ENTERPRISE: Canvas Context (Centralized Zoom System + Grips)
-import { CanvasProvider, useCanvasContext } from '../contexts/CanvasContext';
+// 🏢 ENTERPRISE: Canvas Context (Centralized Zoom System)
+import { CanvasProvider } from '../contexts/CanvasContext';
 
 // 🧪 UNIFIED TEST RUNNER - Import modal (test functions moved to DebugToolbar)
 import { TestResultsModal } from '../debug/TestResultsModal';
@@ -96,6 +88,9 @@ export function DxfViewerContent(props: DxfViewerAppProps) {
   const [testModalOpen, setTestModalOpen] = React.useState(false);
   const [testReport, setTestReport] = React.useState<UnifiedTestReport | null>(null);
   const [formattedTestReport, setFormattedTestReport] = React.useState<string>('');
+
+  // 🧪 TESTS MODAL - State για tests button
+  const [testsModalOpen, setTestsModalOpen] = React.useState(false);
 
   // 🔧 HELPER: Replace alert() with notification + copy button
   const showCopyableNotification = React.useCallback((message: string, type: 'success' | 'info' | 'warning' | 'error' = 'info') => {
@@ -188,29 +183,34 @@ export function DxfViewerContent(props: DxfViewerAppProps) {
   // Get overlay store and level manager
   const overlayStore = useOverlayStore();
   const levelManager = useLevelManager();
-  
+
   // Get grip context for manual control
   const { updateGripSettings } = useGripContext();
+
+  // 🧪 WRAP handleAction to intercept run-tests action
+  const wrappedHandleAction = React.useCallback((action: string, data?: any) => {
+    console.log('🧪 wrappedHandleAction called:', { action, data });
+    if (action === 'run-tests') {
+      console.log('🧪 Tests button clicked - opening tests modal');
+      setTestsModalOpen(true);
+      return;
+    }
+    // Pass all other actions to original handleAction
+    handleAction(action, data);
+  }, [handleAction]);
+
+  // 🧪 CREATE wrapped state with new handleAction
+  const wrappedState = React.useMemo(() => ({
+    ...state,
+    handleAction: wrappedHandleAction,
+    onAction: wrappedHandleAction  // Also add onAction alias
+  }), [state, wrappedHandleAction]);
   
   // Get snap context for ProSnapToolbar
   const { enabledModes, toggleMode } = useSnapContext();
 
   // Get canvas operations hook
   const canvasOps = useCanvasOperations();
-
-  // 🎯 ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Get Canvas Context για grips
-  const canvasContext = useCanvasContext();
-
-  // 🔧 FIX: Wrapper callback που ενημερώνει ΚΑΙ local state ΚΑΙ Canvas Context
-  const handleEntitySelection = React.useCallback((ids: string[]) => {
-    // Update local React state (για backward compatibility)
-    setSelectedEntityIds(ids);
-
-    // 🎯 CRITICAL: Update Canvas Context για grips rendering
-    if (canvasContext) {
-      canvasContext.setSelectedEntityIds(ids);
-    }
-  }, [setSelectedEntityIds, canvasContext]);
 
   // Use overlay drawing hook
   const {
@@ -356,7 +356,7 @@ Check console for detailed metrics`;
       });
       isInitializedRef.current = true;
     } catch (error) {
-      console.warn('Failed to get initial transform:', error);
+      // Swallow silently - not critical
     }
   }, [currentScene]); // ✅ FIXED: Removed canvasOps from dependency array
 
@@ -380,7 +380,7 @@ Check console for detailed metrics`;
           });
         }
       } catch (error) {
-        console.warn('Failed to sync transform from event:', error);
+        // Swallow silently - not critical
       }
     });
 
@@ -799,15 +799,14 @@ Check console for detailed metrics`;
         floatingRef={floatingRef}
         currentScene={currentScene}
         selectedEntityIds={selectedEntityIds}
-        setSelectedEntityIds={handleEntitySelection}
+        setSelectedEntityIds={setSelectedEntityIds}
         currentZoom={currentZoom}
         activeTool={activeTool}
-        onSceneImported={handleFileImportWithEncoding}
       />
 
       {/* ✅ PHASE 5: Main Content Section */}
       <MainContentSection
-        state={state}
+        state={wrappedState as any}
         currentScene={currentScene}
         handleFileImportWithEncoding={handleFileImportWithEncoding}
         canvasTransform={canvasTransform}
@@ -848,7 +847,7 @@ Check console for detailed metrics`;
         floatingRef={floatingRef}
         showCursorSettings={showCursorSettings}
         showCalibration={showCalibration}
-        handleAction={handleAction}
+        handleAction={wrappedHandleAction}
         activeTool={activeTool}
         overlayMode={overlayMode}
         overlayStatus={overlayStatus}
@@ -865,6 +864,13 @@ Check console for detailed metrics`;
         setTestModalOpen={setTestModalOpen}
         testReport={testReport}
         formattedTestReport={formattedTestReport}
+      />
+
+      {/* 🧪 TESTS MODAL - Tests button modal */}
+      <TestsModal
+        isOpen={testsModalOpen}
+        onClose={() => setTestsModalOpen(false)}
+        showCopyableNotification={showCopyableNotification}
       />
       </div>
       </TransformProvider>

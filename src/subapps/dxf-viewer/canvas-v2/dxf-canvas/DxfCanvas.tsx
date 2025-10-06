@@ -25,6 +25,7 @@ import type { GridSettings, RulerSettings, ColorLayer } from '../layer-canvas/la
 // ✅ ADD: Grid and Ruler renderers για independent UI rendering
 import { GridRenderer } from '../../rendering/ui/grid/GridRenderer';
 import { RulerRenderer } from '../../rendering/ui/ruler/RulerRenderer';
+import { createUIRenderContext, DEFAULT_UI_TRANSFORM } from '../../rendering/ui/core/UIRenderContext';
 
 // ✅ MOVED OUTSIDE COMPONENT - Prevents re-render loop
 const DEFAULT_RENDER_OPTIONS: DxfRenderOptions = {
@@ -277,17 +278,18 @@ export const DxfCanvas = React.forwardRef<DxfCanvasRef, DxfCanvasProps>(({
       if (gridRendererRef.current && gridSettings?.enabled) {
         console.log('🎨 DxfCanvas: 2️⃣ Rendering GRID...', { enabled: gridSettings.enabled, visible: gridSettings.visible });
         const canvas = canvasRef.current;
-        if (canvas) {
-          const context = {
-            ctx: canvas.getContext('2d'),
-            canvas: canvas,
-            transform: transform
+        const ctx = canvas?.getContext('2d');
+        if (canvas && ctx) {
+          // 🎯 TYPE-SAFE: Create proper UIRenderContext
+          const uiTransform = {
+            scale: transform.scale,
+            offsetX: transform.offsetX,
+            offsetY: transform.offsetY,
+            rotation: 0
           };
-
-          if (context.ctx) {
-            gridRendererRef.current.render(context as any, viewport, gridSettings);
-            console.log('✅ DxfCanvas: GRID rendered successfully');
-          }
+          const context = createUIRenderContext(ctx, viewport, uiTransform);
+          gridRendererRef.current.render(context, viewport, gridSettings);
+          console.log('✅ DxfCanvas: GRID rendered successfully');
         }
       }
 
@@ -295,17 +297,18 @@ export const DxfCanvas = React.forwardRef<DxfCanvasRef, DxfCanvasProps>(({
       if (rulerRendererRef.current && rulerSettings?.enabled) {
         console.log('🎨 DxfCanvas: 3️⃣ Rendering RULERS...', { enabled: rulerSettings.enabled, visible: rulerSettings.visible });
         const canvas = canvasRef.current;
-        if (canvas) {
-          const context = {
-            ctx: canvas.getContext('2d'),
-            canvas: canvas,
-            transform: transform
+        const ctx = canvas?.getContext('2d');
+        if (canvas && ctx) {
+          // 🎯 TYPE-SAFE: Create proper UIRenderContext
+          const uiTransform = {
+            scale: transform.scale,
+            offsetX: transform.offsetX,
+            offsetY: transform.offsetY,
+            rotation: 0
           };
-
-          if (context.ctx) {
-            rulerRendererRef.current.render(context as any, viewport, rulerSettings);
-            console.log('✅ DxfCanvas: RULERS rendered successfully');
-          }
+          const context = createUIRenderContext(ctx, viewport, uiTransform);
+          rulerRendererRef.current.render(context, viewport, rulerSettings);
+          console.log('✅ DxfCanvas: RULERS rendered successfully');
         }
       }
     } catch (error) {

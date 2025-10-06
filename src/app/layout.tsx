@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Roboto } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AppSidebar } from "@/components/app-sidebar";
@@ -13,10 +14,6 @@ import { UserRoleProvider } from "@/contexts/UserRoleContext";
 import { FloorplanProvider } from "@/contexts/FloorplanContext";
 import { cn } from "@/lib/utils";
 import { I18nProvider } from '@/components/providers/I18nProvider';
-import { initStackSuppression } from '@/subapps/dxf-viewer/utils/suppress-react-stacks';
-
-// 🚫 Initialize React stack trace suppression (controlled by .env.local)
-initStackSuppression();
 
 const roboto = Roboto({
   subsets: ["latin", "greek"],
@@ -60,6 +57,9 @@ export default function RootLayout({
 
   return (
     <html lang="el" suppressHydrationWarning>
+      <head>
+        <Script src="/suppress-console.js" strategy="beforeInteractive" />
+      </head>
       <body className={cn("font-sans", roboto.variable)}>
         <ThemeProvider
           attribute="class"

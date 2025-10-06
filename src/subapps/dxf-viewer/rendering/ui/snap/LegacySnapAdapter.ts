@@ -59,13 +59,17 @@ export class LegacySnapAdapter {
     };
 
     // Convert legacy LayerSnapResult to SnapResult
-    const convertedSnapResults: SnapResult[] = snapResults.map(snap => ({
-      point: snap.point,
-      type: snap.type,
-      distance: (snap as any).distance || 0, // LayerSnapResult doesn't have distance, use 0 as default
-      entityId: snap.entityId,
-      priority: this.getSnapPriority(snap.type)
-    }));
+    // 🎯 TYPE-SAFE: LayerSnapResult may have optional distance property
+    const convertedSnapResults: SnapResult[] = snapResults.map(snap => {
+      const snapWithDistance = snap as typeof snap & { distance?: number };
+      return {
+        point: snap.point,
+        type: snap.type,
+        distance: snapWithDistance.distance || 0, // LayerSnapResult doesn't have distance, use 0 as default
+        entityId: snap.entityId,
+        priority: this.getSnapPriority(snap.type)
+      };
+    });
 
     // ✅ FIX: Convert ViewTransform to UITransform
     const uiTransform: UITransform = transform ? {
@@ -76,14 +80,17 @@ export class LegacySnapAdapter {
     } : DEFAULT_UI_TRANSFORM;
 
     // Convert legacy call to new UIRenderer interface με actual transform
-    const uiContext = createUIRenderContext(
+    // 🎯 TYPE-SAFE CONTEXT EXTENSION: Use UIRenderContextWithSnap
+    const baseContext = createUIRenderContext(
       this.ctx,
       viewport,
       uiTransform
     );
 
-    // Add snap data to context
-    (uiContext as any).snapData = convertedSnapResults;
+    const uiContext: import('../core/UIRenderer').UIRenderContextWithSnap = {
+      ...baseContext,
+      snapData: convertedSnapResults
+    };
 
     this.coreRenderer.render(uiContext, viewport, flatSettings);
   }

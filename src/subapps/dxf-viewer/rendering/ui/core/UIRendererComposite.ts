@@ -97,16 +97,18 @@ export class UIRendererComposite {
     const renderOptions = { ...this.options, ...options };
 
     // Create UI render context
-    const uiContext = createUIRenderContext(
+    // 🎯 TYPE-SAFE CONTEXT EXTENSION: Use ExtendedUIRenderContext
+    const baseContext = createUIRenderContext(
       this.ctx,
       viewport,
       DEFAULT_UI_TRANSFORM
     );
 
-    // 🎯 EXTEND CONTEXT: Add world transform για debug overlays (Origin Markers)
-    if (worldTransform) {
-      (uiContext as any).worldTransform = worldTransform;
-    }
+    // Add world transform για debug overlays (Origin Markers)
+    const uiContext: import('./UIRenderer').ExtendedUIRenderContext = {
+      ...baseContext,
+      worldTransform: worldTransform || undefined
+    };
 
     // Clear metrics if enabled
     if (renderOptions.enableMetrics) {

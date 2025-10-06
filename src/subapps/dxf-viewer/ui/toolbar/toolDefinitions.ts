@@ -3,7 +3,7 @@ import {
   MousePointer, Hand, ZoomIn, ZoomOut, Minus, Square, CircleDot, Circle, Pen,
   Move, Copy, Trash2, Ruler, Undo, Redo, Focus, Maximize2,
   Grid, Settings, Crop, Download, Plus, Crosshair,
-  Maximize, Calculator, Map, Edit, Hexagon
+  Maximize, Calculator, Map, Edit, Hexagon, FlaskConical
 } from "lucide-react";
 import { 
   CircleRadiusIcon, 
@@ -152,11 +152,18 @@ export const createActionButtons = (props: {
     disabled: false, // 🔥 Ensure it's not disabled
     onClick: () => props.onAction('fit-to-view')
   },
-  { 
-    id: 'export', 
-    icon: Download, 
-    label: 'Export', 
+  {
+    id: 'export',
+    icon: Download,
+    label: 'Export',
     hotkey: 'Ctrl+E',
     onClick: () => props.onAction('export')
+  },
+  {
+    id: 'tests',
+    icon: FlaskConical,
+    label: 'Run Tests',
+    hotkey: 'Ctrl+Shift+T',
+    onClick: () => props.onAction('run-tests')
   }
 ];

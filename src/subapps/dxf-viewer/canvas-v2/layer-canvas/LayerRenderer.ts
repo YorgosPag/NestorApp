@@ -363,8 +363,12 @@ export class LayerRenderer {
 
       if (rulerStatus.enabled && rulerStatus.settings) {
         // Create minimal UIRenderContext
-        const uiContext = createUIRenderContext(this.ctx, viewport, DEFAULT_UI_TRANSFORM);
-        (uiContext as any).worldTransform = transform;
+        // 🎯 TYPE-SAFE: Use ExtendedUIRenderContext for worldTransform
+        const baseContext = createUIRenderContext(this.ctx, viewport, DEFAULT_UI_TRANSFORM);
+        const uiContext: import('../../rendering/ui/core/UIRenderer').ExtendedUIRenderContext = {
+          ...baseContext,
+          worldTransform: transform
+        };
 
         const renderSettings = {
           ...rulerStatus.settings,

@@ -21,7 +21,7 @@ type StartOpts = {
 
 export function useUnifiedOverlayCreation() {
   const { add } = useOverlayStore();
-  const { startPolygon, addPoint, state } = useUnifiedDrawing();
+  const { startPolygon } = useUnifiedDrawing();
 
   const startOverlayCreation = useCallback(async (opts: StartOpts) => {
 
@@ -63,10 +63,5 @@ export function useUnifiedOverlayCreation() {
     return { stop };
   }, [add, startPolygon]);
 
-  return {
-    startOverlayCreation,
-    addPoint, // ✅ EXPORT: Expose addPoint για canvas click handling
-    state,    // ✅ EXPORT: Expose state για overlay preview rendering
-    isUsingUnifiedEngine: isFeatureEnabled('USE_UNIFIED_DRAWING_ENGINE')
-  };
+  return { startOverlayCreation, isUsingUnifiedEngine: isFeatureEnabled('USE_UNIFIED_DRAWING_ENGINE') };
 }
