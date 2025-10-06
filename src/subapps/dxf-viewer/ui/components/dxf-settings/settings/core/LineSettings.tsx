@@ -63,6 +63,7 @@ import { useUnifiedLinePreview, useUnifiedLineCompletion } from '../../../../hoo
 import type { LineTemplate } from '../../../../../contexts/LineSettingsContext';
 import { SharedColorPicker } from '../../../shared/SharedColorPicker';
 import { useSettingsUpdater, commonValidators } from '../../../../hooks/useSettingsUpdater';
+import { useNotifications } from '../../../../../../providers/NotificationProvider';
 import {
   LINE_TYPE_LABELS,
   LINE_CAP_LABELS,
@@ -113,6 +114,7 @@ const SwatchIcon = ({ className }: { className?: string }) => (
 export function LineSettings({ contextType }: { contextType?: 'preview' | 'completion' }) {
   // 🔺 ΔΙΟΡΘΩΣΗ: Χρήση unified hooks όπως σε TextSettings και GripSettings
   const generalLineSettings = useLineSettingsFromProvider();
+  const notifications = useNotifications();
 
   // Καθορίζουμε το active context
   const activeContext = contextType || 'general';
@@ -390,8 +392,20 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
     if (confirmed && resetToFactory) {
       resetToFactory();
       console.log('🏭 [LineSettings] Factory reset confirmed - resetting to ISO/AutoCAD defaults');
+
+      // Toast notification για επιτυχία
+      notifications.success(
+        '🏭 Εργοστασιακές ρυθμίσεις επαναφέρθηκαν!\n' +
+        'Όλες οι ρυθμίσεις γραμμών επέστρεψαν στα πρότυπα ISO 128 & AutoCAD 2024.',
+        { duration: 5000 }
+      );
     } else {
       console.log('🏭 [LineSettings] Factory reset cancelled by user');
+
+      // Toast notification για ακύρωση
+      if (confirmed === false) {
+        notifications.info('❌ Ακυρώθηκε η επαναφορά εργοστασιακών ρυθμίσεων');
+      }
     }
   };
 
@@ -411,7 +425,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           >
             Επαναφορά
           </button>
-          {resetToFactory && contextType === 'general' && (
+          {resetToFactory && !contextType && (
             <button
               onClick={handleFactoryReset}
               className="px-3 py-1 text-xs bg-red-700 hover:bg-red-600 text-white rounded transition-colors font-semibold"
