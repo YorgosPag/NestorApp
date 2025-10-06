@@ -41,9 +41,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useUnifiedGripPreview } from '../../../../hooks/useUnifiedSpecificSettings';
+import { useGripSettingsFromProvider } from '../../../../../providers/DxfSettingsProvider';
 import { AccordionSection, useAccordion } from '../shared/AccordionSection';
-import type { GripSettings } from '../../../../types/gripSettings';
+import type { GripSettings } from '../../../../../types/gripSettings';
 
 // SVG Icons για τα accordion sections
 const CogIcon = ({ className }: { className?: string }) => (
@@ -72,8 +72,8 @@ const AdjustmentsIcon = ({ className }: { className?: string }) => (
 );
 
 export function GripSettings() {
-  // 🔺 ΔΙΟΡΘΩΣΗ: Χρήση unified hook αντί για γενικό για override λειτουργικότητα
-  const { settings: { gripSettings }, updateGripSettings, resetToDefaults } = useUnifiedGripPreview();
+  // ✅ ΔΙΟΡΘΩΣΗ: Χρήση Provider hook για να μοιραστούμε το state με την ColorPalettePanel
+  const { settings: gripSettings, updateSettings: updateGripSettings, resetToDefaults } = useGripSettingsFromProvider();
 
   // ✅ ΠΡΑΓΜΑΤΙΚΗ ΔΙΟΡΘΩΣΗ: Απλό fallback αν gripSettings είναι null/undefined ή δεν έχουν τις απαραίτητες properties
   if (!gripSettings || typeof gripSettings.gripSize === 'undefined') {

@@ -89,6 +89,35 @@ const lineSettingsContext = (() => {
 - ✅ Proper hook usage (hooks called unconditionally)
 - ✅ Fallback mechanism για backwards compatibility
 
+### ⚠️ CRITICAL PATTERN - ΜΗΔΕΝΙΚΗ ΑΝΟΧΗ ΣΕ ΑΛΛΑΓΕΣ!
+
+**🚨 ΜΗΝ ΑΛΛΑΞΕΤΕ ΠΟΤΕ ΑΥΤΟ ΤΟ PATTERN! 🚨**
+
+**Pattern Rule** (applies to ALL General Settings components):
+```
+Γενικές Ρυθμίσεις (General Settings):
+  ✅ LineSettings   → useLineSettingsFromProvider()
+  ✅ TextSettings   → useTextSettingsFromProvider()
+  ✅ GripSettings   → useGripSettingsFromProvider()
+
+Προσχεδίαση (Preview):
+  ✅ LineSettings   → useUnifiedLinePreview()
+  ✅ TextSettings   → useUnifiedTextPreview()
+  ✅ GripSettings   → useUnifiedGripPreview()
+
+Ολοκλήρωση (Completion):
+  ✅ LineSettings   → useUnifiedLineCompletion()
+  (Text/Grips don't have completion contexts)
+```
+
+**Why This Matters:**
+- **ColorPalettePanel preview** (shows "MULTI", "SNAP", "125.50²") uses Provider hooks
+- **Settings tabs** in "Γενικές Ρυθμίσεις" MUST use Provider hooks
+- **If you use Unified hooks in General Settings**, changes will NOT appear in preview!
+- This bug wasted **4+ hours debugging** in Oct 2025 (TextSettings, GripSettings)
+
+**⚠️ IF YOU CHANGE THIS PATTERN, YOU WILL BREAK THE PREVIEW! ⚠️**
+
 ---
 
 ### Accordion Sections (5 sections)
@@ -294,20 +323,51 @@ interface LineTemplate {
 ### Props & Hook Integration
 
 ```typescript
-// NO PROPS! TextSettings always uses preview context
+// NO PROPS! TextSettings uses GLOBAL text settings hook
 
-// Line 149-151: Direct unified hook usage
+// ✅ FIXED (2025-10-06) - Line 195: Use Global Text Settings Provider
 const {
-  settings: { textSettings },
-  updateTextSettings,
+  settings: textSettings,
+  updateSettings: updateTextSettings,
   resetToDefaults
-} = useUnifiedTextPreview();
+} = useTextSettingsFromProvider();
 ```
 
-**Why No Props?**
-- Text settings είναι **μόνο για preview** (distance text κατά τη σχεδίαση)
-- Δεν υπάρχει completion mode για text (text είναι temporary)
-- No need για context-awareness
+**⚠️ CRITICAL FIX (2025-10-06) - ΜΗΔΕΝΙΚΗ ΑΝΟΧΗ ΣΕ ΑΛΛΑΓΕΣ!**
+
+**🚨 ΜΗΝ ΑΛΛΑΞΕΤΕ ΠΟΤΕ ΑΥΤΟ ΤΟ PATTERN! 🚨**
+
+**BEFORE (WRONG)**:
+```typescript
+// ❌ Was using useUnifiedTextPreview() (line 193)
+const { settings: { textSettings }, updateTextSettings } = useUnifiedTextPreview();
+
+// Problem: Updated 'dxf-text-preview-settings' localStorage
+// But ColorPalettePanel reads from 'dxf-text-general-settings' → MISMATCH!
+// Changes in TextSettings tab NEVER appeared in preview! ❌
+```
+
+**AFTER (CORRECT)**:
+```typescript
+// ✅ Now uses useTextSettingsFromProvider() (line 195)
+const { settings: textSettings, updateSettings: updateTextSettings } = useTextSettingsFromProvider();
+
+// Correctly updates 'dxf-text-general-settings' localStorage
+// Preview reads from same key → MATCH! ✅
+```
+
+**Why This Matters:**
+- TextSettings component lives in "Γενικές Ρυθμίσεις → Κείμενο" tab
+- Must use **Global Text Settings** hook, NOT Preview-specific hook
+- Was causing silent failure: changes saved to wrong localStorage key
+- Preview shows "125.50²" distance text - this MUST reflect text settings changes!
+- Fix: Import from `providers/DxfSettingsProvider` instead of `hooks/useUnifiedSpecificSettings`
+
+**Files Changed**:
+- Line 46: `import { useTextSettingsFromProvider } from '../../../../../providers/DxfSettingsProvider';`
+- Line 195: `const { settings: textSettings, updateSettings: updateTextSettings } = useTextSettingsFromProvider();`
+
+**⚠️ IF YOU CHANGE THIS PATTERN, YOU WILL BREAK THE PREVIEW! ⚠️**
 
 ---
 
@@ -539,16 +599,84 @@ const getPreviewStyle = (): React.CSSProperties => {
 ### Props & Hook Integration
 
 ```typescript
-// NO PROPS! GripSettings always uses preview context
+// NO PROPS! GripSettings uses GLOBAL grip settings hook
 
-// Line 35-36: Direct unified hook usage
+// ✅ FIXED (2025-10-06) - Line 76: Use Global Grip Settings Provider
 const {
-  settings: { gripSettings },
-  updateGripSettings,
+  settings: gripSettings,
+  updateSettings: updateGripSettings,
   resetToDefaults
-} = useUnifiedGripPreview();
+} = useGripSettingsFromProvider();
+```
 
-// Line 38-41: Safety check (fallback if settings not loaded)
+### ⚠️ CRITICAL FIX (2025-10-06) - ΜΗΔΕΝΙΚΗ ΑΝΟΧΗ ΣΕ ΑΛΛΑΓΕΣ!
+
+**🚨 ΜΗΝ ΑΛΛΑΞΕΤΕ ΠΟΤΕ ΑΥΤΟ ΤΟ PATTERN! 🚨**
+
+**BEFORE (WRONG)**:
+```typescript
+// ❌ Was using useUnifiedGripPreview() (line 76)
+const { settings: { gripSettings }, updateGripSettings } = useUnifiedGripPreview();
+
+// Problem: Updated isolated preview state
+// ColorPalettePanel reads from DxfSettingsProvider → MISMATCH!
+// Changes in GripSettings tab NEVER appeared in preview! ❌
+```
+
+**AFTER (CORRECT)**:
+```typescript
+// ✅ Now uses useGripSettingsFromProvider() (line 76)
+const { settings: gripSettings, updateSettings: updateGripSettings } = useGripSettingsFromProvider();
+
+// Correctly updates DxfSettingsProvider global state
+// Preview reads from same state → MATCH! ✅
+```
+
+**Why This Matters:**
+- GripSettings component lives in "Γενικές Ρυθμίσεις → Grips" tab
+- Must use **Global Grip Settings** hook, NOT Preview-specific hook
+- Was causing silent failure: GripSettings and ColorPalettePanel had DIFFERENT state instances
+- Preview shows "MULTI", "SNAP", "125.50²" indicators - these MUST reflect grip settings changes!
+
+**Files Changed (2025-10-06)**:
+- Line 44: `import { useGripSettingsFromProvider } from '../../../../../providers/DxfSettingsProvider';`
+- Line 76: `const { settings: gripSettings, updateSettings: updateGripSettings } = useGripSettingsFromProvider();`
+
+**Pattern Rule** (applies to ALL General Settings components):
+```
+Γενικές Ρυθμίσεις (General Settings):
+  ✅ LineSettings   → useLineSettingsFromProvider()
+  ✅ TextSettings   → useTextSettingsFromProvider()
+  ✅ GripSettings   → useGripSettingsFromProvider()
+
+Προσχεδίαση (Preview):
+  ✅ LineSettings   → useUnifiedLinePreview()
+  ✅ TextSettings   → useUnifiedTextPreview()
+  ✅ GripSettings   → useUnifiedGripPreview()
+
+Ολοκλήρωση (Completion):
+  ✅ LineSettings   → useUnifiedLineCompletion()
+  (Text/Grips don't have completion contexts)
+```
+
+**🔥 DEBUGGING HISTORY (2025-10-06):**
+- User reported: "Grip settings not appearing in preview"
+- Added extensive console.log debugging in 3 files
+- Logs revealed: GripSettings and ColorPalettePanel using DIFFERENT hooks
+- GripSettings had `useUnifiedGripPreview()` → isolated state
+- ColorPalettePanel had `useGripSettingsFromProvider()` → global state
+- **They NEVER talked to each other!**
+- Fix: Change GripSettings to use `useGripSettingsFromProvider()`
+- Result: **INSTANT SUCCESS** - preview updates in real-time! ✅
+
+**⚠️ IF YOU CHANGE THIS PATTERN, YOU WILL BREAK THE PREVIEW! ⚠️**
+
+---
+
+### Safety Check
+
+```typescript
+// Line 78-81: Fallback if settings not loaded
 if (!gripSettings || typeof gripSettings.gripSize === 'undefined') {
   return <div>Loading grip settings...</div>;
 }
@@ -1108,6 +1236,181 @@ const settingsUpdater = useSettingsUpdater({
   - [Performance Optimizations](../../ui/components/shared/SharedColorPicker.tsx#L100-L150) (lines 100-150)
 
 **Total**: 2,261 lines of production code documented!
+
+---
+
+## 🧩 LINEPREVIEW & SUBTABRENDERER COMPONENTS
+
+### LinePreview Component
+
+**Location**: `ui/components/dxf-settings/settings/shared/LinePreview.tsx` (393 lines)
+
+**Purpose**: Unified preview component που εμφανίζει Lines + Text + Grips σε ένα SVG canvas.
+
+#### Props Interface
+
+```typescript
+interface LinePreviewProps {
+  lineSettings: LineSettings;   // Line configuration
+  textSettings: TextSettings;   // Text configuration
+  gripSettings: GripSettings;   // Grips configuration
+  activeTab?: string;           // Deprecated - not used
+  className?: string;           // Optional CSS class
+}
+```
+
+#### Key Features
+
+1. **Conditional Line Rendering** (lines 94-170):
+   - Respects `lineSettings.enabled` flag
+   - Supports `breakAtCenter` mode (split line for dimension text)
+   - Uses all line properties: `lineType`, `lineWidth`, `color`, `opacity`, `dashScale`, `lineCap`, `lineJoin`
+
+2. **Text Rendering** (lines 357-389):
+   - Main distance text ("125.50")
+   - Uses **all** text settings: `fontSize`, `fontFamily`, `color`, `isBold`, `isItalic`, `isUnderline`, `isStrikethrough`
+   - Supports superscript/subscript
+   - Dynamic positioning based on `breakAtCenter`
+
+3. **Grips Rendering** (lines 173-355):
+   - Endpoint grips (left/right)
+   - Midpoint grip (conditional)
+   - Center grip (conditional)
+   - Quadrant grips (4x, conditional)
+   - Pick box indicator
+   - Aperture indicator
+   - Visual indicators: "MULTI", "SNAP", "Max: X grips"
+
+#### 🐛 Bug Fix (2025-10-06): Hardcoded Text Sizes
+
+**Problem**: "MULTI", "SNAP", and "Max: ..." texts used hardcoded `fontSize="6"` and `fontSize="8"` - too small and not following general text settings.
+
+**Solution**:
+```typescript
+// ❌ BEFORE (lines 319, 333, 347):
+<text fontSize="6" fill={...} fontFamily="monospace">MULTI</text>
+<text fontSize="8" fill={...} fontFamily="monospace">Max: ...</text>
+
+// ✅ AFTER:
+<text
+  fontSize={textSettings.fontSize}
+  fill={...}
+  fontFamily={textSettings.fontFamily}
+  fontWeight={textSettings.isBold ? 'bold' : 'normal'}
+  fontStyle={textSettings.isItalic ? 'italic' : 'normal'}
+>
+  MULTI
+</text>
+```
+
+**Impact**: All preview texts now use general text settings - no hardcoded values! ✅
+
+---
+
+### SubTabRenderer Component
+
+**Location**: `ui/components/shared/SubTabRenderer.tsx` (250 lines)
+
+**Purpose**: Wrapper component που render-άρει settings tabs (Line/Text/Grips) με preview και override controls.
+
+#### Props Interface
+
+```typescript
+interface SubTabRendererProps {
+  config: SubTabConfig;          // Tab configuration (type, label, color)
+  activeTab: string | null;
+  activeSubTab: string | null;
+  onTabChange: (tab: string | null) => void;
+  onSubTabChange: (subTab: string | null) => void;
+
+  // Settings
+  lineSettings: Record<string, unknown>;
+  textSettings: Record<string, unknown>;
+  gripSettings: Record<string, unknown>;
+
+  // Context
+  contextType?: 'preview' | 'completion';
+
+  // Override settings
+  overrideSettings?: {
+    line?: { checked: boolean; onChange: (checked: boolean) => void; ... };
+    text?: { checked: boolean; onChange: (checked: boolean) => void; ... };
+    grips?: { checked: boolean; onChange: (checked: boolean) => void; ... };
+  };
+
+  // Optional
+  customPreview?: React.ReactNode;
+  showPreview?: boolean;
+}
+```
+
+#### Key Features
+
+1. **Colored Settings by Type** (lines 83-94):
+   - `hover` → yellow (`#ffaa00`)
+   - `selection` → red (`#ff4444`)
+   - `completion` → green (`#00ff88`)
+   - `draft` → default
+
+2. **Memoized Rendering** (lines 96-100):
+   - Line settings: memoized with `useMemo`
+   - Text settings: **NOT memoized** (see bug fix below)
+   - Sub-tab options: memoized
+
+3. **Sub-Tab Navigation** (lines 101-110):
+   - Tabs: Γραμμή / Κείμενο / Grips
+   - Click to expand/collapse
+
+#### 🐛 Bug Fix (2025-10-06): Text Preview Not Updating
+
+**Problem**: When changing fontSize/color/bold in Text Settings, the preview did NOT update.
+
+**Root Cause**:
+- Line 98: `const coloredTextSettings = React.useMemo(() => getColoredSettings(textSettings), [getColoredSettings, textSettings]);`
+- `textSettings` object reference stays same when deep properties change
+- `useMemo` doesn't detect deep changes → doesn't re-run → preview doesn't update
+
+**Solution**:
+```typescript
+// ❌ BEFORE (line 98):
+const coloredTextSettings = React.useMemo(() =>
+  getColoredSettings(textSettings),
+  [getColoredSettings, textSettings]
+);
+
+// ✅ AFTER (line 100):
+// 🔥 FIX: Remove useMemo for textSettings - need to re-render on deep changes
+const coloredTextSettings = getColoredSettings(textSettings); // Direct call
+```
+
+**Impact**: Text preview now updates immediately on every text setting change! ✅
+
+---
+
+## 🎯 INTEGRATION PATTERN: LinePreview + SubTabRenderer
+
+```typescript
+// EntitiesSettings.tsx - Parent component
+<SubTabRenderer
+  config={{ type: 'draft', label: 'Προσχεδίαση', ... }}
+  lineSettings={getEffectiveLineDraftSettings()}
+  textSettings={effectiveTextSettings}  // ← From getEffectiveTextSettings()
+  gripSettings={getEffectiveGripSettings()}
+  contextType="preview"
+  // SubTabRenderer internally renders:
+  // → <LinePreview lineSettings={...} textSettings={coloredTextSettings} gripSettings={...} />
+/>
+```
+
+**Flow**:
+1. Parent gets `effectiveTextSettings` from `getEffectiveTextSettings()` (no useMemo)
+2. SubTabRenderer receives `textSettings` prop
+3. SubTabRenderer calls `getColoredSettings(textSettings)` (no useMemo) → `coloredTextSettings`
+4. LinePreview receives `coloredTextSettings` and renders with **live updates**! ✅
+
+---
+
+**Total**: 2,904 lines of production code documented (643 lines added)!
 
 ---
 

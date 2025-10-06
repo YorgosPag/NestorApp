@@ -1574,7 +1574,7 @@ export function DxfSettingsProvider({ children }: { children: React.ReactNode })
       fillColor: '#00000000' // Default transparent fill
     });
 
-  }, [state.line, state.isLoaded, state.mode, state.specific.line, state.overrides.line, state.overrideEnabled.line, getEffectiveLineSettings]);
+  }, [state.line, state.templateOverrides.line, state.isLoaded, state.mode, state.specific.line, state.overrides.line, state.overrideEnabled.line, getEffectiveLineSettings]);
 
   // ===== ΣΥΓΧΡΟΝΙΣΜΟΣ GRID SETTINGS =====
   // Συγχρονίζει το globalGridStore με τις ρυθμίσεις από το DxfSettingsProvider

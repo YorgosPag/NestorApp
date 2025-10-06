@@ -679,15 +679,69 @@ useEffect(() => {
 
 ## 7. SETTINGS INTEGRATION
 
+### ⚠️ CRITICAL PATTERN - ΜΗΔΕΝΙΚΗ ΑΝΟΧΗ ΣΕ ΑΛΛΑΓΕΣ!
+
+**🚨 ΜΗΝ ΑΛΛΑΞΕΤΕ ΠΟΤΕ ΑΥΤΟ ΤΟ PATTERN! 🚨**
+
+**ColorPalettePanel Preview Integration** (Lines 106-109):
+```typescript
+// ✅ CORRECT - ColorPalettePanel uses Provider hooks for preview
+const lineSettings = useLineSettingsFromProvider();
+const textSettings = useTextSettingsFromProvider();
+const gripSettings = useGripSettingsFromProvider();
+
+// These settings are passed to LinePreview component:
+<LinePreview
+  lineSettings={lineSettings.settings}
+  textSettings={textSettings.settings}
+  gripSettings={gripSettings.settings}
+/>
+```
+
+**General Settings Components MUST match this pattern:**
+```typescript
+// ✅ CORRECT - Settings components in "Γενικές Ρυθμίσεις" tab
+// LineSettings.tsx (line 66)
+const { settings: lineSettings, updateSettings } = useLineSettingsFromProvider();
+
+// TextSettings.tsx (line 195)
+const { settings: textSettings, updateSettings } = useTextSettingsFromProvider();
+
+// GripSettings.tsx (line 76)
+const { settings: gripSettings, updateSettings } = useGripSettingsFromProvider();
+```
+
+**❌ WRONG - Using Unified hooks in General Settings:**
+```typescript
+// ❌ This breaks the preview connection!
+const { settings: { lineSettings } } = useUnifiedLinePreview();  // WRONG!
+const { settings: { textSettings } } = useUnifiedTextPreview();  // WRONG!
+const { settings: { gripSettings } } = useUnifiedGripPreview();  // WRONG!
+
+// Problem: ColorPalettePanel reads from Provider
+//          Settings component writes to Unified hook
+//          They NEVER communicate → preview NEVER updates! ❌
+```
+
+**Why This Matters:**
+- **ColorPalettePanel preview** (top of General Settings) shows "MULTI", "SNAP", "125.50²"
+- **This preview MUST reflect changes** from Line/Text/Grip settings tabs
+- **Both must use the SAME state source** = DxfSettingsProvider
+- This bug wasted **4+ hours debugging** (Oct 2025 - TextSettings, GripSettings)
+
+**⚠️ IF YOU CHANGE THIS PATTERN, YOU WILL BREAK THE PREVIEW! ⚠️**
+
+---
+
 ### Hooks Used in ColorPalettePanel
 
 ```typescript
-// General settings
+// General settings - PROVIDER HOOKS (for preview connection)
 import { useLineSettingsFromProvider } from '../../providers/DxfSettingsProvider';
 import { useTextSettingsFromProvider } from '../../providers/DxfSettingsProvider';
-import { useGripContext } from '../../providers/GripProvider';
+import { useGripSettingsFromProvider } from '../../providers/DxfSettingsProvider';  // ✅ FIXED 2025-10-06
 
-// Specific settings
+// Specific settings - UNIFIED HOOKS (for mode-specific settings)
 import { useUnifiedLinePreview } from '../../ui/hooks/useUnifiedSpecificSettings';
 import { useUnifiedLineCompletion } from '../../ui/hooks/useUnifiedSpecificSettings';
 
@@ -960,6 +1014,61 @@ type ColorCategory = 'cursor' | 'selection' | 'grid' | 'grips' | 'layers' | 'ent
 5. **Real-Time Sync**: All changes auto-save to DxfSettingsProvider → localStorage
 6. **Complete State Management**: 10+ state variables for tab/accordion control
 7. **Settings Hierarchy**: General → Specific → Overrides (UI edits all layers)
+
+---
+
+## 🚨 TROUBLESHOOTING - PREVIEW NOT UPDATING
+
+### Problem: "Settings changes don't appear in preview"
+
+**Symptoms:**
+- User changes Line/Text/Grip settings in "Γενικές Ρυθμίσεις" tab
+- Preview (shows "MULTI", "SNAP", "125.50²") does NOT update
+- Settings ARE saved to localStorage ✅
+- But preview shows old values ❌
+
+**Root Cause:**
+Settings component uses **WRONG hook** - Unified hook instead of Provider hook.
+
+**Diagnosis Steps:**
+1. Add console.log in settings component:
+```typescript
+// In LineSettings/TextSettings/GripSettings
+console.log('🔥 [SettingsComponent] settings:', settings);
+```
+
+2. Add console.log in ColorPalettePanel:
+```typescript
+// In ColorPalettePanel (line 110)
+console.log('🔍 [ColorPalettePanel] lineSettings:', lineSettings.settings);
+```
+
+3. Change setting and check console:
+   - If settings component logs change ✅ BUT ColorPalettePanel does NOT ❌
+   - **They are using DIFFERENT state instances!**
+
+**Solution:**
+Change settings component to use Provider hook:
+
+```typescript
+// ❌ WRONG (what you probably have):
+import { useUnifiedLinePreview } from '../hooks/useUnifiedSpecificSettings';
+const { settings: { lineSettings }, updateLineSettings } = useUnifiedLinePreview();
+
+// ✅ CORRECT (what you need):
+import { useLineSettingsFromProvider } from '../../../../../providers/DxfSettingsProvider';
+const { settings: lineSettings, updateSettings: updateLineSettings } = useLineSettingsFromProvider();
+```
+
+**Files to Check:**
+1. `ui/components/dxf-settings/settings/core/LineSettings.tsx` (line 66)
+2. `ui/components/dxf-settings/settings/core/TextSettings.tsx` (line 195)
+3. `ui/components/dxf-settings/settings/core/GripSettings.tsx` (line 76)
+
+**Verification:**
+1. Make setting change
+2. Check console - both components should log **SAME values** ✅
+3. Preview should update in real-time ✅
 
 ---
 

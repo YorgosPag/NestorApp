@@ -22,8 +22,7 @@ import { SelectionSettings } from './dxf-settings/settings/special/SelectionSett
 import { GripSettings } from './dxf-settings/settings/core/GripSettings';
 import { LinePreview } from './dxf-settings/settings/shared/LinePreview';
 import { CurrentSettingsDisplay } from './dxf-settings/settings/shared/CurrentSettingsDisplay';
-import { useLineSettingsFromProvider, useTextSettingsFromProvider } from '../../providers/DxfSettingsProvider';
-import { useGripContext } from '../../providers/GripProvider';
+import { useLineSettingsFromProvider, useTextSettingsFromProvider, useGripSettingsFromProvider } from '../../providers/DxfSettingsProvider';
 import {
   CrosshairIcon,
   SelectionIcon,
@@ -107,14 +106,18 @@ export function ColorPalettePanel({ className = '' }: ColorPalettePanelProps) {
   // Line, Text and Grip settings contexts for preview
   const lineSettings = useLineSettingsFromProvider();
   const textSettings = useTextSettingsFromProvider();
-  const { gripSettings } = useGripContext();
+  const gripSettings = useGripSettingsFromProvider();
 
   // Debug log settings changes
   React.useEffect(() => {
     if (DEBUG_COLOR_PALETTE_PANEL) {
-
+      console.log('🔍 [ColorPalettePanel] Settings changed:', {
+        lineSettings: lineSettings.settings,
+        textSettings: textSettings.settings,
+        gripSettings: gripSettings.settings
+      });
     }
-  }, [lineSettings.settings, gripSettings]);
+  }, [lineSettings.settings, textSettings.settings, gripSettings.settings]);
 
   // Ruler lines visibility state (synchronized with actual ruler settings)
   const [rulerUnitsEnabled, setRulerUnitsEnabled] = useState<boolean>(rulerSettings?.horizontal?.showMinorTicks ?? true);
@@ -2130,7 +2133,7 @@ export function ColorPalettePanel({ className = '' }: ColorPalettePanelProps) {
             <LinePreview
               lineSettings={lineSettings.settings}
               textSettings={textSettings.settings}
-              gripSettings={gripSettings}
+              gripSettings={gripSettings.settings}
             />
 
             {/* Current Settings Display */}
@@ -2139,11 +2142,11 @@ export function ColorPalettePanel({ className = '' }: ColorPalettePanelProps) {
               lineSettings={lineSettings.settings}
               textSettings={textSettings.settings}
               gripSettings={{
-                showGrips: gripSettings.showGrips,
-                gripSize: gripSettings.gripSize,
+                showGrips: gripSettings.settings.enabled,
+                gripSize: gripSettings.settings.gripSize,
                 gripShape: 'square' as const,
                 showFill: true,
-                colors: gripSettings.colors
+                colors: gripSettings.settings.colors
               }}
             />
           </div>
