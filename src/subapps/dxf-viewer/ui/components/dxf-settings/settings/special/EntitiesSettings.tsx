@@ -104,19 +104,34 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
   // Γενικές ρυθμίσεις κειμένου για συγχρονισμό
   const globalTextSettings = useTextSettingsFromProvider();
 
-  // 🔥 ΔΙΟΡΘΩΣΗ: Memoized effective text settings που εξαρτώνται από τα specificTextSettings
-  // Αυτό εξαναγκάζει re-render στα SubTabRenderer components όταν αλλάζουν τα text settings
-  const effectiveTextSettings = useMemo(() => {
-    return getEffectiveTextSettings();
-  }, [specificTextSettings.overrideGlobalSettings, specificTextSettings.textSettings, globalTextSettings.settings]);
+  // 🔥 FIX: useMemo ensures re-calculation when getEffective* functions change
+  // These functions are useCallbacks with dependencies [overrideSettings, globalSettings]
+  // So when override flag OR specific settings change, these will re-run and preview will update
+
+  // Line settings (4 contexts: Draft, Hover, Selection, Completion)
+  const effectiveLineDraftSettings = useMemo(() => getEffectiveLineDraftSettings(), [getEffectiveLineDraftSettings]);
+  const effectiveLineHoverSettings = useMemo(() => getEffectiveLineHoverSettings(), [getEffectiveLineHoverSettings]);
+  const effectiveLineSelectionSettings = useMemo(() => getEffectiveLineSelectionSettings(), [getEffectiveLineSelectionSettings]);
+  const effectiveLineCompletionSettings = useMemo(() => getEffectiveLineCompletionSettings(), [getEffectiveLineCompletionSettings]);
+
+  // Text settings
+  const effectiveTextSettings = useMemo(() => getEffectiveTextSettings(), [getEffectiveTextSettings]);
+
+  // Grip settings
+  const effectiveGripSettings = useMemo(() => getEffectiveGripSettings(), [getEffectiveGripSettings]);
+
+  // 🐛 DEBUG: Log effective settings to console
+  console.log('🔍 [EntitiesSettings] effectiveTextSettings:', effectiveTextSettings);
+  console.log('🔍 [EntitiesSettings] effectiveGripSettings:', effectiveGripSettings);
+  console.log('🔍 [EntitiesSettings] globalTextSettings:', globalTextSettings.settings);
 
   // ✅ ΝΕΟ: Συγχρονισμός draft settings με το global store για PhaseManager
   useEffect(() => {
     updateDraftSettingsStore({
       overrideGlobalSettings: draftSettings.overrideGlobalSettings || false,
-      settings: getEffectiveLineDraftSettings()
+      settings: effectiveLineDraftSettings
     });
-  }, [draftSettings.overrideGlobalSettings, draftSettings.lineSettings, getEffectiveLineDraftSettings]);
+  }, [draftSettings.overrideGlobalSettings, draftSettings.lineSettings, effectiveLineDraftSettings]);
 
   // ✅ ΝΕΟ: Συγχρονισμός draft text settings με το global store για PhaseManager
   useEffect(() => {
@@ -345,9 +360,9 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
             activeSubTab={activeDraftSubTab}
             onTabChange={setActiveLineTab}
             onSubTabChange={setActiveDraftSubTab}
-            lineSettings={getEffectiveLineDraftSettings()}
+            lineSettings={effectiveLineDraftSettings}
             textSettings={effectiveTextSettings}
-            gripSettings={getEffectiveGripSettings()}
+            gripSettings={effectiveGripSettings}
             contextType="preview"
             overrideSettings={{
               line: {
@@ -385,7 +400,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
             activeSubTab={activeHoverSubTab}
             onTabChange={setActiveLineTab}
             onSubTabChange={setActiveHoverSubTab}
-            lineSettings={getEffectiveLineHoverSettings()}
+            lineSettings={effectiveLineHoverSettings}
             textSettings={effectiveTextSettings}
             contextType="preview"
             gripSettings={{
@@ -418,7 +433,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
             activeSubTab={activeSelectionSubTab}
             onTabChange={setActiveLineTab}
             onSubTabChange={setActiveSelectionSubTab}
-            lineSettings={getEffectiveLineSelectionSettings()}
+            lineSettings={effectiveLineSelectionSettings}
             textSettings={effectiveTextSettings}
             contextType="preview"
             gripSettings={{
@@ -451,15 +466,15 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
             activeSubTab={activeCompletionSubTab}
             onTabChange={setActiveLineTab}
             onSubTabChange={setActiveCompletionSubTab}
-            lineSettings={getEffectiveLineCompletionSettings()}
+            lineSettings={effectiveLineCompletionSettings}
             textSettings={effectiveTextSettings}
             contextType="completion"
-            gripSettings={getEffectiveGripSettings()}
+            gripSettings={effectiveGripSettings}
             customPreview={
               <LinePreview
-                lineSettings={getEffectiveLineCompletionSettings()}
+                lineSettings={effectiveLineCompletionSettings}
                 textSettings={effectiveTextSettings}
-                gripSettings={getEffectiveGripSettings()}
+                gripSettings={effectiveGripSettings}
               />
             }
             overrideSettings={{

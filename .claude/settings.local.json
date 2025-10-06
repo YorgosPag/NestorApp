@@ -175,7 +175,10 @@
       "Bash(tasklist:*)",
       "Bash(git restore:*)",
       "Bash(/dev/null)",
-      "Bash(npm run test:validate-line-drawing:*)"
+      "Bash(npm run test:validate-line-drawing:*)",
+      "Read(//c/Users/user/**)",
+      "Bash(xcopy:*)",
+      "Bash(robocopy:*)"
     ],
     "deny": [],
     "ask": []

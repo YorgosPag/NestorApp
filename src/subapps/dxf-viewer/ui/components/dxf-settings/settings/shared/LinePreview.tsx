@@ -17,9 +17,11 @@ interface LineSettings {
   lineCap?: string;
   lineJoin?: string;
   breakAtCenter: boolean;
+  enabled: boolean; // 🆕 ΠΡΟΣΘΗΚΗ: Flag για εμφάνιση γραμμών
 }
 
 interface TextSettings {
+  enabled: boolean; // 🆕 ΠΡΟΣΘΗΚΗ: Flag για εμφάνιση κειμένου απόστασης
   color: string;
   fontSize: number;
   fontFamily: string;
@@ -89,7 +91,8 @@ export function LinePreview({ lineSettings, textSettings, gripSettings, activeTa
       {/* Live Preview με πραγματικές ρυθμίσεις - ΠΛΗΡΗΣ ΠΡΟΕΠΙΣΚΟΠΗΣΗ GRIPS */}
       <div className="relative h-12 flex items-center">
         <svg width="100%" height="100%" className="absolute inset-0">
-          {lineSettings.breakAtCenter ? (
+          {/* 🆕 ΕΛΕΓΧΟΣ: Σχεδιάζουμε γραμμές ΜΟΝΟ αν enabled = true */}
+          {lineSettings.enabled && lineSettings.breakAtCenter ? (
             // Σπασμένη γραμμή - δυναμικό κενό βάσει μεγέθους κειμένου
             (() => {
               // Δυναμικός υπολογισμός πλάτους κειμένου βάσει πραγματικών ρυθμίσεων
@@ -150,8 +153,8 @@ export function LinePreview({ lineSettings, textSettings, gripSettings, activeTa
                 </>
               );
             })()
-          ) : (
-            // Κανονική γραμμή - από άκρη σε άκρη
+          ) : lineSettings.enabled ? (
+            // Κανονική γραμμή - από άκρη σε άκρη (ΜΟΝΟ αν enabled = true)
             <line
               x1="0"
               y1="50%"
@@ -165,7 +168,7 @@ export function LinePreview({ lineSettings, textSettings, gripSettings, activeTa
               strokeLinecap={(previewSettings.lineCap as 'butt' | 'round' | 'square') || 'butt'}
               strokeLinejoin={(previewSettings.lineJoin as 'miter' | 'round' | 'bevel') || 'miter'}
             />
-          )}
+          ) : null}
 
           {/* Grips Rendering - εάν enabled */}
           {gripSettings.enabled && (
@@ -314,23 +317,25 @@ export function LinePreview({ lineSettings, textSettings, gripSettings, activeTa
                   <text
                     x="10%"
                     y="20%"
-                    fontSize="8"
+                    fontSize={textSettings.fontSize}
                     fill="#ff6600"
-                    fontFamily="monospace"
+                    fontFamily={textSettings.fontFamily}
                   >
                     Max: {gripSettings.maxGripsPerEntity} ({totalGrips} grips)
                   </text>
                 );
               })()}
 
-              {/* Visual indicators για λειτουργικότητες */}
+              {/* Visual indicators για λειτουργικότητες - 🎯 USE TEXT SETTINGS */}
               {gripSettings.multiGripEdit && (
                 <text
                   x="85%"
                   y="20%"
-                  fontSize="6"
+                  fontSize={textSettings.fontSize}
                   fill={gripSettings.colors.hot}
-                  fontFamily="monospace"
+                  fontFamily={textSettings.fontFamily}
+                  fontWeight={textSettings.isBold ? 'bold' : 'normal'}
+                  fontStyle={textSettings.isItalic ? 'italic' : 'normal'}
                 >
                   MULTI
                 </text>
@@ -340,9 +345,11 @@ export function LinePreview({ lineSettings, textSettings, gripSettings, activeTa
                 <text
                   x="85%"
                   y="85%"
-                  fontSize="6"
+                  fontSize={textSettings.fontSize}
                   fill="#00ff00"
-                  fontFamily="monospace"
+                  fontFamily={textSettings.fontFamily}
+                  fontWeight={textSettings.isBold ? 'bold' : 'normal'}
+                  fontStyle={textSettings.isItalic ? 'italic' : 'normal'}
                 >
                   SNAP
                 </text>
@@ -352,39 +359,42 @@ export function LinePreview({ lineSettings, textSettings, gripSettings, activeTa
         </svg>
 
         {/* Distance text με θέση ανάλογα με την επιλογή */}
-        <div
-          className="absolute text-xs font-mono pointer-events-none"
-          style={{
-            color: textSettings.color,
-            fontSize: `${textSettings.fontSize}px`,
-            fontFamily: textSettings.fontFamily,
-            fontWeight: textSettings.isBold ? 'bold' : 'normal',
-            fontStyle: textSettings.isItalic ? 'italic' : 'normal',
-            textDecoration: [
-              textSettings.isUnderline ? 'underline' : '',
-              textSettings.isStrikethrough ? 'line-through' : ''
-            ].filter(Boolean).join(' ') || 'none',
-            // Θέση ανάλογα με το αν η γραμμή είναι σπασμένη
-            ...(lineSettings.breakAtCenter ? {
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-            } : {
-              top: 'calc(50% - 1.5em)',
-              left: '50%',
-              transform: 'translateX(-50%)',
-            }),
-            whiteSpace: 'nowrap'
-          }}
-        >
-          125.50
-          {textSettings.isSuperscript && (
-            <span style={{ fontSize: '60%', verticalAlign: 'super' }}>²</span>
-          )}
-          {textSettings.isSubscript && (
-            <span style={{ fontSize: '60%', verticalAlign: 'sub' }}>₂</span>
-          )}
-        </div>
+        {/* 🔥 FIX: Render μόνο αν textSettings.enabled === true */}
+        {textSettings.enabled && (
+          <div
+            className="absolute text-xs font-mono pointer-events-none"
+            style={{
+              color: textSettings.color,
+              fontSize: `${textSettings.fontSize}px`,
+              fontFamily: textSettings.fontFamily,
+              fontWeight: textSettings.isBold ? 'bold' : 'normal',
+              fontStyle: textSettings.isItalic ? 'italic' : 'normal',
+              textDecoration: [
+                textSettings.isUnderline ? 'underline' : '',
+                textSettings.isStrikethrough ? 'line-through' : ''
+              ].filter(Boolean).join(' ') || 'none',
+              // Θέση ανάλογα με το αν η γραμμή είναι σπασμένη
+              ...(lineSettings.breakAtCenter ? {
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+              } : {
+                top: 'calc(50% - 1.5em)',
+                left: '50%',
+                transform: 'translateX(-50%)',
+              }),
+              whiteSpace: 'nowrap'
+            }}
+          >
+            125.50
+            {textSettings.isSuperscript && (
+              <span style={{ fontSize: '60%', verticalAlign: 'super' }}>²</span>
+            )}
+            {textSettings.isSubscript && (
+              <span style={{ fontSize: '60%', verticalAlign: 'sub' }}>₂</span>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

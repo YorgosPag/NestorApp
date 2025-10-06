@@ -93,9 +93,15 @@ export const SubTabRenderer = React.memo<SubTabRendererProps>(function SubTabRen
     }
   }, [config.type]);
 
-  // Memoized colored settings
+  // 🔥 FIX: Remove useMemo for textSettings - need to re-render on deep changes
+  // When fontSize/color/isBold changes, textSettings object reference stays same
+  // → useMemo doesn't re-run → preview doesn't update
   const coloredLineSettings = React.useMemo(() => getColoredSettings(lineSettings), [getColoredSettings, lineSettings]);
-  const coloredTextSettings = React.useMemo(() => getColoredSettings(textSettings), [getColoredSettings, textSettings]);
+  const coloredTextSettings = getColoredSettings(textSettings); // Direct call - no memoization
+
+  // 🐛 DEBUG: Log text settings to console
+  console.log('🔍 [SubTabRenderer] textSettings:', textSettings);
+  console.log('🔍 [SubTabRenderer] coloredTextSettings:', coloredTextSettings);
 
   // Memoized sub-tab options
   const subTabOptions = React.useMemo(() => [

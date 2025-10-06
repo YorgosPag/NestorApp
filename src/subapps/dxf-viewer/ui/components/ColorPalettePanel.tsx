@@ -23,6 +23,12 @@ import { GripSettings } from './dxf-settings/settings/core/GripSettings';
 import { LinePreview } from './dxf-settings/settings/shared/LinePreview';
 import { CurrentSettingsDisplay } from './dxf-settings/settings/shared/CurrentSettingsDisplay';
 import { useLineSettingsFromProvider, useTextSettingsFromProvider, useGripSettingsFromProvider } from '../../providers/DxfSettingsProvider';
+// 🆕 Import unified preview hooks for effective settings calculation
+import {
+  useUnifiedLinePreview,
+  useUnifiedTextPreview,
+  useUnifiedGripPreview
+} from '../hooks/useUnifiedSpecificSettings';
 import {
   CrosshairIcon,
   SelectionIcon,
@@ -103,7 +109,19 @@ export function ColorPalettePanel({ className = '' }: ColorPalettePanelProps) {
     setRulerVisibility
   } = useRulersGridContext();
 
-  // Line, Text and Grip settings contexts for preview
+  // 🆕 UNIFIED PREVIEW HOOKS - Calculate effective settings based on override flags
+  // These hooks automatically use General Settings OR Preview-specific settings
+  // depending on the overrideGlobalSettings flag in each context
+  const linePreviewHook = useUnifiedLinePreview();
+  const textPreviewHook = useUnifiedTextPreview();
+  const gripPreviewHook = useUnifiedGripPreview();
+
+  // Extract effective settings (respects override flags automatically)
+  const effectiveLineSettings = linePreviewHook.getEffectiveLineSettings();
+  const effectiveTextSettings = textPreviewHook.getEffectiveTextSettings();
+  const effectiveGripSettings = gripPreviewHook.getEffectiveGripSettings();
+
+  // Keep Provider hooks for backward compatibility (still needed in General Settings tab)
   const lineSettings = useLineSettingsFromProvider();
   const textSettings = useTextSettingsFromProvider();
   const gripSettings = useGripSettingsFromProvider();

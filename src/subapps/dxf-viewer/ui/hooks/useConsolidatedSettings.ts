@@ -61,15 +61,18 @@ export function useConsolidatedSettings<T>(
     setOverrideSettings(prev => {
       const updated = { ...prev, ...updates };
 
-      // Αν ενεργοποιήθηκε το override, αρχικοποιούμε με τις τρέχουσες global settings
-      if (updates.overrideGlobalSettings === true && !prev.overrideGlobalSettings) {
-        updated.specificSettings = { ...globalSettings.settings };
+      // 🔥 FIX (2025-10-06): ΔΕΝ αντιγράφουμε global settings όταν γίνεται enable το override!
+      // Τα specific settings πρέπει να κρατούν τις δικές τους τιμές (διαφορετικές από τα general)
+      // BEFORE: Όταν override ON → specificSettings = globalSettings (λάθος!)
+      // AFTER: Όταν override ON → specificSettings μένουν όπως ήταν (σωστό!)
 
-      }
+      // Removed: if (updates.overrideGlobalSettings === true && !prev.overrideGlobalSettings) {
+      //   updated.specificSettings = { ...globalSettings.settings };
+      // }
 
       return updated;
     });
-  }, [globalSettings.settings, settingsKey]);
+  }, [settingsKey]);
 
   // Update μόνο τα specific settings (ΠΑΝΤΑ ανεξάρτητα από το override)
   const updateSpecificSettings = useCallback((updates: Partial<T>) => {

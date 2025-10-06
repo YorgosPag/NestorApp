@@ -1,28 +1,32 @@
 {
-  "timestamp": "2025-10-06T15:45:00Z",
-  "category": "HOTFIX",
-  "shortDescription": "Factory Reset Button Visibility + Toast Notifications",
-  "problem": "Το 🏭 'Εργοστασιακές' button δεν εμφανιζόταν όταν ο χρήστης άνοιγε το Line Settings panel. Bug: Η conditional rendering συνθήκη ήταν contextType === 'general', αλλά όταν δεν περνάει contextType parameter (default usage), η τιμή είναι undefined, όχι 'general'. Επίσης, δεν υπήρχε feedback όταν ο χρήστης πάταγε το button - κανένα toast notification για επιτυχία ή ακύρωση.",
-  "cause": "Λανθασμένη conditional logic: contextType === 'general' αντί για !contextType (check for undefined). Το component LineSettings({ contextType }) έχει optional parameter που defaults σε undefined. Επίσης έλειπε integration με το NotificationProvider (sonner toast library) για user feedback.",
+  "timestamp": "2025-10-06T18:30:00Z",
+  "category": "FIX",
+  "shortDescription": "Grip Settings Preview Integration - Provider Hook Fix",
+  "problem": "Grip settings changes in 'Γενικές Ρυθμίσεις → Grips' tab did NOT appear in preview. Preview shows 'MULTI', 'SNAP', '125.50²' indicators but these NEVER updated when user changed grip settings. User wasted 4+ hours debugging this critical issue.",
+  "cause": "GripSettings.tsx used useUnifiedGripPreview() (isolated state) while ColorPalettePanel used useGripSettingsFromProvider() (global state). They created DIFFERENT React state instances that never communicated. Changes in GripSettings updated isolated state, while preview read from global state → frozen preview.",
   "filesChanged": [
-    "src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/LineSettings.tsx (Bug fix + toast integration)"
+    "src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/GripSettings.tsx",
+    "src/subapps/dxf-viewer/ui/components/ColorPalettePanel.tsx",
+    "src/subapps/dxf-viewer/providers/DxfSettingsProvider.tsx",
+    "src/subapps/dxf-viewer/docs/settings-system/05-UI_COMPONENTS.md",
+    "src/subapps/dxf-viewer/docs/settings-system/02-COLORPALETTEPANEL.md"
   ],
   "solution": {
-    "phase1": "Fixed Conditional Rendering - Changed από contextType === 'general' σε !contextType. Τώρα το button εμφανίζεται όταν δεν υπάρχει contextType (general settings usage)",
-    "phase2": "Added useNotifications Hook - Import από NotificationProvider για access στο toast API. Sonner library already in use across application",
-    "phase3": "Success Toast - Μετά την επιβεβαίωση factory reset, εμφανίζεται success toast: '🏭 Εργοστασιακές ρυθμίσεις επαναφέρθηκαν! Όλες οι ρυθμίσεις γραμμών επέστρεψαν στα πρότυπα ISO 128 & AutoCAD 2024.' Duration: 5000ms",
-    "phase4": "Cancellation Toast - Αν ο χρήστης κάνει Cancel στο confirmation dialog, εμφανίζεται info toast: '❌ Ακυρώθηκε η επαναφορά εργοστασιακών ρυθμίσεων'"
+    "phase1": "DEBUGGING: Added extensive console.log in 3 files (GripSettings, ColorPalettePanel, DxfSettingsProvider) to trace data flow",
+    "phase2": "LOG ANALYSIS: Analyzed localhost.log - discovered GripSettings and ColorPalettePanel logging DIFFERENT values for same setting changes. Identified state isolation issue.",
+    "phase3": "ROOT CAUSE: GripSettings used useUnifiedGripPreview() (WRONG hook for General Settings tab). LineSettings and TextSettings correctly used Provider hooks.",
+    "phase4": "CODE FIX: Changed GripSettings.tsx line 44 import to useGripSettingsFromProvider from DxfSettingsProvider. Changed line 76 to use Provider hook. Fixed import path (6 levels not 7).",
+    "phase5": "CLEANUP & DOCS: Removed debug console.log from all 3 files. Added CRITICAL warnings in documentation with ΜΗΔΕΝΙΚΗ ΑΝΟΧΗ notices. Added troubleshooting guide."
   },
-  "testing": "✅ Button τώρα εμφανίζεται στο header του Line Settings panel (Γενικές Ρυθμίσεις). ✅ Click → Confirmation dialog → OK → Success toast appears (5 seconds). ✅ Click → Confirmation dialog → Cancel → Info toast appears. Testing instructions: (1) Open Settings Panel → Line Settings (2) Βλέπεις 2 buttons: 'Επαναφορά' (gray) και '🏭 Εργοστασιακές' (red) (3) Click 🏭 → Dialog → OK → Green toast (4) Click 🏭 → Dialog → Cancel → Blue toast",
+  "testing": "✅ Manual testing: Changed grip size (5→11), opacity (1.0→0.6), colors (blue→red) in Grips tab → Preview updated in real-time! All grip indicators (MULTI, SNAP, grip squares) now reflect settings changes immediately. TypeScript compilation: 0 errors. Dev server: Running successfully on port 3002.",
   "notes": [
-    "🐛 BUG FIX: Conditional rendering ήταν λάθος - contextType === 'general' vs !contextType",
-    "✅ Enterprise UX: Following industry standards (AutoCAD, Revit, SolidWorks) - confirmation + feedback",
-    "🎨 Toast Library: Sonner (already in use) - notifications.success(), notifications.info()",
-    "⏱️ Toast Duration: 5000ms (5 seconds) για success toast - χρήστης να προλάβει να διαβάσει το μήνυμα",
-    "🎯 User Feedback: Τώρα ο χρήστης ξέρει αν η ενέργεια πέτυχε (success toast) ή ακυρώθηκε (info toast)",
-    "🏭 Button Visibility: Εμφανίζεται ΜΟΝΟ στο general context (όχι σε preview/completion contexts)",
-    "🔴 Button Style: bg-red-700 hover:bg-red-600 - κόκκινο για destructive action (industry standard)",
-    "📱 Responsive: Toast notifications positioned στο top-right (NotificationProvider default)"
+    "⚠️ CRITICAL PATTERN: General Settings components MUST use Provider hooks (useLineSettingsFromProvider, useTextSettingsFromProvider, useGripSettingsFromProvider)",
+    "🚨 NEVER use Unified hooks (useUnifiedGripPreview, etc.) in General Settings - only for Preview/Completion modes!",
+    "🔥 This bug wasted 4+ hours debugging - added extensive documentation to prevent recurrence",
+    "📚 Added TROUBLESHOOTING section in 02-COLORPALETTEPANEL.md with diagnosis steps and solution",
+    "🐛 Same bug previously fixed in TextSettings.tsx (2025-10-06) - pattern now documented clearly with warnings",
+    "✅ Import path fix: ../../../../../providers/DxfSettingsProvider (6 levels from settings/core/ folder)",
+    "🎯 Pattern now matches LineSettings and TextSettings - all 3 use Provider hooks in General Settings tab"
   ],
   "contributors": {
     "user": "Γιώργος Παγώνης",
@@ -30,14 +34,15 @@
     "sessionDate": "2025-10-06"
   },
   "relatedBackups": [
-    "template-overrides-system-20251006"
+    "text-settings-preview-fix-20251006",
+    "settings-system-documentation-20251006"
   ],
   "commits": [
     {
-      "hash": "d50f940",
-      "message": "Fix: Factory Reset Button Visibility + Toast Notifications",
-      "files": 1,
-      "description": "Fixed button not appearing (contextType bug). Added success/cancel toast notifications using sonner library. Enterprise UX following industry standards."
+      "hash": "e9fc603",
+      "message": "Fix: Grip Settings Preview Integration - Use Provider Hook (CRITICAL)",
+      "files": 5,
+      "description": "Fixed GripSettings to use useGripSettingsFromProvider() instead of useUnifiedGripPreview(). Added critical warnings in documentation. Preview now updates in real-time."
     }
   ]
 }
