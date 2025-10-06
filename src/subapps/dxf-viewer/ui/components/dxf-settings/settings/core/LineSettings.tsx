@@ -175,7 +175,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
     }
   })();
 
-  const { settings, updateSettings, resetToDefaults, applyTemplate, getCurrentDashPattern } = lineSettingsContext;
+  const { settings, updateSettings, resetToDefaults, resetToFactory, applyTemplate, getCurrentDashPattern } = lineSettingsContext;
 
   // Settings updater hook
   const settingsUpdater = useSettingsUpdater({
@@ -375,6 +375,26 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
     }
   };
 
+  // 🆕 TEMPLATE SYSTEM: Factory reset με confirmation dialog
+  const handleFactoryReset = () => {
+    const confirmed = window.confirm(
+      '⚠️ ΕΠΑΝΑΦΟΡΑ ΕΡΓΟΣΤΑΣΙΑΚΩΝ ΡΥΘΜΙΣΕΩΝ\n\n' +
+      'Θα χάσετε ΟΛΑ τα εξής:\n' +
+      '• Όλες τις προσαρμοσμένες ρυθμίσεις γραμμών\n' +
+      '• Όλα τα templates που έχετε επιλέξει\n' +
+      '• Όλες τις αλλαγές που έχετε κάνει\n\n' +
+      'Οι ρυθμίσεις θα επανέλθουν στα πρότυπα ISO 128 & AutoCAD 2024.\n\n' +
+      'Είστε σίγουροι ότι θέλετε να συνεχίσετε;'
+    );
+
+    if (confirmed && resetToFactory) {
+      resetToFactory();
+      console.log('🏭 [LineSettings] Factory reset confirmed - resetting to ISO/AutoCAD defaults');
+    } else {
+      console.log('🏭 [LineSettings] Factory reset cancelled by user');
+    }
+  };
+
   // Accordion state management
   const { toggleSection, isOpen } = useAccordion('basic');
 
@@ -383,12 +403,24 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
       {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-medium text-white">Ρυθμίσεις Γραμμών</h3>
-        <button
-          onClick={resetToDefaults}
-          className="px-3 py-1 text-xs bg-gray-600 hover:bg-gray-500 text-white rounded transition-colors"
-        >
-          Επαναφορά
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={resetToDefaults}
+            className="px-3 py-1 text-xs bg-gray-600 hover:bg-gray-500 text-white rounded transition-colors"
+            title="Επαναφορά στις προεπιλεγμένες ρυθμίσεις"
+          >
+            Επαναφορά
+          </button>
+          {resetToFactory && contextType === 'general' && (
+            <button
+              onClick={handleFactoryReset}
+              className="px-3 py-1 text-xs bg-red-700 hover:bg-red-600 text-white rounded transition-colors font-semibold"
+              title="Επαναφορά στις εργοστασιακές ρυθμίσεις (ISO 128 & AutoCAD 2024)"
+            >
+              🏭 Εργοστασιακές
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Enable/Disable Line Display - ΠΆΝΤΑ ΕΜΦΑΝΈΣ για όλα τα contexts */}

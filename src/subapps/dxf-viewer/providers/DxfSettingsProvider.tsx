@@ -180,6 +180,20 @@ interface OverrideEnabledFlags {
   grip: boolean;
 }
 
+// 🆕 TEMPLATE OVERRIDES: User customizations on top of templates
+interface TemplateOverrides {
+  line?: Partial<LineSettings>;
+  text?: Partial<TextSettings>;
+  grip?: Partial<GripSettings>;
+}
+
+// 🆕 ACTIVE TEMPLATES: Track which template is currently selected
+interface ActiveTemplates {
+  line: string | null;
+  text: string | null;
+  grip: string | null;
+}
+
 interface DxfSettingsState {
   // ===== EXISTING SETTINGS (General) =====
   line: LineSettings;
@@ -194,6 +208,10 @@ interface DxfSettingsState {
   specific: SpecificSettings;            // 🆕 MERGE: Mode-specific settings (preview/completion overrides)
   overrides: OverrideSettings;           // 🆕 MERGE: User overrides per mode
   overrideEnabled: OverrideEnabledFlags; // 🆕 MERGE: Which entities have override enabled
+
+  // ===== TEMPLATE SYSTEM (2025-10-06) =====
+  templateOverrides: TemplateOverrides;  // 🆕 User customizations on templates
+  activeTemplates: ActiveTemplates;      // 🆕 Currently selected templates
 
   // ===== EXISTING META =====
   isLoaded: boolean;
@@ -224,7 +242,13 @@ type SettingsAction =
   | { type: 'UPDATE_GRIP_OVERRIDES'; payload: { mode: 'preview'; settings: Partial<GripSettings> } }
   | { type: 'TOGGLE_LINE_OVERRIDE'; payload: boolean }
   | { type: 'TOGGLE_TEXT_OVERRIDE'; payload: boolean }
-  | { type: 'TOGGLE_GRIP_OVERRIDE'; payload: boolean };
+  | { type: 'TOGGLE_GRIP_OVERRIDE'; payload: boolean }
+
+  // ===== TEMPLATE SYSTEM ACTIONS (2025-10-06) =====
+  | { type: 'APPLY_LINE_TEMPLATE'; payload: { templateName: string; settings: LineSettings } }
+  | { type: 'UPDATE_LINE_TEMPLATE_OVERRIDES'; payload: Partial<LineSettings> }
+  | { type: 'CLEAR_LINE_TEMPLATE_OVERRIDES' }
+  | { type: 'RESET_LINE_TO_FACTORY' };
 
 interface DxfSettingsContextType {
   // State
@@ -255,6 +279,12 @@ interface DxfSettingsContextType {
   getEffectiveLineSettings: (mode?: ViewerMode) => LineSettings;
   getEffectiveTextSettings: (mode?: ViewerMode) => TextSettings;
   getEffectiveGripSettings: (mode?: ViewerMode) => GripSettings;
+
+  // ===== TEMPLATE SYSTEM METHODS (2025-10-06) =====
+  applyLineTemplate: (templateName: string, templateSettings: LineSettings) => void;
+  updateLineTemplateOverrides: (overrides: Partial<LineSettings>) => void;
+  clearLineTemplateOverrides: () => void;
+  resetLineToFactory: () => void;
 
   // Computed
   isAutoSaving: boolean;
@@ -387,6 +417,18 @@ const initialState: DxfSettingsState = {
     line: false,
     text: false,
     grip: false
+  },
+
+  // ===== TEMPLATE SYSTEM (2025-10-06) =====
+  templateOverrides: {  // 🆕 User customizations on templates (empty by default)
+    line: undefined,
+    text: undefined,
+    grip: undefined
+  },
+  activeTemplates: {    // 🆕 Currently selected templates (none by default)
+    line: null,
+    text: null,
+    grip: null
   },
 
   // ===== EXISTING META =====
@@ -591,6 +633,57 @@ function settingsReducer(state: DxfSettingsState, action: SettingsAction): DxfSe
         }
       };
 
+    // ===== TEMPLATE SYSTEM REDUCER CASES (2025-10-06) =====
+
+    case 'APPLY_LINE_TEMPLATE':
+      return {
+        ...state,
+        line: action.payload.settings,  // Apply template as base
+        activeTemplates: {
+          ...state.activeTemplates,
+          line: action.payload.templateName  // Track active template
+        },
+        saveStatus: 'idle'  // Mark as unsaved
+      };
+
+    case 'UPDATE_LINE_TEMPLATE_OVERRIDES':
+      return {
+        ...state,
+        templateOverrides: {
+          ...state.templateOverrides,
+          line: {
+            ...state.templateOverrides.line,
+            ...action.payload  // Merge user overrides
+          }
+        },
+        saveStatus: 'idle'  // Mark as unsaved
+      };
+
+    case 'CLEAR_LINE_TEMPLATE_OVERRIDES':
+      return {
+        ...state,
+        templateOverrides: {
+          ...state.templateOverrides,
+          line: undefined  // Clear all overrides
+        },
+        saveStatus: 'idle'
+      };
+
+    case 'RESET_LINE_TO_FACTORY':
+      return {
+        ...state,
+        line: defaultLineSettings,  // Reset to factory defaults
+        templateOverrides: {
+          ...state.templateOverrides,
+          line: undefined  // Clear overrides
+        },
+        activeTemplates: {
+          ...state.activeTemplates,
+          line: null  // Clear template selection
+        },
+        saveStatus: 'idle'
+      };
+
     default:
       return state;
   }
@@ -604,7 +697,9 @@ const STORAGE_KEYS = {
   grip: 'dxf-grip-general-settings',
   grid: 'dxf-grid-specific-settings',     // 🆕 ΠΡΟΣΘΗΚΗ: Grid storage key
   ruler: 'dxf-ruler-specific-settings',   // 🆕 ΠΡΟΣΘΗΚΗ: Ruler storage key
-  cursor: 'dxf-cursor-specific-settings'  // 🆕 ΠΡΟΣΘΗΚΗ: Cursor storage key (will migrate from 'autocad_cursor_settings')
+  cursor: 'dxf-cursor-specific-settings', // 🆕 ΠΡΟΣΘΗΚΗ: Cursor storage key (will migrate from 'autocad_cursor_settings')
+  templateOverrides: 'dxf-template-overrides',  // 🆕 TEMPLATE SYSTEM: User overrides
+  activeTemplates: 'dxf-active-templates'       // 🆕 TEMPLATE SYSTEM: Selected templates
 } as const;
 
 // ✅ ΔΙΕΘΝΗ ΠΡΟΤΥΠΑ VERSION - αν αλλάξει αυτό, τα παλιά localStorage settings θα επανεγκατασταθούν
@@ -858,6 +953,46 @@ function loadAllSettings(): Partial<DxfSettingsState> {
       }
     }
 
+    // 🆕 TEMPLATE SYSTEM: Load templateOverrides
+    const templateOverridesStr = localStorage.getItem(STORAGE_KEYS.templateOverrides);
+    if (templateOverridesStr) {
+      try {
+        const parsed = JSON.parse(templateOverridesStr);
+        const { __autosave_timestamp, __autosave_key, __standards_version, ...actualData } = parsed;
+
+        if (__standards_version === INTERNATIONAL_STANDARDS_VERSION) {
+          result.templateOverrides = actualData;
+          console.log('✅ [DEBUG] Template overrides loaded from localStorage');
+        } else {
+          console.warn('⚠️ [DEBUG] Template overrides version mismatch - using empty');
+          result.templateOverrides = { line: undefined, text: undefined, grip: undefined };
+        }
+      } catch (e) {
+        console.error('❌ [DEBUG] Failed to parse templateOverrides:', e);
+        result.templateOverrides = { line: undefined, text: undefined, grip: undefined };
+      }
+    }
+
+    // 🆕 TEMPLATE SYSTEM: Load activeTemplates
+    const activeTemplatesStr = localStorage.getItem(STORAGE_KEYS.activeTemplates);
+    if (activeTemplatesStr) {
+      try {
+        const parsed = JSON.parse(activeTemplatesStr);
+        const { __autosave_timestamp, __autosave_key, __standards_version, ...actualData } = parsed;
+
+        if (__standards_version === INTERNATIONAL_STANDARDS_VERSION) {
+          result.activeTemplates = actualData;
+          console.log('✅ [DEBUG] Active templates loaded from localStorage');
+        } else {
+          console.warn('⚠️ [DEBUG] Active templates version mismatch - using null');
+          result.activeTemplates = { line: null, text: null, grip: null };
+        }
+      } catch (e) {
+        console.error('❌ [DEBUG] Failed to parse activeTemplates:', e);
+        result.activeTemplates = { line: null, text: null, grip: null };
+      }
+    }
+
     // 🆕 ENHANCED LOGGING & CLEANUP: Migration summary με automatic cleanup
     if (migrationOccurred) {
 
@@ -877,12 +1012,14 @@ function loadAllSettings(): Partial<DxfSettingsState> {
   }
 }
 
-function saveAllSettings(settings: Pick<DxfSettingsState, 'line' | 'text' | 'grip' | 'grid' | 'ruler' | 'cursor'>) {
+function saveAllSettings(settings: Pick<DxfSettingsState, 'line' | 'text' | 'grip' | 'grid' | 'ruler' | 'cursor' | 'templateOverrides' | 'activeTemplates'>) {
   try {
     const timestamp = Date.now();
     console.log('🔍 [DEBUG] saveAllSettings called with keys:', Object.keys(settings));
 
-    Object.entries(STORAGE_KEYS).forEach(([key, storageKey]) => {
+    // Save basic settings (line, text, grip, grid, ruler, cursor)
+    ['line', 'text', 'grip', 'grid', 'ruler', 'cursor'].forEach((key) => {
+      const storageKey = STORAGE_KEYS[key as keyof typeof STORAGE_KEYS];
       const data = settings[key as keyof typeof settings];
 
       // 🚨 DEBUG: Check if data exists
@@ -910,6 +1047,30 @@ function saveAllSettings(settings: Pick<DxfSettingsState, 'line' | 'text' | 'gri
       const readBack = localStorage.getItem(storageKey);
       console.log(`🔍 [DEBUG] Verified write for ${storageKey}:`, readBack ? '✅ Success' : '❌ Failed');
     });
+
+    // 🆕 TEMPLATE SYSTEM: Save templateOverrides
+    if (settings.templateOverrides) {
+      const overridesWithMetadata = {
+        ...settings.templateOverrides,
+        __autosave_timestamp: timestamp,
+        __autosave_key: STORAGE_KEYS.templateOverrides,
+        __standards_version: INTERNATIONAL_STANDARDS_VERSION
+      };
+      localStorage.setItem(STORAGE_KEYS.templateOverrides, JSON.stringify(overridesWithMetadata));
+      console.log(`🔍 [DEBUG] Saved templateOverrides to localStorage`);
+    }
+
+    // 🆕 TEMPLATE SYSTEM: Save activeTemplates
+    if (settings.activeTemplates) {
+      const templatesWithMetadata = {
+        ...settings.activeTemplates,
+        __autosave_timestamp: timestamp,
+        __autosave_key: STORAGE_KEYS.activeTemplates,
+        __standards_version: INTERNATIONAL_STANDARDS_VERSION
+      };
+      localStorage.setItem(STORAGE_KEYS.activeTemplates, JSON.stringify(templatesWithMetadata));
+      console.log(`🔍 [DEBUG] Saved activeTemplates to localStorage`);
+    }
 
     return true;
 
@@ -1101,7 +1262,9 @@ export function DxfSettingsProvider({ children }: { children: React.ReactNode })
         grip: settingsRef.current.grip,
         grid: settingsRef.current.grid,
         ruler: settingsRef.current.ruler,
-        cursor: settingsRef.current.cursor
+        cursor: settingsRef.current.cursor,
+        templateOverrides: settingsRef.current.templateOverrides,  // 🆕 TEMPLATE SYSTEM
+        activeTemplates: settingsRef.current.activeTemplates       // 🆕 TEMPLATE SYSTEM
       });
 
       if (success) {
@@ -1207,11 +1370,41 @@ export function DxfSettingsProvider({ children }: { children: React.ReactNode })
     dispatch({ type: 'TOGGLE_GRIP_OVERRIDE', payload: enabled });
   }, []);
 
+  // ===== TEMPLATE SYSTEM METHODS (2025-10-06) =====
+
+  const applyLineTemplate = useCallback((templateName: string, templateSettings: LineSettings) => {
+    console.log('🎨 [Template] Applying template:', templateName);
+    dispatch({
+      type: 'APPLY_LINE_TEMPLATE',
+      payload: { templateName, settings: templateSettings }
+    });
+  }, []);
+
+  const updateLineTemplateOverrides = useCallback((overrides: Partial<LineSettings>) => {
+    console.log('🎨 [Template] Updating user overrides:', overrides);
+    dispatch({ type: 'UPDATE_LINE_TEMPLATE_OVERRIDES', payload: overrides });
+  }, []);
+
+  const clearLineTemplateOverrides = useCallback(() => {
+    console.log('🎨 [Template] Clearing all overrides');
+    dispatch({ type: 'CLEAR_LINE_TEMPLATE_OVERRIDES' });
+  }, []);
+
+  const resetLineToFactory = useCallback(() => {
+    console.log('🏭 [Template] Resetting to factory defaults');
+    dispatch({ type: 'RESET_LINE_TO_FACTORY' });
+  }, []);
+
   // ===== NEW: EFFECTIVE SETTINGS CALCULATION (from ConfigurationProvider) =====
 
   const getEffectiveLineSettings = useCallback((mode?: ViewerMode): LineSettings => {
     const currentMode = mode || state.mode;
-    let settings = state.line; // Start with general
+    let settings = state.line; // Start with general (template base)
+
+    // 🆕 TEMPLATE SYSTEM: Apply user template overrides FIRST (they persist across template changes)
+    if (state.templateOverrides.line) {
+      settings = { ...settings, ...state.templateOverrides.line };
+    }
 
     // Apply specific settings for current mode
     if (currentMode !== 'normal' && state.specific.line[currentMode]) {
@@ -1224,7 +1417,7 @@ export function DxfSettingsProvider({ children }: { children: React.ReactNode })
     }
 
     return settings;
-  }, [state.mode, state.line, state.specific.line, state.overrides.line, state.overrideEnabled.line]);
+  }, [state.mode, state.line, state.specific.line, state.overrides.line, state.overrideEnabled.line, state.templateOverrides.line]);
 
   const getEffectiveTextSettings = useCallback((mode?: ViewerMode): TextSettings => {
     const currentMode = mode || state.mode;
@@ -1292,6 +1485,11 @@ export function DxfSettingsProvider({ children }: { children: React.ReactNode })
     toggleLineOverride,
     toggleTextOverride,
     toggleGripOverride,
+    // ===== TEMPLATE SYSTEM METHODS (2025-10-06) =====
+    applyLineTemplate,
+    updateLineTemplateOverrides,
+    clearLineTemplateOverrides,
+    resetLineToFactory,
     // ===== NEW: EFFECTIVE SETTINGS (from ConfigurationProvider) =====
     getEffectiveLineSettings,
     getEffectiveTextSettings,
@@ -1319,6 +1517,10 @@ export function DxfSettingsProvider({ children }: { children: React.ReactNode })
     toggleLineOverride,
     toggleTextOverride,
     toggleGripOverride,
+    applyLineTemplate,              // 🆕 TEMPLATE SYSTEM (2025-10-06)
+    updateLineTemplateOverrides,    // 🆕 TEMPLATE SYSTEM (2025-10-06)
+    clearLineTemplateOverrides,     // 🆕 TEMPLATE SYSTEM (2025-10-06)
+    resetLineToFactory,             // 🆕 TEMPLATE SYSTEM (2025-10-06)
     getEffectiveLineSettings,
     getEffectiveTextSettings,
     getEffectiveGripSettings,
@@ -1432,22 +1634,25 @@ export function useLineSettingsFromProvider() {
       settings: defaultLineSettings,
       updateSettings: () => {},
       resetToDefaults: () => {},
+      resetToFactory: () => {},  // 🆕 TEMPLATE SYSTEM: Factory reset
       getCurrentDashPattern,
       applyTemplate: () => {}
     };
   }
 
-  const { settings, updateLineSettings } = dxfSettings;
+  const { settings, updateLineSettings, applyLineTemplate, updateLineTemplateOverrides, resetLineToFactory } = dxfSettings;
 
   const getCurrentDashPattern = () => {
     return getDashArray(settings.line.lineType, settings.line.dashScale);
   };
 
   const applyTemplate = (template: LineTemplate) => {
-    console.log('🔧 DxfSettingsProvider.applyTemplate called with:', template);
+    console.log('🎨 [Template Hook] Applying template:', template.name);
     // Templates have settings nested inside - use template.settings
     const templateSettings = template.settings || template;
-    updateLineSettings({
+
+    // 🆕 TEMPLATE SYSTEM: Use new applyLineTemplate action (tracks template, resets overrides)
+    applyLineTemplate(template.name, {
       lineType: templateSettings.lineType,
       lineWidth: templateSettings.lineWidth,
       color: templateSettings.color,
@@ -1456,15 +1661,42 @@ export function useLineSettingsFromProvider() {
       dashOffset: templateSettings.dashOffset,
       lineCap: templateSettings.lineCap,
       lineJoin: templateSettings.lineJoin,
-      breakAtCenter: templateSettings.breakAtCenter
+      breakAtCenter: templateSettings.breakAtCenter,
+      // Copy remaining fields from template or use defaults
+      enabled: templateSettings.enabled ?? true,
+      hoverColor: templateSettings.hoverColor ?? '#FFFF00',
+      hoverType: templateSettings.hoverType ?? 'solid',
+      hoverWidth: templateSettings.hoverWidth ?? 0.35,
+      hoverOpacity: templateSettings.hoverOpacity ?? 0.8,
+      finalColor: templateSettings.finalColor ?? '#00FF00',
+      finalType: templateSettings.finalType ?? 'solid',
+      finalWidth: templateSettings.finalWidth ?? 0.35,
+      finalOpacity: templateSettings.finalOpacity ?? 1.0,
+      activeTemplate: template.name
     });
-    console.log('✅ DxfSettingsProvider.updateLineSettings called with:', templateSettings);
+    console.log('✅ [Template Hook] Template applied via applyLineTemplate action');
+  };
+
+  // 🆕 TEMPLATE SYSTEM: Smart update function που ξέρει αν υπάρχει active template
+  const updateSettings = (updates: Partial<LineSettings>) => {
+    const hasActiveTemplate = settings.activeTemplates.line !== null;
+
+    if (hasActiveTemplate) {
+      // Αν υπάρχει active template, οι user changes πάνε στα overrides
+      console.log('🎨 [Template Hook] User change detected - saving to overrides');
+      updateLineTemplateOverrides(updates);
+    } else {
+      // Αν δεν υπάρχει template, οι αλλαγές πάνε κανονικά στα line settings
+      console.log('🎨 [Template Hook] No active template - updating line settings directly');
+      updateLineSettings(updates);
+    }
   };
 
   return {
     settings: settings.line,
-    updateSettings: updateLineSettings,
+    updateSettings,
     resetToDefaults: () => updateLineSettings(defaultLineSettings),
+    resetToFactory: resetLineToFactory,  // 🆕 TEMPLATE SYSTEM: Reset to ISO/AutoCAD factory defaults
     getCurrentDashPattern,
     applyTemplate
   };

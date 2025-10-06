@@ -56,6 +56,14 @@
    - DPI-aware 100% zoom
    - Browser conflict resolution
 
+2. **[docs/settings-system/00-INDEX.md](./docs/settings-system/00-INDEX.md)** 🆕
+   - DxfSettingsProvider (το ΜΟΝΟ σημείο για settings)
+   - Template System με Overrides (Persist across template changes)
+   - Multi-layer Settings (General → Specific → Overrides → Template Overrides)
+   - Auto-save με localStorage (500ms debounce)
+   - Factory Reset (ISO 128 & AutoCAD 2024 Standards)
+   - Mode-based Settings (Normal/Preview/Completion)
+
 ### 📖 **Reference (Αναφορές classes):**
 
 1. **[docs/reference/class-index.md](./docs/reference/class-index.md)**

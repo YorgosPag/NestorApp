@@ -119,6 +119,19 @@ interface DxfSettingsState {
     grip: boolean;
   };
 
+  // ===== TEMPLATE SYSTEM (2025-10-06) =====
+  templateOverrides: {      // User customizations on top of templates
+    line?: Partial<LineSettings>;
+    text?: Partial<TextSettings>;
+    grip?: Partial<GripSettings>;
+  };
+
+  activeTemplates: {        // Currently selected templates (tracking)
+    line: string | null;    // e.g., "Κύρια Γραμμή", "Λεπτή Γραμμή"
+    text: string | null;
+    grip: string | null;
+  };
+
   // ===== META =====
   isLoaded: boolean;        // Loaded from localStorage?
   lastSaved: Date | null;   // Last save timestamp
@@ -368,6 +381,58 @@ toggleGripOverride(true);
 updateGripOverrides('preview', {
   gripSize: 8
 });
+```
+
+---
+
+### Template System Actions (🆕 2025-10-06)
+
+```typescript
+// Apply a template (resets overrides, tracks active template)
+applyLineTemplate('Κύρια Γραμμή', {
+  lineType: 'solid',
+  lineWidth: 0.50,
+  color: '#FFFFFF',
+  opacity: 1.0
+  // ... other settings
+});
+
+// Update user customizations ON TOP of active template
+// (These persist when switching between templates!)
+updateLineTemplateOverrides({
+  color: '#FF0000',     // User wants red color
+  opacity: 0.8          // User wants 80% opacity
+});
+
+// Clear all template overrides (reset to template base)
+clearLineTemplateOverrides();
+
+// Factory reset (ISO 128 + AutoCAD 2024 standards)
+// Clears template selection + overrides + returns to defaults
+resetLineToFactory();
+```
+
+**How Template System Works**:
+```typescript
+// 1. User selects template
+applyLineTemplate('Κύρια Γραμμή', templateSettings);
+// → state.line = template settings (base)
+// → state.activeTemplates.line = 'Κύρια Γραμμή'
+// → state.templateOverrides.line = {} (reset)
+
+// 2. User customizes (e.g., changes color)
+updateLineTemplateOverrides({ color: '#FF0000' });
+// → state.line = UNCHANGED (still template)
+// → state.templateOverrides.line = { color: '#FF0000' }
+
+// 3. User switches to different template
+applyLineTemplate('Λεπτή Γραμμή', newTemplateSettings);
+// → state.line = new template settings
+// → state.activeTemplates.line = 'Λεπτή Γραμμή'
+// → state.templateOverrides.line = { color: '#FF0000' } ✅ KEPT!
+
+// 4. Effective settings = template + overrides
+getEffectiveLineSettings(); // Returns merged result
 ```
 
 ---
@@ -828,43 +893,51 @@ return (
 
 ## 9. EFFECTIVE SETTINGS CALCULATION
 
-### The Settings Hierarchy
+### The Settings Hierarchy (🆕 Updated 2025-10-06)
 
 ```
-EFFECTIVE SETTINGS = GENERAL → SPECIFIC → OVERRIDES
-                       ↑          ↑          ↑
-                     Base    Mode-based  User preference
+EFFECTIVE SETTINGS = TEMPLATE BASE → TEMPLATE OVERRIDES → SPECIFIC → OVERRIDES
+                          ↑                ↑                ↑          ↑
+                      Template     User customizations  Mode-based  User preference
 ```
+
+**Key Insight**: Template overrides persist when switching templates! 🎯
 
 ---
 
-### getEffectiveLineSettings Implementation
+### getEffectiveLineSettings Implementation (🆕 Updated)
 
 ```typescript
 const getEffectiveLineSettings = useCallback((mode?: ViewerMode): LineSettings => {
   const currentMode = mode || state.mode;
 
-  // Step 1: Start with General settings (base layer)
+  // Step 1: Start with Template Base (or General settings)
   let effective = { ...state.line };
 
-  // Step 2: Merge Specific settings (if exists for current mode)
-  if (currentMode === 'preview' && state.specific.line.preview) {
-    effective = { ...effective, ...state.specific.line.preview };
-  } else if (currentMode === 'completion' && state.specific.line.completion) {
-    effective = { ...effective, ...state.specific.line.completion };
+  // Step 2: 🆕 Apply Template Overrides (persist across template changes!)
+  if (state.templateOverrides.line) {
+    effective = { ...effective, ...state.templateOverrides.line };
   }
 
-  // Step 3: Merge Overrides (if enabled and exists for current mode)
-  if (state.overrideEnabled.line) {
-    if (currentMode === 'preview' && state.overrides.line.preview) {
-      effective = { ...effective, ...state.overrides.line.preview };
-    } else if (currentMode === 'completion' && state.overrides.line.completion) {
-      effective = { ...effective, ...state.overrides.line.completion };
-    }
+  // Step 3: Merge Specific settings (if exists for current mode)
+  if (currentMode !== 'normal' && state.specific.line[currentMode]) {
+    effective = { ...effective, ...state.specific.line[currentMode] };
+  }
+
+  // Step 4: Merge Overrides (if enabled and exists for current mode)
+  if (state.overrideEnabled.line && state.overrides.line[currentMode]) {
+    effective = { ...effective, ...state.overrides.line[currentMode] };
   }
 
   return effective;
-}, [state.line, state.specific.line, state.overrides.line, state.overrideEnabled.line, state.mode]);
+}, [
+  state.line,
+  state.templateOverrides.line,  // 🆕 Template overrides dependency
+  state.specific.line,
+  state.overrides.line,
+  state.overrideEnabled.line,
+  state.mode
+]);
 ```
 
 ---
