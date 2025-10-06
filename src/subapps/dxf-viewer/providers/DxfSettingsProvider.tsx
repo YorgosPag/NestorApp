@@ -146,38 +146,54 @@ export const globalRulerStore = createRulerStore();
 export type ViewerMode = 'normal' | 'preview' | 'completion';
 
 // 🆕 MERGE: Specific settings structure (from ConfigurationProvider)
+// 🔧 EXTENDED (2025-10-06): Added draft/hover/selection modes for enterprise CAD standard
 interface SpecificSettings {
   line: {
-    preview?: Partial<LineSettings>;
-    completion?: Partial<LineSettings>;
+    draft?: Partial<LineSettings>;      // 🆕 Προσχεδίαση (Drawing preview - first click)
+    hover?: Partial<LineSettings>;      // 🆕 Αιώρηση (Mouse hover state)
+    selection?: Partial<LineSettings>;  // 🆕 Επιλογή (Selected entity state)
+    completion?: Partial<LineSettings>; // ✅ Ολοκλήρωση (Final entity state)
   };
   text: {
-    preview?: Partial<TextSettings>;
+    draft?: Partial<TextSettings>;      // 🆕 RENAMED from 'preview' for consistency
   };
   grip: {
-    preview?: Partial<GripSettings>;
+    draft?: Partial<GripSettings>;      // 🆕 RENAMED from 'preview' for consistency
   };
 }
 
 // 🆕 MERGE: Override settings structure (from ConfigurationProvider)
+// 🔧 EXTENDED (2025-10-06): Added draft/hover/selection modes for enterprise CAD standard
 interface OverrideSettings {
   line: {
-    preview?: Partial<LineSettings>;
-    completion?: Partial<LineSettings>;
+    draft?: Partial<LineSettings>;      // 🆕 Προσχεδίαση overrides
+    hover?: Partial<LineSettings>;      // 🆕 Αιώρηση overrides
+    selection?: Partial<LineSettings>;  // 🆕 Επιλογή overrides
+    completion?: Partial<LineSettings>; // ✅ Ολοκλήρωση overrides
   };
   text: {
-    preview?: Partial<TextSettings>;
+    draft?: Partial<TextSettings>;      // 🆕 RENAMED from 'preview' for consistency
   };
   grip: {
-    preview?: Partial<GripSettings>;
+    draft?: Partial<GripSettings>;      // 🆕 RENAMED from 'preview' for consistency
   };
 }
 
 // 🆕 MERGE: Override enabled flags
+// 🔧 EXTENDED (2025-10-06): Per-mode override flags for granular control
 interface OverrideEnabledFlags {
-  line: boolean;
-  text: boolean;
-  grip: boolean;
+  line: {
+    draft: boolean;      // 🆕 Προσχεδίαση override enabled
+    hover: boolean;      // 🆕 Αιώρηση override enabled
+    selection: boolean;  // 🆕 Επιλογή override enabled
+    completion: boolean; // 🆕 Ολοκλήρωση override enabled
+  };
+  text: {
+    draft: boolean;      // 🆕 Κείμενο προσχεδίασης override enabled
+  };
+  grip: {
+    draft: boolean;      // 🆕 Grips προσχεδίασης override enabled
+  };
 }
 
 // 🆕 TEMPLATE OVERRIDES: User customizations on top of templates
@@ -233,16 +249,17 @@ type SettingsAction =
   | { type: 'RESET_TO_DEFAULTS' }
 
   // ===== NEW: MODE-BASED ACTIONS (from ConfigurationProvider) =====
+  // 🔧 EXTENDED (2025-10-06): Per-mode actions for draft/hover/selection/completion
   | { type: 'SET_MODE'; payload: ViewerMode }
-  | { type: 'UPDATE_SPECIFIC_LINE_SETTINGS'; payload: { mode: 'preview' | 'completion'; settings: Partial<LineSettings> } }
-  | { type: 'UPDATE_SPECIFIC_TEXT_SETTINGS'; payload: { mode: 'preview'; settings: Partial<TextSettings> } }
-  | { type: 'UPDATE_SPECIFIC_GRIP_SETTINGS'; payload: { mode: 'preview'; settings: Partial<GripSettings> } }
-  | { type: 'UPDATE_LINE_OVERRIDES'; payload: { mode: 'preview' | 'completion'; settings: Partial<LineSettings> } }
-  | { type: 'UPDATE_TEXT_OVERRIDES'; payload: { mode: 'preview'; settings: Partial<TextSettings> } }
-  | { type: 'UPDATE_GRIP_OVERRIDES'; payload: { mode: 'preview'; settings: Partial<GripSettings> } }
-  | { type: 'TOGGLE_LINE_OVERRIDE'; payload: boolean }
-  | { type: 'TOGGLE_TEXT_OVERRIDE'; payload: boolean }
-  | { type: 'TOGGLE_GRIP_OVERRIDE'; payload: boolean }
+  | { type: 'UPDATE_SPECIFIC_LINE_SETTINGS'; payload: { mode: 'draft' | 'hover' | 'selection' | 'completion'; settings: Partial<LineSettings> } }
+  | { type: 'UPDATE_SPECIFIC_TEXT_SETTINGS'; payload: { mode: 'draft'; settings: Partial<TextSettings> } }
+  | { type: 'UPDATE_SPECIFIC_GRIP_SETTINGS'; payload: { mode: 'draft'; settings: Partial<GripSettings> } }
+  | { type: 'UPDATE_LINE_OVERRIDES'; payload: { mode: 'draft' | 'hover' | 'selection' | 'completion'; settings: Partial<LineSettings> } }
+  | { type: 'UPDATE_TEXT_OVERRIDES'; payload: { mode: 'draft'; settings: Partial<TextSettings> } }
+  | { type: 'UPDATE_GRIP_OVERRIDES'; payload: { mode: 'draft'; settings: Partial<GripSettings> } }
+  | { type: 'TOGGLE_LINE_OVERRIDE'; payload: { mode: 'draft' | 'hover' | 'selection' | 'completion'; enabled: boolean } }
+  | { type: 'TOGGLE_TEXT_OVERRIDE'; payload: { mode: 'draft'; enabled: boolean } }
+  | { type: 'TOGGLE_GRIP_OVERRIDE'; payload: { mode: 'draft'; enabled: boolean } }
 
   // ===== TEMPLATE SYSTEM ACTIONS (2025-10-06) =====
   | { type: 'APPLY_LINE_TEMPLATE'; payload: { templateName: string; settings: LineSettings } }
@@ -264,16 +281,17 @@ interface DxfSettingsContextType {
   resetToDefaults: () => void;
 
   // ===== NEW: MODE-BASED ACTIONS (from ConfigurationProvider) =====
+  // 🔧 EXTENDED (2025-10-06): Per-mode methods for draft/hover/selection/completion
   setMode: (mode: ViewerMode) => void;
-  updateSpecificLineSettings: (mode: 'preview' | 'completion', settings: Partial<LineSettings>) => void;
-  updateSpecificTextSettings: (mode: 'preview', settings: Partial<TextSettings>) => void;
-  updateSpecificGripSettings: (mode: 'preview', settings: Partial<GripSettings>) => void;
-  updateLineOverrides: (mode: 'preview' | 'completion', settings: Partial<LineSettings>) => void;
-  updateTextOverrides: (mode: 'preview', settings: Partial<TextSettings>) => void;
-  updateGripOverrides: (mode: 'preview', settings: Partial<GripSettings>) => void;
-  toggleLineOverride: (enabled: boolean) => void;
-  toggleTextOverride: (enabled: boolean) => void;
-  toggleGripOverride: (enabled: boolean) => void;
+  updateSpecificLineSettings: (mode: 'draft' | 'hover' | 'selection' | 'completion', settings: Partial<LineSettings>) => void;
+  updateSpecificTextSettings: (mode: 'draft', settings: Partial<TextSettings>) => void;
+  updateSpecificGripSettings: (mode: 'draft', settings: Partial<GripSettings>) => void;
+  updateLineOverrides: (mode: 'draft' | 'hover' | 'selection' | 'completion', settings: Partial<LineSettings>) => void;
+  updateTextOverrides: (mode: 'draft', settings: Partial<TextSettings>) => void;
+  updateGripOverrides: (mode: 'draft', settings: Partial<GripSettings>) => void;
+  toggleLineOverride: (mode: 'draft' | 'hover' | 'selection' | 'completion', enabled: boolean) => void;
+  toggleTextOverride: (mode: 'draft', enabled: boolean) => void;
+  toggleGripOverride: (mode: 'draft', enabled: boolean) => void;
 
   // ===== NEW: EFFECTIVE SETTINGS CALCULATION (from ConfigurationProvider) =====
   getEffectiveLineSettings: (mode?: ViewerMode) => LineSettings;
@@ -369,54 +387,87 @@ const initialState: DxfSettingsState = {
 
   // ===== NEW: MODE-BASED SETTINGS (from ConfigurationProvider) =====
   mode: 'normal',  // 🆕 MERGE: Default mode is 'normal'
-  specific: {      // 🆕 MERGE: Specific settings per mode
+  specific: {      // 🆕 MERGE: Specific settings per mode (CAD enterprise standard)
     line: {
-      preview: {
+      // 🆕 Προσχεδίαση (Draft) - First click, temporary line
+      draft: {
         lineType: 'dashed',
-        color: '#FFFF00',    // Yellow for preview (AutoCAD standard)
-        opacity: 0.7
+        color: '#FFFF00',    // ✅ AutoCAD ACI 2: Yellow for draft
+        opacity: 0.7,
+        lineWidth: 0.25
       },
+      // 🆕 Αιώρηση (Hover) - Mouse over entity
+      hover: {
+        lineType: 'solid',
+        color: '#FF8C00',    // ✅ AutoCAD: Orange for hover
+        opacity: 0.8,
+        lineWidth: 0.35
+      },
+      // 🆕 Επιλογή (Selection) - Entity selected
+      selection: {
+        lineType: 'solid',
+        color: '#00BFFF',    // ✅ AutoCAD: Light blue for selection
+        opacity: 1.0,
+        lineWidth: 0.35
+      },
+      // ✅ Ολοκλήρωση (Completion) - Final entity state
       completion: {
         lineType: 'solid',
-        color: '#00FF00',    // Green for completion (AutoCAD standard)
-        opacity: 1.0
+        color: '#00FF00',    // ✅ AutoCAD ACI 3: Green for completion
+        opacity: 1.0,
+        lineWidth: 0.25
       }
     },
     text: {
-      preview: {
-        color: '#FFFF00',    // Yellow for text preview
-        opacity: 0.8
+      // 🆕 Προσχεδίαση (Draft) - Temporary text
+      draft: {
+        color: '#FFFF00',    // ✅ Yellow for text draft
+        opacity: 0.8,
+        fontSize: 2.5
       }
     },
     grip: {
-      preview: {
+      // 🆕 Προσχεδίαση (Draft) - Grips during drawing
+      draft: {
         colors: {
-          cold: '#0000FF',   // Blue - unselected
-          warm: '#FF69B4',   // Hot Pink - hover
-          hot: '#FF0000',    // Red - selected
-          contour: '#000000' // Black contour
+          cold: '#0000FF',   // ✅ Blue - unselected
+          warm: '#FF69B4',   // ✅ Hot Pink - hover
+          hot: '#FF0000',    // ✅ Red - selected
+          contour: '#000000' // ✅ Black contour
         },
         gripSize: 8,
-        showGrips: true
+        showGrips: true,
+        opacity: 0.9
       }
     }
   },
   overrides: {     // 🆕 MERGE: User overrides (empty by default)
     line: {
-      preview: {},
+      draft: {},
+      hover: {},
+      selection: {},
       completion: {}
     },
     text: {
-      preview: {}
+      draft: {}
     },
     grip: {
-      preview: {}
+      draft: {}
     }
   },
-  overrideEnabled: { // 🆕 MERGE: Override flags (disabled by default)
-    line: false,
-    text: false,
-    grip: false
+  overrideEnabled: { // 🆕 MERGE: Per-mode override flags (disabled by default)
+    line: {
+      draft: false,
+      hover: false,
+      selection: false,
+      completion: false
+    },
+    text: {
+      draft: false
+    },
+    grip: {
+      draft: false
+    }
   },
 
   // ===== TEMPLATE SYSTEM (2025-10-06) =====
@@ -607,29 +658,41 @@ function settingsReducer(state: DxfSettingsState, action: SettingsAction): DxfSe
       };
 
     case 'TOGGLE_LINE_OVERRIDE':
+      // 🔧 FIXED (2025-10-06): Per-mode override toggle for line
       return {
         ...state,
         overrideEnabled: {
           ...state.overrideEnabled,
-          line: action.payload
+          line: {
+            ...state.overrideEnabled.line,
+            [action.payload.mode]: action.payload.enabled
+          }
         }
       };
 
     case 'TOGGLE_TEXT_OVERRIDE':
+      // 🔧 FIXED (2025-10-06): Per-mode override toggle for text
       return {
         ...state,
         overrideEnabled: {
           ...state.overrideEnabled,
-          text: action.payload
+          text: {
+            ...state.overrideEnabled.text,
+            [action.payload.mode]: action.payload.enabled
+          }
         }
       };
 
     case 'TOGGLE_GRIP_OVERRIDE':
+      // 🔧 FIXED (2025-10-06): Per-mode override toggle for grip
       return {
         ...state,
         overrideEnabled: {
           ...state.overrideEnabled,
-          grip: action.payload
+          grip: {
+            ...state.overrideEnabled.grip,
+            [action.payload.mode]: action.payload.enabled
+          }
         }
       };
 
@@ -1334,40 +1397,43 @@ export function DxfSettingsProvider({ children }: { children: React.ReactNode })
     dispatch({ type: 'SET_MODE', payload: mode });
   }, []);
 
-  const updateSpecificLineSettings = useCallback((mode: 'preview' | 'completion', settings: Partial<LineSettings>) => {
+  // 🔧 FIXED (2025-10-06): Per-mode specific settings methods
+  const updateSpecificLineSettings = useCallback((mode: 'draft' | 'hover' | 'selection' | 'completion', settings: Partial<LineSettings>) => {
     dispatch({ type: 'UPDATE_SPECIFIC_LINE_SETTINGS', payload: { mode, settings } });
   }, []);
 
-  const updateSpecificTextSettings = useCallback((mode: 'preview', settings: Partial<TextSettings>) => {
+  const updateSpecificTextSettings = useCallback((mode: 'draft', settings: Partial<TextSettings>) => {
     dispatch({ type: 'UPDATE_SPECIFIC_TEXT_SETTINGS', payload: { mode, settings } });
   }, []);
 
-  const updateSpecificGripSettings = useCallback((mode: 'preview', settings: Partial<GripSettings>) => {
+  const updateSpecificGripSettings = useCallback((mode: 'draft', settings: Partial<GripSettings>) => {
     dispatch({ type: 'UPDATE_SPECIFIC_GRIP_SETTINGS', payload: { mode, settings } });
   }, []);
 
-  const updateLineOverrides = useCallback((mode: 'preview' | 'completion', settings: Partial<LineSettings>) => {
+  // 🔧 FIXED (2025-10-06): Per-mode override methods
+  const updateLineOverrides = useCallback((mode: 'draft' | 'hover' | 'selection' | 'completion', settings: Partial<LineSettings>) => {
     dispatch({ type: 'UPDATE_LINE_OVERRIDES', payload: { mode, settings } });
   }, []);
 
-  const updateTextOverrides = useCallback((mode: 'preview', settings: Partial<TextSettings>) => {
+  const updateTextOverrides = useCallback((mode: 'draft', settings: Partial<TextSettings>) => {
     dispatch({ type: 'UPDATE_TEXT_OVERRIDES', payload: { mode, settings } });
   }, []);
 
-  const updateGripOverrides = useCallback((mode: 'preview', settings: Partial<GripSettings>) => {
+  const updateGripOverrides = useCallback((mode: 'draft', settings: Partial<GripSettings>) => {
     dispatch({ type: 'UPDATE_GRIP_OVERRIDES', payload: { mode, settings } });
   }, []);
 
-  const toggleLineOverride = useCallback((enabled: boolean) => {
-    dispatch({ type: 'TOGGLE_LINE_OVERRIDE', payload: enabled });
+  // 🔧 FIXED (2025-10-06): Per-mode toggle methods
+  const toggleLineOverride = useCallback((mode: 'draft' | 'hover' | 'selection' | 'completion', enabled: boolean) => {
+    dispatch({ type: 'TOGGLE_LINE_OVERRIDE', payload: { mode, enabled } });
   }, []);
 
-  const toggleTextOverride = useCallback((enabled: boolean) => {
-    dispatch({ type: 'TOGGLE_TEXT_OVERRIDE', payload: enabled });
+  const toggleTextOverride = useCallback((mode: 'draft', enabled: boolean) => {
+    dispatch({ type: 'TOGGLE_TEXT_OVERRIDE', payload: { mode, enabled } });
   }, []);
 
-  const toggleGripOverride = useCallback((enabled: boolean) => {
-    dispatch({ type: 'TOGGLE_GRIP_OVERRIDE', payload: enabled });
+  const toggleGripOverride = useCallback((mode: 'draft', enabled: boolean) => {
+    dispatch({ type: 'TOGGLE_GRIP_OVERRIDE', payload: { mode, enabled } });
   }, []);
 
   // ===== TEMPLATE SYSTEM METHODS (2025-10-06) =====
