@@ -3,7 +3,7 @@
  * Κεντρική κλάση για όλες τις zoom λειτουργίες
  *
  * ⚠️  ΠΡΙΝ ΔΗΜΙΟΥΡΓΗΣΕΙΣ CUSTOM ZOOM LOGIC:
- * 📖 Architecture Guide: src/subapps/dxf-viewer/centralized_systems.md
+ * 📖 Architecture Guide: src/subapps/dxf-viewer/docs/CENTRALIZED_SYSTEMS.md
  * 🔍 Section: "Zoom & Pan" - Χρησιμοποίησε το κεντρικό ZoomManager
  *
  * 🏢 ENTERPRISE PATTERN: Centralized viewport management με state consistency

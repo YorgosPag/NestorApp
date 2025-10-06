@@ -195,7 +195,7 @@
 - [SETTINGS_ARCHITECTURE.md](../SETTINGS_ARCHITECTURE.md) - Overview (already created)
 - [LINE_DRAWING_SYSTEM.md](../LINE_DRAWING_SYSTEM.md) - Drawing tools
 - [DXF_LOADING_FLOW.md](../DXF_LOADING_FLOW.md) - File loading
-- [centralized_systems.md](../centralized_systems.md) - Centralization rules
+- [centralized_systems.md](../docs/CENTRALIZED_SYSTEMS.md) - Centralization rules
 
 ### External Resources
 - [AutoCAD ACI Color Standards](https://knowledge.autodesk.com/support/autocad/learn-explore/caas/CloudHelp/cloudhelp/2020/ENU/AutoCAD-Core/files/GUID-A0F4A32D-77A7-4F7E-8B8A-5E6D2E0A5E5E-htm.html)

@@ -7,7 +7,7 @@
 ### 🎯 **Αρχιτεκτονική Συστημάτων**
 **ΠΡΙΝ ΞΕΚΙΝΗΣΕΙΣ DEVELOPMENT**, διάβασε τον οδηγό αρχιτεκτονικής:
 
-📋 **[Centralized Systems Guide](./centralized_systems.md)**
+📋 **[Centralized Systems Guide](./docs/CENTRALIZED_SYSTEMS.md)**
 
 Αυτός ο οδηγός περιέχει:
 - ✅ 20 κύριες κατηγορίες κεντρικοποιημένων συστημάτων
@@ -81,7 +81,7 @@ const [selected, setSelected] = useState([]); // Bypass system
 
 ## 🎯 **Next Steps**
 
-1. Read the [Architecture Guide](./centralized_systems.md)
+1. Read the [Architecture Guide](./docs/CENTRALIZED_SYSTEMS.md)
 2. Explore the codebase following the centralized patterns
 3. Use factories and registries for extensibility
 4. Follow enterprise development practices

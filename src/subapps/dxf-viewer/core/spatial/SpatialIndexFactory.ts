@@ -3,7 +3,7 @@
  * Enterprise-level factory για intelligent spatial index creation
  *
  * ⚠️  ΠΡΙΝ ΔΗΜΙΟΥΡΓΗΣΕΙΣ ΝΕΟ SPATIAL INDEX:
- * 📖 Architecture Guide: src/subapps/dxf-viewer/centralized_systems.md
+ * 📖 Architecture Guide: src/subapps/dxf-viewer/docs/CENTRALIZED_SYSTEMS.md
  * 🔍 Section: "Spatial Indexing" - Βρες εάν υπάρχει ήδη κατάλληλο index
  *
  * 🏢 ENTERPRISE PATTERN: Central Factory για όλα τα spatial indices

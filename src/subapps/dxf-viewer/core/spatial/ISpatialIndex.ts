@@ -17,7 +17,7 @@ import type { Point2D } from '../../rendering/types/Types';
 /**
  * Base spatial indexable item
  *
- * @see centralized_systems.md - Spatial Indexing Systems
+ * @see docs/CENTRALIZED_SYSTEMS.md - Spatial Indexing Systems
  * @example
  * // Χρησιμοποίησε το SpatialFactory αντί να δημιουργείς custom items
  * const index = SpatialFactory.forHitTesting(bounds);

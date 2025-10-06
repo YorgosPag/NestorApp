@@ -858,7 +858,7 @@ console.log('Saved settings:', settings);
 
 - [DXF_LOADING_FLOW.md](./DXF_LOADING_FLOW.md) - File loading architecture
 - [LINE_DRAWING_SYSTEM.md](./LINE_DRAWING_SYSTEM.md) - Drawing tools documentation
-- [centralized_systems.md](./centralized_systems.md) - Centralization rules
+- [centralized_systems.md](./docs/CENTRALIZED_SYSTEMS.md) - Centralization rules
 
 ---
 

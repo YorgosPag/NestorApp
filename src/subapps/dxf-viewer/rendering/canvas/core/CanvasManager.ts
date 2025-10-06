@@ -3,7 +3,7 @@
  * ✅ ΦΑΣΗ 7: Central orchestrator για όλα τα canvas instances
  *
  * ⚠️  ΠΡΙΝ ΔΗΜΙΟΥΡΓΗΣΕΙΣ ΝΕΟ CANVAS INSTANCE:
- * 📖 Architecture Guide: src/subapps/dxf-viewer/centralized_systems.md
+ * 📖 Architecture Guide: src/subapps/dxf-viewer/docs/CENTRALIZED_SYSTEMS.md
  * 🔍 Section: "Canvas Management" - Χρησιμοποίησε το CanvasManager
  *
  * 🏢 ENTERPRISE PATTERN: Centralized canvas lifecycle με memory management

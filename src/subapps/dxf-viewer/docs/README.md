@@ -41,6 +41,13 @@ API reference και class listings
 - [API Reference](./reference/api-reference.md) - Public APIs και interfaces
 - [Type Definitions](./reference/types.md) - TypeScript type definitions
 
+### 📋 [Centralization Guide](./CENTRALIZED_SYSTEMS.md)
+Navigation pointer for all centralized systems
+- Rules for centralization (Single Source of Truth)
+- Quick lookup by feature ("I want to...")
+- Statistics and cross-reference table
+- Enterprise patterns και best practices
+
 ---
 
 ## 🎯 Getting Started

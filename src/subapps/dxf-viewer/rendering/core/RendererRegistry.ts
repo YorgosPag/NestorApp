@@ -3,7 +3,7 @@
  * ✅ CENTRALIZED: Plugin-like registration για entity renderers
  *
  * ⚠️  ΠΡΙΝ ΔΗΜΙΟΥΡΓΗΣΕΙΣ ΝΕΟ ENTITY RENDERER:
- * 📖 Architecture Guide: src/subapps/dxf-viewer/centralized_systems.md
+ * 📖 Architecture Guide: src/subapps/dxf-viewer/docs/CENTRALIZED_SYSTEMS.md
  * 🔍 Section: "Entity Management Systems" - Ελέγξε τους υπάρχοντες renderers
  *
  * 🏢 ENTERPRISE PATTERN: Registry Pattern για extensible rendering system

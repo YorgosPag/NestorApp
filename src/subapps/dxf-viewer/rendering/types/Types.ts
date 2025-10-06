@@ -9,7 +9,7 @@ import type { LineType } from '../settings-core/types';
 /**
  * Βασικό 2D point interface
  *
- * @see centralized_systems.md - Coordinate Systems
+ * @see docs/CENTRALIZED_SYSTEMS.md - Coordinate Systems
  * @example
  * // Χρησιμοποίησε CoordinateTransforms για μετατροπές
  * const screenPoint = CoordinateTransforms.worldToScreen(worldPoint, transform, viewport);
@@ -27,7 +27,7 @@ export interface Point3D extends Point2D {
 /**
  * Viewport transformation interface
  *
- * @see centralized_systems.md - Zoom & Pan Systems
+ * @see docs/CENTRALIZED_SYSTEMS.md - Zoom & Pan Systems
  * @example
  * // Χρησιμοποίησε ZoomManager αντί για manual transform manipulation
  * zoomManager.setTransform(newTransform);

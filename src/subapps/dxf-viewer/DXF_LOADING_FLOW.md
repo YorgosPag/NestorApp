@@ -328,7 +328,7 @@ onSceneImported={dxfProps.handleFileImport}
 ## 📚 RELATED DOCUMENTATION
 
 - [CANVAS_ECOSYSTEM_DEBUG_PLAN.md](./CANVAS_ECOSYSTEM_DEBUG_PLAN.md) - Canvas debugging guide
-- [centralized_systems.md](./centralized_systems.md) - Centralized systems overview
+- [centralized_systems.md](./docs/CENTRALIZED_SYSTEMS.md) - Centralized systems overview
 - [CLAUDE.md](../../../CLAUDE.md) - Work rules (ΔΕΚΑΛΟΓΟΣ)
 
 ---

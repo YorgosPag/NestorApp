@@ -6,7 +6,7 @@
 >
 > **Based On**:
 > - 📖 [CLAUDE.md](../../../CLAUDE.md) - ΔΕΚΑΛΟΓΟΣ ΕΡΓΑΣΙΑΣ (13 κανόνες)
-> - 📖 [centralized_systems.md](./centralized_systems.md) - ΚΑΝΟΝΕΣ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗΣ (9 συστήματα)
+> - 📖 [centralized_systems.md](./docs/CENTRALIZED_SYSTEMS.md) - ΚΑΝΟΝΕΣ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗΣ (9 συστήματα)
 > - 📖 [docs/](./docs/) - Enterprise Architecture Documentation
 
 ---
@@ -68,7 +68,7 @@
     - Ο Γιώργος ενδιαφέρεται **ΠΑΡΑ ΠΟΛΥ** για την κεντρικοποίηση
     - ΔΕΝ θέλει διάσπαρτους κώδικες
     - Όλα τα αρχεία πρέπει να χρησιμοποιούν τους κεντρικοποιημένους κώδικες/μεθόδους/λειτουργίες
-    - Πριν γράψω κώδικα, ελέγχω: [docs/](./docs/) και [centralized_systems.md](./centralized_systems.md)
+    - Πριν γράψω κώδικα, ελέγχω: [docs/](./docs/) και [centralized_systems.md](./docs/CENTRALIZED_SYSTEMS.md)
 
 13. **🚨 PROACTIVE CENTRALIZATION PROPOSALS**:
     - Όταν βλέπω διάσπαρτους κώδικες → ενημερώνω ΑΜΕΣΑ τον Γιώργο
@@ -76,7 +76,7 @@
     - Δίνω συγκεκριμένα paths και προτείνω centralized location
 
 14. **📝 ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ & ΤΕΚΜΗΡΙΩΣΗ**:
-    - Όταν κεντρικοποιώ → ενημερώνω **ΠΑΝΤΑ** το [centralized_systems.md](./centralized_systems.md)
+    - Όταν κεντρικοποιώ → ενημερώνω **ΠΑΝΤΑ** το [centralized_systems.md](./docs/CENTRALIZED_SYSTEMS.md)
     - Ενημερώνω τις σχετικές αναφορές (MD files) στο `src/md_files/diplotypa/`
     - Cross-reference μεταξύ αρχείων
 
@@ -84,7 +84,7 @@
 
 ## ✅ ΚΑΝΟΝΕΣ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗΣ
 
-> **Source**: [centralized_systems.md](./centralized_systems.md)
+> **Source**: [centralized_systems.md](./docs/CENTRALIZED_SYSTEMS.md)
 >
 > **Αυτοί είναι οι κανόνες για τα ΗΔΗ ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ συστήματα**
 
@@ -241,7 +241,7 @@
 ## 🗺️ CENTRALIZED SYSTEMS MAP
 
 **Reference First**: Πριν κάνεις ΟΠΟΙΑΔΗΠΟΤΕ αλλαγή, έλεγξε:
-- 📖 [centralized_systems.md](./centralized_systems.md) - Navigation pointer
+- 📖 [centralized_systems.md](./docs/CENTRALIZED_SYSTEMS.md) - Navigation pointer
 - 📖 [docs/architecture/coordinate-systems.md](./docs/architecture/coordinate-systems.md) - Coordinate transform rules
 - 📖 [docs/systems/zoom-pan.md](./docs/systems/zoom-pan.md) - Zoom system documentation
 

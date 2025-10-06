@@ -3,7 +3,7 @@
  * Manages registration and initialization of snap engines
  *
  * ⚠️  ΠΡΙΝ ΠΡΟΣΘΕΣΕΙΣ ΝΕΟ SNAP ENGINE:
- * 📖 Architecture Guide: src/subapps/dxf-viewer/centralized_systems.md
+ * 📖 Architecture Guide: src/subapps/dxf-viewer/docs/CENTRALIZED_SYSTEMS.md
  * 🔍 Section: "Snapping Systems" - Δες τους υπάρχοντες engines
  *
  * 🏢 ENTERPRISE PATTERN: Registry για extensible snap engine system

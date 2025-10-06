@@ -3,7 +3,7 @@
  * Centralized selection management system for entities and regions
  *
  * ⚠️  ΠΡΙΝ ΔΗΜΙΟΥΡΓΗΣΕΙΣ ΝΕΟ SELECTION LOGIC:
- * 📖 Architecture Guide: src/subapps/dxf-viewer/centralized_systems.md
+ * 📖 Architecture Guide: src/subapps/dxf-viewer/docs/CENTRALIZED_SYSTEMS.md
  * 🔍 Section: "Selection Systems" - Χρησιμοποίησε τα υπάρχοντα hooks και utilities
  *
  * 🏢 ENTERPRISE PATTERN: Centralized selection state με React hooks

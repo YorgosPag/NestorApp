@@ -3,7 +3,7 @@
  * Main orchestrator that coordinates snap engines using specialized components
  *
  * ⚠️  ΠΡΙΝ ΤΡΟΠΟΠΟΙΗΣΕΙΣ ΤΟ SNAPPING SYSTEM:
- * 📖 Architecture Guide: src/subapps/dxf-viewer/centralized_systems.md
+ * 📖 Architecture Guide: src/subapps/dxf-viewer/docs/CENTRALIZED_SYSTEMS.md
  * 🔍 Section: "Snapping Systems" - Κατάλαβε την αρχιτεκτονική πριν αλλάξεις
  *
  * 🏢 ENTERPRISE PATTERN: Orchestrator για coordination πολλαπλών snap engines
