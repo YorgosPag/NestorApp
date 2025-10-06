@@ -64,6 +64,7 @@ import type { TextSettings } from '../contexts/TextSettingsContext';
 import type { GripSettings } from '../types/gripSettings';
 import type { GridSettings, RulerSettings } from '../systems/rulers-grid/config';
 import type { CursorSettings } from '../systems/cursor/config';
+import type { LineTemplate } from '../contexts/LineSettingsContext';
 import { DEFAULT_GRID_SETTINGS, DEFAULT_RULER_SETTINGS } from '../systems/rulers-grid/config';
 import { DEFAULT_CURSOR_SETTINGS } from '../systems/cursor/config';
 import { textStyleStore } from '../stores/TextStyleStore';
@@ -733,6 +734,8 @@ function getMigrationDiagnostics(): { [key: string]: { hasNew: boolean; hasLegac
 
 function loadAllSettings(): Partial<DxfSettingsState> {
   try {
+    console.log('🔍 [DEBUG] loadAllSettings started - checking localStorage...');
+
     // 🔄 ΠΡΩΤΑ: Εκτέλεση comprehensive migration για legacy settings
     const migrationResults = performComprehensiveMigration();
     let migrationOccurred = false;
@@ -754,6 +757,15 @@ function loadAllSettings(): Partial<DxfSettingsState> {
     const ruler = localStorage.getItem(STORAGE_KEYS.ruler);   // 🆕 ΠΡΟΣΘΗΚΗ: Ruler loading
     const cursor = localStorage.getItem(STORAGE_KEYS.cursor); // 🆕 ΠΡΟΣΘΗΚΗ: Cursor loading (μετά τη migration)
 
+    console.log('🔍 [DEBUG] localStorage keys found:', {
+      line: !!line,
+      text: !!text,
+      grip: !!grip,
+      grid: !!grid,
+      ruler: !!ruler,
+      cursor: !!cursor
+    });
+
     const result: Partial<DxfSettingsState> = {};
 
     // ✅ ΕΛΕΓΧΟΣ VERSION - αν τα αποθηκευμένα δεδομένα δεν έχουν το σωστό version, χρησιμοποίησε defaults
@@ -761,10 +773,17 @@ function loadAllSettings(): Partial<DxfSettingsState> {
       const parsed = JSON.parse(line);
       const { __autosave_timestamp, __autosave_key, __standards_version, ...actualData } = parsed;
 
+      console.log('🔍 [DEBUG] Line settings version check:', {
+        saved: __standards_version,
+        expected: INTERNATIONAL_STANDARDS_VERSION,
+        match: __standards_version === INTERNATIONAL_STANDARDS_VERSION
+      });
+
       if (__standards_version === INTERNATIONAL_STANDARDS_VERSION) {
         result.line = { ...defaultLineSettings, ...actualData };
+        console.log('✅ [DEBUG] Line settings loaded from localStorage');
       } else {
-
+        console.warn('⚠️ [DEBUG] Line settings version mismatch - using defaults');
         result.line = defaultLineSettings;
       }
     }
@@ -861,6 +880,7 @@ function loadAllSettings(): Partial<DxfSettingsState> {
 function saveAllSettings(settings: Pick<DxfSettingsState, 'line' | 'text' | 'grip' | 'grid' | 'ruler' | 'cursor'>) {
   try {
     const timestamp = Date.now();
+    console.log('🔍 [DEBUG] saveAllSettings called with keys:', Object.keys(settings));
 
     Object.entries(STORAGE_KEYS).forEach(([key, storageKey]) => {
       const data = settings[key as keyof typeof settings];
@@ -877,8 +897,18 @@ function saveAllSettings(settings: Pick<DxfSettingsState, 'line' | 'text' | 'gri
         __autosave_key: storageKey,
         __standards_version: INTERNATIONAL_STANDARDS_VERSION
       };
+
+      console.log(`🔍 [DEBUG] Writing to localStorage:`, {
+        key: storageKey,
+        dataSize: JSON.stringify(dataWithMetadata).length,
+        hasData: !!data
+      });
+
       localStorage.setItem(storageKey, JSON.stringify(dataWithMetadata));
 
+      // 🔍 Verify write immediately
+      const readBack = localStorage.getItem(storageKey);
+      console.log(`🔍 [DEBUG] Verified write for ${storageKey}:`, readBack ? '✅ Success' : '❌ Failed');
     });
 
     return true;
@@ -1041,49 +1071,59 @@ export function DxfSettingsProvider({ children }: { children: React.ReactNode })
   //   }
   // }, [state.ruler, state.isLoaded]);
 
-  // 🚨 TEMPORARILY DISABLED: Auto-save causing infinite loops
-  // Auto-save function with debouncing
+  // ✅ AUTO-SAVE RE-ENABLED: Fixed infinite loop by using useRef for tracking
+  const settingsRef = React.useRef(state);
+
+  // Update ref when settings change (doesn't trigger re-render)
   useEffect(() => {
+    settingsRef.current = state;
+  }, [state]);
 
-    // Force set status to idle immediately
-    if (state.saveStatus !== 'idle') {
-      setTimeout(() => {
-        dispatch({ type: 'SET_SAVE_STATUS', payload: 'idle' });
-      }, 100);
+  // Auto-save function with 500ms debouncing
+  useEffect(() => {
+    if (!state.isLoaded) return;
+
+    // Clear previous timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
     }
-  }, [state.saveStatus]);
 
-  // ORIGINAL AUTO-SAVE (DISABLED)
-  // useEffect(() => {
-  //   if (!state.isLoaded) return;
+    // Set saving status (optimistic)
+    dispatch({ type: 'SET_SAVE_STATUS', payload: 'saving' });
 
-  //   if (saveTimeoutRef.current) {
-  //     clearTimeout(saveTimeoutRef.current);
-  //   }
-  //   dispatch({ type: 'SET_SAVE_STATUS', payload: 'saving' });
-  //   const emergencyTimeoutRef = setTimeout(() => {
-  //     console.warn('⚠️ [DxfSettings] Emergency timeout - resetting save status');
-  //     dispatch({ type: 'SET_SAVE_STATUS', payload: 'idle' });
-  //   }, 10000);
-  //   saveTimeoutRef.current = setTimeout(() => {
+    // Debounced save (500ms)
+    saveTimeoutRef.current = setTimeout(() => {
+      console.log('💾 [DxfSettings] Auto-saving settings...');
 
-  //     const success = saveAllSettings({
-  //       line: state.line, text: state.text, grip: state.grip,
-  //       grid: state.grid, ruler: state.ruler, cursor: state.cursor
-  //     });
-  //     clearTimeout(emergencyTimeoutRef);
-  //     if (success) {
+      const success = saveAllSettings({
+        line: settingsRef.current.line,
+        text: settingsRef.current.text,
+        grip: settingsRef.current.grip,
+        grid: settingsRef.current.grid,
+        ruler: settingsRef.current.ruler,
+        cursor: settingsRef.current.cursor
+      });
 
-  //       dispatch({ type: 'MARK_SAVED', payload: new Date() });
-  //       setTimeout(() => {
-  //         dispatch({ type: 'SET_SAVE_STATUS', payload: 'idle' });
-  //       }, 2000);
-  //     } else {
-  //       console.error('❌ [DxfSettings] Save failed, marking as error');
-  //       dispatch({ type: 'SET_SAVE_STATUS', payload: 'error' });
-  //     }
-  //   }, 500);
-  // }, [state.line, state.text, state.grip, state.grid, state.ruler, state.cursor, state.isLoaded]);
+      if (success) {
+        console.log('✅ [DxfSettings] Auto-save successful');
+        dispatch({ type: 'MARK_SAVED', payload: new Date() });
+        // Reset to idle after 1 second
+        setTimeout(() => {
+          dispatch({ type: 'SET_SAVE_STATUS', payload: 'idle' });
+        }, 1000);
+      } else {
+        console.error('❌ [DxfSettings] Auto-save failed');
+        dispatch({ type: 'SET_SAVE_STATUS', payload: 'error' });
+      }
+    }, 500);
+
+    // Cleanup
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [state.line, state.text, state.grip, state.grid, state.ruler, state.cursor, state.isLoaded]);
 
   // 🚨 REMOVED DUPLICATE: This was causing infinite save loop
 
@@ -1392,7 +1432,8 @@ export function useLineSettingsFromProvider() {
       settings: defaultLineSettings,
       updateSettings: () => {},
       resetToDefaults: () => {},
-      getCurrentDashPattern
+      getCurrentDashPattern,
+      applyTemplate: () => {}
     };
   }
 
@@ -1402,11 +1443,30 @@ export function useLineSettingsFromProvider() {
     return getDashArray(settings.line.lineType, settings.line.dashScale);
   };
 
+  const applyTemplate = (template: LineTemplate) => {
+    console.log('🔧 DxfSettingsProvider.applyTemplate called with:', template);
+    // Templates have settings nested inside - use template.settings
+    const templateSettings = template.settings || template;
+    updateLineSettings({
+      lineType: templateSettings.lineType,
+      lineWidth: templateSettings.lineWidth,
+      color: templateSettings.color,
+      opacity: templateSettings.opacity,
+      dashScale: templateSettings.dashScale,
+      dashOffset: templateSettings.dashOffset,
+      lineCap: templateSettings.lineCap,
+      lineJoin: templateSettings.lineJoin,
+      breakAtCenter: templateSettings.breakAtCenter
+    });
+    console.log('✅ DxfSettingsProvider.updateLineSettings called with:', templateSettings);
+  };
+
   return {
     settings: settings.line,
     updateSettings: updateLineSettings,
     resetToDefaults: () => updateLineSettings(defaultLineSettings),
-    getCurrentDashPattern
+    getCurrentDashPattern,
+    applyTemplate
   };
 }
 

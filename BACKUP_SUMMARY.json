@@ -1,53 +1,47 @@
 {
+  "timestamp": "2025-10-06T14:45:00Z",
   "category": "FIX",
-  "shortDescription": "Line Drawing System - Complete Fix & Integration",
-  "problem": "Η σχεδίαση γραμμών δεν λειτουργούσε καθόλου. Όταν ο χρήστης επέλεγε το εργαλείο Line και έκανε κλικ στο canvas, δεν εμφανιζόταν καμία γραμμή. Το σύστημα δεν ανταποκρινόταν στα clicks.",
-  "cause": "ΠΟΛΛΑΠΛΑ BUGS:\n\n1. **Bug #1 - Zoom-to-cursor shift**: Hardcoded margins (left: 80, top: 30) στο calculations.ts προκαλούσαν μετατόπιση του σημείου κάτω από τον κέρσορα κατά το zoom.\n\n2. **Bug #2 - Selection box blocking**: Το selection system καλούσε startSelection() για ΟΛΑ τα tools εκτός από 'pan', μπλοκάροντας τα drawing tools. Ο χρήστης διέγνωσε σωστά ότι \"τα selection boxes προηγούνται του κέρσορα\".\n\n3. **Bug #3 - Duplicate click handlers**: Υπήρχαν ΔΥΟ handlers (handleDxfCanvasClick + handleCanvasClick) που δημιουργούσαν routing conflicts. Το working version χρησιμοποιούσε ΜΟΝΟ ΜΙΑ handleCanvasClick.\n\n4. **Bug #4 - Event flow broken**: Το onCanvasClick prop δεν περνούσε στο useCentralizedMouseHandlers, σπάζοντας το event chain.\n\n5. **Bug #5 - Type mismatch**: dxfCanvasRef ήταν HTMLCanvasElement αντί για DxfCanvasRef, χωρίς πρόσβαση στη getCanvas() method.",
+  "shortDescription": "Auto-Save Settings Fixed + Template Selection UX Improvements",
+  "problem": "Critical bug: Auto-save was disabled (infinite loop issue), settings were NOT persisting after page reload. Additionally, template selection in Line Settings had UX issues: no preview updates, no checkmark for selected template, dropdown couldn't scroll to show all categories.",
+  "cause": "1) Auto-save infinite loop: useEffect dependency on 'state' caused re-renders → save → state update → infinite loop. 2) Template preview: applyTemplate function missing from DxfSettingsProvider. 3) Template settings: Code accessed template.lineType but actual structure is template.settings.lineType. 4) Dropdown scrolling: max-h-48 too small for all template categories.",
   "filesChanged": [
-    "src/subapps/dxf-viewer/components/dxf-layout/CanvasSection.tsx - Ολική αναδιοργάνωση click handling",
-    "src/subapps/dxf-viewer/systems/cursor/useCentralizedMouseHandlers.ts - Προσθήκη onCanvasClick prop & isDrawingTool check",
-    "src/subapps/dxf-viewer/canvas-v2/dxf-canvas/DxfCanvas.tsx - Προσθήκη onCanvasClick prop support",
-    "src/subapps/dxf-viewer/systems/zoom/utils/calculations.ts - Αφαίρεση hardcoded margins (Bug #1)",
-    "src/subapps/dxf-viewer/systems/zoom/ZoomManager.ts - Viewport Dependency Injection (Enterprise pattern)",
-    "src/subapps/dxf-viewer/systems/zoom/hooks/useZoom.ts - Viewport prop injection",
-    "src/subapps/dxf-viewer/docs/LINE_DRAWING_SYSTEM.md - Complete enterprise documentation (654a78d)"
+    "src/subapps/dxf-viewer/providers/DxfSettingsProvider.tsx (CRITICAL FIX - lines 862-902, 1045-1097)",
+    "src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/LineSettings.tsx (UX improvements)",
+    "src/subapps/dxf-viewer/docs/settings-system/03-DXFSETTINGSPROVIDER.md (Documentation updated)"
   ],
-  "solution": "ΠΛΗΡΗΣ ΑΝΑΔΙΟΡΓΑΝΩΣΗ ΣΕ 5 ΦΑΣΕΙΣ:\n\n**ΦΑΣΗ 1 - Zoom-to-cursor Fix (Bug #1)**:\n- Αφαιρέθηκαν hardcoded margins από calculations.ts\n- Τώρα χρησιμοποιεί centralized COORDINATE_LAYOUT.MARGINS\n- Viewport Dependency Injection pattern στο ZoomManager\n\n**ΦΑΣΗ 2 - Selection Blocking Fix (Bug #2)**:\n- Προσθήκη isDrawingTool check στο useCentralizedMouseHandlers\n- Skip startSelection() για drawing tools (line, polyline, polygon, circle, rectangle, arc)\n- Commit: 66efec8\n\n**ΦΑΣΗ 3 - Event Flow Chain (Bug #4)**:\n- Προσθήκη onCanvasClick prop στο CentralizedMouseHandlersProps interface\n- Κλήση onCanvasClick στο handleMouseUp με guards: !cursor.isSelecting && !panState.isPanning\n- Commit: 7274136\n\n**ΦΑΣΗ 4 - DxfCanvas Integration**:\n- Προσθήκη onCanvasClick στο DxfCanvasProps interface\n- Pass-through στο useCentralizedMouseHandlers\n- Commit: 3df0a89\n\n**ΦΑΣΗ 5 - Unification (Bug #3 & #5)**:\n- ΑΦΑΙΡΕΣΗ handleDxfCanvasClick (duplicate)\n- REFACTOR handleCanvasClick να χειρίζεται ΚΑΙ drawing tools ΚΑΙ overlays\n- Fix dxfCanvasRef type: HTMLCanvasElement → any (DxfCanvasRef)\n- Single source of truth για canvas clicks\n- Commit: 0e564de\n\n**ΑΡΧΙΤΕΚΤΟΝΙΚΗ:**\n```\nUser Click → onMouseUp\n  ↓\nhandleMouseUp (useCentralizedMouseHandlers)\n  ↓ (checks: !selecting && !panning)\nonCanvasClick callback\n  ↓\nhandleCanvasClick (CanvasSection)\n  ↓ (isDrawingTool check)\ngetCanvas() → screenToWorld transform\n  ↓\ndrawingHandlersRef.current.onDrawingPoint(worldPoint)\n  ↓\nEntity created! ✅\n```\n\n**DOCUMENTATION:**\n- Complete LINE_DRAWING_SYSTEM.md (1900+ γραμμές enterprise documentation)\n- Commit hash reference: 654a78d\n- Location: src/subapps/dxf-viewer/docs/LINE_DRAWING_SYSTEM.md",
-  "testing": "✅ ΠΛΗΡΗΣ ΔΟΚΙΜΗ:\n\n1. **Line Tool Selection**: Click Line → Auto-start drawing ✅\n2. **Canvas Click**: Click στο canvas → World coordinates calculated ✅\n3. **Entity Rendering**: Η γραμμή ΕΜΦΑΝΙΖΕΤΑΙ στο canvas! ✅\n4. **Zoom-to-cursor**: Σημείο κάτω από cursor παραμένει σταθερό ✅\n5. **Selection blocking**: Drawing tools ΔΕΝ μπλοκάρονται ✅\n\n**ΑΠΟΤΕΛΕΣΜΑ**: Ο χρήστης επιβεβαίωσε: \"Τώρα λειτουργεί εμφανίζεται η γραμμή\" 🎉",
-  "notes": "ΚΡΙΣΙΜΕΣ ΠΑΡΑΤΗΡΗΣΕΙΣ:\n\n1. **User Diagnosis**: Ο Γιώργος διέγνωσε ΣΩΣΤΑ το Bug #2 ρωτώντας: \"Μήπως σχετίζεται με το selection boxes μήπως ο κέρσορας προηγείται το selection boxes???\". Είχε 100% δίκιο!\n\n2. **Working Version Pattern**: Η λύση προήλθε από σύγκριση με working backup:\n   - Path: \"dxf-viewer (4). ΛΕΙΤΟΥΡΓΕΙ ΣΧΕΔΙΑΣΗ ΓΡΑΜΜΗΣ. ΟΜΩΣ ΑΛΛΑ ΘΕΜΑΤΑ ΕΧΕΙ\"\n   - Key insight: ΜΟΝΟ ΜΙΑ handleCanvasClick για ΚΑΙ ΤΑ ΔΥΟ canvas\n\n3. **Enterprise Patterns Applied**:\n   - Viewport Dependency Injection (ZoomManager)\n   - Unified event handling (single handleCanvasClick)\n   - Centralized configuration (COORDINATE_LAYOUT)\n\n4. **Debugging Challenges**:\n   - 4+ μήνες lost time thinking it was zoom issues\n   - Actual problem: Wrong prop name in ToolbarSection (onFileImport vs handleFileImport)\n   - See: DXF_LOADING_FLOW.md για complete prop chain documentation\n\n5. **DOCUMENTATION CREATED**:\n   - LINE_DRAWING_SYSTEM.md (1900+ lines) - Complete enterprise documentation\n   - Commit: 654a78d\n   - Includes: Architecture, Event Flow, State Management, Coordinate Systems, Preview System\n\n6. **ΜΕΛΛΟΝΤΙΚΑ**:\n   - Ο χρήστης ανέφερε \"άλλα θέματα\" που δεν διευκρίνισε ακόμα\n   - Backup πριν προχωρήσουμε σε επόμενα fixes",
+  "solution": {
+    "phase1": "Fixed auto-save infinite loop using useRef pattern - settingsRef tracks state without triggering re-renders",
+    "phase2": "Re-enabled auto-save with 500ms debounced save to localStorage (was DISABLED for months)",
+    "phase3": "Added comprehensive debug logging to saveAllSettings() and loadAllSettings() for troubleshooting",
+    "phase4": "Fixed template selection: Added applyTemplate function with nested settings support (template.settings.lineType)",
+    "phase5": "UX improvements: Added green checkmark (✓) for selected templates, increased dropdown max-height for scrolling, updated keyboard navigation to save activeTemplate"
+  },
+  "testing": "✅ Auto-save tested and verified working: Settings persist after F5 page reload. Console logs show successful localStorage writes with immediate verification. All 6 settings types (line, text, grip, grid, ruler, cursor) save correctly. Template selection tested with preview updates and checkmark display.",
+  "notes": [
+    "🚨 CRITICAL: Auto-save was disabled for MONTHS - this is a major bug fix that restores core functionality",
+    "✅ useRef pattern prevents infinite loops by tracking state without triggering re-renders",
+    "✅ Debug logging added: saveAllSettings logs all keys/sizes/verification, loadAllSettings logs version checking",
+    "✅ Version checking works correctly: '2024.09.21-ISO-AutoCAD-v3.0-GRIP-COLORS-FIXED' matches successfully",
+    "✅ All 6 localStorage keys verified: dxf-line-general-settings, dxf-text-general-settings, dxf-grip-general-settings, dxf-grid-specific-settings, dxf-ruler-specific-settings, dxf-cursor-specific-settings",
+    "✅ Template system fixed: Nested settings structure (template.settings) now handled correctly",
+    "✅ UX improvements: Users can now see which template is selected (checkmark) and scroll to see all categories",
+    "📊 localStorage data sizes: Line 510b, Text 352b, Grip 504b, Grid 658b, Ruler 1167b, Cursor 955b (total ~4KB)",
+    "🔍 Debug logs can be removed after stability confirmed (currently helpful for troubleshooting)"
+  ],
   "contributors": {
-    "user": "Γιώργος (giorgio-pc)",
-    "assistant": "Claude Code (Anthropic)",
-    "sessionDate": "2025-10-05"
+    "user": "Γιώργος Παγώνης",
+    "assistant": "Claude Code (Anthropic AI)",
+    "sessionDate": "2025-10-06"
   },
-  "relatedBackups": {
-    "workingReference": "dxf-viewer (4). ΛΕΙΤΟΥΡΓΕΙ ΣΧΕΔΙΑΣΗ ΓΡΑΜΜΗΣ. ΟΜΩΣ ΑΛΛΑ ΘΕΜΑΤΑ ΕΧΕΙ",
-    "previousBroken": "Multiple attempts over 4 months - DXF loading issues confused with zoom problems"
-  },
+  "relatedBackups": [
+    "settings-architecture-docs-20251006",
+    "configuration-provider-merge-20251006"
+  ],
   "commits": [
     {
-      "hash": "654a78d",
-      "message": "Implement: Line Drawing Settings Integration (Preview & Completion) - DOCUMENTATION"
-    },
-    {
-      "hash": "66efec8",
-      "message": "Fix: Selection box blocking drawing tools (Bug #2)"
-    },
-    {
-      "hash": "7274136",
-      "message": "Add onCanvasClick to handleMouseUp (complete event chain)"
-    },
-    {
-      "hash": "3df0a89",
-      "message": "DxfCanvas onCanvasClick prop integration"
-    },
-    {
-      "hash": "07e9590",
-      "message": "Fix getBoundingClientRect error (type mismatch)"
-    },
-    {
-      "hash": "0e564de",
-      "message": "Refactor: Unify canvas click handling - Use single handleCanvasClick function (FINAL FIX)"
+      "message": "Fix: Auto-Save Settings Re-Enabled + Template Selection UX",
+      "files": 3,
+      "description": "Critical bug fix: Auto-save was disabled due to infinite loops. Fixed with useRef pattern. Added debug logging. Template selection UX improvements (checkmark, scrolling, preview)."
     }
   ]
 }

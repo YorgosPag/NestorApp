@@ -417,6 +417,74 @@ lastSaved: new Date()
 
 ---
 
+### ⚠️ CRITICAL BUG FIX (2025-10-06)
+
+**Bug**: Auto-save was **DISABLED** (line 1045: "TEMPORARILY DISABLED: Auto-save causing infinite loops")
+- Settings were NOT being saved to localStorage
+- All changes were lost on page reload
+- Root cause: useEffect dependency on `state` caused re-renders → save → state update → infinite loop
+
+**Solution**: useRef pattern to break the infinite loop
+```typescript
+// ✅ FIXED: Use useRef to track state without triggering re-renders
+const settingsRef = React.useRef(state);
+
+// Update ref when settings change (doesn't trigger re-render)
+useEffect(() => {
+  settingsRef.current = state;
+}, [state]);
+
+// Auto-save function uses settingsRef.current instead of state directly
+useEffect(() => {
+  if (!state.isLoaded) return;
+
+  // Clear previous timeout
+  if (saveTimeoutRef.current) {
+    clearTimeout(saveTimeoutRef.current);
+  }
+
+  // Set saving status (optimistic)
+  dispatch({ type: 'SET_SAVE_STATUS', payload: 'saving' });
+
+  // Debounced save (500ms)
+  saveTimeoutRef.current = setTimeout(() => {
+    const success = saveAllSettings({
+      line: settingsRef.current.line,      // ✅ Use ref, not state
+      text: settingsRef.current.text,
+      grip: settingsRef.current.grip,
+      grid: settingsRef.current.grid,
+      ruler: settingsRef.current.ruler,
+      cursor: settingsRef.current.cursor
+    });
+
+    if (success) {
+      dispatch({ type: 'MARK_SAVED', payload: new Date() });
+      setTimeout(() => {
+        dispatch({ type: 'SET_SAVE_STATUS', payload: 'idle' });
+      }, 1000);
+    } else {
+      dispatch({ type: 'SET_SAVE_STATUS', payload: 'error' });
+    }
+  }, 500);
+
+  // Cleanup
+  return () => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+  };
+}, [state.line, state.text, state.grip, state.grid, state.ruler, state.cursor, state.isLoaded]);
+```
+
+**Debug Logging Added**:
+- `saveAllSettings()`: Logs all keys being saved, data size, and immediate verification
+- `loadAllSettings()`: Logs localStorage keys found and version checking
+- Helps track the full save → read cycle for troubleshooting
+
+**Result**: ✅ Auto-save now works perfectly! Settings persist after page reload.
+
+---
+
 ### Auto-Save Implementation
 
 ```typescript

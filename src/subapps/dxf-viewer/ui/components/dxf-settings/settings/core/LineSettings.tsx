@@ -230,7 +230,13 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
     ];
     const template = allTemplates.find(t => t.name === templateName);
     if (template) {
+      console.log('🎨 Applying template:', templateName, template);
       applyTemplate(template);
+      // Update activeTemplate to show checkmark
+      updateSettings({ activeTemplate: templateName });
+      console.log('✅ Template applied, activeTemplate set to:', templateName);
+    } else {
+      console.warn('⚠️ Template not found:', templateName);
     }
     setShowTemplateDropdown(false);
   };
@@ -268,7 +274,8 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           const template = allTemplates[index];
           if (template) {
             applyTemplate(template);
-            // Keep highlighting for keyboard navigation
+            updateSettings({ activeTemplate: template.name });
+            console.log('⌨️ Keyboard: Template applied:', template.name);
           }
         };
         break;
@@ -452,7 +459,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           {showTemplateDropdown && (
               <div
                 data-dropdown-content
-                className="absolute top-full left-0 right-0 mt-1 rounded-md shadow-2xl max-h-48 overflow-y-auto"
+                className="absolute top-full left-0 right-0 mt-1 rounded-md shadow-2xl max-h-96 overflow-y-auto"
                 style={{
                   zIndex: 99999999,
                   backgroundColor: '#374151',
@@ -476,18 +483,28 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
                         {templates.map((template, localIndex) => {
                           const globalTemplateIndex = categoryStartIndex + localIndex;
                           const isHighlighted = highlightedTemplateIndex === globalTemplateIndex;
+                          const isSelected = settings.activeTemplate === template.name;
                           return (
                             <button
                               key={template.name}
                               onClick={() => handleTemplateSelect(template.name)}
-                              className={`w-full px-3 py-2 text-left text-sm border-b border-gray-700 last:border-b-0 transition-colors ${
+                              className={`w-full px-3 py-2 text-left text-sm border-b border-gray-700 last:border-b-0 transition-colors flex items-start justify-between ${
                                 isHighlighted
                                   ? 'bg-blue-600 text-white'
                                   : 'text-white hover:bg-gray-600'
                               }`}
                             >
-                              <div className="font-medium">{template.name}</div>
-                              <div className="text-xs text-gray-400">{template.description}</div>
+                              <div className="flex-1">
+                                <div className="font-medium">{template.name}</div>
+                                <div className={`text-xs ${isHighlighted ? 'text-blue-200' : 'text-gray-400'}`}>
+                                  {template.description}
+                                </div>
+                              </div>
+                              {isSelected && (
+                                <svg className="w-5 h-5 text-green-400 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
                             </button>
                           );
                         })}
