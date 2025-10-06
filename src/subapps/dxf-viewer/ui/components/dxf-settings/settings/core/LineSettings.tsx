@@ -63,7 +63,7 @@ import { useUnifiedLinePreview, useUnifiedLineCompletion } from '../../../../hoo
 import type { LineTemplate } from '../../../../../contexts/LineSettingsContext';
 import { SharedColorPicker } from '../../../shared/SharedColorPicker';
 import { useSettingsUpdater, commonValidators } from '../../../../hooks/useSettingsUpdater';
-import { useNotifications } from '../../../../../../providers/NotificationProvider';
+import { useNotifications } from '../../../../../../../providers/NotificationProvider';
 import {
   LINE_TYPE_LABELS,
   LINE_CAP_LABELS,
