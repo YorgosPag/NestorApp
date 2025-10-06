@@ -296,6 +296,9 @@ interface DxfSettingsContextType {
   // State
   settings: DxfSettingsState;
 
+  // ✨ NEW (2025-10-06 - Phase 6): Raw dispatch for advanced use cases
+  dispatch: React.Dispatch<SettingsAction>;
+
   // ===== EXISTING ACTIONS =====
   updateLineSettings: (updates: Partial<LineSettings>) => void;
   updateTextSettings: (updates: Partial<TextSettings>) => void;
@@ -1787,6 +1790,7 @@ export function DxfSettingsProvider({ children }: { children: React.ReactNode })
 
   const contextValue = useMemo(() => ({
     settings: state,
+    dispatch,  // ✨ NEW (2025-10-06 - Phase 6): Expose raw dispatch
     // ===== EXISTING METHODS =====
     updateLineSettings,
     updateTextSettings,
@@ -2269,3 +2273,273 @@ export function useGripStyles(mode?: ViewerMode) {
 
 // ===== ViewerMode TYPE ALREADY EXPORTED at line 102 =====
 // export type { ViewerMode }; // ❌ Duplicate - Already exported above
+
+// ===== ENTERPRISE REFACTORING (2025-10-06): PHASE 6 - NEW PROVIDER HOOKS =====
+/**
+ * NEW PROVIDER HOOKS - Direct access to specific settings from Provider
+ *
+ * @enterprise_refactoring (2025-10-06 - Phase 6)
+ * These hooks provide direct access to specific settings (draft/hover/selection/completion)
+ * stored in the centralized DxfSettingsProvider. They replace useConsolidatedSettings.
+ *
+ * @benefits
+ * - ✅ Direct connection to Provider state (no local useState)
+ * - ✅ Auto-save persistence (500ms debounce)
+ * - ✅ Type-safe with discriminated union actions
+ * - ✅ Consistent API across all modes
+ * - ✅ getEffectiveSettings() respects override flags
+ *
+ * @usage
+ * ```tsx
+ * const draft = useLineDraftSettings();
+ * draft.updateSettings({ color: '#FF0000' });
+ * const effective = draft.getEffectiveSettings(); // Returns specific or general
+ * ```
+ *
+ * @see {@link docs/ENTERPRISE_REFACTORING_PLAN.md#phase-6} - Phase 6 documentation
+ * @see {@link docs/settings-system/04-HOOKS_REFERENCE.md} - Hooks reference (to be updated)
+ */
+
+/**
+ * useLineDraftSettings - Hook για Line Draft mode settings
+ *
+ * @description
+ * Provides access to Line Draft mode settings (Προσχεδίαση).
+ * Draft mode is used during line drawing preview (first click).
+ *
+ * @returns {Object} Hook result
+ * @returns {Partial<LineSettings> | undefined} settings - Current draft settings
+ * @returns {(updates: Partial<LineSettings>) => void} updateSettings - Update draft settings
+ * @returns {() => LineSettings} getEffectiveSettings - Get effective settings (specific or general)
+ * @returns {boolean} isOverrideEnabled - Is override enabled for draft mode?
+ * @returns {(enabled: boolean) => void} toggleOverride - Toggle override flag
+ */
+export function useLineDraftSettings() {
+  const { settings, dispatch } = useDxfSettings();
+
+  return useMemo(() => ({
+    settings: settings.specific.line.draft,
+    updateSettings: (updates: Partial<LineSettings>) => {
+      dispatch({
+        type: 'UPDATE_SPECIFIC_LINE_SETTINGS',
+        payload: { mode: 'draft', settings: updates }
+      });
+    },
+    getEffectiveSettings: (): LineSettings => {
+      // Check override flag
+      if (settings.overrideEnabled.line.draft) {
+        // Override ON: Check overrides first, fallback to specific
+        return {
+          ...settings.line,  // Start with general
+          ...settings.specific.line.draft,  // Apply specific
+          ...settings.overrides.line.draft  // Apply overrides (highest priority)
+        } as LineSettings;
+      } else {
+        // Override OFF: Use general settings
+        return settings.line;
+      }
+    },
+    isOverrideEnabled: settings.overrideEnabled.line.draft,
+    toggleOverride: (enabled: boolean) => {
+      dispatch({
+        type: 'TOGGLE_LINE_OVERRIDE',
+        payload: { mode: 'draft', enabled }
+      });
+    }
+  }), [settings, dispatch]);
+}
+
+/**
+ * useLineHoverSettings - Hook για Line Hover mode settings
+ *
+ * @description
+ * Provides access to Line Hover mode settings (Αιώρηση).
+ * Hover mode is used when mouse hovers over a line entity.
+ */
+export function useLineHoverSettings() {
+  const { settings, dispatch } = useDxfSettings();
+
+  return useMemo(() => ({
+    settings: settings.specific.line.hover,
+    updateSettings: (updates: Partial<LineSettings>) => {
+      dispatch({
+        type: 'UPDATE_SPECIFIC_LINE_SETTINGS',
+        payload: { mode: 'hover', settings: updates }
+      });
+    },
+    getEffectiveSettings: (): LineSettings => {
+      if (settings.overrideEnabled.line.hover) {
+        return {
+          ...settings.line,
+          ...settings.specific.line.hover,
+          ...settings.overrides.line.hover
+        } as LineSettings;
+      } else {
+        return settings.line;
+      }
+    },
+    isOverrideEnabled: settings.overrideEnabled.line.hover,
+    toggleOverride: (enabled: boolean) => {
+      dispatch({
+        type: 'TOGGLE_LINE_OVERRIDE',
+        payload: { mode: 'hover', enabled }
+      });
+    }
+  }), [settings, dispatch]);
+}
+
+/**
+ * useLineSelectionSettings - Hook για Line Selection mode settings
+ *
+ * @description
+ * Provides access to Line Selection mode settings (Επιλογή).
+ * Selection mode is used when a line entity is selected.
+ */
+export function useLineSelectionSettings() {
+  const { settings, dispatch } = useDxfSettings();
+
+  return useMemo(() => ({
+    settings: settings.specific.line.selection,
+    updateSettings: (updates: Partial<LineSettings>) => {
+      dispatch({
+        type: 'UPDATE_SPECIFIC_LINE_SETTINGS',
+        payload: { mode: 'selection', settings: updates }
+      });
+    },
+    getEffectiveSettings: (): LineSettings => {
+      if (settings.overrideEnabled.line.selection) {
+        return {
+          ...settings.line,
+          ...settings.specific.line.selection,
+          ...settings.overrides.line.selection
+        } as LineSettings;
+      } else {
+        return settings.line;
+      }
+    },
+    isOverrideEnabled: settings.overrideEnabled.line.selection,
+    toggleOverride: (enabled: boolean) => {
+      dispatch({
+        type: 'TOGGLE_LINE_OVERRIDE',
+        payload: { mode: 'selection', enabled }
+      });
+    }
+  }), [settings, dispatch]);
+}
+
+/**
+ * useLineCompletionSettings - Hook για Line Completion mode settings
+ *
+ * @description
+ * Provides access to Line Completion mode settings (Ολοκλήρωση).
+ * Completion mode is used when line drawing is finalized (second click).
+ */
+export function useLineCompletionSettings() {
+  const { settings, dispatch } = useDxfSettings();
+
+  return useMemo(() => ({
+    settings: settings.specific.line.completion,
+    updateSettings: (updates: Partial<LineSettings>) => {
+      dispatch({
+        type: 'UPDATE_SPECIFIC_LINE_SETTINGS',
+        payload: { mode: 'completion', settings: updates }
+      });
+    },
+    getEffectiveSettings: (): LineSettings => {
+      if (settings.overrideEnabled.line.completion) {
+        return {
+          ...settings.line,
+          ...settings.specific.line.completion,
+          ...settings.overrides.line.completion
+        } as LineSettings;
+      } else {
+        return settings.line;
+      }
+    },
+    isOverrideEnabled: settings.overrideEnabled.line.completion,
+    toggleOverride: (enabled: boolean) => {
+      dispatch({
+        type: 'TOGGLE_LINE_OVERRIDE',
+        payload: { mode: 'completion', enabled }
+      });
+    }
+  }), [settings, dispatch]);
+}
+
+/**
+ * useTextDraftSettings - Hook για Text Draft mode settings
+ *
+ * @description
+ * Provides access to Text Draft mode settings (Προσχεδίαση Κειμένου).
+ * Draft mode is used during text drawing preview.
+ */
+export function useTextDraftSettings() {
+  const { settings, dispatch } = useDxfSettings();
+
+  return useMemo(() => ({
+    settings: settings.specific.text.draft,
+    updateSettings: (updates: Partial<TextSettings>) => {
+      dispatch({
+        type: 'UPDATE_SPECIFIC_TEXT_SETTINGS',
+        payload: { mode: 'draft', settings: updates }
+      });
+    },
+    getEffectiveSettings: (): TextSettings => {
+      if (settings.overrideEnabled.text.draft) {
+        return {
+          ...settings.text,
+          ...settings.specific.text.draft,
+          ...settings.overrides.text.draft
+        } as TextSettings;
+      } else {
+        return settings.text;
+      }
+    },
+    isOverrideEnabled: settings.overrideEnabled.text.draft,
+    toggleOverride: (enabled: boolean) => {
+      dispatch({
+        type: 'TOGGLE_TEXT_OVERRIDE',
+        payload: { enabled }
+      });
+    }
+  }), [settings, dispatch]);
+}
+
+/**
+ * useGripDraftSettings - Hook για Grip Draft mode settings
+ *
+ * @description
+ * Provides access to Grip Draft mode settings (Προσχεδίαση Grips).
+ * Draft mode is used during grip visualization in drawing preview.
+ */
+export function useGripDraftSettings() {
+  const { settings, dispatch } = useDxfSettings();
+
+  return useMemo(() => ({
+    settings: settings.specific.grip.draft,
+    updateSettings: (updates: Partial<GripSettings>) => {
+      dispatch({
+        type: 'UPDATE_SPECIFIC_GRIP_SETTINGS',
+        payload: { mode: 'draft', settings: updates }
+      });
+    },
+    getEffectiveSettings: (): GripSettings => {
+      if (settings.overrideEnabled.grip.draft) {
+        return {
+          ...settings.grip,
+          ...settings.specific.grip.draft,
+          ...settings.overrides.grip.draft
+        } as GripSettings;
+      } else {
+        return settings.grip;
+      }
+    },
+    isOverrideEnabled: settings.overrideEnabled.grip.draft,
+    toggleOverride: (enabled: boolean) => {
+      dispatch({
+        type: 'TOGGLE_GRIP_OVERRIDE',
+        payload: { enabled }
+      });
+    }
+  }), [settings, dispatch]);
+}
