@@ -210,7 +210,7 @@ const effectiveGripSettings = useMemo(() => getEffectiveGripSettings(), [getEffe
 
 ## 📝 INVESTIGATION NOTES
 
-### Session 2025-10-06 (Evening)
+### Session 2025-10-06 (Evening) - Part 1: Initial Investigation
 
 **Participants**: Claude Code, Γιώργος Παγώνης
 
@@ -229,13 +229,65 @@ const effectiveGripSettings = useMemo(() => getEffectiveGripSettings(), [getEffe
 
 **Time Spent**: ~1 hour
 
-**Next Session Goals**:
-1. Add comprehensive debug logging to trace data flow
-2. Verify override flag propagation through hook chain
-3. Test React re-render triggers with React DevTools Profiler
-4. Consider alternative implementation if current approach is fundamentally flawed
+---
+
+### Session 2025-10-06 (Evening) - Part 2: Enterprise Refactoring (SOLUTION IN PROGRESS)
+
+**Participants**: Claude Code, Γιώργος Παγώνης
+
+**Decision**: Instead of patching the bug, implement **ENTERPRISE REFACTORING** to centralize all settings in DxfSettingsProvider.
+
+**Strategy**: 10-Phase plan to migrate Ειδικά Settings (Draft/Hover/Selection/Completion) from `useConsolidatedSettings` to centralized Provider.
+
+**Progress** (Phases 1-5 COMPLETE):
+
+1. ✅ **Phase 2: Backup** (Commit: `352b51b`)
+   - Full backup created in `F:\Pagonis_Nestor\backups\enterprise-refactoring-20251006`
+   - Git commit: "Pre-refactoring: Save working state before Enterprise Settings migration"
+
+2. ✅ **Phase 3: Extended State Structure** (Commit: `dc460fe`)
+   - Extended `SpecificSettings` interface with draft/hover/selection/completion modes
+   - Updated `OverrideEnabledFlags` to per-mode objects (not booleans)
+   - Added AutoCAD-standard default colors (Yellow, Orange, Light Blue, Green)
+   - File: `providers/DxfSettingsProvider.tsx` (lines 148-197, 386-469)
+
+3. ✅ **Phase 4: Updated Reducer & Actions** (Commit: `dc460fe`)
+   - Added 12 new action types for line/text/grip × draft/hover/selection/completion
+   - Updated reducer cases to handle per-mode structure
+   - Updated context methods (toggleLineOverride, updateSpecificLineSettings, etc.)
+   - File: `providers/DxfSettingsProvider.tsx` (lines 659-696, 1400-1435)
+
+4. ✅ **Phase 5: localStorage Persistence** (Commit: `91bc405`)
+   - Extended STORAGE_KEYS with 7 new keys:
+     - `dxf-line-specific-settings`, `dxf-text-specific-settings`, `dxf-grip-specific-settings`
+     - `dxf-line-overrides`, `dxf-text-overrides`, `dxf-grip-overrides`
+     - `dxf-override-enabled-flags`
+   - Updated `saveAllSettings()` to persist all new settings types
+   - Updated `loadAllSettings()` to restore with version checking
+   - Integrated with auto-save mechanism (500ms debounce)
+   - File: `providers/DxfSettingsProvider.tsx` (lines 757-782, 1035-1241, 1419-1431)
+
+**Files Modified** (Total):
+- `providers/DxfSettingsProvider.tsx`: +404 lines, -42 lines (1600 → 1962 lines)
+
+**Commits**:
+- `352b51b`: Pre-refactoring backup
+- `dc460fe`: Phases 3+4 - Extended state structure + reducer actions
+- `91bc405`: Phase 5 - localStorage persistence
+
+**Time Spent**: ~3 hours (Phases 2-5)
+
+**Next Steps** (Phases 6-10):
+1. Phase 6: Create Provider Hooks (useLineDraftSettings, useLineHoverSettings, etc.)
+2. Phase 7: Migrate useUnifiedSpecificSettings to use Provider hooks
+3. Phase 8: Remove useConsolidatedSettings (cleanup)
+4. Phase 9: Update Auto-Save Status Component
+5. Phase 10: Final Testing & Documentation
+
+**Expected Result**: Bug will be fixed as side effect of centralization - settings will persist and update correctly when override is ON.
 
 ---
 
-**Last Updated**: 2025-10-06
-**Status**: 1 Active Bug, 0 Fixed Bugs
+**Last Updated**: 2025-10-06 (Evening)
+**Status**: 1 Active Bug (being fixed via enterprise refactoring), 0 Fixed Bugs
+**Documentation**: See `docs/ENTERPRISE_REFACTORING_PLAN.md` for complete 10-phase plan

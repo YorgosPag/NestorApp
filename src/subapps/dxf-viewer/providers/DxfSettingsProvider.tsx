@@ -42,20 +42,30 @@
  * const effectiveSettings = getEffectiveLineSettings('preview');
  * ```
  *
- * @see {@link docs/settings-system/03-DXFSETTINGSPROVIDER.md} - Complete documentation (1,006 lines)
+ * @see {@link docs/settings-system/03-DXFSETTINGSPROVIDER.md} - Complete documentation (1,577 lines)
+ * @see {@link docs/settings-system/03-DXFSETTINGSPROVIDER.md#11-enterprise-refactoring-2025-10-06-} - Enterprise Refactoring (Phases 2-5)
  * @see {@link docs/settings-system/01-ARCHITECTURE_OVERVIEW.md} - Architecture diagrams
  * @see {@link docs/settings-system/06-SETTINGS_FLOW.md} - Settings lifecycle flow
  * @see {@link docs/SETTINGS_ARCHITECTURE.md} - Overview
+ * @see {@link docs/ENTERPRISE_REFACTORING_PLAN.md} - 10-Phase refactoring plan
+ * @see {@link docs/settings-system/BUGFIX_LOG.md} - Bug tracking & investigation notes
  *
  * @migration
  * Automatically migrates from legacy keys:
- * - 'line-settings' → 'dxf-settings-v1'.line
- * - 'text-settings' → 'dxf-settings-v1'.text
- * - 'grip-settings' → 'dxf-settings-v1'.grip
+ * - 'line-settings' → 'dxf-line-general-settings'
+ * - 'text-settings' → 'dxf-text-general-settings'
+ * - 'grip-settings' → 'dxf-grip-general-settings'
+ *
+ * @enterprise_refactoring (2025-10-06)
+ * Extended with CAD-standard modes (Phases 2-5 complete):
+ * - ✅ Phase 3: Extended SpecificSettings with draft/hover/selection/completion (lines 148-197)
+ * - ✅ Phase 4: Updated reducer with per-mode actions (lines 659-696)
+ * - ✅ Phase 5: Complete localStorage persistence (7 new keys, lines 757-782, 1035-1241)
+ * - ⏸️ Phase 6-10: Provider hooks, migration, cleanup, testing (pending)
  *
  * @author Γιώργος Παγώνης + Claude Code (Anthropic AI)
  * @since 2025-10-06
- * @version 1.0.0
+ * @version 1.1.0 (Enterprise Refactoring - Draft/Hover/Selection/Completion modes)
  */
 
 import React, { createContext, useContext, useReducer, useEffect, useCallback, useMemo } from 'react';
@@ -147,6 +157,21 @@ export type ViewerMode = 'normal' | 'preview' | 'completion';
 
 // 🆕 MERGE: Specific settings structure (from ConfigurationProvider)
 // 🔧 EXTENDED (2025-10-06): Added draft/hover/selection modes for enterprise CAD standard
+/**
+ * SpecificSettings - Mode-specific settings (Draft/Hover/Selection/Completion)
+ *
+ * @description
+ * Ειδικές ρυθμίσεις ανά mode για κάθε entity type (Line, Text, Grip).
+ * Αυτές οι ρυθμίσεις εφαρμόζονται όταν το entity βρίσκεται σε συγκεκριμένο mode.
+ *
+ * @enterprise_refactoring (2025-10-06 - Phase 3)
+ * - Added 4 CAD-standard modes: draft, hover, selection, completion
+ * - AutoCAD color standards: Yellow, Orange, Light Blue, Green
+ * - Per-mode granular control (not global boolean)
+ *
+ * @see {@link docs/settings-system/03-DXFSETTINGSPROVIDER.md#2-state-structure} - State structure documentation
+ * @see {@link docs/settings-system/03-DXFSETTINGSPROVIDER.md#11-enterprise-refactoring-2025-10-06-} - Enterprise refactoring details
+ */
 interface SpecificSettings {
   line: {
     draft?: Partial<LineSettings>;      // 🆕 Προσχεδίαση (Drawing preview - first click)
@@ -754,6 +779,29 @@ function settingsReducer(state: DxfSettingsState, action: SettingsAction): DxfSe
 
 // ===== PERSISTENCE UTILITIES =====
 
+/**
+ * STORAGE_KEYS - localStorage keys for all settings types
+ *
+ * @description
+ * Κεντρικός πίνακας με τα keys που χρησιμοποιούνται για αποθήκευση στο localStorage.
+ * Κάθε setting type έχει το δικό του key για granular control και καλύτερο debugging.
+ *
+ * @enterprise_refactoring (2025-10-06 - Phase 5)
+ * Added 7 new keys for specific settings and overrides:
+ * - specificLine, specificText, specificGrip (draft/hover/selection/completion modes)
+ * - overridesLine, overridesText, overridesGrip (user customizations)
+ * - overrideEnabled (per-mode override flags)
+ *
+ * @why_separate_keys
+ * 1. ✅ Granular control - Load/save specific settings independently
+ * 2. ✅ Better debugging - Inspect each setting type separately in DevTools
+ * 3. ✅ Selective migration - Migrate one setting type at a time
+ * 4. ✅ Version tracking - Each key has __standards_version metadata
+ * 5. ✅ Error isolation - Corrupt data in one key doesn't affect others
+ *
+ * @see {@link docs/settings-system/03-DXFSETTINGSPROVIDER.md#6-localstorage-integration} - localStorage documentation
+ * @see {@link docs/settings-system/03-DXFSETTINGSPROVIDER.md#11-enterprise-refactoring-2025-10-06-} - Enterprise refactoring details
+ */
 const STORAGE_KEYS = {
   // ===== GENERAL SETTINGS =====
   line: 'dxf-line-general-settings',
