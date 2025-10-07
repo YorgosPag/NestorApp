@@ -2326,18 +2326,21 @@ export function useLineDraftSettings() {
       });
     },
     getEffectiveSettings: (): LineSettings => {
-      // Check override flag
-      if (settings.overrideEnabled.line.draft) {
-        // Override ON: Check overrides first, fallback to specific
-        return {
-          ...settings.line,  // Start with general
-          ...settings.specific.line.draft,  // Apply specific
-          ...settings.overrides.line.draft  // Apply overrides (highest priority)
-        } as LineSettings;
-      } else {
-        // Override OFF: Use general settings
-        return settings.line;
-      }
+      // ✅ FIX: Proper 3-layer merge (General → Specific → Overrides)
+      // Start with FULL general settings (all properties defined)
+      const base: LineSettings = { ...settings.line };
+
+      // Layer 2: Merge specific settings (only defined properties)
+      const withSpecific = settings.specific.line.draft
+        ? { ...base, ...settings.specific.line.draft }
+        : base;
+
+      // Layer 3: Merge overrides if enabled (only defined properties)
+      const final = (settings.overrideEnabled.line.draft && settings.overrides.line.draft)
+        ? { ...withSpecific, ...settings.overrides.line.draft }
+        : withSpecific;
+
+      return final;
     },
     isOverrideEnabled: settings.overrideEnabled.line.draft,
     toggleOverride: (enabled: boolean) => {
@@ -2368,15 +2371,14 @@ export function useLineHoverSettings() {
       });
     },
     getEffectiveSettings: (): LineSettings => {
-      if (settings.overrideEnabled.line.hover) {
-        return {
-          ...settings.line,
-          ...settings.specific.line.hover,
-          ...settings.overrides.line.hover
-        } as LineSettings;
-      } else {
-        return settings.line;
-      }
+      const base: LineSettings = { ...settings.line };
+      const withSpecific = settings.specific.line.hover
+        ? { ...base, ...settings.specific.line.hover }
+        : base;
+      const final = (settings.overrideEnabled.line.hover && settings.overrides.line.hover)
+        ? { ...withSpecific, ...settings.overrides.line.hover }
+        : withSpecific;
+      return final;
     },
     isOverrideEnabled: settings.overrideEnabled.line.hover,
     toggleOverride: (enabled: boolean) => {
@@ -2407,15 +2409,14 @@ export function useLineSelectionSettings() {
       });
     },
     getEffectiveSettings: (): LineSettings => {
-      if (settings.overrideEnabled.line.selection) {
-        return {
-          ...settings.line,
-          ...settings.specific.line.selection,
-          ...settings.overrides.line.selection
-        } as LineSettings;
-      } else {
-        return settings.line;
-      }
+      const base: LineSettings = { ...settings.line };
+      const withSpecific = settings.specific.line.selection
+        ? { ...base, ...settings.specific.line.selection }
+        : base;
+      const final = (settings.overrideEnabled.line.selection && settings.overrides.line.selection)
+        ? { ...withSpecific, ...settings.overrides.line.selection }
+        : withSpecific;
+      return final;
     },
     isOverrideEnabled: settings.overrideEnabled.line.selection,
     toggleOverride: (enabled: boolean) => {
@@ -2446,15 +2447,14 @@ export function useLineCompletionSettings() {
       });
     },
     getEffectiveSettings: (): LineSettings => {
-      if (settings.overrideEnabled.line.completion) {
-        return {
-          ...settings.line,
-          ...settings.specific.line.completion,
-          ...settings.overrides.line.completion
-        } as LineSettings;
-      } else {
-        return settings.line;
-      }
+      const base: LineSettings = { ...settings.line };
+      const withSpecific = settings.specific.line.completion
+        ? { ...base, ...settings.specific.line.completion }
+        : base;
+      const final = (settings.overrideEnabled.line.completion && settings.overrides.line.completion)
+        ? { ...withSpecific, ...settings.overrides.line.completion }
+        : withSpecific;
+      return final;
     },
     isOverrideEnabled: settings.overrideEnabled.line.completion,
     toggleOverride: (enabled: boolean) => {
@@ -2485,15 +2485,14 @@ export function useTextDraftSettings() {
       });
     },
     getEffectiveSettings: (): TextSettings => {
-      if (settings.overrideEnabled.text.draft) {
-        return {
-          ...settings.text,
-          ...settings.specific.text.draft,
-          ...settings.overrides.text.draft
-        } as TextSettings;
-      } else {
-        return settings.text;
-      }
+      const base: TextSettings = { ...settings.text };
+      const withSpecific = settings.specific.text.draft
+        ? { ...base, ...settings.specific.text.draft }
+        : base;
+      const final = (settings.overrideEnabled.text.draft && settings.overrides.text.draft)
+        ? { ...withSpecific, ...settings.overrides.text.draft }
+        : withSpecific;
+      return final;
     },
     isOverrideEnabled: settings.overrideEnabled.text.draft,
     toggleOverride: (enabled: boolean) => {
@@ -2524,15 +2523,18 @@ export function useGripDraftSettings() {
       });
     },
     getEffectiveSettings: (): GripSettings => {
-      if (settings.overrideEnabled.grip.draft) {
-        return {
-          ...settings.grip,
-          ...settings.specific.grip.draft,
-          ...settings.overrides.grip.draft
-        } as GripSettings;
-      } else {
-        return settings.grip;
+      // ✅ FIX: Always merge General + Specific, then add Overrides if enabled
+      let effective = { ...settings.grip };
+
+      if (settings.specific.grip.draft) {
+        effective = { ...effective, ...settings.specific.grip.draft };
       }
+
+      if (settings.overrideEnabled.grip.draft && settings.overrides.grip.draft) {
+        effective = { ...effective, ...settings.overrides.grip.draft };
+      }
+
+      return effective as GripSettings;
     },
     isOverrideEnabled: settings.overrideEnabled.grip.draft,
     toggleOverride: (enabled: boolean) => {

@@ -50,8 +50,18 @@
  * @version 1.0.0
  */
 
-import { useConsolidatedSettings } from './useConsolidatedSettings';
-import { useLineSettingsFromProvider, useTextSettingsFromProvider } from '../../providers/DxfSettingsProvider';
+// ⚠️ DEPRECATED: useConsolidatedSettings removed in Phase 8 (Enterprise Refactoring)
+// import { useConsolidatedSettings } from './useConsolidatedSettings';
+import {
+  useLineSettingsFromProvider,
+  useTextSettingsFromProvider,
+  useLineDraftSettings,
+  useLineHoverSettings,
+  useLineSelectionSettings,
+  useLineCompletionSettings,
+  useTextDraftSettings,
+  useGripDraftSettings
+} from '../../providers/DxfSettingsProvider';
 import type { LineSettings } from '../../settings-core/types';
 import type { TextSettings } from '../../contexts/TextSettingsContext';
 
@@ -121,103 +131,75 @@ const defaultTextPreviewSettings: TextSettings = {
 
 /**
  * Unified Line Preview Settings Hook
- * ⚠️ LEGACY: Χρησιμοποιείται μόνο από το DxfSettingsProvider.tsx
- * ΓΙΑ ΝΕΕΣ ΚΑΡΤΕΛΕΣ: Χρησιμοποιήστε τα ξεχωριστά hooks παρακάτω
+ * ✅ MIGRATED: Uses useLineDraftSettings (Phase 7 - ColorPalettePanel compatibility)
+ *
+ * Note: This is a compatibility wrapper for ColorPalettePanel.tsx
+ * It delegates to useLineDraftSettings() which uses the Provider Hook
  */
 export function useUnifiedLinePreview() {
-  const globalLineSettings = useLineSettingsFromProvider();
-
-  const consolidated = useConsolidatedSettings({
-    defaultSpecificSettings: defaultLinePreviewSettings,
-    globalSettingsHook: () => globalLineSettings,
-    settingsKey: 'LinePreview'
-  });
-
-  // Backwards compatibility interface
-  return {
-    settings: {
-      overrideGlobalSettings: consolidated.settings.overrideGlobalSettings,
-      lineSettings: consolidated.settings.specificSettings
-    },
-    updateSettings: (updates: { overrideGlobalSettings?: boolean; lineSettings?: Partial<LineSettings> }) => {
-      if (updates.overrideGlobalSettings !== undefined) {
-        consolidated.updateSettings({ overrideGlobalSettings: updates.overrideGlobalSettings });
-      }
-      if (updates.lineSettings) {
-        consolidated.updateSpecificSettings(updates.lineSettings);
-      }
-    },
-    updateLineSettings: consolidated.updateSpecificSettings,
-    getEffectiveLineSettings: consolidated.getEffectiveSettings,
-    resetToDefaults: consolidated.resetToDefaults,
-    getCurrentDashPattern: globalLineSettings.getCurrentDashPattern
-  };
+  // Delegate to the migrated hook
+  return useUnifiedLineDraft();
 }
 
 /**
  * Unified Line Completion Settings Hook
- * ✅ ΕΝΕΡΓΟ: Χρησιμοποιείται για Completion tab στο EntitiesSettings.tsx
+ * ✅ MIGRATED: Uses Provider Hook (Phase 7)
  */
 export function useUnifiedLineCompletion() {
+  const providerHook = useLineCompletionSettings();
   const globalLineSettings = useLineSettingsFromProvider();
 
-  const consolidated = useConsolidatedSettings({
-    defaultSpecificSettings: defaultLineCompletionSettings,
-    globalSettingsHook: () => globalLineSettings,
-    settingsKey: 'LineCompletion'
-  });
-
-  // Backwards compatibility interface
+  // Backwards compatibility wrapper
   return {
     settings: {
-      overrideGlobalSettings: consolidated.settings.overrideGlobalSettings,
-      lineSettings: consolidated.settings.specificSettings
+      overrideGlobalSettings: providerHook.isOverrideEnabled,
+      lineSettings: providerHook.getEffectiveSettings() // ✅ FIX: Use effective settings (General + Specific + Overrides)
     },
     updateSettings: (updates: { overrideGlobalSettings?: boolean; lineSettings?: Partial<LineSettings> }) => {
       if (updates.overrideGlobalSettings !== undefined) {
-        consolidated.updateSettings({ overrideGlobalSettings: updates.overrideGlobalSettings });
+        providerHook.toggleOverride(updates.overrideGlobalSettings);
       }
       if (updates.lineSettings) {
-        consolidated.updateSpecificSettings(updates.lineSettings);
+        providerHook.updateSettings(updates.lineSettings);
       }
     },
-    updateLineSettings: consolidated.updateSpecificSettings,
-    getEffectiveLineSettings: consolidated.getEffectiveSettings,
-    resetToDefaults: consolidated.resetToDefaults,
+    updateLineSettings: providerHook.updateSettings,
+    getEffectiveLineSettings: providerHook.getEffectiveSettings,
+    resetToDefaults: () => {
+      providerHook.updateSettings(defaultLineCompletionSettings);
+      providerHook.toggleOverride(false);
+    },
     getCurrentDashPattern: globalLineSettings.getCurrentDashPattern
   };
 }
 
 /**
  * Unified Text Preview Settings Hook
- * ✅ ΕΝΕΡΓΟ: Χρησιμοποιείται για Text settings στο EntitiesSettings.tsx
+ * ✅ MIGRATED: Uses Provider Hook (Phase 7)
  */
 export function useUnifiedTextPreview() {
-  const globalTextSettings = useTextSettingsFromProvider();
+  const providerHook = useTextDraftSettings();
 
-  const consolidated = useConsolidatedSettings({
-    defaultSpecificSettings: defaultTextPreviewSettings,
-    globalSettingsHook: () => globalTextSettings,
-    settingsKey: 'TextPreview'
-  });
-
-  // Backwards compatibility interface
+  // Backwards compatibility wrapper
   return {
     settings: {
-      overrideGlobalSettings: consolidated.settings.overrideGlobalSettings,
-      textSettings: consolidated.settings.specificSettings
+      overrideGlobalSettings: providerHook.isOverrideEnabled,
+      textSettings: providerHook.getEffectiveSettings() // ✅ FIX: Use effective settings (General + Specific + Overrides)
     },
     updateSettings: (updates: { overrideGlobalSettings?: boolean; textSettings?: Partial<TextSettings> }) => {
       if (updates.overrideGlobalSettings !== undefined) {
-        consolidated.updateSettings({ overrideGlobalSettings: updates.overrideGlobalSettings });
+        providerHook.toggleOverride(updates.overrideGlobalSettings);
       }
       if (updates.textSettings) {
-        consolidated.updateSpecificSettings(updates.textSettings);
+        providerHook.updateSettings(updates.textSettings);
       }
     },
-    updateTextSettings: consolidated.updateSpecificSettings,
-    getEffectiveTextSettings: consolidated.getEffectiveSettings,
-    resetToDefaults: consolidated.resetToDefaults
+    updateTextSettings: providerHook.updateSettings,
+    getEffectiveTextSettings: providerHook.getEffectiveSettings,
+    resetToDefaults: () => {
+      providerHook.updateSettings(defaultTextPreviewSettings);
+      providerHook.toggleOverride(false);
+    }
   };
 }
 
@@ -265,40 +247,35 @@ const defaultGripPreviewSettings: MockGripSettings = {
 };
 
 /**
- * Unified Grip Preview Settings Hook (Mock implementation)
+ * Unified Grip Preview Settings Hook
+ * ✅ MIGRATED: Uses useGripDraftSettings (Phase 7 - ColorPalettePanel compatibility)
+ *
+ * Note: This is a compatibility wrapper for ColorPalettePanel.tsx
+ * Maps Provider Hook interface to legacy ColorPalettePanel interface
  */
 export function useUnifiedGripPreview() {
-  // Mock global grip settings hook
-  const mockGlobalGripSettings = () => ({
-    settings: defaultGripPreviewSettings,
-    updateSettings: (updates: Partial<MockGripSettings>) => {
+  const providerHook = useGripDraftSettings();
 
-    }
-  });
-
-  const consolidated = useConsolidatedSettings({
-    defaultSpecificSettings: defaultGripPreviewSettings,
-    globalSettingsHook: mockGlobalGripSettings,
-    settingsKey: 'GripPreview'
-  });
-
-  // Backwards compatibility interface
+  // Backwards compatibility interface (map GripSettings to MockGripSettings format)
   return {
     settings: {
-      overrideGlobalSettings: consolidated.settings.overrideGlobalSettings,
-      gripSettings: consolidated.settings.specificSettings
+      overrideGlobalSettings: providerHook.isOverrideEnabled,
+      gripSettings: providerHook.getEffectiveSettings() // ✅ FIX: Use effective settings (General + Specific + Overrides)
     },
     updateSettings: (updates: { overrideGlobalSettings?: boolean; gripSettings?: Partial<MockGripSettings> }) => {
       if (updates.overrideGlobalSettings !== undefined) {
-        consolidated.updateSettings({ overrideGlobalSettings: updates.overrideGlobalSettings });
+        providerHook.toggleOverride(updates.overrideGlobalSettings);
       }
       if (updates.gripSettings) {
-        consolidated.updateSpecificSettings(updates.gripSettings);
+        providerHook.updateSettings(updates.gripSettings as any);
       }
     },
-    updateGripSettings: consolidated.updateSpecificSettings,
-    getEffectiveGripSettings: consolidated.getEffectiveSettings,
-    resetToDefaults: consolidated.resetToDefaults
+    updateGripSettings: providerHook.updateSettings,
+    getEffectiveGripSettings: providerHook.getEffectiveSettings,
+    resetToDefaults: () => {
+      providerHook.updateSettings(defaultGripPreviewSettings);
+      providerHook.toggleOverride(false);
+    }
   };
 }
 
@@ -308,99 +285,103 @@ export function useUnifiedGripPreview() {
 
 /**
  * Hook για Draft/Προσχεδίαση καρτέλα
- * ✅ ΕΝΕΡΓΟ: Νέο ξεχωριστό hook για απομόνωση settings
+ * ✅ MIGRATED: Uses Provider Hook (Phase 7)
  */
 export function useUnifiedLineDraft() {
+  const providerHook = useLineDraftSettings();
   const globalLineSettings = useLineSettingsFromProvider();
 
-  const consolidated = useConsolidatedSettings({
-    defaultSpecificSettings: defaultLinePreviewSettings,
-    globalSettingsHook: () => globalLineSettings,
-    settingsKey: 'LineDraft'  // 🔥 ΞΕΧΩΡΙΣΤΟ KEY!
-  });
-
+  // Backwards compatibility wrapper
   return {
     settings: {
-      overrideGlobalSettings: consolidated.settings.overrideGlobalSettings,
-      lineSettings: consolidated.settings.specificSettings
+      overrideGlobalSettings: providerHook.isOverrideEnabled,
+      lineSettings: providerHook.getEffectiveSettings() // ✅ FIX: Use effective settings (General + Specific + Overrides)
     },
     updateSettings: (updates: { overrideGlobalSettings?: boolean; lineSettings?: Partial<LineSettings> }) => {
       if (updates.overrideGlobalSettings !== undefined) {
-        consolidated.updateSettings({ overrideGlobalSettings: updates.overrideGlobalSettings });
+        providerHook.toggleOverride(updates.overrideGlobalSettings);
       }
       if (updates.lineSettings) {
-        consolidated.updateSpecificSettings(updates.lineSettings);
+        providerHook.updateSettings(updates.lineSettings);
       }
     },
-    updateLineSettings: consolidated.updateSpecificSettings,
-    getEffectiveLineSettings: consolidated.getEffectiveSettings,
-    resetToDefaults: consolidated.resetToDefaults,
+    updateLineSettings: providerHook.updateSettings,
+    getEffectiveLineSettings: providerHook.getEffectiveSettings,
+    resetToDefaults: () => {
+      // Reset to defaults by clearing specific settings
+      providerHook.updateSettings(defaultLinePreviewSettings);
+      providerHook.toggleOverride(false);
+    },
     getCurrentDashPattern: globalLineSettings.getCurrentDashPattern
   };
 }
 
 /**
  * Hook για Hover καρτέλα
- * ✅ ΕΝΕΡΓΟ: Νέο ξεχωριστό hook για απομόνωση settings
+ * ✅ MIGRATED: Uses Provider Hook (Phase 7)
  */
 export function useUnifiedLineHover() {
+  const providerHook = useLineHoverSettings();
   const globalLineSettings = useLineSettingsFromProvider();
 
-  const consolidated = useConsolidatedSettings({
-    defaultSpecificSettings: { ...defaultLinePreviewSettings, color: '#ffaa00' }, // Κίτρινο για hover
-    globalSettingsHook: () => globalLineSettings,
-    settingsKey: 'LineHover'  // 🔥 ΞΕΧΩΡΙΣΤΟ KEY!
-  });
+  // Default hover settings (orange)
+  const defaultHoverSettings = { ...defaultLinePreviewSettings, color: '#ffaa00' };
 
+  // Backwards compatibility wrapper
   return {
     settings: {
-      overrideGlobalSettings: consolidated.settings.overrideGlobalSettings,
-      lineSettings: consolidated.settings.specificSettings
+      overrideGlobalSettings: providerHook.isOverrideEnabled,
+      lineSettings: providerHook.getEffectiveSettings() // ✅ FIX: Use effective settings (General + Specific + Overrides)
     },
     updateSettings: (updates: { overrideGlobalSettings?: boolean; lineSettings?: Partial<LineSettings> }) => {
       if (updates.overrideGlobalSettings !== undefined) {
-        consolidated.updateSettings({ overrideGlobalSettings: updates.overrideGlobalSettings });
+        providerHook.toggleOverride(updates.overrideGlobalSettings);
       }
       if (updates.lineSettings) {
-        consolidated.updateSpecificSettings(updates.lineSettings);
+        providerHook.updateSettings(updates.lineSettings);
       }
     },
-    updateLineSettings: consolidated.updateSpecificSettings,
-    getEffectiveLineSettings: consolidated.getEffectiveSettings,
-    resetToDefaults: consolidated.resetToDefaults,
+    updateLineSettings: providerHook.updateSettings,
+    getEffectiveLineSettings: providerHook.getEffectiveSettings,
+    resetToDefaults: () => {
+      providerHook.updateSettings(defaultHoverSettings);
+      providerHook.toggleOverride(false);
+    },
     getCurrentDashPattern: globalLineSettings.getCurrentDashPattern
   };
 }
 
 /**
  * Hook για Selection/Επιλογή καρτέλα
- * ✅ ΕΝΕΡΓΟ: Νέο ξεχωριστό hook για απομόνωση settings
+ * ✅ MIGRATED: Uses Provider Hook (Phase 7)
  */
 export function useUnifiedLineSelection() {
+  const providerHook = useLineSelectionSettings();
   const globalLineSettings = useLineSettingsFromProvider();
 
-  const consolidated = useConsolidatedSettings({
-    defaultSpecificSettings: { ...defaultLinePreviewSettings, color: '#ff4444' }, // Κόκκινο για selection
-    globalSettingsHook: () => globalLineSettings,
-    settingsKey: 'LineSelection'  // 🔥 ΞΕΧΩΡΙΣΤΟ KEY!
-  });
+  // Default selection settings (red)
+  const defaultSelectionSettings = { ...defaultLinePreviewSettings, color: '#ff4444' };
 
+  // Backwards compatibility wrapper
   return {
     settings: {
-      overrideGlobalSettings: consolidated.settings.overrideGlobalSettings,
-      lineSettings: consolidated.settings.specificSettings
+      overrideGlobalSettings: providerHook.isOverrideEnabled,
+      lineSettings: providerHook.getEffectiveSettings() // ✅ FIX: Use effective settings (General + Specific + Overrides)
     },
     updateSettings: (updates: { overrideGlobalSettings?: boolean; lineSettings?: Partial<LineSettings> }) => {
       if (updates.overrideGlobalSettings !== undefined) {
-        consolidated.updateSettings({ overrideGlobalSettings: updates.overrideGlobalSettings });
+        providerHook.toggleOverride(updates.overrideGlobalSettings);
       }
       if (updates.lineSettings) {
-        consolidated.updateSpecificSettings(updates.lineSettings);
+        providerHook.updateSettings(updates.lineSettings);
       }
     },
-    updateLineSettings: consolidated.updateSpecificSettings,
-    getEffectiveLineSettings: consolidated.getEffectiveSettings,
-    resetToDefaults: consolidated.resetToDefaults,
+    updateLineSettings: providerHook.updateSettings,
+    getEffectiveLineSettings: providerHook.getEffectiveSettings,
+    resetToDefaults: () => {
+      providerHook.updateSettings(defaultSelectionSettings);
+      providerHook.toggleOverride(false);
+    },
     getCurrentDashPattern: globalLineSettings.getCurrentDashPattern
   };
 }

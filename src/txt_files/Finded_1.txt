@@ -1,0 +1,95 @@
+ Γιώργο, ΟΧΙ δεν είναι έτσι όπως τα λες!
+
+  Το ColorPalettePanel.tsx έχει:
+
+  🎯 ΚΥΡΙΕΣ ΚΑΡΤΕΛΕΣ (Main Tabs):        
+
+  1. Γενικές Ρυθμίσεις (General Settings)
+  2. Ειδικές Ρυθμίσεις (Specific Settings)
+
+  📂 ΥΠΟ-ΚΑΡΤΕΛΕΣ:
+
+  🟢 Γενικές Ρυθμίσεις → 3 καρτέλες:
+
+  - Γραμμές (Lines)
+  - Κείμενο (Text)
+  - Grips
+
+  🔵 Ειδικές Ρυθμίσεις → 7 κατηγορίες (icons):
+
+  1. Crosshair & Cursor (Σταυρώνημα & Δρομέας)
+  2. Selection Boxes (Κουτιά Επιλογής)
+  3. Grid & Rulers (Πλέγμα & Χάρακες)
+  4. Grips & Handles (Coming Soon)
+  5. Layer Colors (Χρώματα Επιπέδων) ← Αυτό είναι το "Επίπεδα"!
+  6. Entities (Οντότητες)
+  7. Lighting & Effects (Coming Soon)
+
+  ---
+  Δεν υπάρχουν οι καρτέλες που ανέφερες:
+  - ❌ "Ιεραρχία"
+  - ❌ "Overlay"
+  - ❌ "Ρυθμίσεις DXF"
+
+  Υπάρχει μόνο το "Layer Colors" (Επίπεδα) στη γραμμή 218-222.
+
+  Μήπως ψάχνεις για άλλο panel/component; 🤔
+
+> Ψάξε να μου πεις που υπάρχουν καρτέλα ρυθμίσεις dxf στην εφαρμογή 
+
+● Ψάχνω για καρτέλα "Ρυθμίσεις DXF" στην εφαρμογή...
+
+● Search(pattern: "Ρυθμίσεις DXF|DXF Settings|dxf.*settings|settings.*dxf", path: "src\subapps\dxf-viewer")
+  ⎿  Found 46 files (ctrl+o to expand)
+
+● Ψάχνω για UI components με tabs/panels:
+
+● Search(pattern: "Tab|Panel|Ρυθμίσεις|Επίπεδα|Ιεραρχία|Overlay", path: "src\subapps\dxf-viewer\ui\components", glob:       
+        "*.tsx")
+  ⎿  Found 38 files (ctrl+o to expand)
+
+● Βρήκα το LevelPanel.tsx! Ας το ελέγξω:
+
+● Read(src\subapps\dxf-viewer\ui\components\LevelPanel.tsx)
+  ⎿  Read 150 lines (ctrl+o to expand)
+
+● Ψάχνω για tabs μέσα στο LevelPanel:
+
+● Search(pattern: "Επίπεδα|Ιεραρχία|Overlay|Ρυθμίσεις|activeTab|tab.*===|Tab.*button", path:
+        "src\subapps\dxf-viewer\ui\components\LevelPanel.tsx", output_mode: "content")
+  ⎿  Found 23 lines (ctrl+o to expand)
+
+● Ας δω την τελική δομή του LevelPanel (render section):
+
+● Bash(powershell -Command "(Get-Content 'F:\Pagonis_Nestor\src\subapps\dxf-viewer\ui\components\LevelPanel.tsx').Count")   
+  ⎿  425
+
+● Read(src\subapps\dxf-viewer\ui\components\LevelPanel.tsx)
+  ⎿  Read 185 lines (ctrl+o to expand)
+
+● Τώρα ψάχνω για το PanelTabs.tsx που βρήκα νωρίτερα:
+
+● Read(src\subapps\dxf-viewer\ui\components\PanelTabs.tsx)
+  ⎿  Read 66 lines (ctrl+o to expand)
+
+● 🎯 ΒΡΗΚΑ ΤΟ! Γιώργο, ΝΑΙ έχεις δίκιο!
+
+  Το PanelTabs.tsx (γραμμή 6, 18-26) έχει 4 καρτέλες ακριβώς όπως τις περιέγραψες:
+
+  📊 ΠΡΩΤΗ ΣΕΙΡΑ (Top Row):
+
+  1. Επίπεδα (levels) - 📊 emoji - t('panels.levels.title')
+  2. Ιεραρχία (hierarchy) - 🏗️ emoji -  t('panels.hierarchy.title')
+
+  🗺️ ΔΕΥΤΕΡΗ ΣΕΙΡΑ (Bottom Row):
+
+  3. Overlay - 🗺️ emoji -  t('panels.overlay.title')
+  4. Ρυθμίσεις DXF (colors) - ⚙️ emoji - Hardcoded label: 'Ρυθμίσεις DXF'
+
+  ---
+  Σημαντικό: Η καρτέλα "Ρυθμίσεις DXF" έχει:
+  - ID: 'colors' (γραμμή 25)
+  - Label: 'Ρυθμίσεις DXF' (hardcoded, όχι i18n)
+  - Icon: ⚙️
+
+  Θέλεις να κάνουμε κάτι με αυτές τις καρτέλες; 🤔

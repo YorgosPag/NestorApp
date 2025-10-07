@@ -61,18 +61,26 @@ export function CentralizedAutoSaveStatus() {
   };
 
   const getStatusMessage = () => {
-    // ✅ FIXED: Remove console.log from render function to prevent infinite loop
-    const debugInfo = `L:${!!settings.line} T:${!!settings.text} G:${!!settings.grip} C:${!!settings.cursor} GR:${!!settings.grid} R:${!!settings.ruler}`;
-    // 
+    // ✅ Phase 9: Enhanced debug info με Γενικά + Ειδικά settings
+    const generalInfo = `L:${!!settings.line} T:${!!settings.text} G:${!!settings.grip} C:${!!settings.cursor} GR:${!!settings.grid} R:${!!settings.ruler}`;
+    const specificInfo = `LD:${!!settings.specific?.line?.draft} LH:${!!settings.specific?.line?.hover} LS:${!!settings.specific?.line?.selection} LC:${!!settings.specific?.line?.completion} TP:${!!settings.specific?.text?.draft}`;
+    const debugInfo = `${generalInfo} | ${specificInfo}`.replace(/\s+/g, ' ');
 
     if (isAutoSaving) {
       return `Αποθήκευση... [${debugInfo}]`;
     }
 
     if (settings.saveStatus === 'saved') {
-      // Count active settings
-      const activeCount = [settings.line, settings.text, settings.grip, settings.cursor, settings.grid, settings.ruler].filter(Boolean).length;
-      return `Ρυθμίσεις OK (${activeCount}/6) [${debugInfo}]`;
+      // Count active settings (Γενικά + Ειδικά)
+      const generalCount = [settings.line, settings.text, settings.grip, settings.cursor, settings.grid, settings.ruler].filter(Boolean).length;
+      const specificCount = [
+        settings.specific?.line?.draft,
+        settings.specific?.line?.hover,
+        settings.specific?.line?.selection,
+        settings.specific?.line?.completion,
+        settings.specific?.text?.draft
+      ].filter(Boolean).length;
+      return `Ρυθμίσεις OK (Γ:${generalCount}/6 Ε:${specificCount}/5) [${debugInfo}]`;
     }
 
     if (settings.saveStatus === 'error') {
@@ -129,15 +137,29 @@ export function CentralizedAutoSaveStatus() {
         )}
       </div>
 
-      {/* Settings Indicator - FORCE 6 VISIBLE DOTS */}
-      <div className="flex items-center gap-1">
-        {/* 🚨 TESTING: Hard-coded 6 dots with inline styles */}
-        <div style={{width: '8px', height: '8px', borderRadius: '50%', backgroundColor: settings.line ? '#60a5fa' : '#4b5563'}} title="Γραμμές"></div>
-        <div style={{width: '8px', height: '8px', borderRadius: '50%', backgroundColor: settings.text ? '#4ade80' : '#4b5563'}} title="Κείμενο"></div>
-        <div style={{width: '8px', height: '8px', borderRadius: '50%', backgroundColor: settings.grip ? '#facc15' : '#4b5563'}} title="Grips"></div>
-        <div style={{width: '8px', height: '8px', borderRadius: '50%', backgroundColor: settings.cursor ? '#c084fc' : '#4b5563'}} title="Κέρσορας"></div>
-        <div style={{width: '8px', height: '8px', borderRadius: '50%', backgroundColor: settings.grid ? '#22d3ee' : '#4b5563'}} title="Grid"></div>
-        <div style={{width: '8px', height: '8px', borderRadius: '50%', backgroundColor: settings.ruler ? '#fb7185' : '#4b5563'}} title="Χάρακες"></div>
+      {/* Settings Indicator - Γενικά (Blue) + Ειδικά (Green) */}
+      <div className="flex items-center gap-2">
+        {/* 🔵 ΓΕΝΙΚΑ SETTINGS (Blue dots) */}
+        <div className="flex items-center gap-1" title="Γενικές Ρυθμίσεις">
+          <div style={{width: '8px', height: '8px', borderRadius: '50%', backgroundColor: settings.line ? '#60a5fa' : '#4b5563'}} title="Γραμμές (Γενικά)"></div>
+          <div style={{width: '8px', height: '8px', borderRadius: '50%', backgroundColor: settings.text ? '#60a5fa' : '#4b5563'}} title="Κείμενο (Γενικά)"></div>
+          <div style={{width: '8px', height: '8px', borderRadius: '50%', backgroundColor: settings.grip ? '#60a5fa' : '#4b5563'}} title="Grips (Γενικά)"></div>
+          <div style={{width: '8px', height: '8px', borderRadius: '50%', backgroundColor: settings.cursor ? '#60a5fa' : '#4b5563'}} title="Κέρσορας"></div>
+          <div style={{width: '8px', height: '8px', borderRadius: '50%', backgroundColor: settings.grid ? '#60a5fa' : '#4b5563'}} title="Grid"></div>
+          <div style={{width: '8px', height: '8px', borderRadius: '50%', backgroundColor: settings.ruler ? '#60a5fa' : '#4b5563'}} title="Χάρακες"></div>
+        </div>
+
+        {/* Separator */}
+        <div style={{width: '1px', height: '16px', backgroundColor: '#6b7280'}}></div>
+
+        {/* 🟢 ΕΙΔΙΚΑ SETTINGS (Green dots) */}
+        <div className="flex items-center gap-1" title="Ειδικές Ρυθμίσεις">
+          <div style={{width: '8px', height: '8px', borderRadius: '50%', backgroundColor: settings.specific?.line?.draft ? '#4ade80' : '#4b5563'}} title="Line Draft (Προσχεδίαση)"></div>
+          <div style={{width: '8px', height: '8px', borderRadius: '50%', backgroundColor: settings.specific?.line?.hover ? '#4ade80' : '#4b5563'}} title="Line Hover"></div>
+          <div style={{width: '8px', height: '8px', borderRadius: '50%', backgroundColor: settings.specific?.line?.selection ? '#4ade80' : '#4b5563'}} title="Line Selection (Επιλογή)"></div>
+          <div style={{width: '8px', height: '8px', borderRadius: '50%', backgroundColor: settings.specific?.line?.completion ? '#4ade80' : '#4b5563'}} title="Line Completion (Ολοκλήρωση)"></div>
+          <div style={{width: '8px', height: '8px', borderRadius: '50%', backgroundColor: settings.specific?.text?.draft ? '#4ade80' : '#4b5563'}} title="Text Preview"></div>
+        </div>
       </div>
     </div>
   );

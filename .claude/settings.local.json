@@ -178,7 +178,8 @@
       "Bash(npm run test:validate-line-drawing:*)",
       "Read(//c/Users/user/**)",
       "Bash(xcopy:*)",
-      "Bash(robocopy:*)"
+      "Bash(robocopy:*)",
+      "Bash(git mv:*)"
     ],
     "deny": [],
     "ask": []
