@@ -178,8 +178,8 @@
   - ✅ `systems/zoom/ZoomManager.ts` → Auto-updated via re-exports
   - ✅ `ui/toolbar/ZoomControls.tsx` → Using ZOOM_FACTORS.BUTTON_IN (20%)
 
-### 🔟 **SETTINGS HOOKS (2025-10-06 - ENTERPRISE REFACTORING)**
-- ❌ ΟΧΙ `useConsolidatedSettings` (deprecated - local useState)
+### 🔟 **SETTINGS HOOKS (2025-10-06 - ENTERPRISE REFACTORING PHASE 6-10)**
+- ❌ ΟΧΙ `useConsolidatedSettings` ⚠️ **DEPRECATED 2025-10-07** (Phase 8)
 - ❌ ΟΧΙ local state για mode-specific settings
 - ✅ ΜΟΝΟ Provider Hooks από `DxfSettingsProvider`
 - 📍 **Κεντρικοποίηση 2025-10-06 (Phase 6)**:
@@ -204,8 +204,14 @@
   draft.isOverrideEnabled           // Override flag status
   draft.toggleOverride(true)        // Toggle override
   ```
+- ⚠️ **DEPRECATED HOOK** (Removed Phase 7-8):
+  - `useConsolidatedSettings` → Renamed to `.deprecated.ts` (2025-10-07)
+  - **Why Deprecated**: Used local useState, caused preview freeze bugs, no persistence for specific settings
+  - **Replacement**: Use Provider Hooks (`useLineDraftSettings`, etc.) directly
+  - **Migration Status**: ✅ All 5 hooks migrated, ✅ Zero usages remaining, ✅ ColorPalettePanel uses compatibility wrappers
+  - **File**: `ui/hooks/useConsolidatedSettings.deprecated.ts`
 - 📍 Δες: `docs/settings-system/00-INDEX.md` - Complete settings documentation (10 chapters)
-- 📍 **Enterprise Refactoring**: `docs/ENTERPRISE_REFACTORING_PLAN.md` - 10-phase plan (60% complete)
+- 📍 **Enterprise Refactoring**: `docs/ENTERPRISE_REFACTORING_PLAN.md` + `ENTERPRISE_REFACTORING_COMPLETE.md` - 10-phase plan (100% complete! 🎉)
 
 ---
 

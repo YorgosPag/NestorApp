@@ -349,7 +349,184 @@ function DrawingToolbar() {
 
 ---
 
-## 5. SPECIALIZED HOOKS
+## 5. PROVIDER HOOKS (NEW - Phase 6)
+
+**Added**: 2025-10-07 (Enterprise Refactoring Phase 6)
+**Purpose**: Direct access to Provider state με mode-specific settings
+
+### 5.1 useLineDraftSettings()
+
+**Purpose**: Get/update Draft/Προσχεδίαση line settings (specific + overrides)
+
+**Signature**:
+```typescript
+function useLineDraftSettings(): {
+  settings: LineSettings;
+  updateSettings: (updates: Partial<LineSettings>) => void;
+  getEffectiveSettings: () => LineSettings;
+  isOverrideEnabled: boolean;
+  toggleOverride: (enabled: boolean) => void;
+}
+```
+
+**Usage**:
+```typescript
+function DraftSettingsPanel() {
+  const {
+    settings,
+    updateSettings,
+    isOverrideEnabled,
+    toggleOverride
+  } = useLineDraftSettings();
+
+  return (
+    <div>
+      <label>
+        <input
+          type="checkbox"
+          checked={isOverrideEnabled}
+          onChange={(e) => toggleOverride(e.target.checked)}
+        />
+        Override General Settings
+      </label>
+      {isOverrideEnabled && (
+        <ColorPicker
+          value={settings.color}
+          onChange={(color) => updateSettings({ color })}
+        />
+      )}
+    </div>
+  );
+}
+```
+
+**When to Use**:
+- ✅ In "Ειδικές Ρυθμίσεις → Draft" tab (ColorPalettePanel)
+- ✅ When editing draft-specific overrides
+- ✅ Real-time preview updates with override toggle
+
+---
+
+### 5.2 useLineHoverSettings()
+
+**Purpose**: Get/update Hover line settings (specific + overrides)
+
+**Signature**: Same as `useLineDraftSettings()`
+
+**Usage**:
+```typescript
+function HoverSettingsPanel() {
+  const { settings, updateSettings, isOverrideEnabled } = useLineHoverSettings();
+
+  return (
+    <ColorPicker
+      value={settings.color}
+      onChange={(color) => updateSettings({ color })}
+      disabled={!isOverrideEnabled}
+    />
+  );
+}
+```
+
+**When to Use**:
+- ✅ In "Ειδικές Ρυθμίσεις → Hover" tab
+- ✅ When editing hover-specific overrides
+
+---
+
+### 5.3 useLineSelectionSettings()
+
+**Purpose**: Get/update Selection line settings (specific + overrides)
+
+**Signature**: Same as `useLineDraftSettings()`
+
+**When to Use**:
+- ✅ In "Ειδικές Ρυθμίσεις → Selection" tab
+- ✅ When editing selection-specific overrides
+
+---
+
+### 5.4 useLineCompletionSettings()
+
+**Purpose**: Get/update Completion line settings (specific + overrides)
+
+**Signature**: Same as `useLineDraftSettings()`
+
+**When to Use**:
+- ✅ In "Ειδικές Ρυθμίσεις → Completion" tab
+- ✅ When editing completion-specific overrides
+
+---
+
+### 5.5 useTextDraftSettings()
+
+**Purpose**: Get/update Draft text settings (specific + overrides)
+
+**Signature**:
+```typescript
+function useTextDraftSettings(): {
+  settings: TextSettings;
+  updateSettings: (updates: Partial<TextSettings>) => void;
+  getEffectiveSettings: () => TextSettings;
+  isOverrideEnabled: boolean;
+  toggleOverride: (enabled: boolean) => void;
+}
+```
+
+**When to Use**:
+- ✅ In "Ειδικές Ρυθμίσεις → Text Draft" tab
+- ✅ When editing text draft-specific overrides
+
+---
+
+### 5.6 useGripDraftSettings()
+
+**Purpose**: Get/update Draft grip settings (specific + overrides)
+
+**Signature**:
+```typescript
+function useGripDraftSettings(): {
+  settings: GripSettings;
+  updateSettings: (updates: Partial<GripSettings>) => void;
+  getEffectiveSettings: () => GripSettings;
+  isOverrideEnabled: boolean;
+  toggleOverride: (enabled: boolean) => void;
+}
+```
+
+**When to Use**:
+- ✅ In "Ειδικές Ρυθμίσεις → Grip Draft" tab
+- ✅ When editing grip draft-specific overrides
+
+---
+
+### 5.7 Provider Hooks Pattern
+
+**Architecture**:
+```
+useLineDraftSettings()
+  ↓
+useDxfSettings() (Provider Hook)
+  ↓
+DxfSettingsProvider (Centralized State)
+  ↓
+Effective Settings = General → Specific → Overrides
+```
+
+**Key Features**:
+- ✅ **Direct Provider Access**: No intermediate local state
+- ✅ **Real-time Updates**: Override toggle → instant preview update
+- ✅ **Auto-Save**: Changes persist to localStorage (500ms debounce)
+- ✅ **Type-Safe**: Full TypeScript support with discriminated unions
+
+**Performance**:
+- Uses `useMemo` for stable settings objects
+- Minimal re-renders (only when relevant settings change)
+- No stale closure issues
+
+---
+
+## 6. SPECIALIZED HOOKS
 
 ### useLineSettingsFromProvider()
 
@@ -460,6 +637,44 @@ function CompletionSettingsPanel() {
 **When to Use**:
 - ✅ In "Ειδικές Ρυθμίσεις → Completion" accordion (ColorPalettePanel)
 - ✅ When you want to edit completion-specific overrides
+
+---
+
+### useConsolidatedSettings() ⚠️ DEPRECATED
+
+**Status**: ❌ **DEPRECATED** - Removed in Phase 8 (Enterprise Refactoring 2025-10-07)
+
+**Why Deprecated**:
+- ❌ Used local `useState` instead of centralized Provider
+- ❌ Caused preview freeze bugs (4+ hours debugging)
+- ❌ No localStorage persistence for specific settings
+- ❌ Complex merge logic prone to stale state
+
+**Replacement**:
+```typescript
+// ❌ OLD: useConsolidatedSettings
+const { settings, updateSettings } = useConsolidatedSettings({
+  entityType: 'line',
+  mode: 'draft',
+  generalSettings: lineSettings
+});
+
+// ✅ NEW: useLineDraftSettings (Provider Hook)
+const {
+  settings,
+  updateSettings,
+  isOverrideEnabled,
+  toggleOverride
+} = useLineDraftSettings();
+```
+
+**Migration Status**:
+- ✅ All hooks migrated to Provider Hooks (Phase 7)
+- ✅ File renamed to `.deprecated.ts` (Phase 8)
+- ✅ Zero usages remaining in codebase
+- ✅ ColorPalettePanel now uses compatibility wrappers
+
+**File Location**: `ui/hooks/useConsolidatedSettings.deprecated.ts`
 
 ---
 
