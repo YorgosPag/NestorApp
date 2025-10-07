@@ -1,82 +1,289 @@
-// SpecificSettingsPanel.tsx - Container for Specific settings (7 categories)
-// STATUS: PLACEHOLDER - Phase 1 Step 1.2
-// TODO: Implement in Phase 3 (STEP 3.8)
+// SpecificSettingsPanel.tsx - Specific settings panel router (extracted from DxfSettingsPanel)
+// STATUS: ACTIVE - Phase 3 Step 3.8
+// PURPOSE: Router for all 7 Specific Settings categories with lazy loading
 
 /**
  * ╔════════════════════════════════════════════════════════════════════════════╗
- * ║                        CROSS-REFERENCES (Documentation)                    ║
+ * ║  CROSS-REFERENCES: docs/dxf-settings/MIGRATION_CHECKLIST.md (STEP 3.8)    ║
+ * ║  Parent: DxfSettingsPanel.tsx (Specific tab)                               ║
+ * ║  Uses: All 7 category components (lazy loaded)                             ║
+ * ║  Categories: Selection, Cursor, Grid, Layers, Entities, Grips, Lighting    ║
+ * ║  Icons: icons/DxfSettingsIcons.tsx                                         ║
  * ╚════════════════════════════════════════════════════════════════════════════╝
- *
- * 📋 Migration Checklist:
- *    - docs/dxf-settings/MIGRATION_CHECKLIST.md (STEP 1.2 - Placeholder Creation)
- *    - docs/dxf-settings/MIGRATION_CHECKLIST.md (STEP 3.8 - Implementation)
- *
- * 🏗️ Architecture:
- *    - docs/dxf-settings/ARCHITECTURE.md (§2 Component Hierarchy - Panels)
- *    - docs/dxf-settings/ARCHITECTURE.md (§4.3 SpecificSettingsPanel Structure)
- *
- * 📖 Component Guide:
- *    - docs/dxf-settings/COMPONENT_GUIDE.md (§2.3 SpecificSettingsPanel)
- *
- * 📊 State Management:
- *    - docs/dxf-settings/STATE_MANAGEMENT.md (§2.3 Category Navigation State)
- *
- * 📝 Decision Log:
- *    - docs/dxf-settings/DECISION_LOG.md (ADR-003: Separate General vs Specific Settings)
- *    - docs/dxf-settings/DECISION_LOG.md (ADR-005: Use Custom Hooks for Navigation State)
- *
- * 📚 Roadmap:
- *    - docs/REFACTORING_ROADMAP_ColorPalettePanel.md (Phase 3, Step 3.8)
- *
- * ╔════════════════════════════════════════════════════════════════════════════╗
- * ║                      RELATED CODE FILES                                    ║
- * ╚════════════════════════════════════════════════════════════════════════════╝
- *
- * Parent:
- *    - panels/DxfSettingsPanel.tsx
- *
- * Children (Categories):
- *    - categories/SelectionCategory.tsx (Επιλογή)
- *    - categories/CursorCategory.tsx (Κέρσορας)
- *    - categories/LayersCategory.tsx
- *    - categories/EntitiesCategory.tsx
- *    - categories/BackgroundCategory.tsx (Φόντο)
- *    - categories/DrawingCategory.tsx (Χάραξη)
- *    - categories/ImportCategory.tsx (Εισαγωγή)
- *
- * Infrastructure:
- *    - LazyComponents.tsx (lazy loading wrapper)
- *    - hooks/useCategoryNavigation.ts (category state management)
- *    - shared/CategoryButton.tsx (category button UI component)
  */
 
-import React from 'react';
+import React, { Suspense, lazy, useState } from 'react';
+import {
+  CrosshairIcon,
+  SelectionIcon,
+  GridIcon,
+  GripsIcon,
+  LayersIcon,
+  EntitiesIcon,
+  LightingIcon
+} from '../icons/DxfSettingsIcons';
 
 /**
- * SpecificSettingsPanel - Container for Specific settings categories
+ * SpecificSettingsPanel - Router for all Specific Settings categories
  *
- * Renders:
- * - CategoryButton list (7 buttons: Επιλογή, Κέρσορας, Layers, Entities, Φόντο, Χάραξη, Εισαγωγή)
- * - Active category content (SelectionCategory | CursorCategory | ...)
+ * Purpose:
+ * - Display category navigation (icon-based, tooltip on hover)
+ * - Route to appropriate category component based on selection
+ * - Lazy load category components for performance
+ *
+ * Categories (7 total):
+ * 1. Selection - Selection settings (window/crossing)
+ * 2. Cursor - Cursor & Crosshair settings (2 sub-tabs)
+ * 3. Grid - Grid & Rulers settings (2 main tabs, 6 total sub-tabs)
+ * 4. Layers - Layers settings
+ * 5. Entities - Entities settings
+ * 6. Grips - Coming Soon
+ * 7. Lighting - Coming Soon
+ *
+ * Architecture:
+ * - Category state managed locally (useState)
+ * - Lazy loading via React.lazy() and Suspense
+ * - Icon-based navigation with tooltips
+ *
+ * State:
+ * - activeCategory: Currently selected category
+ * - Settings state managed by child components
  *
  * @see docs/dxf-settings/COMPONENT_GUIDE.md#SpecificSettingsPanel
- * @see docs/dxf-settings/ARCHITECTURE.md - Component hierarchy
+ * @see docs/dxf-settings/ARCHITECTURE.md - Panel routing pattern
+ *
+ * @example
+ * ```tsx
+ * // In DxfSettingsPanel.tsx
+ * {activeMainTab === 'specific' && (
+ *   <SpecificSettingsPanel />
+ * )}
+ * ```
  */
+
+// ============================================================================
+// LAZY LOADED COMPONENTS
+// ============================================================================
+
+const LazySelectionCategory = lazy(() => import('../categories/SelectionCategory'));
+const LazyCursorCategory = lazy(() => import('../categories/CursorCategory'));
+const LazyGridCategory = lazy(() => import('../categories/GridCategory'));
+const LazyLayersCategory = lazy(() => import('../categories/LayersCategory'));
+const LazyEntitiesCategory = lazy(() => import('../categories/EntitiesCategory'));
+const LazyGripsCategory = lazy(() => import('../categories/GripsCategory'));
+const LazyLightingCategory = lazy(() => import('../categories/LightingCategory'));
+
+// ============================================================================
+// TYPES
+// ============================================================================
 
 export interface SpecificSettingsPanelProps {
   className?: string;
+  defaultCategory?: ColorCategory;
 }
+
+type ColorCategory = 'cursor' | 'selection' | 'grid' | 'grips' | 'layers' | 'entities' | 'lighting';
+
+interface CategoryConfig {
+  id: ColorCategory;
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  comingSoon?: boolean;
+}
+
+// ============================================================================
+// COMPONENT
+// ============================================================================
 
 export const SpecificSettingsPanel: React.FC<SpecificSettingsPanelProps> = ({
   className = '',
+  defaultCategory = 'selection'
 }) => {
+  // ============================================================================
+  // STATE
+  // ============================================================================
+
+  const [activeCategory, setActiveCategory] = useState<ColorCategory>(defaultCategory);
+
+  // ============================================================================
+  // CATEGORY CONFIGURATION
+  // ============================================================================
+
+  const categories: CategoryConfig[] = [
+    {
+      id: 'selection',
+      title: 'Επιλογή (Selection)',
+      description: 'Ρυθμίσεις επιλογής αντικειμένων',
+      icon: <SelectionIcon />
+    },
+    {
+      id: 'cursor',
+      title: 'Κέρσορας (Cursor)',
+      description: 'Ρυθμίσεις κέρσορα και σταυρονήματος',
+      icon: <CrosshairIcon />
+    },
+    {
+      id: 'grid',
+      title: 'Πλέγμα & Χάρακες (Grid & Rulers)',
+      description: 'Ρυθμίσεις πλέγματος και χαράκων',
+      icon: <GridIcon />
+    },
+    {
+      id: 'layers',
+      title: 'Επίπεδα (Layers)',
+      description: 'Ρυθμίσεις επιπέδων',
+      icon: <LayersIcon />
+    },
+    {
+      id: 'entities',
+      title: 'Οντότητες (Entities)',
+      description: 'Ρυθμίσεις οντοτήτων DXF',
+      icon: <EntitiesIcon />
+    },
+    {
+      id: 'grips',
+      title: 'Grips',
+      description: 'Ρυθμίσεις grips (σύντομα)',
+      icon: <GripsIcon />,
+      comingSoon: true
+    },
+    {
+      id: 'lighting',
+      title: 'Φωτισμός (Lighting)',
+      description: 'Ρυθμίσεις φωτισμού (σύντομα)',
+      icon: <LightingIcon />,
+      comingSoon: true
+    }
+  ];
+
+  // ============================================================================
+  // RENDER CATEGORY CONTENT
+  // ============================================================================
+
+  const renderCategoryContent = () => {
+    switch (activeCategory) {
+      case 'selection':
+        return <LazySelectionCategory />;
+      case 'cursor':
+        return <LazyCursorCategory />;
+      case 'grid':
+        return <LazyGridCategory />;
+      case 'layers':
+        return <LazyLayersCategory />;
+      case 'entities':
+        return <LazyEntitiesCategory />;
+      case 'grips':
+        return <LazyGripsCategory />;
+      case 'lighting':
+        return <LazyLightingCategory />;
+      default:
+        return <LazySelectionCategory />;
+    }
+  };
+
+  // ============================================================================
+  // RENDER
+  // ============================================================================
+
   return (
-    <div className={`specific-settings-panel ${className}`}>
-      <h3>Specific Settings Panel (Placeholder)</h3>
-      <p>Categories: Επιλογή | Κέρσορας | Layers | Entities | Φόντο | Χάραξη | Εισαγωγή</p>
-      <p>🚧 Under Construction - Phase 3 Step 3.8</p>
+    <div className={className}>
+      {/* Category Navigation - Icon Only */}
+      <nav className="flex gap-1 mb-4 p-2">
+        {categories.map((category) => (
+          <button
+            key={category.id}
+            onClick={() => setActiveCategory(category.id)}
+            disabled={category.comingSoon}
+            title={category.title}
+            className={`h-8 w-8 p-0 rounded-md border transition-colors duration-150 flex items-center justify-center relative ${
+              activeCategory === category.id
+                ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-500'
+                : category.comingSoon
+                ? 'bg-gray-700 text-gray-500 border-gray-600 cursor-not-allowed opacity-50'
+                : 'bg-gray-700 hover:bg-gray-600 text-gray-300 border-gray-600 hover:border-gray-500'
+            }`}
+          >
+            {category.icon}
+            {category.comingSoon && (
+              <span className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full text-[8px] flex items-center justify-center text-white font-bold">
+                !
+              </span>
+            )}
+          </button>
+        ))}
+      </nav>
+
+      {/* Category Content */}
+      <Suspense
+        fallback={
+          <div className="px-4 py-8 text-center text-gray-400">
+            Φόρτωση...
+          </div>
+        }
+      >
+        {renderCategoryContent()}
+      </Suspense>
     </div>
   );
 };
 
+// ============================================================================
+// DEFAULT EXPORT
+// ============================================================================
+
 export default SpecificSettingsPanel;
+
+/**
+ * MIGRATION NOTES: Extracted from DxfSettingsPanel.tsx lines 800-2113
+ *
+ * Original code:
+ * ```tsx
+ * {activeMainTab === 'specific' && (
+ *   <div>
+ *     {/* Category Navigation - Icon Only *\/}
+ *     <nav className="flex gap-1 mb-4 p-2">
+ *       {categories.map((category) => (
+ *         <button onClick={() => setActiveCategory(category.id)}>
+ *           {category.icon}
+ *         </button>
+ *       ))}
+ *     </nav>
+ *
+ *     {/* Category Content (inline switch) *\/}
+ *     {(() => {
+ *       switch (activeCategory) {
+ *         case 'cursor': return <div>{/* 400+ lines inline *\/}</div>;
+ *         case 'selection': return <SelectionSettings />;
+ *         case 'grid': return <div>{/* 915 lines inline *\/}</div>;
+ *         case 'layers': return <LayersSettings />;
+ *         case 'entities': return <EntitiesSettings />;
+ *         default: return <ComingSoonSettings />;
+ *       }
+ *     })()}
+ *   </div>
+ * )}
+ * ```
+ *
+ * Changes:
+ * - ✅ Extracted entire Specific tab to SpecificSettingsPanel component
+ * - ✅ All 7 categories now lazy loaded for performance
+ * - ✅ Created 7 category components:
+ *   1. SelectionCategory (simple wrapper)
+ *   2. CursorCategory (2 sub-tabs: Crosshair, Cursor)
+ *   3. GridCategory (2 main tabs: Grid, Rulers with 6 total sub-tabs)
+ *   4. LayersCategory (simple wrapper)
+ *   5. EntitiesCategory (simple wrapper)
+ *   6. GripsCategory (Coming Soon)
+ *   7. LightingCategory (Coming Soon)
+ * - ✅ Clean separation: SpecificSettingsPanel (routing) vs categories (UI)
+ * - ✅ Consistent pattern with GeneralSettingsPanel
+ *
+ * Benefits:
+ * - ✅ Single Responsibility (SpecificSettingsPanel = Category routing only)
+ * - ✅ Lazy loading for all categories (performance)
+ * - ✅ Reusable category components
+ * - ✅ Testable in isolation
+ * - ✅ Cleaner parent component (DxfSettingsPanel)
+ * - ✅ Consistent architecture across all panels
+ */
