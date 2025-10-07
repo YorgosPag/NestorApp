@@ -74,10 +74,10 @@ import { lazy } from 'react';
 // ============================================================================
 
 /**
- * DxfSettingsPanel - Root component
- * Lazy loaded: NO (always needed)
+ * NOTE: DxfSettingsPanel is NOT exported from here.
+ * It should be imported directly from '../DxfSettingsPanel'
+ * Reason: Circular dependency issue when GeneralSettingsPanel imports from LazyComponents
  */
-export { DxfSettingsPanel } from './panels/DxfSettingsPanel';
 
 /**
  * GeneralSettingsPanel - Container για General settings (Lines, Text, Grips)
@@ -206,7 +206,7 @@ export const LazyImportCategory = lazy(
 
 export default {
   // Panels
-  DxfSettingsPanel,
+  // NOTE: DxfSettingsPanel removed (circular dependency - import from '../DxfSettingsPanel' instead)
   LazyGeneralSettingsPanel,
   LazySpecificSettingsPanel,
 

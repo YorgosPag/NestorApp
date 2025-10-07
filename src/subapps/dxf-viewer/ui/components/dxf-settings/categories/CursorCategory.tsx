@@ -14,8 +14,8 @@
  */
 
 import React, { Suspense } from 'react';
-import { useTabNavigation } from '../../hooks/useTabNavigation';
-import { TabNavigation } from '../../ui/TabNavigation';
+import { useTabNavigation } from '../hooks/useTabNavigation';
+import { TabNavigation } from '../shared/TabNavigation';
 import { CrosshairSettings } from '../settings/special/CrosshairSettings';
 import { CursorSettings } from '../settings/special/CursorSettings';
 

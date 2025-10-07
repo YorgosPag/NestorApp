@@ -52,6 +52,13 @@ import React, { Suspense } from 'react';
 import { useTabNavigation } from '../hooks/useTabNavigation';
 import { TabNavigation } from '../shared/TabNavigation';
 import { LazyLinesTab, LazyTextTab, LazyGripsTab } from '../LazyComponents';
+import { LinePreview } from '../settings/shared/LinePreview';
+import { CurrentSettingsDisplay } from '../settings/shared/CurrentSettingsDisplay';
+import {
+  useLineSettingsFromProvider,
+  useTextSettingsFromProvider,
+  useGripSettingsFromProvider
+} from '../../../../providers/DxfSettingsProvider';
 
 /**
  * GeneralSettingsPanel - Container για General settings tabs
@@ -117,6 +124,14 @@ export const GeneralSettingsPanel: React.FC<GeneralSettingsPanelProps> = ({
   const { activeTab, setActiveTab } = useTabNavigation<GeneralTab>(defaultTab);
 
   // ============================================================================
+  // HOOKS - Settings από DxfSettingsProvider
+  // ============================================================================
+
+  const lineSettings = useLineSettingsFromProvider();
+  const textSettings = useTextSettingsFromProvider();
+  const gripSettings = useGripSettingsFromProvider();
+
+  // ============================================================================
   // TAB CONFIGURATION
   // ============================================================================
 
@@ -149,6 +164,30 @@ export const GeneralSettingsPanel: React.FC<GeneralSettingsPanelProps> = ({
 
   return (
     <div className={className}>
+      {/* Preview and Current Settings Display */}
+      <div className="px-4 mb-6 space-y-4">
+        {/* Line Preview Canvas */}
+        <LinePreview
+          lineSettings={lineSettings.settings}
+          textSettings={textSettings.settings}
+          gripSettings={gripSettings.settings}
+        />
+
+        {/* Current Settings Display */}
+        <CurrentSettingsDisplay
+          activeTab={activeTab}
+          lineSettings={lineSettings.settings}
+          textSettings={textSettings.settings}
+          gripSettings={{
+            showGrips: gripSettings.settings.enabled,
+            gripSize: gripSettings.settings.gripSize,
+            gripShape: 'square' as const,
+            showFill: true,
+            colors: gripSettings.settings.colors
+          }}
+        />
+      </div>
+
       {/* Tab Navigation */}
       <div className="border-b border-gray-600 mb-4">
         <TabNavigation

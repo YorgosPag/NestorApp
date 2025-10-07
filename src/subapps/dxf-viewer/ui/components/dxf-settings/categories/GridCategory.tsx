@@ -14,8 +14,8 @@
  */
 
 import React from 'react';
-import { useTabNavigation } from '../../hooks/useTabNavigation';
-import { TabNavigation } from '../../ui/TabNavigation';
+import { useTabNavigation } from '../hooks/useTabNavigation';
+import { TabNavigation } from '../shared/TabNavigation';
 import { GridSettings } from '../settings/special/GridSettings';
 import { RulersSettings } from '../settings/special/RulersSettings';
 
