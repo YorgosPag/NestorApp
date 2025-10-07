@@ -16,8 +16,8 @@
  */
 
 import React from 'react';
-import { useTabNavigation } from '../../../hooks/useTabNavigation';
-import { TabNavigation } from '../../../ui/TabNavigation';
+import { useTabNavigation } from '../../hooks/useTabNavigation';
+import { TabNavigation } from '../../ui/TabNavigation';
 import { RulerBackgroundSettings } from './rulers/RulerBackgroundSettings';
 import { RulerLinesSettings } from './rulers/RulerLinesSettings';
 import { RulerTextSettings } from './rulers/RulerTextSettings';
