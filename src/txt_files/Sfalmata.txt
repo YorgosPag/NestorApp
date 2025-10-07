@@ -1,0 +1,16 @@
+Build Error
+Failed to compile
+
+Next.js (14.2.32) is outdated (learn more) (turbo)
+./src/subapps/dxf-viewer/ui/components/LazyLoadWrapper.tsx:165:9
+Module not found: Can't resolve './ColorPalettePanel'
+  163 |
+  164 | export const LazyColorPalettePanel = withLazyLoad(
+> 165 |   () => import('./ColorPalettePanel').then(m => ({ default: m.ColorPalettePanel }))
+      |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  166 | );
+  167 |
+  168 | /**
+
+https://nextjs.org/docs/messages/module-not-found
+This error occurred during the build process and can only be dismissed by fixing the error.

@@ -162,7 +162,7 @@ export const LazyHierarchyDebugPanel = withLazyLoad(
 );
 
 export const LazyColorPalettePanel = withLazyLoad(
-  () => import('./ColorPalettePanel').then(m => ({ default: m.ColorPalettePanel }))
+  () => import('./DxfSettingsPanel').then(m => ({ default: m.DxfSettingsPanel }))
 );
 
 /**
