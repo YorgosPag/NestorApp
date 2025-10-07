@@ -1,6 +1,6 @@
 // GeneralSettingsPanel.tsx - Container for General settings (Lines, Text, Grips)
-// STATUS: PLACEHOLDER - Phase 1 Step 1.2
-// TODO: Implement in Phase 2 (STEP 2.6)
+// STATUS: ACTIVE - Phase 2 Step 2.4
+// PURPOSE: Router για General Settings tabs (Lines, Text, Grips)
 
 /**
  * ╔════════════════════════════════════════════════════════════════════════════╗
@@ -8,8 +8,7 @@
  * ╚════════════════════════════════════════════════════════════════════════════╝
  *
  * 📋 Migration Checklist:
- *    - docs/dxf-settings/MIGRATION_CHECKLIST.md (STEP 1.2 - Placeholder Creation)
- *    - docs/dxf-settings/MIGRATION_CHECKLIST.md (STEP 2.6 - Implementation)
+ *    - docs/dxf-settings/MIGRATION_CHECKLIST.md (STEP 2.4 - Implementation)
  *
  * 🏗️ Architecture:
  *    - docs/dxf-settings/ARCHITECTURE.md (§2 Component Hierarchy - Panels)
@@ -26,53 +25,208 @@
  *    - docs/dxf-settings/DECISION_LOG.md (ADR-005: Use Custom Hooks for Navigation State)
  *
  * 📚 Roadmap:
- *    - docs/REFACTORING_ROADMAP_ColorPalettePanel.md (Phase 2, Step 2.6)
+ *    - docs/REFACTORING_ROADMAP_ColorPalettePanel.md (Phase 2, Step 2.4)
  *
  * ╔════════════════════════════════════════════════════════════════════════════╗
  * ║                      RELATED CODE FILES                                    ║
  * ╚════════════════════════════════════════════════════════════════════════════╝
  *
  * Parent:
- *    - panels/DxfSettingsPanel.tsx
+ *    - panels/DxfSettingsPanel.tsx (main router)
  *
- * Children (Tabs):
- *    - tabs/general/LinesTab.tsx
- *    - tabs/general/TextTab.tsx
- *    - tabs/general/GripsTab.tsx
+ * Children (Tabs - Lazy Loaded):
+ *    - tabs/general/LinesTab.tsx (via LazyLinesTab)
+ *    - tabs/general/TextTab.tsx (via LazyTextTab)
+ *    - tabs/general/GripsTab.tsx (via LazyGripsTab)
  *
  * Infrastructure:
- *    - LazyComponents.tsx (lazy loading wrapper)
+ *    - LazyComponents.tsx (lazy loading exports)
  *    - hooks/useTabNavigation.ts (tab state management)
  *    - shared/TabNavigation.tsx (tab UI component)
+ *
+ * Extracted from:
+ *    - ui/components/DxfSettingsPanel.tsx (lines 2146-2222, originally ColorPalettePanel)
  */
 
-import React from 'react';
+import React, { Suspense } from 'react';
+import { useTabNavigation } from '../hooks/useTabNavigation';
+import { TabNavigation } from '../shared/TabNavigation';
+import { LazyLinesTab, LazyTextTab, LazyGripsTab } from '../LazyComponents';
 
 /**
- * GeneralSettingsPanel - Container for General settings tabs
+ * GeneralSettingsPanel - Container για General settings tabs
  *
- * Renders:
- * - TabNavigation (3 buttons: Lines, Text, Grips)
- * - Active tab content (LinesTab | TextTab | GripsTab)
+ * Purpose:
+ * - Route between 3 General tabs (Lines, Text, Grips)
+ * - Render tab navigation UI
+ * - Lazy load active tab only
+ *
+ * Architecture:
+ * - Single Responsibility: Tab routing ONLY
+ * - NO business logic (lives in tab components)
+ * - NO settings state (lives in DxfSettingsProvider)
+ *
+ * State:
+ * - activeTab: 'lines' | 'text' | 'grips' (via useTabNavigation hook)
  *
  * @see docs/dxf-settings/COMPONENT_GUIDE.md#GeneralSettingsPanel
  * @see docs/dxf-settings/ARCHITECTURE.md - Data flow
+ * @see docs/dxf-settings/DECISION_LOG.md - ADR-003, ADR-005
+ *
+ * @example
+ * ```tsx
+ * // In DxfSettingsPanel.tsx
+ * {activeMainTab === 'general' && (
+ *   <Suspense fallback={<div>Loading...</div>}>
+ *     <GeneralSettingsPanel />
+ *   </Suspense>
+ * )}
+ * ```
  */
 
+// ============================================================================
+// TYPES
+// ============================================================================
+
+export type GeneralTab = 'lines' | 'text' | 'grips';
+
 export interface GeneralSettingsPanelProps {
+  /**
+   * Default active tab (default: 'lines')
+   */
+  defaultTab?: GeneralTab;
+
+  /**
+   * Optional CSS class
+   */
   className?: string;
 }
 
+// ============================================================================
+// COMPONENT
+// ============================================================================
+
 export const GeneralSettingsPanel: React.FC<GeneralSettingsPanelProps> = ({
+  defaultTab = 'lines',
   className = '',
 }) => {
+  // ============================================================================
+  // STATE - Tab Navigation
+  // ============================================================================
+
+  const { activeTab, setActiveTab } = useTabNavigation<GeneralTab>(defaultTab);
+
+  // ============================================================================
+  // TAB CONFIGURATION
+  // ============================================================================
+
+  const tabs = [
+    { id: 'lines' as const, label: 'Γραμμές' },
+    { id: 'text' as const, label: 'Κείμενο' },
+    { id: 'grips' as const, label: 'Grips' },
+  ];
+
+  // ============================================================================
+  // RENDER TAB CONTENT (Lazy Loaded)
+  // ============================================================================
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'lines':
+        return <LazyLinesTab />;
+      case 'text':
+        return <LazyTextTab />;
+      case 'grips':
+        return <LazyGripsTab />;
+      default:
+        return <LazyLinesTab />; // Fallback
+    }
+  };
+
+  // ============================================================================
+  // RENDER
+  // ============================================================================
+
   return (
-    <div className={`general-settings-panel ${className}`}>
-      <h3>General Settings Panel (Placeholder)</h3>
-      <p>Tabs: Lines | Text | Grips</p>
-      <p>🚧 Under Construction - Phase 2 Step 2.6</p>
+    <div className={className}>
+      {/* Tab Navigation */}
+      <div className="border-b border-gray-600 mb-4">
+        <TabNavigation
+          tabs={tabs}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          className="px-2 pb-2"
+        />
+      </div>
+
+      {/* Tab Content (Lazy Loaded) */}
+      <Suspense
+        fallback={
+          <div className="px-4 py-8 text-center text-gray-400">
+            Φόρτωση...
+          </div>
+        }
+      >
+        <div className="px-4">{renderTabContent()}</div>
+      </Suspense>
     </div>
   );
 };
 
+// ============================================================================
+// DEFAULT EXPORT
+// ============================================================================
+
 export default GeneralSettingsPanel;
+
+/**
+ * MIGRATION NOTES (από DxfSettingsPanel.tsx):
+ *
+ * Original code (lines 2146-2222):
+ * ```tsx
+ * {activeMainTab === 'general' && (
+ *   <div className="min-h-[850px] max-h-[96vh] overflow-y-auto">
+ *     {/* Preview and Current Settings Display */}
+ *     <div className="px-4 mb-6 space-y-4">
+ *       <LinePreview ... />
+ *       <CurrentSettingsDisplay ... />
+ *     </div>
+ *
+ *     {/* General Settings Sub-tabs Navigation */}
+ *     <div className="border-b border-gray-600 mb-4">
+ *       <nav className="flex gap-1 px-2 pb-2">
+ *         <button onClick={() => setActiveGeneralTab('lines')} ...>Γραμμές</button>
+ *         <button onClick={() => setActiveGeneralTab('text')} ...>Κείμενο</button>
+ *         <button onClick={() => setActiveGeneralTab('grips')} ...>Grips</button>
+ *       </nav>
+ *     </div>
+ *
+ *     {/* General Settings Content */}
+ *     <div className="px-4">
+ *       {activeGeneralTab === 'lines' && <LineSettings />}
+ *       {activeGeneralTab === 'text' && <TextSettings />}
+ *       {activeGeneralTab === 'grips' && <GripSettings />}
+ *     </div>
+ *   </div>
+ * )}
+ * ```
+ *
+ * Changes:
+ * - ✅ Extracted tab navigation → TabNavigation component (reusable)
+ * - ✅ Extracted tab state → useTabNavigation hook (reusable)
+ * - ✅ Extracted tab routing → renderTabContent() method
+ * - ✅ Added Suspense boundaries για lazy loading
+ * - ✅ Removed Preview/CurrentSettingsDisplay (will be added back in Phase 2.5 if needed)
+ * - ✅ Tab buttons → Generic TabNavigation component
+ * - ✅ Conditional rendering → Lazy loaded components
+ *
+ * Benefits:
+ * - ✅ Single Responsibility (routing only)
+ * - ✅ Reusable TabNavigation component
+ * - ✅ Lazy loading (performance boost)
+ * - ✅ Testable in isolation
+ * - ✅ Clean separation of concerns
+ *
+ * Note: Preview & CurrentSettingsDisplay removed for now (ADR-007: Keep It Simple).
+ * Can be added back later if needed in Phase 2.5 or later.
+ */
