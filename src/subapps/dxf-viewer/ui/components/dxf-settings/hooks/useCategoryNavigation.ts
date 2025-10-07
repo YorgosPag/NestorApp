@@ -3,6 +3,16 @@
 // PURPOSE: Semantic alias για category navigation (ΔΕΝ δημιουργεί διπλότυπο!)
 
 /**
+ * ╔════════════════════════════════════════════════════════════════════════════╗
+ * ║  CROSS-REFERENCES: docs/dxf-settings/MIGRATION_CHECKLIST.md (STEP 1.4)    ║
+ * ║  Re-exports: hooks/useTabNavigation.ts (NO DUPLICATE - Semantic Alias!)   ║
+ * ║  Used by: panels/SpecificSettingsPanel.tsx, all categories/               ║
+ * ║  ADR: docs/dxf-settings/DECISION_LOG.md (ADR-005: Custom Hooks)           ║
+ * ║  ΔΕΚΑΛΟΓΟΣ: Rule #3 (No Duplicates), Rule #11 (Centralization)            ║
+ * ╚════════════════════════════════════════════════════════════════════════════╝
+ */
+
+/**
  * useCategoryNavigation - Re-export του useTabNavigation για Specific categories
  *
  * ΣΗΜΑΝΤΙΚΟ:

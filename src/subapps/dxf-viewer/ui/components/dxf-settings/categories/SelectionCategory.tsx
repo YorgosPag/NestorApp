@@ -2,6 +2,14 @@
 // STATUS: PLACEHOLDER - Phase 1 Step 1.2
 // TODO: Implement in Phase 3 (STEP 3.1)
 
+/**
+ * ╔════════════════════════════════════════════════════════════════════════════╗
+ * ║  CROSS-REFERENCES: See docs/dxf-settings/MIGRATION_CHECKLIST.md (STEP 3.1)║
+ * ║  Parent: panels/SpecificSettingsPanel.tsx                                  ║
+ * ║  Uses: settings/special/SelectionSettings.tsx, hooks/useCategoryNavigation ║
+ * ╚════════════════════════════════════════════════════════════════════════════╝
+ */
+
 import React from 'react';
 
 /**

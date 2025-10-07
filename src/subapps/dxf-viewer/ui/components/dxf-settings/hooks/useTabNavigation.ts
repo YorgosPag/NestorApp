@@ -2,6 +2,15 @@
 // STATUS: ACTIVE - Phase 1 Step 1.4
 // PURPOSE: Centralized tab state management για GeneralSettingsPanel
 
+/**
+ * ╔════════════════════════════════════════════════════════════════════════════╗
+ * ║  CROSS-REFERENCES: docs/dxf-settings/MIGRATION_CHECKLIST.md (STEP 1.4)    ║
+ * ║  Used by: panels/GeneralSettingsPanel.tsx, panels/DxfSettingsPanel.tsx    ║
+ * ║  Re-exported by: hooks/useCategoryNavigation.ts (semantic alias)           ║
+ * ║  ADR: docs/dxf-settings/DECISION_LOG.md (ADR-005: Custom Hooks)           ║
+ * ╚════════════════════════════════════════════════════════════════════════════╝
+ */
+
 import { useState, useCallback } from 'react';
 
 /**

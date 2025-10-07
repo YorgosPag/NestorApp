@@ -2,6 +2,15 @@
 // STATUS: ACTIVE - Phase 1 Step 1.4
 // PURPOSE: Real-time preview της εμφάνισης με τα τρέχοντα settings
 
+/**
+ * ╔════════════════════════════════════════════════════════════════════════════╗
+ * ║  CROSS-REFERENCES: docs/dxf-settings/MIGRATION_CHECKLIST.md (STEP 1.4)    ║
+ * ║  Used by: tabs/general/LinesTab, TextTab, GripsTab                         ║
+ * ║  Uses: settings/shared/LinePreview.tsx                                     ║
+ * ║  ADR: docs/dxf-settings/DECISION_LOG.md (ADR-005: Custom Hooks)           ║
+ * ╚════════════════════════════════════════════════════════════════════════════╝
+ */
+
 import { useMemo } from 'react';
 
 /**

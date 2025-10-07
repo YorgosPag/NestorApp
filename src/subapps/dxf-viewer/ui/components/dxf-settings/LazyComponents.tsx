@@ -2,6 +2,54 @@
 // STATUS: ACTIVE - Phase 1 Step 1.3
 // PURPOSE: Code-splitting για performance optimization
 
+/**
+ * ╔════════════════════════════════════════════════════════════════════════════╗
+ * ║                        CROSS-REFERENCES (Documentation)                    ║
+ * ╚════════════════════════════════════════════════════════════════════════════╝
+ *
+ * 📋 Migration Checklist:
+ *    - docs/dxf-settings/MIGRATION_CHECKLIST.md (STEP 1.3)
+ *
+ * 🏗️ Architecture:
+ *    - docs/dxf-settings/ARCHITECTURE.md (§4.3 Lazy Loading Strategy)
+ *    - docs/dxf-settings/ARCHITECTURE.md (§6.1 Performance - Code Splitting)
+ *
+ * 📖 Component Guide:
+ *    - docs/dxf-settings/COMPONENT_GUIDE.md (§1 Lazy Loading Infrastructure)
+ *
+ * 🧪 Testing:
+ *    - docs/dxf-settings/TESTING_STRATEGY.md (§5 Performance Testing - Bundle Size)
+ *
+ * 📝 Decision Log:
+ *    - docs/dxf-settings/DECISION_LOG.md (ADR-002: Use React.lazy() for Lazy Loading)
+ *    - docs/dxf-settings/DECISION_LOG.md (ADR-008: Lazy Load Categories Separately)
+ *
+ * 📚 Roadmap:
+ *    - docs/REFACTORING_ROADMAP_ColorPalettePanel.md (Phase 1, Step 1.3)
+ *
+ * ╔════════════════════════════════════════════════════════════════════════════╗
+ * ║                      RELATED CODE FILES (Components)                       ║
+ * ╚════════════════════════════════════════════════════════════════════════════╝
+ *
+ * Panels (Lazy Loaded):
+ *    - panels/GeneralSettingsPanel.tsx
+ *    - panels/SpecificSettingsPanel.tsx
+ *
+ * Tabs (Lazy Loaded):
+ *    - tabs/general/LinesTab.tsx
+ *    - tabs/general/TextTab.tsx
+ *    - tabs/general/GripsTab.tsx
+ *
+ * Categories (Lazy Loaded):
+ *    - categories/SelectionCategory.tsx
+ *    - categories/CursorCategory.tsx
+ *    - categories/LayersCategory.tsx
+ *    - categories/EntitiesCategory.tsx
+ *    - categories/BackgroundCategory.tsx
+ *    - categories/DrawingCategory.tsx
+ *    - categories/ImportCategory.tsx
+ */
+
 import { lazy } from 'react';
 
 /**

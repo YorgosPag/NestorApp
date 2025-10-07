@@ -2,6 +2,15 @@
 // STATUS: ACTIVE - Phase 1 Step 1.5
 // PURPOSE: Generic tab navigation UI (χρησιμοποιείται σε multiple places)
 
+/**
+ * ╔════════════════════════════════════════════════════════════════════════════╗
+ * ║  CROSS-REFERENCES: docs/dxf-settings/MIGRATION_CHECKLIST.md (STEP 1.5)    ║
+ * ║  Used by: panels/DxfSettingsPanel, panels/GeneralSettingsPanel            ║
+ * ║  Works with: hooks/useTabNavigation.ts                                     ║
+ * ║  ADR: docs/dxf-settings/DECISION_LOG.md (ADR-004: Reusable TabNavigation) ║
+ * ╚════════════════════════════════════════════════════════════════════════════╝
+ */
+
 import React from 'react';
 
 /**

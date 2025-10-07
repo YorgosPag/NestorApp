@@ -2,6 +2,15 @@
 // STATUS: ACTIVE - Phase 1 Step 1.5
 // PURPOSE: Generic button για Specific settings categories
 
+/**
+ * ╔════════════════════════════════════════════════════════════════════════════╗
+ * ║  CROSS-REFERENCES: docs/dxf-settings/MIGRATION_CHECKLIST.md (STEP 1.5)    ║
+ * ║  Used by: panels/SpecificSettingsPanel.tsx                                 ║
+ * ║  Works with: hooks/useCategoryNavigation.ts                                ║
+ * ║  ADR: docs/dxf-settings/DECISION_LOG.md (ADR-004: Reusable Components)    ║
+ * ╚════════════════════════════════════════════════════════════════════════════╝
+ */
+
 import React from 'react';
 
 /**
