@@ -15,8 +15,8 @@
 
 import React from 'react';
 import { useRulersGridContext } from '../../../../../../systems/rulers-grid/RulersGridSystem';
-import { useTabNavigation } from '../../../../hooks/useTabNavigation';
-import { TabNavigation } from '../../../../ui/TabNavigation';
+import { useTabNavigation } from '../../../hooks/useTabNavigation';
+import { TabNavigation } from '../../../ui/TabNavigation';
 
 export interface RulerLinesSettingsProps {
   className?: string;
