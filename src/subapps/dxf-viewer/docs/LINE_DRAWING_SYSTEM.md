@@ -4349,9 +4349,9 @@ switch (tool) {
 
 ## ✅ WHAT EXISTS AND WORKS (100% Complete)
 
-### 1. Settings UI System (ColorPalettePanel)
+### 1. Settings UI System (DxfSettingsPanel)
 
-**Location**: `src/subapps/dxf-viewer/ui/components/ColorPalettePanel.tsx`
+**Location**: `src/subapps/dxf-viewer/ui/components/DxfSettingsPanel.tsx`
 
 **Tabs Confirmed**:
 - Γενικές Ρυθμίσεις (General Settings) - Line 2109
@@ -4446,12 +4446,12 @@ NotificationProvider
 **Before (Sept 2025)**:
 - Settings UI existed but was NOT connected to entity creation
 - Entities had hardcoded properties (layer: '0', visible: true)
-- No color, lineweight, opacity, etc. from ColorPalettePanel
+- No color, lineweight, opacity, etc. from DxfSettingsPanel
 
 **After (Oct 2025)**:
 - ✅ Settings fully integrated via `useLineStyles()` hooks
-- ✅ Preview phase uses ColorPalettePanel → Ειδικές → Preview settings
-- ✅ Completion phase uses ColorPalettePanel → Ειδικές → Completion settings
+- ✅ Preview phase uses DxfSettingsPanel → Ειδικές → Preview settings
+- ✅ Completion phase uses DxfSettingsPanel → Ειδικές → Completion settings
 - ✅ Centralized `applyPreviewSettings()` helper eliminates code duplication
 
 ---
@@ -4473,7 +4473,7 @@ const lineCompletionStyles = useLineStyles('completion');
 
 ```typescript
 // ===== ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΗ HELPER FUNCTION ΓΙΑ PREVIEW SETTINGS =====
-// Applies ColorPalettePanel settings (DXF Settings → General + Specific Preview)
+// Applies DxfSettingsPanel settings (DXF Settings → General + Specific Preview)
 // Used by: line, polyline, circle, rectangle entities
 const applyPreviewSettings = useCallback((entity: any) => {
   entity.color = linePreviewStyles.settings.color;
@@ -4507,7 +4507,7 @@ applyPreviewSettings(extendedRectangle); // ✅ Κεντρικοποιημένο
 #### Step 4: Completion Settings Application (Lines 372-382)
 
 ```typescript
-// Apply completion settings from ColorPalettePanel (for line entities only)
+// Apply completion settings from DxfSettingsPanel (for line entities only)
 if (newEntity.type === 'line' && state.currentTool === 'line') {
   // ✅ Type-safe property assignment (no 'as any' needed!)
   newEntity.color = lineCompletionStyles.settings.color;
@@ -4546,7 +4546,7 @@ if (newEntity.type === 'line' && state.currentTool === 'line') {
 ### 🎨 Settings Flow - Complete Data Path
 
 ```
-User opens ColorPalettePanel
+User opens DxfSettingsPanel
   ↓
 Γενικές Ρυθμίσεις (General) or Ειδικές Ρυθμίσεις (Specific)
   ↓
@@ -4558,7 +4558,7 @@ PREVIEW PHASE: applyPreviewSettings(entity) applies 9 properties
   ↓
 COMPLETION PHASE: Direct property assignment applies 9 properties
   ↓
-Entity rendered with ColorPalettePanel settings ✅
+Entity rendered with DxfSettingsPanel settings ✅
 ```
 
 ---
@@ -4567,8 +4567,8 @@ Entity rendered with ColorPalettePanel settings ✅
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Preview settings from ColorPalettePanel | ✅ Working | Lines 504, 511, 524, 529 |
-| Completion settings from ColorPalettePanel | ✅ Working | Lines 372-382 |
+| Preview settings from DxfSettingsPanel | ✅ Working | Lines 504, 511, 524, 529 |
+| Completion settings from DxfSettingsPanel | ✅ Working | Lines 372-382 |
 | Centralized settings helper | ✅ Working | `applyPreviewSettings()` at line 135 |
 | Real-time settings updates | ✅ Working | Settings changes propagate immediately |
 | Auto-save to localStorage | ✅ Working | Via DxfSettingsProvider |
@@ -4595,7 +4595,7 @@ Entity rendered with ColorPalettePanel settings ✅
 
 ### System 1: Settings UI ✅ Connected
 ```
-ColorPalettePanel (DXF Settings tab)
+DxfSettingsPanel (DXF Settings tab)
   ├─ Γενικές Ρυθμίσεις (General)
   │   └─ LineSettings component
   │       └─ Updates: DxfSettingsProvider.line.general
@@ -4624,10 +4624,10 @@ useUnifiedDrawing()
   ├─ useLineStyles('completion') → lineCompletionStyles
   │
   ├─ PREVIEW PHASE (lines 504, 511, 524, 529):
-  │   └─ applyPreviewSettings(entity) → Applies 9 properties from ColorPalettePanel
+  │   └─ applyPreviewSettings(entity) → Applies 9 properties from DxfSettingsPanel
   │
   └─ COMPLETION PHASE (lines 372-382):
-      └─ Direct assignment → Applies 9 properties from ColorPalettePanel
+      └─ Direct assignment → Applies 9 properties from DxfSettingsPanel
 ```
 
 **The Solution**: ✅ **BRIDGE ESTABLISHED** between all 3 systems via `useLineStyles()` hooks + centralized helpers
@@ -4667,7 +4667,7 @@ ab5d272 Docs: Complete Line Drawing System Documentation (2000+ lines)
 | `lineweight` property in createEntityFromTool | `useUnifiedDrawing.ts` | ❌ No | Not set |
 | `opacity` property in createEntityFromTool | `useUnifiedDrawing.ts` | ❌ No | Not set |
 | Settings hooks exist | `hooks/useEntityStyles.ts` | ✅ Yes | Functional |
-| Settings UI exists | `ui/components/ColorPalettePanel.tsx` | ✅ Yes | Functional |
+| Settings UI exists | `ui/components/DxfSettingsPanel.tsx` | ✅ Yes | Functional |
 | Settings provider exists | `providers/DxfSettingsProvider.tsx` | ✅ Yes | Functional |
 
 ## 🎯 WHY THIS WASN'T OBVIOUS
@@ -4677,7 +4677,7 @@ ab5d272 Docs: Complete Line Drawing System Documentation (2000+ lines)
 **User Believed**: "It worked before, then it broke"
 
 **Actual History**:
-1. Settings UI was built first (ColorPalettePanel with Γενικές/Ειδικές)
+1. Settings UI was built first (DxfSettingsPanel with Γενικές/Ειδικές)
 2. Settings providers were built second (DxfSettingsProvider, useEntityStyles)
 3. Entity creation system was built third (useUnifiedDrawing)
 4. **Step 4 was never completed**: Connect settings to entity creation
@@ -4692,7 +4692,7 @@ ab5d272 Docs: Complete Line Drawing System Documentation (2000+ lines)
 ### The Illusion of Completeness
 
 **What Makes This Confusing**:
-1. **UI Feedback Loop**: ColorPalettePanel shows settings changing → user assumes they're being applied
+1. **UI Feedback Loop**: DxfSettingsPanel shows settings changing → user assumes they're being applied
 2. **Test File Success**: `test-new-hooks.tsx` demonstrates `useEntityStyles('line')` working → user assumes it's integrated
 3. **Entity Creation Works**: Lines are drawn on canvas → user assumes settings are applied
 4. **No Error Messages**: Nothing crashes, no console errors → user assumes it's correct
@@ -4969,15 +4969,15 @@ if (previewEntity && (state.currentTool === 'polygon' || state.currentTool === '
 
 1. **Ειδικές Ρυθμίσεις → Preview Mode** (Specific Settings)
    - User has explicitly configured preview appearance
-   - Location: ColorPalettePanel → DXF Settings → Ειδικές → Preview
+   - Location: DxfSettingsPanel → DXF Settings → Ειδικές → Preview
 
 2. **Γενικές Ρυθμίσεις** (General Settings)
    - Fallback if no specific preview settings
-   - Location: ColorPalettePanel → DXF Settings → Γενικές
+   - Location: DxfSettingsPanel → DXF Settings → Γενικές
 
 **Settings Applied**:
 ```typescript
-// From ColorPalettePanel → DXF Settings → Ειδικές → Preview
+// From DxfSettingsPanel → DXF Settings → Ειδικές → Preview
 {
   color: '#00FF00',           // Green preview line (example)
   lineWidth: 1.5,             // Slightly thicker for visibility
@@ -5127,15 +5127,15 @@ setLevelScene(currentLevelId, updatedScene);
 
 1. **Ειδικές Ρυθμίσεις → Completion Mode** (Specific Settings)
    - User has explicitly configured final appearance
-   - Location: ColorPalettePanel → DXF Settings → Ειδικές → Completion
+   - Location: DxfSettingsPanel → DXF Settings → Ειδικές → Completion
 
 2. **Γενικές Ρυθμίσεις** (General Settings)
    - Fallback if no specific completion settings
-   - Location: ColorPalettePanel → DXF Settings → Γενικές
+   - Location: DxfSettingsPanel → DXF Settings → Γενικές
 
 **Settings Applied**:
 ```typescript
-// From ColorPalettePanel → DXF Settings → Ειδικές → Completion
+// From DxfSettingsPanel → DXF Settings → Ειδικές → Completion
 {
   color: '#FFFFFF',           // White final line (example)
   lineWidth: 1.0,             // Standard thickness
@@ -5281,7 +5281,7 @@ if (isComplete(state.currentTool, newTempPoints)) {
 
 ```
 User Interaction Flow:
-1. User opens ColorPalettePanel
+1. User opens DxfSettingsPanel
 2. Clicks "DXF Settings" tab
 3. Sees two sub-tabs:
    ├─ Γενικές Ρυθμίσεις (General)
@@ -5612,7 +5612,7 @@ if (isComplete(state.currentTool, newTempPoints)) {
 ]);
 ```
 
-**Why This Matters**: If user changes settings in ColorPalettePanel, preview/completion appearance updates immediately!
+**Why This Matters**: If user changes settings in DxfSettingsPanel, preview/completion appearance updates immediately!
 
 ---
 
@@ -5621,7 +5621,7 @@ if (isComplete(state.currentTool, newTempPoints)) {
 ### Test 1: Preview Phase Visual Feedback
 
 **Test Steps**:
-1. Open ColorPalettePanel → DXF Settings → Ειδικές → Preview
+1. Open DxfSettingsPanel → DXF Settings → Ειδικές → Preview
 2. Set preview color to GREEN (#00FF00)
 3. Set preview lineType to DASHED
 4. Set preview opacity to 0.7
@@ -5647,7 +5647,7 @@ if (isComplete(state.currentTool, newTempPoints)) {
 ### Test 2: Completion Phase Final Appearance
 
 **Test Steps**:
-1. Open ColorPalettePanel → DXF Settings → Ειδικές → Completion
+1. Open DxfSettingsPanel → DXF Settings → Ειδικές → Completion
 2. Set completion color to WHITE (#FFFFFF)
 3. Set completion lineType to SOLID
 4. Set completion opacity to 1.0
@@ -5671,7 +5671,7 @@ if (isComplete(state.currentTool, newTempPoints)) {
 ### Test 3: Settings Inheritance (Γενικές Fallback)
 
 **Test Steps**:
-1. Open ColorPalettePanel → DXF Settings → Γενικές
+1. Open DxfSettingsPanel → DXF Settings → Γενικές
 2. Set general color to RED (#FF0000)
 3. Open Ειδικές tab
 4. CLEAR preview settings (use general instead)
@@ -5691,7 +5691,7 @@ if (isComplete(state.currentTool, newTempPoints)) {
 
 **Test Steps**:
 1. Draw a line (preview phase active, mouse moving)
-2. **While preview is visible**, open ColorPalettePanel
+2. **While preview is visible**, open DxfSettingsPanel
 3. Change preview color from GREEN to BLUE
 4. **Don't click** (stay in preview phase)
 
@@ -5730,7 +5730,7 @@ if (isComplete(state.currentTool, newTempPoints)) {
   - [x] Real-time feedback during drawing (preview phase)
   - [x] Clear visual distinction between phases (preview vs completion)
   - [x] Dimensional accuracy (distance labels)
-  - [x] User-configurable appearance (ColorPalettePanel)
+  - [x] User-configurable appearance (DxfSettingsPanel)
 
 - [x] **AutoCAD Compatibility**
   - [x] Preview uses dashed lines (industry standard)
@@ -5853,13 +5853,13 @@ const updatePreview = useCallback(() => {
 }, [linePreviewStyles.settings]); // Updates when settings change
 ```
 
-**Why This Matters**: User changes settings in ColorPalettePanel → preview doesn't update!
+**Why This Matters**: User changes settings in DxfSettingsPanel → preview doesn't update!
 
 ---
 
 ## 🎨 VISUAL ELEMENTS SETTINGS INTEGRATION
 
-### ✅ VERIFIED: All Preview Phase Visual Elements Get Settings from ColorPalettePanel
+### ✅ VERIFIED: All Preview Phase Visual Elements Get Settings from DxfSettingsPanel
 
 **Date Verified:** 2025-10-05
 **Verification Method:** Full codebase trace from UI → Provider → Canvas → Renderer
@@ -5879,7 +5879,7 @@ const updatePreview = useCallback(() => {
 
 **Data Flow:**
 ```
-ColorPalettePanel (UI controls)
+DxfSettingsPanel (UI controls)
   ↓
 DXF Settings Store (Γενικές/Ειδικές Ρυθμίσεις)
   ↓
@@ -5899,7 +5899,7 @@ Rendering system applies styles via PhaseManager
 
 **Data Flow:**
 ```
-ColorPalettePanel (Text Settings - Γενικές/Ειδικές)
+DxfSettingsPanel (Text Settings - Γενικές/Ειδικές)
   ↓
 Text Settings Store (DxfSettingsProvider)
   ↓
@@ -5925,7 +5925,7 @@ renderStyledTextWithOverride() - Advanced text rendering with decorations
 
 **Data Flow:**
 ```
-ColorPalettePanel (GripSettings UI)
+DxfSettingsPanel (GripSettings UI)
   ↓
 GripProvider (validates & stores)
   ↓
@@ -5964,7 +5964,7 @@ EntityRendererComposite.setGripSettings() (Line 71-75)
 **Result:** ✅ **ENTERPRISE-GRADE COMPLETE**
 
 All three visual element systems are:
-1. ✅ Fully connected to ColorPalettePanel UI
+1. ✅ Fully connected to DxfSettingsPanel UI
 2. ✅ Using centralized DxfSettingsProvider
 3. ✅ Supporting Γενικές/Ειδικές Ρυθμίσεις inheritance
 4. ✅ Real-time updates when settings change
@@ -5998,7 +5998,7 @@ All three visual element systems are:
 
 **Reason for Exclusion**: Grip editing is post-completion interaction, not part of drawing lifecycle.
 
-**Settings Source**: ✅ **NOW DOCUMENTED ABOVE** - Grips get settings from ColorPalettePanel via GripProvider → DxfSettingsProvider → useGripContext.
+**Settings Source**: ✅ **NOW DOCUMENTED ABOVE** - Grips get settings from DxfSettingsPanel via GripProvider → DxfSettingsProvider → useGripContext.
 
 **When to Consult**: When implementing entity modification, stretch/move operations.
 

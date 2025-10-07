@@ -26,12 +26,12 @@
 
 ### Τι Είναι Αυτό το Chapter;
 
-Αυτό το κεφάλαιο εξηγεί **ακριβώς** πώς το settings system (ColorPalettePanel) συνδέεται με το line drawing system (useUnifiedDrawing). Είναι το **κρισιμότερο** κεφάλαιο γιατί:
+Αυτό το κεφάλαιο εξηγεί **ακριβώς** πώς το settings system (DxfSettingsPanel) συνδέεται με το line drawing system (useUnifiedDrawing). Είναι το **κρισιμότερο** κεφάλαιο γιατί:
 
 1. Απαντά στο ερώτημα: "Γιατί η πρώτη γραμμή έχει διαφορετικό χρώμα από τη δεύτερη;"
 2. Δείχνει το **complete data flow** από το UI click μέχρι την entity rendering
 3. Εξηγεί την αρχιτεκτονική του ConfigurationProvider → DxfSettingsProvider merge
-4. Προσδιορίζει τα action items για το ColorPalettePanel
+4. Προσδιορίζει τα action items για το DxfSettingsPanel
 
 ### Γιατί Αυτό το Chapter Πρώτο;
 
@@ -119,8 +119,8 @@ const lineCompletionStyles = useLineStyles('completion');
 ```
 
 **What Happens Here**:
-- `useLineStyles('preview')` reads ColorPalettePanel → DXF Settings → Ειδικές → Preview
-- `useLineStyles('completion')` reads ColorPalettePanel → DXF Settings → Ειδικές → Completion
+- `useLineStyles('preview')` reads DxfSettingsPanel → DXF Settings → Ειδικές → Preview
+- `useLineStyles('completion')` reads DxfSettingsPanel → DXF Settings → Ειδικές → Completion
 - These hooks return **effective settings** (General → Specific → Overrides)
 
 ---
@@ -129,7 +129,7 @@ const lineCompletionStyles = useLineStyles('completion');
 
 ```typescript
 // ===== ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΗ HELPER FUNCTION ΓΙΑ PREVIEW SETTINGS =====
-// Applies ColorPalettePanel settings (DXF Settings → General + Specific Preview)
+// Applies DxfSettingsPanel settings (DXF Settings → General + Specific Preview)
 // Used by: line, polyline, circle, rectangle entities
 const applyPreviewSettings = useCallback((entity: any) => {
   entity.color = linePreviewStyles.settings.color;              // e.g., '#FFFF00' (yellow)
@@ -161,7 +161,7 @@ const extendedLine: ExtendedLineEntity = {
   showEdgeDistances: shouldShowEdgeDistances,
   showPreviewGrips: true
 };
-applyPreviewSettings(extendedLine); // ✅ Applies 9 properties from ColorPalettePanel
+applyPreviewSettings(extendedLine); // ✅ Applies 9 properties from DxfSettingsPanel
 
 // Polyline preview (line 504)
 applyPreviewSettings(extendedPolyline);
@@ -175,7 +175,7 @@ applyPreviewSettings(extendedRectangle);
 
 **What Happens**:
 1. Entity created with basic properties (id, type, start, end)
-2. `applyPreviewSettings()` adds visual properties from ColorPalettePanel
+2. `applyPreviewSettings()` adds visual properties from DxfSettingsPanel
 3. Entity rendered with **preview appearance** (dashed, semi-transparent, yellow)
 
 ---
@@ -183,7 +183,7 @@ applyPreviewSettings(extendedRectangle);
 ### 3.4 Completion Settings Application (Lines 372-382)
 
 ```typescript
-// Apply completion settings from ColorPalettePanel (for line entities only)
+// Apply completion settings from DxfSettingsPanel (for line entities only)
 if (newEntity.type === 'line' && state.currentTool === 'line') {
   // ✅ Type-safe property assignment (no 'as any' needed!)
   newEntity.color = lineCompletionStyles.settings.color;        // e.g., '#00FF00' (green)
@@ -231,13 +231,13 @@ specific: {
 
 ### 4.2 How to Change Preview Settings
 
-**UI Path**: ColorPalettePanel → DXF Settings → Ειδικές Ρυθμίσεις → Line Preview
+**UI Path**: DxfSettingsPanel → DXF Settings → Ειδικές Ρυθμίσεις → Line Preview
 
 **Code Path**:
 ```
-User changes color to red in ColorPalettePanel
+User changes color to red in DxfSettingsPanel
   ↓
-ColorPalettePanel.tsx: LineSettings component
+DxfSettingsPanel.tsx: LineSettings component
   ↓
 LineSettings.tsx: useUnifiedLinePreview().updateLineSettings({ color: '#FF0000' })
   ↓
@@ -278,13 +278,13 @@ specific: {
 
 ### 5.2 How to Change Completion Settings
 
-**UI Path**: ColorPalettePanel → DXF Settings → Ειδικές Ρυθμίσεις → Line Completion
+**UI Path**: DxfSettingsPanel → DXF Settings → Ειδικές Ρυθμίσεις → Line Completion
 
 **Code Path**:
 ```
-User changes color to blue in ColorPalettePanel
+User changes color to blue in DxfSettingsPanel
   ↓
-ColorPalettePanel.tsx: LineSettings component
+DxfSettingsPanel.tsx: LineSettings component
   ↓
 LineSettings.tsx: useUnifiedLineCompletion().updateLineSettings({ color: '#0000FF' })
   ↓
@@ -361,7 +361,7 @@ Final effective color: '#FF0000' (red)
 ### 6.3 Hook Architecture
 
 ```
-ColorPalettePanel (UI)
+DxfSettingsPanel (UI)
   └─ useUnifiedLinePreview() / useUnifiedLineCompletion()
       └─ useDxfSettings()
           └─ DxfSettingsProvider context
@@ -421,7 +421,7 @@ useUnifiedDrawing (Drawing Logic)
 **DXF Viewer Implementation**:
 - ✅ Follows AutoCAD standards
 - ✅ Provides visual feedback (preview vs final)
-- ✅ User-configurable via ColorPalettePanel
+- ✅ User-configurable via DxfSettingsPanel
 
 ---
 
@@ -429,17 +429,17 @@ useUnifiedDrawing (Drawing Logic)
 
 **Option 1: Change Completion Color to Match Preview**
 ```
-ColorPalettePanel → DXF Settings → Ειδικές → Completion → Color → #FFFF00 (yellow)
+DxfSettingsPanel → DXF Settings → Ειδικές → Completion → Color → #FFFF00 (yellow)
 ```
 
 **Option 2: Change Preview Color to Match Completion**
 ```
-ColorPalettePanel → DXF Settings → Ειδικές → Preview → Color → #00FF00 (green)
+DxfSettingsPanel → DXF Settings → Ειδικές → Preview → Color → #00FF00 (green)
 ```
 
 **Option 3: Use General Settings for Both**
 ```
-ColorPalettePanel → DXF Settings → Γενικές → Color → #FF0000 (red)
+DxfSettingsPanel → DXF Settings → Γενικές → Color → #FF0000 (red)
 + DISABLE specific preview/completion overrides
 ```
 
@@ -535,7 +535,7 @@ if (newEntity.type === 'circle' && state.currentTool === 'circle') {
 
 ### 9.1 Issue: Preview Settings Not Updating
 
-**Symptom**: User changes color in ColorPalettePanel, but preview still shows old color.
+**Symptom**: User changes color in DxfSettingsPanel, but preview still shows old color.
 
 **Diagnosis**:
 ```typescript
@@ -610,7 +610,7 @@ localStorage.getItem('dxf-settings-v1'); // Should return JSON string
 **Diagnosis**: Specific settings are overriding general settings.
 
 **Fix**:
-1. Open ColorPalettePanel → Ειδικές Ρυθμίσεις
+1. Open DxfSettingsPanel → Ειδικές Ρυθμίσεις
 2. Check if preview/completion specific settings exist
 3. If yes, they override general settings (this is by design)
 4. To use general settings, REMOVE specific settings or set them to match general
@@ -629,7 +629,7 @@ EFFECTIVE = GENERAL → SPECIFIC → OVERRIDES
 ### 10.1 Manual Testing Checklist
 
 **Test 1: Preview Settings**
-- [ ] Open ColorPalettePanel → DXF Settings → Ειδικές → Preview
+- [ ] Open DxfSettingsPanel → DXF Settings → Ειδικές → Preview
 - [ ] Change color to red (#FF0000)
 - [ ] Click Line tool
 - [ ] Click canvas once
@@ -639,21 +639,21 @@ EFFECTIVE = GENERAL → SPECIFIC → OVERRIDES
 - [ ] ✅ Verify final line uses completion color (not preview)
 
 **Test 2: Completion Settings**
-- [ ] Open ColorPalettePanel → DXF Settings → Ειδικές → Completion
+- [ ] Open DxfSettingsPanel → DXF Settings → Ειδικές → Completion
 - [ ] Change color to blue (#0000FF)
 - [ ] Click Line tool
 - [ ] Draw a line (two clicks)
 - [ ] ✅ Verify completed line is BLUE
 
 **Test 3: General Settings Fallback**
-- [ ] Open ColorPalettePanel → DXF Settings → Γενικές
+- [ ] Open DxfSettingsPanel → DXF Settings → Γενικές
 - [ ] Change color to purple (#800080)
 - [ ] DISABLE all specific settings (remove preview/completion overrides)
 - [ ] Draw a line
 - [ ] ✅ Verify both preview and completion use PURPLE
 
 **Test 4: Settings Persistence**
-- [ ] Change settings in ColorPalettePanel
+- [ ] Change settings in DxfSettingsPanel
 - [ ] Wait 1 second (auto-save debounce)
 - [ ] Reload page (F5)
 - [ ] ✅ Verify settings persisted
@@ -742,8 +742,8 @@ console.log('Line Preview Settings:', dxfSettings.specific.line.preview);
   - [Effective Settings Calculation](../../providers/DxfSettingsProvider.tsx#L800-L850) (lines 800-850)
 
 **UI Components**:
-- [`ui/components/ColorPalettePanel.tsx`](../../ui/components/ColorPalettePanel.tsx) - Settings UI (2,200+ lines)
-  - [Entities Settings Section](../../ui/components/ColorPalettePanel.tsx#L550-L650) (lines 550-650)
+- [`ui/components/DxfSettingsPanel.tsx`](../../ui/components/DxfSettingsPanel.tsx) - Settings UI (2,200+ lines)
+  - [Entities Settings Section](../../ui/components/DxfSettingsPanel.tsx#L550-L650) (lines 550-650)
 
 - [`ui/components/dxf-settings/settings/core/LineSettings.tsx`](../../ui/components/dxf-settings/settings/core/LineSettings.tsx) - Line settings component (952 lines)
   - [Context-Aware Hook Selection](../../ui/components/dxf-settings/settings/core/LineSettings.tsx#L65-L90) (lines 65-90)
@@ -755,7 +755,7 @@ console.log('Line Preview Settings:', dxfSettings.specific.line.preview);
 
 ## 🎯 ACTION ITEMS
 
-Based on this chapter's analysis, here are the action items for ColorPalettePanel:
+Based on this chapter's analysis, here are the action items for DxfSettingsPanel:
 
 ### Priority 1: UI/UX Improvements
 - [ ] Add visual indicator showing which settings apply to preview vs completion
@@ -764,8 +764,8 @@ Based on this chapter's analysis, here are the action items for ColorPalettePane
 - [ ] Add tooltips explaining preview vs completion phases
 
 ### Priority 2: Documentation
-- [ ] Add inline help text in ColorPalettePanel explaining settings hierarchy
-- [ ] Add link to this documentation from ColorPalettePanel
+- [ ] Add inline help text in DxfSettingsPanel explaining settings hierarchy
+- [ ] Add link to this documentation from DxfSettingsPanel
 - [ ] Create visual diagram showing settings flow
 
 ### Priority 3: Testing
@@ -783,7 +783,7 @@ Based on this chapter's analysis, here are the action items for ColorPalettePane
 - Πρώτη γραμμή = **PREVIEW** (κίτρινη, dashed, 70% opacity)
 - Δεύτερη γραμμή = **COMPLETION** (πράσινη/custom, solid, 100% opacity)
 - Αυτό είναι **CAD standard behavior** (AutoCAD, ISO 128)
-- Και τα δύο χρώματα είναι **user-configurable** via ColorPalettePanel
+- Και τα δύο χρώματα είναι **user-configurable** via DxfSettingsPanel
 
 **Λύση**:
 - Για να έχουν το ίδιο χρώμα: Άλλαξε Ειδικές Ρυθμίσεις → Preview/Completion

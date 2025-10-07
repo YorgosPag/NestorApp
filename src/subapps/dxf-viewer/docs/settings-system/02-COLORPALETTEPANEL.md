@@ -26,7 +26,7 @@
 
 ### Βασικές Πληροφορίες
 
-**File**: `src/subapps/dxf-viewer/ui/components/ColorPalettePanel.tsx`
+**File**: `src/subapps/dxf-viewer/ui/components/DxfSettingsPanel.tsx`
 
 **Size**: 2,200+ lines
 
@@ -44,12 +44,12 @@
 ### Component Props
 
 ```typescript
-export interface ColorPalettePanelProps {
+export interface DxfSettingsPanelProps {
   className?: string;  // Optional CSS class
 }
 
 // Usage:
-<ColorPalettePanel className="custom-panel" />
+<DxfSettingsPanel className="custom-panel" />
 ```
 
 ---
@@ -59,7 +59,7 @@ export interface ColorPalettePanelProps {
 ### Complete Component Tree
 
 ```
-ColorPalettePanel (Root)
+DxfSettingsPanel (Root)
 │
 ├─ Main Tabs Navigation
 │  ├─ 📋 Γενικές Ρυθμίσεις (General)
@@ -683,9 +683,9 @@ useEffect(() => {
 
 **🚨 ΜΗΝ ΑΛΛΑΞΕΤΕ ΠΟΤΕ ΑΥΤΟ ΤΟ PATTERN! 🚨**
 
-**ColorPalettePanel Preview Integration** (Lines 106-109):
+**DxfSettingsPanel Preview Integration** (Lines 106-109):
 ```typescript
-// ✅ CORRECT - ColorPalettePanel uses Provider hooks for preview
+// ✅ CORRECT - DxfSettingsPanel uses Provider hooks for preview
 const lineSettings = useLineSettingsFromProvider();
 const textSettings = useTextSettingsFromProvider();
 const gripSettings = useGripSettingsFromProvider();
@@ -718,13 +718,13 @@ const { settings: { lineSettings } } = useUnifiedLinePreview();  // WRONG!
 const { settings: { textSettings } } = useUnifiedTextPreview();  // WRONG!
 const { settings: { gripSettings } } = useUnifiedGripPreview();  // WRONG!
 
-// Problem: ColorPalettePanel reads from Provider
+// Problem: DxfSettingsPanel reads from Provider
 //          Settings component writes to Unified hook
 //          They NEVER communicate → preview NEVER updates! ❌
 ```
 
 **Why This Matters:**
-- **ColorPalettePanel preview** (top of General Settings) shows "MULTI", "SNAP", "125.50²"
+- **DxfSettingsPanel preview** (top of General Settings) shows "MULTI", "SNAP", "125.50²"
 - **This preview MUST reflect changes** from Line/Text/Grip settings tabs
 - **Both must use the SAME state source** = DxfSettingsProvider
 - This bug wasted **4+ hours debugging** (Oct 2025 - TextSettings, GripSettings)
@@ -733,7 +733,7 @@ const { settings: { gripSettings } } = useUnifiedGripPreview();  // WRONG!
 
 ---
 
-### Hooks Used in ColorPalettePanel
+### Hooks Used in DxfSettingsPanel
 
 ```typescript
 // General settings - PROVIDER HOOKS (for preview connection)
@@ -755,7 +755,7 @@ import { useRulersGridContext } from '../../systems/rulers-grid/RulersGridSystem
 ### Data Flow: User Input → Provider → Auto-Save
 
 ```
-User clicks color picker in ColorPalettePanel
+User clicks color picker in DxfSettingsPanel
   ↓
 LineSettings component: onChange handler
   ↓
@@ -771,7 +771,7 @@ Debounce 500ms
   ↓
 localStorage.setItem('dxf-settings-v1', JSON.stringify(state))
   ↓
-React re-renders ColorPalettePanel (new color displayed) ✅
+React re-renders DxfSettingsPanel (new color displayed) ✅
   ↓
 useUnifiedDrawing reads new settings
   ↓
@@ -937,10 +937,10 @@ interface GripSettingsProps {
 
 ## 10. PROPS & INTERFACES
 
-### ColorPalettePanelProps
+### DxfSettingsPanelProps
 
 ```typescript
-export interface ColorPalettePanelProps {
+export interface DxfSettingsPanelProps {
   className?: string;  // Optional CSS class for styling
 }
 ```
@@ -988,11 +988,11 @@ type ColorCategory = 'cursor' | 'selection' | 'grid' | 'grips' | 'layers' | 'ent
 ### Related Code Files
 
 **Main Component**:
-- [`ui/components/ColorPalettePanel.tsx`](../../ui/components/ColorPalettePanel.tsx) (2,200+ lines)
-  - [Component Props](../../ui/components/ColorPalettePanel.tsx#L45-L47) (lines 45-47)
-  - [State Variables](../../ui/components/ColorPalettePanel.tsx#L60-L85) (lines 60-85)
-  - [Main Tabs Rendering](../../ui/components/ColorPalettePanel.tsx#L150-L200) (lines 150-200)
-  - [Entities Settings Section](../../ui/components/ColorPalettePanel.tsx#L550-L650) (lines 550-650)
+- [`ui/components/DxfSettingsPanel.tsx`](../../ui/components/DxfSettingsPanel.tsx) (2,200+ lines)
+  - [Component Props](../../ui/components/DxfSettingsPanel.tsx#L45-L47) (lines 45-47)
+  - [State Variables](../../ui/components/DxfSettingsPanel.tsx#L60-L85) (lines 60-85)
+  - [Main Tabs Rendering](../../ui/components/DxfSettingsPanel.tsx#L150-L200) (lines 150-200)
+  - [Entities Settings Section](../../ui/components/DxfSettingsPanel.tsx#L550-L650) (lines 550-650)
 
 **Sub-Components**:
 - [`ui/components/dxf-settings/settings/core/LineSettings.tsx`](../../ui/components/dxf-settings/settings/core/LineSettings.tsx) (952 lines)
@@ -1037,14 +1037,14 @@ Settings component uses **WRONG hook** - Unified hook instead of Provider hook.
 console.log('🔥 [SettingsComponent] settings:', settings);
 ```
 
-2. Add console.log in ColorPalettePanel:
+2. Add console.log in DxfSettingsPanel:
 ```typescript
-// In ColorPalettePanel (line 110)
-console.log('🔍 [ColorPalettePanel] lineSettings:', lineSettings.settings);
+// In DxfSettingsPanel (line 110)
+console.log('🔍 [DxfSettingsPanel] lineSettings:', lineSettings.settings);
 ```
 
 3. Change setting and check console:
-   - If settings component logs change ✅ BUT ColorPalettePanel does NOT ❌
+   - If settings component logs change ✅ BUT DxfSettingsPanel does NOT ❌
    - **They are using DIFFERENT state instances!**
 
 **Solution:**

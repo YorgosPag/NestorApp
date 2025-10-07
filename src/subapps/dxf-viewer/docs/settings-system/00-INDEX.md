@@ -16,7 +16,7 @@
 #### For Developers (Νέοι στο σύστημα)
 ```
 1. Architecture Overview (01) → Γενική εικόνα
-2. ColorPalettePanel (02) → UI κατανόηση
+2. DxfSettingsPanel (02) → UI κατανόηση
 3. DxfSettingsProvider (03) → State management
 4. Hooks Reference (04) → Πώς να χρησιμοποιείς τα hooks
 5. Line Drawing Integration (08) → Πώς συνδέονται όλα
@@ -50,13 +50,13 @@
 - Overall system design (Single source of truth, Mode-based, Hierarchical)
 - Provider hierarchy (DxfSettingsProvider → StyleManager → Grip → Canvas)
 - Data flow patterns (User input → Settings → Rendering)
-- Integration points (ColorPalettePanel, useUnifiedDrawing, Rendering)
+- Integration points (DxfSettingsPanel, useUnifiedDrawing, Rendering)
 - Architecture diagrams (4 detailed ASCII diagrams)
 - Design decisions (5 key decisions with rationale)
 
 ---
 
-### [02 - ColorPalettePanel](./02-COLORPALETTEPANEL.md)
+### [02 - DxfSettingsPanel](./02-COLORPALETTEPANEL.md)
 **Status**: ✅ **COMPLETE** (2025-10-06)
 **Focus**: UI structure, tabs, accordions, user interaction
 **Key Topics**:
@@ -246,7 +246,7 @@
 - **Chapter 07**: Mode System (normal/preview/completion, overrides, effective settings)
 - **Chapter 08**: Line Drawing Integration (THE COLOR MYSTERY SOLVED! ⭐)
 
-**Next Steps**: Ready for ColorPalettePanel fixes based on documentation insights!
+**Next Steps**: Ready for DxfSettingsPanel fixes based on documentation insights!
 
 ---
 

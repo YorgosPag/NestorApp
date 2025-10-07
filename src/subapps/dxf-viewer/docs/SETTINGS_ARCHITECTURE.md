@@ -10,7 +10,7 @@
 
 1. [Overview](#overview)
 2. [Architecture Diagram](#architecture-diagram)
-3. [ColorPalettePanel UI Structure](#colorpalettepanel-ui-structure)
+3. [DxfSettingsPanel UI Structure](#colorpalettepanel-ui-structure)
 4. [Settings Hierarchy](#settings-hierarchy)
 5. [DxfSettingsProvider - Central State Management](#dxfsettingsprovider)
 6. [Mode-Based Settings System](#mode-based-settings)
@@ -42,7 +42,7 @@
 ┌─────────────────────────────────────────────────────────────────┐
 │                    USER INTERFACE LAYER                         │
 │  ┌──────────────────────────────────────────────────────────┐   │
-│  │          ColorPalettePanel (Main UI)                     │   │
+│  │          DxfSettingsPanel (Main UI)                     │   │
 │  │  ┌────────────────┬──────────────────────────────────┐   │   │
 │  │  │  Main Tabs     │  - Γενικές Ρυθμίσεις (General)  │   │   │
 │  │  │                │  - Ειδικές Ρυθμίσεις (Specific)  │   │   │
@@ -155,12 +155,12 @@
 ### Main Tabs
 
 ```tsx
-<ColorPalettePanel>
+<DxfSettingsPanel>
   <MainTabs>
     ├─ Γενικές Ρυθμίσεις (General Settings)
     └─ Ειδικές Ρυθμίσεις (Specific Settings)
   </MainTabs>
-</ColorPalettePanel>
+</DxfSettingsPanel>
 ```
 
 ### Γενικές Ρυθμίσεις (General Settings)
@@ -252,7 +252,7 @@
 
 ### 1. General Settings (Base Layer)
 
-**Που βρίσκονται**: ColorPalettePanel → Γενικές Ρυθμίσεις
+**Που βρίσκονται**: DxfSettingsPanel → Γενικές Ρυθμίσεις
 **Τι κάνουν**: Εφαρμόζονται σε **ΟΛΕΣ** τις οντότητες του ίδιου τύπου (π.χ. όλες οι γραμμές)
 
 ```typescript
@@ -483,7 +483,7 @@ specific: {
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ 1. User Opens ColorPalettePanel                            │
+│ 1. User Opens DxfSettingsPanel                            │
 └─────────────────────────────────────────────────────────────┘
                          │
                          ▼

@@ -55,13 +55,13 @@ User Input → UI Component → Hook → Provider Dispatch → Reducer → State
 ┌─────────────────────────────────────────────────────────────────────┐
 │  STEP 1: USER INTERACTION                                          │
 │                                                                     │
-│  User opens ColorPalettePanel                                      │
+│  User opens DxfSettingsPanel                                      │
 │  → Navigates to "Ειδικές Ρυθμίσεις" tab                           │
 │  → Selects "Entities" category                                     │
 │  → Opens "Preview Settings" accordion                               │
 │  → Changes line color: Yellow (#FFFF00) → Red (#FF0000)           │
 │                                                                     │
-│  UI Component: ColorPalettePanel.tsx (line 550)                    │
+│  UI Component: DxfSettingsPanel.tsx (line 550)                    │
 │  ├─ EntitiesSettings component                                     │
 │  │  ├─ AccordionSection: "Preview Settings"                        │
 │  │  │  └─ LineSettings contextType="preview"                       │
@@ -164,7 +164,7 @@ User Input → UI Component → Hook → Provider Dispatch → Reducer → State
 │  DxfSettingsProvider setState() triggers React reconciliation      │
 │                                                                     │
 │  All consumers of DxfSettingsContext re-read settings:             │
-│  ├─ ColorPalettePanel (UI updates)                                 │
+│  ├─ DxfSettingsPanel (UI updates)                                 │
 │  ├─ useUnifiedLinePreview() (re-computes effective settings)       │
 │  ├─ useLineStyles('preview') (returns new color)                   │
 │  └─ useUnifiedDrawing() (reads new preview settings)               │
@@ -224,7 +224,7 @@ User Input → UI Component → Hook → Provider Dispatch → Reducer → State
 | T+4ms | Reducer logic | DxfSettingsProvider | New state computed (immutable update) |
 | T+5ms | setState called | React | `setState(newState)` |
 | T+6ms | React reconciliation start | React | Virtual DOM diffing begins |
-| T+10ms | Component re-renders | ColorPalettePanel, LineSettings | UI updates with new color |
+| T+10ms | Component re-renders | DxfSettingsPanel, LineSettings | UI updates with new color |
 | T+15ms | Auto-save timer starts | DxfSettingsProvider | `setTimeout(() => saveSettings(), 500)` |
 | T+515ms | localStorage write | DxfSettingsProvider | `localStorage.setItem('dxf-settings-v1', ...)` |
 | T+516ms | Save status update | DxfSettingsProvider | `setSaveStatus('saved')` ✅ |
@@ -239,7 +239,7 @@ User Input → UI Component → Hook → Provider Dispatch → Reducer → State
 ### Pattern 1: General Settings Update
 
 ```typescript
-// User changes GENERAL line width in ColorPalettePanel
+// User changes GENERAL line width in DxfSettingsPanel
 // Γενικές Ρυθμίσεις → Lines tab → Line Width slider
 
 // FLOW:
@@ -505,7 +505,7 @@ export function DxfSettingsProvider({ children }: { children: React.ReactNode })
 State Change Triggers React Reconciliation:
 DxfSettingsProvider (state changed)
   │
-  ├─ Consumer 1: ColorPalettePanel
+  ├─ Consumer 1: DxfSettingsPanel
   │  └─ Re-renders UI with new values
   │     └─ LineSettings shows updated color
   │        └─ SharedColorPicker reflects new state

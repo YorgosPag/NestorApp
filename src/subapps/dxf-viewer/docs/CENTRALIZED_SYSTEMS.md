@@ -65,7 +65,7 @@
    - Mode-based Settings (Normal/Preview/Completion)
 
 3. **[docs/dxf-settings/MIGRATION_CHECKLIST.md](./docs/dxf-settings/MIGRATION_CHECKLIST.md)** 🆕 **2025-10-07**
-   - **DxfSettings Refactoring** (ColorPalettePanel → DxfSettingsPanel)
+   - **DxfSettings Refactoring** (DxfSettingsPanel → DxfSettingsPanel)
    - **Enterprise Modular Architecture** (2200+ lines → 25+ files)
    - **Phase 1 COMPLETE** (Infrastructure: Folders, Placeholders, Lazy Loading, Hooks, Shared Components)
    - **Inline Cross-References** (Code ↔ Documentation bidirectional links)
@@ -76,7 +76,7 @@
      - [DECISION_LOG.md](./docs/dxf-settings/DECISION_LOG.md) - 10 Architectural Decision Records (ADRs)
      - [STATE_MANAGEMENT.md](./docs/dxf-settings/STATE_MANAGEMENT.md) - Complete state strategy
      - [TESTING_STRATEGY.md](./docs/dxf-settings/TESTING_STRATEGY.md) - Test pyramid (80%+ coverage)
-     - [REFACTORING_ROADMAP_ColorPalettePanel.md](./docs/REFACTORING_ROADMAP_ColorPalettePanel.md) - 6-phase roadmap (37 hours)
+     - [REFACTORING_ROADMAP_DxfSettingsPanel.md](./docs/REFACTORING_ROADMAP_DxfSettingsPanel.md) - 6-phase roadmap (37 hours)
 
 ### 📖 **Reference (Αναφορές classes):**
 
@@ -222,13 +222,13 @@
   - `useConsolidatedSettings` → Renamed to `.deprecated.ts` (2025-10-07)
   - **Why Deprecated**: Used local useState, caused preview freeze bugs, no persistence for specific settings
   - **Replacement**: Use Provider Hooks (`useLineDraftSettings`, etc.) directly
-  - **Migration Status**: ✅ All 5 hooks migrated, ✅ Zero usages remaining, ✅ ColorPalettePanel uses compatibility wrappers
+  - **Migration Status**: ✅ All 5 hooks migrated, ✅ Zero usages remaining, ✅ DxfSettingsPanel uses compatibility wrappers
   - **File**: `ui/hooks/useConsolidatedSettings.deprecated.ts`
 - 📍 Δες: `docs/settings-system/00-INDEX.md` - Complete settings documentation (10 chapters)
 - 📍 **Enterprise Refactoring**: `docs/ENTERPRISE_REFACTORING_PLAN.md` + `ENTERPRISE_REFACTORING_COMPLETE.md` - 10-phase plan (100% complete! 🎉)
 
 ### 1️⃣1️⃣ **DXF SETTINGS UI ARCHITECTURE (2025-10-07 - MODULAR REFACTORING)** 🆕
-- ❌ ΟΧΙ monolithic `ColorPalettePanel.tsx` (2200+ lines)
+- ❌ ΟΧΙ monolithic `DxfSettingsPanel.tsx` (2200+ lines)
 - ❌ ΟΧΙ duplicate navigation logic
 - ❌ ΟΧΙ inline component definitions
 - ✅ ΜΟΝΟ modular `DxfSettingsPanel` (25+ components)
@@ -263,7 +263,7 @@
   - `docs/dxf-settings/DECISION_LOG.md` - 10 ADRs (ADR-001 to ADR-010)
   - `docs/dxf-settings/STATE_MANAGEMENT.md` - Local/Global/Derived state strategy
   - `docs/dxf-settings/TESTING_STRATEGY.md` - Test pyramid (80%+ coverage, visual regression)
-  - `docs/REFACTORING_ROADMAP_ColorPalettePanel.md` - Complete 6-phase roadmap (37 hours)
+  - `docs/REFACTORING_ROADMAP_DxfSettingsPanel.md` - Complete 6-phase roadmap (37 hours)
 - 🎯 **Benefits**:
   - **Maintainability**: Single Responsibility → Easy to test & debug
   - **Performance**: Lazy loading → Faster initial page load

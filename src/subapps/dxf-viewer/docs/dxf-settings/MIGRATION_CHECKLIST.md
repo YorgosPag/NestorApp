@@ -14,7 +14,7 @@
 
 ## 🎯 HOW TO USE THIS CHECKLIST
 
-This is a **quick-reference** version of the [REFACTORING_ROADMAP_ColorPalettePanel.md](../REFACTORING_ROADMAP_ColorPalettePanel.md).
+This is a **quick-reference** version of the [REFACTORING_ROADMAP_DxfSettingsPanel.md](../REFACTORING_ROADMAP_DxfSettingsPanel.md).
 
 **Usage:**
 1. ✅ Check off each item as you complete it
@@ -175,10 +175,10 @@ git commit -m "feat: Create shared UI components (TabNavigation, CategoryButton)
 
 **Est. Time:** 2 hours | **Actual Time:** _____ | **Status:** ⏸️
 
-**Source:** `ColorPalettePanel.tsx` lines ~2210-2220
+**Source:** `DxfSettingsPanel.tsx` lines ~2210-2220
 
 **Tasks:**
-- [ ] Copy relevant code from ColorPalettePanel.tsx
+- [ ] Copy relevant code from DxfSettingsPanel.tsx
 - [ ] Extract state management (line-specific state only)
 - [ ] Extract hooks usage (useLineSettingsFromProvider, etc.)
 - [ ] Extract preview logic
@@ -199,7 +199,7 @@ git commit -m "feat: Create shared UI components (TabNavigation, CategoryButton)
 **Git Commit:**
 ```bash
 git add .
-git commit -m "feat(refactor): Extract LinesTab from ColorPalettePanel"
+git commit -m "feat(refactor): Extract LinesTab from DxfSettingsPanel"
 ```
 
 **Notes:** _____________________
@@ -210,7 +210,7 @@ git commit -m "feat(refactor): Extract LinesTab from ColorPalettePanel"
 
 **Est. Time:** 1.5 hours | **Actual Time:** _____ | **Status:** ⏸️
 
-**Source:** `ColorPalettePanel.tsx` lines ~2214-2218
+**Source:** `DxfSettingsPanel.tsx` lines ~2214-2218
 
 **Tasks:**
 - [ ] Follow same pattern as LinesTab
@@ -224,7 +224,7 @@ git commit -m "feat(refactor): Extract LinesTab from ColorPalettePanel"
 **Git Commit:**
 ```bash
 git add .
-git commit -m "feat(refactor): Extract TextTab from ColorPalettePanel"
+git commit -m "feat(refactor): Extract TextTab from DxfSettingsPanel"
 ```
 
 **Notes:** _____________________
@@ -235,7 +235,7 @@ git commit -m "feat(refactor): Extract TextTab from ColorPalettePanel"
 
 **Est. Time:** 1.5 hours | **Actual Time:** _____ | **Status:** ⏸️
 
-**Source:** `ColorPalettePanel.tsx` lines ~2218-2220
+**Source:** `DxfSettingsPanel.tsx` lines ~2218-2220
 
 **Tasks:**
 - [ ] Follow same pattern as LinesTab/TextTab
@@ -249,7 +249,7 @@ git commit -m "feat(refactor): Extract TextTab from ColorPalettePanel"
 **Git Commit:**
 ```bash
 git add .
-git commit -m "feat(refactor): Extract GripsTab from ColorPalettePanel"
+git commit -m "feat(refactor): Extract GripsTab from DxfSettingsPanel"
 ```
 
 **Notes:** _____________________
@@ -293,7 +293,7 @@ git commit -m "feat(refactor): Create GeneralSettingsPanel with tab routing"
 
 **Est. Time:** 2 hours | **Actual Time:** _____ | **Status:** ⏸️
 
-**Source:** `ColorPalettePanel.tsx` (Cursor case in renderCategoryContent)
+**Source:** `DxfSettingsPanel.tsx` (Cursor case in renderCategoryContent)
 
 **Tasks:**
 - [ ] Copy Cursor category code
@@ -307,7 +307,7 @@ git commit -m "feat(refactor): Create GeneralSettingsPanel with tab routing"
 **Git Commit:**
 ```bash
 git add .
-git commit -m "feat(refactor): Extract CursorCategory from ColorPalettePanel"
+git commit -m "feat(refactor): Extract CursorCategory from DxfSettingsPanel"
 ```
 
 **Notes:** _____________________
@@ -318,7 +318,7 @@ git commit -m "feat(refactor): Extract CursorCategory from ColorPalettePanel"
 
 **Est. Time:** 2 hours | **Actual Time:** _____ | **Status:** ⏸️
 
-**Source:** `ColorPalettePanel.tsx` (Selection case)
+**Source:** `DxfSettingsPanel.tsx` (Selection case)
 
 **Tasks:**
 - [ ] Copy Selection category code
@@ -331,7 +331,7 @@ git commit -m "feat(refactor): Extract CursorCategory from ColorPalettePanel"
 **Git Commit:**
 ```bash
 git add .
-git commit -m "feat(refactor): Extract SelectionCategory from ColorPalettePanel"
+git commit -m "feat(refactor): Extract SelectionCategory from DxfSettingsPanel"
 ```
 
 **Notes:** _____________________
@@ -342,7 +342,7 @@ git commit -m "feat(refactor): Extract SelectionCategory from ColorPalettePanel"
 
 **Est. Time:** 3 hours | **Actual Time:** _____ | **Status:** ⏸️
 
-**Source:** `ColorPalettePanel.tsx` (Grid case - ~300 lines)
+**Source:** `DxfSettingsPanel.tsx` (Grid case - ~300 lines)
 
 **Tasks:**
 - [ ] Copy Grid category code
@@ -357,7 +357,7 @@ git commit -m "feat(refactor): Extract SelectionCategory from ColorPalettePanel"
 **Git Commit:**
 ```bash
 git add .
-git commit -m "feat(refactor): Extract GridCategory from ColorPalettePanel"
+git commit -m "feat(refactor): Extract GridCategory from DxfSettingsPanel"
 ```
 
 **Notes:** _____________________
@@ -388,7 +388,7 @@ git commit -m "feat(refactor): Extract GripsCategory (Coming Soon)"
 
 **Est. Time:** 2 hours | **Actual Time:** _____ | **Status:** ⏸️
 
-**Source:** `ColorPalettePanel.tsx` (Layers case)
+**Source:** `DxfSettingsPanel.tsx` (Layers case)
 
 **Tasks:**
 - [ ] Copy Layers category code
@@ -400,7 +400,7 @@ git commit -m "feat(refactor): Extract GripsCategory (Coming Soon)"
 **Git Commit:**
 ```bash
 git add .
-git commit -m "feat(refactor): Extract LayersCategory from ColorPalettePanel"
+git commit -m "feat(refactor): Extract LayersCategory from DxfSettingsPanel"
 ```
 
 **Notes:** _____________________
@@ -411,7 +411,7 @@ git commit -m "feat(refactor): Extract LayersCategory from ColorPalettePanel"
 
 **Est. Time:** 3 hours | **Actual Time:** _____ | **Status:** ⏸️
 
-**Source:** `ColorPalettePanel.tsx` (Entities case - existing EntitiesSettings.tsx)
+**Source:** `DxfSettingsPanel.tsx` (Entities case - existing EntitiesSettings.tsx)
 
 **Tasks:**
 - [ ] Review existing EntitiesSettings.tsx
@@ -426,7 +426,7 @@ git commit -m "feat(refactor): Extract LayersCategory from ColorPalettePanel"
 **Git Commit:**
 ```bash
 git add .
-git commit -m "feat(refactor): Extract EntitiesCategory from ColorPalettePanel"
+git commit -m "feat(refactor): Extract EntitiesCategory from DxfSettingsPanel"
 ```
 
 **Notes:** _____________________
@@ -506,7 +506,7 @@ git commit -m "feat(refactor): Create DxfSettingsPanel as main entry point"
 **File:** `ui/hooks/usePanelContentRenderer.tsx`
 
 **Tasks:**
-- [ ] Update import (ColorPalettePanel → DxfSettingsPanel)
+- [ ] Update import (DxfSettingsPanel → DxfSettingsPanel)
 - [ ] Update component usage in case 'colors'
 - [ ] Test panel loading in app
 - [ ] TypeScript compilation ✅
@@ -514,18 +514,18 @@ git commit -m "feat(refactor): Create DxfSettingsPanel as main entry point"
 **Git Commit:**
 ```bash
 git add .
-git commit -m "refactor: Switch from ColorPalettePanel to DxfSettingsPanel"
+git commit -m "refactor: Switch from DxfSettingsPanel to DxfSettingsPanel"
 ```
 
 **Notes:** _____________________
 
 ---
 
-### ✅ STEP 4.3: Deprecate ColorPalettePanel (15 min)
+### ✅ STEP 4.3: Deprecate DxfSettingsPanel (15 min)
 
 **Est. Time:** 15 min | **Actual Time:** _____ | **Status:** ⏸️
 
-**File:** `ui/components/ColorPalettePanel.tsx`
+**File:** `ui/components/DxfSettingsPanel.tsx`
 
 **Tasks:**
 - [ ] Add deprecation JSDoc comment
@@ -535,7 +535,7 @@ git commit -m "refactor: Switch from ColorPalettePanel to DxfSettingsPanel"
 **Git Commit:**
 ```bash
 git add .
-git commit -m "docs: Mark ColorPalettePanel as deprecated"
+git commit -m "docs: Mark DxfSettingsPanel as deprecated"
 ```
 
 **Notes:** _____________________
@@ -670,7 +670,7 @@ git commit -m "test: Add performance benchmarks for DxfSettings"
 
 ## 🧹 PHASE 6: CLEANUP & DOCUMENTATION (2 hours)
 
-### ✅ STEP 6.1: Remove ColorPalettePanel (15 min)
+### ✅ STEP 6.1: Remove DxfSettingsPanel (15 min)
 
 **Est. Time:** 15 min | **Actual Time:** _____ | **Status:** ⏸️
 
@@ -680,14 +680,14 @@ git commit -m "test: Add performance benchmarks for DxfSettings"
 - [ ] Visual regression tests pass ✅
 
 **Tasks:**
-- [ ] Delete `ui/components/ColorPalettePanel.tsx`
+- [ ] Delete `ui/components/DxfSettingsPanel.tsx`
 - [ ] Update imports in `LazyLoadWrapper.tsx`
 - [ ] TypeScript compilation ✅
 
 **Git Commit:**
 ```bash
 git add .
-git commit -m "chore: Remove deprecated ColorPalettePanel.tsx"
+git commit -m "chore: Remove deprecated DxfSettingsPanel.tsx"
 ```
 
 **Notes:** _____________________
@@ -847,7 +847,7 @@ git commit -m "chore: Finalize DxfSettings refactoring (v1.0)"
 
 ## 📚 QUICK REFERENCE LINKS
 
-- [Full Roadmap](../REFACTORING_ROADMAP_ColorPalettePanel.md)
+- [Full Roadmap](../REFACTORING_ROADMAP_DxfSettingsPanel.md)
 - [Architecture](./ARCHITECTURE.md)
 - [Component Guide](./COMPONENT_GUIDE.md)
 - [State Management](./STATE_MANAGEMENT.md)

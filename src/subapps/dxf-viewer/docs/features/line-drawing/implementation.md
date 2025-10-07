@@ -223,7 +223,7 @@ const updatePreview = useCallback((worldPoint: Point2D, snappedPoint: Point2D) =
 ]);
 ```
 
-**Why This Matters:** If user changes settings in ColorPalettePanel, preview/completion appearance updates immediately!
+**Why This Matters:** If user changes settings in DxfSettingsPanel, preview/completion appearance updates immediately!
 
 ---
 
@@ -258,7 +258,7 @@ const updatePreview = useCallback((worldPoint: Point2D, snappedPoint: Point2D) =
 ### Test Scenario
 
 **Setup:**
-1. Open ColorPalettePanel → DXF Settings → Ειδικές
+1. Open DxfSettingsPanel → DXF Settings → Ειδικές
 2. Set Preview: Green (#00FF00), Dashed, 70% opacity
 3. Set Completion: White (#FFFFFF), Solid, 100% opacity
 

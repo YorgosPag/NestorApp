@@ -36,7 +36,7 @@
 **Objective:** Verify preview settings are applied during drawing
 
 **Setup:**
-1. Open ColorPalettePanel → DXF Settings → Ειδικές → Preview
+1. Open DxfSettingsPanel → DXF Settings → Ειδικές → Preview
 2. Set preview color to **GREEN** (#00FF00)
 3. Set preview lineType to **DASHED**
 4. Set preview opacity to **0.7** (70%)
@@ -74,7 +74,7 @@
 **Objective:** Verify completion settings are applied after drawing
 
 **Setup:**
-1. Open ColorPalettePanel → DXF Settings → Ειδικές → Completion
+1. Open DxfSettingsPanel → DXF Settings → Ειδικές → Completion
 2. Set completion color to **WHITE** (#FFFFFF)
 3. Set completion lineType to **SOLID**
 4. Set completion opacity to **1.0** (100%)
@@ -111,7 +111,7 @@
 **Objective:** Verify fallback to Γενικές when Ειδικές not set
 
 **Setup:**
-1. Open ColorPalettePanel → DXF Settings → Γενικές
+1. Open DxfSettingsPanel → DXF Settings → Γενικές
 2. Set general color to **RED** (#FF0000)
 3. Set general lineType to **SOLID**
 4. Set general opacity to **0.8**
@@ -151,7 +151,7 @@
 3. Click first point (preview active, mouse moving)
 
 **Steps:**
-1. **While preview is visible**, open ColorPalettePanel
+1. **While preview is visible**, open DxfSettingsPanel
 2. Change preview color from GREEN to **BLUE** (#0000FF)
 3. **Don't click** (stay in preview phase)
 4. Observe line appearance
@@ -209,7 +209,7 @@
 - [ ] Real-time feedback during drawing (preview phase)
 - [ ] Clear visual distinction between phases (preview vs completion)
 - [ ] Dimensional accuracy (distance labels show correct values)
-- [ ] User-configurable appearance (ColorPalettePanel settings work)
+- [ ] User-configurable appearance (DxfSettingsPanel settings work)
 - [ ] Consistent behavior across entity types
 - [ ] No data loss (entities persist correctly)
 
@@ -290,7 +290,7 @@
 ### Problem: Settings don't update in real-time
 
 **Symptoms:**
-- Change settings in ColorPalettePanel
+- Change settings in DxfSettingsPanel
 - Preview doesn't update until next draw
 
 **Debug Steps:**

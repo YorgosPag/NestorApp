@@ -501,7 +501,7 @@
 | 6 - Provider Hooks | ✅ DONE | 2025-10-06 | 2025-10-07 | None | f8e990d | 6 Provider Hooks created (275 lines) |
 | 6.5 - Docs Update | ✅ DONE | 2025-10-06 | 2025-10-07 | None | 87ac4a1, dfeaff3 | Bidirectional cross-references |
 | 6.6 - Enterprise Migration | ✅ DONE | 2025-10-07 | 2025-10-07 | None | b644b7e | centralized_systems.md → docs/CENTRALIZED_SYSTEMS.md |
-| 7 - Hook Migration | ✅ DONE | 2025-10-07 | 2025-10-07 | ColorPalettePanel hotfix | (pending) | 5 hooks migrated to Provider Hooks |
+| 7 - Hook Migration | ✅ DONE | 2025-10-07 | 2025-10-07 | DxfSettingsPanel hotfix | (pending) | 5 hooks migrated to Provider Hooks |
 | 8 - Cleanup | ✅ DONE | 2025-10-07 | 2025-10-07 | None | (pending) | useConsolidatedSettings deprecated + renamed |
 | 9 - Auto-Save UI | ✅ DONE | 2025-10-07 | 2025-10-07 | None | (pending) | Enhanced με Ειδικά Settings indicators |
 | 10 - Testing & Docs | ✅ DONE | 2025-10-07 | 2025-10-07 | None | (pending) | Documentation complete, testing checklist ready |
@@ -569,7 +569,7 @@
 - `useUnifiedLineCompletion` → `useLineCompletionSettings()`
 - `useUnifiedTextPreview` → `useTextDraftSettings()`
 
-**Compatibility Wrappers** (ColorPalettePanel hotfix):
+**Compatibility Wrappers** (DxfSettingsPanel hotfix):
 - `useUnifiedLinePreview` → delegates to `useLineDraftSettings()`
 - `useUnifiedGripPreview` → uses `useGripDraftSettings()`
 

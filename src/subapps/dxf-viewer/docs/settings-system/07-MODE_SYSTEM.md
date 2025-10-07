@@ -344,9 +344,9 @@ specific.grip.preview = {
 
 ### How to Update Specific Settings
 
-**Via UI (ColorPalettePanel)**:
+**Via UI (DxfSettingsPanel)**:
 ```
-ColorPalettePanel
+DxfSettingsPanel
   → DXF Settings Tab
     → Ειδικές Ρυθμίσεις (Specific)
       → Entities section

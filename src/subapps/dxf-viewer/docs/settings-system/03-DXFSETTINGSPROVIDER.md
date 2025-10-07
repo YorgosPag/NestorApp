@@ -509,7 +509,7 @@ migrationUtils.cleanupLegacy();
 ### How Auto-Save Works
 
 ```
-User changes setting in ColorPalettePanel
+User changes setting in DxfSettingsPanel
   ↓
 dispatch({ type: 'UPDATE_LINE_SETTINGS', payload: { color: '#FF0000' } })
   ↓
@@ -1209,7 +1209,7 @@ const { settings } = useDxfSettings();
 - [`hooks/useUnifiedSpecificSettings.ts`](../../hooks/useUnifiedSpecificSettings.ts) - Unified settings hooks
 
 **UI Consumers**:
-- [`ui/components/ColorPalettePanel.tsx`](../../ui/components/ColorPalettePanel.tsx) - Main UI consumer (2,200+ lines)
+- [`ui/components/DxfSettingsPanel.tsx`](../../ui/components/DxfSettingsPanel.tsx) - Main UI consumer (2,200+ lines)
 - [`ui/components/dxf-settings/settings/core/LineSettings.tsx`](../../ui/components/dxf-settings/settings/core/LineSettings.tsx) - Line settings UI
 
 **Drawing Integration**:
@@ -1366,7 +1366,7 @@ const { settings: textSettings, updateSettings: updateTextSettings } = useTextSe
 **Hook Purpose Clarification**:
 - `useTextSettingsFromProvider()`: For **Global General Text Settings** (Γενικές Ρυθμίσεις)
   - Writes to: `dxf-text-general-settings`
-  - Used in: TextSettings.tsx, ColorPalettePanel.tsx
+  - Used in: TextSettings.tsx, DxfSettingsPanel.tsx
 - `useUnifiedTextPreview()`: For **Preview-specific settings** (Ειδικές Ρυθμίσεις → Entities)
   - Writes to: `dxf-text-preview-settings`
   - Used in: EntitiesSettings.tsx (for mode-based preview text)
@@ -1552,7 +1552,7 @@ overrideEnabled: {
 
 **Phase 7**: ✅ useUnifiedSpecificSettings Migrated (2025-10-07)
 - All 5 hooks point to Provider hooks instead of useConsolidatedSettings
-- Backward compatibility wrappers for ColorPalettePanel
+- Backward compatibility wrappers for DxfSettingsPanel
 - Zero breaking changes for consuming components
 
 **Phase 8**: ✅ useConsolidatedSettings Deprecated (2025-10-07)
@@ -1580,5 +1580,5 @@ overrideEnabled: {
 ---
 
 **Next Chapter**: [04 - Hooks Reference →](./04-HOOKS_REFERENCE.md)
-**Previous Chapter**: [← 02 - ColorPalettePanel](./02-COLORPALETTEPANEL.md)
+**Previous Chapter**: [← 02 - DxfSettingsPanel](./02-COLORPALETTEPANEL.md)
 **Back to Index**: [← Documentation Index](./00-INDEX.md)

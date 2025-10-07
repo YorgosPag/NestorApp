@@ -43,9 +43,9 @@ This document is part of the **DxfSettings Refactoring Documentation Suite**:
 | [TESTING_STRATEGY.md](./TESTING_STRATEGY.md) | Testing approach | Writing tests |
 
 **Related Files:**
-- Source: [`ColorPalettePanel.tsx`](../../ui/components/ColorPalettePanel.tsx) - Original monolithic component
+- Source: [`DxfSettingsPanel.tsx`](../../ui/components/DxfSettingsPanel.tsx) - Original monolithic component
 - Target: [`DxfSettingsPanel.tsx`](../../ui/components/dxf-settings/DxfSettingsPanel.tsx) - New modular structure
-- Roadmap: [`REFACTORING_ROADMAP_ColorPalettePanel.md`](../REFACTORING_ROADMAP_ColorPalettePanel.md) - Full migration plan
+- Roadmap: [`REFACTORING_ROADMAP_DxfSettingsPanel.md`](../REFACTORING_ROADMAP_DxfSettingsPanel.md) - Full migration plan
 
 ---
 
@@ -59,7 +59,7 @@ This document is part of the **DxfSettings Refactoring Documentation Suite**:
 6. [ADR-006: Keep Settings Components Unchanged](#adr-006-keep-settings-components-unchanged)
 7. [ADR-007: Folder Structure by Responsibility](#adr-007-folder-structure-by-responsibility)
 8. [ADR-008: Lazy Load Categories Separately](#adr-008-lazy-load-categories-separately)
-9. [ADR-009: Deprecate Don't Delete ColorPalettePanel](#adr-009-deprecate-dont-delete-colorpalettepanel)
+9. [ADR-009: Deprecate Don't Delete DxfSettingsPanel](#adr-009-deprecate-dont-delete-colorpalettepanel)
 10. [ADR-010: Testing Strategy - Unit + Integration + Visual](#adr-010-testing-strategy---unit--integration--visual)
 
 ---
@@ -72,7 +72,7 @@ This document is part of the **DxfSettings Refactoring Documentation Suite**:
 
 ### Context
 
-The original `ColorPalettePanel.tsx` is a **monolithic component** (2200+ lines) that violates **Single Responsibility Principle**:
+The original `DxfSettingsPanel.tsx` is a **monolithic component** (2200+ lines) that violates **Single Responsibility Principle**:
 - Handles main tab routing (General vs Specific)
 - Handles sub-tab routing (Lines, Text, Grips)
 - Handles category routing (7 categories)
@@ -87,7 +87,7 @@ The original `ColorPalettePanel.tsx` is a **monolithic component** (2200+ lines)
 - ❌ Not scalable (new feature = edit 2200-line file)
 
 **Related Files:**
-- [`ColorPalettePanel.tsx:1-2200`](../../ui/components/ColorPalettePanel.tsx) - Monolithic component
+- [`DxfSettingsPanel.tsx:1-2200`](../../ui/components/DxfSettingsPanel.tsx) - Monolithic component
 
 ### Decision
 
@@ -222,14 +222,14 @@ export const LazyTextTab = lazy(() => import('./tabs/general/TextTab'));
 
 ### Context
 
-Original `ColorPalettePanel.tsx` has **2 main tabs**:
+Original `DxfSettingsPanel.tsx` has **2 main tabs**:
 1. **General Settings** (Lines, Text, Grips) - Global defaults
 2. **Specific Settings** (7 categories) - Context-specific overrides
 
 **Question:** Should these be in the same component or separate?
 
 **Related Files:**
-- [`ColorPalettePanel.tsx:2146-2300`](../../ui/components/ColorPalettePanel.tsx#L2146) - Main tab rendering
+- [`DxfSettingsPanel.tsx:2146-2300`](../../ui/components/DxfSettingsPanel.tsx#L2146) - Main tab rendering
 
 ### Decision
 
@@ -645,7 +645,7 @@ import { CursorCategory, GridCategory, EntitiesCategory } from './categories';
 
 ---
 
-## ADR-009: Deprecate, Don't Delete ColorPalettePanel
+## ADR-009: Deprecate, Don't Delete DxfSettingsPanel
 
 **📅 Date:** 2025-10-07
 **👤 Author:** Γιώργος Παγωνής
@@ -653,7 +653,7 @@ import { CursorCategory, GridCategory, EntitiesCategory } from './categories';
 
 ### Context
 
-After refactoring completes, what to do with original `ColorPalettePanel.tsx`?
+After refactoring completes, what to do with original `DxfSettingsPanel.tsx`?
 
 **Options:**
 1. Delete immediately
@@ -661,7 +661,7 @@ After refactoring completes, what to do with original `ColorPalettePanel.tsx`?
 3. Deprecate (keep but mark as deprecated)
 
 **Related Files:**
-- [`ColorPalettePanel.tsx`](../../ui/components/ColorPalettePanel.tsx) - Original component (to deprecate)
+- [`DxfSettingsPanel.tsx`](../../ui/components/DxfSettingsPanel.tsx) - Original component (to deprecate)
 
 ### Decision
 
@@ -676,9 +676,9 @@ After refactoring completes, what to do with original `ColorPalettePanel.tsx`?
  *
  * @deprecated Use ui/components/dxf-settings/DxfSettingsPanel.tsx
  * @see ui/components/dxf-settings/DxfSettingsPanel.tsx
- * @see docs/REFACTORING_ROADMAP_ColorPalettePanel.md
+ * @see docs/REFACTORING_ROADMAP_DxfSettingsPanel.md
  */
-export function ColorPalettePanel({ className = '' }: ColorPalettePanelProps) {
+export function DxfSettingsPanel({ className = '' }: DxfSettingsPanelProps) {
   // ... existing code (kept for reference)
 }
 ```

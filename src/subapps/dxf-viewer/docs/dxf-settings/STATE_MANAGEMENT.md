@@ -26,7 +26,7 @@ This document is part of the **DxfSettings Refactoring Documentation Suite**:
 | [TESTING_STRATEGY.md](./TESTING_STRATEGY.md) | Testing approach | Writing tests |
 
 **Related Files:**
-- Source: [`ColorPalettePanel.tsx`](../../ui/components/ColorPalettePanel.tsx) - Original state (15+ useState)
+- Source: [`DxfSettingsPanel.tsx`](../../ui/components/DxfSettingsPanel.tsx) - Original state (15+ useState)
 - Target: [`DxfSettingsPanel.tsx`](../../ui/components/dxf-settings/DxfSettingsPanel.tsx) - New state architecture
 - Providers: [`DxfSettingsProvider.tsx`](../../providers/DxfSettingsProvider.tsx) - Global settings state
 
@@ -53,10 +53,10 @@ This document is part of the **DxfSettings Refactoring Documentation Suite**:
 
 ## 🏗️ STATE ARCHITECTURE OVERVIEW
 
-### Current State (ColorPalettePanel - Monolithic)
+### Current State (DxfSettingsPanel - Monolithic)
 
 ```
-ColorPalettePanel.tsx (2200+ lines)
+DxfSettingsPanel.tsx (2200+ lines)
 ├── 15+ useState hooks (all in one component!)
 │   ├── activeMainTab
 │   ├── activeGeneralTab
@@ -598,7 +598,7 @@ describe('LinesTab Settings Persistence', () => {
 
 ### Step 1: Extract Local State to Hooks
 
-**Before (ColorPalettePanel):**
+**Before (DxfSettingsPanel):**
 ```typescript
 const [activeTab, setActiveTab] = useState('lines');
 const isTabActive = (tabId) => activeTab === tabId;
@@ -613,9 +613,9 @@ const { activeTab, setActiveTab, isTabActive } = useTabNavigation('lines');
 
 ### Step 2: Move to Nearest Component Owner
 
-**Before (All state in ColorPalettePanel):**
+**Before (All state in DxfSettingsPanel):**
 ```typescript
-// ColorPalettePanel.tsx - 2200 lines
+// DxfSettingsPanel.tsx - 2200 lines
 const [activeMainTab, setActiveMainTab] = useState('specific');
 const [activeGeneralTab, setActiveGeneralTab] = useState('lines');
 // ... 15+ more useState

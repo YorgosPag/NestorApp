@@ -71,7 +71,7 @@
 **Rendering:**
 - Entity follows cursor (60 FPS update)
 - Geometry updates on mouse move
-- Uses **Preview Settings** from ColorPalettePanel
+- Uses **Preview Settings** from DxfSettingsPanel
 
 #### 2. Construction Grips
 
@@ -328,7 +328,7 @@ if (isComplete(state.currentTool, newTempPoints)) {
 ### Settings Inheritance Flow
 
 ```
-User Opens ColorPalettePanel
+User Opens DxfSettingsPanel
   └─ DXF Settings tab
       ├─ Γενικές Ρυθμίσεις (General)
       └─ Ειδικές Ρυθμίσεις (Specific)

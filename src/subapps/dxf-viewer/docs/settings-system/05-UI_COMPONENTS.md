@@ -111,7 +111,7 @@ const lineSettingsContext = (() => {
 ```
 
 **Why This Matters:**
-- **ColorPalettePanel preview** (shows "MULTI", "SNAP", "125.50²") uses Provider hooks
+- **DxfSettingsPanel preview** (shows "MULTI", "SNAP", "125.50²") uses Provider hooks
 - **Settings tabs** in "Γενικές Ρυθμίσεις" MUST use Provider hooks
 - **If you use Unified hooks in General Settings**, changes will NOT appear in preview!
 - This bug wasted **4+ hours debugging** in Oct 2025 (TextSettings, GripSettings)
@@ -523,7 +523,7 @@ const {
 const { settings: { textSettings }, updateTextSettings } = useUnifiedTextPreview();
 
 // Problem: Updated 'dxf-text-preview-settings' localStorage
-// But ColorPalettePanel reads from 'dxf-text-general-settings' → MISMATCH!
+// But DxfSettingsPanel reads from 'dxf-text-general-settings' → MISMATCH!
 // Changes in TextSettings tab NEVER appeared in preview! ❌
 ```
 
@@ -799,7 +799,7 @@ const {
 const { settings: { gripSettings }, updateGripSettings } = useUnifiedGripPreview();
 
 // Problem: Updated isolated preview state
-// ColorPalettePanel reads from DxfSettingsProvider → MISMATCH!
+// DxfSettingsPanel reads from DxfSettingsProvider → MISMATCH!
 // Changes in GripSettings tab NEVER appeared in preview! ❌
 ```
 
@@ -815,7 +815,7 @@ const { settings: gripSettings, updateSettings: updateGripSettings } = useGripSe
 **Why This Matters:**
 - GripSettings component lives in "Γενικές Ρυθμίσεις → Grips" tab
 - Must use **Global Grip Settings** hook, NOT Preview-specific hook
-- Was causing silent failure: GripSettings and ColorPalettePanel had DIFFERENT state instances
+- Was causing silent failure: GripSettings and DxfSettingsPanel had DIFFERENT state instances
 - Preview shows "MULTI", "SNAP", "125.50²" indicators - these MUST reflect grip settings changes!
 
 **Files Changed (2025-10-06)**:
@@ -842,9 +842,9 @@ const { settings: gripSettings, updateSettings: updateGripSettings } = useGripSe
 **🔥 DEBUGGING HISTORY (2025-10-06):**
 - User reported: "Grip settings not appearing in preview"
 - Added extensive console.log debugging in 3 files
-- Logs revealed: GripSettings and ColorPalettePanel using DIFFERENT hooks
+- Logs revealed: GripSettings and DxfSettingsPanel using DIFFERENT hooks
 - GripSettings had `useUnifiedGripPreview()` → isolated state
-- ColorPalettePanel had `useGripSettingsFromProvider()` → global state
+- DxfSettingsPanel had `useGripSettingsFromProvider()` → global state
 - **They NEVER talked to each other!**
 - Fix: Change GripSettings to use `useGripSettingsFromProvider()`
 - Result: **INSTANT SUCCESS** - preview updates in real-time! ✅

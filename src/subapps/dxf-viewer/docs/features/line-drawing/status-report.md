@@ -35,7 +35,7 @@
 **Finding:** The Line Drawing System is **95% complete** but **non-functional** due to missing settings connection.
 
 **What Works** ✅:
-- Settings UI (ColorPalettePanel with Γενικές/Ειδικές tabs)
+- Settings UI (DxfSettingsPanel with Γενικές/Ειδικές tabs)
 - Settings providers (DxfSettingsProvider, useEntityStyles hook)
 - Entity creation system (useUnifiedDrawing, createEntityFromTool)
 - Preview/completion phase detection (PhaseManager)
@@ -53,7 +53,7 @@
 
 ### Component 1: Settings UI System ✅
 
-**Location:** `src/subapps/dxf-viewer/ui/components/ColorPalettePanel.tsx`
+**Location:** `src/subapps/dxf-viewer/ui/components/DxfSettingsPanel.tsx`
 
 **Verification:**
 - Line 2109: "Γενικές Ρυθμίσεις" tab exists ✅
@@ -267,7 +267,7 @@ protected shouldRenderSplitLine(entity: EntityModel, options: RenderOptions = {}
 
 **Verification:**
 
-**Step 1:** ColorPalettePanel → DxfSettingsProvider
+**Step 1:** DxfSettingsPanel → DxfSettingsProvider
 ```typescript
 // Line 901-908: toolStyleStore.set() called
 toolStyleStore.set({
@@ -396,7 +396,7 @@ entity.opacity = linePreviewStyles.settings.opacity;
 
 | Component | Working? | Verified? | Line Numbers |
 |-----------|----------|-----------|--------------|
-| 1. Settings UI (ColorPalettePanel) | ✅ YES | ✅ YES | 2109, 2120 |
+| 1. Settings UI (DxfSettingsPanel) | ✅ YES | ✅ YES | 2109, 2120 |
 | 2. Settings Provider (DxfSettingsProvider) | ✅ YES | ✅ YES | 603-604, 893-910 |
 | 3. Entity Styles Hook (useEntityStyles) | ✅ YES | ✅ YES | 52-87 |
 | 4. Unified Settings (useUnifiedSpecificSettings) | ✅ YES | ✅ YES | 75-137 |
@@ -458,7 +458,7 @@ const lineCompletionStyles = useEntityStyles('line', 'completion');
 
 ## 🎨 VISUAL ELEMENTS SETTINGS INTEGRATION (2025-10-05)
 
-### **✅ VERIFIED: All Preview Phase Visual Elements Get Settings from ColorPalettePanel**
+### **✅ VERIFIED: All Preview Phase Visual Elements Get Settings from DxfSettingsPanel**
 
 | Visual Element | Connected | Flow Verified | Settings Applied |
 |---|---|---|---|
@@ -486,7 +486,7 @@ extendedLine.opacity = linePreviewStyles.settings.opacity;
 
 **Flow:**
 ```
-ColorPalettePanel → DXF Settings (Γενικές/Ειδικές)
+DxfSettingsPanel → DXF Settings (Γενικές/Ειδικές)
   → useEntityStyles → useUnifiedDrawing → Entity Properties
 ```
 
@@ -507,7 +507,7 @@ protected applyDistanceTextStyle(): void {
 
 **Flow:**
 ```
-ColorPalettePanel → Text Settings (Γενικές/Ειδικές)
+DxfSettingsPanel → Text Settings (Γενικές/Ειδικές)
   → getTextPreviewStyleWithOverride() → BaseEntityRenderer.applyDistanceTextStyle()
 ```
 
@@ -545,7 +545,7 @@ protected drawGrip(position: Point2D, state: 'cold' | 'warm' | 'hot', gripType?:
 
 **Flow:**
 ```
-ColorPalettePanel → GripSettings UI → GripProvider → DxfSettingsProvider
+DxfSettingsPanel → GripSettings UI → GripProvider → DxfSettingsProvider
   → useGripContext() (DxfCanvasCore) → EntityRendererComposite
   → BaseEntityRenderer.setGripSettings() → drawGrip()
 ```
@@ -563,7 +563,7 @@ ColorPalettePanel → GripSettings UI → GripProvider → DxfSettingsProvider
 
 ### **🎯 CONCLUSION**
 
-**ALL** visual elements during Preview Phase (Προσχεδίαση) are **100% connected** to ColorPalettePanel settings:
+**ALL** visual elements during Preview Phase (Προσχεδίαση) are **100% connected** to DxfSettingsPanel settings:
 
 1. ✅ **Line** - Full styling control (9 properties)
 2. ✅ **Distance Labels** - Complete text styling + decorations (8+ properties)

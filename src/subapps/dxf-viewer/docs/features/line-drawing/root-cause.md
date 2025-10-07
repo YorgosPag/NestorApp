@@ -101,7 +101,7 @@ git log --all --oneline useUnifiedDrawing.ts
 
 ### 1. Settings UI System (100% Functional)
 
-**Location:** `src/subapps/dxf-viewer/ui/components/ColorPalettePanel.tsx`
+**Location:** `src/subapps/dxf-viewer/ui/components/DxfSettingsPanel.tsx`
 
 **Tabs:**
 - Γενικές Ρυθμίσεις (Line 2109) ✅
@@ -170,7 +170,7 @@ grep "color\|lineweight\|opacity" useUnifiedDrawing.ts
 ### System 1: Settings UI (Working ✅)
 
 ```
-ColorPalettePanel
+DxfSettingsPanel
   ├─ Γενικές Ρυθμίσεις
   │   └─ Updates: DxfSettingsProvider.line.general
   │
@@ -213,7 +213,7 @@ useUnifiedDrawing()
 **What Misleads Users:**
 
 1. **UI Feedback Loop**
-   - ColorPalettePanel shows settings changing
+   - DxfSettingsPanel shows settings changing
    - User assumes they're being applied ✅
    - Reality: Only stored, not applied ❌
 

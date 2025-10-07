@@ -131,7 +131,7 @@ useLineStyles('normal');
 **Rule**: Κάθε αλλαγή στις ρυθμίσεις αποθηκεύεται αυτόματα.
 
 ```typescript
-// User changes color in ColorPalettePanel
+// User changes color in DxfSettingsPanel
 updateLineSettings({ color: '#FF0000' });
   ↓
 // Auto-save trigger (500ms debounce)
@@ -201,7 +201,7 @@ App.tsx
 ### Settings Data Flow
 
 ```
-ColorPalettePanel (UI)
+DxfSettingsPanel (UI)
   ↓ updateLineSettings({ color: '#FF0000' })
 DxfSettingsProvider
   ↓ Auto-save (500ms debounce)
@@ -221,9 +221,9 @@ Preview Entity Rendered ✅
 ### Pattern 1: User Input → Settings Update
 
 ```
-User clicks color picker in ColorPalettePanel
+User clicks color picker in DxfSettingsPanel
   ↓
-ColorPalettePanel.tsx: onChange handler
+DxfSettingsPanel.tsx: onChange handler
   ↓
 LineSettings.tsx: useUnifiedLinePreview().updateLineSettings({ color: '#FF0000' })
   ↓
@@ -290,9 +290,9 @@ Completed entity uses completion-specific settings ✅
 
 ## 5. INTEGRATION POINTS
 
-### Integration 1: ColorPalettePanel → DxfSettingsProvider
+### Integration 1: DxfSettingsPanel → DxfSettingsProvider
 
-**File**: `ui/components/ColorPalettePanel.tsx`
+**File**: `ui/components/DxfSettingsPanel.tsx`
 
 **Integration Hooks**:
 ```typescript
@@ -308,7 +308,7 @@ const { settings, updateSettings } = useLineSettingsFromProvider();
 
 **Data Path**:
 ```
-ColorPalettePanel
+DxfSettingsPanel
   → LineSettings component
     → useUnifiedLinePreview() / useUnifiedLineCompletion()
       → useDxfSettings()
@@ -413,9 +413,9 @@ interface DxfSettingsContextType {
 
 ---
 
-### Component 2: ColorPalettePanel
+### Component 2: DxfSettingsPanel
 
-**Location**: `ui/components/ColorPalettePanel.tsx` (2,200+ lines)
+**Location**: `ui/components/DxfSettingsPanel.tsx` (2,200+ lines)
 
 **Responsibilities**:
 - Settings UI rendering
@@ -426,7 +426,7 @@ interface DxfSettingsContextType {
 
 **Structure**:
 ```
-ColorPalettePanel
+DxfSettingsPanel
 ├─ Main Tabs
 │  ├─ Γενικές Ρυθμίσεις (General Settings)
 │  │  ├─ Lines sub-tab
@@ -558,7 +558,7 @@ const applyPreviewSettings = useCallback((entity: any) => {
 
 ```
 ┌──────────────────────┐
-│  ColorPalettePanel   │ ← User interacts
+│  DxfSettingsPanel   │ ← User interacts
 │  (Settings UI)       │
 └──────────┬───────────┘
            │ updateLineSettings({ color: '#FF0000' })
@@ -674,7 +674,7 @@ const applyPreviewSettings = useCallback((entity: any) => {
                 │                           │
                 ↓                           ↓
 ┌───────────────────────────┐   ┌───────────────────────────┐
-│   ColorPalettePanel.tsx   │   │   DxfCanvas.tsx           │
+│   DxfSettingsPanel.tsx   │   │   DxfCanvas.tsx           │
 │   (Settings UI)           │   │   (Main canvas)           │
 │                           │   │                           │
 │  - Γενικές Ρυθμίσεις      │   │  - handleMouseDown        │
@@ -831,7 +831,7 @@ const applyPreviewSettings = useCallback((entity: any) => {
 ### Related Code Files
 
 - `providers/DxfSettingsProvider.tsx` - Central provider (1,659 lines)
-- `ui/components/ColorPalettePanel.tsx` - Settings UI (2,200+ lines)
+- `ui/components/DxfSettingsPanel.tsx` - Settings UI (2,200+ lines)
 - `hooks/drawing/useUnifiedDrawing.ts` - Drawing logic with settings integration
 - `hooks/useEntityStyles.ts` - Legacy compatibility wrapper
 - `hooks/usePreviewMode.ts` - Mode management
@@ -854,5 +854,5 @@ const applyPreviewSettings = useCallback((entity: any) => {
 
 ---
 
-**Next Chapter**: [02 - ColorPalettePanel →](./02-COLORPALETTEPANEL.md)
+**Next Chapter**: [02 - DxfSettingsPanel →](./02-COLORPALETTEPANEL.md)
 **Back to Index**: [← Documentation Index](./00-INDEX.md)

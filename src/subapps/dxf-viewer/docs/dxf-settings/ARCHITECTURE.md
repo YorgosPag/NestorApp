@@ -3,7 +3,7 @@
 ---
 
 **📋 Document Type:** Architecture Overview
-**🎯 Scope:** DxfSettingsPanel (formerly ColorPalettePanel)
+**🎯 Scope:** DxfSettingsPanel (formerly DxfSettingsPanel)
 **👤 Architect:** Γιώργος Παγωνής
 **🤖 Developer:** Claude (Anthropic AI)
 **📅 Created:** 2025-10-07
@@ -40,7 +40,7 @@ The **DxfSettingsPanel** is the central configuration hub for the DXF Viewer app
 
 ### Why Refactor?
 
-The original `ColorPalettePanel.tsx` (2200+ lines) violated **Single Responsibility Principle** and created:
+The original `DxfSettingsPanel.tsx` (2200+ lines) violated **Single Responsibility Principle** and created:
 - ❌ High maintenance cost
 - ❌ Difficult testing
 - ❌ Git collaboration conflicts
@@ -102,7 +102,7 @@ DXF Viewer Application
 **Rule:** Each component has ONE responsibility.
 
 ```
-❌ OLD (ColorPalettePanel.tsx):
+❌ OLD (DxfSettingsPanel.tsx):
 - Main tab routing (General vs Specific)
 - Sub-tab routing (Lines, Text, Grips)
 - Category routing (7 categories)
@@ -778,7 +778,7 @@ Based on ChatGPT-5 feedback, add:
 ## 📚 REFERENCES
 
 ### Internal Documentation
-- [REFACTORING_ROADMAP_ColorPalettePanel.md](./REFACTORING_ROADMAP_ColorPalettePanel.md)
+- [REFACTORING_ROADMAP_DxfSettingsPanel.md](./REFACTORING_ROADMAP_DxfSettingsPanel.md)
 - [COMPONENT_GUIDE.md](./COMPONENT_GUIDE.md)
 - [STATE_MANAGEMENT.md](./STATE_MANAGEMENT.md)
 - [TESTING_STRATEGY.md](./TESTING_STRATEGY.md)

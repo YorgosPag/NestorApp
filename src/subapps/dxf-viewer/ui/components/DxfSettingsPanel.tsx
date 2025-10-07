@@ -1,7 +1,7 @@
 'use client';
 
 // DEBUG FLAG - Set to false to disable performance-heavy logging
-const DEBUG_COLOR_PALETTE_PANEL = false;
+const DEBUG_DXF_SETTINGS_PANEL = false;
 
 import React, { useState, useEffect } from 'react';
 import { CursorColorPalette, type CursorColors } from './palettes/CursorColorPalette';
@@ -39,7 +39,7 @@ import {
   LightingIcon
 } from './dxf-settings/icons/DxfSettingsIcons';
 
-export interface ColorPalettePanelProps {
+export interface DxfSettingsPanelProps {
   className?: string;
 }
 
@@ -56,7 +56,7 @@ interface CategoryConfig {
 type MainTab = 'general' | 'specific';
 type GeneralTab = 'lines' | 'text' | 'grips';
 
-export function ColorPalettePanel({ className = '' }: ColorPalettePanelProps) {
+export function DxfSettingsPanel({ className = '' }: DxfSettingsPanelProps) {
 
   // Main tabs state
   const [activeMainTab, setActiveMainTab] = useState<MainTab>('specific');
@@ -73,7 +73,7 @@ export function ColorPalettePanel({ className = '' }: ColorPalettePanelProps) {
     // Fallback to default
     cursorHookResult = {
       settings: DEFAULT_CURSOR_SETTINGS,
-      updateSettings: (updates: Partial<typeof DEFAULT_CURSOR_SETTINGS>) => { if (DEBUG_COLOR_PALETTE_PANEL) console.log('🔧 Mock updateSettings:', updates); }
+      updateSettings: (updates: Partial<typeof DEFAULT_CURSOR_SETTINGS>) => { if (DEBUG_DXF_SETTINGS_PANEL) console.log('🔧 Mock updateSettings:', updates); }
     };
   }
 
@@ -128,8 +128,8 @@ export function ColorPalettePanel({ className = '' }: ColorPalettePanelProps) {
 
   // Debug log settings changes
   React.useEffect(() => {
-    if (DEBUG_COLOR_PALETTE_PANEL) {
-      console.log('🔍 [ColorPalettePanel] Settings changed:', {
+    if (DEBUG_DXF_SETTINGS_PANEL) {
+      console.log('🔍 [DxfSettingsPanel] Settings changed:', {
         lineSettings: lineSettings.settings,
         textSettings: textSettings.settings,
         gripSettings: gripSettings.settings

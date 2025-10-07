@@ -159,7 +159,7 @@ Modified files (8):
 ├─ hooks/useEntityStyles.ts (compatibility wrapper added)
 ├─ hooks/drawing/useUnifiedDrawing.ts (updated imports)
 ├─ providers/GripProvider.tsx (updated to use DxfSettingsProvider)
-├─ ui/components/ColorPalettePanel.tsx (updated imports)
+├─ ui/components/DxfSettingsPanel.tsx (updated imports)
 ├─ rendering/entities/LineRenderer.ts (no changes needed - uses entities)
 ├─ hooks/useUnifiedSpecificSettings.ts (new file)
 └─ contexts/LineSettingsContext.tsx (deprecated, kept for backward compat)
@@ -656,7 +656,7 @@ const lineStyles = useLineStyles('preview');
 **Testing**:
 - [ ] TypeScript compilation passes (`npx tsc --noEmit`)
 - [ ] Dev server runs without errors (`npm run dev`)
-- [ ] Settings UI works (ColorPalettePanel opens and saves)
+- [ ] Settings UI works (DxfSettingsPanel opens and saves)
 - [ ] Line drawing uses correct settings (preview yellow, completion green)
 - [ ] Auto-save works (check after 500ms)
 - [ ] Page reload preserves settings (no reset to defaults)

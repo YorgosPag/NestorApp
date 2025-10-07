@@ -1,12 +1,12 @@
 # 🏢 ENTERPRISE REFACTORING ROADMAP
-## ColorPalettePanel.tsx → Modular DxfSettingsPanel Structure
+## DxfSettingsPanel.tsx → Modular DxfSettingsPanel Structure
 
 ---
 
 **📋 Αρχιτέκτονας:** Γιώργος Παγωνής
 **🤖 Developer:** Claude (Anthropic AI)
 **📅 Date Created:** 2025-10-07
-**🎯 Objective:** Refactor monolithic ColorPalettePanel.tsx (2200+ lines) → Enterprise modular structure
+**🎯 Objective:** Refactor monolithic DxfSettingsPanel.tsx (2200+ lines) → Enterprise modular structure
 
 ---
 
@@ -30,7 +30,7 @@
 
 ```
 ui/components/
-├── ColorPalettePanel.tsx                 ❌ 2200+ lines (MONOLITHIC)
+├── DxfSettingsPanel.tsx                 ❌ 2200+ lines (MONOLITHIC)
 │   │
 │   ├── Contains ALL logic:
 │   │   ├── Main tab routing (General vs Specific)
@@ -71,7 +71,7 @@ ui/components/
 
 #### 1. **Monolithic Architecture**
 ```typescript
-// ColorPalettePanel.tsx (Lines 59-100+)
+// DxfSettingsPanel.tsx (Lines 59-100+)
 const [activeMainTab, setActiveMainTab] = useState<MainTab>('specific');
 const [activeGeneralTab, setActiveGeneralTab] = useState<GeneralTab>('lines');
 const [activeCategory, setActiveCategory] = useState<ColorCategory>('selection');
@@ -138,7 +138,7 @@ const renderCategoryContent = () => {
 // Answer: You CAN'T! It's all in one 2200-line component!
 
 // Current approach:
-import { ColorPalettePanel } from './ColorPalettePanel';
+import { DxfSettingsPanel } from './DxfSettingsPanel';
 // You have to test the ENTIRE component, not just Lines tab
 ```
 
@@ -150,7 +150,7 @@ import { ColorPalettePanel } from './ColorPalettePanel';
 Developer A: Editing Lines tab (lines 2210-2220)
 Developer B: Editing Grid category (lines 1700-1850)
 
-# Result: Git conflict in ColorPalettePanel.tsx!
+# Result: Git conflict in DxfSettingsPanel.tsx!
 # Even though they're working on DIFFERENT features!
 ```
 
@@ -309,7 +309,7 @@ export const LinesTab: React.FC<LinesTabProps> = () => {
   return (
     <div className="p-4">
       <h2>Lines Tab - Coming Soon</h2>
-      <p>This tab will contain Lines settings from ColorPalettePanel</p>
+      <p>This tab will contain Lines settings from DxfSettingsPanel</p>
     </div>
   );
 };
@@ -486,7 +486,7 @@ export const TabNavigation: React.FC<TabNavigationProps> = ({
 **Duration:** 2 hours
 **Risk:** 🟡 Medium (first extraction, sets the pattern)
 
-**Source:** `ColorPalettePanel.tsx` lines ~2210-2220 (Lines tab content)
+**Source:** `DxfSettingsPanel.tsx` lines ~2210-2220 (Lines tab content)
 
 **Target:** `tabs/general/LinesTab.tsx`
 
@@ -536,7 +536,7 @@ export const LinesTab: React.FC<LinesTabProps> = ({ className = '' }) => {
 ```
 
 **Steps:**
-1. [ ] Copy relevant code from ColorPalettePanel.tsx (lines 2210-2220)
+1. [ ] Copy relevant code from DxfSettingsPanel.tsx (lines 2210-2220)
 2. [ ] Extract state management (line-specific state only)
 3. [ ] Extract hooks usage (useLineSettingsFromProvider, etc.)
 4. [ ] Extract preview logic
@@ -544,7 +544,7 @@ export const LinesTab: React.FC<LinesTabProps> = ({ className = '' }) => {
 6. [ ] Update imports
 7. [ ] Test in isolation (mount LinesTab directly)
 8. [ ] Visual regression test (compare old vs new)
-9. [ ] Git commit: "feat(refactor): Extract LinesTab from ColorPalettePanel"
+9. [ ] Git commit: "feat(refactor): Extract LinesTab from DxfSettingsPanel"
 
 **Testing Checklist:**
 - [ ] LinesTab renders correctly
@@ -559,7 +559,7 @@ export const LinesTab: React.FC<LinesTabProps> = ({ className = '' }) => {
 **Duration:** 1.5 hours
 **Risk:** 🟢 Low (same pattern as LinesTab)
 
-**Source:** `ColorPalettePanel.tsx` lines ~2214-2218 (Text tab content)
+**Source:** `DxfSettingsPanel.tsx` lines ~2214-2218 (Text tab content)
 
 **Target:** `tabs/general/TextTab.tsx`
 
@@ -569,7 +569,7 @@ export const LinesTab: React.FC<LinesTabProps> = ({ className = '' }) => {
 3. [ ] Extract state & hooks
 4. [ ] Test in isolation
 5. [ ] Visual regression test
-6. [ ] Git commit: "feat(refactor): Extract TextTab from ColorPalettePanel"
+6. [ ] Git commit: "feat(refactor): Extract TextTab from DxfSettingsPanel"
 
 **Testing Checklist:**
 - [ ] TextTab renders correctly
@@ -583,7 +583,7 @@ export const LinesTab: React.FC<LinesTabProps> = ({ className = '' }) => {
 **Duration:** 1.5 hours
 **Risk:** 🟢 Low (same pattern)
 
-**Source:** `ColorPalettePanel.tsx` lines ~2218-2220 (Grips tab content)
+**Source:** `DxfSettingsPanel.tsx` lines ~2218-2220 (Grips tab content)
 
 **Target:** `tabs/general/GripsTab.tsx`
 
@@ -593,7 +593,7 @@ export const LinesTab: React.FC<LinesTabProps> = ({ className = '' }) => {
 3. [ ] Extract state & hooks
 4. [ ] Test in isolation
 5. [ ] Visual regression test
-6. [ ] Git commit: "feat(refactor): Extract GripsTab from ColorPalettePanel"
+6. [ ] Git commit: "feat(refactor): Extract GripsTab from DxfSettingsPanel"
 
 **Testing Checklist:**
 - [ ] GripsTab renders correctly
@@ -697,7 +697,7 @@ export const GeneralSettingsPanel: React.FC<GeneralSettingsPanelProps> = ({
 **Duration:** 2 hours
 **Risk:** 🟡 Medium (has sub-tabs: Crosshair, Cursor)
 
-**Source:** `ColorPalettePanel.tsx` lines ~1500-1700 (Cursor case in renderCategoryContent)
+**Source:** `DxfSettingsPanel.tsx` lines ~1500-1700 (Cursor case in renderCategoryContent)
 
 **Target:** `categories/CursorCategory.tsx`
 
@@ -727,13 +727,13 @@ export const CursorCategory: React.FC = () => {
 ```
 
 **Steps:**
-1. [ ] Copy Cursor category code from ColorPalettePanel.tsx
+1. [ ] Copy Cursor category code from DxfSettingsPanel.tsx
 2. [ ] Extract sub-tab state (crosshair vs cursor)
 3. [ ] Extract useCursorSettings() hook usage
 4. [ ] Extract rendering logic
 5. [ ] Test in isolation
 6. [ ] Visual regression test
-7. [ ] Git commit: "feat(refactor): Extract CursorCategory from ColorPalettePanel"
+7. [ ] Git commit: "feat(refactor): Extract CursorCategory from DxfSettingsPanel"
 
 ---
 
@@ -741,7 +741,7 @@ export const CursorCategory: React.FC = () => {
 **Duration:** 2 hours
 **Risk:** 🟡 Medium (has sub-tabs: Window, Crossing)
 
-**Source:** `ColorPalettePanel.tsx` (Selection case)
+**Source:** `DxfSettingsPanel.tsx` (Selection case)
 
 **Target:** `categories/SelectionCategory.tsx`
 
@@ -753,7 +753,7 @@ export const CursorCategory: React.FC = () => {
 **Duration:** 3 hours
 **Risk:** 🔴 High (complex: Grid [Major/Minor] + Rulers [4 tabs])
 
-**Source:** `ColorPalettePanel.tsx` (Grid case - ~300 lines)
+**Source:** `DxfSettingsPanel.tsx` (Grid case - ~300 lines)
 
 **Target:** `categories/GridCategory.tsx`
 
@@ -765,7 +765,7 @@ export const CursorCategory: React.FC = () => {
 5. [ ] Extract useRulersGridContext() hook
 6. [ ] Test all 6 sub-tabs
 7. [ ] Visual regression test
-8. [ ] Git commit: "feat(refactor): Extract GridCategory from ColorPalettePanel"
+8. [ ] Git commit: "feat(refactor): Extract GridCategory from DxfSettingsPanel"
 
 ---
 
@@ -929,7 +929,7 @@ export const DxfSettingsPanel: React.FC<DxfSettingsPanelProps> = ({
 **Change:**
 ```typescript
 // OLD:
-import { LazyColorPalettePanel as ColorPalettePanel } from '../components/LazyLoadWrapper';
+import { LazyDxfSettingsPanel as DxfSettingsPanel } from '../components/LazyLoadWrapper';
 
 // NEW:
 import { DxfSettingsPanel } from '../components/dxf-settings/DxfSettingsPanel';
@@ -939,7 +939,7 @@ case 'colors':
   return (
     <div>
       <LazyPanelWrapper loadingText="Φόρτωση παλέτας χρωμάτων...">
-        <DxfSettingsPanel />  {/* Changed from ColorPalettePanel */}
+        <DxfSettingsPanel />  {/* Changed from DxfSettingsPanel */}
       </LazyPanelWrapper>
     </div>
   );
@@ -949,15 +949,15 @@ case 'colors':
 1. [ ] Update import
 2. [ ] Update component usage
 3. [ ] Test panel loading in app
-4. [ ] Git commit: "refactor: Switch from ColorPalettePanel to DxfSettingsPanel"
+4. [ ] Git commit: "refactor: Switch from DxfSettingsPanel to DxfSettingsPanel"
 
 ---
 
-#### ✅ STEP 4.3: Deprecate ColorPalettePanel
+#### ✅ STEP 4.3: Deprecate DxfSettingsPanel
 **Duration:** 15 minutes
 **Risk:** ⚪ None (documentation only)
 
-**File:** `ui/components/ColorPalettePanel.tsx`
+**File:** `ui/components/DxfSettingsPanel.tsx`
 
 **Add deprecation notice:**
 ```typescript
@@ -969,9 +969,9 @@ case 'colors':
  *
  * @deprecated Use ui/components/dxf-settings/DxfSettingsPanel.tsx
  * @see ui/components/dxf-settings/DxfSettingsPanel.tsx
- * @see docs/REFACTORING_ROADMAP_ColorPalettePanel.md
+ * @see docs/REFACTORING_ROADMAP_DxfSettingsPanel.md
  */
-export function ColorPalettePanel({ className = '' }: ColorPalettePanelProps) {
+export function DxfSettingsPanel({ className = '' }: DxfSettingsPanelProps) {
   // ... existing code (kept for reference until full migration validated)
 }
 ```
@@ -979,7 +979,7 @@ export function ColorPalettePanel({ className = '' }: ColorPalettePanelProps) {
 **Steps:**
 1. [ ] Add deprecation JSDoc
 2. [ ] Keep file for now (don't delete yet)
-3. [ ] Git commit: "docs: Mark ColorPalettePanel as deprecated"
+3. [ ] Git commit: "docs: Mark DxfSettingsPanel as deprecated"
 
 ---
 
@@ -1075,7 +1075,7 @@ describe('LinesTab', () => {
 
 ### PHASE 6: CLEANUP & DOCUMENTATION
 
-#### ✅ STEP 6.1: Remove ColorPalettePanel.tsx
+#### ✅ STEP 6.1: Remove DxfSettingsPanel.tsx
 **Duration:** 15 minutes
 **Risk:** 🟢 Low (after full validation)
 
@@ -1083,9 +1083,9 @@ describe('LinesTab', () => {
 1. [ ] Verify DxfSettingsPanel works in production
 2. [ ] Verify all tests pass
 3. [ ] Verify visual regression tests pass
-4. [ ] Delete `ui/components/ColorPalettePanel.tsx`
+4. [ ] Delete `ui/components/DxfSettingsPanel.tsx`
 5. [ ] Update imports in `LazyLoadWrapper.tsx`
-6. [ ] Git commit: "chore: Remove deprecated ColorPalettePanel.tsx"
+6. [ ] Git commit: "chore: Remove deprecated DxfSettingsPanel.tsx"
 
 ---
 
@@ -1156,7 +1156,7 @@ describe('LinesTab', () => {
 #### Phase 4: Main Panel
 - [ ] STEP 4.1: Create DxfSettingsPanel (1 hour)
 - [ ] STEP 4.2: Update usePanelContentRenderer (30 min)
-- [ ] STEP 4.3: Deprecate ColorPalettePanel (15 min)
+- [ ] STEP 4.3: Deprecate DxfSettingsPanel (15 min)
 
 #### Phase 5: Testing
 - [ ] STEP 5.1: Unit Tests (4 hours)
@@ -1165,7 +1165,7 @@ describe('LinesTab', () => {
 - [ ] STEP 5.4: Performance Testing (1 hour)
 
 #### Phase 6: Cleanup
-- [ ] STEP 6.1: Remove ColorPalettePanel (15 min)
+- [ ] STEP 6.1: Remove DxfSettingsPanel (15 min)
 - [ ] STEP 6.2: Update Documentation (1 hour)
 - [ ] STEP 6.3: Final Commit & Backup (30 min)
 

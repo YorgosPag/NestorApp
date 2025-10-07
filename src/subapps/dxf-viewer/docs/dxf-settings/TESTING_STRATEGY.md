@@ -26,7 +26,7 @@ This document is part of the **DxfSettings Refactoring Documentation Suite**:
 | **[TESTING_STRATEGY.md](./TESTING_STRATEGY.md)** ⭐ | **Testing approach (THIS)** | **Writing tests** |
 
 **Related Files:**
-- Source: [`ColorPalettePanel.tsx`](../../ui/components/ColorPalettePanel.tsx) - Original component (to test against)
+- Source: [`DxfSettingsPanel.tsx`](../../ui/components/DxfSettingsPanel.tsx) - Original component (to test against)
 - Target: [`DxfSettingsPanel.tsx`](../../ui/components/dxf-settings/DxfSettingsPanel.tsx) - New implementation
 - Tests: [`__tests__/`](../../ui/components/dxf-settings/__tests__/) - Test suite location
 

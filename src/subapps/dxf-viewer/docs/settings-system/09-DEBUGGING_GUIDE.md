@@ -554,7 +554,7 @@ console.log('[HOOK] Effective settings:', effectiveSettings);
 console.log('[DRAWING] Applying preview settings:', lineStyles.settings);
 console.log('[DRAWING] Preview entity:', previewEntity);
 
-// ColorPalettePanel.tsx
+// DxfSettingsPanel.tsx
 console.log('[UI] Color changed:', newColor);
 console.log('[UI] Context type:', contextType);
 ```

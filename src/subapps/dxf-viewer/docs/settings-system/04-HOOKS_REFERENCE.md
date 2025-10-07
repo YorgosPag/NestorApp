@@ -401,7 +401,7 @@ function DraftSettingsPanel() {
 ```
 
 **When to Use**:
-- ✅ In "Ειδικές Ρυθμίσεις → Draft" tab (ColorPalettePanel)
+- ✅ In "Ειδικές Ρυθμίσεις → Draft" tab (DxfSettingsPanel)
 - ✅ When editing draft-specific overrides
 - ✅ Real-time preview updates with override toggle
 
@@ -557,7 +557,7 @@ function GeneralLineSettings() {
 ```
 
 **When to Use**:
-- ✅ In "Γενικές Ρυθμίσεις" tab (ColorPalettePanel)
+- ✅ In "Γενικές Ρυθμίσεις" tab (DxfSettingsPanel)
 - ✅ When you explicitly want general settings (no mode logic)
 - ❌ For mode-aware settings (use `useLineStyles(mode)` instead)
 
@@ -597,7 +597,7 @@ function PreviewSettingsPanel() {
 ```
 
 **When to Use**:
-- ✅ In "Ειδικές Ρυθμίσεις → Preview" accordion (ColorPalettePanel)
+- ✅ In "Ειδικές Ρυθμίσεις → Preview" accordion (DxfSettingsPanel)
 - ✅ When you want to edit preview-specific overrides
 
 ---
@@ -635,7 +635,7 @@ function CompletionSettingsPanel() {
 ```
 
 **When to Use**:
-- ✅ In "Ειδικές Ρυθμίσεις → Completion" accordion (ColorPalettePanel)
+- ✅ In "Ειδικές Ρυθμίσεις → Completion" accordion (DxfSettingsPanel)
 - ✅ When you want to edit completion-specific overrides
 
 ---
@@ -672,7 +672,7 @@ const {
 - ✅ All hooks migrated to Provider Hooks (Phase 7)
 - ✅ File renamed to `.deprecated.ts` (Phase 8)
 - ✅ Zero usages remaining in codebase
-- ✅ ColorPalettePanel now uses compatibility wrappers
+- ✅ DxfSettingsPanel now uses compatibility wrappers
 
 **File Location**: `ui/hooks/useConsolidatedSettings.deprecated.ts`
 

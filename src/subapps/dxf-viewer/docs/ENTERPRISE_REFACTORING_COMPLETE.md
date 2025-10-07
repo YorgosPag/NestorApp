@@ -254,7 +254,7 @@ export function useUnifiedLineDraft() {
 - `useUnifiedLineCompletion` → delegates to `useLineCompletionSettings()`
 - `useUnifiedTextPreview` → delegates to `useTextDraftSettings()`
 
-**3 Compatibility Wrappers (ColorPalettePanel hotfix):**
+**3 Compatibility Wrappers (DxfSettingsPanel hotfix):**
 - `useUnifiedLinePreview` → delegates to `useLineDraftSettings()`
 - `useUnifiedGripPreview` → uses `useGripDraftSettings()`
 - `useUnifiedTextPreview` → already migrated (Phase 7)
@@ -385,7 +385,7 @@ export function useUnifiedLineDraft() {
 
 ## 🐛 Issues & Hotfixes
 
-### Issue #1: ColorPalettePanel Runtime Error (Phase 7)
+### Issue #1: DxfSettingsPanel Runtime Error (Phase 7)
 
 **Error:**
 ```
@@ -394,7 +394,7 @@ TypeError: useUnifiedLinePreview is not a function
 
 **Root Cause:**
 - Phase 8 commented out `useUnifiedLinePreview` and `useUnifiedGripPreview`
-- ColorPalettePanel.tsx still imported and used these hooks
+- DxfSettingsPanel.tsx still imported and used these hooks
 
 **Fix Applied:**
 1. ✅ Uncommented `useUnifiedLinePreview` and `useUnifiedGripPreview`
@@ -403,7 +403,7 @@ TypeError: useUnifiedLinePreview is not a function
    - `useUnifiedGripPreview` → uses `useGripDraftSettings()`
 3. ✅ Added `useGripDraftSettings` to imports
 
-**Result:** ColorPalettePanel now works με Provider Hooks!
+**Result:** DxfSettingsPanel now works με Provider Hooks!
 
 ---
 

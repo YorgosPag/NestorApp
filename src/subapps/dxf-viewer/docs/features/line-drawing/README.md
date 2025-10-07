@@ -147,7 +147,7 @@ CanvasSection (orchestrates drawing)
 - ✅ Distance labels (real-time measurements)
 - ✅ Split lines (line breaks at midpoint for label)
 - ✅ PhaseManager (applies settings at runtime)
-- ✅ Settings UI (ColorPalettePanel with Γενικές/Ειδικές tabs)
+- ✅ Settings UI (DxfSettingsPanel with Γενικές/Ειδικές tabs)
 - ✅ Settings sync (DxfSettingsProvider → toolStyleStore)
 - ✅ Grips rendering (start point + cursor following)
 
@@ -246,7 +246,7 @@ case 'line':
 ### Settings Flow (Ειδικές vs Γενικές)
 
 ```
-ColorPalettePanel (UI)
+DxfSettingsPanel (UI)
   ├→ Γενικές Ρυθμίσεις Tab
   │   └→ Default settings (fallback)
   │
@@ -363,7 +363,7 @@ Canvas Rendering (visual display)
 - **[PhaseManager](../../systems/phase-manager/)** - Determines preview vs completion phase
 - **[DxfSettingsProvider](../../providers/DxfSettingsProvider.tsx)** - Central settings management
 - **[useEntityStyles](../../hooks/useEntityStyles.ts)** - Settings retrieval hook
-- **[ColorPalettePanel](../../ui/components/ColorPalettePanel.tsx)** - Settings UI (Γενικές/Ειδικές)
+- **[DxfSettingsPanel](../../ui/components/DxfSettingsPanel.tsx)** - Settings UI (Γενικές/Ειδικές)
 - **[toolStyleStore](../../hooks/useLinePreviewStyle.ts)** - Settings storage
 
 ### Integration Points
