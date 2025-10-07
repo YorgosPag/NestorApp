@@ -479,90 +479,92 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-200">Προκαθορισμένα Πρότυπα</label>
               <div className="relative">
-            <button
-              onClick={() => {
-                setShowTemplateDropdown(!showTemplateDropdown);
-                setHighlightedTemplateIndex(-1);
-              }}
-              onKeyDown={(e) => handleKeyDown(e, 'template')}
-              className="w-full px-3 py-2 pr-8 bg-gray-700 border border-gray-600 rounded-md text-white text-left hover:bg-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              {settings.activeTemplate ? `${settings.activeTemplate} Template` : 'Επιλέξτε πρότυπο...'}
-            </button>
-            {/* Dropdown Arrow */}
-            <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-              <svg
-                className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${
-                  showTemplateDropdown ? 'rotate-180' : ''
-                }`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
-          </div>
+                <button
+                  onClick={() => {
+                    setShowTemplateDropdown(!showTemplateDropdown);
+                    setHighlightedTemplateIndex(-1);
+                  }}
+                  onKeyDown={(e) => handleKeyDown(e, 'template')}
+                  className="w-full px-3 py-2 pr-8 bg-gray-700 border border-gray-600 rounded-md text-white text-left hover:bg-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  {settings.activeTemplate ? `${settings.activeTemplate} Template` : 'Επιλέξτε πρότυπο...'}
+                </button>
+                {/* Dropdown Arrow */}
+                <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                  <svg
+                    className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${
+                      showTemplateDropdown ? 'rotate-180' : ''
+                    }`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
 
-          {showTemplateDropdown && (
-              <div
-                data-dropdown-content
-                className="absolute top-full left-0 right-0 mt-1 rounded-md shadow-2xl max-h-96 overflow-y-auto"
-                style={{
-                  zIndex: 99999999,
-                  backgroundColor: '#374151',
-                  border: '1px solid #4B5563',
-                  backdropFilter: 'none',
-                  WebkitBackdropFilter: 'none'
-                }}
-              >
-                {(() => {
-                  let globalIndex = 0;
-                  return ['engineering', 'architectural', 'electrical'].map(category => {
-                    const templates = getTemplatesByCategory(category as TemplateCategory);
-                    const categoryStartIndex = globalIndex;
-                    globalIndex += templates.length;
+                {/* Dropdown Content - MUST be inside relative container */}
+                {showTemplateDropdown && (
+                  <div
+                    data-dropdown-content
+                    className="absolute top-full left-0 right-0 mt-1 rounded-md shadow-2xl max-h-96 overflow-y-auto"
+                    style={{
+                      zIndex: 9999,
+                      backgroundColor: '#374151',
+                      border: '1px solid #4B5563',
+                      backdropFilter: 'none',
+                      WebkitBackdropFilter: 'none',
+                      position: 'absolute'
+                    }}
+                  >
+                    {(() => {
+                      let globalIndex = 0;
+                      return ['engineering', 'architectural', 'electrical'].map(category => {
+                        const templates = getTemplatesByCategory(category as TemplateCategory);
+                        const categoryStartIndex = globalIndex;
+                        globalIndex += templates.length;
 
-                    return (
-                      <div key={category} className="border-b border-gray-600 last:border-b-0">
-                        <div className="px-3 py-2 text-xs font-medium text-gray-400 bg-gray-800">
-                          {TEMPLATE_LABELS[category as TemplateCategory]}
-                        </div>
-                        {templates.map((template, localIndex) => {
-                          const globalTemplateIndex = categoryStartIndex + localIndex;
-                          const isHighlighted = highlightedTemplateIndex === globalTemplateIndex;
-                          const isSelected = settings.activeTemplate === template.name;
-                          return (
-                            <button
-                              key={template.name}
-                              onClick={() => handleTemplateSelect(template.name)}
-                              className={`w-full px-3 py-2 text-left text-sm border-b border-gray-700 last:border-b-0 transition-colors flex items-start justify-between ${
-                                isHighlighted
-                                  ? 'bg-blue-600 text-white'
-                                  : 'text-white hover:bg-gray-600'
-                              }`}
-                            >
-                              <div className="flex-1">
-                                <div className="font-medium">{template.name}</div>
-                                <div className={`text-xs ${isHighlighted ? 'text-blue-200' : 'text-gray-400'}`}>
-                                  {template.description}
-                                </div>
-                              </div>
-                              {isSelected && (
-                                <svg className="w-5 h-5 text-green-400 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                </svg>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    );
-                  });
-                })()}
+                        return (
+                          <div key={category} className="border-b border-gray-600 last:border-b-0">
+                            <div className="px-3 py-2 text-xs font-medium text-gray-400 bg-gray-800">
+                              {TEMPLATE_LABELS[category as TemplateCategory]}
+                            </div>
+                            {templates.map((template, localIndex) => {
+                              const globalTemplateIndex = categoryStartIndex + localIndex;
+                              const isHighlighted = highlightedTemplateIndex === globalTemplateIndex;
+                              const isSelected = settings.activeTemplate === template.name;
+                              return (
+                                <button
+                                  key={template.name}
+                                  onClick={() => handleTemplateSelect(template.name)}
+                                  className={`w-full px-3 py-2 text-left text-sm border-b border-gray-700 last:border-b-0 transition-colors flex items-start justify-between ${
+                                    isHighlighted
+                                      ? 'bg-blue-600 text-white'
+                                      : 'text-white hover:bg-gray-600'
+                                  }`}
+                                >
+                                  <div className="flex-1">
+                                    <div className="font-medium">{template.name}</div>
+                                    <div className={`text-xs ${isHighlighted ? 'text-blue-200' : 'text-gray-400'}`}>
+                                      {template.description}
+                                    </div>
+                                  </div>
+                                  {isSelected && (
+                                    <svg className="w-5 h-5 text-green-400 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                )}
               </div>
-          )}
-        </div>
+            </div>
           </div>
         </AccordionSection>
 
@@ -609,7 +611,8 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
                   data-dropdown-content
                   className="absolute top-full left-0 right-0 mt-1 rounded-md shadow-2xl"
                   style={{
-                    zIndex: 99999999,
+                    zIndex: 9999,
+                    position: 'absolute',
                     backgroundColor: '#374151',
                     border: '1px solid #4B5563',
                     backdropFilter: 'none',
@@ -943,7 +946,8 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
                     data-dropdown-content
                     className="absolute top-full left-0 right-0 mt-1 rounded-md shadow-2xl"
                     style={{
-                      zIndex: 99999999,
+                      zIndex: 9999,
+                      position: 'absolute',
                       backgroundColor: '#374151',
                       border: '1px solid #4B5563',
                       backdropFilter: 'none',
@@ -1005,7 +1009,8 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
                     data-dropdown-content
                     className="absolute top-full left-0 right-0 mt-1 rounded-md shadow-2xl"
                     style={{
-                      zIndex: 99999999,
+                      zIndex: 9999,
+                      position: 'absolute',
                       backgroundColor: '#374151',
                       border: '1px solid #4B5563',
                       backdropFilter: 'none',

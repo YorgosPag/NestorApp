@@ -41,7 +41,7 @@ export function AccordionSection({
   disabled = false
 }: AccordionSectionProps) {
   return (
-    <div className={`border border-gray-600 rounded-lg overflow-hidden ${className}`}>
+    <div className={`border border-gray-600 rounded-lg ${className}`}>
       {/* Header */}
       <button
         onClick={disabled ? undefined : onToggle}
@@ -85,7 +85,7 @@ export function AccordionSection({
 
       {/* Content */}
       {isOpen && (
-        <div className={`px-4 py-4 bg-gray-750 border-t border-gray-600 ${contentClassName}`}>
+        <div className={`px-4 py-4 bg-gray-750 border-t border-gray-600 overflow-visible ${contentClassName}`}>
           {children}
         </div>
       )}

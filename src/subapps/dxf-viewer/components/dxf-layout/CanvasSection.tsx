@@ -207,8 +207,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // RulersGridSystem uses: gridSettings.visual.color
   // Canvas GridRenderer uses: gridSettings.color
   const gridSettings: GridSettings = {
-    // Enabled state: ΠΡΩΤΑ από panel, μετά toolbar fallback
-    enabled: gridContextSettings?.visual?.enabled ?? showGrid,
+    // Enabled state: ΠΡΩΤΑ από panel, μετά toolbar fallback, τέλος ΠΑΝΤΑ true για stability
+    // 🛡️ NULL GUARD: Ensure grid is always enabled, even if context is temporarily undefined during re-renders
+    enabled: gridContextSettings?.visual?.enabled ?? showGrid ?? true,
     visible: gridContextSettings?.visual?.enabled ?? true, // ✅ VISIBILITY: Controls grid rendering
 
     // ✅ SIZE: Από panel settings
@@ -861,7 +862,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
               crosshairSettings={crosshairSettings} // ✅ CONNECT TO EXISTING CURSOR SYSTEM
               gridSettings={gridSettings} // ✅ FIX: Enable grid rendering in DxfCanvas
               rulerSettings={{
-                enabled: globalRulerSettings.horizontal.enabled && globalRulerSettings.vertical.enabled,
+                // 🛡️ NULL GUARD: Ensure rulers are always enabled, even if context is temporarily undefined
+                enabled: (globalRulerSettings?.horizontal?.enabled && globalRulerSettings?.vertical?.enabled) ?? true,
                 visible: true,
                 opacity: 1.0,
                 unit: globalRulerSettings.units as 'mm' | 'cm' | 'm',

@@ -11,7 +11,11 @@ import {
   useUnifiedLineHover,
   useUnifiedLineSelection
 } from '../../../../hooks/useUnifiedSpecificSettings';
-import { useTextSettingsFromProvider } from '../../../../../providers/DxfSettingsProvider';
+import {
+  useTextSettingsFromProvider,
+  useLineSettingsFromProvider,
+  useGripSettingsFromProvider
+} from '../../../../../providers/DxfSettingsProvider';
 import { LineSettings } from '../core/LineSettings';
 import { TextSettings } from '../core/TextSettings';
 import { GripSettings } from '../core/GripSettings';
@@ -101,8 +105,10 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
   const { settings: specificTextSettings, updateSettings: updateSpecificTextSettings, updateTextSettings, getEffectiveTextSettings } = useUnifiedTextPreview();
   const { settings: specificGripSettings, updateSettings: updateSpecificGripSettings, updateGripSettings, getEffectiveGripSettings } = useUnifiedGripPreview();
 
-  // Γενικές ρυθμίσεις κειμένου για συγχρονισμό
+  // 🆕 Γενικές ρυθμίσεις (pure General - χωρίς merge με Specific)
   const globalTextSettings = useTextSettingsFromProvider();
+  const { settings: globalLineSettings } = useLineSettingsFromProvider();
+  const { settings: globalGripSettings } = useGripSettingsFromProvider();
 
   // 🔥 FIX: useMemo ensures re-calculation when getEffective* functions change
   // These functions are useCallbacks with dependencies [overrideSettings, globalSettings]
@@ -120,34 +126,86 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
   // Grip settings
   const effectiveGripSettings = useMemo(() => getEffectiveGripSettings(), [getEffectiveGripSettings]);
 
-  // 🐛 DEBUG: Log effective settings to console
-  console.log('🔍 [EntitiesSettings] effectiveTextSettings:', effectiveTextSettings);
-  console.log('🔍 [EntitiesSettings] effectiveGripSettings:', effectiveGripSettings);
-  console.log('🔍 [EntitiesSettings] globalTextSettings:', globalTextSettings.settings);
+  // 🆕 CONDITIONAL PREVIEW SETTINGS - για preview box
+  // Αν checkbox OFF → pure General | Αν checkbox ON → Effective (merged)
+  const previewLineDraftSettings = useMemo(() => {
+    if (!globalLineSettings) {
+      console.warn('⚠️ [previewLineDraftSettings] globalLineSettings is undefined!');
+      return effectiveLineDraftSettings;
+    }
+    return draftSettings.overrideGlobalSettings ? effectiveLineDraftSettings : globalLineSettings;
+  }, [draftSettings.overrideGlobalSettings, effectiveLineDraftSettings, globalLineSettings]);
 
-  // ✅ ΝΕΟ: Συγχρονισμός draft settings με το global store για PhaseManager
-  useEffect(() => {
-    updateDraftSettingsStore({
-      overrideGlobalSettings: draftSettings.overrideGlobalSettings || false,
-      settings: effectiveLineDraftSettings
-    });
-  }, [draftSettings.overrideGlobalSettings, draftSettings.lineSettings, effectiveLineDraftSettings]);
+  const previewLineHoverSettings = useMemo(() => {
+    if (!globalLineSettings) {
+      console.warn('⚠️ [previewLineHoverSettings] globalLineSettings is undefined!');
+      return effectiveLineHoverSettings;
+    }
+    return hoverSettings.overrideGlobalSettings ? effectiveLineHoverSettings : globalLineSettings;
+  }, [hoverSettings.overrideGlobalSettings, effectiveLineHoverSettings, globalLineSettings]);
 
-  // ✅ ΝΕΟ: Συγχρονισμός draft text settings με το global store για PhaseManager
-  useEffect(() => {
-    updateDraftTextSettingsStore({
-      overrideGlobalSettings: specificTextSettings.overrideGlobalSettings || false,
-      settings: effectiveTextSettings
-    });
-  }, [specificTextSettings.overrideGlobalSettings, specificTextSettings.textSettings, effectiveTextSettings]);
+  const previewLineSelectionSettings = useMemo(() => {
+    if (!globalLineSettings) {
+      console.warn('⚠️ [previewLineSelectionSettings] globalLineSettings is undefined!');
+      return effectiveLineSelectionSettings;
+    }
+    return selectionSettings.overrideGlobalSettings ? effectiveLineSelectionSettings : globalLineSettings;
+  }, [selectionSettings.overrideGlobalSettings, effectiveLineSelectionSettings, globalLineSettings]);
 
-  // ✅ ΝΕΟ: Συγχρονισμός draft grip settings με το global store για PhaseManager
-  useEffect(() => {
-    updateDraftGripSettingsStore({
-      overrideGlobalSettings: specificGripSettings.overrideGlobalSettings || false,
-      settings: getEffectiveGripSettings()
-    });
-  }, [specificGripSettings.overrideGlobalSettings, specificGripSettings.gripSettings, getEffectiveGripSettings]);
+  const previewLineCompletionSettings = useMemo(() => {
+    if (!globalLineSettings) {
+      console.warn('⚠️ [previewLineCompletionSettings] globalLineSettings is undefined!');
+      return effectiveLineCompletionSettings;
+    }
+    return completionSettings.overrideGlobalSettings ? effectiveLineCompletionSettings : globalLineSettings;
+  }, [completionSettings.overrideGlobalSettings, effectiveLineCompletionSettings, globalLineSettings]);
+
+  const previewTextSettings = useMemo(() => {
+    if (!globalTextSettings || !globalTextSettings.settings) {
+      console.warn('⚠️ [previewTextSettings] globalTextSettings is undefined!');
+      return effectiveTextSettings;
+    }
+    return specificTextSettings.overrideGlobalSettings ? effectiveTextSettings : globalTextSettings.settings;
+  }, [specificTextSettings.overrideGlobalSettings, effectiveTextSettings, globalTextSettings, globalTextSettings?.settings]);
+
+  const previewGripSettings = useMemo(() => {
+    // 🛡️ Null guard: Ensure all values are defined
+    if (!specificGripSettings || specificGripSettings.overrideGlobalSettings === undefined) {
+      console.warn('⚠️ [previewGripSettings] specificGripSettings invalid:', specificGripSettings);
+      return globalGripSettings || DEFAULT_GRIP_SETTINGS;
+    }
+
+    if (!globalGripSettings) {
+      console.warn('⚠️ [previewGripSettings] globalGripSettings is undefined!');
+      return effectiveGripSettings || DEFAULT_GRIP_SETTINGS;
+    }
+
+    return specificGripSettings.overrideGlobalSettings ? effectiveGripSettings : globalGripSettings;
+  }, [specificGripSettings, specificGripSettings?.overrideGlobalSettings, effectiveGripSettings, globalGripSettings]);
+
+
+  // 🏢 ENTERPRISE PATTERN: Explicit Sync (No Auto-Sync)
+  // Settings sync happens ONLY when drawing tool is activated (event-driven)
+  // This prevents unwanted side effects and keeps Scene/Canvas stable
+
+  // ❌ REMOVED: Automatic useEffect sync (caused scene to lose entities)
+  // ✅ NEW: Manual sync will be called from tool activation handlers
+
+  // Example usage (to be implemented in drawing tool handlers):
+  // const syncSettingsToCanvas = useCallback(() => {
+  //   updateDraftSettingsStore({
+  //     overrideGlobalSettings: draftSettings.overrideGlobalSettings || false,
+  //     settings: previewLineDraftSettings
+  //   });
+  //   updateDraftTextSettingsStore({
+  //     overrideGlobalSettings: specificTextSettings.overrideGlobalSettings || false,
+  //     settings: previewTextSettings
+  //   });
+  //   updateDraftGripSettingsStore({
+  //     overrideGlobalSettings: specificGripSettings.overrideGlobalSettings || false,
+  //     settings: previewGripSettings
+  //   });
+  // }, [previewLineDraftSettings, previewTextSettings, previewGripSettings]);
 
   // Συγχρονισμός: Όταν το override είναι ενεργό, οι αλλαγές στις γενικές ρυθμίσεις
   // προωθούνται στις ειδικές ρυθμίσεις για άμεση ενημέρωση
@@ -172,21 +230,8 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
     isSubscript: false
   });
 
-  // Mock global line settings - ✅ Updated to ISO 128 standards
-  const [globalLineSettings] = useState({
-    lineType: 'solid' as string,      // ✅ ISO 128: Continuous line as default
-    lineWidth: 0.25,                  // ✅ ISO 128: Standard 0.25mm line weight
-    color: '#FFFFFF',                 // ✅ AutoCAD ACI 7: White for main lines
-    opacity: 100,
-    dashScale: 1.0,                   // ✅ Standard dash scale
-    dashOffset: 0,                    // ✅ No offset standard
-    lineCap: 'round' as string,       // ✅ Round caps standard
-    lineJoin: 'round' as string,      // ✅ Round joins standard
-    breakAtCenter: false,             // ✅ No break at center default
-    activeTemplate: null as string | null
-  });
-
-  // Removed duplicate dropdown state - these are handled by the LineSettings component
+  // ❌ REMOVED: Mock global line settings - now using real settings from useLineSettingsFromProvider()
+  // The real globalLineSettings is defined at line ~110 via useLineSettingsFromProvider hook
 
   // Drawing tools - χρησιμοποιούν τα ίδια εικονίδια με την κεντρική εργαλειοθήκη
   const drawingTools: MockToolIcon[] = [
@@ -360,9 +405,9 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
             activeSubTab={activeDraftSubTab}
             onTabChange={setActiveLineTab}
             onSubTabChange={setActiveDraftSubTab}
-            lineSettings={effectiveLineDraftSettings}
-            textSettings={effectiveTextSettings}
-            gripSettings={effectiveGripSettings}
+            lineSettings={previewLineDraftSettings}
+            textSettings={previewTextSettings}
+            gripSettings={previewGripSettings}
             contextType="preview"
             overrideSettings={{
               line: {
@@ -400,14 +445,14 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
             activeSubTab={activeHoverSubTab}
             onTabChange={setActiveLineTab}
             onSubTabChange={setActiveHoverSubTab}
-            lineSettings={effectiveLineHoverSettings}
-            textSettings={effectiveTextSettings}
+            lineSettings={previewLineHoverSettings}
+            textSettings={previewTextSettings}
             contextType="preview"
             gripSettings={{
-              ...getEffectiveGripSettings(),
+              ...previewGripSettings,
               colors: {
-                ...getEffectiveGripSettings().colors,
-                cold: getEffectiveGripSettings().colors.warm // Hover state = warm grips
+                ...previewGripSettings.colors,
+                cold: previewGripSettings.colors.warm // Hover state = warm grips
               }
             }}
             overrideSettings={{
@@ -433,14 +478,14 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
             activeSubTab={activeSelectionSubTab}
             onTabChange={setActiveLineTab}
             onSubTabChange={setActiveSelectionSubTab}
-            lineSettings={effectiveLineSelectionSettings}
-            textSettings={effectiveTextSettings}
+            lineSettings={previewLineSelectionSettings}
+            textSettings={previewTextSettings}
             contextType="preview"
             gripSettings={{
-              ...getEffectiveGripSettings(),
+              ...previewGripSettings,
               colors: {
-                ...getEffectiveGripSettings().colors,
-                cold: getEffectiveGripSettings().colors.hot // Selection state = hot grips
+                ...previewGripSettings.colors,
+                cold: previewGripSettings.colors.hot // Selection state = hot grips
               }
             }}
             overrideSettings={{
@@ -466,15 +511,15 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
             activeSubTab={activeCompletionSubTab}
             onTabChange={setActiveLineTab}
             onSubTabChange={setActiveCompletionSubTab}
-            lineSettings={effectiveLineCompletionSettings}
-            textSettings={effectiveTextSettings}
+            lineSettings={previewLineCompletionSettings}
+            textSettings={previewTextSettings}
             contextType="completion"
-            gripSettings={effectiveGripSettings}
+            gripSettings={previewGripSettings}
             customPreview={
               <LinePreview
-                lineSettings={effectiveLineCompletionSettings}
-                textSettings={effectiveTextSettings}
-                gripSettings={effectiveGripSettings}
+                lineSettings={previewLineCompletionSettings}
+                textSettings={previewTextSettings}
+                gripSettings={previewGripSettings}
               />
             }
             overrideSettings={{
