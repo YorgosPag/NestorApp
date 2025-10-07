@@ -186,13 +186,13 @@ export default GeneralSettingsPanel;
  * ```tsx
  * {activeMainTab === 'general' && (
  *   <div className="min-h-[850px] max-h-[96vh] overflow-y-auto">
- *     {/* Preview and Current Settings Display */}
+ *     // Preview and Current Settings Display
  *     <div className="px-4 mb-6 space-y-4">
  *       <LinePreview ... />
  *       <CurrentSettingsDisplay ... />
  *     </div>
  *
- *     {/* General Settings Sub-tabs Navigation */}
+ *     // General Settings Sub-tabs Navigation
  *     <div className="border-b border-gray-600 mb-4">
  *       <nav className="flex gap-1 px-2 pb-2">
  *         <button onClick={() => setActiveGeneralTab('lines')} ...>Γραμμές</button>
@@ -201,7 +201,7 @@ export default GeneralSettingsPanel;
  *       </nav>
  *     </div>
  *
- *     {/* General Settings Content */}
+ *     // General Settings Content
  *     <div className="px-4">
  *       {activeGeneralTab === 'lines' && <LineSettings />}
  *       {activeGeneralTab === 'text' && <TextSettings />}
