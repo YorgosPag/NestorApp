@@ -65,15 +65,24 @@
    - Mode-based Settings (Normal/Preview/Completion)
 
 3. **[docs/dxf-settings/MIGRATION_CHECKLIST.md](./docs/dxf-settings/MIGRATION_CHECKLIST.md)** 🆕 **2025-10-07**
-   - **DxfSettings Refactoring** (DxfSettingsPanel → DxfSettingsPanel)
-   - **Enterprise Modular Architecture** (2200+ lines → 25+ files)
-   - **Phase 1 COMPLETE** (Infrastructure: Folders, Placeholders, Lazy Loading, Hooks, Shared Components)
-   - **Inline Cross-References** (Code ↔ Documentation bidirectional links)
+   - **DxfSettings Refactoring** (ColorPalettePanel → DxfSettingsPanel)
+   - **Enterprise Modular Architecture** (2157 lines → 33 components)
+   - **Phase 1-4 COMPLETE** ✅
+     - **Phase 1:** Infrastructure (Folders, Lazy Loading, Hooks, Shared Components)
+     - **Phase 2:** GeneralSettingsPanel extraction (3 tabs: Lines, Text, Grips)
+     - **Phase 3:** SpecificSettingsPanel extraction (7 categories)
+     - **Phase 4:** Enterprise File Size Compliance (485+560 lines → 6 files) 🆕
+   - **Bidirectional Cross-References** (Code ↔ Documentation με section numbers & ADRs)
+   - **Enterprise Split Components (4 νέα):** 🆕
+     - `RulerMajorLinesSettings.tsx` (155 lines) - Major ruler lines
+     - `RulerMinorLinesSettings.tsx` (155 lines) - Minor ruler lines
+     - `CrosshairAppearanceSettings.tsx` (195 lines) - Crosshair visual appearance
+     - `CrosshairBehaviorSettings.tsx` (143 lines) - Crosshair behavior
    - **Files:**
      - [ARCHITECTURE.md](./docs/dxf-settings/ARCHITECTURE.md) - System architecture & component hierarchy
-     - [COMPONENT_GUIDE.md](./docs/dxf-settings/COMPONENT_GUIDE.md) - Detailed API reference (29 components)
+     - [COMPONENT_GUIDE.md](./docs/dxf-settings/COMPONENT_GUIDE.md) - Detailed API reference (**33 components** - updated 2025-10-07)
      - [MIGRATION_CHECKLIST.md](./docs/dxf-settings/MIGRATION_CHECKLIST.md) - Step-by-step migration (6 phases, 27 steps)
-     - [DECISION_LOG.md](./docs/dxf-settings/DECISION_LOG.md) - 10 Architectural Decision Records (ADRs)
+     - [DECISION_LOG.md](./docs/dxf-settings/DECISION_LOG.md) - 11 Architectural Decision Records (ADRs) - **ADR-009 added** 🆕
      - [STATE_MANAGEMENT.md](./docs/dxf-settings/STATE_MANAGEMENT.md) - Complete state strategy
      - [TESTING_STRATEGY.md](./docs/dxf-settings/TESTING_STRATEGY.md) - Test pyramid (80%+ coverage)
      - [REFACTORING_ROADMAP_DxfSettingsPanel.md](./docs/REFACTORING_ROADMAP_DxfSettingsPanel.md) - 6-phase roadmap (37 hours)

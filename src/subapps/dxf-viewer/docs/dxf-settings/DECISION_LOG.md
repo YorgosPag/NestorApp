@@ -867,11 +867,206 @@ When making a new architectural decision during refactoring:
 
 ---
 
+## 🆕 ADR-009: Enterprise File Size Split Strategy
+
+**Date:** 2025-10-07
+**Status:** ✅ ACCEPTED & IMPLEMENTED
+**Phase:** Phase 4 - Enterprise File Size Compliance
+**Impact:** HIGH - Affects maintainability and code organization
+
+### Context
+
+After Phase 3 completion, two components violated enterprise file size guidelines:
+- `RulerLinesSettings.tsx`: **485 lines** (❌ >200 limit)
+- `CrosshairSettings.tsx`: **560 lines** (❌ >200 limit)
+
+**Enterprise Standard:**
+```
+<200 lines: ✅ Perfect
+200-300 lines: ⚠️ Acceptable
+300-500 lines: ⚠️ Consider split
+>500 lines: ❌ MUST split
+```
+
+**User Request:**
+> "Προχώρα λοιπόν στην υπόλοιπη διάσπαση για να είμαστε 100% enterprise level"
+
+### Decision
+
+Split both violating components using **Router + Specialized Sub-components** pattern.
+
+**Pattern:**
+```typescript
+// BEFORE: Monolithic component (485 lines)
+export const RulerLinesSettings = () => {
+  // All inline UI for Major + Minor lines
+  return <div>{/* 485 lines of UI */}</div>;
+};
+
+// AFTER: Router (100 lines) + 2 Sub-components (155 + 155 lines)
+export const RulerLinesSettings = () => {
+  const { activeTab } = useTabNavigation('major');
+  return (
+    <div>
+      <TabNavigation tabs={tabs} activeTab={activeTab} />
+      {activeTab === 'major' ? <RulerMajorLinesSettings /> : <RulerMinorLinesSettings />}
+    </div>
+  );
+};
+```
+
+### Consequences
+
+**Positive:**
+- ✅ 100% Enterprise file size compliance (all files <200 lines)
+- ✅ Single Responsibility Principle (each file has ONE job)
+- ✅ Better testability (test each sub-component in isolation)
+- ✅ Improved maintainability (easier to find and modify code)
+- ✅ Cleaner git diffs (changes localized to specific files)
+- ✅ Faster code navigation (smaller files load faster in IDE)
+
+**Negative:**
+- ⚠️ More files to manage (2 files → 6 files)
+- ⚠️ Slightly more import statements
+- ⚠️ Need to understand component hierarchy (router → sub-components)
+
+**Metrics:**
+```
+BEFORE Phase 4:
+- Components: 29 total
+- Violations: 2 files (485 + 560 lines)
+- Total: 1045 violating lines
+
+AFTER Phase 4:
+- Components: 33 total (+4 new)
+- Violations: 0 files ✅
+- Total: 868 lines (split across 6 files)
+- Per-file: 100, 155, 155, 120, 195, 143 (all <200) ✅
+```
+
+### Implementation
+
+**Split #1: RulerLinesSettings (485 → 3 files)**
+```
+RulerLinesSettings.tsx (100 lines - Router)
+├─ RulerMajorLinesSettings.tsx (155 lines)
+│   - Visibility, Color, Opacity, Thickness for Major lines
+└─ RulerMinorLinesSettings.tsx (155 lines)
+    - Visibility, Color, Opacity, Thickness for Minor lines
+```
+
+**Split #2: CrosshairSettings (560 → 3 files)**
+```
+CrosshairSettings.tsx (120 lines - Router + State)
+├─ CrosshairAppearanceSettings.tsx (195 lines)
+│   - Line Style (solid/dashed/dotted/dash-dot)
+│   - Line Width (1px-5px)
+│   - Size/Type (0%/5%/8%/15%/Full)
+└─ CrosshairBehaviorSettings.tsx (143 lines)
+    - Crosshair Color
+    - Opacity Slider
+    - Cursor Gap Toggle
+```
+
+**Files Created:**
+- `settings/special/rulers/RulerMajorLinesSettings.tsx`
+- `settings/special/rulers/RulerMinorLinesSettings.tsx`
+- `settings/special/CrosshairAppearanceSettings.tsx`
+- `settings/special/CrosshairBehaviorSettings.tsx`
+
+**Files Modified:**
+- `settings/special/rulers/RulerLinesSettings.tsx` (485 → 100 lines)
+- `settings/special/CrosshairSettings.tsx` (560 → 120 lines)
+
+### Alternatives Considered
+
+**Alternative 1: Keep files as-is (REJECTED)**
+- ❌ Violates enterprise standards
+- ❌ Harder to maintain
+- ❌ Slower to navigate
+
+**Alternative 2: Split into MORE files (REJECTED)**
+- ❌ Over-engineering (each sub-component would be <100 lines)
+- ❌ Too many files (harder to navigate)
+- ❌ Diminishing returns
+
+**Alternative 3: Inline Sub-components (REJECTED)**
+```typescript
+const MajorLines = () => { /* ... */ };
+const MinorLines = () => { /* ... */ };
+
+export const RulerLinesSettings = () => {
+  return activeTab === 'major' ? <MajorLines /> : <MinorLines />;
+};
+```
+- ❌ Still violates file size (485 lines in one file)
+- ❌ Cannot test sub-components in isolation
+- ❌ Cannot lazy load sub-components
+
+### Documentation Updates
+
+**Bidirectional Cross-References Added:**
+- Code files now reference:
+  - `docs/dxf-settings/COMPONENT_GUIDE.md` (specific section numbers §7.2-7.5)
+  - `docs/dxf-settings/MIGRATION_CHECKLIST.md` (Phase 4 steps)
+  - `docs/dxf-settings/ARCHITECTURE.md` (§6.3 Enterprise File Size)
+  - `docs/dxf-settings/DECISION_LOG.md` (This ADR: ADR-009)
+  - `docs/CENTRALIZED_SYSTEMS.md` (Rule #12)
+
+**Documentation files now reference:**
+- `COMPONENT_GUIDE.md` - Added §7.2-7.5 (4 new components)
+- `CENTRALIZED_SYSTEMS.md` - Updated Phase 4 status
+- `DECISION_LOG.md` - This ADR (ADR-009)
+- Total components updated: 29 → 33
+
+### Testing Strategy
+
+**Unit Tests Required:**
+```typescript
+describe('RulerMajorLinesSettings', () => {
+  it('renders visibility toggle', () => { /* ... */ });
+  it('renders color picker with rgba support', () => { /* ... */ });
+  it('renders opacity slider 0.1-1.0', () => { /* ... */ });
+  it('renders thickness control 0.5px-3px', () => { /* ... */ });
+  it('updates settings via useRulersGridContext', () => { /* ... */ });
+});
+
+// Same for RulerMinorLinesSettings, CrosshairAppearanceSettings, CrosshairBehaviorSettings
+```
+
+**Integration Tests Required:**
+```typescript
+describe('RulerLinesSettings Integration', () => {
+  it('switches between Major/Minor tabs', () => { /* ... */ });
+  it('preserves settings across tab switches', () => { /* ... */ });
+  it('applies changes to ruler system immediately', () => { /* ... */ });
+});
+```
+
+### Related ADRs
+
+- **ADR-001:** Extract to separate files (established pattern)
+- **ADR-004:** Use TabNavigation component (used in routers)
+- **ADR-005:** Use useTabNavigation hook (used in routers)
+- **ADR-008:** Lazy load categories separately (performance)
+
+### Success Metrics
+
+- ✅ All files <200 lines (100% compliance)
+- ✅ Zero TypeScript errors
+- ✅ All functionality preserved (no breaking changes)
+- ✅ Bidirectional documentation (Code ↔ Docs)
+- ✅ Component count: 29 → 33 (+4)
+- ✅ Total lines: 1045 → 868 (split across 6 files)
+
+---
+
 ## 📝 CHANGELOG
 
 | Date | Author | Changes |
 |------|--------|---------|
 | 2025-10-07 | Claude | Initial ADRs (001-010) - Pre-refactoring decisions |
+| 2025-10-07 | Claude | **ADR-009 added** - Enterprise File Size Split Strategy (Phase 4) |
 
 ---
 

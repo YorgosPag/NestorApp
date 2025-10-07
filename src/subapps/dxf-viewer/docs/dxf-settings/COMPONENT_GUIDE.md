@@ -39,11 +39,17 @@ This guide provides detailed reference for **every component** in the DxfSetting
 | **Panels** | 2 | Routing containers | `GeneralSettingsPanel`, `SpecificSettingsPanel` |
 | **Tabs** | 3 | General settings UI | `LinesTab`, `TextTab`, `GripsTab` |
 | **Categories** | 7 | Specific settings UI | `CursorCategory`, `GridCategory`, etc. |
-| **Settings** | 7 | Reusable settings UI | `LineSettings`, `TextSettings`, etc. |
+| **Settings** | 11 | Reusable settings UI | `LineSettings`, `TextSettings`, etc. |
 | **Shared** | 6 | Utility components | `TabNavigation`, `LinePreview`, etc. |
 | **Hooks** | 3 | Custom React hooks | `useTabNavigation`, etc. |
 
-**Total:** 29 components
+**Total:** 33 components (updated 2025-10-07 after Phase 4 Enterprise Split)
+
+**Phase 4 Additions (4 new components):**
+- `RulerMajorLinesSettings` (155 lines) - Extracted from RulerLinesSettings
+- `RulerMinorLinesSettings` (155 lines) - Extracted from RulerLinesSettings
+- `CrosshairAppearanceSettings` (195 lines) - Extracted from CrosshairSettings
+- `CrosshairBehaviorSettings` (143 lines) - Extracted from CrosshairSettings
 
 ---
 
@@ -1108,11 +1114,162 @@ describe('LinesTab Accessibility', () => {
 
 ---
 
+## 🆕 PHASE 4 ENTERPRISE SPLIT COMPONENTS
+
+### §7.2 RulerMajorLinesSettings
+
+**File:** `settings/special/rulers/RulerMajorLinesSettings.tsx`
+**Lines:** 155 (✅ <200 - Enterprise compliant)
+**Parent:** `RulerLinesSettings.tsx` (router)
+**Sibling:** `RulerMinorLinesSettings.tsx`
+
+**Responsibility:** Major ruler lines appearance settings (visibility, color, opacity, thickness).
+
+#### API
+
+```typescript
+export interface RulerMajorLinesSettingsProps {
+  className?: string;
+}
+
+export const RulerMajorLinesSettings: React.FC<RulerMajorLinesSettingsProps>;
+```
+
+#### Hooks Used
+
+```typescript
+const { state: { rulers: rulerSettings }, updateRulerSettings } = useRulersGridContext();
+```
+
+#### Settings Controlled
+
+- **Visibility Toggle:** Show/hide major ruler lines
+- **Color Picker:** RGBA color support
+- **Opacity Slider:** 0.1 - 1.0 range
+- **Thickness Control:** 0.5px - 3px range
+
+#### Cross-References
+
+- **Component Guide:** This document (§7.2)
+- **Migration Checklist:** Phase 4 - Step 4.2
+- **Architecture:** §6.3 Enterprise File Size Compliance
+- **Decision Log:** ADR-009 Enterprise Split Strategy
+- **Centralized Systems:** Rule #12 Settings Components
+
+#### Extracted From
+
+- **Original:** RulerLinesSettings.tsx lines 200-319 (Phase 3)
+- **Split Date:** 2025-10-07 (Phase 4.2)
+- **Reason:** 485 lines → 3 files (100 + 155 + 155)
+
+---
+
+### §7.3 RulerMinorLinesSettings
+
+**File:** `settings/special/rulers/RulerMinorLinesSettings.tsx`
+**Lines:** 155 (✅ <200 - Enterprise compliant)
+**Parent:** `RulerLinesSettings.tsx` (router)
+**Sibling:** `RulerMajorLinesSettings.tsx`
+
+**Responsibility:** Minor ruler lines appearance settings (visibility, color, opacity, thickness).
+
+**API, Hooks, Settings:** Same structure as RulerMajorLinesSettings (§7.2)
+
+#### Extracted From
+
+- **Original:** RulerLinesSettings.tsx lines 321-439 (Phase 3)
+- **Split Date:** 2025-10-07 (Phase 4.2)
+
+---
+
+### §7.4 CrosshairAppearanceSettings
+
+**File:** `settings/special/CrosshairAppearanceSettings.tsx`
+**Lines:** 195 (✅ <200 - Enterprise compliant)
+**Parent:** `CrosshairSettings.tsx` (router)
+**Sibling:** `CrosshairBehaviorSettings.tsx`
+
+**Responsibility:** Crosshair visual appearance (line style, width, size/type).
+
+#### API
+
+```typescript
+export interface CrosshairAppearanceSettingsProps {
+  className?: string;
+  cursorColors: CursorColors;
+}
+
+export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsProps>;
+```
+
+#### Hooks Used
+
+```typescript
+const { settings, updateSettings } = useCursorSettings();
+```
+
+#### Settings Controlled
+
+- **Line Style:** Solid, Dashed, Dotted, Dash-Dot (4 options)
+- **Line Width:** 1px - 5px with quick buttons
+- **Size/Type:** 0%, 5%, 8%, 15%, Full screen (5 options)
+
+#### Cross-References
+
+- **Component Guide:** This document (§7.4)
+- **Migration Checklist:** Phase 4 - Step 4.3
+- **Architecture:** §6.3 Enterprise File Size Compliance
+- **Decision Log:** ADR-009 Enterprise Split Strategy
+- **Centralized Systems:** Rule #12 Settings Components
+
+#### Extracted From
+
+- **Original:** CrosshairSettings.tsx lines 170-435 (Phase 3)
+- **Split Date:** 2025-10-07 (Phase 4.3)
+- **Reason:** 560 lines → 3 files (120 + 195 + 143)
+
+---
+
+### §7.5 CrosshairBehaviorSettings
+
+**File:** `settings/special/CrosshairBehaviorSettings.tsx`
+**Lines:** 143 (✅ <200 - Enterprise compliant)
+**Parent:** `CrosshairSettings.tsx` (router)
+**Sibling:** `CrosshairAppearanceSettings.tsx`
+
+**Responsibility:** Crosshair behavior settings (color, opacity, cursor gap).
+
+#### API
+
+```typescript
+export interface CrosshairBehaviorSettingsProps {
+  className?: string;
+  cursorColors: CursorColors;
+  onCursorColorsChange: (colors: CursorColors) => void;
+}
+
+export const CrosshairBehaviorSettings: React.FC<CrosshairBehaviorSettingsProps>;
+```
+
+#### Settings Controlled
+
+- **Crosshair Color:** Hex color picker with text input
+- **Opacity Slider:** 0.1 - 1.0 range (10% - 100%)
+- **Cursor Gap Toggle:** Enable/disable gap around cursor
+
+#### Extracted From
+
+- **Original:** CrosshairSettings.tsx lines 144-168, 437-487 (Phase 3)
+- **Split Date:** 2025-10-07 (Phase 4.3)
+
+---
+
 ## 📝 CHANGELOG
 
 | Date | Author | Changes |
 |------|--------|---------|
 | 2025-10-07 | Claude | Initial draft - All 29 components documented |
+| 2025-10-07 | Claude | **Phase 4 Update** - Added 4 enterprise split components (§7.2-7.5), updated total to 33 |
 
 ---
 
