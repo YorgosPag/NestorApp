@@ -61,10 +61,11 @@ import { useLineSettingsFromProvider } from '../../../../../providers/DxfSetting
 // ✅ ΑΝΤΙΚΑΤΑΣΤΑΣΗ ΜΕ UNIFIED HOOKS
 import { useUnifiedLinePreview, useUnifiedLineCompletion } from '../../../../hooks/useUnifiedSpecificSettings';
 import type { LineTemplate } from '../../../../../contexts/LineSettingsContext';
-import { SharedColorPicker } from '../../../shared/SharedColorPicker';
+import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
 import { useSettingsUpdater, commonValidators } from '../../../../hooks/useSettingsUpdater';
 import { useNotifications } from '../../../../../../../providers/NotificationProvider';
 import { BaseModal } from '../../../../../components/shared/BaseModal';
+import { EnterpriseComboBox, type ComboBoxOption, type ComboBoxGroupedOptions } from '../shared/EnterpriseComboBox';
 import {
   LINE_TYPE_LABELS,
   LINE_CAP_LABELS,
@@ -207,177 +208,88 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
     }
   });
 
-  // Local state για dropdowns
-  const [showLineTypeDropdown, setShowLineTypeDropdown] = useState(false);
-  const [showCapDropdown, setShowCapDropdown] = useState(false);
-  const [showJoinDropdown, setShowJoinDropdown] = useState(false);
-  const [showTemplateDropdown, setShowTemplateDropdown] = useState(false);
-  const [showFactoryResetModal, setShowFactoryResetModal] = useState(false); // 🆕 ENTERPRISE MODAL
+  // Local state για modal (Factory Reset)
+  const [showFactoryResetModal, setShowFactoryResetModal] = useState(false);
 
-  // Keyboard navigation state
-  const [highlightedTemplateIndex, setHighlightedTemplateIndex] = useState(-1);
-  const [highlightedLineTypeIndex, setHighlightedLineTypeIndex] = useState(-1);
-  const [highlightedCapIndex, setHighlightedCapIndex] = useState(-1);
-  const [highlightedJoinIndex, setHighlightedJoinIndex] = useState(-1);
+  // ===== HANDLERS =====
 
-  // Handle line type change
-  const handleLineTypeChange = (lineType: LineType) => {
-    settingsUpdater.createSelectHandler('lineType', () => setShowLineTypeDropdown(false))(lineType);
-  };
-
-  // Handle template application
+  // Handle template selection
   const handleTemplateSelect = (templateName: string) => {
-    const allTemplates = [
-      ...getTemplatesByCategory('engineering'),
-      ...getTemplatesByCategory('architectural'),
-      ...getTemplatesByCategory('electrical')
-    ];
-    const template = allTemplates.find(t => t.name === templateName);
-    if (template) {
-      console.log('🎨 Applying template:', templateName, template);
-      applyTemplate(template);
-      // Update activeTemplate to show checkmark
-      updateSettings({ activeTemplate: templateName });
-      console.log('✅ Template applied, activeTemplate set to:', templateName);
+    const allTemplates = templateGroupedOptions.flatMap(group => group.options);
+    const selectedOption = allTemplates.find(opt => opt.value === templateName);
+
+    if (selectedOption) {
+      // Find the actual template object
+      const template = [
+        ...getTemplatesByCategory('engineering'),
+        ...getTemplatesByCategory('architectural'),
+        ...getTemplatesByCategory('electrical')
+      ].find(t => t.name === templateName);
+
+      if (template) {
+        console.log('🎨 Applying template:', templateName, template);
+        applyTemplate(template);
+        updateSettings({ activeTemplate: templateName });
+        console.log('✅ Template applied, activeTemplate set to:', templateName);
+      }
     } else {
       console.warn('⚠️ Template not found:', templateName);
     }
-    setShowTemplateDropdown(false);
   };
 
   // Get current dash pattern for preview
   const currentDashPattern = getCurrentDashPattern();
 
-  // Get all available options for dropdowns
-  const allTemplates = [
-    ...getTemplatesByCategory('engineering'),
-    ...getTemplatesByCategory('architectural'),
-    ...getTemplatesByCategory('electrical')
+  // ===== COMBOBOX OPTIONS (Enterprise Pattern) =====
+
+  // Line Type Options
+  const lineTypeOptions: ComboBoxOption<LineType>[] = Object.entries(LINE_TYPE_LABELS).map(([value, label]) => ({
+    value: value as LineType,
+    label: label as string
+  }));
+
+  // Line Cap Options
+  const lineCapOptions: ComboBoxOption<LineCapStyle>[] = Object.entries(LINE_CAP_LABELS).map(([value, label]) => ({
+    value: value as LineCapStyle,
+    label: label as string
+  }));
+
+  // Line Join Options
+  const lineJoinOptions: ComboBoxOption<LineJoinStyle>[] = Object.entries(LINE_JOIN_LABELS).map(([value, label]) => ({
+    value: value as LineJoinStyle,
+    label: label as string
+  }));
+
+  // Template Options (Grouped by category)
+  const templateGroupedOptions: ComboBoxGroupedOptions<string>[] = [
+    {
+      category: 'engineering',
+      categoryLabel: TEMPLATE_LABELS.engineering,
+      options: getTemplatesByCategory('engineering').map(t => ({
+        value: t.name,
+        label: t.name,
+        description: t.description
+      }))
+    },
+    {
+      category: 'architectural',
+      categoryLabel: TEMPLATE_LABELS.architectural,
+      options: getTemplatesByCategory('architectural').map(t => ({
+        value: t.name,
+        label: t.name,
+        description: t.description
+      }))
+    },
+    {
+      category: 'electrical',
+      categoryLabel: TEMPLATE_LABELS.electrical,
+      options: getTemplatesByCategory('electrical').map(t => ({
+        value: t.name,
+        label: t.name,
+        description: t.description
+      }))
+    }
   ];
-  const lineTypeOptions = Object.entries(LINE_TYPE_LABELS);
-  const lineCapOptions = Object.entries(LINE_CAP_LABELS);
-  const lineJoinOptions = Object.entries(LINE_JOIN_LABELS);
-
-  // Keyboard navigation handlers
-  const handleKeyDown = (e: React.KeyboardEvent, dropdownType: 'template' | 'lineType' | 'cap' | 'join') => {
-    if (!['ArrowDown', 'ArrowUp', 'Enter', 'Escape'].includes(e.key)) return;
-
-    e.preventDefault();
-
-    let currentIndex = -1;
-    let maxIndex = 0;
-    let setHighlightedIndex: (index: number) => void;
-    let handleSelect: (index: number) => void;
-
-    switch (dropdownType) {
-      case 'template':
-        currentIndex = highlightedTemplateIndex;
-        maxIndex = allTemplates.length - 1;
-        setHighlightedIndex = setHighlightedTemplateIndex;
-        handleSelect = (index) => {
-          const template = allTemplates[index];
-          if (template) {
-            applyTemplate(template);
-            updateSettings({ activeTemplate: template.name });
-            console.log('⌨️ Keyboard: Template applied:', template.name);
-          }
-        };
-        break;
-      case 'lineType':
-        currentIndex = highlightedLineTypeIndex;
-        maxIndex = lineTypeOptions.length - 1;
-        setHighlightedIndex = setHighlightedLineTypeIndex;
-        handleSelect = (index) => {
-          const [type] = lineTypeOptions[index];
-          if (type) {
-            settingsUpdater.updateSetting('lineType', type as LineType);
-            // Keep highlighting for keyboard navigation
-          }
-        };
-        break;
-      case 'cap':
-        currentIndex = highlightedCapIndex;
-        maxIndex = lineCapOptions.length - 1;
-        setHighlightedIndex = setHighlightedCapIndex;
-        handleSelect = (index) => {
-          const [cap] = lineCapOptions[index];
-          if (cap) {
-            settingsUpdater.updateSetting('lineCap', cap as LineCapStyle);
-            // Keep highlighting for keyboard navigation
-          }
-        };
-        break;
-      case 'join':
-        currentIndex = highlightedJoinIndex;
-        maxIndex = lineJoinOptions.length - 1;
-        setHighlightedIndex = setHighlightedJoinIndex;
-        handleSelect = (index) => {
-          const [join] = lineJoinOptions[index];
-          if (join) {
-            settingsUpdater.updateSetting('lineJoin', join as LineJoinStyle);
-            // Keep highlighting for keyboard navigation
-          }
-        };
-        break;
-    }
-
-    switch (e.key) {
-      case 'ArrowDown':
-        const nextIndex = currentIndex === -1 ? 0 : (currentIndex < maxIndex ? currentIndex + 1 : 0);
-        setHighlightedIndex(nextIndex);
-        // Apply selection immediately but keep highlighting
-        handleSelect(nextIndex);
-        break;
-      case 'ArrowUp':
-        const prevIndex = currentIndex === -1 ? maxIndex : (currentIndex > 0 ? currentIndex - 1 : maxIndex);
-        setHighlightedIndex(prevIndex);
-        // Apply selection immediately but keep highlighting
-        handleSelect(prevIndex);
-        break;
-      case 'Enter':
-        if (currentIndex >= 0) {
-          handleSelect(currentIndex);
-          // Close dropdown and reset highlighting on Enter
-          setHighlightedIndex(-1);
-          switch (dropdownType) {
-            case 'template': setShowTemplateDropdown(false); break;
-            case 'lineType': setShowLineTypeDropdown(false); break;
-            case 'cap': setShowCapDropdown(false); break;
-            case 'join': setShowJoinDropdown(false); break;
-          }
-        }
-        break;
-      case 'Escape':
-        // Close dropdown and reset highlight
-        setHighlightedIndex(-1);
-        switch (dropdownType) {
-          case 'template': setShowTemplateDropdown(false); break;
-          case 'lineType': setShowLineTypeDropdown(false); break;
-          case 'cap': setShowCapDropdown(false); break;
-          case 'join': setShowJoinDropdown(false); break;
-        }
-        break;
-    }
-  };
-
-  // Close dropdowns when clicking outside
-  const handleContainerClick = (e: React.MouseEvent) => {
-    // Check if click is on a dropdown button or dropdown content
-    const target = e.target as HTMLElement;
-    const isDropdownButton = target.closest('button');
-    const isDropdownContent = target.closest('[data-dropdown-content]');
-
-    if (!isDropdownButton && !isDropdownContent) {
-      setShowTemplateDropdown(false);
-      setShowLineTypeDropdown(false);
-      setShowCapDropdown(false);
-      setShowJoinDropdown(false);
-      setHighlightedTemplateIndex(-1);
-      setHighlightedLineTypeIndex(-1);
-      setHighlightedCapIndex(-1);
-      setHighlightedJoinIndex(-1);
-    }
-  };
 
   // 🆕 TEMPLATE SYSTEM: Factory reset με enterprise confirmation modal
   const handleFactoryResetClick = () => {
@@ -415,7 +327,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
   const { toggleSection, isOpen } = useAccordion('basic');
 
   return (
-    <div className="space-y-4 p-4" onClick={handleContainerClick}>
+    <div className="space-y-4 p-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-medium text-white">Ρυθμίσεις Γραμμών</h3>
@@ -475,96 +387,15 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           disabled={!settings.enabled}
         >
           <div className="space-y-4">
-            {/* Template Quick Select */}
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-200">Προκαθορισμένα Πρότυπα</label>
-              <div className="relative">
-                <button
-                  onClick={() => {
-                    setShowTemplateDropdown(!showTemplateDropdown);
-                    setHighlightedTemplateIndex(-1);
-                  }}
-                  onKeyDown={(e) => handleKeyDown(e, 'template')}
-                  className="w-full px-3 py-2 pr-8 bg-gray-700 border border-gray-600 rounded-md text-white text-left hover:bg-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  {settings.activeTemplate ? `${settings.activeTemplate} Template` : 'Επιλέξτε πρότυπο...'}
-                </button>
-                {/* Dropdown Arrow */}
-                <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                  <svg
-                    className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${
-                      showTemplateDropdown ? 'rotate-180' : ''
-                    }`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-
-                {/* Dropdown Content - MUST be inside relative container */}
-                {showTemplateDropdown && (
-                  <div
-                    data-dropdown-content
-                    className="absolute top-full left-0 right-0 mt-1 rounded-md shadow-2xl max-h-96 overflow-y-auto"
-                    style={{
-                      zIndex: 9999,
-                      backgroundColor: '#374151',
-                      border: '1px solid #4B5563',
-                      backdropFilter: 'none',
-                      WebkitBackdropFilter: 'none',
-                      position: 'absolute'
-                    }}
-                  >
-                    {(() => {
-                      let globalIndex = 0;
-                      return ['engineering', 'architectural', 'electrical'].map(category => {
-                        const templates = getTemplatesByCategory(category as TemplateCategory);
-                        const categoryStartIndex = globalIndex;
-                        globalIndex += templates.length;
-
-                        return (
-                          <div key={category} className="border-b border-gray-600 last:border-b-0">
-                            <div className="px-3 py-2 text-xs font-medium text-gray-400 bg-gray-800">
-                              {TEMPLATE_LABELS[category as TemplateCategory]}
-                            </div>
-                            {templates.map((template, localIndex) => {
-                              const globalTemplateIndex = categoryStartIndex + localIndex;
-                              const isHighlighted = highlightedTemplateIndex === globalTemplateIndex;
-                              const isSelected = settings.activeTemplate === template.name;
-                              return (
-                                <button
-                                  key={template.name}
-                                  onClick={() => handleTemplateSelect(template.name)}
-                                  className={`w-full px-3 py-2 text-left text-sm border-b border-gray-700 last:border-b-0 transition-colors flex items-start justify-between ${
-                                    isHighlighted
-                                      ? 'bg-blue-600 text-white'
-                                      : 'text-white hover:bg-gray-600'
-                                  }`}
-                                >
-                                  <div className="flex-1">
-                                    <div className="font-medium">{template.name}</div>
-                                    <div className={`text-xs ${isHighlighted ? 'text-blue-200' : 'text-gray-400'}`}>
-                                      {template.description}
-                                    </div>
-                                  </div>
-                                  {isSelected && (
-                                    <svg className="w-5 h-5 text-green-400 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                    </svg>
-                                  )}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        );
-                      });
-                    })()}
-                  </div>
-                )}
-              </div>
-            </div>
+            {/* 🏢 ENTERPRISE: Template Quick Select - ComboBox */}
+            <EnterpriseComboBox
+              label="Προκαθορισμένα Πρότυπα"
+              value={settings.activeTemplate || ''}
+              groupedOptions={templateGroupedOptions}
+              onChange={handleTemplateSelect}
+              placeholder="Επιλέξτε πρότυπο..."
+              getDisplayValue={(value) => value ? `${value} Template` : 'Επιλέξτε πρότυπο...'}
+            />
           </div>
         </AccordionSection>
 
@@ -579,66 +410,13 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
         >
           <div className="space-y-4">
 
-        {/* Line Type */}
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-200">Τύπος Γραμμής</label>
-          <div className="relative">
-            <button
-              onClick={() => {
-                setShowLineTypeDropdown(!showLineTypeDropdown);
-                setHighlightedLineTypeIndex(-1);
-              }}
-              onKeyDown={(e) => handleKeyDown(e, 'lineType')}
-              className="w-full px-3 py-2 pr-8 bg-gray-700 border border-gray-600 rounded-md text-white text-left hover:bg-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              {LINE_TYPE_LABELS[settings.lineType]}
-            </button>
-            <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-              <svg
-                className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${
-                  showLineTypeDropdown ? 'rotate-180' : ''
-                }`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
-
-            {showLineTypeDropdown && (
-                <div
-                  data-dropdown-content
-                  className="absolute top-full left-0 right-0 mt-1 rounded-md shadow-2xl"
-                  style={{
-                    zIndex: 9999,
-                    position: 'absolute',
-                    backgroundColor: '#374151',
-                    border: '1px solid #4B5563',
-                    backdropFilter: 'none',
-                    WebkitBackdropFilter: 'none'
-                  }}
-                >
-                  {lineTypeOptions.map(([type, label], index) => {
-                    const isHighlighted = highlightedLineTypeIndex === index;
-                    return (
-                      <button
-                        key={type}
-                        onClick={() => handleLineTypeChange(type as LineType)}
-                        className={`w-full px-3 py-2 text-left text-sm border-b border-gray-700 last:border-b-0 transition-colors ${
-                          isHighlighted
-                            ? 'bg-blue-600 text-white'
-                            : 'text-white hover:bg-gray-600'
-                        }`}
-                      >
-                        {label}
-                      </button>
-                    );
-                  })}
-                </div>
-            )}
-          </div>
-        </div>
+        {/* 🏢 ENTERPRISE: Line Type - ComboBox */}
+        <EnterpriseComboBox
+          label="Τύπος Γραμμής"
+          value={settings.lineType}
+          options={lineTypeOptions}
+          onChange={(value) => settingsUpdater.updateSetting('lineType', value)}
+        />
 
         {/* Line Width */}
         <div className="space-y-2">
@@ -667,15 +445,21 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           </div>
         </div>
 
-        {/* Color */}
-        <SharedColorPicker
-          value={settings.color}
-          onChange={settingsUpdater.createColorHandler('color')}
-          label="Χρώμα"
-          previewSize="large"
-          showTextInput={true}
-          textInputPlaceholder="#ffffff"
-        />
+        {/* Color - 🏢 ENTERPRISE Color System */}
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-200">Χρώμα</label>
+          <ColorDialogTrigger
+            value={settings.color}
+            onChange={settingsUpdater.createColorHandler('color')}
+            label={settings.color}
+            title="Επιλογή Χρώματος Γραμμής"
+            alpha={false}
+            modes={['hex', 'rgb', 'hsl']}
+            palettes={['dxf', 'semantic', 'material']}
+            recent={true}
+            eyedropper={true}
+          />
+        </div>
 
         {/* Opacity */}
         <div className="space-y-2">
@@ -733,15 +517,21 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
         >
           <div className="space-y-4">
 
-        {/* Hover Color */}
-        <SharedColorPicker
-          value={settings.hoverColor}
-          onChange={settingsUpdater.createColorHandler('hoverColor')}
-          label="Χρώμα Hover"
-          previewSize="large"
-          showTextInput={true}
-          textInputPlaceholder="#ffff00"
-        />
+        {/* Hover Color - 🏢 ENTERPRISE Color System */}
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-200">Χρώμα Hover</label>
+          <ColorDialogTrigger
+            value={settings.hoverColor}
+            onChange={settingsUpdater.createColorHandler('hoverColor')}
+            label={settings.hoverColor}
+            title="Επιλογή Χρώματος Hover"
+            alpha={false}
+            modes={['hex', 'rgb', 'hsl']}
+            palettes={['dxf', 'semantic', 'material']}
+            recent={true}
+            eyedropper={true}
+          />
+        </div>
 
         {/* Hover Width */}
         <div className="space-y-2">
@@ -810,15 +600,21 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
         >
           <div className="space-y-4">
 
-        {/* Final Color */}
-        <SharedColorPicker
-          value={settings.finalColor}
-          onChange={settingsUpdater.createColorHandler('finalColor')}
-          label="Τελικό Χρώμα"
-          previewSize="large"
-          showTextInput={true}
-          textInputPlaceholder="#00ff00"
-        />
+        {/* Final Color - 🏢 ENTERPRISE Color System */}
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-200">Τελικό Χρώμα</label>
+          <ColorDialogTrigger
+            value={settings.finalColor}
+            onChange={settingsUpdater.createColorHandler('finalColor')}
+            label={settings.finalColor}
+            title="Επιλογή Τελικού Χρώματος"
+            alpha={false}
+            modes={['hex', 'rgb', 'hsl']}
+            palettes={['dxf', 'semantic', 'material']}
+            recent={true}
+            eyedropper={true}
+          />
+        </div>
 
         {/* Final Width */}
         <div className="space-y-2">
@@ -914,131 +710,21 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
             </div>
           )}
 
-          {/* Line Cap */}
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-200">Άκρα Γραμμής</label>
-            <div className="relative">
-              <button
-                onClick={() => {
-                  setShowCapDropdown(!showCapDropdown);
-                  setHighlightedCapIndex(-1);
-                }}
-                onKeyDown={(e) => handleKeyDown(e, 'cap')}
-                className="w-full px-3 py-2 pr-8 bg-gray-700 border border-gray-600 rounded-md text-white text-left hover:bg-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                {LINE_CAP_LABELS[settings.lineCap]}
-              </button>
-              <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                <svg
-                  className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${
-                    showCapDropdown ? 'rotate-180' : ''
-                  }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
+          {/* 🏢 ENTERPRISE: Line Cap - ComboBox */}
+          <EnterpriseComboBox
+            label="Άκρα Γραμμής"
+            value={settings.lineCap}
+            options={lineCapOptions}
+            onChange={(value) => settingsUpdater.updateSetting('lineCap', value)}
+          />
 
-              {showCapDropdown && (
-                  <div
-                    data-dropdown-content
-                    className="absolute top-full left-0 right-0 mt-1 rounded-md shadow-2xl"
-                    style={{
-                      zIndex: 9999,
-                      position: 'absolute',
-                      backgroundColor: '#374151',
-                      border: '1px solid #4B5563',
-                      backdropFilter: 'none',
-                      WebkitBackdropFilter: 'none'
-                    }}
-                  >
-                    {lineCapOptions.map(([cap, label], index) => {
-                      const isHighlighted = highlightedCapIndex === index;
-                      return (
-                        <button
-                          key={cap}
-                          onClick={() => {
-                            settingsUpdater.createSelectHandler('lineCap', () => setShowCapDropdown(false))(cap as LineCapStyle);
-                          }}
-                          className={`w-full px-3 py-2 text-left text-sm border-b border-gray-700 last:border-b-0 transition-colors ${
-                            isHighlighted
-                              ? 'bg-blue-600 text-white'
-                              : 'text-white hover:bg-gray-600'
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      );
-                    })}
-                  </div>
-              )}
-            </div>
-          </div>
-
-          {/* Line Join */}
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-200">Συνδέσεις Γραμμής</label>
-            <div className="relative">
-              <button
-                onClick={() => {
-                  setShowJoinDropdown(!showJoinDropdown);
-                  setHighlightedJoinIndex(-1);
-                }}
-                onKeyDown={(e) => handleKeyDown(e, 'join')}
-                className="w-full px-3 py-2 pr-8 bg-gray-700 border border-gray-600 rounded-md text-white text-left hover:bg-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                {LINE_JOIN_LABELS[settings.lineJoin]}
-              </button>
-              <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                <svg
-                  className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${
-                    showJoinDropdown ? 'rotate-180' : ''
-                  }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-
-              {showJoinDropdown && (
-                <div
-                    data-dropdown-content
-                    className="absolute top-full left-0 right-0 mt-1 rounded-md shadow-2xl"
-                    style={{
-                      zIndex: 9999,
-                      position: 'absolute',
-                      backgroundColor: '#374151',
-                      border: '1px solid #4B5563',
-                      backdropFilter: 'none',
-                      WebkitBackdropFilter: 'none'
-                    }}
-                  >
-                    {lineJoinOptions.map(([join, label], index) => {
-                      const isHighlighted = highlightedJoinIndex === index;
-                      return (
-                        <button
-                          key={join}
-                          onClick={() => {
-                            settingsUpdater.createSelectHandler('lineJoin', () => setShowJoinDropdown(false))(join as LineJoinStyle);
-                          }}
-                          className={`w-full px-3 py-2 text-left text-sm border-b border-gray-700 last:border-b-0 transition-colors ${
-                            isHighlighted
-                              ? 'bg-blue-600 text-white'
-                              : 'text-white hover:bg-gray-600'
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      );
-                    })}
-                  </div>
-              )}
-            </div>
-          </div>
+          {/* 🏢 ENTERPRISE: Line Join - ComboBox */}
+          <EnterpriseComboBox
+            label="Συνδέσεις Γραμμής"
+            value={settings.lineJoin}
+            options={lineJoinOptions}
+            onChange={(value) => settingsUpdater.updateSetting('lineJoin', value)}
+          />
 
           {/* Dash Offset (only for non-solid lines) */}
           {settings.lineType !== 'solid' && (
