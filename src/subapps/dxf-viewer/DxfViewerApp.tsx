@@ -26,7 +26,8 @@ import type { DxfViewerAppProps } from './types';
 // import { ConfigurationProvider } from './providers/ConfigurationProvider';
 import { StyleManagerProvider } from './providers/StyleManagerProvider';
 // ===== ΚΕΝΤΡΙΚΟΣ AUTO-SAVE PROVIDER =====
-import { DxfSettingsProvider } from './providers/DxfSettingsProvider';
+// 🔄 MIGRATED (2025-10-09): Phase 3.2 - Direct Enterprise
+import { EnterpriseDxfSettingsProvider as DxfSettingsProvider } from './providers/EnterpriseDxfSettingsProvider';
 
 export function DxfViewerApp(props: DxfViewerAppProps) {
   // Debug logging removed for performance
@@ -36,14 +37,16 @@ export function DxfViewerApp(props: DxfViewerAppProps) {
         <DxfViewerErrorBoundary>
           {/* ===== ΝΕΑ UNIFIED PROVIDERS (για internal use από contexts) ===== */}
           {/* 🗑️ REMOVED: ConfigurationProvider - MERGED into DxfSettingsProvider */}
-            <StyleManagerProvider>
               <ProjectHierarchyProvider>
                 {/* ===== ΚΕΝΤΡΙΚΟΣ AUTO-SAVE PROVIDER (πρώτα από όλα) ===== */}
-                <DxfSettingsProvider>
+                <DxfSettingsProvider enabled={true}>
+                  <StyleManagerProvider>
                 {/* LineSettingsProvider REMOVED - χρησιμοποιείται πλέον μόνο το DxfSettingsProvider */}
                 {/* TextSettingsProvider REMOVED - χρησιμοποιείται πλέον μόνο το DxfSettingsProvider */}
+                {/* 🔍 TESTING: Re-enable GripProvider to test for infinite loop */}
                 <GripProvider>
                       {/* ✅ ΑΦΑΙΡΕΣΗ ΠΑΛΙΩΝ SPECIFIC PROVIDERS - ΧΡΗΣΙΜΟΠΟΙΟΥΝΤΑΙ ΠΛΕΟΝ UNIFIED HOOKS */}
+                      {/* 🚫 TEMPORARY: Re-enable providers one-by-one */}
                       <SnapProvider>
                 <RulersGridSystem enablePersistence={true} persistenceKey="dxf-viewer-rulers-grid">
                   <CursorSystem>
@@ -65,9 +68,9 @@ export function DxfViewerApp(props: DxfViewerAppProps) {
                 </GripProvider>
                 {/* TextSettingsProvider REMOVED - χρησιμοποιείται πλέον μόνο το DxfSettingsProvider */}
                 {/* LineSettingsProvider REMOVED - χρησιμοποιείται πλέον μόνο το DxfSettingsProvider */}
-              </DxfSettingsProvider>
-            </ProjectHierarchyProvider>
-          </StyleManagerProvider>
+                  </StyleManagerProvider>
+                </DxfSettingsProvider>
+              </ProjectHierarchyProvider>
           {/* 🗑️ REMOVED: ConfigurationProvider closing tag */}
       </DxfViewerErrorBoundary>
     </StorageErrorBoundary>

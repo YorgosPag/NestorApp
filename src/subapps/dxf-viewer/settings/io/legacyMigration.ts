@@ -317,7 +317,7 @@ export function migrateFromLegacyProvider(
  * Handles 'preview' → 'draft' alias mapping
  */
 function migrateLineSpecific(
-  lineSpecific: LegacyDxfSettingsState['specific']['line'] | undefined,
+  lineSpecific: NonNullable<LegacyDxfSettingsState['specific']>['line'] | undefined,
   mode: 'draft' | 'hover' | 'selection' | 'completion'
 ): Partial<LineSettings> {
   if (!lineSpecific) return {};
@@ -339,7 +339,7 @@ function migrateLineSpecific(
  * Migrate line-override settings for a mode
  */
 function migrateLineOverrides(
-  lineOverrides: LegacyDxfSettingsState['overrides']['line'] | undefined,
+  lineOverrides: NonNullable<LegacyDxfSettingsState['overrides']>['line'] | undefined,
   mode: 'draft' | 'hover' | 'selection' | 'completion'
 ): Partial<LineSettings> {
   if (!lineOverrides) return {};
@@ -359,7 +359,7 @@ function migrateLineOverrides(
  * Migrate text-specific settings for a mode
  */
 function migrateTextSpecific(
-  textSpecific: LegacyDxfSettingsState['specific']['text'] | undefined,
+  textSpecific: NonNullable<LegacyDxfSettingsState['specific']>['text'] | undefined,
   mode: 'draft'
 ): Partial<TextSettings> {
   if (!textSpecific) return {};
@@ -375,7 +375,7 @@ function migrateTextSpecific(
  * Migrate text-override settings for a mode
  */
 function migrateTextOverrides(
-  textOverrides: LegacyDxfSettingsState['overrides']['text'] | undefined,
+  textOverrides: NonNullable<LegacyDxfSettingsState['overrides']>['text'] | undefined,
   mode: 'draft'
 ): Partial<TextSettings> {
   if (!textOverrides) return {};
@@ -391,7 +391,7 @@ function migrateTextOverrides(
  * Migrate grip-specific settings for a mode
  */
 function migrateGripSpecific(
-  gripSpecific: LegacyDxfSettingsState['specific']['grip'] | undefined,
+  gripSpecific: NonNullable<LegacyDxfSettingsState['specific']>['grip'] | undefined,
   mode: 'draft'
 ): Partial<GripSettings> {
   if (!gripSpecific) return {};
@@ -407,7 +407,7 @@ function migrateGripSpecific(
  * Migrate grip-override settings for a mode
  */
 function migrateGripOverrides(
-  gripOverrides: LegacyDxfSettingsState['overrides']['grip'] | undefined,
+  gripOverrides: NonNullable<LegacyDxfSettingsState['overrides']>['grip'] | undefined,
   mode: 'draft'
 ): Partial<GripSettings> {
   if (!gripOverrides) return {};

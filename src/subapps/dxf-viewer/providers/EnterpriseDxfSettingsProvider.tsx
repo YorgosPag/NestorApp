@@ -75,6 +75,15 @@ import type {
   GripSettings
 } from '../settings/core/types';
 
+// Re-export types for backward compatibility
+export type { ViewerMode, StorageMode, LineSettings, TextSettings, GripSettings, SettingsState };
+
+// 🔄 BACKWARD COMPATIBLE: Additional entity types (not in enterprise yet)
+import type { GridSettings, RulerSettings } from '../systems/rulers-grid/config';
+import type { UICursorSettings as CursorSettings } from '../rendering/ui/cursor/CursorTypes';
+// 🔄 BACKWARD COMPATIBLE: Import default settings for Grid & Ruler stores
+import { DEFAULT_GRID_SETTINGS, DEFAULT_RULER_SETTINGS } from '../systems/rulers-grid/config';
+
 import { FACTORY_DEFAULTS } from '../settings/FACTORY_DEFAULTS';
 import { computeEffective } from '../settings/core/computeEffective';
 import { IndexedDbDriver } from '../settings/io/IndexedDbDriver';
@@ -95,22 +104,60 @@ import { migrateFromLegacyProvider, isLegacyFormat, getMigrationInfo } from '../
  */
 interface EnterpriseDxfSettingsContextType {
   // State
-  settings: SettingsState;
+  settings: SettingsState & {
+    // 🔄 BACKWARD COMPATIBLE: Add old API properties for compatibility
+    mode?: ViewerMode;
+    saveStatus?: 'idle' | 'saving' | 'saved' | 'error';
+    lastSaved?: Date | null;
+    cursor?: any; // Not implemented in enterprise yet
+    grid?: any; // Not implemented in enterprise yet
+    ruler?: any; // Not implemented in enterprise yet
+    specific?: any; // Old structure - not needed in enterprise
+  };
 
-  // Core actions
-  updateLineSettings: (mode: StorageMode, updates: Partial<LineSettings>, layer: 'general' | 'specific' | 'overrides') => void;
-  updateTextSettings: (mode: StorageMode, updates: Partial<TextSettings>, layer: 'general' | 'specific' | 'overrides') => void;
-  updateGripSettings: (mode: StorageMode, updates: Partial<GripSettings>, layer: 'general' | 'specific' | 'overrides') => void;
+  // Core actions - 🔄 BACKWARD COMPATIBLE: Support both OLD (1 param) and NEW (3 params) API
+  updateLineSettings: {
+    (updates: Partial<LineSettings>): void; // OLD API
+    (mode: StorageMode, updates: Partial<LineSettings>, layer?: 'general' | 'specific' | 'overrides'): void; // NEW API
+  };
+  updateTextSettings: {
+    (updates: Partial<TextSettings>): void; // OLD API
+    (mode: StorageMode, updates: Partial<TextSettings>, layer?: 'general' | 'specific' | 'overrides'): void; // NEW API
+  };
+  updateGripSettings: {
+    (updates: Partial<GripSettings>): void; // OLD API
+    (mode: StorageMode, updates: Partial<GripSettings>, layer?: 'general' | 'specific' | 'overrides'): void; // NEW API
+  };
 
   // Override toggles
   toggleLineOverride: (mode: StorageMode, enabled: boolean) => void;
   toggleTextOverride: (mode: StorageMode, enabled: boolean) => void;
   toggleGripOverride: (mode: StorageMode, enabled: boolean) => void;
 
-  // Effective settings (computed)
-  getEffectiveLineSettings: (mode: ViewerMode) => LineSettings;
-  getEffectiveTextSettings: (mode: ViewerMode) => TextSettings;
-  getEffectiveGripSettings: (mode: ViewerMode) => GripSettings;
+  // Effective settings (computed) - 🔄 BACKWARD COMPATIBLE: mode is optional (defaults to 'normal')
+  getEffectiveLineSettings: (mode?: ViewerMode) => LineSettings;
+  getEffectiveTextSettings: (mode?: ViewerMode) => TextSettings;
+  getEffectiveGripSettings: (mode?: ViewerMode) => GripSettings;
+
+  // 🔄 BACKWARD COMPATIBLE: Old API methods (aliases to new API)
+  setMode?: (mode: ViewerMode) => void; // Deprecated - use mode-aware getters instead
+  updateSpecificLineSettings?: (mode: 'draft' | 'hover' | 'selection' | 'completion', settings: Partial<LineSettings>) => void;
+  updateSpecificTextSettings?: (mode: 'draft', settings: Partial<TextSettings>) => void;
+  updateSpecificGripSettings?: (mode: 'draft', settings: Partial<GripSettings>) => void;
+  updateLineOverrides?: (mode: 'draft' | 'hover' | 'selection' | 'completion', settings: Partial<LineSettings>) => void;
+  updateTextOverrides?: (mode: 'draft', settings: Partial<TextSettings>) => void;
+  updateGripOverrides?: (mode: 'draft', settings: Partial<GripSettings>) => void;
+
+  // 🔄 BACKWARD COMPATIBLE: Additional entity types (grid, ruler, cursor)
+  updateGridSettings?: (updates: Partial<GridSettings>) => void;
+  updateRulerSettings?: (updates: Partial<RulerSettings>) => void;
+  updateCursorSettings?: (updates: Partial<CursorSettings>) => void;
+
+  // 🔄 BACKWARD COMPATIBLE: Template system (optional - not in enterprise yet)
+  applyLineTemplate?: (templateName: string, templateSettings: LineSettings) => void;
+  updateLineTemplateOverrides?: (overrides: Partial<LineSettings>) => void;
+  clearLineTemplateOverrides?: () => void;
+  resetLineToFactory?: () => void;
 
   // Reset
   resetToDefaults: () => void;
@@ -119,6 +166,13 @@ interface EnterpriseDxfSettingsContextType {
   isLoaded: boolean;
   isSaving: boolean;
   lastError: string | null;
+
+  // 🔄 BACKWARD COMPATIBLE: Additional computed flags
+  isAutoSaving?: boolean; // Alias for isSaving
+  hasUnsavedChanges?: boolean; // Not tracked in enterprise yet
+
+  // 🔄 BACKWARD COMPATIBLE: Raw dispatch for advanced use cases
+  dispatch?: React.Dispatch<any>; // Optional - for advanced users
 
   // 🆕 PHASE 2: Migration utilities (debugging & diagnostics)
   migrationUtils: {
@@ -157,6 +211,66 @@ interface EnterpriseState {
   isSaving: boolean;
   lastError: string | null;
 }
+
+// ============================================================================
+// GLOBAL STORES (BACKWARD COMPATIBLE - for Grid & Ruler synchronization)
+// ============================================================================
+
+interface GridSettingsStore {
+  settings: GridSettings;
+  listeners: Set<(settings: GridSettings) => void>;
+  update: (updates: Partial<GridSettings>) => void;
+  subscribe: (listener: (settings: GridSettings) => void) => () => void;
+}
+
+interface RulerSettingsStore {
+  settings: RulerSettings;
+  listeners: Set<(settings: RulerSettings) => void>;
+  update: (updates: Partial<RulerSettings>) => void;
+  subscribe: (listener: (settings: RulerSettings) => void) => () => void;
+}
+
+// Grid Settings Store
+const createGridStore = (): GridSettingsStore => {
+  let current = { ...DEFAULT_GRID_SETTINGS };
+  const listeners = new Set<(settings: GridSettings) => void>();
+
+  return {
+    get settings() { return current; },
+    listeners,
+    update: (updates) => {
+      current = { ...current, ...updates };
+      listeners.forEach(listener => listener(current));
+    },
+    subscribe: (listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    }
+  };
+};
+
+// Ruler Settings Store
+const createRulerStore = (): RulerSettingsStore => {
+  let current = { ...DEFAULT_RULER_SETTINGS };
+  const listeners = new Set<(settings: RulerSettings) => void>();
+
+  return {
+    get settings() { return current; },
+    listeners,
+    update: (updates) => {
+      current = { ...current, ...updates };
+      listeners.forEach(listener => listener(current));
+    },
+    subscribe: (listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    }
+  };
+};
+
+// Global stores για sync (exported for backward compatibility)
+export const globalGridStore = createGridStore();
+export const globalRulerStore = createRulerStore();
 
 // ============================================================================
 // REDUCER
@@ -316,6 +430,19 @@ export function EnterpriseDxfSettingsProvider({
   enabled = false  // ✅ Disabled by default (Phase 1)
 }: EnterpriseDxfSettingsProviderProps) {
   // ========================================================================
+  // DEBUG: Render counter
+  // ========================================================================
+  const renderCountRef = useRef(0);
+  renderCountRef.current++;
+
+  if (renderCountRef.current > 50) {
+    console.error('[Enterprise] INFINITE LOOP DETECTED! Render count:', renderCountRef.current);
+    console.trace('[Enterprise] Stack trace:');
+  } else {
+    console.log('[Enterprise] Render #', renderCountRef.current);
+  }
+
+  // ========================================================================
   // STORAGE DRIVER
   // ========================================================================
 
@@ -340,6 +467,26 @@ export function EnterpriseDxfSettingsProvider({
     isSaving: false,
     lastError: null
   });
+
+  // 🔄 BACKWARD COMPATIBLE: Track current viewer mode (old API compatibility)
+  const [currentMode, setCurrentMode] = React.useState<ViewerMode>('normal');
+
+  // 🔄 BACKWARD COMPATIBLE: Track save status (derived from reducer state)
+  const saveStatus = useMemo<'idle' | 'saving' | 'saved' | 'error'>(() => {
+    if (state.isSaving) return 'saving';
+    if (state.lastError) return 'error';
+    if (state.isLoaded) return 'saved';
+    return 'idle';
+  }, [state.isSaving, state.lastError, state.isLoaded]);
+
+  const [lastSaved, setLastSaved] = React.useState<Date | null>(null);
+
+  // Update lastSaved when save completes
+  useEffect(() => {
+    if (saveStatus === 'saved' && !state.isSaving) {
+      setLastSaved(new Date());
+    }
+  }, [saveStatus, state.isSaving]);
 
   // ========================================================================
   // LOAD FROM STORAGE
@@ -386,9 +533,22 @@ export function EnterpriseDxfSettingsProvider({
   // ========================================================================
 
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const previousSettingsRef = useRef<SettingsState | null>(null);
 
   useEffect(() => {
     if (!enabled || !state.isLoaded) return; // Skip if disabled or not loaded
+
+    // ✅ FIX: Skip save if settings haven't actually changed (deep equality)
+    if (previousSettingsRef.current) {
+      const hasChanged = JSON.stringify(state.settings) !== JSON.stringify(previousSettingsRef.current);
+      if (!hasChanged) {
+        console.log('[Enterprise] Settings unchanged, skipping auto-save');
+        return;
+      }
+    }
+
+    // Update previous settings ref
+    previousSettingsRef.current = state.settings;
 
     // Debounce saves (500ms)
     if (saveTimeoutRef.current) {
@@ -409,6 +569,10 @@ export function EnterpriseDxfSettingsProvider({
             console.error('[Enterprise] Save failed:', error);
             dispatch({ type: 'SAVE_ERROR', payload: error });
           }
+        })
+        .catch(err => {
+          console.error('[Enterprise] Save exception:', err);
+          dispatch({ type: 'SAVE_ERROR', payload: String(err) });
         });
     }, 500);
 
@@ -417,34 +581,77 @@ export function EnterpriseDxfSettingsProvider({
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [driver, state.settings, state.isLoaded, enabled]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [driver, state.settings, enabled]); // ✅ FIX: Remove state.isLoaded to avoid infinite loop when SAVE_START/SAVE_SUCCESS toggle isSaving
 
   // ========================================================================
   // ACTIONS
   // ========================================================================
 
+  // ============================================================================
+  // 🔄 BACKWARD COMPATIBLE API
+  // Supports both OLD API (1 param) and NEW API (3 params)
+  // ============================================================================
+
   const updateLineSettings = useCallback((
-    mode: StorageMode,
-    updates: Partial<LineSettings>,
-    layer: 'general' | 'specific' | 'overrides'
+    modeOrUpdates: StorageMode | Partial<LineSettings>,
+    updatesParam?: Partial<LineSettings>,
+    layerParam?: 'general' | 'specific' | 'overrides'
   ) => {
-    dispatch({ type: 'UPDATE_LINE', payload: { mode, updates, layer } });
+    console.log('[Enterprise] updateLineSettings called', { modeOrUpdates, updatesParam, layerParam });
+    // Detect OLD API: updateLineSettings(updates)
+    if (typeof modeOrUpdates === 'object' && updatesParam === undefined) {
+      const mode = 'normal' as StorageMode;
+      const updates = modeOrUpdates as Partial<LineSettings>;
+      const layer = 'general';
+      dispatch({ type: 'UPDATE_LINE', payload: { mode, updates, layer } });
+    } else {
+      // NEW API: updateLineSettings(mode, updates, layer)
+      const mode = modeOrUpdates as StorageMode;
+      const updates = updatesParam!;
+      const layer = layerParam || 'general';
+      dispatch({ type: 'UPDATE_LINE', payload: { mode, updates, layer } });
+    }
   }, []);
 
   const updateTextSettings = useCallback((
-    mode: StorageMode,
-    updates: Partial<TextSettings>,
-    layer: 'general' | 'specific' | 'overrides'
+    modeOrUpdates: StorageMode | Partial<TextSettings>,
+    updatesParam?: Partial<TextSettings>,
+    layerParam?: 'general' | 'specific' | 'overrides'
   ) => {
-    dispatch({ type: 'UPDATE_TEXT', payload: { mode, updates, layer } });
+    // Detect OLD API: updateTextSettings(updates)
+    if (typeof modeOrUpdates === 'object' && updatesParam === undefined) {
+      const mode = 'normal' as StorageMode;
+      const updates = modeOrUpdates as Partial<TextSettings>;
+      const layer = 'general';
+      dispatch({ type: 'UPDATE_TEXT', payload: { mode, updates, layer } });
+    } else {
+      // NEW API: updateTextSettings(mode, updates, layer)
+      const mode = modeOrUpdates as StorageMode;
+      const updates = updatesParam!;
+      const layer = layerParam || 'general';
+      dispatch({ type: 'UPDATE_TEXT', payload: { mode, updates, layer } });
+    }
   }, []);
 
   const updateGripSettings = useCallback((
-    mode: StorageMode,
-    updates: Partial<GripSettings>,
-    layer: 'general' | 'specific' | 'overrides'
+    modeOrUpdates: StorageMode | Partial<GripSettings>,
+    updatesParam?: Partial<GripSettings>,
+    layerParam?: 'general' | 'specific' | 'overrides'
   ) => {
-    dispatch({ type: 'UPDATE_GRIP', payload: { mode, updates, layer } });
+    // Detect OLD API: updateGripSettings(updates)
+    if (typeof modeOrUpdates === 'object' && updatesParam === undefined) {
+      const mode = 'normal' as StorageMode;
+      const updates = modeOrUpdates as Partial<GripSettings>;
+      const layer = 'general';
+      dispatch({ type: 'UPDATE_GRIP', payload: { mode, updates, layer } });
+    } else {
+      // NEW API: updateGripSettings(mode, updates, layer)
+      const mode = modeOrUpdates as StorageMode;
+      const updates = updatesParam!;
+      const layer = layerParam || 'general';
+      dispatch({ type: 'UPDATE_GRIP', payload: { mode, updates, layer } });
+    }
   }, []);
 
   const toggleLineOverride = useCallback((mode: StorageMode, enabled: boolean) => {
@@ -467,43 +674,132 @@ export function EnterpriseDxfSettingsProvider({
   // COMPUTED EFFECTIVE SETTINGS
   // ========================================================================
 
-  const getEffectiveLineSettings = useCallback((mode: ViewerMode): LineSettings => {
+  // 🔄 BACKWARD COMPATIBLE: Accept optional mode parameter (default 'normal')
+  const getEffectiveLineSettings = useCallback((mode?: ViewerMode): LineSettings => {
+    const effectiveMode = mode || 'normal';
     return computeEffective(
       state.settings.line.general as unknown as Record<string, unknown>,
       state.settings.line.specific,
       state.settings.line.overrides,
       state.settings.overrideEnabled.line,
-      mode
+      effectiveMode
     ) as unknown as LineSettings;
   }, [state.settings]);
 
-  const getEffectiveTextSettings = useCallback((mode: ViewerMode): TextSettings => {
+  // 🔄 BACKWARD COMPATIBLE: Accept optional mode parameter (default 'normal')
+  const getEffectiveTextSettings = useCallback((mode?: ViewerMode): TextSettings => {
+    const effectiveMode = mode || 'normal';
     return computeEffective(
       state.settings.text.general as unknown as Record<string, unknown>,
       state.settings.text.specific,
       state.settings.text.overrides,
       state.settings.overrideEnabled.text,
-      mode
+      effectiveMode
     ) as unknown as TextSettings;
   }, [state.settings]);
 
-  const getEffectiveGripSettings = useCallback((mode: ViewerMode): GripSettings => {
+  // 🔄 BACKWARD COMPATIBLE: Accept optional mode parameter (default 'normal')
+  const getEffectiveGripSettings = useCallback((mode?: ViewerMode): GripSettings => {
+    const effectiveMode = mode || 'normal';
     return computeEffective(
       state.settings.grip.general as unknown as Record<string, unknown>,
       state.settings.grip.specific,
       state.settings.grip.overrides,
       state.settings.overrideEnabled.grip,
-      mode
+      effectiveMode
     ) as unknown as GripSettings;
   }, [state.settings]);
+
+  // ========================================================================
+  // 🔄 BACKWARD COMPATIBLE: Old API methods (aliases/stubs)
+  // ========================================================================
+
+  // Map old specific mode names to new StorageMode
+  const mapSpecificMode = (oldMode: 'draft' | 'hover' | 'selection' | 'completion'): StorageMode => {
+    return oldMode as StorageMode;
+  };
+
+  // 🔄 BACKWARD COMPATIBLE: setMode now works by updating internal state
+  const setMode = useCallback((mode: ViewerMode) => {
+    setCurrentMode(mode);
+  }, []);
+
+  const updateSpecificLineSettings = useCallback((mode: 'draft' | 'hover' | 'selection' | 'completion', settings: Partial<LineSettings>) => {
+    const storageMode = mapSpecificMode(mode);
+    updateLineSettings(storageMode, settings, 'specific');
+  }, [updateLineSettings]);
+
+  const updateSpecificTextSettings = useCallback((mode: 'draft', settings: Partial<TextSettings>) => {
+    const storageMode = mapSpecificMode(mode);
+    updateTextSettings(storageMode, settings, 'specific');
+  }, [updateTextSettings]);
+
+  const updateSpecificGripSettings = useCallback((mode: 'draft', settings: Partial<GripSettings>) => {
+    const storageMode = mapSpecificMode(mode);
+    updateGripSettings(storageMode, settings, 'specific');
+  }, [updateGripSettings]);
+
+  const updateLineOverrides = useCallback((mode: 'draft' | 'hover' | 'selection' | 'completion', settings: Partial<LineSettings>) => {
+    const storageMode = mapSpecificMode(mode);
+    updateLineSettings(storageMode, settings, 'overrides');
+  }, [updateLineSettings]);
+
+  const updateTextOverrides = useCallback((mode: 'draft', settings: Partial<TextSettings>) => {
+    const storageMode = mapSpecificMode(mode);
+    updateTextSettings(storageMode, settings, 'overrides');
+  }, [updateTextSettings]);
+
+  const updateGripOverrides = useCallback((mode: 'draft', settings: Partial<GripSettings>) => {
+    const storageMode = mapSpecificMode(mode);
+    updateGripSettings(storageMode, settings, 'overrides');
+  }, [updateGripSettings]);
+
+  // Stub implementations for grid/ruler/cursor (not in enterprise yet)
+  const updateGridSettings = useCallback((updates: Partial<GridSettings>) => {
+    console.warn('[EnterpriseDxfSettings] Grid settings not implemented in enterprise yet:', updates);
+  }, []);
+
+  const updateRulerSettings = useCallback((updates: Partial<RulerSettings>) => {
+    console.warn('[EnterpriseDxfSettings] Ruler settings not implemented in enterprise yet:', updates);
+  }, []);
+
+  const updateCursorSettings = useCallback((updates: Partial<CursorSettings>) => {
+    console.warn('[EnterpriseDxfSettings] Cursor settings not implemented in enterprise yet:', updates);
+  }, []);
+
+  // Template system stubs (not in enterprise yet)
+  const applyLineTemplate = useCallback((_templateName: string, _templateSettings: LineSettings) => {
+    console.warn('[EnterpriseDxfSettings] Template system not implemented in enterprise yet');
+  }, []);
+
+  const updateLineTemplateOverrides = useCallback((_overrides: Partial<LineSettings>) => {
+    console.warn('[EnterpriseDxfSettings] Template system not implemented in enterprise yet');
+  }, []);
+
+  const clearLineTemplateOverrides = useCallback(() => {
+    console.warn('[EnterpriseDxfSettings] Template system not implemented in enterprise yet');
+  }, []);
+
+  const resetLineToFactory = useCallback(() => {
+    console.warn('[EnterpriseDxfSettings] Template system not implemented in enterprise yet');
+  }, []);
 
   // ========================================================================
   // CONTEXT VALUE
   // ========================================================================
 
   const contextValue = useMemo<EnterpriseDxfSettingsContextType>(() => ({
-    // State
-    settings: state.settings,
+    // State - 🔄 BACKWARD COMPATIBLE: Add old API properties
+    settings: {
+      ...state.settings,
+      mode: currentMode,
+      saveStatus,
+      lastSaved,
+      cursor: undefined, // Not implemented yet
+      grid: undefined, // Not implemented yet
+      ruler: undefined, // Not implemented yet
+      specific: undefined // Old structure not needed
+    },
 
     // Actions
     updateLineSettings,
@@ -519,10 +815,31 @@ export function EnterpriseDxfSettingsProvider({
     getEffectiveTextSettings,
     getEffectiveGripSettings,
 
+    // 🔄 BACKWARD COMPATIBLE: Old API methods
+    setMode,
+    updateSpecificLineSettings,
+    updateSpecificTextSettings,
+    updateSpecificGripSettings,
+    updateLineOverrides,
+    updateTextOverrides,
+    updateGripOverrides,
+    updateGridSettings,
+    updateRulerSettings,
+    updateCursorSettings,
+    applyLineTemplate,
+    updateLineTemplateOverrides,
+    clearLineTemplateOverrides,
+    resetLineToFactory,
+
     // Metadata
     isLoaded: state.isLoaded,
     isSaving: state.isSaving,
     lastError: state.lastError,
+    isAutoSaving: state.isSaving, // Alias
+    hasUnsavedChanges: false, // Not tracked in enterprise yet
+
+    // 🔄 BACKWARD COMPATIBLE: Raw dispatch (optional)
+    dispatch: undefined, // Not exposed in enterprise
 
     // Migration utilities
     migrationUtils: {
@@ -531,7 +848,14 @@ export function EnterpriseDxfSettingsProvider({
       triggerManualMigration: migrateFromLegacyProvider
     }
   }), [
-    state,
+    // ✅ FIX: Use destructured properties instead of entire state object to avoid infinite re-renders
+    state.settings,
+    state.isLoaded,
+    state.isSaving,
+    state.lastError,
+    currentMode,
+    saveStatus,
+    lastSaved,
     updateLineSettings,
     updateTextSettings,
     updateGripSettings,
@@ -541,17 +865,40 @@ export function EnterpriseDxfSettingsProvider({
     resetToDefaults,
     getEffectiveLineSettings,
     getEffectiveTextSettings,
-    getEffectiveGripSettings
+    getEffectiveGripSettings,
+    setMode,
+    updateSpecificLineSettings,
+    updateSpecificTextSettings,
+    updateSpecificGripSettings,
+    updateLineOverrides,
+    updateTextOverrides,
+    updateGripOverrides,
+    updateGridSettings,
+    updateRulerSettings,
+    updateCursorSettings,
+    applyLineTemplate,
+    updateLineTemplateOverrides,
+    clearLineTemplateOverrides,
+    resetLineToFactory
   ]);
 
   // ========================================================================
   // RENDER
   // ========================================================================
 
-  // If disabled, just render children (pass-through)
+  // 🏢 SHADOW MODE: Pass-through if disabled, validate if enabled
   if (!enabled) {
+    console.warn('[Enterprise] Provider is DISABLED - no context provided');
     return <>{children}</>;
   }
+
+  // Debug: Log context value creation
+  console.log('[Enterprise] Provider rendering with context:', {
+    hasSettings: !!contextValue.settings,
+    isLoaded: state.isLoaded,
+    isSaving: state.isSaving,
+    hasMode: !!contextValue.settings?.mode
+  });
 
   return (
     <EnterpriseDxfSettingsContext.Provider value={contextValue}>
@@ -573,6 +920,8 @@ export function useEnterpriseDxfSettings(): EnterpriseDxfSettingsContextType {
   const context = useContext(EnterpriseDxfSettingsContext);
 
   if (!context) {
+    console.error('[Enterprise] useEnterpriseDxfSettings called outside provider context!');
+    console.trace('[Enterprise] Call stack:');
     throw new Error(
       'useEnterpriseDxfSettings must be used within EnterpriseDxfSettingsProvider'
     );
@@ -601,6 +950,77 @@ export function useEnterpriseTextSettings(mode: ViewerMode = 'normal') {
  * Convenience hook for grip settings
  */
 export function useEnterpriseGripSettings(mode: ViewerMode = 'normal') {
+  const { getEffectiveGripSettings } = useEnterpriseDxfSettings();
+  return getEffectiveGripSettings(mode);
+}
+
+// ============================================================================
+// 🔄 BACKWARD COMPATIBLE EXPORTS
+// ============================================================================
+
+/**
+ * 🔄 BACKWARD COMPATIBLE: Alias for useEnterpriseDxfSettings
+ *
+ * This allows old code to use `useDxfSettings()` instead of `useEnterpriseDxfSettings()`.
+ * When we delete the old DxfSettingsProvider, all imports will automatically work with enterprise.
+ */
+export const useDxfSettings = useEnterpriseDxfSettings;
+
+/**
+ * 🔄 BACKWARD COMPATIBLE: Specialized hooks matching old API
+ */
+export function useLineSettingsFromProvider(mode?: ViewerMode) {
+  const { getEffectiveLineSettings, updateLineSettings, resetToDefaults } = useEnterpriseDxfSettings();
+  return {
+    settings: getEffectiveLineSettings(mode),
+    updateSettings: updateLineSettings as (updates: Partial<LineSettings>) => void,
+    resetToDefaults
+  };
+}
+
+export function useTextSettingsFromProvider(mode?: ViewerMode) {
+  const { getEffectiveTextSettings, updateTextSettings, resetToDefaults } = useEnterpriseDxfSettings();
+  return {
+    settings: getEffectiveTextSettings(mode),
+    updateSettings: updateTextSettings as (updates: Partial<TextSettings>) => void,
+    resetToDefaults,
+    resetToFactory: resetToDefaults // Alias
+  };
+}
+
+export function useTextDraftSettings() {
+  const { getEffectiveTextSettings, updateSpecificTextSettings } = useEnterpriseDxfSettings();
+  return {
+    settings: getEffectiveTextSettings('preview'),
+    updateSettings: (updates: Partial<TextSettings>) => {
+      updateSpecificTextSettings?.('draft', updates);
+    }
+  };
+}
+
+export function useGripSettingsFromProvider() {
+  const { getEffectiveGripSettings, updateGripSettings, resetToDefaults } = useEnterpriseDxfSettings();
+  return {
+    settings: getEffectiveGripSettings(),
+    updateSettings: updateGripSettings as (updates: Partial<GripSettings>) => void,
+    resetToDefaults
+  };
+}
+
+/**
+ * 🔄 BACKWARD COMPATIBLE: Style hooks (aliases to get settings)
+ */
+export function useLineStyles(mode?: ViewerMode) {
+  const { getEffectiveLineSettings } = useEnterpriseDxfSettings();
+  return getEffectiveLineSettings(mode);
+}
+
+export function useTextStyles(mode?: ViewerMode) {
+  const { getEffectiveTextSettings } = useEnterpriseDxfSettings();
+  return getEffectiveTextSettings(mode);
+}
+
+export function useGripStyles(mode?: ViewerMode) {
   const { getEffectiveGripSettings } = useEnterpriseDxfSettings();
   return getEffectiveGripSettings(mode);
 }

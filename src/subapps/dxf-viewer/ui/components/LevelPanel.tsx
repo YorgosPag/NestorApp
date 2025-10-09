@@ -3,7 +3,7 @@
 // DEBUG FLAG - Set to false to disable performance-heavy logging
 const DEBUG_LEVEL_PANEL = false;
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Trash2, Plus, Building2, Edit, MousePointer, Pen, Move, Info, Shapes } from 'lucide-react';
 import { useOverlayStore } from '../../overlays/overlay-store';
 import { OverlayList } from '../OverlayList';
@@ -212,7 +212,8 @@ export function LevelPanel({
   };
 
   // Handle layering tool activation
-  const handleLayeringActivation = () => {
+  // ✅ FIX: Wrapped in useCallback to prevent infinite loop in useEffect dependency
+  const handleLayeringActivation = useCallback(() => {
     setShowToolbox(true);
 
     // Auto-activate editing mode when layering is activated
@@ -223,7 +224,7 @@ export function LevelPanel({
       snapToGrips: true
     });
 
-  };
+  }, [updateGripSettings]);
 
   // ✅ EVENT LISTENER: Ακούω για το layering activate event από overlay clicks
   React.useEffect(() => {
