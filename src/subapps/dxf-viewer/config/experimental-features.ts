@@ -13,6 +13,13 @@ export const EXPERIMENTAL_FEATURES = {
   // Future features can be added here
   ADVANCED_SNAPPING: true,
   MULTI_LAYER_GRIPS: true,
+
+  // 🆕 PHASE 3: Enterprise Settings System (Migration Phases 1-8)
+  // Set to true to enable enterprise provider in shadow mode (validation only)
+  ENTERPRISE_SETTINGS_SHADOW_MODE: false,
+
+  // 🆕 PHASE 6: Enable enterprise provider as primary (replaces old provider)
+  ENTERPRISE_SETTINGS_PRODUCTION_MODE: false,
 } as const;
 
 export function isFeatureEnabled(feature: keyof typeof EXPERIMENTAL_FEATURES): boolean {

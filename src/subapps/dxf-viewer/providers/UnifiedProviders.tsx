@@ -11,6 +11,8 @@ import React from 'react';
 // import { ConfigurationProvider } from './ConfigurationProvider';
 import { StyleManagerProvider } from './StyleManagerProvider';
 import { DxfSettingsProvider } from './DxfSettingsProvider';
+import { EnterpriseDxfSettingsProvider } from './EnterpriseDxfSettingsProvider';
+import { EXPERIMENTAL_FEATURES } from '../config/experimental-features';
 
 // Import των υπαρχόντων providers για backward compatibility
 import { ProjectHierarchyProvider } from '../contexts/ProjectHierarchyContext';
@@ -31,15 +33,19 @@ export function UnifiedProviders({
 
   if (enableLegacyMode) {
     // LEGACY MODE: Διατηρεί υπάρχοντα providers + προσθέτει νέα
+    // 🆕 PHASE 3: Dual-Provider Mode (Old + Enterprise)
     return (
       <ProjectHierarchyProvider>
         <GripProvider>
           <SnapProvider>
             {/* 🗑️ REMOVED: ConfigurationProvider - Now using DxfSettingsProvider */}
             <DxfSettingsProvider>
-              <StyleManagerProvider>
-                {children}
-              </StyleManagerProvider>
+              {/* 🆕 PHASE 3: Enterprise Provider (Shadow Mode - Feature Flag Controlled) */}
+              <EnterpriseDxfSettingsProvider enabled={EXPERIMENTAL_FEATURES.ENTERPRISE_SETTINGS_SHADOW_MODE}>
+                <StyleManagerProvider>
+                  {children}
+                </StyleManagerProvider>
+              </EnterpriseDxfSettingsProvider>
             </DxfSettingsProvider>
           </SnapProvider>
         </GripProvider>
