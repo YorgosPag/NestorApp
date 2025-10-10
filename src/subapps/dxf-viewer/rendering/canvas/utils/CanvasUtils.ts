@@ -5,6 +5,15 @@
 
 import type { CanvasConfig, Point2D } from '../../types/Types';
 
+// ✅ ENTERPRISE: Vendor-specific canvas context properties for HiDPI support
+interface VendorCanvasRenderingContext2D extends CanvasRenderingContext2D {
+  webkitBackingStorePixelRatio?: number;
+  mozBackingStorePixelRatio?: number;
+  msBackingStorePixelRatio?: number;
+  oBackingStorePixelRatio?: number;
+  backingStorePixelRatio?: number;
+}
+
 
 /**
  * 🔺 CENTRALIZED CANVAS UTILITIES
@@ -104,11 +113,13 @@ export class CanvasUtils {
     if (!ctx) return 1;
 
     const dpr = window.devicePixelRatio || 1;
-    const backingStoreRatio = (ctx as any).webkitBackingStorePixelRatio ||
-                             (ctx as any).mozBackingStorePixelRatio ||
-                             (ctx as any).msBackingStorePixelRatio ||
-                             (ctx as any).oBackingStorePixelRatio ||
-                             (ctx as any).backingStorePixelRatio || 1;
+    // ✅ ENTERPRISE: Type-safe access to vendor-specific properties
+    const vendorCtx = ctx as VendorCanvasRenderingContext2D;
+    const backingStoreRatio = vendorCtx.webkitBackingStorePixelRatio ||
+                             vendorCtx.mozBackingStorePixelRatio ||
+                             vendorCtx.msBackingStorePixelRatio ||
+                             vendorCtx.oBackingStorePixelRatio ||
+                             vendorCtx.backingStorePixelRatio || 1;
 
     return dpr / backingStoreRatio;
   }

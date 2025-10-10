@@ -24,6 +24,20 @@
 
 import { serviceRegistry, type ServiceName } from './ServiceRegistry';
 
+// ✅ ENTERPRISE: Window interface extension for debug helpers
+declare global {
+  interface Window {
+    serviceHealth?: {
+      start: () => void;
+      stop: () => void;
+      check: () => Promise<unknown>;
+      report: () => unknown;
+      stats: () => unknown;
+      log: () => void;
+    };
+  }
+}
+
 /**
  * Health status levels
  */
@@ -433,7 +447,7 @@ export const logHealthStatus = async (): Promise<void> => {
  * 🎯 Browser console helper
  */
 if (typeof window !== 'undefined') {
-  (window as any).serviceHealth = {
+  window.serviceHealth = {
     start: () => serviceHealthMonitor.start(),
     stop: () => serviceHealthMonitor.stop(),
     check: () => serviceHealthMonitor.checkAllServices(),

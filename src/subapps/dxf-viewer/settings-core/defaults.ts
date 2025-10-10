@@ -53,6 +53,14 @@ export const DEFAULT_TEXT_SETTINGS: TextSettings = {
   textAlign: 'left',           // Standard alignment
   textBaseline: 'alphabetic',  // Standard baseline
 
+  // Boolean text styling (backward compatibility)
+  isBold: false,
+  isItalic: false,
+  isUnderline: false,
+  isStrikethrough: false,
+  isSuperscript: false,
+  isSubscript: false,
+
   // Shadow
   shadowEnabled: false,
   shadowOffsetX: 0,

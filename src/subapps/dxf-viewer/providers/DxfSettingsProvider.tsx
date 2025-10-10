@@ -69,8 +69,7 @@
  */
 
 import React, { createContext, useContext, useReducer, useEffect, useCallback, useMemo } from 'react';
-import type { LineSettings } from '../settings-core/types';
-import type { TextSettings } from '../contexts/TextSettingsContext';
+import type { LineSettings, TextSettings } from '../settings-core/types';
 import type { GripSettings } from '../types/gripSettings';
 import type { GridSettings, RulerSettings } from '../systems/rulers-grid/config';
 import type { CursorSettings } from '../systems/cursor/config';
@@ -153,7 +152,8 @@ export const globalRulerStore = createRulerStore();
 // ===== TYPES =====
 
 // 🆕 MERGE: Mode type from ConfigurationProvider
-export type ViewerMode = 'normal' | 'preview' | 'completion';
+// 🔧 EXTENDED (2025-10-06): Added draft/hover/selection modes for enterprise CAD standard
+export type ViewerMode = 'normal' | 'draft' | 'hover' | 'selection' | 'completion' | 'preview';
 
 // 🆕 MERGE: Specific settings structure (from ConfigurationProvider)
 // 🔧 EXTENDED (2025-10-06): Added draft/hover/selection modes for enterprise CAD standard
@@ -173,34 +173,40 @@ export type ViewerMode = 'normal' | 'preview' | 'completion';
  * @see {@link docs/settings-system/03-DXFSETTINGSPROVIDER.md#11-enterprise-refactoring-2025-10-06-} - Enterprise refactoring details
  */
 interface SpecificSettings {
-  line: {
+  line?: {
     draft?: Partial<LineSettings>;      // 🆕 Προσχεδίαση (Drawing preview - first click)
     hover?: Partial<LineSettings>;      // 🆕 Αιώρηση (Mouse hover state)
     selection?: Partial<LineSettings>;  // 🆕 Επιλογή (Selected entity state)
     completion?: Partial<LineSettings>; // ✅ Ολοκλήρωση (Final entity state)
+    preview?: Partial<LineSettings>;    // 🔧 Alias for draft (backward compatibility)
   };
-  text: {
+  text?: {
     draft?: Partial<TextSettings>;      // 🆕 RENAMED from 'preview' for consistency
+    preview?: Partial<TextSettings>;    // 🔧 Alias for draft (backward compatibility)
   };
-  grip: {
+  grip?: {
     draft?: Partial<GripSettings>;      // 🆕 RENAMED from 'preview' for consistency
+    preview?: Partial<GripSettings>;    // 🔧 Alias for draft (backward compatibility)
   };
 }
 
 // 🆕 MERGE: Override settings structure (from ConfigurationProvider)
 // 🔧 EXTENDED (2025-10-06): Added draft/hover/selection modes for enterprise CAD standard
 interface OverrideSettings {
-  line: {
+  line?: {
     draft?: Partial<LineSettings>;      // 🆕 Προσχεδίαση overrides
     hover?: Partial<LineSettings>;      // 🆕 Αιώρηση overrides
     selection?: Partial<LineSettings>;  // 🆕 Επιλογή overrides
     completion?: Partial<LineSettings>; // ✅ Ολοκλήρωση overrides
+    preview?: Partial<LineSettings>;    // 🔧 Alias for draft (backward compatibility)
   };
-  text: {
+  text?: {
     draft?: Partial<TextSettings>;      // 🆕 RENAMED from 'preview' for consistency
+    preview?: Partial<TextSettings>;    // 🔧 Alias for draft (backward compatibility)
   };
-  grip: {
+  grip?: {
     draft?: Partial<GripSettings>;      // 🆕 RENAMED from 'preview' for consistency
+    preview?: Partial<GripSettings>;    // 🔧 Alias for draft (backward compatibility)
   };
 }
 
@@ -371,13 +377,32 @@ const defaultTextSettings: TextSettings = {
   enabled: true,               // Default: κείμενο ενεργοποιημένο
   fontFamily: 'Arial, sans-serif', // ✅ ISO 3098: Sans-serif font recommended
   fontSize: 2.5,               // ✅ ISO 3098: Standard 2.5mm text height
+  fontWeight: 400,             // ✅ Normal weight (400 = normal)
+  fontStyle: 'normal',         // ✅ Normal style (not italic/oblique)
   color: '#FFFFFF',            // ✅ AutoCAD ACI 7: White for text
+  opacity: 1.0,                // ✅ Full opacity
+  letterSpacing: 0,            // ✅ Normal letter spacing
+  lineHeight: 1.2,             // ✅ Standard line height
+  textAlign: 'left',           // ✅ Left alignment default
+  textBaseline: 'alphabetic',  // ✅ Alphabetic baseline
   isBold: false,               // ✅ ISO 3098: Normal weight default
   isItalic: false,             // ✅ ISO 3098: Upright text default
   isUnderline: false,          // ✅ ISO 3098: No underline default
   isStrikethrough: false,      // ✅ ISO 3098: No strikethrough default
   isSuperscript: false,        // ✅ ISO 3098: Normal script default
-  isSubscript: false           // ✅ ISO 3098: Normal script default
+  isSubscript: false,          // ✅ ISO 3098: Normal script default
+  shadowEnabled: false,        // ✅ No shadow by default
+  shadowOffsetX: 0,            // ✅ Shadow offset X
+  shadowOffsetY: 0,            // ✅ Shadow offset Y
+  shadowBlur: 0,               // ✅ Shadow blur
+  shadowColor: '#000000',      // ✅ Black shadow
+  strokeEnabled: false,        // ✅ No stroke by default
+  strokeWidth: 0,              // ✅ Stroke width
+  strokeColor: '#000000',      // ✅ Black stroke
+  backgroundEnabled: false,    // ✅ No background by default
+  backgroundColor: '#000000',  // ✅ Black background
+  backgroundPadding: 0,        // ✅ No padding
+  activeTemplate: null         // ✅ No active template default
 };
 
 const defaultGripSettings: GripSettings = {
@@ -601,9 +626,9 @@ function settingsReducer(state: DxfSettingsState, action: SettingsAction): DxfSe
         specific: {
           ...state.specific,
           line: {
-            ...state.specific.line,
+            ...(state.specific.line || {}),
             [action.payload.mode]: {
-              ...state.specific.line[action.payload.mode],
+              ...(state.specific.line?.[action.payload.mode] || {}),
               ...action.payload.settings
             }
           }
@@ -616,9 +641,9 @@ function settingsReducer(state: DxfSettingsState, action: SettingsAction): DxfSe
         specific: {
           ...state.specific,
           text: {
-            ...state.specific.text,
+            ...(state.specific.text || {}),
             [action.payload.mode]: {
-              ...state.specific.text[action.payload.mode],
+              ...(state.specific.text?.[action.payload.mode] || {}),
               ...action.payload.settings
             }
           }
@@ -631,9 +656,9 @@ function settingsReducer(state: DxfSettingsState, action: SettingsAction): DxfSe
         specific: {
           ...state.specific,
           grip: {
-            ...state.specific.grip,
+            ...(state.specific.grip || {}),
             [action.payload.mode]: {
-              ...state.specific.grip[action.payload.mode],
+              ...(state.specific.grip?.[action.payload.mode] || {}),
               ...action.payload.settings
             }
           }
@@ -646,9 +671,9 @@ function settingsReducer(state: DxfSettingsState, action: SettingsAction): DxfSe
         overrides: {
           ...state.overrides,
           line: {
-            ...state.overrides.line,
+            ...(state.overrides.line || {}),
             [action.payload.mode]: {
-              ...state.overrides.line[action.payload.mode],
+              ...(state.overrides.line?.[action.payload.mode] || {}),
               ...action.payload.settings
             }
           }
@@ -661,9 +686,9 @@ function settingsReducer(state: DxfSettingsState, action: SettingsAction): DxfSe
         overrides: {
           ...state.overrides,
           text: {
-            ...state.overrides.text,
+            ...(state.overrides.text || {}),
             [action.payload.mode]: {
-              ...state.overrides.text[action.payload.mode],
+              ...(state.overrides.text?.[action.payload.mode] || {}),
               ...action.payload.settings
             }
           }
@@ -676,9 +701,9 @@ function settingsReducer(state: DxfSettingsState, action: SettingsAction): DxfSe
         overrides: {
           ...state.overrides,
           grip: {
-            ...state.overrides.grip,
+            ...(state.overrides.grip || {}),
             [action.payload.mode]: {
-              ...state.overrides.grip[action.payload.mode],
+              ...(state.overrides.grip?.[action.payload.mode] || {}),
               ...action.payload.settings
             }
           }
@@ -1607,7 +1632,7 @@ export function DxfSettingsProvider({ children }: { children: React.ReactNode })
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [state.line, state.text, state.grip, state.grid, state.ruler, state.cursor, state.isLoaded]);
+  }, [state.line, state.text, state.grip, state.grid, state.ruler, state.cursor, state.specific, state.isLoaded]);
 
   // 🚨 REMOVED DUPLICATE: This was causing infinite save loop
 
@@ -1731,13 +1756,19 @@ export function DxfSettingsProvider({ children }: { children: React.ReactNode })
     }
 
     // Apply specific settings for current mode
-    if (currentMode !== 'normal' && state.specific.line[currentMode]) {
-      settings = { ...settings, ...state.specific.line[currentMode] };
+    if (currentMode !== 'normal' && state.specific.line) {
+      const specificKey = currentMode as keyof typeof state.specific.line;
+      if (state.specific.line[specificKey]) {
+        settings = { ...settings, ...state.specific.line[specificKey] };
+      }
     }
 
     // Apply user overrides if enabled
-    if (state.overrideEnabled.line && state.overrides.line[currentMode]) {
-      settings = { ...settings, ...state.overrides.line[currentMode] };
+    if (state.overrideEnabled.line && state.overrides.line) {
+      const overrideKey = currentMode as keyof typeof state.overrides.line;
+      if (state.overrides.line[overrideKey]) {
+        settings = { ...settings, ...state.overrides.line[overrideKey] };
+      }
     }
 
     return settings;
@@ -1748,13 +1779,19 @@ export function DxfSettingsProvider({ children }: { children: React.ReactNode })
     let settings = state.text; // Start with general
 
     // Apply specific settings for current mode
-    if (currentMode !== 'normal' && state.specific.text[currentMode]) {
-      settings = { ...settings, ...state.specific.text[currentMode] };
+    if (currentMode !== 'normal' && state.specific.text) {
+      const specificKey = currentMode as keyof typeof state.specific.text;
+      if (state.specific.text[specificKey]) {
+        settings = { ...settings, ...state.specific.text[specificKey] };
+      }
     }
 
     // Apply user overrides if enabled
-    if (state.overrideEnabled.text && state.overrides.text[currentMode]) {
-      settings = { ...settings, ...state.overrides.text[currentMode] };
+    if (state.overrideEnabled.text && state.overrides.text) {
+      const overrideKey = currentMode as keyof typeof state.overrides.text;
+      if (state.overrides.text[overrideKey]) {
+        settings = { ...settings, ...state.overrides.text[overrideKey] };
+      }
     }
 
     return settings;
@@ -1765,13 +1802,19 @@ export function DxfSettingsProvider({ children }: { children: React.ReactNode })
     let settings = state.grip; // Start with general
 
     // Apply specific settings for current mode
-    if (currentMode !== 'normal' && state.specific.grip[currentMode]) {
-      settings = { ...settings, ...state.specific.grip[currentMode] };
+    if (currentMode !== 'normal' && state.specific.grip) {
+      const specificKey = currentMode as keyof typeof state.specific.grip;
+      if (state.specific.grip[specificKey]) {
+        settings = { ...settings, ...state.specific.grip[specificKey] };
+      }
     }
 
     // Apply user overrides if enabled
-    if (state.overrideEnabled.grip && state.overrides.grip[currentMode]) {
-      settings = { ...settings, ...state.overrides.grip[currentMode] };
+    if (state.overrideEnabled.grip && state.overrides.grip) {
+      const overrideKey = currentMode as keyof typeof state.overrides.grip;
+      if (state.overrides.grip[overrideKey]) {
+        settings = { ...settings, ...state.overrides.grip[overrideKey] };
+      }
     }
 
     return settings;
@@ -2148,20 +2191,31 @@ export function useLineStyles(mode?: ViewerMode) {
     settings: effectiveSettings,
     isOverridden,
     update: (updates: Partial<LineSettings>) => {
+      // Map 'preview' to 'draft' for backward compatibility
+      const mappedMode = currentMode === 'preview' ? 'draft' : currentMode;
+
       if (isOverridden && currentMode !== 'normal') {
-        // Update overrides
-        updateLineOverrides(currentMode as 'preview' | 'completion', updates);
+        // Only update overrides if mode is valid
+        if (mappedMode === 'draft' || mappedMode === 'hover' || mappedMode === 'selection' || mappedMode === 'completion') {
+          updateLineOverrides(mappedMode, updates);
+        }
       } else if (currentMode === 'normal') {
         // Update general settings
         updateLineSettings(updates);
       } else {
-        // Update specific settings
-        updateSpecificLineSettings(currentMode as 'preview' | 'completion', updates);
+        // Only update specific settings if mode is valid
+        if (mappedMode === 'draft' || mappedMode === 'hover' || mappedMode === 'selection' || mappedMode === 'completion') {
+          updateSpecificLineSettings(mappedMode, updates);
+        }
       }
     },
     reset: () => {
-      if (isOverridden) {
-        toggleLineOverride(false);
+      if (isOverridden && currentMode !== 'normal') {
+        // Map 'preview' to 'draft' for backward compatibility
+        const mappedMode = currentMode === 'preview' ? 'draft' : currentMode;
+        if (mappedMode === 'draft' || mappedMode === 'hover' || mappedMode === 'selection' || mappedMode === 'completion') {
+          toggleLineOverride(mappedMode, false);
+        }
       }
     }
   };
@@ -2200,20 +2254,23 @@ export function useTextStyles(mode?: ViewerMode) {
     settings: effectiveSettings,
     isOverridden,
     update: (updates: Partial<TextSettings>) => {
+      // Map 'preview' to 'draft' for backward compatibility
+      const mappedMode = currentMode === 'preview' ? 'draft' : currentMode;
+
       if (isOverridden && currentMode !== 'normal') {
         // Update overrides
-        updateTextOverrides(currentMode as 'preview', updates);
+        updateTextOverrides('draft', updates);
       } else if (currentMode === 'normal') {
         // Update general settings
         updateTextSettings(updates);
       } else {
         // Update specific settings
-        updateSpecificTextSettings(currentMode as 'preview', updates);
+        updateSpecificTextSettings('draft', updates);
       }
     },
     reset: () => {
       if (isOverridden) {
-        toggleTextOverride(false);
+        toggleTextOverride('draft', false);
       }
     }
   };
@@ -2252,20 +2309,23 @@ export function useGripStyles(mode?: ViewerMode) {
     settings: effectiveSettings,
     isOverridden,
     update: (updates: Partial<GripSettings>) => {
+      // Map 'preview' to 'draft' for backward compatibility
+      const mappedMode = currentMode === 'preview' ? 'draft' : currentMode;
+
       if (isOverridden && currentMode !== 'normal') {
         // Update overrides
-        updateGripOverrides(currentMode as 'preview', updates);
+        updateGripOverrides('draft', updates);
       } else if (currentMode === 'normal') {
         // Update general settings
         updateGripSettings(updates);
       } else {
         // Update specific settings
-        updateSpecificGripSettings(currentMode as 'preview', updates);
+        updateSpecificGripSettings('draft', updates);
       }
     },
     reset: () => {
       if (isOverridden) {
-        toggleGripOverride(false);
+        toggleGripOverride('draft', false);
       }
     }
   };
@@ -2318,7 +2378,7 @@ export function useLineDraftSettings() {
   const { settings, dispatch } = useDxfSettings();
 
   return useMemo(() => ({
-    settings: settings.specific.line.draft,
+    settings: settings.specific.line?.draft,
     updateSettings: (updates: Partial<LineSettings>) => {
       dispatch({
         type: 'UPDATE_SPECIFIC_LINE_SETTINGS',
@@ -2330,14 +2390,14 @@ export function useLineDraftSettings() {
       // Start with FULL general settings (all properties defined)
       const base: LineSettings = { ...settings.line };
 
-      // Layer 2: Merge specific settings (only defined properties)
-      const withSpecific = settings.specific.line.draft
-        ? { ...base, ...settings.specific.line.draft }
+      // Layer 2: Merge specific settings ONLY if override enabled (only defined properties)
+      const withSpecific = (settings.overrideEnabled.line.draft && settings.specific.line?.draft)
+        ? { ...base, ...settings.specific.line?.draft }
         : base;
 
       // Layer 3: Merge overrides if enabled (only defined properties)
-      const final = (settings.overrideEnabled.line.draft && settings.overrides.line.draft)
-        ? { ...withSpecific, ...settings.overrides.line.draft }
+      const final = (settings.overrideEnabled.line.draft && settings.overrides.line?.draft)
+        ? { ...withSpecific, ...settings.overrides.line?.draft }
         : withSpecific;
 
       return final;
@@ -2363,7 +2423,7 @@ export function useLineHoverSettings() {
   const { settings, dispatch } = useDxfSettings();
 
   return useMemo(() => ({
-    settings: settings.specific.line.hover,
+    settings: settings.specific.line?.hover,
     updateSettings: (updates: Partial<LineSettings>) => {
       dispatch({
         type: 'UPDATE_SPECIFIC_LINE_SETTINGS',
@@ -2372,11 +2432,11 @@ export function useLineHoverSettings() {
     },
     getEffectiveSettings: (): LineSettings => {
       const base: LineSettings = { ...settings.line };
-      const withSpecific = settings.specific.line.hover
-        ? { ...base, ...settings.specific.line.hover }
+      const withSpecific = (settings.overrideEnabled.line.hover && settings.specific.line?.hover)
+        ? { ...base, ...settings.specific.line?.hover }
         : base;
-      const final = (settings.overrideEnabled.line.hover && settings.overrides.line.hover)
-        ? { ...withSpecific, ...settings.overrides.line.hover }
+      const final = (settings.overrideEnabled.line.hover && settings.overrides.line?.hover)
+        ? { ...withSpecific, ...settings.overrides.line?.hover }
         : withSpecific;
       return final;
     },
@@ -2401,7 +2461,7 @@ export function useLineSelectionSettings() {
   const { settings, dispatch } = useDxfSettings();
 
   return useMemo(() => ({
-    settings: settings.specific.line.selection,
+    settings: settings.specific.line?.selection,
     updateSettings: (updates: Partial<LineSettings>) => {
       dispatch({
         type: 'UPDATE_SPECIFIC_LINE_SETTINGS',
@@ -2410,11 +2470,11 @@ export function useLineSelectionSettings() {
     },
     getEffectiveSettings: (): LineSettings => {
       const base: LineSettings = { ...settings.line };
-      const withSpecific = settings.specific.line.selection
-        ? { ...base, ...settings.specific.line.selection }
+      const withSpecific = (settings.overrideEnabled.line.selection && settings.specific.line?.selection)
+        ? { ...base, ...settings.specific.line?.selection }
         : base;
-      const final = (settings.overrideEnabled.line.selection && settings.overrides.line.selection)
-        ? { ...withSpecific, ...settings.overrides.line.selection }
+      const final = (settings.overrideEnabled.line.selection && settings.overrides.line?.selection)
+        ? { ...withSpecific, ...settings.overrides.line?.selection }
         : withSpecific;
       return final;
     },
@@ -2439,7 +2499,7 @@ export function useLineCompletionSettings() {
   const { settings, dispatch } = useDxfSettings();
 
   return useMemo(() => ({
-    settings: settings.specific.line.completion,
+    settings: settings.specific.line?.completion,
     updateSettings: (updates: Partial<LineSettings>) => {
       dispatch({
         type: 'UPDATE_SPECIFIC_LINE_SETTINGS',
@@ -2448,11 +2508,11 @@ export function useLineCompletionSettings() {
     },
     getEffectiveSettings: (): LineSettings => {
       const base: LineSettings = { ...settings.line };
-      const withSpecific = settings.specific.line.completion
-        ? { ...base, ...settings.specific.line.completion }
+      const withSpecific = (settings.overrideEnabled.line.completion && settings.specific.line?.completion)
+        ? { ...base, ...settings.specific.line?.completion }
         : base;
-      const final = (settings.overrideEnabled.line.completion && settings.overrides.line.completion)
-        ? { ...withSpecific, ...settings.overrides.line.completion }
+      const final = (settings.overrideEnabled.line.completion && settings.overrides.line?.completion)
+        ? { ...withSpecific, ...settings.overrides.line?.completion }
         : withSpecific;
       return final;
     },
@@ -2477,7 +2537,7 @@ export function useTextDraftSettings() {
   const { settings, dispatch } = useDxfSettings();
 
   return useMemo(() => ({
-    settings: settings.specific.text.draft,
+    settings: settings.specific.text?.draft,
     updateSettings: (updates: Partial<TextSettings>) => {
       dispatch({
         type: 'UPDATE_SPECIFIC_TEXT_SETTINGS',
@@ -2486,11 +2546,11 @@ export function useTextDraftSettings() {
     },
     getEffectiveSettings: (): TextSettings => {
       const base: TextSettings = { ...settings.text };
-      const withSpecific = settings.specific.text.draft
-        ? { ...base, ...settings.specific.text.draft }
+      const withSpecific = (settings.overrideEnabled.text.draft && settings.specific.text?.draft)
+        ? { ...base, ...settings.specific.text?.draft }
         : base;
-      const final = (settings.overrideEnabled.text.draft && settings.overrides.text.draft)
-        ? { ...withSpecific, ...settings.overrides.text.draft }
+      const final = (settings.overrideEnabled.text.draft && settings.overrides.text?.draft)
+        ? { ...withSpecific, ...settings.overrides.text?.draft }
         : withSpecific;
       return final;
     },
@@ -2498,7 +2558,7 @@ export function useTextDraftSettings() {
     toggleOverride: (enabled: boolean) => {
       dispatch({
         type: 'TOGGLE_TEXT_OVERRIDE',
-        payload: { enabled }
+        payload: { mode: 'draft', enabled }
       });
     }
   }), [settings, dispatch]);
@@ -2515,7 +2575,7 @@ export function useGripDraftSettings() {
   const { settings, dispatch } = useDxfSettings();
 
   return useMemo(() => ({
-    settings: settings.specific.grip.draft,
+    settings: settings.specific.grip?.draft,
     updateSettings: (updates: Partial<GripSettings>) => {
       dispatch({
         type: 'UPDATE_SPECIFIC_GRIP_SETTINGS',
@@ -2523,15 +2583,15 @@ export function useGripDraftSettings() {
       });
     },
     getEffectiveSettings: (): GripSettings => {
-      // ✅ FIX: Always merge General + Specific, then add Overrides if enabled
+      // ✅ FIX: Merge Specific ONLY if override enabled
       let effective = { ...settings.grip };
 
-      if (settings.specific.grip.draft) {
-        effective = { ...effective, ...settings.specific.grip.draft };
+      if (settings.overrideEnabled.grip.draft && settings.specific.grip?.draft) {
+        effective = { ...effective, ...settings.specific.grip?.draft };
       }
 
-      if (settings.overrideEnabled.grip.draft && settings.overrides.grip.draft) {
-        effective = { ...effective, ...settings.overrides.grip.draft };
+      if (settings.overrideEnabled.grip.draft && settings.overrides.grip?.draft) {
+        effective = { ...effective, ...settings.overrides.grip?.draft };
       }
 
       return effective as GripSettings;
@@ -2540,7 +2600,7 @@ export function useGripDraftSettings() {
     toggleOverride: (enabled: boolean) => {
       dispatch({
         type: 'TOGGLE_GRIP_OVERRIDE',
-        payload: { enabled }
+        payload: { mode: 'draft', enabled }
       });
     }
   }), [settings, dispatch]);

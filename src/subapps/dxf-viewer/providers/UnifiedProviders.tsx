@@ -9,9 +9,9 @@
 import React from 'react';
 // 🗑️ REMOVED (2025-10-06): ConfigurationProvider - MERGED into DxfSettingsProvider
 // import { ConfigurationProvider } from './ConfigurationProvider';
+// 🔄 MIGRATED (2025-10-09): Phase 3.2 - Full Enterprise Migration (old provider removed)
 import { StyleManagerProvider } from './StyleManagerProvider';
-import { DxfSettingsProvider } from './DxfSettingsProvider';
-import { EnterpriseDxfSettingsProvider } from './EnterpriseDxfSettingsProvider';
+import { EnterpriseDxfSettingsProvider } from '../settings-provider';
 import { EXPERIMENTAL_FEATURES } from '../config/experimental-features';
 
 // Import των υπαρχόντων providers για backward compatibility
@@ -31,39 +31,21 @@ export function UnifiedProviders({
   enableLegacyMode = true // Default true για safety
 }: UnifiedProvidersProps) {
 
-  if (enableLegacyMode) {
-    // LEGACY MODE: Διατηρεί υπάρχοντα providers + προσθέτει νέα
-    // 🆕 PHASE 3: Dual-Provider Mode (Old + Enterprise)
-    return (
-      <ProjectHierarchyProvider>
-        <GripProvider>
-          <SnapProvider>
-            {/* 🗑️ REMOVED: ConfigurationProvider - Now using DxfSettingsProvider */}
-            <DxfSettingsProvider>
-              {/* 🆕 PHASE 3: Enterprise Provider (Shadow Mode - Feature Flag Controlled) */}
-              <EnterpriseDxfSettingsProvider enabled={EXPERIMENTAL_FEATURES.ENTERPRISE_SETTINGS_SHADOW_MODE}>
-                <StyleManagerProvider>
-                  {children}
-                </StyleManagerProvider>
-              </EnterpriseDxfSettingsProvider>
-            </DxfSettingsProvider>
-          </SnapProvider>
-        </GripProvider>
-      </ProjectHierarchyProvider>
-    );
-  }
-
-  // FUTURE MODE: Μόνο νέα unified providers
+  // 🏢 PHASE 3.2 COMPLETE: FULL ENTERPRISE MIGRATION
+  // Old provider removed - Enterprise is now primary
+  // All backward compatibility built into EnterpriseDxfSettingsProvider
   return (
     <ProjectHierarchyProvider>
-      {/* 🗑️ REMOVED: ConfigurationProvider - Now using DxfSettingsProvider */}
-      <DxfSettingsProvider>
-        <StyleManagerProvider>
-          <SnapProvider>
-            {children}
-          </SnapProvider>
-        </StyleManagerProvider>
-      </DxfSettingsProvider>
+      <GripProvider>
+        <SnapProvider>
+          {/* ✅ ENTERPRISE PROVIDER - Now primary (backward compatible) */}
+          <EnterpriseDxfSettingsProvider enabled={true}>
+            <StyleManagerProvider>
+              {children}
+            </StyleManagerProvider>
+          </EnterpriseDxfSettingsProvider>
+        </SnapProvider>
+      </GripProvider>
     </ProjectHierarchyProvider>
   );
 }

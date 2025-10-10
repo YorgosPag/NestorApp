@@ -7,7 +7,9 @@ import { gripStyleStore } from '../stores/GripStyleStore';
 // ===== ΝΕΑ UNIFIED PROVIDERS (για internal use) =====
 // 🗑️ REMOVED (2025-10-06): ConfigurationProvider - MERGED into DxfSettingsProvider
 // import { useViewerConfig } from './ConfigurationProvider';
-import { useDxfSettings, useGripSettingsFromProvider } from './DxfSettingsProvider';
+// 🔄 MIGRATED (2025-10-09): Phase 3.2 - Direct Enterprise (no adapter)
+// ✅ FIX (ChatGPT-5): Use optional hook to avoid errors when provider is missing
+import { useEnterpriseDxfSettingsOptional } from '../settings-provider';
 
 // === CONTEXT TYPE ===
 interface GripContextType {
@@ -26,38 +28,43 @@ interface GripProviderProps {
 }
 
 // === DEEP EQUALITY CHECK για Object Stability ===
+// ✅ ENTERPRISE: Type-safe deep equality without 'as any'
 function deepEqual(a: unknown, b: unknown): boolean {
   if (a === b) return true;
   if (a == null || b == null) return false;
   if (typeof a !== 'object' || typeof b !== 'object') return false;
-  
-  const keysA = Object.keys(a);
-  const keysB = Object.keys(b);
-  
+
+  // ✅ ENTERPRISE: Type guard - narrow to Record<string, unknown>
+  const objA = a as Record<string, unknown>;
+  const objB = b as Record<string, unknown>;
+
+  const keysA = Object.keys(objA);
+  const keysB = Object.keys(objB);
+
   if (keysA.length !== keysB.length) return false;
-  
+
   for (const key of keysA) {
     if (!keysB.includes(key)) return false;
-    if (!deepEqual(a[key], b[key])) return false;
+    // ✅ ENTERPRISE: Recursive call with proper types
+    if (!deepEqual(objA[key], objB[key])) return false;
   }
-  
+
   return true;
 }
 
 // === STABLE GRIP PROVIDER ===
 export function GripProvider({ children }: GripProviderProps) {
-  // ===== ΠΡΟΣΠΑΘΕΙΑ ΚΕΝΤΡΙΚΗΣ ΣΥΝΔΕΣΗΣ =====
-  let centralGripHook = null;
-  try {
-    // ✅ ΧΡΗΣΗ ΕΙΔΙΚΟΥ HOOK για grip settings από το κεντρικό σύστημα
-    centralGripHook = useGripSettingsFromProvider();
-  } catch (error) {
-    // DxfSettingsProvider not available, continue with fallback
-    centralGripHook = null;
-  }
+  // ✅ FIX (ChatGPT-5): Optional enterprise context. No error thrown when missing.
+  const enterpriseCtx = useEnterpriseDxfSettingsOptional();
 
-  // 🗑️ REMOVED (2025-10-06): Legacy unified config - ConfigurationProvider deleted
-  // Now only using centralGripHook from DxfSettingsProvider
+  const centralGripHook = useMemo(() => {
+    if (!enterpriseCtx) return null;
+    return {
+      settings: enterpriseCtx.getEffectiveGripSettings(),
+      updateSettings: enterpriseCtx.updateGripSettings as (u: Partial<GripSettings>) => void,
+      resetToDefaults: enterpriseCtx.resetToDefaults
+    };
+  }, [enterpriseCtx]);
 
   // Fallback state για backwards compatibility
   const [fallbackSettings, setFallbackSettings] = useState<GripSettings>(DEFAULT_GRIP_SETTINGS);
@@ -75,6 +82,9 @@ export function GripProvider({ children }: GripProviderProps) {
   const renderCount = useRef(0);
   renderCount.current++;
 
+  // ✅ FIX (ChatGPT-5): JSON-based deep equal guard
+  const isEqual = useCallback((a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b), []);
+
   // === STABLE UPDATE FUNCTION με Object Equality Guard ===
   const updateGripSettings = useCallback((updates: Partial<GripSettings>) => {
     // 1. ✅ ΠΡΩΤΗ προτεραιότητα στο κεντρικό hook
@@ -82,8 +92,8 @@ export function GripProvider({ children }: GripProviderProps) {
       const currentSettings = centralGripHook.settings;
       const next = validateGripSettings({ ...currentSettings, ...updates });
 
-      // === CRITICAL: Object stability check ===
-      if (deepEqual(currentSettings, next)) {
+      // ✅ FIX (ChatGPT-5): Guard - cut no-op updates
+      if (isEqual(currentSettings, next)) {
         return;
       }
 
@@ -107,7 +117,8 @@ export function GripProvider({ children }: GripProviderProps) {
     setFallbackSettings(prev => {
       const next = validateGripSettings({ ...prev, ...updates });
 
-      if (deepEqual(prev, next)) {
+      // ✅ FIX (ChatGPT-5): Guard - cut no-op updates
+      if (isEqual(prev, next)) {
         return prev;
       }
 
@@ -123,7 +134,7 @@ export function GripProvider({ children }: GripProviderProps) {
 
       return next;
     });
-  }, [centralGripHook]);
+  }, [centralGripHook, isEqual]);
 
   // === RESET TO DEFAULTS FUNCTION ===
   const resetToDefaults = useCallback(() => {

@@ -96,8 +96,9 @@ export class ServiceRegistry {
    */
   private registerDefaultServices(): void {
     // Static class services (no instantiation needed - use class methods directly)
-    this.registerSingleton('fit-to-view', FitToViewService as any);
-    this.registerSingleton('dxf-firestore', DxfFirestoreService as any);
+    // ✅ ENTERPRISE: Type-safe registration for static classes
+    this.registerSingleton('fit-to-view', FitToViewService as typeof FitToViewService);
+    this.registerSingleton('dxf-firestore', DxfFirestoreService as typeof DxfFirestoreService);
 
     // Instance-based services (lazy initialization)
     this.registerFactory('hit-testing', () => new HitTestingService());

@@ -25,40 +25,45 @@ import { ACI_PALETTE } from './standards/aci';
  * Current settings schema version
  *
  * **INCREMENT THIS** when making breaking changes to settings structure
+ *
+ * ✅ FIX v2: Property name migration (lineColor→color, lineStyle→lineType, textColor→color,
+ *            size→gripSize, color/hoverColor→colors{cold,warm,hot,contour})
+ * ✅ FIX v3: FontWeight type migration (string→number) - ChatGPT5 fix
  */
-export const CURRENT_VERSION = 1;
+export const CURRENT_VERSION = 3;
 
 // ============================================================================
 // LINE SETTINGS DEFAULTS
 // ============================================================================
 
 const LINE_DEFAULTS = {
+  enabled: true,                // ✅ FIX: Added enabled property (for LinePreview)
   lineWidth: 0.25,              // 0.25mm (ISO 128 standard)
-  lineColor: ACI_PALETTE[7] as string,    // White (ACI 7)
-  lineStyle: 'solid' as const,
+  color: ACI_PALETTE[7] as string,        // White (ACI 7) - ✅ FIX: renamed from lineColor
+  lineType: 'solid' as const,             // ✅ FIX: renamed from lineStyle
   opacity: 1.0
 };
 
 const LINE_DRAFT_DEFAULTS = {
   lineWidth: 0.18,              // Thinner for draft
-  lineColor: ACI_PALETTE[8] as string,    // Gray (ACI 8)
-  lineStyle: 'dashed' as const,
+  color: ACI_PALETTE[8] as string,        // Gray (ACI 8) - ✅ FIX: renamed from lineColor
+  lineType: 'dashed' as const,            // ✅ FIX: renamed from lineStyle
   opacity: 0.7                   // Slightly transparent
 };
 
 const LINE_HOVER_DEFAULTS = {
-  lineColor: ACI_PALETTE[4] as string,    // Cyan (ACI 4) for hover
+  color: ACI_PALETTE[4] as string,        // Cyan (ACI 4) for hover - ✅ FIX: renamed from lineColor
   opacity: 1.0
 };
 
 const LINE_SELECTION_DEFAULTS = {
-  lineColor: ACI_PALETTE[1] as string,    // Red (ACI 1) for selection
+  color: ACI_PALETTE[1] as string,        // Red (ACI 1) for selection - ✅ FIX: renamed from lineColor
   lineWidth: 0.35,              // Thicker for visibility
   opacity: 1.0
 };
 
 const LINE_COMPLETION_DEFAULTS = {
-  lineColor: ACI_PALETTE[3] as string,    // Green (ACI 3) for completion
+  color: ACI_PALETTE[3] as string,        // Green (ACI 3) for completion - ✅ FIX: renamed from lineColor
   opacity: 1.0
 };
 
@@ -67,33 +72,34 @@ const LINE_COMPLETION_DEFAULTS = {
 // ============================================================================
 
 const TEXT_DEFAULTS = {
+  enabled: true,                // ✅ FIX: Added enabled property (for LinePreview)
   fontSize: 12,                 // 12pt (standard CAD text)
   fontFamily: 'Arial',          // Sans-serif (CAD standard)
-  fontWeight: 'normal' as const,
+  fontWeight: 400,              // ✅ FIX: Changed from 'normal' to 400 (number)
   fontStyle: 'normal' as const,
-  textColor: ACI_PALETTE[7] as string,    // White (ACI 7)
+  color: ACI_PALETTE[7] as string,        // White (ACI 7) - ✅ FIX: renamed from textColor
   opacity: 1.0
 };
 
 const TEXT_DRAFT_DEFAULTS = {
   fontSize: 10,                 // Smaller for draft
-  textColor: ACI_PALETTE[8] as string,    // Gray (ACI 8)
+  color: ACI_PALETTE[8] as string,        // Gray (ACI 8) - ✅ FIX: renamed from textColor
   opacity: 0.7
 };
 
 const TEXT_HOVER_DEFAULTS = {
-  textColor: ACI_PALETTE[4] as string,    // Cyan (ACI 4)
+  color: ACI_PALETTE[4] as string,        // Cyan (ACI 4) - ✅ FIX: renamed from textColor
   opacity: 1.0
 };
 
 const TEXT_SELECTION_DEFAULTS = {
-  textColor: ACI_PALETTE[1] as string,    // Red (ACI 1)
-  fontWeight: 'bold' as const,
+  color: ACI_PALETTE[1] as string,        // Red (ACI 1) - ✅ FIX: renamed from textColor
+  fontWeight: 700,              // ✅ FIX: Changed from 'bold' to 700 (number)
   opacity: 1.0
 };
 
 const TEXT_COMPLETION_DEFAULTS = {
-  textColor: ACI_PALETTE[3] as string,    // Green (ACI 3)
+  color: ACI_PALETTE[3] as string,        // Green (ACI 3) - ✅ FIX: renamed from textColor
   opacity: 1.0
 };
 
@@ -102,31 +108,49 @@ const TEXT_COMPLETION_DEFAULTS = {
 // ============================================================================
 
 const GRIP_DEFAULTS = {
-  size: 8,                      // 8px (standard CAD grip)
-  color: ACI_PALETTE[5] as string,        // Blue (ACI 5)
-  hoverColor: ACI_PALETTE[4] as string,   // Cyan (ACI 4) on hover
+  enabled: true,                // ✅ FIX: Added enabled property (for LinePreview)
+  gripSize: 8,                  // 8px (standard CAD grip) - ✅ FIX: renamed from size
+  pickBoxSize: 3,               // ✅ FIX: Added pickBoxSize (AutoCAD PICKBOX default: 3 DIP)
+  apertureSize: 10,             // ✅ FIX: Added apertureSize (AutoCAD APERTURE default: 10 pixels)
+  colors: {                     // ✅ FIX: changed from flat color/hoverColor to nested structure
+    cold: ACI_PALETTE[5] as string,       // Blue (ACI 5)
+    warm: ACI_PALETTE[4] as string,       // Cyan (ACI 4) on hover
+    hot: ACI_PALETTE[1] as string,        // Red (ACI 1) on selection
+    contour: '#000000'                    // Black contour
+  },
   shape: 'square' as const,     // Square (CAD standard)
-  opacity: 1.0
+  opacity: 1.0,
+  showAperture: true,           // ✅ FIX: Added showAperture (AutoCAD APBOX default: enabled)
+  multiGripEdit: true,          // ✅ FIX: Added multiGripEdit (multi-grip editing enabled)
+  snapToGrips: true,            // ✅ FIX: Added snapToGrips (snap to grips enabled)
+  showMidpoints: true,          // ✅ FIX: Added showMidpoints (show midpoint grips)
+  showCenters: true,            // ✅ FIX: Added showCenters (show center grips)
+  showQuadrants: true,          // ✅ FIX: Added showQuadrants (show quadrant grips)
+  maxGripsPerEntity: 50         // ✅ FIX: Added maxGripsPerEntity (default max grips)
 };
 
 const GRIP_DRAFT_DEFAULTS = {
-  size: 6,                      // Smaller for draft
+  gripSize: 6,                  // Smaller for draft - ✅ FIX: renamed from size
   opacity: 0.7
 };
 
 const GRIP_HOVER_DEFAULTS = {
-  size: 10,                     // Larger on hover
+  gripSize: 10,                 // Larger on hover - ✅ FIX: renamed from size
   opacity: 1.0
 };
 
 const GRIP_SELECTION_DEFAULTS = {
-  color: ACI_PALETTE[1] as string,        // Red (ACI 1)
-  size: 10,
+  colors: {                     // ✅ FIX: changed from flat color to nested structure
+    hot: ACI_PALETTE[1] as string         // Red (ACI 1)
+  },
+  gripSize: 10,                 // ✅ FIX: renamed from size
   opacity: 1.0
 };
 
 const GRIP_COMPLETION_DEFAULTS = {
-  color: ACI_PALETTE[3] as string,        // Green (ACI 3)
+  colors: {                     // ✅ FIX: changed from flat color to nested structure
+    cold: ACI_PALETTE[3] as string        // Green (ACI 3)
+  },
   opacity: 1.0
 };
 

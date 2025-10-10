@@ -58,6 +58,14 @@ export interface TextSettings {
   textAlign: TextAlign;
   textBaseline: TextBaseline;
 
+  // Boolean text styling (backward compatibility)
+  isBold: boolean;
+  isItalic: boolean;
+  isUnderline: boolean;
+  isStrikethrough: boolean;
+  isSuperscript: boolean;
+  isSubscript: boolean;
+
   // Shadow
   shadowEnabled: boolean;
   shadowOffsetX: number;
@@ -163,6 +171,12 @@ export const validateTextSettings = (settings: Partial<TextSettings>): TextSetti
     lineHeight: 1.2,
     textAlign: 'left',
     textBaseline: 'alphabetic',
+    isBold: false,
+    isItalic: false,
+    isUnderline: false,
+    isStrikethrough: false,
+    isSuperscript: false,
+    isSubscript: false,
     shadowEnabled: false,
     shadowOffsetX: 0,
     shadowOffsetY: 0,

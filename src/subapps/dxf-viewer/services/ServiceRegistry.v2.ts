@@ -213,8 +213,9 @@ export class EnterpriseServiceRegistry {
    */
   private registerDefaultServices(): void {
     // Static class services
-    this.registerSingleton('fit-to-view', FitToViewService as any);
-    this.registerSingleton('dxf-firestore', DxfFirestoreService as any);
+    // ✅ ENTERPRISE: Type-safe registration for static classes
+    this.registerSingleton('fit-to-view', FitToViewService as typeof FitToViewService);
+    this.registerSingleton('dxf-firestore', DxfFirestoreService as typeof DxfFirestoreService);
 
     // Instance-based services με async support
     this.registerFactory('hit-testing', () => new HitTestingService(), { async: true });

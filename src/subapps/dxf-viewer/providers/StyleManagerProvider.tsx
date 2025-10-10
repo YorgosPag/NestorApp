@@ -11,7 +11,8 @@ import type {
 } from '../types/viewerConfiguration';
 // 🗑️ REMOVED (2025-10-06): ConfigurationProvider - Using DxfSettingsProvider instead
 // import { useViewerConfig } from './ConfigurationProvider';
-import { useDxfSettings } from './DxfSettingsProvider';
+// 🔄 MIGRATED (2025-10-09): Phase 3.2 - Direct Enterprise (no adapter)
+import { useDxfSettings } from '../settings-provider';
 import { toolStyleStore } from '../stores/ToolStyleStore';
 import { textStyleStore } from '../stores/TextStyleStore';
 import { gripStyleStore } from '../stores/GripStyleStore';
@@ -22,7 +23,9 @@ const StyleManagerContext = createContext<StyleManagerContextType | null>(null);
 
 // ===== STORE SYNC UTILITIES =====
 
-const syncLineStore = (settings: EffectiveSettings) => {
+// 🔄 MIGRATION NOTE: Type assertion needed because adapter returns Old types
+// but these sync functions expect specific entity types
+const syncLineStore = (settings: any) => {
   const hexToRgba = (hex: string, opacity: number) => {
     const r = parseInt(hex.slice(1, 3), 16);
     const g = parseInt(hex.slice(3, 5), 16);
@@ -40,7 +43,7 @@ const syncLineStore = (settings: EffectiveSettings) => {
   });
 };
 
-const syncTextStore = (settings: EffectiveSettings) => {
+const syncTextStore = (settings: any) => {
   const getTextDecoration = (): string => {
     const decorations: string[] = [];
     if (settings.isUnderline) decorations.push('underline');
@@ -62,7 +65,7 @@ const syncTextStore = (settings: EffectiveSettings) => {
   });
 };
 
-const syncGripStore = (settings: EffectiveSettings) => {
+const syncGripStore = (settings: any) => {
   gripStyleStore.set({
     enabled: settings.showGrips,
     showGrips: settings.showGrips,
