@@ -38,15 +38,9 @@ export default function RootLayout({
     const origArc = proto.arc;
 
     proto.arc = function patchedArc(x: number, y: number, r: number, s: number, e: number, ccw?: boolean) {
-      // 1) LOG για να βρούμε από ΠΟΥ ήρθε η κλήση
-      try {
-        const msg = `[ARC] r=${r} at (${Math.round(x)},${Math.round(y)})`;
-        console.groupCollapsed(msg);
-        console.trace('ARC stack');
-        console.groupEnd();
-      } catch {}
+      // ✅ ΚΑΘΑΡΟ: Χωρίς console noise
 
-      // 2) Kill-switch: σχολίασέ το για να ΞΑΝΑΦΑΝΕΙ ο κύκλος
+      // Kill-switch: σχολίασέ το για να ΞΑΝΑΦΑΝΕΙ ο κύκλος
       // Ενεργό => ΔΕΝ ζωγραφίζονται καθόλου κύκλοι
       return; // ⬅️ προσωρινό hard stop
 

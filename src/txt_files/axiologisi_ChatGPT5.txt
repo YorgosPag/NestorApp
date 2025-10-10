@@ -1,29 +1,380 @@
-Αιτία: ο Provider είναι σε σφάλμα αποθήκευσης. Ο IndexedDB ρίχνει FILE_ERROR_NO_SPACE, η migration/validation ξανατρέχει, και το UI κλειδώνει τα controls σε read-only με “Σφάλμα αποθήκευσης.” 
+Βρέθηκαν δύο υλοποιήσεις.
 
-localhost
+Enterprise color picker
 
-Τεκμήρια:
+Κώδικας συστήματος:
 
-Error: ... .ldb: FILE_ERROR_NO_SPACE. 
+dxf-viewer/ui/color/EnterpriseColorPicker.tsx
 
-localhost
+dxf-viewer/ui/color/EnterpriseColorDialog.tsx (περιλαμβάνει ColorDialogTrigger)
 
-Επαναλαμβανόμενο safeLoad → FORCING PROPERTY MIGRATION (lineColor/lineStyle or missing enabled) και validation/coercion. Το migrated snapshot δεν σώζεται λόγω no-space, άρα μένεις σε μόνιμο “migration pending”. 
+dxf-viewer/ui/color/EnterpriseColorArea.tsx
 
-localhost
+dxf-viewer/ui/color/EnterpriseColorSlider.tsx
 
-Banner “Σφάλμα αποθήκευσης” στο UI.
+dxf-viewer/ui/color/EnterpriseColorField.tsx
 
-Τι να κάνεις τώρα:
+dxf-viewer/ui/color/SwatchesPalette.tsx
 
-Ελευθέρωσε χώρο ή καθάρισε site storage για localhost:3000 ώστε να γράψει ο IndexedDB. Μετά κάνε ένα save για να σταθεροποιηθεί το migrated snapshot και να σταματήσει το “FORCING PROPERTY MIGRATION.” 
+dxf-viewer/ui/color/RecentColorsStore.ts
 
-localhost
+dxf-viewer/ui/color/BrandPalettes.ts
 
-Κράτα το UI ενεργό όταν ο δίσκος γεμίσει. Στο useStorageSave χειρίσου no space ως offline και μη βάζεις saveStatus='error' στο reducer. Αυτό αποτρέπει το κλείδωμα των sliders. (Χρειάζεται το μοτίβο που ήδη έδειξα: map σε STORAGE_OFFLINE και μην απενεργοποιείς controls.)
+dxf-viewer/ui/color/hooks/useContrast.ts
 
-Ολοκλήρωσε τις migrations. Έχεις ήδη φτιάξει fontWeight. Βεβαιώσου ότι το snapshot γράφεται με τα νέα ονόματα (lineColor→color, lineStyle→lineType, και enabled πεδία). Διαφορετικά θα ξαναφαίνεται “FORCING PROPERTY MIGRATION” σε κάθε load. 
+dxf-viewer/ui/color/types.ts, dxf-viewer/ui/color/index.ts
 
-localhost
+Χρήσεις:
 
-Με άδειο χώρο + ενεργό UI σε offline save, τα Grip controls ξεπαγώνουν και οι αλλαγές εφαρμόζονται άμεσα.
+dxf-viewer/ui/components/dxf-settings/settings/core/LineSettings.tsx → <ColorDialogTrigger ... />
+
+dxf-viewer/ui/components/layers/components/ColorPickerModal.tsx → wrapper του Enterprise dialog
+
+Απλό color picker (native)
+
+Κοινόχρηστο component:
+
+dxf-viewer/ui/components/shared/SharedColorPicker.tsx (χρησιμοποιεί <input type="color">)
+
+Άμεση χρήση <input type="color">:
+
+dxf-viewer/layout/CadDock.tsx
+
+dxf-viewer/ui/components/dxf-settings/controls/LineColorControl.tsx
+
+dxf-viewer/ui/components/dxf-settings/settings/core/GripSettings.tsx
+
+dxf-viewer/ui/components/dxf-settings/settings/core/TextSettings.tsx
+
+dxf-viewer/ui/components/dxf-settings/settings/special/CrosshairBehaviorSettings.tsx
+
+dxf-viewer/ui/components/dxf-settings/settings/special/CursorSettings.tsx
+
+dxf-viewer/ui/components/dxf-settings/settings/special/GridSettings.tsx
+
+dxf-viewer/ui/components/dxf-settings/settings/special/rulers/RulerBackgroundSettings.tsx
+
+dxf-viewer/ui/components/dxf-settings/settings/special/rulers/RulerMajorLinesSettings.tsx
+
+dxf-viewer/ui/components/dxf-settings/settings/special/rulers/RulerMinorLinesSettings.tsx
+
+dxf-viewer/ui/components/dxf-settings/settings/special/rulers/RulerTextSettings.tsx
+
+dxf-viewer/ui/components/dxf-settings/settings/special/rulers/RulerUnitsSettings.tsx
+
+dxf-viewer/ui/components/dxf-settings/settings/special/SelectionSettings.tsx
+
+dxf-viewer/ui/components/palettes/CursorColorPalette.tsx
+
+dxf-viewer/ui/CursorSettingsPanel.tsx
+
+
+
+
+Στόχος: μόνο Enterprise color picker, μία πηγή αλήθειας.
+
+Βήματα
+
+Δημιούργησε canonical component.
+
+Αρχείο: dxf-viewer/ui/color/ColorPicker.tsx
+
+'use client';
+import React from 'react';
+import { ColorDialogTrigger, EnterpriseColorPicker } from './EnterpriseColorDialog';
+type Props = {
+  value: string;
+  onChange: (color: string) => void;
+  disabled?: boolean;
+  label?: string;
+  variant?: 'dialog' | 'inline';
+  className?: string;
+};
+export function ColorPicker({ value, onChange, disabled, label='Color', variant='dialog', className }: Props) {
+  if (variant === 'inline') {
+    return (
+      <div className={className}>
+        <EnterpriseColorPicker value={value} onChange={onChange} />
+      </div>
+    );
+  }
+  return (
+    <ColorDialogTrigger
+      value={value}
+      onChange={onChange}
+      disabled={disabled}
+      label={label}
+      className={className as any}
+    />
+  );
+}
+export default ColorPicker;
+
+
+Κάνε το export από το public API.
+
+Άνοιξε dxf-viewer/ui/color/index.ts και πρόσθεσε:
+
+export { ColorPicker } from './ColorPicker';
+
+
+Αυτόματος μετασχηματισμός κώδικα για να φύγουν όλα τα <input type="color"> και το SharedColorPicker.
+
+Δημιούργησε αρχείο: codemods/migrate-color-picker.js
+
+/**
+ * jscodeshift codemod:
+ * - αντικαθιστά <input type="color" .../> με <ColorPicker .../>
+ * - αντικαθιστά <SharedColorPicker .../> με <ColorPicker .../>
+ * - προσαρμόζει onChange ώστε να δέχεται (color: string)
+ */
+const path = require('path');
+
+module.exports = function transformer(file, api) {
+  const j = api.jscodeshift;
+  const root = j(file.source);
+
+  // helper: υπολόγισε σχετική διαδρομή import προς ui/color
+  function importPathToColorIndex() {
+    const dir = path.dirname(file.path);
+    // βρες root μέχρι τον φάκελο "/ui/"
+    const uiIdx = dir.lastIndexOf(path.sep + 'ui' + path.sep);
+    const base = uiIdx >= 0 ? dir.slice(0, uiIdx) : dir;
+    const target = path.join(base, 'ui', 'color');
+    let rel = path.relative(dir, target).replace(/\\/g, '/');
+    if (!rel.startsWith('.')) rel = './' + rel;
+    return rel;
+  }
+
+  // πρόσθεσε ή ενημέρωσε import { ColorPicker } από '.../ui/color'
+  function ensureColorPickerImport() {
+    const importPath = importPathToColorIndex();
+    const existing = root.find(j.ImportDeclaration, { source: { value: importPath } });
+    if (existing.size() > 0) {
+      const hasSpecifier = existing.find(j.ImportSpecifier, { imported: { name: 'ColorPicker' } }).size() > 0;
+      if (!hasSpecifier) {
+        existing.get().node.specifiers.push(j.importSpecifier(j.identifier('ColorPicker')));
+      }
+      return;
+    }
+    // διαφορετικό import path ήδη προς ui/color/*
+    const anyUiColor = root.find(j.ImportDeclaration).filter(p => {
+      const v = p.value.source.value || '';
+      return /\/ui\/color(\/.+)?$/.test(v);
+    });
+    if (anyUiColor.size() > 0) {
+      anyUiColor.forEach(p => {
+        const v = p.value.source.value;
+        // ενοποίηση προς .../ui/color
+        p.value.source.value = importPath;
+        const has = p.value.specifiers.some(s => s.type === 'ImportSpecifier' && s.imported.name === 'ColorPicker');
+        if (!has) p.value.specifiers.push(j.importSpecifier(j.identifier('ColorPicker')));
+      });
+      return;
+    }
+    // νέο import
+    const decl = j.importDeclaration([j.importSpecifier(j.identifier('ColorPicker'))], j.literal(importPath));
+    // βάλε το πρώτο
+    root.get().node.program.body.unshift(decl);
+  }
+
+  // τυλίγει παλιό onChange ώστε να πάρει (color) και να καλέσει handler σαν event
+  function wrapOnChange(expr) {
+    return j.arrowFunctionExpression(
+      [j.identifier('color')],
+      j.callExpression(
+        j.parenthesizedExpression(expr),
+        [j.objectExpression([
+          j.property('init', j.identifier('target'),
+            j.objectExpression([ j.property('init', j.identifier('value'), j.identifier('color')) ])
+          )
+        ])]
+      )
+    );
+  }
+
+  // μετασχηματισμός onChange: αν είναι arrow fn με e.target.value -> κάνε param 'color' και αντικατάστησε τα μέλη
+  function normalizeOnChange(attr) {
+    if (!attr || attr.value.type !== 'JSXExpressionContainer') return;
+    const exp = attr.value.expression;
+    if (exp.type === 'ArrowFunctionExpression' && exp.params.length >= 1) {
+      const param = exp.params[0];
+      if (param.type === 'Identifier') {
+        let changed = false;
+        j(exp.body)
+          .find(j.MemberExpression, {
+            object: { type: 'MemberExpression', object: { type: 'Identifier', name: param.name }, property: { name: 'target' } },
+            property: { name: 'value' }
+          })
+          .replaceWith(() => {
+            changed = true;
+            return j.identifier('color');
+          });
+        if (changed) {
+          exp.params[0] = j.identifier('color');
+          return;
+        }
+      }
+    }
+    // αλλιώς τύλιξε ώστε να δεχθεί color και να ταΐσει event-shape
+    attr.value.expression = wrapOnChange(exp);
+  }
+
+  // <input type="color" .../> -> <ColorPicker .../>
+  let modified = false;
+  root.find(j.JSXElement, {
+    openingElement: { name: { type: 'JSXIdentifier', name: 'input' } }
+  }).forEach(p => {
+    const attrs = p.value.openingElement.attributes || [];
+    const typeAttr = attrs.find(a => a.name && a.name.name === 'type');
+    if (!typeAttr) return;
+    const typeVal = typeAttr.value && typeAttr.value.type === 'Literal'
+      ? typeAttr.value.value
+      : (typeAttr.value && typeAttr.value.type === 'JSXExpressionContainer' && typeAttr.value.expression.type === 'Literal'
+          ? typeAttr.value.expression.value
+          : null);
+    if (typeVal !== 'color') return;
+
+    // κράτα value, onChange, disabled, className, label αν υπάρχει
+    const keepNames = new Set(['value', 'onChange', 'disabled', 'className', 'label']);
+    const newAttrs = [];
+    attrs.forEach(a => {
+      if (!a.name) return;
+      const n = a.name.name;
+      if (n === 'type') return;
+      if (keepNames.has(n)) newAttrs.push(a);
+    });
+
+    // κανονικοποίησε onChange
+    const onChangeAttr = newAttrs.find(a => a.name && a.name.name === 'onChange');
+    if (onChangeAttr) normalizeOnChange(onChangeAttr);
+
+    // αντικατάσταση tag
+    p.value.openingElement.name.name = 'ColorPicker';
+    if (p.value.closingElement) p.value.closingElement.name.name = 'ColorPicker';
+    p.value.openingElement.attributes = newAttrs;
+    modified = true;
+  });
+
+  // <SharedColorPicker .../> -> <ColorPicker .../>
+  root.find(j.JSXIdentifier, { name: 'SharedColorPicker' }).forEach(id => {
+    id.name = 'ColorPicker';
+    modified = true;
+  });
+
+  // αντικατάσταση import SharedColorPicker -> ColorPicker
+  root.find(j.ImportDeclaration).forEach(p => {
+    const src = p.value.source.value || '';
+    if (/SharedColorPicker\.tsx?$/.test(src)) {
+      p.value.source.value = importPathToColorIndex();
+      p.value.specifiers = [j.importSpecifier(j.identifier('ColorPicker'))];
+      modified = true;
+    }
+    // αφαίρεσε specifier SharedColorPicker αν υπάρχει
+    p.value.specifiers = (p.value.specifiers || []).filter(s => !(s.imported && s.imported.name === 'SharedColorPicker'));
+  });
+
+  if (modified) ensureColorPickerImport();
+  return modified ? root.toSource({ quote: 'single', reuseWhitespace: false }) : null;
+};
+
+
+Τρέξε τον μετασχηματισμό από τον φάκελο dxf-viewer:
+
+npx jscodeshift -t codemods/migrate-color-picker.js "ui/**/*.{ts,tsx,js,jsx}" --parser=tsx
+
+
+Διέγραψε το legacy component.
+
+git rm ui/components/shared/SharedColorPicker.tsx
+
+
+Κλείδωσε την “μία πηγή αλήθειας”.
+
+.eslintrc.js: απαγόρευση <input type="color"> και direct imports εκτός ui/color.
+
+module.exports = {
+  // ...
+  rules: {
+    'no-restricted-syntax': [
+      'error',
+      {
+        selector: 'JSXAttribute[name.name="type"][value.value="color"]',
+        message: 'Χρησιμοποίησε το Enterprise ColorPicker από ui/color.'
+      }
+    ],
+    'no-restricted-imports': [
+      'error',
+      {
+        paths: [
+          { name: '../color/EnterpriseColorPicker', message: 'Κάνε import μόνο από ui/color.' },
+          { name: '../color/EnterpriseColorDialog', message: 'Κάνε import μόνο από ui/color.' }
+        ],
+        patterns: ['**/ui/color/*'] // θα επιτρέψουμε μόνο το **/ui/color (index)
+      }
+    ]
+  }
+};
+
+
+Έλεγχος.
+
+rg -n "<input[^>]*type=['\"]color['\"]" ui || echo "OK: no native color inputs"
+rg -n "SharedColorPicker" ui || echo "OK: no SharedColorPicker"
+pnpm typecheck
+pnpm build
+
+
+Αρχεία που θα επηρεαστούν από την αντικατάσταση
+
+Με βεβαιότητα εντοπίστηκαν native inputs:
+
+layout/CadDock.tsx
+
+ui/components/dxf-settings/controls/LineColorControl.tsx
+
+ui/components/dxf-settings/settings/core/GripSettings.tsx
+
+ui/components/dxf-settings/settings/core/TextSettings.tsx
+
+ui/components/dxf-settings/settings/special/CrosshairBehaviorSettings.tsx
+
+ui/components/dxf-settings/settings/special/CursorSettings.tsx
+
+ui/components/dxf-settings/settings/special/GridSettings.tsx
+
+ui/components/dxf-settings/settings/special/rulers/RulerBackgroundSettings.tsx
+
+ui/components/dxf-settings/settings/special/rulers/RulerMajorLinesSettings.tsx
+
+ui/components/dxf-settings/settings/special/rulers/RulerMinorLinesSettings.tsx
+
+ui/components/dxf-settings/settings/special/rulers/RulerTextSettings.tsx
+
+ui/components/dxf-settings/settings/special/rulers/RulerUnitsSettings.tsx
+
+ui/components/dxf-settings/settings/special/SelectionSettings.tsx
+
+ui/components/palettes/CursorColorPalette.tsx
+
+ui/CursorSettingsPanel.tsx
+
+ui/components/shared/SharedColorPicker.tsx (θα αφαιρεθεί)
+
+Χρήση μετά τη μετανάστευση
+
+Dialog:
+
+import { ColorPicker } from '../../color';
+<ColorPicker value={color} onChange={setColor} label="Color" />
+
+
+Inline:
+
+import { ColorPicker } from '../../color';
+<ColorPicker value={color} onChange={setColor} variant="inline" />
+
+
+Με τα παραπάνω, όλο το UI παίρνει χρώματα μόνο από ui/color και το παλιό picker αφαιρείται.
+
+

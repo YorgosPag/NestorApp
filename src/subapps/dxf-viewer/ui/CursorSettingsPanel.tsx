@@ -13,6 +13,7 @@ import {
   type CursorSettings
 } from "../systems/cursor/config";
 import { useRulersGridContext } from "../systems/rulers-grid/RulersGridSystem";
+import { SimpleColorPicker } from "./color";
 
 // Force cursor styles for the panel to override canvas cursor settings
 const panelStyles = `
@@ -84,37 +85,8 @@ function SliderRow({
   );
 }
 
-function ColorPicker({
-  label, value, onChange, disabled = false
-}: {
-  label: string;
-  value: string;
-  onChange: (color: string) => void;
-  disabled?: boolean;
-}) {
-  return (
-    <div className="mb-3">
-      <label className="text-sm text-gray-300 mb-1 block">{label}</label>
-      <div className="flex items-center gap-2">
-        <input
-          type="color"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          disabled={disabled}
-          className="w-8 h-8 rounded border border-gray-600 cursor-pointer"
-        />
-        <input
-          type="text"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          disabled={disabled}
-          className="flex-1 bg-gray-700 text-white text-xs px-2 py-1 rounded border border-gray-600"
-          placeholder="#ffffff"
-        />
-      </div>
-    </div>
-  );
-}
+// ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρησιμοποιεί το Enterprise Color System
+// ColorPicker function αντικαταστάθηκε με SimpleColorPicker από το κεντρικό σύστημα
 
 function CheckboxRow({
   label, checked, onChange, disabled = false

@@ -1,11 +1,14 @@
 /**
  * SHARED COMPONENTS INDEX
  * Centralized exports για όλα τα shared components
- * ΒΗΜΑ 7-8 του FloatingPanelContainer refactoring
+ *
+ * ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Color pickers τώρα διαθέσιμα από ../../../color
+ * ✅ BACKWARD COMPATIBLE: SharedColorPicker εξακολουθεί να λειτουργεί
+ * ✅ ENTERPRISE: Όλα τα color components χρησιμοποιούν Enterprise Color System
  */
 
 export { OverrideToggle } from './OverrideToggle';
-export { SharedColorPicker } from './SharedColorPicker';
+export { SharedColorPicker } from './SharedColorPicker'; // ✅ Now redirects to centralized system
 export { SubTabRenderer } from './SubTabRenderer';
 export { LazyPanelWrapper } from './LazyPanelWrapper';
 // REMOVED: AutoSaveIndicator - replaced with CentralizedAutoSaveStatus

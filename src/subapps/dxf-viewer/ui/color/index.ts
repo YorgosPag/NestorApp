@@ -22,6 +22,17 @@ export {
 } from './EnterpriseColorSlider';
 export { SwatchesPalette } from './SwatchesPalette';
 
+// ===== UNIFIED SOLUTION =====
+export {
+  UnifiedColorPicker,
+  SharedColorPicker,
+  ColorPickerModal,
+  SimpleColorPicker,
+  type UnifiedColorPickerProps,
+  type ColorPickerModalProps,
+  type SimpleColorPickerProps,
+} from './UnifiedColorPicker';
+
 // ===== TYPES =====
 export type {
   ColorMode,

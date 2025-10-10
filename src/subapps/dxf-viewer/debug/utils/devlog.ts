@@ -25,7 +25,7 @@ export const DXF_DEBUG =
 
 export const dlog = (...args: Parameters<typeof console.log>): void => {
   if (process.env.NODE_ENV !== 'production' && DXF_DEBUG) {
-
+    console.log(...args);
   }
 };
 
