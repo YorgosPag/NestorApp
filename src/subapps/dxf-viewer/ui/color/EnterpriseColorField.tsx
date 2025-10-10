@@ -19,7 +19,7 @@
 
 import React, { useState, useCallback, useMemo } from 'react';
 import type { EnterpriseColorFieldProps, ColorMode, RGBColor, HSLColor } from './types';
-import { parseColor, rgbToHex, formatRgb, formatHsl, parseHex, parseRgb, parseHsl } from './utils';
+import { parseColor, rgbToHex, formatRgb, formatHsl, parseHex, parseRgb, parseHsl, hslToRgb } from './utils';
 
 /**
  * Enterprise Color Field Component
@@ -223,7 +223,8 @@ export function EnterpriseColorField({
 
     const handleComponentChange = (component: 'h' | 's' | 'l' | 'a', newValue: number) => {
       const updated: HSLColor = { ...colorValue.hsl, [component]: newValue };
-      const rgb = parseHsl(formatHsl(updated)).valueOf() as any;
+      // ✅ ENTERPRISE: Convert HSL to RGB using proper utility function
+      const rgb = hslToRgb(updated);
       const hex = rgbToHex(rgb, { alpha });
       onChange(hex);
     };

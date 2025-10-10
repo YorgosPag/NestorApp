@@ -1,16 +1,14 @@
 /**
- * LINE STYLE CONTROL Component
+ * 🏢 ENTERPRISE LINE STYLE CONTROL Component
  * Standalone control για line type selection
+ *
+ * @version 2.0.0
+ * @migration Migrated from Radix Select to EnterpriseComboBox (PR1: Centralized ComboBox)
+ * @see src/subapps/dxf-viewer/ui/components/dxf-settings/settings/shared/EnterpriseComboBox.tsx
  */
 
 import React from 'react';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../../../../../../components/ui/select';
+import { EnterpriseComboBox } from '../settings/shared/EnterpriseComboBox';
 import type { LineType } from '../../../../settings-core/types';
 import { getDashArray } from '../../../../settings-core/defaults';
 
@@ -22,12 +20,13 @@ interface LineStyleControlProps {
   showPreview?: boolean;
 }
 
-const LINE_TYPE_OPTIONS: Array<{ value: LineType; label: string; preview: string }> = [
-  { value: 'solid', label: 'Solid', preview: '━━━━━━━━' },
-  { value: 'dashed', label: 'Dashed', preview: '━ ━ ━ ━' },
-  { value: 'dotted', label: 'Dotted', preview: '· · · · ·' },
-  { value: 'dash-dot', label: 'Dash-Dot', preview: '━ · ━ ·' },
-  { value: 'dash-dot-dot', label: 'Dash-Dot-Dot', preview: '━ · · ━' },
+// 🏢 ENTERPRISE: Line type options με preview characters
+const LINE_TYPE_OPTIONS: Array<{ value: LineType; label: string; preview: string; description?: string }> = [
+  { value: 'solid', label: 'Solid', preview: '━━━━━━━━', description: 'Continuous line' },
+  { value: 'dashed', label: 'Dashed', preview: '━ ━ ━ ━', description: 'Dashed pattern' },
+  { value: 'dotted', label: 'Dotted', preview: '· · · · ·', description: 'Dotted pattern' },
+  { value: 'dash-dot', label: 'Dash-Dot', preview: '━ · ━ ·', description: 'Mixed pattern' },
+  { value: 'dash-dot-dot', label: 'Dash-Dot-Dot', preview: '━ · · ━', description: 'Complex pattern' },
 ];
 
 export const LineStyleControl: React.FC<LineStyleControlProps> = ({
@@ -37,54 +36,34 @@ export const LineStyleControl: React.FC<LineStyleControlProps> = ({
   disabled = false,
   showPreview = true,
 }) => {
-  const handleChange = (newValue: string) => {
-    onChange(newValue as LineType);
-  };
+  // 🏢 ENTERPRISE: Custom render function για options με preview
+  const renderOption = (option: typeof LINE_TYPE_OPTIONS[0], isSelected: boolean) => (
+    <div className="flex items-center justify-between w-full">
+      <span className="text-sm">{option.label}</span>
+      {showPreview && (
+        <span className={`text-xs font-mono ml-4 ${isSelected ? 'text-blue-400' : 'text-gray-400'}`}>
+          {option.preview}
+        </span>
+      )}
+    </div>
+  );
 
   return (
     <div className="space-y-2">
-      <label className="text-sm font-medium text-gray-300">
-        {label}
-      </label>
+      {/* 🏢 ENTERPRISE: EnterpriseComboBox with custom rendering */}
+      <EnterpriseComboBox
+        label={label}
+        value={value}
+        options={LINE_TYPE_OPTIONS}
+        onChange={(newValue) => onChange(newValue as LineType)}
+        disabled={disabled}
+        enableTypeahead={false}
+        renderOption={renderOption}
+        buttonClassName="bg-gray-900 border-gray-700 text-gray-100"
+        listboxClassName="bg-gray-900 border-gray-700"
+      />
 
-      <Select value={value} onValueChange={handleChange} disabled={disabled}>
-        <SelectTrigger className="w-full bg-gray-900 border-gray-700 text-gray-100">
-          <SelectValue>
-            {showPreview ? (
-              <div className="flex items-center justify-between w-full">
-                <span className="text-sm">
-                  {LINE_TYPE_OPTIONS.find(opt => opt.value === value)?.label}
-                </span>
-                <span className="text-xs font-mono text-gray-400 ml-2">
-                  {LINE_TYPE_OPTIONS.find(opt => opt.value === value)?.preview}
-                </span>
-              </div>
-            ) : (
-              LINE_TYPE_OPTIONS.find(opt => opt.value === value)?.label
-            )}
-          </SelectValue>
-        </SelectTrigger>
-        <SelectContent className="bg-gray-900 border-gray-700">
-          {LINE_TYPE_OPTIONS.map((option) => (
-            <SelectItem
-              key={option.value}
-              value={option.value}
-              className="text-gray-100 hover:bg-gray-800"
-            >
-              <div className="flex items-center justify-between w-full">
-                <span className="text-sm">{option.label}</span>
-                {showPreview && (
-                  <span className="text-xs font-mono text-gray-400 ml-4">
-                    {option.preview}
-                  </span>
-                )}
-              </div>
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      {/* Visual preview of selected style */}
+      {/* 🏢 ENTERPRISE: Visual SVG preview (unchanged from original) */}
       {showPreview && (
         <div className="h-8 flex items-center justify-center bg-gray-800 rounded">
           <svg width="100%" height="2" className="overflow-visible">

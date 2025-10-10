@@ -73,8 +73,12 @@ export function EnterpriseColorSlider({
   const trackRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // ✅ FIX (ChatGPT-5): Guard against undefined/null value
+  // Default to white (#FFFFFF) if value is missing
+  const safeValue = value || '#FFFFFF';
+
   // Parse color and convert to appropriate format
-  const parsedColor = parseAriaColor(value);
+  const parsedColor = parseAriaColor(safeValue);
 
   // Convert to HSB if using HSB channels (hue/saturation/brightness)
   // Keep RGB if using RGB channels (red/green/blue)

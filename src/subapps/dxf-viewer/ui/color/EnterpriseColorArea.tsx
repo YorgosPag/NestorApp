@@ -62,8 +62,12 @@ export function EnterpriseColorArea({
   const inputXRef = useRef<HTMLInputElement>(null);
   const inputYRef = useRef<HTMLInputElement>(null);
 
+  // ✅ FIX (ChatGPT-5): Guard against undefined/null value
+  // Default to white (#FFFFFF) if value is missing
+  const safeValue = value || '#FFFFFF';
+
   // Parse color using React Aria's parser and convert to HSB
-  const parsedColor = parseAriaColor(value);
+  const parsedColor = parseAriaColor(safeValue);
   const ariaColor = parsedColor.toFormat('hsb');
 
   // Create color area state

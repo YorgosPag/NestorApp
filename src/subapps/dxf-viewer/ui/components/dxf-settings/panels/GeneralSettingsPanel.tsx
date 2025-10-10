@@ -58,7 +58,7 @@ import {
   useLineSettingsFromProvider,
   useTextSettingsFromProvider,
   useGripSettingsFromProvider
-} from '../../../../providers/DxfSettingsProvider';
+} from '../../../../settings-provider';
 
 /**
  * GeneralSettingsPanel - Container για General settings tabs
@@ -130,6 +130,27 @@ export const GeneralSettingsPanel: React.FC<GeneralSettingsPanelProps> = ({
   const lineSettings = useLineSettingsFromProvider();
   const textSettings = useTextSettingsFromProvider();
   const gripSettings = useGripSettingsFromProvider();
+
+  // ✅ FIX (ChatGPT-5): Guard against undefined settings during Enterprise Provider initialization
+  if (!lineSettings?.settings || !textSettings?.settings || !gripSettings?.settings) {
+    console.warn('⚠️ GeneralSettingsPanel: Settings not loaded yet', {
+      lineSettings: lineSettings?.settings,
+      textSettings: textSettings?.settings,
+      gripSettings: gripSettings?.settings
+    });
+    return (
+      <div className={`${className} px-4 py-8 text-center text-gray-400`}>
+        Φόρτωση ρυθμίσεων...
+      </div>
+    );
+  }
+
+  // 🔍 DEBUG: Log settings για να δούμε τι περνάει στο Preview
+  console.log('✅ GeneralSettingsPanel: Settings loaded', {
+    lineSettings: lineSettings.settings,
+    textSettings: textSettings.settings,
+    gripSettings: gripSettings.settings
+  });
 
   // ============================================================================
   // TAB CONFIGURATION
