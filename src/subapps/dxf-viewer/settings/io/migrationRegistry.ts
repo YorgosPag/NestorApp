@@ -51,11 +51,11 @@ export interface Migration {
  * **CRITICAL:** Add migrations in sequential order (v1, v2, v3, ...)
  */
 export const migrations: Migration[] = [
-  // Version 1 → 2: Add 'opacity' field to all entity settings
-  // This is a REAL migration example for testing
+  // Version 1 → 2: Fix property names to match TypeScript interfaces
+  // CRITICAL: This migration fixes the mismatch between old property names and TypeScript interfaces
   {
     version: 2,
-    description: 'Add opacity field (0.0-1.0) to line/text/grip settings',
+    description: 'Fix property names: lineColor→color, lineStyle→lineType, textColor→color, size→gripSize, color/hoverColor→colors{cold,warm,hot,contour}',
     migrate: (data: unknown) => {
       const state = data as {
         __standards_version: number;
@@ -68,9 +68,9 @@ export const migrations: Migration[] = [
       return {
         ...state,
         __standards_version: 2,
-        line: addOpacityToEntity(state.line),
-        text: addOpacityToEntity(state.text),
-        grip: addOpacityToEntity(state.grip)
+        line: fixLinePropertyNames(state.line),
+        text: fixTextPropertyNames(state.text),
+        grip: fixGripPropertyNames(state.grip)
       };
     },
     rollback: (data: unknown) => {
@@ -85,9 +85,73 @@ export const migrations: Migration[] = [
       return {
         ...state,
         __standards_version: 1,
-        line: removeOpacityFromEntity(state.line),
-        text: removeOpacityFromEntity(state.text),
-        grip: removeOpacityFromEntity(state.grip)
+        line: revertLinePropertyNames(state.line),
+        text: revertTextPropertyNames(state.text),
+        grip: revertGripPropertyNames(state.grip)
+      };
+    }
+  },
+
+  // Version 2 → 3: Fix fontWeight type (string → number)
+  // CRITICAL: ChatGPT5 fix for schema validation errors
+  {
+    version: 3,
+    description: 'Fix fontWeight: convert string values (bold/normal) to numbers (700/400)',
+    migrate: (data: unknown) => {
+      const state = data as any;
+
+      // ✅ ENTERPRISE: ChatGPT5 solution - normalize fontWeight
+      const toWeight = (w: any): number => {
+        if (typeof w === 'string') {
+          return w === 'bold' ? 700 : w === 'normal' ? 400 : Number(w) || 400;
+        }
+        return typeof w === 'number' ? w : 400;
+      };
+
+      // Fix all fontWeight properties
+      if (state.text?.general?.fontWeight) {
+        state.text.general.fontWeight = toWeight(state.text.general.fontWeight);
+      }
+
+      if (state.text?.specific) {
+        Object.keys(state.text.specific).forEach(mode => {
+          if (state.text.specific[mode]?.fontWeight) {
+            state.text.specific[mode].fontWeight = toWeight(state.text.specific[mode].fontWeight);
+          }
+        });
+      }
+
+      return {
+        ...state,
+        __standards_version: 3
+      };
+    },
+    rollback: (data: unknown) => {
+      const state = data as any;
+
+      // Convert numbers back to strings
+      const toWeightString = (w: any): string => {
+        if (typeof w === 'number') {
+          return w >= 700 ? 'bold' : 'normal';
+        }
+        return w || 'normal';
+      };
+
+      if (state.text?.general?.fontWeight) {
+        state.text.general.fontWeight = toWeightString(state.text.general.fontWeight);
+      }
+
+      if (state.text?.specific) {
+        Object.keys(state.text.specific).forEach(mode => {
+          if (state.text.specific[mode]?.fontWeight) {
+            state.text.specific[mode].fontWeight = toWeightString(state.text.specific[mode].fontWeight);
+          }
+        });
+      }
+
+      return {
+        ...state,
+        __standards_version: 2
       };
     }
   }
@@ -261,71 +325,281 @@ export function validateMigration(
 }
 
 // ============================================================================
-// EXAMPLE MIGRATIONS (FOR REFERENCE)
+// PROPERTY NAME MIGRATIONS (v1 → v2)
 // ============================================================================
 
 /**
- * Add opacity field to entity settings (v1 → v2)
- *
- * This is used by the REAL migration in the registry
+ * Fix Line property names: lineColor → color, lineStyle → lineType
  */
-function addOpacityToEntity(entitySettings: unknown): unknown {
-  const DEFAULT_OPACITY = 1.0;
-
+function fixLinePropertyNames(entitySettings: unknown): unknown {
   const entity = entitySettings as {
     general: Record<string, unknown>;
     specific: Record<string, Record<string, unknown>>;
     overrides: Record<string, Record<string, unknown>>;
   };
 
+  const fixLineSettings = (settings: Record<string, unknown>): Record<string, unknown> => {
+    const fixed = { ...settings };
+
+    // lineColor → color
+    if ('lineColor' in fixed) {
+      fixed.color = fixed.lineColor;
+      delete fixed.lineColor;
+    }
+
+    // lineStyle → lineType
+    if ('lineStyle' in fixed) {
+      fixed.lineType = fixed.lineStyle;
+      delete fixed.lineStyle;
+    }
+
+    // ✅ FIX: Add enabled property if missing (for LinePreview)
+    if (!('enabled' in fixed)) {
+      fixed.enabled = true;
+    }
+
+    return fixed;
+  };
+
   return {
-    general: { ...entity.general, opacity: DEFAULT_OPACITY },
+    general: fixLineSettings(entity.general),
     specific: Object.fromEntries(
       Object.entries(entity.specific).map(([mode, settings]) => [
         mode,
-        settings && typeof settings === 'object' ? { ...settings, opacity: DEFAULT_OPACITY } : settings
+        settings && typeof settings === 'object' ? fixLineSettings(settings as Record<string, unknown>) : settings
       ])
     ),
     overrides: Object.fromEntries(
       Object.entries(entity.overrides).map(([mode, settings]) => [
         mode,
-        settings && typeof settings === 'object' ? { ...settings, opacity: DEFAULT_OPACITY } : settings
+        settings && typeof settings === 'object' ? fixLineSettings(settings as Record<string, unknown>) : settings
       ])
     )
   };
 }
 
 /**
- * Remove opacity field from entity settings (v2 → v1 rollback)
+ * Fix Text property names: textColor → color
  */
-function removeOpacityFromEntity(entitySettings: unknown): unknown {
+function fixTextPropertyNames(entitySettings: unknown): unknown {
   const entity = entitySettings as {
     general: Record<string, unknown>;
     specific: Record<string, Record<string, unknown>>;
     overrides: Record<string, Record<string, unknown>>;
   };
 
-  const { opacity: _o1, ...generalWithoutOpacity } = entity.general;
+  const fixTextSettings = (settings: Record<string, unknown>): Record<string, unknown> => {
+    const fixed = { ...settings };
+
+    // textColor → color
+    if ('textColor' in fixed) {
+      fixed.color = fixed.textColor;
+      delete fixed.textColor;
+    }
+
+    // ✅ FIX: Add enabled property if missing (for LinePreview)
+    if (!('enabled' in fixed)) {
+      fixed.enabled = true;
+    }
+
+    return fixed;
+  };
 
   return {
-    general: generalWithoutOpacity,
+    general: fixTextSettings(entity.general),
     specific: Object.fromEntries(
-      Object.entries(entity.specific).map(([mode, settings]) => {
-        if (settings && typeof settings === 'object') {
-          const { opacity: _o, ...rest } = settings as Record<string, unknown>;
-          return [mode, rest];
-        }
-        return [mode, settings];
-      })
+      Object.entries(entity.specific).map(([mode, settings]) => [
+        mode,
+        settings && typeof settings === 'object' ? fixTextSettings(settings as Record<string, unknown>) : settings
+      ])
     ),
     overrides: Object.fromEntries(
-      Object.entries(entity.overrides).map(([mode, settings]) => {
-        if (settings && typeof settings === 'object') {
-          const { opacity: _o, ...rest } = settings as Record<string, unknown>;
-          return [mode, rest];
-        }
-        return [mode, settings];
-      })
+      Object.entries(entity.overrides).map(([mode, settings]) => [
+        mode,
+        settings && typeof settings === 'object' ? fixTextSettings(settings as Record<string, unknown>) : settings
+      ])
+    )
+  };
+}
+
+/**
+ * Fix Grip property names: size → gripSize, color/hoverColor → colors{cold,warm,hot,contour}
+ */
+function fixGripPropertyNames(entitySettings: unknown): unknown {
+  const entity = entitySettings as {
+    general: Record<string, unknown>;
+    specific: Record<string, Record<string, unknown>>;
+    overrides: Record<string, Record<string, unknown>>;
+  };
+
+  const fixGripSettings = (settings: Record<string, unknown>): Record<string, unknown> => {
+    const fixed = { ...settings };
+
+    // size → gripSize
+    if ('size' in fixed) {
+      fixed.gripSize = fixed.size;
+      delete fixed.size;
+    }
+
+    // color/hoverColor → colors{cold,warm,hot,contour}
+    if ('color' in fixed || 'hoverColor' in fixed) {
+      fixed.colors = {
+        cold: fixed.color || '#0000FF',           // Blue (unselected)
+        warm: fixed.hoverColor || '#00FFFF',      // Cyan (hover)
+        hot: '#FF0000',                           // Red (selected)
+        contour: '#000000'                        // Black (contour)
+      };
+      delete fixed.color;
+      delete fixed.hoverColor;
+    }
+
+    // ✅ FIX: Add enabled property if missing (for LinePreview)
+    if (!('enabled' in fixed)) {
+      fixed.enabled = true;
+    }
+
+    return fixed;
+  };
+
+  return {
+    general: fixGripSettings(entity.general),
+    specific: Object.fromEntries(
+      Object.entries(entity.specific).map(([mode, settings]) => [
+        mode,
+        settings && typeof settings === 'object' ? fixGripSettings(settings as Record<string, unknown>) : settings
+      ])
+    ),
+    overrides: Object.fromEntries(
+      Object.entries(entity.overrides).map(([mode, settings]) => [
+        mode,
+        settings && typeof settings === 'object' ? fixGripSettings(settings as Record<string, unknown>) : settings
+      ])
+    )
+  };
+}
+
+/**
+ * Revert Line property names: color → lineColor, lineType → lineStyle (rollback)
+ */
+function revertLinePropertyNames(entitySettings: unknown): unknown {
+  const entity = entitySettings as {
+    general: Record<string, unknown>;
+    specific: Record<string, Record<string, unknown>>;
+    overrides: Record<string, Record<string, unknown>>;
+  };
+
+  const revertLineSettings = (settings: Record<string, unknown>): Record<string, unknown> => {
+    const reverted = { ...settings };
+
+    if ('color' in reverted) {
+      reverted.lineColor = reverted.color;
+      delete reverted.color;
+    }
+
+    if ('lineType' in reverted) {
+      reverted.lineStyle = reverted.lineType;
+      delete reverted.lineType;
+    }
+
+    return reverted;
+  };
+
+  return {
+    general: revertLineSettings(entity.general),
+    specific: Object.fromEntries(
+      Object.entries(entity.specific).map(([mode, settings]) => [
+        mode,
+        settings && typeof settings === 'object' ? revertLineSettings(settings as Record<string, unknown>) : settings
+      ])
+    ),
+    overrides: Object.fromEntries(
+      Object.entries(entity.overrides).map(([mode, settings]) => [
+        mode,
+        settings && typeof settings === 'object' ? revertLineSettings(settings as Record<string, unknown>) : settings
+      ])
+    )
+  };
+}
+
+/**
+ * Revert Text property names: color → textColor (rollback)
+ */
+function revertTextPropertyNames(entitySettings: unknown): unknown {
+  const entity = entitySettings as {
+    general: Record<string, unknown>;
+    specific: Record<string, Record<string, unknown>>;
+    overrides: Record<string, Record<string, unknown>>;
+  };
+
+  const revertTextSettings = (settings: Record<string, unknown>): Record<string, unknown> => {
+    const reverted = { ...settings };
+
+    if ('color' in reverted) {
+      reverted.textColor = reverted.color;
+      delete reverted.color;
+    }
+
+    return reverted;
+  };
+
+  return {
+    general: revertTextSettings(entity.general),
+    specific: Object.fromEntries(
+      Object.entries(entity.specific).map(([mode, settings]) => [
+        mode,
+        settings && typeof settings === 'object' ? revertTextSettings(settings as Record<string, unknown>) : settings
+      ])
+    ),
+    overrides: Object.fromEntries(
+      Object.entries(entity.overrides).map(([mode, settings]) => [
+        mode,
+        settings && typeof settings === 'object' ? revertTextSettings(settings as Record<string, unknown>) : settings
+      ])
+    )
+  };
+}
+
+/**
+ * Revert Grip property names: gripSize → size, colors{} → color/hoverColor (rollback)
+ */
+function revertGripPropertyNames(entitySettings: unknown): unknown {
+  const entity = entitySettings as {
+    general: Record<string, unknown>;
+    specific: Record<string, Record<string, unknown>>;
+    overrides: Record<string, Record<string, unknown>>;
+  };
+
+  const revertGripSettings = (settings: Record<string, unknown>): Record<string, unknown> => {
+    const reverted = { ...settings };
+
+    if ('gripSize' in reverted) {
+      reverted.size = reverted.gripSize;
+      delete reverted.gripSize;
+    }
+
+    if ('colors' in reverted && typeof reverted.colors === 'object') {
+      const colors = reverted.colors as { cold?: string; warm?: string };
+      reverted.color = colors.cold || '#0000FF';
+      reverted.hoverColor = colors.warm || '#00FFFF';
+      delete reverted.colors;
+    }
+
+    return reverted;
+  };
+
+  return {
+    general: revertGripSettings(entity.general),
+    specific: Object.fromEntries(
+      Object.entries(entity.specific).map(([mode, settings]) => [
+        mode,
+        settings && typeof settings === 'object' ? revertGripSettings(settings as Record<string, unknown>) : settings
+      ])
+    ),
+    overrides: Object.fromEntries(
+      Object.entries(entity.overrides).map(([mode, settings]) => [
+        mode,
+        settings && typeof settings === 'object' ? revertGripSettings(settings as Record<string, unknown>) : settings
+      ])
     )
   };
 }

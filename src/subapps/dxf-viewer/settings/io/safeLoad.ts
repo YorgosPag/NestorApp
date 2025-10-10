@@ -87,9 +87,52 @@ export async function safeLoad(
     let processedData = rawData;
     let source: 'storage' | 'migrated' | 'coerced' = 'storage';
 
+    // ✅ FIX: Property-based migration detection (v1 → v2)
+    // Check if data has old property names (lineColor, lineStyle, textColor, etc.)
+    const hasOldPropertyNames = (data: unknown): boolean => {
+      if (!data || typeof data !== 'object') return false;
+      const obj = data as Record<string, unknown>;
+
+      // Check line.general for old property names OR missing enabled property
+      if (obj.line?.general) {
+        const lineGeneral = obj.line.general;
+        if ('lineColor' in lineGeneral || 'lineStyle' in lineGeneral || !('enabled' in lineGeneral)) {
+          console.log('[safeLoad] Detected old line property names (lineColor/lineStyle) or missing enabled');
+          return true;
+        }
+      }
+
+      // Check text.general for old property names OR missing enabled property
+      if (obj.text?.general) {
+        const textGeneral = obj.text.general;
+        if ('textColor' in textGeneral || !('enabled' in textGeneral)) {
+          console.log('[safeLoad] Detected old text property names (textColor) or missing enabled');
+          return true;
+        }
+      }
+
+      // Check grip.general for old property names OR missing enabled property
+      if (obj.grip?.general) {
+        const gripGeneral = obj.grip.general;
+        if ('size' in gripGeneral || ('color' in gripGeneral && !('colors' in gripGeneral)) || !('enabled' in gripGeneral)) {
+          console.log('[safeLoad] Detected old grip property names (size/color flat structure) or missing enabled');
+          return true;
+        }
+      }
+
+      return false;
+    };
+
     // Step 3: Migration needed?
-    if (needsMigration(rawData, CURRENT_VERSION)) {
-      console.info('[safeLoad] Migration needed, creating backup...');
+    const needsVersionMigration = needsMigration(rawData, CURRENT_VERSION);
+    const needsPropertyMigration = hasOldPropertyNames(rawData);
+
+    if (needsVersionMigration || needsPropertyMigration) {
+      console.info('[safeLoad] Migration needed (version or property names), creating backup...');
+
+      if (needsPropertyMigration) {
+        console.warn('[safeLoad] 🔄 FORCING PROPERTY MIGRATION: Old property names detected!');
+      }
 
       // Create backup before migration
       const backup = createBackup(rawData);

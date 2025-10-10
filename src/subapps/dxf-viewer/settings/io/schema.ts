@@ -44,12 +44,15 @@ export const StorageModeSchema = z.enum([
 // LINE SETTINGS SCHEMA
 // ============================================================================
 
+// ✅ FIX: Updated to match settings-core/types.ts (LineSettings interface)
+// 🔥 CRITICAL: .passthrough() allows extra properties (dashScale, lineCap, hoverColor, etc.)
 export const LineSettingsSchema = z.object({
+  enabled: z.boolean(),                                // ✅ FIX: Added enabled property
   lineWidth: z.number().min(0.1).max(10.0),
-  lineColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
-  lineStyle: z.enum(['solid', 'dashed', 'dotted']),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/),        // ✅ FIX: renamed from lineColor
+  lineType: z.enum(['solid', 'dashed', 'dotted']),     // ✅ FIX: renamed from lineStyle
   opacity: z.number().min(0.0).max(1.0)
-});
+}).passthrough();
 
 export type LineSettingsType = z.infer<typeof LineSettingsSchema>;
 
@@ -57,14 +60,17 @@ export type LineSettingsType = z.infer<typeof LineSettingsSchema>;
 // TEXT SETTINGS SCHEMA
 // ============================================================================
 
+// ✅ FIX: Updated to match settings-core/types.ts (TextSettings interface)
+// 🔥 CRITICAL: .passthrough() allows extra properties (isBold, isItalic, shadowEnabled, etc.)
 export const TextSettingsSchema = z.object({
+  enabled: z.boolean(),                                // ✅ FIX: Added enabled property
   fontSize: z.number().min(8).max(72),
   fontFamily: z.string().min(1),
-  fontWeight: z.enum(['normal', 'bold']),
-  fontStyle: z.enum(['normal', 'italic']),
-  textColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+  fontWeight: z.number().min(100).max(900),            // ✅ FIX: Changed from enum to number (100-900)
+  fontStyle: z.enum(['normal', 'italic', 'oblique']),  // ✅ FIX: Added 'oblique'
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/),        // ✅ FIX: renamed from textColor
   opacity: z.number().min(0.0).max(1.0)
-});
+}).passthrough();
 
 export type TextSettingsType = z.infer<typeof TextSettingsSchema>;
 
@@ -72,13 +78,20 @@ export type TextSettingsType = z.infer<typeof TextSettingsSchema>;
 // GRIP SETTINGS SCHEMA
 // ============================================================================
 
-export const GripSettingsSchema = z.object({
-  size: z.number().min(4).max(20),
-  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
-  hoverColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
-  shape: z.enum(['square', 'circle']),
-  opacity: z.number().min(0.0).max(1.0)
+// ✅ FIX: Updated to match settings-core/types.ts (GripSettings interface)
+export const GripColorsSchema = z.object({
+  cold: z.string().regex(/^#[0-9A-Fa-f]{6}$/),     // Unselected (Blue)
+  warm: z.string().regex(/^#[0-9A-Fa-f]{6}$/),     // Hover (Cyan)
+  hot: z.string().regex(/^#[0-9A-Fa-f]{6}$/),      // Selected (Red)
+  contour: z.string().regex(/^#[0-9A-Fa-f]{6}$/)   // Contour (Black)
 });
+
+export const GripSettingsSchema = z.object({
+  enabled: z.boolean(),                             // ✅ FIX: Added enabled property
+  gripSize: z.number().min(4).max(20),              // ✅ FIX: renamed from size
+  colors: GripColorsSchema,                         // ✅ FIX: nested colors object instead of flat color/hoverColor
+  opacity: z.number().min(0.0).max(1.0)
+}).passthrough();
 
 export type GripSettingsType = z.infer<typeof GripSettingsSchema>;
 
@@ -89,10 +102,11 @@ export type GripSettingsType = z.infer<typeof GripSettingsSchema>;
 export function createEntitySettingsSchema<T extends z.ZodTypeAny>(
   settingsSchema: T
 ) {
+  // ✅ ENTERPRISE: Use z.ZodType<unknown> instead of any for type-safe partial schemas
   return z.object({
     general: settingsSchema,
-    specific: z.record(StorageModeSchema, (settingsSchema as unknown as z.ZodObject<any>).partial()),
-    overrides: z.record(StorageModeSchema, (settingsSchema as unknown as z.ZodObject<any>).partial())
+    specific: z.record(StorageModeSchema, (settingsSchema as unknown as z.ZodType<unknown>).partial()),
+    overrides: z.record(StorageModeSchema, (settingsSchema as unknown as z.ZodType<unknown>).partial())
   });
 }
 
