@@ -57,7 +57,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useLineSettingsFromProvider } from '../../../../../providers/DxfSettingsProvider';
+import { useLineSettingsFromProvider } from '../../../../../settings-provider';
 // ✅ ΑΝΤΙΚΑΤΑΣΤΑΣΗ ΜΕ UNIFIED HOOKS
 import { useUnifiedLinePreview, useUnifiedLineCompletion } from '../../../../hooks/useUnifiedSpecificSettings';
 import type { LineTemplate } from '../../../../../contexts/LineSettingsContext';
@@ -175,7 +175,22 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
       };
     } else {
       // Γενικές ρυθμίσεις - fallback
-      return generalLineSettings;
+      return {
+        ...generalLineSettings,
+        applyTemplate: (template: LineTemplate) => {
+          // ✅ FIX: Added applyTemplate for general context
+          generalLineSettings.updateSettings({
+            lineType: template.lineType,
+            lineWidth: template.lineWidth,
+            color: template.color,
+            opacity: template.opacity,
+            dashScale: template.dashScale,
+            dashOffset: template.dashOffset,
+            lineCap: template.lineCap,
+            lineJoin: template.lineJoin,
+          });
+        }
+      };
     }
   })();
 

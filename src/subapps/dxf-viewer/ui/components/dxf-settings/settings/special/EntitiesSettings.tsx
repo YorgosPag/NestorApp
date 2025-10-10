@@ -15,7 +15,7 @@ import {
   useTextSettingsFromProvider,
   useLineSettingsFromProvider,
   useGripSettingsFromProvider
-} from '../../../../../providers/DxfSettingsProvider';
+} from '../../../../../settings-provider';
 import { LineSettings } from '../core/LineSettings';
 import { TextSettings } from '../core/TextSettings';
 import { GripSettings } from '../core/GripSettings';
@@ -451,8 +451,8 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
             gripSettings={{
               ...previewGripSettings,
               colors: {
-                ...previewGripSettings.colors,
-                cold: previewGripSettings.colors.warm // Hover state = warm grips
+                ...(previewGripSettings.colors || DEFAULT_GRIP_SETTINGS.colors),
+                cold: (previewGripSettings.colors?.warm || DEFAULT_GRIP_SETTINGS.colors.warm) // Hover state = warm grips
               }
             }}
             overrideSettings={{
@@ -484,8 +484,8 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
             gripSettings={{
               ...previewGripSettings,
               colors: {
-                ...previewGripSettings.colors,
-                cold: previewGripSettings.colors.hot // Selection state = hot grips
+                ...(previewGripSettings.colors || DEFAULT_GRIP_SETTINGS.colors),
+                cold: (previewGripSettings.colors?.hot || DEFAULT_GRIP_SETTINGS.colors.hot) // Selection state = hot grips
               }
             }}
             overrideSettings={{

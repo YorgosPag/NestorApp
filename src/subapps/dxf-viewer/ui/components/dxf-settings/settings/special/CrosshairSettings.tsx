@@ -18,8 +18,8 @@ import React, { useState, useEffect } from 'react';
 import { useCursorSettings } from '../../../../../systems/cursor';
 import { DEFAULT_CURSOR_SETTINGS } from '../../../../../systems/cursor/config';
 import type { CursorColors } from '../../../palettes/CursorColorPalette';
-import { useTabNavigation } from '../../../hooks/useTabNavigation';
-import { TabNavigation } from '../../../shared/TabNavigation';
+import { useTabNavigation } from '../../hooks/useTabNavigation';
+import { TabNavigation } from '../../shared/TabNavigation';
 import { CrosshairAppearanceSettings } from './CrosshairAppearanceSettings';
 import { CrosshairBehaviorSettings } from './CrosshairBehaviorSettings';
 

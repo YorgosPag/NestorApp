@@ -7,10 +7,13 @@
  * - Χωρίς κυκλικά loops
  * - Καθαρό API
  * - Κεντρικοποιημένο status
+ *
+ * 🔄 MIGRATED (2025-10-09): Phase 3.1 - Enterprise Adapter
  */
 
 import React from 'react';
-import { useDxfSettings } from '../../providers/DxfSettingsProvider';
+// 🔄 MIGRATED (2025-10-09): Phase 3.2 - Direct Enterprise (no adapter)
+import { useDxfSettings } from '../../settings-provider';
 
 /**
  * Κεντρικοποιημένο component για auto-save status
@@ -18,6 +21,7 @@ import { useDxfSettings } from '../../providers/DxfSettingsProvider';
 // ===== SAFE HOOK WRAPPER =====
 function useDxfSettingsSafe() {
   try {
+    // 🔄 MIGRATED: Direct Enterprise (no adapter)
     return useDxfSettings();
   } catch (error) {
     return null;
@@ -61,35 +65,21 @@ export function CentralizedAutoSaveStatus() {
   };
 
   const getStatusMessage = () => {
-    // ✅ Phase 9: Enhanced debug info με Γενικά + Ειδικά settings
-    const generalInfo = `L:${!!settings.line} T:${!!settings.text} G:${!!settings.grip} C:${!!settings.cursor} GR:${!!settings.grid} R:${!!settings.ruler}`;
-    const specificInfo = `LD:${!!settings.specific?.line?.draft} LH:${!!settings.specific?.line?.hover} LS:${!!settings.specific?.line?.selection} LC:${!!settings.specific?.line?.completion} TP:${!!settings.specific?.text?.draft}`;
-    const debugInfo = `${generalInfo} | ${specificInfo}`.replace(/\s+/g, ' ');
-
     if (isAutoSaving) {
-      return `Αποθήκευση... [${debugInfo}]`;
+      return `Αποθήκευση...`;
     }
 
     if (settings.saveStatus === 'saved') {
-      // Count active settings (Γενικά + Ειδικά)
-      const generalCount = [settings.line, settings.text, settings.grip, settings.cursor, settings.grid, settings.ruler].filter(Boolean).length;
-      const specificCount = [
-        settings.specific?.line?.draft,
-        settings.specific?.line?.hover,
-        settings.specific?.line?.selection,
-        settings.specific?.line?.completion,
-        settings.specific?.text?.draft
-      ].filter(Boolean).length;
-      return `Ρυθμίσεις OK (Γ:${generalCount}/6 Ε:${specificCount}/5) [${debugInfo}]`;
+      return `Αυτόματη αποθήκευση`;
     }
 
     if (settings.saveStatus === 'error') {
-      return `Σφάλμα [${debugInfo}]`;
+      return `Σφάλμα αποθήκευσης`;
     }
 
     return hasUnsavedChanges
-      ? `Αναμονή αλλαγών... [${debugInfo}]`
-      : `Αυτόματη αποθήκευση [${debugInfo}]`;
+      ? `Αναμονή αλλαγών...`
+      : `Αυτόματη αποθήκευση`;
   };
 
   const getStatusColor = () => {

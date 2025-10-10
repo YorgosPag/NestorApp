@@ -43,12 +43,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { createPortal } from 'react-dom';
-import { useTextSettingsFromProvider } from '../../../../../providers/DxfSettingsProvider';
+import { useTextSettingsFromProvider } from '../../../../../settings-provider';
 import { AccordionSection, useAccordion } from '../shared/AccordionSection';
 import type { TextSettings } from '../../../../contexts/TextSettingsContext';
 import { BaseModal } from '../../../../../components/shared/BaseModal';
 import { useNotifications } from '../../../../../../../providers/NotificationProvider';
+import { EnterpriseComboBox, type ComboBoxOption } from '../shared/EnterpriseComboBox';
 
 // Simple SVG icons for text
 const DocumentTextIcon = ({ className }: { className?: string }) => (
@@ -76,8 +76,8 @@ const EyeIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-// Mock constants - same structure as dxf-viewer-kalo but as mock data
-const FREE_FONTS = [
+// 🏢 ENTERPRISE: Typed options for EnterpriseComboBox
+const FREE_FONTS: ComboBoxOption<string>[] = [
   { value: 'Arial, sans-serif', label: 'Arial' },
   { value: 'Georgia, serif', label: 'Georgia' },
   { value: 'Times New Roman, serif', label: 'Times New Roman' },
@@ -95,7 +95,13 @@ const FREE_FONTS = [
   { value: 'Garamond, serif', label: 'Garamond' }
 ];
 
-const FONT_SIZES = [8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 36, 48, 72];
+const FONT_SIZES_RAW = [8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 36, 48, 72];
+
+// 🏢 ENTERPRISE: Typed options for Font Size ComboBox
+const FONT_SIZE_OPTIONS: ComboBoxOption<number>[] = FONT_SIZES_RAW.map(size => ({
+  value: size,
+  label: `${size}px`
+}));
 
 const TEXT_LABELS = {
   PREVIEW: 'Προεπισκόπηση',
@@ -208,62 +214,10 @@ export function TextSettings() {
 
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
-  // Search states - these can remain local as they're UI-only
-  const [fontSearch, setFontSearch] = useState('');
-  const [sizeSearch, setSizeSearch] = useState('');
-  const [showFontDropdown, setShowFontDropdown] = useState(false);
-  const [showSizeDropdown, setShowSizeDropdown] = useState(false);
-
-  // 🔥 FIX: Refs για dropdown positioning (escape accordion overflow-hidden)
-  const fontInputRef = React.useRef<HTMLInputElement>(null);
-  const sizeInputRef = React.useRef<HTMLInputElement>(null);
-  const [fontDropdownPos, setFontDropdownPos] = React.useState({ top: 0, left: 0, width: 0 });
-  const [sizeDropdownPos, setSizeDropdownPos] = React.useState({ top: 0, left: 0, width: 0 });
-
-  // 🔥 FIX: Calculate dropdown position (for fixed positioning) - useCallback
-  const updateFontDropdownPosition = React.useCallback(() => {
-    if (fontInputRef.current) {
-      const rect = fontInputRef.current.getBoundingClientRect();
-      setFontDropdownPos({
-        top: rect.bottom + window.scrollY,
-        left: rect.left + window.scrollX,
-        width: rect.width
-      });
-    }
-  }, []);
-
-  const updateSizeDropdownPosition = React.useCallback(() => {
-    if (sizeInputRef.current) {
-      const rect = sizeInputRef.current.getBoundingClientRect();
-      setSizeDropdownPos({
-        top: rect.bottom + window.scrollY,
-        left: rect.left + window.scrollX,
-        width: rect.width
-      });
-    }
-  }, []);
-
-  // 🔥 FIX: Update positions when dropdowns open
-  React.useEffect(() => {
-    if (showFontDropdown) {
-      updateFontDropdownPosition();
-    }
-  }, [showFontDropdown, updateFontDropdownPosition]);
-
-  React.useEffect(() => {
-    if (showSizeDropdown) {
-      updateSizeDropdownPosition();
-    }
-  }, [showSizeDropdown, updateSizeDropdownPosition]);
+  // 🏢 ENTERPRISE: Removed ~150 lines of duplicate dropdown code
+  // Now using EnterpriseComboBox with built-in search, positioning, ARIA, etc.
 
   // Handlers
-  const handleFontFamilyChange = (fontFamily: string) => {
-    updateTextSettings({ fontFamily });
-  };
-
-  const handleFontSizeChange = (fontSize: number) => {
-    updateTextSettings({ fontSize });
-  };
 
   const toggleTextStyle = (style: keyof Pick<typeof textSettings, 'isBold' | 'isItalic' | 'isUnderline' | 'isStrikethrough'>) => {
     updateTextSettings({ [style]: !textSettings[style] });
@@ -287,47 +241,14 @@ export function TextSettings() {
     updateTextSettings({ color });
   };
 
-  // Filter functions
-  const filteredFonts = FREE_FONTS.filter(font =>
-    font.label.toLowerCase().includes(fontSearch.toLowerCase())
-  );
-
-  const filteredSizes = FONT_SIZES.filter(size =>
-    size.toString().includes(sizeSearch)
-  );
-
-  const handleFontSearchChange = (value: string) => {
-    setFontSearch(value);
-    setShowFontDropdown(true);
-    updateFontDropdownPosition();
-  };
-
-  const handleSizeSearchChange = (value: string) => {
-    setSizeSearch(value);
-    setShowSizeDropdown(true);
-    updateSizeDropdownPosition();
-  };
-
-  const selectFont = (fontValue: string) => {
-    handleFontFamilyChange(fontValue);
-    setFontSearch('');
-    setShowFontDropdown(false);
-  };
-
-  const selectSize = (size: number) => {
-    handleFontSizeChange(size);
-    setSizeSearch('');
-    setShowSizeDropdown(false);
-  };
-
   const increaseFontSize = () => {
     const newSize = Math.min(200, textSettings.fontSize + 1);
-    handleFontSizeChange(newSize);
+    updateTextSettings({ fontSize: newSize });
   };
 
   const decreaseFontSize = () => {
     const newSize = Math.max(6, textSettings.fontSize - 1);
-    handleFontSizeChange(newSize);
+    updateTextSettings({ fontSize: newSize });
   };
 
   // Factory reset handlers
@@ -445,168 +366,65 @@ export function TextSettings() {
           className="overflow-visible"
         >
           <div className="space-y-4">
-            {/* Font Family Selection with Search */}
-            <div className="space-y-2 relative">
-        <label className="block text-sm font-medium text-gray-300">
-          {TEXT_LABELS.FONT_FAMILY}
-        </label>
-        <div className="relative">
-          <input
-            ref={fontInputRef}
-            type="text"
-            placeholder={TEXT_LABELS.SEARCH_FONTS}
-            value={fontSearch || FREE_FONTS.find(f => f.value === textSettings.fontFamily)?.label || ''}
-            onChange={(e) => handleFontSearchChange(e.target.value)}
-            onFocus={() => { setShowFontDropdown(true); updateFontDropdownPosition(); }}
-            onClick={() => { setShowFontDropdown(!showFontDropdown); updateFontDropdownPosition(); }}
-            onBlur={() => setTimeout(() => setShowFontDropdown(false), 150)}
-            className="w-full px-3 py-2 pr-8 bg-gray-700 border border-gray-600 rounded-md text-white text-sm focus:outline-none focus:ring-2 focus:ring-green-500 cursor-text"
-            style={{ fontFamily: textSettings.fontFamily }}
-          />
-          {/* Dropdown Arrow - 🔥 FIX: Added cursor-pointer for hand icon */}
-          <div
-            className="absolute right-2 top-1/2 transform -translate-y-1/2 cursor-pointer"
-            onClick={() => setShowFontDropdown(!showFontDropdown)}
-          >
-            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </div>
-          {showFontDropdown && typeof document !== 'undefined' && createPortal(
-            <div
-              className="fixed bg-gray-900 border-2 border-gray-400 rounded-md shadow-2xl overflow-y-scroll backdrop-blur-sm"
-              style={{
-                zIndex: 999999,
-                maxHeight: '300px',
-                top: `${fontDropdownPos.top}px`,
-                left: `${fontDropdownPos.left}px`,
-                width: `${fontDropdownPos.width}px`
-              }}
-              onMouseDown={(e) => e.preventDefault()}
-            >
-              {filteredFonts.length > 0 ? (
-                filteredFonts.map((font) => (
-                  <button
-                    key={font.value}
-                    onClick={() => selectFont(font.value)}
-                    className="w-full text-left px-3 py-2 text-sm text-white hover:bg-gray-700 transition-colors first:rounded-t-md last:rounded-b-md border-b border-gray-600 last:border-b-0"
-                    style={{ fontFamily: font.value }}
-                  >
-                    {font.label}
-                  </button>
-                ))
-              ) : (
-                <div className="px-3 py-2 text-sm text-gray-400">
-                  Δεν βρέθηκαν γραμματοσειρές
-                </div>
-              )}
-            </div>,
-            document.body
-          )}
-        </div>
-      </div>
-
-      {/* Font Size Selection with Search and Controls */}
-      <div className="space-y-2 relative">
-        <label className="block text-sm font-medium text-gray-300">
-          {TEXT_LABELS.FONT_SIZE}
-        </label>
-        <div className="flex gap-2">
-          {/* Size Input with Dropdown */}
-          <div className="flex-1 relative">
-            <input
-              ref={sizeInputRef}
-              type="text"
-              placeholder={TEXT_LABELS.SEARCH_SIZE}
-              value={sizeSearch || `${textSettings.fontSize}pt`}
-              onChange={(e) => handleSizeSearchChange(e.target.value.replace('pt', ''))}
-              onFocus={() => { setShowSizeDropdown(true); updateSizeDropdownPosition(); }}
-              onClick={() => { setShowSizeDropdown(!showSizeDropdown); updateSizeDropdownPosition(); }}
-              onBlur={() => setTimeout(() => setShowSizeDropdown(false), 150)}
-              className="w-full px-3 py-2 pr-8 bg-gray-700 border border-gray-600 rounded-md text-white text-sm focus:outline-none focus:ring-2 focus:ring-green-500 cursor-text"
+            {/* 🏢 ENTERPRISE: Font Family ComboBox */}
+            <EnterpriseComboBox
+              label={TEXT_LABELS.FONT_FAMILY}
+              value={textSettings.fontFamily}
+              options={FREE_FONTS}
+              onChange={(fontFamily) => updateTextSettings({ fontFamily })}
+              enableTypeahead={true}
+              placeholder={TEXT_LABELS.SEARCH_FONTS}
+              buttonClassName="text-sm"
             />
-            {/* Dropdown Arrow - 🔥 FIX: Added cursor-pointer for hand icon */}
-            <div
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 cursor-pointer"
-              onClick={() => setShowSizeDropdown(!showSizeDropdown)}
-            >
-              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
-            {showSizeDropdown && typeof document !== 'undefined' && createPortal(
-              <div
-                className="fixed bg-gray-900 border-2 border-gray-400 rounded-md shadow-2xl overflow-y-scroll backdrop-blur-sm"
-                style={{
-                  zIndex: 999999,
-                  maxHeight: '300px',
-                  top: `${sizeDropdownPos.top}px`,
-                  left: `${sizeDropdownPos.left}px`,
-                  width: `${sizeDropdownPos.width}px`
-                }}
-                onMouseDown={(e) => e.preventDefault()}
-              >
-                {filteredSizes.length > 0 ? (
-                  filteredSizes.map((size) => (
-                    <button
-                      key={size}
-                      onClick={() => selectSize(size)}
-                      className="w-full text-left px-3 py-2 text-sm text-white hover:bg-gray-700 transition-colors first:rounded-t-md last:rounded-b-md border-b border-gray-600 last:border-b-0"
-                    >
-                      {size}pt
-                    </button>
-                  ))
-                ) : (
-                  <div className="px-3 py-2 text-sm text-gray-400">
-                    {TEXT_LABELS.NO_SIZES_FOUND}
-                  </div>
-                )}
-                {/* Custom size option */}
-                {sizeSearch && !isNaN(Number(sizeSearch)) && Number(sizeSearch) >= 6 && Number(sizeSearch) <= 200 && (
+
+            {/* 🏢 ENTERPRISE: Font Size ComboBox with +/- controls */}
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <EnterpriseComboBox
+                    label={TEXT_LABELS.FONT_SIZE}
+                    value={textSettings.fontSize}
+                    options={FONT_SIZE_OPTIONS}
+                    onChange={(fontSize) => updateTextSettings({ fontSize })}
+                    enableTypeahead={true}
+                    placeholder={TEXT_LABELS.SEARCH_SIZE}
+                    buttonClassName="text-sm"
+                    getDisplayValue={(val) => `${val}pt`}
+                  />
+                </div>
+
+                {/* Font Size Increase/Decrease Controls */}
+                <div className="flex gap-1 items-end">
+                  {/* Increase Font Size - Big A with up arrow */}
                   <button
-                    onClick={() => selectSize(Number(sizeSearch))}
-                    className="w-full text-left px-3 py-2 text-sm text-green-400 hover:bg-gray-700 transition-colors border-t border-gray-600 rounded-b-md"
+                    onClick={increaseFontSize}
+                    className="w-10 h-9 bg-gray-700 border border-gray-500 rounded text-white hover:bg-gray-600 transition-colors flex items-center justify-center"
+                    title="Αύξηση μεγέθους γραμματοσειράς"
                   >
-                    {sizeSearch}{TEXT_LABELS.FONT_SIZE_UNIT} ({TEXT_LABELS.CUSTOM_SIZE})
+                    <div className="flex items-center">
+                      <span className="text-base font-bold">A</span>
+                      <svg className="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 15l7-7 7 7" />
+                      </svg>
+                    </div>
                   </button>
-                )}
-              </div>,
-              document.body
-            )}
-          </div>
 
-          {/* Font Size Increase/Decrease Controls */}
-          <div className="flex gap-1">
-            {/* Increase Font Size - Big A with up arrow */}
-            <button
-              onClick={increaseFontSize}
-              className="w-10 h-9 bg-gray-700 border border-gray-500 rounded text-white hover:bg-gray-600 transition-colors flex items-center justify-center"
-              title="Αύξηση μεγέθους γραμματοσειράς"
-            >
-              <div className="flex items-center">
-                <span className="text-base font-bold">A</span>
-                <svg className="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 15l7-7 7 7" />
-                </svg>
+                  {/* Decrease Font Size - Small A with down arrow */}
+                  <button
+                    onClick={decreaseFontSize}
+                    className="w-10 h-9 bg-gray-700 border border-gray-500 rounded text-white hover:bg-gray-600 transition-colors flex items-center justify-center"
+                    title="Μείωση μεγέθους γραμματοσειράς"
+                  >
+                    <div className="flex items-center">
+                      <span className="text-xs font-bold">A</span>
+                      <svg className="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </button>
+                </div>
               </div>
-            </button>
-
-            {/* Decrease Font Size - Small A with down arrow */}
-            <button
-              onClick={decreaseFontSize}
-              className="w-10 h-9 bg-gray-700 border border-gray-500 rounded text-white hover:bg-gray-600 transition-colors flex items-center justify-center"
-              title="Μείωση μεγέθους γραμματοσειράς"
-            >
-              <div className="flex items-center">
-                <span className="text-xs font-bold">A</span>
-                <svg className="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-            </button>
-          </div>
-        </div>
-      </div>
+            </div>
 
       {/* Text Color */}
       <div className="space-y-2">

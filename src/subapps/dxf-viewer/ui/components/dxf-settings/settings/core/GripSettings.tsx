@@ -1,51 +1,9 @@
-/**
- * GripSettings Component
- *
- * @description
- * Grip settings UI component για Preview mode.
- * Διαχειρίζεται grip size, colors (cold/warm/hot), show/hide toggles.
- *
- * @features
- * - 📏 Grip size control (2-20 pixel range)
- * - 🎨 AutoCAD ACI color standards (Cold/Warm/Hot states)
- * - 👁️ Show/hide toggles (showGrips, showEdgeGrips, showCenterGrips)
- * - 🔄 Accordion sections (Basic/Colors/Visibility/Advanced)
- * - ✅ AutoCAD-compatible color system
- *
- * @accordion_sections
- * 1. **Basic Settings** - Grip size (2-20 pixels)
- * 2. **Grip Colors** - Cold (unselected), Warm (hover), Hot (selected)
- * 3. **Visibility** - Show Grips, Edge Grips, Center Grips toggles
- * 4. **Advanced** - Opacity, Border width
- *
- * @autocad_color_standards
- * - **Cold (Unselected)**: AutoCAD ACI 5 (Blue #0000FF)
- * - **Warm (Hover)**: AutoCAD ACI 2 (Yellow #FFFF00)
- * - **Hot (Selected)**: AutoCAD ACI 1 (Red #FF0000)
- *
- * @usage
- * ```tsx
- * // In EntitiesSettings - Preview tab
- * <GripSettings />
- * ```
- *
- * @see {@link docs/settings-system/05-UI_COMPONENTS.md#gripsettings-component} - Full documentation
- * @see {@link docs/settings-system/02-COLORPALETTEPANEL.md} - Parent component
- * @see {@link ui/hooks/useUnifiedSpecificSettings.ts} - useUnifiedGripPreview hook
- *
- * @author Γιώργος Παγώνης + Claude Code (Anthropic AI)
- * @since 2025-10-06
- * @version 1.0.0
- */
-
 'use client';
 
-import React, { useState } from 'react';
-import { useGripSettingsFromProvider } from '../../../../../providers/DxfSettingsProvider';
+import React from 'react';
+import { useUnifiedGripPreview } from '../../../../hooks/useUnifiedSpecificSettings';
 import { AccordionSection, useAccordion } from '../shared/AccordionSection';
-import type { GripSettings } from '../../../../../types/gripSettings';
-import { BaseModal } from '../../../../../components/shared/BaseModal';
-import { useNotifications } from '../../../../../../../providers/NotificationProvider';
+import type { GripSettings } from '../../../../types/gripSettings';
 
 // SVG Icons για τα accordion sections
 const CogIcon = ({ className }: { className?: string }) => (
@@ -74,57 +32,19 @@ const AdjustmentsIcon = ({ className }: { className?: string }) => (
 );
 
 export function GripSettings() {
-  // ✅ ΔΙΟΡΘΩΣΗ: Χρήση Provider hook για να μοιραστούμε το state με την ColorPalettePanel
-  const { settings: gripSettings, updateSettings: updateGripSettings, resetToDefaults, resetToFactory } = useGripSettingsFromProvider();
+  // 🎯 ΔΙΟΡΘΩΣΗ: Χρήση unified hook αντί για γενικό για override λειτουργικότητα
+  const { settings: { gripSettings }, updateGripSettings, resetToDefaults } = useUnifiedGripPreview();
 
-  // Notifications for factory reset feedback
-  const notifications = useNotifications();
-
-  // Factory reset modal state
-  const [showFactoryResetModal, setShowFactoryResetModal] = useState(false);
+  // ✅ HOOKS FIRST: All hooks must be called before any conditional returns (React Rules of Hooks)
+  const { toggleSection, isOpen } = useAccordion('basic');
 
   // ✅ ΠΡΑΓΜΑΤΙΚΗ ΔΙΟΡΘΩΣΗ: Απλό fallback αν gripSettings είναι null/undefined ή δεν έχουν τις απαραίτητες properties
   if (!gripSettings || typeof gripSettings.gripSize === 'undefined') {
     return <div>Loading grip settings...</div>;
   }
 
-  // Accordion state management
-  const { toggleSection, isOpen } = useAccordion('basic');
-
   const updateSettings = (updates: Partial<GripSettings>) => {
     updateGripSettings(updates);
-  };
-
-  // Factory reset handlers
-  const handleFactoryResetClick = () => {
-    setShowFactoryResetModal(true);
-  };
-
-  const handleFactoryResetConfirm = () => {
-    if (resetToFactory) {
-      resetToFactory();
-      console.log('🏭 [GripSettings] Factory reset confirmed - resetting to AutoCAD defaults');
-
-      // Close modal
-      setShowFactoryResetModal(false);
-
-      // Toast notification για επιτυχία
-      notifications.success(
-        '🏭 Εργοστασιακές ρυθμίσεις επαναφέρθηκαν!',
-        {
-          description: 'Όλες οι ρυθμίσεις grips επέστρεψαν στα πρότυπα AutoCAD.',
-          duration: 5000
-        }
-      );
-    }
-  };
-
-  const handleFactoryResetCancel = () => {
-    console.log('🏭 [GripSettings] Factory reset cancelled by user');
-    setShowFactoryResetModal(false);
-
-    // Toast notification για ακύρωση
-    notifications.info('❌ Ακυρώθηκε η επαναφορά εργοστασιακών ρυθμίσεων');
   };
 
   return (
@@ -132,24 +52,12 @@ export function GripSettings() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-medium text-white">Ρυθμίσεις Grips</h3>
-        <div className="flex gap-2">
-          <button
-            onClick={resetToDefaults}
-            className="px-3 py-1 text-xs bg-gray-600 hover:bg-gray-500 text-white rounded transition-colors"
-            title="Επαναφορά στις προεπιλεγμένες ρυθμίσεις"
-          >
-            Επαναφορά
-          </button>
-          {resetToFactory && (
-            <button
-              onClick={handleFactoryResetClick}
-              className="px-3 py-1 text-xs bg-red-700 hover:bg-red-600 text-white rounded transition-colors font-semibold"
-              title="Επαναφορά στις εργοστασιακές ρυθμίσεις (AutoCAD)"
-            >
-              🏭 Εργοστασιακές
-            </button>
-          )}
-        </div>
+        <button
+          onClick={resetToDefaults}
+          className="px-3 py-1 text-xs bg-gray-600 hover:bg-gray-500 text-white rounded transition-colors"
+        >
+          Επαναφορά
+        </button>
       </div>
 
       {/* Enable/Disable Grips */}
@@ -184,7 +92,7 @@ export function GripSettings() {
           icon={<CogIcon className="w-4 h-4" />}
           isOpen={isOpen('basic')}
           onToggle={() => toggleSection('basic')}
-          disabled={!gripSettings.enabled}
+          disabled={false}
           badge={3}
         >
           <div className="space-y-4">
@@ -251,7 +159,7 @@ export function GripSettings() {
           icon={<ColorSwatchIcon className="w-4 h-4" />}
           isOpen={isOpen('colors')}
           onToggle={() => toggleSection('colors')}
-          disabled={!gripSettings.enabled}
+          disabled={false}
           badge={4}
         >
           <div className="grid grid-cols-2 gap-4">
@@ -290,13 +198,13 @@ export function GripSettings() {
                 />
                 <input
                   type="color"
-                  value={gripSettings.colors.warm || '#ffffff'}
+                  value={gripSettings.colors.warm || '#00FF80'}
                   onChange={(e) => updateSettings({ colors: { ...gripSettings.colors, warm: e.target.value } })}
                   className="w-20 h-10 bg-gray-700 border border-gray-600 rounded cursor-pointer"
                 />
                 <input
                   type="text"
-                  value={gripSettings.colors.warm || '#ffffff'}
+                  value={gripSettings.colors.warm || '#00FF80'}
                   onChange={(e) => updateSettings({ colors: { ...gripSettings.colors, warm: e.target.value } })}
                   className="w-16 px-1 py-1 bg-gray-700 border border-gray-600 rounded text-white text-xs"
                   placeholder="#ffff00"
@@ -360,7 +268,7 @@ export function GripSettings() {
           icon={<ViewGridIcon className="w-4 h-4" />}
           isOpen={isOpen('types')}
           onToggle={() => toggleSection('types')}
-          disabled={!gripSettings.enabled}
+          disabled={false}
           badge={3}
         >
           <div className="space-y-2">
@@ -403,7 +311,7 @@ export function GripSettings() {
           icon={<AdjustmentsIcon className="w-4 h-4" />}
           isOpen={isOpen('advanced')}
           onToggle={() => toggleSection('advanced')}
-          disabled={!gripSettings.enabled}
+          disabled={false}
           badge={6}
         >
           <div className="space-y-4">
@@ -549,64 +457,6 @@ export function GripSettings() {
           </div>
         </AccordionSection>
       </div>
-
-      {/* 🆕 ENTERPRISE FACTORY RESET CONFIRMATION MODAL */}
-      <BaseModal
-        isOpen={showFactoryResetModal}
-        onClose={handleFactoryResetCancel}
-        title="⚠️ Επαναφορά Εργοστασιακών Ρυθμίσεων"
-        size="md"
-        closeOnBackdrop={false}
-        zIndex={10000}
-      >
-        <div className="space-y-4">
-          {/* Warning Message */}
-          <div className="bg-red-900 bg-opacity-20 border-l-4 border-red-500 p-4 rounded">
-            <p className="text-red-200 font-semibold mb-2">
-              ⚠️ ΠΡΟΕΙΔΟΠΟΙΗΣΗ: Θα χάσετε ΟΛΑ τα δεδομένα σας!
-            </p>
-          </div>
-
-          {/* Loss List */}
-          <div className="space-y-2">
-            <p className="text-gray-300 font-medium">Θα χάσετε:</p>
-            <ul className="list-disc list-inside space-y-1 text-gray-400 text-sm">
-              <li>Όλες τις προσαρμοσμένες ρυθμίσεις grips</li>
-              <li>Όλα τα templates που έχετε επιλέξει</li>
-              <li>Όλες τις αλλαγές που έχετε κάνει</li>
-            </ul>
-          </div>
-
-          {/* Reset Info */}
-          <div className="bg-blue-900 bg-opacity-20 border-l-4 border-blue-500 p-4 rounded">
-            <p className="text-blue-200 text-sm">
-              <strong>Επαναφορά:</strong> Οι ρυθμίσεις θα επανέλθουν στα πρότυπα AutoCAD
-            </p>
-          </div>
-
-          {/* Confirmation Question */}
-          <p className="text-white font-medium text-center pt-2">
-            Είστε σίγουροι ότι θέλετε να συνεχίσετε;
-          </p>
-
-          {/* Action Buttons */}
-          <div className="flex gap-3 justify-end pt-4 border-t border-gray-700">
-            <button
-              onClick={handleFactoryResetCancel}
-              className="px-4 py-2 text-sm bg-gray-600 hover:bg-gray-500 text-white rounded transition-colors"
-            >
-              Ακύρωση
-            </button>
-            <button
-              onClick={handleFactoryResetConfirm}
-              className="px-4 py-2 text-sm bg-red-700 hover:bg-red-600 text-white rounded transition-colors font-semibold"
-            >
-              🏭 Επαναφορά Εργοστασιακών
-            </button>
-          </div>
-        </div>
-      </BaseModal>
-
     </div>
   );
 }

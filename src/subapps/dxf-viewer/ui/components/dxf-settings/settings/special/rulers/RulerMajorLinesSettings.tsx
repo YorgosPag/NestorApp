@@ -41,7 +41,7 @@
 'use client';
 
 import React from 'react';
-import { useRulersGridContext } from '../../../../../../../systems/rulers-grid/RulersGridSystem';
+import { useRulersGridContext } from '../../../../../../systems/rulers-grid/RulersGridSystem';
 
 export interface RulerMajorLinesSettingsProps {
   className?: string;

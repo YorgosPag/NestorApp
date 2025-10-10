@@ -105,8 +105,9 @@ export function LevelPanel({
     ? overlayStore.getByLevel(currentLevelId)
     : [];
     
+  // ✅ ENTERPRISE: Proper typing for levelScenes (SceneModel instead of unknown)
   const levelScenes = useMemo(() => {
-    const scenes: Record<string, unknown> = {};
+    const scenes: Record<string, SceneModel> = {};
     if (levels && getLevelScene) {
       levels.forEach(level => {
         const scene = getLevelScene(level.id);
@@ -293,20 +294,12 @@ export function LevelPanel({
                       />
                     </div>
                   ) : (
-                    <div className="flex-1 cursor-pointer" onClick={(e) => {
-
+                    <div className="flex-1 cursor-pointer" onClick={() => {
                       setCurrentLevel(level.id);
-                      // Auto-activate grip-edit tool for layer editing
-                      if (currentTool !== 'grip-edit' && onToolChange) {
-
-                        onToolChange('grip-edit');
-                      }
-                      // Show toolbox when level is selected
-                      handleLayeringActivation();
-
-                      // ✅ ΧΡΗΣΗ ΥΠΑΡΧΟΝΤΟΣ EVENT SYSTEM: Dispatch layering activation
+                      if (currentTool !== 'grip-edit' && onToolChange) onToolChange('grip-edit');
+                      // ✅ FIX (ChatGPT-5): ONLY one activation path - via event (removed direct call to handleLayeringActivation)
                       window.dispatchEvent(new CustomEvent('level-panel:layering-activate', {
-                        detail: { levelId: level.id }
+                        detail: { levelId: level.id, origin: 'card' }
                       }));
                     }}>
                       <div className="font-medium">{level.name}</div>
@@ -389,7 +382,6 @@ export function LevelPanel({
             onLayerDelete={onLayerDelete}
             onLayerColorChange={onLayerColorChange}
             onLayerRename={onLayerRename}
-            onLayerCreate={onLayerCreate}
             onEntityToggle={onEntityToggle}
             onEntityDelete={onEntityDelete}
             onEntityColorChange={onEntityColorChange}

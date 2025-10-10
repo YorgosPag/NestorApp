@@ -21,6 +21,14 @@ import {
   RulerSettingsUpdate,
   GridSettingsUpdate
 } from './config';
+
+// ✅ ENTERPRISE: Window interface extension for debug globals
+declare global {
+  interface Window {
+    __GRID_SETTINGS__?: GridSettings;
+    __RULER_SETTINGS__?: RulerSettings;
+  }
+}
 import { RulersGridCalculations, RulersGridRendering, RulersGridSnapping } from './utils';
 import { setRulersGridContext, type RulersGridHookReturn } from './useRulersGrid';
 import { RulersGridSystemProps, DEFAULT_ORIGIN } from './types';
@@ -28,7 +36,7 @@ import { useRulerManagement } from './useRulerManagement';
 import { useGridManagement } from './useGridManagement';
 import { useSnapManagement } from './useSnapManagement';
 import { useRenderingCalculations } from './useRenderingCalculations';
-import { globalGridStore, globalRulerStore } from '../../providers/DxfSettingsProvider';
+import { globalGridStore, globalRulerStore } from '../../settings-provider';
 
 function useRulersGridSystemIntegration({
   initialRulerSettings = {},
@@ -261,8 +269,8 @@ function useRulersGridSystemIntegration({
           style: grid.visual.style || 'lines' // Always ensure style is set
         }
       };
-      (window as any).__GRID_SETTINGS__ = gridWithStyle;
-      (window as any).__RULER_SETTINGS__ = rulers;
+      window.__GRID_SETTINGS__ = gridWithStyle;
+      window.__RULER_SETTINGS__ = rulers;
     }
   }, [grid, rulers]);
 

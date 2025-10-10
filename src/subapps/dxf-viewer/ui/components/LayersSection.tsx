@@ -8,7 +8,6 @@
 import React from 'react';
 import { Layers } from 'lucide-react';
 import type { SceneModel } from '../../types/scene';
-import type { EntityOperations, ColorGroupOperations } from '../../types/shared';
 import { ColorPickerModal } from './layers/components/ColorPickerModal';
 import { MergePanel } from './layers/components/MergePanel';
 import { SearchInput } from './layers/components/SearchInput';
@@ -20,21 +19,32 @@ import { useSearchFilter } from './layers/hooks/useSearchFilter';
 import { useLayersCallbacks } from './layers/hooks/useLayersCallbacks';
 import { useKeyboardNavigation } from './layers/hooks/useKeyboardNavigation';
 
-interface LayersSectionProps extends EntityOperations, ColorGroupOperations {
+// ✅ ENTERPRISE: Inline type definitions (matching LevelPanel.tsx)
+interface LayersSectionProps {
   scene: SceneModel | null;
   selectedEntityIds: string[];
   onEntitySelectionChange?: (entityIds: string[]) => void;
+  // Layer operations
   onLayerToggle?: (layerName: string, visible: boolean) => void;
   onLayerDelete?: (layerName: string) => void;
   onLayerColorChange?: (layerName: string, color: string) => void;
   onLayerRename?: (oldName: string, newName: string) => void;
+  // Entity operations (inline instead of extending EntityOperations)
+  onEntityToggle?: (entityId: string, visible: boolean) => void;
+  onEntityDelete?: (entityId: string) => void;
+  onEntityColorChange?: (entityId: string, color: string) => void;
+  onEntityRename?: (entityId: string, newName: string) => void;
+  // Color group operations (inline instead of extending ColorGroupOperations)
+  onColorGroupToggle?: (colorGroupName: string, layersInGroup: string[], visible: boolean) => void;
+  onColorGroupDelete?: (colorGroupName: string, layersInGroup: string[]) => void;
+  onColorGroupColorChange?: (colorGroupName: string, layersInGroup: string[], color: string) => void;
   // Merge operations
   onEntitiesMerge?: (targetEntityId: string, sourceEntityIds: string[]) => void;
   onLayersMerge?: (targetLayerName: string, sourceLayerNames: string[]) => void;
   onColorGroupsMerge?: (targetColorGroup: string, sourceColorGroups: string[]) => void;
-  // Expansion state
-  expandedKeys: Set<string>;
-  onExpandChange: (next: Set<string>) => void;
+  // Expansion state (optional - matching LevelPanel props)
+  expandedKeys?: Set<string>;
+  onExpandChange?: (next: Set<string>) => void;
 }
 
 export function LayersSection({
@@ -55,8 +65,8 @@ export function LayersSection({
   onEntitiesMerge,
   onLayersMerge,
   onColorGroupsMerge,
-  expandedKeys,
-  onExpandChange
+  expandedKeys = new Set<string>(), // ✅ ENTERPRISE: Default value for optional prop
+  onExpandChange = () => {} // ✅ ENTERPRISE: Default no-op function for optional prop
 }: LayersSectionProps) {
 
   // Use custom hooks for state management
