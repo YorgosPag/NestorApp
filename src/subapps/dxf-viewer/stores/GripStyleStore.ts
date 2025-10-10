@@ -20,6 +20,16 @@ export interface GripStyle {
   apertureSize: number;
   showGrips: boolean;
   opacity: number;
+  // ✅ ENTERPRISE: Additional grip settings (from GripSettings)
+  showAperture: boolean;      // Show aperture box (AutoCAD APBOX)
+  multiGripEdit: boolean;      // Enable multi-grip editing
+  snapToGrips: boolean;        // Snap to grip points
+  showGripTips: boolean;       // Show grip tooltips
+  dpiScale: number;            // DPI scaling factor
+  showMidpoints: boolean;      // Show midpoint grips
+  showCenters: boolean;        // Show center grips
+  showQuadrants: boolean;      // Show quadrant grips
+  maxGripsPerEntity: number;   // Maximum grips per entity
 }
 
 import { useSyncExternalStore } from 'react';
@@ -37,7 +47,17 @@ let current: GripStyle = {
   pickBoxSize: 3,
   apertureSize: 20,
   showGrips: true,
-  opacity: 1.0
+  opacity: 1.0,
+  // ✅ ENTERPRISE: Additional grip settings defaults
+  showAperture: true,       // ✅ AutoCAD APBOX default: enabled
+  multiGripEdit: true,      // ✅ ΑΠΟΚΑΤΑΣΤΑΣΗ: Ενεργοποίηση multi grips
+  snapToGrips: true,        // ✅ ΑΠΟΚΑΤΑΣΤΑΣΗ: Ενεργοποίηση snap to grips
+  showGripTips: false,      // ✅ Grip tooltips disabled by default
+  dpiScale: 1.0,            // ✅ Default DPI scale
+  showMidpoints: true,      // ✅ Show midpoint grips
+  showCenters: true,        // ✅ Show center grips
+  showQuadrants: true,      // ✅ Show quadrant grips
+  maxGripsPerEntity: 50     // ✅ Maximum grips per entity
 };
 
 const listeners = new Set<Listener>();

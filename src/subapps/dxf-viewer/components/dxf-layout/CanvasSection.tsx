@@ -20,7 +20,7 @@ import { useOverlayStore } from '../../overlays/overlay-store';
 import { useLevels } from '../../systems/levels';
 import { useRulersGridContext } from '../../systems/rulers-grid/RulersGridSystem';
 import { useCursorSettings } from '../../systems/cursor';
-import { globalRulerStore } from '../../providers/DxfSettingsProvider';
+import { globalRulerStore } from '../../settings-provider';
 import type { DXFViewerLayoutProps } from '../../integration/types';
 import type { OverlayEditorMode, Status, OverlayKind } from '../../overlays/types';
 import { getStatusColors } from '../../config/color-mapping';

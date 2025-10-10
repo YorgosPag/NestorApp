@@ -20,11 +20,15 @@ import type { ToolType } from '../ui/toolbar/types';
 import { DXFViewerLayout } from '../integration/DXFViewerLayout';
 import { DebugToolbar } from '../debug/DebugToolbar';
 import type { UnifiedTestReport } from '../debug/unified-test-runner';
+import type { DxfViewerState } from '../integration/types';
 
 // ✅ ENTERPRISE: Comprehensive type-safe props interface
 interface MainContentSectionProps {
   // State from useDxfViewerState
-  state: any; // TODO: Create proper DxfViewerState type
+  state: DxfViewerState & {
+    handleAction?: (action: string, data?: unknown) => void;
+    onAction?: (action: string, data?: unknown) => void;
+  };
 
   // Scene and file handling
   currentScene: SceneModel | null;

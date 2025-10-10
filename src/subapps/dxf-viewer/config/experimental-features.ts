@@ -14,12 +14,17 @@ export const EXPERIMENTAL_FEATURES = {
   ADVANCED_SNAPPING: true,
   MULTI_LAYER_GRIPS: true,
 
-  // 🆕 PHASE 3: Enterprise Settings System (Migration Phases 1-8)
-  // Set to true to enable enterprise provider in shadow mode (validation only)
-  ENTERPRISE_SETTINGS_SHADOW_MODE: false,
+  // 🆕 PHASE 4: Enterprise Settings System - Shadow Mode ENABLED
+  // Enterprise provider validates data while old provider renders UI
+  ENTERPRISE_SETTINGS_SHADOW_MODE: true,
 
-  // 🆕 PHASE 6: Enable enterprise provider as primary (replaces old provider)
+  // 🆕 PHASE 6: Production Mode (Future - After Conference)
+  // Enterprise provider as primary - requires full migration
   ENTERPRISE_SETTINGS_PRODUCTION_MODE: false,
+
+  // 🆕 PORTS & ADAPTERS: Store Sync with Dependency Injection
+  // Enables decoupled store synchronization via ports
+  ENABLE_SETTINGS_SYNC: true,
 } as const;
 
 export function isFeatureEnabled(feature: keyof typeof EXPERIMENTAL_FEATURES): boolean {
