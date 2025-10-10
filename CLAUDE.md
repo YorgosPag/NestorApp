@@ -1,6 +1,50 @@
 Κείμενο οδηγίας
 
 Θα μου μιλάς πάντοτε στα ελληνικά.
+
+---
+
+# 🏢 ENTERPRISE CODE STANDARDS (ΥΨΙΣΤΗ ΠΡΟΤΕΡΑΙΟΤΗΤΑ)
+
+## ⚠️ ΑΠΑΓΟΡΕΥΣΕΙΣ - ZERO TOLERANCE
+
+### ❌ ΑΠΑΓΟΡΕΥΕΤΑΙ ΑΠΟΛΥΤΑ:
+
+1. **`as any`** - Η χρήση του `as any` είναι **ΑΠΑΓΟΡΕΥΜΕΝΗ**
+   - Αυτό είναι **μπακάλικο γειτονιάς**, όχι enterprise λύση
+   - Χρησιμοποίησε: Function overloads, discriminated unions, proper types
+
+2. **`@ts-ignore`** - Η χρήση του `@ts-ignore` είναι **ΑΠΑΓΟΡΕΥΜΕΝΗ**
+   - Αυτό κρύβει προβλήματα αντί να τα λύνει
+   - Χρησιμοποίησε: Proper TypeScript types, module resolution
+
+3. **`any` type** - Η χρήση του `any` είναι **ΑΠΑΓΟΡΕΥΜΕΝΗ**
+   - Χρησιμοποίησε: Generics (`<T>`), union types, proper interfaces
+
+### ✅ ENTERPRISE ΛΥΣΕΙΣ:
+
+**Αντί για:**
+```typescript
+const value = someValue as any; // ❌ ΜΠΑΚΑΛΙΚΟ
+```
+
+**Χρησιμοποίησε:**
+```typescript
+// ✅ ENTERPRISE: Function overloads
+export function myFunction(value: string): Result;
+export function myFunction(value: number): Result;
+export function myFunction(value: string | number): Result {
+  const result = typeof value === 'string'
+    ? { type: 'string' as const, value }
+    : { type: 'number' as const, value };
+  return result;
+}
+```
+
+**Κανόνας:** Κάθε λύση πρέπει να είναι **enterprise-class**, όχι **μπακάλικο γειτονιάς**!
+
+---
+
 # ΔΕΚΑΛΟΓΟΣ ΕΡΓΑΣΙΑΣ
 
 ## 💙 ΜΗΝΥΜΑ ΣΥΝΕΡΓΑΣΙΑΣ

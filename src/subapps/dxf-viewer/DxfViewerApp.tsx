@@ -27,9 +27,28 @@ import type { DxfViewerAppProps } from './types';
 import { StyleManagerProvider } from './providers/StyleManagerProvider';
 // ===== ΚΕΝΤΡΙΚΟΣ AUTO-SAVE PROVIDER =====
 // 🔄 MIGRATED (2025-10-09): Phase 3.2 - Direct Enterprise
-import { EnterpriseDxfSettingsProvider as DxfSettingsProvider } from './providers/EnterpriseDxfSettingsProvider';
+import { EnterpriseDxfSettingsProvider as DxfSettingsProvider } from './settings-provider';
+// ===== PORTS & ADAPTERS COMPOSITION ROOT =====
+import { createSyncDependencies } from './settings/sync/compositionRoot';
+import { useMemo } from 'react';
+import { EXPERIMENTAL_FEATURES } from './config/experimental-features';
 
 export function DxfViewerApp(props: DxfViewerAppProps) {
+  // ===== DEPENDENCY INJECTION (Composition Root) =====
+  // Create sync dependencies ONCE (stable reference)
+  const syncDeps = useMemo(() => {
+    return createSyncDependencies({
+      enableSync: EXPERIMENTAL_FEATURES.ENABLE_SETTINGS_SYNC, // Feature flag
+      ports: {
+        toolStyle: true,
+        textStyle: true,
+        gripStyle: true,
+        grid: true,
+        ruler: true
+      }
+    });
+  }, []); // Empty deps - create once and never change
+
   // Debug logging removed for performance
   return (
     <NotificationProvider>
@@ -39,7 +58,7 @@ export function DxfViewerApp(props: DxfViewerAppProps) {
           {/* 🗑️ REMOVED: ConfigurationProvider - MERGED into DxfSettingsProvider */}
               <ProjectHierarchyProvider>
                 {/* ===== ΚΕΝΤΡΙΚΟΣ AUTO-SAVE PROVIDER (πρώτα από όλα) ===== */}
-                <DxfSettingsProvider enabled={true}>
+                <DxfSettingsProvider enabled={true} syncDeps={syncDeps}>
                   <StyleManagerProvider>
                 {/* LineSettingsProvider REMOVED - χρησιμοποιείται πλέον μόνο το DxfSettingsProvider */}
                 {/* TextSettingsProvider REMOVED - χρησιμοποιείται πλέον μόνο το DxfSettingsProvider */}
