@@ -17,6 +17,28 @@ import type { OverlayEditorMode, OverlayKind, Status } from '../overlays/types';
 import type { ViewTransform, Point2D } from '../rendering/types/Types';
 import type { ToolType } from '../ui/toolbar/types';
 
+// ✅ ENTERPRISE: Window interface extension for debug functions
+interface WorkflowStepResult {
+  step: string;
+  status: 'success' | 'failed';
+  error?: string;
+  durationMs: number;
+}
+
+interface WorkflowTestResult {
+  success: boolean;
+  steps: WorkflowStepResult[];
+  layerDisplayed: boolean;
+  reportTime: string;
+}
+
+declare global {
+  interface Window {
+    showCopyableNotification?: (message: string, type?: 'success' | 'info' | 'warning' | 'error') => void;
+    runLayeringWorkflowTest?: () => Promise<WorkflowTestResult>;
+  }
+}
+
 // Hooks
 import { useDxfViewerState } from '../hooks/useDxfViewerState';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
@@ -35,7 +57,7 @@ import { useColorMenuState } from '../hooks/state/useColorMenuState';
 import { useOverlayStore } from '../overlays/overlay-store';
 import { useLevelManager } from '../systems/levels/useLevels';
 import { useGripContext } from '../providers/GripProvider';
-import { globalRulerStore } from '../providers/DxfSettingsProvider';
+import { globalRulerStore } from '../settings-provider';
 
 // UI Components
 import { FloatingPanelContainer, type FloatingPanelHandle } from '../ui/FloatingPanelContainer';
@@ -113,9 +135,9 @@ export function DxfViewerContent(props: DxfViewerAppProps) {
 
   // Expose showCopyableNotification to window for debug overlays
   React.useEffect(() => {
-    (window as any).showCopyableNotification = showCopyableNotification;
+    window.showCopyableNotification = showCopyableNotification;
     return () => {
-      delete (window as any).showCopyableNotification;
+      delete window.showCopyableNotification;
     };
   }, [showCopyableNotification]);
 
@@ -255,10 +277,10 @@ export function DxfViewerContent(props: DxfViewerAppProps) {
         console.log('🎯 Ctrl+F2 SHORTCUT: LAYERING WORKFLOW TEST TRIGGERED');
 
         // Direct call to window function
-        if ((window as any).runLayeringWorkflowTest) {
-          (window as any).runLayeringWorkflowTest().then((result: any) => {
+        if (window.runLayeringWorkflowTest) {
+          window.runLayeringWorkflowTest().then((result) => {
             console.log('📊 LAYERING WORKFLOW RESULT:', result);
-            const successSteps = result.steps.filter((s: any) => s.status === 'success').length;
+            const successSteps = result.steps.filter((s) => s.status === 'success').length;
             const totalSteps = result.steps.length;
             const summary = `Workflow: ${result.success ? '✅ SUCCESS' : '❌ FAILED'}\nSteps: ${successSteps}/${totalSteps}\nLayer Displayed: ${result.layerDisplayed ? '✅ YES' : '❌ NO'}`;
             showCopyableNotification(summary, result.success ? 'success' : 'error');
@@ -267,9 +289,9 @@ export function DxfViewerContent(props: DxfViewerAppProps) {
           // Fallback to import
           import('../debug/layering-workflow-test').then(module => {
             const runLayeringWorkflowTest = module.runLayeringWorkflowTest;
-            runLayeringWorkflowTest().then((result: any) => {
+            runLayeringWorkflowTest().then((result) => {
               console.log('📊 LAYERING WORKFLOW RESULT:', result);
-              const successSteps = result.steps.filter((s: any) => s.status === 'success').length;
+              const successSteps = result.steps.filter((s) => s.status === 'success').length;
               const totalSteps = result.steps.length;
               const summary = `Workflow: ${result.success ? '✅ SUCCESS' : '❌ FAILED'}\nSteps: ${successSteps}/${totalSteps}\nLayer Displayed: ${result.layerDisplayed ? '✅ YES' : '❌ NO'}`;
               showCopyableNotification(summary, result.success ? 'success' : 'error');
@@ -283,10 +305,10 @@ export function DxfViewerContent(props: DxfViewerAppProps) {
       if (event.key === 'F12') {
         event.preventDefault();
         console.log('🎯 F12 SHORTCUT: LAYERING WORKFLOW TEST TRIGGERED');
-        if ((window as any).runLayeringWorkflowTest) {
-          (window as any).runLayeringWorkflowTest().then((result: any) => {
+        if (window.runLayeringWorkflowTest) {
+          window.runLayeringWorkflowTest().then((result) => {
             console.log('📊 LAYERING WORKFLOW RESULT:', result);
-            const successSteps = result.steps.filter((s: any) => s.status === 'success').length;
+            const successSteps = result.steps.filter((s) => s.status === 'success').length;
             const totalSteps = result.steps.length;
             const summary = `Workflow: ${result.success ? '✅ SUCCESS' : '❌ FAILED'}\nSteps: ${successSteps}/${totalSteps}\nLayer Displayed: ${result.layerDisplayed ? '✅ YES' : '❌ NO'}`;
             showCopyableNotification(summary, result.success ? 'success' : 'error');
@@ -638,19 +660,29 @@ Check console for detailed metrics`;
   }, [overlayStore, showLayers, handleAction, levelManager]);
 
   // Enable grips for selected entities in select mode, grip-edit mode, and layering modes
+  // ✅ ENTERPRISE: ChatGPT5 Solution - Track previous values to prevent unnecessary updates
+  const prevGripStateRef = React.useRef<{ shouldEnableGrips: boolean } | null>(null);
+
   React.useEffect(() => {
     // Νέο: κρατάμε τα grips ενεργά ΚΑΙ στο overlayMode: 'draw' (layering)
-    const shouldEnableGrips = 
-      activeTool === 'select' || 
+    const shouldEnableGrips =
+      activeTool === 'select' ||
       activeTool === 'grip-edit' ||
       (activeTool === 'layering' && (overlayMode === 'edit' || overlayMode === 'draw'));
+
+    // ✅ ENTERPRISE: Guard - Skip if nothing changed (ChatGPT5 solution)
+    if (prevGripStateRef.current?.shouldEnableGrips === shouldEnableGrips) {
+      return;
+    }
+
+    prevGripStateRef.current = { shouldEnableGrips };
 
     updateGripSettings({
       showGrips: shouldEnableGrips,
       multiGripEdit: true,
       snapToGrips: true,
     });
-  }, [activeTool, overlayMode, updateGripSettings]);
+  }, [activeTool, overlayMode, updateGripSettings]); // ✅ Keep updateGripSettings but guard prevents loops
 
   // Sync level manager currentLevelId with overlay store
   React.useEffect(() => {
@@ -806,7 +838,7 @@ Check console for detailed metrics`;
 
       {/* ✅ PHASE 5: Main Content Section */}
       <MainContentSection
-        state={wrappedState as any}
+        state={wrappedState}
         currentScene={currentScene}
         handleFileImportWithEncoding={handleFileImportWithEncoding}
         canvasTransform={canvasTransform}
