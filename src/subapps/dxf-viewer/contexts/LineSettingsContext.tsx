@@ -6,7 +6,7 @@ import { getDashArray } from '../settings-core/defaults';
 // ===== ΝΕΑ UNIFIED PROVIDERS (για internal use) =====
 import { useViewerConfig } from '../providers/ConfigurationProvider';
 // ===== ΚΕΝΤΡΙΚΟ AUTO-SAVE ΣΎΣΤΗΜΑ =====
-import { useLineSettingsFromProvider } from '../providers/DxfSettingsProvider';
+import { useLineSettingsFromProvider } from '../settings-provider';
 // ===== OVERRIDE GUARD SYSTEM =====
 import { guardGlobalAccess } from '../../../utils/overrideGuard';
 

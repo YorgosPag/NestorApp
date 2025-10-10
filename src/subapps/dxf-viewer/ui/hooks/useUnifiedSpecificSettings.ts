@@ -61,9 +61,10 @@ import {
   useLineCompletionSettings,
   useTextDraftSettings,
   useGripDraftSettings
-} from '../../providers/DxfSettingsProvider';
+} from '../../settings-provider';
 import type { LineSettings } from '../../settings-core/types';
 import type { TextSettings } from '../../contexts/TextSettingsContext';
+import type { GripSettings } from '../../types/gripSettings';
 
 // Default settings για διαφορετικούς τύπους
 
@@ -267,7 +268,8 @@ export function useUnifiedGripPreview() {
         providerHook.toggleOverride(updates.overrideGlobalSettings);
       }
       if (updates.gripSettings) {
-        providerHook.updateSettings(updates.gripSettings as any);
+        // ✅ ENTERPRISE: MockGripSettings is compatible with GripSettings
+        providerHook.updateSettings(updates.gripSettings as Partial<GripSettings>);
       }
     },
     updateGripSettings: providerHook.updateSettings,

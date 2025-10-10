@@ -14,6 +14,10 @@ export interface TextPreviewStyle {
   fontStyle: string;
   textDecoration: string;
   opacity: number;
+  isBold?: boolean;          // Boolean text styling (backward compatibility)
+  isItalic?: boolean;
+  isUnderline?: boolean;
+  isStrikethrough?: boolean;
   isSuperscript: boolean;
   isSubscript: boolean;
 }
@@ -63,7 +67,7 @@ export function getTextPreviewStyleWithOverride(): TextPreviewStyle {
     const specificSettings = draftTextSettingsStore.settings;
 
     // Helper function για text decoration από specific settings
-    const getSpecificTextDecoration = (settings: { isUnderline?: boolean; isStrikethrough?: boolean }): string => {
+    const getSpecificTextDecoration = (settings: Partial<TextPreviewStyle>): string => {
       const decorations: string[] = [];
       if (settings.isUnderline) decorations.push('underline');
       if (settings.isStrikethrough) decorations.push('line-through');

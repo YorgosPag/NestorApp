@@ -1,24 +1,43 @@
 /**
  * OVERRIDE SYSTEM MANAGEMENT HOOK
  * Καθαρή διαχείριση του override system για όλα τα entities
+ *
+ * 🔄 MIGRATED (2025-10-09): Phase 3.2 - Direct Enterprise (no adapter)
+ * OLD: useViewerConfig (ConfigurationProvider - DELETED)
+ * NEW: useDxfSettings (Enterprise provider)
  */
 
 import { useCallback, useMemo } from 'react';
-import { useViewerConfig } from '../providers/ConfigurationProvider';
+// 🔄 MIGRATION: Phase 3.2 - Direct Enterprise (no adapter)
+import { useDxfSettings } from '../settings-provider';
 import type { EntityType, OverrideSystemHookResult } from '../types/viewerConfiguration';
 
 // ===== MAIN HOOK =====
 
 export function useOverrideSystem(): OverrideSystemHookResult {
-  const { config, updateEntityConfig } = useViewerConfig();
+  // 🔄 MIGRATED: Direct Enterprise (no adapter)
+  const dxfSettings = useDxfSettings();
+
+  // Safety check - should always exist but protect against edge cases
+  if (!dxfSettings) {
+    throw new Error('useOverrideSystem must be used within DxfSettingsProvider');
+  }
+
+  const {
+    settings,
+    toggleLineOverride,
+    toggleTextOverride,
+    toggleGripOverride
+  } = dxfSettings;
 
   // ===== CURRENT STATE =====
 
   const overrideStates = useMemo(() => ({
-    line: config.entities.line.overrideEnabled,
-    text: config.entities.text.overrideEnabled,
-    grip: config.entities.grip.overrideEnabled
-  }), [config.entities]);
+    // 🔄 MIGRATED: Access override flags from settings state
+    line: settings.overrideEnabled.line.draft, // Use draft mode as default
+    text: settings.overrideEnabled.text.draft,
+    grip: settings.overrideEnabled.grip.draft
+  }), [settings.overrideEnabled]);
 
   // ===== UTILITY METHODS =====
 
@@ -27,23 +46,51 @@ export function useOverrideSystem(): OverrideSystemHookResult {
   }, [overrideStates]);
 
   const toggle = useCallback((entityType: EntityType) => {
+    // 🔄 MIGRATED: Use specific toggle methods from adapter
     const currentState = overrideStates[entityType];
-    updateEntityConfig(entityType, {
-      overrideEnabled: !currentState
-    });
-  }, [overrideStates, updateEntityConfig]);
+
+    switch (entityType) {
+      case 'line':
+        toggleLineOverride('draft', !currentState);
+        break;
+      case 'text':
+        toggleTextOverride('draft', !currentState);
+        break;
+      case 'grip':
+        toggleGripOverride('draft', !currentState);
+        break;
+    }
+  }, [overrideStates, toggleLineOverride, toggleTextOverride, toggleGripOverride]);
 
   const enable = useCallback((entityType: EntityType) => {
-    updateEntityConfig(entityType, {
-      overrideEnabled: true
-    });
-  }, [updateEntityConfig]);
+    // 🔄 MIGRATED: Use specific toggle methods from adapter
+    switch (entityType) {
+      case 'line':
+        toggleLineOverride('draft', true);
+        break;
+      case 'text':
+        toggleTextOverride('draft', true);
+        break;
+      case 'grip':
+        toggleGripOverride('draft', true);
+        break;
+    }
+  }, [toggleLineOverride, toggleTextOverride, toggleGripOverride]);
 
   const disable = useCallback((entityType: EntityType) => {
-    updateEntityConfig(entityType, {
-      overrideEnabled: false
-    });
-  }, [updateEntityConfig]);
+    // 🔄 MIGRATED: Use specific toggle methods from adapter
+    switch (entityType) {
+      case 'line':
+        toggleLineOverride('draft', false);
+        break;
+      case 'text':
+        toggleTextOverride('draft', false);
+        break;
+      case 'grip':
+        toggleGripOverride('draft', false);
+        break;
+    }
+  }, [toggleLineOverride, toggleTextOverride, toggleGripOverride]);
 
   // ===== RETURN VALUE =====
 

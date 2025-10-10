@@ -1,18 +1,25 @@
 /**
- * PREVIEW MODE MANAGEMENT HOOK - MIGRATED TO DxfSettingsProvider
+ * PREVIEW MODE MANAGEMENT HOOK - MIGRATED TO Enterprise Provider
  *
- * 🔄 MIGRATION NOTE (2025-10-06):
- * This hook now uses DxfSettingsProvider instead of ConfigurationProvider.
- * ConfigurationProvider has been MERGED into DxfSettingsProvider.
+ * 🔄 MIGRATION HISTORY:
+ * - 2025-10-06: ConfigurationProvider → DxfSettingsProvider
+ * - 2025-10-09: Phase 3.2 - Direct Enterprise (no adapter)
+ *
+ * @see {@link ../providers/EnterpriseDxfSettingsProvider.tsx} - Enterprise provider
  */
 
 import { useCallback, useMemo } from 'react';
-import { useDxfSettings, type ViewerMode } from '../providers/DxfSettingsProvider';
+// 🔄 MIGRATED (2025-10-09): Phase 3.2 - Direct Enterprise (no adapter)
+import { useDxfSettings } from '../settings-provider';
 import type { PreviewModeHookResult } from '../types/viewerConfiguration';
+
+// Use ViewerMode from old types (compatible with both)
+type ViewerMode = 'normal' | 'preview' | 'completion';
 
 // ===== MAIN HOOK =====
 
 export function usePreviewMode(): PreviewModeHookResult {
+  // 🔄 MIGRATED: Direct Enterprise (no adapter)
   const dxfSettings = useDxfSettings();
 
   if (!dxfSettings) {
@@ -30,7 +37,10 @@ export function usePreviewMode(): PreviewModeHookResult {
 
   // ===== CURRENT STATE =====
 
-  const mode = settings.mode;
+  // 🔄 MIGRATION NOTE: Enterprise settings.mode includes all modes (normal/draft/hover/selection/completion/preview)
+  // Old ViewerMode only has (normal/preview/completion)
+  // Type assertion is safe here since we only use the 3 old modes in this hook
+  const mode = settings.mode as ViewerMode;
 
   // ===== CONVENIENCE BOOLEANS =====
 

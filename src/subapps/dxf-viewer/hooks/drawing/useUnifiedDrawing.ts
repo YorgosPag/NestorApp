@@ -92,7 +92,7 @@ import { usePreviewMode } from '../usePreviewMode';
 // 🗑️ REMOVED: useEntityStyles from ConfigurationProvider
 // import { useEntityStyles } from '../useEntityStyles';
 // 🆕 MERGE: Χρησιμοποιούμε το νέο useLineStyles από DxfSettingsProvider
-import { useLineStyles } from '../../providers/DxfSettingsProvider';
+import { useLineStyles } from '../../settings-provider';
 
 export type DrawingTool = 'select' | 'line' | 'rectangle' | 'circle' | 'circle-diameter' | 'circle-2p-diameter' | 'polyline' | 'polygon' | 'measure-distance' | 'measure-area' | 'measure-angle';
 
@@ -133,15 +133,19 @@ export function useUnifiedDrawing() {
   // Applies ColorPalettePanel settings (DXF Settings → General + Specific Preview)
   // Used by: line, polyline, circle, rectangle entities
   const applyPreviewSettings = useCallback((entity: any) => {
-    entity.color = linePreviewStyles.settings.color;
-    entity.lineweight = linePreviewStyles.settings.lineWidth;
-    entity.opacity = linePreviewStyles.settings.opacity;
-    entity.lineType = linePreviewStyles.settings.lineType;
-    entity.dashScale = linePreviewStyles.settings.dashScale;
-    entity.lineCap = linePreviewStyles.settings.lineCap;
-    entity.lineJoin = linePreviewStyles.settings.lineJoin;
-    entity.dashOffset = linePreviewStyles.settings.dashOffset;
-    entity.breakAtCenter = linePreviewStyles.settings.breakAtCenter;
+    // ✅ FIX (ChatGPT-5): Guard against undefined linePreviewStyles
+    if (!linePreviewStyles) return;
+
+    // ✅ FIX (ChatGPT-5): useLineStyles returns LineSettings directly, not { settings: LineSettings }
+    entity.color = linePreviewStyles.color;
+    entity.lineweight = linePreviewStyles.lineWidth;
+    entity.opacity = linePreviewStyles.opacity;
+    entity.lineType = linePreviewStyles.lineType;
+    entity.dashScale = linePreviewStyles.dashScale;
+    entity.lineCap = linePreviewStyles.lineCap;
+    entity.lineJoin = linePreviewStyles.lineJoin;
+    entity.dashOffset = linePreviewStyles.dashOffset;
+    entity.breakAtCenter = linePreviewStyles.breakAtCenter;
   }, [linePreviewStyles]);
 
   // Snap functionality moved to DxfCanvas level
@@ -369,17 +373,17 @@ export function useUnifiedDrawing() {
       const newEntity = createEntityFromTool(state.currentTool, newTempPoints);
       if (newEntity && currentLevelId) {
         // Apply completion settings from ColorPalettePanel (for line entities only)
-        if (newEntity.type === 'line' && state.currentTool === 'line') {
-          // ✅ Type-safe property assignment (no 'as any' needed!)
-          newEntity.color = lineCompletionStyles.settings.color;
-          newEntity.lineweight = lineCompletionStyles.settings.lineWidth;
-          newEntity.opacity = lineCompletionStyles.settings.opacity;
-          newEntity.lineType = lineCompletionStyles.settings.lineType;
-          newEntity.dashScale = lineCompletionStyles.settings.dashScale;
-          newEntity.lineCap = lineCompletionStyles.settings.lineCap;
-          newEntity.lineJoin = lineCompletionStyles.settings.lineJoin;
-          newEntity.dashOffset = lineCompletionStyles.settings.dashOffset;
-          newEntity.breakAtCenter = lineCompletionStyles.settings.breakAtCenter;
+        if (newEntity.type === 'line' && state.currentTool === 'line' && lineCompletionStyles) {
+          // ✅ FIX (ChatGPT-5): Guard against undefined + useLineStyles returns LineSettings directly
+          newEntity.color = lineCompletionStyles.color;
+          newEntity.lineweight = lineCompletionStyles.lineWidth;
+          newEntity.opacity = lineCompletionStyles.opacity;
+          newEntity.lineType = lineCompletionStyles.lineType;
+          newEntity.dashScale = lineCompletionStyles.dashScale;
+          newEntity.lineCap = lineCompletionStyles.lineCap;
+          newEntity.lineJoin = lineCompletionStyles.lineJoin;
+          newEntity.dashOffset = lineCompletionStyles.dashOffset;
+          newEntity.breakAtCenter = lineCompletionStyles.breakAtCenter;
         }
 
         const scene = getLevelScene(currentLevelId);
@@ -451,7 +455,7 @@ export function useUnifiedDrawing() {
         previewEntity: partialPreview
       }));
     }
-  }, [state, createEntityFromTool, currentLevelId, getLevelScene, setLevelScene, setMode, lineCompletionStyles.settings]);
+  }, [state, createEntityFromTool, currentLevelId, getLevelScene, setLevelScene, setMode, lineCompletionStyles]);
 
   const updatePreview = useCallback((mousePoint: Point2D, transform: { worldToScreen: (point: Point2D) => Point2D; screenToWorld: (point: Point2D) => Point2D }) => {
     if (!state.isDrawing) {
@@ -523,7 +527,11 @@ export function useUnifiedDrawing() {
         extendedCircle.showPreviewGrips = true;
         applyPreviewSettings(extendedCircle); // ✅ Κεντρικοποιημένο
       } else if (previewEntity.type === 'rectangle') {
-        const extendedRectangle = previewEntity as any; // Rectangle uses polyline internally
+        // ✅ ENTERPRISE: Type-safe rectangle entity (uses polyline internally)
+        const extendedRectangle = previewEntity as unknown as {
+          preview?: boolean;
+          showPreviewGrips?: boolean;
+        } & typeof previewEntity;
         extendedRectangle.preview = true;
         extendedRectangle.showPreviewGrips = true;
         applyPreviewSettings(extendedRectangle); // ✅ Κεντρικοποιημένο
@@ -569,7 +577,7 @@ export function useUnifiedDrawing() {
     }
 
     setState(prev => ({ ...prev, previewEntity }));
-  }, [state, createEntityFromTool, linePreviewStyles.settings]);
+  }, [state, createEntityFromTool, linePreviewStyles]);
 
   const startDrawing = useCallback((tool: DrawingTool) => {
 

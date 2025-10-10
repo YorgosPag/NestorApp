@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useCallback, useMemo } from
 // ===== ΝΕΑ UNIFIED PROVIDERS (για internal use) =====
 import { useViewerConfig } from '../providers/ConfigurationProvider';
 // ===== ΚΕΝΤΡΙΚΟ AUTO-SAVE ΣΎΣΤΗΜΑ =====
-import { useTextSettingsFromProvider } from '../providers/DxfSettingsProvider';
+import { useTextSettingsFromProvider } from '../settings-provider';
 // ===== OVERRIDE GUARD SYSTEM =====
 import { guardGlobalAccess } from '../../../utils/overrideGuard';
 

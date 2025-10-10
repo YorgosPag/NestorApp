@@ -46,7 +46,7 @@
  * @version 1.0.0 (Compatibility wrapper)
  */
 
-import { useLineStyles, useTextStyles, useGripStyles, type ViewerMode } from '../providers/DxfSettingsProvider';
+import { useLineStyles, useTextStyles, useGripStyles, type ViewerMode } from '../settings-provider';
 import type {
   EntityType,
   EntityStylesHookResult

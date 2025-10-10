@@ -10,6 +10,13 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import type { ViewTransform } from '../rendering/types/Types';
 
+// ✅ ENTERPRISE: Window interface extension for legacy support
+declare global {
+  interface Window {
+    dxfTransform?: ViewTransform;
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────
 // TYPE DEFINITIONS
 // ─────────────────────────────────────────────────────────────────
@@ -64,7 +71,7 @@ export function TransformProvider({
     // ✅ LEGACY SUPPORT: Ενημέρωση window.dxfTransform για backward compatibility
     // (Θα αφαιρεθεί σταδιακά καθώς όλα μεταβούν σε Context)
     if (typeof window !== 'undefined') {
-      (window as any).dxfTransform = newTransform;
+      window.dxfTransform = newTransform;
     }
 
     // ✅ EVENT DISPATCH: Για components που ακούν events
@@ -90,7 +97,7 @@ export function TransformProvider({
 
       // Same side effects as setTransform
       if (typeof window !== 'undefined') {
-        (window as any).dxfTransform = newTransform;
+        window.dxfTransform = newTransform;
         window.dispatchEvent(new CustomEvent('dxf-zoom-changed', {
           detail: { transform: newTransform }
         }));
