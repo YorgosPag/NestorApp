@@ -99,12 +99,26 @@ export const snapWarn = (...args: any[]) => SnapLogger.warn(...args);
 export const hitTestLog = (...args: any[]) => HitTestLogger.debug(...args);
 export const hitTestWarn = (...args: any[]) => HitTestLogger.warn(...args);
 
+// ═══ ENTERPRISE TESTS ═══
+export { runEnterpriseSettingsTests } from './settings-enterprise-test';
+export { runStoreSyncTests } from './store-sync-test';
+
 // ═══ DEVELOPMENT HELPERS ═══
 
 /**
  * Global debug utilities (development only)
  */
 if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
+  // Enterprise Settings Tests
+  import('./settings-enterprise-test').then(({ runEnterpriseSettingsTests }) => {
+    (window as any).runEnterpriseSettingsTests = runEnterpriseSettingsTests;
+  });
+
+  // Store Sync Tests (Ports & Adapters Architecture)
+  import('./store-sync-test').then(({ runStoreSyncTests }) => {
+    (window as any).runStoreSyncTests = runStoreSyncTests;
+  });
+
   (window as any).dxfDebug = {
     // Legacy compatibility
     enable: () => {
@@ -122,6 +136,24 @@ if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
     rendering: () => RenderingLogger,
     snap: () => SnapLogger,
     performance: () => PerformanceLogger,
+
+    // 🆕 Enterprise Settings Tests
+    testSettings: () => {
+      if ((window as any).runEnterpriseSettingsTests) {
+        return (window as any).runEnterpriseSettingsTests();
+      } else {
+        console.error('Enterprise Settings Tests not loaded yet');
+      }
+    },
+
+    // 🆕 Store Sync Tests (Ports & Adapters Architecture)
+    testStoreSync: () => {
+      if ((window as any).runStoreSyncTests) {
+        return (window as any).runStoreSyncTests();
+      } else {
+        console.error('Store Sync Tests not loaded yet');
+      }
+    },
 
     // Quick help
     help: () => {
@@ -145,6 +177,12 @@ dxfDebug.manager().modules()          - List all modules
 == Emergency Controls ==
 dxfDebug.manager().emergencySilence() - Silence all logs except errors
 dxfDebug.manager().emergencyRestore() - Restore normal logging
+
+== Enterprise Tests ==
+dxfDebug.testSettings()               - Run Enterprise Settings validation suite
+dxfDebug.testStoreSync()              - Run Store Sync (Ports & Adapters) tests
+runEnterpriseSettingsTests()          - Direct test runner (async)
+runStoreSyncTests()                   - Direct store sync test runner (async)
 
 == Legacy Support ==
 dxfDebug.enable()  - Enable legacy DXF_DEBUG flag
