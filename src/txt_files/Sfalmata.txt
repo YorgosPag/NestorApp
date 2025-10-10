@@ -1,5 +1,22 @@
-⚠️
-DXF Viewer Error
-Κάτι πήγε στραβά στη φόρτωση του DXF Viewer.
+Build Error
+Failed to compile
 
-setMode is not a function
+Next.js (14.2.32) is outdated (learn more) (turbo)
+./src/subapps/dxf-viewer/ui/components/shared/SharedColorPicker.tsx:19:1
+Module not found: Can't resolve '../../../color'
+  17 | // ============================================================================
+  18 |
+> 19 | import {
+     | ^^^^^^^^
+> 20 |   SharedColorPicker as CentralizedSharedColorPicker,
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 21 |   type UnifiedColorPickerProps
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 22 | } from '../../../color';
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^
+  23 |
+  24 | // ============================================================================
+  25 | // TYPE COMPATIBILITY
+
+https://nextjs.org/docs/messages/module-not-found
+This error occurred during the build process and can only be dismissed by fixing the error.

@@ -19,7 +19,7 @@
 import {
   SharedColorPicker as CentralizedSharedColorPicker,
   type UnifiedColorPickerProps
-} from '../../../color';
+} from '../../color';
 
 // ============================================================================
 // TYPE COMPATIBILITY
@@ -87,4 +87,4 @@ export {
   type UnifiedColorPickerProps,
   type ColorPickerModalProps,
   type SimpleColorPickerProps,
-} from '../../../color';
+} from '../../color';
