@@ -14,7 +14,7 @@
 // UNIVERSAL POLYGON SYSTEM (Integrated)
 // ============================================================================
 
-// Export Universal Polygon System από integrated location
+// Export Universal Polygon System από το νέο @geo-alert/core package
 export {
   // Core types
   type UniversalPolygon,
@@ -52,7 +52,7 @@ export {
   type UsePolygonSystemOptions,
   type UsePolygonSystemReturn,
   type PolygonSystemProviderProps
-} from './polygon-system';
+} from '@geo-alert/core/polygon-system';
 
 // ============================================================================
 // UNIFIED DATABASE SYSTEM (Extracted & Optimized)

@@ -20,14 +20,22 @@
     "paths": {
       "@geo-alert/core/*": ["./src/*"],
       "@geo-alert/core/polygon-system": ["./polygon-system"],
-      "@geo-alert/core/polygon-system/*": ["./polygon-system/*"]
+      "@geo-alert/core/polygon-system/*": ["./polygon-system/*"],
+      "@geo-alert/core/database-system": ["./database-system"],
+      "@geo-alert/core/database-system/*": ["./database-system/*"],
+      "@geo-alert/core/alert-engine": ["./alert-engine"],
+      "@geo-alert/core/alert-engine/*": ["./alert-engine/*"]
     }
   },
   "include": [
     "src/**/*.ts",
     "src/**/*.tsx",
     "polygon-system/**/*.ts",
-    "polygon-system/**/*.tsx"
+    "polygon-system/**/*.tsx",
+    "database-system/**/*.ts",
+    "database-system/**/*.tsx",
+    "alert-engine/**/*.ts",
+    "alert-engine/**/*.tsx"
   ],
   "exclude": [
     "node_modules",

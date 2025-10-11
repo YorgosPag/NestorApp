@@ -37,7 +37,9 @@
       "Bash(grep:*)",
       "Bash(npx next:*)",
       "Bash(cmd:*)",
-      "Bash(del /S /Q node_modules)"
+      "Bash(del /S /Q node_modules)",
+      "Bash(npm cache clean:*)",
+      "Bash(tasklist)"
     ],
     "deny": [],
     "ask": []

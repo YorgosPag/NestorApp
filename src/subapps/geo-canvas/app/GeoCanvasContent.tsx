@@ -7,11 +7,14 @@ import { FloorPlanUploadModal } from '../floor-plan-system/components/FloorPlanU
 import { FloorPlanCanvasLayer } from '../floor-plan-system/rendering/FloorPlanCanvasLayer';
 import { FloorPlanControls } from '../floor-plan-system/rendering/FloorPlanControls';
 import { FloorPlanControlPointPicker } from '../floor-plan-system/components/FloorPlanControlPointPicker';
+import { UserTypeSelector } from '../components/UserTypeSelector';
+import { CitizenDrawingInterface } from '../components/CitizenDrawingInterface';
 import { useFloorPlanUpload } from '../floor-plan-system/hooks/useFloorPlanUpload';
 import { useFloorPlanControlPoints } from '../floor-plan-system/hooks/useFloorPlanControlPoints';
 import { useGeoTransformation } from '../floor-plan-system/hooks/useGeoTransformation';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { useSnapEngine } from '../floor-plan-system/snapping';
+import { useOptimizedUserRole } from '@/contexts/OptimizedUserRoleContext';
 import type { GeoCanvasAppProps } from '../types';
 import type { GeoCoordinate, DxfCoordinate } from '../types';
 
@@ -26,6 +29,7 @@ import type { GeoCoordinate, DxfCoordinate } from '../types';
  */
 export function GeoCanvasContent(props: GeoCanvasAppProps) {
   const { t, isLoading } = useTranslationLazy('geo-canvas');
+  const { user, setUserType, isCitizen, isProfessional, isTechnical } = useOptimizedUserRole();
   const [activeView, setActiveView] = useState<'foundation' | 'georeferencing' | 'map'>('georeferencing');
 
   // 🏢 ENTERPRISE: SINGLE SOURCE OF TRUTH for Control Points
@@ -191,8 +195,10 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
           </div>
 
           <div className="flex items-center space-x-4">
-            {/* Floor Plan Upload Button */}
-            <FloorPlanUploadButton onClick={handleFloorPlanUploadClick} />
+            {/* Phase 2.2: Show Floor Plan Upload ONLY for Professional/Technical users */}
+            {(isProfessional || isTechnical) && (
+              <FloorPlanUploadButton onClick={handleFloorPlanUploadClick} />
+            )}
 
             <div className="px-3 py-1 bg-green-600 rounded-full text-xs">
               {t('phases.transformation')}
@@ -248,7 +254,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
             {activeView === 'foundation' && (
               /* Phase 1: Foundation Display */
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center max-w-2xl p-8">
+                <div className="text-center max-w-4xl p-8 w-full">
                   <div className="text-8xl mb-6">🌍</div>
                   <h2 className="text-3xl font-bold mb-4 text-blue-400">
                     {t('title')}
@@ -256,6 +262,16 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                   <p className="text-xl text-gray-400 mb-8">
                     {t('subtitle')}
                   </p>
+
+                  {/* Phase 2.2: User Type Selector */}
+                  {!user?.userType && (
+                    <div className="mb-8">
+                      <UserTypeSelector
+                        currentType={user?.userType}
+                        onSelect={setUserType}
+                      />
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-2 gap-6 text-left">
                     <div className="bg-gray-800 p-6 rounded-lg">
@@ -366,7 +382,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                 )}
 
                 {/* 📍 CONTROL POINT PICKER (STEP 2.2) */}
-                {floorPlanUpload.result && floorPlanUpload.result.success && (
+                {floorPlanUpload.result && floorPlanUpload.result.success && (isProfessional || isTechnical) && (
                   <div
                     style={{
                       position: 'absolute',
@@ -381,6 +397,27 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                     }}
                   >
                     <FloorPlanControlPointPicker controlPoints={controlPoints} />
+                  </div>
+                )}
+
+                {/* 🏘️ CITIZEN DRAWING INTERFACE (Phase 2.2.2) */}
+                {isCitizen && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '16px',
+                      left: '16px',
+                      zIndex: 200,
+                      maxWidth: '360px'
+                    }}
+                  >
+                    <CitizenDrawingInterface
+                      mapRef={mapRef}
+                      onPolygonComplete={(polygon) => {
+                        console.log('🏘️ Citizen polygon completed:', polygon);
+                        // TODO: Integrate με alert system
+                      }}
+                    />
                   </div>
                 )}
               </div>

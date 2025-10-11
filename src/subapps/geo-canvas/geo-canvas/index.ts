@@ -36,27 +36,27 @@ export {
 // PHASE 4: POSTGIS DATABASE INTEGRATION
 // ============================================================================
 
-export * from './database/index';
+export * from '@geo-alert/core/database-system';
 export {
   GeoAlertDatabaseService,
   DatabaseManager,
   ProjectRepository,
   ControlPointRepository,
   SpatialQueryEngine
-} from './database/index';
+} from '@geo-alert/core/database-system';
 
 // ============================================================================
 // PHASE 5: ALERT ENGINE & RULES SYSTEM
 // ============================================================================
 
-export * from './alert-engine/index';
+export * from '@geo-alert/core/alert-engine';
 export {
   GeoAlertEngine,
   RulesEngine,
   AlertDetectionSystem,
   NotificationDispatchEngine,
   RealTimeMonitoringDashboard
-} from './alert-engine/index';
+} from '@geo-alert/core/alert-engine';
 
 // ============================================================================
 // PHASE 6: ADVANCED UI/UX & DASHBOARD
@@ -134,8 +134,8 @@ export {
 
 import { GeoAlertTransformationService } from './transformation/index';
 import { GeoAlertMappingService } from './mapping/index';
-import { GeoAlertDatabaseService } from './database/index';
-import { GeoAlertEngine } from './alert-engine/index';
+import { GeoAlertDatabaseService } from '@geo-alert/core/database-system';
+import { GeoAlertEngine } from '@geo-alert/core/alert-engine';
 import { GeoAlertDesignSystem } from './ui/design-system/index';
 import { GeoAlertPerformanceMonitor } from './performance/monitoring/PerformanceMonitor';
 import { GeoAlertTestSuite } from './testing/TestSuite';

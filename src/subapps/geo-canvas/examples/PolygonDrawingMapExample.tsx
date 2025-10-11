@@ -10,7 +10,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { InteractiveMap } from '../components/InteractiveMap';
-import type { UniversalPolygon, PolygonType } from '@/core/polygon-system';
+import type { UniversalPolygon, PolygonType } from '@geo-alert/core';
 import type { GeoCoordinate } from '../types';
 
 // Mock transform state (για το παράδειγμα)

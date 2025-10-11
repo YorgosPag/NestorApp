@@ -5,9 +5,13 @@ import { useCache } from './CacheProvider';
 
 export type UserRole = 'admin' | 'public' | 'authenticated';
 
+// 🏢 GEO-ALERT Phase 2.2: User Types για διαφορετικά interfaces
+export type UserType = 'citizen' | 'professional' | 'technical';
+
 interface User {
   email: string;
   role: UserRole;
+  userType?: UserType; // User type για το GEO-ALERT system
   isAuthenticated: boolean;
   lastLogin?: number;
   preferences?: Record<string, any>;
@@ -19,10 +23,15 @@ interface UserRoleContextType {
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   updatePreferences: (preferences: Record<string, any>) => void;
+  setUserType: (userType: UserType) => void; // Phase 2.2: Set user type
   isAdmin: boolean;
   isPublic: boolean;
   isAuthenticated: boolean;
   sessionTimeRemaining: number | null;
+  // Phase 2.2: User Type helpers
+  isCitizen: boolean;
+  isProfessional: boolean;
+  isTechnical: boolean;
 }
 
 const UserRoleContext = createContext<UserRoleContextType | null>(null);
@@ -53,7 +62,11 @@ export function OptimizedUserRoleProvider({ children }: { children: React.ReactN
   const derivedValues = useMemo(() => ({
     isAdmin: user?.role === 'admin',
     isPublic: !user?.isAuthenticated,
-    isAuthenticated: user?.isAuthenticated || false
+    isAuthenticated: user?.isAuthenticated || false,
+    // Phase 2.2: User Type helpers
+    isCitizen: user?.userType === 'citizen',
+    isProfessional: user?.userType === 'professional',
+    isTechnical: user?.userType === 'technical'
   }), [user]);
 
   // Session time remaining
@@ -210,10 +223,10 @@ export function OptimizedUserRoleProvider({ children }: { children: React.ReactN
 
     // Optimistic update
     setUser(updatedUser);
-    
+
     // Update caches
-    cache.set(USER_CACHE_KEY, updatedUser, { 
-      ttl: sessionTimeRemaining || SESSION_DURATION 
+    cache.set(USER_CACHE_KEY, updatedUser, {
+      ttl: sessionTimeRemaining || SESSION_DURATION
     });
     cache.set(PREFERENCES_CACHE_KEY, updatedUser.preferences, {
       ttl: sessionTimeRemaining || SESSION_DURATION  
@@ -225,6 +238,29 @@ export function OptimizedUserRoleProvider({ children }: { children: React.ReactN
     } catch (error) {
       console.warn('Failed to save preferences to localStorage:', error);
     }
+  }, [user, cache, sessionTimeRemaining]);
+
+  // Phase 2.2: Set User Type (Citizen/Professional/Technical)
+  const setUserType = useCallback((userType: UserType) => {
+    if (!user) return;
+
+    const updatedUser = {
+      ...user,
+      userType
+    };
+
+    // Update state
+    setUser(updatedUser);
+
+    // Update caches
+    cache.set(USER_CACHE_KEY, updatedUser, {
+      ttl: sessionTimeRemaining || SESSION_DURATION
+    });
+
+    // Update localStorage
+    localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+
+    console.log('🏢 GEO-ALERT: User type updated to:', userType);
   }, [user, cache, sessionTimeRemaining]);
 
   // Load user on mount
@@ -265,6 +301,7 @@ export function OptimizedUserRoleProvider({ children }: { children: React.ReactN
     login,
     logout,
     updatePreferences,
+    setUserType, // Phase 2.2: User type setter
     sessionTimeRemaining,
     ...derivedValues
   };
