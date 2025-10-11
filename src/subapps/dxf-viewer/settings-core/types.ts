@@ -245,6 +245,47 @@ export const validateGripSettings = (settings: Partial<GripSettings>): GripSetti
 export type EntityId = string;
 
 // ============================================================================
+// CURSOR SETTINGS (Enterprise Integration)
+// ============================================================================
+
+export interface EnterpriseCursorSettings {
+  enabled: boolean;
+  crosshairSize: number;      // % of viewport
+  crosshairColor: string;
+  cursorSize: number;         // pixels
+  cursorColor: string;
+  // Additional cursor settings can be added as needed
+}
+
+// ============================================================================
+// GRID SETTINGS (Enterprise Integration)
+// ============================================================================
+
+export interface EnterpriseGridSettings {
+  enabled: boolean;
+  spacing: number;
+  majorLineInterval: number;
+  color: string;
+  majorColor: string;
+  opacity: number;
+  style: 'lines' | 'dots' | 'crosses';
+  // Additional grid settings from rulers-grid/config
+}
+
+// ============================================================================
+// RULER SETTINGS (Enterprise Integration)
+// ============================================================================
+
+export interface EnterpriseRulerSettings {
+  enabled: boolean;
+  unit: 'mm' | 'cm' | 'm' | 'in' | 'ft';
+  fontSize: number;
+  textColor: string;
+  backgroundColor: string;
+  // Additional ruler settings from rulers-grid/config
+}
+
+// ============================================================================
 // COMBINED SETTINGS TYPE
 // ============================================================================
 
@@ -252,10 +293,16 @@ export interface DxfSettings {
   line: LineSettings;
   text: TextSettings;
   grip: GripSettings;
+  cursor?: EnterpriseCursorSettings;   // Optional για backward compatibility
+  grid?: EnterpriseGridSettings;        // Optional για backward compatibility
+  ruler?: EnterpriseRulerSettings;      // Optional για backward compatibility
 }
 
 export type PartialDxfSettings = {
   line?: Partial<LineSettings>;
   text?: Partial<TextSettings>;
   grip?: Partial<GripSettings>;
+  cursor?: Partial<EnterpriseCursorSettings>;
+  grid?: Partial<EnterpriseGridSettings>;
+  ruler?: Partial<EnterpriseRulerSettings>;
 };

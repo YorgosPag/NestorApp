@@ -48,6 +48,7 @@ import { AccordionSection, useAccordion } from '../shared/AccordionSection';
 import type { TextSettings } from '../../../../contexts/TextSettingsContext';
 import { BaseModal } from '../../../../../components/shared/BaseModal';
 import { useNotifications } from '../../../../../../../providers/NotificationProvider';
+import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
 import { EnterpriseComboBox, type ComboBoxOption } from '../shared/EnterpriseComboBox';
 
 // Simple SVG icons for text
@@ -428,25 +429,19 @@ export function TextSettings() {
 
       {/* Text Color */}
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-300">
-          Χρώμα Κειμένου
-        </label>
-        <div className="flex gap-2 items-center">
-          <input
-            type="color"
-            value={textSettings.color}
-            onChange={(e) => handleColorChange(e.target.value)}
-            className="w-10 h-8 bg-gray-700 border border-gray-600 rounded cursor-pointer"
-          />
-          <input
-            type="text"
-            value={textSettings.color.toUpperCase()}
-            onChange={(e) => handleColorChange(e.target.value)}
-            className="flex-1 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
-            placeholder="#000000"
-          />
-            </div>
-          </div>
+        <label className="block text-sm font-medium text-gray-200">Χρώμα Κειμένου</label>
+        <ColorDialogTrigger
+          value={textSettings.color}
+          onChange={handleColorChange}
+          label={textSettings.color}
+          title="Επιλογή Χρώματος Κειμένου"
+          alpha={false}
+          modes={['hex', 'rgb', 'hsl']}
+          palettes={['dxf', 'semantic', 'material']}
+          recent={true}
+          eyedropper={true}
+        />
+      </div>
         </div>
         </AccordionSection>
 

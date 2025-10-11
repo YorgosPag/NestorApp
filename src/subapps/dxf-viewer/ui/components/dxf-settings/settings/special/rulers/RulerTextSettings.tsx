@@ -14,6 +14,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRulersGridContext } from '../../../../../../systems/rulers-grid/RulersGridSystem';
+import { UnifiedColorPicker } from '../../../../../color';
 
 export interface RulerTextSettingsProps {
   className?: string;

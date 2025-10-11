@@ -17,6 +17,7 @@ import React from 'react';
 import { useRulersGridContext } from '../../../../../systems/rulers-grid/RulersGridSystem';
 import { useTabNavigation } from '../../hooks/useTabNavigation';
 import { TabNavigation } from '../../shared/TabNavigation';
+import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
 
 export interface GridSettingsProps {
   className?: string;
@@ -219,29 +220,19 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
           <div className="space-y-4">
             {/* Major Grid Color */}
             <div className="p-2 bg-gray-700 rounded space-y-2">
-              <div className="text-sm text-white">
-                <div className="font-medium">Χρώμα Κύριων Γραμμών</div>
-                <div className="font-normal text-gray-400">Χρώμα των κύριων γραμμών πλέγματος</div>
-              </div>
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-6 h-6 rounded border border-gray-500"
-                  style={{ backgroundColor: gridSettings.visual.majorGridColor }}
-                />
-                <input
-                  type="color"
-                  value={gridSettings.visual.majorGridColor}
-                  onChange={(e) => handleMajorGridColorChange(e.target.value)}
-                  className="w-8 h-6 rounded border-0 cursor-pointer"
-                />
-                <input
-                  type="text"
-                  value={gridSettings.visual.majorGridColor}
-                  onChange={(e) => handleMajorGridColorChange(e.target.value)}
-                  className="w-20 px-2 py-1 text-xs bg-gray-600 text-white rounded border border-gray-500"
-                  placeholder="#888888"
-                />
-              </div>
+              <label className="block text-sm font-medium text-gray-200">Χρώμα Κύριων Γραμμών</label>
+              <div className="text-xs text-gray-400 mb-2">Χρώμα των κύριων γραμμών πλέγματος</div>
+              <ColorDialogTrigger
+                value={gridSettings.visual.majorGridColor}
+                onChange={handleMajorGridColorChange}
+                label={gridSettings.visual.majorGridColor}
+                title="Επιλογή Χρώματος Κύριων Γραμμών"
+                alpha={false}
+                modes={['hex', 'rgb', 'hsl']}
+                palettes={['dxf', 'semantic', 'material']}
+                recent={true}
+                eyedropper={true}
+              />
             </div>
 
             {/* Major Grid Line Weight */}
@@ -271,29 +262,19 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
           <div className="space-y-4">
             {/* Minor Grid Color */}
             <div className="p-2 bg-gray-700 rounded space-y-2">
-              <div className="text-sm text-white">
-                <div className="font-medium">Χρώμα Δευτερευουσών Γραμμών</div>
-                <div className="font-normal text-gray-400">Χρώμα των δευτερευουσών γραμμών πλέγματος</div>
-              </div>
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-6 h-6 rounded border border-gray-500"
-                  style={{ backgroundColor: gridSettings.visual.minorGridColor }}
-                />
-                <input
-                  type="color"
-                  value={gridSettings.visual.minorGridColor}
-                  onChange={(e) => handleMinorGridColorChange(e.target.value)}
-                  className="w-8 h-6 rounded border-0 cursor-pointer"
-                />
-                <input
-                  type="text"
-                  value={gridSettings.visual.minorGridColor}
-                  onChange={(e) => handleMinorGridColorChange(e.target.value)}
-                  className="w-20 px-2 py-1 text-xs bg-gray-600 text-white rounded border border-gray-500"
-                  placeholder="#bbbbbb"
-                />
-              </div>
+              <label className="block text-sm font-medium text-gray-200">Χρώμα Δευτερευουσών Γραμμών</label>
+              <div className="text-xs text-gray-400 mb-2">Χρώμα των δευτερευουσών γραμμών πλέγματος</div>
+              <ColorDialogTrigger
+                value={gridSettings.visual.minorGridColor}
+                onChange={handleMinorGridColorChange}
+                label={gridSettings.visual.minorGridColor}
+                title="Επιλογή Χρώματος Δευτερευουσών Γραμμών"
+                alpha={false}
+                modes={['hex', 'rgb', 'hsl']}
+                palettes={['dxf', 'semantic', 'material']}
+                recent={true}
+                eyedropper={true}
+              />
             </div>
 
             {/* Minor Grid Line Weight */}

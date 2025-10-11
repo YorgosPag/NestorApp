@@ -1,22 +1,8 @@
-Build Error
-Failed to compile
-
-Next.js (14.2.32) is outdated (learn more) (turbo)
-./src/subapps/dxf-viewer/ui/components/shared/SharedColorPicker.tsx:19:1
-Module not found: Can't resolve '../../../color'
-  17 | // ============================================================================
-  18 |
-> 19 | import {
-     | ^^^^^^^^
-> 20 |   SharedColorPicker as CentralizedSharedColorPicker,
-     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-> 21 |   type UnifiedColorPickerProps
-     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-> 22 | } from '../../../color';
-     | ^^^^^^^^^^^^^^^^^^^^^^^^^
-  23 |
-  24 | // ============================================================================
-  25 | // TYPE COMPATIBILITY
-
-https://nextjs.org/docs/messages/module-not-found
-This error occurred during the build process and can only be dismissed by fixing the error.
+PS F:\Pagonis_Nestor> npm install
+npm error code ENOTEMPTY
+npm error syscall rmdir
+npm error path F:\Pagonis_Nestor\node_modules\jsts
+npm error errno -4051
+npm error ENOTEMPTY: directory not empty, rmdir 'F:\Pagonis_Nestor\node_modules\jsts'
+npm error A complete log of this run can be found in: F:\npm-cache\_logs\2025-10-11T17_41_48_748Z-debug-0.log
+PS F:\Pagonis_Nestor> 

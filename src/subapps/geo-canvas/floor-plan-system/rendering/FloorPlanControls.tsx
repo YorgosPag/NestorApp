@@ -1,0 +1,174 @@
+/**
+ * 🎛️ FLOOR PLAN CONTROLS
+ *
+ * UI controls για floor plan layer management
+ *
+ * @module floor-plan-system/rendering/FloorPlanControls
+ *
+ * Features:
+ * - Opacity slider (0-100%)
+ * - Show/hide toggle
+ * - Layer name display
+ * - Compact design
+ */
+
+'use client';
+
+import React from 'react';
+
+/**
+ * Component props
+ */
+export interface FloorPlanControlsProps {
+  /** Layer visibility */
+  visible: boolean;
+  /** Layer opacity (0-1) */
+  opacity: number;
+  /** Floor plan file name */
+  fileName?: string;
+  /** On visibility toggle */
+  onVisibilityChange: (visible: boolean) => void;
+  /** On opacity change */
+  onOpacityChange: (opacity: number) => void;
+  /** Container className */
+  className?: string;
+}
+
+/**
+ * FloorPlanControls Component
+ *
+ * Provides UI controls για layer visibility και opacity
+ *
+ * @example
+ * ```tsx
+ * <FloorPlanControls
+ *   visible={isVisible}
+ *   opacity={0.8}
+ *   fileName="floor-plan.dxf"
+ *   onVisibilityChange={setVisible}
+ *   onOpacityChange={setOpacity}
+ * />
+ * ```
+ */
+export function FloorPlanControls({
+  visible,
+  opacity,
+  fileName,
+  onVisibilityChange,
+  onOpacityChange,
+  className = ''
+}: FloorPlanControlsProps) {
+  return (
+    <div
+      className={`floor-plan-controls bg-white rounded-lg shadow-lg p-4 ${className}`}
+      style={{
+        minWidth: '280px',
+        border: '1px solid #e5e7eb'
+      }}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <span className="text-lg">🗺️</span>
+          <h3 className="font-semibold text-gray-900 text-sm">
+            Floor Plan Layer
+          </h3>
+        </div>
+
+        {/* Visibility Toggle */}
+        <button
+          onClick={() => onVisibilityChange(!visible)}
+          className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+            visible
+              ? 'bg-green-100 text-green-700 hover:bg-green-200'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+          title={visible ? 'Hide layer' : 'Show layer'}
+        >
+          {visible ? '👁️ Visible' : '🚫 Hidden'}
+        </button>
+      </div>
+
+      {/* File Name */}
+      {fileName && (
+        <div className="mb-3 text-xs text-gray-600 truncate" title={fileName}>
+          📁 {fileName}
+        </div>
+      )}
+
+      {/* Opacity Slider */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between text-xs">
+          <label htmlFor="floor-plan-opacity" className="text-gray-700 font-medium">
+            Opacity
+          </label>
+          <span className="text-gray-900 font-semibold">
+            {Math.round(opacity * 100)}%
+          </span>
+        </div>
+
+        <input
+          id="floor-plan-opacity"
+          type="range"
+          min="0"
+          max="100"
+          value={Math.round(opacity * 100)}
+          onChange={(e) => onOpacityChange(parseInt(e.target.value) / 100)}
+          disabled={!visible}
+          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{
+            accentColor: '#3b82f6'
+          }}
+        />
+
+        <div className="flex justify-between text-xs text-gray-500">
+          <span>0%</span>
+          <span>Transparent</span>
+          <span>Opaque</span>
+          <span>100%</span>
+        </div>
+      </div>
+
+      {/* Quick Preset Buttons */}
+      <div className="mt-3 flex gap-2">
+        <button
+          onClick={() => onOpacityChange(0.3)}
+          disabled={!visible}
+          className="flex-1 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
+          title="Set opacity to 30%"
+        >
+          30%
+        </button>
+        <button
+          onClick={() => onOpacityChange(0.5)}
+          disabled={!visible}
+          className="flex-1 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
+          title="Set opacity to 50%"
+        >
+          50%
+        </button>
+        <button
+          onClick={() => onOpacityChange(0.8)}
+          disabled={!visible}
+          className="flex-1 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
+          title="Set opacity to 80%"
+        >
+          80%
+        </button>
+        <button
+          onClick={() => onOpacityChange(1.0)}
+          disabled={!visible}
+          className="flex-1 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
+          title="Set opacity to 100%"
+        >
+          100%
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Export for convenience
+ */
+export default FloorPlanControls;

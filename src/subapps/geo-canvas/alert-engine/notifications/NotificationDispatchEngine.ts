@@ -954,7 +954,14 @@ export class NotificationDispatchEngine {
   } {
     const activeChannels = Array.from(this.channels.values()).filter(c => c.isEnabled && c.isHealthy).length;
 
-    const queueStatus: Record<NotificationPriority, number> = {} as any;
+    // ✅ ENTERPRISE: Proper initialization instead of 'as any'
+    const queueStatus: Record<NotificationPriority, number> = {
+      immediate: 0,
+      high: 0,
+      normal: 0,
+      low: 0,
+      batch: 0
+    };
     for (const [priority, queue] of this.queues) {
       queueStatus[priority] = queue.messages.length;
     }

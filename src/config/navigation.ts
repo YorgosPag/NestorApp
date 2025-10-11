@@ -19,6 +19,7 @@ import {
   PenTool,
   FileText,
   Construction, // Added icon
+  MapPin, // Added for Geo-Canvas
 } from "lucide-react"
 import type { MenuItem } from "@/types/sidebar"
 
@@ -87,12 +88,18 @@ export const toolsMenuItems: MenuItem[] = [
     href: "/legal-documents",
     badge: null,
     subItems: [
-      { 
-        title: 'Συγγραφή Υποχρεώσεων', 
-        icon: PenTool, 
-        href: '/obligations' 
+      {
+        title: 'Συγγραφή Υποχρεώσεων',
+        icon: PenTool,
+        href: '/obligations'
       }
     ]
+  },
+  {
+    title: "Geo-Canvas System",
+    icon: MapPin,
+    href: "/geo/canvas",
+    badge: "ENTERPRISE",
   }
 ]
 

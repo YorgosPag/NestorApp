@@ -653,7 +653,17 @@ export class AlertDetectionSystem {
       },
       detectedAt: new Date(),
       triggeredByRule: 'accuracy_degradation_manual',
-      ruleEvaluation: {} as any, // Mock για manual detection
+      // ✅ ENTERPRISE: Proper mock object instead of 'as any'
+      ruleEvaluation: {
+        ruleId: 'accuracy_degradation_manual',
+        triggered: true,
+        confidence: 1.0,
+        conditionResults: [],
+        actionsExecuted: [],
+        executionTime: 0,
+        evaluatedAt: new Date(),
+        metadata: { source: 'manual_detection' }
+      },
       actionsTaken: [],
       createdBy: 'alert_detection_system',
       tags: ['accuracy', 'control_point']
@@ -679,7 +689,17 @@ export class AlertDetectionSystem {
       projectId,
       detectedAt: new Date(),
       triggeredByRule: 'data_quality_manual',
-      ruleEvaluation: {} as any,
+      // ✅ ENTERPRISE: Proper mock object instead of 'as any'
+      ruleEvaluation: {
+        ruleId: 'data_quality_manual',
+        triggered: true,
+        confidence: 1.0,
+        conditionResults: [],
+        actionsExecuted: [],
+        executionTime: 0,
+        evaluatedAt: new Date(),
+        metadata: { source: 'manual_detection' }
+      },
       actionsTaken: [],
       createdBy: 'alert_detection_system',
       tags: ['data_quality']
@@ -698,10 +718,25 @@ export class AlertDetectionSystem {
   }
 
   private async executeAlertActions(alert: Alert, actionTypes: string[]): Promise<void> {
+    // ✅ ENTERPRISE: Valid action types
+    const validActionTypes = new Set<AlertAction['type']>([
+      'notification_sent',
+      'email_sent',
+      'workflow_triggered',
+      'record_updated',
+      'escalated'
+    ]);
+
     for (const actionType of actionTypes) {
+      // ✅ ENTERPRISE: Type guard instead of 'as any'
+      if (!validActionTypes.has(actionType as AlertAction['type'])) {
+        console.warn(`⚠️ Invalid action type: ${actionType}`);
+        continue;
+      }
+
       try {
         const action: AlertAction = {
-          type: actionType as any,
+          type: actionType as AlertAction['type'],
           timestamp: new Date(),
           details: { alertId: alert.id, actionType },
           success: true
@@ -713,7 +748,7 @@ export class AlertDetectionSystem {
         alert.actionsTaken.push(action);
       } catch (error) {
         const action: AlertAction = {
-          type: actionType as any,
+          type: actionType as AlertAction['type'],
           timestamp: new Date(),
           details: { alertId: alert.id, actionType },
           success: false,

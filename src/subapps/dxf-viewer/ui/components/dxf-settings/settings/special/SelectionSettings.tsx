@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useCursorSettings } from '../../../../../systems/cursor';
+import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
 
 export function SelectionSettings() {
   const [activeSelectionTab, setActiveSelectionTab] = useState<'window' | 'crossing'>('window');
@@ -98,29 +99,18 @@ export function SelectionSettings() {
 
           {/* Window Fill Color */}
           <div className="p-2 bg-gray-700 rounded space-y-2">
-            <div className="text-sm text-white">
-              <div className="font-medium">Χρώμα Γεμίσματος</div>
-              <div className="font-normal text-gray-400">Εσωτερικό χρώμα κουτιού</div>
-            </div>
-            <div className="flex items-center gap-2">
-              <div
-                className="w-6 h-6 rounded border border-gray-500"
-                style={{ backgroundColor: settings.selection.window.fillColor }}
-              />
-              <input
-                type="color"
-                value={settings.selection.window.fillColor}
-                onChange={(e) => handleWindowSelectionChange('fillColor', e.target.value)}
-                className="w-8 h-6 rounded border-0 cursor-pointer"
-              />
-              <input
-                type="text"
-                value={settings.selection.window.fillColor}
-                onChange={(e) => handleWindowSelectionChange('fillColor', e.target.value)}
-                className="w-20 px-2 py-1 text-xs bg-gray-600 text-white rounded border border-gray-500"
-                placeholder="#ffffff"
-              />
-            </div>
+            <label className="block text-sm font-medium text-gray-200">Χρώμα Γεμίσματος</label>
+            <ColorDialogTrigger
+              value={settings.selection.window.fillColor}
+              onChange={(color) => handleWindowSelectionChange('fillColor', color)}
+              label={settings.selection.window.fillColor}
+              title="Επιλογή Χρώματος Γεμίσματος Window"
+              alpha={false}
+              modes={['hex', 'rgb', 'hsl']}
+              palettes={['dxf', 'semantic', 'material']}
+              recent={true}
+              eyedropper={true}
+            />
           </div>
 
           {/* Window Fill Opacity */}
@@ -147,29 +137,18 @@ export function SelectionSettings() {
 
           {/* Window Border Color */}
           <div className="p-2 bg-gray-700 rounded space-y-2">
-            <div className="text-sm text-white">
-              <div className="font-medium">Χρώμα Περιγράμματος</div>
-              <div className="font-normal text-gray-400">Εξωτερική γραμμή κουτιού</div>
-            </div>
-            <div className="flex items-center gap-2">
-              <div
-                className="w-6 h-6 rounded border border-gray-500"
-                style={{ backgroundColor: settings.selection.window.borderColor }}
-              />
-              <input
-                type="color"
-                value={settings.selection.window.borderColor}
-                onChange={(e) => handleWindowSelectionChange('borderColor', e.target.value)}
-                className="w-8 h-6 rounded border-0 cursor-pointer"
-              />
-              <input
-                type="text"
-                value={settings.selection.window.borderColor}
-                onChange={(e) => handleWindowSelectionChange('borderColor', e.target.value)}
-                className="w-20 px-2 py-1 text-xs bg-gray-600 text-white rounded border border-gray-500"
-                placeholder="#ffffff"
-              />
-            </div>
+            <label className="block text-sm font-medium text-gray-200">Χρώμα Περιγράμματος</label>
+            <ColorDialogTrigger
+              value={settings.selection.window.borderColor}
+              onChange={(color) => handleWindowSelectionChange('borderColor', color)}
+              label={settings.selection.window.borderColor}
+              title="Επιλογή Χρώματος Περιγράμματος Window"
+              alpha={false}
+              modes={['hex', 'rgb', 'hsl']}
+              palettes={['dxf', 'semantic', 'material']}
+              recent={true}
+              eyedropper={true}
+            />
           </div>
 
           {/* Window Border Opacity */}
@@ -279,29 +258,18 @@ export function SelectionSettings() {
 
           {/* Crossing Fill Color */}
           <div className="p-2 bg-gray-700 rounded space-y-2">
-            <div className="text-sm text-white">
-              <div className="font-medium">Χρώμα Γεμίσματος</div>
-              <div className="font-normal text-gray-400">Εσωτερικό χρώμα κουτιού</div>
-            </div>
-            <div className="flex items-center gap-2">
-              <div
-                className="w-6 h-6 rounded border border-gray-500"
-                style={{ backgroundColor: settings.selection.crossing.fillColor }}
-              />
-              <input
-                type="color"
-                value={settings.selection.crossing.fillColor}
-                onChange={(e) => handleCrossingSelectionChange('fillColor', e.target.value)}
-                className="w-8 h-6 rounded border-0 cursor-pointer"
-              />
-              <input
-                type="text"
-                value={settings.selection.crossing.fillColor}
-                onChange={(e) => handleCrossingSelectionChange('fillColor', e.target.value)}
-                className="w-20 px-2 py-1 text-xs bg-gray-600 text-white rounded border border-gray-500"
-                placeholder="#ffffff"
-              />
-            </div>
+            <label className="block text-sm font-medium text-gray-200">Χρώμα Γεμίσματος</label>
+            <ColorDialogTrigger
+              value={settings.selection.crossing.fillColor}
+              onChange={(color) => handleCrossingSelectionChange('fillColor', color)}
+              label={settings.selection.crossing.fillColor}
+              title="Επιλογή Χρώματος Γεμίσματος Crossing"
+              alpha={false}
+              modes={['hex', 'rgb', 'hsl']}
+              palettes={['dxf', 'semantic', 'material']}
+              recent={true}
+              eyedropper={true}
+            />
           </div>
 
           {/* Crossing Fill Opacity */}
@@ -328,29 +296,18 @@ export function SelectionSettings() {
 
           {/* Crossing Border Color */}
           <div className="p-2 bg-gray-700 rounded space-y-2">
-            <div className="text-sm text-white">
-              <div className="font-medium">Χρώμα Περιγράμματος</div>
-              <div className="font-normal text-gray-400">Εξωτερική γραμμή κουτιού</div>
-            </div>
-            <div className="flex items-center gap-2">
-              <div
-                className="w-6 h-6 rounded border border-gray-500"
-                style={{ backgroundColor: settings.selection.crossing.borderColor }}
-              />
-              <input
-                type="color"
-                value={settings.selection.crossing.borderColor}
-                onChange={(e) => handleCrossingSelectionChange('borderColor', e.target.value)}
-                className="w-8 h-6 rounded border-0 cursor-pointer"
-              />
-              <input
-                type="text"
-                value={settings.selection.crossing.borderColor}
-                onChange={(e) => handleCrossingSelectionChange('borderColor', e.target.value)}
-                className="w-20 px-2 py-1 text-xs bg-gray-600 text-white rounded border border-gray-500"
-                placeholder="#ffffff"
-              />
-            </div>
+            <label className="block text-sm font-medium text-gray-200">Χρώμα Περιγράμματος</label>
+            <ColorDialogTrigger
+              value={settings.selection.crossing.borderColor}
+              onChange={(color) => handleCrossingSelectionChange('borderColor', color)}
+              label={settings.selection.crossing.borderColor}
+              title="Επιλογή Χρώματος Περιγράμματος Crossing"
+              alpha={false}
+              modes={['hex', 'rgb', 'hsl']}
+              palettes={['dxf', 'semantic', 'material']}
+              recent={true}
+              eyedropper={true}
+            />
           </div>
 
           {/* Crossing Border Opacity */}

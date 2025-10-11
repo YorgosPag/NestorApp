@@ -13,6 +13,49 @@ import { performance, PerformanceObserver } from 'perf_hooks';
 // ============================================================================
 
 /**
+ * ✅ ENTERPRISE: Network Information API
+ */
+interface NetworkInformation {
+  readonly effectiveType?: 'slow-2g' | '2g' | '3g' | '4g';
+  readonly downlink?: number;
+  readonly rtt?: number;
+  readonly saveData?: boolean;
+}
+
+interface NavigatorWithConnection extends Navigator {
+  readonly connection?: NetworkInformation;
+}
+
+/**
+ * ✅ ENTERPRISE: Chrome Performance Memory API
+ */
+interface PerformanceMemory {
+  readonly jsHeapSizeLimit: number;
+  readonly totalJSHeapSize: number;
+  readonly usedJSHeapSize: number;
+}
+
+interface PerformanceWithMemory extends Performance {
+  readonly memory?: PerformanceMemory;
+}
+
+/**
+ * ✅ ENTERPRISE: Layout Shift Entry (Web Vitals)
+ */
+interface LayoutShiftEntry extends PerformanceEntry {
+  value: number;
+  hadRecentInput: boolean;
+}
+
+/**
+ * ✅ ENTERPRISE: First Input Entry
+ */
+interface FirstInputEntry extends PerformanceEntry {
+  processingStart: number;
+  processingEnd: number;
+}
+
+/**
  * Performance profile session
  */
 export interface ProfileSession {
@@ -586,7 +629,12 @@ export class GeoAlertPerformanceProfiler {
 
   private detectEnvironment(): 'development' | 'production' | 'testing' {
     if (typeof process !== 'undefined' && process.env) {
-      return process.env.NODE_ENV as any || 'development';
+      // ✅ ENTERPRISE: Type guard for NODE_ENV
+      const env = process.env.NODE_ENV;
+      if (env === 'development' || env === 'production' || env === 'testing') {
+        return env;
+      }
+      return 'development';
     }
     return window.location.hostname === 'localhost' ? 'development' : 'production';
   }
@@ -599,8 +647,10 @@ export class GeoAlertPerformanceProfiler {
   }
 
   private getConnectionType(): string {
+    // ✅ ENTERPRISE: Type-safe Navigator.connection
     if ('connection' in navigator) {
-      return (navigator as any).connection.effectiveType || 'unknown';
+      const nav = navigator as NavigatorWithConnection;
+      return nav.connection?.effectiveType || 'unknown';
     }
     return 'unknown';
   }
@@ -695,11 +745,15 @@ export class GeoAlertPerformanceProfiler {
     if (!this.config.metrics.enableNetwork) return;
 
     // Monitor network information
+    // ✅ ENTERPRISE: Type-safe Navigator.connection
     if ('connection' in navigator) {
-      const connection = (navigator as any).connection;
-      connection.addEventListener('change', () => {
-        this.updateNetworkMetrics();
-      });
+      const nav = navigator as NavigatorWithConnection;
+      const connection = nav.connection;
+      if (connection && 'addEventListener' in connection) {
+        (connection as EventTarget).addEventListener('change', () => {
+          this.updateNetworkMetrics();
+        });
+      }
     }
 
     // Monitor resource loading
@@ -766,11 +820,14 @@ export class GeoAlertPerformanceProfiler {
   private updateNetworkMetrics(): void {
     if (!('connection' in navigator)) return;
 
-    const connection = (navigator as any).connection;
+    // ✅ ENTERPRISE: Type-safe Navigator.connection
+    const nav = navigator as NavigatorWithConnection;
+    const connection = nav.connection;
+    if (!connection) return;
 
     for (const session of this.activeSessions.values()) {
-      session.metrics.network.bandwidth.effectiveType = connection.effectiveType;
-      session.metrics.network.bandwidth.download = connection.downlink * 1024 * 1024; // Convert to bytes/s
+      session.metrics.network.bandwidth.effectiveType = connection.effectiveType || 'unknown';
+      session.metrics.network.bandwidth.download = (connection.downlink || 0) * 1024 * 1024; // Convert to bytes/s
     }
   }
 
@@ -1203,13 +1260,17 @@ export class GeoAlertPerformanceProfiler {
       };
     }
 
-    if (typeof window !== 'undefined' && 'performance' in window && 'memory' in (window.performance as any)) {
-      const memory = (window.performance as any).memory;
-      return {
-        used: memory.usedJSHeapSize || 0,
-        total: memory.totalJSHeapSize || 0,
-        limit: memory.jsHeapSizeLimit || 0
-      };
+    // ✅ ENTERPRISE: Type-safe performance.memory
+    if (typeof window !== 'undefined' && 'performance' in window) {
+      const perf = window.performance as PerformanceWithMemory;
+      if (perf.memory) {
+        const memory = perf.memory;
+        return {
+          used: memory.usedJSHeapSize || 0,
+          total: memory.totalJSHeapSize || 0,
+          limit: memory.jsHeapSizeLimit || 0
+        };
+      }
     }
 
     return { used: 0, total: 0, limit: 0 };
@@ -1309,12 +1370,20 @@ export class GeoAlertPerformanceProfiler {
   }
 
   private processFIDEntry(session: ProfileSession, entry: PerformanceEntry): void {
-    session.metrics.rendering.paintTiming.firstInputDelay = (entry as any).processingStart - entry.startTime;
+    // ✅ ENTERPRISE: Type guard for FirstInputEntry
+    if ('processingStart' in entry) {
+      const fidEntry = entry as FirstInputEntry;
+      session.metrics.rendering.paintTiming.firstInputDelay = fidEntry.processingStart - entry.startTime;
+    }
   }
 
   private processCLSEntry(session: ProfileSession, entry: PerformanceEntry): void {
-    if (!(entry as any).hadRecentInput) {
-      session.metrics.rendering.paintTiming.cumulativeLayoutShift += (entry as any).value;
+    // ✅ ENTERPRISE: Type guard for LayoutShiftEntry
+    if ('hadRecentInput' in entry && 'value' in entry) {
+      const clsEntry = entry as LayoutShiftEntry;
+      if (!clsEntry.hadRecentInput) {
+        session.metrics.rendering.paintTiming.cumulativeLayoutShift += clsEntry.value;
+      }
     }
   }
 

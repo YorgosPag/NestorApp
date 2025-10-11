@@ -474,12 +474,17 @@ export class EventAnalyticsEngine {
     // Mock events
     for (let i = 0; i < 50; i++) {
       const timestamp = new Date(last24Hours.getTime() + Math.random() * 24 * 60 * 60 * 1000);
+
+      // ✅ ENTERPRISE: Type-safe arrays instead of 'as any'
+      const eventTypes: Array<RealTimeEvent['type']> = ['alert', 'rule', 'notification', 'system'];
+      const severities: Array<RealTimeEvent['severity']> = ['info', 'warning', 'error'];
+
       this.events.push({
         id: `event_${i}`,
-        type: ['alert', 'rule', 'notification', 'system'][Math.floor(Math.random() * 4)] as any,
+        type: eventTypes[Math.floor(Math.random() * eventTypes.length)],
         timestamp,
         message: `Mock event ${i}`,
-        severity: ['info', 'warning', 'error'][Math.floor(Math.random() * 3)] as any,
+        severity: severities[Math.floor(Math.random() * severities.length)],
         source: `Source${Math.floor(Math.random() * 5) + 1}`
       });
     }

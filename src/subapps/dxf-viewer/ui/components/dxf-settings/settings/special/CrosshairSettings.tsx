@@ -169,7 +169,12 @@ export const CrosshairSettings: React.FC<CrosshairSettingsProps> = ({ className 
   const renderTabContent = () => {
     switch (activeTab) {
       case 'appearance':
-        return <CrosshairAppearanceSettings cursorColors={cursorColors} />;
+        return (
+          <CrosshairAppearanceSettings
+            cursorColors={cursorColors}
+            onCursorColorsChange={handleCursorColorsChange}
+          />
+        );
       case 'behavior':
         return (
           <CrosshairBehaviorSettings
@@ -178,7 +183,12 @@ export const CrosshairSettings: React.FC<CrosshairSettingsProps> = ({ className 
           />
         );
       default:
-        return <CrosshairAppearanceSettings cursorColors={cursorColors} />;
+        return (
+          <CrosshairAppearanceSettings
+            cursorColors={cursorColors}
+            onCursorColorsChange={handleCursorColorsChange}
+          />
+        );
     }
   };
 

@@ -59,7 +59,7 @@ i18n
 if (typeof window !== 'undefined') {
   // Client-side only
   setTimeout(async () => {
-    const criticalNamespaces = ['errors', 'toasts', 'navigation', 'dxf-viewer'];
+    const criticalNamespaces = ['errors', 'toasts', 'navigation', 'dxf-viewer', 'geo-canvas'];
     const currentLang = i18n.language;
     
     // console.log('🚀 Preloading critical namespaces...');

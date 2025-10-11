@@ -1,0 +1,18 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "outDir": "../dist/polygon-system"
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "examples/**/*",
+    "docs/**/*",
+    "**/*.test.ts",
+    "**/*.test.tsx"
+  ]
+}

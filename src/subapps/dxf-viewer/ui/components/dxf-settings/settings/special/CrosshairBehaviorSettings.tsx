@@ -45,6 +45,7 @@ import React from 'react';
 import { useCursorSettings } from '../../../../../systems/cursor';
 import { DEFAULT_CURSOR_SETTINGS } from '../../../../../systems/cursor/config';
 import type { CursorColors } from '../../../palettes/CursorColorPalette';
+import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
 
 export interface CrosshairBehaviorSettingsProps {
   className?: string;
@@ -99,28 +100,19 @@ export const CrosshairBehaviorSettings: React.FC<CrosshairBehaviorSettingsProps>
     <div className={`space-y-4 ${className}`}>
       {/* Crosshair Color */}
       <div className="p-2 bg-gray-700 rounded space-y-2">
-        <div className="text-sm text-white">
-          <div className="font-medium">Χρώμα</div>
-          <div className="font-normal text-gray-400">Χρώμα γραμμών σταυρώνυματος</div>
-        </div>
-        <div className="flex items-center gap-2">
-          <div
-            className="w-6 h-6 rounded border border-gray-500"
-            style={{ backgroundColor: cursorColors.crosshairColor }}
-          />
-          <input
-            type="color"
-            value={cursorColors.crosshairColor}
-            onChange={(e) => onCursorColorsChange({ ...cursorColors, crosshairColor: e.target.value })}
-            className="w-8 h-6 rounded border-0 cursor-pointer"
-          />
-          <input
-            type="text"
-            value={cursorColors.crosshairColor}
-            onChange={(e) => onCursorColorsChange({ ...cursorColors, crosshairColor: e.target.value })}
-            className="w-20 px-2 py-1 text-xs bg-gray-600 text-white rounded border border-gray-500"
-          />
-        </div>
+        <label className="block text-sm font-medium text-gray-200">Χρώμα</label>
+        <div className="text-xs text-gray-400 mb-2">Χρώμα γραμμών σταυρώνυματος</div>
+        <ColorDialogTrigger
+          value={cursorColors.crosshairColor}
+          onChange={(color) => onCursorColorsChange({ ...cursorColors, crosshairColor: color })}
+          label={cursorColors.crosshairColor}
+          title="Επιλογή Χρώματος Crosshair"
+          alpha={false}
+          modes={['hex', 'rgb', 'hsl']}
+          palettes={['dxf', 'semantic', 'material']}
+          recent={true}
+          eyedropper={true}
+        />
       </div>
 
       {/* Crosshair Opacity */}

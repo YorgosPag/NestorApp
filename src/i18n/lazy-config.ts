@@ -14,7 +14,8 @@ export type Language = typeof SUPPORTED_LANGUAGES[number];
 // Available namespaces
 export const SUPPORTED_NAMESPACES = [
   'common',
-  'dxf-viewer', 
+  'dxf-viewer',
+  'geo-canvas', // Added geo-canvas namespace
   'forms',
   'toasts',
   'errors',

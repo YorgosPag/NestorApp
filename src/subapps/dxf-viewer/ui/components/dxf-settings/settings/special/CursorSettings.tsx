@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useCursorSettings } from '../../../../../systems/cursor';
+import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
 
 // Type definitions for cursor and crosshair settings
 type LineStyle = 'solid' | 'dashed' | 'dotted' | 'dash-dot';
@@ -105,28 +106,19 @@ export function CursorSettings() {
 
           {/* Cursor Color */}
           <div className="p-2 bg-gray-700 rounded space-y-2">
-            <div className="text-sm text-white">
-              <div className="font-medium">Χρώμα Κέρσορα</div>
-              <div className="font-normal text-gray-400">Χρώμα περιγράμματος κέρσορα</div>
-            </div>
-            <div className="flex items-center gap-2">
-              <div
-                className="w-6 h-6 rounded border border-gray-500"
-                style={{ backgroundColor: settings.cursor.color }}
-              />
-              <input
-                type="color"
-                value={settings.cursor.color}
-                onChange={(e) => handleCursorColorChange(e.target.value)}
-                className="w-8 h-6 rounded border-0 cursor-pointer"
-              />
-              <input
-                type="text"
-                value={settings.cursor.color}
-                onChange={(e) => handleCursorColorChange(e.target.value)}
-                className="w-20 px-2 py-1 text-xs bg-gray-600 text-white rounded border border-gray-500"
-              />
-            </div>
+            <label className="block text-sm font-medium text-gray-200">Χρώμα Κέρσορα</label>
+            <div className="text-xs text-gray-400 mb-2">Χρώμα περιγράμματος κέρσορα</div>
+            <ColorDialogTrigger
+              value={settings.cursor.color}
+              onChange={handleCursorColorChange}
+              label={settings.cursor.color}
+              title="Επιλογή Χρώματος Κέρσορα"
+              alpha={false}
+              modes={['hex', 'rgb', 'hsl']}
+              palettes={['dxf', 'semantic', 'material']}
+              recent={true}
+              eyedropper={true}
+            />
           </div>
 
           {/* Cursor Line Style */}

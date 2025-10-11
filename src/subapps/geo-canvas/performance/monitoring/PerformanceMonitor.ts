@@ -10,6 +10,17 @@
 // PERFORMANCE TYPES
 // ============================================================================
 
+/**
+ * ✅ ENTERPRISE: Type definition for PerformanceEventTiming (Event Timing API)
+ */
+interface PerformanceEventTimingEntry extends PerformanceEntry {
+  processingStart?: number;
+  processingEnd?: number;
+  duration: number;
+  cancelable?: boolean;
+  target?: EventTarget | null;
+}
+
 export interface PerformanceMetrics {
   timestamp: number;
 
@@ -197,7 +208,10 @@ export class PerformanceMonitor {
       if ('PerformanceEventTiming' in window) {
         const inputObserver = new PerformanceObserver((list) => {
           for (const entry of list.getEntries()) {
-            this.recordInputLatency(entry as any);
+            // ✅ ENTERPRISE: Type guard instead of 'as any'
+            if ('processingStart' in entry && 'startTime' in entry) {
+              this.recordInputLatency(entry as PerformanceEventTimingEntry);
+            }
           }
         });
 
@@ -529,7 +543,7 @@ export class PerformanceMonitor {
     }
   }
 
-  private recordInputLatency(entry: any): void {
+  private recordInputLatency(entry: PerformanceEventTimingEntry): void {
     if (entry.processingStart && entry.startTime) {
       const latency = entry.processingStart - entry.startTime;
 

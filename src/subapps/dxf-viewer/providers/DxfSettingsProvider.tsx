@@ -1,4 +1,12 @@
 /**
+ * ⚠️ DEPRECATED & TEMPORARILY DISABLED FOR TESTING
+ *
+ * Checking if old DxfSettingsProvider is still being used somewhere.
+ * If compilation succeeds, it means the new EnterpriseDxfSettingsProvider is working properly.
+ *
+ * @deprecated Use EnterpriseDxfSettingsProvider instead
+ *
+ * OLD DESCRIPTION:
  * DxfSettingsProvider - Central Settings Provider
  *
  * @description
@@ -80,6 +88,7 @@ import { textStyleStore } from '../stores/TextStyleStore';
 import { toolStyleStore } from '../stores/ToolStyleStore';
 import { useUnifiedLinePreview } from '../ui/hooks/useUnifiedSpecificSettings';
 import { getDashArray } from '../settings-core/defaults';
+import { modeMap } from '../settings/core/modeMap';
 
 // ===== RULERS GRID SYNC STORES =====
 // Κεντρικά stores για συγχρονισμό Grid & Rulers settings χωρίς κυκλικές εξαρτήσεις
@@ -1429,6 +1438,7 @@ const DxfSettingsContext = createContext<DxfSettingsContextType | null>(null);
 
 // ===== PROVIDER =====
 
+// ⚠️ DEPRECATED - Use EnterpriseDxfSettingsProvider instead
 export function DxfSettingsProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(settingsReducer, initialState);
   const saveTimeoutRef = React.useRef<NodeJS.Timeout>();
@@ -1755,19 +1765,19 @@ export function DxfSettingsProvider({ children }: { children: React.ReactNode })
       settings = { ...settings, ...state.templateOverrides.line };
     }
 
-    // Apply specific settings for current mode
+    // Apply specific settings for current mode (Fixed: preview → draft mapping)
     if (currentMode !== 'normal' && state.specific.line) {
-      const specificKey = currentMode as keyof typeof state.specific.line;
-      if (state.specific.line[specificKey]) {
-        settings = { ...settings, ...state.specific.line[specificKey] };
+      const mappedMode = modeMap(currentMode);
+      if (state.specific.line[mappedMode]) {
+        settings = { ...settings, ...state.specific.line[mappedMode] };
       }
     }
 
-    // Apply user overrides if enabled
+    // Apply user overrides if enabled (Fixed: preview → draft mapping)
     if (state.overrideEnabled.line && state.overrides.line) {
-      const overrideKey = currentMode as keyof typeof state.overrides.line;
-      if (state.overrides.line[overrideKey]) {
-        settings = { ...settings, ...state.overrides.line[overrideKey] };
+      const mappedMode = modeMap(currentMode);
+      if (state.overrideEnabled.line[mappedMode] && state.overrides.line[mappedMode]) {
+        settings = { ...settings, ...state.overrides.line[mappedMode] };
       }
     }
 
@@ -1778,19 +1788,19 @@ export function DxfSettingsProvider({ children }: { children: React.ReactNode })
     const currentMode = mode || state.mode;
     let settings = state.text; // Start with general
 
-    // Apply specific settings for current mode
+    // Apply specific settings for current mode (Fixed: preview → draft mapping)
     if (currentMode !== 'normal' && state.specific.text) {
-      const specificKey = currentMode as keyof typeof state.specific.text;
-      if (state.specific.text[specificKey]) {
-        settings = { ...settings, ...state.specific.text[specificKey] };
+      const mappedMode = modeMap(currentMode);
+      if (state.specific.text[mappedMode]) {
+        settings = { ...settings, ...state.specific.text[mappedMode] };
       }
     }
 
-    // Apply user overrides if enabled
+    // Apply user overrides if enabled (Fixed: preview → draft mapping)
     if (state.overrideEnabled.text && state.overrides.text) {
-      const overrideKey = currentMode as keyof typeof state.overrides.text;
-      if (state.overrides.text[overrideKey]) {
-        settings = { ...settings, ...state.overrides.text[overrideKey] };
+      const mappedMode = modeMap(currentMode);
+      if (state.overrideEnabled.text[mappedMode] && state.overrides.text[mappedMode]) {
+        settings = { ...settings, ...state.overrides.text[mappedMode] };
       }
     }
 
@@ -1801,19 +1811,19 @@ export function DxfSettingsProvider({ children }: { children: React.ReactNode })
     const currentMode = mode || state.mode;
     let settings = state.grip; // Start with general
 
-    // Apply specific settings for current mode
+    // Apply specific settings for current mode (Fixed: preview → draft mapping)
     if (currentMode !== 'normal' && state.specific.grip) {
-      const specificKey = currentMode as keyof typeof state.specific.grip;
-      if (state.specific.grip[specificKey]) {
-        settings = { ...settings, ...state.specific.grip[specificKey] };
+      const mappedMode = modeMap(currentMode);
+      if (state.specific.grip[mappedMode]) {
+        settings = { ...settings, ...state.specific.grip[mappedMode] };
       }
     }
 
-    // Apply user overrides if enabled
+    // Apply user overrides if enabled (Fixed: preview → draft mapping)
     if (state.overrideEnabled.grip && state.overrides.grip) {
-      const overrideKey = currentMode as keyof typeof state.overrides.grip;
-      if (state.overrides.grip[overrideKey]) {
-        settings = { ...settings, ...state.overrides.grip[overrideKey] };
+      const mappedMode = modeMap(currentMode);
+      if (state.overrideEnabled.grip[mappedMode] && state.overrides.grip[mappedMode]) {
+        settings = { ...settings, ...state.overrides.grip[mappedMode] };
       }
     }
 
@@ -1971,6 +1981,7 @@ export function DxfSettingsProvider({ children }: { children: React.ReactNode })
 
 // ===== HOOK =====
 
+// ⚠️ DEPRECATED - Use EnterpriseDxfSettingsProvider instead
 export function useDxfSettings(): DxfSettingsContextType {
   const context = useContext(DxfSettingsContext);
   if (!context) {
@@ -2162,6 +2173,7 @@ export function useRulerSettingsFromProvider() {    // 🆕 ΠΡΟΣΘΗΚΗ: Ru
  * @param mode - Viewer mode (normal, preview, completion)
  * @returns Effective line settings για το συγκεκριμένο mode
  */
+// ⚠️ DEPRECATED - Use EnterpriseDxfSettingsProvider instead
 export function useLineStyles(mode?: ViewerMode) {
   const dxfSettings = useDxfSettingsSafe();
 
@@ -2184,15 +2196,14 @@ export function useLineStyles(mode?: ViewerMode) {
   } = dxfSettings;
 
   const currentMode = mode || state.mode;
+  const mappedMode = modeMap(currentMode);
   const effectiveSettings = getEffectiveLineSettings(currentMode);
-  const isOverridden = state.overrideEnabled.line;
+  const isOverridden = state.overrideEnabled.line[mappedMode] || false;
 
   return {
     settings: effectiveSettings,
     isOverridden,
     update: (updates: Partial<LineSettings>) => {
-      // Map 'preview' to 'draft' for backward compatibility
-      const mappedMode = currentMode === 'preview' ? 'draft' : currentMode;
 
       if (isOverridden && currentMode !== 'normal') {
         // Only update overrides if mode is valid
@@ -2211,8 +2222,6 @@ export function useLineStyles(mode?: ViewerMode) {
     },
     reset: () => {
       if (isOverridden && currentMode !== 'normal') {
-        // Map 'preview' to 'draft' for backward compatibility
-        const mappedMode = currentMode === 'preview' ? 'draft' : currentMode;
         if (mappedMode === 'draft' || mappedMode === 'hover' || mappedMode === 'selection' || mappedMode === 'completion') {
           toggleLineOverride(mappedMode, false);
         }
@@ -2225,6 +2234,7 @@ export function useLineStyles(mode?: ViewerMode) {
  * 🆕 MERGE: Unified hook για Text settings με mode support
  * Αντικαθιστά το useEntityStyles('text', mode) από ConfigurationProvider
  */
+// ⚠️ DEPRECATED - Use EnterpriseDxfSettingsProvider instead
 export function useTextStyles(mode?: ViewerMode) {
   const dxfSettings = useDxfSettingsSafe();
 

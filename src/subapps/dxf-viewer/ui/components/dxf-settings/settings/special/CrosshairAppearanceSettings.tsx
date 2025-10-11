@@ -45,10 +45,12 @@ import React from 'react';
 import { useCursorSettings } from '../../../../../systems/cursor';
 import { DEFAULT_CURSOR_SETTINGS } from '../../../../../systems/cursor/config';
 import type { CursorColors } from '../../../palettes/CursorColorPalette';
+import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
 
 export interface CrosshairAppearanceSettingsProps {
   className?: string;
   cursorColors: CursorColors;
+  onCursorColorsChange: (colors: CursorColors) => void;
 }
 
 /**
@@ -68,7 +70,8 @@ export interface CrosshairAppearanceSettingsProps {
  */
 export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsProps> = ({
   className = '',
-  cursorColors
+  cursorColors,
+  onCursorColorsChange
 }) => {
   // ============================================================================
   // HOOKS
@@ -95,6 +98,23 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
 
   return (
     <div className={`space-y-4 ${className}`}>
+      {/* Crosshair Color */}
+      <div className="p-2 bg-gray-700 rounded space-y-2">
+        <label className="block text-sm font-medium text-gray-200">Χρώμα Σταυρονήματος</label>
+        <div className="text-xs text-gray-400 mb-2">Χρώμα γραμμών σταυρώνυματος</div>
+        <ColorDialogTrigger
+          value={cursorColors.crosshairColor}
+          onChange={(color) => onCursorColorsChange({ ...cursorColors, crosshairColor: color })}
+          label={cursorColors.crosshairColor}
+          title="Επιλογή Χρώματος Σταυρώνυματος"
+          alpha={false}
+          modes={['hex', 'rgb', 'hsl']}
+          palettes={['dxf', 'semantic', 'material']}
+          recent={true}
+          eyedropper={true}
+        />
+      </div>
+
       {/* Line Style */}
       <div className="p-2 bg-gray-700 rounded space-y-2">
         <div className="text-sm text-white">

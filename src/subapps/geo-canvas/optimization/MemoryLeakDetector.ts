@@ -13,6 +13,26 @@ import { performance, PerformanceObserver } from 'perf_hooks';
 // ============================================================================
 
 /**
+ * ✅ ENTERPRISE: Chrome Performance Memory API
+ */
+interface PerformanceMemory {
+  readonly jsHeapSizeLimit: number;
+  readonly totalJSHeapSize: number;
+  readonly usedJSHeapSize: number;
+}
+
+interface PerformanceWithMemory extends Performance {
+  readonly memory?: PerformanceMemory;
+}
+
+/**
+ * ✅ ENTERPRISE: Window with gc() exposed (Chrome --expose-gc flag)
+ */
+interface WindowWithGC extends Window {
+  gc?: () => void;
+}
+
+/**
  * Memory snapshot δεδομένα
  */
 export interface MemorySnapshot {
@@ -307,15 +327,19 @@ export class GeoAlertMemoryLeakDetector {
     }
 
     // Browser fallback
-    if (typeof window !== 'undefined' && 'performance' in window && 'memory' in (window.performance as any)) {
-      const memory = (window.performance as any).memory;
-      return {
-        rss: 0,
-        heapTotal: memory.totalJSHeapSize || 0,
-        heapUsed: memory.usedJSHeapSize || 0,
-        external: 0,
-        arrayBuffers: 0
-      };
+    // ✅ ENTERPRISE: Type-safe check for Chrome Performance Memory API
+    if (typeof window !== 'undefined' && 'performance' in window) {
+      const perf = window.performance as PerformanceWithMemory;
+      if (perf.memory) {
+        const memory = perf.memory;
+        return {
+          rss: 0,
+          heapTotal: memory.totalJSHeapSize || 0,
+          heapUsed: memory.usedJSHeapSize || 0,
+          external: 0,
+          arrayBuffers: 0
+        };
+      }
     }
 
     // Mock fallback για development
@@ -1007,9 +1031,13 @@ export class GeoAlertMemoryLeakDetector {
    * Force garbage collection (development only)
    */
   public forceGarbageCollection(): void {
+    // ✅ ENTERPRISE: Type-safe check for gc() function
     if (typeof window !== 'undefined' && 'gc' in window) {
-      console.log('🗑️  Forcing garbage collection...');
-      (window as any).gc();
+      const win = window as WindowWithGC;
+      if (win.gc) {
+        console.log('🗑️  Forcing garbage collection...');
+        win.gc();
+      }
     } else if (typeof global !== 'undefined' && global.gc) {
       console.log('🗑️  Forcing garbage collection...');
       global.gc();

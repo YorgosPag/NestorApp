@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useGeoTransform } from '../hooks/useGeoTransform';
+import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import type { DxfCoordinate, GeoCoordinate } from '../types';
 
 /**
@@ -10,6 +11,7 @@ import type { DxfCoordinate, GeoCoordinate } from '../types';
  * Phase 2: Core transformation functionality
  */
 export function GeoreferencingPanel() {
+  const { t, isLoading } = useTranslationLazy('geo-canvas');
   const [transformState, transformActions] = useGeoTransform();
   const [showAddPoint, setShowAddPoint] = useState(false);
   const [newPointData, setNewPointData] = useState({
@@ -20,6 +22,18 @@ export function GeoreferencingPanel() {
     accuracy: '1.0',
     description: ''
   });
+
+  // Show loading while translations are being loaded
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-400">Φόρτωση...</p>
+        </div>
+      </div>
+    );
+  }
 
   // ========================================================================
   // CONTROL POINT MANAGEMENT
@@ -84,36 +98,36 @@ export function GeoreferencingPanel() {
     return (
       <div className="bg-gray-800 rounded-lg p-4 mb-4">
         <h3 className="text-lg font-semibold mb-3 text-blue-400">
-          📊 Validation Status
+          {t('validation.status')}
         </h3>
 
         <div className={`flex items-center mb-3 ${getStatusColor()}`}>
           <span className="mr-2">{getStatusIcon()}</span>
           <span className="font-medium">
-            {validation.isValid ? 'Ready για Calibration' : 'Χρειάζεται Βελτίωση'}
+            {validation.isValid ? t('validation.ready') : t('validation.needsImprovement')}
           </span>
         </div>
 
         {/* Statistics */}
         <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
           <div>
-            <span className="text-gray-400">Control Points:</span>
+            <span className="text-gray-400">{t('validation.statistics.controlPoints')}</span>
             <span className="ml-2 text-white">{validation.statistics.count}</span>
           </div>
           <div>
-            <span className="text-gray-400">Avg Accuracy:</span>
+            <span className="text-gray-400">{t('validation.statistics.avgAccuracy')}</span>
             <span className="ml-2 text-white">
               {validation.statistics.averageAccuracy.toFixed(2)}m
             </span>
           </div>
           <div>
-            <span className="text-gray-400">Max Error:</span>
+            <span className="text-gray-400">{t('validation.statistics.maxError')}</span>
             <span className="ml-2 text-white">
               {validation.statistics.maxError.toFixed(2)}m
             </span>
           </div>
           <div>
-            <span className="text-gray-400">Distribution:</span>
+            <span className="text-gray-400">{t('validation.statistics.distribution')}</span>
             <span className="ml-2 text-white capitalize">
               {validation.statistics.spatialDistribution}
             </span>
@@ -123,7 +137,7 @@ export function GeoreferencingPanel() {
         {/* Errors */}
         {validation.errors.length > 0 && (
           <div className="mb-3">
-            <h4 className="text-red-400 font-medium mb-2">Errors:</h4>
+            <h4 className="text-red-400 font-medium mb-2">{t('validation.sections.errors')}</h4>
             <ul className="text-sm text-red-300 space-y-1">
               {validation.errors.map((error, i) => (
                 <li key={i}>• {error}</li>
@@ -135,7 +149,7 @@ export function GeoreferencingPanel() {
         {/* Warnings */}
         {validation.warnings.length > 0 && (
           <div className="mb-3">
-            <h4 className="text-yellow-400 font-medium mb-2">Warnings:</h4>
+            <h4 className="text-yellow-400 font-medium mb-2">{t('validation.sections.warnings')}</h4>
             <ul className="text-sm text-yellow-300 space-y-1">
               {validation.warnings.map((warning, i) => (
                 <li key={i}>• {warning}</li>
@@ -147,7 +161,7 @@ export function GeoreferencingPanel() {
         {/* Recommendations */}
         {validation.recommendations.length > 0 && (
           <div>
-            <h4 className="text-blue-400 font-medium mb-2">Recommendations:</h4>
+            <h4 className="text-blue-400 font-medium mb-2">{t('validation.sections.recommendations')}</h4>
             <ul className="text-sm text-blue-300 space-y-1">
               {validation.recommendations.map((rec, i) => (
                 <li key={i}>• {rec}</li>
@@ -167,23 +181,23 @@ export function GeoreferencingPanel() {
     <div className="bg-gray-800 rounded-lg p-4 mb-4">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-blue-400">
-          📍 Control Points ({transformState.controlPoints.length})
+          {t('panelTitle')} ({transformState.controlPoints.length})
         </h3>
         <button
           onClick={() => setShowAddPoint(!showAddPoint)}
           className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm transition-colors"
         >
-          {showAddPoint ? 'Cancel' : '+ Add Point'}
+          {showAddPoint ? t('buttons.cancel') : t('actions.addPoint')}
         </button>
       </div>
 
       {/* Add Point Form */}
       {showAddPoint && (
         <div className="bg-gray-700 rounded p-4 mb-4">
-          <h4 className="font-medium mb-3">Add Control Point</h4>
+          <h4 className="font-medium mb-3">{t('addControlPoint')}</h4>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-gray-400 mb-1">DXF X:</label>
+              <label className="block text-sm text-gray-400 mb-1">{t('form.dxfX')}</label>
               <input
                 type="number"
                 value={newPointData.dxfX}
@@ -193,7 +207,7 @@ export function GeoreferencingPanel() {
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">DXF Y:</label>
+              <label className="block text-sm text-gray-400 mb-1">{t('form.dxfY')}</label>
               <input
                 type="number"
                 value={newPointData.dxfY}
@@ -203,7 +217,7 @@ export function GeoreferencingPanel() {
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Longitude:</label>
+              <label className="block text-sm text-gray-400 mb-1">{t('form.geoLng')}</label>
               <input
                 type="number"
                 value={newPointData.geoLng}
@@ -214,7 +228,7 @@ export function GeoreferencingPanel() {
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Latitude:</label>
+              <label className="block text-sm text-gray-400 mb-1">{t('form.geoLat')}</label>
               <input
                 type="number"
                 value={newPointData.geoLat}
@@ -251,14 +265,14 @@ export function GeoreferencingPanel() {
               onClick={() => setShowAddPoint(false)}
               className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded text-sm transition-colors"
             >
-              Cancel
+              {t('controlPoints.cancel')}
             </button>
             <button
               onClick={handleAddPoint}
               disabled={!newPointData.dxfX || !newPointData.dxfY || !newPointData.geoLng || !newPointData.geoLat}
               className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-3 py-1 rounded text-sm transition-colors"
             >
-              Add Point
+              {t('controlPoints.addPoint')}
             </button>
           </div>
         </div>
@@ -312,8 +326,8 @@ export function GeoreferencingPanel() {
         {transformState.controlPoints.length === 0 && (
           <div className="text-center py-8 text-gray-400">
             <div className="text-4xl mb-2">📍</div>
-            <p>No control points added yet</p>
-            <p className="text-sm">Add at least 3 points για georeferencing</p>
+            <p>{t('controlPoints.noPointsYet')}</p>
+            <p className="text-sm">{t('controlPoints.addMinimumPoints')}</p>
           </div>
         )}
       </div>
@@ -327,25 +341,25 @@ export function GeoreferencingPanel() {
   const renderTransformationControls = () => (
     <div className="bg-gray-800 rounded-lg p-4 mb-4">
       <h3 className="text-lg font-semibold mb-4 text-blue-400">
-        🔧 Transformation Controls
+        {t('transformation.controls')}
       </h3>
 
       {/* Calibration Status */}
       <div className="mb-4">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-gray-400">Status:</span>
+          <span className="text-gray-400">{t('transformation.status')}</span>
           <div className="flex items-center">
             {transformState.isCalibrated ? (
               <>
-                <span className="text-green-400 mr-2">✅ Calibrated</span>
+                <span className="text-green-400 mr-2">{t('transformation.calibrated')}</span>
                 <span className="text-sm text-gray-400">
                   ({transformState.method}, ±{transformState.accuracy?.toFixed(3)}m)
                 </span>
               </>
             ) : transformState.isCalibrating ? (
-              <span className="text-yellow-400">⏳ Calibrating...</span>
+              <span className="text-yellow-400">{t('transformation.calibrating')}</span>
             ) : (
-              <span className="text-gray-400">❌ Not Calibrated</span>
+              <span className="text-gray-400">{t('transformation.notCalibrated')}</span>
             )}
           </div>
         </div>
@@ -362,7 +376,7 @@ export function GeoreferencingPanel() {
           }
           className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-2 px-4 rounded transition-colors"
         >
-          {transformState.isCalibrating ? 'Calibrating...' : '📐 Calibrate Transformation'}
+          {transformState.isCalibrating ? t('transformation.calibratingButton') : t('transformation.calibrateTransformation')}
         </button>
 
         <div className="grid grid-cols-2 gap-2">
@@ -371,14 +385,14 @@ export function GeoreferencingPanel() {
             disabled={transformState.controlPoints.length === 0}
             className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-2 px-4 rounded text-sm transition-colors"
           >
-            💾 Save Points
+            {t('controlPoints.savePoints')}
           </button>
 
           <button
             onClick={transformActions.loadControlPoints}
             className="bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded text-sm transition-colors"
           >
-            📂 Load Points
+            {t('controlPoints.loadPoints')}
           </button>
         </div>
 
@@ -387,7 +401,7 @@ export function GeoreferencingPanel() {
           disabled={transformState.controlPoints.length === 0}
           className="w-full bg-red-600 hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-2 px-4 rounded text-sm transition-colors"
         >
-          🗑️ Clear All Points
+          {t('controlPoints.clearAllPoints')}
         </button>
       </div>
     </div>
@@ -424,10 +438,10 @@ export function GeoreferencingPanel() {
       {/* Header */}
       <div className="bg-gray-800 rounded-lg p-4">
         <h2 className="text-xl font-bold text-blue-400 mb-2">
-          🗺️ DXF Georeferencing
+          {t('panelHeader.title')}
         </h2>
         <p className="text-sm text-gray-400">
-          Phase 2: Coordinate transformation engine
+          {t('panelHeader.subtitle')}
         </p>
         {transformState.lastOperation && (
           <p className="text-xs text-green-400 mt-2">

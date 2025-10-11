@@ -30,7 +30,7 @@
 // DEBUG FLAG
 const DEBUG_UNIFIED_DRAWING = false;
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type { AnySceneEntity, LineEntity, CircleEntity, PolylineEntity, RectangleEntity, AngleMeasurementEntity } from '../../types/scene';
 
@@ -127,14 +127,37 @@ export function useUnifiedDrawing() {
   const linePreviewStyles = useLineStyles('preview');
   const lineCompletionStyles = useLineStyles('completion');
 
+  // 🔍 DEBUG: Log preview settings
+  useEffect(() => {
+    console.log('🔍 DEBUG - Line Preview Settings:', {
+      linePreviewStyles,
+      hasSettings: !!linePreviewStyles,
+      color: linePreviewStyles?.color,
+      lineWidth: linePreviewStyles?.lineWidth,
+      opacity: linePreviewStyles?.opacity,
+      lineType: linePreviewStyles?.lineType
+    });
+  }, [linePreviewStyles]);
+
   const nextEntityIdRef = useRef(1);
 
   // ===== ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΗ HELPER FUNCTION ΓΙΑ PREVIEW SETTINGS =====
   // Applies ColorPalettePanel settings (DXF Settings → General + Specific Preview)
   // Used by: line, polyline, circle, rectangle entities
   const applyPreviewSettings = useCallback((entity: any) => {
+    // 🔍 DEBUG: Log apply preview settings call
+    console.log('🔍 DEBUG - applyPreviewSettings called:', {
+      entityType: entity?.type,
+      entityId: entity?.id,
+      hasLinePreviewStyles: !!linePreviewStyles,
+      linePreviewStyles
+    });
+
     // ✅ FIX (ChatGPT-5): Guard against undefined linePreviewStyles
-    if (!linePreviewStyles) return;
+    if (!linePreviewStyles) {
+      console.warn('⚠️ DEBUG - linePreviewStyles is undefined/null, returning early');
+      return;
+    }
 
     // ✅ FIX (ChatGPT-5): useLineStyles returns LineSettings directly, not { settings: LineSettings }
     entity.color = linePreviewStyles.color;
@@ -146,6 +169,15 @@ export function useUnifiedDrawing() {
     entity.lineJoin = linePreviewStyles.lineJoin;
     entity.dashOffset = linePreviewStyles.dashOffset;
     entity.breakAtCenter = linePreviewStyles.breakAtCenter;
+
+    // 🔍 DEBUG: Log applied settings
+    console.log('✅ DEBUG - Preview settings applied to entity:', {
+      entityType: entity.type,
+      appliedColor: entity.color,
+      appliedLineWidth: entity.lineweight,
+      appliedOpacity: entity.opacity,
+      appliedLineType: entity.lineType
+    });
   }, [linePreviewStyles]);
 
   // Snap functionality moved to DxfCanvas level

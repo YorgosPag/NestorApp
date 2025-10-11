@@ -1,9 +1,10 @@
 // Generated TypeScript types for i18n translation keys
 // This ensures type safety when using translation keys
 
-export type TranslationNamespace = 
+export type TranslationNamespace =
   | 'common'
   | 'dxf-viewer'
+  | 'geo-canvas' // Added geo-canvas namespace
   | 'forms'
   | 'toasts'
   | 'errors'
@@ -95,8 +96,8 @@ export type CrmKeys =
   | 'overview.stats.scheduledViewings'
   | 'overview.stats.pendingTasks';
 
-// Properties namespace keys  
-export type PropertiesKeys = 
+// Properties namespace keys
+export type PropertiesKeys =
   | 'toolbar.actions.new'
   | 'toolbar.actions.edit'
   | 'toolbar.actions.delete'
@@ -139,6 +140,176 @@ export type PropertiesKeys =
   | 'search.terms.shop'
   | 'search.terms.parking'
   | 'search.terms.storage';
+
+// Geo-Canvas namespace keys
+export type GeoCanvasKeys =
+  | 'title'
+  | 'subtitle'
+  | 'phases.foundation'
+  | 'phases.transformation'
+  | 'phases.mapping'
+  | 'phases.database'
+  | 'phases.alerts'
+  | 'phases.ui'
+  | 'phases.performance'
+  | 'phases.deployment'
+  | 'status.ready'
+  | 'status.inProgress'
+  | 'status.completed'
+  | 'status.pending'
+  | 'status.transformationReady'
+  | 'status.mappingReady'
+  | 'status.databaseReady'
+  | 'views.foundation'
+  | 'views.georeferencing'
+  | 'views.mapping'
+  | 'views.database'
+  | 'views.alerts'
+  | 'toolbar.view'
+  | 'toolbar.crs'
+  | 'toolbar.zoom'
+  | 'toolbar.coordinates'
+  | 'georeferencing.title'
+  | 'georeferencing.subtitle'
+  | 'georeferencing.workspace'
+  | 'georeferencing.engineDescription'
+  | 'georeferencing.coordinateTransform'
+  | 'georeferencing.steps.upload'
+  | 'georeferencing.steps.points'
+  | 'georeferencing.steps.transform'
+  | 'georeferencing.steps.validate'
+  | 'georeferencing.workflow.step1'
+  | 'georeferencing.workflow.step2'
+  | 'georeferencing.workflow.step3'
+  | 'georeferencing.workflow.step4'
+  | 'georeferencing.uploadArea.title'
+  | 'georeferencing.uploadArea.description'
+  | 'georeferencing.uploadArea.dragText'
+  | 'georeferencing.uploadArea.formats'
+  | 'georeferencing.uploadArea.button'
+  | 'georeferencing.controlPoints.title'
+  | 'georeferencing.controlPoints.description'
+  | 'georeferencing.controlPoints.count'
+  | 'georeferencing.controlPoints.addPoint'
+  | 'georeferencing.controlPoints.removePoint'
+  | 'georeferencing.controlPoints.accuracy'
+  | 'georeferencing.controlPoints.status'
+  | 'georeferencing.controlPoints.none'
+  | 'georeferencing.controlPoints.minimum'
+  | 'georeferencing.controlPoints.features.addEdit'
+  | 'georeferencing.controlPoints.features.mapping'
+  | 'georeferencing.controlPoints.features.validation'
+  | 'georeferencing.controlPoints.features.distribution'
+  | 'georeferencing.controlPoints.coordinates.local'
+  | 'georeferencing.controlPoints.coordinates.world'
+  | 'georeferencing.controlPoints.coordinates.x'
+  | 'georeferencing.controlPoints.coordinates.y'
+  | 'georeferencing.controlPoints.coordinates.lat'
+  | 'georeferencing.controlPoints.coordinates.lng'
+  | 'georeferencing.transformation.title'
+  | 'georeferencing.transformation.controls'
+  | 'georeferencing.transformation.engine'
+  | 'georeferencing.transformation.method'
+  | 'georeferencing.transformation.methods.affine'
+  | 'georeferencing.transformation.methods.polynomial'
+  | 'georeferencing.transformation.methods.tps'
+  | 'georeferencing.transformation.execute'
+  | 'georeferencing.transformation.calibrate'
+  | 'georeferencing.transformation.notCalibrated'
+  | 'georeferencing.transformation.features.affine'
+  | 'georeferencing.transformation.features.leastSquares'
+  | 'georeferencing.transformation.features.rmsCalculation'
+  | 'georeferencing.transformation.features.inverse'
+  | 'georeferencing.transformation.results.title'
+  | 'georeferencing.transformation.results.accuracy'
+  | 'georeferencing.transformation.results.rmse'
+  | 'georeferencing.transformation.results.points'
+  | 'georeferencing.transformation.results.status'
+  | 'georeferencing.validation.title'
+  | 'georeferencing.validation.description'
+  | 'georeferencing.validation.checkAccuracy'
+  | 'georeferencing.validation.export'
+  | 'georeferencing.validation.save'
+  | 'errors.fileUpload'
+  | 'errors.invalidFile'
+  | 'errors.insufficientPoints'
+  | 'errors.transformationFailed'
+  | 'errors.networkError'
+  | 'errors.unauthorized'
+  | 'notifications.fileUploaded'
+  | 'notifications.pointAdded'
+  | 'notifications.pointRemoved'
+  | 'notifications.transformationCompleted'
+  | 'notifications.projectSaved'
+  | 'notifications.dataExported'
+  | 'buttons.upload'
+  | 'buttons.add'
+  | 'buttons.remove'
+  | 'buttons.transform'
+  | 'buttons.validate'
+  | 'buttons.save'
+  | 'buttons.export'
+  | 'buttons.cancel'
+  | 'buttons.confirm'
+  | 'buttons.reset'
+  | 'buttons.back'
+  | 'buttons.next'
+  | 'buttons.finish'
+  | 'loading.uploading'
+  | 'loading.processing'
+  | 'loading.transforming'
+  | 'loading.validating'
+  | 'loading.saving'
+  | 'loading.loading'
+  | 'coordinateSystems.epsg4326'
+  | 'coordinateSystems.epsg3857'
+  | 'coordinateSystems.epsg2100'
+  | 'coordinateSystems.epsg4230'
+  | 'coordinateSystems.custom'
+  | 'footer.poweredBy'
+  | 'footer.version'
+  | 'footer.lastUpdate'
+  | 'footer.support'
+  | 'footer.documentation'
+  | 'progress.title'
+  | 'progress.phase1'
+  | 'progress.phase1Description'
+  | 'progress.phase2'
+  | 'progress.phase2Description'
+  | 'progress.phase3'
+  | 'progress.phase3Description'
+  | 'progress.phase4'
+  | 'progress.phase4Description'
+  | 'progress.phase5'
+  | 'progress.phase5Description'
+  | 'features.title'
+  | 'features.controlPointManagement'
+  | 'features.affineTransformation'
+  | 'features.accuracyValidation'
+  | 'features.spatialDistribution'
+  | 'features.rmsCalculation'
+  | 'features.coordinateTransformation'
+  | 'technical.title'
+  | 'technical.transformation'
+  | 'technical.transformationValue'
+  | 'technical.accuracy'
+  | 'technical.accuracyValue'
+  | 'technical.crsSupport'
+  | 'technical.crsSupportValue'
+  | 'technical.mathEngine'
+  | 'technical.mathEngineValue'
+  | 'technical.standards'
+  | 'technical.standardsValue'
+  | 'next.title'
+  | 'next.maplibre'
+  | 'next.interactivePicking'
+  | 'next.realtimePreview'
+  | 'next.basemapLayers'
+  | 'next.visualIndicators'
+  | 'actions.savePoints'
+  | 'actions.loadPoints'
+  | 'actions.clearAllPoints'
+  | 'actions.addPoint';
 
 // Forms namespace keys
 export type FormsKeys = 
@@ -213,13 +384,14 @@ export type FormsKeys =
   | 'placeholders.dragDropFile';
 
 // Union type for all translation keys by namespace
-export type TranslationKeys<T extends TranslationNamespace> = 
+export type TranslationKeys<T extends TranslationNamespace> =
   T extends 'common' ? CommonKeys :
   T extends 'auth' ? AuthKeys :
   T extends 'navigation' ? NavigationKeys :
   T extends 'dashboard' ? DashboardKeys :
   T extends 'crm' ? CrmKeys :
   T extends 'properties' ? PropertiesKeys :
+  T extends 'geo-canvas' ? GeoCanvasKeys : // Added geo-canvas support
   T extends 'forms' ? FormsKeys :
   string; // Fallback for other namespaces not yet typed
 
@@ -243,6 +415,7 @@ declare module 'react-i18next' {
       dashboard: Record<DashboardKeys, string>;
       crm: Record<CrmKeys, string>;
       properties: Record<PropertiesKeys, string>;
+      'geo-canvas': Record<GeoCanvasKeys, string>; // Added geo-canvas support
       forms: Record<FormsKeys, string>;
     };
   }

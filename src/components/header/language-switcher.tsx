@@ -38,6 +38,12 @@ export function LanguageSwitcher() {
       
       // Preload critical namespaces for the new language
       await preloadCriticalNamespaces(languageCode as any);
+
+      // Also preload geo-canvas namespace if we're on that page
+      if (window.location.pathname.includes('/geo/canvas')) {
+        const { loadNamespace } = await import('@/i18n/lazy-config');
+        await loadNamespace('geo-canvas', languageCode as any);
+      }
       
       // Change language
       await i18n.changeLanguage(languageCode);

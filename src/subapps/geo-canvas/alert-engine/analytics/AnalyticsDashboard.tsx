@@ -792,7 +792,13 @@ export const AnalyticsDashboard: React.FC = () => {
         ].map(tab => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
+            onClick={() => {
+              // ✅ ENTERPRISE: Type guard instead of 'as any'
+              const validTabs = ['overview', 'events', 'alerts', 'rules', 'notifications', 'insights'];
+              if (validTabs.includes(tab.id)) {
+                setActiveTab(tab.id as typeof activeTab);
+              }
+            }}
             style={{
               padding: '12px 16px',
               border: 'none',

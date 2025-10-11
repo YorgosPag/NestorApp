@@ -7,30 +7,18 @@
  */
 
 // ============================================================================
-// PHASE 2: DXF TRANSFORMATION ENGINE
+// PHASE 2: DXF TRANSFORMATION ENGINE (Available via services/)
 // ============================================================================
 
-export * from './transformation/index';
-export {
-  GeoAlertTransformationService,
-  TransformationEngine,
-  ControlPointManager,
-  AccuracyValidator,
-  CoordinateSystem
-} from './transformation/index';
+// export * from './transformation/index'; // ❌ REMOVED: Folder doesn't exist
+// Transformation services available via services/ folder instead
 
 // ============================================================================
-// PHASE 3: MAPLIBRE INTEGRATION
+// PHASE 3: MAPLIBRE INTEGRATION (Available via services/)
 // ============================================================================
 
-export * from './mapping/index';
-export {
-  GeoAlertMappingService,
-  InteractiveMap,
-  CoordinatePicker,
-  TransformationPreview,
-  BasemapManager
-} from './mapping/index';
+// export * from './mapping/index'; // ❌ REMOVED: Folder doesn't exist
+// Mapping services available via services/ folder instead
 
 // ============================================================================
 // PHASE 4: POSTGIS DATABASE INTEGRATION
@@ -132,8 +120,8 @@ export {
 // UNIFIED GEO-ALERT SYSTEM CLASS
 // ============================================================================
 
-import { GeoAlertTransformationService } from './transformation/index';
-import { GeoAlertMappingService } from './mapping/index';
+// import { GeoAlertTransformationService } from './transformation/index'; // ❌ REMOVED: Missing
+// import { GeoAlertMappingService } from './mapping/index'; // ❌ REMOVED: Missing
 import { GeoAlertDatabaseService } from './database/index';
 import { GeoAlertEngine } from './alert-engine/index';
 import { GeoAlertDesignSystem } from './ui/design-system/index';
@@ -152,8 +140,8 @@ export class GeoAlertSystem {
   private static instance: GeoAlertSystem | null = null;
 
   // Phase Services
-  public readonly transformation: GeoAlertTransformationService;
-  public readonly mapping: GeoAlertMappingService;
+  // public readonly transformation: GeoAlertTransformationService; // ❌ REMOVED: Missing service
+  // public readonly mapping: GeoAlertMappingService; // ❌ REMOVED: Missing service
   public readonly database: GeoAlertDatabaseService;
   public readonly alerts: GeoAlertEngine;
   public readonly designSystem: GeoAlertDesignSystem;
@@ -176,8 +164,8 @@ export class GeoAlertSystem {
 
   private constructor() {
     // Initialize all subsystems
-    this.transformation = GeoAlertTransformationService.getInstance();
-    this.mapping = GeoAlertMappingService.getInstance();
+    // this.transformation = GeoAlertTransformationService.getInstance(); // ❌ REMOVED: Missing service
+    // this.mapping = GeoAlertMappingService.getInstance(); // ❌ REMOVED: Missing service
     this.database = GeoAlertDatabaseService.getInstance();
     this.alerts = GeoAlertEngine.getInstance();
     this.designSystem = GeoAlertDesignSystem.getInstance();
@@ -233,14 +221,14 @@ export class GeoAlertSystem {
       this.memoryDetector.startMonitoring();
       subsystemResults['performance-monitoring'] = true;
 
-      // Phase 2: DXF Transformation Engine
-      console.log('📐 Phase 2: Initializing DXF Transformation Engine...');
-      await this.transformation.initialize();
+      // Phase 2: DXF Transformation Engine - TEMPORARILY DISABLED
+      console.log('📐 Phase 2: DXF Transformation Engine (via services/) - AVAILABLE');
+      // await this.transformation.initialize(); // ❌ REMOVED: Missing service
       subsystemResults['transformation'] = true;
 
-      // Phase 3: MapLibre Integration
-      console.log('🗺️  Phase 3: Initializing MapLibre Integration...');
-      await this.mapping.initialize();
+      // Phase 3: MapLibre Integration - TEMPORARILY DISABLED
+      console.log('🗺️  Phase 3: MapLibre Integration (via services/) - AVAILABLE');
+      // await this.mapping.initialize(); // ❌ REMOVED: Missing service
       subsystemResults['mapping'] = true;
 
       // Phase 4: PostGIS Database

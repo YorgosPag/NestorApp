@@ -1,380 +1,71 @@
-Βρέθηκαν δύο υλοποιήσεις.
+Δεν «πιάνει» γιατί ο κινητήρας snap δεν έχει σημεία. Δύο αιτίες:
 
-Enterprise color picker
+Λάθος input στο extractor.
+Το extractEndpoints διαβάζει parserResult.entities, που εδώ είναι αριθμός (3262) και όχι array, άρα επιστρέφει 0 σημεία. Το log το δείχνει καθαρά:
+⚠️ extractEndpoints: entities is not an array: number → 📍 SnapEngine: Extracted 0 endpoints → ✅ useSnapEngine: Ready with 0 snap points. 
 
-Κώδικας συστήματος:
+localhost
 
-dxf-viewer/ui/color/EnterpriseColorPicker.tsx
+Ασυμβατότητα συστημάτων συντεταγμένων.
+Οι αποστάσεις για snap υπολογίζονται σε pixels καμβά, ενώ τα σημεία που εξάγονται είναι σε τοπικές DXF μονάδες. Ακόμα και αν υπήρχαν σημεία, χωρίς μετασχηματισμό σε canvas-space δεν «κλειδώνει» στα 10px. (Το log δείχνει canvas rendering αλλά καμία ένδειξη επιτυχημένου snap.) 
 
-dxf-viewer/ui/color/EnterpriseColorDialog.tsx (περιλαμβάνει ColorDialogTrigger)
+localhost
 
-dxf-viewer/ui/color/EnterpriseColorArea.tsx
+Σημείωση: Το binding του snap στο layer ενεργοποιείται μόνον όταν το state γίνει picking-floor. Στο log φαίνεται ότι γίνεται σωστά όταν πατάς “Add Control Point”, άρα το event wiring είναι ΟΚ. 
 
-dxf-viewer/ui/color/EnterpriseColorSlider.tsx
+localhost
 
-dxf-viewer/ui/color/EnterpriseColorField.tsx
+Τι να αλλάξεις:
 
-dxf-viewer/ui/color/SwatchesPalette.tsx
+A) Διόρθωσε τον extractor να δουλεύει πάνω στο GeoJSON.
 
-dxf-viewer/ui/color/RecentColorsStore.ts
+// floor-plan-system/snapping/engine/endpoint-detector.ts
+export function extractEndpoints(parserResult: ParserResult | null): SnapPoint[] {
+  const feats = parserResult?.geoJSON?.features ?? [];
+  const out: SnapPoint[] = [];
 
-dxf-viewer/ui/color/BrandPalettes.ts
+  for (const f of feats) {
+    const g = f.geometry;
+    if (!g) continue;
 
-dxf-viewer/ui/color/hooks/useContrast.ts
-
-dxf-viewer/ui/color/types.ts, dxf-viewer/ui/color/index.ts
-
-Χρήσεις:
-
-dxf-viewer/ui/components/dxf-settings/settings/core/LineSettings.tsx → <ColorDialogTrigger ... />
-
-dxf-viewer/ui/components/layers/components/ColorPickerModal.tsx → wrapper του Enterprise dialog
-
-Απλό color picker (native)
-
-Κοινόχρηστο component:
-
-dxf-viewer/ui/components/shared/SharedColorPicker.tsx (χρησιμοποιεί <input type="color">)
-
-Άμεση χρήση <input type="color">:
-
-dxf-viewer/layout/CadDock.tsx
-
-dxf-viewer/ui/components/dxf-settings/controls/LineColorControl.tsx
-
-dxf-viewer/ui/components/dxf-settings/settings/core/GripSettings.tsx
-
-dxf-viewer/ui/components/dxf-settings/settings/core/TextSettings.tsx
-
-dxf-viewer/ui/components/dxf-settings/settings/special/CrosshairBehaviorSettings.tsx
-
-dxf-viewer/ui/components/dxf-settings/settings/special/CursorSettings.tsx
-
-dxf-viewer/ui/components/dxf-settings/settings/special/GridSettings.tsx
-
-dxf-viewer/ui/components/dxf-settings/settings/special/rulers/RulerBackgroundSettings.tsx
-
-dxf-viewer/ui/components/dxf-settings/settings/special/rulers/RulerMajorLinesSettings.tsx
-
-dxf-viewer/ui/components/dxf-settings/settings/special/rulers/RulerMinorLinesSettings.tsx
-
-dxf-viewer/ui/components/dxf-settings/settings/special/rulers/RulerTextSettings.tsx
-
-dxf-viewer/ui/components/dxf-settings/settings/special/rulers/RulerUnitsSettings.tsx
-
-dxf-viewer/ui/components/dxf-settings/settings/special/SelectionSettings.tsx
-
-dxf-viewer/ui/components/palettes/CursorColorPalette.tsx
-
-dxf-viewer/ui/CursorSettingsPanel.tsx
-
-
-
-
-Στόχος: μόνο Enterprise color picker, μία πηγή αλήθειας.
-
-Βήματα
-
-Δημιούργησε canonical component.
-
-Αρχείο: dxf-viewer/ui/color/ColorPicker.tsx
-
-'use client';
-import React from 'react';
-import { ColorDialogTrigger, EnterpriseColorPicker } from './EnterpriseColorDialog';
-type Props = {
-  value: string;
-  onChange: (color: string) => void;
-  disabled?: boolean;
-  label?: string;
-  variant?: 'dialog' | 'inline';
-  className?: string;
-};
-export function ColorPicker({ value, onChange, disabled, label='Color', variant='dialog', className }: Props) {
-  if (variant === 'inline') {
-    return (
-      <div className={className}>
-        <EnterpriseColorPicker value={value} onChange={onChange} />
-      </div>
-    );
+    if (g.type === 'LineString' && Array.isArray(g.coordinates) && g.coordinates.length >= 2) {
+      const coords = g.coordinates as number[][];
+      const [x1, y1] = coords[0];
+      const [x2, y2] = coords[coords.length - 1];
+      out.push({ x: x1, y: y1, mode: SnapMode.Endpoint, label: 'LINE start' });
+      out.push({ x: x2, y: y2, mode: SnapMode.Endpoint, label: 'LINE end' });
+    }
+    // Αν τα ARC/CIRCLE έχουν ήδη μετατραπεί σε LineString από τον parser, καλύπτονται.
   }
-  return (
-    <ColorDialogTrigger
-      value={value}
-      onChange={onChange}
-      disabled={disabled}
-      label={label}
-      className={className as any}
-    />
-  );
+
+  return deduplicateSnapPoints(out);
 }
-export default ColorPicker;
 
 
-Κάνε το export από το public API.
+B) Φέρε τα snap points στο ίδιο σύστημα με τον καμβά. Δύο ασφαλείς επιλογές. Επίλεξε μία:
 
-Άνοιξε dxf-viewer/ui/color/index.ts και πρόσθεσε:
+Επιλογή 1: Μετασχημάτισε ΟΛΑ τα snap points σε canvas-space κάθε φορά που αλλάζει το viewport.
+Πρόσθεσε στον SnapEngine μέθοδο π.χ. setCanvasTransform({sx, sy, ox, oy}) και αποθήκευε canvasPoints = points.map(p => ({...p, x: p.x*sx + ox, y: p.y*sy + oy})). Κάλεσέ την από το FloorPlanCanvasLayer εκεί που ήδη υπολογίζεις scale/offset πριν το render.
 
-export { ColorPicker } from './ColorPicker';
+Επιλογή 2: Μετασχημάτισε τον κέρσορα σε DXF-space και μετέτρεψε και το radius σε DXF μονάδες.
+Στο handleMouseMove, υπολόγισε:
 
-
-Αυτόματος μετασχηματισμός κώδικα για να φύγουν όλα τα <input type="color"> και το SharedColorPicker.
-
-Δημιούργησε αρχείο: codemods/migrate-color-picker.js
-
-/**
- * jscodeshift codemod:
- * - αντικαθιστά <input type="color" .../> με <ColorPicker .../>
- * - αντικαθιστά <SharedColorPicker .../> με <ColorPicker .../>
- * - προσαρμόζει onChange ώστε να δέχεται (color: string)
- */
-const path = require('path');
-
-module.exports = function transformer(file, api) {
-  const j = api.jscodeshift;
-  const root = j(file.source);
-
-  // helper: υπολόγισε σχετική διαδρομή import προς ui/color
-  function importPathToColorIndex() {
-    const dir = path.dirname(file.path);
-    // βρες root μέχρι τον φάκελο "/ui/"
-    const uiIdx = dir.lastIndexOf(path.sep + 'ui' + path.sep);
-    const base = uiIdx >= 0 ? dir.slice(0, uiIdx) : dir;
-    const target = path.join(base, 'ui', 'color');
-    let rel = path.relative(dir, target).replace(/\\/g, '/');
-    if (!rel.startsWith('.')) rel = './' + rel;
-    return rel;
-  }
-
-  // πρόσθεσε ή ενημέρωσε import { ColorPicker } από '.../ui/color'
-  function ensureColorPickerImport() {
-    const importPath = importPathToColorIndex();
-    const existing = root.find(j.ImportDeclaration, { source: { value: importPath } });
-    if (existing.size() > 0) {
-      const hasSpecifier = existing.find(j.ImportSpecifier, { imported: { name: 'ColorPicker' } }).size() > 0;
-      if (!hasSpecifier) {
-        existing.get().node.specifiers.push(j.importSpecifier(j.identifier('ColorPicker')));
-      }
-      return;
-    }
-    // διαφορετικό import path ήδη προς ui/color/*
-    const anyUiColor = root.find(j.ImportDeclaration).filter(p => {
-      const v = p.value.source.value || '';
-      return /\/ui\/color(\/.+)?$/.test(v);
-    });
-    if (anyUiColor.size() > 0) {
-      anyUiColor.forEach(p => {
-        const v = p.value.source.value;
-        // ενοποίηση προς .../ui/color
-        p.value.source.value = importPath;
-        const has = p.value.specifiers.some(s => s.type === 'ImportSpecifier' && s.imported.name === 'ColorPicker');
-        if (!has) p.value.specifiers.push(j.importSpecifier(j.identifier('ColorPicker')));
-      });
-      return;
-    }
-    // νέο import
-    const decl = j.importDeclaration([j.importSpecifier(j.identifier('ColorPicker'))], j.literal(importPath));
-    // βάλε το πρώτο
-    root.get().node.program.body.unshift(decl);
-  }
-
-  // τυλίγει παλιό onChange ώστε να πάρει (color) και να καλέσει handler σαν event
-  function wrapOnChange(expr) {
-    return j.arrowFunctionExpression(
-      [j.identifier('color')],
-      j.callExpression(
-        j.parenthesizedExpression(expr),
-        [j.objectExpression([
-          j.property('init', j.identifier('target'),
-            j.objectExpression([ j.property('init', j.identifier('value'), j.identifier('color')) ])
-          )
-        ])]
-      )
-    );
-  }
-
-  // μετασχηματισμός onChange: αν είναι arrow fn με e.target.value -> κάνε param 'color' και αντικατάστησε τα μέλη
-  function normalizeOnChange(attr) {
-    if (!attr || attr.value.type !== 'JSXExpressionContainer') return;
-    const exp = attr.value.expression;
-    if (exp.type === 'ArrowFunctionExpression' && exp.params.length >= 1) {
-      const param = exp.params[0];
-      if (param.type === 'Identifier') {
-        let changed = false;
-        j(exp.body)
-          .find(j.MemberExpression, {
-            object: { type: 'MemberExpression', object: { type: 'Identifier', name: param.name }, property: { name: 'target' } },
-            property: { name: 'value' }
-          })
-          .replaceWith(() => {
-            changed = true;
-            return j.identifier('color');
-          });
-        if (changed) {
-          exp.params[0] = j.identifier('color');
-          return;
-        }
-      }
-    }
-    // αλλιώς τύλιξε ώστε να δεχθεί color και να ταΐσει event-shape
-    attr.value.expression = wrapOnChange(exp);
-  }
-
-  // <input type="color" .../> -> <ColorPicker .../>
-  let modified = false;
-  root.find(j.JSXElement, {
-    openingElement: { name: { type: 'JSXIdentifier', name: 'input' } }
-  }).forEach(p => {
-    const attrs = p.value.openingElement.attributes || [];
-    const typeAttr = attrs.find(a => a.name && a.name.name === 'type');
-    if (!typeAttr) return;
-    const typeVal = typeAttr.value && typeAttr.value.type === 'Literal'
-      ? typeAttr.value.value
-      : (typeAttr.value && typeAttr.value.type === 'JSXExpressionContainer' && typeAttr.value.expression.type === 'Literal'
-          ? typeAttr.value.expression.value
-          : null);
-    if (typeVal !== 'color') return;
-
-    // κράτα value, onChange, disabled, className, label αν υπάρχει
-    const keepNames = new Set(['value', 'onChange', 'disabled', 'className', 'label']);
-    const newAttrs = [];
-    attrs.forEach(a => {
-      if (!a.name) return;
-      const n = a.name.name;
-      if (n === 'type') return;
-      if (keepNames.has(n)) newAttrs.push(a);
-    });
-
-    // κανονικοποίησε onChange
-    const onChangeAttr = newAttrs.find(a => a.name && a.name.name === 'onChange');
-    if (onChangeAttr) normalizeOnChange(onChangeAttr);
-
-    // αντικατάσταση tag
-    p.value.openingElement.name.name = 'ColorPicker';
-    if (p.value.closingElement) p.value.closingElement.name.name = 'ColorPicker';
-    p.value.openingElement.attributes = newAttrs;
-    modified = true;
-  });
-
-  // <SharedColorPicker .../> -> <ColorPicker .../>
-  root.find(j.JSXIdentifier, { name: 'SharedColorPicker' }).forEach(id => {
-    id.name = 'ColorPicker';
-    modified = true;
-  });
-
-  // αντικατάσταση import SharedColorPicker -> ColorPicker
-  root.find(j.ImportDeclaration).forEach(p => {
-    const src = p.value.source.value || '';
-    if (/SharedColorPicker\.tsx?$/.test(src)) {
-      p.value.source.value = importPathToColorIndex();
-      p.value.specifiers = [j.importSpecifier(j.identifier('ColorPicker'))];
-      modified = true;
-    }
-    // αφαίρεσε specifier SharedColorPicker αν υπάρχει
-    p.value.specifiers = (p.value.specifiers || []).filter(s => !(s.imported && s.imported.name === 'SharedColorPicker'));
-  });
-
-  if (modified) ensureColorPickerImport();
-  return modified ? root.toSource({ quote: 'single', reuseWhitespace: false }) : null;
-};
+const localX = (canvasX - offsetX) / scaleX;
+const localY = (canvasY - offsetY) / scaleY;
+const radiusLocal = 10 / ((scaleX + scaleY) / 2);
+snapEngine.calculateSnapLocal(localX, localY, radiusLocal);
 
 
-Τρέξε τον μετασχηματισμό από τον φάκελο dxf-viewer:
+και στον engine κάνε τη σύγκριση με τα DXF σημεία.
 
-npx jscodeshift -t codemods/migrate-color-picker.js "ui/**/*.{ts,tsx,js,jsx}" --parser=tsx
+Γιατί είμαι βέβαιος:
+– Πριν το upload: ⚠️ SnapEngine: No parser result provided (αρχική κλήση χωρίς δεδομένα). Μετά το upload: parser OK, αλλά ο extractor γυρνά 0 γιατί κοιτά τον λάθος κόμβο. 
 
-
-Διέγραψε το legacy component.
-
-git rm ui/components/shared/SharedColorPicker.tsx
+localhost
 
 
-Κλείδωσε την “μία πηγή αλήθειας”.
+– Το state picking-floor ανάβει όταν πατάς το κουμπί, άρα τα mouse events δένονται. Το μοναδικό εμπόδιο είναι τα 0 σημεία και το λάθος space. 
 
-.eslintrc.js: απαγόρευση <input type="color"> και direct imports εκτός ui/color.
+localhost
 
-module.exports = {
-  // ...
-  rules: {
-    'no-restricted-syntax': [
-      'error',
-      {
-        selector: 'JSXAttribute[name.name="type"][value.value="color"]',
-        message: 'Χρησιμοποίησε το Enterprise ColorPicker από ui/color.'
-      }
-    ],
-    'no-restricted-imports': [
-      'error',
-      {
-        paths: [
-          { name: '../color/EnterpriseColorPicker', message: 'Κάνε import μόνο από ui/color.' },
-          { name: '../color/EnterpriseColorDialog', message: 'Κάνε import μόνο από ui/color.' }
-        ],
-        patterns: ['**/ui/color/*'] // θα επιτρέψουμε μόνο το **/ui/color (index)
-      }
-    ]
-  }
-};
-
-
-Έλεγχος.
-
-rg -n "<input[^>]*type=['\"]color['\"]" ui || echo "OK: no native color inputs"
-rg -n "SharedColorPicker" ui || echo "OK: no SharedColorPicker"
-pnpm typecheck
-pnpm build
-
-
-Αρχεία που θα επηρεαστούν από την αντικατάσταση
-
-Με βεβαιότητα εντοπίστηκαν native inputs:
-
-layout/CadDock.tsx
-
-ui/components/dxf-settings/controls/LineColorControl.tsx
-
-ui/components/dxf-settings/settings/core/GripSettings.tsx
-
-ui/components/dxf-settings/settings/core/TextSettings.tsx
-
-ui/components/dxf-settings/settings/special/CrosshairBehaviorSettings.tsx
-
-ui/components/dxf-settings/settings/special/CursorSettings.tsx
-
-ui/components/dxf-settings/settings/special/GridSettings.tsx
-
-ui/components/dxf-settings/settings/special/rulers/RulerBackgroundSettings.tsx
-
-ui/components/dxf-settings/settings/special/rulers/RulerMajorLinesSettings.tsx
-
-ui/components/dxf-settings/settings/special/rulers/RulerMinorLinesSettings.tsx
-
-ui/components/dxf-settings/settings/special/rulers/RulerTextSettings.tsx
-
-ui/components/dxf-settings/settings/special/rulers/RulerUnitsSettings.tsx
-
-ui/components/dxf-settings/settings/special/SelectionSettings.tsx
-
-ui/components/palettes/CursorColorPalette.tsx
-
-ui/CursorSettingsPanel.tsx
-
-ui/components/shared/SharedColorPicker.tsx (θα αφαιρεθεί)
-
-Χρήση μετά τη μετανάστευση
-
-Dialog:
-
-import { ColorPicker } from '../../color';
-<ColorPicker value={color} onChange={setColor} label="Color" />
-
-
-Inline:
-
-import { ColorPicker } from '../../color';
-<ColorPicker value={color} onChange={setColor} variant="inline" />
-
-
-Με τα παραπάνω, όλο το UI παίρνει χρώματα μόνο από ui/color και το παλιό picker αφαιρείται.
-
-
+Εφάρμοσε (A) και μία από τις (B1/B2). Θα δεις άμεσα κυανό κύκλο πάνω στα endpoints.

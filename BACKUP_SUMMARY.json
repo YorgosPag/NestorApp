@@ -1,242 +1,98 @@
 {
-  "category": "FIX",
-  "shortDescription": "ΚΡΙΣΙΜΗ ΕΠΙΔΙΟΡΘΩΣΗ: React Infinite Loop + Enterprise Provider Migration",
-  "problem": "Σοβαρά προβλήματα που έκαναν το DXF Viewer ακατάλληλο για production",
-  "problemDetails": {
-    "reactInfiniteLoop": "Maximum update depth exceeded - infinite re-renders στον EnterpriseDxfSettingsProvider",
-    "consoleNoise": "Excessive console errors και warnings κατά το development (F12)",
-    "uiFreezeng": "UI controls κλείδωμα από storage errors και validation failures",
-    "storageQuota": "IndexedDB FILE_ERROR_NO_SPACE προκαλούσε app crashes",
-    "schemaValidation": "FontWeight type mismatch (string vs number) validation errors",
-    "backwardCompatibility": "setMode is not a function errors από missing provider interface"
-  },
-  "cause": "Αρχιτεκτονικά προβλήματα στο Enterprise Settings System",
-  "causeDetails": {
-    "unstableDependencies": "useEffect dependencies άλλαζαν σε κάθε render (infinite loops)",
-    "renderTimeDispatch": "Dispatch actions κατά τη διάρκεια του render cycle",
-    "storageErrorHandling": "Δεν υπήρχε graceful degradation για disk space issues",
-    "legacyDataFormats": "Migration gaps για old data formats (fontWeight strings)",
-    "providerInconsistency": "Enterprise provider δεν εκθέτει όλες τις απαραίτητες interfaces"
-  },
+  "category": "FEATURE",
+  "shortDescription": "Floor Plan System - STEP 1.7-1.8 & STEP 2.1 Complete (Upload + Canvas Layer Rendering)",
+  "problem": "Χρειαζόμασταν (1) useFloorPlanUpload hook για state management, (2) integration με GeoCanvasContent, (3) Canvas layer rendering για εμφάνιση floor plan πάνω στο χάρτη με opacity controls.",
+  "cause": "STEP 1.7-1.8: Custom hook για centralized upload workflow. STEP 2.1: Canvas-based rendering layer με MapLibre integration για real-time floor plan display.",
   "filesChanged": [
-    "src/subapps/dxf-viewer/settings-provider/EnterpriseDxfSettingsProvider.tsx",
-    "src/subapps/dxf-viewer/settings-provider/hooks/useEnterpriseSettingsState.ts",
-    "src/subapps/dxf-viewer/settings-provider/storage/useStorageLoad.ts",
-    "src/subapps/dxf-viewer/settings-provider/storage/useStorageSave.ts",
-    "src/subapps/dxf-viewer/settings-provider/storage/useStorageDriver.ts",
-    "src/subapps/dxf-viewer/settings-provider/storage/useStorageQuota.ts",
-    "src/subapps/dxf-viewer/settings-provider/reducerHelpers.ts",
-    "src/subapps/dxf-viewer/settings-provider/hooks/useEnterpriseActions.ts",
-    "src/subapps/dxf-viewer/settings-provider/hooks/useEffectiveSettings.ts",
-    "src/subapps/dxf-viewer/settings-provider/hooks/useBackwardCompatHooks.ts",
-    "src/subapps/dxf-viewer/settings/io/migrationRegistry.ts",
-    "src/subapps/dxf-viewer/settings/io/schema.ts",
-    "src/subapps/dxf-viewer/settings/io/safeLoad.ts",
-    "src/subapps/dxf-viewer/app/DxfViewerContent.tsx",
-    "src/subapps/dxf-viewer/hooks/useLineDraftSettings.ts",
-    "src/subapps/dxf-viewer/hooks/useLineHoverSettings.ts",
-    "src/subapps/dxf-viewer/hooks/useLineSelectionSettings.ts",
-    "src/subapps/dxf-viewer/hooks/useLineCompletionSettings.ts",
-    "src/subapps/dxf-viewer/hooks/useTextDraftSettings.ts",
-    "src/subapps/dxf-viewer/hooks/useGripDraftSettings.ts",
-    "src/subapps/dxf-viewer/settings/sync/storeSync.ts",
-    "src/subapps/dxf-viewer/settings/sync/ports.ts",
-    "src/subapps/dxf-viewer/settings/sync/compositionRoot.ts",
-    "src/subapps/dxf-viewer/settings/sync/adapters/gripStyleAdapter.ts",
-    "src/subapps/dxf-viewer/settings/sync/adapters/rulerAdapter.ts",
-    "src/subapps/dxf-viewer/settings/sync/adapters/textStyleAdapter.ts",
-    "src/subapps/dxf-viewer/settings/sync/adapters/toolStyleAdapter.ts",
-    "src/subapps/dxf-viewer/settings/sync/adapters/gridAdapter.ts",
-    "src/subapps/dxf-viewer/ui/color/EnterpriseColorArea.tsx",
-    "src/subapps/dxf-viewer/ui/color/EnterpriseColorField.tsx",
-    "src/subapps/dxf-viewer/ui/color/EnterpriseColorSlider.tsx",
-    "src/subapps/dxf-viewer/ui/components/dxf-settings/settings/shared/EnterpriseComboBox.tsx",
-    "src/subapps/dxf-viewer/ui/components/dxf-settings/settings/shared/ComboBox.tsx",
-    "src/subapps/dxf-viewer/debug/settings-enterprise-test.ts",
-    "src/subapps/dxf-viewer/debug/store-sync-test.ts",
-    "ENTERPRISE_PROVIDER_ANALYSIS.md",
-    "REFACTORING_ANALYSIS.md",
-    "REFACTORING_PLAN.md",
-    "CHROME_STORAGE_CLEANUP_GUIDE.md"
+    "src/subapps/geo-canvas/floor-plan-system/hooks/useFloorPlanUpload.ts",
+    "src/subapps/geo-canvas/floor-plan-system/hooks/index.ts",
+    "src/subapps/geo-canvas/floor-plan-system/index.ts",
+    "src/subapps/geo-canvas/app/GeoCanvasContent.tsx",
+    "src/subapps/geo-canvas/floor-plan-system/rendering/FloorPlanCanvasLayer.tsx",
+    "src/subapps/geo-canvas/floor-plan-system/rendering/FloorPlanControls.tsx",
+    "src/subapps/geo-canvas/floor-plan-system/rendering/index.ts",
+    "src/subapps/geo-canvas/components/InteractiveMap.tsx"
   ],
-  "solution": "5-Phase Enterprise Grade Solution με ChatGPT5 συμβουλευτική",
-  "solutionPhases": {
-    "phase1": {
-      "title": "CORE INFINITE LOOP FIX",
-      "description": "ChatGPT5 Pattern: Memoized callbacks + stable dependencies",
-      "implementation": [
-        "useCallback memoization για onLoadSuccess, onSaveError callbacks",
-        "Stable driver tracking στο useStorageLoad (hasLoadedRef)",
-        "Render-time dispatch guards στο DxfViewerContent",
-        "setMode function addition για backward compatibility"
-      ]
-    },
-    "phase2": {
-      "title": "STORAGE & QUOTA MANAGEMENT",
-      "description": "Enterprise storage system με graceful degradation",
-      "implementation": [
-        "FILE_ERROR_NO_SPACE detection και STORAGE_OFFLINE mode",
-        "Auto-save με debounced writes (500ms)",
-        "Deep equality check με stable hash",
-        "Quota monitoring system (disabled for infinite loop prevention)"
-      ]
-    },
-    "phase3": {
-      "title": "SCHEMA MIGRATION V3",
-      "description": "FontWeight type compatibility fix",
-      "implementation": [
-        "Migration V2→V3 για fontWeight string→number conversion",
-        "Safe type coercion (bold→700, normal→400)",
-        "Zod schema validation compatibility",
-        "Backward compatibility για legacy data"
-      ]
-    },
-    "phase4": {
-      "title": "ENTERPRISE HOOKS ARCHITECTURE",
-      "description": "Modular hooks system με single responsibility",
-      "implementation": [
-        "13 specialized hooks (Line/Text/Grip με mode support)",
-        "useEffectiveSettings για computed settings",
-        "useEnterpriseActions για settings operations",
-        "Backward compatibility layer για existing components"
-      ]
-    },
-    "phase5": {
-      "title": "STORE SYNC & UI INTEGRATION",
-      "description": "Ports & Adapters pattern + Enterprise UI components",
-      "implementation": [
-        "Store synchronization με Dependency Injection",
-        "React Aria foundation για accessible UI components",
-        "Enterprise color system integration",
-        "Debug & testing infrastructure"
-      ]
-    }
+  "solution": {
+    "phase1": "🎣 useFloorPlanUpload Hook - Custom React hook (220 lines) με file upload state, automatic parsing (DXF/DWG/Image), error handling, progress tracking, modal state management. Centralized logic για reusability.",
+    "phase2": "🔄 GeoCanvasContent Integration - Αντικατάσταση manual state management με useFloorPlanUpload hook, streamlined workflow, cleaner code. Auto-close modal 1.5s μετά επιτυχή upload.",
+    "phase3": "🗺️ FloorPlanCanvasLayer Component - Canvas-based rendering (420 lines) με GeoJSON features (LineString, Polygon), responsive to map pan/zoom, opacity support, show/hide toggle, placeholder local coordinate transformation.",
+    "phase4": "🎛️ FloorPlanControls Component - UI controls (150 lines) με opacity slider (0-100%), show/hide toggle, quick preset buttons (30%, 50%, 80%, 100%), file name display, compact design.",
+    "phase5": "🔗 InteractiveMap Enhancement - Added onMapReady callback prop για map instance access, enables floor plan layer integration, MapLibre GL JS event handling.",
+    "phase6": "🎨 Styling & UX - Μαύρο χρώμα για floor plan lines (αντί κόκκινου), auto-close modal after upload, top-right positioned controls, z-index layering (canvas: 100, controls: 200)."
   },
-  "testing": {
-    "console": "✅ ΚΑΘΑΡΟ - Δεν υπάρχουν πλέον infinite loop errors στο console",
-    "ui": "✅ ΣΤΑΘΕΡΟ - UI controls δουλεύουν χωρίς freezing",
-    "storage": "✅ GRACEFUL - Storage errors δεν κλειδώνουν την εφαρμογή",
-    "compatibility": "✅ BACKWARD - Όλα τα existing components δουλεύουν",
-    "performance": "✅ OPTIMIZED - Debounced saves, stable dependencies",
-    "accessibility": "✅ ENTERPRISE - React Aria foundation για a11y"
+  "testing": "Manual testing με DXF file upload, canvas layer rendering verification, opacity slider functionality, show/hide toggle, auto-close modal timing, map pan/zoom responsiveness.",
+  "notes": {
+    "hookArchitecture": "useFloorPlanUpload provides centralized state (file, result, isParsing, error, isModalOpen) και actions (uploadFile, clearUpload, openModal, closeModal). Reusable across components.",
+    "canvasRendering": "HTML5 Canvas API με transform functions για local coords → canvas pixels. Placeholder implementation - STEP 2.2-2.3 θα προσθέσουν proper geo-transformation με control points.",
+    "userExperience": "Auto-close modal after 1.5s (brief preview), opacity slider με presets, instant show/hide toggle, file name display, responsive to map interactions.",
+    "coordinates": "Current implementation: Local coordinate system (centered on canvas με scaling). Future: Geo-projected coordinates με affine transformation matrix.",
+    "colorChange": "Αλλαγή από κόκκινο (#FF0000) → μαύρο (#000000) για καλύτερη αναγνωσιμότητα πάνω στο χάρτη.",
+    "autoClose": "Modal auto-closes 1.5s μετά successful upload για smoother UX. User βλέπει briefly το preview και μετά το floor plan εμφανίζεται στο χάρτη.",
+    "codeQuality": "800+ lines implementation code, TypeScript strict mode, enterprise patterns (custom hooks, canvas rendering, event handling), MapLibre GL JS integration.",
+    "implementationStatus": "STEP 1.1-1.8 ✅ COMPLETE, STEP 2.1 ✅ COMPLETE, STEP 2.2-2.3 ⏳ PENDING (Control Points + Geo-transformation)"
   },
-  "notes": [
-    "ΚΡΙΣΙΜΗ ΕΠΙΔΙΟΡΘΩΣΗ: Το DXF Viewer ήταν ακατάλληλο για production λόγω infinite loops",
-    "ChatGPT5 ΣΥΜΒΟΥΛΕΥΤΙΚΗ: Κρίσιμες αναλύσεις παρέχθηκαν από ChatGPT5 για root cause identification",
-    "ENTERPRISE PATTERNS: Όλες οι λύσεις ακολουθούν enterprise architecture patterns",
-    "DISK SPACE: Χρειάζεται cleanup - μόνο 2.86GB ελεύθερα από 232GB",
-    "BACKWARD COMPATIBILITY: 100% συμβατότητα με existing codebase",
-    "13 COMMITS: Κατηγοριοποιημένα commits για easy tracking και rollback",
-    "ZERO TOLERANCE: Ακολουθήθηκαν αυστηρά τα CLAUDE.md enterprise standards"
-  ],
   "contributors": {
-    "user": "Γιώργος Παγώνης",
-    "assistant": "Claude Code (Anthropic AI)",
-    "consultation": "ChatGPT5 (Root Cause Analysis)",
-    "sessionDate": "2025-10-10"
+    "user": "Γιώργος",
+    "assistant": "Claude (Anthropic AI)",
+    "sessionDate": "2025-10-11"
   },
   "relatedBackups": [
-    "b43dc96 Fix: Enterprise Provider Migration - 7 Critical Bug Fixes",
-    "44115c9 Enterprise Settings System - Phases 1-3 Complete",
-    "0a4d920 PR3: Enterprise Color System - React Aria Foundation"
+    "Previous: STEP 1.6 Preview & Metadata + Documentation (2025-10-11)"
   ],
-  "commits": [
-    {
-      "hash": "9af3583",
-      "message": "🐛 Fix: React Infinite Loop - Enterprise Provider Core",
-      "category": "CRITICAL_FIX",
-      "files": 4
-    },
-    {
-      "hash": "1540c74",
-      "message": "🏢 Feature: Enterprise Storage & Quota Management",
-      "category": "FEATURE",
-      "files": 5
-    },
-    {
-      "hash": "46f2250",
-      "message": "🔧 Feature: Enterprise Settings Hooks Architecture",
-      "category": "FEATURE",
-      "files": 11
-    },
-    {
-      "hash": "567603b",
-      "message": "🔄 Fix: Schema Migration V3 - FontWeight Type Compatibility",
-      "category": "FIX",
-      "files": 3
-    },
-    {
-      "hash": "ff116e3",
-      "message": "🏛️ Feature: Store Sync - Ports & Adapters Architecture",
-      "category": "FEATURE",
-      "files": 11
-    },
-    {
-      "hash": "031e227",
-      "message": "🎨 Feature: Enterprise UI Components - React Aria Foundation",
-      "category": "FEATURE",
-      "files": 8
-    },
-    {
-      "hash": "1781315",
-      "message": "🔧 Refactor: Settings System Cleanup & Updates",
-      "category": "REFACTOR",
-      "files": 12
-    },
-    {
-      "hash": "ece1c63",
-      "message": "🎛️ Update: UI Settings Components Integration",
-      "category": "UPDATE",
-      "files": 11
-    },
-    {
-      "hash": "4ae40db",
-      "message": "🔗 Update: Contexts & Hooks Enterprise Integration",
-      "category": "UPDATE",
-      "files": 9
-    },
-    {
-      "hash": "0a409a9",
-      "message": "🐛 Feature: Debug & Testing Infrastructure",
-      "category": "FEATURE",
-      "files": 6
-    },
-    {
-      "hash": "69ce67f",
-      "message": "📚 Feature: Configuration & Documentation Updates",
-      "category": "FEATURE",
-      "files": 10
-    },
-    {
-      "hash": "95892ba",
-      "message": "📋 Docs: Project Management & Migration Documentation",
-      "category": "DOCS",
-      "files": 15
-    },
-    {
-      "hash": "ef9c996",
-      "message": "🌐 Update: Global App Integration & Final Cleanup",
-      "category": "UPDATE",
-      "files": 7
-    }
-  ],
+  "commits": [],
   "metrics": {
-    "totalCommits": 13,
-    "totalFiles": 112,
-    "linesAdded": "~12000+",
-    "linesModified": "~3000+",
-    "newComponents": 47,
-    "fixedBugs": 6,
-    "newFeatures": 8,
-    "documentsCreated": 15
+    "totalFiles": 8,
+    "newFiles": 4,
+    "updatedFiles": 4,
+    "totalLines": "1200+",
+    "componentsCreated": 2,
+    "hooksCreated": 1,
+    "architecturePatterns": [
+      "Custom React Hooks",
+      "Canvas Rendering",
+      "MapLibre GL JS Integration",
+      "Event-driven Architecture",
+      "State Management",
+      "Coordinate Transformation",
+      "Z-index Layering",
+      "Auto-close UX Pattern"
+    ]
+  },
+  "systemComponents": {
+    "useFloorPlanUpload": {
+      "description": "Custom hook για floor plan upload workflow management",
+      "features": ["state management", "automatic parsing", "error handling", "modal control", "auto-close"],
+      "lines": "220"
+    },
+    "floorPlanCanvasLayer": {
+      "description": "Canvas-based rendering layer για floor plan display",
+      "features": ["GeoJSON rendering", "map pan/zoom responsive", "opacity control", "show/hide", "local coordinates"],
+      "lines": "420"
+    },
+    "floorPlanControls": {
+      "description": "UI controls για layer management",
+      "features": ["opacity slider", "show/hide toggle", "preset buttons", "file name display"],
+      "lines": "150"
+    }
   },
   "nextSteps": [
-    "✅ COMPLETED: 13 κατηγοριοποιημένα commits",
-    "✅ COMPLETED: Comprehensive BACKUP_SUMMARY.json",
-    "🔄 PENDING: Execute auto-backup.ps1 script",
-    "📦 PENDING: Verify ZIP backup creation",
-    "🧪 SUGGESTED: Test DXF Viewer στο localhost:3000/dxf/viewer",
-    "🧹 SUGGESTED: Chrome storage cleanup (2.86GB free space)",
-    "📊 OPTIONAL: Performance monitoring μετά τις αλλαγές"
-  ]
+    "✅ COMPLETED: STEP 1.7-1.8 (useFloorPlanUpload Hook + Integration)",
+    "✅ COMPLETED: STEP 2.1 (Canvas Layer Rendering)",
+    "✅ COMPLETED: Auto-close modal fix",
+    "✅ COMPLETED: Color change (red → black)",
+    "⏳ PENDING: STEP 2.2 - Control Point System (click to place points)",
+    "⏳ PENDING: STEP 2.3 - Geo-transformation (affine matrix, proper projection)",
+    "⏳ PENDING: STEP 2.4 - Scale & Rotation controls",
+    "📚 OPTIONAL: Documentation update για STEP 2.1"
+  ],
+  "userFeedback": {
+    "positive": "Πολύ όμορφο εμφανίστηκε η κάτοψη στην οθόνη",
+    "improvements": [
+      "✅ FIXED: Auto-close modal after upload",
+      "✅ FIXED: Αλλαγή χρώματος σε μαύρο",
+      "⏳ NEXT: Τοποθέτηση κάτοψης στη σωστή κλίμακα πάνω στο χάρτη",
+      "⏳ NEXT: Σωστός προσανατολισμός"
+    ]
+  }
 }

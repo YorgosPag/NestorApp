@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import { NotificationProvider } from '../../providers/NotificationProvider';
 import { GeoCanvasContent } from './app/GeoCanvasContent';
 import { GeoCanvasErrorBoundary } from './components/ErrorBoundary';
@@ -27,7 +27,16 @@ export function GeoCanvasApp(props: GeoCanvasAppProps) {
         {/* TODO Phase 5: AlertEngineProvider */}
 
         {/* 📍 CORE APPLICATION CONTENT */}
-        <GeoCanvasContent {...props} />
+        <Suspense fallback={
+          <div className="w-full h-full flex items-center justify-center bg-gray-900 text-white">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-white">Loading Geo-Canvas...</p>
+            </div>
+          </div>
+        }>
+          <GeoCanvasContent {...props} />
+        </Suspense>
 
       </GeoCanvasErrorBoundary>
     </NotificationProvider>

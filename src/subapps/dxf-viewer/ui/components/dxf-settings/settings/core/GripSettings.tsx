@@ -4,6 +4,7 @@ import React from 'react';
 import { useUnifiedGripPreview } from '../../../../hooks/useUnifiedSpecificSettings';
 import { AccordionSection, useAccordion } from '../shared/AccordionSection';
 import type { GripSettings } from '../../../../types/gripSettings';
+import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
 
 // SVG Icons για τα accordion sections
 const CogIcon = ({ className }: { className?: string }) => (
@@ -167,97 +168,65 @@ export function GripSettings() {
             {/* Cold Color */}
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-200">Χρώμα Cold</label>
-              <div className="flex items-center space-x-3">
-                <div
-                  className="w-16 h-10 rounded border border-gray-600"
-                  style={{ backgroundColor: gripSettings.colors.cold }}
-                />
-                <input
-                  type="color"
-                  value={gripSettings.colors.cold || '#0000FF'}
-                  onChange={(e) => updateSettings({ colors: { ...gripSettings.colors, cold: e.target.value } })}
-                  className="w-20 h-10 bg-gray-700 border border-gray-600 rounded cursor-pointer"
-                />
-                <input
-                  type="text"
-                  value={gripSettings.colors.cold || '#0000FF'}
-                  onChange={(e) => updateSettings({ colors: { ...gripSettings.colors, cold: e.target.value } })}
-                  className="w-16 px-1 py-1 bg-gray-700 border border-gray-600 rounded text-white text-xs"
-                  placeholder="#0000FF"
-                />
-              </div>
+              <ColorDialogTrigger
+                value={gripSettings.colors.cold || '#0000FF'}
+                onChange={(color) => updateSettings({ colors: { ...gripSettings.colors, cold: color } })}
+                label={gripSettings.colors.cold || '#0000FF'}
+                title="Επιλογή Χρώματος Cold Grip"
+                alpha={false}
+                modes={['hex', 'rgb', 'hsl']}
+                palettes={['dxf', 'semantic', 'material']}
+                recent={true}
+                eyedropper={true}
+              />
             </div>
 
             {/* Warm Color */}
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-200">Χρώμα Warm (Hover)</label>
-              <div className="flex items-center space-x-3">
-                <div
-                  className="w-16 h-10 rounded border border-gray-600"
-                  style={{ backgroundColor: gripSettings.colors.warm }}
-                />
-                <input
-                  type="color"
-                  value={gripSettings.colors.warm || '#00FF80'}
-                  onChange={(e) => updateSettings({ colors: { ...gripSettings.colors, warm: e.target.value } })}
-                  className="w-20 h-10 bg-gray-700 border border-gray-600 rounded cursor-pointer"
-                />
-                <input
-                  type="text"
-                  value={gripSettings.colors.warm || '#00FF80'}
-                  onChange={(e) => updateSettings({ colors: { ...gripSettings.colors, warm: e.target.value } })}
-                  className="w-16 px-1 py-1 bg-gray-700 border border-gray-600 rounded text-white text-xs"
-                  placeholder="#ffff00"
-                />
-              </div>
+              <ColorDialogTrigger
+                value={gripSettings.colors.warm || '#00FF80'}
+                onChange={(color) => updateSettings({ colors: { ...gripSettings.colors, warm: color } })}
+                label={gripSettings.colors.warm || '#00FF80'}
+                title="Επιλογή Χρώματος Warm Grip"
+                alpha={false}
+                modes={['hex', 'rgb', 'hsl']}
+                palettes={['dxf', 'semantic', 'material']}
+                recent={true}
+                eyedropper={true}
+              />
             </div>
 
             {/* Hot Color */}
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-200">Χρώμα Hot (Επιλεγμένα)</label>
-              <div className="flex items-center space-x-3">
-                <div
-                  className="w-16 h-10 rounded border border-gray-600"
-                  style={{ backgroundColor: gripSettings.colors.hot }}
-                />
-                <input
-                  type="color"
-                  value={gripSettings.colors.hot || '#FF3B30'}
-                  onChange={(e) => updateSettings({ colors: { ...gripSettings.colors, hot: e.target.value } })}
-                  className="w-20 h-10 bg-gray-700 border border-gray-600 rounded cursor-pointer"
-                />
-                <input
-                  type="text"
-                  value={gripSettings.colors.hot || '#FF3B30'}
-                  onChange={(e) => updateSettings({ colors: { ...gripSettings.colors, hot: e.target.value } })}
-                  className="w-16 px-1 py-1 bg-gray-700 border border-gray-600 rounded text-white text-xs"
-                  placeholder="#ff0000"
-                />
-              </div>
+              <ColorDialogTrigger
+                value={gripSettings.colors.hot || '#FF3B30'}
+                onChange={(color) => updateSettings({ colors: { ...gripSettings.colors, hot: color } })}
+                label={gripSettings.colors.hot || '#FF3B30'}
+                title="Επιλογή Χρώματος Hot Grip"
+                alpha={false}
+                modes={['hex', 'rgb', 'hsl']}
+                palettes={['dxf', 'semantic', 'material']}
+                recent={true}
+                eyedropper={true}
+              />
             </div>
 
             {/* Contour Color */}
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-200">Χρώμα Περιγράμματος</label>
-              <div className="flex items-center space-x-3">
-                <div
-                  className="w-16 h-10 rounded border border-gray-600"
-                  style={{ backgroundColor: gripSettings.colors.contour }}
-                />
-                <input
-                  type="color"
-                  value={gripSettings.colors.contour}
-                  onChange={(e) => updateSettings({ colors: { ...gripSettings.colors, contour: e.target.value } })}
-                  className="w-20 h-10 bg-gray-700 border border-gray-600 rounded cursor-pointer"
-                />
-                <input
-                  type="text"
-                  value={gripSettings.colors.contour}
-                  onChange={(e) => updateSettings({ colors: { ...gripSettings.colors, contour: e.target.value } })}
-                  className="w-16 px-1 py-1 bg-gray-700 border border-gray-600 rounded text-white text-xs"
-                  placeholder="#000000"
-                />
-              </div>
+              <ColorDialogTrigger
+                value={gripSettings.colors.contour}
+                onChange={(color) => updateSettings({ colors: { ...gripSettings.colors, contour: color } })}
+                label={gripSettings.colors.contour}
+                title="Επιλογή Χρώματος Contour Grip"
+                alpha={false}
+                modes={['hex', 'rgb', 'hsl']}
+                palettes={['dxf', 'semantic', 'material']}
+                recent={true}
+                eyedropper={true}
+              />
             </div>
           </div>
         </AccordionSection>

@@ -8,9 +8,9 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import type { GeoCoordinate, DxfCoordinate, GeoControlPoint } from '../types';
 
-// ✅ NEW: Universal Polygon System Integration (FIXED PATH)
-import { usePolygonSystem } from '@/core/geo-alert-unified';
-import type { PolygonType, UniversalPolygon } from '@/core/geo-alert-unified';
+// ✅ NEW: Universal Polygon System Integration (CENTRALIZED PACKAGE)
+import { usePolygonSystem } from '@geo-alert/core';
+import type { PolygonType, UniversalPolygon } from '@geo-alert/core';
 
 // ============================================================================
 // MAPLIBRE GL JS - ENTERPRISE IMPLEMENTATION

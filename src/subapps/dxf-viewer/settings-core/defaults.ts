@@ -3,7 +3,15 @@
  * Βασισμένα σε ISO standards και AutoCAD conventions
  */
 
-import type { LineSettings, TextSettings, GripSettings, DxfSettings } from './types';
+import type {
+  LineSettings,
+  TextSettings,
+  GripSettings,
+  EnterpriseCursorSettings,
+  EnterpriseGridSettings,
+  EnterpriseRulerSettings,
+  DxfSettings
+} from './types';
 
 // ============================================================================
 // LINE DEFAULTS - ISO 128 Standards
@@ -107,13 +115,54 @@ export const DEFAULT_GRIP_SETTINGS: GripSettings = {
 };
 
 // ============================================================================
+// CURSOR DEFAULTS - AutoCAD Standards
+// ============================================================================
+
+export const DEFAULT_CURSOR_SETTINGS: EnterpriseCursorSettings = {
+  enabled: true,
+  crosshairSize: 25,          // 25% of viewport
+  crosshairColor: '#FFFFFF',  // White crosshair
+  cursorSize: 5,               // 5px cursor box
+  cursorColor: '#00FF00'       // Green cursor
+};
+
+// ============================================================================
+// GRID DEFAULTS - CAD Standards
+// ============================================================================
+
+export const DEFAULT_GRID_SETTINGS: EnterpriseGridSettings = {
+  enabled: true,
+  spacing: 10,                 // 10mm default spacing
+  majorLineInterval: 5,        // Major line every 5 lines
+  color: '#333333',            // Dark gray for minor lines
+  majorColor: '#555555',       // Medium gray for major lines
+  opacity: 0.5,                // 50% opacity
+  style: 'lines'               // Default to lines
+};
+
+// ============================================================================
+// RULER DEFAULTS - CAD Standards
+// ============================================================================
+
+export const DEFAULT_RULER_SETTINGS: EnterpriseRulerSettings = {
+  enabled: true,
+  unit: 'mm',                  // Metric default
+  fontSize: 10,                // 10px font
+  textColor: '#FFFFFF',        // White text
+  backgroundColor: '#1a1a1a'   // Dark background
+};
+
+// ============================================================================
 // COMBINED DEFAULTS
 // ============================================================================
 
 export const DEFAULT_DXF_SETTINGS: DxfSettings = {
   line: DEFAULT_LINE_SETTINGS,
   text: DEFAULT_TEXT_SETTINGS,
-  grip: DEFAULT_GRIP_SETTINGS
+  grip: DEFAULT_GRIP_SETTINGS,
+  cursor: DEFAULT_CURSOR_SETTINGS,
+  grid: DEFAULT_GRID_SETTINGS,
+  ruler: DEFAULT_RULER_SETTINGS
 };
 
 // ============================================================================

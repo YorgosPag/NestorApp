@@ -42,6 +42,7 @@
 
 import React from 'react';
 import { useRulersGridContext } from '../../../../../../systems/rulers-grid/RulersGridSystem';
+import { ColorDialogTrigger } from '../../../../../color/EnterpriseColorDialog';
 
 export interface RulerMinorLinesSettingsProps {
   className?: string;
@@ -221,32 +222,19 @@ export const RulerMinorLinesSettings: React.FC<RulerMinorLinesSettingsProps> = (
 
       {/* Minor Lines Color */}
       <div className="p-2 bg-gray-700 rounded space-y-2">
-        <div className="text-sm text-white">
-          <div className="font-medium">Χρώμα Δευτερευουσών Γραμμών</div>
-          <div className="font-normal text-gray-400">Χρώμα δευτερευουσών γραμμών (ticks) χαράκων</div>
-        </div>
-        <div className="flex items-center gap-2">
-          <div
-            className="w-6 h-6 rounded border-2"
-            style={{
-              backgroundColor: getPreviewBackground(rulerSettings.horizontal.minorTickColor),
-              borderColor: getPreviewColor(rulerSettings.horizontal.minorTickColor)
-            }}
-          />
-          <input
-            type="color"
-            value={getPreviewColor(rulerSettings.horizontal.minorTickColor)}
-            onChange={(e) => handleMinorTickColorChange(e.target.value)}
-            className="w-8 h-6 rounded border-0 cursor-pointer"
-          />
-          <input
-            type="text"
-            value={rulerSettings.horizontal.minorTickColor}
-            onChange={(e) => handleMinorTickColorChange(e.target.value)}
-            className="w-20 px-2 py-1 text-xs bg-gray-600 text-white rounded border border-gray-500"
-            placeholder="#ffffff"
-          />
-        </div>
+        <label className="block text-sm font-medium text-gray-200">Χρώμα Δευτερευουσών Γραμμών</label>
+        <div className="text-xs text-gray-400 mb-2">Χρώμα δευτερευουσών γραμμών (ticks) χαράκων</div>
+        <ColorDialogTrigger
+          value={rulerSettings.horizontal.minorTickColor}
+          onChange={handleMinorTickColorChange}
+          label={rulerSettings.horizontal.minorTickColor}
+          title="Επιλογή Χρώματος Δευτερευουσών Γραμμών Χάρακα"
+          alpha={false}
+          modes={['hex', 'rgb', 'hsl']}
+          palettes={['dxf', 'semantic', 'material']}
+          recent={true}
+          eyedropper={true}
+        />
       </div>
 
       {/* Minor Lines Thickness */}

@@ -10,9 +10,9 @@ import React from 'react';
 // 🗑️ REMOVED (2025-10-06): ConfigurationProvider - MERGED into DxfSettingsProvider
 // import { ConfigurationProvider } from './ConfigurationProvider';
 // 🔄 MIGRATED (2025-10-09): Phase 3.2 - Full Enterprise Migration (old provider removed)
-import { StyleManagerProvider } from './StyleManagerProvider';
-import { EnterpriseDxfSettingsProvider } from '../settings-provider';
-import { EXPERIMENTAL_FEATURES } from '../config/experimental-features';
+// StyleManagerProvider moved to DxfViewerApp.tsx (needs EnterpriseDxfSettingsProvider context)
+// import { StyleManagerProvider } from './StyleManagerProvider';
+// import { EXPERIMENTAL_FEATURES } from '../config/experimental-features';
 
 // Import των υπαρχόντων providers για backward compatibility
 import { ProjectHierarchyProvider } from '../contexts/ProjectHierarchyContext';
@@ -38,12 +38,9 @@ export function UnifiedProviders({
     <ProjectHierarchyProvider>
       <GripProvider>
         <SnapProvider>
-          {/* ✅ ENTERPRISE PROVIDER - Now primary (backward compatible) */}
-          <EnterpriseDxfSettingsProvider enabled={true}>
-            <StyleManagerProvider>
-              {children}
-            </StyleManagerProvider>
-          </EnterpriseDxfSettingsProvider>
+          {/* ✅ StyleManagerProvider MOVED - Must be INSIDE EnterpriseDxfSettingsProvider */}
+          {/* StyleManagerProvider needs useEnterpriseDxfSettings, so it goes in DxfViewerApp.tsx */}
+          {children}
         </SnapProvider>
       </GripProvider>
     </ProjectHierarchyProvider>
