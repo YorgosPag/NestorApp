@@ -1,0 +1,563 @@
+{
+  "title": "Σύστημα Geo-Canvas",
+  "subtitle": "Enterprise Πλατφόρμα Γεωχωρικών Ειδοποιήσεων",
+  "phases": {
+    "foundation": "Φάση 1: Θεμέλια",
+    "transformation": "Φάση 2: Μετασχηματισμός",
+    "mapping": "Φάση 3: Χαρτογράφηση",
+    "database": "Φάση 4: Βάση Δεδομένων",
+    "alerts": "Φάση 5: Ειδοποιήσεις",
+    "ui": "Φάση 6: Διεπαφή Χρήστη",
+    "performance": "Φάση 7: Απόδοση",
+    "deployment": "Φάση 8: Ανάπτυξη"
+  },
+  "status": {
+    "ready": "Έτοιμο",
+    "inProgress": "Σε Εξέλιξη",
+    "completed": "Ολοκληρώθηκε",
+    "pending": "Εκκρεμεί",
+    "transformationReady": "Μετασχηματισμός Έτοιμος",
+    "mappingReady": "Χαρτογράφηση Έτοιμη",
+    "databaseReady": "Βάση Δεδομένων Έτοιμη"
+  },
+  "views": {
+    "foundation": "📋 Επισκόπηση Θεμελίων",
+    "georeferencing": "🗺️ Γεωαναφορά (Φάση 2)",
+    "mapping": "🌍 Χαρτογράφηση (Φάση 3)",
+    "database": "🗄️ Βάση Δεδομένων (Φάση 4)",
+    "alerts": "🚨 Ειδοποιήσεις (Φάση 5)"
+  },
+  "toolbar": {
+    "view": "Προβολή:",
+    "crs": "Σύστημα Συντεταγμένων:",
+    "zoom": "Μεγέθυνση:",
+    "coordinates": "Συντεταγμένες:"
+  },
+  "floorPlan": {
+    "uploadButton": {
+      "text": "Ανέβασμα Κάτοψης",
+      "tooltip": "Ανέβασμα αρχιτεκτονικής κάτοψης (DXF, PNG, JPG, TIFF)",
+      "loading": "Ανέβασμα..."
+    },
+    "uploadModal": {
+      "title": "Ανέβασμα Κάτοψης",
+      "description": "Ανεβάστε αρχιτεκτονική κάτοψη σε μορφή DXF, DWG, PDF, ή εικόνα (PNG, JPG, TIFF)",
+      "dragText": "Σύρετε και αφήστε ένα αρχείο εδώ",
+      "dropText": "Αφήστε το αρχείο εδώ...",
+      "orText": "ή",
+      "browseButton": "Επιλογή Αρχείου",
+      "supportedFormats": "Υποστηριζόμενες Μορφές:",
+      "maxSize": "Μέγιστο μέγεθος αρχείου: 50 MB",
+      "errors": {
+        "invalidFormat": "Μη έγκυρη μορφή αρχείου. Παρακαλώ ανεβάστε DXF, DWG, PDF, PNG, JPG, ή TIFF.",
+        "fileTooLarge": "Το αρχείο είναι πολύ μεγάλο. Μέγιστο μέγεθος: 50 MB."
+      }
+    },
+    "preview": {
+      "thumbnailTitle": "Προεπισκόπηση",
+      "fileInfoTitle": "Πληροφορίες Αρχείου",
+      "dxfDataTitle": "Δεδομένα DXF",
+      "imageDataTitle": "Δεδομένα Εικόνας",
+      "nextStepsTitle": "Επόμενα Βήματα",
+      "nextStepsDescription": "Μετά το ανέβασμα, θα κάνετε γεωαναφορά της κάτοψης προσθέτοντας σημεία ελέγχου στον χάρτη.",
+      "fileName": "Όνομα Αρχείου",
+      "format": "Μορφή",
+      "fileSize": "Μέγεθος Αρχείου",
+      "entities": "Οντότητες",
+      "layers": "Επίπεδα",
+      "features": "Χαρακτηριστικά",
+      "dimensions": "Διαστάσεις",
+      "layerList": "Λίστα Επιπέδων",
+      "moreLayers": "επιπλέον",
+      "aspectRatio": "Αναλογία Διαστάσεων",
+      "transparency": "Διαφάνεια",
+      "supported": "Υποστηρίζεται",
+      "notSupported": "Δεν Υποστηρίζεται"
+    }
+  },
+  "georeferencing": {
+    "title": "🗺️ Γεωαναφορά DXF",
+    "subtitle": "Μετασχηματισμός DXF αρχείων σε γεωγραφικές συντεταγμένες",
+    "workspace": "Χώρος Εργασίας Γεωαναφοράς DXF",
+    "engineDescription": "Μηχανή μετασχηματισμού συντεταγμένων",
+    "coordinateTransform": "Μετασχηματισμός συντεταγμένων DXF → Γεωγραφικές συντεταγμένες",
+    "steps": {
+      "upload": "1. Ανέβασμα DXF",
+      "points": "2. Σημεία Ελέγχου",
+      "transform": "3. Μετασχηματισμός",
+      "validate": "4. Επικύρωση"
+    },
+    "workflow": {
+      "step1": "Βήμα 1: Προσθήκη σημείων ελέγχου με DXF και Γεωγραφικές συντεταγμένες",
+      "step2": "Βήμα 2: Εξασφάλιση καλής χωρικής κατανομής (γωνίες + κέντρο)",
+      "step3": "Βήμα 3: Βαθμονόμηση μετασχηματισμού για αντιστοίχιση συντεταγμένων",
+      "step4": "Βήμα 4: Επικύρωση ακρίβειας (στόχος: <5m RMS σφάλμα)"
+    },
+    "uploadArea": {
+      "title": "Ανέβασμα DXF Αρχείου",
+      "description": "Σύρετε ένα DXF αρχείο εδώ ή κάντε κλικ για επιλογή",
+      "dragText": "Αφήστε το DXF αρχείο εδώ...",
+      "formats": "Υποστηριζόμενες μορφές: .dxf",
+      "button": "Επιλογή Αρχείου"
+    },
+    "controlPoints": {
+      "title": "Σημεία Ελέγχου",
+      "description": "Ορίστε τουλάχιστον 3 σημεία ελέγχου για ακριβή γεωαναφορά",
+      "count": "Σημεία Ελέγχου",
+      "addPoint": "➕ Προσθήκη Σημείου",
+      "removePoint": "🗑️ Αφαίρεση",
+      "accuracy": "Ακρίβεια:",
+      "status": "Κατάσταση:",
+      "none": "Δεν προστέθηκαν σημεία ελέγχου ακόμη",
+      "minimum": "Προσθέστε τουλάχιστον 3 σημεία για γεωαναφορά",
+      "features": {
+        "addEdit": "• Προσθήκη/Επεξεργασία σημείων ελέγχου",
+        "mapping": "• Αντιστοίχιση DXF ↔ Γεωγραφικών",
+        "validation": "• Επικύρωση ακρίβειας",
+        "distribution": "• Χωρική κατανομή"
+      },
+      "coordinates": {
+        "local": "Τοπικές Συντεταγμένες (DXF)",
+        "world": "Παγκόσμιες Συντεταγμένες (Γεωγραφικές)",
+        "x": "X:",
+        "y": "Y:",
+        "lat": "Γεωγραφικό Πλάτος:",
+        "lng": "Γεωγραφικό Μήκος:"
+      }
+    },
+    "transformation": {
+      "title": "Μετασχηματισμός",
+      "controls": "Έλεγχοι Μετασχηματισμού",
+      "engine": "Μηχανή Μετασχηματισμού",
+      "method": "Μέθοδος:",
+      "methods": {
+        "affine": "Affine (6 παράμετροι)",
+        "polynomial": "Πολυωνυμικός",
+        "tps": "Thin Plate Spline"
+      },
+      "execute": "Εκτέλεση Μετασχηματισμού",
+      "calibrate": "📐 Βαθμονόμηση Μετασχηματισμού",
+      "notCalibrated": "❌ Μη Βαθμονομημένο",
+      "features": {
+        "affine": "• Affine μετασχηματισμός",
+        "leastSquares": "• Βαθμονόμηση ελάχιστων τετραγώνων",
+        "rmsCalculation": "• Υπολογισμός ακρίβειας RMS",
+        "inverse": "• Αντίστροφος μετασχηματισμός"
+      },
+      "results": {
+        "title": "Αποτελέσματα Μετασχηματισμού",
+        "accuracy": "Ακρίβεια:",
+        "rmse": "Μέσο Τετραγωνικό Σφάλμα:",
+        "points": "Σημεία:",
+        "status": "Κατάσταση:"
+      }
+    },
+    "validation": {
+      "title": "Επικύρωση",
+      "description": "Ελέγξτε την ακρίβεια του μετασχηματισμού",
+      "checkAccuracy": "Έλεγχος Ακρίβειας",
+      "export": "Εξαγωγή Αποτελεσμάτων",
+      "save": "Αποθήκευση Έργου"
+    }
+  },
+  "errors": {
+    "fileUpload": "Σφάλμα κατά το ανέβασμα του αρχείου",
+    "invalidFile": "Μη έγκυρο αρχείο DXF",
+    "insufficientPoints": "Χρειάζονται τουλάχιστον 3 σημεία ελέγχου",
+    "transformationFailed": "Ο μετασχηματισμός απέτυχε",
+    "networkError": "Σφάλμα δικτύου",
+    "unauthorized": "Μη εξουσιοδοτημένη πρόσβαση"
+  },
+  "notifications": {
+    "fileUploaded": "Το αρχείο ανέβηκε επιτυχώς",
+    "pointAdded": "Το σημείο ελέγχου προστέθηκε",
+    "pointRemoved": "Το σημείο ελέγχου αφαιρέθηκε",
+    "transformationCompleted": "Ο μετασχηματισμός ολοκληρώθηκε",
+    "projectSaved": "Το έργο αποθηκεύτηκε",
+    "dataExported": "Τα δεδομένα εξήχθησαν"
+  },
+  "buttons": {
+    "upload": "Ανέβασμα",
+    "add": "Προσθήκη",
+    "remove": "Αφαίρεση",
+    "transform": "Μετασχηματισμός",
+    "validate": "Επικύρωση",
+    "save": "Αποθήκευση",
+    "export": "Εξαγωγή",
+    "cancel": "Ακύρωση",
+    "confirm": "Επιβεβαίωση",
+    "reset": "Επαναφορά",
+    "back": "Πίσω",
+    "next": "Επόμενο",
+    "finish": "Ολοκλήρωση"
+  },
+  "loading": {
+    "uploading": "Ανέβασμα αρχείου...",
+    "processing": "Επεξεργασία...",
+    "transforming": "Μετασχηματισμός σε εξέλιξη...",
+    "validating": "Επικύρωση...",
+    "saving": "Αποθήκευση...",
+    "loading": "Φόρτωση..."
+  },
+  "coordinateSystems": {
+    "epsg4326": "WGS84 (EPSG:4326)",
+    "epsg3857": "Web Mercator (EPSG:3857)",
+    "epsg2100": "GGRS87 (EPSG:2100)",
+    "epsg4230": "ED50 (EPSG:4230)",
+    "custom": "Προσαρμοσμένο"
+  },
+  "footer": {
+    "poweredBy": "Τροφοδοτείται από",
+    "version": "Έκδοση",
+    "lastUpdate": "Τελευταία ενημέρωση",
+    "support": "Υποστήριξη",
+    "documentation": "Τεκμηρίωση"
+  },
+  "progress": {
+    "title": "📊 Πρόοδος Φάσεων",
+    "phase1": "✅ Φάση 1: Θεμέλια",
+    "phase1Description": "Αρχιτεκτονική + Τύποι Ολοκληρώθηκαν",
+    "phase2": "✅ Φάση 2: Μετασχηματισμός",
+    "phase2Description": "Γεωαναφορά DXF Έτοιμη",
+    "phase3": "⏳ Φάση 3: MapLibre",
+    "phase3Description": "Διαδραστική χαρτογράφηση",
+    "phase4": "⭕ Φάση 4: PostGIS",
+    "phase4Description": "Χωρική βάση δεδομένων",
+    "phase5": "⭕ Φάση 5: Ειδοποιήσεις",
+    "phase5Description": "Μηχανή γεω-ειδοποιήσεων"
+  },
+  "features": {
+    "title": "✅ Διαθέσιμα Χαρακτηριστικά",
+    "controlPointManagement": "Διαχείριση Σημείων Ελέγχου",
+    "affineTransformation": "Affine Μετασχηματισμός",
+    "accuracyValidation": "Επικύρωση Ακρίβειας",
+    "spatialDistribution": "Ανάλυση Χωρικής Κατανομής",
+    "rmsCalculation": "Υπολογισμός RMS Σφάλματος",
+    "coordinateTransformation": "Μετασχηματισμός Συντεταγμένων"
+  },
+  "technical": {
+    "title": "🔧 Τεχνικές Προδιαγραφές",
+    "transformation": "Μετασχηματισμός:",
+    "transformationValue": "Affine + Ελάχιστα Τετράγωνα",
+    "accuracy": "Ακρίβεια:",
+    "accuracyValue": "Επίπεδο χιλιοστού",
+    "crsSupport": "Υποστήριξη CRS:",
+    "crsSupportValue": "WGS84, GGRS87, UTM",
+    "mathEngine": "Μαθηματική Μηχανή:",
+    "mathEngineValue": "Enterprise TypeScript",
+    "standards": "Πρότυπα:",
+    "standardsValue": "ISO 19107, OGC"
+  },
+  "next": {
+    "title": "⏭️ Επόμενο (Φάση 3)",
+    "maplibre": "• Ενσωμάτωση MapLibre GL JS",
+    "interactivePicking": "• Διαδραστική επιλογή συντεταγμένων",
+    "realtimePreview": "• Προεπισκόπηση σε πραγματικό χρόνο",
+    "basemapLayers": "• Πολλαπλά επίπεδα βάσης",
+    "visualIndicators": "• Οπτικοί δείκτες ακρίβειας"
+  },
+  "actions": {
+    "savePoints": "💾 Αποθήκευση Σημείων",
+    "loadPoints": "📂 Φόρτωση Σημείων",
+    "clearAllPoints": "🗑️ Καθαρισμός Όλων των Σημείων",
+    "addPoint": "+ Προσθήκη Σημείου"
+  },
+  "validation": {
+    "status": "📊 Κατάσταση Επικύρωσης",
+    "ready": "Έτοιμο για Βαθμονόμηση",
+    "needsImprovement": "Χρειάζεται Βελτίωση",
+    "statistics": {
+      "controlPoints": "Σημεία Ελέγχου:",
+      "avgAccuracy": "Μέση Ακρίβεια:",
+      "maxError": "Μέγιστο Σφάλμα:",
+      "distribution": "Κατανομή:"
+    },
+    "sections": {
+      "errors": "Σφάλματα:",
+      "warnings": "Προειδοποιήσεις:",
+      "recommendations": "Συστάσεις:"
+    }
+  },
+  "panelTitle": "📍 Σημεία Ελέγχου",
+  "addControlPoint": "Προσθήκη Σημείου Ελέγχου",
+  "panelHeader": {
+    "title": "🗺️ Γεωαναφορά DXF",
+    "subtitle": "Φάση 2: Μηχανή μετασχηματισμού συντεταγμένων"
+  },
+  "form": {
+    "dxfX": "DXF X:",
+    "dxfY": "DXF Y:",
+    "geoLng": "Γεωγραφικό Μήκος:",
+    "geoLat": "Γεωγραφικό Πλάτος:",
+    "accuracy": "Ακρίβεια (m):",
+    "description": "Περιγραφή:"
+  },
+  "controlPoints": {
+    "noPointsYet": "Δεν έχουν προστεθεί σημεία ελέγχου ακόμα",
+    "addMinimumPoints": "Προσθέστε τουλάχιστον 3 σημεία για γεωαναφορά",
+    "cancel": "Ακύρωση",
+    "addPoint": "Προσθήκη Σημείου",
+    "savePoints": "💾 Αποθήκευση Σημείων",
+    "loadPoints": "📂 Φόρτωση Σημείων",
+    "clearAllPoints": "🗑️ Διαγραφή Όλων των Σημείων"
+  },
+  "transformation": {
+    "controls": "🔧 Έλεγχοι Μετασχηματισμού",
+    "status": "Κατάσταση:",
+    "calibrated": "✅ Βαθμονομημένο",
+    "notCalibrated": "❌ Μη Βαθμονομημένο",
+    "calibrating": "⏳ Βαθμονόμηση...",
+    "calibrateTransformation": "📐 Βαθμονόμηση Μετασχηματισμού",
+    "calibratingButton": "Βαθμονόμηση..."
+  },
+  "workspace": {
+    "dxfGeoreferencingWorkspace": "Χώρος Εργασίας Γεωαναφοράς DXF",
+    "phase2Transform": "Φάση 2: Μετασχηματισμός συντεταγμένων DXF → Γεωγραφικές συντεταγμένες",
+    "controlPointsTitle": "✅ Σημεία Ελέγχου",
+    "controlPointsFeatures": {
+      "addEdit": "• Προσθήκη/Επεξεργασία σημείων ελέγχου",
+      "mapping": "• Αντιστοίχιση DXF ↔ Γεωγραφικών",
+      "accuracyValidation": "• Επικύρωση ακρίβειας",
+      "spatialDistribution": "• Χωρική κατανομή"
+    },
+    "transformationEngineTitle": "🔧 Μηχανή Μετασχηματισμού",
+    "transformationEngineFeatures": {
+      "affine": "• Affine μετασχηματισμός",
+      "leastSquares": "• Βαθμονόμηση ελάχιστων τετραγώνων",
+      "rmsCalculation": "• Υπολογισμός ακρίβειας RMS",
+      "inverseTransformation": "• Αντίστροφος μετασχηματισμός"
+    },
+    "nextPhase3": "⏳ Επόμενο: Φάση 3",
+    "nextPhase3Features": {
+      "maplibre": "• Ενσωμάτωση MapLibre GL",
+      "coordinatePicker": "• Οπτική επιλογή συντεταγμένων",
+      "realtimePreview": "• Προεπισκόπηση σε πραγματικό χρόνο",
+      "basemapLayers": "• Επίπεδα βασικού χάρτη"
+    },
+    "workflowInstructions": "📋 Οδηγίες Ροής Εργασίας",
+    "workflowSteps": {
+      "step1": "Βήμα 1: Προσθέστε σημεία ελέγχου με συντεταγμένες DXF και Γεωγραφικές",
+      "step2": "Βήμα 2: Εξασφαλίστε καλή χωρική κατανομή (γωνίες + κέντρο)",
+      "step3": "Βήμα 3: Βαθμονομήστε τον μετασχηματισμό για αντιστοίχιση συντεταγμένων",
+      "step4": "Βήμα 4: Επικυρώστε την ακρίβεια (στόχος: <5m σφάλμα RMS)"
+    }
+  },
+  "sidebar": {
+    "phaseProgress": {
+      "title": "📊 Πρόοδος Φάσεων",
+      "phase1Title": "✅ Φάση 1: Θεμέλια",
+      "phase1Description": "Αρχιτεκτονική + Τύποι Ολοκληρώθηκαν",
+      "phase2Title": "✅ Φάση 2: Μετασχηματισμός",
+      "phase2Description": "Γεωαναφορά DXF Έτοιμη",
+      "phase3Title": "⏳ Φάση 3: MapLibre",
+      "phase3Description": "Διαδραστική χαρτογράφηση",
+      "phase4Title": "⭕ Φάση 4: PostGIS",
+      "phase4Description": "Χωρική βάση δεδομένων",
+      "phase5Title": "⭕ Φάση 5: Ειδοποιήσεις",
+      "phase5Description": "Μηχανή γεω-ειδοποιήσεων"
+    },
+    "availableFeatures": {
+      "title": "✅ Διαθέσιμα Χαρακτηριστικά",
+      "controlPointManagement": "Διαχείριση Σημείων Ελέγχου",
+      "affineTransformation": "Affine Μετασχηματισμός",
+      "accuracyValidation": "Επικύρωση Ακρίβειας",
+      "spatialDistributionAnalysis": "Ανάλυση Χωρικής Κατανομής",
+      "rmsErrorCalculation": "Υπολογισμός Σφάλματος RMS",
+      "coordinateTransformation": "Μετασχηματισμός Συντεταγμένων"
+    },
+    "technicalSpecs": {
+      "title": "🔧 Τεχνικές Προδιαγραφές",
+      "transformation": "Μετασχηματισμός:",
+      "transformationValue": "Affine + Ελάχιστα Τετράγωνα",
+      "accuracy": "Ακρίβεια:",
+      "accuracyValue": "Επίπεδο χιλιοστού",
+      "crsSupport": "Υποστήριξη CRS:",
+      "crsSupportValue": "WGS84, GGRS87, UTM",
+      "mathEngine": "Μηχανή Υπολογισμών:",
+      "mathEngineValue": "Enterprise TypeScript",
+      "standards": "Πρότυπα:",
+      "standardsValue": "ISO 19107, OGC"
+    },
+    "comingNext": {
+      "title": "⏭️ Επόμενα (Φάση 3)",
+      "maplibreIntegration": "• Ενσωμάτωση MapLibre GL JS",
+      "interactiveCoordinatePicking": "• Διαδραστική επιλογή συντεταγμένων",
+      "realtimeTransformationPreview": "• Προεπισκόπηση μετασχηματισμού σε πραγματικό χρόνο",
+      "multipleBasemapLayers": "• Πολλαπλά επίπεδα βασικού χάρτη",
+      "visualAccuracyIndicators": "• Οπτικοί δείκτες ακρίβειας"
+    }
+  },
+  "errorBoundary": {
+    "title": "Σφάλμα Συστήματος Geo-Canvas",
+    "subtitle": "Κάτι πήγε στραβά με το σύστημα Geo-Alert",
+    "errorDetails": "Λεπτομέρειες Σφάλματος",
+    "errorMessage": "Μήνυμα Σφάλματος:",
+    "stackTrace": "Stack Trace:",
+    "componentStack": "Component Stack:",
+    "recoveryOptions": "Επιλογές Ανάκαμψης",
+    "tryAgain": "🔄 Δοκίμασε Ξανά",
+    "reloadPage": "🔃 Επαναφόρτωση Σελίδας",
+    "troubleshooting": "Συμβουλές Αντιμετώπισης Προβλημάτων:",
+    "troubleshootingTips": {
+      "tip1": "• Έλεγξε την κονσόλα του browser για επιπλέον σφάλματα",
+      "tip2": "• Βεβαιώσου ότι οι εξαρτήσεις MapLibre GL JS έχουν φορτωθεί",
+      "tip3": "• Επαλήθευσε τα δεδομένα μετασχηματισμού συντεταγμένων",
+      "tip4": "• Έλεγξε τη συνδεσιμότητα της χωρικής βάσης δεδομένων (Φάση 4+)"
+    },
+    "developmentMode": "Λειτουργία Ανάπτυξης:",
+    "developmentInfo": "Επιπρόσθετες πληροφορίες debugging είναι διαθέσιμες παραπάνω. Έλεγξε την κονσόλα του browser για λεπτομερή logs και stack traces.",
+    "systemVersion": "Σύστημα Geo-Canvas v1.0.0 (Φάση 1)",
+    "platformName": "Enterprise Πλατφόρμα Geo-Alert"
+  },
+  "phaseDetails": {
+    "phase1Features": {
+      "foundationStructure": "• Δομή θεμελίων",
+      "enterpriseTypeSystem": "• Σύστημα τύπων Enterprise",
+      "configurationSetup": "• Ρύθμιση διαμόρφωσης",
+      "routerIntegrationReady": "• Ενσωμάτωση router έτοιμη"
+    },
+    "phase2Features": {
+      "dxfTransformationEngine": "• Μηχανή μετασχηματισμού DXF",
+      "coordinateSystemSupport": "• Υποστήριξη συστήματος συντεταγμένων",
+      "georeferencingTools": "• Εργαλεία γεωαναφοράς",
+      "controlPointManagement": "• Διαχείριση σημείων ελέγχου"
+    },
+    "architectureOverview": {
+      "title": "Επισκόπηση Αρχιτεκτονικής",
+      "centralizedSystem": "Κεντρικοποιημένο Σύστημα: Ενσωματωμένο στο οικοσύστημα DXF Viewer",
+      "technologyStack": "Στοίβα Τεχνολογίας: React + TypeScript + MapLibre GL JS",
+      "dataFlow": "Ροή Δεδομένων: DXF → Μετασχηματισμός → GeoJSON → Χάρτης → Ειδοποιήσεις",
+      "standards": "Πρότυπα: ISO 19107, OGC, συμβάσεις AutoCAD"
+    }
+  },
+  "map": {
+    "controls": {
+      "pickGeographicPoint": "Επιλογή Γεωγραφικού Σημείου",
+      "cancelPicking": "Ακύρωση Επιλογής",
+      "cancel": "Ακύρωση",
+      "mapStyle": "Στυλ Χάρτη",
+      "clickOnMap": "Κάντε κλικ στον χάρτη...",
+      "openStreetMap": "OpenStreetMap",
+      "satellite": "Δορυφορικός",
+      "terrain": "Τοπογραφικός",
+      "darkMode": "Σκούρο Θέμα"
+    },
+    "status": {
+      "mapLoaded": "Χάρτης Φορτώθηκε",
+      "mapLoading": "Φόρτωση...",
+      "points": "Σημεία",
+      "controlPoints": "Σημεία Ελέγχου",
+      "avgAccuracy": "Avg Accuracy:",
+      "best": "Best:",
+      "accuracy": "±{value}m"
+    },
+    "coordinates": {
+      "lng": "Γεωγρ. Μήκος",
+      "lat": "Γεωγρ. Πλάτος"
+    },
+    "styleSelector": {
+      "style": "Στυλ:"
+    }
+  },
+  "accuracy": {
+    "legend": "📐 Μύημα Ακρίβειας",
+    "visualization": "Οπτικοποίηση:",
+    "types": {
+      "circles": "○ Κύκλοι",
+      "zones": "◊ Ζώνες"
+    },
+    "levels": {
+      "excellent": "Άριστη (≤0.5m)",
+      "good": "Καλή (≤1.0m)",
+      "fair": "Μέτρια (≤2.0m)",
+      "poor": "Κακή (≤5.0m)",
+      "veryPoor": "Πολύ Κακή (>5.0m)"
+    },
+    "controls": {
+      "hideIndicators": "👁️ Απόκρυψη Δεικτών",
+      "showIndicators": "👁️ Εμφάνιση Δεικτών"
+    },
+    "stats": {
+      "avgAccuracy": "Μέση Ακρίβεια:",
+      "best": "Καλύτερη:",
+      "format": "±{value}m"
+    }
+  },
+  "map": {
+    "status": {
+      "mapLoaded": "Χάρτης Φορτώθηκε",
+      "mapLoading": "Φόρτωση...",
+      "points": "Σημεία",
+      "controlPoints": "Σημεία Ελέγχου",
+      "avgAccuracy": "Μέση Ακρίβεια:",
+      "best": "Καλύτερη:",
+      "accuracy": "±{value}m"
+    },
+    "controls": {
+      "pickGeographicPoint": "Επιλογή Γεωγραφικού Σημείου",
+      "clickOnMap": "Κλικ στον Χάρτη",
+      "cancel": "Ακύρωση"
+    }
+  },
+  "floorPlanControlPoints": {
+    "title": "Σημεία Ελέγχου",
+    "description": "Απαιτούνται τουλάχιστον 3 σημεία για γεωαναφορά",
+    "instructions": {
+      "idle": "Κάντε κλικ στο 'Προσθήκη Σημείου Ελέγχου' για να ξεκινήσετε",
+      "pickFloorPlan": "Κάντε κλικ στην κάτοψη για να επιλέξετε ένα σημείο",
+      "pickGeo": "Τώρα κάντε κλικ στον χάρτη για να επιλέξετε το αντίστοιχο γεωγραφικό σημείο"
+    },
+    "buttons": {
+      "addControlPoint": "Προσθήκη Σημείου Ελέγχου",
+      "cancel": "Ακύρωση",
+      "clearAll": "Διαγραφή Όλων"
+    },
+    "state": {
+      "idle": "Αδρανές",
+      "pickingFloorPlan": "Επιλογή Σημείου Κάτοψης",
+      "pickingGeo": "Επιλογή Γεωγραφικού Σημείου"
+    },
+    "list": {
+      "title": "Λίστα Σημείων Ελέγχου",
+      "noPoints": "Δεν υπάρχουν σημεία ελέγχου ακόμα",
+      "point": "Σημείο",
+      "floorPlan": "Κάτοψη:",
+      "geographic": "Γεωγραφικό:",
+      "edit": "Επεξεργασία",
+      "delete": "Διαγραφή",
+      "save": "Αποθήκευση",
+      "cancel": "Ακύρωση"
+    },
+    "quality": {
+      "title": "Ποιότητα Μετασχηματισμού:",
+      "excellent": "ΑΡΙΣΤΗ",
+      "good": "ΚΑΛΗ",
+      "fair": "ΜΕΤΡΙΑ",
+      "poor": "ΚΑΚΗ",
+      "rmsError": "Σφάλμα RMS:",
+      "maxError": "Μέγιστο Σφάλμα:",
+      "meanError": "Μέσο Σφάλμα:",
+      "lowAccuracyWarning": "Χαμηλή ακρίβεια - εξετάστε την προσθήκη περισσότερων σημείων ελέγχου ή τον έλεγχο των υπαρχόντων"
+    },
+    "confirm": {
+      "clearAll": "Είστε σίγουροι ότι θέλετε να διαγράψετε όλα τα σημεία ελέγχου;",
+      "delete": "Είστε σίγουροι ότι θέλετε να διαγράψετε αυτό το σημείο ελέγχου;"
+    }
+  },
+  "floorPlanLayer": {
+    "title": "Επίπεδο Κάτοψης",
+    "toggle": "Εναλλαγή Κάτοψης",
+    "show": "Εμφάνιση Κάτοψης",
+    "hide": "Απόκρυψη Κάτοψης",
+    "opacity": "Διαφάνεια:",
+    "position": "Θέση:",
+    "scale": "Κλίμακα:",
+    "rotation": "Περιστροφή:",
+    "status": {
+      "loading": "Φόρτωση κάτοψης...",
+      "loaded": "Κάτοψη φορτώθηκε",
+      "error": "Σφάλμα φόρτωσης κάτοψης",
+      "notLoaded": "Δεν έχει φορτωθεί κάτοψη"
+    }
+  }
+}

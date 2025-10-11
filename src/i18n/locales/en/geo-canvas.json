@@ -1,0 +1,418 @@
+{
+  "title": "Geo-Canvas System",
+  "subtitle": "Enterprise Geospatial Alert Platform",
+  "phases": {
+    "foundation": "Phase 1: Foundation",
+    "transformation": "Phase 2: Transformation",
+    "mapping": "Phase 3: Mapping",
+    "database": "Phase 4: Database",
+    "alerts": "Phase 5: Alerts",
+    "ui": "Phase 6: User Interface",
+    "performance": "Phase 7: Performance",
+    "deployment": "Phase 8: Deployment"
+  },
+  "status": {
+    "ready": "Ready",
+    "inProgress": "In Progress",
+    "completed": "Completed",
+    "pending": "Pending",
+    "transformationReady": "Transformation Ready",
+    "mappingReady": "Mapping Ready",
+    "databaseReady": "Database Ready"
+  },
+  "views": {
+    "foundation": "📋 Foundation Overview",
+    "georeferencing": "🗺️ Georeferencing (Phase 2)",
+    "mapping": "🌍 Mapping (Phase 3)",
+    "database": "🗄️ Database (Phase 4)",
+    "alerts": "🚨 Alerts (Phase 5)"
+  },
+  "toolbar": {
+    "view": "View:",
+    "crs": "Coordinate System:",
+    "zoom": "Zoom:",
+    "coordinates": "Coordinates:"
+  },
+  "floorPlan": {
+    "uploadButton": {
+      "text": "Upload Floor Plan",
+      "tooltip": "Upload architectural floor plan (DXF, PNG, JPG, TIFF)",
+      "loading": "Uploading..."
+    },
+    "uploadModal": {
+      "title": "Upload Floor Plan",
+      "description": "Upload architectural floor plan in DXF, DWG, PDF, or image format (PNG, JPG, TIFF)",
+      "dragText": "Drag and drop a file here",
+      "dropText": "Drop file here...",
+      "orText": "or",
+      "browseButton": "Browse Files",
+      "supportedFormats": "Supported Formats:",
+      "maxSize": "Maximum file size: 50 MB",
+      "errors": {
+        "invalidFormat": "Invalid file format. Please upload DXF, DWG, PDF, PNG, JPG, or TIFF.",
+        "fileTooLarge": "File is too large. Maximum size is 50 MB."
+      }
+    },
+    "preview": {
+      "thumbnailTitle": "Preview",
+      "fileInfoTitle": "File Information",
+      "dxfDataTitle": "DXF Data",
+      "imageDataTitle": "Image Data",
+      "nextStepsTitle": "Next Steps",
+      "nextStepsDescription": "After uploading, you'll georeference this floor plan by adding control points on the map.",
+      "fileName": "File Name",
+      "format": "Format",
+      "fileSize": "File Size",
+      "entities": "Entities",
+      "layers": "Layers",
+      "features": "Features",
+      "dimensions": "Dimensions",
+      "layerList": "Layer List",
+      "moreLayers": "more",
+      "aspectRatio": "Aspect Ratio",
+      "transparency": "Transparency",
+      "supported": "Supported",
+      "notSupported": "Not Supported"
+    }
+  },
+  "georeferencing": {
+    "title": "🗺️ DXF Georeferencing",
+    "subtitle": "Transform DXF files to geographic coordinates",
+    "steps": {
+      "upload": "1. Upload DXF",
+      "points": "2. Control Points",
+      "transform": "3. Transform",
+      "validate": "4. Validate"
+    },
+    "uploadArea": {
+      "title": "Upload DXF File",
+      "description": "Drag a DXF file here or click to select",
+      "dragText": "Drop DXF file here...",
+      "formats": "Supported formats: .dxf",
+      "button": "Select File"
+    },
+    "controlPoints": {
+      "title": "Control Points",
+      "description": "Define at least 3 control points for accurate georeferencing",
+      "addPoint": "➕ Add Point",
+      "removePoint": "🗑️ Remove",
+      "accuracy": "Accuracy:",
+      "status": "Status:",
+      "coordinates": {
+        "local": "Local Coordinates (DXF)",
+        "world": "World Coordinates (Geographic)",
+        "x": "X:",
+        "y": "Y:",
+        "lat": "Latitude:",
+        "lng": "Longitude:"
+      }
+    },
+    "transformation": {
+      "title": "Transformation",
+      "method": "Method:",
+      "methods": {
+        "affine": "Affine (6 parameters)",
+        "polynomial": "Polynomial",
+        "tps": "Thin Plate Spline"
+      },
+      "execute": "Execute Transformation",
+      "results": {
+        "title": "Transformation Results",
+        "accuracy": "Accuracy:",
+        "rmse": "Root Mean Square Error:",
+        "points": "Points:",
+        "status": "Status:"
+      }
+    },
+    "validation": {
+      "title": "Validation",
+      "description": "Check the accuracy of the transformation",
+      "checkAccuracy": "Check Accuracy",
+      "export": "Export Results",
+      "save": "Save Project"
+    }
+  },
+  "errors": {
+    "fileUpload": "Error uploading file",
+    "invalidFile": "Invalid DXF file",
+    "insufficientPoints": "At least 3 control points required",
+    "transformationFailed": "Transformation failed",
+    "networkError": "Network error",
+    "unauthorized": "Unauthorized access"
+  },
+  "notifications": {
+    "fileUploaded": "File uploaded successfully",
+    "pointAdded": "Control point added",
+    "pointRemoved": "Control point removed",
+    "transformationCompleted": "Transformation completed",
+    "projectSaved": "Project saved",
+    "dataExported": "Data exported"
+  },
+  "buttons": {
+    "upload": "Upload",
+    "add": "Add",
+    "remove": "Remove",
+    "transform": "Transform",
+    "validate": "Validate",
+    "save": "Save",
+    "export": "Export",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "reset": "Reset",
+    "back": "Back",
+    "next": "Next",
+    "finish": "Finish"
+  },
+  "loading": {
+    "uploading": "Uploading file...",
+    "processing": "Processing...",
+    "transforming": "Transformation in progress...",
+    "validating": "Validating...",
+    "saving": "Saving...",
+    "loading": "Loading..."
+  },
+  "coordinateSystems": {
+    "epsg4326": "WGS84 (EPSG:4326)",
+    "epsg3857": "Web Mercator (EPSG:3857)",
+    "epsg2100": "GGRS87 (EPSG:2100)",
+    "epsg4230": "ED50 (EPSG:4230)",
+    "custom": "Custom"
+  },
+  "footer": {
+    "poweredBy": "Powered by",
+    "version": "Version",
+    "lastUpdate": "Last update",
+    "support": "Support",
+    "documentation": "Documentation"
+  },
+  "panelHeader": {
+    "title": "🗺️ DXF Georeferencing",
+    "subtitle": "Phase 2: Coordinate transformation engine"
+  },
+  "form": {
+    "dxfX": "DXF X:",
+    "dxfY": "DXF Y:",
+    "geoLng": "Geographic Longitude:",
+    "geoLat": "Geographic Latitude:",
+    "accuracy": "Accuracy (m):",
+    "description": "Description:"
+  },
+  "controlPoints": {
+    "noPointsYet": "No control points added yet",
+    "addMinimumPoints": "Add at least 3 points for georeferencing",
+    "cancel": "Cancel",
+    "addPoint": "Add Point",
+    "savePoints": "💾 Save Points",
+    "loadPoints": "📂 Load Points",
+    "clearAllPoints": "🗑️ Clear All Points"
+  },
+  "transformation": {
+    "controls": "🔧 Transformation Controls",
+    "status": "Status:",
+    "calibrated": "✅ Calibrated",
+    "notCalibrated": "❌ Not Calibrated",
+    "calibrating": "⏳ Calibrating...",
+    "calibrateTransformation": "📐 Calibrate Transformation",
+    "calibratingButton": "Calibrating..."
+  },
+  "workspace": {
+    "dxfGeoreferencingWorkspace": "DXF Georeferencing Workspace",
+    "phase2Transform": "Phase 2: Transform DXF coordinates → Geographic coordinates",
+    "controlPointsTitle": "✅ Control Points",
+    "controlPointsFeatures": {
+      "addEdit": "• Add/Edit control points",
+      "mapping": "• DXF ↔ Geographic mapping",
+      "accuracyValidation": "• Accuracy validation",
+      "spatialDistribution": "• Spatial distribution"
+    },
+    "transformationEngineTitle": "🔧 Transformation Engine",
+    "transformationEngineFeatures": {
+      "affine": "• Affine transformation",
+      "leastSquares": "• Least squares calibration",
+      "rmsCalculation": "• RMS accuracy calculation",
+      "inverseTransformation": "• Inverse transformation"
+    },
+    "nextPhase3": "⏳ Next: Phase 3",
+    "nextPhase3Features": {
+      "maplibre": "• MapLibre GL integration",
+      "coordinatePicker": "• Visual coordinate picker",
+      "realtimePreview": "• Real-time preview",
+      "basemapLayers": "• Basemap layers"
+    },
+    "workflowInstructions": "📋 Workflow Instructions",
+    "workflowSteps": {
+      "step1": "Step 1: Add control points with DXF and Geographic coordinates",
+      "step2": "Step 2: Ensure good spatial distribution (corners + center)",
+      "step3": "Step 3: Calibrate transformation for coordinate mapping",
+      "step4": "Step 4: Validate accuracy (target: <5m RMS error)"
+    }
+  },
+  "sidebar": {
+    "phaseProgress": {
+      "title": "📊 Phase Progress",
+      "phase1Title": "✅ Phase 1: Foundation",
+      "phase1Description": "Architecture + Types Complete",
+      "phase2Title": "✅ Phase 2: Transformation",
+      "phase2Description": "DXF Georeferencing Ready",
+      "phase3Title": "⏳ Phase 3: MapLibre",
+      "phase3Description": "Interactive mapping",
+      "phase4Title": "⭕ Phase 4: PostGIS",
+      "phase4Description": "Spatial database",
+      "phase5Title": "⭕ Phase 5: Alerts",
+      "phase5Description": "Geo-alert engine"
+    },
+    "availableFeatures": {
+      "title": "✅ Available Features",
+      "controlPointManagement": "Control Point Management",
+      "affineTransformation": "Affine Transformation",
+      "accuracyValidation": "Accuracy Validation",
+      "spatialDistributionAnalysis": "Spatial Distribution Analysis",
+      "rmsErrorCalculation": "RMS Error Calculation",
+      "coordinateTransformation": "Coordinate Transformation"
+    },
+    "technicalSpecs": {
+      "title": "🔧 Technical Specs",
+      "transformation": "Transformation:",
+      "transformationValue": "Affine + Least Squares",
+      "accuracy": "Accuracy:",
+      "accuracyValue": "Millimeter-level",
+      "crsSupport": "CRS Support:",
+      "crsSupportValue": "WGS84, GGRS87, UTM",
+      "mathEngine": "Math Engine:",
+      "mathEngineValue": "Enterprise TypeScript",
+      "standards": "Standards:",
+      "standardsValue": "ISO 19107, OGC"
+    },
+    "comingNext": {
+      "title": "⏭️ Coming Next (Phase 3)",
+      "maplibreIntegration": "• MapLibre GL JS integration",
+      "interactiveCoordinatePicking": "• Interactive coordinate picking",
+      "realtimeTransformationPreview": "• Real-time transformation preview",
+      "multipleBasemapLayers": "• Multiple basemap layers",
+      "visualAccuracyIndicators": "• Visual accuracy indicators"
+    }
+  },
+  "errorBoundary": {
+    "title": "Geo-Canvas System Error",
+    "subtitle": "Something went wrong with the Geo-Alert system",
+    "errorDetails": "Error Details",
+    "errorMessage": "Error Message:",
+    "stackTrace": "Stack Trace:",
+    "componentStack": "Component Stack:",
+    "recoveryOptions": "Recovery Options",
+    "tryAgain": "🔄 Try Again",
+    "reloadPage": "🔃 Reload Page",
+    "troubleshooting": "Troubleshooting Tips:",
+    "troubleshootingTips": {
+      "tip1": "• Check browser console for additional errors",
+      "tip2": "• Ensure MapLibre GL JS dependencies are loaded",
+      "tip3": "• Verify coordinate transformation data",
+      "tip4": "• Check spatial database connectivity (Phase 4+)"
+    },
+    "developmentMode": "Development Mode:",
+    "developmentInfo": "Additional debugging information is available above. Check the browser console for detailed logs and stack traces.",
+    "systemVersion": "Geo-Canvas System v1.0.0 (Phase 1)",
+    "platformName": "Enterprise Geo-Alert Platform"
+  },
+  "accuracy": {
+    "legend": "📐 Accuracy Legend",
+    "visualization": "Visualization:",
+    "types": {
+      "circles": "○ Circles",
+      "zones": "◊ Zones"
+    },
+    "levels": {
+      "excellent": "Excellent (≤0.5m)",
+      "good": "Good (≤1.0m)",
+      "fair": "Fair (≤2.0m)",
+      "poor": "Poor (≤5.0m)",
+      "veryPoor": "Very Poor (>5.0m)"
+    },
+    "controls": {
+      "hideIndicators": "👁️ Hide Indicators",
+      "showIndicators": "👁️ Show Indicators"
+    },
+    "stats": {
+      "avgAccuracy": "Avg Accuracy:",
+      "best": "Best:",
+      "format": "±{value}m"
+    }
+  },
+  "map": {
+    "status": {
+      "mapLoaded": "Map Loaded",
+      "mapLoading": "Loading...",
+      "points": "Points",
+      "controlPoints": "Control Points",
+      "avgAccuracy": "Avg Accuracy:",
+      "best": "Best:",
+      "accuracy": "±{value}m"
+    },
+    "controls": {
+      "pickGeographicPoint": "Pick Geographic Point",
+      "clickOnMap": "Click on Map",
+      "cancel": "Cancel"
+    }
+  },
+  "floorPlanControlPoints": {
+    "title": "Control Points",
+    "description": "Minimum 3 points required for georeferencing",
+    "instructions": {
+      "idle": "Click 'Add Control Point' to start picking points",
+      "pickFloorPlan": "Click on the floor plan to select a point",
+      "pickGeo": "Now click on the map to select the corresponding geographic point"
+    },
+    "buttons": {
+      "addControlPoint": "Add Control Point",
+      "cancel": "Cancel",
+      "clearAll": "Clear All"
+    },
+    "state": {
+      "idle": "Idle",
+      "pickingFloorPlan": "Picking Floor Plan Point",
+      "pickingGeo": "Picking Geographic Point"
+    },
+    "list": {
+      "title": "Control Points List",
+      "noPoints": "No control points yet",
+      "point": "Point",
+      "floorPlan": "Floor Plan:",
+      "geographic": "Geographic:",
+      "edit": "Edit",
+      "delete": "Delete",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+    "quality": {
+      "title": "Transformation Quality:",
+      "excellent": "EXCELLENT",
+      "good": "GOOD",
+      "fair": "FAIR",
+      "poor": "POOR",
+      "rmsError": "RMS Error:",
+      "maxError": "Max Error:",
+      "meanError": "Mean Error:",
+      "lowAccuracyWarning": "Low accuracy - consider adding more control points or checking existing ones"
+    },
+    "confirm": {
+      "clearAll": "Are you sure you want to delete all control points?",
+      "delete": "Are you sure you want to delete this control point?"
+    }
+  },
+  "floorPlanLayer": {
+    "title": "Floor Plan Layer",
+    "toggle": "Toggle Floor Plan",
+    "show": "Show Floor Plan",
+    "hide": "Hide Floor Plan",
+    "opacity": "Opacity:",
+    "position": "Position:",
+    "scale": "Scale:",
+    "rotation": "Rotation:",
+    "status": {
+      "loading": "Loading floor plan...",
+      "loaded": "Floor plan loaded",
+      "error": "Error loading floor plan",
+      "notLoaded": "No floor plan loaded"
+    }
+  }
+}

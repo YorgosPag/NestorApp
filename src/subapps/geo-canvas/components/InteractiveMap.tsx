@@ -1,41 +1,20 @@
 'use client';
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-// import Map, { MapRef, Marker, Source, Layer } from 'react-map-gl';
-// import 'maplibre-gl/dist/maplibre-gl.css';
+import Map, { MapRef, Marker, Source, Layer } from 'react-map-gl/maplibre';
+import 'maplibre-gl/dist/maplibre-gl.css';
 
-import { useGeoTransform } from '../hooks/useGeoTransform';
+// ❌ ΑΦΑΙΡΕΘΗΚΕ: import { useGeoTransform } from '../hooks/useGeoTransform';
+import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import type { GeoCoordinate, DxfCoordinate, GeoControlPoint } from '../types';
 
+// ✅ NEW: Universal Polygon System Integration (FIXED PATH)
+import { usePolygonSystem } from '@/core/geo-alert-unified';
+import type { PolygonType, UniversalPolygon } from '@/core/geo-alert-unified';
+
 // ============================================================================
-// MOCK IMPLEMENTATIONS (για development χωρίς MapLibre dependencies)
+// MAPLIBRE GL JS - ENTERPRISE IMPLEMENTATION
 // ============================================================================
-
-// Mock Map component για development
-const MockMap = ({ children, ...props }: any) => (
-  <div className="w-full h-full bg-gray-800 relative" {...props}>
-    <div className="absolute inset-0 flex items-center justify-center">
-      <div className="text-center">
-        <div className="text-6xl mb-4">🗺️</div>
-        <h3 className="text-xl font-bold text-blue-400 mb-2">Interactive Map</h3>
-        <p className="text-gray-400">MapLibre GL JS Integration</p>
-        <p className="text-sm text-yellow-400 mt-2">Dependencies loading...</p>
-      </div>
-    </div>
-    {children}
-  </div>
-);
-
-// Mock Marker component
-const MockMarker = ({ longitude, latitude, children, ...props }: any) => (
-  <div className="absolute pointer-events-none" {...props}>
-    {children}
-  </div>
-);
-
-// Use mock components during development
-const Map = MockMap;
-const Marker = MockMarker;
 
 // ============================================================================
 // INTERACTIVE MAP COMPONENT
@@ -45,7 +24,18 @@ export interface InteractiveMapProps {
   onCoordinateClick?: (coordinate: GeoCoordinate) => void;
   showControlPoints?: boolean;
   showTransformationPreview?: boolean;
+  isPickingCoordinates?: boolean;
+  transformState: any; // ✅ REQUIRED - Always από parent
   className?: string;
+  onPolygonComplete?: () => void; // ✅ NEW: Callback όταν κλείνει το πολύγωνο
+  onMapReady?: (map: any) => void; // ✅ NEW: Callback when map is ready
+
+  // ✅ NEW: Universal Polygon System Props
+  enablePolygonDrawing?: boolean;
+  defaultPolygonMode?: PolygonType;
+  onPolygonCreated?: (polygon: UniversalPolygon) => void;
+  onPolygonModified?: (polygon: UniversalPolygon) => void;
+  onPolygonDeleted?: (polygonId: string) => void;
 }
 
 /**
@@ -57,10 +47,36 @@ export function InteractiveMap({
   onCoordinateClick,
   showControlPoints = true,
   showTransformationPreview = true,
-  className = ''
+  isPickingCoordinates = false,
+  transformState, // ✅ ALWAYS από parent - NO FALLBACK!
+  className = '',
+  onPolygonComplete, // ✅ NEW: Polygon completion callback
+  onMapReady, // ✅ NEW: Map ready callback
+
+  // ✅ NEW: Universal Polygon System Props
+  enablePolygonDrawing = false,
+  defaultPolygonMode = 'simple',
+  onPolygonCreated,
+  onPolygonModified,
+  onPolygonDeleted
 }: InteractiveMapProps) {
+  const { t, isLoading } = useTranslationLazy('geo-canvas');
   const mapRef = useRef<any>(null);
-  const [transformState] = useGeoTransform();
+
+  // ✅ NEW: Universal Polygon System Integration
+  const polygonSystem = usePolygonSystem({
+    defaultMode: defaultPolygonMode,
+    autoSave: true,
+    storageKey: 'geo-canvas-polygons',
+    debug: true
+  });
+
+  // ✅ ENTERPRISE: Single source of truth - NO duplicate hooks!
+  console.log('🎯 InteractiveMap using transformState:', {
+    controlPointsCount: transformState?.controlPoints?.length || 0,
+    controlPoints: transformState?.controlPoints || [],
+    isCalibrated: transformState?.isCalibrated || false
+  });
   const [mapLoaded, setMapLoaded] = useState(false);
   const [clickMode, setClickMode] = useState<'off' | 'add_dxf' | 'add_geo'>('off');
   const [hoveredCoordinate, setHoveredCoordinate] = useState<GeoCoordinate | null>(null);
@@ -77,119 +93,70 @@ export function InteractiveMap({
   // Map style configuration
   const [currentMapStyle, setCurrentMapStyle] = useState<'osm' | 'satellite' | 'terrain' | 'dark'>('osm');
 
+  // Enterprise MapLibre Style URLs
+  const mapStyleUrls = {
+    osm: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+    satellite: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
+    terrain: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+    dark: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
+  };
+
   // Accuracy visualization settings
   const [showAccuracyCircles, setShowAccuracyCircles] = useState(true);
   const [accuracyVisualizationMode, setAccuracyVisualizationMode] = useState<'circles' | 'heatmap' | 'zones'>('circles');
+
+  // Polygon completion state
+  const [isPolygonComplete, setIsPolygonComplete] = useState(false);
+  const [completedPolygon, setCompletedPolygon] = useState<GeoControlPoint[] | null>(null);
 
   // ========================================================================
   // MAP STYLE CONFIGURATION
   // ========================================================================
 
-  const mapStyles = {
-    osm: {
-      version: 8,
-      name: 'OpenStreetMap',
-      sources: {
-        'osm': {
-          type: 'raster',
-          tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-          tileSize: 256,
-          attribution: '© OpenStreetMap contributors'
-        }
-      },
-      layers: [
-        {
-          id: 'osm-raster',
-          type: 'raster',
-          source: 'osm'
-        }
-      ]
-    },
-    satellite: {
-      version: 8,
-      name: 'Satellite Imagery',
-      sources: {
-        'satellite': {
-          type: 'raster',
-          tiles: [
-            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-            // Fallback servers
-            'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-            'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-          ],
-          tileSize: 256,
-          attribution: '© Esri, DigitalGlobe, GeoEye, Earthstar Geographics, CNES/Airbus DS, USDA, USGS, AeroGRID, IGN, and the GIS User Community'
-        }
-      },
-      layers: [
-        {
-          id: 'satellite-raster',
-          type: 'raster',
-          source: 'satellite'
-        }
-      ]
-    },
-    terrain: {
-      version: 8,
-      name: 'Terrain Map',
-      sources: {
-        'terrain': {
-          type: 'raster',
-          tiles: [
-            'https://stamen-tiles.a.ssl.fastly.net/terrain/{z}/{x}/{y}.png',
-            // Fallback
-            'https://tile.opentopomap.org/{z}/{x}/{y}.png'
-          ],
-          tileSize: 256,
-          attribution: 'Map tiles by Stamen Design, under CC BY 3.0. Data by OpenStreetMap, under ODbL'
-        }
-      },
-      layers: [
-        {
-          id: 'terrain-raster',
-          type: 'raster',
-          source: 'terrain'
-        }
-      ]
-    },
-    dark: {
-      version: 8,
-      name: 'Dark Mode',
-      sources: {
-        'dark': {
-          type: 'raster',
-          tiles: [
-            'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png',
-            // Fallback για dark theme
-            'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-          ],
-          tileSize: 256,
-          attribution: '© Stadia Maps, © OpenMapTiles © OpenStreetMap contributors'
-        }
-      },
-      layers: [
-        {
-          id: 'dark-raster',
-          type: 'raster',
-          source: 'dark'
-        }
-      ]
-    }
-  } as const;
+  const mapStyleNames = {
+    osm: t('map.controls.openStreetMap'),
+    satellite: t('map.controls.satellite'),
+    terrain: t('map.controls.terrain'),
+    dark: t('map.controls.darkMode')
+  };
 
   // ========================================================================
   // MAP EVENT HANDLERS
   // ========================================================================
 
   const handleMapClick = useCallback((event: any) => {
-    if (clickMode === 'off' || !onCoordinateClick) return;
-
     const { lng, lat } = event.lngLat || { lng: event.longitude, lat: event.latitude };
     const coordinate: GeoCoordinate = { lng, lat };
 
+    // ✅ NEW: Universal Polygon System - Handle polygon drawing
+    if (enablePolygonDrawing && polygonSystem.isDrawing) {
+      // Add point to polygon system
+      const point = polygonSystem.addPoint(lng, lat, { lng, lat });
+
+      if (point) {
+        console.log('🎨 Added polygon point:', point);
+      }
+      return;
+    }
+
+    // 🔒 ENTERPRISE: Handle coordinate picking for control points
+    if (!isPickingCoordinates || !onCoordinateClick || isPolygonComplete) {
+      if (isPolygonComplete) {
+        console.log('🔒 Coordinate picking blocked - polygon is complete');
+      }
+      return;
+    }
+
+    console.log('🗺️ Map clicked:', coordinate);
     onCoordinateClick(coordinate);
-    setClickMode('off'); // Reset after click
-  }, [clickMode, onCoordinateClick]);
+  }, [
+    isPickingCoordinates,
+    onCoordinateClick,
+    isPolygonComplete,
+    enablePolygonDrawing,
+    polygonSystem.isDrawing,
+    polygonSystem.addPoint
+  ]);
 
   const handleMapMouseMove = useCallback((event: any) => {
     const { lng, lat } = event.lngLat || { lng: event.longitude, lat: event.latitude };
@@ -198,7 +165,26 @@ export function InteractiveMap({
 
   const handleMapLoad = useCallback(() => {
     setMapLoaded(true);
-  }, []);
+
+    // Initialize polygon system with map instance
+    if (enablePolygonDrawing && mapRef.current) {
+      const map = mapRef.current.getMap?.();
+      if (map && !polygonSystem.manager) {
+        // Note: We don't have a canvas here, so we initialize with map only
+        // The canvas would be used for overlay drawing if needed
+        console.log('🎨 Initializing polygon system with map');
+      }
+    }
+
+    // Notify parent that map is ready
+    if (onMapReady && mapRef.current) {
+      const map = mapRef.current.getMap?.();
+      if (map) {
+        console.log('🗺️ Map loaded - calling onMapReady');
+        onMapReady(map);
+      }
+    }
+  }, [onMapReady, enablePolygonDrawing, polygonSystem.manager]);
 
   const handleMapStyleChange = useCallback((newStyle: 'osm' | 'satellite' | 'terrain' | 'dark') => {
     setCurrentMapStyle(newStyle);
@@ -211,15 +197,135 @@ export function InteractiveMap({
   }, []);
 
   // ========================================================================
+  // POLYGON CLOSURE HANDLER
+  // ========================================================================
+
+  const handlePolygonClosure = useCallback(() => {
+    const currentPoints = transformState.controlPoints;
+
+    if (currentPoints.length < 3) {
+      console.warn('🚨 Cannot close polygon - need at least 3 points');
+      return;
+    }
+
+    console.log('✅ Polygon closure initiated!', {
+      pointsCount: currentPoints.length,
+      firstPoint: currentPoints[0],
+      lastPoint: currentPoints[currentPoints.length - 1]
+    });
+
+    // 🔥 ENTERPRISE IMPLEMENTATION: Polygon closure με map-centered notification
+    const notification = document.createElement('div');
+    notification.className = 'absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-green-500 text-white p-6 rounded-lg shadow-2xl z-[10000] animate-pulse border-2 border-green-300';
+    notification.innerHTML = `
+      <div class="flex items-center space-x-3">
+        <span class="text-2xl">🎯</span>
+        <div>
+          <div class="font-bold text-lg">Πολύγωνο Κλείστηκε!</div>
+          <div class="text-sm opacity-90">${currentPoints.length} σημεία συνδέθηκαν επιτυχώς</div>
+        </div>
+      </div>
+    `;
+
+    // Add to map container instead of document body
+    const mapContainer = document.querySelector('[data-testid="map-container"]') || document.querySelector('.maplibregl-map') || document.body;
+    mapContainer.appendChild(notification);
+
+    // Auto-remove notification after 3 seconds
+    setTimeout(() => {
+      if (mapContainer.contains(notification)) {
+        notification.remove();
+      }
+    }, 3000);
+
+    // ✅ ENTERPRISE: Complete polygon closure logic
+    setIsPolygonComplete(true);
+    setCompletedPolygon([...currentPoints]); // Save current polygon
+
+    // ✅ ENTERPRISE: Notify parent about polygon completion
+    if (onPolygonComplete) {
+      onPolygonComplete();
+      console.log('📞 Parent notified about polygon completion');
+    }
+
+    // Note: Coordinate picking will be blocked by handleMapClick
+    console.log('✅ Polygon successfully closed and saved!', {
+      isComplete: true,
+      polygonPoints: currentPoints.length,
+      coordinatePickingBlocked: true,
+      parentNotified: !!onPolygonComplete
+    });
+  }, [transformState.controlPoints, onPolygonComplete]);
+
+  // ========================================================================
+  // UNIVERSAL POLYGON SYSTEM EFFECTS
+  // ========================================================================
+
+  // Handle polygon creation callback
+  useEffect(() => {
+    if (onPolygonCreated && polygonSystem.polygons.length > 0) {
+      // Get the latest polygon
+      const latestPolygon = polygonSystem.polygons[polygonSystem.polygons.length - 1];
+
+      // Check if this is a new polygon by checking if we've seen it before
+      const polygonId = latestPolygon.id;
+      const existingPolygon = polygonSystem.getPolygon(polygonId);
+
+      if (existingPolygon) {
+        console.log('🎨 Polygon created:', latestPolygon);
+        onPolygonCreated(latestPolygon);
+
+        // Add polygon to map if it has geo coordinates
+        if (latestPolygon.type === 'georeferencing' || latestPolygon.points.some(p => p.x && p.y)) {
+          polygonSystem.addPolygonToMap(latestPolygon);
+        }
+      }
+    }
+  }, [polygonSystem.polygons.length, onPolygonCreated, polygonSystem]);
+
+  // Handle polygon system keyboard shortcuts
+  useEffect(() => {
+    if (!enablePolygonDrawing) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Only handle if polygon drawing is active
+      if (!polygonSystem.isDrawing) return;
+
+      switch (event.key) {
+        case 'Enter':
+          event.preventDefault();
+          const finishedPolygon = polygonSystem.finishDrawing();
+          if (finishedPolygon && onPolygonCreated) {
+            onPolygonCreated(finishedPolygon);
+          }
+          break;
+
+        case 'Escape':
+          event.preventDefault();
+          polygonSystem.cancelDrawing();
+          break;
+
+        case 'Backspace':
+          event.preventDefault();
+          // This would be handled by the polygon system internally
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [enablePolygonDrawing, polygonSystem.isDrawing, polygonSystem, onPolygonCreated]);
+
+  // ========================================================================
   // ACCURACY VISUALIZATION HELPERS
   // ========================================================================
 
   const getAccuracyLevel = (accuracy: number) => {
-    if (accuracy <= 0.5) return { level: 'excellent', color: '#10B981', label: 'Excellent (≤0.5m)' };
-    if (accuracy <= 1.0) return { level: 'good', color: '#3B82F6', label: 'Good (≤1.0m)' };
-    if (accuracy <= 2.0) return { level: 'fair', color: '#F59E0B', label: 'Fair (≤2.0m)' };
-    if (accuracy <= 5.0) return { level: 'poor', color: '#EF4444', label: 'Poor (≤5.0m)' };
-    return { level: 'very_poor', color: '#9333EA', label: 'Very Poor (>5.0m)' };
+    if (accuracy <= 0.5) return { level: 'excellent', color: '#10B981', label: t('accuracy.levels.excellent') };
+    if (accuracy <= 1.0) return { level: 'good', color: '#3B82F6', label: t('accuracy.levels.good') };
+    if (accuracy <= 2.0) return { level: 'fair', color: '#F59E0B', label: t('accuracy.levels.fair') };
+    if (accuracy <= 5.0) return { level: 'poor', color: '#EF4444', label: t('accuracy.levels.poor') };
+    return { level: 'very_poor', color: '#9333EA', label: t('accuracy.levels.veryPoor') };
   };
 
   const calculateAccuracyCircleRadius = (accuracy: number, zoom: number): number => {
@@ -247,24 +353,119 @@ export function InteractiveMap({
   // ========================================================================
 
   const renderControlPoints = () => {
+    console.log('🎯 Rendering control points:', {
+      showControlPoints,
+      mapLoaded,
+      controlPointsCount: transformState.controlPoints.length,
+      controlPoints: transformState.controlPoints
+    });
+
     if (!showControlPoints || !mapLoaded) return null;
 
-    return transformState.controlPoints.map((cp) => (
-      <Marker
-        key={cp.id}
-        longitude={cp.geoPoint.lng}
-        latitude={cp.geoPoint.lat}
-      >
-        <div
-          className={`w-4 h-4 rounded-full border-2 cursor-pointer transition-all ${
-            transformState.selectedPointId === cp.id
-              ? 'bg-blue-500 border-blue-300 scale-125'
-              : 'bg-red-500 border-red-300 hover:scale-110'
-          }`}
-          title={`${cp.id} (±${cp.accuracy}m)`}
+    const points = transformState.controlPoints;
+    const isFirstPointSpecial = points.length >= 3; // Highlight first point when 3+ points
+
+    return points.map((cp, index) => {
+      const isFirstPoint = index === 0;
+      const shouldHighlightFirst = isFirstPointSpecial && isFirstPoint && !isPolygonComplete;
+
+      return (
+        <Marker
+          key={cp.id}
+          longitude={cp.geo.lng}
+          latitude={cp.geo.lat}
+        >
+          <div
+            className={`rounded-full border-2 transition-all relative z-50 ${
+              isPolygonComplete
+                ? 'w-4 h-4 bg-green-500 border-green-300 cursor-default' // Complete polygon - all points green
+                : transformState.selectedPointId === cp.id
+                ? 'w-5 h-5 bg-blue-500 border-blue-300 scale-125 cursor-pointer'
+                : shouldHighlightFirst
+                ? 'w-8 h-8 bg-green-400 border-green-200 scale-125 animate-bounce shadow-lg shadow-green-500/50 cursor-pointer'
+                : 'w-4 h-4 bg-red-500 border-red-300 hover:scale-110 cursor-pointer'
+            }`}
+            style={{
+              zIndex: 99999,
+              pointerEvents: 'auto',
+              cursor: shouldHighlightFirst ? 'pointer' : (isPolygonComplete ? 'default' : 'pointer')
+            }}
+            title={
+              isPolygonComplete
+                ? `${cp.id} - ✅ ΚΛΕΙΣΤΟ Πολύγωνο (±${cp.accuracy}m)`
+                : shouldHighlightFirst
+                ? `${cp.id} - 🔄 Κάντε κλικ για ΚΛΕΙΣΙΜΟ πολυγώνου (±${cp.accuracy}m)`
+                : `${cp.id} (±${cp.accuracy}m)`
+            }
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              console.log('🎯 Control point clicked!', { cp: cp.id, shouldHighlightFirst, isPolygonComplete });
+
+              if (isPolygonComplete) {
+                console.log('🔒 Polygon is complete - click ignored');
+                return;
+              }
+
+              if (shouldHighlightFirst) {
+                console.log('🔴 Polygon closure clicked! Closing polygon...');
+                handlePolygonClosure();
+              }
+            }}
+          />
+        </Marker>
+      );
+    });
+  };
+
+  // ========================================================================
+  // RENDER POLYGON LINES
+  // ========================================================================
+
+  const renderPolygonLines = () => {
+    console.log('🔴 Rendering polygon lines:', {
+      showControlPoints,
+      mapLoaded,
+      controlPointsCount: transformState.controlPoints.length,
+      controlPoints: transformState.controlPoints,
+      isPolygonComplete
+    });
+
+    if (!showControlPoints || !mapLoaded || transformState.controlPoints.length < 2) return null;
+
+    const points = transformState.controlPoints;
+
+    // 🔥 ENTERPRISE: Create coordinates - if polygon is complete, close it!
+    const coordinates = points.map(cp => [cp.geo.lng, cp.geo.lat]);
+
+    // ✅ POLYGON CLOSURE: Add first point to end if polygon is complete
+    if (isPolygonComplete && coordinates.length >= 3) {
+      coordinates.push(coordinates[0]); // Close the polygon
+    }
+
+    const lineGeoJSON = {
+      type: 'Feature' as const,
+      geometry: {
+        type: 'LineString' as const,
+        coordinates: coordinates
+      },
+      properties: {}
+    };
+
+    return (
+      <Source id="polygon-lines" type="geojson" data={lineGeoJSON}>
+        <Layer
+          id="polygon-lines-layer"
+          type="line"
+          paint={{
+            // ✅ ENTERPRISE: Different styles for complete vs incomplete polygon
+            'line-color': isPolygonComplete ? '#10b981' : '#3b82f6', // Green when complete, blue when drawing
+            'line-width': isPolygonComplete ? 3 : 2,
+            'line-dasharray': isPolygonComplete ? [1, 0] : [2, 2] // Solid when complete, dashed when drawing
+          }}
         />
-      </Marker>
-    ));
+      </Source>
+    );
   };
 
   // ========================================================================
@@ -295,11 +496,11 @@ export function InteractiveMap({
         return (
           <Marker
             key={`accuracy-${cp.id}`}
-            longitude={cp.geoPoint.lng}
-            latitude={cp.geoPoint.lat}
+            longitude={cp.geo.lng}
+            latitude={cp.geo.lat}
           >
             <div
-              className="pointer-events-none flex items-center justify-center"
+              className="pointer-events-none flex items-center justify-center absolute"
               style={{
                 width: radius * 2,
                 height: radius * 2,
@@ -307,7 +508,9 @@ export function InteractiveMap({
                 border: `2px solid ${accuracyInfo.color}`,
                 backgroundColor: `${accuracyInfo.color}20`,
                 transform: 'translate(-50%, -50%)',
-                position: 'relative'
+                left: '50%',
+                top: '50%',
+                zIndex: 10
               }}
             >
               {/* Accuracy value label */}
@@ -332,11 +535,11 @@ export function InteractiveMap({
         return (
           <Marker
             key={`accuracy-zone-${cp.id}`}
-            longitude={cp.geoPoint.lng}
-            latitude={cp.geoPoint.lat}
+            longitude={cp.geo.lng}
+            latitude={cp.geo.lat}
           >
             <div
-              className="pointer-events-none flex items-center justify-center"
+              className="pointer-events-none flex items-center justify-center absolute"
               style={{
                 width: size,
                 height: size,
@@ -344,7 +547,10 @@ export function InteractiveMap({
                 border: `2px solid ${accuracyInfo.color}`,
                 borderRadius: accuracyInfo.level === 'excellent' ? '50%' :
                              accuracyInfo.level === 'good' ? '4px' : '0',
-                transform: 'translate(-50%, -50%) rotate(45deg)'
+                transform: 'translate(-50%, -50%) rotate(45deg)',
+                left: '50%',
+                top: '50%',
+                zIndex: 10
               }}
             >
               <div
@@ -387,7 +593,7 @@ export function InteractiveMap({
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
                 }`}
-                title={mapStyles[style].name}
+                title={mapStyleNames[style]}
               >
                 {style === 'osm' ? '🗺️' : style === 'satellite' ? '🛰️' : style === 'terrain' ? '🏔️' : '🌙'}
               </button>
@@ -399,10 +605,10 @@ export function InteractiveMap({
         {hoveredCoordinate && (
           <>
             <div className="font-mono">
-              Lng: {hoveredCoordinate.lng.toFixed(6)}
+              {t('map.coordinates.lng')}: {hoveredCoordinate.lng.toFixed(6)}
             </div>
             <div className="font-mono">
-              Lat: {hoveredCoordinate.lat.toFixed(6)}
+              {t('map.coordinates.lat')}: {hoveredCoordinate.lat.toFixed(6)}
             </div>
           </>
         )}
@@ -423,21 +629,21 @@ export function InteractiveMap({
     if (!showAccuracyCircles || transformState.controlPoints.length === 0) return null;
 
     const accuracyLevels = [
-      { level: 'excellent', color: '#10B981', label: 'Excellent (≤0.5m)' },
-      { level: 'good', color: '#3B82F6', label: 'Good (≤1.0m)' },
-      { level: 'fair', color: '#F59E0B', label: 'Fair (≤2.0m)' },
-      { level: 'poor', color: '#EF4444', label: 'Poor (≤5.0m)' },
-      { level: 'very_poor', color: '#9333EA', label: 'Very Poor (>5.0m)' }
+      { level: 'excellent', color: '#10B981', label: t('accuracy.levels.excellent') },
+      { level: 'good', color: '#3B82F6', label: t('accuracy.levels.good') },
+      { level: 'fair', color: '#F59E0B', label: t('accuracy.levels.fair') },
+      { level: 'poor', color: '#EF4444', label: t('accuracy.levels.poor') },
+      { level: 'very_poor', color: '#9333EA', label: t('accuracy.levels.veryPoor') }
     ];
 
     return (
       <div className="absolute top-4 left-4 bg-gray-900 bg-opacity-90 text-white p-3 rounded-lg shadow-lg">
         <div className="text-sm">
-          <div className="font-semibold mb-2 text-blue-400">📐 Accuracy Legend</div>
+          <div className="font-semibold mb-2 text-blue-400">{t('accuracy.legend')}</div>
 
           {/* Visualization Mode Selector */}
           <div className="mb-3">
-            <div className="text-xs text-gray-400 mb-1">Visualization:</div>
+            <div className="text-xs text-gray-400 mb-1">{t('accuracy.visualization')}</div>
             <div className="flex space-x-1">
               <button
                 onClick={() => setAccuracyVisualizationMode('circles')}
@@ -447,7 +653,7 @@ export function InteractiveMap({
                     : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                 }`}
               >
-                ○ Circles
+                {t('accuracy.types.circles')}
               </button>
               <button
                 onClick={() => setAccuracyVisualizationMode('zones')}
@@ -457,7 +663,7 @@ export function InteractiveMap({
                     : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                 }`}
               >
-                ◊ Zones
+                {t('accuracy.types.zones')}
               </button>
             </div>
           </div>
@@ -488,7 +694,7 @@ export function InteractiveMap({
                   : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
               }`}
             >
-              {showAccuracyCircles ? '👁️ Hide Indicators' : '👁️ Show Indicators'}
+              {showAccuracyCircles ? t('accuracy.controls.hideIndicators') : t('accuracy.controls.showIndicators')}
             </button>
           </div>
         </div>
@@ -513,7 +719,7 @@ export function InteractiveMap({
                 : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
             }`}
           >
-            📍 Pick Geographic Point
+            📍 {t('map.controls.pickGeographicPoint')}
           </button>
 
           <button
@@ -521,7 +727,7 @@ export function InteractiveMap({
             disabled={clickMode === 'off'}
             className="px-3 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded text-sm transition-colors"
           >
-            ✕ Cancel Picking
+            ✕ {t('map.controls.cancelPicking')}
           </button>
         </div>
       </div>
@@ -529,7 +735,7 @@ export function InteractiveMap({
       {/* Map Style Controls */}
       <div className="bg-gray-900 bg-opacity-90 rounded-lg p-2">
         <div className="flex items-center justify-between mb-2">
-          <div className="text-xs text-gray-400">Map Style</div>
+          <div className="text-xs text-gray-400">{t('map.controls.mapStyle')}</div>
           <div className={`w-2 h-2 rounded-full ${mapLoaded ? 'bg-green-400' : 'bg-yellow-400'}`} />
         </div>
         <select
@@ -538,19 +744,94 @@ export function InteractiveMap({
           className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white"
           disabled={!mapLoaded}
         >
-          <option value="osm">🗺️ OpenStreetMap</option>
-          <option value="satellite">🛰️ Satellite</option>
-          <option value="terrain">🏔️ Terrain</option>
-          <option value="dark">🌙 Dark Mode</option>
+          <option value="osm">🗺️ {t('map.controls.openStreetMap')}</option>
+          <option value="satellite">🛰️ {t('map.controls.satellite')}</option>
+          <option value="terrain">🏔️ {t('map.controls.terrain')}</option>
+          <option value="dark">🌙 {t('map.controls.darkMode')}</option>
         </select>
         {currentMapStyle && (
           <div className="text-xs text-gray-500 mt-1">
-            {mapStyles[currentMapStyle].name}
+            {mapStyleNames[currentMapStyle]}
           </div>
         )}
       </div>
     </div>
   );
+
+  // ========================================================================
+  // UNIVERSAL POLYGON SYSTEM RENDERING
+  // ========================================================================
+
+  const renderPolygonSystemLayers = () => {
+    if (!polygonSystem.polygons || polygonSystem.polygons.length === 0) {
+      return null;
+    }
+
+    return polygonSystem.polygons.map((polygon) => {
+      // Convert polygon to GeoJSON for MapLibre
+      const geojsonData = polygonSystem.exportAsGeoJSON();
+
+      // Filter to current polygon
+      const polygonFeature = geojsonData.features.find(
+        (feature) => feature.properties?.id === polygon.id
+      );
+
+      if (!polygonFeature) return null;
+
+      const sourceId = `polygon-${polygon.id}`;
+
+      return (
+        <React.Fragment key={polygon.id}>
+          {/* Polygon Fill Layer */}
+          <Source
+            id={sourceId}
+            type="geojson"
+            data={polygonFeature}
+          >
+            <Layer
+              id={`${sourceId}-fill`}
+              type="fill"
+              paint={{
+                'fill-color': polygon.style.fillColor,
+                'fill-opacity': polygon.style.fillOpacity
+              }}
+            />
+            <Layer
+              id={`${sourceId}-stroke`}
+              type="line"
+              paint={{
+                'line-color': polygon.style.strokeColor,
+                'line-opacity': polygon.style.strokeOpacity,
+                'line-width': polygon.style.strokeWidth
+              }}
+            />
+          </Source>
+
+          {/* Polygon Points (vertices) */}
+          {polygon.points.map((point, index) => (
+            <Marker
+              key={`${polygon.id}-point-${index}`}
+              longitude={point.x}
+              latitude={point.y}
+            >
+              <div
+                style={{
+                  width: (polygon.style.pointRadius || 4) * 2,
+                  height: (polygon.style.pointRadius || 4) * 2,
+                  backgroundColor: polygon.style.pointColor || polygon.style.strokeColor,
+                  borderRadius: '50%',
+                  border: `1px solid ${polygon.style.strokeColor}`,
+                  transform: 'translate(-50%, -50%)',
+                  cursor: 'pointer'
+                }}
+                title={point.label || `Point ${index + 1}`}
+              />
+            </Marker>
+          ))}
+        </React.Fragment>
+      );
+    });
+  };
 
   // ========================================================================
   // MAIN RENDER
@@ -566,17 +847,23 @@ export function InteractiveMap({
         onMouseMove={handleMapMouseMove}
         onLoad={handleMapLoad}
         style={{ width: '100%', height: '100%' }}
-        mapStyle={mapStyles[currentMapStyle]}
-        cursor={clickMode !== 'off' ? 'crosshair' : 'default'}
+        mapStyle={mapStyleUrls[currentMapStyle]}
+        cursor={isPickingCoordinates ? 'crosshair' : 'default'}
       >
         {/* Control Points */}
         {renderControlPoints()}
+
+        {/* Polygon Lines */}
+        {renderPolygonLines()}
 
         {/* Transformation Preview */}
         {renderTransformationPreview()}
 
         {/* Accuracy Indicators */}
         {renderAccuracyIndicators()}
+
+        {/* ✅ NEW: Universal Polygon System Layers */}
+        {enablePolygonDrawing && renderPolygonSystemLayers()}
       </Map>
 
       {/* UI Overlays */}
@@ -590,7 +877,7 @@ export function InteractiveMap({
           <div className="text-sm space-y-1">
             <div className="flex items-center space-x-2">
               <div className={`w-2 h-2 rounded-full ${mapLoaded ? 'bg-green-400' : 'bg-yellow-400'}`} />
-              <span>Map {mapLoaded ? 'Loaded' : 'Loading'}</span>
+              <span>{mapLoaded ? t('map.status.mapLoaded') : t('map.status.mapLoading')}</span>
             </div>
             {transformState.isCalibrated && (
               <div className="flex items-center space-x-2">
@@ -598,16 +885,30 @@ export function InteractiveMap({
                 <span>Transformation Active</span>
               </div>
             )}
+            {enablePolygonDrawing && (
+              <>
+                <div className="flex items-center space-x-2">
+                  <div className={`w-2 h-2 rounded-full ${polygonSystem.isDrawing ? 'bg-yellow-400' : 'bg-gray-400'}`} />
+                  <span>Polygons: {polygonSystem.stats.totalPolygons}</span>
+                </div>
+                {polygonSystem.isDrawing && (
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                    <span>Drawing {polygonSystem.currentMode}...</span>
+                  </div>
+                )}
+              </>
+            )}
             <div className="text-xs text-gray-400">
-              Points: {transformState.controlPoints.length}
+              {t('map.status.points')}: {transformState.controlPoints.length}
             </div>
             {transformState.controlPoints.length > 0 && showAccuracyCircles && (
               <>
                 <div className="text-xs text-gray-400 mt-1">
-                  Avg Accuracy: ±{(transformState.controlPoints.reduce((sum, cp) => sum + cp.accuracy, 0) / transformState.controlPoints.length).toFixed(2)}m
+                  {t('accuracy.stats.avgAccuracy')} {t('accuracy.stats.format', { value: (transformState.controlPoints.reduce((sum, cp) => sum + cp.accuracy, 0) / transformState.controlPoints.length).toFixed(2) })}
                 </div>
                 <div className="text-xs text-gray-400">
-                  Best: ±{Math.min(...transformState.controlPoints.map(cp => cp.accuracy)).toFixed(2)}m
+                  {t('accuracy.stats.best')} {t('accuracy.stats.format', { value: Math.min(...transformState.controlPoints.map(cp => cp.accuracy)).toFixed(2) })}
                 </div>
               </>
             )}

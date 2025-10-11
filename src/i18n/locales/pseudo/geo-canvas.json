@@ -1,0 +1,167 @@
+{
+  "title": "[Ġëø-Ćàñváś Śÿśtëm]",
+  "subtitle": "[Ëñtërprïśë Ġëøśpàtïàł Àłërt Płàtførm]",
+  "phases": {
+    "foundation": "[Phàśë 1: Føüñdàtïøñ]",
+    "transformation": "[Phàśë 2: Tràñśførmatïøñ]",
+    "mapping": "[Phàśë 3: Mappïñg]",
+    "database": "[Phàśë 4: Dàtàbàśë]",
+    "alerts": "[Phàśë 5: Àłërtś]",
+    "ui": "[Phàśë 6: Üśër Ïñtërfàćë]",
+    "performance": "[Phàśë 7: Përførmàñćë]",
+    "deployment": "[Phàśë 8: Dëpłøÿmëñt]"
+  },
+  "status": {
+    "ready": "[Rëàdÿ]",
+    "inProgress": "[Ïñ Prøgrëśś]",
+    "completed": "[Ćømpłëtëd]",
+    "pending": "[Pëñdïñg]",
+    "transformationReady": "[Tràñśførmatïøñ Rëàdÿ]",
+    "mappingReady": "[Mappïñg Rëàdÿ]",
+    "databaseReady": "[Dàtàbàśë Rëàdÿ]"
+  },
+  "views": {
+    "foundation": "[📋 Føüñdàtïøñ Øvërvïëw]",
+    "georeferencing": "[🗺️ Ġëørëfërëñćïñg (Phàśë 2)]",
+    "mapping": "[🌍 Mappïñg (Phàśë 3)]",
+    "database": "[🗄️ Dàtàbàśë (Phàśë 4)]",
+    "alerts": "[🚨 Àłërtś (Phàśë 5)]"
+  },
+  "toolbar": {
+    "view": "[Vïëw:]",
+    "crs": "[Ćøørdïñàtë Śÿśtëm:]",
+    "zoom": "[Zøøm:]",
+    "coordinates": "[Ćøørdïñàtëś:]"
+  },
+  "floorPlan": {
+    "uploadButton": {
+      "text": "[Üpłøàd Fłøør Płàñ]",
+      "tooltip": "[Üpłøàd àrćhïtëćtüràł fłøør płàñ (DXF, PNG, JPG, TÏFF)]",
+      "loading": "[Üpłøàdïñg...]"
+    },
+    "uploadModal": {
+      "title": "[Üpłøàd Fłøør Płàñ]",
+      "description": "[Üpłøàd àrćhïtëćtüràł fłøør płàñ ïñ DXF, DWG, PDF, ør ïmàgë førmàt (PNG, JPG, TÏFF)]",
+      "dragText": "[Dràg àñd drøp à fïłë hërë]",
+      "dropText": "[Drøp fïłë hërë...]",
+      "orText": "[ør]",
+      "browseButton": "[Brøwśë Fïłëś]",
+      "supportedFormats": "[Śüppørtëd Førmàtś:]",
+      "maxSize": "[Màxïmüm fïłë śïzë: 50 MB]",
+      "errors": {
+        "invalidFormat": "[Ïñvàłïd fïłë førmàt. Płëàśë üpłøàd DXF, DWG, PDF, PNG, JPG, ør TÏFF.]",
+        "fileTooLarge": "[Fïłë ïś tøø łàrgë. Màxïmüm śïzë ïś 50 MB.]"
+      }
+    }
+  },
+  "georeferencing": {
+    "title": "[🗺️ DXF Ġëørëfërëñćïñg]",
+    "subtitle": "[Tràñśførm DXF fïłëś tø gëøgràphïć ćøørdïñàtëś]",
+    "steps": {
+      "upload": "[1. Üpłøàd DXF]",
+      "points": "[2. Ćøñtròł Pøïñtś]",
+      "transform": "[3. Tràñśførm]",
+      "validate": "[4. Vàłïdàtë]"
+    },
+    "uploadArea": {
+      "title": "[Üpłøàd DXF Fïłë]",
+      "description": "[Dràg à DXF fïłë hërë ør ćłïćk tø śëłëćt]",
+      "dragText": "[Drøp DXF fïłë hërë...]",
+      "formats": "[Śüppørtëd førmàtś: .dxf]",
+      "button": "[Śëłëćt Fïłë]"
+    },
+    "controlPoints": {
+      "title": "[Ćøñtròł Pøïñtś]",
+      "description": "[Dëfïñë àt łëàśt 3 ćøñtròł pøïñtś før àććüràtë gëørëfërëñćïñg]",
+      "addPoint": "[➕ Àdd Pøïñt]",
+      "removePoint": "[🗑️ Rëmøvë]",
+      "accuracy": "[Àććüràćÿ:]",
+      "status": "[Śtàtüś:]",
+      "coordinates": {
+        "local": "[Łøćàł Ćøørdïñàtëś (DXF)]",
+        "world": "[Wørłd Ćøørdïñàtëś (Ġëøgràphïć)]",
+        "x": "[X:]",
+        "y": "[Y:]",
+        "lat": "[Łàtïtüdë:]",
+        "lng": "[Łøñgïtüdë:]"
+      }
+    },
+    "transformation": {
+      "title": "[Tràñśførmatïøñ]",
+      "method": "[Mëthød:]",
+      "methods": {
+        "affine": "[Àffïñë (6 pàràmëtërś)]",
+        "polynomial": "[Pøłÿñømïàł]",
+        "tps": "[Thïñ Płàtë Śpłïñë]"
+      },
+      "execute": "[Ëxëćütë Tràñśførmatïøñ]",
+      "results": {
+        "title": "[Tràñśførmatïøñ Rëśüłtś]",
+        "accuracy": "[Àććüràćÿ:]",
+        "rmse": "[Røøt Mëàñ Śqüàrë Ërrør:]",
+        "points": "[Pøïñtś:]",
+        "status": "[Śtàtüś:]"
+      }
+    },
+    "validation": {
+      "title": "[Vàłïdàtïøñ]",
+      "description": "[Ćhëćk thë àććüràćÿ øf thë tràñśførmatïøñ]",
+      "checkAccuracy": "[Ćhëćk Àććüràćÿ]",
+      "export": "[Ëxpørt Rëśüłtś]",
+      "save": "[Śàvë Prøjëćt]"
+    }
+  },
+  "errors": {
+    "fileUpload": "[Ërrør üpłøàdïñg fïłë]",
+    "invalidFile": "[Ïñvàłïd DXF fïłë]",
+    "insufficientPoints": "[Àt łëàśt 3 ćøñtròł pøïñtś rëqüïrëd]",
+    "transformationFailed": "[Tràñśførmatïøñ fàïłëd]",
+    "networkError": "[Nëtwørk ërrør]",
+    "unauthorized": "[Üñàüthørïzëd àććëśś]"
+  },
+  "notifications": {
+    "fileUploaded": "[Fïłë üpłøàdëd śüććëśśfüłłÿ]",
+    "pointAdded": "[Ćøñtròł pøïñt àddëd]",
+    "pointRemoved": "[Ćøñtròł pøïñt rëmøvëd]",
+    "transformationCompleted": "[Tràñśførmatïøñ ćømpłëtëd]",
+    "projectSaved": "[Prøjëćt śàvëd]",
+    "dataExported": "[Dàtà ëxpørtëd]"
+  },
+  "buttons": {
+    "upload": "[Üpłøàd]",
+    "add": "[Àdd]",
+    "remove": "[Rëmøvë]",
+    "transform": "[Tràñśførm]",
+    "validate": "[Vàłïdàtë]",
+    "save": "[Śàvë]",
+    "export": "[Ëxpørt]",
+    "cancel": "[Ćàñćëł]",
+    "confirm": "[Ćønfïrm]",
+    "reset": "[Rëśët]",
+    "back": "[Bàćk]",
+    "next": "[Nëxt]",
+    "finish": "[Fïñïśh]"
+  },
+  "loading": {
+    "uploading": "[Üpłøàdïñg fïłë...]",
+    "processing": "[Prøćëśśïñg...]",
+    "transforming": "[Tràñśførmatïøñ ïñ prøgrëśś...]",
+    "validating": "[Vàłïdàtïñg...]",
+    "saving": "[Śàvïñg...]",
+    "loading": "[Łøàdïñg...]"
+  },
+  "coordinateSystems": {
+    "epsg4326": "[WGS84 (EPSG:4326)]",
+    "epsg3857": "[Wëb Mërćàtør (EPSG:3857)]",
+    "epsg2100": "[GGRS87 (EPSG:2100)]",
+    "epsg4230": "[ED50 (EPSG:4230)]",
+    "custom": "[Ćüśtøm]"
+  },
+  "footer": {
+    "poweredBy": "[Pøwërëd bÿ]",
+    "version": "[Vërśïøñ]",
+    "lastUpdate": "[Łàśt üpdàtë]",
+    "support": "[Śüppørt]",
+    "documentation": "[Døćümëñtàtïøñ]"
+  }
+}
