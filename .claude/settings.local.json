@@ -52,7 +52,9 @@
       "Bash(claude config list)",
       "WebFetch(domain:docs.claude.com)",
       "Bash(/cost)",
-      "Bash(claude --print)"
+      "Bash(claude --print)",
+      "Bash(del \"C:\\Nestor_Pagonis\\packages\\core\\alert-engine\\hooks\\useAlertEngine.ts\")",
+      "mcp__ide__getDiagnostics"
     ],
     "deny": [],
     "ask": []

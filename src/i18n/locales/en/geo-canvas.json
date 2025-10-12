@@ -364,7 +364,10 @@
       "openStreetMap": "OpenStreetMap",
       "satellite": "Satellite",
       "terrain": "Terrain",
-      "darkMode": "Dark Mode"
+      "darkMode": "Dark Mode",
+      "greece": "Greece",
+      "watercolor": "Watercolor",
+      "toner": "Black & White"
     },
     "coordinates": {
       "lng": "Longitude",

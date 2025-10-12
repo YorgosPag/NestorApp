@@ -347,9 +347,39 @@ export class ErrorTracker {
     );
   }
 
+  /**
+   * ✅ ENTERPRISE: Safe base64 encoding with UTF-8 support
+   */
+  private safeBase64Encode(input: string): string {
+    try {
+      // Method 1: Use Buffer (Node.js environment)
+      if (typeof Buffer !== 'undefined') {
+        return Buffer.from(input, 'utf8').toString('base64');
+      }
+
+      // Method 2: Use TextEncoder for UTF-8 → base64 (browser environment)
+      const encoder = new TextEncoder();
+      const bytes = encoder.encode(input);
+      let binary = '';
+      bytes.forEach(byte => {
+        binary += String.fromCharCode(byte);
+      });
+      return btoa(binary);
+    } catch (error) {
+      // Fallback: Use simple hash-like approach
+      let hash = 0;
+      for (let i = 0; i < input.length; i++) {
+        const char = input.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32-bit integer
+      }
+      return Math.abs(hash).toString(36);
+    }
+  }
+
   private generateFingerprint(message: string, stack?: string, context?: ErrorContext): string {
     const key = `${message}_${context?.component}_${context?.action}`;
-    return btoa(key).substr(0, 16);
+    return this.safeBase64Encode(key).substr(0, 16);
   }
 
   private generateErrorId(): string {
@@ -458,11 +488,44 @@ export class ErrorTracker {
   // CONSOLE INTERCEPTION
   // ============================================================================
 
+  /**
+   * ✅ ENTERPRISE: Safe JSON stringify with circular reference handling
+   */
+  private safeStringify(obj: any): string {
+    try {
+      // Simple types - no need for JSON.stringify
+      if (obj === null || obj === undefined) return String(obj);
+      if (typeof obj === 'string' || typeof obj === 'number' || typeof obj === 'boolean') {
+        return String(obj);
+      }
+
+      // Handle circular references with replacer function
+      const seen = new WeakSet();
+      return JSON.stringify(obj, (key, value) => {
+        // Skip common circular reference properties
+        if (key === '_map' || key === '_controls' || key === 'map' || key === 'target') {
+          return '[Circular Reference]';
+        }
+
+        if (value !== null && typeof value === 'object') {
+          if (seen.has(value)) {
+            return '[Circular Reference]';
+          }
+          seen.add(value);
+        }
+        return value;
+      });
+    } catch (error) {
+      // Fallback: return object type and basic info
+      return `[Object: ${obj?.constructor?.name || 'Unknown'}]`;
+    }
+  }
+
   private interceptConsoleError(): void {
     const originalError = console.error;
     console.error = (...args: any[]) => {
       const message = args.map(arg =>
-        typeof arg === 'string' ? arg : JSON.stringify(arg)
+        typeof arg === 'string' ? arg : this.safeStringify(arg)
       ).join(' ');
 
       // ✅ ENTERPRISE FIX: Defer error capture to avoid setState during render

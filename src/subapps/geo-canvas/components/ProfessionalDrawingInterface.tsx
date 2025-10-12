@@ -3,11 +3,11 @@
 import React, { useState, useCallback } from 'react';
 import { Upload, FileImage, FileText, Layers, Building, Check, X, Bell, BarChart, Settings } from 'lucide-react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
-import { usePolygonSystem } from '@geo-alert/core';
+import { useCentralizedPolygonSystem } from '../systems/polygon-system';
 import { FloorPlanUploadModal } from '../floor-plan-system/components/FloorPlanUploadModal';
 import { PropertyStatusManager } from './PropertyStatusManager';
 import { useRealEstateMatching } from '@/services/real-estate-monitor/useRealEstateMatching';
-import type { PolygonType, RealEstatePolygon } from '@geo-alert/core';
+import type { RealEstatePolygon } from '@geo-alert/core';
 import type { ParserResult } from '../floor-plan-system/types';
 import type { PropertyStatus } from '@/constants/statuses';
 
@@ -44,7 +44,9 @@ export function ProfessionalDrawingInterface({
 }: ProfessionalDrawingInterfaceProps) {
   const { t, isLoading } = useTranslationLazy('geo-canvas');
   const [selectedTool, setSelectedTool] = useState<'upload' | 'polygon' | 'auto-detect' | 'property-manager' | 'monitoring-dashboard' | null>(null);
+  // ✅ ENTERPRISE: Combine local and centralized drawing state
   const [isDrawing, setIsDrawing] = useState(false);
+  const actualIsDrawing = isDrawing || systemIsDrawing;
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [parserResult, setParserResult] = useState<ParserResult | null>(null);
@@ -69,13 +71,17 @@ export function ProfessionalDrawingInterface({
   // ✅ ENTERPRISE FIX: Get statistics as object, not function
   const realEstateStats = getStatistics();
 
-  // Use the polygon system from @geo-alert/core
-  const polygonSystem = usePolygonSystem({
-    autoInit: false,
-    debug: true,
-    enableSnapping: true,
-    snapTolerance: 10 // Smaller tolerance για professional precision
-  });
+  // ✅ ENTERPRISE: Use centralized polygon system with Professional role
+  const {
+    polygons,
+    stats,
+    startDrawing,
+    finishDrawing,
+    cancelDrawing,
+    clearAll,
+    isDrawing: systemIsDrawing,
+    currentRole
+  } = useCentralizedPolygonSystem();
 
   // 🏠 Phase 2.5: Property Status Management Handlers
   const handlePropertyStatusChange = useCallback((status: PropertyStatus) => {
@@ -117,9 +123,9 @@ export function ProfessionalDrawingInterface({
 
   // Tool selection handler
   const handleToolSelect = useCallback((tool: 'upload' | 'polygon' | 'auto-detect' | 'property-manager' | 'monitoring-dashboard') => {
-    if (isDrawing) {
+    if (actualIsDrawing) {
       // Cancel current drawing
-      polygonSystem.cancelDrawing();
+      cancelDrawing();
       setIsDrawing(false);
     }
 
@@ -135,7 +141,7 @@ export function ProfessionalDrawingInterface({
 
       case 'polygon':
         // Professional polygon mode (more precise)
-        polygonSystem.startDrawing('simple', {
+        startDrawing('simple', {
           fillColor: 'rgba(34, 197, 94, 0.3)', // Green fill
           strokeColor: '#22c55e',
           strokeWidth: 2
@@ -168,7 +174,7 @@ export function ProfessionalDrawingInterface({
         console.log('📊 Professional: Real estate monitoring dashboard opened');
         break;
     }
-  }, [isDrawing, polygonSystem, parserResult]);
+  }, [actualIsDrawing, startDrawing, cancelDrawing, parserResult]);
 
   // Floor plan upload handlers
   const handleFileSelect = useCallback((file: File) => {
@@ -212,22 +218,22 @@ export function ProfessionalDrawingInterface({
 
   // Complete drawing
   const handleComplete = useCallback(() => {
-    const polygon = polygonSystem.finishDrawing();
+    const polygon = finishDrawing();
     if (polygon && onPolygonComplete) {
       onPolygonComplete(polygon);
       console.log('✅ Professional: Drawing completed', polygon);
     }
     setIsDrawing(false);
     setSelectedTool(null);
-  }, [polygonSystem, onPolygonComplete]);
+  }, [finishDrawing, onPolygonComplete]);
 
   // Cancel drawing
   const handleCancel = useCallback(() => {
-    polygonSystem.cancelDrawing();
+    cancelDrawing();
     setIsDrawing(false);
     setSelectedTool(null);
     console.log('❌ Professional: Drawing cancelled');
-  }, [polygonSystem]);
+  }, [cancelDrawing]);
 
   // Auto-detect rooms/properties
   const handleAutoDetect = useCallback(() => {
@@ -289,7 +295,7 @@ export function ProfessionalDrawingInterface({
           {/* Floor Plan Upload */}
           <button
             onClick={() => handleToolSelect('upload')}
-            disabled={isDrawing}
+            disabled={actualIsDrawing}
             className={`
               flex flex-col items-center justify-center p-4 rounded-lg border-2
               transition-all duration-200 min-h-[100px]
@@ -308,7 +314,7 @@ export function ProfessionalDrawingInterface({
           {/* Precision Polygon */}
           <button
             onClick={() => handleToolSelect('polygon')}
-            disabled={isDrawing && selectedTool !== 'polygon'}
+            disabled={actualIsDrawing && selectedTool !== 'polygon'}
             className={`
               flex flex-col items-center justify-center p-4 rounded-lg border-2
               transition-all duration-200 min-h-[100px]
@@ -316,7 +322,7 @@ export function ProfessionalDrawingInterface({
                 ? 'border-green-500 bg-green-50'
                 : 'border-gray-300 hover:border-gray-400 bg-white'
               }
-              ${isDrawing && selectedTool !== 'polygon' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:shadow-md'}
+              ${actualIsDrawing && selectedTool !== 'polygon' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:shadow-md'}
             `}
           >
             <Building className="w-8 h-8 mb-2 text-blue-600" />
@@ -327,7 +333,7 @@ export function ProfessionalDrawingInterface({
           {/* Auto-Detection */}
           <button
             onClick={() => handleToolSelect('auto-detect')}
-            disabled={isDrawing || !parserResult}
+            disabled={actualIsDrawing || !parserResult}
             className={`
               flex flex-col items-center justify-center p-4 rounded-lg border-2
               transition-all duration-200 min-h-[100px]
@@ -335,7 +341,7 @@ export function ProfessionalDrawingInterface({
                 ? 'border-green-500 bg-green-50'
                 : 'border-gray-300 hover:border-gray-400 bg-white'
               }
-              ${(isDrawing || !parserResult) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:shadow-md'}
+              ${(actualIsDrawing || !parserResult) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:shadow-md'}
             `}
           >
             <Layers className="w-8 h-8 mb-2 text-purple-600" />
@@ -346,7 +352,7 @@ export function ProfessionalDrawingInterface({
           {/* 🏠 Phase 2.5: Property Status Manager */}
           <button
             onClick={() => handleToolSelect('property-manager')}
-            disabled={isDrawing}
+            disabled={actualIsDrawing}
             className={`
               flex flex-col items-center justify-center p-4 rounded-lg border-2
               transition-all duration-200 min-h-[100px]
@@ -365,7 +371,7 @@ export function ProfessionalDrawingInterface({
           {/* 🏠 Phase 2.5.3: Real Estate Monitoring Dashboard */}
           <button
             onClick={() => handleToolSelect('monitoring-dashboard')}
-            disabled={isDrawing}
+            disabled={actualIsDrawing}
             className={`
               flex flex-col items-center justify-center p-4 rounded-lg border-2
               transition-all duration-200 min-h-[100px]
@@ -383,7 +389,7 @@ export function ProfessionalDrawingInterface({
         </div>
 
         {/* Action Buttons */}
-        {isDrawing && (
+        {actualIsDrawing && (
           <div className="flex gap-2 mb-4">
             <button
               onClick={handleComplete}
@@ -444,11 +450,11 @@ export function ProfessionalDrawingInterface({
         )}
 
         {/* Statistics */}
-        {(polygonSystem.stats.totalPolygons > 0 || realEstateStats.totalAlerts > 0) && (
+        {(stats.totalPolygons > 0 || realEstateStats.totalAlerts > 0) && (
           <div className="mt-4 p-3 bg-gray-50 rounded-md space-y-1">
-            {polygonSystem.stats.totalPolygons > 0 && (
+            {stats.totalPolygons > 0 && (
               <p className="text-xs text-gray-600">
-                <span className="font-medium">Ακίνητα:</span> {polygonSystem.stats.totalPolygons}
+                <span className="font-medium">Ακίνητα:</span> {stats.totalPolygons}
               </p>
             )}
 
@@ -560,15 +566,15 @@ export function ProfessionalDrawingInterface({
 
             <button
               onClick={() => {
-                if (polygonSystem.polygons.length > 0) {
-                  handleBatchRealEstateMonitoring(polygonSystem.polygons);
+                if (polygons.length > 0) {
+                  handleBatchRealEstateMonitoring(polygons);
                 }
               }}
-              disabled={polygonSystem.polygons.length === 0}
+              disabled={polygons.length === 0}
               className="flex items-center justify-center gap-2 bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50"
             >
               <Bell className="w-4 h-4" />
-              <span className="text-sm font-medium">{t('realEstateMonitoring.actions.monitorAll', { count: polygonSystem.polygons.length })}</span>
+              <span className="text-sm font-medium">{t('realEstateMonitoring.actions.monitorAll', { count: polygons.length })}</span>
             </button>
 
             <button

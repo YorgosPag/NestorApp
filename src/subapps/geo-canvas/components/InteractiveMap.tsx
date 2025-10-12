@@ -1,15 +1,18 @@
 'use client';
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import Map, { MapRef, Marker, Source, Layer } from 'react-map-gl/maplibre';
+import MapComponent, { MapRef, Marker, Source, Layer } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
+
+// ✅ ENTERPRISE: Explicit reference για native Map to avoid naming conflicts
+const NativeMap = globalThis.Map;
 
 // ❌ ΑΦΑΙΡΕΘΗΚΕ: import { useGeoTransform } from '../hooks/useGeoTransform';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import type { GeoCoordinate, DxfCoordinate, GeoControlPoint } from '../types';
 
-// ✅ NEW: Universal Polygon System Integration (CENTRALIZED PACKAGE)
-import { usePolygonSystem } from '@geo-alert/core';
+// ✅ ENTERPRISE: Centralized Polygon System Integration
+import { useCentralizedPolygonSystem } from '../systems/polygon-system';
 import type { PolygonType, UniversalPolygon } from '@geo-alert/core';
 
 // ============================================================================
@@ -38,6 +41,49 @@ export interface InteractiveMapProps {
   onPolygonDeleted?: (polygonId: string) => void;
 }
 
+// ========================================================================
+// ELEVATION SERVICE (Open Elevation API)
+// ========================================================================
+
+/**
+ * Fetch elevation data για συγκεκριμένες συντεταγμένες
+ * Uses Open Elevation API (δωρεάν service)
+ */
+const fetchElevationData = async (lng: number, lat: number): Promise<number | null> => {
+  try {
+    const url = `https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lng}`;
+    console.log('🌐 Fetching elevation from:', url);
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
+
+    console.log('📡 Elevation response status:', response.status, response.statusText);
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('📊 Elevation API response:', data);
+
+    if (data.results && data.results.length > 0) {
+      const elevation = Math.round(data.results[0].elevation);
+      console.log('🏔️ Elevation found:', elevation, 'meters');
+      return elevation;
+    }
+
+    console.warn('⚠️ No elevation results in API response');
+    return null;
+  } catch (error) {
+    console.warn('❌ Elevation fetch failed:', error);
+    return null;
+  }
+};
+
 /**
  * INTERACTIVE MAP COMPONENT
  * Enterprise MapLibre GL JS integration για visual georeferencing
@@ -63,23 +109,141 @@ export function InteractiveMap({
   const { t, isLoading } = useTranslationLazy('geo-canvas');
   const mapRef = useRef<any>(null);
 
-  // ✅ NEW: Universal Polygon System Integration
-  const polygonSystem = usePolygonSystem({
-    defaultMode: defaultPolygonMode,
-    autoSave: true,
-    storageKey: 'geo-canvas-polygons',
-    debug: true
-  });
+  // ✅ ENTERPRISE: Centralized Polygon System Integration
+  const {
+    polygons,
+    stats,
+    startDrawing,
+    finishDrawing,
+    cancelDrawing,
+    clearAll,
+    addPoint,
+    setMapRef,
+    exportAsGeoJSON,
+    getCurrentDrawing,
+    isDrawing: systemIsDrawing,
+    currentRole,
+    isPolygonComplete: systemIsPolygonComplete
+  } = useCentralizedPolygonSystem();
 
   // ✅ ENTERPRISE: Single source of truth - NO duplicate hooks!
-  console.log('🎯 InteractiveMap using transformState:', {
-    controlPointsCount: transformState?.controlPoints?.length || 0,
-    controlPoints: transformState?.controlPoints || [],
-    isCalibrated: transformState?.isCalibrated || false
-  });
+
+  // Force re-render when drawing state changes for live preview
+  const [forceUpdate, setForceUpdate] = useState(0);
+  useEffect(() => {
+    if (systemIsDrawing) {
+      const interval = setInterval(() => {
+        setForceUpdate(prev => prev + 1);
+      }, 100); // Update every 100ms during drawing
+      return () => clearInterval(interval);
+    }
+  }, [systemIsDrawing]);
+
+  // ✅ ENTERPRISE: Freehand drawing state management
+  const [isDraggingFreehand, setIsDraggingFreehand] = useState(false);
+  const [lastDragPoint, setLastDragPoint] = useState<{ lng: number, lat: number } | null>(null);
+
+  // Helper function για να ελέγχω αν είμαστε σε freehand mode
+  const isInFreehandMode = useCallback(() => {
+    const currentDrawing = getCurrentDrawing();
+    return systemIsDrawing && currentDrawing && currentDrawing.type === 'freehand';
+  }, [systemIsDrawing, getCurrentDrawing]);
+
   const [mapLoaded, setMapLoaded] = useState(false);
   const [clickMode, setClickMode] = useState<'off' | 'add_dxf' | 'add_geo'>('off');
   const [hoveredCoordinate, setHoveredCoordinate] = useState<GeoCoordinate | null>(null);
+
+  // ✅ NEW: Elevation data state και caching
+  const [elevationCache, setElevationCache] = useState(() => new NativeMap<string, number>());
+  const [elevationLoading, setElevationLoading] = useState<boolean>(false);
+
+  // ✅ ENTERPRISE: Throttled elevation fetcher με caching
+  const fetchElevationWithCache = useCallback(async (lng: number, lat: number) => {
+    // Create cache key με 4 decimal precision (≈ 10m accuracy)
+    const cacheKey = `${lat.toFixed(4)},${lng.toFixed(4)}`;
+
+    // Check cache first
+    if (elevationCache.has(cacheKey)) {
+      const cachedElevation = elevationCache.get(cacheKey)!;
+      console.log('🎯 Cache hit! Elevation:', cachedElevation, 'for key:', cacheKey);
+
+      setHoveredCoordinate(prev => {
+        if (!prev) return prev;
+
+        const currentCacheKey = `${prev.lat.toFixed(4)},${prev.lng.toFixed(4)}`;
+        console.log('📍 Updating from cache:', {
+          currentKey: currentCacheKey,
+          targetKey: cacheKey,
+          matches: currentCacheKey === cacheKey,
+          cachedElevation
+        });
+
+        return currentCacheKey === cacheKey
+          ? { ...prev, alt: cachedElevation }
+          : prev;
+      });
+      return;
+    }
+
+    // Prevent multiple simultaneous requests
+    if (elevationLoading) return;
+
+    setElevationLoading(true);
+
+    try {
+      const elevation = await fetchElevationData(lng, lat);
+
+      if (elevation !== null) {
+        console.log('💾 Caching elevation:', elevation, 'for key:', cacheKey);
+
+        // Update cache
+        setElevationCache(prev => new NativeMap(prev.set(cacheKey, elevation)));
+
+        // Update current coordinate με elevation (using same precision as cache key)
+        setHoveredCoordinate(prev => {
+          if (!prev) return prev;
+
+          const currentCacheKey = `${prev.lat.toFixed(4)},${prev.lng.toFixed(4)}`;
+          const targetCacheKey = `${lat.toFixed(4)},${lng.toFixed(4)}`;
+
+          console.log('🔄 Updating coordinate:', {
+            currentKey: currentCacheKey,
+            targetKey: targetCacheKey,
+            matches: currentCacheKey === targetCacheKey,
+            elevation
+          });
+
+          return currentCacheKey === targetCacheKey
+            ? { ...prev, alt: elevation }
+            : prev;
+        });
+      }
+    } catch (error) {
+      console.warn('Elevation fetch error:', error);
+    } finally {
+      setElevationLoading(false);
+    }
+  }, [elevationCache, elevationLoading]);
+
+  // ✅ ENTERPRISE: Throttled elevation fetching για hover coordinates
+  useEffect(() => {
+    console.log('🔍 Elevation useEffect triggered:', {
+      hoveredCoordinate,
+      hasAlt: hoveredCoordinate?.alt !== undefined
+    });
+
+    if (!hoveredCoordinate || hoveredCoordinate.alt !== undefined) return;
+
+    console.log('⏱️ Setting elevation timeout for:', hoveredCoordinate);
+
+    // Throttle elevation requests (500ms delay)
+    const timeoutId = setTimeout(() => {
+      console.log('🚀 Calling fetchElevationWithCache for:', hoveredCoordinate);
+      fetchElevationWithCache(hoveredCoordinate.lng, hoveredCoordinate.lat);
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [hoveredCoordinate, fetchElevationWithCache]);
 
   // Map configuration
   const [viewState, setViewState] = useState({
@@ -91,22 +255,113 @@ export function InteractiveMap({
   });
 
   // Map style configuration
-  const [currentMapStyle, setCurrentMapStyle] = useState<'osm' | 'satellite' | 'terrain' | 'dark'>('osm');
+  const [currentMapStyle, setCurrentMapStyle] = useState<'osm' | 'satellite' | 'terrain' | 'dark' | 'greece' | 'watercolor' | 'toner'>('osm');
+
+  // Custom Greece-focused style
+  const greeceCustomStyle = {
+    version: 8,
+    name: "Greece Focused",
+    sources: {
+      'osm': {
+        type: 'raster' as const,
+        tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+        tileSize: 256,
+        attribution: '© OpenStreetMap contributors'
+      }
+    },
+    layers: [
+      {
+        id: 'osm-raster',
+        type: 'raster' as const,
+        source: 'osm',
+        paint: {
+          'raster-saturation': 0.1, // Ελαφρά desaturation για καλύτερη ανάγνωση
+          'raster-contrast': 0.2     // Ελαφρή αύξηση contrast
+        }
+      }
+    ],
+    // Greece-focused initial view
+    center: [23.7275, 37.9755], // Athens
+    zoom: 6.5,
+    bearing: 0,
+    pitch: 0
+  };
 
   // Enterprise MapLibre Style URLs
   const mapStyleUrls = {
     osm: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
     satellite: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
-    terrain: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
-    dark: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
+    terrain: {
+      version: 8,
+      name: "Terrain Style",
+      sources: {
+        'terrain-tiles': {
+          type: 'raster' as const,
+          tiles: ['https://tile.opentopomap.org/{z}/{x}/{y}.png'],
+          tileSize: 256,
+          maxzoom: 17,  // OpenTopoMap max zoom level
+          attribution: '© OpenTopoMap (CC-BY-SA), © OpenStreetMap contributors'
+        }
+      },
+      layers: [
+        {
+          id: 'terrain-raster',
+          type: 'raster' as const,
+          source: 'terrain-tiles'
+        }
+      ]
+    },
+    dark: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+    greece: greeceCustomStyle,
+    watercolor: {
+      version: 8,
+      name: "Watercolor Style",
+      sources: {
+        'watercolor-tiles': {
+          type: 'raster' as const,
+          tiles: ['https://tiles.stadiamaps.com/tiles/stamen_watercolor/{z}/{x}/{y}.jpg'],
+          tileSize: 256,
+          maxzoom: 16,  // Stamen Watercolor max zoom level
+          attribution: '© Stadia Maps, Stamen Design, OpenMapTiles © OpenStreetMap contributors'
+        }
+      },
+      layers: [
+        {
+          id: 'watercolor-raster',
+          type: 'raster' as const,
+          source: 'watercolor-tiles'
+        }
+      ]
+    },
+    toner: {
+      version: 8,
+      name: "Toner Style",
+      sources: {
+        'toner-tiles': {
+          type: 'raster' as const,
+          tiles: ['https://tiles.stadiamaps.com/tiles/stamen_toner/{z}/{x}/{y}.png'],
+          tileSize: 256,
+          maxzoom: 18,  // Stamen Toner max zoom level
+          attribution: '© Stadia Maps, Stamen Design, OpenMapTiles © OpenStreetMap contributors'
+        }
+      },
+      layers: [
+        {
+          id: 'toner-raster',
+          type: 'raster' as const,
+          source: 'toner-tiles'
+        }
+      ]
+    }
   };
 
   // Accuracy visualization settings
   const [showAccuracyCircles, setShowAccuracyCircles] = useState(true);
   const [accuracyVisualizationMode, setAccuracyVisualizationMode] = useState<'circles' | 'heatmap' | 'zones'>('circles');
 
-  // Polygon completion state
-  const [isPolygonComplete, setIsPolygonComplete] = useState(false);
+  // ✅ ENTERPRISE: Combine local and centralized polygon state (LEGACY COMPATIBILITY)
+  const [localIsPolygonComplete, setLocalIsPolygonComplete] = useState(false);
+  const isPolygonComplete = localIsPolygonComplete || systemIsPolygonComplete;
   const [completedPolygon, setCompletedPolygon] = useState<GeoControlPoint[] | null>(null);
 
   // ========================================================================
@@ -117,7 +372,10 @@ export function InteractiveMap({
     osm: t('map.controls.openStreetMap'),
     satellite: t('map.controls.satellite'),
     terrain: t('map.controls.terrain'),
-    dark: t('map.controls.darkMode')
+    dark: t('map.controls.darkMode'),
+    greece: t('map.controls.greece'),
+    watercolor: t('map.controls.watercolor'),
+    toner: t('map.controls.toner')
   };
 
   // ========================================================================
@@ -129,39 +387,105 @@ export function InteractiveMap({
     const coordinate: GeoCoordinate = { lng, lat };
 
     // ✅ NEW: Universal Polygon System - Handle polygon drawing
-    if (enablePolygonDrawing && polygonSystem.isDrawing) {
-      // Add point to polygon system
-      const point = polygonSystem.addPoint(lng, lat, { lng, lat });
+    if (enablePolygonDrawing && systemIsDrawing) {
+      // Skip click handling for freehand mode (handled by mouse drag)
+      if (isInFreehandMode()) return;
 
-      if (point) {
-        console.log('🎨 Added polygon point:', point);
+      // Add point to polygon system using centralized method
+      addPoint(lng, lat);
+
+      // ✅ NEW: Check if this is point mode - automatically finish after first click
+      const currentDrawing = getCurrentDrawing();
+      if (currentDrawing?.config?.pointMode === true) {
+        // For point mode, finish drawing immediately after first click
+        setTimeout(() => {
+          finishDrawing();
+        }, 100); // Small delay to ensure point is added first
       }
+
       return;
     }
 
     // 🔒 ENTERPRISE: Handle coordinate picking for control points
     if (!isPickingCoordinates || !onCoordinateClick || isPolygonComplete) {
       if (isPolygonComplete) {
-        console.log('🔒 Coordinate picking blocked - polygon is complete');
       }
       return;
     }
 
-    console.log('🗺️ Map clicked:', coordinate);
     onCoordinateClick(coordinate);
   }, [
     isPickingCoordinates,
     onCoordinateClick,
     isPolygonComplete,
     enablePolygonDrawing,
-    polygonSystem.isDrawing,
-    polygonSystem.addPoint
+    systemIsDrawing,
+    addPoint,
+    getCurrentDrawing,
+    finishDrawing,
+    isInFreehandMode
   ]);
 
   const handleMapMouseMove = useCallback((event: any) => {
     const { lng, lat } = event.lngLat || { lng: event.longitude, lat: event.latitude };
     setHoveredCoordinate({ lng, lat });
-  }, []);
+
+    // ✅ ENTERPRISE: Freehand drawing during mouse move (when dragging)
+    if (isDraggingFreehand && isInFreehandMode() && enablePolygonDrawing) {
+      // Throttling: Προσθέτουμε point μόνο αν έχουμε μετακινηθεί αρκετά
+      if (lastDragPoint) {
+        const distance = Math.sqrt(
+          Math.pow(lng - lastDragPoint.lng, 2) + Math.pow(lat - lastDragPoint.lat, 2)
+        );
+
+        // Minimum distance για smoother lines (0.0001 degrees ≈ 10 meters)
+        if (distance > 0.0001) {
+          addPoint(lng, lat);
+          setLastDragPoint({ lng, lat });
+        }
+      }
+    }
+
+    // ✅ ENTERPRISE: Update live preview for point mode
+    if (enablePolygonDrawing && systemIsDrawing) {
+      const currentDrawing = getCurrentDrawing();
+      if (currentDrawing?.config?.pointMode === true && currentDrawing.points.length === 0) {
+        // Force re-render για live preview
+        setForceUpdate(prev => prev + 1);
+      }
+    }
+  }, [enablePolygonDrawing, systemIsDrawing, getCurrentDrawing, isDraggingFreehand, isInFreehandMode, addPoint, lastDragPoint]);
+
+  // ✅ ENTERPRISE: Freehand drawing mouse handlers
+  const handleMapMouseDown = useCallback((event: any) => {
+    // Μόνο για freehand mode
+    if (!isInFreehandMode() || !enablePolygonDrawing) return;
+
+    const { lng, lat } = event.lngLat;
+    setIsDraggingFreehand(true);
+    setLastDragPoint({ lng, lat });
+
+    // Ξεκινάει το freehand drawing με το πρώτο point
+    addPoint(lng, lat);
+  }, [isInFreehandMode, enablePolygonDrawing, addPoint]);
+
+
+  const handleMapMouseUp = useCallback(() => {
+    if (!isDraggingFreehand || !isInFreehandMode()) return;
+
+    setIsDraggingFreehand(false);
+    setLastDragPoint(null);
+
+    // ✅ FIX: Validation - Τελειώνει το freehand drawing μόνο αν έχουμε αρκετά points
+    const currentDrawing = getCurrentDrawing();
+    if (currentDrawing && currentDrawing.points && currentDrawing.points.length >= 2) {
+      finishDrawing();
+    } else {
+      // Cancel drawing αν δεν έχουμε αρκετά points
+      cancelDrawing();
+      console.log('🚫 Freehand drawing cancelled: Not enough points');
+    }
+  }, [isDraggingFreehand, isInFreehandMode, finishDrawing, getCurrentDrawing, cancelDrawing]);
 
   const handleMapLoad = useCallback(() => {
     setMapLoaded(true);
@@ -169,10 +493,9 @@ export function InteractiveMap({
     // Initialize polygon system with map instance
     if (enablePolygonDrawing && mapRef.current) {
       const map = mapRef.current.getMap?.();
-      if (map && !polygonSystem.manager) {
+      if (map) {
         // Note: We don't have a canvas here, so we initialize with map only
         // The canvas would be used for overlay drawing if needed
-        console.log('🎨 Initializing polygon system with map');
       }
     }
 
@@ -180,13 +503,28 @@ export function InteractiveMap({
     if (onMapReady && mapRef.current) {
       const map = mapRef.current.getMap?.();
       if (map) {
-        console.log('🗺️ Map loaded - calling onMapReady');
+        // ✅ ENTERPRISE FIX: Pass mapRef to centralized polygon system
+        if (enablePolygonDrawing) {
+          setMapRef(mapRef);
+
+          map._polygonSystem = {
+            polygons,
+            stats,
+            startDrawing,
+            finishDrawing,
+            cancelDrawing,
+            isDrawing: systemIsDrawing
+          };
+        }
         onMapReady(map);
       }
     }
-  }, [onMapReady, enablePolygonDrawing, polygonSystem.manager]);
+  }, [onMapReady, enablePolygonDrawing, setMapRef]);
 
   // ✅ ENTERPRISE FIX: Handle MapLibre errors
+  /**
+   * ✅ ENTERPRISE: Enhanced map error handling with fallback cascade
+   */
   const handleMapError = useCallback((error: any) => {
     console.error('🗺️ MapLibre GL JS Error:', error);
 
@@ -195,38 +533,90 @@ export function InteractiveMap({
       type: 'MapLibre Error',
       error: error?.error || error,
       message: error?.message || 'Unknown MapLibre error',
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      currentStyle: currentMapStyle,
+      failureReason: error?.message?.includes('Failed to fetch') ? 'Network/CORS' : 'Unknown'
     };
 
     console.error('🔍 MapLibre Error Details:', errorInfo);
 
+    // 🔧 FIX: Don't fallback for tile loading errors (404s at high zoom)
+    // These are normal when zoom level exceeds maxzoom
+    const isTileError = error?.message?.includes('tile') || error?.error?.message?.includes('404') || error?.error?.status === 404;
+    const isHighZoomError = error?.message?.includes('Failed to fetch') && error?.error?.url?.includes('/tile/');
+
+    if (isTileError || isHighZoomError) {
+      // Just log the error but don't change map style
+      return;
+    }
+
     // Don't crash the app - graceful degradation
     setMapLoaded(false);
 
-    // Try to recover by switching to basic OSM style if current style failed
-    if (currentMapStyle !== 'osm') {
-      console.log('🔄 Attempting recovery with basic OSM style...');
+    // ✅ ENHANCED: Fallback cascade only for serious style failures
+    const fallbackOrder = {
+      // If Stamen styles fail → fallback to CartoDB
+      'terrain': 'osm',     // Stamen Terrain → CartoDB Positron
+      'watercolor': 'osm',  // Stamen Watercolor → CartoDB Positron
+      'toner': 'dark',      // Stamen Toner → CartoDB Dark Matter
+      'greece': 'osm',      // Custom Greece → CartoDB Positron
+
+      // If CartoDB styles fail → fallback to basic OSM
+      'satellite': 'osm',   // CartoDB Voyager → Basic OSM
+      'dark': 'osm',        // CartoDB Dark → Basic OSM
+      'osm': null           // Basic OSM is final fallback
+    };
+
+    const fallbackStyle = fallbackOrder[currentMapStyle as keyof typeof fallbackOrder];
+
+    if (fallbackStyle) {
       setTimeout(() => {
+        setCurrentMapStyle(fallbackStyle as any);
+        setMapLoaded(true); // Try to load immediately
+      }, 1500);
+    } else {
+      // Final fallback failed - show user notification
+      console.error('❌ All map styles failed. Using emergency fallback.');
+      setTimeout(() => {
+        // Emergency: Try to load with minimal OSM style
         setCurrentMapStyle('osm');
-      }, 2000);
+        setMapLoaded(true);
+      }, 3000);
     }
   }, [currentMapStyle]);
 
-  const handleMapStyleChange = useCallback((newStyle: 'osm' | 'satellite' | 'terrain' | 'dark') => {
+  const handleMapStyleChange = useCallback((newStyle: 'osm' | 'satellite' | 'terrain' | 'dark' | 'greece' | 'watercolor' | 'toner') => {
+
     setCurrentMapStyle(newStyle);
     setMapLoaded(false); // Show loading while style changes
 
-    // Simulate brief loading for style transition
+    // ✅ ENHANCED: Different timeout for different style types
+    const loadingTimeout = {
+      // Stamen styles might take longer to load
+      'terrain': 2000,
+      'watercolor': 2500,
+      'toner': 1500,
+      // Custom styles
+      'greece': 1200,
+      // CartoDB styles are usually faster
+      'osm': 800,
+      'satellite': 1000,
+      'dark': 800
+    };
+
+    const timeout = loadingTimeout[newStyle] || 1000;
+
+    // Set loading state with appropriate timeout
     setTimeout(() => {
       setMapLoaded(true);
-    }, 500);
-  }, []);
+    }, timeout);
+  }, [currentMapStyle]);
 
   // ========================================================================
   // POLYGON CLOSURE HANDLER
   // ========================================================================
 
-  const handlePolygonClosure = useCallback(() => {
+  const handleLegacyPolygonClosure = useCallback(() => {
     const currentPoints = transformState.controlPoints;
 
     if (currentPoints.length < 3) {
@@ -234,11 +624,6 @@ export function InteractiveMap({
       return;
     }
 
-    console.log('✅ Polygon closure initiated!', {
-      pointsCount: currentPoints.length,
-      firstPoint: currentPoints[0],
-      lastPoint: currentPoints[currentPoints.length - 1]
-    });
 
     // 🔥 ENTERPRISE IMPLEMENTATION: Polygon closure με map-centered notification
     const notification = document.createElement('div');
@@ -271,16 +656,9 @@ export function InteractiveMap({
     // ✅ ENTERPRISE: Notify parent about polygon completion
     if (onPolygonComplete) {
       onPolygonComplete();
-      console.log('📞 Parent notified about polygon completion');
     }
 
     // Note: Coordinate picking will be blocked by handleMapClick
-    console.log('✅ Polygon successfully closed and saved!', {
-      isComplete: true,
-      polygonPoints: currentPoints.length,
-      coordinatePickingBlocked: true,
-      parentNotified: !!onPolygonComplete
-    });
   }, [transformState.controlPoints, onPolygonComplete]);
 
   // ========================================================================
@@ -289,25 +667,25 @@ export function InteractiveMap({
 
   // Handle polygon creation callback
   useEffect(() => {
-    if (onPolygonCreated && polygonSystem.polygons.length > 0) {
+    if (onPolygonCreated && polygons.length > 0) {
       // Get the latest polygon
-      const latestPolygon = polygonSystem.polygons[polygonSystem.polygons.length - 1];
+      const latestPolygon = polygons[polygons.length - 1];
 
       // Check if this is a new polygon by checking if we've seen it before
       const polygonId = latestPolygon.id;
-      const existingPolygon = polygonSystem.getPolygon(polygonId);
+      // ✅ ENTERPRISE: Get polygon from centralized system
+      const existingPolygon = polygons.find(p => p.id === polygonId);
 
       if (existingPolygon) {
-        console.log('🎨 Polygon created:', latestPolygon);
         onPolygonCreated(latestPolygon);
 
         // Add polygon to map if it has geo coordinates
         if (latestPolygon.type === 'georeferencing' || latestPolygon.points.some(p => p.x && p.y)) {
-          polygonSystem.addPolygonToMap(latestPolygon);
+          // ✅ ENTERPRISE: Polygon rendering handled by centralized system
         }
       }
     }
-  }, [polygonSystem.polygons.length, onPolygonCreated, polygonSystem]);
+  }, [polygons.length, onPolygonCreated]);
 
   // Handle polygon system keyboard shortcuts
   useEffect(() => {
@@ -315,12 +693,12 @@ export function InteractiveMap({
 
     const handleKeyDown = (event: KeyboardEvent) => {
       // Only handle if polygon drawing is active
-      if (!polygonSystem.isDrawing) return;
+      if (!systemIsDrawing) return;
 
       switch (event.key) {
         case 'Enter':
           event.preventDefault();
-          const finishedPolygon = polygonSystem.finishDrawing();
+          const finishedPolygon = finishDrawing();
           if (finishedPolygon && onPolygonCreated) {
             onPolygonCreated(finishedPolygon);
           }
@@ -328,7 +706,7 @@ export function InteractiveMap({
 
         case 'Escape':
           event.preventDefault();
-          polygonSystem.cancelDrawing();
+          cancelDrawing();
           break;
 
         case 'Backspace':
@@ -340,7 +718,7 @@ export function InteractiveMap({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [enablePolygonDrawing, polygonSystem.isDrawing, polygonSystem, onPolygonCreated]);
+  }, [enablePolygonDrawing, systemIsDrawing, onPolygonCreated]);
 
   // ========================================================================
   // ACCURACY VISUALIZATION HELPERS
@@ -379,13 +757,6 @@ export function InteractiveMap({
   // ========================================================================
 
   const renderControlPoints = () => {
-    console.log('🎯 Rendering control points:', {
-      showControlPoints,
-      mapLoaded,
-      controlPointsCount: transformState.controlPoints.length,
-      controlPoints: transformState.controlPoints
-    });
-
     if (!showControlPoints || !mapLoaded) return null;
 
     const points = transformState.controlPoints;
@@ -426,16 +797,13 @@ export function InteractiveMap({
             onClick={(e) => {
               e.stopPropagation();
               e.preventDefault();
-              console.log('🎯 Control point clicked!', { cp: cp.id, shouldHighlightFirst, isPolygonComplete });
 
               if (isPolygonComplete) {
-                console.log('🔒 Polygon is complete - click ignored');
                 return;
               }
 
               if (shouldHighlightFirst) {
-                console.log('🔴 Polygon closure clicked! Closing polygon...');
-                handlePolygonClosure();
+                handleLegacyPolygonClosure();
               }
             }}
           />
@@ -449,14 +817,6 @@ export function InteractiveMap({
   // ========================================================================
 
   const renderPolygonLines = () => {
-    console.log('🔴 Rendering polygon lines:', {
-      showControlPoints,
-      mapLoaded,
-      controlPointsCount: transformState.controlPoints.length,
-      controlPoints: transformState.controlPoints,
-      isPolygonComplete
-    });
-
     if (!showControlPoints || !mapLoaded || transformState.controlPoints.length < 2) return null;
 
     const points = transformState.controlPoints;
@@ -610,7 +970,7 @@ export function InteractiveMap({
         <div className="flex justify-between items-center mb-2">
           <span className="text-xs text-gray-400">{t('map.styleSelector.style')}</span>
           <div className="flex space-x-1">
-            {(['osm', 'satellite', 'terrain', 'dark'] as const).map((style) => (
+            {(['osm', 'satellite', 'terrain', 'dark', 'greece', 'watercolor', 'toner'] as const).map((style) => (
               <button
                 key={style}
                 onClick={() => handleMapStyleChange(style)}
@@ -621,7 +981,12 @@ export function InteractiveMap({
                 }`}
                 title={mapStyleNames[style]}
               >
-                {style === 'osm' ? '🗺️' : style === 'satellite' ? '🛰️' : style === 'terrain' ? '🏔️' : '🌙'}
+                {style === 'osm' ? '🗺️' :
+                 style === 'satellite' ? '🛰️' :
+                 style === 'terrain' ? '🏔️' :
+                 style === 'dark' ? '🌙' :
+                 style === 'greece' ? '🇬🇷' :
+                 style === 'watercolor' ? '🎨' : '⚫'}
               </button>
             ))}
           </div>
@@ -631,10 +996,17 @@ export function InteractiveMap({
         {hoveredCoordinate && (
           <>
             <div className="font-mono">
-              {t('toolbar.longitude')} {hoveredCoordinate.lng.toFixed(6)}
+              Γεωγρ. Μήκος: {hoveredCoordinate.lng.toFixed(6)}
             </div>
             <div className="font-mono">
-              {t('toolbar.latitude')} {hoveredCoordinate.lat.toFixed(6)}
+              Γεωγρ. Πλάτος: {hoveredCoordinate.lat.toFixed(6)}
+            </div>
+            <div className="font-mono">
+              Ύψος: {
+                hoveredCoordinate.alt !== undefined
+                  ? `${hoveredCoordinate.alt}m`
+                  : 'Φόρτωση...'
+              }
             </div>
           </>
         )}
@@ -766,7 +1138,7 @@ export function InteractiveMap({
         </div>
         <select
           value={currentMapStyle}
-          onChange={(e) => handleMapStyleChange(e.target.value as 'osm' | 'satellite' | 'terrain' | 'dark')}
+          onChange={(e) => handleMapStyleChange(e.target.value as 'osm' | 'satellite' | 'terrain' | 'dark' | 'greece' | 'watercolor' | 'toner')}
           className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white"
           disabled={!mapLoaded}
         >
@@ -774,6 +1146,9 @@ export function InteractiveMap({
           <option value="satellite">🛰️ {t('map.controls.satellite')}</option>
           <option value="terrain">🏔️ {t('map.controls.terrain')}</option>
           <option value="dark">🌙 {t('map.controls.darkMode')}</option>
+          <option value="greece">🇬🇷 {t('map.controls.greece')}</option>
+          <option value="watercolor">🎨 {t('map.controls.watercolor')}</option>
+          <option value="toner">⚫ {t('map.controls.toner')}</option>
         </select>
         {currentMapStyle && (
           <div className="text-xs text-gray-500 mt-1">
@@ -785,41 +1160,374 @@ export function InteractiveMap({
   );
 
   // ========================================================================
+  // LIVE DRAWING PREVIEW RENDERING
+  // ========================================================================
+
+  const renderLiveDrawingPreview = () => {
+    if (!enablePolygonDrawing || !systemIsDrawing) {
+      return null;
+    }
+
+    const currentDrawing = getCurrentDrawing();
+
+    // ✅ ENTERPRISE: Live preview για point mode πριν το πρώτο κλικ
+    if (currentDrawing?.config?.pointMode === true && currentDrawing.points.length === 0 && hoveredCoordinate) {
+      const pointRadius = currentDrawing.config?.radius || 100; // Default 100m radius
+
+      // Validate hovered coordinates
+      if (hoveredCoordinate.lat < -90 || hoveredCoordinate.lat > 90 ||
+          hoveredCoordinate.lng < -180 || hoveredCoordinate.lng > 180) {
+        return null;
+      }
+
+      // Calculate radius circle in degrees (approximation for visualization)
+      const radiusInDegrees = pointRadius / 111000;
+      const circleCoordinates = [];
+      const numPoints = 32; // Lower resolution για smooth preview
+
+      for (let i = 0; i < numPoints; i++) {
+        const angle = (i / numPoints) * 2 * Math.PI;
+        const lat = hoveredCoordinate.lat + radiusInDegrees * Math.cos(angle);
+        const lng = hoveredCoordinate.lng + radiusInDegrees * Math.sin(angle) / Math.cos(hoveredCoordinate.lat * Math.PI / 180);
+        circleCoordinates.push([lng, lat]);
+      }
+      // Close the circle
+      circleCoordinates.push(circleCoordinates[0]);
+
+      const circleFeature = {
+        type: 'Feature' as const,
+        geometry: {
+          type: 'Polygon' as const,
+          coordinates: [circleCoordinates]
+        },
+        properties: {
+          id: 'point-mode-preview-circle'
+        }
+      };
+
+      return (
+        <React.Fragment>
+          {/* Preview Radius Circle */}
+          <Source
+            id="point-preview-circle"
+            type="geojson"
+            data={circleFeature}
+          >
+            <Layer
+              id="point-preview-circle-fill"
+              type="fill"
+              paint={{
+                'fill-color': '#3b82f6',
+                'fill-opacity': 0.05
+              }}
+            />
+            <Layer
+              id="point-preview-circle-stroke"
+              type="line"
+              paint={{
+                'line-color': '#3b82f6',
+                'line-opacity': 0.4,
+                'line-width': 1,
+                'line-dasharray': [8, 8]
+              }}
+            />
+          </Source>
+
+          {/* Preview Pin Marker (ghost πινέζα) */}
+          <Marker
+            longitude={hoveredCoordinate.lng}
+            latitude={hoveredCoordinate.lat}
+          >
+            <div
+              style={{
+                width: 20,
+                height: 28,
+                background: 'linear-gradient(135deg, #3b82f6, #60a5fa)',
+                borderRadius: '50% 50% 50% 0%',
+                transform: 'translate(-50%, -100%) rotate(-45deg)',
+                border: '1px solid white',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                cursor: 'crosshair',
+                position: 'relative',
+                opacity: 0.7
+              }}
+              title={`Πινέζα Preview - Ακτίνα: ${pointRadius}m`}
+            >
+              {/* Pin center dot */}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '30%',
+                  left: '30%',
+                  width: 4,
+                  height: 4,
+                  backgroundColor: 'white',
+                  borderRadius: '50%',
+                  transform: 'rotate(45deg)'
+                }}
+              />
+            </div>
+          </Marker>
+
+          {/* Preview Radius Label */}
+          <Marker
+            longitude={hoveredCoordinate.lng}
+            latitude={hoveredCoordinate.lat + radiusInDegrees * 0.7}
+          >
+            <div
+              style={{
+                background: 'rgba(59, 130, 246, 0.9)',
+                color: 'white',
+                padding: '2px 6px',
+                borderRadius: '3px',
+                fontSize: '11px',
+                fontWeight: 'bold',
+                transform: 'translate(-50%, -50%)',
+                whiteSpace: 'nowrap',
+                pointerEvents: 'none',
+                opacity: 0.8
+              }}
+            >
+              {pointRadius}m
+            </div>
+          </Marker>
+        </React.Fragment>
+      );
+    }
+
+    // ✅ STANDARD: Current drawing points για non-point modes ή μετά το πρώτο κλικ
+    if (!currentDrawing || !currentDrawing.points || currentDrawing.points.length === 0) {
+      return null;
+    }
+
+    return (
+      <React.Fragment>
+        {/* Render current drawing points */}
+        {currentDrawing.points.map((point, index) => {
+          // Validate coordinates
+          if (point.y < -90 || point.y > 90 || point.x < -180 || point.x > 180) {
+            return null;
+          }
+
+          return (
+            <Marker
+              key={`preview-point-${index}`}
+              longitude={point.x}
+              latitude={point.y}
+            >
+              <div
+                style={{
+                  width: 12,
+                  height: 12,
+                  backgroundColor: '#3b82f6',
+                  borderRadius: '50%',
+                  border: '2px solid #1e40af',
+                  transform: 'translate(-50%, -50%)',
+                  cursor: 'pointer',
+                  animation: 'pulse 1s ease-in-out infinite'
+                }}
+                title={`Point ${index + 1} (Drawing)`}
+              />
+            </Marker>
+          );
+        })}
+
+        {/* Render lines between points */}
+        {currentDrawing.points.length > 1 && (
+          <Source
+            id="preview-line"
+            type="geojson"
+            data={{
+              type: 'Feature',
+              geometry: {
+                type: 'LineString',
+                coordinates: currentDrawing.points.map(p => [p.x, p.y])
+              },
+              properties: {}
+            }}
+          >
+            <Layer
+              id="preview-line-layer"
+              type="line"
+              paint={{
+                'line-color': '#3b82f6',
+                'line-width': 2,
+                'line-dasharray': [4, 4],
+                'line-opacity': 0.8
+              }}
+            />
+          </Source>
+        )}
+      </React.Fragment>
+    );
+  };
+
+  // ========================================================================
   // UNIVERSAL POLYGON SYSTEM RENDERING
   // ========================================================================
 
   const renderPolygonSystemLayers = () => {
-    if (!polygonSystem.polygons || polygonSystem.polygons.length === 0) {
+    if (!polygons || polygons.length === 0) {
       return null;
     }
 
-    return polygonSystem.polygons.map((polygon) => {
-      // Convert polygon to GeoJSON for MapLibre
-      const geojsonData = polygonSystem.exportAsGeoJSON();
+    // ✅ ENTERPRISE: Get GeoJSON data from centralized system
+    const geojsonData = exportAsGeoJSON();
 
-      // Filter to current polygon
-      const polygonFeature = geojsonData.features.find(
-        (feature) => feature.properties?.id === polygon.id
-      );
+    if (!geojsonData || !geojsonData.features || geojsonData.features.length === 0) {
+      return null;
+    }
 
-      if (!polygonFeature) return null;
+    return geojsonData.features.map((feature, index) => {
+      const polygon = polygons.find(p => p.id === feature.properties?.id);
+      if (!polygon) {
+        return null;
+      }
 
       const sourceId = `polygon-${polygon.id}`;
 
+      // ✅ ENTERPRISE: Check if this is a point mode polygon (πινέζα)
+      const isPointMode = polygon.config?.pointMode === true;
+      const pointRadius = polygon.config?.radius || 100; // Default 100m radius
+
+
+      if (isPointMode && polygon.points.length === 1) {
+        const point = polygon.points[0];
+
+        // Validate coordinates before rendering
+        if (point.y < -90 || point.y > 90 || point.x < -180 || point.x > 180) {
+          return null;
+        }
+
+        // Calculate radius circle in degrees (approximation for visualization)
+        // 1 degree ≈ 111km at equator, so radius in degrees = radius_meters / 111000
+        const radiusInDegrees = pointRadius / 111000;
+        const circleCoordinates = [];
+        const numPoints = 64; // Circle resolution
+
+        for (let i = 0; i < numPoints; i++) {
+          const angle = (i / numPoints) * 2 * Math.PI;
+          const lat = point.y + radiusInDegrees * Math.cos(angle);
+          const lng = point.x + radiusInDegrees * Math.sin(angle) / Math.cos(point.y * Math.PI / 180);
+          circleCoordinates.push([lng, lat]);
+        }
+        // Close the circle
+        circleCoordinates.push(circleCoordinates[0]);
+
+        const circleFeature = {
+          type: 'Feature' as const,
+          geometry: {
+            type: 'Polygon' as const,
+            coordinates: [circleCoordinates]
+          },
+          properties: {
+            id: `${polygon.id}-radius-circle`
+          }
+        };
+
+        return (
+          <React.Fragment key={polygon.id}>
+            {/* Radius Circle */}
+            <Source
+              id={`${sourceId}-circle`}
+              type="geojson"
+              data={circleFeature}
+            >
+              <Layer
+                id={`${sourceId}-circle-fill`}
+                type="fill"
+                paint={{
+                  'fill-color': polygon.style.fillColor,
+                  'fill-opacity': 0.1
+                }}
+              />
+              <Layer
+                id={`${sourceId}-circle-stroke`}
+                type="line"
+                paint={{
+                  'line-color': polygon.style.strokeColor,
+                  'line-opacity': 0.6,
+                  'line-width': 2,
+                  'line-dasharray': [5, 5]
+                }}
+              />
+            </Source>
+
+            {/* Pin Marker (πινέζα) */}
+            <Marker
+              longitude={point.x}
+              latitude={point.y}
+            >
+              <div
+                style={{
+                  width: 24,
+                  height: 32,
+                  background: `linear-gradient(135deg, ${polygon.style.strokeColor}, ${polygon.style.fillColor})`,
+                  borderRadius: '50% 50% 50% 0%',
+                  transform: 'translate(-50%, -100%) rotate(-45deg)',
+                  border: '2px solid white',
+                  boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
+                  cursor: 'pointer',
+                  position: 'relative'
+                }}
+                title={`Πινέζα - Ακτίνα: ${pointRadius}m`}
+              >
+                {/* Pin center dot */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '30%',
+                    left: '30%',
+                    width: 6,
+                    height: 6,
+                    backgroundColor: 'white',
+                    borderRadius: '50%',
+                    transform: 'rotate(45deg)'
+                  }}
+                />
+              </div>
+            </Marker>
+
+            {/* Radius text label */}
+            <Marker
+              longitude={point.x}
+              latitude={point.y + radiusInDegrees * 0.7}
+            >
+              <div
+                style={{
+                  background: 'rgba(0,0,0,0.8)',
+                  color: 'white',
+                  padding: '4px 8px',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  transform: 'translate(-50%, -50%)',
+                  whiteSpace: 'nowrap',
+                  pointerEvents: 'none'
+                }}
+              >
+                {pointRadius}m
+              </div>
+            </Marker>
+          </React.Fragment>
+        );
+      }
+
+      // ✅ STANDARD: Regular polygon rendering for non-point modes
       return (
         <React.Fragment key={polygon.id}>
           {/* Polygon Fill Layer */}
           <Source
             id={sourceId}
             type="geojson"
-            data={polygonFeature}
+            data={feature}
           >
             <Layer
               id={`${sourceId}-fill`}
               type="fill"
               paint={{
                 'fill-color': polygon.style.fillColor,
-                'fill-opacity': polygon.style.fillOpacity
+                'fill-opacity': polygon.style.fillOpacity || 0.3  // ✅ FIX: Prevents MapLibre "number expected, undefined" errors
               }}
             />
             <Layer
@@ -827,19 +1535,25 @@ export function InteractiveMap({
               type="line"
               paint={{
                 'line-color': polygon.style.strokeColor,
-                'line-opacity': polygon.style.strokeOpacity,
-                'line-width': polygon.style.strokeWidth
+                'line-opacity': polygon.style.strokeOpacity || 1.0,
+                'line-width': polygon.style.strokeWidth || 2
               }}
             />
           </Source>
 
           {/* Polygon Points (vertices) */}
-          {polygon.points.map((point, index) => (
-            <Marker
-              key={`${polygon.id}-point-${index}`}
-              longitude={point.x}
-              latitude={point.y}
-            >
+          {polygon.points.map((point, index) => {
+            // Validate coordinates before rendering
+            if (point.y < -90 || point.y > 90 || point.x < -180 || point.x > 180) {
+              return null; // Skip invalid markers
+            }
+
+            return (
+              <Marker
+                key={`${polygon.id}-point-${index}`}
+                longitude={point.x}
+                latitude={point.y}
+              >
               <div
                 style={{
                   width: (polygon.style.pointRadius || 4) * 2,
@@ -853,7 +1567,8 @@ export function InteractiveMap({
                 title={point.label || `Point ${index + 1}`}
               />
             </Marker>
-          ))}
+            );
+          })}
         </React.Fragment>
       );
     });
@@ -865,17 +1580,26 @@ export function InteractiveMap({
 
   return (
     <div className={`relative ${className}`}>
-      <Map
+      <MapComponent
         ref={mapRef}
         {...viewState}
         onMove={(evt: any) => setViewState(evt.viewState)}
         onClick={handleMapClick}
         onMouseMove={handleMapMouseMove}
+        onMouseDown={handleMapMouseDown}
+        onMouseUp={handleMapMouseUp}
         onLoad={handleMapLoad}
         onError={handleMapError}
         style={{ width: '100%', height: '100%' }}
-        mapStyle={mapStyleUrls[currentMapStyle]}
-        cursor={isPickingCoordinates ? 'crosshair' : 'default'}
+        mapStyle={mapStyleUrls[currentMapStyle] || mapStyleUrls.osm}
+        cursor={isPickingCoordinates ? 'crosshair' : systemIsDrawing ? 'crosshair' : 'default'}
+        // ✅ ENTERPRISE: Disable map interactions when drawing (prevents map dragging during polygon drawing)
+        dragPan={!systemIsDrawing}
+        dragRotate={!systemIsDrawing}
+        scrollZoom={!systemIsDrawing}
+        touchZoom={!systemIsDrawing}
+        doubleClickZoom={!systemIsDrawing}
+        keyboard={!systemIsDrawing}
       >
         {/* Control Points */}
         {renderControlPoints()}
@@ -889,9 +1613,12 @@ export function InteractiveMap({
         {/* Accuracy Indicators */}
         {renderAccuracyIndicators()}
 
+        {/* ✅ NEW: Live Drawing Preview */}
+        {renderLiveDrawingPreview()}
+
         {/* ✅ NEW: Universal Polygon System Layers */}
         {enablePolygonDrawing && renderPolygonSystemLayers()}
-      </Map>
+      </MapComponent>
 
       {/* UI Overlays */}
       {renderAccuracyLegend()}
@@ -915,13 +1642,13 @@ export function InteractiveMap({
             {enablePolygonDrawing && (
               <>
                 <div className="flex items-center space-x-2">
-                  <div className={`w-2 h-2 rounded-full ${polygonSystem.isDrawing ? 'bg-yellow-400' : 'bg-gray-400'}`} />
-                  <span>Polygons: {polygonSystem.stats.totalPolygons}</span>
+                  <div className={`w-2 h-2 rounded-full ${systemIsDrawing ? 'bg-yellow-400' : 'bg-gray-400'}`} />
+                  <span>Polygons: {stats.totalPolygons}</span>
                 </div>
-                {polygonSystem.isDrawing && (
+                {systemIsDrawing && (
                   <div className="flex items-center space-x-2">
                     <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                    <span>Drawing {polygonSystem.currentMode}...</span>
+                    <span>Drawing mode active...</span>
                   </div>
                 )}
               </>

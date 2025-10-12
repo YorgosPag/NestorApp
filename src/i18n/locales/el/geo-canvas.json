@@ -447,7 +447,10 @@
       "openStreetMap": "OpenStreetMap",
       "satellite": "Δορυφορικός",
       "terrain": "Τοπογραφικός",
-      "darkMode": "Σκούρο Θέμα"
+      "darkMode": "Σκούρο Θέμα",
+      "greece": "Ελλάδα",
+      "watercolor": "Ζωγραφική",
+      "toner": "Ασπρόμαυρο"
     },
     "status": {
       "mapLoaded": "Χάρτης Φορτώθηκε",

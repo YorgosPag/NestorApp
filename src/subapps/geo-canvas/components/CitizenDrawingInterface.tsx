@@ -1,16 +1,23 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
-import { MapPin, Hexagon, Hand, Trash2, Check, X, Bell, Home } from 'lucide-react';
-import { usePolygonSystem } from '@geo-alert/core';
+import React, { useState, useCallback, useEffect } from 'react';
+import { MapPin, Hexagon, Hand, Trash2, Check, X, Bell, Home, Search } from 'lucide-react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
-import type { PolygonType, RealEstatePolygon } from '@geo-alert/core';
+import type { RealEstatePolygon } from '@geo-alert/core';
 import { useRealEstateMatching } from '@/services/real-estate-monitor/useRealEstateMatching';
+
+// ✅ NEW: Enterprise Centralized Polygon System
+import { useCentralizedPolygonSystem } from '../systems/polygon-system';
+
+// ✅ NEW: Address Search Integration
+import { AddressSearchPanel } from './AddressSearchPanel';
+import type { GreekAddress } from '@/services/real-estate-monitor/AddressResolver';
 
 interface CitizenDrawingInterfaceProps {
   mapRef: React.RefObject<any>;
   onPolygonComplete?: (polygon: any) => void;
   onRealEstateAlertCreated?: (alert: RealEstatePolygon) => void;
+  onLocationSelected?: (lat: number, lng: number, address?: GreekAddress) => void;
 }
 
 /**
@@ -28,11 +35,26 @@ interface CitizenDrawingInterfaceProps {
 export function CitizenDrawingInterface({
   mapRef,
   onPolygonComplete,
-  onRealEstateAlertCreated
+  onRealEstateAlertCreated,
+  onLocationSelected
 }: CitizenDrawingInterfaceProps) {
   const { t } = useTranslationLazy('geo-canvas');
   const [selectedTool, setSelectedTool] = useState<'point' | 'polygon' | 'freehand' | 'real-estate' | null>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
+  const [pointRadius, setPointRadius] = useState<number>(100); // Default 100m radius
+  const [lastPointPolygonId, setLastPointPolygonId] = useState<string | null>(null);
+
+  // ✅ NEW: Centralized Polygon System (replaces dual-system complexity)
+  const {
+    polygons,
+    stats,
+    startDrawing,
+    finishDrawing,
+    cancelDrawing,
+    clearAll,
+    isDrawing,
+    currentRole,
+    updatePolygonConfig
+  } = useCentralizedPolygonSystem();
 
   // 🏠 Phase 2.5.3: Real Estate Integration
   const [showRealEstateSetup, setShowRealEstateSetup] = useState(false);
@@ -41,6 +63,9 @@ export function CitizenDrawingInterface({
     propertyTypes: ['apartment'] as string[],
     includeExclude: 'include' as 'include' | 'exclude'
   });
+
+  // 🔍 NEW: Address Search Integration
+  const [showAddressSearch, setShowAddressSearch] = useState(false);
 
   // Real Estate Monitoring Integration
   const {
@@ -51,14 +76,6 @@ export function CitizenDrawingInterface({
 
   // ✅ ENTERPRISE FIX: Get statistics as object, not function
   const realEstateStats = getStatistics();
-
-  // Use the polygon system from @geo-alert/core
-  const polygonSystem = usePolygonSystem({
-    autoInit: false,
-    debug: true,
-    enableSnapping: true,
-    snapTolerance: 15 // Larger tolerance για mobile/touch
-  });
 
   // Handle real estate alert creation
   const handleRealEstateAlertComplete = useCallback((polygon: any) => {
@@ -85,12 +102,11 @@ export function CitizenDrawingInterface({
     setShowRealEstateSetup(false);
   }, [realEstateSettings, addRealEstatePolygon, onRealEstateAlertCreated]);
 
-  // Tool selection handler
+  // ✅ NEW: Simplified tool selection handler (centralized system)
   const handleToolSelect = useCallback((tool: 'point' | 'polygon' | 'freehand' | 'real-estate') => {
     if (isDrawing) {
-      // Cancel current drawing
-      polygonSystem.cancelDrawing();
-      setIsDrawing(false);
+      // Cancel current drawing using centralized system
+      cancelDrawing();
     }
 
     setSelectedTool(tool);
@@ -98,29 +114,34 @@ export function CitizenDrawingInterface({
     // Start appropriate drawing mode
     switch (tool) {
       case 'point':
-        // Point mode - θα προσθέσουμε μόνο ένα σημείο
-        console.log('🎯 Citizen: Point mode selected');
+        // Point mode - pin/marker με ακτίνα
+        // Θα δημιουργήσουμε ένα point marker με radius circle
+        startDrawing('simple', {
+          fillColor: `rgba(59, 130, 246, 0.2)`, // Light blue fill για το radius circle
+          strokeColor: '#3b82f6',
+          strokeWidth: 2,
+          pointMode: true,
+          radius: pointRadius
+        });
         break;
 
       case 'polygon':
-        // Simple polygon mode
-        polygonSystem.startDrawing('simple', {
+        // Simple polygon mode using centralized system
+        startDrawing('simple', {
           fillColor: 'rgba(59, 130, 246, 0.3)', // Blue fill
           strokeColor: '#3b82f6',
           strokeWidth: 2
         });
-        setIsDrawing(true);
         console.log('🔷 Citizen: Polygon mode started');
         break;
 
       case 'freehand':
-        // Freehand drawing mode
-        polygonSystem.startDrawing('freehand', {
+        // Freehand drawing mode using centralized system
+        startDrawing('freehand', {
           fillColor: 'rgba(16, 185, 129, 0.3)', // Green fill
           strokeColor: '#10b981',
           strokeWidth: 2
         });
-        setIsDrawing(true);
         console.log('✏️ Citizen: Freehand mode started');
         break;
 
@@ -130,11 +151,11 @@ export function CitizenDrawingInterface({
         console.log('🏠 Citizen: Real estate alert setup opened');
         break;
     }
-  }, [isDrawing, polygonSystem]);
+  }, [isDrawing, startDrawing, cancelDrawing, pointRadius]);
 
-  // Complete drawing
+  // ✅ NEW: Simplified handlers using centralized system
   const handleComplete = useCallback(() => {
-    const polygon = polygonSystem.finishDrawing();
+    const polygon = finishDrawing();
     if (polygon) {
       if (selectedTool === 'real-estate') {
         // Handle real estate alert completion
@@ -145,35 +166,99 @@ export function CitizenDrawingInterface({
         console.log('✅ Citizen: Drawing completed', polygon);
       }
     }
-    setIsDrawing(false);
     setSelectedTool(null);
-  }, [polygonSystem, selectedTool, onPolygonComplete, handleRealEstateAlertComplete]);
+    setLastPointPolygonId(null); // Clear reference when polygon is completed
+  }, [finishDrawing, selectedTool, onPolygonComplete, handleRealEstateAlertComplete]);
 
   // Cancel drawing
   const handleCancel = useCallback(() => {
-    polygonSystem.cancelDrawing();
-    setIsDrawing(false);
+    cancelDrawing();
     setSelectedTool(null);
+    setLastPointPolygonId(null); // Clear reference to last point polygon
     console.log('❌ Citizen: Drawing cancelled');
-  }, [polygonSystem]);
+  }, [cancelDrawing]);
+
+  // ✅ ENTERPRISE: Track point mode polygons for real-time radius updates
+  useEffect(() => {
+    // Find the most recent point mode polygon
+    const pointPolygon = polygons
+      .filter(p => p.config?.pointMode === true && p.points.length === 1)
+      .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))[0];
+
+    if (pointPolygon && pointPolygon.id !== lastPointPolygonId) {
+      setLastPointPolygonId(pointPolygon.id);
+      console.log('📍 Found new point polygon for radius tracking:', pointPolygon.id);
+    }
+  }, [polygons, lastPointPolygonId]);
+
+  // ✅ ENTERPRISE: Update radius in real-time when radius changes
+  useEffect(() => {
+    if (lastPointPolygonId && selectedTool === 'point') {
+      updatePolygonConfig(lastPointPolygonId, { radius: pointRadius });
+      console.log('🔄 Updated point polygon radius:', lastPointPolygonId, pointRadius);
+    }
+  }, [lastPointPolygonId, pointRadius, selectedTool, updatePolygonConfig]);
 
   // Clear all
   const handleClearAll = useCallback(() => {
-    polygonSystem.clearAll();
+    clearAll();
     console.log('🗑️ Citizen: All polygons cleared');
-  }, [polygonSystem]);
+  }, [clearAll]);
+
+  // ✅ NEW: Handle location selection από address search
+  const handleLocationFromSearch = useCallback((lat: number, lng: number, address?: GreekAddress) => {
+    console.log('📍 Location selected from search:', { lat, lng, address });
+
+    // Close address search panel
+    setShowAddressSearch(false);
+
+    // Notify parent component (InteractiveMap) to center map
+    if (onLocationSelected) {
+      onLocationSelected(lat, lng, address);
+    }
+  }, [onLocationSelected]);
 
   return (
     <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-4">
       {/* Header */}
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">
-          {t('drawingInterfaces.citizen.title')}
-        </h3>
-        <p className="text-sm text-gray-600">
-          {t('drawingInterfaces.citizen.subtitle')}
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">
+              {t('drawingInterfaces.citizen.title')}
+            </h3>
+            <p className="text-sm text-gray-600">
+              {t('drawingInterfaces.citizen.subtitle')}
+            </p>
+          </div>
+
+          {/* Address Search Toggle Button */}
+          <button
+            onClick={() => setShowAddressSearch(!showAddressSearch)}
+            className={`
+              flex items-center gap-2 px-3 py-2 rounded-lg border transition-all
+              ${showAddressSearch
+                ? 'border-blue-500 bg-blue-50 text-blue-700'
+                : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+              }
+            `}
+            title="Αναζήτηση διεύθυνσης ή GPS"
+          >
+            <Search className="w-4 h-4" />
+            <span className="text-sm font-medium">Αναζήτηση</span>
+          </button>
+        </div>
       </div>
+
+      {/* Address Search Panel */}
+      {showAddressSearch && (
+        <div className="mb-4">
+          <AddressSearchPanel
+            onLocationSelected={handleLocationFromSearch}
+            onClose={() => setShowAddressSearch(false)}
+          />
+        </div>
+      )}
 
       {/* Tool Buttons - Large & Touch-friendly */}
       <div className="grid grid-cols-2 gap-3 mb-4">
@@ -256,6 +341,50 @@ export function CitizenDrawingInterface({
           <span className="text-xs text-gray-500">{t('drawingInterfaces.citizen.tools.realEstateDescription')}</span>
         </button>
       </div>
+
+      {/* Point Radius Selector - Shows only when point tool is selected */}
+      {selectedTool === 'point' && (
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <h4 className="text-sm font-medium text-blue-900 mb-3">Ακτίνα Πινέζας</h4>
+          <div className="grid grid-cols-3 gap-2 mb-3">
+            {[50, 100, 250].map((radius) => (
+              <button
+                key={radius}
+                onClick={() => setPointRadius(radius)}
+                className={`
+                  py-2 px-3 text-sm font-medium rounded-md transition-all
+                  ${pointRadius === radius
+                    ? 'bg-blue-500 text-white shadow-md'
+                    : 'bg-white text-blue-700 border border-blue-300 hover:bg-blue-100'
+                  }
+                `}
+              >
+                {radius}m
+              </button>
+            ))}
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {[500, 1000, 2000].map((radius) => (
+              <button
+                key={radius}
+                onClick={() => setPointRadius(radius)}
+                className={`
+                  py-2 px-3 text-sm font-medium rounded-md transition-all
+                  ${pointRadius === radius
+                    ? 'bg-blue-500 text-white shadow-md'
+                    : 'bg-white text-blue-700 border border-blue-300 hover:bg-blue-100'
+                  }
+                `}
+              >
+                {radius >= 1000 ? `${radius/1000}km` : `${radius}m`}
+              </button>
+            ))}
+          </div>
+          <div className="mt-3 text-xs text-blue-600 text-center">
+            Επιλεγμένη ακτίνα: <span className="font-semibold">{pointRadius >= 1000 ? `${pointRadius/1000}km` : `${pointRadius}m`}</span>
+          </div>
+        </div>
+      )}
 
       {/* Action Buttons */}
       {isDrawing && (
@@ -347,13 +476,12 @@ export function CitizenDrawingInterface({
           <div className="flex gap-2">
             <button
               onClick={() => {
-                // Start polygon drawing for real estate alert
-                polygonSystem.startDrawing('simple', {
+                // Start polygon drawing for real estate alert using centralized system
+                startDrawing('simple', {
                   fillColor: 'rgba(255, 165, 0, 0.3)', // Orange fill
                   strokeColor: '#ff8c00',
                   strokeWidth: 2
                 });
-                setIsDrawing(true);
                 setSelectedTool('real-estate');
                 setShowRealEstateSetup(false);
                 console.log('🏠 Citizen: Real estate polygon drawing started');
@@ -376,13 +504,13 @@ export function CitizenDrawingInterface({
       )}
 
       {/* Clear All Button */}
-      {polygonSystem.polygons.length > 0 && !isDrawing && (
+      {polygons.length > 0 && !isDrawing && (
         <button
           onClick={handleClearAll}
           className="w-full flex items-center justify-center gap-2 bg-gray-100 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors"
         >
           <Trash2 className="w-4 h-4" />
-          <span className="text-sm">{t('drawingInterfaces.citizen.actions.clearAll')} ({polygonSystem.polygons.length})</span>
+          <span className="text-sm">{t('drawingInterfaces.citizen.actions.clearAll')} ({polygons.length})</span>
         </button>
       )}
 
@@ -399,11 +527,11 @@ export function CitizenDrawingInterface({
       )}
 
       {/* Statistics */}
-      {(polygonSystem.stats.totalPolygons > 0 || realEstateStats.totalAlerts > 0) && (
+      {(stats.totalPolygons > 0 || realEstateStats.totalAlerts > 0) && (
         <div className="mt-4 p-3 bg-gray-50 rounded-md space-y-1">
-          {polygonSystem.stats.totalPolygons > 0 && (
+          {stats.totalPolygons > 0 && (
             <p className="text-xs text-gray-600">
-              <span className="font-medium">Περιοχές:</span> {polygonSystem.stats.totalPolygons}
+              <span className="font-medium">Περιοχές:</span> {stats.totalPolygons}
             </p>
           )}
 

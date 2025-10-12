@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { HardHat, Ruler, FileText, ExternalLink, Settings, Database, AlertTriangle, Bell, Monitor, Zap, X } from 'lucide-react';
-import { usePolygonSystem } from '@geo-alert/core';
+import { useCentralizedPolygonSystem } from '../systems/polygon-system';
 import { useRealEstateMatching } from '@/services/real-estate-monitor/useRealEstateMatching';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import type { RealEstatePolygon } from '@geo-alert/core';
@@ -38,7 +38,9 @@ export function TechnicalDrawingInterface({
 }: TechnicalDrawingInterfaceProps) {
   const { t } = useTranslationLazy('geo-canvas');
   const [selectedTool, setSelectedTool] = useState<'dxf-viewer' | 'precision' | 'settings' | 'automated-alerts' | null>(null);
+  // ✅ ENTERPRISE: Combine local and centralized drawing state
   const [isDrawing, setIsDrawing] = useState(false);
+  const actualIsDrawing = isDrawing || systemIsDrawing;
 
   // 🚨 Phase 2.5.3: Automated Alerts Integration
   const [showAutomatedAlerts, setShowAutomatedAlerts] = useState(false);
@@ -61,13 +63,17 @@ export function TechnicalDrawingInterface({
   // ✅ ENTERPRISE FIX: Get statistics as object, not function
   const realEstateStats = getStatistics();
 
-  // Use the polygon system from @geo-alert/core
-  const polygonSystem = usePolygonSystem({
-    autoInit: false,
-    debug: true,
-    enableSnapping: true,
-    snapTolerance: 1 // Ultra-precise tolerance για technical users (1px)
-  });
+  // ✅ ENTERPRISE: Use centralized polygon system with Technical role
+  const {
+    polygons,
+    stats,
+    startDrawing,
+    finishDrawing,
+    cancelDrawing,
+    clearAll,
+    isDrawing: systemIsDrawing,
+    currentRole
+  } = useCentralizedPolygonSystem();
 
   // Advanced automated alert creation
   const handleAutomatedAlertCreation = useCallback((polygon: any) => {
@@ -105,9 +111,9 @@ export function TechnicalDrawingInterface({
 
   // Tool selection handler
   const handleToolSelect = useCallback((tool: 'dxf-viewer' | 'precision' | 'settings' | 'automated-alerts') => {
-    if (isDrawing) {
+    if (actualIsDrawing) {
       // Cancel current drawing
-      polygonSystem.cancelDrawing();
+      cancelDrawing();
       setIsDrawing(false);
     }
 
@@ -123,7 +129,7 @@ export function TechnicalDrawingInterface({
 
       case 'precision':
         // Ultra-precision polygon mode
-        polygonSystem.startDrawing('simple', {
+        startDrawing('simple', {
           fillColor: 'rgba(168, 85, 247, 0.2)', // Purple fill (technical theme)
           strokeColor: '#a855f7',
           strokeWidth: 1 // Thin lines για precision
@@ -143,26 +149,26 @@ export function TechnicalDrawingInterface({
         console.log('🚨 Technical: Automated alerts configuration opened');
         break;
     }
-  }, [isDrawing, polygonSystem]);
+  }, [actualIsDrawing, startDrawing, cancelDrawing]);
 
   // Complete drawing
   const handleComplete = useCallback(() => {
-    const polygon = polygonSystem.finishDrawing();
+    const polygon = finishDrawing();
     if (polygon && onPolygonComplete) {
       onPolygonComplete(polygon);
       console.log('✅ Technical: Ultra-precision drawing completed', polygon);
     }
     setIsDrawing(false);
     setSelectedTool(null);
-  }, [polygonSystem, onPolygonComplete]);
+  }, [finishDrawing, onPolygonComplete]);
 
   // Cancel drawing
   const handleCancel = useCallback(() => {
-    polygonSystem.cancelDrawing();
+    cancelDrawing();
     setIsDrawing(false);
     setSelectedTool(null);
     console.log('❌ Technical: Drawing cancelled');
-  }, [polygonSystem]);
+  }, [cancelDrawing]);
 
   return (
     <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-4">
@@ -181,7 +187,7 @@ export function TechnicalDrawingInterface({
         {/* DXF Viewer */}
         <button
           onClick={() => handleToolSelect('dxf-viewer')}
-          disabled={isDrawing}
+          disabled={actualIsDrawing}
           className={`
             flex flex-col items-center justify-center p-4 rounded-lg border-2
             transition-all duration-200 min-h-[100px]
@@ -200,7 +206,7 @@ export function TechnicalDrawingInterface({
         {/* Ultra-Precision Polygon */}
         <button
           onClick={() => handleToolSelect('precision')}
-          disabled={isDrawing && selectedTool !== 'precision'}
+          disabled={actualIsDrawing && selectedTool !== 'precision'}
           className={`
             flex flex-col items-center justify-center p-4 rounded-lg border-2
             transition-all duration-200 min-h-[100px]
@@ -208,7 +214,7 @@ export function TechnicalDrawingInterface({
               ? 'border-purple-500 bg-purple-50'
               : 'border-gray-300 hover:border-gray-400 bg-white'
             }
-            ${isDrawing && selectedTool !== 'precision' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:shadow-md'}
+            ${actualIsDrawing && selectedTool !== 'precision' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:shadow-md'}
           `}
         >
           <Ruler className="w-8 h-8 mb-2 text-blue-600" />
@@ -219,7 +225,7 @@ export function TechnicalDrawingInterface({
         {/* Technical Settings */}
         <button
           onClick={() => handleToolSelect('settings')}
-          disabled={isDrawing}
+          disabled={actualIsDrawing}
           className={`
             flex flex-col items-center justify-center p-4 rounded-lg border-2
             transition-all duration-200 min-h-[100px]
@@ -238,7 +244,7 @@ export function TechnicalDrawingInterface({
         {/* 🚨 Phase 2.5.3: Automated Alerts */}
         <button
           onClick={() => handleToolSelect('automated-alerts')}
-          disabled={isDrawing}
+          disabled={actualIsDrawing}
           className={`
             flex flex-col items-center justify-center p-4 rounded-lg border-2
             transition-all duration-200 min-h-[100px]
@@ -256,7 +262,7 @@ export function TechnicalDrawingInterface({
       </div>
 
       {/* Action Buttons για Precision Mode */}
-      {isDrawing && selectedTool === 'precision' && (
+      {actualIsDrawing && selectedTool === 'precision' && (
         <div className="flex gap-2 mb-4">
           <button
             onClick={handleComplete}
@@ -330,11 +336,11 @@ export function TechnicalDrawingInterface({
       </div>
 
       {/* Statistics */}
-      {(polygonSystem.stats.totalPolygons > 0 || realEstateStats.totalAlerts > 0) && (
+      {(stats.totalPolygons > 0 || realEstateStats.totalAlerts > 0) && (
         <div className="mt-4 p-3 bg-gray-50 rounded-md space-y-1">
-          {polygonSystem.stats.totalPolygons > 0 && (
+          {stats.totalPolygons > 0 && (
             <p className="text-xs text-gray-600">
-              <span className="font-medium">{t('drawingInterfaces.technical.stats.technicalDrawings')}:</span> {polygonSystem.stats.totalPolygons}
+              <span className="font-medium">{t('drawingInterfaces.technical.stats.technicalDrawings')}:</span> {stats.totalPolygons}
             </p>
           )}
 
@@ -462,17 +468,17 @@ export function TechnicalDrawingInterface({
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
             <button
               onClick={() => {
-                if (polygonSystem.polygons.length > 0) {
-                  polygonSystem.polygons.forEach((polygon) => {
+                if (polygons.length > 0) {
+                  polygons.forEach((polygon) => {
                     handleAutomatedAlertCreation(polygon);
                   });
                 }
               }}
-              disabled={polygonSystem.polygons.length === 0}
+              disabled={polygons.length === 0}
               className="flex items-center justify-center gap-2 bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
             >
               <Zap className="w-4 h-4" />
-              <span className="text-sm font-medium">{t('hardcodedTexts.actions.automateAll')} ({polygonSystem.polygons.length})</span>
+              <span className="text-sm font-medium">{t('hardcodedTexts.actions.automateAll')} ({polygons.length})</span>
             </button>
 
             <button

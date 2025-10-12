@@ -11,10 +11,14 @@ import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 
 // Core Alert Engine Integration
 import {
-  useAlertEngine,
-  type AlertRule,
-  type AlertSubscription
+  geoAlertEngine
 } from '@geo-alert/core';
+
+// Use existing unified system types
+import type {
+  AlertRules,
+  AlertZone
+} from '@/core/geo-alert-unified/database/types';
 
 // Existing UI Patterns
 import { useNotificationDrawer } from '@/components/NotificationDrawer.enterprise';
@@ -39,7 +43,8 @@ export function AlertManagementPanel({
   const [activeTab, setActiveTab] = useState<'create' | 'manage' | 'preferences'>('create');
 
   // Alert Engine Integration
-  const { alertDetector, isInitialized } = useAlertEngine();
+  const [isInitialized, setIsInitialized] = useState(false);
+  const alertDetector = geoAlertEngine.detection;
   const { sendSpatialAlert } = useAlertNotifications();
 
   // UI State

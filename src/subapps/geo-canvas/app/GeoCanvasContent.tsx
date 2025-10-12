@@ -12,6 +12,10 @@ import { CitizenDrawingInterface } from '../components/CitizenDrawingInterface';
 import { ProfessionalDrawingInterface } from '../components/ProfessionalDrawingInterface';
 import { TechnicalDrawingInterface } from '../components/TechnicalDrawingInterface';
 import { AlertManagementPanel } from '../components/AlertManagementPanel';
+
+// ✅ NEW: Enterprise Centralized Polygon System Provider
+import { PolygonSystemProvider } from '../systems/polygon-system';
+
 import { useFloorPlanUpload } from '../floor-plan-system/hooks/useFloorPlanUpload';
 import { useFloorPlanControlPoints } from '../floor-plan-system/hooks/useFloorPlanControlPoints';
 import { useGeoTransformation } from '../floor-plan-system/hooks/useGeoTransformation';
@@ -118,6 +122,25 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
   const [floorPlanVisible, setFloorPlanVisible] = useState(true);
   const [floorPlanOpacity, setFloorPlanOpacity] = useState(0.8);
   const mapRef = useRef<any>(null); // MapLibre map instance
+
+  // ✅ NEW: Handle location selection από address search/GPS
+  const handleLocationSelected = useCallback((lat: number, lng: number, address?: any) => {
+    console.log('📍 Location selected, centering map:', { lat, lng, address });
+
+    if (mapRef.current) {
+      // Center και zoom στη νέα θέση
+      mapRef.current.flyTo({
+        center: [lng, lat],
+        zoom: 16, // Κατάλληλο zoom level για διεύθυνση
+        duration: 2000, // 2 seconds animation
+        essential: true
+      });
+
+      console.log('🗺️ Map centered to selected location');
+    } else {
+      console.warn('⚠️ Map reference not available yet');
+    }
+  }, []);
 
   // Floor Plan Upload handler - uses hook
   const handleFloorPlanUploadClick = useCallback(() => {
@@ -229,7 +252,8 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
     );
   }
   return (
-    <div className="w-full h-full flex flex-col bg-gray-900 text-white">
+    <PolygonSystemProvider initialRole="citizen">
+      <div className="w-full h-full flex flex-col bg-gray-900 text-white">
       {/* 📊 HEADER SECTION */}
       <header className="bg-gray-800 border-b border-gray-700 p-4">
         <div className="flex items-center justify-between">
@@ -410,6 +434,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                     showTransformationPreview={true}
                     isPickingCoordinates={controlPoints.pickingState === 'picking-geo'}
                     transformState={transformState}
+                    enablePolygonDrawing={true}
                     onPolygonComplete={() => {
                       console.log('🎯 Polygon completed');
                     }}
@@ -495,6 +520,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                         console.log('🏘️ Citizen polygon completed:', polygon);
                         // TODO: Integrate με alert system
                       }}
+                      onLocationSelected={handleLocationSelected}
                     />
                   </div>
                 )}
@@ -715,6 +741,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
       {/* 🛠️ DEVELOPMENT ERROR REPORTING DASHBOARD */}
       <ErrorReportingDashboard position="bottom-right" minimized={true} />
     </div>
+    </PolygonSystemProvider>
   );
 }
 
