@@ -520,6 +520,33 @@ src/subapps/dxf-viewer/
 
 ---
 
+---
+
+## 🏠 **PHASE 2.5: REAL ESTATE INNOVATION SYSTEM** 🆕 **2025-10-12**
+
+### 1️⃣0️⃣ **PROPERTY STATUS SYSTEM** ✅ **ΟΛΟΚΛΗΡΩΘΗΚΕ**
+- ❌ ΟΧΙ hardcoded status colors σε components
+- ✅ ΜΟΝΟ `src/constants/statuses.ts` (centralized PropertyStatus system)
+- ✅ ΜΟΝΟ `STATUS_COLORS_MAPPING` από `src/subapps/dxf-viewer/config/color-mapping.ts`
+- 📊 **Enhanced PropertyStatus Types**: 10 διαφορετικά statuses
+  - 🟢 `for-sale/for-rent` - Διαθέσιμο
+  - 🔴 `sold/rented` - Πωλημένο/Ενοικιασμένο
+  - 🟡 `under-negotiation` - Υπό διαπραγμάτευση
+  - 🔵 `reserved` - Κρατημένο
+  - 🟣 `coming-soon` - Σύντομα διαθέσιμο
+  - ⚪ `off-market` - Εκτός αγοράς
+  - ⚫ `unavailable` - Μη διαθέσιμο
+  - 🟣 `landowner` - Οικοπεδούχου
+- 🎨 **Zero Duplicates Achievement**: Removed hardcoded statusColors από PropertyPolygonPath.tsx
+- 🏢 **Enterprise Component**: PropertyStatusManager (350+ lines) για Professional/Technical interfaces
+- 📍 Δες: `src/subapps/geo-canvas/components/PropertyStatusManager.tsx`
+- 📍 **Integration**: Professional/Technical interfaces (Property Management mode)
+
+**🎯 Phase 2.5.1 COMPLETE** - Color-Coded Floor Plan System
+**🔄 Phase 2.5.2 NEXT** - Automated Real Estate Monitoring
+
+---
+
 *Ημερομηνία δημιουργίας modular docs: 2025-10-03*
-*Τελευταία ενημέρωση: 2025-10-06 - Settings Hooks centralization (Phase 6)*
+*Τελευταία ενημέρωση: 2025-10-12 - Property Status System centralization (Phase 2.5.1)*
 *Αρχείο υπενθύμισης κεντρικοποίησης - Μη διαγράψεις!*

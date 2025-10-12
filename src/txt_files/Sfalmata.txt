@@ -1,47 +1,31 @@
-PS F:\Pagonis_Nestor> npm install -g pnpm
-⠧^CTerminate batch job (Y/N)? y
-PS F:\Pagonis_Nestor> rmdir /s /q node_modules
->>   del package-lock.json
-Remove-Item : A positional parameter cannot be found that accepts argument '/q'.
-At line:1 char:1
-+ rmdir /s /q node_modules
-+ ~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : InvalidArgument: (:) [Remove-Item], ParameterBindingException
-    + FullyQualifiedErrorId : PositionalParameterNotFound,Microsoft.PowerShell.Commands.RemoveItemCommand
- 
-PS F:\Pagonis_Nestor> npm install -g pnpm; rm -r -fo node_modules; rm -fo package-lock.json; $env:PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD="1";
->>   pnpm install
+PS F:\Pagonis_Nestor> npm run dev:fast
 
-changed 1 package in 1m
+> nextn@0.1.1 dev:fast
+> npx next dev        
 
-1 package is looking for funding
-  run `npm fund` for details
-rm : Cannot find path 'F:\Pagonis_Nestor\node_modules' because it does not exist.
-At line:1 char:22
-+ npm install -g pnpm; rm -r -fo node_modules; rm -fo package-lock.json ...
-+                      ~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : ObjectNotFound: (F:\Pagonis_Nestor\node_modules:String) [Remove-Item], ItemNotFoundExceptio 
-   n
-    + FullyQualifiedErrorId : PathNotFound,Microsoft.PowerShell.Commands.RemoveItemCommand
- 
-rm : Cannot find path 'F:\Pagonis_Nestor\package-lock.json' because it does not exist.
-At line:1 char:46
-+ ... all -g pnpm; rm -r -fo node_modules; rm -fo package-lock.json; $env:P ...
-+                                          ~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : ObjectNotFound: (F:\Pagonis_Nestor\package-lock.json:String) [Remove-Item], ItemNotFoundExc  
-   eption
-    + FullyQualifiedErrorId : PathNotFound,Microsoft.PowerShell.Commands.RemoveItemCommand
- 
- WARN  The "workspaces" field in package.json is not supported by pnpm. Create a "pnpm-workspace.yaml" file instead.
-Downloading maplibre-gl@5.9.0: 7,97 MB/7,97 MB, done
-Downloading firebase@12.4.0: 6,06 MB/6,06 MB, done
-Downloading @napi-rs/canvas-win32-x64-msvc@0.1.80: 14,76 MB/14,76 MB, done
-Downloading @swc/core-win32-x64-msvc@1.13.5: 15,18 MB/15,18 MB, done
-Downloading @firebase/firestore@4.9.2: 5,84 MB/5,84 MB, done
-Downloading @maplibre/maplibre-gl-style-spec@19.3.3: 13,34 MB/13,34 MB, done
-Downloading next@14.2.33: 20,76 MB/20,76 MB, done
- WARN  2 deprecated subdependencies found: glob@7.2.3, inflight@1.0.6
-Packages: +1080
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++  
-Downloading @next/swc-win32-x64-msvc@14.2.33: 41,49 MB/41,49 MB, done
-Progress: resolved 1131, reused 1, downloaded 1084, added 0
+   ▲ Next.js 15.5.4
+   - Local:        http://localhost:3000   
+   - Network:      http://192.168.0.45:3000
+   - Environments: .env.local, .env        
+
+ ✓ Starting...
+It looks like you're trying to use TypeScript but do not have the required package(s) installed.
+Installing dependencies
+
+If you are not trying to use TypeScript, please remove the tsconfig.json file from your package root (and any TypeScript files in your app and pages directories).
+
+
+Installing devDependencies (yarn):
+- typescript
+
+yarn add v1.22.22
+info No lockfile found.
+error Running this command will add the dependency to the workspace root rather than the workspace itself, which might not 
+be what you want - if you really meant it, make it explicit by running this command again with the -W flag (or --ignore-workspace-root-check).
+info Visit https://yarnpkg.com/en/docs/cli/add for documentation about this command.
+Failed to install required TypeScript dependencies, please install them manually to continue:
+yarn add --exact --dev typescript
+
+{ command: 'yarn add --exact --dev typescript' }
+
+PS F:\Pagonis_Nestor> 

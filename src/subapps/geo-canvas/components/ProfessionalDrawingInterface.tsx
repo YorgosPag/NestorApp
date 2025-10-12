@@ -1,0 +1,594 @@
+'use client';
+
+import React, { useState, useCallback } from 'react';
+import { Upload, FileImage, FileText, Layers, Building, Check, X, Bell, BarChart, Settings } from 'lucide-react';
+import { usePolygonSystem } from '@geo-alert/core/polygon-system';
+import { FloorPlanUploadModal } from '../floor-plan-system/components/FloorPlanUploadModal';
+import { PropertyStatusManager } from './PropertyStatusManager';
+import { useRealEstateMatching } from '@/services/real-estate-monitor/useRealEstateMatching';
+import type { PolygonType, RealEstatePolygon } from '@geo-alert/core/polygon-system';
+import type { ParserResult } from '../floor-plan-system/types';
+import type { PropertyStatus } from '@/constants/statuses';
+
+interface ProfessionalDrawingInterfaceProps {
+  mapRef: React.RefObject<any>;
+  onPolygonComplete?: (polygon: any) => void;
+  onFloorPlanUploaded?: (floorPlan: any) => void;
+  onRealEstateAlertCreated?: (alert: RealEstatePolygon) => void;
+}
+
+/**
+ * 🏢 GEO-ALERT Phase 2.5.3: Enhanced Professional Drawing Interface
+ *
+ * Interface για επαγγελματίες (μεσίτες, κατασκευαστές) με:
+ * - Floor Plan Upload (DXF, PDF, DWG, PNG, JPG)
+ * - Auto-detection algorithms για κατόψεις
+ * - Batch polygon creation
+ * - Integration με existing floor-plan-system
+ * - 🏠 Real Estate Monitoring Integration (Phase 2.5.3)
+ *
+ * Professional features:
+ * - Upload κατόψεων (image/PDF)
+ * - Auto-detection of rooms/properties
+ * - Batch polygon creation
+ * - Advanced georeferencing
+ * - Real Estate Alert Management
+ * - Market Monitoring Dashboard
+ */
+export function ProfessionalDrawingInterface({
+  mapRef,
+  onPolygonComplete,
+  onFloorPlanUploaded,
+  onRealEstateAlertCreated
+}: ProfessionalDrawingInterfaceProps) {
+  const [selectedTool, setSelectedTool] = useState<'upload' | 'polygon' | 'auto-detect' | 'property-manager' | 'monitoring-dashboard' | null>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [parserResult, setParserResult] = useState<ParserResult | null>(null);
+  const [isParsing, setIsParsing] = useState(false);
+
+  // 🏠 Phase 2.5: Property Status Management
+  const [showPropertyManager, setShowPropertyManager] = useState(false);
+  const [currentPropertyStatus, setCurrentPropertyStatus] = useState<PropertyStatus>('for-sale');
+
+  // 🏠 Phase 2.5.3: Real Estate Monitoring Integration
+  const [showMonitoringDashboard, setShowMonitoringDashboard] = useState(false);
+  const [batchMonitoringMode, setBatchMonitoringMode] = useState(false);
+
+  // Real Estate Monitoring Integration
+  const {
+    addRealEstatePolygon,
+    getRealEstateAlerts,
+    statistics: realEstateStats,
+    exportMatches
+  } = useRealEstateMatching();
+
+  // Use the polygon system from @geo-alert/core
+  const polygonSystem = usePolygonSystem({
+    autoInit: false,
+    debug: true,
+    enableSnapping: true,
+    snapTolerance: 10 // Smaller tolerance για professional precision
+  });
+
+  // 🏠 Phase 2.5: Property Status Management Handlers
+  const handlePropertyStatusChange = useCallback((status: PropertyStatus) => {
+    setCurrentPropertyStatus(status);
+    console.log('🏢 Professional: Property status changed to', status);
+    // TODO: Update active polygon/property status
+  }, []);
+
+  const handlePropertyManagerToggle = useCallback(() => {
+    setShowPropertyManager(!showPropertyManager);
+    setSelectedTool(showPropertyManager ? null : 'property-manager');
+  }, [showPropertyManager]);
+
+  // Professional batch real estate monitoring handler
+  const handleBatchRealEstateMonitoring = useCallback((polygons: any[]) => {
+    console.log('🏢 Professional: Setting up batch real estate monitoring for', polygons.length, 'polygons');
+
+    polygons.forEach((polygon, index) => {
+      const realEstatePolygon: RealEstatePolygon = {
+        ...polygon,
+        type: 'real-estate',
+        alertSettings: {
+          enabled: true,
+          priceRange: { min: 100000, max: 1000000 }, // Professional range
+          propertyTypes: ['apartment', 'house', 'commercial'],
+          includeExclude: 'include'
+        }
+      };
+
+      addRealEstatePolygon(realEstatePolygon);
+
+      if (onRealEstateAlertCreated) {
+        onRealEstateAlertCreated(realEstatePolygon);
+      }
+    });
+
+    console.log('✅ Professional: Batch monitoring setup completed');
+  }, [addRealEstatePolygon, onRealEstateAlertCreated]);
+
+  // Tool selection handler
+  const handleToolSelect = useCallback((tool: 'upload' | 'polygon' | 'auto-detect' | 'property-manager' | 'monitoring-dashboard') => {
+    if (isDrawing) {
+      // Cancel current drawing
+      polygonSystem.cancelDrawing();
+      setIsDrawing(false);
+    }
+
+    setSelectedTool(tool);
+
+    // Start appropriate tool mode
+    switch (tool) {
+      case 'upload':
+        // Open floor plan upload modal
+        setShowUploadModal(true);
+        console.log('🏢 Professional: Floor plan upload mode');
+        break;
+
+      case 'polygon':
+        // Professional polygon mode (more precise)
+        polygonSystem.startDrawing('simple', {
+          fillColor: 'rgba(34, 197, 94, 0.3)', // Green fill
+          strokeColor: '#22c55e',
+          strokeWidth: 2
+        });
+        setIsDrawing(true);
+        console.log('🔷 Professional: Precision polygon mode started');
+        break;
+
+      case 'auto-detect':
+        // Auto-detection mode (requires floor plan to be uploaded first)
+        if (!parserResult) {
+          console.warn('⚠️ Professional: Auto-detection requires a floor plan upload first');
+          // Fallback to upload mode
+          setShowUploadModal(true);
+        } else {
+          console.log('🤖 Professional: Auto-detection mode activated');
+          // TODO: Implement auto-detection algorithm
+        }
+        break;
+
+      case 'property-manager':
+        // 🏠 Phase 2.5: Property Management mode
+        setShowPropertyManager(true);
+        console.log('🏢 Professional: Property management mode activated');
+        break;
+
+      case 'monitoring-dashboard':
+        // 🏠 Phase 2.5.3: Real Estate Monitoring Dashboard
+        setShowMonitoringDashboard(true);
+        console.log('📊 Professional: Real estate monitoring dashboard opened');
+        break;
+    }
+  }, [isDrawing, polygonSystem, parserResult]);
+
+  // Floor plan upload handlers
+  const handleFileSelect = useCallback((file: File) => {
+    setSelectedFile(file);
+    setIsParsing(true);
+
+    // TODO: Parse the file using floor-plan-system parsers
+    // For now, mock the parsing
+    setTimeout(() => {
+      const mockResult: ParserResult = {
+        type: 'raster',
+        bounds: {
+          minX: 0,
+          minY: 0,
+          maxX: 1000,
+          maxY: 1000
+        },
+        imageUrl: URL.createObjectURL(file),
+        metadata: {
+          fileName: file.name,
+          fileSize: file.size,
+          fileType: file.type
+        }
+      };
+
+      setParserResult(mockResult);
+      setIsParsing(false);
+
+      if (onFloorPlanUploaded) {
+        onFloorPlanUploaded(mockResult);
+      }
+
+      console.log('📁 Professional: Floor plan uploaded and parsed', mockResult);
+    }, 2000);
+  }, [onFloorPlanUploaded]);
+
+  const handleUploadModalClose = useCallback(() => {
+    setShowUploadModal(false);
+    setSelectedTool(null);
+  }, []);
+
+  // Complete drawing
+  const handleComplete = useCallback(() => {
+    const polygon = polygonSystem.finishDrawing();
+    if (polygon && onPolygonComplete) {
+      onPolygonComplete(polygon);
+      console.log('✅ Professional: Drawing completed', polygon);
+    }
+    setIsDrawing(false);
+    setSelectedTool(null);
+  }, [polygonSystem, onPolygonComplete]);
+
+  // Cancel drawing
+  const handleCancel = useCallback(() => {
+    polygonSystem.cancelDrawing();
+    setIsDrawing(false);
+    setSelectedTool(null);
+    console.log('❌ Professional: Drawing cancelled');
+  }, [polygonSystem]);
+
+  // Auto-detect rooms/properties
+  const handleAutoDetect = useCallback(() => {
+    if (!parserResult) {
+      console.warn('⚠️ No floor plan available for auto-detection');
+      return;
+    }
+
+    // Mock auto-detection of 3 polygons
+    console.log('🤖 Professional: Running auto-detection algorithm...');
+
+    // Simulate auto-detection delay
+    setTimeout(() => {
+      // Create 3 mock detected polygons
+      for (let i = 1; i <= 3; i++) {
+        const mockPolygon = {
+          id: `auto-detected-${i}`,
+          type: 'property',
+          coordinates: [
+            [100 * i, 100 * i],
+            [200 * i, 100 * i],
+            [200 * i, 200 * i],
+            [100 * i, 200 * i],
+            [100 * i, 100 * i]
+          ],
+          metadata: {
+            detectedType: i === 1 ? 'living-room' : i === 2 ? 'bedroom' : 'kitchen',
+            confidence: 0.85 + (i * 0.05),
+            autoDetected: true
+          }
+        };
+
+        if (onPolygonComplete) {
+          onPolygonComplete(mockPolygon);
+        }
+      }
+
+      console.log('✅ Professional: Auto-detection completed - 3 properties detected');
+    }, 1500);
+
+    setSelectedTool(null);
+  }, [parserResult, onPolygonComplete]);
+
+  return (
+    <>
+      <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-4">
+        {/* Header */}
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">
+            🏢 Εργαλεία Επαγγελματία
+          </h3>
+          <p className="text-sm text-gray-600">
+            Upload κατόψεων και auto-detection για ακίνητα
+          </p>
+        </div>
+
+        {/* Tool Buttons */}
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
+          {/* Floor Plan Upload */}
+          <button
+            onClick={() => handleToolSelect('upload')}
+            disabled={isDrawing}
+            className={`
+              flex flex-col items-center justify-center p-4 rounded-lg border-2
+              transition-all duration-200 min-h-[100px]
+              ${selectedTool === 'upload'
+                ? 'border-green-500 bg-green-50'
+                : 'border-gray-300 hover:border-gray-400 bg-white'
+              }
+              ${isDrawing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:shadow-md'}
+            `}
+          >
+            <Upload className="w-8 h-8 mb-2 text-green-600" />
+            <span className="text-sm font-medium">Upload</span>
+            <span className="text-xs text-gray-500">Κάτοψη</span>
+          </button>
+
+          {/* Precision Polygon */}
+          <button
+            onClick={() => handleToolSelect('polygon')}
+            disabled={isDrawing && selectedTool !== 'polygon'}
+            className={`
+              flex flex-col items-center justify-center p-4 rounded-lg border-2
+              transition-all duration-200 min-h-[100px]
+              ${selectedTool === 'polygon'
+                ? 'border-green-500 bg-green-50'
+                : 'border-gray-300 hover:border-gray-400 bg-white'
+              }
+              ${isDrawing && selectedTool !== 'polygon' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:shadow-md'}
+            `}
+          >
+            <Building className="w-8 h-8 mb-2 text-blue-600" />
+            <span className="text-sm font-medium">Ακίνητο</span>
+            <span className="text-xs text-gray-500">Χειροκίνητα</span>
+          </button>
+
+          {/* Auto-Detection */}
+          <button
+            onClick={() => handleToolSelect('auto-detect')}
+            disabled={isDrawing || !parserResult}
+            className={`
+              flex flex-col items-center justify-center p-4 rounded-lg border-2
+              transition-all duration-200 min-h-[100px]
+              ${selectedTool === 'auto-detect'
+                ? 'border-green-500 bg-green-50'
+                : 'border-gray-300 hover:border-gray-400 bg-white'
+              }
+              ${(isDrawing || !parserResult) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:shadow-md'}
+            `}
+          >
+            <Layers className="w-8 h-8 mb-2 text-purple-600" />
+            <span className="text-sm font-medium">Auto-Detect</span>
+            <span className="text-xs text-gray-500">Αυτόματα</span>
+          </button>
+
+          {/* 🏠 Phase 2.5: Property Status Manager */}
+          <button
+            onClick={() => handleToolSelect('property-manager')}
+            disabled={isDrawing}
+            className={`
+              flex flex-col items-center justify-center p-4 rounded-lg border-2
+              transition-all duration-200 min-h-[100px]
+              ${selectedTool === 'property-manager'
+                ? 'border-orange-500 bg-orange-50'
+                : 'border-gray-300 hover:border-gray-400 bg-white'
+              }
+              ${isDrawing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:shadow-md'}
+            `}
+          >
+            <Building className="w-8 h-8 mb-2 text-orange-600" />
+            <span className="text-sm font-medium">Properties</span>
+            <span className="text-xs text-gray-500">Status</span>
+          </button>
+
+          {/* 🏠 Phase 2.5.3: Real Estate Monitoring Dashboard */}
+          <button
+            onClick={() => handleToolSelect('monitoring-dashboard')}
+            disabled={isDrawing}
+            className={`
+              flex flex-col items-center justify-center p-4 rounded-lg border-2
+              transition-all duration-200 min-h-[100px]
+              ${selectedTool === 'monitoring-dashboard'
+                ? 'border-blue-500 bg-blue-50'
+                : 'border-gray-300 hover:border-gray-400 bg-white'
+              }
+              ${isDrawing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:shadow-md'}
+            `}
+          >
+            <BarChart className="w-8 h-8 mb-2 text-blue-600" />
+            <span className="text-sm font-medium">Monitor</span>
+            <span className="text-xs text-gray-500">Αγορά</span>
+          </button>
+        </div>
+
+        {/* Action Buttons */}
+        {isDrawing && (
+          <div className="flex gap-2 mb-4">
+            <button
+              onClick={handleComplete}
+              className="flex-1 flex items-center justify-center gap-2 bg-green-500 text-white py-3 px-4 rounded-lg hover:bg-green-600 transition-colors"
+            >
+              <Check className="w-5 h-5" />
+              <span className="font-medium">Ολοκλήρωση</span>
+            </button>
+
+            <button
+              onClick={handleCancel}
+              className="flex-1 flex items-center justify-center gap-2 bg-red-500 text-white py-3 px-4 rounded-lg hover:bg-red-600 transition-colors"
+            >
+              <X className="w-5 h-5" />
+              <span className="font-medium">Ακύρωση</span>
+            </button>
+          </div>
+        )}
+
+        {/* Auto-Detection Button */}
+        {selectedTool === 'auto-detect' && parserResult && (
+          <div className="mb-4">
+            <button
+              onClick={handleAutoDetect}
+              className="w-full flex items-center justify-center gap-2 bg-purple-500 text-white py-3 px-4 rounded-lg hover:bg-purple-600 transition-colors"
+            >
+              <Layers className="w-5 h-5" />
+              <span className="font-medium">Ανίχνευση Δωματίων</span>
+            </button>
+          </div>
+        )}
+
+        {/* Floor Plan Status */}
+        {parserResult && (
+          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md">
+            <p className="text-sm text-green-700">
+              <span className="font-medium">Κάτοψη:</span> {parserResult.metadata?.fileName || 'Uploaded'} ✅
+            </p>
+            {parserResult.metadata?.fileSize && (
+              <p className="text-xs text-green-600">
+                Μέγεθος: {(parserResult.metadata.fileSize / 1024 / 1024).toFixed(2)} MB
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Instructions */}
+        {selectedTool && (
+          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+            <p className="text-sm text-blue-700">
+              {selectedTool === 'upload' && '📁 Upload κάτοψης σε format DXF, PDF, PNG, ή JPG'}
+              {selectedTool === 'polygon' && '🏢 Κάντε κλικ για να προσθέσετε σημεία στο ακίνητο. Διπλό κλικ για ολοκλήρωση'}
+              {selectedTool === 'auto-detect' && '🤖 Αυτόματη ανίχνευση δωματίων από την uploaded κάτοψη'}
+              {selectedTool === 'monitoring-dashboard' && '📊 Dashboard για παρακολούθηση αγοράς ακινήτων και analytics'}
+            </p>
+          </div>
+        )}
+
+        {/* Statistics */}
+        {(polygonSystem.stats.totalPolygons > 0 || realEstateStats.totalAlerts > 0) && (
+          <div className="mt-4 p-3 bg-gray-50 rounded-md space-y-1">
+            {polygonSystem.stats.totalPolygons > 0 && (
+              <p className="text-xs text-gray-600">
+                <span className="font-medium">Ακίνητα:</span> {polygonSystem.stats.totalPolygons}
+              </p>
+            )}
+
+            {realEstateStats.totalAlerts > 0 && (
+              <div className="text-xs text-blue-700">
+                <p>
+                  <span className="font-medium">📊 Monitoring Zones:</span> {realEstateStats.totalAlerts}
+                </p>
+                {realEstateStats.totalMatches > 0 && (
+                  <p>
+                    <span className="font-medium">🎯 Detected Properties:</span> {realEstateStats.totalMatches}
+                  </p>
+                )}
+                {realEstateStats.lastCheck && (
+                  <p>
+                    <span className="font-medium">🕐 Last Scan:</span> {new Date(realEstateStats.lastCheck).toLocaleTimeString('el-GR')}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Floor Plan Upload Modal */}
+      <FloorPlanUploadModal
+        isOpen={showUploadModal}
+        onClose={handleUploadModalClose}
+        onFileSelect={handleFileSelect}
+        parserResult={parserResult}
+        selectedFile={selectedFile}
+        isParsing={isParsing}
+      />
+
+      {/* 🏠 Phase 2.5: Property Status Manager */}
+      {showPropertyManager && (
+        <div className="mt-4">
+          <PropertyStatusManager
+            onStatusChange={handlePropertyStatusChange}
+            onColorSchemeChange={(scheme) => {
+              console.log('🏢 Professional: Color scheme changed to', scheme);
+              // TODO: Apply color scheme to floor plan visualization
+            }}
+            onLayerVisibilityChange={(statuses, visible) => {
+              console.log('🏢 Professional: Layer visibility changed', { statuses, visible });
+              // TODO: Toggle property layer visibility
+            }}
+            className="max-w-md"
+          />
+        </div>
+      )}
+
+      {/* 🏠 Phase 2.5.3: Real Estate Monitoring Dashboard */}
+      {showMonitoringDashboard && (
+        <div className="mt-4 bg-white rounded-lg shadow-lg border border-gray-200 p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <BarChart className="w-5 h-5 text-blue-600" />
+              Real Estate Monitoring Dashboard
+            </h3>
+            <button
+              onClick={() => {
+                setShowMonitoringDashboard(false);
+                setSelectedTool(null);
+              }}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Quick Stats */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            <div className="bg-blue-50 p-3 rounded-md">
+              <p className="text-sm font-medium text-blue-900">Monitoring Zones</p>
+              <p className="text-2xl font-bold text-blue-600">{realEstateStats.totalAlerts}</p>
+            </div>
+            <div className="bg-green-50 p-3 rounded-md">
+              <p className="text-sm font-medium text-green-900">Properties Found</p>
+              <p className="text-2xl font-bold text-green-600">{realEstateStats.totalMatches}</p>
+            </div>
+            <div className="bg-orange-50 p-3 rounded-md">
+              <p className="text-sm font-medium text-orange-900">Avg Confidence</p>
+              <p className="text-2xl font-bold text-orange-600">
+                {realEstateStats.averageConfidence ? `${Math.round(realEstateStats.averageConfidence * 100)}%` : '-'}
+              </p>
+            </div>
+            <div className="bg-purple-50 p-3 rounded-md">
+              <p className="text-sm font-medium text-purple-900">Last Scan</p>
+              <p className="text-sm font-bold text-purple-600">
+                {realEstateStats.lastCheck ? new Date(realEstateStats.lastCheck).toLocaleDateString('el-GR') : '-'}
+              </p>
+            </div>
+          </div>
+
+          {/* Professional Actions */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
+            <button
+              onClick={() => setBatchMonitoringMode(!batchMonitoringMode)}
+              className={`flex items-center justify-center gap-2 py-2 px-4 rounded-lg border transition-colors ${
+                batchMonitoringMode
+                  ? 'bg-blue-100 border-blue-300 text-blue-700'
+                  : 'bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              <Settings className="w-4 h-4" />
+              <span className="text-sm font-medium">Batch Mode</span>
+            </button>
+
+            <button
+              onClick={() => {
+                if (polygonSystem.polygons.length > 0) {
+                  handleBatchRealEstateMonitoring(polygonSystem.polygons);
+                }
+              }}
+              disabled={polygonSystem.polygons.length === 0}
+              className="flex items-center justify-center gap-2 bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50"
+            >
+              <Bell className="w-4 h-4" />
+              <span className="text-sm font-medium">Monitor All ({polygonSystem.polygons.length})</span>
+            </button>
+
+            <button
+              onClick={() => {
+                exportMatches('CSV');
+                console.log('📊 Professional: Exporting data to CSV');
+              }}
+              disabled={realEstateStats.totalMatches === 0}
+              className="flex items-center justify-center gap-2 bg-gray-500 text-white py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-50"
+            >
+              <FileText className="w-4 h-4" />
+              <span className="text-sm font-medium">Export CSV</span>
+            </button>
+          </div>
+
+          {/* Professional Tips */}
+          <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+            <h4 className="text-sm font-semibold text-blue-900 mb-2">💡 Professional Tips:</h4>
+            <ul className="text-xs text-blue-700 space-y-1">
+              <li>• Batch Mode: Setup monitoring για multiple polygons ταυτόχρονα</li>
+              <li>• Export: Κατεβάστε τα results για analysis σε Excel/CRM</li>
+              <li>• Real-time: Automatic checks κάθε 30 λεπτά για νέες αγγελίες</li>
+            </ul>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}

@@ -1,12 +1,12 @@
 ﻿# ===================================================================
-# AUTOMATIC DXF VIEWER BACKUP SCRIPT
+# AUTOMATIC SUBAPPS BACKUP SCRIPT
 # ===================================================================
 # Χρήση: .\auto-backup.ps1
 #
 # Τι κάνει:
 # 1. Διαβάζει BACKUP_SUMMARY.json (που έχει γράψει ο Claude)
 # 2. Δημιουργεί CHANGELOG.md αυτόματα
-# 3. Ζιπάρει τον dxf-viewer folder
+# 3. Ζιπάρει ολόκληρο τον subapps folder (geo-canvas, dxf-viewer, κλπ.)
 # 4. ZERO ερωτήσεις - ΠΛΗΡΩΣ ΑΥΤΟΜΑΤΟ!
 # ===================================================================
 
@@ -18,14 +18,14 @@ $Host.UI.RawUI.ForegroundColor = "White"
 
 Write-Host ""
 Write-Host "╔═══════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-Write-Host "║         AUTOMATIC DXF VIEWER BACKUP                      ║" -ForegroundColor Cyan
+Write-Host "║         AUTOMATIC SUBAPPS BACKUP                         ║" -ForegroundColor Cyan
 Write-Host "╚═══════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
 Write-Host ""
 
 # ===================================================================
 # Paths
 # ===================================================================
-$sourcePath = "F:\Pagonis_Nestor\src\subapps\dxf-viewer"
+$sourcePath = "F:\Pagonis_Nestor\src\subapps"
 $destinationRoot = "C:\Users\user\Downloads\BuckUps\Zip_BuckUps-2"
 $summaryFile = "F:\Pagonis_Nestor\BACKUP_SUMMARY.json"
 $timestamp = Get-Date -Format "yyyyMMdd_HHmm"
@@ -168,7 +168,7 @@ $notes
 
 ## 📚 METADATA
 
-- **Source Path:** F:\Pagonis_Nestor\src\subapps\dxf-viewer
+- **Source Path:** F:\Pagonis_Nestor\src\subapps
 - **Backup Location:** C:\Users\user\Downloads\BuckUps\Zip_BuckUps-2
 - **Timestamp:** $timestamp
 $(if ($summary.contributors) {
@@ -221,9 +221,31 @@ Write-Host "⏳ Preparing files..." -ForegroundColor Cyan
 
 New-Item -ItemType Directory -Path $tempFolder -Force | Out-Null
 
-# Copy dxf-viewer folder
+# Copy entire subapps folder (excluding heavy folders)
 Write-Host "   📁 Copying source files..." -ForegroundColor White
-Copy-Item -Path $sourcePath -Destination (Join-Path $tempFolder "dxf-viewer") -Recurse -Force
+
+# Exclude heavy folders that are not needed for backup
+$excludeFolders = @("node_modules", ".next", "dist", "build", ".git", "coverage", "*.log")
+
+# Use robocopy for better performance and exclusion support
+$destination = Join-Path $tempFolder "subapps"
+New-Item -ItemType Directory -Path $destination -Force | Out-Null
+
+# Robocopy with exclusions (much faster)
+$robocopyArgs = @(
+    "`"$sourcePath`"",
+    "`"$destination`"",
+    "/E",        # Copy subdirectories including empty ones
+    "/XD", "node_modules", ".next", "dist", "build", ".git", "coverage", # Exclude directories
+    "/XF", "*.log", "*.tmp",  # Exclude file types
+    "/MT:8",     # Multi-threaded (8 threads)
+    "/NFL",      # No file list
+    "/NDL"       # No directory list
+)
+
+$robocopyCommand = "robocopy " + ($robocopyArgs -join " ")
+Write-Host "   🚀 Using robocopy for optimized copying (excluding node_modules, .next, etc.)..." -ForegroundColor Yellow
+Invoke-Expression $robocopyCommand | Out-Null
 
 # Create CHANGELOG.md with UTF-8 encoding (using Out-File for Greek character support)
 $changelogPath = Join-Path $tempFolder "CHANGELOG.md"
@@ -279,7 +301,7 @@ Write-Host ""
 
 Write-Host "📋 Περιεχόμενα ZIP:" -ForegroundColor Yellow
 Write-Host "   ├── CHANGELOG.md  ← Πλήρεις λεπτομέρειες (auto-generated)" -ForegroundColor White
-Write-Host "   └── dxf-viewer\   ← Source code" -ForegroundColor White
+Write-Host "   └── subapps\      ← Όλα τα subapps (εκτός node_modules, .next, dist)" -ForegroundColor White
 Write-Host ""
 
 Write-Host "🎯 Category: [$category]" -ForegroundColor $(

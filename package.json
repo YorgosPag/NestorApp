@@ -7,7 +7,7 @@
   ],
   "scripts": {
     "dev": "next dev",
-    "dev:fast": "next dev --turbo",
+    "dev:fast": "npx next dev",
     "dev:clean": "npm run clear-cache && next dev",
     "build": "next build",
     "build:clean": "node scripts/clear-cache.js && npm run build",

@@ -3,11 +3,17 @@ import type { PropertyStatus } from '../../../constants/statuses';
 // 🔺 ΕΝΙΑΊΟΣ STATUS_COLORS MAPPER - κεντρική αλήθεια για όλα τα overlay colors
 // Μετατρέπει τα κεντρικά CSS variables σε concrete hex colors για canvas rendering
 export const STATUS_COLORS_MAPPING: Record<PropertyStatus, { stroke: string; fill: string }> = {
-  'for-sale': { stroke: '#22c55e', fill: '#22c55e80' },    // Green - success
-  'for-rent': { stroke: '#3b82f6', fill: '#3b82f680' },    // Blue - info
-  'reserved': { stroke: '#f59e0b', fill: '#f59e0b80' },    // Orange - warning
-  'sold': { stroke: '#ef4444', fill: '#ef444480' },        // Red - error
-  'landowner': { stroke: '#8b5cf6', fill: '#8b5cf680' },   // Purple - special
+  'for-sale': { stroke: '#22c55e', fill: '#22c55e80' },    // 🟢 Green - success
+  'for-rent': { stroke: '#3b82f6', fill: '#3b82f680' },    // 🔵 Blue - info
+  'reserved': { stroke: '#f59e0b', fill: '#f59e0b80' },    // 🟡 Orange - warning
+  'sold': { stroke: '#ef4444', fill: '#ef444480' },        // 🔴 Red - error
+  'landowner': { stroke: '#8b5cf6', fill: '#8b5cf680' },   // 🟣 Purple - special
+  // 🏠 Phase 2.5: Real Estate Innovation System - Enhanced Canvas Colors
+  'rented': { stroke: '#dc2626', fill: '#dc262680' },      // 🔴 Dark Red - rented
+  'under-negotiation': { stroke: '#fbbf24', fill: '#fbbf2480' }, // 🟡 Light Orange - negotiation
+  'coming-soon': { stroke: '#a855f7', fill: '#a855f780' }, // 🟣 Light Purple - coming soon
+  'off-market': { stroke: '#9ca3af', fill: '#9ca3af60' },  // ⚪ Gray - off market
+  'unavailable': { stroke: '#6b7280', fill: '#6b728060' }, // ⚫ Dark Gray - unavailable
 };
 
 // Helper function για backward compatibility

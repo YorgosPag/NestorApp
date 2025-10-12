@@ -11,7 +11,10 @@ export type {
   UniversalPolygon,
   PolygonPoint,
   PolygonStyle,
-  PolygonType
+  PolygonType,
+  RealEstatePolygon,
+  PropertyLocation,
+  PropertyMatchResult
 } from './types';
 
 // Drawing system
@@ -23,7 +26,13 @@ export {
   validatePolygon,
   calculatePolygonArea,
   isPolygonClosed,
-  closePolygon
+  closePolygon,
+  isPointInPolygon,
+  getPolygonBounds,
+  checkPropertyInRealEstatePolygons,
+  checkMultiplePropertiesInRealEstatePolygons,
+  getAlertableProperties,
+  groupPropertyResultsByPolygon
 } from './utils/polygon-utils';
 
 // Converters

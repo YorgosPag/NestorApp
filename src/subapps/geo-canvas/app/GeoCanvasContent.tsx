@@ -9,12 +9,18 @@ import { FloorPlanControls } from '../floor-plan-system/rendering/FloorPlanContr
 import { FloorPlanControlPointPicker } from '../floor-plan-system/components/FloorPlanControlPointPicker';
 import { UserTypeSelector } from '../components/UserTypeSelector';
 import { CitizenDrawingInterface } from '../components/CitizenDrawingInterface';
+import { ProfessionalDrawingInterface } from '../components/ProfessionalDrawingInterface';
+import { TechnicalDrawingInterface } from '../components/TechnicalDrawingInterface';
+import { AlertManagementPanel } from '../components/AlertManagementPanel';
 import { useFloorPlanUpload } from '../floor-plan-system/hooks/useFloorPlanUpload';
 import { useFloorPlanControlPoints } from '../floor-plan-system/hooks/useFloorPlanControlPoints';
 import { useGeoTransformation } from '../floor-plan-system/hooks/useGeoTransformation';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { useSnapEngine } from '../floor-plan-system/snapping';
 import { useOptimizedUserRole } from '@/contexts/OptimizedUserRoleContext';
+import { PageErrorBoundary, ComponentErrorBoundary } from '@/components/ui/ErrorBoundary/ErrorBoundary';
+import ErrorReportingDashboard from '@/components/development/ErrorReportingDashboard';
+import { useAnalytics } from '@/services/AnalyticsBridge';
 import type { GeoCanvasAppProps } from '../types';
 import type { GeoCoordinate, DxfCoordinate } from '../types';
 
@@ -31,6 +37,27 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
   const { t, isLoading } = useTranslationLazy('geo-canvas');
   const { user, setUserType, isCitizen, isProfessional, isTechnical } = useOptimizedUserRole();
   const [activeView, setActiveView] = useState<'foundation' | 'georeferencing' | 'map'>('georeferencing');
+  const [showAlertDashboard, setShowAlertDashboard] = useState(false);
+
+  // **📊 ANALYTICS INTEGRATION**
+  const analytics = useAnalytics();
+
+  // Analytics-enhanced user type selection
+  const handleUserTypeSelect = useCallback((userType: 'citizen' | 'professional' | 'technical') => {
+    // Track analytics before state change
+    analytics.trackUserBehavior('user_type_selected', 'UserTypeSelector', {
+      selectedUserType: userType,
+      previousUserType: user?.userType
+    });
+
+    // Update user analytics context
+    analytics.updateUser(user?.email || 'anonymous', userType);
+
+    // Update state
+    setUserType(userType);
+
+    console.log('🎭 User type selected:', userType);
+  }, [analytics, setUserType, user]);
 
   // 🏢 ENTERPRISE: SINGLE SOURCE OF TRUTH for Control Points
   // Floor Plan Upload hook
@@ -195,6 +222,19 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
           </div>
 
           <div className="flex items-center space-x-4">
+            {/* Phase 2.3: Alert Management Dashboard */}
+            <button
+              onClick={() => setShowAlertDashboard(!showAlertDashboard)}
+              className={`flex items-center space-x-2 px-3 py-2 rounded-md transition-colors ${
+                showAlertDashboard
+                  ? 'bg-orange-600 text-white'
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              }`}
+            >
+              <span className="text-sm">🚨</span>
+              <span className="text-sm font-medium">Alert Dashboard</span>
+            </button>
+
             {/* Phase 2.2: Show Floor Plan Upload ONLY for Professional/Technical users */}
             {(isProfessional || isTechnical) && (
               <FloorPlanUploadButton onClick={handleFloorPlanUploadClick} />
@@ -266,10 +306,12 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                   {/* Phase 2.2: User Type Selector */}
                   {!user?.userType && (
                     <div className="mb-8">
-                      <UserTypeSelector
-                        currentType={user?.userType}
-                        onSelect={setUserType}
-                      />
+                      <ComponentErrorBoundary componentName="UserTypeSelector">
+                        <UserTypeSelector
+                          currentType={user?.userType}
+                          onSelect={handleUserTypeSelect}
+                        />
+                      </ComponentErrorBoundary>
                     </div>
                   )}
 
@@ -326,21 +368,23 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
             {activeView === 'georeferencing' && (
               /* Phase 3: Interactive MapLibre GL JS Workspace */
               <div className="absolute inset-0">
-                <InteractiveMap
-                  className="w-full h-full"
-                  onCoordinateClick={handleCoordinateClick}
-                  showControlPoints={true}
-                  showTransformationPreview={true}
-                  isPickingCoordinates={controlPoints.pickingState === 'picking-geo'}
-                  transformState={transformState}
-                  onPolygonComplete={() => {
-                    console.log('🎯 Polygon completed');
+                <ComponentErrorBoundary componentName="InteractiveMap">
+                  <InteractiveMap
+                    className="w-full h-full"
+                    onCoordinateClick={handleCoordinateClick}
+                    showControlPoints={true}
+                    showTransformationPreview={true}
+                    isPickingCoordinates={controlPoints.pickingState === 'picking-geo'}
+                    transformState={transformState}
+                    onPolygonComplete={() => {
+                      console.log('🎯 Polygon completed');
+                    }}
+                    onMapReady={(map) => {
+                      console.log('🗺️ Map ready - storing reference');
+                      mapRef.current = map;
                   }}
-                  onMapReady={(map) => {
-                    console.log('🗺️ Map ready - storing reference');
-                    mapRef.current = map;
-                  }}
-                />
+                  />
+                </ComponentErrorBoundary>
 
                 {/* 🗺️ FLOOR PLAN CANVAS LAYER */}
                 {floorPlanUpload.result && floorPlanUpload.result.success && (
@@ -416,6 +460,52 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                       onPolygonComplete={(polygon) => {
                         console.log('🏘️ Citizen polygon completed:', polygon);
                         // TODO: Integrate με alert system
+                      }}
+                    />
+                  </div>
+                )}
+
+                {/* 🏢 PROFESSIONAL DRAWING INTERFACE (Phase 2.2.3) */}
+                {isProfessional && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '16px',
+                      left: '16px',
+                      zIndex: 200,
+                      maxWidth: '360px'
+                    }}
+                  >
+                    <ProfessionalDrawingInterface
+                      mapRef={mapRef}
+                      onPolygonComplete={(polygon) => {
+                        console.log('🏢 Professional polygon completed:', polygon);
+                        // TODO: Integrate με alert system
+                      }}
+                      onFloorPlanUploaded={(floorPlan) => {
+                        console.log('📁 Professional floor plan uploaded:', floorPlan);
+                        // TODO: Integrate με georeferencing system
+                      }}
+                    />
+                  </div>
+                )}
+
+                {/* 🛠️ TECHNICAL DRAWING INTERFACE (Phase 2.2.4) */}
+                {isTechnical && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '16px',
+                      left: '16px',
+                      zIndex: 200,
+                      maxWidth: '360px'
+                    }}
+                  >
+                    <TechnicalDrawingInterface
+                      mapRef={mapRef}
+                      onPolygonComplete={(polygon) => {
+                        console.log('🛠️ Technical polygon completed:', polygon);
+                        // TODO: Integrate με alert system και DXF precision system
                       }}
                     />
                   </div>
@@ -565,8 +655,57 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
         selectedFile={floorPlanUpload.file}
         isParsing={floorPlanUpload.isParsing}
       />
+
+      {/* 🚨 ALERT MANAGEMENT DASHBOARD (Phase 2.3) */}
+      {showAlertDashboard && (
+        <div
+          style={{
+            position: 'fixed',
+            top: '80px',
+            right: '16px',
+            width: '480px',
+            maxHeight: 'calc(100vh - 100px)',
+            zIndex: 300,
+            overflow: 'auto'
+          }}
+        >
+          <ComponentErrorBoundary componentName="AlertManagementPanel">
+            <AlertManagementPanel
+              onClose={() => setShowAlertDashboard(false)}
+              className="shadow-2xl"
+            />
+          </ComponentErrorBoundary>
+        </div>
+      )}
+
+      {/* 🛠️ DEVELOPMENT ERROR REPORTING DASHBOARD */}
+      <ErrorReportingDashboard position="bottom-right" minimized={true} />
     </div>
   );
 }
 
-export default GeoCanvasContent;
+// **🛡️ ENTERPRISE ERROR BOUNDARY WRAPPER**
+// Wrap το GeoCanvasContent με PageErrorBoundary για enterprise error handling
+const GeoCanvasContentWithErrorBoundary = (props: GeoCanvasAppProps) => (
+  <PageErrorBoundary
+    componentName="GeoCanvasContent"
+    enableRetry={true}
+    maxRetries={2}
+    enableReporting={true}
+    onError={(error, errorInfo, errorId) => {
+      // Custom error handling για GEO-ALERT specific errors
+      console.error('🌍 GEO-ALERT Error Captured:', {
+        errorId,
+        component: 'GeoCanvasContent',
+        error: error.message,
+        stack: error.stack,
+        componentStack: errorInfo.componentStack
+      });
+    }}
+  >
+    <GeoCanvasContent {...props} />
+  </PageErrorBoundary>
+);
+
+// Export το wrapped component
+export default GeoCanvasContentWithErrorBoundary;

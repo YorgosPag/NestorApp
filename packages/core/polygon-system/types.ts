@@ -30,6 +30,7 @@ export type PolygonType =
   | 'simple'         // Απλό σχέδιο
   | 'georeferencing' // Control points για georeferencing
   | 'alert-zone'     // Alert zone definitions
+  | 'real-estate'    // Real estate monitoring zones (Phase 2.5.2)
   | 'measurement'    // Μετρήσεις
   | 'annotation';    // Σχόλια
 
@@ -160,6 +161,15 @@ export const DEFAULT_POLYGON_STYLES: Record<PolygonType, PolygonStyle> = {
     pointRadius: 5,
     pointColor: '#dc2626'
   },
+  'real-estate': {
+    strokeColor: '#06b6d4',
+    fillColor: '#06b6d4',
+    strokeWidth: 2,
+    fillOpacity: 0.12,
+    strokeOpacity: 1,
+    pointRadius: 5,
+    pointColor: '#0891b2'
+  },
   measurement: {
     strokeColor: '#10b981',
     fillColor: '#10b981',
@@ -232,4 +242,56 @@ export interface PolygonImportResult {
 
   /** Skipped items */
   skipped: number;
+}
+
+// ============================================================================
+// REAL ESTATE MONITORING TYPES (Phase 2.5.2)
+// ============================================================================
+
+/**
+ * Real estate polygon with alert settings
+ */
+export interface RealEstatePolygon extends UniversalPolygon {
+  type: 'real-estate';
+  alertSettings: {
+    enabled: boolean;
+    priceRange?: { min?: number; max?: number };
+    propertyTypes?: string[];
+    minSize?: number;
+    maxSize?: number;
+    priority: 1 | 2 | 3 | 4 | 5;
+    includeExclude: 'include' | 'exclude';
+  };
+}
+
+/**
+ * Property location from real estate platforms
+ */
+export interface PropertyLocation {
+  id: string;
+  coordinates: {
+    lat: number;
+    lng: number;
+  };
+  address: string;
+  price?: number;
+  size?: number;
+  type?: string;
+  url?: string;
+  source: 'spitogatos' | 'xe' | 'remax' | 'other';
+  scrapedAt: Date;
+}
+
+/**
+ * Property match result
+ */
+export interface PropertyMatchResult {
+  property: PropertyLocation;
+  matchedPolygons: {
+    polygon: RealEstatePolygon;
+    confidence: number;
+    distance: number;
+  }[];
+  shouldAlert: boolean;
+  alertReason?: string;
 }

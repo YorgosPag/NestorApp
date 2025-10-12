@@ -3,6 +3,7 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home, ArrowLeft, Bug, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { errorTracker } from '@/services/ErrorTracker';
 
 interface ErrorInfo {
   componentStack: string;
@@ -59,8 +60,33 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     const { onError, componentName } = this.props;
-    
+
     this.setState({ errorInfo });
+
+    // **🚀 INTEGRATION WITH ERRORTRACKER SERVICE**
+    // Capture error με το ErrorTracker service
+    const trackerErrorId = errorTracker.captureError(
+      error,
+      'error',
+      'system',
+      {
+        component: componentName || 'ErrorBoundary',
+        action: 'React Component Error',
+        metadata: {
+          componentStack: errorInfo.componentStack,
+          retryCount: this.state.retryCount,
+          userAgent: navigator.userAgent,
+          url: window.location.href,
+          userId: this.getUserId(),
+          // ErrorBoundary specific context
+          errorBoundaryComponent: componentName || 'Unknown',
+          hasCustomFallback: !!this.props.fallback,
+          enableRetry: this.props.enableRetry,
+          maxRetries: this.props.maxRetries,
+          isolateError: this.props.isolateError
+        }
+      }
+    );
 
     // Enhanced error logging
     const enhancedError = {
@@ -70,7 +96,8 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
       userAgent: navigator.userAgent,
       url: window.location.href,
       userId: this.getUserId(),
-      errorInfo
+      errorInfo,
+      trackerErrorId // Add ErrorTracker ID
     };
 
     // Log to console in development
@@ -79,12 +106,13 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
       console.error('Error:', error);
       console.error('Component Stack:', errorInfo.componentStack);
       console.error('Error Stack:', error.stack);
+      console.error('ErrorTracker ID:', trackerErrorId);
       console.groupEnd();
     }
 
-    // Call custom error handler
+    // Call custom error handler με ErrorTracker ID
     if (onError && this.state.errorId) {
-      onError(error, errorInfo, this.state.errorId);
+      onError(error, errorInfo, trackerErrorId || this.state.errorId);
     }
 
     // Auto-retry after delay if enabled
@@ -373,11 +401,29 @@ export function withErrorBoundary<T extends {}>(
   return WrappedComponent;
 }
 
-// Hook for manual error reporting
+// Hook for manual error reporting με ErrorTracker integration
 export function useErrorReporting() {
   return {
     reportError: (error: Error, context?: Record<string, any>) => {
+      // **🚀 USE ERRORTRACKER SERVICE**
+      const errorId = errorTracker.captureError(
+        error,
+        'error',
+        'user',
+        {
+          component: 'Manual Error Report',
+          action: 'useErrorReporting Hook',
+          metadata: {
+            ...context,
+            manual: true,
+            hookUsage: true
+          }
+        }
+      );
+
+      // Legacy error report για backward compatibility
       const errorReport = {
+        errorId, // Include ErrorTracker ID
         message: error.message,
         stack: error.stack,
         context,
@@ -385,10 +431,29 @@ export function useErrorReporting() {
         url: window.location.href,
         userAgent: navigator.userAgent
       };
-      
+
       console.error('Manual error report:', errorReport);
-      // In a real app, send to error reporting service
-    }
+      return errorId; // Return ErrorTracker ID για reference
+    },
+
+    // **🆕 NEW: Direct access to ErrorTracker methods**
+    captureUserError: (message: string, action: string, metadata?: any) => {
+      return errorTracker.captureUserError(message, action, metadata);
+    },
+
+    captureNetworkError: (url: string, status: number, statusText: string, method?: string) => {
+      return errorTracker.captureNetworkError(url, status, statusText, method);
+    },
+
+    capturePerformanceIssue: (metric: string, value: number, threshold: number) => {
+      return errorTracker.capturePerformanceIssue(metric, value, threshold);
+    },
+
+    // Get error statistics
+    getErrorStats: () => errorTracker.getStats(),
+
+    // Clear all errors
+    clearErrors: () => errorTracker.clearErrors()
   };
 }
 

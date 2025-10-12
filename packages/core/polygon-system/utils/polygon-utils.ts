@@ -9,7 +9,10 @@
 import type {
   UniversalPolygon,
   PolygonPoint,
-  PolygonValidationResult
+  PolygonValidationResult,
+  RealEstatePolygon,
+  PropertyLocation,
+  PropertyMatchResult
 } from '../types';
 
 /**
@@ -420,4 +423,272 @@ function pointToLineDistance(
   const dy = point.y - yy;
 
   return Math.sqrt(dx * dx + dy * dy);
+}
+
+// ============================================================================
+// REAL ESTATE MONITORING FUNCTIONS (Phase 2.5.2)
+// ============================================================================
+
+/**
+ * Check if property location matches real estate polygons
+ */
+export function checkPropertyInRealEstatePolygons(
+  property: PropertyLocation,
+  polygons: RealEstatePolygon[],
+  toleranceMeters = 100
+): PropertyMatchResult {
+  const matchedPolygons: PropertyMatchResult['matchedPolygons'] = [];
+
+  for (const polygon of polygons) {
+    // Convert lat/lng to x/y for point-in-polygon test
+    const point: PolygonPoint = {
+      x: property.coordinates.lng,
+      y: property.coordinates.lat
+    };
+
+    const isInside = isPointInPolygon(point, polygon);
+    const distance = calculateDistanceToPolygonCenter(property.coordinates, polygon);
+
+    if (isInside || distance <= toleranceMeters) {
+      const confidence = calculateMatchConfidence(property.coordinates, polygon, distance, isInside);
+
+      matchedPolygons.push({
+        polygon,
+        confidence,
+        distance
+      });
+    }
+  }
+
+  const shouldAlert = determineShouldAlert(property, matchedPolygons);
+  const alertReason = generateAlertReason(property, matchedPolygons);
+
+  return {
+    property,
+    matchedPolygons,
+    shouldAlert,
+    alertReason
+  };
+}
+
+/**
+ * Calculate distance from property to polygon center in meters
+ */
+function calculateDistanceToPolygonCenter(
+  coordinates: { lat: number; lng: number },
+  polygon: UniversalPolygon
+): number {
+  const center = calculatePolygonCenterLatLng(polygon);
+  return calculateHaversineDistance(coordinates, center);
+}
+
+/**
+ * Calculate polygon center for lat/lng coordinates
+ */
+function calculatePolygonCenterLatLng(polygon: UniversalPolygon): { lat: number; lng: number } {
+  let latSum = 0;
+  let lngSum = 0;
+
+  for (const point of polygon.points) {
+    latSum += point.y; // y = lat
+    lngSum += point.x; // x = lng
+  }
+
+  return {
+    lat: latSum / polygon.points.length,
+    lng: lngSum / polygon.points.length
+  };
+}
+
+/**
+ * Calculate distance between two lat/lng points using Haversine formula
+ */
+function calculateHaversineDistance(
+  point1: { lat: number; lng: number },
+  point2: { lat: number; lng: number }
+): number {
+  const R = 6371000; // Earth radius in meters
+  const dLat = toRadians(point2.lat - point1.lat);
+  const dLng = toRadians(point2.lng - point1.lng);
+
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRadians(point1.lat)) * Math.cos(toRadians(point2.lat)) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+/**
+ * Convert degrees to radians
+ */
+function toRadians(degrees: number): number {
+  return degrees * (Math.PI / 180);
+}
+
+/**
+ * Calculate match confidence based on distance and polygon settings
+ */
+function calculateMatchConfidence(
+  coordinates: { lat: number; lng: number },
+  polygon: RealEstatePolygon,
+  distance: number,
+  isInside: boolean
+): number {
+  let baseConfidence = polygon.alertSettings.includeExclude === 'include' ? 0.8 : 0.2;
+
+  if (isInside) {
+    baseConfidence += 0.2;
+  }
+
+  // Distance weighting: closer to center = higher confidence
+  const maxDistance = 1000; // 1km max distance for confidence calculation
+  const distanceWeight = Math.max(0, 1 - (distance / maxDistance));
+
+  return Math.min(1, baseConfidence + (distanceWeight * 0.1));
+}
+
+/**
+ * Determine if property should trigger alert based on polygon settings
+ */
+function determineShouldAlert(
+  property: PropertyLocation,
+  matches: PropertyMatchResult['matchedPolygons']
+): boolean {
+  if (matches.length === 0) return false;
+
+  for (const match of matches) {
+    const { polygon } = match;
+    const { alertSettings } = polygon;
+
+    if (!alertSettings.enabled) continue;
+
+    // 'exclude' polygons prevent alerts
+    if (alertSettings.includeExclude === 'exclude') {
+      return false;
+    }
+
+    // Check price range
+    if (alertSettings.priceRange && property.price) {
+      const { min, max } = alertSettings.priceRange;
+      if ((min && property.price < min) || (max && property.price > max)) {
+        continue;
+      }
+    }
+
+    // Check property type
+    if (alertSettings.propertyTypes && property.type) {
+      if (!alertSettings.propertyTypes.includes(property.type)) {
+        continue;
+      }
+    }
+
+    // Check size range
+    if (property.size) {
+      if (alertSettings.minSize && property.size < alertSettings.minSize) {
+        continue;
+      }
+      if (alertSettings.maxSize && property.size > alertSettings.maxSize) {
+        continue;
+      }
+    }
+
+    // If we reach here, this polygon wants to alert
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Generate human-readable alert reason
+ */
+function generateAlertReason(
+  property: PropertyLocation,
+  matches: PropertyMatchResult['matchedPolygons']
+): string | undefined {
+  if (matches.length === 0) return undefined;
+
+  const includingPolygons = matches.filter(m => m.polygon.alertSettings.includeExclude === 'include');
+  const excludingPolygons = matches.filter(m => m.polygon.alertSettings.includeExclude === 'exclude');
+
+  if (excludingPolygons.length > 0) {
+    const polygonNames = excludingPolygons.map(m => m.polygon.metadata?.description || m.polygon.id);
+    return `Αποκλείεται από: ${polygonNames.join(', ')}`;
+  }
+
+  if (includingPolygons.length > 0) {
+    const bestMatch = includingPolygons.reduce((best, current) =>
+      current.confidence > best.confidence ? current : best
+    );
+
+    const polygonName = bestMatch.polygon.metadata?.description || bestMatch.polygon.id;
+    const details = [];
+    if (property.price) details.push(`€${property.price.toLocaleString()}`);
+    if (property.size) details.push(`${property.size}m²`);
+    if (property.type) details.push(property.type);
+
+    return `Βρέθηκε στην περιοχή "${polygonName}" (${Math.round(bestMatch.distance)}m από κέντρο)${details.length ? ` - ${details.join(', ')}` : ''}`;
+  }
+
+  return undefined;
+}
+
+/**
+ * Batch process multiple properties against real estate polygons
+ */
+export async function checkMultiplePropertiesInRealEstatePolygons(
+  properties: PropertyLocation[],
+  polygons: RealEstatePolygon[],
+  options: {
+    toleranceMeters?: number;
+    batchSize?: number;
+  } = {}
+): Promise<PropertyMatchResult[]> {
+  const { toleranceMeters = 100, batchSize = 50 } = options;
+  const results: PropertyMatchResult[] = [];
+
+  // Process in batches για performance
+  for (let i = 0; i < properties.length; i += batchSize) {
+    const batch = properties.slice(i, i + batchSize);
+
+    const batchResults = batch.map(property =>
+      checkPropertyInRealEstatePolygons(property, polygons, toleranceMeters)
+    );
+
+    results.push(...batchResults);
+
+    // Small delay μεταξύ batches (avoid blocking UI)
+    if (i + batchSize < properties.length) {
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Get properties that should trigger alerts
+ */
+export function getAlertableProperties(results: PropertyMatchResult[]): PropertyMatchResult[] {
+  return results.filter(result => result.shouldAlert);
+}
+
+/**
+ * Group results by polygon for reporting
+ */
+export function groupPropertyResultsByPolygon(results: PropertyMatchResult[]): Map<string, PropertyMatchResult[]> {
+  const groups = new Map<string, PropertyMatchResult[]>();
+
+  for (const result of results) {
+    for (const match of result.matchedPolygons) {
+      const polygonId = match.polygon.id;
+      if (!groups.has(polygonId)) {
+        groups.set(polygonId, []);
+      }
+      groups.get(polygonId)!.push(result);
+    }
+  }
+
+  return groups;
 }

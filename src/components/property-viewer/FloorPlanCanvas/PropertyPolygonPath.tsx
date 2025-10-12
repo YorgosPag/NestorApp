@@ -4,6 +4,8 @@
 
 import { cn } from "@/lib/utils";
 import type { Property } from '@/types/property-viewer';
+import { STATUS_COLORS_MAPPING } from '@/subapps/dxf-viewer/config/color-mapping';
+import type { PropertyStatus } from '@/constants/statuses';
 
 interface PropertyPolygonPathProps {
   property: Property;
@@ -17,13 +19,8 @@ interface PropertyPolygonPathProps {
   isFirstConnectionPoint: boolean;
 }
 
-const statusColors = {
-  'for-sale': '#10b981',
-  'for-rent': '#3b82f6',
-  'sold': '#ef4444',
-  'rented': '#f97316',
-  'reserved': '#eab308',
-};
+// 🏠 Phase 2.5: Use centralized STATUS_COLORS_MAPPING instead of hardcoded colors
+// This ensures consistency across the entire application
 
 export function PropertyPolygonPath({
   property,
@@ -40,7 +37,9 @@ export function PropertyPolygonPath({
     .map((vertex, index) => `${index === 0 ? 'M' : 'L'} ${vertex.x} ${vertex.y}`)
     .join(' ') + ' Z';
 
-  const fillColor = statusColors[property.status as keyof typeof statusColors] || '#cccccc';
+  // 🏠 Phase 2.5: Use centralized color mapping for consistent status colors
+  const statusMapping = STATUS_COLORS_MAPPING[property.status as PropertyStatus];
+  const fillColor = statusMapping?.stroke || '#cccccc'; // Fallback to gray if status not found
 
   let fillOpacity = opacity;
   let strokeWidth = 1;

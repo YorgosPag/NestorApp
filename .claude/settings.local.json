@@ -39,7 +39,20 @@
       "Bash(cmd:*)",
       "Bash(del /S /Q node_modules)",
       "Bash(npm cache clean:*)",
-      "Bash(tasklist)"
+      "Bash(tasklist)",
+      "Bash(npm run typecheck:*)",
+      "Bash(npx typescript tsc:*)",
+      "Bash(pnpm install:*)",
+      "Bash(del \"F:\\Pagonis_Nestor\\src\\components\\error-boundaries\\GlobalErrorBoundary.tsx\")",
+      "Bash(del \"F:\\Pagonis_Nestor\\src\\services\\real-estate-monitor\\GeoMatcher.ts\")",
+      "Bash(/help)",
+      "Bash(/usage)",
+      "Bash(claude config --help)",
+      "Bash(yarn add:*)",
+      "Bash(claude config list)",
+      "WebFetch(domain:docs.claude.com)",
+      "Bash(/cost)",
+      "Bash(claude --print)"
     ],
     "deny": [],
     "ask": []
