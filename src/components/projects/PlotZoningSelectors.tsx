@@ -26,7 +26,7 @@ export function PlotZoningSelectors({ plotData, onPlotDataChange, isEditing, onE
     return (
         <div className="space-y-3">
             <div className="grid grid-cols-[auto_1fr] items-center">
-                 <Select value={plotData.insideLimits} onValueChange={(v) => handleSelectChange('insideLimits', v as any)} disabled={!isEditing}>
+                 <Select value={plotData.insideLimits} onValueChange={(v) => handleSelectChange('insideLimits', v as 'yes' | 'no')} disabled={!isEditing}>
                     <SelectTrigger className="h-8 w-28">
                         <SelectValue />
                     </SelectTrigger>
@@ -38,7 +38,7 @@ export function PlotZoningSelectors({ plotData, onPlotDataChange, isEditing, onE
                 <Label className="text-sm font-medium text-muted-foreground text-left pl-2">Εντός Ορίων</Label>
             </div>
              <div className="grid grid-cols-[auto_1fr] items-center">
-                 <Select value={plotData.insideZone} onValueChange={(v) => handleSelectChange('insideZone', v as any)} disabled={!isEditing}>
+                 <Select value={plotData.insideZone} onValueChange={(v) => handleSelectChange('insideZone', v as 'yes' | 'no')} disabled={!isEditing}>
                     <SelectTrigger className="h-8 w-28">
                         <SelectValue />
                     </SelectTrigger>
@@ -50,7 +50,7 @@ export function PlotZoningSelectors({ plotData, onPlotDataChange, isEditing, onE
                 <Label className="text-sm font-medium text-muted-foreground text-left pl-2">Εντός Ζώνης</Label>
             </div>
             <div className="grid grid-cols-[auto_1fr] items-center">
-                 <Select value={plotData.pilotis} onValueChange={(v) => handleSelectChange('pilotis', v as any)} disabled={!isEditing}>
+                 <Select value={plotData.pilotis} onValueChange={(v) => handleSelectChange('pilotis', v as 'yes' | 'no')} disabled={!isEditing}>
                     <SelectTrigger className="h-8 w-28">
                         <SelectValue />
                     </SelectTrigger>
@@ -62,7 +62,7 @@ export function PlotZoningSelectors({ plotData, onPlotDataChange, isEditing, onE
                 <Label className="text-sm font-medium text-muted-foreground text-left pl-2">Πυλωτή</Label>
             </div>
              <div className="grid grid-cols-[auto_1fr] items-center">
-                 <Select value={plotData.hasRoof} onValueChange={(v) => handleSelectChange('hasRoof', v as any)} disabled={!isEditing}>
+                 <Select value={plotData.hasRoof} onValueChange={(v) => handleSelectChange('hasRoof', v as 'yes' | 'no')} disabled={!isEditing}>
                     <SelectTrigger className="h-8 w-28">
                         <SelectValue />
                     </SelectTrigger>

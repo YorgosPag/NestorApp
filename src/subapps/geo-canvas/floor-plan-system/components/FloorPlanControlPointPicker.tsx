@@ -214,7 +214,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
 
       // Validate inputs
       if (isNaN(dxfPoint.x) || isNaN(dxfPoint.y) || isNaN(geoPoint.lng) || isNaN(geoPoint.lat)) {
-        toast.error('Παρακαλώ εισάγετε έγκυρες συντεταγμένες');
+        toast.error(t('toastMessages.invalidCoordinates'));
         return;
       }
 
@@ -231,7 +231,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
       // Add to points via the hook's internal state
       // Note: We need to access the addPoint method from the hook
       console.log('🔧 Manual point to add:', newPoint);
-      toast.success('Σημείο προστέθηκε χειροκίνητα!');
+      toast.success(t('toastMessages.pointAddedManually'));
 
       // Reset form
       setManualInput({
@@ -245,7 +245,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
 
     } catch (error) {
       console.error('Error adding manual point:', error);
-      toast.error('Σφάλμα κατά την προσθήκη σημείου');
+      toast.error(t('toastMessages.errorAddingPoint'));
     }
   };
 
@@ -254,11 +254,11 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
    */
   const handleCalibrate = () => {
     if (!transformation.isValid) {
-      toast.error('Χρειάζονται τουλάχιστον 3 σημεία για βαθμονόμηση');
+      toast.error(t('toastMessages.needMinimumPoints'));
       return;
     }
 
-    toast.success(`Βαθμονόμηση ολοκληρώθηκε! Ποιότητα: ${transformation.quality?.toUpperCase()}`);
+    toast.success(t('toastMessages.calibrationComplete', { quality: transformation.quality?.toUpperCase() }));
     console.log('🎯 Calibration completed:', transformation);
   };
 
@@ -267,7 +267,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
    */
   const handleSavePoints = () => {
     if (points.length === 0) {
-      toast.error('Δεν υπάρχουν σημεία για αποθήκευση');
+      toast.error(t('toastMessages.noPointsToSave'));
       return;
     }
 
@@ -286,7 +286,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
     link.click();
 
     URL.revokeObjectURL(url);
-    toast.success('Σημεία αποθηκεύτηκαν!');
+    toast.success(t('toastMessages.pointsSaved'));
   };
 
   /**
@@ -303,12 +303,12 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
         if (data.points && Array.isArray(data.points)) {
           // This would need to be implemented in the hook
           console.log('📁 Loading points:', data.points);
-          toast.success(`Φορτώθηκαν ${data.points.length} σημεία!`);
+          toast.success(t('toastMessages.pointsLoaded', { count: data.points.length }));
         } else {
-          toast.error('Μη έγκυρο αρχείο σημείων');
+          toast.error(t('toastMessages.invalidPointsFile'));
         }
       } catch (error) {
-        toast.error('Σφάλμα κατά τη φόρτωση αρχείου');
+        toast.error(t('toastMessages.errorLoadingFile'));
       }
     };
     reader.readAsText(file);
@@ -426,7 +426,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
         }}
       >
         <span>📍 {t('floorPlanControlPoints.title')}</span>
-        <span style={{ fontSize: '12px', opacity: 0.8 }}>✋ Drag</span>
+        <span style={{ fontSize: '12px', opacity: 0.8 }}>✋ {t('floorPlanControlPoints.dragHandle')}</span>
       </div>
 
       {/* TAB NAVIGATION */}
@@ -449,7 +449,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
             transition: 'all 0.2s'
           }}
         >
-          🎯 Visual Picking
+          🎯 {t('floorPlanControlPoints.tabs.visualPicking')}
         </button>
         <button
           onClick={() => setActiveTab('manual')}
@@ -465,7 +465,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
             transition: 'all 0.2s'
           }}
         >
-          📝 Manual Input
+          📝 {t('floorPlanControlPoints.tabs.manualInput')}
         </button>
       </div>
 
@@ -535,12 +535,12 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
           <>
             <div className="mb-4">
               <p className="text-sm text-gray-700 mb-4">
-                💡 Εισάγετε χειροκίνητα τις συντεταγμένες για ακριβείς μετρήσεις
+                {t('floorPlanControlPoints.manualInput.description')}
               </p>
 
               {/* DXF Coordinates */}
               <div className="mb-4 p-3 border border-gray-200 rounded">
-                <h4 className="text-sm font-semibold mb-2 text-gray-700">📐 DXF Συντεταγμένες</h4>
+                <h4 className="text-sm font-semibold mb-2 text-gray-700">📐 {t('floorPlanControlPoints.manualInput.dxfCoordinates')}</h4>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="block text-xs text-gray-600 mb-1">DXF X:</label>
@@ -569,10 +569,10 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
 
               {/* Geo Coordinates */}
               <div className="mb-4 p-3 border border-gray-200 rounded">
-                <h4 className="text-sm font-semibold mb-2 text-gray-700">🌍 Γεωγραφικές Συντεταγμένες</h4>
+                <h4 className="text-sm font-semibold mb-2 text-gray-700">🌍 {t('floorPlanControlPoints.manualInput.geoCoordinates')}</h4>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-xs text-gray-600 mb-1">Γεωγραφικό Μήκος:</label>
+                    <label className="block text-xs text-gray-600 mb-1">{t('floorPlanControlPoints.manualInput.longitude')}:</label>
                     <input
                       type="number"
                       step="any"
@@ -583,7 +583,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-600 mb-1">Γεωγραφικό Πλάτος:</label>
+                    <label className="block text-xs text-gray-600 mb-1">{t('floorPlanControlPoints.manualInput.latitude')}:</label>
                     <input
                       type="number"
                       step="any"
@@ -627,7 +627,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
                 className="w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm font-medium"
                 disabled={!manualInput.dxfX || !manualInput.dxfY || !manualInput.geoLng || !manualInput.geoLat}
               >
-                ✅ Προσθήκη Σημείου
+                ✅ {t('floorPlanControlPoints.manualInput.addPoint')}
               </button>
             </div>
           </>
@@ -646,7 +646,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
             >
-              ⚡ Βαθμονόμηση
+              ⚡ {t('floorPlanControlPoints.actions.calibrate')}
             </button>
 
             {/* Save Points */}
@@ -659,12 +659,12 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
             >
-              💾 Αποθήκευση
+              💾 {t('floorPlanControlPoints.actions.save')}
             </button>
 
             {/* Load Points */}
             <label className="px-3 py-2 bg-purple-600 text-white rounded text-sm font-medium hover:bg-purple-700 transition-colors cursor-pointer">
-              📁 Φόρτωση
+              📁 {t('floorPlanControlPoints.actions.load')}
               <input
                 type="file"
                 accept=".json"
@@ -679,7 +679,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
                 onClick={handleClearAll}
                 className="px-3 py-2 bg-red-600 text-white rounded text-sm font-medium hover:bg-red-700 transition-colors"
               >
-                🗑️ Καθαρισμός
+                🗑️ {t('floorPlanControlPoints.buttons.clearAll')}
               </button>
             )}
           </div>
@@ -689,15 +689,18 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
         <div className="mb-4">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium">
-              Points: {points.length}
+              {t('floorPlanControlPoints.status.points')} {points.length}
             </span>
             {hasMinPoints ? (
               <span className="text-sm text-green-600 font-medium">
-                ✅ Ready for georeferencing
+                ✅ {t('floorPlanControlPoints.status.readyForGeoreferencing')}
               </span>
             ) : (
               <span className="text-sm text-orange-600 font-medium">
-                ⚠️ Need {3 - points.length} more point{3 - points.length !== 1 ? 's' : ''}
+                ⚠️ {t('floorPlanControlPoints.status.needMorePoints', {
+                  count: 3 - points.length,
+                  plural: 3 - points.length !== 1 ? 's' : ''
+                })}
               </span>
             )}
           </div>
@@ -717,7 +720,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
         {transformation.isValid && transformation.quality && (
           <div className="mb-4 p-3 border rounded">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium">Transformation Quality:</span>
+              <span className="text-sm font-medium">{t('floorPlanControlPoints.status.transformationQuality')}</span>
               <span
                 className={`px-2 py-1 rounded text-xs font-semibold ${
                   transformation.quality === 'excellent'

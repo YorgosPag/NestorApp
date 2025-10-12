@@ -28,10 +28,17 @@
     "legal": "Legal Documents",
     "obligations": "Obligations Drafting",
     "dxf": "DXF Panel",
-    "shortcuts": "Shortcuts"
+    "shortcuts": "Shortcuts",
+    "geoCanvas": "Geo-Canvas System"
   },
   "badges": {
     "new": "New",
-    "pro": "PRO"
+    "pro": "PRO",
+    "enterprise": "ENTERPRISE"
+  },
+  "user": {
+    "title": "User",
+    "name": "Nestor Pagonis",
+    "email": "user@example.com"
   }
 }

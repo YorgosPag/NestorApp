@@ -8,16 +8,19 @@
 
 import {
   AlertDetectionSystem,
+  alertDetectionSystem,
   Alert,
   AlertSeverity,
   AlertStatus
 } from '../detection/AlertDetectionSystem';
 import {
   NotificationDispatchEngine,
+  notificationDispatchEngine,
   NotificationStatistics
 } from '../notifications/NotificationDispatchEngine';
 import {
   RulesEngine,
+  rulesEngine,
   RuleEvaluationResult
 } from '../rules/RulesEngine';
 
@@ -157,9 +160,9 @@ export class DashboardService {
   // ========================================================================
 
   private constructor() {
-    this.alertDetection = AlertDetectionSystem.getInstance();
-    this.notificationEngine = NotificationDispatchEngine.getInstance();
-    this.rulesEngine = RulesEngine.getInstance();
+    this.alertDetection = alertDetectionSystem;
+    this.notificationEngine = notificationDispatchEngine;
+    this.rulesEngine = rulesEngine;
 
     // Initialize real-time monitoring
     this.initializeRealTimeMonitoring();

@@ -2,11 +2,12 @@
 
 import React, { useState, useCallback } from 'react';
 import { Upload, FileImage, FileText, Layers, Building, Check, X, Bell, BarChart, Settings } from 'lucide-react';
-import { usePolygonSystem } from '@geo-alert/core/polygon-system';
+import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+import { usePolygonSystem } from '@geo-alert/core';
 import { FloorPlanUploadModal } from '../floor-plan-system/components/FloorPlanUploadModal';
 import { PropertyStatusManager } from './PropertyStatusManager';
 import { useRealEstateMatching } from '@/services/real-estate-monitor/useRealEstateMatching';
-import type { PolygonType, RealEstatePolygon } from '@geo-alert/core/polygon-system';
+import type { PolygonType, RealEstatePolygon } from '@geo-alert/core';
 import type { ParserResult } from '../floor-plan-system/types';
 import type { PropertyStatus } from '@/constants/statuses';
 
@@ -41,6 +42,7 @@ export function ProfessionalDrawingInterface({
   onFloorPlanUploaded,
   onRealEstateAlertCreated
 }: ProfessionalDrawingInterfaceProps) {
+  const { t, isLoading } = useTranslationLazy('geo-canvas');
   const [selectedTool, setSelectedTool] = useState<'upload' | 'polygon' | 'auto-detect' | 'property-manager' | 'monitoring-dashboard' | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -60,9 +62,12 @@ export function ProfessionalDrawingInterface({
   const {
     addRealEstatePolygon,
     getRealEstateAlerts,
-    statistics: realEstateStats,
+    getStatistics,
     exportMatches
   } = useRealEstateMatching();
+
+  // ✅ ENTERPRISE FIX: Get statistics as object, not function
+  const realEstateStats = getStatistics();
 
   // Use the polygon system from @geo-alert/core
   const polygonSystem = usePolygonSystem({
@@ -272,10 +277,10 @@ export function ProfessionalDrawingInterface({
         {/* Header */}
         <div className="mb-4">
           <h3 className="text-lg font-semibold text-gray-900">
-            🏢 Εργαλεία Επαγγελματία
+            {t('drawingInterfaces.professional.title')}
           </h3>
           <p className="text-sm text-gray-600">
-            Upload κατόψεων και auto-detection για ακίνητα
+            {t('drawingInterfaces.professional.subtitle')}
           </p>
         </div>
 
@@ -296,7 +301,7 @@ export function ProfessionalDrawingInterface({
             `}
           >
             <Upload className="w-8 h-8 mb-2 text-green-600" />
-            <span className="text-sm font-medium">Upload</span>
+            <span className="text-sm font-medium">{t('hardcodedTexts.ui.upload')}</span>
             <span className="text-xs text-gray-500">Κάτοψη</span>
           </button>
 
@@ -315,8 +320,8 @@ export function ProfessionalDrawingInterface({
             `}
           >
             <Building className="w-8 h-8 mb-2 text-blue-600" />
-            <span className="text-sm font-medium">Ακίνητο</span>
-            <span className="text-xs text-gray-500">Χειροκίνητα</span>
+            <span className="text-sm font-medium">{t('drawingInterfaces.professional.tools.property')}</span>
+            <span className="text-xs text-gray-500">{t('drawingInterfaces.professional.tools.propertyManual')}</span>
           </button>
 
           {/* Auto-Detection */}
@@ -334,8 +339,8 @@ export function ProfessionalDrawingInterface({
             `}
           >
             <Layers className="w-8 h-8 mb-2 text-purple-600" />
-            <span className="text-sm font-medium">Auto-Detect</span>
-            <span className="text-xs text-gray-500">Αυτόματα</span>
+            <span className="text-sm font-medium">{t('hardcodedTexts.ui.autoDetect')}</span>
+            <span className="text-xs text-gray-500">{t('drawingInterfaces.professional.tools.autoDetectAuto')}</span>
           </button>
 
           {/* 🏠 Phase 2.5: Property Status Manager */}
@@ -353,8 +358,8 @@ export function ProfessionalDrawingInterface({
             `}
           >
             <Building className="w-8 h-8 mb-2 text-orange-600" />
-            <span className="text-sm font-medium">Properties</span>
-            <span className="text-xs text-gray-500">Status</span>
+            <span className="text-sm font-medium">{t('hardcodedTexts.ui.properties')}</span>
+            <span className="text-xs text-gray-500">{t('hardcodedTexts.ui.status')}</span>
           </button>
 
           {/* 🏠 Phase 2.5.3: Real Estate Monitoring Dashboard */}
@@ -372,8 +377,8 @@ export function ProfessionalDrawingInterface({
             `}
           >
             <BarChart className="w-8 h-8 mb-2 text-blue-600" />
-            <span className="text-sm font-medium">Monitor</span>
-            <span className="text-xs text-gray-500">Αγορά</span>
+            <span className="text-sm font-medium">{t('hardcodedTexts.ui.monitor')}</span>
+            <span className="text-xs text-gray-500">{t('drawingInterfaces.professional.tools.monitoringMarket')}</span>
           </button>
         </div>
 
@@ -429,10 +434,11 @@ export function ProfessionalDrawingInterface({
         {selectedTool && (
           <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
             <p className="text-sm text-blue-700">
-              {selectedTool === 'upload' && '📁 Upload κάτοψης σε format DXF, PDF, PNG, ή JPG'}
-              {selectedTool === 'polygon' && '🏢 Κάντε κλικ για να προσθέσετε σημεία στο ακίνητο. Διπλό κλικ για ολοκλήρωση'}
-              {selectedTool === 'auto-detect' && '🤖 Αυτόματη ανίχνευση δωματίων από την uploaded κάτοψη'}
-              {selectedTool === 'monitoring-dashboard' && '📊 Dashboard για παρακολούθηση αγοράς ακινήτων και analytics'}
+              {selectedTool === 'upload' && t('drawingInterfaces.professional.uploadFloorPlan')}
+              {selectedTool === 'polygon' && t('drawingInterfaces.professional.addPropertyPoints')}
+              {selectedTool === 'auto-detect' && t('drawingInterfaces.professional.autoDetectRooms')}
+              {selectedTool === 'property-manager' && t('drawingInterfaces.professional.propertyManager')}
+              {selectedTool === 'monitoring-dashboard' && t('drawingInterfaces.professional.marketDashboard')}
             </p>
           </div>
         )}
@@ -449,16 +455,16 @@ export function ProfessionalDrawingInterface({
             {realEstateStats.totalAlerts > 0 && (
               <div className="text-xs text-blue-700">
                 <p>
-                  <span className="font-medium">📊 Monitoring Zones:</span> {realEstateStats.totalAlerts}
+                  <span className="font-medium">{t('hardcodedTexts.labels.monitoringZones')}</span> {realEstateStats.totalAlerts}
                 </p>
                 {realEstateStats.totalMatches > 0 && (
                   <p>
-                    <span className="font-medium">🎯 Detected Properties:</span> {realEstateStats.totalMatches}
+                    <span className="font-medium">{t('hardcodedTexts.labels.detectedProperties')}</span> {realEstateStats.totalMatches}
                   </p>
                 )}
                 {realEstateStats.lastCheck && (
                   <p>
-                    <span className="font-medium">🕐 Last Scan:</span> {new Date(realEstateStats.lastCheck).toLocaleTimeString('el-GR')}
+                    <span className="font-medium">{t('hardcodedTexts.labels.lastScan')}</span> {new Date(realEstateStats.lastCheck).toLocaleTimeString('el-GR')}
                   </p>
                 )}
               </div>
@@ -501,7 +507,7 @@ export function ProfessionalDrawingInterface({
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <BarChart className="w-5 h-5 text-blue-600" />
-              Real Estate Monitoring Dashboard
+              {t('realEstateMonitoring.title')}
             </h3>
             <button
               onClick={() => {
@@ -517,21 +523,21 @@ export function ProfessionalDrawingInterface({
           {/* Quick Stats */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             <div className="bg-blue-50 p-3 rounded-md">
-              <p className="text-sm font-medium text-blue-900">Monitoring Zones</p>
+              <p className="text-sm font-medium text-blue-900">{t('realEstateMonitoring.stats.monitoringZones')}</p>
               <p className="text-2xl font-bold text-blue-600">{realEstateStats.totalAlerts}</p>
             </div>
             <div className="bg-green-50 p-3 rounded-md">
-              <p className="text-sm font-medium text-green-900">Properties Found</p>
+              <p className="text-sm font-medium text-green-900">{t('realEstateMonitoring.stats.propertiesFound')}</p>
               <p className="text-2xl font-bold text-green-600">{realEstateStats.totalMatches}</p>
             </div>
             <div className="bg-orange-50 p-3 rounded-md">
-              <p className="text-sm font-medium text-orange-900">Avg Confidence</p>
+              <p className="text-sm font-medium text-orange-900">{t('realEstateMonitoring.stats.avgConfidence')}</p>
               <p className="text-2xl font-bold text-orange-600">
                 {realEstateStats.averageConfidence ? `${Math.round(realEstateStats.averageConfidence * 100)}%` : '-'}
               </p>
             </div>
             <div className="bg-purple-50 p-3 rounded-md">
-              <p className="text-sm font-medium text-purple-900">Last Scan</p>
+              <p className="text-sm font-medium text-purple-900">{t('realEstateMonitoring.stats.lastScan')}</p>
               <p className="text-sm font-bold text-purple-600">
                 {realEstateStats.lastCheck ? new Date(realEstateStats.lastCheck).toLocaleDateString('el-GR') : '-'}
               </p>
@@ -549,7 +555,7 @@ export function ProfessionalDrawingInterface({
               }`}
             >
               <Settings className="w-4 h-4" />
-              <span className="text-sm font-medium">Batch Mode</span>
+              <span className="text-sm font-medium">{t('realEstateMonitoring.actions.batchMode')}</span>
             </button>
 
             <button
@@ -562,7 +568,7 @@ export function ProfessionalDrawingInterface({
               className="flex items-center justify-center gap-2 bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50"
             >
               <Bell className="w-4 h-4" />
-              <span className="text-sm font-medium">Monitor All ({polygonSystem.polygons.length})</span>
+              <span className="text-sm font-medium">{t('realEstateMonitoring.actions.monitorAll', { count: polygonSystem.polygons.length })}</span>
             </button>
 
             <button
@@ -574,17 +580,17 @@ export function ProfessionalDrawingInterface({
               className="flex items-center justify-center gap-2 bg-gray-500 text-white py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-50"
             >
               <FileText className="w-4 h-4" />
-              <span className="text-sm font-medium">Export CSV</span>
+              <span className="text-sm font-medium">{t('realEstateMonitoring.actions.exportCsv')}</span>
             </button>
           </div>
 
           {/* Professional Tips */}
           <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-            <h4 className="text-sm font-semibold text-blue-900 mb-2">💡 Professional Tips:</h4>
+            <h4 className="text-sm font-semibold text-blue-900 mb-2">{t('realEstateMonitoring.tips.title')}</h4>
             <ul className="text-xs text-blue-700 space-y-1">
-              <li>• Batch Mode: Setup monitoring για multiple polygons ταυτόχρονα</li>
-              <li>• Export: Κατεβάστε τα results για analysis σε Excel/CRM</li>
-              <li>• Real-time: Automatic checks κάθε 30 λεπτά για νέες αγγελίες</li>
+              <li>{t('realEstateMonitoring.tips.batchMode')}</li>
+              <li>{t('realEstateMonitoring.tips.export')}</li>
+              <li>{t('realEstateMonitoring.tips.realtime')}</li>
             </ul>
           </div>
         </div>

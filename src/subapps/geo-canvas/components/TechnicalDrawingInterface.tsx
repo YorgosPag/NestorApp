@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { HardHat, Ruler, FileText, ExternalLink, Settings, Database, AlertTriangle, Bell, Monitor, Zap } from 'lucide-react';
-import { usePolygonSystem } from '@geo-alert/core/polygon-system';
+import { HardHat, Ruler, FileText, ExternalLink, Settings, Database, AlertTriangle, Bell, Monitor, Zap, X } from 'lucide-react';
+import { usePolygonSystem } from '@geo-alert/core';
 import { useRealEstateMatching } from '@/services/real-estate-monitor/useRealEstateMatching';
-import type { RealEstatePolygon } from '@geo-alert/core/polygon-system';
+import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+import type { RealEstatePolygon } from '@geo-alert/core';
 
 interface TechnicalDrawingInterfaceProps {
   mapRef: React.RefObject<any>;
@@ -35,6 +36,7 @@ export function TechnicalDrawingInterface({
   onPolygonComplete,
   onRealEstateAlertCreated
 }: TechnicalDrawingInterfaceProps) {
+  const { t } = useTranslationLazy('geo-canvas');
   const [selectedTool, setSelectedTool] = useState<'dxf-viewer' | 'precision' | 'settings' | 'automated-alerts' | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
 
@@ -51,10 +53,13 @@ export function TechnicalDrawingInterface({
   const {
     addRealEstatePolygon,
     getRealEstateAlerts,
-    statistics: realEstateStats,
+    getStatistics,
     startPeriodicCheck,
     stopPeriodicCheck
   } = useRealEstateMatching();
+
+  // ✅ ENTERPRISE FIX: Get statistics as object, not function
+  const realEstateStats = getStatistics();
 
   // Use the polygon system from @geo-alert/core
   const polygonSystem = usePolygonSystem({
@@ -164,10 +169,10 @@ export function TechnicalDrawingInterface({
       {/* Header */}
       <div className="mb-4">
         <h3 className="text-lg font-semibold text-gray-900">
-          🛠️ Εργαλεία Μηχανικού
+          {t('drawingInterfaces.technical.title')}
         </h3>
         <p className="text-sm text-gray-600">
-          CAD-level precision με πλήρη DXF/DWG υποστήριξη
+          {t('drawingInterfaces.technical.subtitle')}
         </p>
       </div>
 
@@ -188,8 +193,8 @@ export function TechnicalDrawingInterface({
           `}
         >
           <ExternalLink className="w-8 h-8 mb-2 text-purple-600" />
-          <span className="text-sm font-medium">DXF Viewer</span>
-          <span className="text-xs text-gray-500">Full CAD</span>
+          <span className="text-sm font-medium">{t('hardcodedTexts.ui.dxfViewer')}</span>
+          <span className="text-xs text-gray-500">{t('hardcodedTexts.ui.fullCad')}</span>
         </button>
 
         {/* Ultra-Precision Polygon */}
@@ -207,7 +212,7 @@ export function TechnicalDrawingInterface({
           `}
         >
           <Ruler className="w-8 h-8 mb-2 text-blue-600" />
-          <span className="text-sm font-medium">Ακρίβεια</span>
+          <span className="text-sm font-medium">{t('drawingInterfaces.technical.tools.precision')}</span>
           <span className="text-xs text-gray-500">mm-level</span>
         </button>
 
@@ -226,8 +231,8 @@ export function TechnicalDrawingInterface({
           `}
         >
           <Settings className="w-8 h-8 mb-2 text-gray-600" />
-          <span className="text-sm font-medium">Ρυθμίσεις</span>
-          <span className="text-xs text-gray-500">Προχωρημένα</span>
+          <span className="text-sm font-medium">{t('drawingInterfaces.technical.tools.settings')}</span>
+          <span className="text-xs text-gray-500">{t('drawingInterfaces.technical.tools.settingsAdvanced')}</span>
         </button>
 
         {/* 🚨 Phase 2.5.3: Automated Alerts */}
@@ -245,8 +250,8 @@ export function TechnicalDrawingInterface({
           `}
         >
           <AlertTriangle className="w-8 h-8 mb-2 text-red-600" />
-          <span className="text-sm font-medium">Alerts</span>
-          <span className="text-xs text-gray-500">Αυτόματα</span>
+          <span className="text-sm font-medium">{t('hardcodedTexts.ui.alerts')}</span>
+          <span className="text-xs text-gray-500">{t('drawingInterfaces.technical.tools.alertsAuto')}</span>
         </button>
       </div>
 
@@ -258,14 +263,14 @@ export function TechnicalDrawingInterface({
             className="flex-1 flex items-center justify-center gap-2 bg-purple-500 text-white py-3 px-4 rounded-lg hover:bg-purple-600 transition-colors"
           >
             <Ruler className="w-5 h-5" />
-            <span className="font-medium">Ολοκλήρωση</span>
+            <span className="font-medium">{t('drawingInterfaces.technical.actions.complete')}</span>
           </button>
 
           <button
             onClick={handleCancel}
             className="flex-1 flex items-center justify-center gap-2 bg-red-500 text-white py-3 px-4 rounded-lg hover:bg-red-600 transition-colors"
           >
-            <span className="font-medium">Ακύρωση</span>
+            <span className="font-medium">{t('drawingInterfaces.technical.actions.cancel')}</span>
           </button>
         </div>
       )}
@@ -273,20 +278,20 @@ export function TechnicalDrawingInterface({
       {/* Technical Specs Panel */}
       <div className="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-md">
         <h4 className="text-sm font-medium text-purple-800 mb-2">
-          🔬 Τεχνικές Προδιαγραφές
+          🔬 {t('drawingInterfaces.technical.specifications.title')}
         </h4>
         <div className="grid grid-cols-2 gap-2 text-xs">
           <div className="text-purple-700">
-            <span className="font-medium">Ακρίβεια:</span> ±1mm
+            <span className="font-medium">{t('drawingInterfaces.technical.specifications.accuracy')}:</span> ±1mm
           </div>
           <div className="text-purple-700">
-            <span className="font-medium">Συντεταγμένες:</span> WGS84
+            <span className="font-medium">{t('drawingInterfaces.technical.specifications.coordinates')}:</span> WGS84
           </div>
           <div className="text-purple-700">
-            <span className="font-medium">Formats:</span> DXF, DWG
+            <span className="font-medium">{t('hardcodedTexts.labels.formats')}</span> {t('hardcodedTexts.values.dxfDwg')}
           </div>
           <div className="text-purple-700">
-            <span className="font-medium">CAD Tools:</span> Full
+            <span className="font-medium">{t('hardcodedTexts.labels.cadTools')}</span> {t('hardcodedTexts.values.full')}
           </div>
         </div>
       </div>
@@ -295,10 +300,10 @@ export function TechnicalDrawingInterface({
       {selectedTool && (
         <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
           <p className="text-sm text-blue-700">
-            {selectedTool === 'dxf-viewer' && '🛠️ Άνοιγμα πλήρους DXF Viewer σε νέο tab με όλα τα CAD εργαλεία'}
-            {selectedTool === 'precision' && '📐 Ultra-precision mode: Κάντε κλικ για σημεία με ακρίβεια χιλιοστού'}
-            {selectedTool === 'settings' && '⚙️ Προχωρημένες ρυθμίσεις για τεχνικούς χρήστες'}
-            {selectedTool === 'automated-alerts' && '🚨 Διαμόρφωση αυτοματοποιημένων ειδοποιήσεων με τεχνική ακρίβεια'}
+            {selectedTool === 'dxf-viewer' && t('drawingInterfaces.technical.fullDxfViewer')}
+            {selectedTool === 'precision' && t('drawingInterfaces.technical.instructions.precision')}
+            {selectedTool === 'settings' && t('drawingInterfaces.technical.instructions.settings')}
+            {selectedTool === 'automated-alerts' && t('drawingInterfaces.technical.instructions.automatedAlerts')}
           </p>
         </div>
       )}
@@ -308,7 +313,7 @@ export function TechnicalDrawingInterface({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Database className="w-4 h-4 text-gray-600" />
-            <span className="text-sm text-gray-700">DXF Viewer</span>
+            <span className="text-sm text-gray-700">{t('hardcodedTexts.labels.dxfViewerLabel')}</span>
           </div>
           <a
             href="/dxf/viewer"
@@ -316,11 +321,11 @@ export function TechnicalDrawingInterface({
             rel="noopener noreferrer"
             className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
           >
-            Άνοιγμα <ExternalLink className="w-3 h-3" />
+            {t('drawingInterfaces.technical.openViewer')} <ExternalLink className="w-3 h-3" />
           </a>
         </div>
         <p className="text-xs text-gray-500 mt-1">
-          Πλήρες CAD environment με όλα τα εργαλεία
+          {t('drawingInterfaces.technical.cadEnvironment')}
         </p>
       </div>
 
@@ -329,23 +334,23 @@ export function TechnicalDrawingInterface({
         <div className="mt-4 p-3 bg-gray-50 rounded-md space-y-1">
           {polygonSystem.stats.totalPolygons > 0 && (
             <p className="text-xs text-gray-600">
-              <span className="font-medium">Τεχνικά Σχέδια:</span> {polygonSystem.stats.totalPolygons}
+              <span className="font-medium">{t('drawingInterfaces.technical.stats.technicalDrawings')}:</span> {polygonSystem.stats.totalPolygons}
             </p>
           )}
 
           {realEstateStats.totalAlerts > 0 && (
             <div className="text-xs text-red-700">
               <p>
-                <span className="font-medium">🚨 Automated Alerts:</span> {realEstateStats.totalAlerts}
+                <span className="font-medium">{t('hardcodedTexts.labels.automatedAlerts')}</span> {realEstateStats.totalAlerts}
               </p>
               {realEstateStats.totalMatches > 0 && (
                 <p>
-                  <span className="font-medium">🎯 Technical Matches:</span> {realEstateStats.totalMatches}
+                  <span className="font-medium">{t('hardcodedTexts.labels.technicalMatches')}</span> {realEstateStats.totalMatches}
                 </p>
               )}
               {realEstateStats.averageConfidence && (
                 <p>
-                  <span className="font-medium">📊 Precision:</span> {Math.round(realEstateStats.averageConfidence * 100)}%
+                  <span className="font-medium">{t('hardcodedTexts.labels.precisionLabel')}</span> {Math.round(realEstateStats.averageConfidence * 100)}%
                 </p>
               )}
             </div>
@@ -359,7 +364,7 @@ export function TechnicalDrawingInterface({
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 text-red-600" />
-              Technical Automated Alerts
+              {t('drawingInterfaces.technical.automatedAlerts.title')}
             </h3>
             <button
               onClick={() => {
@@ -376,11 +381,11 @@ export function TechnicalDrawingInterface({
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
             {/* Sensitivity Settings */}
             <div className="space-y-3">
-              <h4 className="text-sm font-semibold text-gray-900">Technical Sensitivity</h4>
+              <h4 className="text-sm font-semibold text-gray-900">{t('hardcodedTexts.labels.technicalSensitivity')}</h4>
 
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Detection Sensitivity
+                  {t('drawingInterfaces.technical.automatedAlerts.detectionSensitivity')}
                 </label>
                 <select
                   value={alertConfiguration.sensitivity}
@@ -390,15 +395,15 @@ export function TechnicalDrawingInterface({
                   }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                 >
-                  <option value="high">High (95%+ confidence)</option>
-                  <option value="medium">Medium (85%+ confidence)</option>
-                  <option value="low">Low (75%+ confidence)</option>
+                  <option value="high">{t('drawingInterfaces.technical.automatedAlerts.sensitivity.high')}</option>
+                  <option value="medium">{t('drawingInterfaces.technical.automatedAlerts.sensitivity.medium')}</option>
+                  <option value="low">{t('drawingInterfaces.technical.automatedAlerts.sensitivity.low')}</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Monitoring Interval (minutes)
+                  {t('drawingInterfaces.technical.automatedAlerts.monitoringInterval')}
                 </label>
                 <select
                   value={alertConfiguration.monitoringInterval}
@@ -408,23 +413,23 @@ export function TechnicalDrawingInterface({
                   }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                 >
-                  <option value={5}>5 minutes (Real-time)</option>
-                  <option value={15}>15 minutes (Frequent)</option>
-                  <option value={30}>30 minutes (Standard)</option>
-                  <option value={60}>60 minutes (Hourly)</option>
+                  <option value={5}>{t('drawingInterfaces.technical.automatedAlerts.intervals.realtime')}</option>
+                  <option value={15}>{t('drawingInterfaces.technical.automatedAlerts.intervals.frequent')}</option>
+                  <option value={30}>{t('drawingInterfaces.technical.automatedAlerts.intervals.standard')}</option>
+                  <option value={60}>{t('drawingInterfaces.technical.automatedAlerts.intervals.hourly')}</option>
                 </select>
               </div>
             </div>
 
             {/* Platform Settings */}
             <div className="space-y-3">
-              <h4 className="text-sm font-semibold text-gray-900">Monitoring Platforms</h4>
+              <h4 className="text-sm font-semibold text-gray-900">{t('hardcodedTexts.labels.monitoringPlatforms')}</h4>
 
               <div className="space-y-2">
                 {[
-                  { id: 'spitogatos', name: 'Spitogatos.gr', icon: '🏠' },
-                  { id: 'xe', name: 'XE.gr', icon: '🏢' },
-                  { id: 'future-platform', name: 'More platforms...', icon: '🔮', disabled: true }
+                  { id: 'spitogatos', name: t('hardcodedTexts.values.spitogatosGr'), icon: '🏠' },
+                  { id: 'xe', name: t('hardcodedTexts.values.xeGr'), icon: '🏢' },
+                  { id: 'future-platform', name: t('drawingInterfaces.technical.automatedAlerts.morePlatforms'), icon: '🔮', disabled: true }
                 ].map((platform) => (
                   <label key={platform.id} className="flex items-center space-x-2">
                     <input
@@ -445,7 +450,7 @@ export function TechnicalDrawingInterface({
                     <span className="text-sm text-gray-700 flex items-center gap-1">
                       <span>{platform.icon}</span>
                       {platform.name}
-                      {platform.disabled && <span className="text-xs text-gray-400">(Coming Soon)</span>}
+                      {platform.disabled && <span className="text-xs text-gray-400">{t('hardcodedTexts.values.comingSoon')}</span>}
                     </span>
                   </label>
                 ))}
@@ -467,7 +472,7 @@ export function TechnicalDrawingInterface({
               className="flex items-center justify-center gap-2 bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
             >
               <Zap className="w-4 h-4" />
-              <span className="text-sm font-medium">Automate All ({polygonSystem.polygons.length})</span>
+              <span className="text-sm font-medium">{t('hardcodedTexts.actions.automateAll')} ({polygonSystem.polygons.length})</span>
             </button>
 
             <button
@@ -478,7 +483,7 @@ export function TechnicalDrawingInterface({
               className="flex items-center justify-center gap-2 bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-600 transition-colors"
             >
               <Monitor className="w-4 h-4" />
-              <span className="text-sm font-medium">Start Monitoring</span>
+              <span className="text-sm font-medium">{t('hardcodedTexts.actions.startMonitoring')}</span>
             </button>
 
             <button
@@ -489,25 +494,25 @@ export function TechnicalDrawingInterface({
               className="flex items-center justify-center gap-2 bg-gray-500 text-white py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors"
             >
               <Settings className="w-4 h-4" />
-              <span className="text-sm font-medium">Stop All</span>
+              <span className="text-sm font-medium">{t('hardcodedTexts.actions.stopAll')}</span>
             </button>
           </div>
 
           {/* Technical Specifications */}
           <div className="bg-red-50 border border-red-200 rounded-md p-3">
-            <h4 className="text-sm font-semibold text-red-900 mb-2">🔬 Technical Specifications:</h4>
+            <h4 className="text-sm font-semibold text-red-900 mb-2">{t('drawingInterfaces.technical.automatedAlerts.technicalSpecifications')}</h4>
             <div className="grid grid-cols-2 gap-2 text-xs text-red-700">
               <div>
-                <span className="font-medium">Precision:</span> Millimeter-level accuracy
+                <span className="font-medium">{t('hardcodedTexts.ui.precision')}:</span> {t('hardcodedTexts.values.millimeterLevel')}
               </div>
               <div>
-                <span className="font-medium">Georeferencing:</span> WGS84 + Local Grid
+                <span className="font-medium">{t('hardcodedTexts.labels.georeferencing')}</span> {t('hardcodedTexts.values.wgs84LocalGrid')}
               </div>
               <div>
-                <span className="font-medium">Confidence Threshold:</span> {Math.round(alertConfiguration.alertThreshold * 100)}%
+                <span className="font-medium">{t('hardcodedTexts.labels.confidenceThreshold')}</span> {Math.round(alertConfiguration.alertThreshold * 100)}%
               </div>
               <div>
-                <span className="font-medium">Processing:</span> Real-time automated
+                <span className="font-medium">{t('hardcodedTexts.labels.processingLabel')}</span> {t('hardcodedTexts.values.realtimeAutomated')}
               </div>
             </div>
           </div>

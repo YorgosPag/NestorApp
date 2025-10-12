@@ -8,6 +8,7 @@ import { ReadOnlyPropertyViewerLayout } from '@/features/read-only-viewer';
 
 import { useUrlPreselect } from '@/features/property-management/hooks/useUrlPreselect';
 import { useViewerProps } from '@/features/property-management/hooks/useViewerProps';
+import type { PublicViewerHookShape } from '@/features/property-management/types/publicViewer';
 
 export function PropertyManagementPageContent() {
   const searchParams = useSearchParams();
@@ -25,7 +26,7 @@ export function PropertyManagementPageContent() {
   });
 
   // Viewer props builder (ίδιες τιμές, ίδια διάταξη)
-  const viewerProps = useViewerProps(hookState as any); // διατηρούμε τη χαλαρότητα τύπων του υπάρχοντος κώδικα
+  const viewerProps = useViewerProps(hookState as PublicViewerHookShape);
 
   // === RENDER (ΑΠΑΡΑΛΛΑΚΤΟ DOM/Tailwind/labels/flows) ===
   return (

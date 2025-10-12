@@ -13,7 +13,8 @@
 
 'use client';
 
-import { EventAnalyticsEngine } from '@geo-alert/core/alert-engine/analytics/EventAnalyticsEngine';
+// TODO: EventAnalyticsEngine not implemented yet - temporarily disabled
+// import { EventAnalyticsEngine } from '@geo-alert/core/alert-engine/analytics/EventAnalyticsEngine';
 import { errorTracker } from './ErrorTracker';
 
 // ============================================================================
@@ -104,7 +105,9 @@ export interface PerformanceMetrics {
 // ============================================================================
 
 export class AnalyticsBridge {
-  private analyticsEngine: EventAnalyticsEngine;
+  // TODO: Temporarily disabled until EventAnalyticsEngine is implemented
+  // private analyticsEngine: EventAnalyticsEngine;
+  private analyticsEngine: any; // Temporary placeholder
   private currentSession: UserSession | null = null;
   private eventQueue: GeoAlertEvent[] = [];
   private isOnline = true;
@@ -122,10 +125,19 @@ export class AnalyticsBridge {
       ...config
     };
 
-    this.analyticsEngine = new EventAnalyticsEngine();
-    this.initializeSession();
-    this.setupEventListeners();
-    this.startPerformanceMonitoring();
+    // TODO: EventAnalyticsEngine to be implemented
+    // this.analyticsEngine = new EventAnalyticsEngine();
+    this.analyticsEngine = null; // Temporary placeholder
+
+    // Defer initialization to prevent setState during render warning
+    if (typeof window !== 'undefined') {
+      // Use setTimeout to defer initialization until after current render cycle
+      setTimeout(() => {
+        this.initializeSession();
+        this.setupEventListeners();
+        this.startPerformanceMonitoring();
+      }, 0);
+    }
   }
 
   // ============================================================================
@@ -210,7 +222,21 @@ export class AnalyticsBridge {
     performance?: GeoAlertEvent['performance'],
     geoContext?: GeoAlertEvent['geoContext']
   ): string {
-    if (!this.config.enabled || !this.currentSession) return '';
+    if (!this.config.enabled) return '';
+
+    // If session not initialized yet (deferred initialization), create minimal session
+    if (!this.currentSession) {
+      this.currentSession = {
+        sessionId: this.generateSessionId(),
+        userId: undefined,
+        userType: undefined,
+        startTime: new Date(),
+        pageViews: 1,
+        events: [],
+        errors: [],
+        features: []
+      };
+    }
 
     const event: GeoAlertEvent = {
       id: this.generateEventId(),
@@ -470,9 +496,15 @@ export class AnalyticsBridge {
       }));
 
       // Send to analytics engine
-      analyticsEvents.forEach(event => {
-        this.analyticsEngine.logEvent(event);
-      });
+      // TODO: Re-enable when EventAnalyticsEngine is implemented
+      // analyticsEvents.forEach(event => {
+      //   this.analyticsEngine.logEvent(event);
+      // });
+
+      // For now, just log to console in dev mode
+      if (this.config.debug) {
+        console.log('[AnalyticsBridge] Would send events:', analyticsEvents);
+      }
 
       this.log('Events flushed', { count: this.eventQueue.length });
 
@@ -577,7 +609,7 @@ export class AnalyticsBridge {
   /**
    * Get analytics engine instance
    */
-  getAnalyticsEngine(): EventAnalyticsEngine {
+  getAnalyticsEngine(): any { // TODO: Return type to be EventAnalyticsEngine when implemented
     return this.analyticsEngine;
   }
 

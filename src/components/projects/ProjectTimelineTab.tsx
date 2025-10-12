@@ -38,8 +38,8 @@ export function ProjectTimelineTab({ project }: { project: Project }) {
                             <Building className="w-4 h-4 text-muted-foreground" />
                             <span className="font-medium">{building.name}</span>
                         </div>
-                        <Badge variant="secondary" className={getStatusColor(building.status as any)}>
-                            {getStatusLabel(building.status as any)}
+                        <Badge variant="secondary" className={getStatusColor(building.status)}>
+                            {getStatusLabel(building.status)}
                         </Badge>
                     </div>
                     <div className="flex items-center gap-4">

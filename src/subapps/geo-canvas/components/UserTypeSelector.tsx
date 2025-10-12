@@ -3,6 +3,7 @@
 import React from 'react';
 import { UserType } from '@/contexts/OptimizedUserRoleContext';
 import { Users, Briefcase, HardHat } from 'lucide-react';
+import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 
 interface UserTypeSelectorProps {
   currentType?: UserType;
@@ -21,6 +22,24 @@ interface UserTypeSelectorProps {
  * - Technical: Full DXF/DWG support με CAD precision
  */
 export function UserTypeSelector({ currentType, onSelect, disabled }: UserTypeSelectorProps) {
+  const { t, isLoading } = useTranslationLazy('geo-canvas');
+
+  // ✅ ENTERPRISE: Return loading state while translations load
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="animate-pulse">
+          <div className="h-6 bg-gray-200 rounded mb-4"></div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-32 bg-gray-200 rounded-lg"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const userTypes: Array<{
     type: UserType;
     label: string;
@@ -30,22 +49,22 @@ export function UserTypeSelector({ currentType, onSelect, disabled }: UserTypeSe
   }> = [
     {
       type: 'citizen',
-      label: 'Πολίτης',
-      description: 'Απλή χρήση - Επιλογή σημείου ή περιοχής στο χάρτη',
+      label: t('userTypeSelector.types.citizen.title'),
+      description: t('userTypeSelector.types.citizen.description'),
       icon: <Users className="w-6 h-6" />,
       color: 'bg-blue-500'
     },
     {
       type: 'professional',
-      label: 'Επαγγελματίας',
-      description: 'Μεσίτες/Κατασκευαστές - Upload κατόψεων (εικόνα/PDF)',
+      label: t('userTypeSelector.types.professional.title'),
+      description: t('userTypeSelector.types.professional.description'),
       icon: <Briefcase className="w-6 h-6" />,
       color: 'bg-green-500'
     },
     {
       type: 'technical',
-      label: 'Τεχνικός',
-      description: 'Μηχανικοί - Πλήρης υποστήριξη DXF/DWG με ακρίβεια CAD',
+      label: t('userTypeSelector.types.technical.title'),
+      description: t('userTypeSelector.types.technical.description'),
       icon: <HardHat className="w-6 h-6" />,
       color: 'bg-purple-500'
     }
@@ -54,7 +73,7 @@ export function UserTypeSelector({ currentType, onSelect, disabled }: UserTypeSe
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
       <h3 className="text-lg font-semibold text-gray-900 mb-4">
-        Επιλέξτε Τύπο Χρήστη
+        {t('userTypeSelector.title')}
       </h3>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -104,8 +123,8 @@ export function UserTypeSelector({ currentType, onSelect, disabled }: UserTypeSe
       {currentType && (
         <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
           <p className="text-sm text-blue-700">
-            <span className="font-medium">Τρέχων τύπος:</span>{' '}
-            {userTypes.find(t => t.type === currentType)?.label}
+            <span className="font-medium">{t('userTypeSelector.currentType')}</span>{' '}
+            {userTypes.find(ut => ut.type === currentType)?.label}
           </p>
         </div>
       )}

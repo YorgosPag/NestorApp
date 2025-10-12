@@ -29,7 +29,7 @@ export function GeoreferencingPanel() {
       <div className="flex items-center justify-center p-8">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-400">Φόρτωση...</p>
+          <p className="text-gray-400">{t('loadingStates.loading')}</p>
         </div>
       </div>
     );
@@ -256,7 +256,7 @@ export function GeoreferencingPanel() {
                 value={newPointData.description}
                 onChange={(e) => setNewPointData(prev => ({ ...prev, description: e.target.value }))}
                 className="w-full bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm"
-                placeholder="Optional description"
+                placeholder={t('hardcodedTexts.placeholders.optionalDescription')}
               />
             </div>
           </div>

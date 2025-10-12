@@ -11,15 +11,15 @@
 // ============================================================================
 
 // Rules Engine
-export * from './rules';
+export * from './rules/RulesEngine';
 export { RulesEngine, rulesEngine as defaultRulesEngine } from './rules/RulesEngine';
 
 // Alert Detection System
-export * from './detection';
+export * from './detection/AlertDetectionSystem';
 export { AlertDetectionSystem, alertDetectionSystem as defaultAlertDetection } from './detection/AlertDetectionSystem';
 
 // Notification Dispatch Engine
-export * from './notifications';
+export * from './notifications/NotificationDispatchEngine';
 export { NotificationDispatchEngine, notificationEngine as defaultNotificationEngine } from './notifications/NotificationDispatchEngine';
 
 // Real-time Dashboard
@@ -38,9 +38,9 @@ export { AnalyticsDashboard, eventAnalyticsEngine as defaultAnalyticsEngine } fr
 // UNIFIED ALERT ENGINE SERVICE
 // ============================================================================
 
-import { RulesEngine } from './rules/RulesEngine';
-import { AlertDetectionSystem } from './detection/AlertDetectionSystem';
-import { NotificationDispatchEngine } from './notifications/NotificationDispatchEngine';
+import { RulesEngine, rulesEngine } from './rules/RulesEngine';
+import { AlertDetectionSystem, alertDetectionSystem } from './detection/AlertDetectionSystem';
+import { NotificationDispatchEngine, notificationDispatchEngine } from './notifications/NotificationDispatchEngine';
 import { DashboardService } from './dashboard/DashboardService';
 import { ConfigurationService } from './configuration/ConfigurationService';
 import { EventAnalyticsEngine } from './analytics/EventAnalyticsEngine';
@@ -69,9 +69,9 @@ export class GeoAlertEngine {
   // ========================================================================
 
   private constructor() {
-    this.rules = RulesEngine.getInstance();
-    this.detection = AlertDetectionSystem.getInstance();
-    this.notifications = NotificationDispatchEngine.getInstance();
+    this.rules = rulesEngine;
+    this.detection = alertDetectionSystem;
+    this.notifications = notificationDispatchEngine;
     this.dashboard = DashboardService.getInstance();
     this.configuration = ConfigurationService.getInstance();
     this.analytics = EventAnalyticsEngine.getInstance();

@@ -41,23 +41,44 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
 
   // **📊 ANALYTICS INTEGRATION**
   const analytics = useAnalytics();
+  const [pendingUserType, setPendingUserType] = useState<string | null>(null);
 
-  // Analytics-enhanced user type selection
+  // Handle analytics tracking after state changes (prevents setState during render warning)
+  React.useEffect(() => {
+    if (pendingUserType && user?.userType === pendingUserType) {
+      // Defer analytics tracking to next tick to prevent setState during render
+      setTimeout(() => {
+        // Track analytics after render cycle is complete
+        analytics.trackUserBehavior('user_type_selected', 'UserTypeSelector', {
+          selectedUserType: pendingUserType,
+          previousUserType: null // We don't track previous anymore to avoid race conditions
+        });
+
+        // Update user analytics context
+        const userId = user?.email || 'anonymous';
+        // ✅ ENTERPRISE: Type guard instead of 'as any'
+        if (pendingUserType && (pendingUserType === 'citizen' || pendingUserType === 'professional' || pendingUserType === 'technical')) {
+          analytics.updateUser(userId, pendingUserType);
+        }
+
+        console.log('🎭 User type analytics tracked:', pendingUserType);
+      }, 0);
+
+      // Clear pending state immediately
+      setPendingUserType(null);
+    }
+  }, [user?.userType, pendingUserType]); // ✅ Removed analytics and user?.email from deps
+
+  // Simplified user type selection (no analytics in render cycle)
   const handleUserTypeSelect = useCallback((userType: 'citizen' | 'professional' | 'technical') => {
-    // Track analytics before state change
-    analytics.trackUserBehavior('user_type_selected', 'UserTypeSelector', {
-      selectedUserType: userType,
-      previousUserType: user?.userType
-    });
+    // Set pending analytics tracking
+    setPendingUserType(userType);
 
-    // Update user analytics context
-    analytics.updateUser(user?.email || 'anonymous', userType);
-
-    // Update state
+    // Update state immediately
     setUserType(userType);
 
     console.log('🎭 User type selected:', userType);
-  }, [analytics, setUserType, user]);
+  }, [setUserType]);
 
   // 🏢 ENTERPRISE: SINGLE SOURCE OF TRUTH for Control Points
   // Floor Plan Upload hook
@@ -68,12 +89,12 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
 
   // Floor Plan Geo-Transformation hook (STEP 2.3) - OFFICIAL SYSTEM
   // ❗ CRITICAL: Memoize options to prevent infinite re-renders
-  const transformOpts = React.useMemo(() => ({ debug: true }), []);
+  const transformOpts = React.useMemo(() => ({ debug: false }), []); // ✅ Disabled debug to prevent console logs
   const transformation = useGeoTransformation(controlPoints.points, transformOpts);
 
   // Snap Engine hook (STEP 3: Snap-to-Point)
   const snapEngine = useSnapEngine(floorPlanUpload.result, {
-    debug: true
+    debug: false // ✅ Disabled debug to prevent console logs
   });
 
   // 🎯 ENTERPRISE: Unified Transform State (Single Source of Truth)
@@ -85,13 +106,13 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
     matrix: transformation.matrix
   }), [controlPoints.points, transformation.isValid, transformation.quality, transformation.rmsError, transformation.matrix]);
 
-  // 🚨 CRITICAL DEBUGGING για GeoCanvasContent
-  console.log('🏢 GeoCanvasContent transformState:', {
-    controlPointsCount: transformState.controlPoints.length,
-    controlPoints: transformState.controlPoints,
-    isCalibrated: transformState.isCalibrated,
-    timestamp: Date.now()
-  });
+  // 🚨 CRITICAL DEBUGGING για GeoCanvasContent (removed to prevent render loops)
+  // console.log('🏢 GeoCanvasContent transformState:', {
+  //   controlPointsCount: transformState.controlPoints.length,
+  //   controlPoints: transformState.controlPoints,
+  //   isCalibrated: transformState.isCalibrated,
+  //   timestamp: Date.now()
+  // });
 
   // Floor Plan Layer state
   const [floorPlanVisible, setFloorPlanVisible] = useState(true);
@@ -202,7 +223,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
       <div className="w-full h-full flex items-center justify-center bg-gray-900 text-white">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-white">Φόρτωση μεταφράσεων...</p>
+          <p className="text-white">{t('loadingStates.loadingTranslations')}</p>
         </div>
       </div>
     );
@@ -232,7 +253,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
               }`}
             >
               <span className="text-sm">🚨</span>
-              <span className="text-sm font-medium">Alert Dashboard</span>
+              <span className="text-sm font-medium">{t('alertDashboard.title')}</span>
             </button>
 
             {/* Phase 2.2: Show Floor Plan Upload ONLY for Professional/Technical users */}
@@ -304,16 +325,29 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                   </p>
 
                   {/* Phase 2.2: User Type Selector */}
-                  {!user?.userType && (
-                    <div className="mb-8">
-                      <ComponentErrorBoundary componentName="UserTypeSelector">
-                        <UserTypeSelector
-                          currentType={user?.userType}
-                          onSelect={handleUserTypeSelect}
-                        />
-                      </ComponentErrorBoundary>
-                    </div>
-                  )}
+                  <div className="mb-8">
+                    <ComponentErrorBoundary componentName="UserTypeSelector">
+                      <UserTypeSelector
+                        currentType={user?.userType}
+                        onSelect={handleUserTypeSelect}
+                      />
+                    </ComponentErrorBoundary>
+
+                    {/* Reset Button - If user already selected type */}
+                    {user?.userType && (
+                      <div className="mt-4 text-center">
+                        <button
+                          onClick={() => {
+                            // ✅ ENTERPRISE: Clear user type by setting to a valid empty state
+                            window.location.reload(); // Reload to reset all user state
+                          }}
+                          className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-md text-sm transition-colors"
+                        >
+                          🔄 {t('userActions.changeUserType')}
+                        </button>
+                      </div>
+                    )}
+                  </div>
 
                   <div className="grid grid-cols-2 gap-6 text-left">
                     <div className="bg-gray-800 p-6 rounded-lg">
@@ -321,10 +355,10 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                         ✅ Phase 1 Complete
                       </h3>
                       <ul className="space-y-2 text-sm text-gray-300">
-                        <li>{t('phaseDetails.phase1Features.foundationStructure')}</li>
-                        <li>{t('phaseDetails.phase1Features.enterpriseTypeSystem')}</li>
-                        <li>{t('phaseDetails.phase1Features.configurationSetup')}</li>
-                        <li>{t('phaseDetails.phase1Features.routerIntegrationReady')}</li>
+                        <li>{isLoading ? '• Δομή θεμελίων' : t('phaseDetails.phase1Features.foundationStructure')}</li>
+                        <li>{isLoading ? '• Σύστημα τύπων Enterprise' : t('phaseDetails.phase1Features.enterpriseTypeSystem')}</li>
+                        <li>{isLoading ? '• Ρύθμιση διαμόρφωσης' : t('phaseDetails.phase1Features.configurationSetup')}</li>
+                        <li>{isLoading ? '• Ενσωμάτωση router έτοιμη' : t('phaseDetails.phase1Features.routerIntegrationReady')}</li>
                       </ul>
                     </div>
 
@@ -333,10 +367,10 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                         ✅ Phase 2 Complete
                       </h3>
                       <ul className="space-y-2 text-sm text-gray-300">
-                        <li>{t('phaseDetails.phase2Features.dxfTransformationEngine')}</li>
-                        <li>{t('phaseDetails.phase2Features.coordinateSystemSupport')}</li>
-                        <li>{t('phaseDetails.phase2Features.georeferencingTools')}</li>
-                        <li>{t('phaseDetails.phase2Features.controlPointManagement')}</li>
+                        <li>{isLoading ? '• Μηχανή μετασχηματισμού DXF' : t('phaseDetails.phase2Features.dxfTransformationEngine')}</li>
+                        <li>{isLoading ? '• Υποστήριξη συστήματος συντεταγμένων' : t('phaseDetails.phase2Features.coordinateSystemSupport')}</li>
+                        <li>{isLoading ? '• Εργαλεία γεωαναφοράς' : t('phaseDetails.phase2Features.georeferencingTools')}</li>
+                        <li>{isLoading ? '• Διαχείριση σημείων ελέγχου' : t('phaseDetails.phase2Features.controlPointManagement')}</li>
                       </ul>
                     </div>
                   </div>
@@ -344,20 +378,20 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                   {/* Architecture Overview */}
                   <div className="mt-8 p-6 bg-gray-800 rounded-lg">
                     <h3 className="text-lg font-semibold mb-4 text-blue-400">
-                      🏗️ {t('phaseDetails.architectureOverview.title')}
+                      🏗️ {isLoading ? 'Επισκόπηση Αρχιτεκτονικής' : t('phaseDetails.architectureOverview.title')}
                     </h3>
                     <div className="text-sm text-gray-300 space-y-2">
                       <p>
-                        <strong>{t('phaseDetails.architectureOverview.centralizedSystem')}</strong>
+                        <strong>{isLoading ? 'Κεντρικοποιημένο Σύστημα: Ενσωματωμένο στο οικοσύστημα DXF Viewer' : t('phaseDetails.architectureOverview.centralizedSystem')}</strong>
                       </p>
                       <p>
-                        <strong>{t('phaseDetails.architectureOverview.technologyStack')}</strong>
+                        <strong>{isLoading ? 'Στοίβα Τεχνολογίας: React + TypeScript + MapLibre GL JS' : t('phaseDetails.architectureOverview.technologyStack')}</strong>
                       </p>
                       <p>
-                        <strong>{t('phaseDetails.architectureOverview.dataFlow')}</strong>
+                        <strong>{isLoading ? 'Ροή Δεδομένων: DXF → Μετασχηματισμός → GeoJSON → Χάρτης → Ειδοποιήσεις' : t('phaseDetails.architectureOverview.dataFlow')}</strong>
                       </p>
                       <p>
-                        <strong>{t('phaseDetails.architectureOverview.standards')}</strong>
+                        <strong>{isLoading ? 'Πρότυπα: ISO 19107, OGC, συμβάσεις AutoCAD' : t('phaseDetails.architectureOverview.standards')}</strong>
                       </p>
                     </div>
                   </div>
@@ -630,9 +664,9 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
       <footer className="bg-gray-800 border-t border-gray-700 p-3">
         <div className="flex items-center justify-between text-sm">
           <div className="flex items-center space-x-4">
-            <span className="text-green-400">● Active</span>
-            <span className="text-green-400">Phase 2: DXF Transformation</span>
-            <span className="text-blue-400">Georeferencing Ready</span>
+            <span className="text-green-400">● {t('footer.status.active')}</span>
+            <span className="text-green-400">{t('footer.status.phase2DxfTransformation')}</span>
+            <span className="text-blue-400">{t('footer.status.georeferencingReady')}</span>
           </div>
 
           <div className="flex items-center space-x-4">
@@ -693,14 +727,16 @@ const GeoCanvasContentWithErrorBoundary = (props: GeoCanvasAppProps) => (
     maxRetries={2}
     enableReporting={true}
     onError={(error, errorInfo, errorId) => {
-      // Custom error handling για GEO-ALERT specific errors
-      console.error('🌍 GEO-ALERT Error Captured:', {
-        errorId,
-        component: 'GeoCanvasContent',
-        error: error.message,
-        stack: error.stack,
-        componentStack: errorInfo.componentStack
-      });
+      // ✅ ENTERPRISE FIX: Defer error logging to avoid setState during render
+      setTimeout(() => {
+        console.error('🌍 GEO-ALERT Error Captured:', {
+          errorId,
+          component: 'GeoCanvasContent',
+          error: error.message,
+          stack: error.stack,
+          componentStack: errorInfo.componentStack
+        });
+      }, 0);
     }}
   >
     <GeoCanvasContent {...props} />

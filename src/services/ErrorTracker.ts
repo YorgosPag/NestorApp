@@ -465,15 +465,18 @@ export class ErrorTracker {
         typeof arg === 'string' ? arg : JSON.stringify(arg)
       ).join(' ');
 
-      this.captureError(
-        new Error(message),
-        'error',
-        'system',
-        {
-          component: 'Console',
-          action: 'console.error'
-        }
-      );
+      // ✅ ENTERPRISE FIX: Defer error capture to avoid setState during render
+      setTimeout(() => {
+        this.captureError(
+          new Error(message),
+          'error',
+          'system',
+          {
+            component: 'Console',
+            action: 'console.error'
+          }
+        );
+      }, 0);
 
       originalError.apply(console, args);
     };

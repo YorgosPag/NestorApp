@@ -58,7 +58,13 @@ export function UnitsListHeader({
                 <span className="text-xs text-muted-foreground">Ταξινόμηση:</span>
                 <select
                     value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as any)}
+                    onChange={(e) => {
+                        const value = e.target.value;
+                        // ✅ ENTERPRISE: Type guard instead of 'as any'
+                        if (value === 'name' || value === 'price' || value === 'area') {
+                            setSortBy(value);
+                        }
+                    }}
                     className="text-xs px-2 py-1 rounded border bg-background"
                 >
                     <option value="name">Όνομα</option>

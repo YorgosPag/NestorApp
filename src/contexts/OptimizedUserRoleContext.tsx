@@ -53,8 +53,46 @@ const USER_CACHE_KEY = 'current-user';
 const PREFERENCES_CACHE_KEY = 'user-preferences';
 
 export function OptimizedUserRoleProvider({ children }: { children: React.ReactNode }) {
-  const cache = useCache();
-  const [user, setUser] = useState<User | null>(null);
+  // ✅ ENTERPRISE FIX: Use fallback cache implementation to prevent circular dependency
+  // This provider cannot depend on CacheProvider as it creates circular dependency
+  const cache = {
+    get: (key: string) => {
+      try {
+        const item = localStorage.getItem(`cache_${key}`);
+        return item ? { data: JSON.parse(item), stale: false, timestamp: Date.now() } : null;
+      } catch {
+        return null;
+      }
+    },
+    set: (key: string, data: any) => {
+      try {
+        localStorage.setItem(`cache_${key}`, JSON.stringify(data));
+      } catch {
+        // Ignore localStorage errors
+      }
+    },
+    invalidate: (key: string) => {
+      try {
+        localStorage.removeItem(`cache_${key}`);
+      } catch {
+        // Ignore localStorage errors
+      }
+    },
+    prefetch: () => Promise.resolve() // No-op for prefetch when cache unavailable
+  };
+  // ✅ ENTERPRISE FIX: Use lazy initialization to prevent setState during render
+  const [user, setUser] = useState<User | null>(() => {
+    // Try to get cached user synchronously during initialization
+    try {
+      const cachedUser = cache.get<User>(USER_CACHE_KEY);
+      if (cachedUser && !cachedUser.stale) {
+        return cachedUser.data;
+      }
+    } catch {
+      // Ignore cache errors during initialization
+    }
+    return null;
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [sessionExpiry, setSessionExpiry] = useState<number | null>(null);
 
@@ -263,10 +301,18 @@ export function OptimizedUserRoleProvider({ children }: { children: React.ReactN
     console.log('🏢 GEO-ALERT: User type updated to:', userType);
   }, [user, cache, sessionTimeRemaining]);
 
-  // Load user on mount
+  // Load user on mount (check if already loaded to prevent setState during render)
   useEffect(() => {
-    loadUserFromStorage();
-  }, [loadUserFromStorage]);
+    // ✅ ENTERPRISE FIX: Only load if no user is set from lazy initialization
+    if (!user) {
+      setTimeout(() => {
+        loadUserFromStorage();
+      }, 0);
+    } else {
+      // User already loaded from cache, just set loading to false
+      setIsLoading(false);
+    }
+  }, [loadUserFromStorage, user]);
 
   // Session expiry check
   useEffect(() => {
@@ -324,7 +370,31 @@ export function useOptimizedUserRole() {
 // Performance-optimized sidebar type hook with caching
 export function useOptimizedSidebarType() {
   const { isAdmin, isPublic } = useOptimizedUserRole();
-  const cache = useCache();
+  // ✅ ENTERPRISE FIX: Use localStorage-based cache to avoid dependency issues
+  const cache = {
+    get: (key: string) => {
+      try {
+        const item = localStorage.getItem(`cache_${key}`);
+        return item ? { data: JSON.parse(item), stale: false, timestamp: Date.now() } : null;
+      } catch {
+        return null;
+      }
+    },
+    set: (key: string, data: any) => {
+      try {
+        localStorage.setItem(`cache_${key}`, JSON.stringify(data));
+      } catch {
+        // Ignore localStorage errors
+      }
+    },
+    invalidate: (key: string) => {
+      try {
+        localStorage.removeItem(`cache_${key}`);
+      } catch {
+        // Ignore localStorage errors
+      }
+    }
+  };
   
   return useMemo(() => {
     const cacheKey = `sidebar-type-${isAdmin}-${isPublic}`;
@@ -345,7 +415,45 @@ export function useOptimizedSidebarType() {
 
 // Hook for preloading user-related data
 export function useUserDataPreloader() {
-  const cache = useCache();
+  // ✅ ENTERPRISE FIX: Use localStorage-based cache to avoid dependency issues
+  const cache = {
+    prefetch: (key: string, fetcher: () => Promise<any>, options?: any) => {
+      // Simple prefetch - just fetch and store in localStorage
+      return fetcher().then(data => {
+        try {
+          localStorage.setItem(`cache_${key}`, JSON.stringify(data));
+        } catch {
+          // Ignore localStorage errors
+        }
+        return data;
+      }).catch(() => {
+        // Ignore fetch errors for prefetch
+        return null;
+      });
+    },
+    get: (key: string) => {
+      try {
+        const item = localStorage.getItem(`cache_${key}`);
+        return item ? { data: JSON.parse(item), stale: false } : null;
+      } catch {
+        return null;
+      }
+    },
+    set: (key: string, data: any) => {
+      try {
+        localStorage.setItem(`cache_${key}`, JSON.stringify(data));
+      } catch {
+        // Ignore localStorage errors
+      }
+    },
+    invalidate: (key: string) => {
+      try {
+        localStorage.removeItem(`cache_${key}`);
+      } catch {
+        // Ignore localStorage errors
+      }
+    }
+  };
   const { user, isAuthenticated } = useOptimizedUserRole();
 
   return useCallback(async () => {

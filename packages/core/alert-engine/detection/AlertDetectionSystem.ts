@@ -12,12 +12,12 @@
 
 import type { RulesEngine, Rule, RuleEvaluationResult } from '../rules/RulesEngine';
 import { rulesEngine } from '../rules/RulesEngine';
-import type { DatabaseManager } from '../../database/connection/DatabaseManager';
-import { databaseManager } from '../../database/connection/DatabaseManager';
-import type { GeoControlPoint } from '../../database/repositories/ControlPointRepository';
-import { controlPointRepository } from '../../database/repositories/ControlPointRepository';
-import type { GeoProject } from '../../database/repositories/ProjectRepository';
-import { projectRepository } from '../../database/repositories/ProjectRepository';
+import type { DatabaseManager } from '../../database-system/connection/DatabaseManager';
+import { databaseManager } from '../../database-system/connection/DatabaseManager';
+import type { GeoControlPoint } from '../../database-system/repositories/ControlPointRepository';
+import { controlPointRepository } from '../../database-system/repositories/ControlPointRepository';
+import type { GeoProject } from '../../database-system/repositories/ProjectRepository';
+import { projectRepository } from '../../database-system/repositories/ProjectRepository';
 
 // ============================================================================
 // ALERT DETECTION TYPES

@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { Building, Tag, Palette, Eye, EyeOff, Settings, Info } from 'lucide-react';
+import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import {
   PropertyStatus,
   PROPERTY_STATUS_LABELS,
@@ -35,6 +36,8 @@ export function PropertyStatusManager({
   onLayerVisibilityChange,
   className = ''
 }: PropertyStatusManagerProps) {
+  // ✅ ENTERPRISE: All hooks must be declared BEFORE any conditional returns
+  const { t, isLoading } = useTranslationLazy('geo-canvas');
   const [selectedStatuses, setSelectedStatuses] = useState<PropertyStatus[]>(getAllStatuses());
   const [colorScheme, setColorScheme] = useState<'status' | 'price' | 'type'>('status');
   const [showLegend, setShowLegend] = useState(true);
@@ -72,6 +75,18 @@ export function PropertyStatusManager({
     return selectedStatuses.includes(status);
   }, [selectedStatuses]);
 
+  // ✅ ENTERPRISE: Return loading state while translations load (AFTER all hooks)
+  if (isLoading) {
+    return (
+      <div className={`bg-white rounded-lg shadow-lg border border-gray-200 p-4 ${className}`}>
+        <div className="animate-pulse">
+          <div className="h-6 bg-gray-200 rounded mb-4"></div>
+          <div className="h-32 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`bg-white rounded-lg shadow-lg border border-gray-200 p-4 ${className}`}>
       {/* Header */}
@@ -79,7 +94,7 @@ export function PropertyStatusManager({
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
             <Building className="w-5 h-5 text-blue-600" />
-            Διαχείριση Ακινήτων
+            {t('propertyStatusManager.title')}
           </h3>
           <button
             onClick={() => setShowLegend(!showLegend)}
@@ -90,7 +105,7 @@ export function PropertyStatusManager({
           </button>
         </div>
         <p className="text-sm text-gray-600 mt-1">
-          Color-coded visualization για property status management
+          {t('propertyStatusManager.subtitle')}
         </p>
       </div>
 
@@ -98,7 +113,7 @@ export function PropertyStatusManager({
       <div className="mb-4">
         <label className="text-sm font-medium text-gray-700 mb-2 block flex items-center gap-2">
           <Palette className="w-4 h-4" />
-          Χρωματικό Σχήμα
+          {t('propertyStatusManager.colorScheme.title')}
         </label>
         <div className="flex gap-2">
           <button
@@ -109,7 +124,7 @@ export function PropertyStatusManager({
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
-            Status
+            {t('propertyStatusManager.colorScheme.status')}
           </button>
           <button
             onClick={() => handleColorSchemeChange('price')}
@@ -119,7 +134,7 @@ export function PropertyStatusManager({
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
-            Τιμή
+            {t('propertyStatusManager.colorScheme.price')}
           </button>
           <button
             onClick={() => handleColorSchemeChange('type')}
@@ -129,7 +144,7 @@ export function PropertyStatusManager({
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
-            Τύπος
+            {t('propertyStatusManager.colorScheme.type')}
           </button>
         </div>
       </div>
@@ -140,13 +155,15 @@ export function PropertyStatusManager({
           <div className="flex items-center justify-between mb-3">
             <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
               <Tag className="w-4 h-4" />
-              Status Categories
+              {t('propertyStatusManager.statusCategories')}
             </label>
             <button
               onClick={handleSelectAll}
               className="text-xs text-blue-600 hover:text-blue-800 font-medium"
             >
-              {selectedStatuses.length === getAllStatuses().length ? 'Κανένα' : 'Όλα'}
+              {selectedStatuses.length === getAllStatuses().length
+                ? t('propertyStatusManager.selectNone')
+                : t('propertyStatusManager.selectAll')}
             </button>
           </div>
 
@@ -184,7 +201,7 @@ export function PropertyStatusManager({
                         ? 'text-blue-600 hover:text-blue-800'
                         : 'text-gray-400 hover:text-gray-600'
                     }`}
-                    title={isVisible ? 'Απόκρυψη' : 'Εμφάνιση'}
+                    title={isVisible ? t('propertyStatusManager.hide') : t('propertyStatusManager.show')}
                   >
                     {isVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                   </button>
@@ -199,16 +216,16 @@ export function PropertyStatusManager({
       <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
         <div className="flex items-center gap-2 mb-2">
           <Info className="w-4 h-4 text-blue-600" />
-          <span className="text-sm font-medium text-blue-900">Στατιστικά</span>
+          <span className="text-sm font-medium text-blue-900">{t('propertyStatusManager.statistics.title')}</span>
         </div>
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <span className="text-blue-700">Ορατά Status:</span>
+            <span className="text-blue-700">{t('propertyStatusManager.statistics.visibleStatus')}</span>
             <span className="ml-2 font-semibold text-blue-900">{selectedStatuses.length}/{getAllStatuses().length}</span>
           </div>
           <div>
-            <span className="text-blue-700">Σχήμα:</span>
-            <span className="ml-2 font-semibold text-blue-900 capitalize">{colorScheme}</span>
+            <span className="text-blue-700">{t('propertyStatusManager.statistics.scheme')}</span>
+            <span className="ml-2 font-semibold text-blue-900">{t(`propertyStatusManager.colorScheme.${colorScheme}`)}</span>
           </div>
         </div>
       </div>
@@ -216,9 +233,7 @@ export function PropertyStatusManager({
       {/* Usage Instructions */}
       <div className="mt-4 p-3 bg-gray-50 rounded-md">
         <p className="text-xs text-gray-600">
-          <strong>💡 Tip:</strong> Χρησιμοποιήστε τα color schemes για διαφορετικές απεικονίσεις.
-          Το Status scheme δείχνει την κατάσταση του ακινήτου, το Price scheme την τιμή,
-          και το Type scheme τον τύπο ακινήτου.
+          <strong>{t('propertyStatusManager.tips.title')}</strong> {t('propertyStatusManager.tips.description')}
         </p>
       </div>
     </div>

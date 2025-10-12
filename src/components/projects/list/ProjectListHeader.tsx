@@ -43,7 +43,13 @@ export function ProjectListHeader({
       <div className="flex items-center gap-2">
         <select
           value={sortBy}
-          onChange={(e) => setSortBy(e.target.value as any)}
+          onChange={(e) => {
+            const value = e.target.value;
+            // ✅ ENTERPRISE: Type guard instead of 'as any'
+            if (value === 'name' || value === 'progress' || value === 'totalValue' || value === 'status' || value === 'area') {
+              setSortBy(value);
+            }
+          }}
           className="text-xs px-2 py-1 rounded border bg-background"
         >
           <option value="name">Όνομα</option>

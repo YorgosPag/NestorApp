@@ -2,6 +2,8 @@
 
 import React, { Suspense } from 'react';
 import { NotificationProvider } from '../../providers/NotificationProvider';
+import { CacheProvider } from '../../contexts/CacheProvider';
+import { OptimizedUserRoleProvider } from '../../contexts/OptimizedUserRoleContext';
 import { GeoCanvasContent } from './app/GeoCanvasContent';
 import { GeoCanvasErrorBoundary } from './components/ErrorBoundary';
 import type { GeoCanvasAppProps } from './types';
@@ -19,26 +21,30 @@ import type { GeoCanvasAppProps } from './types';
 export function GeoCanvasApp(props: GeoCanvasAppProps) {
   return (
     <NotificationProvider>
-      <GeoCanvasErrorBoundary>
-        {/* 🏢 ENTERPRISE PROVIDERS STACK */}
-        {/* TODO Phase 2: GeoTransformProvider */}
-        {/* TODO Phase 3: MapLibreProvider */}
-        {/* TODO Phase 4: SpatialDatabaseProvider */}
-        {/* TODO Phase 5: AlertEngineProvider */}
+      <CacheProvider>
+        <OptimizedUserRoleProvider>
+          <GeoCanvasErrorBoundary>
+            {/* 🏢 ENTERPRISE PROVIDERS STACK */}
+            {/* TODO Phase 2: GeoTransformProvider */}
+            {/* TODO Phase 3: MapLibreProvider */}
+            {/* TODO Phase 4: SpatialDatabaseProvider */}
+            {/* TODO Phase 5: AlertEngineProvider */}
 
-        {/* 📍 CORE APPLICATION CONTENT */}
-        <Suspense fallback={
-          <div className="w-full h-full flex items-center justify-center bg-gray-900 text-white">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-white">Loading Geo-Canvas...</p>
-            </div>
-          </div>
-        }>
-          <GeoCanvasContent {...props} />
-        </Suspense>
+            {/* 📍 CORE APPLICATION CONTENT */}
+            <Suspense fallback={
+              <div className="w-full h-full flex items-center justify-center bg-gray-900 text-white">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                  <p className="text-white">Loading Geo-Canvas...</p>
+                </div>
+              </div>
+            }>
+              <GeoCanvasContent {...props} />
+            </Suspense>
 
-      </GeoCanvasErrorBoundary>
+          </GeoCanvasErrorBoundary>
+        </OptimizedUserRoleProvider>
+      </CacheProvider>
     </NotificationProvider>
   );
 }

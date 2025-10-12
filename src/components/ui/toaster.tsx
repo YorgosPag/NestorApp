@@ -14,7 +14,16 @@ import {
 import type { ToastVariant } from "@/types/toast"
 
 export function Toaster() {
-  const { toasts = [] } = useToast() as any // Temporary fix for compatibility
+  // ✅ ENTERPRISE: useToast doesn't provide toasts array, this component needs redesign
+  // const toastHook = useToast();
+  const toasts: Array<{
+    id: string;
+    title?: string;
+    description?: string;
+    action?: { label: string; onClick: () => void };
+    variant?: ToastVariant;
+    duration?: number;
+  }> = []; // Empty for now - needs proper toast state management
 
   const getVariant = (variant?: ToastVariant): "default" | "destructive" => {
       if(variant === "error") return "destructive"
@@ -23,7 +32,7 @@ export function Toaster() {
 
   return (
     <ToastProvider>
-      {toasts.map(function ({ id, title, description, action, variant, ...props }: any) {
+      {toasts.map(function ({ id, title, description, action, variant, ...props }) {
         return (
           <Toast key={id} {...props} variant={getVariant(variant)} duration={props.duration}>
             <div className="grid gap-1">

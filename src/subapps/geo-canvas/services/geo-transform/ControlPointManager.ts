@@ -419,7 +419,7 @@ export class ControlPointManager {
   }
 
   /**
-   * Calculate bounding box για DXF points
+   * Calculate bounding box for DXF points
    */
   private calculateBoundingBox(points: DxfCoordinate[]): {
     minX: number; maxX: number; minY: number; maxY: number;
@@ -523,7 +523,7 @@ export class ControlPointManager {
   }
 
   /**
-   * Load από localStorage
+   * Load from localStorage
    */
   loadFromLocalStorage(key: string = 'geo-canvas-control-points'): boolean {
     try {
@@ -536,7 +536,7 @@ export class ControlPointManager {
 
       return true;
     } catch (error) {
-      console.error('Failed to load control points από localStorage:', error);
+      console.error('Failed to load control points from localStorage:', error);
       return false;
     }
   }

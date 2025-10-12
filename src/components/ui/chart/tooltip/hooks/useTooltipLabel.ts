@@ -24,13 +24,13 @@ export function useTooltipLabel({
     const itemConfig = resolveItemConfig(config, item, key);
     const value =
       !labelKey && typeof label === "string"
-        ? (config as any)[label]?.label || label
+        ? (config as Record<string, { label?: string }>)[label]?.label || label
         : itemConfig?.label;
 
     if (labelFormatter) {
       return { value, className: labelClassName, formatter: labelFormatter };
     }
     if (!value) return null;
-    return { value, className: labelClassName, formatter: null as any };
+    return { value, className: labelClassName, formatter: null };
   }, [hideLabel, payload, labelKey, label, labelFormatter, labelClassName, config]);
 }

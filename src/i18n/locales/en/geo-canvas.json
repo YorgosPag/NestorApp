@@ -31,7 +31,9 @@
     "view": "View:",
     "crs": "Coordinate System:",
     "zoom": "Zoom:",
-    "coordinates": "Coordinates:"
+    "coordinates": "Coordinates:",
+    "longitude": "Longitude:",
+    "latitude": "Latitude:"
   },
   "floorPlan": {
     "uploadButton": {
@@ -183,7 +185,12 @@
     "version": "Version",
     "lastUpdate": "Last update",
     "support": "Support",
-    "documentation": "Documentation"
+    "documentation": "Documentation",
+    "status": {
+      "active": "Active",
+      "phase2DxfTransformation": "Phase 2: DXF Transformation",
+      "georeferencingReady": "Georeferencing Ready"
+    }
   },
   "panelHeader": {
     "title": "🗺️ DXF Georeferencing",
@@ -350,13 +357,43 @@
     },
     "controls": {
       "pickGeographicPoint": "Pick Geographic Point",
-      "clickOnMap": "Click on Map",
-      "cancel": "Cancel"
+      "cancelPicking": "Cancel Picking",
+      "cancel": "Cancel",
+      "mapStyle": "Map Style",
+      "clickOnMap": "Click on map...",
+      "openStreetMap": "OpenStreetMap",
+      "satellite": "Satellite",
+      "terrain": "Terrain",
+      "darkMode": "Dark Mode"
+    },
+    "coordinates": {
+      "lng": "Longitude",
+      "lat": "Latitude"
+    },
+    "styleSelector": {
+      "style": "Style:"
     }
   },
   "floorPlanControlPoints": {
     "title": "Control Points",
     "description": "Minimum 3 points required for georeferencing",
+    "dragHandle": "Drag",
+    "tabs": {
+      "visualPicking": "Visual Picking",
+      "manualInput": "Manual Input"
+    },
+    "actions": {
+      "calibrate": "Calibrate",
+      "save": "Save",
+      "load": "Load",
+      "clear": "Clear"
+    },
+    "status": {
+      "points": "Points:",
+      "readyForGeoreferencing": "Ready for georeferencing",
+      "needMorePoints": "Need {count} more point{plural}",
+      "transformationQuality": "Transformation Quality:"
+    },
     "instructions": {
       "idle": "Click 'Add Control Point' to start picking points",
       "pickFloorPlan": "Click on the floor plan to select a point",
@@ -413,6 +450,302 @@
       "loaded": "Floor plan loaded",
       "error": "Error loading floor plan",
       "notLoaded": "No floor plan loaded"
+    }
+  },
+  "userTypeSelector": {
+    "title": "Select User Type",
+    "currentType": "Current type:",
+    "changeType": "🔄 Change User Type",
+    "types": {
+      "citizen": {
+        "title": "Citizen",
+        "description": "Simple use - Select point or area on map"
+      },
+      "professional": {
+        "title": "Professional",
+        "description": "Realtors/Builders - Upload floor plans (image/PDF)"
+      },
+      "technical": {
+        "title": "Technical",
+        "description": "Engineers - Full DXF/DWG support with CAD precision"
+      }
+    }
+  },
+  "propertyStatusManager": {
+    "title": "Property Management",
+    "subtitle": "Color-coded visualization for property status management",
+    "colorScheme": {
+      "title": "Color Scheme",
+      "status": "Status",
+      "price": "Price",
+      "type": "Type"
+    },
+    "statusCategories": "Status Categories",
+    "selectAll": "All",
+    "selectNone": "None",
+    "hide": "Hide",
+    "show": "Show",
+    "statistics": {
+      "title": "Statistics",
+      "visibleStatus": "Visible Status:",
+      "scheme": "Scheme:"
+    },
+    "tips": {
+      "title": "💡 Tip:",
+      "description": "Use color schemes for different visualizations. Status scheme shows property status, Price scheme shows pricing, and Type scheme shows property types."
+    }
+  },
+  "realEstateMonitoring": {
+    "title": "Real Estate Monitoring Dashboard",
+    "stats": {
+      "monitoringZones": "Monitoring Zones",
+      "propertiesFound": "Properties Found",
+      "avgConfidence": "Avg Confidence",
+      "lastScan": "Last Scan"
+    },
+    "actions": {
+      "batchMode": "Batch Mode",
+      "monitorAll": "Monitor All ({count})",
+      "exportCsv": "Export CSV"
+    },
+    "tips": {
+      "title": "💡 Professional Tips:",
+      "batchMode": "• Batch Mode: Setup monitoring for multiple polygons simultaneously",
+      "export": "• Export: Download results for analysis in Excel/CRM",
+      "realtime": "• Real-time: Automatic checks every 30 minutes for new listings"
+    }
+  },
+  "toastMessages": {
+    "invalidCoordinates": "Please enter valid coordinates",
+    "pointAddedManually": "Point added manually!",
+    "errorAddingPoint": "Error adding point",
+    "needMinimumPoints": "At least 3 points needed for calibration",
+    "calibrationComplete": "Calibration completed! Quality: {quality}",
+    "noPointsToSave": "No points to save",
+    "pointsSaved": "Points saved!",
+    "pointsLoaded": "Loaded {count} points!",
+    "invalidPointsFile": "Invalid points file",
+    "errorLoadingFile": "Error loading file"
+  },
+  "loadingStates": {
+    "loadingTranslations": "Loading translations...",
+    "loading": "Loading..."
+  },
+  "phaseInformation": {
+    "foundationStructure": "• Foundation structure",
+    "enterpriseTypeSystem": "• Enterprise type system",
+    "configurationSetup": "• Configuration setup",
+    "routerIntegrationReady": "• Router integration ready",
+    "dxfTransformationEngine": "• DXF transformation engine",
+    "coordinateSystemSupport": "• Coordinate system support",
+    "georeferencingTools": "• Georeferencing tools",
+    "controlPointManagement": "• Control point management",
+    "architectureOverview": "Architecture Overview",
+    "centralizedSystem": "Centralized System: Integrated into DXF Viewer ecosystem",
+    "technologyStack": "Technology Stack: React + TypeScript + MapLibre GL JS",
+    "dataFlow": "Data Flow: DXF → Transformation → GeoJSON → Map → Alerts",
+    "standards": "Standards: ISO 19107, OGC, AutoCAD conventions"
+  },
+  "drawingInterfaces": {
+    "common": {
+      "cancel": "Cancel",
+      "complete": "Complete",
+      "automatically": "Automatically",
+      "from": "From",
+      "to": "To",
+      "floorPlan": "Floor Plan:"
+    },
+    "technical": {
+      "title": "🔧 Technical Tools",
+      "subtitle": "Engineers - Full DXF/DWG support with CAD precision",
+      "tools": {
+        "precision": "📐 Millimeter Accuracy",
+        "settings": "⚙️ Settings",
+        "settingsAdvanced": "🔧 Advanced Settings",
+        "alertsAuto": "🚨 Automated Alerts"
+      },
+      "automatedAlerts": {
+        "title": "🚨 Technical Automated Alerts",
+        "detectionSensitivity": "Detection Sensitivity",
+        "monitoringInterval": "Monitoring Interval (minutes)",
+        "morePlatforms": "More platforms...",
+        "technicalSpecifications": "🔬 Technical Specifications:",
+        "sensitivity": {
+          "high": "High (95%+ confidence)",
+          "medium": "Medium (85%+ confidence)",
+          "low": "Low (75%+ confidence)"
+        },
+        "intervals": {
+          "realtime": "5 minutes (Real-time)",
+          "frequent": "15 minutes (Frequent)",
+          "standard": "30 minutes (Standard)",
+          "hourly": "60 minutes (Hourly)"
+        }
+      },
+      "specifications": {
+        "title": "🔬 Technical Specifications",
+        "accuracy": "±1mm",
+        "coordinates": "WGS84"
+      },
+      "actions": {
+        "complete": "✅ Complete",
+        "cancel": "❌ Cancel"
+      },
+      "instructions": {
+        "precision": "📐 Technical millimeter-level accuracy for CAD work",
+        "settings": "⚙️ Advanced settings for technical users",
+        "automatedAlerts": "🚨 Configure automated alerts with technical precision"
+      },
+      "openViewer": "🛠️ Open DXF Viewer",
+      "cadEnvironment": "🏗️ CAD Environment",
+      "fullDxfViewer": "🛠️ Open full DXF Viewer in new tab with all CAD tools",
+      "ultraPrecision": "📐 Ultra-precision mode: Click for millimeter accuracy points",
+      "advancedSettings": "⚙️ Advanced settings for technical users"
+    },
+    "professional": {
+      "title": "🏢 Professional Tools",
+      "subtitle": "Floor plan upload and auto-detection for properties",
+      "tools": {
+        "property": "Property",
+        "propertyManual": "Manual",
+        "autoDetectAuto": "Automatic",
+        "monitoringMarket": "Market"
+      },
+      "uploadFloorPlan": "📁 Upload floor plan in DXF, PDF, PNG, or JPG format",
+      "addPropertyPoints": "🏢 Click to add points to the property. Double click to complete",
+      "autoDetectRooms": "🤖 Automatic room detection from uploaded floor plan",
+      "propertyManager": "🏘️ Property status management with color coding and statistics",
+      "marketDashboard": "📊 Dashboard for real estate market monitoring and analytics"
+    },
+    "citizen": {
+      "title": "👥 Citizen Tools",
+      "subtitle": "Simple use - Select point or area on the map",
+      "tools": {
+        "point": "Point",
+        "pointDescription": "Pin",
+        "polygon": "Polygon",
+        "polygonDescription": "Outline",
+        "freehand": "Freehand Drawing",
+        "freehandDrawing": "Drag & Draw",
+        "realEstate": "Real Estate",
+        "realEstateDescription": "Notifications"
+      },
+      "actions": {
+        "complete": "Complete",
+        "cancel": "Cancel",
+        "drawArea": "Draw Area",
+        "clearAll": "Clear all"
+      },
+      "instructions": {
+        "realEstate": "🏠 Draw the area of interest for property notifications"
+      },
+      "realEstateSetup": {
+        "title": "Real Estate Alerts",
+        "propertyType": "Property Type",
+        "propertyTypes": {
+          "apartment": "Apartment",
+          "house": "House",
+          "land": "Land",
+          "commercial": "Commercial"
+        }
+      },
+      "placePoint": "📍 Click on the map to place an alert point",
+      "addPolygonPoints": "🔷 Click to add points to the polygon. Double click to complete",
+      "drawFreehand": "✏️ Hold and drag to draw freehand",
+      "drawInterestArea": "🏠 Draw area of interest for property alerts. Double click to complete"
+    }
+  },
+  "mapStatus": {
+    "polygonClosed": "✅ CLOSED Polygon",
+    "clickToClose": "🔄 Click to CLOSE polygon"
+  },
+  "hardcodedTexts": {
+    "ui": {
+      "upload": "Upload",
+      "properties": "Properties",
+      "status": "Status",
+      "monitor": "Monitor",
+      "alerts": "Alerts",
+      "autoDetect": "Auto-Detect",
+      "dxfViewer": "DXF Viewer",
+      "fullCad": "Full CAD",
+      "show": "Show",
+      "start": "Start",
+      "stop": "Stop",
+      "cancel": "Cancel",
+      "precision": "Precision",
+      "technical": "Technical",
+      "processing": "Processing",
+      "confidence": "Confidence",
+      "monitoring": "Monitoring"
+    },
+    "labels": {
+      "dxfEntities": "DXF Entities:",
+      "controlPoints": "Control Points",
+      "accuracyCircles": "Accuracy Circles",
+      "grid": "Grid",
+      "transformed": "Transformed:",
+      "errors": "Errors:",
+      "rmsAccuracy": "RMS Accuracy:",
+      "technicalSensitivity": "Technical Sensitivity",
+      "monitoringPlatforms": "Monitoring Platforms",
+      "monitoringZones": "📊 Monitoring Zones:",
+      "detectedProperties": "🎯 Detected Properties:",
+      "lastScan": "🕐 Last Scan:",
+      "technicalMatches": "🎯 Technical Matches:",
+      "automatedAlerts": "🚨 Automated Alerts:",
+      "precisionLabel": "📊 Precision:",
+      "georeferencing": "Georeferencing:",
+      "confidenceThreshold": "Confidence Threshold:",
+      "processingLabel": "Processing:",
+      "formats": "Formats:",
+      "cadTools": "CAD Tools:",
+      "dxfViewerLabel": "DXF Viewer"
+    },
+    "actions": {
+      "automateAll": "Automate All",
+      "startMonitoring": "Start Monitoring",
+      "stopAll": "Stop All",
+      "showDxfEntities": "Show DXF Entities",
+      "showControlPoints": "Show Control Points",
+      "showAccuracyCircles": "Show Accuracy Circles",
+      "showGrid": "Show Grid"
+    },
+    "placeholders": {
+      "optionalDescription": "Optional description",
+      "coordinates": "0.00",
+      "longitude": "23.7275",
+      "latitude": "37.9755",
+      "accuracy": "1.0"
+    },
+    "values": {
+      "uploaded": "Uploaded",
+      "millimeterLevel": "Millimeter-level accuracy",
+      "wgs84LocalGrid": "WGS84 + Local Grid",
+      "realtimeAutomated": "Real-time automated",
+      "dxfDwg": "DXF, DWG",
+      "full": "Full",
+      "comingSoon": "(Coming Soon)",
+      "spitogatosGr": "Spitogatos.gr",
+      "xeGr": "XE.gr"
+    }
+  },
+  "citizenDrawingInterface": {
+    "priceRange": {
+      "label": "Price Range (€)"
+    }
+  },
+  "alertDashboard": {
+    "title": "Alert Dashboard"
+  },
+  "userActions": {
+    "changeUserType": "🔄 Change User Type"
+  },
+  "instructions": {
+    "citizen": {
+      "placePoint": "📍 Click on the map to place an alert point",
+      "addPolygonPoints": "🔷 Click to add points to the polygon. Double-click to complete",
+      "drawFreehand": "✏️ Hold and drag to draw freely"
     }
   }
 }

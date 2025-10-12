@@ -186,6 +186,32 @@ export function InteractiveMap({
     }
   }, [onMapReady, enablePolygonDrawing, polygonSystem.manager]);
 
+  // ✅ ENTERPRISE FIX: Handle MapLibre errors
+  const handleMapError = useCallback((error: any) => {
+    console.error('🗺️ MapLibre GL JS Error:', error);
+
+    // Log structured error for debugging
+    const errorInfo = {
+      type: 'MapLibre Error',
+      error: error?.error || error,
+      message: error?.message || 'Unknown MapLibre error',
+      timestamp: Date.now()
+    };
+
+    console.error('🔍 MapLibre Error Details:', errorInfo);
+
+    // Don't crash the app - graceful degradation
+    setMapLoaded(false);
+
+    // Try to recover by switching to basic OSM style if current style failed
+    if (currentMapStyle !== 'osm') {
+      console.log('🔄 Attempting recovery with basic OSM style...');
+      setTimeout(() => {
+        setCurrentMapStyle('osm');
+      }, 2000);
+    }
+  }, [currentMapStyle]);
+
   const handleMapStyleChange = useCallback((newStyle: 'osm' | 'satellite' | 'terrain' | 'dark') => {
     setCurrentMapStyle(newStyle);
     setMapLoaded(false); // Show loading while style changes
@@ -582,7 +608,7 @@ export function InteractiveMap({
       <div className="text-sm space-y-1">
         {/* Quick Style Switcher */}
         <div className="flex justify-between items-center mb-2">
-          <span className="text-xs text-gray-400">Style:</span>
+          <span className="text-xs text-gray-400">{t('map.styleSelector.style')}</span>
           <div className="flex space-x-1">
             {(['osm', 'satellite', 'terrain', 'dark'] as const).map((style) => (
               <button
@@ -605,10 +631,10 @@ export function InteractiveMap({
         {hoveredCoordinate && (
           <>
             <div className="font-mono">
-              {t('map.coordinates.lng')}: {hoveredCoordinate.lng.toFixed(6)}
+              {t('toolbar.longitude')} {hoveredCoordinate.lng.toFixed(6)}
             </div>
             <div className="font-mono">
-              {t('map.coordinates.lat')}: {hoveredCoordinate.lat.toFixed(6)}
+              {t('toolbar.latitude')} {hoveredCoordinate.lat.toFixed(6)}
             </div>
           </>
         )}
@@ -846,6 +872,7 @@ export function InteractiveMap({
         onClick={handleMapClick}
         onMouseMove={handleMapMouseMove}
         onLoad={handleMapLoad}
+        onError={handleMapError}
         style={{ width: '100%', height: '100%' }}
         mapStyle={mapStyleUrls[currentMapStyle]}
         cursor={isPickingCoordinates ? 'crosshair' : 'default'}

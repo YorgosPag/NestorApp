@@ -332,7 +332,7 @@ export function useGeoTransform(): [GeoTransformState, GeoTransformActions] {
           ...prev,
           controlPoints: controlPointManager.getAllControlPoints(),
           validation: controlPointManager.validateControlPoints(),
-          lastOperation: 'Control points loaded από localStorage',
+          lastOperation: 'Control points loaded from localStorage',
           isCalibrated: false // Require re-calibration
         }));
       }
@@ -419,7 +419,7 @@ export function useGeoTransform(): [GeoTransformState, GeoTransformActions] {
   // EFFECTS
   // ========================================================================
 
-  // Initialize από localStorage on mount
+  // Initialize from localStorage on mount
   useEffect(() => {
     const loaded = controlPointManager.loadFromLocalStorage();
     if (loaded) {

@@ -30,6 +30,12 @@
       ],
       "@/systems/*": [
         "./src/subapps/dxf-viewer/systems/*"
+      ],
+      "@geo-alert/core": [
+        "./packages/core/src"
+      ],
+      "@geo-alert/core/*": [
+        "./packages/core/src/*"
       ]
     }
   },

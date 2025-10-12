@@ -4,10 +4,12 @@ import { useSidebar } from "@/components/ui/sidebar"
 import { cn } from "@/lib/utils"
 import LogoPagonis from "@/components/property-viewer/Logo_Pagonis"
 import { useEffect, useState } from "react"
+import { useTranslation } from "react-i18next"
 
 export function SidebarLogo() {
   const { state } = useSidebar()
   const [isMounted, setIsMounted] = useState(false)
+  const { t } = useTranslation('navigation')
 
   useEffect(() => {
     setIsMounted(true)
@@ -26,7 +28,7 @@ export function SidebarLogo() {
       >
         {isMounted && (
           <span className="text-base font-bold text-foreground">
-            Nestor Pagonis
+            {t('user.name')}
           </span>
         )}
       </div>

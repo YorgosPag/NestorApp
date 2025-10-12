@@ -10,10 +10,10 @@
  * - Machine learning integration ready
  */
 
-import type { DatabaseManager } from '../../database/connection/DatabaseManager';
-import { databaseManager } from '../../database/connection/DatabaseManager';
-import type { GeoControlPoint } from '../../database/repositories/ControlPointRepository';
-import type { GeoProject } from '../../database/repositories/ProjectRepository';
+import type { DatabaseManager } from '../../database-system/connection/DatabaseManager';
+import { databaseManager } from '../../database-system/connection/DatabaseManager';
+import type { GeoControlPoint } from '../../database-system/repositories/ControlPointRepository';
+import type { GeoProject } from '../../database-system/repositories/ProjectRepository';
 
 // ============================================================================
 // RULES ENGINE TYPES

@@ -29,7 +29,7 @@ export function ProjectsPageContent() {
     setFilterStatus,
     showDashboard,
     setShowDashboard,
-  } = useProjectsState(firestoreProjects as any);
+  } = useProjectsState(firestoreProjects as Project[]);
 
   // Πάντα καλούμε όλα τα hooks πριν από τα conditional returns
   const { filtered, stats } = useFilteredProjects(projects, searchTerm, filterCompany, filterStatus);

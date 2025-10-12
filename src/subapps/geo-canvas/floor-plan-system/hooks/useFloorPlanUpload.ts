@@ -29,7 +29,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { detectFormat } from '../utils/format-detection';
+import { detectFormat } from '../parsers';
 import { parseDxf, parseDwg, parseImage } from '../parsers';
 import type { ParserResult, FloorPlanFormat } from '../types';
 

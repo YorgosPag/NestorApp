@@ -105,6 +105,14 @@ export type {
 // ENTERPRISE DATABASE SERVICE (FACADE PATTERN)
 // ============================================================================
 
+// Import all services for the facade
+import databaseManager from './connection/DatabaseManager';
+import projectRepository from './repositories/ProjectRepository';
+import controlPointRepository from './repositories/ControlPointRepository';
+import spatialQueryEngine from './queries/SpatialQueryEngine';
+import databaseAnalytics from './analytics/DatabaseAnalytics';
+import dataMigrationService from './migration/DataMigrationService';
+
 /**
  * Enterprise Database Service - Unified API για όλες τις database operations
  * Implements Facade pattern για simplified access to complex subsystems

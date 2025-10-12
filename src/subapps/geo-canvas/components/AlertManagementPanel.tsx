@@ -14,7 +14,7 @@ import {
   useAlertEngine,
   type AlertRule,
   type AlertSubscription
-} from '@geo-alert/core/alert-engine';
+} from '@geo-alert/core';
 
 // Existing UI Patterns
 import { useNotificationDrawer } from '@/components/NotificationDrawer.enterprise';

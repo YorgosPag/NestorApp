@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useGeoTransform } from '../hooks/useGeoTransform';
+import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { dxfGeoTransformService } from '../services/geo-transform/DxfGeoTransform';
 import type { DxfCoordinate, GeoCoordinate, SpatialEntity } from '../types';
 
@@ -45,6 +46,7 @@ export function TransformationPreview({
   onTransformedDataChange,
   className = ''
 }: TransformationPreviewProps) {
+  const { t } = useTranslationLazy('geo-canvas');
   const [transformState] = useGeoTransform();
   const [previewSettings, setPreviewSettings] = useState<PreviewSettings>({
     showEntities: true,
@@ -265,7 +267,7 @@ export function TransformationPreview({
               onChange={(e) => setPreviewSettings(prev => ({ ...prev, showEntities: e.target.checked }))}
               className="rounded"
             />
-            <span className="text-sm">Show DXF Entities</span>
+            <span className="text-sm">{t('hardcodedTexts.actions.showDxfEntities')}</span>
           </label>
 
           <label className="flex items-center space-x-2">
@@ -275,7 +277,7 @@ export function TransformationPreview({
               onChange={(e) => setPreviewSettings(prev => ({ ...prev, showControlPoints: e.target.checked }))}
               className="rounded"
             />
-            <span className="text-sm">Show Control Points</span>
+            <span className="text-sm">{t('hardcodedTexts.actions.showControlPoints')}</span>
           </label>
 
           <label className="flex items-center space-x-2">
@@ -285,7 +287,7 @@ export function TransformationPreview({
               onChange={(e) => setPreviewSettings(prev => ({ ...prev, showAccuracyCircles: e.target.checked }))}
               className="rounded"
             />
-            <span className="text-sm">Show Accuracy Circles</span>
+            <span className="text-sm">{t('hardcodedTexts.actions.showAccuracyCircles')}</span>
           </label>
 
           <label className="flex items-center space-x-2">
@@ -295,7 +297,7 @@ export function TransformationPreview({
               onChange={(e) => setPreviewSettings(prev => ({ ...prev, showTransformationGrid: e.target.checked }))}
               className="rounded"
             />
-            <span className="text-sm">Show Grid</span>
+            <span className="text-sm">{t('hardcodedTexts.actions.showGrid')}</span>
           </label>
         </div>
 
@@ -348,24 +350,24 @@ export function TransformationPreview({
 
       <div className="grid grid-cols-2 gap-4 text-sm">
         <div className="flex justify-between">
-          <span className="text-gray-400">DXF Entities:</span>
+          <span className="text-gray-400">{t('hardcodedTexts.labels.dxfEntities')}</span>
           <span className="text-white">{previewStats.entityCount}</span>
         </div>
 
         <div className="flex justify-between">
-          <span className="text-gray-400">Transformed:</span>
+          <span className="text-gray-400">{t('hardcodedTexts.labels.transformed')}</span>
           <span className="text-green-400">{previewStats.transformedCount}</span>
         </div>
 
         <div className="flex justify-between">
-          <span className="text-gray-400">Errors:</span>
+          <span className="text-gray-400">{t('hardcodedTexts.labels.errors')}</span>
           <span className={previewStats.errorCount > 0 ? 'text-red-400' : 'text-gray-400'}>
             {previewStats.errorCount}
           </span>
         </div>
 
         <div className="flex justify-between">
-          <span className="text-gray-400">Processing:</span>
+          <span className="text-gray-400">{t('hardcodedTexts.labels.processingLabel')}</span>
           <span className="text-blue-400">{previewStats.processingTime.toFixed(1)}ms</span>
         </div>
       </div>
@@ -373,7 +375,7 @@ export function TransformationPreview({
       {transformState.isCalibrated && transformState.accuracy && (
         <div className="mt-3 pt-3 border-t border-gray-700">
           <div className="flex justify-between text-sm">
-            <span className="text-gray-400">RMS Accuracy:</span>
+            <span className="text-gray-400">{t('hardcodedTexts.labels.rmsAccuracy')}</span>
             <span className="text-yellow-400">±{transformState.accuracy.toFixed(3)}m</span>
           </div>
         </div>

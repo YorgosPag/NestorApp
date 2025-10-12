@@ -6,7 +6,7 @@
  * Implements enterprise configuration patterns με versioning και audit trail.
  */
 
-import { Rule, RulesEngine } from '../rules/RulesEngine';
+import { Rule, RulesEngine, rulesEngine } from '../rules/RulesEngine';
 import { AlertTemplate, DetectionConfig } from '../detection/AlertDetectionSystem';
 import { NotificationTemplate, NotificationConfig } from '../notifications/NotificationDispatchEngine';
 
@@ -136,7 +136,7 @@ export class ConfigurationService {
   // ========================================================================
 
   private constructor() {
-    this.rulesEngine = RulesEngine.getInstance();
+    this.rulesEngine = rulesEngine;
     this.initializeValidationRules();
     this.loadDefaultConfiguration();
   }

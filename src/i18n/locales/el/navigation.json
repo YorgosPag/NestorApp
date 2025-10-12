@@ -28,10 +28,17 @@
     "legal": "Νομικά Έγγραφα",
     "obligations": "Συγγραφή Υποχρεώσεων",
     "dxf": "DXF Panel",
-    "shortcuts": "Συντομεύσεις"
+    "shortcuts": "Συντομεύσεις",
+    "geoCanvas": "Geo-Canvas System"
   },
   "badges": {
     "new": "Νέο",
-    "pro": "PRO"
+    "pro": "PRO",
+    "enterprise": "ENTERPRISE"
+  },
+  "user": {
+    "title": "Χρήστης",
+    "name": "Nestor Pagonis",
+    "email": "user@example.com"
   }
 }

@@ -2,8 +2,9 @@
 
 import React, { useState, useCallback } from 'react';
 import { MapPin, Hexagon, Hand, Trash2, Check, X, Bell, Home } from 'lucide-react';
-import { usePolygonSystem } from '@geo-alert/core/polygon-system';
-import type { PolygonType, RealEstatePolygon } from '@geo-alert/core/polygon-system';
+import { usePolygonSystem } from '@geo-alert/core';
+import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+import type { PolygonType, RealEstatePolygon } from '@geo-alert/core';
 import { useRealEstateMatching } from '@/services/real-estate-monitor/useRealEstateMatching';
 
 interface CitizenDrawingInterfaceProps {
@@ -29,6 +30,7 @@ export function CitizenDrawingInterface({
   onPolygonComplete,
   onRealEstateAlertCreated
 }: CitizenDrawingInterfaceProps) {
+  const { t } = useTranslationLazy('geo-canvas');
   const [selectedTool, setSelectedTool] = useState<'point' | 'polygon' | 'freehand' | 'real-estate' | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
 
@@ -44,8 +46,11 @@ export function CitizenDrawingInterface({
   const {
     addRealEstatePolygon,
     getRealEstateAlerts,
-    statistics: realEstateStats
+    getStatistics
   } = useRealEstateMatching();
+
+  // ✅ ENTERPRISE FIX: Get statistics as object, not function
+  const realEstateStats = getStatistics();
 
   // Use the polygon system from @geo-alert/core
   const polygonSystem = usePolygonSystem({
@@ -163,10 +168,10 @@ export function CitizenDrawingInterface({
       {/* Header */}
       <div className="mb-4">
         <h3 className="text-lg font-semibold text-gray-900">
-          🏘️ Εργαλεία Πολίτη
+          {t('drawingInterfaces.citizen.title')}
         </h3>
         <p className="text-sm text-gray-600">
-          Απλά εργαλεία για επιλογή περιοχής ενδιαφέροντος
+          {t('drawingInterfaces.citizen.subtitle')}
         </p>
       </div>
 
@@ -187,8 +192,8 @@ export function CitizenDrawingInterface({
           `}
         >
           <MapPin className="w-8 h-8 mb-2 text-blue-600" />
-          <span className="text-sm font-medium">Σημείο</span>
-          <span className="text-xs text-gray-500">Πινέζα</span>
+          <span className="text-sm font-medium">{t('drawingInterfaces.citizen.tools.point')}</span>
+          <span className="text-xs text-gray-500">{t('drawingInterfaces.citizen.tools.pointDescription')}</span>
         </button>
 
         {/* Polygon Tool */}
@@ -206,8 +211,8 @@ export function CitizenDrawingInterface({
           `}
         >
           <Hexagon className="w-8 h-8 mb-2 text-green-600" />
-          <span className="text-sm font-medium">Πολύγωνο</span>
-          <span className="text-xs text-gray-500">Περίγραμμα</span>
+          <span className="text-sm font-medium">{t('drawingInterfaces.citizen.tools.polygon')}</span>
+          <span className="text-xs text-gray-500">{t('drawingInterfaces.citizen.tools.polygonDescription')}</span>
         </button>
       </div>
 
@@ -228,8 +233,8 @@ export function CitizenDrawingInterface({
           `}
         >
           <Hand className="w-8 h-8 mb-2 text-purple-600" />
-          <span className="text-sm font-medium">Ελεύθερο</span>
-          <span className="text-xs text-gray-500">Σχέδιο</span>
+          <span className="text-sm font-medium">{t('drawingInterfaces.citizen.tools.freehand')}</span>
+          <span className="text-xs text-gray-500">{t('drawingInterfaces.citizen.tools.freehandDrawing')}</span>
         </button>
 
         {/* Real Estate Alert Tool */}
@@ -247,8 +252,8 @@ export function CitizenDrawingInterface({
           `}
         >
           <Home className="w-8 h-8 mb-2 text-orange-600" />
-          <span className="text-sm font-medium">Ακίνητα</span>
-          <span className="text-xs text-gray-500">Ειδοποιήσεις</span>
+          <span className="text-sm font-medium">{t('drawingInterfaces.citizen.tools.realEstate')}</span>
+          <span className="text-xs text-gray-500">{t('drawingInterfaces.citizen.tools.realEstateDescription')}</span>
         </button>
       </div>
 
@@ -260,7 +265,7 @@ export function CitizenDrawingInterface({
             className="flex-1 flex items-center justify-center gap-2 bg-green-500 text-white py-3 px-4 rounded-lg hover:bg-green-600 transition-colors"
           >
             <Check className="w-5 h-5" />
-            <span className="font-medium">Ολοκλήρωση</span>
+            <span className="font-medium">{t('drawingInterfaces.citizen.actions.complete')}</span>
           </button>
 
           <button
@@ -268,7 +273,7 @@ export function CitizenDrawingInterface({
             className="flex-1 flex items-center justify-center gap-2 bg-red-500 text-white py-3 px-4 rounded-lg hover:bg-red-600 transition-colors"
           >
             <X className="w-5 h-5" />
-            <span className="font-medium">Ακύρωση</span>
+            <span className="font-medium">{t('drawingInterfaces.citizen.actions.cancel')}</span>
           </button>
         </div>
       )}
@@ -279,7 +284,7 @@ export function CitizenDrawingInterface({
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-lg font-semibold text-orange-900 flex items-center gap-2">
               <Bell className="w-5 h-5" />
-              Ειδοποίηση Ακινήτων
+              {t('drawingInterfaces.citizen.realEstateSetup.title')}
             </h4>
             <button
               onClick={() => setShowRealEstateSetup(false)}
@@ -292,12 +297,12 @@ export function CitizenDrawingInterface({
           {/* Price Range */}
           <div className="mb-4">
             <label className="block text-sm font-medium text-orange-900 mb-2">
-              Εύρος Τιμής (€)
+              {t('citizenDrawingInterface.priceRange.label')}
             </label>
             <div className="grid grid-cols-2 gap-2">
               <input
                 type="number"
-                placeholder="Από"
+                placeholder={t('drawingInterfaces.common.from')}
                 value={realEstateSettings.priceRange.min || ''}
                 onChange={(e) => setRealEstateSettings(prev => ({
                   ...prev,
@@ -307,7 +312,7 @@ export function CitizenDrawingInterface({
               />
               <input
                 type="number"
-                placeholder="Έως"
+                placeholder={t('drawingInterfaces.common.to')}
                 value={realEstateSettings.priceRange.max || ''}
                 onChange={(e) => setRealEstateSettings(prev => ({
                   ...prev,
@@ -321,7 +326,7 @@ export function CitizenDrawingInterface({
           {/* Property Type */}
           <div className="mb-4">
             <label className="block text-sm font-medium text-orange-900 mb-2">
-              Τύπος Ακινήτου
+              {t('drawingInterfaces.citizen.realEstateSetup.propertyType')}
             </label>
             <select
               value={realEstateSettings.propertyTypes[0] || 'apartment'}
@@ -331,10 +336,10 @@ export function CitizenDrawingInterface({
               }))}
               className="w-full px-3 py-2 border border-orange-300 rounded-md text-sm"
             >
-              <option value="apartment">Διαμέρισμα</option>
-              <option value="house">Μονοκατοικία</option>
-              <option value="land">Οικόπεδο</option>
-              <option value="commercial">Επαγγελματικό</option>
+              <option value="apartment">{t('drawingInterfaces.citizen.realEstateSetup.propertyTypes.apartment')}</option>
+              <option value="house">{t('drawingInterfaces.citizen.realEstateSetup.propertyTypes.house')}</option>
+              <option value="land">{t('drawingInterfaces.citizen.realEstateSetup.propertyTypes.land')}</option>
+              <option value="commercial">{t('drawingInterfaces.citizen.realEstateSetup.propertyTypes.commercial')}</option>
             </select>
           </div>
 
@@ -356,7 +361,7 @@ export function CitizenDrawingInterface({
               className="flex-1 flex items-center justify-center gap-2 bg-orange-500 text-white py-2 px-4 rounded-lg hover:bg-orange-600 transition-colors"
             >
               <MapPin className="w-4 h-4" />
-              <span className="text-sm font-medium">Σχεδίασε Περιοχή</span>
+              <span className="text-sm font-medium">{t('drawingInterfaces.citizen.actions.drawArea')}</span>
             </button>
 
             <button
@@ -364,7 +369,7 @@ export function CitizenDrawingInterface({
               className="flex-1 flex items-center justify-center gap-2 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors"
             >
               <X className="w-4 h-4" />
-              <span className="text-sm font-medium">Ακύρωση</span>
+              <span className="text-sm font-medium">{t('drawingInterfaces.citizen.actions.cancel')}</span>
             </button>
           </div>
         </div>
@@ -377,7 +382,7 @@ export function CitizenDrawingInterface({
           className="w-full flex items-center justify-center gap-2 bg-gray-100 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors"
         >
           <Trash2 className="w-4 h-4" />
-          <span className="text-sm">Καθαρισμός όλων ({polygonSystem.polygons.length})</span>
+          <span className="text-sm">{t('drawingInterfaces.citizen.actions.clearAll')} ({polygonSystem.polygons.length})</span>
         </button>
       )}
 
@@ -385,10 +390,10 @@ export function CitizenDrawingInterface({
       {selectedTool && (
         <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
           <p className="text-sm text-blue-700">
-            {selectedTool === 'point' && '📍 Κάντε κλικ στο χάρτη για να τοποθετήσετε ένα σημείο ειδοποίησης'}
-            {selectedTool === 'polygon' && '🔷 Κάντε κλικ για να προσθέσετε σημεία στο πολύγωνο. Διπλό κλικ για ολοκλήρωση'}
-            {selectedTool === 'freehand' && '✏️ Κρατήστε πατημένο και σύρετε για να σχεδιάσετε ελεύθερα'}
-            {selectedTool === 'real-estate' && '🏠 Σχεδιάστε την περιοχή ενδιαφέροντος για ειδοποιήσεις ακινήτων. Διπλό κλικ για ολοκλήρωση'}
+            {selectedTool === 'point' && t('instructions.citizen.placePoint')}
+            {selectedTool === 'polygon' && t('instructions.citizen.addPolygonPoints')}
+            {selectedTool === 'freehand' && t('instructions.citizen.drawFreehand')}
+            {selectedTool === 'real-estate' && t('drawingInterfaces.citizen.instructions.realEstate')}
           </p>
         </div>
       )}
