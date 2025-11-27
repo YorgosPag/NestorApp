@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ToolbarAddButton, ToolbarEditButton, ToolbarDeleteButton, ToolbarArchiveButton, ToolbarCallButton, ToolbarEmailButton, ToolbarSMSButton, ToolbarExportButton, ToolbarImportButton, ToolbarHelpButton, ToolbarFavoritesButton, ToolbarArchivedFilterButton } from '@/components/ui/form/ActionButtons';
 import {
   Plus,
   Edit,
@@ -155,35 +156,61 @@ export function ContactsToolbar({
 
         <TabsContent value="actions" className="mt-3">
           <div className="flex flex-wrap gap-2">
-            {renderButton(
-              Plus,
-              'Νέα Επαφή',
-              () => onNewContact?.(),
-              'default',
-              false,
-              'Προσθήκη νέας επαφής'
-            )}
-            {renderButton(
-              Edit,
-              'Επεξεργασία',
-              () => hasSelectedContact && onEditContact?.(),
-              'outline',
-              !hasSelectedContact,
-              'Επεξεργασία επιλεγμένης επαφής'
-            )}
-            {renderButton(
-              Trash2,
-              'Διαγραφή',
-              handleDeleteAction,
-              'destructive',
-              selectedItems.length === 0 && !hasSelectedContact,
-              selectedItems.length > 0
-                ? `Διαγραφή ${selectedItems.length} επαφής/ών`
-                : hasSelectedContact
-                  ? 'Διαγραφή επιλεγμένης επαφής'
-                  : 'Επιλέξτε επαφή για διαγραφή',
-              selectedItems.length > 0 ? selectedItems.length : undefined
-            )}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <ToolbarAddButton
+                    variant="default"
+                    onClick={() => onNewContact?.()}
+                    disabled={false}
+                  >
+                    Νέα Επαφή
+                  </ToolbarAddButton>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Προσθήκη νέας επαφής</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <ToolbarEditButton
+                    variant="outline"
+                    onClick={() => hasSelectedContact && onEditContact?.()}
+                    disabled={!hasSelectedContact}
+                  >
+                    Επεξεργασία
+                  </ToolbarEditButton>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Επεξεργασία επιλεγμένης επαφής</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <ToolbarDeleteButton
+                    variant="destructive"
+                    onClick={handleDeleteAction}
+                    disabled={selectedItems.length === 0 && !hasSelectedContact}
+                    badge={selectedItems.length > 0 ? selectedItems.length : undefined}
+                  >
+                    Διαγραφή
+                  </ToolbarDeleteButton>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>
+                    {selectedItems.length > 0
+                      ? `Διαγραφή ${selectedItems.length} επαφής/ών`
+                      : hasSelectedContact
+                        ? 'Διαγραφή επιλεγμένης επαφής'
+                        : 'Επιλέξτε επαφή για διαγραφή'}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             {renderButton(
               RefreshCw,
               'Ανανέωση',
@@ -197,30 +224,51 @@ export function ContactsToolbar({
 
         <TabsContent value="communication" className="mt-3">
           <div className="flex flex-wrap gap-2">
-            {renderButton(
-              Phone,
-              'Κλήση',
-              () => console.log('Call selected contacts...'),
-              'ghost',
-              selectedItems.length === 0,
-              'Κλήση επιλεγμένων επαφών'
-            )}
-            {renderButton(
-              Mail,
-              'Email',
-              () => console.log('Email selected contacts...'),
-              'ghost',
-              selectedItems.length === 0,
-              'Αποστολή email στις επιλεγμένες επαφές'
-            )}
-            {renderButton(
-              MessageSquare,
-              'SMS',
-              () => console.log('Send SMS...'),
-              'ghost',
-              selectedItems.length === 0,
-              'Αποστολή SMS στις επιλεγμένες επαφές'
-            )}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <ToolbarCallButton
+                    onClick={() => console.log('Call selected contacts...')}
+                    disabled={selectedItems.length === 0}
+                  >
+                    Κλήση
+                  </ToolbarCallButton>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Κλήση επιλεγμένων επαφών</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <ToolbarEmailButton
+                    onClick={() => console.log('Email selected contacts...')}
+                    disabled={selectedItems.length === 0}
+                  >
+                    Email
+                  </ToolbarEmailButton>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Αποστολή email στις επιλεγμένες επαφές</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <ToolbarSMSButton
+                    onClick={() => console.log('Send SMS...')}
+                    disabled={selectedItems.length === 0}
+                  >
+                    SMS
+                  </ToolbarSMSButton>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Αποστολή SMS στις επιλεγμένες επαφές</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
           {selectedItems.length === 0 && (
             <div className="text-center text-sm text-muted-foreground mt-4 p-4 border rounded-lg bg-muted/20">
@@ -231,64 +279,105 @@ export function ContactsToolbar({
 
         <TabsContent value="management" className="mt-3">
           <div className="flex flex-wrap gap-2">
-            {renderButton(
-              Download,
-              'Εξαγωγή',
-              () => onExport?.(),
-              'ghost',
-              false,
-              'Εξαγωγή λίστας επαφών'
-            )}
-            {renderButton(
-              Upload,
-              'Εισαγωγή',
-              () => console.log('Import contacts...'),
-              'ghost',
-              false,
-              'Εισαγωγή επαφών από αρχείο'
-            )}
-            {renderButton(
-              Archive,
-              'Αρχειοθέτηση',
-              handleArchiveAction,
-              'ghost',
-              selectedItems.length === 0 && !hasSelectedContact,
-              selectedItems.length > 0
-                ? `Αρχειοθέτηση ${selectedItems.length} επαφής/ών`
-                : hasSelectedContact
-                  ? 'Αρχειοθέτηση επιλεγμένης επαφής'
-                  : 'Επιλέξτε επαφή για αρχειοθέτηση',
-              selectedItems.length > 0 ? selectedItems.length : undefined
-            )}
-            {renderButton(
-              HelpCircle,
-              'Βοήθεια',
-              () => console.log('Show help...'),
-              'ghost',
-              false,
-              'Βοήθεια και οδηγίες'
-            )}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <ToolbarExportButton
+                    onClick={() => onExport?.()}
+                  >
+                    Εξαγωγή
+                  </ToolbarExportButton>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Εξαγωγή λίστας επαφών</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <ToolbarImportButton
+                    onClick={() => console.log('Import contacts...')}
+                  >
+                    Εισαγωγή
+                  </ToolbarImportButton>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Εισαγωγή επαφών από αρχείο</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <ToolbarArchiveButton
+                    onClick={handleArchiveAction}
+                    disabled={selectedItems.length === 0 && !hasSelectedContact}
+                    badge={selectedItems.length > 0 ? selectedItems.length : undefined}
+                  >
+                    Αρχειοθέτηση
+                  </ToolbarArchiveButton>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>
+                    {selectedItems.length > 0
+                      ? `Αρχειοθέτηση ${selectedItems.length} επαφής/ών`
+                      : hasSelectedContact
+                        ? 'Αρχειοθέτηση επιλεγμένης επαφής'
+                        : 'Επιλέξτε επαφή για αρχειοθέτηση'}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <ToolbarHelpButton
+                    onClick={() => console.log('Show help...')}
+                  >
+                    Βοήθεια
+                  </ToolbarHelpButton>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Βοήθεια και οδηγίες</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </TabsContent>
 
         <TabsContent value="filters" className="mt-3">
           <div className="flex flex-wrap gap-2">
-            {renderButton(
-              Star,
-              'Αγαπημένα',
-              () => onToggleFavoritesFilter?.(),
-              showOnlyFavorites ? 'default' : 'ghost',
-              false,
-              showOnlyFavorites ? 'Εμφάνιση όλων των επαφών' : 'Φιλτράρισμα μόνο αγαπημένων'
-            )}
-            {renderButton(
-              Archive,
-              'Αρχειοθετημένα',
-              () => onToggleArchivedFilter?.(),
-              showArchivedContacts ? 'default' : 'ghost',
-              false,
-              showArchivedContacts ? 'Εμφάνιση ενεργών επαφών' : 'Φιλτράρισμα μόνο αρχειοθετημένων'
-            )}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <ToolbarFavoritesButton
+                    active={showOnlyFavorites}
+                    onClick={() => onToggleFavoritesFilter?.()}
+                  >
+                    Αγαπημένα
+                  </ToolbarFavoritesButton>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{showOnlyFavorites ? 'Εμφάνιση όλων των επαφών' : 'Φιλτράρισμα μόνο αγαπημένων'}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <ToolbarArchivedFilterButton
+                    active={showArchivedContacts}
+                    onClick={() => onToggleArchivedFilter?.()}
+                  >
+                    Αρχειοθετημένα
+                  </ToolbarArchivedFilterButton>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{showArchivedContacts ? 'Εμφάνιση ενεργών επαφών' : 'Φιλτράρισμα μόνο αρχειοθετημένων'}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
           <div className="text-center text-sm text-muted-foreground mt-4 p-4 border rounded-lg bg-blue-50/50">
             💡 Χρησιμοποιήστε τα φίλτρα στο header για περισσότερες επιλογές

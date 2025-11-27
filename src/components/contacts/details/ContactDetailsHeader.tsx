@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
+import { EditButton, DeleteButton } from '@/components/ui/form/ActionButtons';
 import { Badge } from '@/components/ui/badge';
 import { Users, Building2, Landmark, Edit, Trash2 } from 'lucide-react';
 import type { Contact, ContactType, ContactStatus } from '@/types/contacts';
@@ -46,17 +47,12 @@ export function ContactDetailsHeader({ contact, onEditContact, onDeleteContact }
           </div>
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => onEditContact?.()}>
-              <Edit className="w-4 h-4 mr-2"/>
-              Επεξεργασία
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={() => onDeleteContact?.()}
-          >
-              <Trash2 className="w-4 h-4 mr-2"/>
-              Διαγραφή
-          </Button>
+          <EditButton onClick={() => onEditContact?.()}>
+            Επεξεργασία
+          </EditButton>
+          <DeleteButton onClick={() => onDeleteContact?.()}>
+            Διαγραφή
+          </DeleteButton>
         </div>
       </div>
     </div>

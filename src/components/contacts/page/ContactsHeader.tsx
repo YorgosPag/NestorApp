@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { AddButton } from '@/components/ui/form/ActionButtons';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -156,13 +157,9 @@ export function ContactsHeader({
               </TooltipTrigger>
               <TooltipContent>Προβολή Πλέγματος</TooltipContent>
             </Tooltip>
-            <Button
-              className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
-              onClick={() => onNewContact?.()}
-            >
-              <Plus className="w-4 h-4 mr-2" />
+            <AddButton onClick={() => onNewContact?.()}>
               Νέα Επαφή
-            </Button>
+            </AddButton>
           </div>
         </div>
         <div className="flex flex-col gap-3">

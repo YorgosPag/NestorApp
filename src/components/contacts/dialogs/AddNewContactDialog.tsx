@@ -14,6 +14,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { FormGrid, FormField, FormInput } from '@/components/ui/form/FormComponents';
+import { SaveButton, CancelButton } from '@/components/ui/form/ActionButtons';
 import { ContactsService } from '@/services/contacts.service';
 import toast from 'react-hot-toast';
 import type { Contact, ContactType } from '@/types/contacts';
@@ -172,49 +174,51 @@ export function AddNewContactDialog({ open, onOpenChange, onContactAdded }: AddN
         </DialogHeader>
         
         <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4">
+          <FormGrid>
             {/* Τύπος Επαφής */}
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="type" className="text-right">Τύπος *</Label>
-              <Select name="type" value={formData.type} onValueChange={(value) => handleSelectChange('type', value)} disabled={loading}>
-                <SelectTrigger className="col-span-3">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="individual">👤 Φυσικό Πρόσωπο</SelectItem>
-                  <SelectItem value="company">🏢 Εταιρεία</SelectItem>
-                  <SelectItem value="service">🏛️ Δημόσια Υπηρεσία</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <FormField label="Τύπος" htmlFor="type" required>
+              <FormInput>
+                <Select name="type" value={formData.type} onValueChange={(value) => handleSelectChange('type', value)} disabled={loading}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="individual">👤 Φυσικό Πρόσωπο</SelectItem>
+                    <SelectItem value="company">🏢 Εταιρεία</SelectItem>
+                    <SelectItem value="service">🏛️ Δημόσια Υπηρεσία</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormInput>
+            </FormField>
 
             {/* Πεδία για Φυσικό Πρόσωπο */}
             {formData.type === 'individual' && (
               <>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="firstName" className="text-right">Όνομα *</Label>
-                  <Input 
-                    id="firstName" 
-                    name="firstName" 
-                    value={formData.firstName} 
-                    onChange={handleChange} 
-                    className="col-span-3" 
-                    required 
-                    disabled={loading} 
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="lastName" className="text-right">Επώνυμο *</Label>
-                  <Input 
-                    id="lastName" 
-                    name="lastName" 
-                    value={formData.lastName} 
-                    onChange={handleChange} 
-                    className="col-span-3" 
-                    required 
-                    disabled={loading} 
-                  />
-                </div>
+                <FormField label="Όνομα" htmlFor="firstName" required>
+                  <FormInput>
+                    <Input
+                      id="firstName"
+                      name="firstName"
+                      value={formData.firstName}
+                      onChange={handleChange}
+                      required
+                      disabled={loading}
+                    />
+                  </FormInput>
+                </FormField>
+
+                <FormField label="Επώνυμο" htmlFor="lastName" required>
+                  <FormInput>
+                    <Input
+                      id="lastName"
+                      name="lastName"
+                      value={formData.lastName}
+                      onChange={handleChange}
+                      required
+                      disabled={loading}
+                    />
+                  </FormInput>
+                </FormField>
               </>
             )}
 
@@ -282,18 +286,18 @@ export function AddNewContactDialog({ open, onOpenChange, onContactAdded }: AddN
             )}
 
             {/* Κοινά πεδία */}
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="email" className="text-right">Email</Label>
-              <Input 
-                id="email" 
-                name="email" 
-                type="email" 
-                value={formData.email} 
-                onChange={handleChange} 
-                className="col-span-3" 
-                disabled={loading} 
-              />
-            </div>
+            <FormField label="Email" htmlFor="email">
+              <FormInput>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  disabled={loading}
+                />
+              </FormInput>
+            </FormField>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="phone" className="text-right">Τηλέφωνο</Label>
               <Input 
@@ -318,20 +322,11 @@ export function AddNewContactDialog({ open, onOpenChange, onContactAdded }: AddN
                 disabled={loading} 
               />
             </div>
-          </div>
+          </FormGrid>
           
           <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={loading}>
-              Άκυρο
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Αποθήκευση...
-                </>
-              ) : 'Αποθήκευση Επαφής'}
-            </Button>
+            <CancelButton onClick={() => onOpenChange(false)} disabled={loading} />
+            <SaveButton loading={loading}>Αποθήκευση Επαφής</SaveButton>
           </DialogFooter>
         </form>
       </DialogContent>
