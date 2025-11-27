@@ -20,6 +20,7 @@ const MAX_BATCH = 500;
 async function buildContactsQuery(options?: {
   type?: ContactType;
   onlyFavorites?: boolean;
+  includeArchived?: boolean;           // ΝΕΟ: για προβολή archived
   orderByField?: string;
   orderDirection?: 'asc' | 'desc';
   lastDoc?: DocumentSnapshot;          // διατηρείται για συμβατότητα
@@ -30,6 +31,9 @@ async function buildContactsQuery(options?: {
 
   if (options?.type) constraints.push(where('type', '==', options.type));
   if (options?.onlyFavorites) constraints.push(where('isFavorite', '==', true));
+
+  // ΣΗΜΕΙΩΣΗ: Δεν φιλτράρουμε archived στο query level γιατί απαιτεί σύνθετο Firestore index
+  // Θα κάνουμε client-side filtering για status στη συνέχεια
 
   const orderField = options?.orderByField || 'updatedAt';
   const orderDir = options?.orderDirection || 'desc';
@@ -110,6 +114,7 @@ export class ContactsService {
   static async getAllContacts(options?: {
     type?: ContactType;
     onlyFavorites?: boolean;
+    includeArchived?: boolean; // ΝΕΟ: για προβολή archived
     searchTerm?: string;
     orderByField?: string;
     orderDirection?: 'asc' | 'desc';
@@ -122,36 +127,52 @@ export class ContactsService {
       const qs = await getDocs(q);
       const contacts = mapDocs<Contact>(qs); // thanks to converter, dates normalized
 
-      // Client-side search (σταθεροποιημένα πεδία)
-      const filtered = options?.searchTerm
-        ? contacts.filter((contact) => {
-            const term = options.searchTerm!.toLowerCase();
-            if (isIndividualContact(contact)) {
-              const emails = (contact.emails ?? []).map((e) => e.email || '');
-              const phones = (contact.phones ?? []).map((p) => p.number || '');
-              return (
-                (contact.firstName || '').toLowerCase().includes(term) ||
-                (contact.lastName || '').toLowerCase().includes(term) ||
-                emails.some((e) => e.toLowerCase().includes(term)) ||
-                phones.some((n) => n.includes(term))
-              );
-            }
-            if (isCompanyContact(contact)) {
-              const emails = (contact.emails ?? []).map((e) => e.email || '');
-              return (
-                (contact.companyName || '').toLowerCase().includes(term) ||
-                (contact.vatNumber || '').includes(term) ||
-                emails.some((e) => e.toLowerCase().includes(term))
-              );
-            }
-            // service
+      // Client-side filtering (status & search)
+      let filtered = contacts;
+
+      // Filter by archived status (client-side για να αποφύγουμε Firestore index)
+      if (options?.includeArchived === true) {
+        // Δείχνει ΜΟΝΟ archived επαφές
+        filtered = filtered.filter((contact: any) =>
+          contact.status === 'archived'
+        );
+      } else {
+        // Exclude archived contacts (default behavior)
+        filtered = filtered.filter((contact: any) =>
+          !contact.status || contact.status !== 'archived'
+        );
+      }
+
+      // Search filter
+      if (options?.searchTerm) {
+        const term = options.searchTerm.toLowerCase();
+        filtered = filtered.filter((contact) => {
+          if (isIndividualContact(contact)) {
+            const emails = (contact.emails ?? []).map((e) => e.email || '');
+            const phones = (contact.phones ?? []).map((p) => p.number || '');
+            return (
+              (contact.firstName || '').toLowerCase().includes(term) ||
+              (contact.lastName || '').toLowerCase().includes(term) ||
+              emails.some((e) => e.toLowerCase().includes(term)) ||
+              phones.some((n) => n.includes(term))
+            );
+          }
+          if (isCompanyContact(contact)) {
             const emails = (contact.emails ?? []).map((e) => e.email || '');
             return (
-              (contact.serviceName || '').toLowerCase().includes(term) ||
+              (contact.companyName || '').toLowerCase().includes(term) ||
+              (contact.vatNumber || '').includes(term) ||
               emails.some((e) => e.toLowerCase().includes(term))
             );
-          })
-        : contacts;
+          }
+          // service
+          const emails = (contact.emails ?? []).map((e) => e.email || '');
+          return (
+            (contact.serviceName || '').toLowerCase().includes(term) ||
+            emails.some((e) => e.toLowerCase().includes(term))
+          );
+        });
+      }
 
       const lastDoc = qs.docs[qs.docs.length - 1] || null;
       return { contacts: filtered, lastDoc, nextCursor: lastDoc?.id ?? null };
@@ -178,6 +199,69 @@ export class ContactsService {
     } catch (error) {
       console.error('Error toggling favorite:', error);
       throw new Error('Failed to toggle favorite');
+    }
+  }
+
+  // Archive functionality
+  static async archiveContact(id: string, reason?: string): Promise<void> {
+    try {
+      const updateData: any = {
+        status: 'archived',
+        archivedAt: serverTimestamp(),
+        archivedBy: 'current-user' // TODO: Get actual user ID
+      };
+
+      // Only add archivedReason if it's provided
+      if (reason && reason.trim()) {
+        updateData.archivedReason = reason.trim();
+      }
+
+      await this.updateContact(id, updateData);
+    } catch (error) {
+      console.error('Error archiving contact:', error);
+      throw new Error('Failed to archive contact');
+    }
+  }
+
+  static async restoreContact(id: string): Promise<void> {
+    try {
+      await this.updateContact(id, {
+        status: 'active',
+        restoredAt: serverTimestamp(),
+        restoredBy: 'current-user' // TODO: Get actual user ID
+      } as any);
+    } catch (error) {
+      console.error('Error restoring contact:', error);
+      throw new Error('Failed to restore contact');
+    }
+  }
+
+  static async archiveMultipleContacts(ids: string[], reason?: string): Promise<void> {
+    try {
+      for (const group of chunk(ids, MAX_BATCH)) {
+        const batch = writeBatch(db);
+        group.forEach((id) => {
+          const docRef = doc(db, CONTACTS_COLLECTION, id);
+
+          const updateData: any = {
+            status: 'archived',
+            archivedAt: serverTimestamp(),
+            archivedBy: 'current-user', // TODO: Get actual user ID
+            updatedAt: serverTimestamp()
+          };
+
+          // Only add archivedReason if it's provided
+          if (reason && reason.trim()) {
+            updateData.archivedReason = reason.trim();
+          }
+
+          batch.update(docRef, updateData);
+        });
+        await batch.commit();
+      }
+    } catch (error) {
+      console.error('Error archiving multiple contacts:', error);
+      throw new Error('Failed to archive contacts');
     }
   }
 

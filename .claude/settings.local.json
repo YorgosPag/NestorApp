@@ -57,7 +57,8 @@
       "mcp__ide__getDiagnostics",
       "WebSearch",
       "Bash(npx kill-port:*)",
-      "Read(//f/Pagonis_Nestor/**)"
+      "Read(//f/Pagonis_Nestor/**)",
+      "Bash(del /S /Q .next)"
     ],
     "deny": [],
     "ask": []

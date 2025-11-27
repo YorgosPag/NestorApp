@@ -17,7 +17,8 @@ import {
   X,
   Hash,
   Ruler,
-  Star
+  Star,
+  Archive
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { UnitsCountFilter, AreaFilter, ContactTypeFilter, ViewMode } from '@/hooks/useContactsState';
@@ -36,6 +37,8 @@ interface ContactsHeaderProps {
   onShowOnlyOwnersChange: (checked: boolean) => void;
   showOnlyFavorites: boolean;
   onShowOnlyFavoritesChange: (checked: boolean) => void;
+  showArchivedContacts?: boolean;
+  onShowArchivedContactsChange?: (checked: boolean) => void;
   unitsCountFilter: UnitsCountFilter;
   setUnitsCountFilter: (filter: UnitsCountFilter) => void;
   areaFilter: AreaFilter;
@@ -56,6 +59,8 @@ export function ContactsHeader({
   onShowOnlyOwnersChange,
   showOnlyFavorites,
   onShowOnlyFavoritesChange,
+  showArchivedContacts,
+  onShowArchivedContactsChange,
   unitsCountFilter,
   setUnitsCountFilter,
   areaFilter,
@@ -92,7 +97,7 @@ export function ContactsHeader({
         setAreaFilter('all');
     }, [setSearchTerm, setFilterType, onShowOnlyOwnersChange, onShowOnlyFavoritesChange, setUnitsCountFilter, setAreaFilter]);
 
-    const toggleDashboard = useCallback(() => setShowDashboard(v => !v), [setShowDashboard]);
+    const toggleDashboard = useCallback(() => setShowDashboard(prev => !prev), [setShowDashboard]);
     const switchToList = useCallback(() => setViewMode('list'), [setViewMode]);
     const switchToGrid = useCallback(() => setViewMode('grid'), [setViewMode]);
     

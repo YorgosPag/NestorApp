@@ -10,6 +10,7 @@ import {
   Phone,
   Mail,
   Loader2,
+  Archive,
 } from "lucide-react";
 import {
   Tooltip,
@@ -51,12 +52,14 @@ export function ContactListItem({
     const initials = getContactInitials(contact);
     const email = getPrimaryEmail(contact);
     const phone = getPrimaryPhone(contact);
+    const isArchived = (contact as any)?.status === 'archived';
 
     return (
         <TooltipProvider>
             <div
                 className={cn(
                     "relative p-3 rounded-lg border cursor-pointer transition-all duration-200 hover:shadow-md group",
+                    isArchived && "opacity-60 bg-muted/30",
                     isSelected
                     ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20 shadow-sm"
                     : "border-border hover:border-blue-300 bg-card hover:bg-accent/50"
@@ -118,6 +121,14 @@ export function ContactListItem({
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                             <Phone className="w-3 h-3" />
                             <span className="truncate">{phone}</span>
+                        </div>
+                    )}
+                    {isArchived && (
+                        <div className="flex items-center gap-2 mt-1">
+                            <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-700 border-orange-200">
+                                <Archive className="w-3 h-3 mr-1" />
+                                Αρχειοθετημένο
+                            </Badge>
                         </div>
                     )}
                 </div>

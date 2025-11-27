@@ -1,0 +1,199 @@
+'use client';
+
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { ContactsService } from '@/services/contacts.service';
+import toast from 'react-hot-toast';
+import type { Contact } from '@/types/contacts';
+import { getContactDisplayName } from '@/types/contacts';
+import { Loader2, Archive, Users, Building, Shield } from 'lucide-react';
+
+interface ArchiveContactDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  contact: Contact | null;
+  selectedContactIds?: string[];
+  onContactsArchived: () => void;
+}
+
+export function ArchiveContactDialog({
+  open,
+  onOpenChange,
+  contact,
+  selectedContactIds = [],
+  onContactsArchived
+}: ArchiveContactDialogProps) {
+  const [loading, setLoading] = useState(false);
+  const [archiveReason, setArchiveReason] = useState('');
+
+  const isMultipleArchive = selectedContactIds.length > 1;
+  const isSingleSelectedArchive = selectedContactIds.length === 1;
+  const isCurrentContactArchive = contact && !isSingleSelectedArchive;
+
+  const getContactIcon = (contact: Contact) => {
+    switch (contact.type) {
+      case 'individual': return <Users className="h-4 w-4 text-blue-500" />;
+      case 'company': return <Building className="h-4 w-4 text-purple-500" />;
+      case 'service': return <Shield className="h-4 w-4 text-green-500" />;
+      default: return <Users className="h-4 w-4 text-gray-500" />;
+    }
+  };
+
+  const getDialogTitle = () => {
+    if (isMultipleArchive) {
+      return `Αρχειοθέτηση ${selectedContactIds.length} Επαφών`;
+    }
+    return 'Αρχειοθέτηση Επαφής';
+  };
+
+  const getDialogDescription = () => {
+    if (isMultipleArchive) {
+      return `Είστε βέβαιοι ότι θέλετε να αρχειοθετήσετε ${selectedContactIds.length} επαφές; Οι επαφές θα μετακινηθούν στο αρχείο αλλά δεν θα διαγραφούν μόνιμα.`;
+    }
+
+    const contactToArchive = contact;
+    if (contactToArchive) {
+      return `Είστε βέβαιοι ότι θέλετε να αρχειοθετήσετε την επαφή "${getContactDisplayName(contactToArchive)}"; Η επαφή θα μετακινηθεί στο αρχείο αλλά δεν θα διαγραφεί μόνιμα.`;
+    }
+
+    return 'Είστε βέβαιοι ότι θέλετε να αρχειοθετήσετε την επαφή; Η επαφή θα μετακινηθεί στο αρχείο αλλά δεν θα διαγραφεί μόνιμα.';
+  };
+
+  const handleArchive = async () => {
+    if (loading) return;
+    setLoading(true);
+
+    try {
+      if (isMultipleArchive) {
+        // Αρχειοθέτηση πολλών επαφών
+        await ContactsService.archiveMultipleContacts(selectedContactIds, archiveReason || undefined);
+        toast.success(`${selectedContactIds.length} επαφές αρχειοθετήθηκαν επιτυχώς.`);
+      } else if (contact) {
+        // Αρχειοθέτηση μίας επαφής
+        await ContactsService.archiveContact(contact.id!, archiveReason || undefined);
+        toast.success(`Η επαφή "${getContactDisplayName(contact)}" αρχειοθετήθηκε επιτυχώς.`);
+      }
+
+      onContactsArchived();
+      onOpenChange(false);
+      setArchiveReason(''); // Clear form
+    } catch (error) {
+      console.error('Archive error:', error);
+      toast.error(
+        isMultipleArchive
+          ? 'Δεν ήταν δυνατή η αρχειοθέτηση των επαφών.'
+          : 'Δεν ήταν δυνατή η αρχειοθέτηση της επαφής.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancel = () => {
+    if (!loading) {
+      onOpenChange(false);
+      setArchiveReason(''); // Clear form
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-orange-600">
+            <Archive className="h-5 w-5" />
+            {getDialogTitle()}
+          </DialogTitle>
+          <DialogDescription className="text-base">
+            {getDialogDescription()}
+          </DialogDescription>
+        </DialogHeader>
+
+        {/* Λεπτομέρειες επαφής/επαφών */}
+        <div className="py-4 space-y-4">
+          {isMultipleArchive ? (
+            <div className="bg-muted p-3 rounded-lg">
+              <p className="text-sm font-medium text-muted-foreground">
+                Επιλεγμένες επαφές για αρχειοθέτηση: {selectedContactIds.length}
+              </p>
+            </div>
+          ) : contact ? (
+            <div className="bg-muted p-3 rounded-lg flex items-center gap-3">
+              {getContactIcon(contact)}
+              <div>
+                <p className="font-medium">{getContactDisplayName(contact)}</p>
+                <p className="text-sm text-muted-foreground">
+                  {contact.type === 'individual' && 'Φυσικό Πρόσωπο'}
+                  {contact.type === 'company' && 'Εταιρεία'}
+                  {contact.type === 'service' && 'Δημόσια Υπηρεσία'}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-muted p-3 rounded-lg">
+              <p className="text-sm text-muted-foreground">Δεν υπάρχει επιλεγμένη επαφή.</p>
+            </div>
+          )}
+
+          {/* Πεδίο για λόγο αρχειοθέτησης */}
+          <div className="space-y-2">
+            <Label htmlFor="archive-reason" className="text-sm font-medium">
+              Λόγος αρχειοθέτησης (προαιρετικό)
+            </Label>
+            <Input
+              id="archive-reason"
+              placeholder="π.χ. Ανενεργός πελάτης, Μετακόμιση, Κλείσιμο εταιρείας..."
+              value={archiveReason}
+              onChange={(e) => setArchiveReason(e.target.value)}
+              disabled={loading}
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground">
+              Ο λόγος αρχειοθέτησης θα σας βοηθήσει να θυμηθείτε γιατί μετακινήσατε την επαφή στο αρχείο.
+            </p>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={handleCancel}
+            disabled={loading}
+          >
+            Άκυρο
+          </Button>
+          <Button
+            type="button"
+            variant="default"
+            onClick={handleArchive}
+            disabled={loading || (!contact && selectedContactIds.length === 0)}
+            className="bg-orange-600 hover:bg-orange-700"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Αρχειοθέτηση...
+              </>
+            ) : (
+              <>
+                <Archive className="mr-2 h-4 w-4" />
+                {isMultipleArchive ? `Αρχειοθέτηση ${selectedContactIds.length} Επαφών` : 'Αρχειοθέτηση Επαφής'}
+              </>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

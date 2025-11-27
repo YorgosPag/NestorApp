@@ -12,6 +12,7 @@ import { ContactDetails } from './details/ContactDetails';
 import { AddNewContactDialog } from './dialogs/AddNewContactDialog';
 import { EditContactDialog } from './dialogs/EditContactDialog';
 import { DeleteContactDialog } from './dialogs/DeleteContactDialog';
+import { ArchiveContactDialog } from './dialogs/ArchiveContactDialog';
 
 // Initial seed data for database (μόνο για πρώτη φόρτωση)
 const SEED_CONTACTS = [
@@ -75,6 +76,7 @@ export function ContactsPageContent() {
   const [showNewContactDialog, setShowNewContactDialog] = useState(false);
   const [showEditContactDialog, setShowEditContactDialog] = useState(false);
   const [showDeleteContactDialog, setShowDeleteContactDialog] = useState(false);
+  const [showArchiveContactDialog, setShowArchiveContactDialog] = useState(false);
   const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
 
   // Add missing search/filter state
@@ -82,6 +84,7 @@ export function ContactsPageContent() {
   const [filterType, setFilterType] = useState<'all' | 'individual' | 'company' | 'service'>('all');
   const [showOnlyOwners, setShowOnlyOwners] = useState(false);
   const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
+  const [showArchivedContacts, setShowArchivedContacts] = useState(false);
   const [unitsCountFilter, setUnitsCountFilter] = useState<'all' | '1-2' | '3-5' | '6+'>('all');
   const [areaFilter, setAreaFilter] = useState<'all' | '0-100' | '101-300' | '301+'>('all');
 
@@ -95,7 +98,8 @@ export function ContactsPageContent() {
       const contactsResult = await ContactsService.getAllContacts({
         limitCount: 50,
         orderByField: 'updatedAt',
-        orderDirection: 'desc'
+        orderDirection: 'desc',
+        includeArchived: showArchivedContacts
       });
 
       console.log('📋 Contacts loaded:', contactsResult);
@@ -134,10 +138,10 @@ export function ContactsPageContent() {
     await loadContacts();
   };
 
-  // Load contacts on component mount
+  // Load contacts on component mount and when archived filter changes
   useEffect(() => {
     loadContacts();
-  }, []);
+  }, [showArchivedContacts]);
 
   const handleNewContact = () => {
     setShowNewContactDialog(true);
@@ -181,8 +185,34 @@ export function ContactsPageContent() {
     await refreshContacts();
   };
 
+  const handleArchiveContacts = (ids?: string[]) => {
+    if (ids && ids.length > 0) {
+      setSelectedContactIds(ids);
+    } else {
+      // Χρησιμοποίησε την τρέχουσα επιλεγμένη επαφή
+      setSelectedContactIds([]);
+    }
+    setShowArchiveContactDialog(true);
+  };
+
+  const handleContactsArchived = async () => {
+    setShowArchiveContactDialog(false);
+
+    // Αν αρχειοθετήθηκε η τρέχουσα επιλεγμένη επαφή, καθάρισε την επιλογή
+    if (selectedContact && selectedContactIds.includes(selectedContact.id!)) {
+      setSelectedContact(null);
+    }
+
+    setSelectedContactIds([]);
+    await refreshContacts();
+  };
+
   const handleToggleFavoritesFilter = () => {
     setShowOnlyFavorites(prev => !prev);
+  };
+
+  const handleToggleArchivedFilter = () => {
+    setShowArchivedContacts(prev => !prev);
   };
 
   // Filter contacts based on current filters
@@ -238,6 +268,8 @@ export function ContactsPageContent() {
           onShowOnlyOwnersChange={setShowOnlyOwners}
           showOnlyFavorites={showOnlyFavorites}
           onShowOnlyFavoritesChange={setShowOnlyFavorites}
+          showArchivedContacts={showArchivedContacts}
+          onShowArchivedContactsChange={setShowArchivedContacts}
           unitsCountFilter={unitsCountFilter}
           setUnitsCountFilter={setUnitsCountFilter}
           areaFilter={areaFilter}
@@ -268,9 +300,12 @@ export function ContactsPageContent() {
                 onNewContact={handleNewContact}
                 onEditContact={handleEditContact}
                 onDeleteContact={handleDeleteContacts}
+                onArchiveContact={handleArchiveContacts}
                 onContactUpdated={refreshContacts}
                 showOnlyFavorites={showOnlyFavorites}
                 onToggleFavoritesFilter={handleToggleFavoritesFilter}
+                showArchivedContacts={showArchivedContacts}
+                onToggleArchivedFilter={handleToggleArchivedFilter}
               />
               <ContactDetails contact={selectedContact} onEditContact={handleEditContact} onDeleteContact={() => handleDeleteContacts()} />
             </>
@@ -303,6 +338,15 @@ export function ContactsPageContent() {
           contact={selectedContact}
           selectedContactIds={selectedContactIds}
           onContactsDeleted={handleContactsDeleted}
+        />
+
+        {/* Dialog για αρχειοθέτηση επαφής */}
+        <ArchiveContactDialog
+          open={showArchiveContactDialog}
+          onOpenChange={setShowArchiveContactDialog}
+          contact={selectedContact}
+          selectedContactIds={selectedContactIds}
+          onContactsArchived={handleContactsArchived}
         />
       </div>
     </TooltipProvider>

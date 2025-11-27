@@ -20,9 +20,12 @@ interface ContactsListProps {
   onNewContact?: () => void;
   onEditContact?: () => void;
   onDeleteContact?: (ids?: string[]) => void;
+  onArchiveContact?: (ids?: string[]) => void;
   onContactUpdated?: () => void;
   showOnlyFavorites?: boolean;
   onToggleFavoritesFilter?: () => void;
+  showArchivedContacts?: boolean;
+  onToggleArchivedFilter?: () => void;
 }
 
 export function ContactsList({
@@ -33,9 +36,12 @@ export function ContactsList({
   onNewContact,
   onEditContact,
   onDeleteContact,
+  onArchiveContact,
   onContactUpdated,
   showOnlyFavorites = false,
-  onToggleFavoritesFilter
+  onToggleFavoritesFilter,
+  showArchivedContacts = false,
+  onToggleArchivedFilter
 }: ContactsListProps) {
   const [sortBy, setSortBy] = useState<string>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -92,9 +98,12 @@ export function ContactsList({
         onNewContact={onNewContact}
         onEditContact={onEditContact}
         onDeleteContact={onDeleteContact}
+        onArchiveContact={onArchiveContact}
         hasSelectedContact={selectedContact !== null}
         showOnlyFavorites={showOnlyFavorites}
         onToggleFavoritesFilter={onToggleFavoritesFilter}
+        showArchivedContacts={showArchivedContacts}
+        onToggleArchivedFilter={onToggleArchivedFilter}
       />
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-2">
