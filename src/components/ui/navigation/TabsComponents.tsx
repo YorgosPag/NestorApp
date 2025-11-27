@@ -1,0 +1,224 @@
+'use client';
+
+import React, { useState } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { LucideIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { THEME_VARIANTS, getThemeVariant, type ThemeVariant } from '@/components/ui/theme/ThemeComponents';
+
+// Centralized tabs styling using the theme system
+export const TABS_STYLES = {
+  container: "w-full",
+  list: "grid w-full",
+  content: "mt-3",
+  contentWrapper: "flex flex-wrap gap-2"
+} as const;
+
+// Tab definition interface
+export interface TabDefinition {
+  id: string;
+  label: string;
+  icon: LucideIcon;
+  content: React.ReactNode;
+  disabled?: boolean;
+}
+
+// Main TabsContainer props
+interface TabsContainerProps {
+  tabs: TabDefinition[];
+  defaultTab?: string;
+  selectedItems?: string[];
+  selectionMessage?: string;
+  theme?: ThemeVariant;
+  className?: string;
+  onTabChange?: (tabId: string) => void;
+}
+
+/**
+ * Centralized Tabs Container Component
+ *
+ * Enterprise-grade tabs system that can be reused across the application.
+ * Supports multiple layouts (toolbar, card, minimal) and handles selection state.
+ *
+ * @example
+ * // ContactsToolbar usage
+ * const tabs = [
+ *   { id: 'actions', label: 'Ενέργειες', icon: Settings, content: <ActionsContent /> },
+ *   { id: 'communication', label: 'Επικοινωνία', icon: MessageSquare, content: <CommunicationContent /> }
+ * ];
+ *
+ * <TabsContainer
+ *   tabs={tabs}
+ *   layout="toolbar"
+ *   selectedItems={selectedContacts}
+ *   selectionMessage={`${selectedContacts.length} επιλεγμένες επαφές`}
+ * />
+ */
+export function TabsContainer({
+  tabs,
+  defaultTab,
+  selectedItems = [],
+  selectionMessage,
+  theme = 'default',
+  className,
+  onTabChange
+}: TabsContainerProps) {
+  const [activeTab, setActiveTab] = useState(defaultTab || tabs[0]?.id);
+
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId);
+    onTabChange?.(tabId);
+  };
+
+  // Get theme configuration
+  const themeConfig = getThemeVariant(theme);
+
+  // Calculate grid columns based on number of tabs
+  const gridCols = tabs.length <= 2 ? 'grid-cols-2' :
+                   tabs.length === 3 ? 'grid-cols-3' :
+                   tabs.length === 4 ? 'grid-cols-4' :
+                   tabs.length === 5 ? 'grid-cols-5' :
+                   'grid-cols-6';
+
+  return (
+    <div className={cn(themeConfig.container, className)}>
+      {/* Selection message */}
+      {selectedItems.length > 0 && selectionMessage && (
+        <div className="text-sm text-muted-foreground mb-2 px-2">
+          {selectionMessage}
+        </div>
+      )}
+
+      <Tabs value={activeTab} onValueChange={handleTabChange} className={TABS_STYLES.container}>
+        <TabsList className={cn(TABS_STYLES.list, gridCols)}>
+          {tabs.map((tab) => (
+            <TabsTrigger
+              key={tab.id}
+              value={tab.id}
+              disabled={tab.disabled}
+              className={themeConfig.tabTrigger}
+            >
+              <tab.icon className="w-4 h-4" />
+              <span className="hidden sm:inline">{tab.label}</span>
+            </TabsTrigger>
+          ))}
+        </TabsList>
+
+        {tabs.map((tab) => (
+          <TabsContent
+            key={tab.id}
+            value={tab.id}
+            className={themeConfig.content}
+          >
+            <div className={TABS_STYLES.contentWrapper}>
+              {tab.content}
+            </div>
+          </TabsContent>
+        ))}
+      </Tabs>
+    </div>
+  );
+}
+
+// Specialized toolbar variant for quick usage
+interface ToolbarTabsProps extends TabsContainerProps {}
+
+export function ToolbarTabs(props: ToolbarTabsProps) {
+  return <TabsContainer {...props} />;
+}
+
+// Themed variants for easy usage
+export function WarningTabs(props: TabsContainerProps) {
+  return <TabsContainer {...props} theme="warning" />;
+}
+
+export function SuccessTabs(props: TabsContainerProps) {
+  return <TabsContainer {...props} theme="success" />;
+}
+
+export function DangerTabs(props: TabsContainerProps) {
+  return <TabsContainer {...props} theme="danger" />;
+}
+
+export function DarkTabs(props: TabsContainerProps) {
+  return <TabsContainer {...props} theme="dark" />;
+}
+
+export function LightTabs(props: TabsContainerProps) {
+  return <TabsContainer {...props} theme="light" />;
+}
+
+// Specialized component that ONLY centralizes tab triggers without affecting content
+interface TabsOnlyTriggersProps {
+  tabs: TabDefinition[];
+  defaultTab?: string;
+  selectedItems?: string[];
+  selectionMessage?: string;
+  theme?: ThemeVariant;
+  className?: string;
+  onTabChange?: (tabId: string) => void;
+  children?: React.ReactNode;
+}
+
+/**
+ * Tabs component that centralizes ONLY the tab triggers
+ * without applying any wrapper styling to content.
+ * Perfect for cases where existing content layout must be preserved.
+ */
+export function TabsOnlyTriggers({
+  tabs,
+  defaultTab,
+  selectedItems = [],
+  selectionMessage,
+  theme = 'default',
+  className,
+  onTabChange,
+  children
+}: TabsOnlyTriggersProps) {
+  const [activeTab, setActiveTab] = useState(defaultTab || tabs[0]?.id);
+
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId);
+    onTabChange?.(tabId);
+  };
+
+  // Get theme configuration
+  const themeConfig = getThemeVariant(theme);
+
+  // Calculate grid columns based on number of tabs
+  const gridCols = tabs.length <= 2 ? 'grid-cols-2' :
+                   tabs.length === 3 ? 'grid-cols-3' :
+                   tabs.length === 4 ? 'grid-cols-4' :
+                   tabs.length === 5 ? 'grid-cols-5' :
+                   'grid-cols-6';
+
+  return (
+    <div className={cn(themeConfig.container, className)}>
+      {/* Selection message */}
+      {selectedItems.length > 0 && selectionMessage && (
+        <div className="text-sm text-muted-foreground mb-2 px-2">
+          {selectionMessage}
+        </div>
+      )}
+
+      <Tabs value={activeTab} onValueChange={handleTabChange} className={TABS_STYLES.container}>
+        <TabsList className={cn(TABS_STYLES.list, gridCols)}>
+          {tabs.map((tab) => (
+            <TabsTrigger
+              key={tab.id}
+              value={tab.id}
+              disabled={tab.disabled}
+              className={themeConfig.tabTrigger}
+            >
+              <tab.icon className="w-4 h-4" />
+              <span className="hidden sm:inline">{tab.label}</span>
+            </TabsTrigger>
+          ))}
+        </TabsList>
+
+        {/* Render children directly without wrapper styling */}
+        {children}
+      </Tabs>
+    </div>
+  );
+}
