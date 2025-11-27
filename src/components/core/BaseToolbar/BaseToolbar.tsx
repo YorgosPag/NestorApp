@@ -44,7 +44,7 @@ export interface ToolbarSearch {
 
 export interface BaseToolbarProps extends React.HTMLAttributes<HTMLDivElement> {
   // Layout options
-  variant?: 'default' | 'compact' | 'expanded';
+  variant?: 'default' | 'compact' | 'expanded' | 'narrow';
   position?: 'top' | 'bottom' | 'sticky';
   
   // Actions section
@@ -98,6 +98,7 @@ export function BaseToolbar({
     default: 'flex items-center justify-between p-4 bg-background border-b',
     compact: 'flex items-center justify-between p-2 bg-background border-b',
     expanded: 'flex flex-col gap-4 p-6 bg-background border-b',
+    narrow: 'flex flex-wrap items-center gap-2 p-2 bg-background border-b',
   };
 
   const positionVariants = {
@@ -121,7 +122,30 @@ export function BaseToolbar({
       )}
       {...props}
     >
-      {variant === 'expanded' ? (
+      {variant === 'narrow' ? (
+        // Narrow layout - everything flows and wraps
+        <>
+          {/* All items in flow with wrapping */}
+          {leftContent}
+          {title && (
+            <span className="text-sm font-medium text-foreground">
+              {title}
+            </span>
+          )}
+          {search && <ToolbarSearchComponent search={search} />}
+          {filters.length > 0 && (
+            <ToolbarFiltersComponent
+              filters={filters}
+              activeCount={activeFiltersCount}
+              onClearAll={onClearAllFilters}
+            />
+          )}
+          {allActions.length > 0 && (
+            <ToolbarActionsComponent actions={allActions} />
+          )}
+          {rightContent}
+        </>
+      ) : variant === 'expanded' ? (
         // Expanded layout - vertical stack
         <>
           {/* Title Section */}
@@ -331,8 +355,9 @@ function ToolbarFiltersComponent({
 
 // Actions component
 function ToolbarActionsComponent({ actions }: { actions: ToolbarAction[] }) {
+
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 flex-wrap">
       {actions.map((action) => (
         <Button
           key={action.id}

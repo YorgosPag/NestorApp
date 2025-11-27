@@ -22,15 +22,19 @@ function EmptyState() {
 
 interface ContactDetailsProps {
   contact: Contact | null;
-  onDataChange: () => void;
+  onEditContact?: () => void;
 }
 
-export function ContactDetails({ contact, onDataChange }: ContactDetailsProps) {
+export function ContactDetails({ contact, onEditContact }: ContactDetailsProps) {
   const [isAddUnitDialogOpen, setIsAddUnitDialogOpen] = useState(false);
-  
+
   const handleUnitAdded = useCallback(() => {
-    onDataChange();
-  }, [onDataChange]);
+    // TODO: Refresh data when unit is added
+  }, []);
+
+  const handleRefresh = useCallback(() => {
+    // TODO: Refresh contact data
+  }, []);
 
   if (!contact) {
     return <EmptyState />;
@@ -39,7 +43,7 @@ export function ContactDetails({ contact, onDataChange }: ContactDetailsProps) {
   return (
     <>
       <div className="flex-1 flex flex-col bg-card border rounded-lg min-w-0 shadow-sm">
-        <ContactDetailsHeader contact={contact} />
+        <ContactDetailsHeader contact={contact} onEditContact={onEditContact} />
         <ScrollArea className="flex-1">
           <div className="p-4">
               <Tabs defaultValue="info">
@@ -49,10 +53,10 @@ export function ContactDetails({ contact, onDataChange }: ContactDetailsProps) {
                       <TabsTrigger value="history"><History className="w-4 h-4 mr-2"/>Ιστορικό</TabsTrigger>
                   </TabsList>
                   <TabsContent value="info" className="mt-4">
-                      <ContactInfo 
-                        contact={contact} 
-                        onAddUnit={() => setIsAddUnitDialogOpen(true)} 
-                        onRefresh={onDataChange} 
+                      <ContactInfo
+                        contact={contact}
+                        onAddUnit={() => setIsAddUnitDialogOpen(true)}
+                        onRefresh={handleRefresh}
                       />
                   </TabsContent>
                   <TabsContent value="files" className="mt-4">

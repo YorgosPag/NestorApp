@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
 import { BaseToolbar } from '@/components/core/BaseToolbar/BaseToolbar';
 import type { ToolbarAction, ToolbarFilter, ToolbarSearch } from '@/components/core/BaseToolbar/BaseToolbar';
 import { 
@@ -34,10 +35,11 @@ interface ContactsToolbarProps {
   activeFilters?: string[];
   onFiltersChange?: (filters: string[]) => void;
   onNewContact?: () => void;
-  onEditContact?: (id: string) => void;
+  onEditContact?: () => void;
   onDeleteContact?: (ids: string[]) => void;
   onExport?: () => void;
   onRefresh?: () => void;
+  hasSelectedContact?: boolean;
 }
 
 export function ContactsToolbar({
@@ -51,9 +53,11 @@ export function ContactsToolbar({
   onEditContact,
   onDeleteContact,
   onExport,
-  onRefresh
+  onRefresh,
+  hasSelectedContact = false
 }: ContactsToolbarProps) {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
 
   const handleClearFilters = () => {
     onFiltersChange?.([]);
@@ -75,16 +79,15 @@ export function ContactsToolbar({
       icon: Plus,
       onClick: () => onNewContact?.(),
       variant: 'default',
-      tooltip: 'Προσθήκη νέας επαφής (Ctrl+N)',
-      shortcut: 'Ctrl+N'
+      tooltip: 'Προσθήκη νέας επαφής'
     },
     {
       id: 'edit-contact',
       label: 'Επεξεργασία',
       icon: Edit,
-      onClick: () => selectedItems[0] && onEditContact?.(selectedItems[0]),
+      onClick: () => hasSelectedContact && onEditContact?.(),
       variant: 'outline',
-      disabled: selectedItems.length !== 1,
+      disabled: !hasSelectedContact,
       tooltip: 'Επεξεργασία επιλεγμένης επαφής (Ctrl+E)',
       shortcut: 'Ctrl+E'
     },
@@ -265,7 +268,7 @@ export function ContactsToolbar({
 
   return (
     <BaseToolbar
-      variant="compact"
+      variant="narrow"
       position="sticky"
       primaryActions={primaryActions}
       secondaryActions={secondaryActions}

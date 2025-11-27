@@ -37,6 +37,7 @@ interface ContactsHeaderProps {
   setUnitsCountFilter: (filter: UnitsCountFilter) => void;
   areaFilter: AreaFilter;
   setAreaFilter: (filter: AreaFilter) => void;
+  onNewContact?: () => void;
 }
 
 export function ContactsHeader({
@@ -54,6 +55,7 @@ export function ContactsHeader({
   setUnitsCountFilter,
   areaFilter,
   setAreaFilter,
+  onNewContact,
 }: ContactsHeaderProps) {
     const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm);
 
@@ -143,7 +145,10 @@ export function ContactsHeader({
               </TooltipTrigger>
               <TooltipContent>Προβολή Πλέγματος</TooltipContent>
             </Tooltip>
-            <Button className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700">
+            <Button
+              className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+              onClick={() => onNewContact?.()}
+            >
               <Plus className="w-4 h-4 mr-2" />
               Νέα Επαφή
             </Button>

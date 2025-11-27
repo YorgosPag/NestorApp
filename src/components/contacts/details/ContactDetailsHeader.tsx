@@ -17,9 +17,10 @@ const TYPE_FALLBACK = { icon: Users, color: 'bg-gray-500', name: 'Άγνωστο
 
 interface ContactDetailsHeaderProps {
   contact: Contact;
+  onEditContact?: () => void;
 }
 
-export function ContactDetailsHeader({ contact }: ContactDetailsHeaderProps) {
+export function ContactDetailsHeader({ contact, onEditContact }: ContactDetailsHeaderProps) {
   const type = contact.type as ContactType;
   const { icon: Icon, color, name: typeName } = TYPE_INFO[type] ?? TYPE_FALLBACK;
   const status = (contact as any).status as ContactStatus | undefined;
@@ -43,7 +44,7 @@ export function ContactDetailsHeader({ contact }: ContactDetailsHeaderProps) {
             </div>
           </div>
         </div>
-        <Button>
+        <Button onClick={() => onEditContact?.()}>
             <Edit className="w-4 h-4 mr-2"/>
             Επεξεργασία
         </Button>

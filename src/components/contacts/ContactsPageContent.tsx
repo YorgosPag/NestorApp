@@ -7,6 +7,8 @@ import { ContactsHeader } from './page/ContactsHeader';
 import { ContactsDashboard } from './page/ContactsDashboard';
 import { ContactsList } from './list/ContactsList';
 import { ContactDetails } from './details/ContactDetails';
+import { AddNewContactDialog } from './dialogs/AddNewContactDialog';
+import { EditContactDialog } from './dialogs/EditContactDialog';
 
 const contactsData: Contact[] = [
   {
@@ -75,13 +77,37 @@ export function ContactsPageContent() {
   const [selectedContact, setSelectedContact] = useState<Contact | null>(contactsData[1]);
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [showDashboard, setShowDashboard] = useState(true);
-  
+  const [showNewContactDialog, setShowNewContactDialog] = useState(false);
+  const [showEditContactDialog, setShowEditContactDialog] = useState(false);
+
   // Add missing search/filter state
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'individual' | 'company' | 'service'>('all');
   const [showOnlyOwners, setShowOnlyOwners] = useState(false);
   const [unitsCountFilter, setUnitsCountFilter] = useState<'all' | '1-2' | '3-5' | '6+'>('all');
   const [areaFilter, setAreaFilter] = useState<'all' | '0-100' | '101-300' | '301+'>('all');
+
+  const handleNewContact = () => {
+    setShowNewContactDialog(true);
+  };
+
+  const handleContactAdded = () => {
+    // TODO: Refresh contacts data από το service
+    // Προς το παρόν μένει στο στατικό contactsData
+    setShowNewContactDialog(false);
+  };
+
+  const handleEditContact = () => {
+    if (selectedContact) {
+      setShowEditContactDialog(true);
+    }
+  };
+
+  const handleContactUpdated = () => {
+    // TODO: Refresh contacts data από το service
+    // Προς το παρόν μένει στο στατικό contactsData
+    setShowEditContactDialog(false);
+  };
 
   const stats = {
     totalContacts: contactsData.length,
@@ -110,6 +136,7 @@ export function ContactsPageContent() {
           setUnitsCountFilter={setUnitsCountFilter}
           areaFilter={areaFilter}
           setAreaFilter={setAreaFilter}
+          onNewContact={handleNewContact}
         />
 
         {showDashboard && <ContactsDashboard stats={stats} />}
@@ -121,8 +148,11 @@ export function ContactsPageContent() {
                 contacts={contactsData}
                 selectedContact={selectedContact}
                 onSelectContact={setSelectedContact}
+                isLoading={false}
+                onNewContact={handleNewContact}
+                onEditContact={handleEditContact}
               />
-              <ContactDetails contact={selectedContact} />
+              <ContactDetails contact={selectedContact} onEditContact={handleEditContact} />
             </>
           ) : (
             <div className="w-full text-center p-8 bg-card rounded-lg border">
@@ -130,6 +160,21 @@ export function ContactsPageContent() {
             </div>
           )}
         </div>
+
+        {/* Dialog για νέα επαφή */}
+        <AddNewContactDialog
+          open={showNewContactDialog}
+          onOpenChange={setShowNewContactDialog}
+          onContactAdded={handleContactAdded}
+        />
+
+        {/* Dialog για επεξεργασία επαφής */}
+        <EditContactDialog
+          open={showEditContactDialog}
+          onOpenChange={setShowEditContactDialog}
+          contact={selectedContact}
+          onContactUpdated={handleContactUpdated}
+        />
       </div>
     </TooltipProvider>
   );

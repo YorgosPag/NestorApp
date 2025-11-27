@@ -15,6 +15,8 @@ interface ContactsListProps {
   selectedContact: Contact | null;
   onSelectContact?: (contact: Contact) => void;
   isLoading: boolean;
+  onNewContact?: () => void;
+  onEditContact?: () => void;
 }
 
 export function ContactsList({
@@ -22,7 +24,11 @@ export function ContactsList({
   selectedContact,
   onSelectContact,
   isLoading,
+  onNewContact,
+  onEditContact,
 }: ContactsListProps) {
+  console.log('ContactsList received onNewContact:', onNewContact);
+
   const [favorites, setFavorites] = useState<string[]>(['1']);
   const [sortBy, setSortBy] = useState<string>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -49,7 +55,11 @@ export function ContactsList({
       <ContactsListHeader
         contactCount={contacts.length}
       />
-      <ContactsToolbar />
+      <ContactsToolbar
+        onNewContact={onNewContact}
+        onEditContact={onEditContact}
+        hasSelectedContact={selectedContact !== null}
+      />
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-2">
           {isLoading ? null : (
