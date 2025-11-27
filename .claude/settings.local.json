@@ -54,7 +54,8 @@
       "Bash(/cost)",
       "Bash(claude --print)",
       "Bash(del \"C:\\Nestor_Pagonis\\packages\\core\\alert-engine\\hooks\\useAlertEngine.ts\")",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "WebSearch"
     ],
     "deny": [],
     "ask": []

@@ -33,12 +33,32 @@ export interface InteractiveMapProps {
   onPolygonComplete?: () => void; // ✅ NEW: Callback όταν κλείνει το πολύγωνο
   onMapReady?: (map: any) => void; // ✅ NEW: Callback when map is ready
 
+  // ✅ NEW: Address Search Marker
+  searchMarker?: {
+    lat: number;
+    lng: number;
+    address?: string;
+  } | null;
+
   // ✅ NEW: Universal Polygon System Props
   enablePolygonDrawing?: boolean;
   defaultPolygonMode?: PolygonType;
   onPolygonCreated?: (polygon: UniversalPolygon) => void;
   onPolygonModified?: (polygon: UniversalPolygon) => void;
   onPolygonDeleted?: (polygonId: string) => void;
+
+  // ✅ NEW: Administrative Boundaries Props
+  administrativeBoundaries?: {
+    feature: GeoJSON.Feature | GeoJSON.FeatureCollection;
+    visible: boolean;
+    style?: {
+      strokeColor?: string;
+      strokeWidth?: number;
+      strokeOpacity?: number;
+      fillColor?: string;
+      fillOpacity?: number;
+    };
+  }[];
 }
 
 // ========================================================================
@@ -99,12 +119,18 @@ export function InteractiveMap({
   onPolygonComplete, // ✅ NEW: Polygon completion callback
   onMapReady, // ✅ NEW: Map ready callback
 
+  // ✅ NEW: Address Search Marker
+  searchMarker = null,
+
   // ✅ NEW: Universal Polygon System Props
   enablePolygonDrawing = false,
   defaultPolygonMode = 'simple',
   onPolygonCreated,
   onPolygonModified,
-  onPolygonDeleted
+  onPolygonDeleted,
+
+  // ✅ NEW: Administrative Boundaries Props
+  administrativeBoundaries = []
 }: InteractiveMapProps) {
   const { t, isLoading } = useTranslationLazy('geo-canvas');
   const mapRef = useRef<any>(null);
@@ -1366,6 +1392,68 @@ export function InteractiveMap({
   // UNIVERSAL POLYGON SYSTEM RENDERING
   // ========================================================================
 
+  /**
+   * Render Administrative Boundaries Layers
+   */
+  const renderAdministrativeBoundaries = () => {
+    if (!administrativeBoundaries || administrativeBoundaries.length === 0) {
+      return null;
+    }
+
+    return administrativeBoundaries.map((boundary, index) => {
+      if (!boundary.visible) return null;
+
+      const sourceId = `admin-boundary-${index}`;
+      const lineLayerId = `admin-boundary-line-${index}`;
+      const fillLayerId = `admin-boundary-fill-${index}`;
+
+      // Default styles
+      const defaultStyle = {
+        strokeColor: '#2563eb',
+        strokeWidth: 2,
+        strokeOpacity: 0.8,
+        fillColor: '#3b82f6',
+        fillOpacity: 0.1
+      };
+
+      const style = { ...defaultStyle, ...boundary.style };
+
+      return (
+        <Source
+          key={sourceId}
+          id={sourceId}
+          type="geojson"
+          data={boundary.feature}
+        >
+          {/* Fill Layer (behind line) */}
+          <Layer
+            id={fillLayerId}
+            type="fill"
+            paint={{
+              'fill-color': style.fillColor,
+              'fill-opacity': style.fillOpacity
+            }}
+          />
+
+          {/* Line Layer (on top) */}
+          <Layer
+            id={lineLayerId}
+            type="line"
+            paint={{
+              'line-color': style.strokeColor,
+              'line-width': style.strokeWidth,
+              'line-opacity': style.strokeOpacity
+            }}
+            layout={{
+              'line-join': 'round',
+              'line-cap': 'round'
+            }}
+          />
+        </Source>
+      );
+    }).filter(Boolean);
+  };
+
   const renderPolygonSystemLayers = () => {
     if (!polygons || polygons.length === 0) {
       return null;
@@ -1618,6 +1706,53 @@ export function InteractiveMap({
 
         {/* ✅ NEW: Universal Polygon System Layers */}
         {enablePolygonDrawing && renderPolygonSystemLayers()}
+
+        {/* ✅ NEW: Administrative Boundaries Layers */}
+        {renderAdministrativeBoundaries()}
+
+        {/* ✅ NEW: Address Search Marker */}
+        {searchMarker && (
+          <Marker
+            longitude={searchMarker.lng}
+            latitude={searchMarker.lat}
+          >
+            <div className="relative flex items-center justify-center group">
+              {/* Main Search Marker */}
+              <div className="flex flex-col items-center">
+                {/* Marker Icon */}
+                <div className="w-8 h-8 bg-red-500 border-2 border-white rounded-full shadow-lg flex items-center justify-center relative z-10">
+                  <svg
+                    className="w-5 h-5 text-white"
+                    fill="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                  </svg>
+                </div>
+                {/* Pin Tip */}
+                <div className="w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-red-500 -mt-1 relative z-10"></div>
+              </div>
+
+              {/* Pulse Animation */}
+              <div className="absolute w-12 h-12 bg-red-400 rounded-full opacity-30 animate-ping"></div>
+              <div
+                className="absolute w-16 h-16 bg-red-300 rounded-full opacity-20 animate-ping"
+                style={{ animationDelay: '0.2s' }}
+              ></div>
+
+              {/* Address Tooltip */}
+              {searchMarker.address && (
+                <div className="absolute -top-16 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-80 text-white px-3 py-2 rounded-lg text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-20">
+                  <div className="max-w-48 truncate">
+                    {typeof searchMarker.address === 'string' ? searchMarker.address : 'Αναζητημένη θέση'}
+                  </div>
+                  {/* Tooltip Arrow */}
+                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-black border-opacity-80"></div>
+                </div>
+              )}
+            </div>
+          </Marker>
+        )}
       </MapComponent>
 
       {/* UI Overlays */}

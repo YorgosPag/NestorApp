@@ -39,10 +39,14 @@ interface UseRealEstateMatchingReturn {
   alertableProperties: PropertyMatchResult[];
   groupedResults: Map<string, PropertyMatchResult[]>;
   error: string | null;
+  realEstatePolygons: RealEstatePolygon[];
 
   // Actions
   checkProperty: (property: PropertyLocation, polygons: RealEstatePolygon[]) => PropertyMatchResult;
   checkMultipleProperties: (properties: PropertyLocation[], polygons: RealEstatePolygon[]) => Promise<void>;
+  addRealEstatePolygon: (polygon: RealEstatePolygon) => void;
+  removeRealEstatePolygon: (polygonId: string) => void;
+  getRealEstateAlerts: () => RealEstatePolygon[];
   clearResults: () => void;
   getStatistics: () => {
     totalChecked: number;
@@ -78,6 +82,7 @@ export function useRealEstateMatching(
   const [isProcessing, setIsProcessing] = useState(false);
   const [results, setResults] = useState<PropertyMatchResult[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [realEstatePolygons, setRealEstatePolygons] = useState<RealEstatePolygon[]>([]);
 
   // Derived state
   const alertableProperties = getAlertableProperties(results);
@@ -169,6 +174,43 @@ export function useRealEstateMatching(
       setIsProcessing(false);
     }
   }, [isProcessing, toleranceMeters, batchSize, autoAlert, onAlert, onBatchComplete]);
+
+  /**
+   * Add real estate polygon for monitoring
+   */
+  const addRealEstatePolygon = useCallback((polygon: RealEstatePolygon) => {
+    setRealEstatePolygons(prev => {
+      // Check if polygon already exists
+      const exists = prev.some(p => p.id === polygon.id);
+      if (exists) {
+        console.warn('RealEstate polygon already exists:', polygon.id);
+        return prev;
+      }
+
+      console.log('✅ Added real estate polygon for monitoring:', polygon.id);
+      return [...prev, polygon];
+    });
+  }, []);
+
+  /**
+   * Remove real estate polygon from monitoring
+   */
+  const removeRealEstatePolygon = useCallback((polygonId: string) => {
+    setRealEstatePolygons(prev => {
+      const filtered = prev.filter(p => p.id !== polygonId);
+      console.log('🗑️ Removed real estate polygon from monitoring:', polygonId);
+      return filtered;
+    });
+  }, []);
+
+  /**
+   * Get all real estate alert polygons
+   */
+  const getRealEstateAlerts = useCallback(() => {
+    return realEstatePolygons.filter(p =>
+      p.alertSettings?.enabled === true
+    );
+  }, [realEstatePolygons]);
 
   /**
    * Clear all results
@@ -295,10 +337,14 @@ export function useRealEstateMatching(
     alertableProperties,
     groupedResults,
     error,
+    realEstatePolygons,
 
     // Actions
     checkProperty,
     checkMultipleProperties,
+    addRealEstatePolygon,
+    removeRealEstatePolygon,
+    getRealEstateAlerts,
     clearResults,
     getStatistics,
 

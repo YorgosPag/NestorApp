@@ -11,13 +11,25 @@ import { useCentralizedPolygonSystem } from '../systems/polygon-system';
 
 // ✅ NEW: Address Search Integration
 import { AddressSearchPanel } from './AddressSearchPanel';
+import { AdminBoundaryDemo } from './AdminBoundaryDemo';
+import { BoundaryLayerControlPanel } from './BoundaryLayerControlPanel';
 import type { GreekAddress } from '@/services/real-estate-monitor/AddressResolver';
+import type { BoundaryLayer } from './BoundaryLayerControlPanel';
 
 interface CitizenDrawingInterfaceProps {
   mapRef: React.RefObject<any>;
   onPolygonComplete?: (polygon: any) => void;
   onRealEstateAlertCreated?: (alert: RealEstatePolygon) => void;
   onLocationSelected?: (lat: number, lng: number, address?: GreekAddress) => void;
+  onAdminBoundarySelected?: (boundary: GeoJSON.Feature | GeoJSON.FeatureCollection, result: any) => void;
+
+  // ✅ NEW: Boundary Layer Control Props
+  boundaryLayers?: BoundaryLayer[];
+  onLayerToggle?: (layerId: string, visible: boolean) => void;
+  onLayerOpacityChange?: (layerId: string, opacity: number) => void;
+  onLayerStyleChange?: (layerId: string, style: Partial<BoundaryLayer['style']>) => void;
+  onLayerRemove?: (layerId: string) => void;
+  onAddNewBoundary?: () => void;
 }
 
 /**
@@ -36,12 +48,27 @@ export function CitizenDrawingInterface({
   mapRef,
   onPolygonComplete,
   onRealEstateAlertCreated,
-  onLocationSelected
+  onLocationSelected,
+  onAdminBoundarySelected,
+
+  // ✅ NEW: Boundary Layer Control Props
+  boundaryLayers = [],
+  onLayerToggle,
+  onLayerOpacityChange,
+  onLayerStyleChange,
+  onLayerRemove,
+  onAddNewBoundary
 }: CitizenDrawingInterfaceProps) {
   const { t } = useTranslationLazy('geo-canvas');
   const [selectedTool, setSelectedTool] = useState<'point' | 'polygon' | 'freehand' | 'real-estate' | null>(null);
   const [pointRadius, setPointRadius] = useState<number>(100); // Default 100m radius
   const [lastPointPolygonId, setLastPointPolygonId] = useState<string | null>(null);
+
+  // ✅ NEW: Demo component state
+  const [showAdminDemo, setShowAdminDemo] = useState<boolean>(false);
+
+  // ✅ NEW: Boundary layer control state
+  const [showBoundaryControl, setShowBoundaryControl] = useState<boolean>(false);
 
   // ✅ NEW: Centralized Polygon System (replaces dual-system complexity)
   const {
@@ -255,6 +282,7 @@ export function CitizenDrawingInterface({
         <div className="mb-4">
           <AddressSearchPanel
             onLocationSelected={handleLocationFromSearch}
+            onAdminBoundarySelected={onAdminBoundarySelected}
             onClose={() => setShowAddressSearch(false)}
           />
         </div>
@@ -339,6 +367,65 @@ export function CitizenDrawingInterface({
           <Home className="w-8 h-8 mb-2 text-orange-600" />
           <span className="text-sm font-medium">{t('drawingInterfaces.citizen.tools.realEstate')}</span>
           <span className="text-xs text-gray-500">{t('drawingInterfaces.citizen.tools.realEstateDescription')}</span>
+        </button>
+      </div>
+
+      {/* Third Row - Testing & Utility Tools */}
+      <div className="grid grid-cols-3 gap-3 mb-4">
+        {/* Address Search Button */}
+        <button
+          onClick={() => setShowAddressSearch(!showAddressSearch)}
+          className={`
+            flex flex-col items-center justify-center p-4 rounded-lg border-2
+            transition-all duration-200 min-h-[100px]
+            ${showAddressSearch
+              ? 'border-indigo-500 bg-indigo-50'
+              : 'border-gray-300 hover:border-gray-400 bg-white'
+            }
+            cursor-pointer hover:shadow-md
+          `}
+        >
+          <Search className="w-8 h-8 mb-2 text-indigo-600" />
+          <span className="text-sm font-medium">Address Search</span>
+          <span className="text-xs text-gray-500">Διευθύνσεις & Όρια</span>
+        </button>
+
+        {/* Admin Boundaries Demo Button */}
+        <button
+          onClick={() => setShowAdminDemo(!showAdminDemo)}
+          className={`
+            flex flex-col items-center justify-center p-4 rounded-lg border-2
+            transition-all duration-200 min-h-[100px]
+            ${showAdminDemo
+              ? 'border-violet-500 bg-violet-50'
+              : 'border-gray-300 hover:border-gray-400 bg-white'
+            }
+            cursor-pointer hover:shadow-md
+          `}
+        >
+          <div className="w-8 h-8 mb-2 text-violet-600 font-bold text-lg">🏛️</div>
+          <span className="text-sm font-medium">Boundaries Demo</span>
+          <span className="text-xs text-gray-500">Test Interface</span>
+        </button>
+
+        {/* Boundary Layer Control Button */}
+        <button
+          onClick={() => setShowBoundaryControl(!showBoundaryControl)}
+          className={`
+            flex flex-col items-center justify-center p-4 rounded-lg border-2
+            transition-all duration-200 min-h-[100px]
+            ${showBoundaryControl
+              ? 'border-emerald-500 bg-emerald-50'
+              : 'border-gray-300 hover:border-gray-400 bg-white'
+            }
+            cursor-pointer hover:shadow-md
+          `}
+        >
+          <div className="w-8 h-8 mb-2 text-emerald-600 font-bold text-lg">🎛️</div>
+          <span className="text-sm font-medium">Layer Control</span>
+          <span className="text-xs text-gray-500">
+            {boundaryLayers.length} layers
+          </span>
         </button>
       </div>
 
@@ -547,6 +634,27 @@ export function CitizenDrawingInterface({
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Administrative Boundaries Demo Panel */}
+      {showAdminDemo && (
+        <div className="mt-4">
+          <AdminBoundaryDemo />
+        </div>
+      )}
+
+      {/* Boundary Layer Control Panel */}
+      {showBoundaryControl && (
+        <div className="mt-4">
+          <BoundaryLayerControlPanel
+            layers={boundaryLayers}
+            onLayerToggle={onLayerToggle || (() => {})}
+            onLayerOpacityChange={onLayerOpacityChange || (() => {})}
+            onLayerStyleChange={onLayerStyleChange || (() => {})}
+            onLayerRemove={onLayerRemove || (() => {})}
+            onAddNewBoundary={onAddNewBoundary || (() => {})}
+          />
         </div>
       )}
     </div>

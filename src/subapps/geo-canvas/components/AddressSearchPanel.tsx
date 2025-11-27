@@ -6,8 +6,13 @@ import { Search, MapPin, Navigation, X, Clock, CheckCircle, AlertCircle, Loader2
 // ✅ Enterprise Address Resolver Integration
 import { useAddressResolver, type GreekAddress, type GeocodingResult } from '@/services/real-estate-monitor/AddressResolver';
 
+// ✅ Administrative Boundaries Integration
+import { useAdministrativeBoundaries } from '../hooks/useAdministrativeBoundaries';
+import type { AdminSearchResult } from '../types/administrative-types';
+
 interface AddressSearchPanelProps {
   onLocationSelected?: (lat: number, lng: number, address?: GreekAddress) => void;
+  onAdminBoundarySelected?: (boundary: GeoJSON.Feature | GeoJSON.FeatureCollection, result: AdminSearchResult) => void;
   onClose?: () => void;
   className?: string;
 }
@@ -20,23 +25,47 @@ interface GPSLocation {
 }
 
 /**
- * 🏢 ENTERPRISE ADDRESS SEARCH PANEL
+ * 🏢 ENTERPRISE LOCATION SEARCH PANEL
  *
  * Features:
  * - Greek address search με οδός, αριθμός, Τ.Κ.
+ * - Administrative boundaries search (municipalities, regions)
  * - GPS location detection
  * - Recent searches με localStorage
- * - Integration με existing AddressResolver
+ * - Integration με AddressResolver & AdministrativeBoundaries
+ * - Tabbed interface για διαφορετικούς τύπους αναζήτησης
  * - Mobile-first UX design
  */
 export function AddressSearchPanel({
   onLocationSelected,
+  onAdminBoundarySelected,
   onClose,
   className = ''
 }: AddressSearchPanelProps) {
 
   // ✅ Enterprise AddressResolver Hook
   const { resolve, getCacheStats } = useAddressResolver();
+
+  // ✅ Administrative Boundaries Hook
+  const {
+    isLoading: isLoadingBoundaries,
+    error: boundariesError,
+    searchResults: boundaryResults,
+    currentBoundary,
+    detectedType,
+    suggestions,
+    smartSearch: searchBoundaries,
+    getMunicipalityBoundary,
+    getRegionBoundary,
+    clearResults: clearBoundaryResults
+  } = useAdministrativeBoundaries({
+    autoPreload: true,
+    cacheResults: true,
+    maxResults: 8
+  });
+
+  // Tab State
+  const [activeTab, setActiveTab] = useState<'address' | 'boundaries'>('address');
 
   // Search State
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -84,42 +113,52 @@ export function AddressSearchPanel({
   // ============================================================================
 
   /**
-   * Perform address search using AddressResolver
+   * Perform search (address or boundaries based on active tab)
    */
-  const handleAddressSearch = useCallback(async () => {
+  const handleSearch = useCallback(async () => {
     if (!searchQuery.trim()) return;
 
-    setIsSearching(true);
-    setSearchError(null);
-    setSearchResults([]);
-
-    try {
-      console.log('🔍 Searching for address:', searchQuery);
-
-      const result = await resolve(searchQuery.trim());
-
-      if (result) {
-        setSearchResults([result]);
-        console.log('✅ Address found:', result);
-      } else {
-        setSearchError('Δεν βρέθηκε η διεύθυνση. Δοκιμάστε με πιο συγκεκριμένα στοιχεία.');
-        setSearchResults([]);
-      }
-    } catch (error) {
-      console.error('❌ Address search error:', error);
-      setSearchError('Σφάλμα κατά την αναζήτηση. Δοκιμάστε ξανά.');
+    if (activeTab === 'address') {
+      setIsSearching(true);
+      setSearchError(null);
       setSearchResults([]);
-    } finally {
-      setIsSearching(false);
+
+      try {
+        console.log('🔍 Searching for address:', searchQuery);
+
+        const result = await resolve(searchQuery.trim());
+
+        if (result) {
+          setSearchResults([result]);
+          console.log('✅ Address found:', result);
+        } else {
+          setSearchError('Δεν βρέθηκε η διεύθυνση. Δοκιμάστε με πιο συγκεκριμένα στοιχεία.');
+          setSearchResults([]);
+        }
+      } catch (error) {
+        console.error('❌ Address search error:', error);
+        setSearchError('Σφάλμα κατά την αναζήτηση. Δοκιμάστε ξανά.');
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    } else {
+      // Administrative boundaries search
+      try {
+        console.log('🏛️ Searching for boundaries:', searchQuery);
+        await searchBoundaries(searchQuery.trim());
+      } catch (error) {
+        console.error('❌ Boundaries search error:', error);
+      }
     }
-  }, [searchQuery, resolve]);
+  }, [activeTab, searchQuery, resolve, searchBoundaries]);
 
   // Handle Enter key
   const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
-      handleAddressSearch();
+      handleSearch();
     }
-  }, [handleAddressSearch]);
+  }, [handleSearch]);
 
   // ============================================================================
   // GPS LOCATION
@@ -204,6 +243,29 @@ export function AddressSearchPanel({
     }
   }, [onLocationSelected, saveRecentSearch]);
 
+  /**
+   * Handle administrative boundary selection
+   */
+  const handleBoundarySelect = useCallback(async (result: AdminSearchResult) => {
+    console.log('🏛️ Boundary selected:', result);
+
+    try {
+      let boundary: GeoJSON.Feature | GeoJSON.FeatureCollection | null = null;
+
+      if (result.adminLevel === 8) { // Municipality
+        boundary = await getMunicipalityBoundary(result.name);
+      } else if (result.adminLevel === 4) { // Region
+        boundary = await getRegionBoundary(result.name);
+      }
+
+      if (boundary && onAdminBoundarySelected) {
+        onAdminBoundarySelected(boundary, result);
+      }
+    } catch (error) {
+      console.error('❌ Error loading boundary:', error);
+    }
+  }, [getMunicipalityBoundary, getRegionBoundary, onAdminBoundarySelected]);
+
   // ============================================================================
   // RENDER HELPERS
   // ============================================================================
@@ -261,6 +323,51 @@ export function AddressSearchPanel({
     </div>
   );
 
+  const renderBoundaryResult = (result: AdminSearchResult, index: number) => (
+    <div
+      key={`boundary-${result.id}-${index}`}
+      onClick={() => handleBoundarySelect(result)}
+      className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-all"
+    >
+      <div className={`w-5 h-5 rounded flex-shrink-0 flex items-center justify-center text-xs font-medium ${
+        result.adminLevel === 4 ? 'bg-purple-100 text-purple-600' :
+        result.adminLevel === 8 ? 'bg-blue-100 text-blue-600' :
+        'bg-gray-100 text-gray-600'
+      }`}>
+        {result.adminLevel === 4 ? 'Π' : result.adminLevel === 8 ? 'Δ' : result.adminLevel}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-medium text-gray-900 truncate">
+          {result.name}
+        </div>
+        {result.nameEn && (
+          <div className="text-xs text-gray-500 truncate">
+            {result.nameEn}
+          </div>
+        )}
+        <div className="flex items-center gap-2 mt-1">
+          <span className={`text-xs px-2 py-0.5 rounded-full ${
+            result.adminLevel === 4 ? 'bg-purple-100 text-purple-700' :
+            result.adminLevel === 8 ? 'bg-blue-100 text-blue-700' :
+            'bg-gray-100 text-gray-600'
+          }`}>
+            {result.adminLevel === 4 ? 'Περιφέρεια' :
+             result.adminLevel === 8 ? 'Δήμος' :
+             `Level ${result.adminLevel}`}
+          </span>
+          <span className="text-xs text-gray-400">
+            {Math.round(result.confidence * 100)}% εμπιστοσύνη
+          </span>
+          {result.hierarchy.region && (
+            <span className="text-xs text-gray-500">
+              • {result.hierarchy.region}
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
   // ============================================================================
   // RENDER
   // ============================================================================
@@ -271,7 +378,7 @@ export function AddressSearchPanel({
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
           <Search className="w-5 h-5 text-blue-600" />
-          Αναζήτηση Διεύθυνσης
+          Αναζήτηση Θέσης
         </h3>
         {onClose && (
           <button
@@ -283,26 +390,54 @@ export function AddressSearchPanel({
         )}
       </div>
 
+      {/* Tabs */}
+      <div className="flex border-b border-gray-200 mb-4">
+        <button
+          onClick={() => setActiveTab('address')}
+          className={`flex-1 py-2 px-1 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'address'
+              ? 'border-blue-500 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          📍 Διευθύνσεις
+        </button>
+        <button
+          onClick={() => setActiveTab('boundaries')}
+          className={`flex-1 py-2 px-1 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'boundaries'
+              ? 'border-blue-500 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          🏛️ Διοικητικά Όρια
+        </button>
+      </div>
+
       {/* Search Input */}
       <div className="mb-4">
         <div className="flex gap-2">
           <div className="flex-1 relative">
             <input
               type="text"
-              placeholder="π.χ. Λεωφόρος Κηφισίας 123, Μαρούσι 15124"
+              placeholder={
+                activeTab === 'address'
+                  ? "π.χ. Λεωφόρος Κηφισίας 123, Μαρούσι 15124"
+                  : "π.χ. Δήμος Αθηναίων, Περιφέρεια Αττικής, Θεσσαλονίκη"
+              }
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyPress={handleKeyPress}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              disabled={isSearching}
+              disabled={isSearching || isLoadingBoundaries}
             />
-            {isSearching && (
+            {(isSearching || isLoadingBoundaries) && (
               <Loader2 className="absolute right-3 top-2.5 w-4 h-4 text-gray-400 animate-spin" />
             )}
           </div>
           <button
-            onClick={handleAddressSearch}
-            disabled={isSearching || !searchQuery.trim()}
+            onClick={handleSearch}
+            disabled={isSearching || isLoadingBoundaries || !searchQuery.trim()}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
           >
             <Search className="w-4 h-4" />
@@ -311,7 +446,10 @@ export function AddressSearchPanel({
 
         {/* Search Helper Text */}
         <div className="mt-2 text-xs text-gray-500">
-          Μπορείτε να αναζητήσετε με: οδός + αριθμός, περιοχή, ταχυδρομικός κώδικας
+          {activeTab === 'address'
+            ? 'Μπορείτε να αναζητήσετε με: οδός + αριθμός, περιοχή, ταχυδρομικός κώδικας'
+            : 'Μπορείτε να αναζητήσετε: δήμους, περιφέρειες, διοικητικές ενότητες'
+          }
         </div>
       </div>
 
@@ -346,17 +484,17 @@ export function AddressSearchPanel({
       </div>
 
       {/* Errors */}
-      {(searchError || gpsError) && (
+      {(searchError || gpsError || boundariesError) && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
           <div className="flex items-center gap-2 text-sm text-red-700">
             <AlertCircle className="w-4 h-4 flex-shrink-0" />
-            <span>{searchError || gpsError}</span>
+            <span>{searchError || gpsError || boundariesError}</span>
           </div>
         </div>
       )}
 
-      {/* Search Results */}
-      {searchResults.length > 0 && (
+      {/* Address Search Results */}
+      {activeTab === 'address' && searchResults.length > 0 && (
         <div className="mb-4">
           <h4 className="text-sm font-medium text-gray-900 mb-2">Αποτελέσματα Αναζήτησης</h4>
           <div className="space-y-2">
@@ -365,8 +503,47 @@ export function AddressSearchPanel({
         </div>
       )}
 
-      {/* Recent Searches */}
-      {recentSearches.length > 0 && searchResults.length === 0 && (
+      {/* Boundary Search Results */}
+      {activeTab === 'boundaries' && boundaryResults.length > 0 && (
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-sm font-medium text-gray-900">Διοικητικά Όρια</h4>
+            {detectedType && (
+              <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
+                {detectedType === 'municipality' ? 'Δήμοι' :
+                 detectedType === 'region' ? 'Περιφέρειες' : 'Γενικά'}
+              </span>
+            )}
+          </div>
+          <div className="space-y-2 max-h-80 overflow-y-auto">
+            {boundaryResults.map(renderBoundaryResult)}
+          </div>
+
+          {/* Suggestions */}
+          {suggestions.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-gray-100">
+              <h5 className="text-xs font-medium text-gray-600 mb-2">Προτάσεις:</h5>
+              <div className="flex gap-1 flex-wrap">
+                {suggestions.map((suggestion, index) => (
+                  <button
+                    key={index}
+                    onClick={() => {
+                      setSearchQuery(suggestion);
+                      handleSearch();
+                    }}
+                    className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded text-gray-700 transition-colors"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Recent Searches (Address tab only) */}
+      {activeTab === 'address' && recentSearches.length > 0 && searchResults.length === 0 && (
         <div className="mb-4">
           <h4 className="text-sm font-medium text-gray-900 mb-2">Πρόσφατες Αναζητήσεις</h4>
           <div className="space-y-1">
@@ -379,8 +556,11 @@ export function AddressSearchPanel({
       {process.env.NODE_ENV === 'development' && (
         <div className="mt-4 p-2 bg-gray-50 rounded-lg">
           <div className="text-xs text-gray-500">
-            Cache: {getCacheStats().size} διευθύνσεις |
-            Recent: {recentSearches.length} αναζητήσεις
+            {activeTab === 'address' ? (
+              <>Cache: {getCacheStats().size} διευθύνσεις | Recent: {recentSearches.length} αναζητήσεις</>
+            ) : (
+              <>Boundaries: {boundaryResults.length} αποτελέσματα | Detected: {detectedType || 'N/A'} | Suggestions: {suggestions.length}</>
+            )}
           </div>
         </div>
       )}

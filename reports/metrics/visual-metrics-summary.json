@@ -1,0 +1,46 @@
+{
+  "generated_at": "2025-11-27T19:03:39.815Z",
+  "summary": {
+    "visual.enterprise_quality_score": {
+      "count": 1,
+      "avg": 99.995,
+      "min": 99.995,
+      "max": 99.995,
+      "latest": 99.995
+    },
+    "visual.total_test_duration": {
+      "count": 1,
+      "avg": 45000,
+      "min": 45000,
+      "max": 45000,
+      "latest": 45000
+    },
+    "visual.artifacts_generated": {
+      "count": 1,
+      "avg": 21,
+      "min": 21,
+      "max": 21,
+      "latest": 21
+    },
+    "visual.baseline_coverage": {
+      "count": 1,
+      "avg": 100,
+      "min": 100,
+      "max": 100,
+      "latest": 100
+    },
+    "visual.flaky_test_rate": {
+      "count": 1,
+      "avg": 0,
+      "min": 0,
+      "max": 0,
+      "latest": 0
+    }
+  },
+  "enterprise_kpis": {
+    "quality_score": 99.995,
+    "performance_score": 100,
+    "reliability_score": 100,
+    "coverage_score": 100
+  }
+}

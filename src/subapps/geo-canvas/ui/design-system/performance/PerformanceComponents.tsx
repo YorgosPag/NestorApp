@@ -19,6 +19,8 @@ import React, {
   Suspense
 } from 'react';
 import { useTheme } from '../theme/ThemeProvider';
+import { adminBoundariesAnalytics } from '../../../services/performance/AdminBoundariesPerformanceAnalytics';
+import type { AdminBoundariesMetrics, AdminBoundariesAlert } from '../../../services/performance/AdminBoundariesPerformanceAnalytics';
 
 // ============================================================================
 // VIRTUALIZED LIST COMPONENT
@@ -779,6 +781,283 @@ if (typeof document !== 'undefined') {
   document.head.appendChild(styleElement);
 }
 
+// ============================================================================
+// ADMINISTRATIVE BOUNDARIES PERFORMANCE PANEL - Phase 7.1
+// ============================================================================
+
+/**
+ * Real-time performance monitoring panel για Administrative Boundaries
+ * Displays metrics, alerts, και recommendations
+ */
+export interface AdminBoundariesPerformancePanelProps {
+  isVisible?: boolean;
+  onClose?: () => void;
+  className?: string;
+  refreshInterval?: number; // milliseconds
+}
+
+export const AdminBoundariesPerformancePanel = memo(({
+  isVisible = false,
+  onClose,
+  className = '',
+  refreshInterval = 5000
+}: AdminBoundariesPerformancePanelProps) => {
+  const { theme } = useTheme();
+  const [metrics, setMetrics] = useState<AdminBoundariesMetrics | null>(null);
+  const [alerts, setAlerts] = useState<AdminBoundariesAlert[]>([]);
+  const [isMonitoring, setIsMonitoring] = useState(false);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Start monitoring when panel becomes visible
+  useEffect(() => {
+    if (isVisible && !isMonitoring) {
+      setIsMonitoring(true);
+      adminBoundariesAnalytics.startMonitoring(refreshInterval);
+
+      // Update metrics immediately
+      const updateMetrics = () => {
+        const latestMetrics = adminBoundariesAnalytics.getLatestMetrics();
+        const latestAlerts = adminBoundariesAnalytics.getAlerts();
+        setMetrics(latestMetrics);
+        setAlerts(latestAlerts);
+      };
+
+      updateMetrics();
+
+      // Set up interval for regular updates
+      intervalRef.current = setInterval(updateMetrics, refreshInterval);
+    }
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, [isVisible, refreshInterval, isMonitoring]);
+
+  // Stop monitoring when panel is closed
+  useEffect(() => {
+    if (!isVisible && isMonitoring) {
+      setIsMonitoring(false);
+      adminBoundariesAnalytics.stopMonitoring();
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    }
+  }, [isVisible, isMonitoring]);
+
+  const formatTime = useCallback((ms: number) => {
+    if (ms < 1000) return `${Math.round(ms)}ms`;
+    return `${(ms / 1000).toFixed(1)}s`;
+  }, []);
+
+  const formatBytes = useCallback((bytes: number) => {
+    if (bytes < 1024) return `${bytes}B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
+    return `${(bytes / 1024 / 1024).toFixed(1)}MB`;
+  }, []);
+
+  const getAlertColor = useCallback((severity: AdminBoundariesAlert['severity']) => {
+    switch (severity) {
+      case 'critical': return '#ef4444';
+      case 'high': return '#f97316';
+      case 'medium': return '#eab308';
+      case 'low': return '#3b82f6';
+      default: return theme.colors.text;
+    }
+  }, [theme.colors.text]);
+
+  const getAlertIcon = useCallback((severity: AdminBoundariesAlert['severity']) => {
+    switch (severity) {
+      case 'critical': return '🔥';
+      case 'high': return '🚨';
+      case 'medium': return '⚠️';
+      case 'low': return '📝';
+      default: return '•';
+    }
+  }, []);
+
+  if (!isVisible) return null;
+
+  return (
+    <div
+      className={`fixed top-4 right-4 w-96 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50 max-h-96 overflow-hidden ${className}`}
+      style={{
+        backgroundColor: theme.colors.surface,
+        color: theme.colors.text,
+        borderColor: theme.colors.border
+      }}
+    >
+      {/* Header */}
+      <div
+        className="flex items-center justify-between p-4 border-b"
+        style={{ borderColor: theme.colors.border }}
+      >
+        <h3 className="font-semibold text-lg flex items-center gap-2">
+          🏛️ Admin Boundaries Performance
+        </h3>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+            style={{ color: theme.colors.textSecondary }}
+          >
+            ✕
+          </button>
+        )}
+      </div>
+
+      <div className="max-h-80 overflow-y-auto">
+        {/* Real-time Metrics */}
+        {metrics && (
+          <div className="p-4 space-y-4">
+            {/* Search Performance */}
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm" style={{ color: theme.colors.primary }}>
+                🔍 Search Performance
+              </h4>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span style={{ color: theme.colors.textSecondary }}>Avg Time:</span>
+                  <span className="ml-2 font-mono">{formatTime(metrics.search.averageSearchTime)}</span>
+                </div>
+                <div>
+                  <span style={{ color: theme.colors.textSecondary }}>Success Rate:</span>
+                  <span className="ml-2 font-mono">{metrics.search.searchSuccessRate}%</span>
+                </div>
+                <div>
+                  <span style={{ color: theme.colors.textSecondary }}>Cache Hit:</span>
+                  <span className="ml-2 font-mono">{metrics.search.cacheHitRate}%</span>
+                </div>
+                <div>
+                  <span style={{ color: theme.colors.textSecondary }}>Total:</span>
+                  <span className="ml-2 font-mono">{metrics.search.totalSearches}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* API Performance */}
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm" style={{ color: theme.colors.primary }}>
+                🌍 Overpass API
+              </h4>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span style={{ color: theme.colors.textSecondary }}>Response Time:</span>
+                  <span className="ml-2 font-mono">{formatTime(metrics.overpassApi.averageResponseTime)}</span>
+                </div>
+                <div>
+                  <span style={{ color: theme.colors.textSecondary }}>Requests:</span>
+                  <span className="ml-2 font-mono">{metrics.overpassApi.totalRequests}</span>
+                </div>
+                <div>
+                  <span style={{ color: theme.colors.textSecondary }}>Failed:</span>
+                  <span className="ml-2 font-mono">{metrics.overpassApi.failedRequests}</span>
+                </div>
+                <div>
+                  <span style={{ color: theme.colors.textSecondary }}>Data Size:</span>
+                  <span className="ml-2 font-mono">{metrics.overpassApi.dataSize}MB</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Boundary Processing */}
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm" style={{ color: theme.colors.primary }}>
+                🗺️ Boundary Processing
+              </h4>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span style={{ color: theme.colors.textSecondary }}>Processing:</span>
+                  <span className="ml-2 font-mono">{formatTime(metrics.boundaries.averageProcessingTime)}</span>
+                </div>
+                <div>
+                  <span style={{ color: theme.colors.textSecondary }}>Rendering:</span>
+                  <span className="ml-2 font-mono">{formatTime(metrics.boundaries.renderingTime)}</span>
+                </div>
+                <div>
+                  <span style={{ color: theme.colors.textSecondary }}>Processed:</span>
+                  <span className="ml-2 font-mono">{metrics.boundaries.processedBoundaries}</span>
+                </div>
+                <div>
+                  <span style={{ color: theme.colors.textSecondary }}>Complexity:</span>
+                  <span className="ml-2 font-mono">{Math.round(metrics.boundaries.geometryComplexity)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Alerts */}
+        {alerts.length > 0 && (
+          <div className="border-t" style={{ borderColor: theme.colors.border }}>
+            <div className="p-4">
+              <h4 className="font-medium text-sm mb-3" style={{ color: theme.colors.primary }}>
+                🚨 Active Alerts ({alerts.length})
+              </h4>
+              <div className="space-y-2 max-h-32 overflow-y-auto">
+                {alerts.slice(0, 5).map((alert) => (
+                  <div
+                    key={alert.id}
+                    className="flex items-start gap-2 text-xs p-2 rounded"
+                    style={{
+                      backgroundColor: theme.colors.surfaceHover,
+                      borderLeft: `3px solid ${getAlertColor(alert.severity)}`
+                    }}
+                  >
+                    <span>{getAlertIcon(alert.severity)}</span>
+                    <div className="flex-1">
+                      <div className="font-medium" style={{ color: getAlertColor(alert.severity) }}>
+                        {alert.message}
+                      </div>
+                      {alert.suggestion && (
+                        <div className="mt-1" style={{ color: theme.colors.textSecondary }}>
+                          💡 {alert.suggestion}
+                        </div>
+                      )}
+                      <div className="text-xs mt-1" style={{ color: theme.colors.textTertiary }}>
+                        {new Date(alert.timestamp).toLocaleTimeString()}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {alerts.length > 5 && (
+                <div className="text-xs text-center mt-2" style={{ color: theme.colors.textSecondary }}>
+                  +{alerts.length - 5} more alerts
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Status */}
+        <div
+          className="p-3 border-t text-center text-xs"
+          style={{
+            borderColor: theme.colors.border,
+            backgroundColor: theme.colors.surfaceHover,
+            color: theme.colors.textSecondary
+          }}
+        >
+          {isMonitoring ? (
+            <span className="flex items-center justify-center gap-2">
+              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+              Monitoring Active • Updates every {refreshInterval / 1000}s
+            </span>
+          ) : (
+            <span>Monitoring Stopped</span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+});
+
+AdminBoundariesPerformancePanel.displayName = 'AdminBoundariesPerformancePanel';
+
 export default {
   VirtualizedList,
   VirtualizedTable,
@@ -789,5 +1068,6 @@ export default {
   LazyComponentWrapper,
   withPerformanceMonitoring,
   createLazyComponent,
-  usePerformanceMonitor
+  usePerformanceMonitor,
+  AdminBoundariesPerformancePanel
 };

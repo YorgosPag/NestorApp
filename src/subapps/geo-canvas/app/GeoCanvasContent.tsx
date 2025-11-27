@@ -43,6 +43,45 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
   const [activeView, setActiveView] = useState<'foundation' | 'georeferencing' | 'map'>('georeferencing');
   const [showAlertDashboard, setShowAlertDashboard] = useState(false);
 
+  // ✅ NEW: Address Search Marker State
+  const [searchMarker, setSearchMarker] = useState<{
+    lat: number;
+    lng: number;
+    address?: string;
+  } | null>(null);
+
+  // ✅ NEW: Administrative Boundaries State (Enhanced for Layer Management)
+  const [administrativeBoundaries, setAdministrativeBoundaries] = useState<{
+    feature: GeoJSON.Feature | GeoJSON.FeatureCollection;
+    visible: boolean;
+    style?: {
+      strokeColor?: string;
+      strokeWidth?: number;
+      strokeOpacity?: number;
+      fillColor?: string;
+      fillOpacity?: number;
+    };
+  }[]>([]);
+
+  // ✅ NEW: Boundary Layer Management State
+  const [boundaryLayers, setBoundaryLayers] = useState<Array<{
+    id: string;
+    name: string;
+    type: 'region' | 'municipality' | 'municipal_unit' | 'community';
+    visible: boolean;
+    opacity: number;
+    style: {
+      strokeColor: string;
+      strokeWidth: number;
+      fillColor: string;
+      fillOpacity: number;
+    };
+    boundary: {
+      feature: GeoJSON.Feature | GeoJSON.FeatureCollection;
+      result: any;
+    };
+  }>>([]);
+
   // **📊 ANALYTICS INTEGRATION**
   const analytics = useAnalytics();
   const [pendingUserType, setPendingUserType] = useState<string | null>(null);
@@ -127,6 +166,43 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
   const handleLocationSelected = useCallback((lat: number, lng: number, address?: any) => {
     console.log('📍 Location selected, centering map:', { lat, lng, address });
 
+    // Set search marker
+    let displayAddress = 'Αναζητημένη θέση';
+
+    // Handle different address formats
+    if (typeof address === 'string') {
+      displayAddress = address;
+    } else if (address && typeof address === 'object') {
+      // Handle GreekAddress format: {street, number, area, municipality, postalCode, region, country, fullAddress}
+      if (address.fullAddress) {
+        displayAddress = address.fullAddress;
+      } else if (address.street) {
+        // Build address from components
+        const parts = [
+          address.street,
+          address.number,
+          address.area,
+          address.municipality
+        ].filter(Boolean);
+        displayAddress = parts.join(' ') || 'Αναζητημένη θέση';
+      } else {
+        // Fallback για άλλα object formats (π.χ. Nominatim)
+        displayAddress = address.display_name || 'Αναζητημένη θέση';
+      }
+    }
+
+    setSearchMarker({
+      lat,
+      lng,
+      address: displayAddress
+    });
+
+    // Auto-hide marker after 30 seconds
+    setTimeout(() => {
+      setSearchMarker(null);
+      console.log('🗑️ Search marker auto-cleared after 30 seconds');
+    }, 30000);
+
     if (mapRef.current) {
       // Center και zoom στη νέα θέση
       mapRef.current.flyTo({
@@ -140,6 +216,241 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
     } else {
       console.warn('⚠️ Map reference not available yet');
     }
+  }, []);
+
+  // ✅ NEW: Handle administrative boundary selection (Enhanced for Layer Management)
+  const handleAdminBoundarySelected = useCallback((boundary: GeoJSON.Feature | GeoJSON.FeatureCollection, result: any) => {
+    console.log('🏛️ Administrative boundary selected:', { boundary, result });
+
+    // Determine boundary type και default style
+    let type: 'region' | 'municipality' | 'municipal_unit' | 'community';
+    let defaultStyle: any;
+
+    if (result.adminLevel === 4) { // Region
+      type = 'region';
+      defaultStyle = {
+        strokeColor: '#7c3aed',
+        strokeWidth: 3,
+        fillColor: '#8b5cf6',
+        fillOpacity: 0.15
+      };
+    } else if (result.adminLevel === 8) { // Municipality
+      type = 'municipality';
+      defaultStyle = {
+        strokeColor: '#2563eb',
+        strokeWidth: 2,
+        fillColor: '#3b82f6',
+        fillOpacity: 0.1
+      };
+    } else if (result.adminLevel === 9) { // Municipal Unit
+      type = 'municipal_unit';
+      defaultStyle = {
+        strokeColor: '#059669',
+        strokeWidth: 2,
+        fillColor: '#10b981',
+        fillOpacity: 0.1
+      };
+    } else { // Community or other
+      type = 'community';
+      defaultStyle = {
+        strokeColor: '#d97706',
+        strokeWidth: 2,
+        fillColor: '#f59e0b',
+        fillOpacity: 0.1
+      };
+    }
+
+    // Create new layer
+    const layerId = `boundary-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const newLayer = {
+      id: layerId,
+      name: result.name,
+      type,
+      visible: true,
+      opacity: 1.0,
+      style: defaultStyle,
+      boundary: {
+        feature: boundary,
+        result
+      }
+    };
+
+    // Add layer to boundary layers
+    setBoundaryLayers(prev => [...prev, newLayer]);
+
+    // Update administrative boundaries για backwards compatibility
+    setAdministrativeBoundaries(prev => [...prev, {
+      feature: boundary,
+      visible: true,
+      style: {
+        strokeColor: defaultStyle.strokeColor,
+        strokeWidth: defaultStyle.strokeWidth,
+        strokeOpacity: 0.8,
+        fillColor: defaultStyle.fillColor,
+        fillOpacity: defaultStyle.fillOpacity
+      }
+    }]);
+
+    // Calculate boundary center για map centering
+    if (mapRef.current && boundary) {
+      try {
+        let center: [number, number] | null = null;
+        let zoom = 10;
+
+        if (boundary.type === 'Feature' && boundary.geometry) {
+          // Simple center calculation for demo - production would use turf.js
+          if (boundary.geometry.type === 'Polygon' && boundary.geometry.coordinates?.[0]) {
+            const coords = boundary.geometry.coordinates[0] as [number, number][];
+            if (coords.length > 0) {
+              const avgLng = coords.reduce((sum, coord) => sum + coord[0], 0) / coords.length;
+              const avgLat = coords.reduce((sum, coord) => sum + coord[1], 0) / coords.length;
+              center = [avgLng, avgLat];
+              zoom = result.adminLevel === 4 ? 8 : 12; // Regions wider view, municipalities closer
+            }
+          }
+        } else if (boundary.type === 'FeatureCollection' && boundary.features.length > 0) {
+          // For FeatureCollection, use first feature's center
+          const firstFeature = boundary.features[0];
+          if (firstFeature.geometry?.type === 'Polygon' && firstFeature.geometry.coordinates?.[0]) {
+            const coords = firstFeature.geometry.coordinates[0] as [number, number][];
+            if (coords.length > 0) {
+              const avgLng = coords.reduce((sum, coord) => sum + coord[0], 0) / coords.length;
+              const avgLat = coords.reduce((sum, coord) => sum + coord[1], 0) / coords.length;
+              center = [avgLng, avgLat];
+              zoom = 10;
+            }
+          }
+        }
+
+        if (center) {
+          mapRef.current.flyTo({
+            center,
+            zoom,
+            duration: 2000,
+            essential: true
+          });
+          console.log(`🗺️ Map centered to ${result.name}:`, center);
+        }
+      } catch (error) {
+        console.warn('⚠️ Failed to center map on boundary:', error);
+      }
+    }
+
+    console.log(`✅ Boundary layer "${result.name}" added with ID: ${layerId}`);
+  }, []);
+
+  // ✅ NEW: Boundary Layer Control Handlers
+  const handleLayerToggle = useCallback((layerId: string, visible: boolean) => {
+    setBoundaryLayers(prev =>
+      prev.map(layer =>
+        layer.id === layerId ? { ...layer, visible } : layer
+      )
+    );
+
+    // Update administrative boundaries για compatibility με InteractiveMap
+    setBoundaryLayers(prev => {
+      const visibleLayers = prev.filter(layer => layer.visible);
+      setAdministrativeBoundaries(visibleLayers.map(layer => ({
+        feature: layer.boundary.feature,
+        visible: layer.visible,
+        style: {
+          strokeColor: layer.style.strokeColor,
+          strokeWidth: layer.style.strokeWidth,
+          strokeOpacity: layer.opacity,
+          fillColor: layer.style.fillColor,
+          fillOpacity: layer.style.fillOpacity * layer.opacity
+        }
+      })));
+      return prev;
+    });
+
+    console.log(`🔄 Layer ${layerId} visibility: ${visible}`);
+  }, []);
+
+  const handleLayerOpacityChange = useCallback((layerId: string, opacity: number) => {
+    setBoundaryLayers(prev =>
+      prev.map(layer =>
+        layer.id === layerId ? { ...layer, opacity } : layer
+      )
+    );
+
+    // Update administrative boundaries
+    setBoundaryLayers(prev => {
+      const visibleLayers = prev.filter(layer => layer.visible);
+      setAdministrativeBoundaries(visibleLayers.map(layer => ({
+        feature: layer.boundary.feature,
+        visible: layer.visible,
+        style: {
+          strokeColor: layer.style.strokeColor,
+          strokeWidth: layer.style.strokeWidth,
+          strokeOpacity: layer.opacity,
+          fillColor: layer.style.fillColor,
+          fillOpacity: layer.style.fillOpacity * layer.opacity
+        }
+      })));
+      return prev;
+    });
+
+    console.log(`🎨 Layer ${layerId} opacity: ${opacity}`);
+  }, []);
+
+  const handleLayerStyleChange = useCallback((layerId: string, styleChanges: any) => {
+    setBoundaryLayers(prev =>
+      prev.map(layer =>
+        layer.id === layerId
+          ? { ...layer, style: { ...layer.style, ...styleChanges } }
+          : layer
+      )
+    );
+
+    // Update administrative boundaries
+    setBoundaryLayers(prev => {
+      const visibleLayers = prev.filter(layer => layer.visible);
+      setAdministrativeBoundaries(visibleLayers.map(layer => ({
+        feature: layer.boundary.feature,
+        visible: layer.visible,
+        style: {
+          strokeColor: layer.style.strokeColor,
+          strokeWidth: layer.style.strokeWidth,
+          strokeOpacity: layer.opacity,
+          fillColor: layer.style.fillColor,
+          fillOpacity: layer.style.fillOpacity * layer.opacity
+        }
+      })));
+      return prev;
+    });
+
+    console.log(`🎨 Layer ${layerId} style updated:`, styleChanges);
+  }, []);
+
+  const handleLayerRemove = useCallback((layerId: string) => {
+    setBoundaryLayers(prev => {
+      const updated = prev.filter(layer => layer.id !== layerId);
+
+      // Update administrative boundaries
+      const visibleLayers = updated.filter(layer => layer.visible);
+      setAdministrativeBoundaries(visibleLayers.map(layer => ({
+        feature: layer.boundary.feature,
+        visible: layer.visible,
+        style: {
+          strokeColor: layer.style.strokeColor,
+          strokeWidth: layer.style.strokeWidth,
+          strokeOpacity: layer.opacity,
+          fillColor: layer.style.fillColor,
+          fillOpacity: layer.style.fillOpacity * layer.opacity
+        }
+      })));
+
+      return updated;
+    });
+
+    console.log(`🗑️ Layer ${layerId} removed`);
+  }, []);
+
+  const handleAddNewBoundary = useCallback(() => {
+    // This will trigger the address search panel to open boundaries tab
+    console.log('➕ Add new boundary requested');
+    // We can implement this later to programmatically open the search panel
   }, []);
 
   // Floor Plan Upload handler - uses hook
@@ -435,6 +746,8 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                     isPickingCoordinates={controlPoints.pickingState === 'picking-geo'}
                     transformState={transformState}
                     enablePolygonDrawing={true}
+                    searchMarker={searchMarker}
+                    administrativeBoundaries={administrativeBoundaries}
                     onPolygonComplete={() => {
                       console.log('🎯 Polygon completed');
                     }}
@@ -521,6 +834,13 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                         // TODO: Integrate με alert system
                       }}
                       onLocationSelected={handleLocationSelected}
+                      onAdminBoundarySelected={handleAdminBoundarySelected}
+                      boundaryLayers={boundaryLayers}
+                      onLayerToggle={handleLayerToggle}
+                      onLayerOpacityChange={handleLayerOpacityChange}
+                      onLayerStyleChange={handleLayerStyleChange}
+                      onLayerRemove={handleLayerRemove}
+                      onAddNewBoundary={handleAddNewBoundary}
                     />
                   </div>
                 )}

@@ -1,0 +1,15 @@
+{
+  "timestamp": "2025-11-27T19:04:04.742Z",
+  "duration": 10,
+  "total": 0,
+  "passed": 0,
+  "failed": 0,
+  "skipped": 0,
+  "results": [],
+  "summary": {
+    "avgMismatchRate": 0,
+    "maxMismatchRate": 0,
+    "totalArtifacts": 0,
+    "artifactSize": 0
+  }
+}

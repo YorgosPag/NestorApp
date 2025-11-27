@@ -1,15 +1,40 @@
-Unhandled Runtime Error
-TypeError: react_map_gl_maplibre__WEBPACK_IMPORTED_MODULE_2__.default is not a constructor
+Build Error
+Failed to compile
 
-Source
-src\subapps\geo-canvas\components\InteractiveMap.tsx (148:77) @ InteractiveMap
+Next.js (14.2.33) is outdated (learn more)
+./src/subapps/geo-canvas/hooks/useAdministrativeBoundaries.ts
+Error: 
+  × the name `historySuggestions` is defined multiple times
+     ╭─[C:\Nestor_Pagonis\src\subapps\geo-canvas\hooks\useAdministrativeBoundaries.ts:88:1]
+  88 │     debounceMs = 300,
+  89 │     maxResults = 10,
+  90 │     enableHistory = true,
+  91 │     historySuggestions = true
+     ·     ─────────┬────────
+     ·              ╰── previous definition of `historySuggestions` here
+  92 │   } = options;
+  93 │ 
+  94 │   // State
+  95 │   const [isLoading, setIsLoading] = useState(false);
+  96 │   const [error, setError] = useState<string | null>(null);
+  97 │   const [searchResults, setSearchResults] = useState<AdminSearchResult[]>([]);
+  98 │   const [currentBoundary, setCurrentBoundary] = useState<GeoJSON.Feature | GeoJSON.FeatureCollection | null>(null);
+  99 │   const [detectedType, setDetectedType] = useState<'municipality' | 'region' | 'general' | null>(null);
+ 100 │   const [suggestions, setSuggestions] = useState<string[]>([]);
+ 101 │   const [searchHistory, setSearchHistory] = useState<SearchHistoryEntry[]>([]);
+ 102 │   const [historySuggestions, setHistorySuggestions] = useState<string[]>([]);
+     ·          ─────────┬────────
+     ·                   ╰── `historySuggestions` redefined here
+ 103 │ 
+ 104 │   // Refs για debouncing και caching
+ 105 │   const debounceTimeoutRef = useRef<NodeJS.Timeout>();
+     ╰────
 
-  146 |
-  147 |   // ✅ NEW: Elevation data state και caching
-> 148 |   const [elevationCache, setElevationCache] = useState<Map<string, number>>(new Map());
-      |                                                                             ^
-  149 |   const [elevationLoading, setElevationLoading] = useState<boolean>(false);
-  150 |
-  151 |   // ✅ ENTERPRISE: Throttled elevation fetcher με caching
-Call Stack
-Show collapsed frames
+Import trace for requested module:
+./src/subapps/geo-canvas/hooks/useAdministrativeBoundaries.ts
+./src/subapps/geo-canvas/components/AddressSearchPanel.tsx
+./src/subapps/geo-canvas/components/CitizenDrawingInterface.tsx
+./src/subapps/geo-canvas/app/GeoCanvasContent.tsx
+./src/subapps/geo-canvas/GeoCanvasApp.tsx
+./src/app/geo/canvas/page.tsx
+This error occurred during the build process and can only be dismissed by fixing the error.
