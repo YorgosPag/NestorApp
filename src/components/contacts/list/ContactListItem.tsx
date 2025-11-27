@@ -9,6 +9,7 @@ import {
   Star,
   Phone,
   Mail,
+  Loader2,
 } from "lucide-react";
 import {
   Tooltip,
@@ -28,6 +29,7 @@ interface ContactListItemProps {
   isFavorite: boolean;
   onSelect: () => void;
   onToggleFavorite: () => void;
+  isTogglingFavorite?: boolean;
 }
 
 const typeInfoMap = {
@@ -41,7 +43,8 @@ export function ContactListItem({
     isSelected,
     isFavorite,
     onSelect,
-    onToggleFavorite
+    onToggleFavorite,
+    isTogglingFavorite = false
 }: ContactListItemProps) {
     const { icon: Icon, color } = typeInfoMap[contact.type];
     const displayName = getContactDisplayName(contact);
@@ -67,16 +70,26 @@ export function ContactListItem({
                                 e.stopPropagation();
                                 onToggleFavorite();
                             }}
-                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 p-1"
+                            disabled={isTogglingFavorite}
+                            className={cn(
+                                "absolute top-2 right-2 transition-opacity z-10 p-1",
+                                isSelected || isFavorite
+                                    ? "opacity-100"
+                                    : "opacity-0 group-hover:opacity-100"
+                            )}
                         >
-                            <Star
-                                className={cn(
-                                    "w-4 h-4 transition-colors",
-                                    isFavorite
-                                    ? "text-yellow-500 fill-yellow-500"
-                                    : "text-gray-400 hover:text-yellow-500"
-                                )}
-                            />
+                            {isTogglingFavorite ? (
+                                <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                            ) : (
+                                <Star
+                                    className={cn(
+                                        "w-4 h-4 transition-colors",
+                                        isFavorite
+                                        ? "text-yellow-500 fill-yellow-500"
+                                        : "text-gray-400 hover:text-yellow-500"
+                                    )}
+                                />
+                            )}
                         </button>
                     </TooltipTrigger>
                     <TooltipContent>

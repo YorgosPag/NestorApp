@@ -16,7 +16,8 @@ import {
   BarChart3,
   X,
   Hash,
-  Ruler
+  Ruler,
+  Star
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { UnitsCountFilter, AreaFilter, ContactTypeFilter, ViewMode } from '@/hooks/useContactsState';
@@ -33,6 +34,8 @@ interface ContactsHeaderProps {
   setFilterType: (type: ContactTypeFilter) => void;
   showOnlyOwners: boolean;
   onShowOnlyOwnersChange: (checked: boolean) => void;
+  showOnlyFavorites: boolean;
+  onShowOnlyFavoritesChange: (checked: boolean) => void;
   unitsCountFilter: UnitsCountFilter;
   setUnitsCountFilter: (filter: UnitsCountFilter) => void;
   areaFilter: AreaFilter;
@@ -51,6 +54,8 @@ export function ContactsHeader({
   setFilterType,
   showOnlyOwners,
   onShowOnlyOwnersChange,
+  showOnlyFavorites,
+  onShowOnlyFavoritesChange,
   unitsCountFilter,
   setUnitsCountFilter,
   areaFilter,
@@ -75,16 +80,17 @@ export function ContactsHeader({
         setLocalSearchTerm(searchTerm);
     }, [searchTerm]);
 
-    const hasActiveFilters = searchTerm !== '' || filterType !== 'all' || showOnlyOwners || unitsCountFilter !== 'all' || areaFilter !== 'all';
+    const hasActiveFilters = searchTerm !== '' || filterType !== 'all' || showOnlyOwners || showOnlyFavorites || unitsCountFilter !== 'all' || areaFilter !== 'all';
 
     const clearFilters = useCallback(() => {
         setLocalSearchTerm('');
         setSearchTerm('');
         setFilterType('all');
         onShowOnlyOwnersChange(false);
+        onShowOnlyFavoritesChange(false);
         setUnitsCountFilter('all');
         setAreaFilter('all');
-    }, [setSearchTerm, setFilterType, onShowOnlyOwnersChange, setUnitsCountFilter, setAreaFilter]);
+    }, [setSearchTerm, setFilterType, onShowOnlyOwnersChange, onShowOnlyFavoritesChange, setUnitsCountFilter, setAreaFilter]);
 
     const toggleDashboard = useCallback(() => setShowDashboard(v => !v), [setShowDashboard]);
     const switchToList = useCallback(() => setViewMode('list'), [setViewMode]);
@@ -188,13 +194,24 @@ export function ContactsHeader({
             </div>
             <div className="flex flex-wrap items-center gap-4">
                  <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="show-owners-only" 
+                  <Checkbox
+                    id="show-owners-only"
                     checked={showOnlyOwners}
                     onCheckedChange={(checked) => onShowOnlyOwnersChange(!!checked)}
                   />
                   <Label htmlFor="show-owners-only" className="text-sm font-medium whitespace-nowrap">
                     Μόνο με ιδιοκτησίες
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="show-favorites-only"
+                    checked={showOnlyFavorites}
+                    onCheckedChange={(checked) => onShowOnlyFavoritesChange(!!checked)}
+                  />
+                  <Star className={`w-4 h-4 ${showOnlyFavorites ? 'text-yellow-500 fill-yellow-500' : 'text-muted-foreground'}`} />
+                  <Label htmlFor="show-favorites-only" className="text-sm font-medium whitespace-nowrap">
+                    Αγαπημένα
                   </Label>
                 </div>
                 <div className="flex items-center gap-2">

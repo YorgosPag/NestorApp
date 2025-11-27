@@ -40,6 +40,8 @@ interface ContactsToolbarProps {
   onExport?: () => void;
   onRefresh?: () => void;
   hasSelectedContact?: boolean;
+  showOnlyFavorites?: boolean;
+  onToggleFavoritesFilter?: () => void;
 }
 
 export function ContactsToolbar({
@@ -54,7 +56,9 @@ export function ContactsToolbar({
   onDeleteContact,
   onExport,
   onRefresh,
-  hasSelectedContact = false
+  hasSelectedContact = false,
+  showOnlyFavorites = false,
+  onToggleFavoritesFilter
 }: ContactsToolbarProps) {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
@@ -173,10 +177,10 @@ export function ContactsToolbar({
       id: 'favorite',
       label: 'Αγαπημένα',
       icon: Star,
-      onClick: () => console.log('Add to favorites...'),
-      variant: 'ghost',
-      disabled: selectedItems.length === 0,
-      tooltip: 'Προσθήκη στις αγαπημένες επαφές'
+      onClick: () => onToggleFavoritesFilter?.(),
+      variant: showOnlyFavorites ? 'default' : 'ghost',
+      disabled: false,
+      tooltip: showOnlyFavorites ? 'Εμφάνιση όλων των επαφών' : 'Φιλτράρισμα μόνο αγαπημένων επαφών'
     },
     {
       id: 'help',

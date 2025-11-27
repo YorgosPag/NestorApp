@@ -9,6 +9,8 @@ import { ContactsToolbar } from '../toolbar/ContactsToolbar';
 import { ContactListItem } from './ContactListItem';
 import type { Contact } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts';
+import { ContactsService } from '@/services/contacts.service';
+import toast from 'react-hot-toast';
 
 interface ContactsListProps {
   contacts: Contact[];
@@ -18,6 +20,9 @@ interface ContactsListProps {
   onNewContact?: () => void;
   onEditContact?: () => void;
   onDeleteContact?: (ids?: string[]) => void;
+  onContactUpdated?: () => void;
+  showOnlyFavorites?: boolean;
+  onToggleFavoritesFilter?: () => void;
 }
 
 export function ContactsList({
@@ -28,17 +33,45 @@ export function ContactsList({
   onNewContact,
   onEditContact,
   onDeleteContact,
+  onContactUpdated,
+  showOnlyFavorites = false,
+  onToggleFavoritesFilter
 }: ContactsListProps) {
-  const [favorites, setFavorites] = useState<string[]>(['1']);
   const [sortBy, setSortBy] = useState<string>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [togglingFavorites, setTogglingFavorites] = useState<Set<string>>(new Set());
 
-  const toggleFavorite = (contactId: string) => {
-    setFavorites(prev =>
-      prev.includes(contactId)
-        ? prev.filter(id => id !== contactId)
-        : [...prev, contactId]
-    );
+  const toggleFavorite = async (contactId: string) => {
+    const contact = contacts.find(c => c.id === contactId);
+    if (!contact || togglingFavorites.has(contactId)) return;
+
+    try {
+      // Add to loading set
+      setTogglingFavorites(prev => new Set([...prev, contactId]));
+
+      // Toggle favorite in database
+      await ContactsService.toggleFavorite(contactId, contact.isFavorite || false);
+
+      // Show success message
+      const message = contact.isFavorite
+        ? `Αφαιρέθηκε από τα αγαπημένα: ${getContactDisplayName(contact)}`
+        : `Προστέθηκε στα αγαπημένα: ${getContactDisplayName(contact)}`;
+      toast.success(message);
+
+      // Refresh contacts list
+      onContactUpdated?.();
+
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      toast.error('Αποτυχία ενημέρωσης αγαπημένου');
+    } finally {
+      // Remove from loading set
+      setTogglingFavorites(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(contactId);
+        return newSet;
+      });
+    }
   };
 
   const sortedContacts = [...contacts].sort((a, b) => {
@@ -60,6 +93,8 @@ export function ContactsList({
         onEditContact={onEditContact}
         onDeleteContact={onDeleteContact}
         hasSelectedContact={selectedContact !== null}
+        showOnlyFavorites={showOnlyFavorites}
+        onToggleFavoritesFilter={onToggleFavoritesFilter}
       />
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-2">
@@ -82,9 +117,10 @@ export function ContactsList({
                 key={contact.id}
                 contact={contact}
                 isSelected={selectedContact?.id === contact.id}
-                isFavorite={favorites.includes(contact.id!)}
+                isFavorite={contact.isFavorite || false}
                 onSelect={() => onSelectContact?.(contact)}
                 onToggleFavorite={() => toggleFavorite(contact.id!)}
+                isTogglingFavorite={togglingFavorites.has(contact.id!)}
               />
             ))
           )}

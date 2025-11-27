@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { Contact } from '@/types/contacts';
+import { getContactDisplayName } from '@/types/contacts';
 import { ContactsService } from '@/services/contacts.service';
 import { ContactsHeader } from './page/ContactsHeader';
 import { ContactsDashboard } from './page/ContactsDashboard';
@@ -80,6 +81,7 @@ export function ContactsPageContent() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'individual' | 'company' | 'service'>('all');
   const [showOnlyOwners, setShowOnlyOwners] = useState(false);
+  const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
   const [unitsCountFilter, setUnitsCountFilter] = useState<'all' | '1-2' | '3-5' | '6+'>('all');
   const [areaFilter, setAreaFilter] = useState<'all' | '0-100' | '101-300' | '301+'>('all');
 
@@ -179,6 +181,34 @@ export function ContactsPageContent() {
     await refreshContacts();
   };
 
+  const handleToggleFavoritesFilter = () => {
+    setShowOnlyFavorites(prev => !prev);
+  };
+
+  // Filter contacts based on current filters
+  const filteredContacts = contacts.filter(contact => {
+    // Search filter
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      const displayName = getContactDisplayName(contact).toLowerCase();
+      if (!displayName.includes(searchLower)) {
+        return false;
+      }
+    }
+
+    // Type filter
+    if (filterType !== 'all' && contact.type !== filterType) {
+      return false;
+    }
+
+    // Favorites filter
+    if (showOnlyFavorites && !contact.isFavorite) {
+      return false;
+    }
+
+    return true;
+  });
+
   const stats = {
     totalContacts: contacts.length,
     individuals: contacts.filter(c => c.type === 'individual').length,
@@ -206,6 +236,8 @@ export function ContactsPageContent() {
           setFilterType={setFilterType}
           showOnlyOwners={showOnlyOwners}
           onShowOnlyOwnersChange={setShowOnlyOwners}
+          showOnlyFavorites={showOnlyFavorites}
+          onShowOnlyFavoritesChange={setShowOnlyFavorites}
           unitsCountFilter={unitsCountFilter}
           setUnitsCountFilter={setUnitsCountFilter}
           areaFilter={areaFilter}
@@ -229,13 +261,16 @@ export function ContactsPageContent() {
           ) : viewMode === 'list' ? (
             <>
               <ContactsList
-                contacts={contacts}
+                contacts={filteredContacts}
                 selectedContact={selectedContact}
                 onSelectContact={setSelectedContact}
                 isLoading={isLoading}
                 onNewContact={handleNewContact}
                 onEditContact={handleEditContact}
                 onDeleteContact={handleDeleteContacts}
+                onContactUpdated={refreshContacts}
+                showOnlyFavorites={showOnlyFavorites}
+                onToggleFavoritesFilter={handleToggleFavoritesFilter}
               />
               <ContactDetails contact={selectedContact} onEditContact={handleEditContact} onDeleteContact={() => handleDeleteContacts()} />
             </>
