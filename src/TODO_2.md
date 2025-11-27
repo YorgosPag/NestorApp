@@ -1,40 +1,106 @@
-Build Error
-Failed to compile
+● Update(src\components\contacts\ContactsPageContent.tsx)
+  ⎿  Updated src\components\contacts\ContactsPageContent.tsx with 1 addition
+        7    import { ContactsDashboard } from './page/ContactsDashboard';
+        8    import { ContactsList } from './list/ContactsList';
+        9    import { ContactDetails } from './details/ContactDetails';
+       10 +  import { AddNewContactDialog } from './dialogs/AddNewContactDialog';
+       11    
+       12    const contactsData: Contact[] = [
+       13      {
 
-Next.js (14.2.33) is outdated (learn more)
-./src/subapps/geo-canvas/hooks/useAdministrativeBoundaries.ts
-Error: 
-  × the name `historySuggestions` is defined multiple times
-     ╭─[C:\Nestor_Pagonis\src\subapps\geo-canvas\hooks\useAdministrativeBoundaries.ts:88:1]
-  88 │     debounceMs = 300,
-  89 │     maxResults = 10,
-  90 │     enableHistory = true,
-  91 │     historySuggestions = true
-     ·     ─────────┬────────
-     ·              ╰── previous definition of `historySuggestions` here
-  92 │   } = options;
-  93 │ 
-  94 │   // State
-  95 │   const [isLoading, setIsLoading] = useState(false);
-  96 │   const [error, setError] = useState<string | null>(null);
-  97 │   const [searchResults, setSearchResults] = useState<AdminSearchResult[]>([]);
-  98 │   const [currentBoundary, setCurrentBoundary] = useState<GeoJSON.Feature | GeoJSON.FeatureCollection | null>(null);
-  99 │   const [detectedType, setDetectedType] = useState<'municipality' | 'region' | 'general' | null>(null);
- 100 │   const [suggestions, setSuggestions] = useState<string[]>([]);
- 101 │   const [searchHistory, setSearchHistory] = useState<SearchHistoryEntry[]>([]);
- 102 │   const [historySuggestions, setHistorySuggestions] = useState<string[]>([]);
-     ·          ─────────┬────────
-     ·                   ╰── `historySuggestions` redefined here
- 103 │ 
- 104 │   // Refs για debouncing και caching
- 105 │   const debounceTimeoutRef = useRef<NodeJS.Timeout>();
-     ╰────
+● Update(src\components\contacts\ContactsPageContent.tsx)
+  ⎿  Updated src\components\contacts\ContactsPageContent.tsx with 2 additions and 1 removal
+       76      const [selectedContact, setSelectedContact] = useState<Contact | null>(contactsData[1]);
+       77      const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+       78      const [showDashboard, setShowDashboard] = useState(true);
+       79 -    
+       79 +    const [showNewContactDialog, setShowNewContactDialog] = useState(false);
+       80 +  
+       81      // Add missing search/filter state
+       82      const [searchTerm, setSearchTerm] = useState('');
+       83      const [filterType, setFilterType] = useState<'all' | 'individual' | 'company' | 'service'>('all');
 
-Import trace for requested module:
-./src/subapps/geo-canvas/hooks/useAdministrativeBoundaries.ts
-./src/subapps/geo-canvas/components/AddressSearchPanel.tsx
-./src/subapps/geo-canvas/components/CitizenDrawingInterface.tsx
-./src/subapps/geo-canvas/app/GeoCanvasContent.tsx
-./src/subapps/geo-canvas/GeoCanvasApp.tsx
-./src/app/geo/canvas/page.tsx
-This error occurred during the build process and can only be dismissed by fixing the error.
+● Τώρα θα προσθέσω τη function handleNewContact και handleContactAdded:
+
+● Update(src\components\contacts\ContactsPageContent.tsx)
+  ⎿  Updated src\components\contacts\ContactsPageContent.tsx with 10 additions
+        85      const [unitsCountFilter, setUnitsCountFilter] = useState<'all' | '1-2' | '3-5' | '6+'>('all');
+        86      const [areaFilter, setAreaFilter] = useState<'all' | '0-100' | '101-300' | '301+'>('all');    
+        87    
+        88 +    const handleNewContact = () => {
+        89 +      setShowNewContactDialog(true);
+        90 +    };
+        91 +  
+        92 +    const handleContactAdded = () => {
+        93 +      // TODO: Refresh contacts data από το service
+        94 +      // Προς το παρόν μένει στο στατικό contactsData
+        95 +      setShowNewContactDialog(false);
+        96 +    };
+        97 +  
+        98      const stats = {
+        99        totalContacts: contactsData.length,
+       100        individuals: contactsData.filter(c => c.type === 'individual').length,
+
+● Τώρα θα προσθέσω το ContactsList με τη νέα onNewContact prop και το dialog στο τέλος:
+
+● Update(src\components\contacts\ContactsPageContent.tsx)
+  ⎿  Updated src\components\contacts\ContactsPageContent.tsx with 2 additions
+       133                    contacts={contactsData}
+       134                    selectedContact={selectedContact}
+       135                    onSelectContact={setSelectedContact}
+       136 +                  isLoading={false}
+       137 +                  onNewContact={handleNewContact}
+       138                  />
+       139                  <ContactDetails contact={selectedContact} />     
+       140                </>
+
+● Update(src\components\contacts\ContactsPageContent.tsx)
+  ⎿  Updated src\components\contacts\ContactsPageContent.tsx with 7 additions
+       144                </div>
+       145              )}
+       146            </div>
+       147 +  
+       148 +          {/* Dialog για νέα επαφή */}
+       149 +          <AddNewContactDialog
+       150 +            open={showNewContactDialog}
+       151 +            onOpenChange={setShowNewContactDialog}
+       152 +            onContactAdded={handleContactAdded}
+       153 +          />
+       154          </div>
+       155        </TooltipProvider>
+       156      );
+
+● Τώρα πρέπει να ενημερώσω το ContactsList.tsx να δεχτεί το onNewContact prop και να το περάσει στο ContactsToolbar:
+
+● Update(src\components\contacts\list\ContactsList.tsx)
+  ⎿  Updated src\components\contacts\list\ContactsList.tsx with 1 addition
+       15      selectedContact: Contact | null;
+       16      onSelectContact?: (contact: Contact) => void;
+       17      isLoading: boolean;
+       18 +    onNewContact?: () => void;
+       19    }
+       20    
+       21    export function ContactsList({
+
+● Update(src\components\contacts\list\ContactsList.tsx)
+  ⎿  Updated src\components\contacts\list\ContactsList.tsx with 1 addition 
+       23      selectedContact,
+       24      onSelectContact,
+       25      isLoading,
+       26 +    onNewContact,
+       27    }: ContactsListProps) {
+       28      const [favorites, setFavorites] = useState<string[]>(['1']);
+       29      const [sortBy, setSortBy] = useState<string>('name');       
+
+● Update(src\components\contacts\list\ContactsList.tsx)
+  ⎿  Updated src\components\contacts\list\ContactsList.tsx with 1 addition and 1 removal
+       51          <ContactsListHeader
+       52            contactCount={contacts.length}
+       53          />
+       54 -        <ContactsToolbar />
+       54 +        <ContactsToolbar onNewContact={onNewContact} />
+       55          <ScrollArea className="flex-1">
+       56            <div className="p-2 space-y-2">
+       57              {isLoading ? null : (
+
+● Τώρα ας κάνουμε TypeScript compilation check:

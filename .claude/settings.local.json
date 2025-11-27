@@ -55,7 +55,9 @@
       "Bash(claude --print)",
       "Bash(del \"C:\\Nestor_Pagonis\\packages\\core\\alert-engine\\hooks\\useAlertEngine.ts\")",
       "mcp__ide__getDiagnostics",
-      "WebSearch"
+      "WebSearch",
+      "Bash(npx kill-port:*)",
+      "Read(//f/Pagonis_Nestor/**)"
     ],
     "deny": [],
     "ask": []
