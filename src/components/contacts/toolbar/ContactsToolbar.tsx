@@ -36,7 +36,7 @@ interface ContactsToolbarProps {
   onFiltersChange?: (filters: string[]) => void;
   onNewContact?: () => void;
   onEditContact?: () => void;
-  onDeleteContact?: (ids: string[]) => void;
+  onDeleteContact?: (ids?: string[]) => void;
   onExport?: () => void;
   onRefresh?: () => void;
   hasSelectedContact?: boolean;
@@ -95,10 +95,22 @@ export function ContactsToolbar({
       id: 'delete-contact',
       label: 'Διαγραφή',
       icon: Trash2,
-      onClick: () => onDeleteContact?.(selectedItems),
+      onClick: () => {
+        // Αν υπάρχουν selectedItems, περνάμε αυτά
+        // Αλλιώς περνάμε undefined για να χρησιμοποιηθεί το selectedContact
+        if (selectedItems.length > 0) {
+          onDeleteContact?.(selectedItems);
+        } else if (hasSelectedContact) {
+          onDeleteContact?.();
+        }
+      },
       variant: 'destructive',
-      disabled: selectedItems.length === 0,
-      tooltip: `Διαγραφή ${selectedItems.length} επαφής/ών`,
+      disabled: selectedItems.length === 0 && !hasSelectedContact,
+      tooltip: selectedItems.length > 0
+        ? `Διαγραφή ${selectedItems.length} επαφής/ών`
+        : hasSelectedContact
+          ? 'Διαγραφή επιλεγμένης επαφής'
+          : 'Επιλέξτε επαφή για διαγραφή',
       badge: selectedItems.length > 0 ? selectedItems.length : undefined
     }
   ];

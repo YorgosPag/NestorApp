@@ -3,7 +3,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Users, Building2, Landmark, Edit } from 'lucide-react';
+import { Users, Building2, Landmark, Edit, Trash2 } from 'lucide-react';
 import type { Contact, ContactType, ContactStatus } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts';
 
@@ -18,9 +18,10 @@ const TYPE_FALLBACK = { icon: Users, color: 'bg-gray-500', name: 'Άγνωστο
 interface ContactDetailsHeaderProps {
   contact: Contact;
   onEditContact?: () => void;
+  onDeleteContact?: () => void;
 }
 
-export function ContactDetailsHeader({ contact, onEditContact }: ContactDetailsHeaderProps) {
+export function ContactDetailsHeader({ contact, onEditContact, onDeleteContact }: ContactDetailsHeaderProps) {
   const type = contact.type as ContactType;
   const { icon: Icon, color, name: typeName } = TYPE_INFO[type] ?? TYPE_FALLBACK;
   const status = (contact as any).status as ContactStatus | undefined;
@@ -44,10 +45,19 @@ export function ContactDetailsHeader({ contact, onEditContact }: ContactDetailsH
             </div>
           </div>
         </div>
-        <Button onClick={() => onEditContact?.()}>
-            <Edit className="w-4 h-4 mr-2"/>
-            Επεξεργασία
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => onEditContact?.()}>
+              <Edit className="w-4 h-4 mr-2"/>
+              Επεξεργασία
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={() => onDeleteContact?.()}
+          >
+              <Trash2 className="w-4 h-4 mr-2"/>
+              Διαγραφή
+          </Button>
+        </div>
       </div>
     </div>
   );

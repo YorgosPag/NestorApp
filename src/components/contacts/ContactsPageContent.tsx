@@ -1,84 +1,80 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { Contact } from '@/types/contacts';
+import { ContactsService } from '@/services/contacts.service';
 import { ContactsHeader } from './page/ContactsHeader';
 import { ContactsDashboard } from './page/ContactsDashboard';
 import { ContactsList } from './list/ContactsList';
 import { ContactDetails } from './details/ContactDetails';
 import { AddNewContactDialog } from './dialogs/AddNewContactDialog';
 import { EditContactDialog } from './dialogs/EditContactDialog';
+import { DeleteContactDialog } from './dialogs/DeleteContactDialog';
 
-const contactsData: Contact[] = [
+// Initial seed data for database (μόνο για πρώτη φόρτωση)
+const SEED_CONTACTS = [
   {
-    id: '1',
-    type: 'individual',
+    type: 'individual' as const,
     firstName: 'Γιώργος',
     lastName: 'Παπαδόπουλος',
-    emails: [{ email: 'g.papadopoulos@example.com', type: 'work', isPrimary: true }],
-    phones: [{ number: '6971234567', type: 'mobile', isPrimary: true }],
+    emails: [{ email: 'g.papadopoulos@example.com', type: 'work' as const, isPrimary: true }],
+    phones: [{ number: '6971234567', type: 'mobile' as const, isPrimary: true }],
     isFavorite: true,
-    createdAt: new Date('2023-10-26'),
-    updatedAt: new Date('2024-07-28'),
-    status: 'active',
+    status: 'active' as const,
   },
   {
-    id: 'pagonis',
-    type: 'company',
+    type: 'company' as const,
     companyName: 'Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.',
-    emails: [{ email: 'info@pagonis.gr', type: 'work', isPrimary: true }],
-    phones: [{ number: '2109876543', type: 'work', isPrimary: true }],
+    emails: [{ email: 'info@pagonis.gr', type: 'work' as const, isPrimary: true }],
+    phones: [{ number: '2109876543', type: 'work' as const, isPrimary: true }],
     isFavorite: false,
-    createdAt: new Date('2022-01-15'),
-    updatedAt: new Date('2024-07-25'),
-    status: 'active',
+    status: 'active' as const,
     vatNumber: '987654321'
   },
   {
-    id: '2',
-    type: 'company',
+    type: 'company' as const,
     companyName: 'TechCorp Α.Ε.',
-    emails: [{ email: 'info@techcorp.gr', type: 'work', isPrimary: true }],
-    phones: [{ number: '2101234567', type: 'work', isPrimary: true }],
+    emails: [{ email: 'info@techcorp.gr', type: 'work' as const, isPrimary: true }],
+    phones: [{ number: '2101234567', type: 'work' as const, isPrimary: true }],
     isFavorite: false,
-    createdAt: new Date('2023-10-25'),
-    updatedAt: new Date('2024-07-27'),
-    status: 'active',
+    status: 'active' as const,
     vatNumber: '123456789'
   },
   {
-    id: '3',
-    type: 'service',
+    type: 'service' as const,
     serviceName: "ΔΟΥ Α' Θεσσαλονίκης",
-    emails: [{ email: 'doy.a.thess@aade.gr', type: 'work', isPrimary: true }],
-    phones: [{ number: '2310555111', type: 'work', isPrimary: true }],
+    emails: [{ email: 'doy.a.thess@aade.gr', type: 'work' as const, isPrimary: true }],
+    phones: [{ number: '2310555111', type: 'work' as const, isPrimary: true }],
     isFavorite: false,
-    createdAt: new Date('2023-09-15'),
-    updatedAt: new Date('2024-06-15'),
-    status: 'active',
-    serviceType: 'tax_office'
+    status: 'active' as const,
+    serviceType: 'tax_office' as const
   },
   {
-    id: '4',
-    type: 'individual',
+    type: 'individual' as const,
     firstName: 'Μαρία',
     lastName: 'Ιωάννου',
-    emails: [{ email: 'm.ioannou@example.com', type: 'personal', isPrimary: true }],
-    phones: [{ number: '6987654321', type: 'mobile', isPrimary: true }],
+    emails: [{ email: 'm.ioannou@example.com', type: 'personal' as const, isPrimary: true }],
+    phones: [{ number: '6987654321', type: 'mobile' as const, isPrimary: true }],
     isFavorite: false,
-    createdAt: new Date('2023-10-22'),
-    updatedAt: new Date('2024-05-20'),
-    status: 'inactive',
+    status: 'inactive' as const,
   },
-] as any;
+];
 
 export function ContactsPageContent() {
-  const [selectedContact, setSelectedContact] = useState<Contact | null>(contactsData[1]);
+  // Database state
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // UI state
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [showDashboard, setShowDashboard] = useState(true);
   const [showNewContactDialog, setShowNewContactDialog] = useState(false);
   const [showEditContactDialog, setShowEditContactDialog] = useState(false);
+  const [showDeleteContactDialog, setShowDeleteContactDialog] = useState(false);
+  const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
 
   // Add missing search/filter state
   const [searchTerm, setSearchTerm] = useState('');
@@ -87,14 +83,67 @@ export function ContactsPageContent() {
   const [unitsCountFilter, setUnitsCountFilter] = useState<'all' | '1-2' | '3-5' | '6+'>('all');
   const [areaFilter, setAreaFilter] = useState<'all' | '0-100' | '101-300' | '301+'>('all');
 
+  // Database operations
+  const loadContacts = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      console.log('🔄 Starting to load contacts...');
+
+      const contactsResult = await ContactsService.getAllContacts({
+        limitCount: 50,
+        orderByField: 'updatedAt',
+        orderDirection: 'desc'
+      });
+
+      console.log('📋 Contacts loaded:', contactsResult);
+      setContacts(contactsResult.contacts);
+
+      // Αν είναι άδεια η βάση, προσθέτουμε seed data
+      if (contactsResult.contacts.length === 0) {
+        console.log('Empty database, seeding with initial data...');
+        await seedDatabase();
+      }
+    } catch (err) {
+      console.error('❌ Error loading contacts:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError(`Αποτυχία φόρτωσης επαφών: ${errorMessage}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const seedDatabase = async () => {
+    try {
+      console.log('Seeding database with initial contacts...');
+      const promises = SEED_CONTACTS.map(contactData =>
+        ContactsService.createContact(contactData)
+      );
+      await Promise.all(promises);
+      console.log('Database seeded successfully');
+      // Reload contacts after seeding
+      await refreshContacts();
+    } catch (err) {
+      console.error('Error seeding database:', err);
+    }
+  };
+
+  const refreshContacts = async () => {
+    await loadContacts();
+  };
+
+  // Load contacts on component mount
+  useEffect(() => {
+    loadContacts();
+  }, []);
+
   const handleNewContact = () => {
     setShowNewContactDialog(true);
   };
 
-  const handleContactAdded = () => {
-    // TODO: Refresh contacts data από το service
-    // Προς το παρόν μένει στο στατικό contactsData
+  const handleContactAdded = async () => {
     setShowNewContactDialog(false);
+    await refreshContacts();
   };
 
   const handleEditContact = () => {
@@ -103,19 +152,44 @@ export function ContactsPageContent() {
     }
   };
 
-  const handleContactUpdated = () => {
-    // TODO: Refresh contacts data από το service
-    // Προς το παρόν μένει στο στατικό contactsData
+  const handleContactUpdated = async () => {
     setShowEditContactDialog(false);
+    await refreshContacts();
+  };
+
+  const handleDeleteContacts = (ids?: string[]) => {
+    if (ids && ids.length > 0) {
+      setSelectedContactIds(ids);
+    } else {
+      // Χρησιμοποίησε την τρέχουσα επιλεγμένη επαφή
+      setSelectedContactIds([]);
+    }
+    setShowDeleteContactDialog(true);
+  };
+
+  const handleContactsDeleted = async () => {
+    setShowDeleteContactDialog(false);
+
+    // Αν διαγράφηκε η τρέχουσα επιλεγμένη επαφή, καθάρισε την επιλογή
+    if (selectedContact && selectedContactIds.includes(selectedContact.id!)) {
+      setSelectedContact(null);
+    }
+
+    setSelectedContactIds([]);
+    await refreshContacts();
   };
 
   const stats = {
-    totalContacts: contactsData.length,
-    individuals: contactsData.filter(c => c.type === 'individual').length,
-    companies: contactsData.filter(c => c.type === 'company').length,
-    services: contactsData.filter(c => c.type === 'service').length,
-    active: contactsData.filter((c: any) => c.status === 'active').length,
-    newThisMonth: contactsData.filter(c => c.createdAt > new Date(new Date().setMonth(new Date().getMonth() - 1))).length,
+    totalContacts: contacts.length,
+    individuals: contacts.filter(c => c.type === 'individual').length,
+    companies: contacts.filter(c => c.type === 'company').length,
+    services: contacts.filter(c => c.type === 'service').length,
+    active: contacts.filter((c: any) => c.status === 'active').length,
+    newThisMonth: contacts.filter(c => {
+      const oneMonthAgo = new Date();
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+      return c.createdAt && new Date(c.createdAt) > oneMonthAgo;
+    }).length,
   };
   
   return (
@@ -142,17 +216,28 @@ export function ContactsPageContent() {
         {showDashboard && <ContactsDashboard stats={stats} />}
 
         <div className="flex-1 flex overflow-hidden p-4 gap-4">
-          {viewMode === 'list' ? (
+          {error ? (
+            <div className="w-full text-center p-8 bg-card rounded-lg border border-destructive/20">
+              <p className="text-destructive font-medium">⚠️ {error}</p>
+              <button
+                onClick={refreshContacts}
+                className="mt-2 px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
+              >
+                Επανάληψη
+              </button>
+            </div>
+          ) : viewMode === 'list' ? (
             <>
               <ContactsList
-                contacts={contactsData}
+                contacts={contacts}
                 selectedContact={selectedContact}
                 onSelectContact={setSelectedContact}
-                isLoading={false}
+                isLoading={isLoading}
                 onNewContact={handleNewContact}
                 onEditContact={handleEditContact}
+                onDeleteContact={handleDeleteContacts}
               />
-              <ContactDetails contact={selectedContact} onEditContact={handleEditContact} />
+              <ContactDetails contact={selectedContact} onEditContact={handleEditContact} onDeleteContact={() => handleDeleteContacts()} />
             </>
           ) : (
             <div className="w-full text-center p-8 bg-card rounded-lg border">
@@ -174,6 +259,15 @@ export function ContactsPageContent() {
           onOpenChange={setShowEditContactDialog}
           contact={selectedContact}
           onContactUpdated={handleContactUpdated}
+        />
+
+        {/* Dialog για διαγραφή επαφής */}
+        <DeleteContactDialog
+          open={showDeleteContactDialog}
+          onOpenChange={setShowDeleteContactDialog}
+          contact={selectedContact}
+          selectedContactIds={selectedContactIds}
+          onContactsDeleted={handleContactsDeleted}
         />
       </div>
     </TooltipProvider>

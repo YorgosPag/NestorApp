@@ -23,9 +23,10 @@ function EmptyState() {
 interface ContactDetailsProps {
   contact: Contact | null;
   onEditContact?: () => void;
+  onDeleteContact?: () => void;
 }
 
-export function ContactDetails({ contact, onEditContact }: ContactDetailsProps) {
+export function ContactDetails({ contact, onEditContact, onDeleteContact }: ContactDetailsProps) {
   const [isAddUnitDialogOpen, setIsAddUnitDialogOpen] = useState(false);
 
   const handleUnitAdded = useCallback(() => {
@@ -43,7 +44,7 @@ export function ContactDetails({ contact, onEditContact }: ContactDetailsProps) 
   return (
     <>
       <div className="flex-1 flex flex-col bg-card border rounded-lg min-w-0 shadow-sm">
-        <ContactDetailsHeader contact={contact} onEditContact={onEditContact} />
+        <ContactDetailsHeader contact={contact} onEditContact={onEditContact} onDeleteContact={onDeleteContact} />
         <ScrollArea className="flex-1">
           <div className="p-4">
               <Tabs defaultValue="info">

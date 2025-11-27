@@ -17,6 +17,7 @@ interface ContactsListProps {
   isLoading: boolean;
   onNewContact?: () => void;
   onEditContact?: () => void;
+  onDeleteContact?: (ids?: string[]) => void;
 }
 
 export function ContactsList({
@@ -26,9 +27,8 @@ export function ContactsList({
   isLoading,
   onNewContact,
   onEditContact,
+  onDeleteContact,
 }: ContactsListProps) {
-  console.log('ContactsList received onNewContact:', onNewContact);
-
   const [favorites, setFavorites] = useState<string[]>(['1']);
   const [sortBy, setSortBy] = useState<string>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -58,11 +58,25 @@ export function ContactsList({
       <ContactsToolbar
         onNewContact={onNewContact}
         onEditContact={onEditContact}
+        onDeleteContact={onDeleteContact}
         hasSelectedContact={selectedContact !== null}
       />
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-2">
-          {isLoading ? null : (
+          {isLoading ? (
+            // Loading skeletons
+            Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="p-3 border rounded-lg">
+                <Skeleton className="h-4 w-3/4 mb-2" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+            ))
+          ) : contacts.length === 0 ? (
+            <div className="text-center p-8 text-muted-foreground">
+              <p>Δεν υπάρχουν επαφές</p>
+              <p className="text-sm mt-1">Προσθέστε την πρώτη σας επαφή</p>
+            </div>
+          ) : (
             sortedContacts.map((contact) => (
               <ContactListItem
                 key={contact.id}
