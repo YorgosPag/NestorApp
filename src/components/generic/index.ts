@@ -25,6 +25,14 @@ export type { GenericBuildingTabsRendererProps } from './GenericBuildingTabsRend
 export { GenericUnitsTabsRenderer } from './GenericUnitsTabsRenderer';
 export type { GenericUnitsTabsRendererProps } from './GenericUnitsTabsRenderer';
 
+// CRM Dashboard Tab Components
+export { GenericCRMDashboardTabsRenderer } from './GenericCRMDashboardTabsRenderer';
+export type { GenericCRMDashboardTabsRendererProps } from './GenericCRMDashboardTabsRenderer';
+
+// Period Selector Components
+export { GenericPeriodSelector } from './GenericPeriodSelector';
+export type { GenericPeriodSelectorProps } from './GenericPeriodSelector';
+
 // Helper Components
 export {
   createTabsFromConfig,
