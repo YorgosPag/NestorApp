@@ -1,5 +1,6 @@
 'use client';
 
+import React, { useState } from 'react';
 import { AddNewContactDialog } from './AddNewContactDialog';
 import type { Contact } from '@/types/contacts';
 

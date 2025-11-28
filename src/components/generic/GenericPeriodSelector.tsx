@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { PeriodConfig } from '@/config/period-selector-config';
 
 // ============================================================================
@@ -62,52 +63,27 @@ export function GenericPeriodSelector({
   // Φιλτράρισμα enabled periods
   const enabledPeriods = periods.filter(period => period.enabled !== false);
 
-  // Styling variants based on theme
-  const getContainerClasses = () => {
-    const baseClasses = 'flex items-center rounded-lg p-1';
-
-    switch (theme) {
-      case 'large':
-        return `${baseClasses} bg-gray-100 p-2`;
-      case 'compact':
-        return `${baseClasses} bg-gray-100`;
-      default:
-        return `${baseClasses} bg-gray-100`;
-    }
-  };
-
-  const getButtonClasses = (period: PeriodConfig) => {
-    const baseClasses = 'rounded-md transition-colors';
-    const sizeClasses = theme === 'large' ? 'px-4 py-2 text-base' : 'px-3 py-1.5 text-sm';
-
-    const stateClasses = value === period.value
-      ? 'bg-white shadow text-blue-600 font-medium'
-      : disabled
-        ? 'text-gray-400 cursor-not-allowed'
-        : 'text-gray-600 hover:text-gray-900';
-
-    return `${baseClasses} ${sizeClasses} ${stateClasses}`;
-  };
-
   const handlePeriodClick = (period: PeriodConfig) => {
     if (disabled || period.enabled === false) return;
     onChange(period.value);
   };
 
   return (
-    <div className={`${getContainerClasses()} ${className}`}>
-      {enabledPeriods.map(period => (
-        <button
-          key={period.id}
-          onClick={() => handlePeriodClick(period)}
-          disabled={disabled || period.enabled === false}
-          className={getButtonClasses(period)}
-          title={period.description}
-        >
-          {period.label}
-        </button>
-      ))}
-    </div>
+    <Tabs value={value} onValueChange={onChange} className={className}>
+      <TabsList className="w-auto">
+        {enabledPeriods.map(period => (
+          <TabsTrigger
+            key={period.id}
+            value={period.value}
+            disabled={disabled || period.enabled === false}
+            className="text-xs data-[state=active]:bg-orange-500 data-[state=active]:text-white hover:bg-orange-100 hover:text-orange-700"
+            title={period.description}
+          >
+            {period.label}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+    </Tabs>
   );
 }
 
