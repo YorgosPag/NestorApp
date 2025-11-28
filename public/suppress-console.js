@@ -27,6 +27,7 @@
   const shouldDrop = (args) => args?.some(a => {
     if (a instanceof Error && (isStackLike(a.stack || '') || isStackLike(String(a)))) return true;
     if (typeof a === 'string' && isStackLike(a)) return true;
+    if (typeof a === 'string' && a.includes('[Fast Refresh] done in')) return true;
     try { return isStackLike(String(a)); } catch { return false; }
   });
 

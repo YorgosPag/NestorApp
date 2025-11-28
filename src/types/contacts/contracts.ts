@@ -24,39 +24,62 @@ export interface BaseContact {
 // Interface για Φυσικά Πρόσωπα
 export interface IndividualContact extends BaseContact {
   type: 'individual';
-  // Βασικά στοιχεία
+
+  // 👤 Βασικά Στοιχεία
   firstName: string;
   lastName: string;
-  middleName?: string;
-  nickname?: string;
-  
-  // Προσωπικά στοιχεία
-  dateOfBirth?: Date;
-  gender?: 'male' | 'female' | 'other';
-  nationality?: string;
-  idNumber?: string; // ΑΔΤ
-  taxNumber?: string; // ΑΦΜ
-  socialSecurityNumber?: string; // ΑΜΚΑ
-  
-  // Επαγγελματικά στοιχεία
-  profession?: string;
-  jobTitle?: string;
-  company?: string;
-  department?: string;
-  
-  // Στοιχεία επικοινωνίας
+  fatherName?: string;        // Πατρώνυμο
+  motherName?: string;        // Μητρώνυμο
+  middleName?: string;        // Μεσαίο όνομα (legacy)
+  nickname?: string;          // Παρατσούκλι
+
+  birthDate?: string;         // Ημερομηνία Γέννησης (ISO string)
+  birthCountry?: string;      // Χώρα Γέννησης
+  gender?: 'male' | 'female' | 'other';  // Φύλο
+  amka?: string;             // ΑΜΚΑ
+
+  // 💳 Ταυτότητα & ΑΦΜ
+  documentType?: 'identity_card' | 'passport' | 'drivers_license' | 'other';
+  documentIssuer?: string;    // Εκδούσα Αρχή
+  documentNumber?: string;    // Αριθμός Εγγράφου
+  documentIssueDate?: string; // Ημερομηνία Έκδοσης (ISO string)
+  documentExpiryDate?: string; // Ημερομηνία Λήξης (ISO string)
+  vatNumber?: string;         // ΑΦΜ (Φυσικού Προσώπου)
+  taxOffice?: string;         // ΔΟΥ
+
+  // Legacy fields (for backward compatibility)
+  dateOfBirth?: Date;         // Deprecated: use birthDate
+  nationality?: string;       // Deprecated: use birthCountry
+  idNumber?: string;         // Deprecated: use documentNumber
+  taxNumber?: string;        // Deprecated: use vatNumber
+  socialSecurityNumber?: string; // Deprecated: use amka
+
+  // 💼 Επαγγελματικά Στοιχεία
+  profession?: string;        // Επάγγελμα
+  specialty?: string;         // Ειδικότητα
+  employer?: string;          // Επιχείρηση/Εργοδότης
+  position?: string;          // Θέση/Ρόλος
+  workAddress?: string;       // Διεύθυνση Εργασίας
+  workWebsite?: string;       // Ιστοσελίδα Επαγγελματικού Προφίλ
+
+  // Legacy professional fields (for backward compatibility)
+  jobTitle?: string;         // Deprecated: use position
+  company?: string;          // Deprecated: use employer
+  department?: string;       // Keep for department within employer
+
+  // 📞 Στοιχεία επικοινωνίας
   emails?: EmailInfo[];
   phones?: PhoneInfo[];
   addresses?: AddressInfo[];
   websites?: WebsiteInfo[];
   socialMedia?: SocialMediaInfo[];
-  
-  // Οικογενειακή κατάσταση
+
+  // 👨‍👩‍👧‍👦 Οικογενειακή κατάσταση
   maritalStatus?: 'single' | 'married' | 'divorced' | 'widowed';
   spouse?: string;
   children?: string[];
-  
-  // Φωτογραφία
+
+  // 📷 Φωτογραφία
   photoURL?: string;
 }
 

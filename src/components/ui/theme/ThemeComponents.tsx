@@ -16,6 +16,11 @@ export const THEME_SYSTEM = {
     cardDark: "border rounded-lg bg-slate-800 p-4 border-slate-700",
     cardLight: "border rounded-lg bg-white p-4 border-slate-200",
 
+    // Contact card backgrounds (list items)
+    contactCard: "bg-card hover:bg-accent/50",
+    contactCardSelected: "bg-blue-50 dark:bg-blue-950/20",
+    contactCardArchived: "bg-muted/30",
+
     // Minimal containers (simple wrappers)
     minimal: "bg-background p-2",
     minimalDark: "bg-slate-900 p-2",
@@ -24,8 +29,8 @@ export const THEME_SYSTEM = {
 
   // 🎯 TAB TRIGGERS - Component interaction states
   tabs: {
-    // Default tab styling
-    trigger: "flex items-center gap-1 transition-colors",
+    // Default tab styling with centralized typography (Label Medium: 12px, medium, muted)
+    trigger: "flex items-center gap-1 transition-colors text-xs font-medium text-muted-foreground",
 
     // Active states for different themes
     activeDefault: "data-[state=active]:bg-blue-500 data-[state=active]:text-white",
@@ -52,6 +57,34 @@ export const THEME_SYSTEM = {
     success: "bg-green-50/50 rounded-lg p-3 border border-green-200",
     warning: "bg-orange-50/50 rounded-lg p-3 border border-orange-200",
     danger: "bg-red-50/50 rounded-lg p-3 border border-red-200"
+  },
+
+  // 🔤 TYPOGRAPHY HIERARCHY - Enterprise text roles (Material Design + IBM Carbon inspired)
+  typography: {
+    // Display roles (hero content, metrics, brand moments)
+    displayLarge: "text-4xl font-normal text-foreground tracking-tight", // 36px
+    displayMedium: "text-3xl font-normal text-foreground tracking-tight", // 30px
+    displaySmall: "text-2xl font-normal text-foreground tracking-tight", // 24px
+
+    // Headline roles (page titles, section headers)
+    headlineLarge: "text-xl font-semibold text-foreground", // 20px
+    headlineMedium: "text-lg font-semibold text-foreground", // 18px
+    headlineSmall: "text-base font-semibold text-foreground", // 16px
+
+    // Title roles (component titles, card headers)
+    titleLarge: "text-base font-medium text-foreground", // 16px
+    titleMedium: "text-sm font-medium text-foreground", // 14px
+    titleSmall: "text-xs font-medium text-foreground", // 12px
+
+    // Body roles (paragraphs, content text)
+    bodyLarge: "text-base font-normal text-foreground", // 16px
+    bodyMedium: "text-sm font-normal text-foreground", // 14px
+    bodySmall: "text-xs font-normal text-muted-foreground", // 12px
+
+    // Label roles (form labels, captions, metadata)
+    labelLarge: "text-sm font-medium text-muted-foreground", // 14px
+    labelMedium: "text-xs font-medium text-muted-foreground", // 12px
+    labelSmall: "text-xs font-medium text-muted-foreground/80" // 11px
   }
 } as const;
 
@@ -138,4 +171,29 @@ export function createCustomTheme(
     tabTrigger: THEME_VARIANTS[tabTheme].tabTrigger,
     content: THEME_SYSTEM.content.default
   };
+}
+
+/**
+ * Get contact card backgrounds
+ */
+export function getContactCardBackgrounds() {
+  return {
+    default: THEME_SYSTEM.containers.contactCard,
+    selected: THEME_SYSTEM.containers.contactCardSelected,
+    archived: THEME_SYSTEM.containers.contactCardArchived
+  };
+}
+
+/**
+ * Get enterprise typography styles
+ */
+export function getTypographyStyles() {
+  return THEME_SYSTEM.typography;
+}
+
+/**
+ * Get specific typography role
+ */
+export function getTypography(role: keyof typeof THEME_SYSTEM.typography) {
+  return THEME_SYSTEM.typography[role];
 }

@@ -58,7 +58,8 @@
       "WebSearch",
       "Bash(npx kill-port:*)",
       "Read(//f/Pagonis_Nestor/**)",
-      "Bash(del /S /Q .next)"
+      "Bash(del /S /Q .next)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []

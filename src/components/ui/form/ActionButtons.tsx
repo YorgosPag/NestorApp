@@ -3,29 +3,30 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Save, X, Trash2, Plus, Edit, Archive, RotateCcw, Phone, Mail, MessageSquare, Download, Upload, HelpCircle, Star } from 'lucide-react';
+import { Loader2, Save, X, Trash2, Plus, Edit, Archive, RotateCcw, Phone, Mail, MessageSquare, Download, Upload, HelpCircle, Star, RefreshCw, ArrowUpAZ, ArrowDownZA } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // Enterprise Button Categorization - Global Design System Standards
 // Based on Google Material Design, Microsoft Fluent, Apple HIG, Bootstrap 5
+// Typography: Label Large (14px, medium) as per Material Design button specs
 export const BUTTON_CATEGORIES = {
   // 🔵 PRIMARY ACTIONS (Blue #0d6efd) - Main user actions
-  primary: "bg-blue-600 hover:bg-blue-700 text-white border border-blue-600 hover:border-blue-700",
+  primary: "bg-blue-600 hover:bg-blue-700 text-white border border-blue-600 hover:border-blue-700 text-sm font-medium",
 
   // 🟢 SUCCESS/POSITIVE (Green #198754) - Successful completion, save actions
-  success: "bg-green-600 hover:bg-green-700 text-white border border-green-600 hover:border-green-700",
+  success: "bg-green-600 hover:bg-green-700 text-white border border-green-600 hover:border-green-700 text-sm font-medium",
 
   // 🔴 DANGER/DESTRUCTIVE (Red #dc3545) - Permanent destructive actions
-  danger: "bg-red-600 hover:bg-red-700 text-white border border-red-600 hover:border-red-700",
+  danger: "bg-red-600 hover:bg-red-700 text-white border border-red-600 hover:border-red-700 text-sm font-medium",
 
   // 🟡 WARNING/CAUTION (Orange/Yellow #ffc107) - Reversible destructive actions
-  warning: "bg-orange-500 hover:bg-orange-600 text-white border border-orange-500 hover:border-orange-600",
+  warning: "bg-orange-500 hover:bg-orange-600 text-white border border-orange-500 hover:border-orange-600 text-sm font-medium",
 
   // ⚪ SECONDARY/NEUTRAL (Gray #6c757d) - Secondary, optional actions
-  secondary: "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 hover:border-gray-400",
+  secondary: "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 hover:border-gray-400 text-sm font-medium",
 
   // 🌑 UTILITY/PASSIVE (Dark Gray #374151) - Tools, communication, management
-  utility: "bg-gray-700 hover:bg-gray-600 border border-gray-600 hover:border-gray-500"
+  utility: "bg-gray-700 hover:bg-gray-600 text-white border border-gray-600 hover:border-gray-500 text-sm font-medium"
 } as const;
 
 // Legacy button styles with enterprise categorization mapping
@@ -55,6 +56,7 @@ export const BUTTON_STYLES = {
     export: `${BUTTON_CATEGORIES.utility} text-emerald-400`,
     import: `${BUTTON_CATEGORIES.utility} text-orange-400`,
     help: `${BUTTON_CATEGORIES.utility} text-cyan-400`,
+    sort: `${BUTTON_CATEGORIES.utility} text-indigo-400`,
   }
 } as const;
 
@@ -467,6 +469,29 @@ export function ToolbarImportButton({
   );
 }
 
+// Single sorting toggle button - Centralized design system integration
+export function ToolbarSortToggleButton({
+  disabled = false,
+  onClick,
+  className,
+  size = 'sm',
+  sortDirection = 'asc'
+}: BaseButtonProps & { sortDirection?: 'asc' | 'desc' }) {
+  const icon = sortDirection === 'asc' ? <ArrowUpAZ className="w-4 h-4" /> : <ArrowDownZA className="w-4 h-4" />;
+
+  return (
+    <Button
+      size={size}
+      onClick={onClick}
+      disabled={disabled}
+      className={cn(BUTTON_STYLES.variants.sort, "flex items-center gap-2 min-w-[100px] justify-start", className)}
+    >
+      {icon}
+      <span className="hidden md:inline">Ταξινόμηση</span>
+    </Button>
+  );
+}
+
 export function ToolbarHelpButton({
   children = "Βοήθεια",
   disabled = false,
@@ -539,6 +564,27 @@ export function ToolbarArchivedFilterButton({
       className={buttonClassName}
     >
       <Archive className="w-4 h-4" />
+      <span className="hidden md:inline">{children}</span>
+    </Button>
+  );
+}
+
+// Refresh button - Utility action for refreshing data
+export function ToolbarRefreshButton({
+  children = "Ανανέωση",
+  disabled = false,
+  onClick,
+  className,
+  size = 'sm'
+}: BaseButtonProps) {
+  return (
+    <Button
+      size={size}
+      onClick={onClick}
+      disabled={disabled}
+      className={cn(BUTTON_CATEGORIES.utility, "text-cyan-400 flex items-center gap-2 min-w-[100px] justify-start", className)}
+    >
+      <RefreshCw className="w-4 h-4" />
       <span className="hidden md:inline">{children}</span>
     </Button>
   );
