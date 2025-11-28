@@ -3,12 +3,11 @@
 import React from 'react';
 import { TabsContent } from "@/components/ui/tabs";
 import { TabsOnlyTriggers, type TabDefinition } from "@/components/ui/navigation/TabsComponents";
-import type { ProjectTabConfig } from '@/config/project-tabs-config';
-import type { Project } from '@/types/project';
+import type { BuildingTabConfig } from '@/config/building-tabs-config';
+import type { Building } from '@/components/building-management/BuildingsPageContent';
 import {
-  Briefcase, Ruler, Car, Building2, Calendar, Users,
-  BarChart3, ParkingCircle, FileText, Landmark,
-  Camera, Video, UserCheck
+  Home, Clock, Map, TrendingUp, Archive, FileText,
+  Settings, Camera, Video, PackageSearch
 } from 'lucide-react';
 
 // ============================================================================
@@ -19,78 +18,67 @@ import {
  * Mapping από emoji icons σε Lucide React icons
  */
 const ICON_MAPPING = {
-  '🏗️': Briefcase,
-  '📐': Ruler,
-  '🚗': Car,
-  '🏢': Building2,
-  '📅': Calendar,
-  '👥': Users,
-  '📊': BarChart3,
-  '🅿️': ParkingCircle,
-  '🤝': UserCheck,
+  '🏠': Home,
+  '🕐': Clock,
+  '🗺️': Map,
+  '📈': TrendingUp,
+  '📦': Archive,
   '📄': FileText,
-  '🏛️': Landmark,
+  '⚙️': Settings,
   '📸': Camera,
   '🎬': Video,
+  '🔍': PackageSearch,
 } as const;
 
 /**
  * Helper function για την μετατροπή emoji icon σε Lucide icon
  */
 function getIconComponent(emojiIcon: string) {
-  return ICON_MAPPING[emojiIcon as keyof typeof ICON_MAPPING] || Briefcase;
+  return ICON_MAPPING[emojiIcon as keyof typeof ICON_MAPPING] || Home;
 }
 
 // ============================================================================
 // COMPONENT MAPPING
 // ============================================================================
 
-import { GeneralProjectTab } from '../projects/general-project-tab';
-import { BuildingDataTab } from '../projects/BuildingDataTab';
-import { ParkingTab } from '../projects/parking/ParkingTab';
-import { ContributorsTab } from '../projects/contributors-tab';
-import { DocumentsProjectTab } from '../projects/documents-project-tab';
-import { IkaTab } from '../projects/ika-tab';
-import { PhotosTab } from '../projects/PhotosTab';
-import { VideosTab } from '../projects/VideosTab';
-import { ProjectTimelineTab } from '../projects/ProjectTimelineTab';
-import { ProjectCustomersTab } from '../projects/customers-tab';
-import { ProjectStructureTab } from '../projects/tabs/ProjectStructureTab';
+import { GeneralTabContent } from '../building-management/tabs/GeneralTabContent';
+import TimelineTabContent from '../building-management/tabs/TimelineTabContent';
+import AnalyticsTabContent from '../building-management/tabs/AnalyticsTabContent';
+import PhotosTabContent from '../building-management/tabs/PhotosTabContent';
+import VideosTabContent from '../building-management/tabs/VideosTabContent';
+import PlaceholderTab from '../building-management/tabs/PlaceholderTab';
 import { FloorplanViewerTab } from '../projects/tabs/FloorplanViewerTab';
+import { StorageTab } from '../building-management/StorageTab';
 
 /**
  * Component mapping για την αντιστοίχιση component names σε actual components
  */
 const COMPONENT_MAPPING = {
-  'GeneralProjectTab': GeneralProjectTab,
-  'BuildingDataTab': BuildingDataTab,
-  'ParkingTab': ParkingTab,
-  'ContributorsTab': ContributorsTab,
-  'DocumentsProjectTab': DocumentsProjectTab,
-  'IkaTab': IkaTab,
-  'PhotosTab': PhotosTab,
-  'VideosTab': VideosTab,
-  'ProjectTimelineTab': ProjectTimelineTab,
-  'ProjectCustomersTab': ProjectCustomersTab,
-  'ProjectStructureTab': ProjectStructureTab,
+  'GeneralTabContent': GeneralTabContent,
+  'TimelineTabContent': TimelineTabContent,
+  'AnalyticsTabContent': AnalyticsTabContent,
+  'PhotosTabContent': PhotosTabContent,
+  'VideosTabContent': VideosTabContent,
+  'PlaceholderTab': PlaceholderTab,
   'FloorplanViewerTab': FloorplanViewerTab,
+  'StorageTab': StorageTab,
 } as const;
 
 // ============================================================================
 // INTERFACES
 // ============================================================================
 
-export interface GenericProjectTabsRendererProps {
-  /** Project tabs configuration */
-  tabs: ProjectTabConfig[];
-  /** Project data to display */
-  project: Project & { companyName: string };
+export interface GenericBuildingTabsRendererProps {
+  /** Building tabs configuration */
+  tabs: BuildingTabConfig[];
+  /** Building data to display */
+  building: Building;
   /** Default tab to show */
   defaultTab?: string;
   /** Additional data for specific tabs */
   additionalData?: {
-    projectFloorplan?: any;
-    parkingFloorplan?: any;
+    buildingFloorplan?: any;
+    storageFloorplan?: any;
     floorplansLoading?: boolean;
     floorplansError?: string;
     refetchFloorplans?: () => void;
@@ -106,36 +94,36 @@ export interface GenericProjectTabsRendererProps {
 // ============================================================================
 
 /**
- * Generic Project Tabs Renderer
+ * Generic Building Tabs Renderer
  *
- * Renders project detail tabs based on configuration
+ * Renders building detail tabs based on configuration
  *
  * @example
  * ```tsx
- * import { getSortedProjectTabs } from '@/config/project-tabs-config';
- * import { GenericProjectTabsRenderer } from '@/components/generic';
+ * import { getSortedBuildingTabs } from '@/config/building-tabs-config';
+ * import { GenericBuildingTabsRenderer } from '@/components/generic';
  *
- * function ProjectDetails({ project }) {
- *   const tabs = getSortedProjectTabs();
+ * function BuildingTabs({ building }) {
+ *   const tabs = getSortedBuildingTabs();
  *
  *   return (
- *     <GenericProjectTabsRenderer
+ *     <GenericBuildingTabsRenderer
  *       tabs={tabs}
- *       project={project}
+ *       building={building}
  *       defaultTab="general"
  *     />
  *   );
  * }
  * ```
  */
-export function GenericProjectTabsRenderer({
+export function GenericBuildingTabsRenderer({
   tabs,
-  project,
+  building,
   defaultTab = 'general',
   additionalData = {},
   customComponents = {},
   globalProps = {},
-}: GenericProjectTabsRendererProps) {
+}: GenericBuildingTabsRendererProps) {
   // Φιλτράρισμα enabled tabs
   const enabledTabs = tabs.filter(tab => tab.enabled !== false);
 
@@ -162,9 +150,9 @@ export function GenericProjectTabsRenderer({
   };
 
   // Helper function to get component props
-  const getComponentProps = (tab: ProjectTabConfig) => {
+  const getComponentProps = (tab: BuildingTabConfig) => {
     const baseProps = {
-      project,
+      building,
       ...globalProps,
     };
 
@@ -178,34 +166,52 @@ export function GenericProjectTabsRenderer({
       if (tab.value === 'floorplan') {
         return {
           ...baseProps,
-          floorplanData: additionalData.projectFloorplan?.scene,
+          title: 'Κάτοψη Κτιρίου',
+          floorplanData: additionalData.buildingFloorplan?.scene,
           onAddFloorplan: () => {
-            console.log('Add project floorplan for project:', project.id);
+            console.log('Add building floorplan for building:', building.id);
           },
           onEditFloorplan: () => {
-            console.log('Edit project floorplan for project:', project.id);
+            console.log('Edit building floorplan for building:', building.id);
           },
         };
-      } else if (tab.value === 'parking-floorplan') {
+      } else if (tab.value === 'storage-floorplans') {
         return {
           ...baseProps,
-          floorplanData: additionalData.parkingFloorplan?.scene,
+          title: 'Κατόψεις Αποθηκών',
+          floorplanData: additionalData.storageFloorplan?.scene,
           onAddFloorplan: () => {
-            console.log('Add parking floorplan for project:', project.id);
+            console.log('Add storage floorplan for building:', building.id);
           },
           onEditFloorplan: () => {
-            console.log('Edit parking floorplan for project:', project.id);
+            console.log('Edit storage floorplan for building:', building.id);
           },
         };
       }
     }
 
+    // Special handling για PlaceholderTab
+    if (tab.component === 'PlaceholderTab' && tab.componentProps) {
+      const iconName = tab.componentProps.icon;
+      let IconComponent = FileText; // Default fallback
+
+      // Map icon names to actual icons
+      if (iconName === 'FileText') IconComponent = FileText;
+      if (iconName === 'Settings') IconComponent = Settings;
+
+      return {
+        ...baseProps,
+        title: tab.componentProps.title,
+        icon: IconComponent,
+      };
+    }
+
     return baseProps;
   };
 
-  // Μετατροπή ProjectTabConfig[] σε TabDefinition[]
+  // Μετατροπή BuildingTabConfig[] σε TabDefinition[]
   const tabDefinitions: TabDefinition[] = enabledTabs.map((tab) => {
-    const Component = getComponent(tab.component || 'GeneralProjectTab');
+    const Component = getComponent(tab.component || 'GeneralTabContent');
     const componentProps = getComponentProps(tab);
     const IconComponent = getIconComponent(tab.icon);
 
@@ -237,4 +243,4 @@ export function GenericProjectTabsRenderer({
 // EXPORTS
 // ============================================================================
 
-export default GenericProjectTabsRenderer;
+export default GenericBuildingTabsRenderer;

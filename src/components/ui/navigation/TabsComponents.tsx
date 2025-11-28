@@ -73,12 +73,8 @@ export function TabsContainer({
   // Get theme configuration
   const themeConfig = getThemeVariant(theme);
 
-  // Calculate grid columns based on number of tabs
-  const gridCols = tabs.length <= 2 ? 'grid-cols-2' :
-                   tabs.length === 3 ? 'grid-cols-3' :
-                   tabs.length === 4 ? 'grid-cols-4' :
-                   tabs.length === 5 ? 'grid-cols-5' :
-                   'grid-cols-6';
+  // Use flexible layout that allows proper wrapping with vertical spacing
+  const flexWrapStyles = "flex flex-wrap gap-2";
 
   return (
     <div className={cn(themeConfig.container, className)}>
@@ -90,7 +86,7 @@ export function TabsContainer({
       )}
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className={TABS_STYLES.container}>
-        <TabsList className={cn(TABS_STYLES.list, gridCols)}>
+        <TabsList className={cn("w-full", flexWrapStyles)}>
           {tabs.map((tab) => (
             <TabsTrigger
               key={tab.id}
@@ -185,12 +181,8 @@ export function TabsOnlyTriggers({
   // Get theme configuration
   const themeConfig = getThemeVariant(theme);
 
-  // Calculate grid columns based on number of tabs
-  const gridCols = tabs.length <= 2 ? 'grid-cols-2' :
-                   tabs.length === 3 ? 'grid-cols-3' :
-                   tabs.length === 4 ? 'grid-cols-4' :
-                   tabs.length === 5 ? 'grid-cols-5' :
-                   'grid-cols-6';
+  // Use flexible layout that allows proper wrapping with vertical spacing
+  const flexWrapStyles = "flex flex-wrap gap-2";
 
   return (
     <div className={cn(themeConfig.container, className)}>
@@ -202,7 +194,7 @@ export function TabsOnlyTriggers({
       )}
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className={TABS_STYLES.container}>
-        <TabsList className={cn(TABS_STYLES.list, gridCols)}>
+        <TabsList className={cn("w-full", flexWrapStyles)}>
           {tabs.map((tab) => (
             <TabsTrigger
               key={tab.id}

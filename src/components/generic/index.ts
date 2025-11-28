@@ -17,6 +17,14 @@ export type { GenericTabRendererProps } from './GenericTabRenderer';
 export { GenericProjectTabsRenderer } from './GenericProjectTabsRenderer';
 export type { GenericProjectTabsRendererProps } from './GenericProjectTabsRenderer';
 
+// Building Tab Components
+export { GenericBuildingTabsRenderer } from './GenericBuildingTabsRenderer';
+export type { GenericBuildingTabsRendererProps } from './GenericBuildingTabsRenderer';
+
+// Units Tab Components
+export { GenericUnitsTabsRenderer } from './GenericUnitsTabsRenderer';
+export type { GenericUnitsTabsRendererProps } from './GenericUnitsTabsRenderer';
+
 // Helper Components
 export {
   createTabsFromConfig,
