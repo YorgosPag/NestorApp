@@ -2,7 +2,7 @@
  * 🔧 GENERIC COMPONENTS INDEX
  *
  * Centralized exports για όλα τα generic components
- * που διαβάζουν από το company-gemi-config.ts
+ * που διαβάζουν από centralized configurations
  */
 
 // Form Components
@@ -12,6 +12,10 @@ export type { GenericFormRendererProps } from './GenericFormRenderer';
 // Tab Components
 export { GenericTabRenderer } from './GenericTabRenderer';
 export type { GenericTabRendererProps } from './GenericTabRenderer';
+
+// Project Tab Components
+export { GenericProjectTabsRenderer } from './GenericProjectTabsRenderer';
+export type { GenericProjectTabsRendererProps } from './GenericProjectTabsRenderer';
 
 // Helper Components
 export {

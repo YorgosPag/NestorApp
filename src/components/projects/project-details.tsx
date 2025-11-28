@@ -1,25 +1,13 @@
 'use client';
 
 import React from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { GeneralProjectTab } from './general-project-tab';
-import { BuildingDataTab } from './BuildingDataTab';
-import { ParkingTab } from './parking/ParkingTab';
-import { ContributorsTab } from './contributors-tab';
-import { DocumentsProjectTab } from './documents-project-tab';
-import { IkaTab } from './ika-tab';
-import { PhotosTab } from './PhotosTab';
-import { VideosTab } from './VideosTab';
 import type { Project } from '@/types/project';
 import { ProjectDetailsHeader } from './ProjectDetailsHeader';
-import { ProjectTimelineTab } from './ProjectTimelineTab';
-import { ProjectCustomersTab } from './customers-tab';
-import { Briefcase, Users, GitMerge, Map } from 'lucide-react'; // Added Map icon
+import { Briefcase } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ProjectStructureTab } from './tabs/ProjectStructureTab';
-import PlaceholderTab from '../building-management/tabs/PlaceholderTab'; // Added placeholder import
-import { FloorplanViewerTab } from './tabs/FloorplanViewerTab';
 import { useProjectFloorplans } from '../../hooks/useProjectFloorplans';
+import { GenericProjectTabsRenderer } from '@/components/generic';
+import { getSortedProjectTabs } from '@/config/project-tabs-config';
 
 interface ProjectDetailsProps {
     project: Project & { companyName: string };
@@ -55,89 +43,29 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
             </div>
         </div>
     );
+    // Get project tabs from centralized config
+    const projectTabs = getSortedProjectTabs();
+
     return (
-        <div className="flex-1 flex flex-col bg-card border rounded-lg min-w-0 shadow-sm overflow-hidden">
+        <div className="flex-1 flex flex-col bg-card border rounded-lg min-w-0 shadow-sm">
             <ProjectDetailsHeader project={project} />
             <ScrollArea className="flex-1">
-                <div className="p-4">
-                    <Tabs defaultValue="general" className="w-full">
-                        <TabsList className="shrink-0 flex-wrap h-auto justify-start">
-                            <TabsTrigger value="general">Γενικά Έργου</TabsTrigger>
-                            <TabsTrigger value="floorplan">Κάτοψη Έργου</TabsTrigger>
-                            <TabsTrigger value="parking-floorplan">Κάτοψη Θ.Σ.</TabsTrigger>
-                            <TabsTrigger value="structure">Δομή Έργου</TabsTrigger>
-                            <TabsTrigger value="timeline">Timeline</TabsTrigger>
-                            <TabsTrigger value="customers">Πελάτες</TabsTrigger>
-                            <TabsTrigger value="building-data">Στοιχεία Δόμησης</TabsTrigger>
-                            <TabsTrigger value="parking">Θέσεις Στάθμευσης</TabsTrigger>
-                            <TabsTrigger value="contributors">Συντελεστές</TabsTrigger>
-                            <TabsTrigger value="documents">Έγγραφα Έργου</TabsTrigger>
-                            <TabsTrigger value="ika">IKA</TabsTrigger>
-                            <TabsTrigger value="photos">Φωτογραφίες</TabsTrigger>
-                            <TabsTrigger value="videos">Βίντεο</TabsTrigger>
-                        </TabsList>
-                        <TabsContent value="general" className="flex-grow overflow-auto mt-4">
-                            <GeneralProjectTab project={project} />
-                        </TabsContent>
-                        <TabsContent value="floorplan" className="flex-grow overflow-auto mt-4">
-                            <FloorplanViewerTab 
-                                title="Κάτοψη Έργου"
-                                floorplanData={projectFloorplan?.scene}
-                                onAddFloorplan={() => {
-                                    console.log('Add project floorplan for project:', project.id);
-                                    // TODO: Implement add floorplan functionality
-                                }}
-                                onEditFloorplan={() => {
-                                    console.log('Edit project floorplan for project:', project.id);
-                                    // TODO: Implement edit floorplan functionality
-                                }}
-                            />
-                        </TabsContent>
-                        <TabsContent value="parking-floorplan" className="flex-grow overflow-auto mt-4">
-                            <FloorplanViewerTab 
-                                title="Κάτοψη Θέσεων Στάθμευσης"
-                                floorplanData={parkingFloorplan?.scene}
-                                onAddFloorplan={() => {
-                                    console.log('Add parking floorplan for project:', project.id);
-                                    // TODO: Implement add parking floorplan functionality
-                                }}
-                                onEditFloorplan={() => {
-                                    console.log('Edit parking floorplan for project:', project.id);
-                                    // TODO: Implement edit parking floorplan functionality
-                                }}
-                            />
-                        </TabsContent>
-                         <TabsContent value="structure" className="flex-grow overflow-auto mt-4">
-                            <ProjectStructureTab projectId={project.id} />
-                        </TabsContent>
-                         <TabsContent value="timeline" className="flex-grow overflow-auto mt-4">
-                            <ProjectTimelineTab project={project} />
-                        </TabsContent>
-                        <TabsContent value="customers" className="flex-grow overflow-auto mt-4">
-                            <ProjectCustomersTab projectId={project.id} />
-                        </TabsContent>
-                        <TabsContent value="building-data" className="flex-grow overflow-auto mt-4">
-                            <BuildingDataTab />
-                        </TabsContent>
-                        <TabsContent value="parking" className="flex-grow overflow-auto mt-4">
-                             <ParkingTab />
-                        </TabsContent>
-                        <TabsContent value="contributors" className="flex-grow overflow-auto mt-4">
-                            <ContributorsTab />
-                        </TabsContent>
-                        <TabsContent value="documents" className="flex-grow overflow-auto mt-4">
-                            <DocumentsProjectTab />
-                        </TabsContent>
-                        <TabsContent value="ika" className="flex-grow overflow-auto mt-4">
-                            <IkaTab />
-                        </TabsContent>
-                        <TabsContent value="photos" className="flex-grow overflow-auto mt-4">
-                            <PhotosTab />
-                        </TabsContent>
-                        <TabsContent value="videos" className="flex-grow overflow-auto mt-4">
-                            <VideosTab />
-                        </TabsContent>
-                    </Tabs>
+                <div className="p-4 overflow-x-auto">
+                    <GenericProjectTabsRenderer
+                        tabs={projectTabs}
+                        project={project}
+                        defaultTab="general"
+                        additionalData={{
+                            projectFloorplan,
+                            parkingFloorplan,
+                            floorplansLoading,
+                            floorplansError,
+                            refetchFloorplans
+                        }}
+                        globalProps={{
+                            projectId: project.id
+                        }}
+                    />
                 </div>
             </ScrollArea>
         </div>
