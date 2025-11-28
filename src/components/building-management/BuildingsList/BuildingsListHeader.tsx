@@ -2,27 +2,18 @@
 'use client';
 
 import React from 'react';
-import { Button } from "@/components/ui/button";
 import { Building2, TrendingUp, DollarSign } from 'lucide-react';
 
 interface BuildingsListHeaderProps {
     buildingCount: number;
     activeProjectsCount: number;
     totalValue: number;
-    sortBy: string;
-    setSortBy: (value: 'name' | 'progress' | 'value' | 'area') => void;
-    sortOrder: 'asc' | 'desc';
-    setSortOrder: (value: 'asc' | 'desc') => void;
 }
 
 export function BuildingsListHeader({
     buildingCount,
     activeProjectsCount,
-    totalValue,
-    sortBy,
-    setSortBy,
-    sortOrder,
-    setSortOrder
+    totalValue
 }: BuildingsListHeaderProps) {
     return (
         <div className="p-4 border-b bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20">
@@ -38,25 +29,17 @@ export function BuildingsListHeader({
                 </div>
             </div>
 
-            <div className="flex items-center gap-2">
-                <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as any)}
-                    className="text-xs px-2 py-1 rounded border bg-background"
-                >
-                    <option value="name">Όνομα</option>
-                    <option value="progress">Πρόοδος</option>
-                    <option value="value">Αξία</option>
-                    <option value="area">Επιφάνεια</option>
-                </select>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                    className="text-xs h-7"
-                >
-                    {sortOrder === 'asc' ? '↑' : '↓'}
-                </Button>
+            <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="flex items-center gap-1">
+                    <TrendingUp className="w-3 h-3 text-green-600" />
+                    <span className="text-muted-foreground">Ενεργά:</span>
+                    <span className="font-medium">{activeProjectsCount}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                    <DollarSign className="w-3 h-3 text-green-600" />
+                    <span className="text-muted-foreground">Αξία:</span>
+                    <span className="font-medium">{(totalValue / 1000000).toFixed(1)}M€</span>
+                </div>
             </div>
         </div>
     );

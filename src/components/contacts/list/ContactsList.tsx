@@ -5,8 +5,8 @@ import React, { useState } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ContactsListHeader } from './ContactsListHeader';
-import { ContactsToolbar } from '../toolbar/ContactsToolbar';
 import { ContactListItem } from './ContactListItem';
+import { CompactToolbar, contactsConfig } from '@/components/core/CompactToolbar';
 import type { Contact } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts';
 import { ContactsService } from '@/services/contacts.service';
@@ -46,6 +46,11 @@ export function ContactsList({
   const [sortBy, setSortBy] = useState<string>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [togglingFavorites, setTogglingFavorites] = useState<Set<string>>(new Set());
+
+  // CompactToolbar state
+  const [selectedItems, setSelectedItems] = useState<number[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeFilters, setActiveFilters] = useState<string[]>([]);
 
   const toggleFavorite = async (contactId: string) => {
     const contact = contacts.find(c => c.id === contactId);
@@ -94,17 +99,31 @@ export function ContactsList({
       <ContactsListHeader
         contactCount={contacts.length}
       />
-      <ContactsToolbar
-        onNewContact={onNewContact}
-        onEditContact={onEditContact}
-        onDeleteContact={onDeleteContact}
-        onArchiveContact={onArchiveContact}
+
+      <CompactToolbar
+        config={contactsConfig}
+        selectedItems={selectedItems}
+        onSelectionChange={setSelectedItems}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        activeFilters={activeFilters}
+        onFiltersChange={setActiveFilters}
+        sortBy={sortBy as any}
+        onSortChange={(newSortBy, newSortOrder) => {
+          setSortBy(newSortBy);
+          setSortOrder(newSortOrder);
+        }}
         hasSelectedContact={selectedContact !== null}
-        showOnlyFavorites={showOnlyFavorites}
-        onToggleFavoritesFilter={onToggleFavoritesFilter}
-        showArchivedContacts={showArchivedContacts}
-        onToggleArchivedFilter={onToggleArchivedFilter}
+        onNewItem={onNewContact}
+        onEditItem={(id) => selectedContact && onEditContact?.()}
+        onDeleteItems={(ids) => onDeleteContact?.()}
+        onExport={() => console.log('Export contacts')}
+        onRefresh={() => console.log('Refresh contacts')}
+        onFavoritesManagement={onToggleFavoritesFilter}
+        onShare={() => console.log('Share contacts')}
+        onSettings={() => console.log('Contact settings')}
       />
+
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-2">
           {isLoading ? (

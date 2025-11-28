@@ -3,12 +3,11 @@
 
 import React, { useState } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { BuildingToolbar } from './BuildingToolbar';
 import type { Building } from './BuildingsPageContent';
 
 import { BuildingsListHeader } from './BuildingsList/BuildingsListHeader';
 import { BuildingListItem } from './BuildingsList/BuildingListItem';
-import { CompactToolbar } from './BuildingsList/CompactToolbar';
+import { CompactToolbar, buildingsConfig } from '@/components/core/CompactToolbar';
 
 
 interface BuildingsListProps {
@@ -23,7 +22,7 @@ export function BuildingsList({
   onSelectBuilding,
 }: BuildingsListProps) {
   const [favorites, setFavorites] = useState<number[]>([1]);
-  const [sortBy, setSortBy] = useState<'name' | 'progress' | 'value' | 'area'>('name');
+  const [sortBy, setSortBy] = useState<'name' | 'progress' | 'value' | 'area' | 'date'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
@@ -39,7 +38,7 @@ export function BuildingsList({
 
   const sortedBuildings = [...buildings].sort((a, b) => {
     let aValue, bValue;
-    
+
     switch (sortBy) {
       case 'name':
         aValue = a.name.toLowerCase();
@@ -56,6 +55,12 @@ export function BuildingsList({
       case 'area':
         aValue = a.totalArea;
         bValue = b.totalArea;
+        break;
+      case 'date':
+        // Assuming buildings have a createdAt or updatedAt field
+        // If not available, we can use id as a proxy for creation order
+        aValue = new Date(a.createdAt || a.id).getTime();
+        bValue = new Date(b.createdAt || b.id).getTime();
         break;
       default:
         return 0;
@@ -78,36 +83,24 @@ export function BuildingsList({
         buildingCount={buildings.length}
         activeProjectsCount={buildings.filter(b => b.status === 'active' || b.status === 'construction').length}
         totalValue={buildings.reduce((sum, b) => sum + (b.totalValue || 0), 0)}
-        sortBy={sortBy}
-        setSortBy={setSortBy}
-        sortOrder={sortOrder}
-        setSortOrder={setSortOrder}
       />
 
       <CompactToolbar
+        config={buildingsConfig}
         selectedItems={selectedItems}
         onSelectionChange={setSelectedItems}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         activeFilters={activeFilters}
         onFiltersChange={setActiveFilters}
-        onNewBuilding={() => console.log('New building')}
-        onEditBuilding={(id) => console.log('Edit building', id)}
-        onDeleteBuilding={(ids) => console.log('Delete buildings', ids)}
-        onExport={() => console.log('Export buildings')}
-        onRefresh={() => console.log('Refresh buildings')}
-      />
-
-      <BuildingToolbar
-        selectedItems={selectedItems}
-        onSelectionChange={setSelectedItems}
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        activeFilters={activeFilters}
-        onFiltersChange={setActiveFilters}
-        onNewBuilding={() => console.log('New building')}
-        onEditBuilding={(id) => console.log('Edit building', id)}
-        onDeleteBuilding={(ids) => console.log('Delete buildings', ids)}
+        sortBy={sortBy}
+        onSortChange={(newSortBy, newSortOrder) => {
+          setSortBy(newSortBy);
+          setSortOrder(newSortOrder);
+        }}
+        onNewItem={() => console.log('New building')}
+        onEditItem={(id) => console.log('Edit building', id)}
+        onDeleteItems={(ids) => console.log('Delete buildings', ids)}
         onExport={() => console.log('Export buildings')}
         onRefresh={() => console.log('Refresh buildings')}
       />
