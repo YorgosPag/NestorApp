@@ -16,6 +16,7 @@ export type { GenericTabRendererProps } from './GenericTabRenderer';
 // Helper Components
 export {
   createTabsFromConfig,
+  createIndividualTabsFromConfig,
   createTabFromSection,
   getIconComponent
 } from './ConfigTabsHelper';

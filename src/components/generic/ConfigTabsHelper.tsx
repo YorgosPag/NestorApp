@@ -1,8 +1,9 @@
 'use client';
 
 import React from 'react';
-import { Info, FileText, Users, History } from 'lucide-react';
+import { Info, FileText, Users, History, User, CreditCard, Briefcase, Phone } from 'lucide-react';
 import type { SectionConfig } from '@/config/company-gemi-config';
+import type { IndividualSectionConfig } from '@/config/individual-config';
 import { GenericTabRenderer } from './GenericTabRenderer';
 
 // ============================================================================
@@ -21,6 +22,11 @@ const ICON_MAPPING = {
   '👥': Users,
   '📄': FileText,
   '🗂️': FileText,
+  // Individual contact icons
+  '👤': User,
+  '💳': CreditCard,
+  '💼': Briefcase,
+  '📞': Phone,
 } as const;
 
 /**
@@ -61,6 +67,31 @@ export interface TabConfig {
  */
 export function createTabsFromConfig(
   sections: SectionConfig[],
+  data: Record<string, any>,
+  customRenderers?: Record<string, any>,
+  valueFormatters?: Record<string, any>
+): TabConfig[] {
+  return sections.map(section => ({
+    id: section.id,
+    label: section.title,
+    icon: getIconComponent(section.icon),
+    content: (
+      <GenericTabRenderer
+        section={section}
+        data={data}
+        mode="display"
+        customRenderers={customRenderers}
+        valueFormatters={valueFormatters}
+      />
+    ),
+  }));
+}
+
+/**
+ * Creates tab configuration objects from Individual config sections
+ */
+export function createIndividualTabsFromConfig(
+  sections: IndividualSectionConfig[],
   data: Record<string, any>,
   customRenderers?: Record<string, any>,
   valueFormatters?: Record<string, any>

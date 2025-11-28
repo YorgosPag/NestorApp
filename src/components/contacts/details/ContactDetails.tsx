@@ -13,7 +13,8 @@ import { ContactDetailsHeader } from './ContactDetailsHeader';
 import { ContactInfo } from './ContactInfo';
 import { AddUnitToContactDialog } from './AddUnitToContactDialog';
 import { TabsOnlyTriggers } from '@/components/ui/navigation/TabsComponents';
-import { createTabsFromConfig, getSortedSections } from '@/components/generic';
+import { createTabsFromConfig, createIndividualTabsFromConfig, getSortedSections } from '@/components/generic';
+import { getIndividualSortedSections } from '@/config/individual-config';
 
 
 function EmptyState() {
@@ -54,6 +55,9 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact }: Cont
   // Get tabs from centralized config based on contact type
   const tabs = isCompanyContact ? createTabsFromConfig(
     getSortedSections(),
+    contact
+  ) : contact.type === 'individual' ? createIndividualTabsFromConfig(
+    getIndividualSortedSections(),
     contact
   ) : contact.type === 'service' ? [
     {
@@ -152,233 +156,7 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact }: Cont
         </div>
       )
     }
-  ] : [
-    {
-      id: 'basic',
-      label: 'Βασικά Στοιχεία',
-      icon: User,
-      content: (
-        <div className="p-4 border rounded-lg space-y-6">
-          <h4 className="font-semibold mb-4">👤 Βασικά Στοιχεία</h4>
-
-          {/* Φωτογραφία και βασικά */}
-          <div className="flex flex-col md:flex-row gap-6">
-            {/* Φωτογραφία */}
-            <div className="flex flex-col items-center">
-              {(contact as any).photoURL ? (
-                <div
-                  className="w-32 h-32 bg-muted rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
-                  onClick={() => setIsPhotoModalOpen(true)}
-                >
-                  <img
-                    src={(contact as any).photoURL}
-                    alt={`Φωτογραφία ${contact.firstName} ${contact.lastName}`}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.style.display = 'none';
-                      const parent = target.parentElement;
-                      if (parent) {
-                        parent.innerHTML = '<div class="text-xs text-muted-foreground flex items-center justify-center h-full">❌ Άκυρη εικόνα</div>';
-                      }
-                    }}
-                  />
-                </div>
-              ) : (
-                <div className="w-32 h-32 bg-gray-100 border-2 border-gray-200 rounded-lg flex items-center justify-center">
-                  <User className="w-16 h-16 text-gray-400" />
-                </div>
-              )}
-              <p className="text-sm text-muted-foreground mt-2">Κλικ για προβολή</p>
-            </div>
-
-            {/* Βασικά στοιχεία */}
-            <div className="flex-1">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium">Όνομα</label>
-                  <p className="text-sm text-muted-foreground">{contact.firstName || '-'}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Επώνυμο</label>
-                  <p className="text-sm text-muted-foreground">{contact.lastName || '-'}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Πατρώνυμο</label>
-                  <p className="text-sm text-muted-foreground">{(contact as any).fatherName || '-'}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Μητρώνυμο</label>
-                  <p className="text-sm text-muted-foreground">{(contact as any).motherName || '-'}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Ημερομηνία Γέννησης</label>
-                  <p className="text-sm text-muted-foreground">{(contact as any).birthDate ? new Date((contact as any).birthDate).toLocaleDateString('el-GR') : '-'}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Χώρα Γέννησης</label>
-                  <p className="text-sm text-muted-foreground">{(contact as any).birthCountry || '-'}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Φύλο</label>
-                  <p className="text-sm text-muted-foreground">
-                    {(contact as any).gender === 'male' ? 'Άντρας' :
-                     (contact as any).gender === 'female' ? 'Γυναίκα' :
-                     (contact as any).gender === 'other' ? 'Άλλο' : '-'}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium">ΑΜΚΑ (προαιρετικό)</label>
-                  <p className="text-sm text-muted-foreground">{(contact as any).amka || '-'}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )
-    },
-    {
-      id: 'identity',
-      label: 'Ταυτότητα & ΑΦΜ',
-      icon: CreditCard,
-      content: (
-        <div className="p-4 border rounded-lg">
-          <h4 className="font-semibold mb-4">💳 Ταυτότητα & ΑΦΜ</h4>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium">Τύπος Εγγράφου</label>
-                <p className="text-sm text-muted-foreground">
-                  {(contact as any).documentType === 'identity_card' ? 'Δελτίο Ταυτότητας' :
-                   (contact as any).documentType === 'passport' ? 'Διαβατήριο' :
-                   (contact as any).documentType === 'drivers_license' ? 'Άδεια Οδήγησης' :
-                   (contact as any).documentType === 'other' ? 'Άλλο' : '-'}
-                </p>
-              </div>
-              <div>
-                <label className="text-sm font-medium">Εκδούσα Αρχή</label>
-                <p className="text-sm text-muted-foreground">{(contact as any).documentIssuer || '-'}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium">Αριθμός Εγγράφου</label>
-                <p className="text-sm text-muted-foreground">{(contact as any).documentNumber || '-'}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium">Ημερομηνία Έκδοσης</label>
-                <p className="text-sm text-muted-foreground">{(contact as any).documentIssueDate ? new Date((contact as any).documentIssueDate).toLocaleDateString('el-GR') : '-'}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium">Ημερομηνία Λήξης</label>
-                <p className="text-sm text-muted-foreground">{(contact as any).documentExpiryDate ? new Date((contact as any).documentExpiryDate).toLocaleDateString('el-GR') : '-'}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium">ΑΦΜ</label>
-                <p className="text-sm text-muted-foreground">{(contact as any)?.vatNumber || '-'}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium">ΔΟΥ</label>
-                <p className="text-sm text-muted-foreground">{(contact as any).taxOffice || '-'}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )
-    },
-    {
-      id: 'professional',
-      label: 'Επαγγελματικά Στοιχεία',
-      icon: Briefcase,
-      content: (
-        <div className="p-4 border rounded-lg">
-          <h4 className="font-semibold mb-4">💼 Επαγγελματικά Στοιχεία</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium">Επάγγελμα</label>
-              <p className="text-sm text-muted-foreground">{(contact as any)?.profession || '-'}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Ειδικότητα</label>
-              <p className="text-sm text-muted-foreground">{(contact as any)?.specialty || '-'}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Επιχείρηση/Εργοδότης</label>
-              <p className="text-sm text-muted-foreground">{(contact as any)?.employer || '-'}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Θέση/Ρόλος</label>
-              <p className="text-sm text-muted-foreground">{(contact as any)?.position || '-'}</p>
-            </div>
-          </div>
-        </div>
-      )
-    },
-    {
-      id: 'contact',
-      label: 'Επικοινωνία',
-      icon: Phone,
-      content: (
-        <div className="p-4 border rounded-lg">
-          <h4 className="font-semibold mb-4">📞 Στοιχεία Επικοινωνίας</h4>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium">Email</label>
-                <p className="text-sm text-muted-foreground">{(contact as any).email || contact.emails?.[0]?.email || '-'}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium">Τηλέφωνο</label>
-                <p className="text-sm text-muted-foreground">{(contact as any).phone || contact.phones?.[0]?.number || '-'}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )
-    },
-    {
-      id: 'notes',
-      label: 'Σημειώσεις',
-      icon: StickyNote,
-      content: (
-        <div className="p-4 border rounded-lg">
-          <h4 className="font-semibold mb-4">📝 Σημειώσεις</h4>
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium">Ελεύθερες Σημειώσεις</label>
-              <p className="text-sm text-muted-foreground whitespace-pre-wrap">{contact.notes || '-'}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Ετικέτες</label>
-              {contact.tags?.length ? (
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {contact.tags.map((tag, index) => (
-                    <span key={index} className="px-2 py-1 bg-secondary text-secondary-foreground rounded-md text-xs">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">Δεν υπάρχουν ετικέτες</p>
-              )}
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium">Κατάσταση</label>
-                <p className="text-sm text-muted-foreground">
-                  {contact.status === 'active' ? '🟢 Ενεργή' :
-                   contact.status === 'inactive' ? '🟡 Ανενεργή' :
-                   contact.status === 'archived' ? '🔴 Αρχειοθετημένη' : contact.status}
-                </p>
-              </div>
-              <div>
-                <label className="text-sm font-medium">Αγαπημένη</label>
-                <p className="text-sm text-muted-foreground">{contact.isFavorite ? '⭐ Ναι' : 'Όχι'}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )
-    }
-  ];
+  ] : [];
 
   return (
     <>
