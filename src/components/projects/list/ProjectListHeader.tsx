@@ -1,30 +1,15 @@
 'use client';
 
 import React from 'react';
-import { Button } from "@/components/ui/button";
-import { Briefcase, TrendingUp, DollarSign } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import type { Project, ProjectSortKey } from '@/types/project';
+import { Briefcase } from 'lucide-react';
+import type { Project } from '@/types/project';
 
 interface ProjectListHeaderProps {
   projects: Project[];
-  sortBy: ProjectSortKey;
-  setSortBy: (sort: ProjectSortKey) => void;
-  sortOrder: 'asc' | 'desc';
-  setSortOrder: (order: 'asc' | 'desc') => void;
 }
 
 export function ProjectListHeader({
   projects,
-  sortBy,
-  setSortBy,
-  sortOrder,
-  setSortOrder,
 }: ProjectListHeaderProps) {
   return (
     <div className="p-4 border-b bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20">
@@ -40,33 +25,6 @@ export function ProjectListHeader({
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
-        <select
-          value={sortBy}
-          onChange={(e) => {
-            const value = e.target.value;
-            // ✅ ENTERPRISE: Type guard instead of 'as any'
-            if (value === 'name' || value === 'progress' || value === 'totalValue' || value === 'status' || value === 'area') {
-              setSortBy(value);
-            }
-          }}
-          className="text-xs px-2 py-1 rounded border bg-background"
-        >
-          <option value="name">Όνομα</option>
-          <option value="progress">Πρόοδος</option>
-          <option value="totalValue">Αξία</option>
-          <option value="area">Επιφάνεια</option>
-          <option value="status">Κατάσταση</option>
-        </select>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-          className="text-xs h-7"
-        >
-          {sortOrder === 'asc' ? '↑' : '↓'}
-        </Button>
-      </div>
     </div>
   );
 }

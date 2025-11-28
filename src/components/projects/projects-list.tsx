@@ -3,10 +3,10 @@
 
 import React, { useState, useMemo } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ProjectToolbar } from './ProjectToolbar';
-import type { Project, ProjectSortKey } from '@/types/project';
+import type { Project } from '@/types/project';
 import { ProjectListHeader } from './list/ProjectListHeader';
 import { ProjectListItem } from './project-list-item'; // Updated import path
+import { CompactToolbar, projectsConfig } from '@/components/core/CompactToolbar';
 
 interface ProjectsListProps {
   projects: Project[];
@@ -28,8 +28,6 @@ export function ProjectsList({
   console.log('  - selectedProject:', selectedProject?.name || 'null');
   
   const [favorites, setFavorites] = useState<number[]>([1]);
-  const [sortBy, setSortBy] = useState<ProjectSortKey>('name');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   const toggleFavorite = (projectId: number) => {
     setFavorites(prev =>
@@ -39,61 +37,26 @@ export function ProjectsList({
     );
   };
   
-  const sortedProjects = useMemo(() => {
-    if (!projects) return [];
-    return [...projects].sort((a, b) => {
-      let aValue, bValue;
-
-      switch (sortBy) {
-        case 'name':
-          aValue = a.name.toLowerCase();
-          bValue = b.name.toLowerCase();
-          break;
-        case 'progress':
-          aValue = a.progress;
-          bValue = b.progress;
-          break;
-        case 'totalValue':
-          aValue = a.totalValue;
-          bValue = b.totalValue;
-          break;
-        case 'status':
-          aValue = a.status;
-          bValue = b.status;
-          break;
-        default:
-          return 0;
-      }
-
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        return sortOrder === 'asc'
-          ? aValue.localeCompare(bValue)
-          : bValue.localeCompare(aValue);
-      } else if (typeof aValue === 'number' && typeof bValue === 'number') {
-        return sortOrder === 'asc'
-          ? aValue - bValue
-          : bValue - aValue;
-      }
-      return 0;
-    });
-  }, [projects, sortBy, sortOrder]);
+  // Use projects directly since CompactToolbar handles filtering and sorting
+  const displayProjects = projects || [];
 
 
   return (
     <div className="min-w-[300px] max-w-[420px] w-full bg-card border rounded-lg flex flex-col shrink-0 shadow-sm h-fit overflow-hidden">
-      <ProjectListHeader 
-        projects={sortedProjects || []}
-        sortBy={sortBy}
-        setSortBy={setSortBy}
-        sortOrder={sortOrder}
-        setSortOrder={setSortOrder}
+      <ProjectListHeader
+        projects={displayProjects}
       />
 
-      <ProjectToolbar />
+      <CompactToolbar
+        config={projectsConfig}
+        data={displayProjects}
+        onFiltersChange={() => {}}
+        onSortChange={() => {}}
+      />
 
       <ScrollArea className="flex-1 overflow-y-auto w-full">
         <div className="p-2 space-y-2 min-h-0 w-full">
-          {sortedProjects.map((project: Project) => (
+          {displayProjects.map((project: Project) => (
             <div key={project.id} className="shrink-0 w-full">
               <ProjectListItem
                 project={project}

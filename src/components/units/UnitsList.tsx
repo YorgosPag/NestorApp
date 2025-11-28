@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { UnitsListHeader } from './list/UnitsListHeader';
 import { UnitListItem } from './list/UnitListItem';
-import { UnitsToolbar } from '@/features/units-toolbar/UnitsToolbar';
+import { CompactToolbar, unitsConfig } from '@/components/core/CompactToolbar';
 import type { Property } from '@/types/property-viewer';
 import { useUnitsViewerState } from '@/hooks/useUnitsViewerState';
 
@@ -27,6 +27,11 @@ export function UnitsList({
   const [sortBy, setSortBy] = useState<UnitSortKey>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
+  // CompactToolbar state
+  const [selectedItems, setSelectedItems] = useState<number[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeFilters, setActiveFilters] = useState<string[]>([]);
+
   const toggleFavorite = (unitId: string) => {
     setFavorites(prev => 
       prev.includes(unitId) 
@@ -35,9 +40,22 @@ export function UnitsList({
     );
   };
 
-  const sortedUnits = [...units].sort((a, b) => {
+  // Filter units based on search term
+  const filteredUnits = units.filter(unit => {
+    if (!searchTerm) return true;
+
+    const searchLower = searchTerm.toLowerCase();
+
+    // Search in unit name, description, and other relevant fields
+    return unit.name.toLowerCase().includes(searchLower) ||
+           (unit.description && unit.description.toLowerCase().includes(searchLower)) ||
+           (unit.type && unit.type.toLowerCase().includes(searchLower)) ||
+           (unit.status && unit.status.toLowerCase().includes(searchLower));
+  });
+
+  const sortedUnits = [...filteredUnits].sort((a, b) => {
     let aValue, bValue;
-    
+
     switch (sortBy) {
       case 'name':
         aValue = a.name.toLowerCase();
@@ -56,11 +74,11 @@ export function UnitsList({
     }
 
     if (typeof aValue === 'string' && typeof bValue === 'string') {
-      return sortOrder === 'asc' 
+      return sortOrder === 'asc'
         ? aValue.localeCompare(bValue)
         : bValue.localeCompare(aValue);
     } else {
-      return sortOrder === 'asc' 
+      return sortOrder === 'asc'
         ? (aValue as number) - (bValue as number)
         : (bValue as number) - (aValue as number);
     }
@@ -79,22 +97,32 @@ export function UnitsList({
 
   return (
     <div className="min-w-[420px] max-w-[420px] w-full bg-card border rounded-lg flex flex-col shrink-0 shadow-sm max-h-full overflow-hidden">
-      <UnitsListHeader 
+      <UnitsListHeader
         unitCount={units.length}
         availableCount={availableCount}
         totalValue={totalValue}
-        sortBy={sortBy}
-        setSortBy={setSortBy}
-        sortOrder={sortOrder}
-        setSortOrder={setSortOrder}
       />
 
-      <UnitsToolbar 
-        selectedUnitIds={selectedUnitIds}
-        onSelectAll={handleSelectAll}
-        onClearSelection={() => onSelectUnit('__none__', false)}
-        onAssignmentSuccess={onAssignmentSuccess}
-        totalUnits={units.length}
+      <CompactToolbar
+        config={unitsConfig}
+        selectedItems={selectedItems}
+        onSelectionChange={setSelectedItems}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        activeFilters={activeFilters}
+        onFiltersChange={setActiveFilters}
+        sortBy={sortBy as any}
+        onSortChange={(newSortBy, newSortOrder) => {
+          setSortBy(newSortBy as UnitSortKey);
+          setSortOrder(newSortOrder);
+        }}
+        hasSelectedContact={selectedUnitIds.length > 0}
+        onNewItem={() => console.log('New unit')}
+        onEditItem={(id) => console.log('Edit unit')}
+        onDeleteItems={(ids) => console.log('Delete units')}
+        onExport={() => console.log('Export units')}
+        onRefresh={() => console.log('Refresh units')}
+        onSettings={() => console.log('Unit settings')}
       />
 
       <ScrollArea className="flex-1">

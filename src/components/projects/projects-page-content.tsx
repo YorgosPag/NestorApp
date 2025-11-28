@@ -2,10 +2,11 @@
 
 import React from 'react';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { useProjectsState } from '@/hooks/useProjectsState';
-import { useFilteredProjects } from '@/hooks/useFilteredProjects';
+import { useProjectsPageState } from '@/hooks/useProjectsPageState';
 import { useFirestoreProjects } from '@/hooks/useFirestoreProjects';
 import { companies } from '@/components/building-management/mockData';
+import { AdvancedFiltersPanel, projectFiltersConfig } from '@/components/core/AdvancedFilters';
+import { useProjectsStats } from '@/hooks/useProjectsStats';
 
 import { ProjectsHeader } from './ProjectsHeader';
 import { ProjectsDashboard } from './ProjectsDashboard';
@@ -14,35 +15,27 @@ import { ProjectViewSwitch } from './ProjectViewSwitch';
 export function ProjectsPageContent() {
   // Φόρτωση έργων από Firestore αντί για mock data
   const { projects: firestoreProjects, loading, error } = useFirestoreProjects();
-  
+
   const {
-    projects,
     selectedProject,
     setSelectedProject,
     viewMode,
     setViewMode,
-    searchTerm,
-    setSearchTerm,
-    filterCompany,
-    setFilterCompany,
-    filterStatus,
-    setFilterStatus,
     showDashboard,
     setShowDashboard,
-  } = useProjectsState(firestoreProjects as Project[]);
+    filteredProjects,
+    filters,
+    setFilters,
+  } = useProjectsPageState(firestoreProjects || []);
 
-  // Πάντα καλούμε όλα τα hooks πριν από τα conditional returns
-  const { filtered, stats } = useFilteredProjects(projects, searchTerm, filterCompany, filterStatus);
+  const stats = useProjectsStats(filteredProjects || []);
 
   // Debug logging για να δούμε τη ροή των δεδομένων
   console.log('🔍 ProjectsPageContent Debug - UPDATED:');
   console.log('  - firestoreProjects:', firestoreProjects?.length || 0, firestoreProjects);
-  console.log('  - projects from useProjectsState:', projects?.length || 0, projects);
-  console.log('  - filtered projects:', filtered?.length || 0, filtered);
+  console.log('  - filteredProjects:', filteredProjects?.length || 0, filteredProjects);
   console.log('  - selectedProject:', selectedProject?.name || 'null');
-  console.log('  - searchTerm:', searchTerm);
-  console.log('  - filterCompany:', filterCompany);
-  console.log('  - filterStatus:', filterStatus);
+  console.log('  - filters:', filters);
   console.log('  - loading:', loading);
   console.log('  - error:', error);
 
@@ -78,26 +71,26 @@ export function ProjectsPageContent() {
   return (
     <TooltipProvider>
       <div className="h-full flex flex-col bg-background">
-        <ProjectsHeader 
+        <ProjectsHeader
             viewMode={viewMode}
             setViewMode={setViewMode}
             showDashboard={showDashboard}
             setShowDashboard={setShowDashboard}
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            filterCompany={filterCompany}
-            setFilterCompany={setFilterCompany}
-            companies={companies}
-            filterStatus={filterStatus}
-            setFilterStatus={setFilterStatus}
         />
         
         {showDashboard && <ProjectsDashboard stats={stats} />}
 
+        {/* Advanced Filters Panel */}
+        <AdvancedFiltersPanel
+          config={projectFiltersConfig}
+          filters={filters}
+          onFiltersChange={setFilters}
+        />
+
         <main className="flex-1 flex overflow-x-auto overflow-y-hidden p-4 gap-4">
           <ProjectViewSwitch
             viewMode={viewMode}
-            projects={filtered}
+            projects={filteredProjects}
             selectedProject={selectedProject}
             onSelectProject={setSelectedProject}
             companies={companies}

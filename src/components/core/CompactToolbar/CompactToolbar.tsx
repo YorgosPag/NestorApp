@@ -141,10 +141,10 @@ export function CompactToolbar({
             size="sm"
             className="h-8 w-8 p-0"
             onClick={() => onDeleteItems?.(selectedItems)}
-            disabled={selectedItems.length === 0}
+            disabled={hasSelectedContact !== undefined ? !hasSelectedContact : selectedItems.length === 0}
             title={config.tooltips.deleteItems}
           >
-            <Trash2 className={`h-4 w-4 ${selectedItems.length === 0 ? 'text-gray-400' : getIconColor('deleteItems')}`} />
+            <Trash2 className={`h-4 w-4 ${hasSelectedContact !== undefined ? (!hasSelectedContact ? 'text-gray-400' : getIconColor('deleteItems')) : (selectedItems.length === 0 ? 'text-gray-400' : getIconColor('deleteItems'))}`} />
           </Button>
         )}
 
@@ -155,10 +155,15 @@ export function CompactToolbar({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 w-8 p-0"
+                className="h-8 w-8 p-0 relative"
                 title={config.tooltips.filters}
               >
                 <Filter className={`h-4 w-4 ${getIconColor('filters')}`} />
+                {activeFilters.length > 0 && (
+                  <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white text-xs font-medium rounded-full flex items-center justify-center">
+                    {activeFilters.length}
+                  </span>
+                )}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">

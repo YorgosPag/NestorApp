@@ -5,7 +5,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { useUnitsViewerState } from '@/hooks/useUnitsViewerState';
 import { HeaderControls } from '@/components/units/HeaderControls';
 import { DashboardSection } from '@/components/units/DashboardSection';
-import { FiltersPanel } from '@/components/units/FiltersPanel';
+import { AdvancedFiltersPanel, unitFiltersConfig, defaultUnitFilters, type UnitFilterState } from '@/components/core/AdvancedFilters';
 import { UnitsSidebar } from '@/components/units/UnitsSidebar';
 import { PropertyGridView } from '@/features/property-grid/PropertyGridView';
 
@@ -130,7 +130,11 @@ function UnitsPageContent() {
 
         {showDashboard && <DashboardSection stats={dashboardStats} />}
         
-        <FiltersPanel filters={filters} onFiltersChange={handleFiltersChange} />
+        <AdvancedFiltersPanel
+          config={unitFiltersConfig}
+          filters={filters as UnitFilterState}
+          onFiltersChange={handleFiltersChange}
+        />
 
         <main className="flex-1 flex overflow-hidden p-4 gap-4">
           {viewMode === 'list' ? (

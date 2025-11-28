@@ -12,6 +12,7 @@ import { useBuildingsPageState } from '@/hooks/useBuildingsPageState';
 import { useBuildingStats } from '@/hooks/useBuildingStats';
 import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
 import { companies, projects } from './mockData';
+import { AdvancedFiltersPanel, buildingFiltersConfig } from '@/components/core/AdvancedFilters';
 
 // Re-export Building type for backward compatibility
 export type { Building } from '@/types/building/contracts';
@@ -25,17 +26,11 @@ export function BuildingsPageContent() {
     setSelectedBuilding,
     viewMode,
     setViewMode,
-    searchTerm,
-    setSearchTerm,
-    filterCompany,
-    setFilterCompany,
-    filterProject,
-    setFilterProject,
-    filterStatus,
-    setFilterStatus,
     showDashboard,
     setShowDashboard,
     filteredBuildings,
+    filters,
+    setFilters,
   } = useBuildingsPageState(buildingsData);
 
   const stats = useBuildingStats(buildingsData);
@@ -91,6 +86,13 @@ export function BuildingsPageContent() {
         />
 
         {showDashboard && <BuildingsDashboard stats={stats} />}
+
+        {/* Advanced Filters Panel */}
+        <AdvancedFiltersPanel
+          config={buildingFiltersConfig}
+          filters={filters}
+          onFiltersChange={setFilters}
+        />
 
         <div className="flex-1 flex overflow-hidden p-4 gap-4">
           {viewMode === 'list' ? (

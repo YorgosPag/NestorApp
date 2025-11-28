@@ -1,30 +1,20 @@
 'use client';
 
 import React from 'react';
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Home, TrendingUp, DollarSign, Filter } from 'lucide-react';
+import { Home, TrendingUp, DollarSign } from 'lucide-react';
 import { formatCurrency } from '@/lib/project-utils';
-import type { UnitSortKey } from '../UnitsList';
 
 interface UnitsListHeaderProps {
     unitCount: number;
     availableCount: number;
     totalValue: number;
-    sortBy: UnitSortKey;
-    setSortBy: (value: UnitSortKey) => void;
-    sortOrder: 'asc' | 'desc';
-    setSortOrder: (value: 'asc' | 'desc') => void;
 }
 
 export function UnitsListHeader({
     unitCount,
     availableCount,
     totalValue,
-    sortBy,
-    setSortBy,
-    sortOrder,
-    setSortOrder,
 }: UnitsListHeaderProps) {
     return (
         <div className="p-4 border-b bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20">
@@ -53,33 +43,6 @@ export function UnitsListHeader({
                  </Badge>
             </div>
 
-            <div className="flex items-center gap-2">
-                <Filter className="w-3.5 h-3.5 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">Ταξινόμηση:</span>
-                <select
-                    value={sortBy}
-                    onChange={(e) => {
-                        const value = e.target.value;
-                        // ✅ ENTERPRISE: Type guard instead of 'as any'
-                        if (value === 'name' || value === 'price' || value === 'area') {
-                            setSortBy(value);
-                        }
-                    }}
-                    className="text-xs px-2 py-1 rounded border bg-background"
-                >
-                    <option value="name">Όνομα</option>
-                    <option value="price">Τιμή</option>
-                    <option value="area">Εμβαδόν</option>
-                </select>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                    className="text-xs h-7 w-7 p-0"
-                >
-                    {sortOrder === 'asc' ? '↑' : '↓'}
-                </Button>
-            </div>
         </div>
     );
 }

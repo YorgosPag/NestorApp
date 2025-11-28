@@ -36,7 +36,21 @@ export function BuildingsList({
     );
   };
 
-  const sortedBuildings = [...buildings].sort((a, b) => {
+  // Filter buildings based on search term
+  const filteredBuildings = buildings.filter(building => {
+    if (!searchTerm) return true;
+
+    const searchLower = searchTerm.toLowerCase();
+
+    // Search in building name, description, location, and other relevant fields
+    return building.name.toLowerCase().includes(searchLower) ||
+           (building.description && building.description.toLowerCase().includes(searchLower)) ||
+           (building.location && building.location.toLowerCase().includes(searchLower)) ||
+           (building.address && building.address.toLowerCase().includes(searchLower)) ||
+           (building.status && building.status.toLowerCase().includes(searchLower));
+  });
+
+  const sortedBuildings = [...filteredBuildings].sort((a, b) => {
     let aValue, bValue;
 
     switch (sortBy) {
@@ -67,11 +81,11 @@ export function BuildingsList({
     }
 
     if (typeof aValue === 'string' && typeof bValue === 'string') {
-      return sortOrder === 'asc' 
+      return sortOrder === 'asc'
         ? aValue.localeCompare(bValue)
         : bValue.localeCompare(aValue);
     } else {
-      return sortOrder === 'asc' 
+      return sortOrder === 'asc'
         ? (aValue as number) - (bValue as number)
         : (bValue as number) - (aValue as number);
     }

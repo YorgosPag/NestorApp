@@ -85,12 +85,27 @@ export function ContactsList({
     }
   };
 
-  const sortedContacts = [...contacts].sort((a, b) => {
+  // Filter contacts based on search term
+  const filteredContacts = contacts.filter(contact => {
+    if (!searchTerm) return true;
+
+    const displayName = getContactDisplayName(contact).toLowerCase();
+    const searchLower = searchTerm.toLowerCase();
+
+    // Search in name, company name, emails, and phones
+    return displayName.includes(searchLower) ||
+           (contact.companyName && contact.companyName.toLowerCase().includes(searchLower)) ||
+           (contact.serviceName && contact.serviceName.toLowerCase().includes(searchLower)) ||
+           (contact.emails && contact.emails.some(email => email.email.toLowerCase().includes(searchLower))) ||
+           (contact.phones && contact.phones.some(phone => phone.number.includes(searchTerm)));
+  });
+
+  const sortedContacts = [...filteredContacts].sort((a, b) => {
     const aValue = getContactDisplayName(a).toLowerCase();
     const bValue = getContactDisplayName(b).toLowerCase();
-    
-    return sortOrder === 'asc' 
-      ? aValue.localeCompare(bValue) 
+
+    return sortOrder === 'asc'
+      ? aValue.localeCompare(bValue)
       : bValue.localeCompare(aValue);
   });
 
@@ -116,7 +131,7 @@ export function ContactsList({
         hasSelectedContact={selectedContact !== null}
         onNewItem={onNewContact}
         onEditItem={(id) => selectedContact && onEditContact?.()}
-        onDeleteItems={(ids) => onDeleteContact?.()}
+        onDeleteItems={(ids) => selectedContact && onDeleteContact?.([selectedContact.id!])}
         onExport={() => console.log('Export contacts')}
         onRefresh={() => console.log('Refresh contacts')}
         onFavoritesManagement={onToggleFavoritesFilter}
