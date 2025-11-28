@@ -4,6 +4,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ParkingTableToolbar } from './ParkingTableToolbar';
 import { ParkingSpotTable } from './ParkingSpotTable';
+import { OverflowContainer } from './OverflowContainer';
 import { useParkingData } from '@/hooks/useParkingData';
 
 export function ParkingTab() {
@@ -26,12 +27,12 @@ export function ParkingTab() {
   } = useParkingData();
 
   return (
-    <div className="space-y-6">
-      <Card>
+    <div className="space-y-6 min-w-0">
+      <Card className="min-w-0">
         <CardHeader>
           <CardTitle className="text-lg">Διαχείριση Θέσεων Στάθμευσης</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 w-full max-w-full overflow-x-auto">
           <ParkingTableToolbar
             filters={filters}
             onFiltersChange={handleFiltersChange}
@@ -45,15 +46,17 @@ export function ParkingTab() {
             onRefresh={handleRefresh}
           />
           
-          <ParkingSpotTable
-            spots={parkingSpots}
-            filters={filters}
-            selectedSpots={selectedSpots}
-            onSelectionChange={setSelectedSpots}
-            onEdit={handleEdit}
-            onView={handleView}
-            onViewFloorPlan={handleViewFloorPlan}
-          />
+          <OverflowContainer>
+            <ParkingSpotTable
+              spots={parkingSpots}
+              filters={filters}
+              selectedSpots={selectedSpots}
+              onSelectionChange={setSelectedSpots}
+              onEdit={handleEdit}
+              onView={handleView}
+              onViewFloorPlan={handleViewFloorPlan}
+            />
+          </OverflowContainer>
         </CardContent>
       </Card>
     </div>

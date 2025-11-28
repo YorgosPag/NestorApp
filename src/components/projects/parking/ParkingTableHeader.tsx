@@ -69,7 +69,7 @@ export function ParkingTableHeader({
       {/* Headers */}
       <div 
         ref={headerRef}
-        className="w-full h-10 border-b flex bg-muted/30 relative overflow-hidden"
+        className="w-full h-10 border-b flex bg-muted/30 relative"
       >
         {columns.map((col, index) => (
           <ParkingColumnHeader
@@ -84,7 +84,7 @@ export function ParkingTableHeader({
       </div>
       
       {/* Filters */}
-      <div className="flex w-full border-b bg-muted/20 items-stretch p-1 gap-1">
+      <div className="flex w-full border-b bg-muted/20 items-stretch p-1 gap-1 min-w-max">
         {columns.map((col, index) => (
           <ParkingColumnFilter
             key={col.key}

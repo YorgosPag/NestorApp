@@ -41,15 +41,18 @@ export function ParkingSpotTableRow({
       );
   };
     
+  const totalMinWidth = columnWidths.reduce((sum, width) => sum + width, 0);
+
   return (
     <div
       className={cn(
         'flex items-center border-b px-2 py-1.5 transition-colors cursor-pointer',
         isSelected ? 'bg-blue-100 dark:bg-blue-900/20' : 'hover:bg-muted/50'
       )}
+      style={{ minWidth: `${totalMinWidth}px` }}
       onClick={handleSelect}
     >
-      <div style={{ flex: `0 0 ${columnWidths[0]}px` }} className="flex items-center justify-center px-2">
+      <div style={{ flex: `0 0 ${columnWidths[0]}px` }} className="flex items-center justify-center px-2 min-w-0">
         <Checkbox
           checked={isSelected}
           onCheckedChange={handleSelect}

@@ -41,7 +41,7 @@ export function ParkingSpotTable({
   const tableColumns = useMemo(() => COLUMNS.filter(c => c.key !== 'select'), []);
 
   return (
-    <div className="border rounded-md flex flex-col h-[600px] text-sm overflow-hidden">
+    <div className="border rounded-md flex flex-col h-[600px] text-sm w-max">
       <ParkingTableHeader
         columns={tableColumns}
         columnWidths={columnWidths.slice(1)}

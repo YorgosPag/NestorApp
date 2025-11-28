@@ -94,7 +94,7 @@ export function ProjectsPageContent() {
         
         {showDashboard && <ProjectsDashboard stats={stats} />}
 
-        <main className="flex-1 flex overflow-hidden p-4 gap-4">
+        <main className="flex-1 flex overflow-x-auto overflow-y-hidden p-4 gap-4">
           <ProjectViewSwitch
             viewMode={viewMode}
             projects={filtered}
