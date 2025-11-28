@@ -59,7 +59,8 @@
       "Bash(npx kill-port:*)",
       "Read(//f/Pagonis_Nestor/**)",
       "Bash(del /S /Q .next)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "WebFetch(domain:opendata.businessportal.gr)"
     ],
     "deny": [],
     "ask": []

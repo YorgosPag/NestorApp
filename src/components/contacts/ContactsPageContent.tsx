@@ -143,6 +143,16 @@ export function ContactsPageContent() {
     loadContacts();
   }, [showArchivedContacts]);
 
+  // Update selected contact when contacts list changes
+  useEffect(() => {
+    if (selectedContact?.id) {
+      const updatedContact = contacts.find(c => c.id === selectedContact.id);
+      if (updatedContact && JSON.stringify(updatedContact) !== JSON.stringify(selectedContact)) {
+        setSelectedContact(updatedContact);
+      }
+    }
+  }, [contacts, selectedContact?.id]);
+
   const handleNewContact = () => {
     setShowNewContactDialog(true);
   };
