@@ -1,2 +1,0 @@
-// Βρίσκουμε τη γραμμή "export interface Point2D" και την αλλάζουμε
-// Προσθέτουμε export για Entity, UnifiedSnapResult κλπ που λείπουν

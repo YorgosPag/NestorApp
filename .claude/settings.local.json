@@ -60,7 +60,8 @@
       "Read(//f/Pagonis_Nestor/**)",
       "Bash(del /S /Q .next)",
       "Bash(git checkout:*)",
-      "WebFetch(domain:opendata.businessportal.gr)"
+      "WebFetch(domain:opendata.businessportal.gr)",
+      "Bash(del temp_company_tabs.txt temp_extended_types_fix.txt temp_props.txt test-simple.dxf)"
     ],
     "deny": [],
     "ask": []

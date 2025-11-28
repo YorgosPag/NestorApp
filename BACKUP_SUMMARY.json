@@ -1,41 +1,46 @@
 {
   "category": "FEATURE",
-  "shortDescription": "Contact Details Tabs Centralization Complete",
-  "problem": "Contact Details tabs were using manual implementation instead of centralized tabs system, causing inconsistent styling and missing enterprise-class architecture",
-  "cause": "Original ContactDetails component used hardcoded Tabs components without centralized theming and styling system",
+  "shortDescription": "Complete Company Contact Forms Synchronization with GEMI Fields",
+  "problem": "Company contact creation modal had only 2 basic fields while ContactDetails showed extensive GEMI data with 7 rich tabs. Individual contact forms needed professional details separation. Photo updates weren't propagating correctly across views.",
+  "cause": "Form modals and detail views were not synchronized. Missing comprehensive GEMI field structure in company forms. Photo state management had propagation issues.",
   "filesChanged": [
+    "src/components/contacts/ContactsPageContent.tsx",
     "src/components/contacts/details/ContactDetails.tsx",
-    "src/components/ui/navigation/TabsComponents.tsx",
-    "src/components/ui/theme/ThemeComponents.tsx"
+    "src/components/contacts/dialogs/AddNewContactDialog.tsx",
+    "src/components/contacts/dialogs/EditContactDialog.tsx",
+    "src/components/ContactFormSections/CommonContactSection.tsx",
+    "src/components/ContactFormSections/CompanyContactSection.tsx",
+    "src/components/ContactFormSections/IndividualContactSection.tsx",
+    "src/components/ContactFormSections/ServiceContactSection.tsx",
+    "src/components/PhotoUpload/PhotoUploadSection.tsx",
+    "src/hooks/useContactForm.ts",
+    "src/types/ContactFormTypes.ts",
+    "src/utils/contactFormUtils.ts",
+    ".claude/settings.local.json"
   ],
   "solution": {
-    "phase1": "Created TabsOnlyTriggers component for clean tab centralization without content interference",
-    "phase2": "Added comprehensive theme system with container/trigger/content separation",
-    "phase3": "Applied centralized tabs to ContactDetails (Info, Documents, History tabs)",
-    "phase4": "Unified theme styling - both ContactsToolbar and ContactDetails use warning theme",
-    "phase5": "Preserved original content layout completely while centralizing tab structure"
+    "phase1": "Created modular contact form architecture with separate sections for each contact type",
+    "phase2": "Expanded CompanyContactSection from 2 to 22 comprehensive GEMI fields organized in 4 sections",
+    "phase3": "Enhanced IndividualContactSection with separated professional details and communication sections",
+    "phase4": "Fixed photo propagation with useEffect and JSON comparison in ContactsPageContent",
+    "phase5": "Integrated all form sections with centralized useContactForm hook and proper TypeScript types"
   },
-  "testing": "Manual testing verified tabs functionality, theming consistency, and content preservation in localhost:3000/contacts",
-  "notes": [
-    "CRITICAL SUCCESS: Solved content wrapper interference problem that caused previous failures",
-    "TabsOnlyTriggers component renders children directly without wrapper styling",
-    "All contact tabs now use unified 'warning' theme (orange/amber colors)",
-    "Enterprise architecture: Separation of concerns between tab structure and content styling",
-    "Backward compatible with existing TabsContainer for other use cases"
-  ],
+  "testing": "TypeScript compilation verified. Form structure matches ContactDetails tabs. Photo upload and propagation working. All GEMI fields available in company creation modal.",
+  "notes": "Next phase: Centralize GEMI field configurations for Single Source of Truth to eliminate code duplication between form creation, editing, and display components.",
   "contributors": {
     "user": "Γιώργος",
     "assistant": "Claude Code",
     "sessionDate": "2025-11-28"
   },
   "relatedBackups": [
-    "Button centralization work",
-    "ContactsToolbar tabs implementation"
+    "Contact Details Tabs Centralization",
+    "Complete Photo Upload & Display System",
+    "Enterprise Button Centralization System"
   ],
   "commits": [
     {
-      "hash": "254826a",
-      "message": "🎯 FEATURE: Contact Details Tabs Centralization"
+      "hash": "3c1664a",
+      "message": "🏢 FEATURE: Complete Company Contact Forms Synchronization with GEMI Fields"
     }
   ]
 }

@@ -51,11 +51,353 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact }: Cont
   // Define tabs configuration based on contact type
   const isCompanyContact = contact.type === 'company';
 
-  // Get tabs from centralized config based on contact type
+  // Get company tabs from centralized config
   const tabs = isCompanyContact ? createTabsFromConfig(
     getSortedSections(),
     contact
-  ) : contact.type === 'service' ? [
+  ) :
+    {
+      id: 'basicInfo',
+      label: 'Βασικά Στοιχεία ΓΕΜΗ',
+      icon: Info,
+      content: (
+        <div className="p-4 border rounded-lg space-y-4">
+          <h4 className="font-semibold mb-3">Βασικά Στοιχεία από ΓΕΜΗ</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium">Επωνυμία Εταιρείας</label>
+              <p className="text-sm text-muted-foreground">{(contact as any).companyName || (contact as any).serviceTitle || 'Δεν έχει οριστεί'}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Διακριτικός Τίτλος</label>
+              <p className="text-sm text-muted-foreground">{(contact as any).tradeName || 'Δεν έχει οριστεί'}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium">ΑΦΜ</label>
+              <p className="text-sm text-muted-foreground">{(contact as any).serviceVatNumber || (contact as any).vatNumber || 'Δεν έχει οριστεί'}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Αριθμός ΓΕΜΗ</label>
+              <p className="text-sm text-muted-foreground">{(contact as any).gemiNumber || 'Δεν έχει οριστεί'}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Νομική Μορφή</label>
+              <p className="text-sm text-muted-foreground">{(contact as any).legalForm || 'Δεν έχει οριστεί'}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Κατάσταση ΓΕΜΗ</label>
+              <p className="text-sm text-muted-foreground">{(contact as any).gemiStatus || 'Δεν έχει οριστεί'}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Email</label>
+              <p className="text-sm text-muted-foreground">{(contact as any).emails?.[0]?.email || 'Δεν έχει οριστεί'}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Τηλέφωνο</label>
+              <p className="text-sm text-muted-foreground">{(contact as any).phones?.[0]?.number || 'Δεν έχει οριστεί'}</p>
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 'activities',
+      label: 'Δραστηριότητες & ΚΑΔ',
+      icon: FileText,
+      content: (
+        <div className="p-4 border rounded-lg space-y-4">
+          <h4 className="font-semibold mb-3">Δραστηριότητες & Κωδικοί ΚΑΔ</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium">Κωδικός ΚΑΔ</label>
+              <p className="text-sm text-muted-foreground">{(contact as any).activityCodeKAD || 'Δεν έχει οριστεί'}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Περιγραφή Δραστηριότητας</label>
+              <p className="text-sm text-muted-foreground">{(contact as any).activityDescription || 'Δεν έχει οριστεί'}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Τύπος Δραστηριότητας</label>
+              <p className="text-sm text-muted-foreground">{(contact as any).activityType || 'Δεν έχει οριστεί'}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Επιμελητήριο</label>
+              <p className="text-sm text-muted-foreground">{(contact as any).chamber || 'Δεν έχει οριστεί'}</p>
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 'capital',
+      label: 'Κεφάλαιο & Μετοχές',
+      icon: FileText,
+      content: (
+        <div className="p-4 border rounded-lg space-y-4">
+          <h4 className="font-semibold mb-3">Κεφάλαιο & Μετοχική Σύνθεση</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div>
+              <label className="text-sm font-medium">Κεφάλαιο</label>
+              <p className="text-sm text-muted-foreground">{(contact as any).capitalAmount || 'Δεν έχει οριστεί'}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Νόμισμα</label>
+              <p className="text-sm text-muted-foreground">{(contact as any).currency || 'EUR'}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Εξωλογιστικά Κεφάλαια</label>
+              <p className="text-sm text-muted-foreground">{(contact as any).extraordinaryCapital || 'Δεν έχει οριστεί'}</p>
+            </div>
+          </div>
+
+          {(contact as any).shareholders && (contact as any).shareholders.length > 0 ? (
+            <div>
+              <h5 className="font-medium mb-2">Μετοχική Σύνθεση</h5>
+              <div className="space-y-2">
+                {(contact as any).shareholders.map((shareholder: any, index: number) => (
+                  <div key={index} className="border border-gray-200 rounded p-3">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
+                      <div>
+                        <span className="font-medium">Μέτοχος:</span> {shareholder.shareholderName || 'Δεν έχει οριστεί'}
+                      </div>
+                      <div>
+                        <span className="font-medium">Ποσοστό:</span> {shareholder.percentage || 'Δεν έχει οριστεί'}%
+                      </div>
+                      <div>
+                        <span className="font-medium">Τύπος:</span> {shareholder.shareholderType || 'Δεν έχει οριστεί'}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Δεν υπάρχουν στοιχεία μετοχικής σύνθεσης</p>
+          )}
+        </div>
+      )
+    },
+    {
+      id: 'representatives',
+      label: 'Εκπρόσωποι & Όργανα',
+      icon: Users,
+      content: (
+        <div className="p-4 border rounded-lg space-y-4">
+          <h4 className="font-semibold mb-3">Εκπρόσωποι & Όργανα Διοίκησης</h4>
+
+          {(contact as any).representatives && (contact as any).representatives.length > 0 ? (
+            <div className="space-y-3">
+              {(contact as any).representatives.map((rep: any, index: number) => (
+                <div key={index} className="border border-gray-200 rounded p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-sm font-medium">Ονοματεπώνυμο</label>
+                      <p className="text-sm text-muted-foreground">{rep.name || 'Δεν έχει οριστεί'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Ιδιότητα/Ρόλος</label>
+                      <p className="text-sm text-muted-foreground">{rep.role || 'Δεν έχει οριστεί'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Email</label>
+                      <p className="text-sm text-muted-foreground">{rep.email || 'Δεν έχει οριστεί'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Τηλέφωνο</label>
+                      <p className="text-sm text-muted-foreground">{rep.phone || 'Δεν έχει οριστεί'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">ΑΦΜ</label>
+                      <p className="text-sm text-muted-foreground">{rep.taxNumber || 'Δεν έχει οριστεί'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">ΔΟΥ</label>
+                      <p className="text-sm text-muted-foreground">{rep.taxOffice || 'Δεν έχει οριστεί'}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Δεν υπάρχουν στοιχεία εκπροσώπων</p>
+          )}
+        </div>
+      )
+    },
+    {
+      id: 'documents',
+      label: 'Έγγραφα & Ανακοινώσεις',
+      icon: FileText,
+      content: (
+        <div className="p-4 border rounded-lg space-y-4">
+          <h4 className="font-semibold mb-3">Έγγραφα ΓΕΜΗ & Ανακοινώσεις</h4>
+
+          {/* Έγγραφα Εγγραφής/Σύστασης */}
+          <div>
+            <h5 className="font-medium mb-2">Έγγραφα Εγγραφής</h5>
+            {(contact as any).documents?.registrationDocs && (contact as any).documents.registrationDocs.length > 0 ? (
+              <div className="space-y-2">
+                {(contact as any).documents.registrationDocs.map((doc: any, index: number) => (
+                  <div key={index} className="border border-gray-200 rounded p-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <span className="font-medium">Κωδικός:</span> {doc.code || 'Δεν έχει οριστεί'}
+                      </div>
+                      <div>
+                        <span className="font-medium">Θέμα:</span> {doc.subject || 'Δεν έχει οριστεί'}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Δεν υπάρχουν έγγραφα εγγραφής</p>
+            )}
+          </div>
+
+          {/* Ανακοινώσεις */}
+          <div>
+            <h5 className="font-medium mb-2">Ανακοινώσεις</h5>
+            {(contact as any).announcements && (contact as any).announcements.length > 0 ? (
+              <div className="space-y-2">
+                {(contact as any).announcements.map((announcement: any, index: number) => (
+                  <div key={index} className="border border-gray-200 rounded p-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <span className="font-medium">Ημερομηνία:</span> {announcement.announcementDate || 'Δεν έχει οριστεί'}
+                      </div>
+                      <div>
+                        <span className="font-medium">Έκδοση:</span> {announcement.issuePaper || 'Δεν έχει οριστεί'}
+                      </div>
+                      <div className="md:col-span-2">
+                        <span className="font-medium">Περίληψη:</span> {announcement.summary || 'Δεν έχει οριστεί'}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Δεν υπάρχουν ανακοινώσεις</p>
+            )}
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 'decisions',
+      label: 'Αποφάσεις & Πρακτικά',
+      icon: FileText,
+      content: (
+        <div className="p-4 border rounded-lg space-y-4">
+          <h4 className="font-semibold mb-3">Αποφάσεις Οργάνων & Πρακτικά</h4>
+
+          {(contact as any).decisions && (contact as any).decisions.length > 0 ? (
+            <div className="space-y-3">
+              {(contact as any).decisions.map((decision: any, index: number) => (
+                <div key={index} className="border border-gray-200 rounded p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-sm font-medium">Ημερομηνία Απόφασης</label>
+                      <p className="text-sm text-muted-foreground">{decision.decisionDate || 'Δεν έχει οριστεί'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Τύπος Οργάνου</label>
+                      <p className="text-sm text-muted-foreground">{decision.organType || 'Δεν έχει οριστεί'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Αριθμός Πρωτοκόλλου</label>
+                      <p className="text-sm text-muted-foreground">{decision.protocolNumber || 'Δεν έχει οριστεί'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Θέμα</label>
+                      <p className="text-sm text-muted-foreground">{decision.subject || 'Δεν έχει οριστεί'}</p>
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="text-sm font-medium">Περίληψη</label>
+                      <p className="text-sm text-muted-foreground">{decision.summary || 'Δεν έχει οριστεί'}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Δεν υπάρχουν αποφάσεις οργάνων</p>
+          )}
+        </div>
+      )
+    },
+    {
+      id: 'history',
+      label: 'Μεταβολές & Ιστορικό',
+      icon: History,
+      content: (
+        <div className="p-4 border rounded-lg space-y-4">
+          <h4 className="font-semibold mb-3">Μεταβολές & Ιστορικό</h4>
+
+          {/* Βασικές ημερομηνίες */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div>
+              <label className="text-sm font-medium">Ημερομηνία Εγγραφής</label>
+              <p className="text-sm text-muted-foreground">{(contact as any).registrationDate || 'Δεν έχει οριστεί'}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Τελευταία Ενημέρωση</label>
+              <p className="text-sm text-muted-foreground">{(contact as any).lastUpdateDate || 'Δεν έχει οριστεί'}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Ημερομηνία Κατάστασης</label>
+              <p className="text-sm text-muted-foreground">{(contact as any).gemiStatusDate || 'Δεν έχει οριστεί'}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Τοπική Υπηρεσία ΓΕΜΗ</label>
+              <p className="text-sm text-muted-foreground">{(contact as any).gemiDepartment || 'Δεν έχει οριστεί'}</p>
+            </div>
+          </div>
+
+          {/* Υποκαταστήματα */}
+          {(contact as any).branches && (contact as any).branches.length > 0 ? (
+            <div>
+              <h5 className="font-medium mb-2">Υποκαταστήματα</h5>
+              <div className="space-y-2">
+                {(contact as any).branches.map((branch: any, index: number) => (
+                  <div key={index} className="border border-gray-200 rounded p-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <span className="font-medium">Διεύθυνση:</span> {branch.address?.street} {branch.address?.number}, {branch.address?.city}
+                      </div>
+                      <div>
+                        <span className="font-medium">Κατάσταση:</span> {branch.status || 'Δεν έχει οριστεί'}
+                      </div>
+                      <div>
+                        <span className="font-medium">Ημερομηνία Ίδρυσης:</span> {branch.establishedDate || 'Δεν έχει οριστεί'}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Δεν υπάρχουν υποκαταστήματα</p>
+          )}
+
+          {/* Γεωγραφικά στοιχεία */}
+          <div>
+            <h5 className="font-medium mb-2">Γεωγραφικά Στοιχεία</h5>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">Νομός</label>
+                <p className="text-sm text-muted-foreground">{(contact as any).prefecture || 'Δεν έχει οριστεί'}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Δήμος</label>
+                <p className="text-sm text-muted-foreground">{(contact as any).municipality || 'Δεν έχει οριστεί'}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    }
+  ] : contact.type === 'service' ? [
     {
       id: 'serviceInfo',
       label: 'Στοιχεία Υπηρεσίας',
