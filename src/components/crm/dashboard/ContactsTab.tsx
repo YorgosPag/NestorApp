@@ -3,6 +3,7 @@
 
 import React, { useState } from 'react';
 import { Search, Plus } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ContactsList } from './ContactsList';
 
 export function ContactsTab() {
@@ -14,23 +15,21 @@ export function ContactsTab() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <h2 className="text-lg font-semibold">Επαφές</h2>
-            <div className="flex gap-2">
-              {['all', 'customers', 'suppliers', 'agents'].map(type => (
-                <button
-                  key={type}
-                  onClick={() => setFilterType(type)}
-                  className={`px-3 py-1 text-sm rounded-lg ${
-                    filterType === type 
-                      ? 'bg-blue-100 text-blue-700' 
-                      : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-                >
-                  {type === 'all' ? 'Όλες' :
-                   type === 'customers' ? 'Πελάτες' :
-                   type === 'suppliers' ? 'Προμηθευτές' : 'Μεσίτες'}
-                </button>
-              ))}
-            </div>
+            <Tabs value={filterType} onValueChange={setFilterType}>
+              <TabsList className="w-auto">
+                {['all', 'customers', 'suppliers', 'agents'].map(type => (
+                  <TabsTrigger
+                    key={type}
+                    value={type}
+                    className="text-xs data-[state=active]:bg-orange-500 data-[state=active]:text-white hover:bg-orange-100 hover:text-orange-700"
+                  >
+                    {type === 'all' ? 'Όλες' :
+                     type === 'customers' ? 'Πελάτες' :
+                     type === 'suppliers' ? 'Προμηθευτές' : 'Μεσίτες'}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
           </div>
           
           <div className="flex items-center gap-3">

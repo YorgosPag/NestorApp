@@ -8,6 +8,7 @@ import type { Building } from './BuildingsPageContent';
 
 import { BuildingsListHeader } from './BuildingsList/BuildingsListHeader';
 import { BuildingListItem } from './BuildingsList/BuildingListItem';
+import { CompactToolbar } from './BuildingsList/CompactToolbar';
 
 
 interface BuildingsListProps {
@@ -16,14 +17,17 @@ interface BuildingsListProps {
   onSelectBuilding?: (building: Building) => void;
 }
 
-export function BuildingsList({ 
-  buildings, 
-  selectedBuilding, 
+export function BuildingsList({
+  buildings,
+  selectedBuilding,
   onSelectBuilding,
 }: BuildingsListProps) {
   const [favorites, setFavorites] = useState<number[]>([1]);
   const [sortBy, setSortBy] = useState<'name' | 'progress' | 'value' | 'area'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedItems, setSelectedItems] = useState<number[]>([]);
+  const [activeFilters, setActiveFilters] = useState<string[]>([]);
 
   const toggleFavorite = (buildingId: number) => {
     setFavorites(prev => 
@@ -70,7 +74,7 @@ export function BuildingsList({
 
   return (
     <div className="min-w-[300px] max-w-[420px] w-full bg-card border rounded-lg flex flex-col shrink-0 shadow-sm max-h-full overflow-hidden">
-      <BuildingsListHeader 
+      <BuildingsListHeader
         buildingCount={buildings.length}
         activeProjectsCount={buildings.filter(b => b.status === 'active' || b.status === 'construction').length}
         totalValue={buildings.reduce((sum, b) => sum + (b.totalValue || 0), 0)}
@@ -80,7 +84,33 @@ export function BuildingsList({
         setSortOrder={setSortOrder}
       />
 
-      <BuildingToolbar />
+      <CompactToolbar
+        selectedItems={selectedItems}
+        onSelectionChange={setSelectedItems}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        activeFilters={activeFilters}
+        onFiltersChange={setActiveFilters}
+        onNewBuilding={() => console.log('New building')}
+        onEditBuilding={(id) => console.log('Edit building', id)}
+        onDeleteBuilding={(ids) => console.log('Delete buildings', ids)}
+        onExport={() => console.log('Export buildings')}
+        onRefresh={() => console.log('Refresh buildings')}
+      />
+
+      <BuildingToolbar
+        selectedItems={selectedItems}
+        onSelectionChange={setSelectedItems}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        activeFilters={activeFilters}
+        onFiltersChange={setActiveFilters}
+        onNewBuilding={() => console.log('New building')}
+        onEditBuilding={(id) => console.log('Edit building', id)}
+        onDeleteBuilding={(ids) => console.log('Delete buildings', ids)}
+        onExport={() => console.log('Export buildings')}
+        onRefresh={() => console.log('Refresh buildings')}
+      />
 
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-2">

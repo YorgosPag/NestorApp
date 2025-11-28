@@ -4,7 +4,6 @@
 import React from 'react';
 import { Building2 } from 'lucide-react';
 import { HeaderActions } from './HeaderActions';
-import { SearchAndFilters } from './SearchAndFilters';
 import { ViewModeToggle } from './ViewModeToggle';
 
 interface BuildingsHeaderProps {
@@ -12,16 +11,6 @@ interface BuildingsHeaderProps {
   setViewMode: (mode: 'list' | 'grid' | 'byType' | 'byStatus') => void;
   showDashboard: boolean;
   setShowDashboard: (show: boolean) => void;
-  searchTerm: string;
-  setSearchTerm: (term: string) => void;
-  filterCompany: string;
-  setFilterCompany: (company: string) => void;
-  companies: { id: string; name: string }[];
-  filterProject: string;
-  setFilterProject: (project: string) => void;
-  projects: { id: string; name: string }[];
-  filterStatus: string;
-  setFilterStatus: (status: string) => void;
 }
 
 export function BuildingsHeader(props: BuildingsHeaderProps) {
@@ -29,8 +18,7 @@ export function BuildingsHeader(props: BuildingsHeaderProps) {
     viewMode,
     setViewMode,
     showDashboard,
-    setShowDashboard,
-    ...searchAndFilterProps
+    setShowDashboard
   } = props;
   
   return (
@@ -59,7 +47,6 @@ export function BuildingsHeader(props: BuildingsHeaderProps) {
             />
           </div>
         </div>
-        <SearchAndFilters {...searchAndFilterProps} />
       </div>
     </div>
   );

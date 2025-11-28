@@ -3,6 +3,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Search,
   Filter,
@@ -42,40 +43,56 @@ export function SearchAndFilters({
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <div className="relative flex-1 min-w-[300px]">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-        <Input
-          placeholder="Αναζήτηση έργων, τίτλων..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
-        />
+    <div className="space-y-3">
+      {/* Search and basic filters row */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-[250px] max-w-[400px]">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+          <Input
+            placeholder="Αναζήτηση έργων, τίτλων..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Filter className="w-4 h-4 text-muted-foreground" />
+          <FilterSelect
+            value={filterCompany}
+            onChange={(e) => setFilterCompany(e.target.value)}
+            options={companies}
+            placeholder="Όλες οι εταιρείες"
+          />
+          {hasActiveFilters && (
+            <Button variant="ghost" size="sm" onClick={clearFilters} className="text-xs">
+              <X className="w-3 h-3 mr-1" />
+              Καθαρισμός
+            </Button>
+          )}
+        </div>
       </div>
-      <div className="flex items-center gap-2">
-        <Filter className="w-4 h-4 text-muted-foreground" />
-        <FilterSelect
-          value={filterCompany}
-          onChange={(e) => setFilterCompany(e.target.value)}
-          options={companies}
-          placeholder="Όλες οι εταιρείες"
-        />
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          className="h-9 px-3 rounded-md border border-input bg-background text-sm"
-        >
-          <option value="all">Όλες οι καταστάσεις</option>
-          {Object.entries(PROJECT_STATUS_LABELS).map(([key, label]) => (
-             <option key={key} value={key}>{label}</option>
-          ))}
-        </select>
-        {hasActiveFilters && (
-          <Button variant="ghost" size="sm" onClick={clearFilters} className="text-xs">
-            <X className="w-3 h-3 mr-1" />
-            Καθαρισμός
-          </Button>
-        )}
+
+      {/* Status filter tabs */}
+      <div>
+        <Tabs value={filterStatus} onValueChange={setFilterStatus}>
+          <TabsList className="w-auto">
+            <TabsTrigger
+              value="all"
+              className="text-xs data-[state=active]:bg-orange-500 data-[state=active]:text-white hover:bg-orange-100 hover:text-orange-700"
+            >
+              Όλες οι καταστάσεις
+            </TabsTrigger>
+            {Object.entries(PROJECT_STATUS_LABELS).map(([key, label]) => (
+              <TabsTrigger
+                key={key}
+                value={key}
+                className="text-xs data-[state=active]:bg-orange-500 data-[state=active]:text-white hover:bg-orange-100 hover:text-orange-700"
+              >
+                {label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
       </div>
     </div>
   );

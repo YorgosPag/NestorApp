@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Home, CheckCircle, Ruler, TrendingUp } from 'lucide-react';
+import { getThemeVariant } from '@/components/ui/theme/ThemeComponents';
 
 import { GeneralProjectHeader } from '../GeneralProjectHeader';
 import { BasicProjectInfoTab } from '../BasicProjectInfoTab';
@@ -63,6 +64,9 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
 
   const salesPercentage = stats && stats.totalUnits > 0 ? (stats.soldUnits / stats.totalUnits) * 100 : 0;
   const availableUnits = stats ? stats.totalUnits - stats.soldUnits : 0;
+
+  // Get centralized theme configuration
+  const themeConfig = getThemeVariant('warning');
 
   return (
     <>
@@ -126,12 +130,12 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
       )}
 
       <Tabs defaultValue="basic-info" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="basic-info">Βασικές Πληροφορίες</TabsTrigger>
-          <TabsTrigger value="structure">Δομή Έργου</TabsTrigger>
-          <TabsTrigger value="location">Τοποθεσία & Χάρτης</TabsTrigger>
-          <TabsTrigger value="permits">Άδειες & Κατάσταση</TabsTrigger>
-          <TabsTrigger value="attachments">Συνημμένα Αρχεία</TabsTrigger>
+        <TabsList className="flex flex-wrap gap-2 w-full h-auto min-h-fit">
+          <TabsTrigger value="basic-info" className={themeConfig.tabTrigger}>Βασικές Πληροφορίες</TabsTrigger>
+          <TabsTrigger value="structure" className={themeConfig.tabTrigger}>Δομή Έργου</TabsTrigger>
+          <TabsTrigger value="location" className={themeConfig.tabTrigger}>Τοποθεσία & Χάρτης</TabsTrigger>
+          <TabsTrigger value="permits" className={themeConfig.tabTrigger}>Άδειες & Κατάσταση</TabsTrigger>
+          <TabsTrigger value="attachments" className={themeConfig.tabTrigger}>Συνημμένα Αρχεία</TabsTrigger>
         </TabsList>
 
         <TabsContent value="basic-info" className="pt-4">

@@ -88,16 +88,6 @@ export function BuildingsPageContent() {
           setViewMode={setViewMode}
           showDashboard={showDashboard}
           setShowDashboard={setShowDashboard}
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
-          filterCompany={filterCompany}
-          setFilterCompany={setFilterCompany}
-          companies={companies}
-          filterProject={filterProject}
-          setFilterProject={setFilterProject}
-          filterStatus={filterStatus}
-          setFilterStatus={setFilterStatus}
-          projects={[]}
         />
 
         {showDashboard && <BuildingsDashboard stats={stats} />}

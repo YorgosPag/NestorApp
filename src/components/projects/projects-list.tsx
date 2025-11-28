@@ -80,7 +80,7 @@ export function ProjectsList({
 
 
   return (
-    <div className="min-w-[300px] max-w-[420px] w-full bg-card border rounded-lg flex flex-col shrink-0 shadow-sm max-h-full overflow-hidden">
+    <div className="min-w-[300px] max-w-[420px] w-full bg-card border rounded-lg flex flex-col shrink-0 shadow-sm h-fit overflow-hidden">
       <ProjectListHeader 
         projects={sortedProjects || []}
         sortBy={sortBy}

@@ -96,7 +96,7 @@ export function BaseToolbar({
   // Styling variants
   const toolbarVariants = {
     default: 'flex items-center justify-between p-4 bg-background border-b',
-    compact: 'flex items-center justify-between p-2 bg-background border-b',
+    compact: 'flex flex-wrap items-center justify-between gap-2 p-2 bg-background border-b min-h-[3rem]',
     expanded: 'flex flex-col gap-4 p-6 bg-background border-b',
     narrow: 'flex flex-wrap items-center gap-2 p-2 bg-background border-b',
   };
@@ -132,7 +132,7 @@ export function BaseToolbar({
               {title}
             </span>
           )}
-          {search && <ToolbarSearchComponent search={search} />}
+          {search && <ToolbarSearchComponent search={search} compact={false} />}
           {filters.length > 0 && (
             <ToolbarFiltersComponent
               filters={filters}
@@ -171,7 +171,7 @@ export function BaseToolbar({
               
               {/* Search */}
               {search && (
-                <ToolbarSearchComponent search={search} />
+                <ToolbarSearchComponent search={search} compact={false} />
               )}
               
               {/* Filters */}
@@ -196,57 +196,56 @@ export function BaseToolbar({
           </div>
         </>
       ) : (
-        // Default/Compact layout - horizontal
+        // Default/Compact layout - single row, all content directly in main container
         <>
-          {/* Left section */}
-          <div className="flex items-center gap-4">
-            {leftContent}
-            
-            {/* Title */}
-            {title && (
-              <div className="flex flex-col">
-                <h2 className="text-lg font-semibold text-foreground">
-                  {title}
-                </h2>
-                {subtitle && (
-                  <p className="text-sm text-muted-foreground">
-                    {subtitle}
-                  </p>
-                )}
-              </div>
-            )}
-            
-            {/* Search */}
-            {search && (
-              <ToolbarSearchComponent search={search} />
-            )}
-            
-            {/* Filters */}
-            {filters.length > 0 && (
-              <ToolbarFiltersComponent 
-                filters={filters}
-                activeCount={activeFiltersCount}
-                onClearAll={onClearAllFilters}
-              />
-            )}
-          </div>
-          
-          {/* Center section */}
-          {centerContent && (
+          {/* All content flows directly without extra containers */}
+          {leftContent}
+
+          {/* Title */}
+          {title && (
+            <div className="flex flex-col">
+              <h2 className={cn(
+                "font-semibold text-foreground",
+                variant === 'compact' ? "text-sm" : "text-lg"
+              )}>
+                {title}
+              </h2>
+              {subtitle && (
+                <p className="text-sm text-muted-foreground">
+                  {subtitle}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Search */}
+          {search && (
+            <ToolbarSearchComponent search={search} compact={variant === 'compact'} />
+          )}
+
+          {/* Filters */}
+          {filters.length > 0 && (
+            <ToolbarFiltersComponent
+              filters={filters}
+              activeCount={activeFiltersCount}
+              onClearAll={onClearAllFilters}
+            />
+          )}
+
+          {/* Center content - only for non-compact */}
+          {centerContent && variant !== 'compact' && (
             <div className="flex-1 flex justify-center">
               {centerContent}
             </div>
           )}
-          
-          {/* Right section */}
-          <div className="flex items-center gap-2">
-            {rightContent}
-            
-            {/* Actions */}
-            {allActions.length > 0 && (
-              <ToolbarActionsComponent actions={allActions} />
-            )}
-          </div>
+
+          {/* Actions */}
+          {allActions.length > 0 && (
+            <ToolbarActionsComponent actions={allActions} />
+          )}
+
+          {/* Right content */}
+          {rightContent}
         </>
       )}
     </div>
@@ -254,7 +253,7 @@ export function BaseToolbar({
 }
 
 // Search component
-function ToolbarSearchComponent({ search }: { search: ToolbarSearch }) {
+function ToolbarSearchComponent({ search, compact }: { search: ToolbarSearch; compact?: boolean }) {
   return (
     <div className="relative">
       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -263,7 +262,10 @@ function ToolbarSearchComponent({ search }: { search: ToolbarSearch }) {
         value={search.value || ''}
         onChange={(e) => search.onChange?.(e.target.value)}
         disabled={search.disabled}
-        className="pl-10 pr-10 w-64"
+        className={cn(
+          "pl-10 pr-10",
+          compact ? "w-48" : "w-64"
+        )}
       />
       {search.value && search.onClear && (
         <Button

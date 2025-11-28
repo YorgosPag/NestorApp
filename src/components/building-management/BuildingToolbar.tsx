@@ -248,7 +248,7 @@ export function BuildingToolbar({
 
   return (
     <BaseToolbar
-      variant="default"
+      variant="compact"
       position="sticky"
       primaryActions={primaryActions}
       secondaryActions={secondaryActions}

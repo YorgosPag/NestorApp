@@ -9,7 +9,7 @@ import { THEME_VARIANTS, getThemeVariant, type ThemeVariant } from '@/components
 // Centralized tabs styling using the theme system
 export const TABS_STYLES = {
   container: "w-full",
-  list: "grid w-full",
+  list: "flex flex-wrap gap-2 w-full h-auto min-h-fit",
   content: "mt-3",
   contentWrapper: "flex flex-wrap gap-2"
 } as const;
@@ -73,8 +73,8 @@ export function TabsContainer({
   // Get theme configuration
   const themeConfig = getThemeVariant(theme);
 
-  // Use flexible layout that allows proper wrapping with vertical spacing
-  const flexWrapStyles = "flex flex-wrap gap-2";
+  // Use flexible layout that allows proper wrapping with vertical spacing and auto height
+  const flexWrapStyles = "flex flex-wrap gap-2 h-auto min-h-fit";
 
   return (
     <div className={cn(themeConfig.container, className)}>
@@ -86,7 +86,7 @@ export function TabsContainer({
       )}
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className={TABS_STYLES.container}>
-        <TabsList className={cn("w-full", flexWrapStyles)}>
+        <TabsList className={TABS_STYLES.list}>
           {tabs.map((tab) => (
             <TabsTrigger
               key={tab.id}
@@ -181,8 +181,8 @@ export function TabsOnlyTriggers({
   // Get theme configuration
   const themeConfig = getThemeVariant(theme);
 
-  // Use flexible layout that allows proper wrapping with vertical spacing
-  const flexWrapStyles = "flex flex-wrap gap-2";
+  // Use flexible layout that allows proper wrapping with vertical spacing and auto height
+  const flexWrapStyles = "flex flex-wrap gap-2 h-auto min-h-fit";
 
   return (
     <div className={cn(themeConfig.container, className)}>
@@ -194,7 +194,7 @@ export function TabsOnlyTriggers({
       )}
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className={TABS_STYLES.container}>
-        <TabsList className={cn("w-full", flexWrapStyles)}>
+        <TabsList className={TABS_STYLES.list}>
           {tabs.map((tab) => (
             <TabsTrigger
               key={tab.id}
