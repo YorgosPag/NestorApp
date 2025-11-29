@@ -14,6 +14,7 @@ import { UserRoleProvider } from "@/contexts/UserRoleContext";
 import { FloorplanProvider } from "@/contexts/FloorplanContext";
 import { cn } from "@/lib/utils";
 import { I18nProvider } from '@/components/providers/I18nProvider';
+import { NavigationProvider } from '@/components/navigation';
 
 const roboto = Roboto({
   subsets: ["latin", "greek"],
@@ -50,16 +51,17 @@ export default function RootLayout({
   }
 
   return (
-    <html lang="el" suppressHydrationWarning>
+    <html lang="el" className="overflow-x-hidden" suppressHydrationWarning>
       <head>
         <Script src="/suppress-console.js" strategy="beforeInteractive" />
       </head>
-      <body className={cn("font-sans", roboto.variable)}>
+      <body className={cn("font-sans overflow-x-hidden", roboto.variable)}>
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
+          defaultTheme="light"
           enableSystem
           disableTransitionOnChange
+          storageKey="theme-preference"
         >
           <I18nProvider>
             <UserRoleProvider>
@@ -67,7 +69,8 @@ export default function RootLayout({
                 <NotificationProvider>
                   <ToastProvider>
                     <SharedPropertiesProvider>
-                      <SidebarProvider>
+                      <NavigationProvider>
+                        <SidebarProvider>
                         <div className="flex h-screen w-full overflow-hidden">
                           <AppSidebar />
                           <SidebarInset className="flex flex-1 flex-col">
@@ -78,7 +81,8 @@ export default function RootLayout({
                           </SidebarInset>
                         </div>
                       </SidebarProvider>
-                    </SharedPropertiesProvider>
+                    </NavigationProvider>
+                  </SharedPropertiesProvider>
                     <Toaster />
                   </ToastProvider>
                 </NotificationProvider>

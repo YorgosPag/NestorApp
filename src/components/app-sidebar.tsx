@@ -14,7 +14,7 @@ import { SidebarUserFooter } from "@/components/sidebar/sidebar-user-footer"
 import { mainMenuItems, toolsMenuItems, settingsMenuItem } from "@/config/navigation"
 import { useSidebarState } from "@/hooks/useSidebarState"
 import { useTranslationLazy } from "@/i18n/hooks/useTranslationLazy"
-import { Settings } from "lucide-react"
+import { MapPin } from "lucide-react"
 
 export function AppSidebar() {
     const { expandedItems, toggleExpanded, isItemActive } = useSidebarState()
@@ -34,6 +34,17 @@ export function AppSidebar() {
                     onToggleExpanded={toggleExpanded}
                     isItemActive={isItemActive}
                 />
+
+                {/* Navigation Link */}
+                <div className="px-3 py-2">
+                    <a
+                        href="/navigation"
+                        className="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors py-2 px-1 w-full text-left rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+                    >
+                        <MapPin className="h-4 w-4" />
+                        <span className="font-medium">Πλοήγηση</span>
+                    </a>
+                </div>
 
                 <SidebarMenuSection
                     label={isLoading ? 'Tools' : t('menu.tools')}

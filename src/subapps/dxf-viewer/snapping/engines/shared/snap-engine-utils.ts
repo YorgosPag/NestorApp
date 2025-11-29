@@ -210,6 +210,14 @@ export interface StandardSnapCandidate {
 }
 
 /**
+ * Generic snap point interface
+ */
+export interface GenericSnapPoint {
+  point: Point2D;
+  type: string;
+}
+
+/**
  * Find standard snap candidates - compatibility function for snap engines
  */
 export function findStandardSnapCandidates(
@@ -252,4 +260,70 @@ export function findStandardSnapCandidates(
   }
   
   return candidates.sort((a, b) => a.distance - b.distance);
+}
+
+/**
+ * Find entity-based snap candidates for snap engines
+ */
+export function findEntityBasedSnapCandidates(
+  entities: Entity[],
+  cursorPoint: Point2D,
+  context: any,
+  config: any,
+  pointsGenerator: (entity: Entity, cursorPoint: Point2D, radius: number) => Point2D[]
+): any {
+  const candidates: any[] = [];
+  const filteredEntities = filterValidEntities(entities);
+
+  for (const entity of filteredEntities) {
+    const points = pointsGenerator(entity, cursorPoint, context.snapRadius || 20);
+
+    for (const point of points) {
+      if (isWithinTolerance(cursorPoint, point, context.snapRadius || 20)) {
+        candidates.push(createSnapCandidate(point, config, entity));
+      }
+    }
+  }
+
+  return {
+    candidates: sortCandidatesByDistance(candidates, cursorPoint),
+    hasResults: candidates.length > 0
+  };
+}
+
+/**
+ * Find circle-based snap candidates for snap engines
+ */
+export function findCircleBasedSnapCandidates(
+  entities: Entity[],
+  cursorPoint: Point2D,
+  context: any,
+  config: any,
+  pointsGenerator: (center: Point2D, radius: number, entity: Entity) => Point2D[]
+): any {
+  const candidates: any[] = [];
+  const filteredEntities = filterValidEntities(entities);
+
+  for (const entity of filteredEntities) {
+    // Handle circle and arc entities
+    if (entity.type === 'circle' || entity.type === 'arc') {
+      const center = (entity as any).center;
+      const radius = (entity as any).radius;
+
+      if (center && radius) {
+        const points = pointsGenerator(center, radius, entity);
+
+        for (const point of points) {
+          if (isWithinTolerance(cursorPoint, point, context.snapRadius || 20)) {
+            candidates.push(createSnapCandidate(point, config, entity));
+          }
+        }
+      }
+    }
+  }
+
+  return {
+    candidates: sortCandidatesByDistance(candidates, cursorPoint),
+    hasResults: candidates.length > 0
+  };
 }

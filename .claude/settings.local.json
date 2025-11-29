@@ -69,7 +69,9 @@
       "Bash(git show:*)",
       "Bash(ipconfig)",
       "Bash(del \"C:\\Nestor_Pagonis\\src\\components\\units\\ProgressBarTest.tsx\")",
-      "Bash(del \"C:\\Nestor_Pagonis\\src\\components\\projects\\projects\\ProjectCard\\ProjectCardContent\\ProjectCardProgress.tsx\")"
+      "Bash(del \"C:\\Nestor_Pagonis\\src\\components\\projects\\projects\\ProjectCard\\ProjectCardContent\\ProjectCardProgress.tsx\")",
+      "Bash(npm run start:*)",
+      "Bash(del fix-companies.js)"
     ],
     "deny": [],
     "ask": []

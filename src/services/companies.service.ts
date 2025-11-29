@@ -5,7 +5,7 @@ import type { CompanyContact } from '@/types/contacts';
 import { contactConverter } from '@/lib/firestore/converters/contact.converter';
 
 // DEBUG FLAG - Set to false to disable performance-heavy logging
-const DEBUG_COMPANIES_SERVICE = false;
+const DEBUG_COMPANIES_SERVICE = true;
 
 const CONTACTS_COLLECTION = 'contacts';
 

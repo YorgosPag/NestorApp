@@ -5,7 +5,7 @@ import React from 'react';
 const Separator = ({ orientation, className }: { orientation?: string; className?: string }) => (
   <div className={className} />
 );
-import { MousePointer, Pen, X, Copy, Grid3X3, Square, Circle, Triangle, Edit } from 'lucide-react';
+import { MousePointer, Pen, X, Copy, Grid, Square, Circle, Triangle, Edit } from 'lucide-react';
 import { STATUS_COLORS, STATUS_LABELS, KIND_LABELS, type Status, type OverlayKind, type OverlayEditorMode } from '../overlays/types';
 import type { PropertyStatus } from '../../../constants/statuses';
 import { useUnifiedOverlayCreation } from '../hooks/overlay/useUnifiedOverlayCreation';
@@ -66,7 +66,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
     { mode: 'edit' as OverlayEditorMode, icon: Edit, label: 'Επεξεργασία', key: 'E' },
   ];
 
-  const kindIcons = { unit: Square, parking: Circle, storage: Triangle, footprint: Grid3X3 };
+  const kindIcons = { unit: Square, parking: Circle, storage: Triangle, footprint: Grid };
 
   const handleModeChange = (newMode: OverlayEditorMode) => {
     if (newMode === 'draw') {

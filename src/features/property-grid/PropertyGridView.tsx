@@ -43,7 +43,7 @@ export function PropertyGridView() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-background">
+    <div className="min-h-screen bg-gray-50 dark:bg-background overflow-x-hidden">
       {/* Header */}
       <div className="sticky top-0 z-10">
         <PageHeader
@@ -109,22 +109,30 @@ export function PropertyGridView() {
       </div>
 
       {/* Properties Grid/List */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {filteredProperties.length > 0 ? (
-          <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" : "space-y-4"}>
-            {filteredProperties.map((property: any) =>
-              viewMode === 'grid'
-                ? <PropertyCard key={property.id} property={property} onViewFloorPlan={handleViewFloorPlan} />
-                : <PropertyListItem key={property.id} property={property} onViewFloorPlan={handleViewFloorPlan} />
-            )}
-          </div>
-        ) : (
-          <div className="text-center py-12">
-            <Home className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-foreground mb-2">Δεν βρέθηκαν ακίνητα</h3>
-            <p className="text-gray-500 dark:text-muted-foreground">Δοκιμάστε να αλλάξετε τα κριτήρια αναζήτησης</p>
-          </div>
-        )}
+      <div className="w-full px-4 py-8 overflow-x-hidden">
+        <div className="w-full max-w-screen-sm mx-auto overflow-hidden">
+          {filteredProperties.length > 0 ? (
+            <div className={viewMode === 'grid'
+              ? "flex flex-col gap-4"
+              : "flex flex-col gap-4"
+            }>
+              {filteredProperties.map((property: any) => (
+                <div key={property.id} className="w-full min-w-0 overflow-hidden">
+                  {viewMode === 'grid'
+                    ? <PropertyCard property={property} onViewFloorPlan={handleViewFloorPlan} />
+                    : <PropertyListItem property={property} onViewFloorPlan={handleViewFloorPlan} />
+                  }
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 px-4 sm:px-0">
+              <Home className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 dark:text-foreground mb-2">Δεν βρέθηκαν ακίνητα</h3>
+              <p className="text-gray-500 dark:text-muted-foreground">Δοκιμάστε να αλλάξετε τα κριτήρια αναζήτησης</p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Bottom CTA */}

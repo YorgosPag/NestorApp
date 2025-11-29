@@ -5,7 +5,7 @@ import { getPropertyImage } from '../utils/images';
 
 export function PropertyCard({ property, onViewFloorPlan }: { property: any; onViewFloorPlan: (id: string) => void; }) {
   return (
-    <div className="bg-white dark:bg-card rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group cursor-pointer">
+    <div className="w-full flex flex-col bg-white dark:bg-card rounded-xl shadow-md ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden group cursor-pointer hover:shadow-xl transition-all duration-300">
       <div className="relative h-48 overflow-hidden bg-gray-100 dark:bg-muted/30">
         <img
           src={getPropertyImage(property)}
@@ -35,6 +35,7 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: any; onV
           <CommonBadge
             status="category"
             customLabel={property.type}
+            className="text-xs truncate max-w-[90px]"
           />
         </div>
 
@@ -42,7 +43,7 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: any; onV
           €{property.price?.toLocaleString() || 'Επικοινωνήστε'}
         </div>
 
-        <div className="flex items-center gap-4 text-gray-600 dark:text-muted-foreground text-sm mb-4">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-gray-600 dark:text-muted-foreground text-sm mb-4">
           <span className="flex items-center gap-1">
             <Square className="h-4 w-4" />
             {property.area} m²

@@ -10,10 +10,10 @@ export * from './config';
 export * from './utils';
 
 // Hooks (can be imported safely)
-export { useCursor, useCursorState, useCursorSettings, useCursorActions, useCursorContext } from './useCursor';
+export { useCursor, useCursorState, useCursorSettings, useCursorActions } from './useCursor';
 
 // Components need to be imported from .tsx files directly
 // For components, import directly: import { CursorSystem } from './systems/cursor/CursorSystem';
 
 // Re-export main system component for convenience
-export { CursorSystem, useCursorSystemContext } from './CursorSystem';
+export { CursorSystem, CursorContext, CursorProvider, useCursorContext } from './CursorSystem';

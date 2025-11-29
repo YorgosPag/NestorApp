@@ -70,6 +70,32 @@ export function getNearestPointOnLine(
   };
 }
 
+/**
+ * Get line parameter (t) for a point projection onto a line
+ * Returns 0 for lineStart, 1 for lineEnd, <0 or >1 for extensions
+ */
+export function getLineParameter(
+  point: Point2D,
+  lineStart: Point2D,
+  lineEnd: Point2D
+): number {
+  const dx = lineEnd.x - lineStart.x;
+  const dy = lineEnd.y - lineStart.y;
+  const lengthSquared = dx * dx + dy * dy;
+
+  if (lengthSquared === 0) {
+    return 0; // Start and end are the same point
+  }
+
+  const vectorToPoint = {
+    x: point.x - lineStart.x,
+    y: point.y - lineStart.y
+  };
+
+  const dotProduct = vectorToPoint.x * dx + vectorToPoint.y * dy;
+  return dotProduct / lengthSquared;
+}
+
 // ===== ANGLE CALCULATIONS =====
 
 /**

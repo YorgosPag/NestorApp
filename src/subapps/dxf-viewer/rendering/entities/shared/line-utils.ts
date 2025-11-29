@@ -243,11 +243,11 @@ export function renderSplitLine(
 }
 
 /**
- * Render line με έλεγχο για text enabled state
+ * Render line με έλεγχο για text enabled state (Internal version - returns midpoint)
  * Αν το κείμενο είναι enabled, σχεδιάζει γραμμή με κενό
  * Αν το κείμενο είναι disabled, σχεδιάζει συνεχόμενη γραμμή
  */
-export function renderLineWithTextCheck(
+function renderLineWithTextCheckInternal(
   ctx: CanvasRenderingContext2D,
   screenStart: Point2D,
   screenEnd: Point2D,
