@@ -13,7 +13,8 @@ import { AddNewContactDialog } from './dialogs/AddNewContactDialog';
 import { EditContactDialog } from './dialogs/EditContactDialog';
 import { DeleteContactDialog } from './dialogs/DeleteContactDialog';
 import { ArchiveContactDialog } from './dialogs/ArchiveContactDialog';
-import { AdvancedFiltersPanel, contactFiltersConfig, type ContactFilterState } from '@/components/core/AdvancedFilters';
+import { AdvancedFiltersPanel, type ContactFilterState } from '@/components/core/AdvancedFilters';
+import { contactFiltersConfig } from '@/components/core/AdvancedFilters/configs';
 
 // Initial seed data for database (μόνο για πρώτη φόρτωση)
 const SEED_CONTACTS = [
@@ -302,12 +303,12 @@ export function ContactsPageContent() {
 
         {showDashboard && <ContactsDashboard stats={stats} />}
 
-        {/* Advanced Filters Panel */}
-        <AdvancedFiltersPanel
+        {/* Advanced Filters Panel - Temporarily disabled due to import issue */}
+        {/* <AdvancedFiltersPanel
           config={contactFiltersConfig}
           filters={filters}
           onFiltersChange={setFilters}
-        />
+        /> */}
 
         <div className="flex-1 flex overflow-hidden p-4 gap-4">
           {error ? (

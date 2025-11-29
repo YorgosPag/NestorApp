@@ -6,8 +6,8 @@ import { PageHeader } from '@/core/headers';
 import type { ViewMode } from '@/core/headers';
 
 interface ProjectsHeaderProps {
-  viewMode: 'list' | 'grid' | 'byType' | 'byStatus';
-  setViewMode: (mode: 'list' | 'grid' | 'byType' | 'byStatus') => void;
+  viewMode: 'list' | 'byType' | 'byStatus';
+  setViewMode: (mode: 'list' | 'byType' | 'byStatus') => void;
   showDashboard: boolean;
   setShowDashboard: (show: boolean) => void;
 }
@@ -32,7 +32,7 @@ export function ProjectsHeader({
         onDashboardToggle: () => setShowDashboard(!showDashboard),
         viewMode: viewMode as ViewMode,
         onViewModeChange: (mode) => setViewMode(mode as any),
-        viewModes: ['list', 'grid', 'byType', 'byStatus'] as ViewMode[],
+        viewModes: ['list', 'byType', 'byStatus'] as ViewMode[],
         addButton: {
           label: 'Νέο Έργο',
           onClick: () => console.log('Add project')

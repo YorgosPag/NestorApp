@@ -20,7 +20,7 @@ export function useProjectsState(initialProjects: Project[]) {
       setSelectedProject(initialProjects[0]);
     }
   }, [initialProjects, selectedProject]);
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [viewMode, setViewMode] = useState<'list'>('list');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCompany, setFilterCompany] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');

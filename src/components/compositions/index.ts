@@ -2,7 +2,6 @@
 
 // Card Compositions (using BaseCard)
 export * from './BuildingCard';
-export * from './ProjectCard';
 export * from './ContactCard';
 export * from './NotificationCard';
 export * from './StorageCard';

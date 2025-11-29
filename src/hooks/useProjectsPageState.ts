@@ -8,7 +8,7 @@ export function useProjectsPageState(initialProjects: Project[]) {
   const [selectedProject, setSelectedProject] = useState<Project | null>(
     initialProjects.length > 0 ? initialProjects[0] : null
   );
-  const [viewMode, setViewMode] = useState<'list' | 'grid' | 'byType' | 'byStatus'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'byType' | 'byStatus'>('list');
   const [showDashboard, setShowDashboard] = useState(true);
 
   // Use centralized filter state
