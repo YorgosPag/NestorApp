@@ -2,8 +2,9 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { Home, SlidersHorizontal, MapPin } from 'lucide-react';
+import { Home, MapPin, SlidersHorizontal } from 'lucide-react';
 import { usePublicPropertyViewer } from '@/hooks/usePublicPropertyViewer';
+import { PageHeader } from '@/core/headers';
 
 import { usePropertyGridFilters } from './hooks/usePropertyGridFilters';
 import { PropertyCard } from './components/PropertyCard';
@@ -44,34 +45,24 @@ export function PropertyGridView() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-background">
       {/* Header */}
-      <div className="bg-white dark:bg-card border-b dark:border-border sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-4">
-            {/* Top Row */}
-            <div className="flex justify-between items-center mb-4">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-foreground">Διαθέσιμα Ακίνητα</h1>
-                <p className="text-sm text-gray-600 dark:text-muted-foreground mt-1">
-                  Βρέθηκαν {filteredProperties.length} ακίνητα
-                </p>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <ViewModeToggle value={viewMode} onChange={setViewMode} />
-                <button
-                  onClick={handleViewAllFloorPlan}
-                  className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all flex items-center gap-2 font-medium"
-                >
-                  <MapPin className="h-4 w-4" />
-                  Προβολή σε Κάτοψη
-                </button>
-              </div>
-            </div>
-
-            {/* Search and Filters Row */}
-            <div className="flex gap-3">
-              <SearchBar value={searchTerm} onChange={setSearchTerm} />
+      <div className="sticky top-0 z-10">
+        <PageHeader
+          variant="sticky"
+          layout="multi-row"
+          title={{
+            icon: Home,
+            title: "Διαθέσιμα Ακίνητα",
+            subtitle: `Βρέθηκαν ${filteredProperties.length} ακίνητα`
+          }}
+          search={{
+            value: searchTerm,
+            onChange: setSearchTerm,
+            placeholder: "Αναζήτηση ακινήτων..."
+          }}
+          filters={{
+            customFilters: [
               <TypeSelect
+                key="typeselect"
                 selected={filters.propertyType[0]}
                 onChange={(value) => {
                   setFilters({
@@ -79,28 +70,42 @@ export function PropertyGridView() {
                     propertyType: value === 'all' ? [] : [value],
                   });
                 }}
-              />
+              />,
               <button
+                key="advfilters"
                 onClick={() => setShowFilters(!showFilters)}
-                className={`px-4 py-2.5 border rounded-lg flex items-center gap-2 transition-colors ${
+                className={`px-4 py-2.5 border rounded-lg flex items-center gap-2 transition-colors h-9 ${
                   showFilters ? 'bg-blue-50 dark:bg-blue-900/50 border-blue-300 text-blue-600' : 'border-gray-200 dark:border-border hover:bg-gray-50 dark:hover:bg-muted/50'
                 }`}
               >
                 <SlidersHorizontal className="h-4 w-4" />
                 <span className="font-medium">Φίλτρα</span>
               </button>
-            </div>
-            
-            <AdvancedFiltersPanel 
-                show={showFilters}
-                priceRange={priceRange}
-                setPriceRange={setPriceRange}
-                areaRange={areaRange}
-                setAreaRange={setAreaRange}
-            />
+            ]
+          }}
+          actions={{
+            customActions: [
+              <ViewModeToggle key="viewmode" value={viewMode} onChange={setViewMode} />,
+              <button
+                key="floorplan"
+                onClick={handleViewAllFloorPlan}
+                className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all flex items-center gap-2 font-medium h-8"
+              >
+                <MapPin className="h-4 w-4" />
+                Προβολή σε Κάτοψη
+              </button>
+            ]
+          }}
+        />
 
-          </div>
-        </div>
+        {/* Advanced Filters Panel */}
+        <AdvancedFiltersPanel
+          show={showFilters}
+          priceRange={priceRange}
+          setPriceRange={setPriceRange}
+          areaRange={areaRange}
+          setAreaRange={setAreaRange}
+        />
       </div>
 
       {/* Properties Grid/List */}

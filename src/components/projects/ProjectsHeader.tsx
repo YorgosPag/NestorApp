@@ -1,10 +1,9 @@
 'use client';
 
 import React from 'react';
-import { HeaderTitle } from './page/HeaderTitle';
-import { HeaderActions } from './page/HeaderActions';
-import { ViewModeToggle } from './page/ViewModeToggle';
-
+import { Building2 } from 'lucide-react';
+import { PageHeader } from '@/core/headers';
+import type { ViewMode } from '@/core/headers';
 
 interface ProjectsHeaderProps {
   viewMode: 'list' | 'grid' | 'byType' | 'byStatus';
@@ -13,29 +12,32 @@ interface ProjectsHeaderProps {
   setShowDashboard: (show: boolean) => void;
 }
 
-export function ProjectsHeader(props: ProjectsHeaderProps) {
-  const {
-    viewMode,
-    setViewMode,
-    showDashboard,
-    setShowDashboard,
-  } = props;
-
+export function ProjectsHeader({
+  viewMode,
+  setViewMode,
+  showDashboard,
+  setShowDashboard,
+}: ProjectsHeaderProps) {
   return (
-    <div className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-40 p-4">
-      <div className="flex items-center justify-between">
-        <HeaderTitle />
-        <div className="flex items-center gap-2">
-          <HeaderActions
-            showDashboard={showDashboard}
-            setShowDashboard={setShowDashboard}
-          />
-          <ViewModeToggle
-            viewMode={viewMode}
-            setViewMode={setViewMode}
-          />
-        </div>
-      </div>
-    </div>
+    <PageHeader
+      variant="sticky"
+      layout="single-row"
+      title={{
+        icon: Building2,
+        title: "Διαχείριση Έργων",
+        subtitle: "Παρακολούθηση και διαχείριση έργων"
+      }}
+      actions={{
+        showDashboard,
+        onDashboardToggle: () => setShowDashboard(!showDashboard),
+        viewMode: viewMode as ViewMode,
+        onViewModeChange: (mode) => setViewMode(mode as any),
+        viewModes: ['list', 'grid', 'byType', 'byStatus'] as ViewMode[],
+        addButton: {
+          label: 'Νέο Έργο',
+          onClick: () => console.log('Add project')
+        }
+      }}
+    />
   );
 }

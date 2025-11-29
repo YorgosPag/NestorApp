@@ -3,6 +3,7 @@
 import React from 'react';
 import { UnitBadge, CommonBadge } from '@/core/badges';
 import { MapPin } from "lucide-react";
+import { EntityDetailsHeader } from '@/core/entity-headers';
 import { cn } from '@/lib/utils';
 import type { Property } from '@/types/property-viewer';
 
@@ -14,49 +15,42 @@ interface UnitListItemHeaderProps {
   getCategoryLabel: (category: string) => string;
 }
 
-export function UnitListItemHeader({ 
-  unit, 
-  getCategoryIcon, 
-  getStatusColor, 
-  getStatusLabel, 
-  getCategoryLabel 
+export function UnitListItemHeader({
+  unit,
+  getCategoryIcon,
+  getStatusColor,
+  getStatusLabel,
+  getCategoryLabel
 }: UnitListItemHeaderProps) {
   const CategoryIcon = getCategoryIcon(unit.type);
 
   return (
-    <div className="mb-3">
-      <div className="flex items-start gap-2 mb-2">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <div className="flex-shrink-0">
-            <CategoryIcon className="w-4 h-4 text-muted-foreground" />
-          </div>
-          <h4 className="font-medium text-sm text-foreground leading-tight line-clamp-2">
-            {unit.name}
-          </h4>
-        </div>
-      </div>
-      
-      <div className="flex items-center gap-2 mb-2 flex-wrap">
-        <UnitBadge
-          status={unit.status as any}
-          size="sm"
-          className="text-xs text-white border-0"
-        />
-        <CommonBadge
-          status="company"
-          customLabel={getCategoryLabel(unit.type)}
-          variant="outline"
-          size="sm"
-          className="text-xs"
-        />
-      </div>
-
+    <EntityDetailsHeader
+      icon={CategoryIcon}
+      title={unit.name}
+      badges={[
+        {
+          type: 'status',
+          value: getStatusLabel(unit.status),
+          size: 'sm'
+        },
+        {
+          type: 'category',
+          value: getCategoryLabel(unit.type),
+          variant: 'outline',
+          size: 'sm'
+        }
+      ]}
+      variant="compact"
+      className="mb-3 rounded-lg"
+    >
+      {/* Building Location Info */}
       {unit.building && (
-        <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <MapPin className="w-3 h-3 flex-shrink-0" />
           <span className="truncate">{unit.building} - Όροφος {unit.floor}</span>
         </div>
       )}
-    </div>
+    </EntityDetailsHeader>
   );
 }

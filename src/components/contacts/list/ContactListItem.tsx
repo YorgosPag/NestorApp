@@ -167,7 +167,6 @@ export function ContactListItem({
                             <ContactBadge
                                 status="archived"
                                 size="sm"
-                                className="text-xs bg-orange-100 text-orange-700 border-orange-200"
                             />
                         </div>
                     )}

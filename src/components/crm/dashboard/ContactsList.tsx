@@ -30,7 +30,6 @@ export function ContactsList() {
                             <td className="p-3">
                                 <ContactBadge
                                   status={contact.status as any}
-                                  variant={contact.status === 'active' ? 'default' : 'outline'}
                                   size="sm"
                                 />
                             </td>

@@ -1,9 +1,10 @@
 'use client';
 
 import React from 'react';
-import { Button } from '@/components/ui/button';
+import { Home } from 'lucide-react';
+import { PageHeader } from '@/core/headers';
 import { CommonBadge } from '@/core/badges';
-import { LayoutGrid, List, BarChart3, Eye, EyeOff, Plus, Home } from 'lucide-react';
+import type { ViewMode } from '@/core/headers';
 
 interface PropertyPageHeaderProps {
   showDashboard: boolean;
@@ -19,55 +20,31 @@ export function PropertyPageHeader({
   setViewMode
 }: PropertyPageHeaderProps) {
   return (
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2">
-          <Home className="w-6 h-6 text-primary" />
-          <h1 className="text-xl font-semibold">Διαχείριση Ακινήτων</h1>
-        </div>
-        <CommonBadge
-          status="property"
-          customLabel="Διαχείριση και παρακολούθηση ακινήτων έργων"
-          variant="secondary"
-          className="text-xs"
-        />
-      </div>
-
-      <div className="flex items-center gap-2">
-        <Button
-          variant={showDashboard ? "default" : "outline"}
-          size="sm"
-          onClick={() => setShowDashboard(!showDashboard)}
-          className="h-8"
-        >
-          {showDashboard ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
-          {showDashboard ? 'Απόκρυψη' : 'Εμφάνιση'} Dashboard
-        </Button>
-
-        <div className="flex border rounded-md bg-background">
-          <Button
-            variant={viewMode === 'list' ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setViewMode('list')}
-            className="h-8 rounded-r-none border-0"
-          >
-            <List className="w-4 h-4" />
-          </Button>
-          <Button
-            variant={viewMode === 'grid' ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setViewMode('grid')}
-            className="h-8 rounded-l-none border-0"
-          >
-            <LayoutGrid className="w-4 h-4" />
-          </Button>
-        </div>
-
-        <Button size="sm" className="h-8">
-          <Plus className="w-4 h-4 mr-2" />
-          Νέο Ακίνητο
-        </Button>
-      </div>
-    </div>
+    <PageHeader
+      variant="static"
+      layout="single-row"
+      title={{
+        icon: Home,
+        title: "Διαχείριση Ακινήτων",
+        badge: (
+          <CommonBadge
+            status="property"
+            customLabel="Διαχείριση και παρακολούθηση ακινήτων έργων"
+            variant="secondary"
+            className="text-xs"
+          />
+        )
+      }}
+      actions={{
+        showDashboard,
+        onDashboardToggle: () => setShowDashboard(!showDashboard),
+        viewMode: viewMode as ViewMode,
+        onViewModeChange: (mode) => setViewMode(mode as 'list' | 'grid'),
+        addButton: {
+          label: 'Νέο Ακίνητο',
+          onClick: () => console.log('Add property')
+        }
+      }}
+    />
   );
 }

@@ -4,6 +4,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { UnitBadge } from '@/core/badges';
 import { Home, Eye } from 'lucide-react';
+import { EntityDetailsHeader } from '@/core/entity-headers';
 import { cn } from '@/lib/utils';
 import type { Property } from '@/types/property-viewer';
 
@@ -30,44 +31,40 @@ function getStatusLabel(status: string) {
 }
 
 export function UnitDetailsHeader({ unit }: { unit: Property | null }) {
+  // Empty State - No unit selected
   if (!unit) {
     return (
-      <div className="p-4 border-b bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 rounded-t-lg h-[81px] flex items-center">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 shadow-sm">
-            <Home className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-foreground line-clamp-1">Επιλέξτε μια μονάδα</h3>
-            <p className="text-sm text-muted-foreground">Δεν έχει επιλεγεί μονάδα</p>
-          </div>
-        </div>
-      </div>
+      <EntityDetailsHeader
+        icon={Home}
+        title="Επιλέξτε μια μονάδα"
+        subtitle="Δεν έχει επιλεγεί μονάδα"
+        variant="detailed"
+        className="h-[81px] flex items-center"
+      />
     );
   }
+
+  // Selected State - Unit is selected
   return (
-    <div className="p-4 border-b bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 rounded-t-lg">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 shadow-sm">
-            <Home className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-foreground line-clamp-1">{unit.name}</h3>
-            <div className="flex items-center gap-2 mt-1">
-              <UnitBadge
-                status={unit.status as any}
-                size="sm"
-                className="text-xs text-white"
-              />
-            </div>
-          </div>
-        </div>
-        <Button className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700">
-          <Eye className="w-4 h-4 mr-2" />
-          Επίδειξη Μονάδας
-        </Button>
-      </div>
-    </div>
+    <EntityDetailsHeader
+      icon={Home}
+      title={unit.name}
+      badges={[
+        {
+          type: 'status',
+          value: getStatusLabel(unit.status),
+          size: 'sm'
+        }
+      ]}
+      actions={[
+        {
+          label: 'Επίδειξη Μονάδας',
+          onClick: () => console.log('Show unit details'),
+          icon: Eye,
+          className: 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700'
+        }
+      ]}
+      variant="detailed"
+    />
   );
 }
