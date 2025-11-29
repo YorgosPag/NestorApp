@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Badge } from "@/components/ui/badge";
+import { UnitBadge, CommonBadge } from '@/core/badges';
 import { MapPin } from "lucide-react";
 import { cn } from '@/lib/utils';
 import type { Property } from '@/types/property-viewer';
@@ -37,15 +37,18 @@ export function UnitListItemHeader({
       </div>
       
       <div className="flex items-center gap-2 mb-2 flex-wrap">
-        <Badge 
-          variant="secondary" 
-          className={cn("text-xs text-white border-0", getStatusColor(unit.status))}
-        >
-          {getStatusLabel(unit.status)}
-        </Badge>
-        <Badge variant="outline" className="text-xs">
-          {getCategoryLabel(unit.type)}
-        </Badge>
+        <UnitBadge
+          status={unit.status as any}
+          size="sm"
+          className="text-xs text-white border-0"
+        />
+        <CommonBadge
+          status="company"
+          customLabel={getCategoryLabel(unit.type)}
+          variant="outline"
+          size="sm"
+          className="text-xs"
+        />
       </div>
 
       {unit.building && (

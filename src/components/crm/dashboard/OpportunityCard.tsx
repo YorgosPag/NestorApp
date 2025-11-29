@@ -3,7 +3,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Users, Mail, Phone, Calendar, FileText, Edit, Trash2 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { CommonBadge } from '@/core/badges';
 import type { Opportunity, FirestoreishTimestamp } from '@/types/crm';
 import { format } from 'date-fns';
 import { el } from 'date-fns/locale';
@@ -80,9 +80,12 @@ export function OpportunityCard({ opportunity, onEdit, onDelete }: { opportunity
                     <Users className="w-4 h-4" />
                     {opportunity.fullName || opportunity.title}
                 </h4>
-                <Badge className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(opportunity.stage)}`}>
-                    {opportunity.stage}
-                </Badge>
+                <CommonBadge
+                  status="company"
+                  customLabel={opportunity.stage || ''}
+                  size="sm"
+                  className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(opportunity.stage)}`}
+                />
             </div>
             
             <div className="space-y-1.5 text-xs text-muted-foreground">

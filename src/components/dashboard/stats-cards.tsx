@@ -7,14 +7,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { CommonBadge } from "@/core/badges";
 import { Progress } from "@/components/ui/progress";
 import {
   Users,
   TrendingUp,
   Plus,
   Star,
-  Sparkles,
   Activity,
   Clock,
 } from "lucide-react";
@@ -69,10 +68,12 @@ export function StatsCards({ stats }: StatsCardsProps) {
         <CardContent>
           <div className="text-2xl font-bold">{stats.favorites}</div>
           <div className="flex items-center text-xs text-muted-foreground mt-2">
-            <Badge variant="secondary" className="text-xs">
-              <Sparkles className="mr-1 h-3 w-3" />
-              {t('stats.quickAccess')}
-            </Badge>
+            <CommonBadge
+              status="company"
+              customLabel={t('stats.quickAccess')}
+              variant="secondary"
+              className="text-xs"
+            />
           </div>
         </CardContent>
       </Card>

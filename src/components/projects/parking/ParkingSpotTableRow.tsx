@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { UnitBadge } from '@/core/badges';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   DropdownMenu,
@@ -68,9 +68,12 @@ export function ParkingSpotTableRow({
       <div style={{ flex: `0 0 ${columnWidths[7]}px` }} className="px-2 truncate">{formatNumber(spot.value)}</div>
       <div style={{ flex: `0 0 ${columnWidths[8]}px` }} className="px-2 truncate">{formatNumber(spot.valueWithSyndicate)}</div>
       <div style={{ flex: `0 0 ${columnWidths[9]}px` }} className="px-2 truncate">
-        <Badge variant="outline" className={cn('text-xs', getParkingStatusColor(spot.status))}>
-            {getParkingStatusLabel(spot.status)}
-        </Badge>
+        <UnitBadge
+          status={spot.status as any}
+          variant="outline"
+          size="sm"
+          className="text-xs"
+        />
       </div>
       <div style={{ flex: `0 0 ${columnWidths[10]}px` }} className="px-2 truncate">{spot.owner}</div>
       <div style={{ flex: `0 0 ${columnWidths[11]}px` }} className="px-2 truncate">{spot.floorPlan}</div>

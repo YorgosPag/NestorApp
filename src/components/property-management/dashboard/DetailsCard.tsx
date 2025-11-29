@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { CommonBadge } from '@/core/badges';
 
 interface DetailsCardProps {
     title: string;
@@ -48,12 +48,22 @@ export function DetailsCard({ title, icon: Icon, data, labelFormatter, isFloorDa
                         isFloorData ? (
                              <div key={key} className="flex items-center justify-between">
                                 <span className="text-xs truncate flex-1">{key}</span>
-                                <Badge variant="outline" className="ml-2">{count}</Badge>
+                                <CommonBadge
+                                  status="company"
+                                  customLabel={count.toString()}
+                                  variant="outline"
+                                  size="sm"
+                                  className="ml-2"
+                                />
                             </div>
                         ) : (
-                            <Badge key={key} variant="secondary" className="flex items-center gap-1">
-                                {labelFormatter ? labelFormatter(key) : key} ({count})
-                            </Badge>
+                            <CommonBadge
+                              status="company"
+                              customLabel={`${labelFormatter ? labelFormatter(key) : key} (${count})`}
+                              variant="secondary"
+                              size="sm"
+                              className="flex items-center gap-1"
+                            />
                         )
                     ))}
                 </div>

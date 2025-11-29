@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { CommonBadge } from '@/core/badges';
 import { Textarea } from '@/components/ui/textarea';
 import { GripVertical, Edit3, Save, X, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -47,7 +47,13 @@ export function ParagraphItem({
       )}
     >
       {!readOnly && <GripVertical className="h-4 w-4 text-gray-400 cursor-move opacity-0 group-hover:opacity-100 mt-1" />}
-      <Badge variant="outline" className="text-xs mt-1 min-w-6">{paragraph.number}</Badge>
+      <CommonBadge
+        status="company"
+        customLabel={paragraph.number}
+        variant="outline"
+        size="sm"
+        className="text-xs mt-1 min-w-6"
+      />
       <div className="flex-1 space-y-2">
         {isEditing ? (
           <div className="space-y-3">

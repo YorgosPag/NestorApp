@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Badge } from '@/components/ui/badge';
+import { BuildingBadge, CommonBadge } from '@/core/badges';
 import { cn } from '@/lib/utils';
 
 interface BuildingHeaderBadgesProps {
@@ -21,12 +21,18 @@ export function BuildingHeaderBadges({
 }: BuildingHeaderBadgesProps) {
   return (
     <div className="flex items-center gap-2">
-      <Badge className={cn("text-xs shadow-sm", getStatusColor(status).replace('bg-', 'bg-') + ' text-white')}>
-        {getStatusLabel(status)}
-      </Badge>
-      <Badge variant="secondary" className="text-xs bg-white/90 text-gray-700 shadow-sm">
-        {getCategoryLabel(category)}
-      </Badge>
+      <BuildingBadge
+        status={status as any}
+        size="sm"
+        className="text-xs shadow-sm"
+      />
+      <CommonBadge
+        status="company"
+        customLabel={getCategoryLabel(category)}
+        variant="secondary"
+        size="sm"
+        className="text-xs bg-white/90 text-gray-700 shadow-sm"
+      />
     </div>
   );
 }

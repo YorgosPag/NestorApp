@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Badge } from "@/components/ui/badge"
+import { CommonBadge } from "@/core/badges"
 import { cn } from "@/lib/utils"
 import { getBadgeVariant } from "@/lib/sidebar-utils"
 
@@ -11,14 +11,14 @@ interface SidebarBadgeProps {
 
 export function SidebarBadge({ badge }: SidebarBadgeProps) {
   return (
-    <Badge
+    <CommonBadge
+      status="company"
+      customLabel={badge}
       variant="secondary"
       className={cn(
         "ml-auto transition-all duration-200",
         getBadgeVariant(badge)
       )}
-    >
-      {badge}
-    </Badge>
+    />
   )
 }

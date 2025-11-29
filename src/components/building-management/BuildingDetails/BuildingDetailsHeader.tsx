@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { BuildingBadge } from '@/core/badges';
 import { Building2, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Building } from '../BuildingsPageContent';
@@ -26,9 +26,11 @@ export function BuildingDetailsHeader({ building }: BuildingDetailsHeaderProps) 
                     {building.name}
                 </h3>
                 <div className="flex items-center gap-2 mt-1">
-                    <Badge className={cn("text-xs", getStatusColor(building.status).replace('bg-', 'bg-') + ' text-white')}>
-                    {getStatusLabel(building.status)}
-                    </Badge>
+                    <BuildingBadge
+                      status={building.status as any}
+                      size="sm"
+                      className="text-xs text-white"
+                    />
                     <span className="text-sm text-muted-foreground">
                     {building.progress}% ολοκληρωμένο
                     </span>

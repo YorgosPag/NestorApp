@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { getUnitsByOwner } from '@/services/units.service';
 import type { Property } from '@/types/property-viewer';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
+import { CommonBadge } from '@/core/badges';
 import { Button } from '@/components/ui/button';
 import { Home, Eye, Plus } from 'lucide-react';
 
@@ -83,7 +83,12 @@ export function CustomerPropertiesTable({ contactId, onAddUnit }: CustomerProper
                                     <TableCell>{prop.type}</TableCell>
                                     <TableCell>{prop.area ? `${prop.area} τ.μ.` : '-'}</TableCell>
                                     <TableCell>
-                                        <Badge variant="outline">{prop.building}</Badge>
+                                        <CommonBadge
+                                          status="company"
+                                          customLabel={prop.building}
+                                          variant="outline"
+                                          size="sm"
+                                        />
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <Button variant="ghost" size="sm" onClick={() => handleViewUnit(prop.id)}>

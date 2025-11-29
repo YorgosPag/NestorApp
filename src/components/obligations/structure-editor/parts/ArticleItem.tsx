@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { CommonBadge } from '@/core/badges';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { GripVertical, ChevronRight, ChevronDown, Hash, Plus, Edit3, Save, X, Trash2 } from 'lucide-react';
@@ -60,7 +60,13 @@ export function ArticleItem({
           </Button>
         )}
         <Hash className="h-4 w-4 text-green-600" />
-        <Badge variant="secondary" className="text-xs">{article.number}</Badge>
+        <CommonBadge
+          status="company"
+          customLabel={article.number}
+          variant="secondary"
+          size="sm"
+          className="text-xs"
+        />
         <div className="flex-1">
           {isEditing ? (
             <div className="space-y-2">

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Badge } from '@/components/ui/badge';
+import { ProjectBadge, CommonBadge } from '@/core/badges';
 import { cn } from '@/lib/utils';
 import type { ProjectStatus } from '@/types/project';
 
@@ -20,12 +20,18 @@ export function ProjectHeaderBadges({
 }: ProjectHeaderBadgesProps) {
   return (
     <div className="flex items-center gap-2">
-      <Badge className={cn("text-xs shadow-sm", getStatusColor(status), 'text-white')}>
-        {getStatusLabel(status)}
-      </Badge>
-      <Badge variant="secondary" className="text-xs bg-white/90 text-gray-700 shadow-sm">
-        {company}
-      </Badge>
+      <ProjectBadge
+        status={status}
+        size="sm"
+        className="text-xs shadow-sm text-white"
+      />
+      <CommonBadge
+        status="company"
+        customLabel={company}
+        variant="secondary"
+        size="sm"
+        className="text-xs bg-white/90 text-gray-700 shadow-sm"
+      />
     </div>
   );
 }

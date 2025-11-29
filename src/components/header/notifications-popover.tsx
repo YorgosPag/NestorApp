@@ -7,7 +7,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import { CommonBadge } from "@/core/badges"
 import { Bell } from "lucide-react"
 import { defaultNotifications } from "@/constants/header"
 import { NotificationItem } from "@/components/header/notification-item"
@@ -21,12 +21,12 @@ export function NotificationsPopover() {
         <Button variant="outline" size="icon" className="relative">
           <Bell className="h-4 w-4" />
           {notifications.length > 0 && (
-            <Badge
+            <CommonBadge
+              status="company"
+              customLabel={notifications.length.toString()}
               variant="destructive"
               className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs"
-            >
-              {notifications.length}
-            </Badge>
+            />
           )}
         </Button>
       </PopoverTrigger>

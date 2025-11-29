@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Badge } from '@/components/ui/badge';
+import { CommonBadge } from '@/core/badges';
 import { Button } from '@/components/ui/button';
 import { Edit, Save, X, CheckCircle } from 'lucide-react';
 
@@ -22,12 +22,19 @@ export function GeneralProjectHeader({ isEditing, autoSaving, lastSaved, setIsEd
     return (
         <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-                <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
-                    ID: 3
-                </Badge>
-                <Badge variant="outline">
-                    Οικιστικό
-                </Badge>
+                <CommonBadge
+                  status="company"
+                  customLabel="ID: 3"
+                  variant="secondary"
+                  size="sm"
+                  className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+                />
+                <CommonBadge
+                  status="company"
+                  customLabel="Οικιστικό"
+                  variant="outline"
+                  size="sm"
+                />
                 
                 {isEditing && (
                 <div className="flex items-center gap-2 text-xs">

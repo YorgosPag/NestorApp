@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { UnitBadge } from '@/core/badges';
 import { Home, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Property } from '@/types/property-viewer';
@@ -55,9 +55,11 @@ export function UnitDetailsHeader({ unit }: { unit: Property | null }) {
           <div>
             <h3 className="text-lg font-semibold text-foreground line-clamp-1">{unit.name}</h3>
             <div className="flex items-center gap-2 mt-1">
-              <Badge className={cn("text-xs", getStatusColor(unit.status) + ' text-white')}>
-                {getStatusLabel(unit.status)}
-              </Badge>
+              <UnitBadge
+                status={unit.status as any}
+                size="sm"
+                className="text-xs text-white"
+              />
             </div>
           </div>
         </div>

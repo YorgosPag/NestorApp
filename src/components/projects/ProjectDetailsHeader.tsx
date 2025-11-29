@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { ProjectBadge } from '@/core/badges';
 import { Briefcase, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Project, ProjectStatus } from '@/types/project';
@@ -37,9 +37,11 @@ export function ProjectDetailsHeader({ project }: ProjectDetailsHeaderProps) {
                     {project.name}
                 </h3>
                 <div className="flex items-center gap-2 mt-1">
-                    <Badge className={cn("text-xs", getStatusColor(project.status), 'text-white')}>
-                        {PROJECT_STATUS_LABELS[project.status]}
-                    </Badge>
+                    <ProjectBadge
+                      status={project.status}
+                      size="sm"
+                      className="text-xs text-white"
+                    />
                     <span className="text-sm text-muted-foreground">
                         {project.progress}% ολοκληρωμένο
                     </span>

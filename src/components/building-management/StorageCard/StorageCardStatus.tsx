@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Badge } from '@/components/ui/badge';
+import { UnitBadge, CommonBadge } from '@/core/badges';
 import { Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getTypeColor } from './StorageCardUtils';
@@ -19,17 +19,18 @@ export function StorageCardStatus({ unit, isFavorite, getStatusColor, getStatusL
   return (
     <div className="absolute bottom-3 left-3 right-3 z-10 flex justify-between items-end">
       <div className='flex items-center gap-2'>
-        <Badge
-          className={cn(
-            "text-xs text-white shadow-sm pointer-events-none",
-            getStatusColor(unit.status)
-          )}
-        >
-          {getStatusLabel(unit.status)}
-        </Badge>
-        <Badge variant="outline" className={cn("text-xs pointer-events-none", getTypeColor(unit.type))}>
-          {getTypeLabel(unit.type)}
-        </Badge>
+        <UnitBadge
+          status={unit.status as any}
+          size="sm"
+          className="text-xs text-white shadow-sm pointer-events-none"
+        />
+        <CommonBadge
+          status="company"
+          customLabel={getTypeLabel(unit.type)}
+          variant="outline"
+          size="sm"
+          className="text-xs pointer-events-none"
+        />
       </div>
       {isFavorite && (
         <Star className="w-5 h-5 text-yellow-400 fill-yellow-400 filter drop-shadow-sm" />

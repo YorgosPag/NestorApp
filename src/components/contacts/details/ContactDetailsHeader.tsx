@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { EditButton, DeleteButton } from '@/components/ui/form/ActionButtons';
-import { Badge } from '@/components/ui/badge';
+import { ContactBadge, CommonBadge } from '@/core/badges';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Dialog,
@@ -66,10 +66,16 @@ export function ContactDetailsHeader({ contact, onEditContact, onDeleteContact }
               {displayName}
             </h3>
             <div className="flex items-center gap-2 mt-1">
-              <Badge className="text-xs bg-white/90 text-gray-700">{typeName}</Badge>
-              <Badge variant={status === 'active' ? 'default' : 'outline'}>
-                {status === 'active' ? 'Ενεργή' : 'Ανενεργή'}
-              </Badge>
+              <CommonBadge
+                status="company"
+                customLabel={typeName}
+                size="sm"
+                className="text-xs bg-white/90 text-gray-700"
+              />
+              <ContactBadge
+                status={status}
+                size="sm"
+              />
             </div>
           </div>
         </div>

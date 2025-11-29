@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { CommonBadge } from '@/core/badges';
 import { ChevronRight, ChevronDown } from 'lucide-react';
 import type { TocItemProps } from '../types';
 import { getItemIcon } from '../utils/icons';
@@ -58,12 +58,13 @@ export function TocItem({
           </div>
         )}
 
-        <Badge
+        <CommonBadge
+          status="company"
+          customLabel={item.number}
           variant="outline"
+          size="sm"
           className={cn("text-xs font-mono min-w-8 justify-center", getItemBadgeColor(item.type))}
-        >
-          {item.number}
-        </Badge>
+        />
 
         <div className="flex-1 min-w-0">
           <span className={cn(
@@ -77,9 +78,13 @@ export function TocItem({
         </div>
 
         {showPageNumbers && item.page && (
-          <Badge variant="outline" className="text-xs">
-            σελ. {item.page}
-          </Badge>
+          <CommonBadge
+            status="company"
+            customLabel={`σελ. ${item.page}`}
+            variant="outline"
+            size="sm"
+            className="text-xs"
+          />
         )}
 
         {compact && (

@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/tooltip"
 import { Button } from "@/components/ui/button"
 import { Plus, Sparkles, Upload, Mic } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
+import { CommonBadge } from "@/core/badges"
 import { quickActions } from "@/constants/header"
 
 export function QuickAddMenu() {
@@ -59,9 +59,12 @@ export function QuickAddMenu() {
           <DropdownMenuItem className="cursor-pointer">
             <Mic className="mr-2 h-4 w-4" />
             <span>Φωνητική εισαγωγή</span>
-            <Badge variant="secondary" className="ml-auto text-xs">
-              AI
-            </Badge>
+            <CommonBadge
+              status="company"
+              customLabel="AI"
+              variant="secondary"
+              className="ml-auto text-xs"
+            />
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

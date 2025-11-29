@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Badge } from '@/components/ui/badge';
+import { ContactBadge } from '@/core/badges';
 import { Button } from '@/components/ui/button';
 
 export function ContactsList() {
@@ -28,9 +28,11 @@ export function ContactsList() {
                             <td className="p-3 font-medium">{contact.name}</td>
                             <td className="p-3 text-gray-600 dark:text-gray-400">{contact.company}</td>
                             <td className="p-3">
-                                <Badge variant={contact.status === 'active' ? 'default' : 'outline'}>
-                                    {contact.status === 'active' ? 'Ενεργός' : 'Ανενεργός'}
-                                </Badge>
+                                <ContactBadge
+                                  status={contact.status as any}
+                                  variant={contact.status === 'active' ? 'default' : 'outline'}
+                                  size="sm"
+                                />
                             </td>
                             <td className="p-3">
                                 <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">Προβολή</Button>

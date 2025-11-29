@@ -4,7 +4,7 @@ import React from 'react';
 import type { Project } from '@/types/project';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Building } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { BuildingBadge } from '@/core/badges';
 import { Progress } from '@/components/ui/progress';
 import { getStatusColor, getStatusLabel } from '@/lib/project-utils';
 
@@ -38,9 +38,12 @@ export function ProjectTimelineTab({ project }: { project: Project }) {
                             <Building className="w-4 h-4 text-muted-foreground" />
                             <span className="font-medium">{building.name}</span>
                         </div>
-                        <Badge variant="secondary" className={getStatusColor(building.status)}>
-                            {getStatusLabel(building.status)}
-                        </Badge>
+                        <BuildingBadge
+                          status={building.status as any}
+                          variant="secondary"
+                          size="sm"
+                          className="text-xs"
+                        />
                     </div>
                     <div className="flex items-center gap-4">
                         <span className="text-sm font-semibold text-primary">{building.progress}%</span>

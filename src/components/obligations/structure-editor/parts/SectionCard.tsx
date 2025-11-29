@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
+import { CommonBadge } from '@/core/badges';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { GripVertical, ChevronRight, ChevronDown, FileText, Plus, Edit3, Save, X, Copy, Trash2 } from 'lucide-react';
 import { RichTextEditor } from '@/components/obligations/rich-text-editor';
@@ -63,7 +63,12 @@ export function SectionCard({
             </Button>
           )}
           <FileText className="h-4 w-4 text-blue-600" />
-          <Badge variant="outline">{section.number}</Badge>
+          <CommonBadge
+            status="company"
+            customLabel={section.number}
+            variant="outline"
+            size="sm"
+          />
           <div className="flex-1">
             {isEditing ? (
               <div className="space-y-3">
@@ -93,8 +98,22 @@ export function SectionCard({
               <div className="cursor-pointer" onClick={() => handlers.startEditing('section', section.id)}>
                 <CardTitle className="text-base">{section.title || <span className="text-gray-400 italic">Χωρίς τίτλο</span>}</CardTitle>
                 <div className="flex items-center gap-2 mt-1">
-                  <Badge variant="secondary" className="text-xs">{categoryLabels[section.category]}</Badge>
-                  {section.isRequired && <Badge variant="destructive" className="text-xs">Απαραίτητο</Badge>}
+                  <CommonBadge
+                    status="company"
+                    customLabel={categoryLabels[section.category]}
+                    variant="secondary"
+                    size="sm"
+                    className="text-xs"
+                  />
+                  {section.isRequired && (
+                    <CommonBadge
+                      status="company"
+                      customLabel="Απαραίτητο"
+                      variant="destructive"
+                      size="sm"
+                      className="text-xs"
+                    />
+                  )}
                 </div>
               </div>
             )}

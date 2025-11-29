@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { notFound } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { UnitBadge } from '@/core/badges';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { getStorageUnitById } from '@/services/storage.service';
@@ -100,7 +100,11 @@ export default function StorageUnitPage({ params }: { params: { id: string } }) 
                     <CardDescription>{getParkingTypeLabel(unit.type)}</CardDescription>
                 </div>
             </div>
-             <Badge className={cn("text-base", statusColor)}>{statusLabel}</Badge>
+             <UnitBadge
+               status={unit.status as any}
+               size="sm"
+               className={cn("text-base", statusColor)}
+             />
           </div>
         </CardHeader>
         <CardContent className="space-y-6">

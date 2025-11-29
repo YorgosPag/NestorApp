@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Badge } from "@/components/ui/badge";
+import { ContactBadge } from '@/core/badges';
 import {
   Users,
   Building2,
@@ -164,10 +164,11 @@ export function ContactListItem({
                     )}
                     {isArchived && (
                         <div className="flex items-center gap-2 mt-1">
-                            <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-700 border-orange-200">
-                                <Archive className="w-3 h-3 mr-1" />
-                                Αρχειοθετημένο
-                            </Badge>
+                            <ContactBadge
+                                status="archived"
+                                size="sm"
+                                className="text-xs bg-orange-100 text-orange-700 border-orange-200"
+                            />
                         </div>
                     )}
                 </div>

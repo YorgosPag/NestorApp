@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { CommonBadge } from "@/core/badges";
 import { Users, Eye } from "lucide-react";
 // import { getProjectCustomers } from "@/services/projects.service"; // Server action - can't use from client
 import type { ProjectCustomersTableProps } from "../types";
@@ -75,7 +75,11 @@ export function ProjectCustomersTable({ projectId }: ProjectCustomersTableProps)
                 <TableCell className="font-medium">{c.name}</TableCell>
                 <TableCell>{c.phone || "Δεν έχει καταχωρηθεί"}</TableCell>
                 <TableCell>
-                  <Badge variant="secondary">{c.unitsCount} μονάδα/ες</Badge>
+                  <CommonBadge
+                    status="units"
+                    customLabel={`${c.unitsCount} μονάδα/ες`}
+                    variant="secondary"
+                  />
                 </TableCell>
                 <TableCell className="text-right">
                   <Button variant="ghost" size="sm">

@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { PropertyBadge } from '@/core/badges';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -31,12 +32,12 @@ export function PropertyMeta({ property, onUpdateProperty }: PropertyMetaProps) 
       <div className="space-y-2">
         <div className="flex items-start justify-between gap-2">
           <h3 className="font-semibold text-sm leading-tight">{property.name}</h3>
-          <Badge 
-            variant="outline" 
-            className={cn("text-xs flex-shrink-0", statusInfo.color)}
-          >
-            {statusInfo.label}
-          </Badge>
+          <PropertyBadge
+            status={property.status as any}
+            variant="outline"
+            size="sm"
+            className="text-xs flex-shrink-0"
+          />
         </div>
         <p className="text-xs text-muted-foreground">{property.type}</p>
       </div>

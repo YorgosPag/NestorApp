@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { CommonBadge } from '@/core/badges';
 import { Loader2, Save, X, Trash2, Plus, Edit, Archive, RotateCcw, Phone, Mail, MessageSquare, Download, Upload, HelpCircle, Star, RefreshCw, ArrowUpAZ, ArrowDownZA } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -332,9 +332,12 @@ export function ToolbarDeleteButton({
       <Trash2 className="w-4 h-4" />
       <span className="hidden md:inline">{children}</span>
       {badge && (
-        <Badge variant="secondary" className="ml-auto">
-          {badge}
-        </Badge>
+        <CommonBadge
+          status="company"
+          customLabel={badge.toString()}
+          variant="secondary"
+          className="ml-auto"
+        />
       )}
     </Button>
   );
@@ -359,9 +362,12 @@ export function ToolbarArchiveButton({
       <Archive className="w-4 h-4" />
       <span className="hidden md:inline">{children}</span>
       {badge && (
-        <Badge variant="secondary" className="ml-auto">
-          {badge}
-        </Badge>
+        <CommonBadge
+          status="company"
+          customLabel={badge.toString()}
+          variant="secondary"
+          className="ml-auto"
+        />
       )}
     </Button>
   );

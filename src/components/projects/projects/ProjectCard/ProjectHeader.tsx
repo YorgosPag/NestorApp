@@ -5,7 +5,7 @@ import type { Project } from '@/types/project';
 import { ProjectHeaderBackground } from './ProjectHeader/ProjectHeaderBackground';
 import { ProjectHeaderLogo } from './ProjectHeader/ProjectHeaderLogo';
 import { ProjectHeaderActions } from './ProjectHeader/ProjectHeaderActions';
-import { ProjectHeaderBadges } from './ProjectHeader/ProjectHeaderBadges';
+import { ProjectHeaderBadges } from './ProjectHeader/ProjectHeaderBadges.v2';
 import { ProjectHeaderProgress } from './ProjectHeader/ProjectHeaderProgress';
 import { getStatusColor, getStatusLabel } from '@/lib/project-utils';
 
@@ -38,8 +38,6 @@ export function ProjectCardHeader({
         <ProjectHeaderBadges
           status={project.status}
           company={project.company}
-          getStatusColor={getStatusColor}
-          getStatusLabel={getStatusLabel}
         />
         <ProjectHeaderProgress
           isFavorite={isFavorite}

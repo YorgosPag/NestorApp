@@ -1,4 +1,4 @@
-import { Badge } from '@/components/ui/badge';
+import { CommonBadge } from '@/core/badges';
 import { cn } from '@/lib/utils';
 import { getTypeStyles, getTypeLabel } from './notification-utils';
 
@@ -16,9 +16,13 @@ export const NotificationCard = ({ notification }: { notification: any }) => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h4 className="font-semibold">{notification.title}</h4>
-            <Badge variant="outline" className={cn("text-xs", getTypeStyles(notification.type))}>
-              {getTypeLabel(notification.type)}
-            </Badge>
+            <CommonBadge
+              status="company"
+              customLabel={getTypeLabel(notification.type)}
+              variant="outline"
+              size="sm"
+              className={cn("text-xs", getTypeStyles(notification.type))}
+            />
           </div>
           <span className="text-xs text-muted-foreground">{notification.time}</span>
         </div>

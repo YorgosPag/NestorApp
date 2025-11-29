@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Badge } from "@/components/ui/badge";
-import { Home, TrendingUp, DollarSign } from 'lucide-react';
+import { CommonBadge } from "@/core/badges";
+import { Home } from 'lucide-react';
 import { formatCurrency } from '@/lib/project-utils';
 
 interface UnitsListHeaderProps {
@@ -31,16 +31,16 @@ export function UnitsListHeader({
             </div>
 
             <div className="flex items-center justify-between text-xs mb-3">
-                 <Badge variant="secondary" className="flex items-center gap-1.5">
-                    <TrendingUp className="w-3 h-3 text-green-600" />
-                    <span className="font-medium">{availableCount}</span>
-                    <span className="text-muted-foreground">Διαθέσιμες</span>
-                 </Badge>
-                 <Badge variant="secondary" className="flex items-center gap-1.5">
-                    <DollarSign className="w-3 h-3 text-blue-600" />
-                    <span className="font-medium">{formatCurrency(totalValue)}</span>
-                    <span className="text-muted-foreground">Συνολική Αξία</span>
-                 </Badge>
+                 <CommonBadge
+                    status="units"
+                    customLabel={`${availableCount} Διαθέσιμες`}
+                    variant="secondary"
+                 />
+                 <CommonBadge
+                    status="company"
+                    customLabel={`${formatCurrency(totalValue)} Συνολική Αξία`}
+                    variant="secondary"
+                 />
             </div>
 
         </div>

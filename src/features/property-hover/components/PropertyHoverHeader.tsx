@@ -1,5 +1,5 @@
 'use client';
-import { Badge } from '@/components/ui/badge';
+import { PropertyBadge } from '@/core/badges';
 import { cn } from '@/lib/utils';
 
 export function PropertyHoverHeader({ name, type, building, statusLabel, statusColor }:{
@@ -12,9 +12,12 @@ export function PropertyHoverHeader({ name, type, building, statusLabel, statusC
           <h4 className="font-semibold text-sm leading-tight">{name}</h4>
           <span className="text-xs font-normal text-muted-foreground">{type} • {building}</span>
         </div>
-        <Badge variant="outline" className={cn("text-xs flex-shrink-0", statusColor)}>
-          {statusLabel}
-        </Badge>
+        <PropertyBadge
+          status={'for-sale' as any}
+          variant="outline"
+          size="sm"
+          className={cn("text-xs flex-shrink-0", statusColor)}
+        />
       </div>
     </div>
   );

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
+import { ProjectBadge } from '@/core/badges';
 import { Progress } from '@/components/ui/progress';
 import { Briefcase } from 'lucide-react';
 import type { Project } from '@/types/project';
@@ -63,9 +63,12 @@ function CompanyProjectsTable({ companyId }: { companyId: string }) {
                             <TableRow key={project.id}>
                                 <TableCell className="font-medium">{project.name}</TableCell>
                                 <TableCell>
-                                    <Badge variant="outline" className={cn("text-xs")}>
-                                        {getProjectLabel(project.status)}
-                                    </Badge>
+                                    <ProjectBadge
+                                      status={project.status}
+                                      variant="outline"
+                                      size="sm"
+                                      className="text-xs"
+                                    />
                                 </TableCell>
                                 <TableCell className="text-right">
                                     <div className="flex items-center justify-end gap-2">

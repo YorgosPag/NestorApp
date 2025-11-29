@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Badge } from '@/components/ui/badge';
+import { CommonBadge } from '@/core/badges';
 import { Progress } from '@/components/ui/progress';
 import { CheckCircle, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -30,17 +30,18 @@ export function MilestoneItem({ milestone, getStatusColor, getStatusText, getTyp
                         {milestone.title}
                     </h4>
                     <div className="flex items-center gap-2">
-                        <Badge
-                            variant="outline"
-                            className={cn(
-                                "text-xs",
-                                milestone.status === 'completed' ? 'bg-green-50 text-green-700 border-green-300' :
-                                milestone.status === 'in-progress' ? 'bg-blue-50 text-blue-700 border-blue-300' :
-                                'bg-gray-50 text-gray-700 border-gray-300'
-                            )}
-                        >
-                            {getStatusText(milestone.status)}
-                        </Badge>
+                        <CommonBadge
+                          status="company"
+                          customLabel={getStatusText(milestone.status)}
+                          variant="outline"
+                          size="sm"
+                          className={cn(
+                            "text-xs",
+                            milestone.status === 'completed' ? 'bg-green-50 text-green-700 border-green-300' :
+                            milestone.status === 'in-progress' ? 'bg-blue-50 text-blue-700 border-blue-300' :
+                            'bg-gray-50 text-gray-700 border-gray-300'
+                          )}
+                        />
                         <span className="text-sm text-muted-foreground">
                             {new Date(milestone.date).toLocaleDateString('el-GR')}
                         </span>

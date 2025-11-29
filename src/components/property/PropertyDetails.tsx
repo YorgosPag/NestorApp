@@ -4,6 +4,7 @@ import React from 'react';
 import { toast } from 'react-hot-toast';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { PropertyBadge } from '@/core/badges';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -69,7 +70,11 @@ export function PropertyDetails({ property }: PropertyDetailsProps) {
               <Share2 className="w-4 h-4" />
               Κοινοποίηση
             </Button>
-            <Badge className={cn("text-xs", statusInfo.color)}>{statusInfo.label}</Badge>
+            <PropertyBadge
+              status={property.status as any}
+              size="sm"
+              className="text-xs"
+            />
           </div>
         </div>
       </CardHeader>

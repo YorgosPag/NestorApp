@@ -13,6 +13,7 @@ import { AddNewContactDialog } from './dialogs/AddNewContactDialog';
 import { EditContactDialog } from './dialogs/EditContactDialog';
 import { DeleteContactDialog } from './dialogs/DeleteContactDialog';
 import { ArchiveContactDialog } from './dialogs/ArchiveContactDialog';
+import { AdvancedFiltersPanel, contactFiltersConfig, type ContactFilterState } from '@/components/core/AdvancedFilters';
 
 // Initial seed data for database (μόνο για πρώτη φόρτωση)
 const SEED_CONTACTS = [
@@ -87,6 +88,18 @@ export function ContactsPageContent() {
   const [showArchivedContacts, setShowArchivedContacts] = useState(false);
   const [unitsCountFilter, setUnitsCountFilter] = useState<'all' | '1-2' | '3-5' | '6+'>('all');
   const [areaFilter, setAreaFilter] = useState<'all' | '0-100' | '101-300' | '301+'>('all');
+
+  // Advanced Filters state
+  const [filters, setFilters] = useState<ContactFilterState>({
+    searchTerm: '',
+    company: [],
+    status: [],
+    tags: [],
+    dateRange: {
+      from: undefined,
+      to: undefined
+    }
+  });
 
   // Database operations
   const loadContacts = async () => {
@@ -288,6 +301,13 @@ export function ContactsPageContent() {
         />
 
         {showDashboard && <ContactsDashboard stats={stats} />}
+
+        {/* Advanced Filters Panel */}
+        <AdvancedFiltersPanel
+          config={contactFiltersConfig}
+          filters={filters}
+          onFiltersChange={setFilters}
+        />
 
         <div className="flex-1 flex overflow-hidden p-4 gap-4">
           {error ? (

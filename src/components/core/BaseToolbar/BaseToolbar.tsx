@@ -4,7 +4,7 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+import { CommonBadge } from '@/core/badges';
 import { Search, X } from 'lucide-react';
 import {
   DropdownMenu,
@@ -306,12 +306,12 @@ function ToolbarFiltersComponent({
                 {filter.icon && <filter.icon className="h-4 w-4 mr-1" />}
                 {filter.label}
                 {filter.count !== undefined && filter.count > 0 && (
-                  <Badge 
-                    variant="secondary" 
+                  <CommonBadge
+                    status="company"
+                    customLabel={filter.count.toString()}
+                    variant="secondary"
                     className="ml-1 h-5 w-5 p-0 text-xs flex items-center justify-center"
-                  >
-                    {filter.count}
-                  </Badge>
+                  />
                 )}
               </Button>
             </DropdownMenuTrigger>
@@ -329,12 +329,12 @@ function ToolbarFiltersComponent({
             {filter.icon && <filter.icon className="h-4 w-4 mr-1" />}
             {filter.label}
             {filter.count !== undefined && filter.count > 0 && (
-              <Badge 
-                variant="secondary" 
+              <CommonBadge
+                status="company"
+                customLabel={filter.count.toString()}
+                variant="secondary"
                 className="ml-1 h-5 w-5 p-0 text-xs flex items-center justify-center"
-              >
-                {filter.count}
-              </Badge>
+              />
             )}
           </Button>
         )
@@ -373,12 +373,12 @@ function ToolbarActionsComponent({ actions }: { actions: ToolbarAction[] }) {
           {action.icon && <action.icon className="h-4 w-4 mr-1" />}
           {action.label}
           {action.badge && (
-            <Badge 
-              variant="secondary" 
+            <CommonBadge
+              status="company"
+              customLabel={action.badge.toString()}
+              variant="secondary"
               className="ml-1 h-5 w-5 p-0 text-xs flex items-center justify-center"
-            >
-              {action.badge}
-            </Badge>
+            />
           )}
           {action.shortcut && (
             <span className="ml-2 text-xs text-muted-foreground">

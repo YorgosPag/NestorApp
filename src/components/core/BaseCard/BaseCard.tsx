@@ -4,7 +4,7 @@ import React, { forwardRef } from 'react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { CommonBadge } from '@/core/badges';
 import { Heart, MoreVertical } from 'lucide-react';
 import {
   DropdownMenu,
@@ -194,22 +194,22 @@ const BaseCard = forwardRef<HTMLDivElement, BaseCardProps>(({
             {/* Status and Badges */}
             <div className="flex items-center gap-2 flex-wrap">
               {status && (
-                <Badge 
+                <CommonBadge
+                  status="company"
+                  customLabel={status.label}
                   variant={status.variant || 'default'}
                   className={status.color ? `bg-${status.color}` : ''}
-                >
-                  {status.label}
-                </Badge>
+                />
               )}
               
               {badges.map((badge, index) => (
-                <Badge 
+                <CommonBadge
                   key={index}
+                  status="company"
+                  customLabel={badge.label}
                   variant={badge.variant || 'secondary'}
                   className={badge.color ? `bg-${badge.color}` : ''}
-                >
-                  {badge.label}
-                </Badge>
+                />
               ))}
             </div>
           </div>

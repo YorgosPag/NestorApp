@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { CommonBadge } from '@/core/badges';
 import { Separator } from '@/components/ui/separator';
 import { 
   Home, 
@@ -223,12 +223,18 @@ export function PropertyViewerWithLayers({
 
               {/* Right side - Status info */}
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Badge variant="outline" className="text-xs">
-                  {properties.length} Ακίνητα
-                </Badge>
-                <Badge variant="outline" className="text-xs">
-                  Προβολή μόνο
-                </Badge>
+                <CommonBadge
+                  status="units"
+                  customLabel={`${properties.length} Ακίνητα`}
+                  variant="outline"
+                  className="text-xs"
+                />
+                <CommonBadge
+                  status="company"
+                  customLabel="Προβολή μόνο"
+                  variant="outline"
+                  className="text-xs"
+                />
               </div>
             </CardContent>
           </Card>

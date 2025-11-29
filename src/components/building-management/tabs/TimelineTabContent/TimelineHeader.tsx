@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Badge } from '@/components/ui/badge';
+import { CommonBadge } from '@/core/badges';
 
 interface TimelineHeaderProps {
     milestones: any[];
@@ -17,9 +17,13 @@ export function TimelineHeader({ milestones }: TimelineHeaderProps) {
                 </p>
             </div>
             <div className="flex items-center gap-2">
-                <Badge variant="outline" className="bg-green-50 text-green-700">
-                    {milestones.filter(m => m.status === 'completed').length} / {milestones.length} ολοκληρώθηκαν
-                </Badge>
+                <CommonBadge
+                  status="company"
+                  customLabel={`${milestones.filter(m => m.status === 'completed').length} / ${milestones.length} ολοκληρώθηκαν`}
+                  variant="outline"
+                  size="sm"
+                  className="bg-green-50 text-green-700"
+                />
             </div>
         </div>
     );

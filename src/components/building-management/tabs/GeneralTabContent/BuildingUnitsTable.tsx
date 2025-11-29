@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
+import { UnitBadge } from '@/core/badges';
 import { Button } from '@/components/ui/button';
 import { Package, Eye } from 'lucide-react';
 import { getUnitsByBuilding } from '@/services/units.service';
@@ -79,7 +79,11 @@ function BuildingUnitsTable({ buildingId }: { buildingId: number }) {
                 <TableCell>{unit.type}</TableCell>
                 <TableCell>{unit.area || 0} m²</TableCell>
                 <TableCell>
-                  <Badge className={getStatusColor(unit.status as any)}>{getStatusLabel(unit.status as any)}</Badge>
+                  <UnitBadge
+                    status={unit.status as any}
+                    size="sm"
+                    className="text-xs"
+                  />
                 </TableCell>
                 <TableCell className="text-right">
                   <Button variant="ghost" size="sm" onClick={() => handleViewUnit(unit.id)}>

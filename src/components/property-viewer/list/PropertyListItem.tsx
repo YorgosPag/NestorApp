@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { PropertyBadge } from '@/core/badges';
 import { Home, Building, MapPin, Euro, Ruler } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatFloorLabel } from "@/components/building-management/BuildingCard/BuildingCardUtils";
@@ -39,14 +39,11 @@ const PropertyListItemComponent = ({
             <IconComponent className="h-4 w-4 text-muted-foreground flex-shrink-0" />
             <h4 className="font-medium text-sm truncate">{property.name}</h4>
           </div>
-          {statusInfo && (
-            <Badge 
-              variant="outline" 
-              className={cn("text-xs flex-shrink-0", statusInfo.color)}
-            >
-              {statusInfo.label}
-            </Badge>
-          )}
+          <PropertyBadge
+            status={property.status as any}
+            size="sm"
+            className="text-xs flex-shrink-0"
+          />
         </div>
         <p className="text-xs text-muted-foreground">{property.type}</p>
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
