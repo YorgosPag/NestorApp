@@ -7,7 +7,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type { Building } from './BuildingsPageContent';
 
-import { BuildingCardHeader } from './BuildingCard/BuildingCardHeader';
+import { EntityDetailsHeader } from '@/core/entity-headers';
 import { BuildingCardContent } from './BuildingCard/BuildingCardContent';
 import { BuildingCardTimeline } from './BuildingCard/BuildingCardTimeline';
 import { getStatusColor, getStatusLabel, getCategoryLabel, getCategoryIcon } from './BuildingCard/BuildingCardUtils';
@@ -19,20 +19,21 @@ interface BuildingCardProps {
   onClick: () => void;
 }
 
-export function BuildingCard({ 
-  building, 
-  isSelected, 
+export function BuildingCard({
+  building,
+  isSelected,
   onClick,
 }: BuildingCardProps) {
   const [isFavorite, setIsFavorite] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const CategoryIcon = getCategoryIcon(building.category || 'mixed');
 
   return (
-    <Card 
+    <Card
       className={cn(
         "relative overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl group border-2",
-        isSelected 
-          ? "border-blue-500 shadow-lg ring-2 ring-blue-200 dark:ring-blue-800" 
+        isSelected
+          ? "border-blue-500 shadow-lg ring-2 ring-blue-200 dark:ring-blue-800"
           : "border-border hover:border-blue-300 hover:shadow-lg",
         "transform hover:scale-[1.02]"
       )}
@@ -40,15 +41,35 @@ export function BuildingCard({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <BuildingCardHeader
-        building={building}
-        isFavorite={isFavorite}
-        setIsFavorite={setIsFavorite}
-        isHovered={isHovered}
-        getStatusColor={getStatusColor}
-        getStatusLabel={getStatusLabel}
-        getCategoryLabel={getCategoryLabel}
-        getCategoryIcon={getCategoryIcon}
+      {/* EntityDetailsHeader instead of complex visual header */}
+      <EntityDetailsHeader
+        icon={CategoryIcon}
+        title={building.name}
+        badges={[
+          {
+            type: 'status',
+            value: getStatusLabel(building.status),
+            size: 'sm'
+          },
+          {
+            type: 'progress',
+            value: `${building.progress}% ολοκληρωμένο`,
+            variant: 'secondary',
+            size: 'sm'
+          }
+        ]}
+        actions={[
+          {
+            label: isFavorite ? '★' : '☆',
+            onClick: () => {
+              setIsFavorite(!isFavorite);
+            },
+            variant: 'ghost',
+            className: 'w-8 h-8 p-0'
+          }
+        ]}
+        variant="compact"
+        className="border-b"
       />
       
       <BuildingCardContent

@@ -1,1 +1,0 @@
-export { BuildingCard } from './BuildingCard';

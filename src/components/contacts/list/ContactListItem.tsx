@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { ContactBadge } from '@/core/badges';
+import { EntityDetailsHeader } from '@/core/entity-headers';
 import {
   Users,
   Building2,
@@ -115,62 +116,63 @@ export function ContactListItem({
                     </TooltipContent>
                 </Tooltip>
 
-                <div className="flex items-center gap-3">
-                    <Avatar
-                        className={cn(
-                            "h-10 w-10 text-sm",
-                            (contact as any).photoURL && "cursor-pointer hover:opacity-80 transition-opacity"
-                        )}
-                        onClick={(e) => {
-                            if ((contact as any).photoURL) {
-                                e.stopPropagation();
-                                setIsPhotoModalOpen(true);
-                            }
-                        }}
-                    >
-                        {(contact as any).photoURL ? (
-                            <AvatarImage
-                                src={(contact as any).photoURL}
-                                alt={`${displayName} φωτογραφία`}
-                                className="object-cover"
-                                onError={(e) => {
-                                    console.log('Photo load error for contact:', contact.id, (contact as any).photoURL);
-                                }}
-                                onLoad={() => {
-                                    console.log('Photo loaded successfully for contact:', contact.id);
-                                }}
-                            />
-                        ) : null}
-                        <AvatarFallback className={color}>{initials}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                         <h4 className={cn(getTypography('titleMedium'), "truncate")}>{displayName}</h4>
-                         <p className={cn(getTypography('bodySmall'), "truncate")}>{contact.type === 'individual' ? (contact as any).profession : (contact as any).vatNumber || ''}</p>
+                {/* Contact Header - EntityDetailsHeader */}
+                <EntityDetailsHeader
+                    icon={Icon}
+                    title={displayName}
+                    subtitle={contact.type === 'individual' ? (contact as any).profession : (contact as any).vatNumber || ''}
+                    badges={[
+                        ...(isArchived ? [{ type: 'status' as const, value: 'Αρχειοθετημένο', size: 'sm' as const }] : [])
+                    ]}
+                    variant="compact"
+                    className="mb-2"
+                >
+                    {/* Contact Avatar */}
+                    <div className="flex items-center gap-3 mt-2">
+                        <Avatar
+                            className={cn(
+                                "h-8 w-8 text-sm",
+                                (contact as any).photoURL && "cursor-pointer hover:opacity-80 transition-opacity"
+                            )}
+                            onClick={(e) => {
+                                if ((contact as any).photoURL) {
+                                    e.stopPropagation();
+                                    setIsPhotoModalOpen(true);
+                                }
+                            }}
+                        >
+                            {(contact as any).photoURL ? (
+                                <AvatarImage
+                                    src={(contact as any).photoURL}
+                                    alt={`${displayName} φωτογραφία`}
+                                    className="object-cover"
+                                    onError={(e) => {
+                                        console.log('Photo load error for contact:', contact.id, (contact as any).photoURL);
+                                    }}
+                                    onLoad={() => {
+                                        console.log('Photo loaded successfully for contact:', contact.id);
+                                    }}
+                                />
+                            ) : null}
+                            <AvatarFallback className={color}>{initials}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0 space-y-1">
+                            {email && (
+                                <div className={cn("flex items-center gap-2", getTypography('labelSmall'))}>
+                                    <Mail className="w-3 h-3" />
+                                    <span className="truncate">{email}</span>
+                                </div>
+                            )}
+                            {phone && (
+                                <div className={cn("flex items-center gap-2", getTypography('labelSmall'))}>
+                                    <Phone className="w-3 h-3" />
+                                    <span className="truncate">{phone}</span>
+                                </div>
+                            )}
+                        </div>
                     </div>
-                </div>
+                </EntityDetailsHeader>
 
-                <div className="mt-2 pt-2 border-t space-y-1">
-                    {email && (
-                        <div className={cn("flex items-center gap-2", getTypography('labelMedium'))}>
-                            <Mail className="w-3 h-3" />
-                            <span className="truncate">{email}</span>
-                        </div>
-                    )}
-                    {phone && (
-                        <div className={cn("flex items-center gap-2", getTypography('labelMedium'))}>
-                            <Phone className="w-3 h-3" />
-                            <span className="truncate">{phone}</span>
-                        </div>
-                    )}
-                    {isArchived && (
-                        <div className="flex items-center gap-2 mt-1">
-                            <ContactBadge
-                                status="archived"
-                                size="sm"
-                            />
-                        </div>
-                    )}
-                </div>
 
                 {isSelected && (
                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 rounded-r-full" />

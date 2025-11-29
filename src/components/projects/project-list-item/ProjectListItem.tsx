@@ -6,9 +6,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
 import type { ProjectListItemProps } from './types';
+import { EntityDetailsHeader } from '@/core/entity-headers';
+import { Briefcase } from 'lucide-react';
+import { PROJECT_STATUS_LABELS } from '@/types/project';
 
-import { Header } from './parts/Header';
-import { MetaBadges } from './parts/MetaBadges';
+// Removed duplicate imports - now using EntityDetailsHeader
 import { LocationRow } from './parts/LocationRow';
 import { ProgressBlock } from './parts/ProgressBlock';
 import { StatsGrid } from './parts/StatsGrid';
@@ -40,11 +42,29 @@ export function ProjectListItem({
             >
                 <FavoriteButton isFavorite={isFavorite} onToggleFavorite={onToggleFavorite} />
 
-                <div className="mb-3">
-                    <Header project={project} />
-                    <MetaBadges status={project.status} companyName={companyName} />
+                {/* EntityDetailsHeader instead of Header + MetaBadges */}
+                <EntityDetailsHeader
+                    icon={Briefcase}
+                    title={project.name}
+                    subtitle={companyName}
+                    badges={[
+                        {
+                            type: 'status',
+                            value: PROJECT_STATUS_LABELS[project.status] || project.status,
+                            size: 'sm'
+                        },
+                        {
+                            type: 'progress',
+                            value: `${project.progress}% ολοκληρωμένο`,
+                            variant: 'secondary',
+                            size: 'sm'
+                        }
+                    ]}
+                    variant="compact"
+                    className="mb-3"
+                >
                     <LocationRow address={project.address} city={project.city} />
-                </div>
+                </EntityDetailsHeader>
                 
                 <ProgressBlock progress={project.progress} />
                 <StatsGrid project={project} />
