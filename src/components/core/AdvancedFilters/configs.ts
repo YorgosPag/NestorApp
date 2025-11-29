@@ -138,12 +138,17 @@ export const contactFiltersConfig: FilterPanelConfig = {
           ariaLabel: 'Αναζήτηση επαφών'
         },
         {
-          id: 'company',
-          type: 'multiselect',
-          label: 'Εταιρεία',
-          placeholder: 'Επιλογή εταιρείας...',
+          id: 'contactType',
+          type: 'select',
+          label: 'Τύπος Επαφής',
+          placeholder: 'Όλοι οι τύποι',
           width: 1,
-          options: []
+          options: [
+            { value: 'all', label: 'Όλοι οι τύποι' },
+            { value: 'individual', label: 'Φυσικά Πρόσωπα' },
+            { value: 'company', label: 'Νομικά Πρόσωπα' },
+            { value: 'service', label: 'Υπηρεσίες' }
+          ]
         },
         {
           id: 'status',
@@ -157,6 +162,55 @@ export const contactFiltersConfig: FilterPanelConfig = {
             { value: 'inactive', label: 'Ανενεργή' },
             { value: 'lead', label: 'Προοπτική' }
           ]
+        }
+      ]
+    },
+    {
+      id: 'contact-properties',
+      fields: [
+        {
+          id: 'unitsCount',
+          type: 'select',
+          label: 'Πλήθος Μονάδων',
+          placeholder: 'Όλες οι μονάδες',
+          width: 1,
+          options: [
+            { value: 'all', label: 'Όλες οι μονάδες' },
+            { value: '1-2', label: '1-2 μονάδες' },
+            { value: '3-5', label: '3-5 μονάδες' },
+            { value: '6+', label: '6+ μονάδες' }
+          ]
+        },
+        {
+          id: 'totalArea',
+          type: 'select',
+          label: 'Συνολικό Εμβαδόν',
+          placeholder: 'Όλα τα εμβαδά',
+          width: 1,
+          options: [
+            { value: 'all', label: 'Όλα τα εμβαδά' },
+            { value: '0-100', label: 'Έως 100 τ.μ.' },
+            { value: '101-300', label: '101 - 300 τ.μ.' },
+            { value: '301+', label: '301+ τ.μ.' }
+          ]
+        },
+        {
+          id: 'hasProperties',
+          type: 'checkbox',
+          label: 'Μόνο με ιδιοκτησίες',
+          width: 1
+        },
+        {
+          id: 'isFavorite',
+          type: 'checkbox',
+          label: 'Αγαπημένα',
+          width: 1
+        },
+        {
+          id: 'showArchived',
+          type: 'checkbox',
+          label: 'Αρχειοθετημένα',
+          width: 1
         }
       ]
     }
@@ -692,6 +746,12 @@ export const defaultContactFilters: ContactFilterState = {
   searchTerm: '',
   company: [],
   status: [],
+  contactType: 'all',
+  unitsCount: 'all',
+  totalArea: 'all',
+  hasProperties: false,
+  isFavorite: false,
+  showArchived: false,
   tags: [],
   dateRange: { from: undefined, to: undefined }
 };

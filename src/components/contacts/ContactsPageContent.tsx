@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { Contact } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts';
@@ -87,20 +87,20 @@ export function ContactsPageContent() {
   const [showArchiveContactDialog, setShowArchiveContactDialog] = useState(false);
   const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
 
-  // Add missing search/filter state
+  // Search state (simplified - only for header search)
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<'all' | 'individual' | 'company' | 'service'>('all');
-  const [showOnlyOwners, setShowOnlyOwners] = useState(false);
-  const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
-  const [showArchivedContacts, setShowArchivedContacts] = useState(false);
-  const [unitsCountFilter, setUnitsCountFilter] = useState<'all' | '1-2' | '3-5' | '6+'>('all');
-  const [areaFilter, setAreaFilter] = useState<'all' | '0-100' | '101-300' | '301+'>('all');
 
-  // Advanced Filters state
+  // Advanced Filters state (unified - contains all filters)
   const [filters, setFilters] = useState<ContactFilterState>({
     searchTerm: '',
     company: [],
     status: [],
+    contactType: 'all',
+    unitsCount: 'all',
+    totalArea: 'all',
+    hasProperties: false,
+    isFavorite: false,
+    showArchived: false,
     tags: [],
     dateRange: {
       from: undefined,
@@ -109,7 +109,7 @@ export function ContactsPageContent() {
   });
 
   // Database operations
-  const loadContacts = async () => {
+  const loadContacts = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -119,7 +119,7 @@ export function ContactsPageContent() {
         limitCount: 50,
         orderByField: 'updatedAt',
         orderDirection: 'desc',
-        includeArchived: showArchivedContacts
+        includeArchived: filters.showArchived
       });
 
       console.log('📋 Contacts loaded:', contactsResult);
@@ -137,7 +137,7 @@ export function ContactsPageContent() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [filters.showArchived]);
 
   const seedDatabase = async () => {
     try {
@@ -161,7 +161,7 @@ export function ContactsPageContent() {
   // Load contacts on component mount and when archived filter changes
   useEffect(() => {
     loadContacts();
-  }, [showArchivedContacts]);
+  }, [loadContacts]);
 
   // Update selected contact when contacts list changes
   useEffect(() => {
@@ -237,17 +237,10 @@ export function ContactsPageContent() {
     await refreshContacts();
   };
 
-  const handleToggleFavoritesFilter = () => {
-    setShowOnlyFavorites(prev => !prev);
-  };
 
-  const handleToggleArchivedFilter = () => {
-    setShowArchivedContacts(prev => !prev);
-  };
-
-  // Filter contacts based on current filters
+  // Filter contacts based on unified filters
   const filteredContacts = contacts.filter(contact => {
-    // Search filter
+    // Header search filter (separate from advanced filters search)
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
       const displayName = getContactDisplayName(contact).toLowerCase();
@@ -256,15 +249,33 @@ export function ContactsPageContent() {
       }
     }
 
-    // Type filter
-    if (filterType !== 'all' && contact.type !== filterType) {
+    // Advanced filters search (from filters.searchTerm)
+    if (filters.searchTerm) {
+      const searchLower = filters.searchTerm.toLowerCase();
+      const displayName = getContactDisplayName(contact).toLowerCase();
+      if (!displayName.includes(searchLower)) {
+        return false;
+      }
+    }
+
+    // Contact type filter
+    if (filters.contactType !== 'all' && contact.type !== filters.contactType) {
       return false;
     }
 
     // Favorites filter
-    if (showOnlyFavorites && !contact.isFavorite) {
+    if (filters.isFavorite && !contact.isFavorite) {
       return false;
     }
+
+    // Property ownership filter
+    if (filters.hasProperties) {
+      // TODO: Implement property ownership check when contact-property relationship is available
+      // For now, skip this filter
+    }
+
+    // Units count and area filters would require contact-property relationship data
+    // TODO: Implement when contact property data is available
 
     return true;
   });
@@ -323,18 +334,6 @@ export function ContactsPageContent() {
           setShowDashboard={setShowDashboard}
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
-          filterType={filterType}
-          setFilterType={setFilterType}
-          showOnlyOwners={showOnlyOwners}
-          onShowOnlyOwnersChange={setShowOnlyOwners}
-          showOnlyFavorites={showOnlyFavorites}
-          onShowOnlyFavoritesChange={setShowOnlyFavorites}
-          showArchivedContacts={showArchivedContacts}
-          onShowArchivedContactsChange={setShowArchivedContacts}
-          unitsCountFilter={unitsCountFilter}
-          setUnitsCountFilter={setUnitsCountFilter}
-          areaFilter={areaFilter}
-          setAreaFilter={setAreaFilter}
           onNewContact={handleNewContact}
         />
 
@@ -370,10 +369,6 @@ export function ContactsPageContent() {
                 onDeleteContact={handleDeleteContacts}
                 onArchiveContact={handleArchiveContacts}
                 onContactUpdated={refreshContacts}
-                showOnlyFavorites={showOnlyFavorites}
-                onToggleFavoritesFilter={handleToggleFavoritesFilter}
-                showArchivedContacts={showArchivedContacts}
-                onToggleArchivedFilter={handleToggleArchivedFilter}
               />
               <ContactDetails contact={selectedContact} onEditContact={handleEditContact} onDeleteContact={() => handleDeleteContacts()} />
             </>

@@ -72,6 +72,12 @@ export interface ContactFilterState extends GenericFilterState {
   searchTerm: string;
   company: string[];
   status: string[];
+  contactType: string; // 'all' | 'individual' | 'company' | 'service'
+  unitsCount: string; // 'all' | '1-2' | '3-5' | '6+'
+  totalArea: string; // 'all' | '0-100' | '101-300' | '301+'
+  hasProperties: boolean; // Μόνο με ιδιοκτησίες
+  isFavorite: boolean; // Αγαπημένα
+  showArchived: boolean; // Αρχειοθετημένα
   tags: string[];
   dateRange: {
     from?: Date;

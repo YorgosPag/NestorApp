@@ -22,10 +22,6 @@ interface ContactsListProps {
   onDeleteContact?: (ids?: string[]) => void;
   onArchiveContact?: (ids?: string[]) => void;
   onContactUpdated?: () => void;
-  showOnlyFavorites?: boolean;
-  onToggleFavoritesFilter?: () => void;
-  showArchivedContacts?: boolean;
-  onToggleArchivedFilter?: () => void;
 }
 
 export function ContactsList({
@@ -37,11 +33,7 @@ export function ContactsList({
   onEditContact,
   onDeleteContact,
   onArchiveContact,
-  onContactUpdated,
-  showOnlyFavorites = false,
-  onToggleFavoritesFilter,
-  showArchivedContacts = false,
-  onToggleArchivedFilter
+  onContactUpdated
 }: ContactsListProps) {
   const [sortBy, setSortBy] = useState<string>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -134,7 +126,7 @@ export function ContactsList({
         onDeleteItems={(ids) => selectedContact && onDeleteContact?.([selectedContact.id!])}
         onExport={() => console.log('Export contacts')}
         onRefresh={() => console.log('Refresh contacts')}
-        onFavoritesManagement={onToggleFavoritesFilter}
+        onFavoritesManagement={() => console.log('Favorites management')}
         onShare={() => console.log('Share contacts')}
         onSettings={() => console.log('Contact settings')}
       />

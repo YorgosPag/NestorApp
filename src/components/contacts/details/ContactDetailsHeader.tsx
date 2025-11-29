@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { EditButton, DeleteButton } from '@/components/ui/form/ActionButtons';
 import { ContactBadge, CommonBadge } from '@/core/badges';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { EntityDetailsHeader } from '@/core/entity-headers';
@@ -10,7 +9,7 @@ import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
-import { Users, Building2, Landmark, Edit, Trash2, X } from 'lucide-react';
+import { Users, Building2, Landmark, Edit, Trash2, X, Eye } from 'lucide-react';
 import type { Contact, ContactType, ContactStatus } from '@/types/contacts';
 import { getContactDisplayName, getContactInitials } from '@/types/contacts';
 import { cn } from '@/lib/utils';
@@ -55,21 +54,22 @@ export function ContactDetailsHeader({ contact, onEditContact, onDeleteContact }
             size: 'sm'
           }
         ]}
-        actions={[
-          {
-            label: 'Επεξεργασία',
-            onClick: () => onEditContact?.(),
-            variant: 'outline'
-          },
-          {
-            label: 'Διαγραφή',
-            onClick: () => onDeleteContact?.(),
-            variant: 'outline',
-            className: 'text-destructive hover:text-destructive'
-          }
-        ]}
         avatarImageUrl={(contact as any).photoURL}
         onAvatarClick={(contact as any).photoURL ? () => setIsPhotoModalOpen(true) : undefined}
+        actions={[
+          {
+            label: 'Επεξεργασία Επαφής',
+            onClick: () => onEditContact?.(),
+            icon: Edit,
+            className: 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700'
+          },
+          {
+            label: 'Διαγραφή Επαφής',
+            onClick: () => onDeleteContact?.(),
+            icon: Trash2,
+            className: 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700'
+          }
+        ]}
         variant="detailed"
       />
 
