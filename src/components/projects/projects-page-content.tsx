@@ -9,7 +9,14 @@ import { AdvancedFiltersPanel, projectFiltersConfig } from '@/components/core/Ad
 import { useProjectsStats } from '@/hooks/useProjectsStats';
 
 import { ProjectsHeader } from './ProjectsHeader';
-import { ProjectsDashboard } from './ProjectsDashboard';
+import { UnifiedDashboard, type DashboardStat } from '@/core/dashboards/UnifiedDashboard';
+import {
+  Briefcase,
+  TrendingUp,
+  BarChart3,
+  Ruler,
+  Calendar,
+} from 'lucide-react';
 import { ProjectViewSwitch } from './ProjectViewSwitch';
 
 export function ProjectsPageContent() {
@@ -28,7 +35,41 @@ export function ProjectsPageContent() {
     setFilters,
   } = useProjectsPageState(firestoreProjects || []);
 
-  const stats = useProjectsStats(filteredProjects || []);
+  const projectsStats = useProjectsStats(filteredProjects || []);
+
+  // Transform stats to UnifiedDashboard format
+  const dashboardStats: DashboardStat[] = [
+    {
+      title: "Σύνολο Έργων",
+      value: projectsStats.totalProjects,
+      icon: Briefcase,
+      color: "blue"
+    },
+    {
+      title: "Ενεργά Έργα",
+      value: projectsStats.activeProjects,
+      icon: TrendingUp,
+      color: "green"
+    },
+    {
+      title: "Συνολική Αξία",
+      value: `€${(projectsStats.totalValue / 1000000).toFixed(1)}M`,
+      icon: BarChart3,
+      color: "purple"
+    },
+    {
+      title: "Συνολική Επιφάνεια",
+      value: `${(projectsStats.totalArea / 1000).toFixed(1)}K m²`,
+      icon: Ruler,
+      color: "orange"
+    },
+    {
+      title: "Μέση Πρόοδος",
+      value: `${projectsStats.averageProgress}%`,
+      icon: Calendar,
+      color: "cyan"
+    }
+  ];
 
   // Debug logging για να δούμε τη ροή των δεδομένων
   console.log('🔍 ProjectsPageContent Debug - UPDATED:');
@@ -78,7 +119,7 @@ export function ProjectsPageContent() {
             setShowDashboard={setShowDashboard}
         />
         
-        {showDashboard && <ProjectsDashboard stats={stats} />}
+        {showDashboard && <UnifiedDashboard stats={dashboardStats} columns={5} />}
 
         {/* Advanced Filters Panel */}
         <AdvancedFiltersPanel
@@ -89,7 +130,6 @@ export function ProjectsPageContent() {
 
         <main className="flex-1 flex overflow-x-auto overflow-y-hidden p-4 gap-4">
           <ProjectViewSwitch
-            viewMode={viewMode}
             projects={filteredProjects}
             selectedProject={selectedProject}
             onSelectProject={setSelectedProject}

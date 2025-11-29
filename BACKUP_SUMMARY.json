@@ -40,9 +40,12 @@
   ],
   "commits": [
     {
-      "hash": "57ec49f",
-      "message": "🎯 FEATURE: Complete EntityDetailsHeader Centralization + Code Cleanup",
-      "description": "Full centralization of all entity headers + massive duplicate code cleanup"
+      "hash": "0fbb54f",
+      "message": "🎯 REFACTOR: Complete EntityDetailsHeader Centralization + Projects Grid Removal",
+      "description": "Single Source of Truth for all entity headers + simplified Projects to List-only",
+      "files": 8,
+      "insertions": 58,
+      "deletions": 132
     }
   ],
   "nextSteps": [

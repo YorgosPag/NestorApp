@@ -6,7 +6,15 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { BuildingsList } from './BuildingsList';
 import { BuildingDetails } from './BuildingDetails';
 import { BuildingsHeader } from './BuildingsPage/BuildingsHeader';
-import { BuildingsDashboard } from './BuildingsPage/BuildingsDashboard';
+import { UnifiedDashboard, type DashboardStat } from '@/core/dashboards/UnifiedDashboard';
+import {
+  Building,
+  TrendingUp,
+  BarChart3,
+  MapPin,
+  Calendar,
+  Home
+} from 'lucide-react';
 import { BuildingsGroupedView } from './BuildingsPage/BuildingsGroupedView';
 import { useBuildingsPageState } from '@/hooks/useBuildingsPageState';
 import { useBuildingStats } from '@/hooks/useBuildingStats';
@@ -33,7 +41,47 @@ export function BuildingsPageContent() {
     setFilters,
   } = useBuildingsPageState(buildingsData);
 
-  const stats = useBuildingStats(buildingsData);
+  const buildingsStats = useBuildingStats(buildingsData);
+
+  // Transform stats to UnifiedDashboard format
+  const dashboardStats: DashboardStat[] = [
+    {
+      title: "Σύνολο Κτιρίων",
+      value: buildingsStats.totalBuildings,
+      icon: Building,
+      color: "blue"
+    },
+    {
+      title: "Ενεργά Έργα",
+      value: buildingsStats.activeProjects,
+      icon: TrendingUp,
+      color: "green"
+    },
+    {
+      title: "Συνολική Αξία",
+      value: `€${(buildingsStats.totalValue / 1000000).toFixed(1)}M`,
+      icon: BarChart3,
+      color: "purple"
+    },
+    {
+      title: "Συνολική Επιφάνεια",
+      value: `${(buildingsStats.totalArea / 1000).toFixed(1)}K m²`,
+      icon: MapPin,
+      color: "orange"
+    },
+    {
+      title: "Μέση Πρόοδος",
+      value: `${buildingsStats.averageProgress}%`,
+      icon: Calendar,
+      color: "cyan"
+    },
+    {
+      title: "Σύνολο Μονάδων",
+      value: buildingsStats.totalUnits,
+      icon: Home,
+      color: "pink"
+    }
+  ];
 
   // Debug logging
   console.log('🏗️ BuildingsPageContent Debug:', {
@@ -85,7 +133,7 @@ export function BuildingsPageContent() {
           setShowDashboard={setShowDashboard}
         />
 
-        {showDashboard && <BuildingsDashboard stats={stats} />}
+        {showDashboard && <UnifiedDashboard stats={dashboardStats} columns={6} />}
 
         {/* Advanced Filters Panel */}
         <AdvancedFiltersPanel

@@ -124,38 +124,13 @@ export function ContactListItem({
                     badges={[
                         ...(isArchived ? [{ type: 'status' as const, value: 'Αρχειοθετημένο', size: 'sm' as const }] : [])
                     ]}
+                    avatarImageUrl={(contact as any).photoURL}
+                    onAvatarClick={(contact as any).photoURL ? () => setIsPhotoModalOpen(true) : undefined}
                     variant="compact"
                     className="mb-2"
                 >
-                    {/* Contact Avatar */}
+                    {/* Contact Info */}
                     <div className="flex items-center gap-3 mt-2">
-                        <Avatar
-                            className={cn(
-                                "h-8 w-8 text-sm",
-                                (contact as any).photoURL && "cursor-pointer hover:opacity-80 transition-opacity"
-                            )}
-                            onClick={(e) => {
-                                if ((contact as any).photoURL) {
-                                    e.stopPropagation();
-                                    setIsPhotoModalOpen(true);
-                                }
-                            }}
-                        >
-                            {(contact as any).photoURL ? (
-                                <AvatarImage
-                                    src={(contact as any).photoURL}
-                                    alt={`${displayName} φωτογραφία`}
-                                    className="object-cover"
-                                    onError={(e) => {
-                                        console.log('Photo load error for contact:', contact.id, (contact as any).photoURL);
-                                    }}
-                                    onLoad={() => {
-                                        console.log('Photo loaded successfully for contact:', contact.id);
-                                    }}
-                                />
-                            ) : null}
-                            <AvatarFallback className={color}>{initials}</AvatarFallback>
-                        </Avatar>
                         <div className="flex-1 min-w-0 space-y-1">
                             {email && (
                                 <div className={cn("flex items-center gap-2", getTypography('labelSmall'))}>

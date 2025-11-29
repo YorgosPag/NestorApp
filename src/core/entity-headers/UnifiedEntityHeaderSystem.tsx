@@ -39,6 +39,8 @@ export interface EntityHeaderProps {
   subtitle?: string;
   badges?: EntityHeaderBadge[];
   actions?: EntityHeaderAction[];
+  avatarImageUrl?: string; // Optional avatar/photo URL to display instead of icon
+  onAvatarClick?: () => void; // Optional click handler for avatar image
 
   // Layout & Styling
   variant?: 'default' | 'compact' | 'detailed';
@@ -56,6 +58,8 @@ export const EntityDetailsHeader: React.FC<EntityHeaderProps> = ({
   subtitle,
   badges = [],
   actions = [],
+  avatarImageUrl,
+  onAvatarClick,
   variant = 'default',
   className,
   children
@@ -87,15 +91,43 @@ export const EntityDetailsHeader: React.FC<EntityHeaderProps> = ({
       <div className="flex items-center justify-between">
         {/* Left side: Icon + Content */}
         <div className="flex items-center gap-3 flex-1 min-w-0">
-          {/* Icon */}
-          <div className={cn(
-            "flex items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 shadow-sm flex-shrink-0",
-            iconSizes[variant]
-          )}>
-            <Icon className="text-white" style={{
-              width: variant === 'detailed' ? '24px' : variant === 'compact' ? '16px' : '20px',
-              height: variant === 'detailed' ? '24px' : variant === 'compact' ? '16px' : '20px'
-            }} />
+          {/* Icon or Avatar */}
+          <div
+            className={cn(
+              "flex items-center justify-center rounded-lg shadow-sm flex-shrink-0 overflow-hidden",
+              avatarImageUrl
+                ? "bg-gray-200"
+                : "bg-gradient-to-br from-blue-500 to-purple-600",
+              avatarImageUrl && onAvatarClick && "cursor-pointer hover:opacity-80 transition-opacity",
+              iconSizes[variant]
+            )}
+            onClick={avatarImageUrl && onAvatarClick ? onAvatarClick : undefined}
+          >
+            {avatarImageUrl ? (
+              <img
+                src={avatarImageUrl}
+                alt={`${title} φωτογραφία`}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  // Fallback to icon if image fails to load
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                  const parent = target.parentElement;
+                  if (parent) {
+                    parent.className = parent.className.replace('bg-gray-200', 'bg-gradient-to-br from-blue-500 to-purple-600');
+                    const icon = document.createElement('div');
+                    icon.className = 'text-white';
+                    icon.innerHTML = `<svg style="width: ${variant === 'detailed' ? '24px' : variant === 'compact' ? '16px' : '20px'}; height: ${variant === 'detailed' ? '24px' : variant === 'compact' ? '16px' : '20px'};" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`;
+                    parent.appendChild(icon);
+                  }
+                }}
+              />
+            ) : (
+              <Icon className="text-white" style={{
+                width: variant === 'detailed' ? '24px' : variant === 'compact' ? '16px' : '20px',
+                height: variant === 'detailed' ? '24px' : variant === 'compact' ? '16px' : '20px'
+              }} />
+            )}
           </div>
 
           {/* Content */}

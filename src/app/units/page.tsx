@@ -4,10 +4,46 @@ import React, { useCallback, Suspense } from 'react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useUnitsViewerState } from '@/hooks/useUnitsViewerState';
 import { HeaderControls } from '@/components/units/HeaderControls';
-import { DashboardSection } from '@/components/units/DashboardSection';
+import { UnifiedDashboard, type DashboardStat } from '@/core/dashboards/UnifiedDashboard';
+import {
+  Home,
+  TrendingUp,
+  BarChart3,
+  MapPin,
+  Package,
+  Building2,
+} from 'lucide-react';
+import { StatusCard } from '@/components/property-management/dashboard/StatusCard';
+import { DetailsCard } from '@/components/property-management/dashboard/DetailsCard';
 import { AdvancedFiltersPanel, unitFiltersConfig, defaultUnitFilters, type UnitFilterState } from '@/components/core/AdvancedFilters';
 import { UnitsSidebar } from '@/components/units/UnitsSidebar';
 import { PropertyGridView } from '@/features/property-grid/PropertyGridView';
+
+// Helper functions for labels (from original PropertyDashboard)
+const getStatusLabel = (status: string) => {
+  switch (status) {
+    case 'sold': return 'Πουλημένες';
+    case 'available': return 'Διαθέσιμες';
+    case 'reserved': return 'Κρατημένες';
+    case 'owner': return 'Οικοπεδούχου';
+    case 'for-sale': return 'Προς πώληση';
+    case 'for-rent': return 'Προς ενοικίαση';
+    case 'rented': return 'Ενοικιασμένες';
+    default: return status;
+  }
+};
+
+const getTypeLabel = (type: string) => {
+  switch (type) {
+    case 'apartment': return 'Διαμερίσματα';
+    case 'studio': return 'Στούντιο';
+    case 'maisonette': return 'Μεζονέτες';
+    case 'shop': return 'Καταστήματα';
+    case 'office': return 'Γραφεία';
+    case 'storage': return 'Αποθήκες';
+    default: return type;
+  }
+};
 
 function UnitsPageContent() {
   const {
@@ -68,6 +104,46 @@ function UnitsPageContent() {
 
   const safeFloors = Array.isArray(floors) ? floors : [];
   const safeFilteredProperties = Array.isArray(filteredProperties) ? filteredProperties : [];
+
+  // Transform dashboardStats object to DashboardStat array
+  const unifiedDashboardStats: DashboardStat[] = [
+    {
+      title: "Σύνολο Μονάδων",
+      value: dashboardStats.totalProperties,
+      icon: Home,
+      color: "blue"
+    },
+    {
+      title: "Διαθέσιμες",
+      value: dashboardStats.availableProperties,
+      icon: TrendingUp,
+      color: "green"
+    },
+    {
+      title: "Πωληθείσες",
+      value: dashboardStats.soldProperties,
+      icon: BarChart3,
+      color: "purple"
+    },
+    {
+      title: "Συνολική Αξία",
+      value: `€${(dashboardStats.totalValue / 1000000).toFixed(1)}M`,
+      icon: MapPin,
+      color: "orange"
+    },
+    {
+      title: "Συνολική Επιφάνεια",
+      value: `${(dashboardStats.totalArea / 1000).toFixed(1)}K m²`,
+      icon: Package,
+      color: "cyan"
+    },
+    {
+      title: "Μοναδικά Κτίρια",
+      value: dashboardStats.uniqueBuildings,
+      icon: Building2,
+      color: "pink"
+    }
+  ];
   
   const handleAssignmentSuccess = useCallback(() => {
     forceDataRefresh();
@@ -128,7 +204,29 @@ function UnitsPageContent() {
           setShowDashboard={setShowDashboard}
         />
 
-        {showDashboard && <DashboardSection stats={dashboardStats} />}
+        {showDashboard && (
+          <UnifiedDashboard
+            stats={unifiedDashboardStats}
+            columns={6}
+            additionalContainers={
+              <>
+                <StatusCard statsByStatus={dashboardStats.propertiesByStatus} getStatusLabel={getStatusLabel} />
+                <DetailsCard title="Τύποι Μονάδων" icon={Building2} data={dashboardStats.propertiesByType} labelFormatter={getTypeLabel} />
+                <DetailsCard title="Κατανομή ανά Όροφο" icon={MapPin} data={dashboardStats.propertiesByFloor} isFloorData={true} />
+                <DetailsCard
+                  title="Αποθήκες"
+                  icon={Package}
+                  data={{
+                    'Σύνολο': dashboardStats.totalStorageUnits,
+                    'Διαθέσιμες': dashboardStats.availableStorageUnits,
+                    'Πουλημένες': dashboardStats.soldStorageUnits,
+                  }}
+                  isThreeColumnGrid={true}
+                />
+              </>
+            }
+          />
+        )}
         
         <AdvancedFiltersPanel
           config={unitFiltersConfig}

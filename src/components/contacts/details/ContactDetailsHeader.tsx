@@ -68,30 +68,10 @@ export function ContactDetailsHeader({ contact, onEditContact, onDeleteContact }
             className: 'text-destructive hover:text-destructive'
           }
         ]}
+        avatarImageUrl={(contact as any).photoURL}
+        onAvatarClick={(contact as any).photoURL ? () => setIsPhotoModalOpen(true) : undefined}
         variant="detailed"
-      >
-      {/* Custom Avatar Section */}
-      {(contact as any).photoURL && (
-        <div className="flex items-center gap-2 mt-2">
-          <Avatar
-            className={cn(
-              "h-8 w-8 shadow-sm cursor-pointer hover:opacity-80 transition-opacity"
-            )}
-            onClick={() => setIsPhotoModalOpen(true)}
-          >
-            <AvatarImage
-              src={(contact as any).photoURL}
-              alt={`${displayName} φωτογραφία`}
-              className="object-cover"
-            />
-            <AvatarFallback className={`${color.replace('bg-', 'bg-')} text-white`}>
-              {initials}
-            </AvatarFallback>
-          </Avatar>
-          <span className="text-xs text-muted-foreground">Κλικ για προβολή φωτογραφίας</span>
-        </div>
-      )}
-    </EntityDetailsHeader>
+      />
 
     {/* Photo View Modal */}
     <Dialog open={isPhotoModalOpen} onOpenChange={setIsPhotoModalOpen}>

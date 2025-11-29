@@ -6,15 +6,21 @@ import type { Contact } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts';
 import { ContactsService } from '@/services/contacts.service';
 import { ContactsHeader } from './page/ContactsHeader';
-import { ContactsDashboard } from './page/ContactsDashboard';
+import { UnifiedDashboard, type DashboardStat } from '@/core/dashboards/UnifiedDashboard';
+import {
+  Users,
+  Building2,
+  Landmark,
+  Activity,
+  UserPlus,
+} from 'lucide-react';
 import { ContactsList } from './list/ContactsList';
 import { ContactDetails } from './details/ContactDetails';
 import { AddNewContactDialog } from './dialogs/AddNewContactDialog';
 import { EditContactDialog } from './dialogs/EditContactDialog';
 import { DeleteContactDialog } from './dialogs/DeleteContactDialog';
 import { ArchiveContactDialog } from './dialogs/ArchiveContactDialog';
-import { AdvancedFiltersPanel, type ContactFilterState } from '@/components/core/AdvancedFilters';
-import { contactFiltersConfig } from '@/components/core/AdvancedFilters/configs';
+import { AdvancedFiltersPanel, type ContactFilterState, contactFiltersConfig } from '@/components/core/AdvancedFilters';
 
 // Initial seed data for database (μόνο για πρώτη φόρτωση)
 const SEED_CONTACTS = [
@@ -263,18 +269,49 @@ export function ContactsPageContent() {
     return true;
   });
 
-  const stats = {
-    totalContacts: contacts.length,
-    individuals: contacts.filter(c => c.type === 'individual').length,
-    companies: contacts.filter(c => c.type === 'company').length,
-    services: contacts.filter(c => c.type === 'service').length,
-    active: contacts.filter((c: any) => c.status === 'active').length,
-    newThisMonth: contacts.filter(c => {
-      const oneMonthAgo = new Date();
-      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-      return c.createdAt && new Date(c.createdAt) > oneMonthAgo;
-    }).length,
-  };
+  // Transform stats to UnifiedDashboard format
+  const dashboardStats: DashboardStat[] = [
+    {
+      title: "Σύνολο",
+      value: contacts.length,
+      icon: Users,
+      color: "blue"
+    },
+    {
+      title: "Φυσικά Πρόσωπα",
+      value: contacts.filter(c => c.type === 'individual').length,
+      icon: Users,
+      color: "green"
+    },
+    {
+      title: "Νομικά Πρόσωπα",
+      value: contacts.filter(c => c.type === 'company').length,
+      icon: Building2,
+      color: "purple"
+    },
+    {
+      title: "Υπηρεσίες",
+      value: contacts.filter(c => c.type === 'service').length,
+      icon: Landmark,
+      color: "orange"
+    },
+    {
+      title: "Ενεργές",
+      value: contacts.filter((c: any) => c.status === 'active').length,
+      icon: Activity,
+      color: "cyan"
+    },
+    {
+      title: "Νέες (Μήνας)",
+      value: contacts.filter(c => {
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+        return c.createdAt && new Date(c.createdAt) > oneMonthAgo;
+      }).length,
+      icon: UserPlus,
+      color: "pink"
+    }
+  ];
   
   return (
     <TooltipProvider>
@@ -301,14 +338,14 @@ export function ContactsPageContent() {
           onNewContact={handleNewContact}
         />
 
-        {showDashboard && <ContactsDashboard stats={stats} />}
+        {showDashboard && <UnifiedDashboard stats={dashboardStats} columns={6} />}
 
-        {/* Advanced Filters Panel - Temporarily disabled due to import issue */}
-        {/* <AdvancedFiltersPanel
+        {/* Advanced Filters Panel */}
+        <AdvancedFiltersPanel
           config={contactFiltersConfig}
           filters={filters}
           onFiltersChange={setFilters}
-        /> */}
+        />
 
         <div className="flex-1 flex overflow-hidden p-4 gap-4">
           {error ? (
