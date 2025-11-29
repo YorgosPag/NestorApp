@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
+import { ThemeProgressBar } from '@/core/progress/ThemeProgressBar';
 import type { Building } from '../../BuildingsPageContent';
 
 interface OverallProgressCardProps {
@@ -20,7 +20,12 @@ export function OverallProgressCard({ building, milestones }: OverallProgressCar
                 </CardTitle>
             </CardHeader>
             <CardContent>
-                <Progress value={building.progress} className="h-4 mb-4" />
+                <ThemeProgressBar
+                    progress={building.progress}
+                    label="Συνολική Πρόοδος Κτιρίου"
+                    size="md"
+                    showPercentage={false}
+                />
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     <div className="text-center">
                         <div className="text-2xl font-bold text-green-600">{milestones.filter(m => m.status === 'completed').length}</div>

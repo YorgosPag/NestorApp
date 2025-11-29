@@ -3,7 +3,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CommonBadge } from '@/core/badges';
-import { Progress } from '@/components/ui/progress';
+import { ThemeProgressBar } from '@/core/progress/ThemeProgressBar';
 import { TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
@@ -31,7 +31,12 @@ export function ProgressCard({ progress }: ProgressCardProps) {
               className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
             />
           </div>
-          <Progress value={progress} className="h-3" />
+          <ThemeProgressBar
+            progress={progress}
+            label="Ποσοστό Ολοκλήρωσης"
+            size="md"
+            showPercentage={false}
+          />
           
           <div className="grid grid-cols-1 md:grid-cols-4 gap-2 text-xs">
             <div className={cn("p-2 rounded text-center", progress >= 25 ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600")}>

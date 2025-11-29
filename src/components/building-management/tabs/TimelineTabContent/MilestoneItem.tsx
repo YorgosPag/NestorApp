@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { CommonBadge } from '@/core/badges';
-import { Progress } from '@/components/ui/progress';
+import { ThemeProgressBar } from '@/core/progress/ThemeProgressBar';
 import { CheckCircle, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -52,13 +52,12 @@ export function MilestoneItem({ milestone, getStatusColor, getStatusText, getTyp
                     {milestone.description}
                 </p>
 
-                <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                        <span>Πρόοδος milestone</span>
-                        <span className="font-medium">{milestone.progress}%</span>
-                    </div>
-                    <Progress value={milestone.progress} className="h-2" />
-                </div>
+                <ThemeProgressBar
+                    progress={milestone.progress}
+                    label="Πρόοδος milestone"
+                    size="sm"
+                    showPercentage={true}
+                />
 
                 {milestone.status === 'in-progress' && (
                     <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">

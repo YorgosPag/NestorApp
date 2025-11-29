@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+import { ThemeProgressBar } from '@/core/progress/ThemeProgressBar';
 import { Home, CheckCircle, Ruler, TrendingUp } from 'lucide-react';
 import { getThemeVariant } from '@/components/ui/theme/ThemeComponents';
 
@@ -118,7 +118,12 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
                 <span>Πρόοδος Πωλήσεων</span>
                 <span>{stats.soldUnits} από {stats.totalUnits} μονάδες</span>
               </div>
-              <Progress value={salesPercentage} className="h-3" />
+              <ThemeProgressBar
+                progress={salesPercentage}
+                label="Πρόοδος Πωλήσεων"
+                size="md"
+                showPercentage={false}
+              />
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>0%</span>
                 <span>{salesPercentage.toFixed(1)}% ολοκληρωμένο</span>

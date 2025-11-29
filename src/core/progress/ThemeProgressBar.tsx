@@ -31,12 +31,12 @@ export function ThemeProgressBar({
     return 'text-destructive';                     // Destructive (red)
   };
 
-  // Theme-aware inline colors for progress bar
+  // Theme-aware progress bar background colors
   const getProgressBarColor = (value: number) => {
-    if (value >= 80) return '#22c55e';  // Green-500
-    if (value >= 60) return 'hsl(var(--primary))';  // Primary CSS variable
-    if (value >= 40) return '#f97316';  // Orange-500
-    return 'hsl(var(--destructive))';  // Destructive CSS variable
+    if (value >= 80) return '#22c55e';    // Green for 80%+
+    if (value >= 60) return '#3b82f6';    // Blue for 60-79%
+    if (value >= 40) return '#f97316';    // Orange for 40-59%
+    return '#ef4444';                     // Red for <40%
   };
 
   // Size variations
