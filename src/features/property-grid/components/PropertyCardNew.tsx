@@ -2,8 +2,7 @@
 
 import React, { useState } from 'react';
 import { BaseCard } from '@/components/core/BaseCard/BaseCard';
-import { badgeVariants } from '@/components/ui/variants';
-import { getStatusBadgeClass } from '@/lib/design-system';
+import { PropertyBadge, CommonBadge } from '@/core/badges';
 import { getStatusLabel } from '@/constants/statuses';
 import { Eye, ArrowRight, Square, Bed, Bath, Building, MapPin } from 'lucide-react';
 import { getPropertyImage } from '../utils/images';
@@ -67,14 +66,18 @@ export function PropertyCardNew({
       
       // Status badges
       statusBadges={[
-        {
-          label: property.status ? getStatusLabel(property.status as any) : 'Διαθέσιμο',
-          className: getStatusBadgeClass(property.status || 'for-sale')
-        },
-        {
-          label: property.type,
-          className: badgeVariants({ variant: 'secondary', size: 'sm' })
-        }
+        <PropertyBadge
+          key="status"
+          status={property.status || 'for-sale'}
+          customLabel={property.status ? getStatusLabel(property.status as any) : 'Διαθέσιμο'}
+        />,
+        <CommonBadge
+          key="type"
+          status="property"
+          customLabel={property.type}
+          variant="secondary"
+          className="text-sm"
+        />
       ]}
       
       // Content sections
@@ -131,17 +134,21 @@ export function PropertyCardNew({
           content: (
             <div className="flex flex-wrap gap-1">
               {property.tags.slice(0, 3).map((tag, idx) => (
-                <span 
-                  key={idx} 
-                  className={badgeVariants({ variant: 'outline', size: 'sm' })}
-                >
-                  {tag}
-                </span>
+                <CommonBadge
+                  key={idx}
+                  status="property"
+                  customLabel={tag}
+                  variant="outline"
+                  className="text-xs"
+                />
               ))}
               {property.tags.length > 3 && (
-                <span className={badgeVariants({ variant: 'secondary', size: 'sm' })}>
-                  +{property.tags.length - 3}
-                </span>
+                <CommonBadge
+                  status="property"
+                  customLabel={`+${property.tags.length - 3}`}
+                  variant="secondary"
+                  className="text-xs"
+                />
               )}
             </div>
           )

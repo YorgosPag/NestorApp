@@ -3,7 +3,7 @@
 import React from 'react';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { CommonBadge } from '@/core/badges';
 import type { Property } from '@/types/property-viewer';
 import type { Connection, PropertyGroup } from '@/types/connections';
 
@@ -75,7 +75,11 @@ export function SidebarPanel({
                 <div key={property.id} className="p-3 border rounded-lg">
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="font-medium">{property.name}</h4>
-                    <Badge variant="secondary">{property.type}</Badge>
+                    <CommonBadge
+                      status="property"
+                      customLabel={property.type}
+                      variant="secondary"
+                    />
                   </div>
                   <div className="flex gap-2">
                     <Button

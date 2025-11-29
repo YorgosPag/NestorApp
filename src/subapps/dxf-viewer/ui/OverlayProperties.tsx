@@ -6,7 +6,7 @@ import { Label } from '../../../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import { Button } from '../../../components/ui/button';
 import { Separator } from '../../../components/ui/separator';
-import { Badge } from '../../../components/ui/badge';
+import { CommonBadge } from '../../../core/badges';
 import { STATUS_COLORS, STATUS_LABELS, KIND_LABELS, type Overlay, type Status, type OverlayKind } from '../overlays/types';
 
 interface OverlayPropertiesProps {
@@ -87,7 +87,11 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
         {/* Basic Info */}
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 rounded border" style={{ backgroundColor: STATUS_COLORS[overlay.status || 'for-sale'] }} />
-          <Badge variant="outline">{overlay.id.slice(0, 8)}</Badge>
+          <CommonBadge
+            status="company"
+            customLabel={overlay.id.slice(0, 8)}
+            variant="outline"
+          />
         </div>
 
         <Separator />

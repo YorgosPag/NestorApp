@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Badge } from '@/components/ui/badge';
+import { CommonBadge } from '@/core/badges';
 import { formatDate, formatSize } from './version-utils';
 
 export function VersionList({
@@ -30,11 +30,20 @@ export function VersionList({
               <div className="flex items-center gap-2">
                 <h4 className="font-medium">{version.message}</h4>
                 {version.type === 'milestone' && (
-                  <Badge variant="outline" className="border-yellow-400 bg-yellow-50 text-yellow-700">
-                    Ορόσημο
-                  </Badge>
+                  <CommonBadge
+                    status="company"
+                    customLabel="Ορόσημο"
+                    variant="outline"
+                    className="border-yellow-400 bg-yellow-50 text-yellow-700"
+                  />
                 )}
-                {version.type === 'auto' && <Badge variant="secondary">Auto</Badge>}
+                {version.type === 'auto' && (
+                  <CommonBadge
+                    status="company"
+                    customLabel="Auto"
+                    variant="secondary"
+                  />
+                )}
               </div>
               <div className="text-sm text-muted-foreground mt-1">
                 {version.author?.name} • {formatDate(version.timestamp)}

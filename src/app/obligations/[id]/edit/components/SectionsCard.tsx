@@ -5,7 +5,7 @@ import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Badge } from "@/components/ui/badge";
+import { CommonBadge } from "@/core/badges";
 import { Settings, Plus, FileText, Trash2 } from "lucide-react";
 import type { ObligationSection } from "@/types/obligations";
 import { createNewSection } from "@/types/obligations";
@@ -92,9 +92,20 @@ export function SectionsCard({ sections, updateSections }: SectionsCardProps) {
             <AccordionItem key={section.id} value={section.id}>
               <AccordionTrigger className="text-left">
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline">{section.number}</Badge>
+                  <CommonBadge
+                    status="company"
+                    customLabel={section.number.toString()}
+                    variant="outline"
+                  />
                   <span className="font-medium">{section.title}</span>
-                  {section.isRequired && <Badge variant="destructive" className="text-xs">Απαραίτητο</Badge>}
+                  {section.isRequired && (
+                    <CommonBadge
+                      status="company"
+                      customLabel="Απαραίτητο"
+                      variant="destructive"
+                      className="text-xs"
+                    />
+                  )}
                 </div>
               </AccordionTrigger>
               <AccordionContent>

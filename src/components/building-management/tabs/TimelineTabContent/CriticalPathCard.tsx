@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { CommonBadge } from '@/core/badges';
 import { AlertCircle } from 'lucide-react';
 
 export function CriticalPathCard() {
@@ -21,9 +21,12 @@ export function CriticalPathCard() {
                             <p className="font-medium text-orange-900">Ηλ/Μηχ Εγκαταστάσεις</p>
                             <p className="text-sm text-orange-700">Επηρεάζει την παράδοση</p>
                         </div>
-                        <Badge variant="outline" className="bg-orange-100 text-orange-700">
-                            5 ημέρες καθυστέρηση
-                        </Badge>
+                        <CommonBadge
+                            status="company"
+                            customLabel="5 ημέρες καθυστέρηση"
+                            variant="outline"
+                            className="bg-orange-100 text-orange-700"
+                        />
                     </div>
 
                     <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
@@ -31,9 +34,12 @@ export function CriticalPathCard() {
                             <p className="font-medium text-yellow-900">Τελικές Εργασίες</p>
                             <p className="text-sm text-yellow-700">Εξαρτάται από προηγούμενο</p>
                         </div>
-                        <Badge variant="outline" className="bg-yellow-100 text-yellow-700">
-                            Αναμονή
-                        </Badge>
+                        <CommonBadge
+                            status="company"
+                            customLabel="Αναμονή"
+                            variant="outline"
+                            className="bg-yellow-100 text-yellow-700"
+                        />
                     </div>
                 </div>
             </CardContent>

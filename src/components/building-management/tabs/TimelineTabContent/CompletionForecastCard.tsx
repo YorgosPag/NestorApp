@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { CommonBadge } from '@/core/badges';
 import { Separator } from '@/components/ui/separator';
 import { TrendingUp } from 'lucide-react';
 
@@ -41,9 +41,12 @@ export function CompletionForecastCard({ milestones }: CompletionForecastCardPro
                         </div>
                         <div className="flex items-center justify-between">
                             <span className="text-sm text-muted-foreground">Καθυστέρηση</span>
-                            <Badge variant="outline" className="bg-orange-100 text-orange-700">
-                                +{delayDays} ημέρες
-                            </Badge>
+                            <CommonBadge
+                                status="building"
+                                customLabel={`+${delayDays} ημέρες`}
+                                variant="outline"
+                                className="bg-orange-100 text-orange-700"
+                            />
                         </div>
                     </div>
 

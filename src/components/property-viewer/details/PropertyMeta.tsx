@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { PropertyBadge } from '@/core/badges';
-import { Badge } from '@/components/ui/badge';
+import { CommonBadge } from '@/core/badges';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Home, Building, MapPin, Euro, Ruler, Edit3, Eye } from 'lucide-react';
@@ -108,9 +108,13 @@ export function PropertyMeta({ property, onUpdateProperty }: PropertyMetaProps) 
             <h4 className="text-xs font-medium">Χαρακτηριστικά</h4>
             <div className="flex flex-wrap gap-1">
               {property.features.map((feature, index) => (
-                <Badge key={index} variant="secondary" className="text-xs">
-                  {feature}
-                </Badge>
+                <CommonBadge
+                  key={index}
+                  status="property"
+                  customLabel={feature}
+                  variant="secondary"
+                  className="text-xs"
+                />
               ))}
             </div>
           </div>

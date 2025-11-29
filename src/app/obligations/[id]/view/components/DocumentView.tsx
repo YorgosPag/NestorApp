@@ -3,7 +3,7 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
+import { CommonBadge } from "@/core/badges";
 import type { ObligationDocument } from "@/types/obligations";
 import { sanitizeHtml } from "../utils/html-sanitize";
 import { sortSections } from "../utils/sort";
@@ -26,8 +26,18 @@ export function DocumentView({ obligation }: DocumentViewProps) {
                   {/* Section Header */}
                   <div className="border-b-2 border-red-600 pb-2">
                     <div className="flex items-center gap-3 mb-2">
-                      <Badge variant="outline" className="font-mono">Άρθρο {section.number}°</Badge>
-                      <Badge variant="secondary" className="text-xs">{section.category.toUpperCase()}</Badge>
+                      <CommonBadge
+                        status="company"
+                        customLabel={`Άρθρο ${section.number}°`}
+                        variant="outline"
+                        className="font-mono"
+                      />
+                      <CommonBadge
+                        status="company"
+                        customLabel={section.category.toUpperCase()}
+                        variant="secondary"
+                        className="text-xs"
+                      />
                     </div>
                     <h2 className="text-xl font-bold text-red-700 uppercase tracking-wide">{section.title}</h2>
                   </div>
@@ -45,7 +55,12 @@ export function DocumentView({ obligation }: DocumentViewProps) {
                       {section.articles.map((article) => (
                         <div key={article.id} id={`article-${article.id}`} className="space-y-3 border-l-4 border-green-300 pl-4">
                           <div className="flex items-center gap-3">
-                            <Badge variant="outline" className="font-mono text-sm">{article.number}</Badge>
+                            <CommonBadge
+                              status="company"
+                              customLabel={article.number}
+                              variant="outline"
+                              className="font-mono text-sm"
+                            />
                             <h3 className="text-lg font-semibold text-gray-900">{article.title}</h3>
                           </div>
 

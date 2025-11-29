@@ -3,7 +3,7 @@
 
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { CommonBadge } from "@/core/badges";
 import {
   ArrowLeft,
   Edit3,
@@ -42,9 +42,11 @@ export function HeaderBar({ obligation }: HeaderBarProps) {
             {obligation.title}
           </h1>
           <div className="flex items-center gap-4 mt-2">
-            <Badge variant="outline">
-              {getStatusLabel(obligation.status)}
-            </Badge>
+            <CommonBadge
+              status="company"
+              customLabel={getStatusLabel(obligation.status)}
+              variant="outline"
+            />
             <span className="text-gray-600 text-sm">
               Ενημερώθηκε: {formatDate(obligation.updatedAt)}
             </span>

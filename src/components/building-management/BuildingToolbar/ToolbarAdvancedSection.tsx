@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { ToolbarButton } from '@/components/ui/ToolbarButton';
-import { Badge } from '@/components/ui/badge';
+import { BuildingBadge } from '@/core/badges';
 import {
   Copy,
   Archive,
@@ -81,14 +81,20 @@ export function ToolbarAdvancedSection({
         {/* Status Indicators */}
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           {selectedItems.length > 0 && (
-            <Badge variant="secondary" className="text-xs">
-              {selectedItems.length} επιλεγμένα
-            </Badge>
+            <BuildingBadge
+              status="occupied"
+              customLabel={`${selectedItems.length} επιλεγμένα`}
+              variant="secondary"
+              className="text-xs"
+            />
           )}
           {activeFilters.length > 0 && (
-            <Badge variant="outline" className="text-xs">
-              {activeFilters.length} φίλτρα ενεργά
-            </Badge>
+            <BuildingBadge
+              status="partially-occupied"
+              customLabel={`${activeFilters.length} φίλτρα ενεργά`}
+              variant="outline"
+              className="text-xs"
+            />
           )}
           <span className="flex items-center gap-1">
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />

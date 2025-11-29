@@ -1,7 +1,7 @@
 
 'use client';
 
-import { Badge } from "@/components/ui/badge";
+import { CommonBadge } from "@/core/badges";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Property } from '@/types/property-viewer';
 
@@ -58,9 +58,12 @@ export function FloorSelector({ currentFloor, floors, onSelectFloor }: FloorSele
         </SelectContent>
         </Select>
         
-        <Badge variant="outline" className="text-xs">
-        {currentFloor.properties.length} ακίνητα
-        </Badge>
+        <CommonBadge
+          status="property"
+          customLabel={`${currentFloor.properties.length} ακίνητα`}
+          variant="outline"
+          className="text-xs"
+        />
     </div>
   );
 }

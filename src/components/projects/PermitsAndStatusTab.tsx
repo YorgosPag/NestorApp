@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
+import { ProjectBadge } from "@/core/badges";
 import { FileText, Settings } from "lucide-react";
 
 interface PermitsAndStatusTabProps {
@@ -76,19 +76,22 @@ export function PermitsAndStatusTab({ data, setData, isEditing }: PermitsAndStat
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="constructed">
-                                    <Badge variant="secondary" className="bg-green-100 text-green-800">
-                                        Κατασκευασμένα
-                                    </Badge>
+                                    <ProjectBadge
+                                        status="completed"
+                                        customLabel="Κατασκευασμένα"
+                                    />
                                 </SelectItem>
                                  <SelectItem value="planning">
-                                    <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
-                                        Σχεδιασμός
-                                    </Badge>
+                                    <ProjectBadge
+                                        status="planning"
+                                        customLabel="Σχεδιασμός"
+                                    />
                                 </SelectItem>
                                  <SelectItem value="in_progress">
-                                    <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                                        Σε εξέλιξη
-                                    </Badge>
+                                    <ProjectBadge
+                                        status="in-progress"
+                                        customLabel="Σε εξέλιξη"
+                                    />
                                 </SelectItem>
                             </SelectContent>
                         </Select>

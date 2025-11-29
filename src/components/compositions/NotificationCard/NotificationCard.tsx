@@ -2,8 +2,7 @@
 
 import React, { useState } from 'react';
 import { BaseCard } from '@/components/core/BaseCard/BaseCard';
-import { badgeVariants } from '@/components/ui/variants';
-import { getStatusBadgeClass } from '@/lib/design-system';
+import { CommonBadge } from '@/core/badges';
 import { Bell, AlertCircle, Info, CheckCircle, XCircle, Calendar, User, Eye, X } from 'lucide-react';
 
 interface NotificationData {

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { CommonBadge } from '@/core/badges';
 import { 
   Link,
   Building,
@@ -77,16 +77,27 @@ export function StorageCardContent({ unit, getTypeIcon }: StorageCardContentProp
                         {unit.features.slice(0, 3).map((feature, index) => {
                             const FeatureIcon = getFeatureIcon(feature);
                             return (
-                                <Badge key={index} variant='outline' className="font-normal flex items-center gap-1">
-                                    <FeatureIcon className="w-3 h-3" />
-                                    {feature}
-                                </Badge>
+                                <CommonBadge
+                                    key={index}
+                                    status="building"
+                                    customLabel={
+                                        <div className="flex items-center gap-1">
+                                            <FeatureIcon className="w-3 h-3" />
+                                            {feature}
+                                        </div>
+                                    }
+                                    variant="outline"
+                                    className="font-normal"
+                                />
                             );
                         })}
                         {unit.features.length > 3 && (
-                            <Badge variant='outline' className="font-normal">
-                                +{unit.features.length - 3}
-                            </Badge>
+                            <CommonBadge
+                                status="building"
+                                customLabel={`+${unit.features.length - 3}`}
+                                variant="outline"
+                                className="font-normal"
+                            />
                         )}
                     </div>
                 </div>

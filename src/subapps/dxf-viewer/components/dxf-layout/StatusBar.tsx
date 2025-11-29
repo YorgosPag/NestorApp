@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Button } from "../../../../components/ui/button";
-import { Badge } from '../../../../components/ui/badge';
+import { CommonBadge } from '../../../../core/badges';
 import { Eye, Maximize, RotateCcw } from "lucide-react";
 import type { DXFViewerLayoutProps } from '../../integration/types';
 
@@ -60,45 +60,66 @@ export const StatusBar: React.FC<StatusBarProps> = ({
     {/* Status indicators */}
     <div className="flex-1 flex gap-2 items-center">
         {status === 'success' && (
-          <Badge variant="secondary" className="bg-green-600 text-white">
-            ✅ DXF ({entities.length} entities)
-          </Badge>
+          <CommonBadge
+            status="company"
+            customLabel={`✅ DXF (${entities.length} entities)`}
+            variant="secondary"
+            className="bg-green-600 text-white"
+          />
         )}
         
         {selectedEntityIds.length > 0 && (
-          <Badge variant="secondary" className="bg-blue-600 text-white">
-            🔺 Selected: {selectedEntityIds.length}
-          </Badge>
+          <CommonBadge
+            status="company"
+            customLabel={`🔺 Selected: ${selectedEntityIds.length}`}
+            variant="secondary"
+            className="bg-blue-600 text-white"
+          />
         )}
         
         {drawingState.isDrawing && (
-          <Badge variant="secondary" className="bg-yellow-600 text-white">
-            ✏️ Drawing {activeTool}... {drawingState.currentPoints.length > 0 && `(${drawingState.currentPoints.length} points)`}
-          </Badge>
+          <CommonBadge
+            status="company"
+            customLabel={`✏️ Drawing ${activeTool}...${drawingState.currentPoints.length > 0 ? ` (${drawingState.currentPoints.length} points)` : ''}`}
+            variant="secondary"
+            className="bg-yellow-600 text-white"
+          />
         )}
         
         {activeTool.startsWith('measure') && (
-          <Badge variant="secondary" className="bg-purple-600 text-white">
-            📏 Ruler active
-          </Badge>
+          <CommonBadge
+            status="company"
+            customLabel="📏 Ruler active"
+            variant="secondary"
+            className="bg-purple-600 text-white"
+          />
         )}
         
         {activeTool === 'zoom-window' && (
-          <Badge variant="secondary" className="bg-orange-600 text-white">
-            🔹 Zoom Window
-          </Badge>
+          <CommonBadge
+            status="company"
+            customLabel="🔹 Zoom Window"
+            variant="secondary"
+            className="bg-orange-600 text-white"
+          />
         )}
         
         {snapEnabled && drawingState.snapPoint && (
-          <Badge variant="secondary" className="bg-green-600 text-white">
-            🧲 Snap: {drawingState.snapType}
-          </Badge>
+          <CommonBadge
+            status="company"
+            customLabel={`🧲 Snap: ${drawingState.snapType}`}
+            variant="secondary"
+            className="bg-green-600 text-white"
+          />
         )}
         
         {measurements.length > 0 && (
-          <Badge variant="secondary" className="bg-indigo-600 text-white">
-            📏 Measurements: {measurements.length}
-          </Badge>
+          <CommonBadge
+            status="company"
+            customLabel={`📏 Measurements: ${measurements.length}`}
+            variant="secondary"
+            className="bg-indigo-600 text-white"
+          />
         )}
     </div>
 

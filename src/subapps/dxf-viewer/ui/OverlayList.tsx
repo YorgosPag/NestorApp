@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
-import { Badge } from '../../../components/ui/badge';
+import { CommonBadge } from '../../../core/badges';
 import { ScrollArea } from '../../../components/ui/scroll-area';
 import { Input } from '../../../components/ui/input';
 import { Eye, EyeOff, Edit3, Trash2, Search } from 'lucide-react';
@@ -77,7 +77,12 @@ export const OverlayList: React.FC<OverlayListProps> = ({
       <CardHeader className="pb-2 pt-3 px-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm">Overlays</CardTitle>
-          <Badge variant="secondary" className="text-xs bg-gray-700 text-gray-300">{overlays.length}</Badge>
+          <CommonBadge
+            status="company"
+            customLabel={overlays.length.toString()}
+            variant="secondary"
+            className="text-xs bg-gray-700 text-gray-300"
+          />
         </div>
         
         <div className="relative mt-2">

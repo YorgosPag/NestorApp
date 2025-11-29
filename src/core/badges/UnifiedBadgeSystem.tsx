@@ -45,12 +45,6 @@ export const UnifiedBadge: React.FC<UnifiedBadgeProps> = ({
   // Δημιουργία badge configuration μέσω Factory
   const badgeConfig = BadgeFactory.create(domain, status, options);
 
-  // Custom styling
-  const customStyle = {
-    color: badgeConfig.color,
-    backgroundColor: badgeConfig.backgroundColor
-  };
-
   return (
     <Badge
       variant={badgeConfig.variant}
@@ -59,7 +53,6 @@ export const UnifiedBadge: React.FC<UnifiedBadgeProps> = ({
         badgeConfig.className,
         onClick && 'cursor-pointer hover:opacity-80'
       )}
-      style={customStyle}
       onClick={onClick}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
@@ -128,11 +121,6 @@ interface CommonBadgeProps extends Omit<UnifiedBadgeProps, 'domain'> {
 export const CommonBadge: React.FC<CommonBadgeProps> = ({ status, ...props }) => {
   const badgeConfig = BadgeFactory.createCommonBadge(status, props);
 
-  const customStyle = {
-    color: badgeConfig.color,
-    backgroundColor: badgeConfig.backgroundColor
-  };
-
   return (
     <Badge
       variant={badgeConfig.variant}
@@ -141,7 +129,6 @@ export const CommonBadge: React.FC<CommonBadgeProps> = ({ status, ...props }) =>
         badgeConfig.className,
         props.onClick && 'cursor-pointer hover:opacity-80'
       )}
-      style={customStyle}
       onClick={props.onClick}
       onMouseEnter={props.onMouseEnter}
       onMouseLeave={props.onMouseLeave}

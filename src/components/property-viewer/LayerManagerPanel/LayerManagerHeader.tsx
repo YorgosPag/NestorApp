@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { CommonBadge } from "@/core/badges";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Eye, EyeOff } from "lucide-react";
@@ -39,9 +39,12 @@ export function LayerManagerHeader({
     <div className="p-4 border-b space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold">Layers Διαχείρισης</h3>
-        <Badge variant="secondary" className="text-xs">
-          {propertyCount} στοιχεία
-        </Badge>
+        <CommonBadge
+          status="property"
+          customLabel={`${propertyCount} στοιχεία`}
+          variant="secondary"
+          className="text-xs"
+        />
       </div>
       <Input
         placeholder="Αναζήτηση layer..."

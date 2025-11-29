@@ -5,7 +5,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
+import { CommonBadge } from '@/core/badges';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { 
   MessageSquare, 
@@ -165,9 +165,11 @@ const CommunicationsIntegration = ({ leadData = null, defaultTab = "inbox" }) =>
           <span className="font-medium capitalize">{channelName}</span>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant={isEnabled ? "default" : "secondary"}>
-            {isEnabled ? 'Ενεργό' : 'Ανενεργό'}
-          </Badge>
+          <CommonBadge
+            status="company"
+            customLabel={isEnabled ? 'Ενεργό' : 'Ανενεργό'}
+            variant={isEnabled ? "default" : "secondary"}
+          />
           {isEnabled ? (
             <CheckCircle className="h-4 w-4 text-green-600" />
           ) : (
@@ -388,7 +390,11 @@ const CommunicationsIntegration = ({ leadData = null, defaultTab = "inbox" }) =>
                       {getChannelIcon(channel)}
                       <span className="capitalize">{channel}</span>
                     </div>
-                    <Badge variant="secondary">{count}</Badge>
+                    <CommonBadge
+                      status="company"
+                      customLabel={count.toString()}
+                      variant="secondary"
+                    />
                   </div>
                 ))}
               </CardContent>

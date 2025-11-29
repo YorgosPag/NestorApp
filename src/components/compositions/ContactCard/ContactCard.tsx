@@ -2,8 +2,7 @@
 
 import React, { useState } from 'react';
 import { BaseCard } from '@/components/core/BaseCard/BaseCard';
-import { badgeVariants } from '@/components/ui/variants';
-import { getStatusBadgeClass } from '@/lib/design-system';
+import { ContactBadge, CommonBadge } from '@/core/badges';
 import { formatDate } from '@/lib/intl-utils';
 import { User, Mail, Phone, Tag, Calendar, MessageSquare, Building } from 'lucide-react';
 import type { Opportunity } from '@/types/crm';

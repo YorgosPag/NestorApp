@@ -1,6 +1,6 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
+import { CommonBadge } from "@/core/badges";
 import { FileText } from "lucide-react";
 import type { ObligationDocument } from '@/types/obligations';
 import { cn } from "@/lib/utils";
@@ -33,8 +33,20 @@ export function DocumentContent({ doc, activeItemId }: DocumentContentProps) {
         >
           <div className="border-b-2 border-red-600 pb-2">
             <div className="flex items-center gap-3 mb-2">
-              <Badge variant="outline" className="font-mono">Άρθρο {section.number}°</Badge>
-              {section.category && <Badge variant="secondary" className="text-xs">{String(section.category).toUpperCase()}</Badge>}
+              <CommonBadge
+                status="company"
+                customLabel={`Άρθρο ${section.number}°`}
+                variant="outline"
+                className="font-mono"
+              />
+              {section.category && (
+                <CommonBadge
+                  status="company"
+                  customLabel={String(section.category).toUpperCase()}
+                  variant="secondary"
+                  className="text-xs"
+                />
+              )}
             </div>
             <h2 className="text-xl font-bold text-red-700 uppercase tracking-wide">{section.title}</h2>
           </div>
@@ -42,7 +54,12 @@ export function DocumentContent({ doc, activeItemId }: DocumentContentProps) {
           {section.articles?.map((article) => (
             <div key={article.id} id={`preview-${article.id}`} className={cn("space-y-3 border-l-4 border-green-300 pl-4", activeItemId === article.id && "border-l-green-500 bg-green-50 -ml-2 pl-6 py-3 rounded-r")}>
               <div className="flex items-center gap-3">
-                <Badge variant="outline" className="font-mono text-sm">{article.number}</Badge>
+                <CommonBadge
+                  status="company"
+                  customLabel={article.number}
+                  variant="outline"
+                  className="font-mono text-sm"
+                />
                 <h3 className="text-lg font-semibold text-gray-900">{article.title}</h3>
               </div>
               {article.content && <div className="prose prose-sm max-w-none text-gray-700" dangerouslySetInnerHTML={{ __html: article.content.replace(/\n/g, "<br />") }} />}

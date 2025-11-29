@@ -3,7 +3,7 @@
 
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { CommonBadge } from "@/core/badges";
 import { Separator } from "@/components/ui/separator";
 import { ObligationDocument } from "@/types/obligations";
 import { formatDate } from "@/lib/obligations-utils";
@@ -30,15 +30,27 @@ export function SidebarStats({ obligation }: SidebarStatsProps) {
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between">
           <span className="text-sm text-gray-600">Σύνολο άρθρων</span>
-          <Badge variant="outline">{stats.sectionsCount}</Badge>
+          <CommonBadge
+            status="company"
+            customLabel={stats.sectionsCount.toString()}
+            variant="outline"
+          />
         </div>
         <div className="flex items-center justify-between">
           <span className="text-sm text-gray-600">Απαραίτητα</span>
-          <Badge variant="outline">{stats.requiredCount}</Badge>
+          <CommonBadge
+            status="company"
+            customLabel={stats.requiredCount.toString()}
+            variant="outline"
+          />
         </div>
         <div className="flex items-center justify-between">
           <span className="text-sm text-gray-600">Ιδιοκτήτες</span>
-          <Badge variant="outline">{stats.ownersCount}</Badge>
+          <CommonBadge
+            status="company"
+            customLabel={stats.ownersCount.toString()}
+            variant="outline"
+          />
         </div>
         <Separator />
         <div className="text-xs text-gray-500">

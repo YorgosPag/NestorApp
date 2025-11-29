@@ -4,7 +4,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { CommonBadge } from "@/core/badges";
 import { Save, Eye, ArrowLeft, Loader2 } from "lucide-react";
 import toast from 'react-hot-toast';
 
@@ -116,9 +116,12 @@ export default function EditObligationPage({ params }: { params: { id: string } 
               <p className="text-muted-foreground mt-1">
                 {obligation.title} • {getStatusLabel(obligation.status)}
                 {hasUnsavedChanges && (
-                  <Badge variant="outline" className="ml-2 text-orange-600">
-                    Μη αποθηκευμένες αλλαγές
-                  </Badge>
+                  <CommonBadge
+                    status="company"
+                    customLabel="Μη αποθηκευμένες αλλαγές"
+                    variant="outline"
+                    className="ml-2 text-orange-600"
+                  />
                 )}
               </p>
             </div>

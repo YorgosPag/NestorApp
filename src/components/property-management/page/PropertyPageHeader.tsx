@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { CommonBadge } from '@/core/badges';
 import { LayoutGrid, List, BarChart3, Eye, EyeOff, Plus, Home } from 'lucide-react';
 
 interface PropertyPageHeaderProps {
@@ -25,9 +25,12 @@ export function PropertyPageHeader({
           <Home className="w-6 h-6 text-primary" />
           <h1 className="text-xl font-semibold">Διαχείριση Ακινήτων</h1>
         </div>
-        <Badge variant="secondary" className="text-xs">
-          Διαχείριση και παρακολούθηση ακινήτων έργων
-        </Badge>
+        <CommonBadge
+          status="property"
+          customLabel="Διαχείριση και παρακολούθηση ακινήτων έργων"
+          variant="secondary"
+          className="text-xs"
+        />
       </div>
 
       <div className="flex items-center gap-2">

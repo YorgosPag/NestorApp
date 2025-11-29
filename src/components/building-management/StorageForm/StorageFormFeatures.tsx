@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
+import { CommonBadge } from '@/core/badges';
 import { Plus, Trash2, CheckCircle } from 'lucide-react';
 
 interface StorageFormFeaturesProps {
@@ -76,16 +76,23 @@ export function StorageFormFeatures({
             <Label className="text-sm font-medium mb-2 block">Επιλεγμένα Χαρακτηριστικά</Label>
             <div className="flex flex-wrap gap-2">
               {features.map((feature, index) => (
-                <Badge key={index} variant="secondary" className="flex items-center gap-1">
-                  {feature}
-                  <button
-                    type="button"
-                    onClick={() => removeFeature(feature)}
-                    className="ml-1 text-destructive hover:text-destructive/80"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
-                </Badge>
+                <CommonBadge
+                  key={index}
+                  status="building"
+                  customLabel={
+                    <div className="flex items-center gap-1">
+                      {feature}
+                      <button
+                        type="button"
+                        onClick={() => removeFeature(feature)}
+                        className="ml-1 text-destructive hover:text-destructive/80"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  }
+                  variant="secondary"
+                />
               ))}
             </div>
           </div>

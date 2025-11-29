@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { PropertyBadge } from "@/core/badges";
 import { Eye, EyeOff, Lock, Unlock, ChevronDown, ChevronRight, Home } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Property } from '@/types/property-viewer';
@@ -54,7 +54,11 @@ export function PropertyLayerHeader({
 
       <div className="flex items-center justify-between text-xs pl-7">
         <span className="text-muted-foreground">{property.type}</span>
-        <Badge variant="outline" className={cn("text-xs", statusInfo.color)}>{statusInfo.label}</Badge>
+        <PropertyBadge
+          status={property.status as any}
+          variant="outline"
+          className={cn("text-xs", statusInfo.color)}
+        />
       </div>
     </div>
   );

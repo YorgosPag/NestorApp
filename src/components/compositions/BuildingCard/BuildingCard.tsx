@@ -2,8 +2,7 @@
 
 import React, { useState } from 'react';
 import { BaseCard } from '@/components/core/BaseCard/BaseCard';
-import { badgeVariants } from '@/components/ui/variants';
-import { getStatusColor, getStatusBadgeClass } from '@/lib/design-system';
+import { BuildingBadge, CommonBadge } from '@/core/badges';
 import { getStatusLabel, getStatusColor as getStatusColorConstant } from '@/constants/statuses';
 import { Building, Apartment, House, Store } from 'lucide-react';
 import type { Building as BuildingType } from '../../building-management/BuildingsPageContent';

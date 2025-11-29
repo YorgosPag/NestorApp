@@ -2,8 +2,7 @@
 
 import React, { useState } from 'react';
 import { BaseCard } from '@/components/core/BaseCard/BaseCard';
-import { badgeVariants } from '@/components/ui/variants';
-import { getStatusBadgeClass } from '@/lib/design-system';
+import { UnitBadge, CommonBadge } from '@/core/badges';
 import { Package, MapPin, Ruler, Thermometer, Shield, Edit, Trash2 } from 'lucide-react';
 import type { StorageUnit, StorageType, StorageStatus } from '@/types/storage';
 

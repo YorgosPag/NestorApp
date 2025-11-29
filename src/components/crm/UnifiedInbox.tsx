@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Badge } from '../ui/badge';
+import { CommonBadge } from '@/core/badges';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { 
@@ -164,9 +164,11 @@ const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) =
             {leadId ? 'Ιστορικό Επικοινωνιών' : 'Unified Inbox'}
           </CardTitle>
           <div className="flex items-center gap-2">
-            <Badge variant="secondary">
-              {filteredMessages.length} μηνύματα
-            </Badge>
+            <CommonBadge
+              status="company"
+              customLabel={`${filteredMessages.length} μηνύματα`}
+              variant="secondary"
+            />
             <Button
               variant="outline"
               size="sm"
@@ -251,15 +253,18 @@ const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) =
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-xs">
-                            {message.channel?.toUpperCase()}
-                          </Badge>
-                          <Badge 
+                          <CommonBadge
+                            status="company"
+                            customLabel={message.channel?.toUpperCase()}
+                            variant="outline"
+                            className="text-xs"
+                          />
+                          <CommonBadge
+                            status="company"
+                            customLabel={message.direction === MESSAGE_DIRECTIONS.INBOUND ? 'Εισερχόμενο' : 'Εξερχόμενο'}
                             variant={message.direction === MESSAGE_DIRECTIONS.INBOUND ? "default" : "secondary"}
                             className="text-xs"
-                          >
-                            {message.direction === MESSAGE_DIRECTIONS.INBOUND ? 'Εισερχόμενο' : 'Εξερχόμενο'}
-                          </Badge>
+                          />
                         </div>
                         <div className="flex items-center gap-2 text-sm text-gray-500" title={fullTime}>
                           {STATUS_ICONS[message.status] || STATUS_ICONS.default}
@@ -289,9 +294,12 @@ const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) =
 
                       {message.attachments && message.attachments.length > 0 && (
                         <div className="mt-2">
-                          <Badge variant="outline" className="text-xs">
-                            📎 {message.attachments.length} συνημμένα
-                          </Badge>
+                          <CommonBadge
+                            status="company"
+                            customLabel={`📎 ${message.attachments.length} συνημμένα`}
+                            variant="outline"
+                            className="text-xs"
+                          />
                         </div>
                       )}
                     </div>

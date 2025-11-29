@@ -4,7 +4,7 @@ import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { PropertyBadge } from '@/core/badges';
-import { Badge } from '@/components/ui/badge';
+import { CommonBadge } from '@/core/badges';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -76,7 +76,12 @@ export function PropertyDetails({ property }: PropertyDetailsProps) {
               <h4 className="font-semibold text-sm">Χαρακτηριστικά</h4>
               <div className="flex flex-wrap gap-2">
                 {property.features.map((feature, index) => (
-                  <Badge key={index} variant="secondary">{feature}</Badge>
+                  <CommonBadge
+                    key={index}
+                    status="property"
+                    customLabel={feature}
+                    variant="secondary"
+                  />
                 ))}
               </div>
             </div>

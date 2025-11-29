@@ -1,6 +1,6 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
+import { CommonBadge } from "@/core/badges";
 import type { TableOfContentsItem } from '@/types/obligations';
 import { cn } from "@/lib/utils";
 
@@ -25,9 +25,12 @@ export function TableOfContentsPart({ toc, activeItemId, onClick, show }: TableO
         onClick={() => onClick(item)}
       >
         <div className="flex items-center gap-3">
-          <Badge variant={level === 0 ? "outline" : "secondary"} className="font-mono text-xs min-w-8">
-            {item.number}
-          </Badge>
+          <CommonBadge
+            status="company"
+            customLabel={item.number}
+            variant={level === 0 ? "outline" : "secondary"}
+            className="font-mono text-xs min-w-8"
+          />
           <span className={cn("text-sm", level === 0 && "font-medium")}>
             {item.title}
           </span>

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Badge } from "@/components/ui/badge";
+import { BuildingBadge } from "@/core/badges";
 import { MapPin } from "lucide-react";
 import { cn } from '@/lib/utils';
 import type { Building } from '../../BuildingsPageContent';
@@ -26,15 +26,17 @@ export function BuildingListItemHeader({ building }: BuildingListItemHeaderProps
       </div>
       
       <div className="flex items-center gap-2 mb-2">
-        <Badge 
-          variant="secondary" 
+        <BuildingBadge
+          status={building.status as any}
+          variant="secondary"
           className={cn("text-xs text-white", getStatusColor(building.status))}
-        >
-          {getStatusLabel(building.status)}
-        </Badge>
-        <Badge variant="outline" className="text-xs">
-          {getCategoryLabel(building.category || 'mixed')}
-        </Badge>
+        />
+        <BuildingBadge
+          status="planning"
+          customLabel={getCategoryLabel(building.category || 'mixed')}
+          variant="outline"
+          className="text-xs"
+        />
       </div>
 
       {building.address && (

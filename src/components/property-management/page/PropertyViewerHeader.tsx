@@ -3,7 +3,6 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { LayoutGrid, List, BarChart3, Eye, EyeOff, Plus, Home } from 'lucide-react';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { Filter } from 'lucide-react';

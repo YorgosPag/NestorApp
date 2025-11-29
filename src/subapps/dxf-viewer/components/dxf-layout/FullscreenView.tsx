@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { Button } from "../../../../components/ui/button";
-import { Badge } from '../../../../components/ui/badge';
+import { CommonBadge } from '../../../../core/badges';
 import { RotateCcw, Minimize } from "lucide-react";
 import type { DXFViewerLayoutProps } from '../../integration/types';
 import { ToolbarSection } from './ToolbarSection';
@@ -39,15 +39,21 @@ export const FullscreenView: React.FC<DXFViewerLayoutProps> = (props) => (
       
       <div className="flex gap-2 items-center">
         {props.currentScene && (
-          <Badge variant="secondary" className="bg-green-600 text-white">
-            ✅ DXF Active ({props.currentScene.entities.length} entities)
-          </Badge>
+          <CommonBadge
+            status="company"
+            customLabel={`✅ DXF Active (${props.currentScene.entities.length} entities)`}
+            variant="secondary"
+            className="bg-green-600 text-white"
+          />
         )}
         
         {props.selectedEntityIds.length > 0 && (
-          <Badge variant="secondary" className="bg-blue-600 text-white">
-            🔺 Selected: {props.selectedEntityIds.length}
-          </Badge>
+          <CommonBadge
+            status="company"
+            customLabel={`🔺 Selected: ${props.selectedEntityIds.length}`}
+            variant="secondary"
+            className="bg-blue-600 text-white"
+          />
         )}
         
       </div>

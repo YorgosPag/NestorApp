@@ -1,5 +1,6 @@
 'use client';
 import { Eye, ArrowRight, Heart, Square, Bed, Bath, Building } from 'lucide-react';
+import { PropertyBadge, CommonBadge } from '@/core/badges';
 import { getPropertyImage } from '../utils/images';
 
 export function PropertyCard({ property, onViewFloorPlan }: { property: any; onViewFloorPlan: (id: string) => void; }) {
@@ -12,9 +13,10 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: any; onV
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
         />
         <div className="absolute top-3 left-3">
-          <span className="px-3 py-1 bg-blue-600 text-white text-xs font-semibold rounded-full">
-            Διαθέσιμο
-          </span>
+          <PropertyBadge
+            status="available"
+            customLabel="Διαθέσιμο"
+          />
         </div>
         <button className="absolute top-3 right-3 p-2 bg-white/90 dark:bg-gray-800/80 backdrop-blur rounded-full hover:bg-white dark:hover:bg-gray-700 transition-colors">
           <Heart className="h-4 w-4 text-gray-600 dark:text-gray-300" />
@@ -30,9 +32,10 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: any; onV
               {property.project} • {property.building} • {property.floor}ος όροφος
             </p>
           </div>
-          <span className="text-xs font-medium px-2 py-1 bg-gray-100 dark:bg-muted rounded-lg text-foreground">
-            {property.type}
-          </span>
+          <CommonBadge
+            status="category"
+            customLabel={property.type}
+          />
         </div>
 
         <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-3">
@@ -61,9 +64,11 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: any; onV
         {property.tags && property.tags.length > 0 && (
           <div className="flex flex-wrap gap-1 mb-4">
             {property.tags.slice(0, 3).map((tag: string, idx: number) => (
-              <span key={idx} className="text-xs px-2 py-1 bg-blue-50 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300 rounded-full">
-                {tag}
-              </span>
+              <CommonBadge
+                key={idx}
+                status="feature"
+                customLabel={tag}
+              />
             ))}
           </div>
         )}

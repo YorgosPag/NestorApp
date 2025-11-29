@@ -2,8 +2,7 @@
 
 import React, { useState } from 'react';
 import { BaseCard } from '@/components/core/BaseCard/BaseCard';
-import { badgeVariants } from '@/components/ui/variants';
-import { getStatusColor, getStatusBadgeClass } from '@/lib/design-system';
+import { ProjectBadge, CommonBadge } from '@/core/badges';
 import { formatDate as formatIntlDate } from '@/lib/intl-utils';
 import { MapPin, Calendar, Users, Target, Briefcase } from 'lucide-react';
 import type { Project } from '@/types/project';

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
+import { CommonBadge } from "@/core/badges";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   ArrowLeft,
@@ -339,7 +339,11 @@ export default function NewObligationPage() {
               >
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
-                    <Badge variant="outline">{section.number}</Badge>
+                    <CommonBadge
+                      status="company"
+                      customLabel={section.number}
+                      variant="outline"
+                    />
                     {section.title}
                   </CardTitle>
                 </CardHeader>
@@ -363,7 +367,12 @@ export default function NewObligationPage() {
                           }`}
                         >
                           <h4 className="font-medium text-sm flex items-center gap-2">
-                            <Badge variant="secondary" className="text-xs">{article.number}</Badge>
+                            <CommonBadge
+                              status="company"
+                              customLabel={article.number}
+                              variant="secondary"
+                              className="text-xs"
+                            />
                             {article.title}
                           </h4>
                           {article.content && (
@@ -442,7 +451,11 @@ export default function NewObligationPage() {
                           <ChevronRight className="h-4 w-4" />
                         }
                       </Button>
-                      <Badge variant="outline">{section.number}</Badge>
+                      <CommonBadge
+                      status="company"
+                      customLabel={section.number}
+                      variant="outline"
+                    />
                       <span className="text-sm font-medium">{section.title || "Χωρίς τίτλο"}</span>
                     </div>
                     <div className="flex items-center gap-1">
@@ -490,7 +503,12 @@ export default function NewObligationPage() {
                           <div className="space-y-2">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
-                                <Badge variant="secondary" className="text-xs">{article.number}</Badge>
+                                <CommonBadge
+                              status="company"
+                              customLabel={article.number}
+                              variant="secondary"
+                              className="text-xs"
+                            />
                                 <span className="text-xs">{article.title || "Χωρίς τίτλο"}</span>
                               </div>
                               <Button

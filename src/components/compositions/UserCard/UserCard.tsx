@@ -2,8 +2,7 @@
 
 import React, { useState } from 'react';
 import { BaseCard } from '@/components/core/BaseCard/BaseCard';
-import { badgeVariants } from '@/components/ui/variants';
-import { getStatusBadgeClass } from '@/lib/design-system';
+import { CommonBadge } from '@/core/badges';
 import { formatDate as formatIntlDate } from '@/lib/intl-utils';
 import { 
   User, 
@@ -164,24 +163,27 @@ export function UserCard({
       
       // Status badges
       statusBadges={[
-        {
-          label: getStatusLabel(user.status),
-          className: getStatusBadgeClass(
-            user.status === 'active' ? 'available' :
-            user.status === 'suspended' ? 'error' :
-            user.status === 'pending' ? 'reserved' : 
-            'unavailable'
-          )
-        },
-        {
-          label: getRoleLabel(user.role || 'user'),
-          className: badgeVariants({ 
-            variant: user.role === 'admin' ? 'error-outline' :
-                     user.role === 'manager' ? 'warning-outline' :
-                     user.role === 'agent' ? 'info-outline' : 'secondary',
-            size: 'sm' 
-          })
-        }
+        <CommonBadge
+          key="status"
+          status="company"
+          customLabel={getStatusLabel(user.status)}
+          variant={
+            user.status === 'active' ? 'default' :
+            user.status === 'suspended' ? 'destructive' :
+            user.status === 'pending' ? 'secondary' : 'outline'
+          }
+        />,
+        <CommonBadge
+          key="role"
+          status="company"
+          customLabel={getRoleLabel(user.role || 'user')}
+          variant={
+            user.role === 'admin' ? 'destructive' :
+            user.role === 'manager' ? 'default' :
+            user.role === 'agent' ? 'secondary' : 'outline'
+          }
+          className="text-sm"
+        />
       ]}
       
       // Content sections
@@ -292,17 +294,21 @@ export function UserCard({
           content: (
             <div className="flex flex-wrap gap-1">
               {user.specialties.slice(0, 3).map((specialty, index) => (
-                <span 
+                <CommonBadge
                   key={index}
-                  className={badgeVariants({ variant: 'secondary', size: 'sm' })}
-                >
-                  {specialty}
-                </span>
+                  status="company"
+                  customLabel={specialty}
+                  variant="secondary"
+                  className="text-xs"
+                />
               ))}
               {user.specialties.length > 3 && (
-                <span className={badgeVariants({ variant: 'outline', size: 'sm' })}>
-                  +{user.specialties.length - 3}
-                </span>
+                <CommonBadge
+                  status="company"
+                  customLabel={`+${user.specialties.length - 3}`}
+                  variant="outline"
+                  className="text-xs"
+                />
               )}
             </div>
           )

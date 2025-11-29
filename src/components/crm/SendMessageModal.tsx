@@ -8,7 +8,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import { Label } from '../ui/label';
-import { Badge } from '../ui/badge';
+import { CommonBadge } from '@/core/badges';
 import { 
   Send, 
   MessageSquare, 
@@ -316,9 +316,11 @@ const SendMessageModal = ({
             <Send className="h-5 w-5" />
             Αποστολή Μηνύματος
             {leadData && (
-              <Badge variant="secondary">
-                {leadData.fullName}
-              </Badge>
+              <CommonBadge
+                status="contact"
+                customLabel={leadData.fullName}
+                variant="secondary"
+              />
             )}
           </DialogTitle>
         </DialogHeader>
@@ -411,12 +413,12 @@ const SendMessageModal = ({
                     <div className="space-y-2">
                       <div className="text-xs text-gray-600">Διαθέσιμες μεταβλητές:</div>
                       <div className="flex flex-wrap gap-1">
-                        <Badge variant="outline" className="text-xs">leadName</Badge>
-                        <Badge variant="outline" className="text-xs">leadEmail</Badge>
-                        <Badge variant="outline" className="text-xs">leadPhone</Badge>
-                        <Badge variant="outline" className="text-xs">companyName</Badge>
-                        <Badge variant="outline" className="text-xs">companyEmail</Badge>
-                        <Badge variant="outline" className="text-xs">companyPhone</Badge>
+                        <CommonBadge status="contact" customLabel="leadName" variant="outline" className="text-xs" />
+                        <CommonBadge status="contact" customLabel="leadEmail" variant="outline" className="text-xs" />
+                        <CommonBadge status="contact" customLabel="leadPhone" variant="outline" className="text-xs" />
+                        <CommonBadge status="company" customLabel="companyName" variant="outline" className="text-xs" />
+                        <CommonBadge status="company" customLabel="companyEmail" variant="outline" className="text-xs" />
+                        <CommonBadge status="company" customLabel="companyPhone" variant="outline" className="text-xs" />
                       </div>
                     </div>
                   )}

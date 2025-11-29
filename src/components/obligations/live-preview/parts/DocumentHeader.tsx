@@ -1,6 +1,6 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
+import { CommonBadge } from "@/core/badges";
 import { Building, FileText, Hash, MapPin, Users } from "lucide-react";
 import type { ObligationDocument } from '@/types/obligations';
 import { formatDate, getStatusLabel } from "@/lib/obligations-utils";
@@ -75,9 +75,12 @@ export function DocumentHeader({ doc }: DocumentHeaderProps) {
               <div key={owner.id ?? `owner-${index}`} className="flex justify-between items-center">
                 <span>{owner.name || `Ιδιοκτήτης ${index + 1}`}</span>
                 {typeof owner.share === "number" && (
-                  <Badge variant="outline" className="text-xs">
-                    {owner.share}%
-                  </Badge>
+                  <CommonBadge
+                    status="company"
+                    customLabel={`${owner.share}%`}
+                    variant="outline"
+                    className="text-xs"
+                  />
                 )}
               </div>
             ))}
@@ -88,9 +91,11 @@ export function DocumentHeader({ doc }: DocumentHeaderProps) {
       <div className="flex justify-between items-center mt-6 pt-6 border-t text-xs text-gray-500">
         <div>
           Κατάσταση:{" "}
-          <Badge variant="outline">
-            {getStatusLabel(doc.status || "draft")}
-          </Badge>
+          <CommonBadge
+            status="company"
+            customLabel={getStatusLabel(doc.status || "draft")}
+            variant="outline"
+          />
         </div>
         <div>{formatDate(doc.updatedAt || new Date())}</div>
       </div>

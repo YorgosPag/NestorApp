@@ -2,7 +2,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { CommonBadge } from "@/core/badges";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Calendar, MapPin, Building, Users, Download, FileText } from "lucide-react";
@@ -92,7 +92,14 @@ export function DocumentSidebar({ obligation, contentSummary }: DocumentSidebarP
               {obligation.owners.map((owner) => (
                 <div key={owner.id} className="flex justify-between items-center">
                   <span className="text-sm">{owner.name}</span>
-                  {owner.share && (<Badge variant="outline" className="text-xs">{owner.share}%</Badge>)}
+                  {owner.share && (
+                    <CommonBadge
+                      status="company"
+                      customLabel={`${owner.share}%`}
+                      variant="outline"
+                      className="text-xs"
+                    />
+                  )}
                 </div>
               ))}
             </div>

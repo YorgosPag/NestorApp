@@ -8,7 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
+import { CommonBadge } from '@/core/badges';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   Layers, 
@@ -137,13 +137,19 @@ function ReadOnlyLayerItem({
             </div>
             
             <div className="flex items-center gap-1">
-              <Badge variant="secondary" className="text-xs">
-                {layer.elements.length}
-              </Badge>
+              <CommonBadge
+                status="company"
+                customLabel={layer.elements.length}
+                variant="secondary"
+                className="text-xs"
+              />
               {layer.isSystem && (
-                <Badge variant="outline" className="text-xs">
-                  Σύστημα
-                </Badge>
+                <CommonBadge
+                  status="company"
+                  customLabel="Σύστημα"
+                  variant="outline"
+                  className="text-xs"
+                />
               )}
             </div>
           </div>
@@ -530,9 +536,12 @@ export function ReadOnlyLayerViewer({
                       </>
                     )}
                     {category === 'other' && 'Άλλα'}
-                    <Badge variant="outline" className="text-xs">
-                      {layers.length}
-                    </Badge>
+                    <CommonBadge
+                      status="company"
+                      customLabel={layers.length}
+                      variant="outline"
+                      className="text-xs"
+                    />
                   </h4>
                   
                   {layers.map(layer => (

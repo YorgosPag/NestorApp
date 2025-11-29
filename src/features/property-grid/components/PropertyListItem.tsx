@@ -1,5 +1,6 @@
 'use client';
 import { Eye, Square, Bed, Building } from 'lucide-react';
+import { CommonBadge } from '@/core/badges';
 import { getPropertyImage } from '../utils/images';
 
 export function PropertyListItem({ property, onViewFloorPlan }: { property: any; onViewFloorPlan: (id: string) => void; }) {
@@ -19,9 +20,10 @@ export function PropertyListItem({ property, onViewFloorPlan }: { property: any;
               {property.project} • {property.building} • {property.floor}ος όροφος
             </p>
           </div>
-          <span className="text-xs font-medium px-2 py-1 bg-gray-100 dark:bg-muted rounded-lg text-foreground">
-            {property.type}
-          </span>
+          <CommonBadge
+            status="category"
+            customLabel={property.type}
+          />
         </div>
 
         <div className="text-xl font-bold text-blue-600 dark:text-blue-400 mt-2">
