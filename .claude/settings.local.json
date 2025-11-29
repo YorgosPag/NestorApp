@@ -67,7 +67,9 @@
       "Bash(rd:*)",
       "Bash(git tag:*)",
       "Bash(git show:*)",
-      "Bash(ipconfig)"
+      "Bash(ipconfig)",
+      "Bash(del \"C:\\Nestor_Pagonis\\src\\components\\units\\ProgressBarTest.tsx\")",
+      "Bash(del \"C:\\Nestor_Pagonis\\src\\components\\projects\\projects\\ProjectCard\\ProjectCardContent\\ProjectCardProgress.tsx\")"
     ],
     "deny": [],
     "ask": []

@@ -41,9 +41,9 @@ interface ContactListItemProps {
 }
 
 const typeInfoMap = {
-    individual: { icon: Users, color: 'border-blue-200 bg-blue-50 text-blue-700' },
-    company: { icon: Building2, color: 'border-purple-200 bg-purple-50 text-purple-700' },
-    service: { icon: Landmark, color: 'border-green-200 bg-green-50 text-green-700' }
+    individual: { icon: Users },
+    company: { icon: Building2 },
+    service: { icon: Landmark }
 };
 
 export function ContactListItem({
@@ -55,7 +55,7 @@ export function ContactListItem({
     isTogglingFavorite = false
 }: ContactListItemProps) {
     const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
-    const { icon: Icon, color } = typeInfoMap[contact.type];
+    const { icon: Icon } = typeInfoMap[contact.type];
     const displayName = getContactDisplayName(contact);
     const initials = getContactInitials(contact);
     const email = getPrimaryEmail(contact);
@@ -116,21 +116,29 @@ export function ContactListItem({
                     </TooltipContent>
                 </Tooltip>
 
-                {/* Contact Header - EntityDetailsHeader */}
+                {/* Contact Header - EntityDetailsHeader with centralized ContactBadge */}
                 <EntityDetailsHeader
                     icon={Icon}
                     title={displayName}
                     subtitle={contact.type === 'individual' ? (contact as any).profession : (contact as any).vatNumber || ''}
-                    badges={[
-                        ...(isArchived ? [{ type: 'status' as const, value: 'Αρχειοθετημένο', size: 'sm' as const }] : [])
-                    ]}
                     avatarImageUrl={(contact as any).photoURL}
                     onAvatarClick={(contact as any).photoURL ? () => setIsPhotoModalOpen(true) : undefined}
                     variant="compact"
                     className="mb-2"
                 >
+                    {/* Centralized ContactBadge */}
+                    <div className="flex gap-2 mt-2 mb-2">
+                        <ContactBadge status={contact.type as any} variant="outline" size="sm" />
+                        {isArchived && (
+                            <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-muted text-muted-foreground rounded-full">
+                                <Archive className="w-3 h-3 mr-1" />
+                                Αρχειοθετημένο
+                            </span>
+                        )}
+                    </div>
+
                     {/* Contact Info */}
-                    <div className="flex items-center gap-3 mt-2">
+                    <div className="flex items-center gap-3">
                         <div className="flex-1 min-w-0 space-y-1">
                             {email && (
                                 <div className={cn("flex items-center gap-2", getTypography('labelSmall'))}>
@@ -150,7 +158,7 @@ export function ContactListItem({
 
 
                 {isSelected && (
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 rounded-r-full" />
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
                 )}
             </div>
 

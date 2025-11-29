@@ -8,27 +8,7 @@ import { EntityDetailsHeader } from '@/core/entity-headers';
 import { cn } from '@/lib/utils';
 import type { Property } from '@/types/property-viewer';
 
-function getStatusColor(status: string) {
-  switch (status) {
-    case 'for-sale': return 'bg-blue-500';
-    case 'sold': return 'bg-red-500';
-    case 'for-rent': return 'bg-yellow-500';
-    case 'rented': return 'bg-green-500';
-    case 'reserved': return 'bg-purple-500';
-    default: return 'bg-gray-500';
-  }
-}
-
-function getStatusLabel(status: string) {
-  switch (status) {
-    case 'for-sale': return 'Προς πώληση';
-    case 'sold': return 'Πουλήθηκε';
-    case 'for-rent': return 'Προς ενοικίαση';
-    case 'rented': return 'Ενοικιάστηκε';
-    case 'reserved': return 'Κρατήθηκε';
-    default: return status;
-  }
-}
+// Removed hardcoded getStatusColor and getStatusLabel functions - using centralized UnitBadge instead
 
 export function UnitDetailsHeader({ unit }: { unit: Property | null }) {
   // Empty State - No unit selected
@@ -49,13 +29,6 @@ export function UnitDetailsHeader({ unit }: { unit: Property | null }) {
     <EntityDetailsHeader
       icon={Home}
       title={unit.name}
-      badges={[
-        {
-          type: 'status',
-          value: getStatusLabel(unit.status),
-          size: 'sm'
-        }
-      ]}
       actions={[
         {
           label: 'Επίδειξη Μονάδας',
@@ -65,6 +38,11 @@ export function UnitDetailsHeader({ unit }: { unit: Property | null }) {
         }
       ]}
       variant="detailed"
-    />
+    >
+      {/* Centralized UnitBadge Component */}
+      <div className="flex gap-2 mt-2">
+        <UnitBadge status={unit.status as any} size="sm" />
+      </div>
+    </EntityDetailsHeader>
   );
 }

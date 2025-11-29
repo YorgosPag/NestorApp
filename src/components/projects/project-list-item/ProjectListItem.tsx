@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
 import type { ProjectListItemProps } from './types';
 import { EntityDetailsHeader } from '@/core/entity-headers';
+import { ProjectBadge } from '@/core/badges';
 import { Briefcase } from 'lucide-react';
 import { PROJECT_STATUS_LABELS } from '@/types/project';
 
@@ -42,27 +43,20 @@ export function ProjectListItem({
             >
                 <FavoriteButton isFavorite={isFavorite} onToggleFavorite={onToggleFavorite} />
 
-                {/* EntityDetailsHeader instead of Header + MetaBadges */}
+                {/* EntityDetailsHeader with centralized ProjectBadge */}
                 <EntityDetailsHeader
                     icon={Briefcase}
                     title={project.name}
                     subtitle={companyName}
-                    badges={[
-                        {
-                            type: 'status',
-                            value: PROJECT_STATUS_LABELS[project.status] || project.status,
-                            size: 'sm'
-                        },
-                        {
-                            type: 'progress',
-                            value: `${project.progress}% ολοκληρωμένο`,
-                            variant: 'secondary',
-                            size: 'sm'
-                        }
-                    ]}
                     variant="compact"
                     className="mb-3"
                 >
+                    <div className="flex gap-2 mt-2 mb-2">
+                        <ProjectBadge status={project.status} size="sm" />
+                        <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-secondary text-secondary-foreground rounded-full">
+                            {project.progress}% ολοκληρωμένο
+                        </span>
+                    </div>
                     <LocationRow address={project.address} city={project.city} />
                 </EntityDetailsHeader>
                 

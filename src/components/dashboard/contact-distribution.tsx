@@ -7,7 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+import { ThemeProgressBar } from "@/core/progress/ThemeProgressBar";
 import { User, Building2, Landmark } from "lucide-react";
 
 export function ContactDistribution() {
@@ -29,7 +29,12 @@ export function ContactDistribution() {
                 856 (68.6%)
               </span>
             </div>
-            <Progress value={68.6} className="h-2" />
+            <ThemeProgressBar
+              progress={68.6}
+              label=""
+              size="sm"
+              showPercentage={false}
+            />
           </div>
 
           <div className="space-y-2">
@@ -40,7 +45,12 @@ export function ContactDistribution() {
               </div>
               <span className="text-sm text-muted-foreground">312 (25%)</span>
             </div>
-            <Progress value={25} className="h-2 [&>div]:bg-purple-600" />
+            <ThemeProgressBar
+              progress={25}
+              label=""
+              size="sm"
+              showPercentage={false}
+            />
           </div>
 
           <div className="space-y-2">
@@ -51,7 +61,12 @@ export function ContactDistribution() {
               </div>
               <span className="text-sm text-muted-foreground">79 (6.4%)</span>
             </div>
-            <Progress value={6.4} className="h-2 [&>div]:bg-green-600" />
+            <ThemeProgressBar
+              progress={6.4}
+              label=""
+              size="sm"
+              showPercentage={false}
+            />
           </div>
         </div>
       </CardContent>

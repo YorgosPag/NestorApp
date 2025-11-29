@@ -19,31 +19,23 @@ export function BuildingListItemHeader({ building }: BuildingListItemHeaderProps
     <EntityDetailsHeader
       icon={CategoryIcon}
       title={building.name}
-      badges={[
-        {
-          type: 'status',
-          value: getStatusLabel(building.status),
-          size: 'sm'
-        },
-        {
-          type: 'category',
-          value: getCategoryLabel(building.category || 'mixed'),
-          variant: 'outline',
-          size: 'sm'
-        },
-        {
-          type: 'progress',
-          value: `${building.progress}% ολοκληρωμένο`,
-          variant: 'secondary',
-          size: 'sm'
-        }
-      ]}
       variant="compact"
       className="mb-3"
     >
+      {/* Centralized BuildingBadge */}
+      <div className="flex gap-2 mt-2 mb-2">
+        <BuildingBadge status={building.status} size="sm" />
+        <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-muted text-muted-foreground rounded-full">
+          {getCategoryLabel(building.category || 'mixed')}
+        </span>
+        <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-secondary text-secondary-foreground rounded-full">
+          {building.progress}% ολοκληρωμένο
+        </span>
+      </div>
+
       {/* Address inside EntityDetailsHeader */}
       {building.address && (
-        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-2">
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <MapPin className="w-3 h-3" />
           <span className="truncate">{building.address}</span>
         </div>

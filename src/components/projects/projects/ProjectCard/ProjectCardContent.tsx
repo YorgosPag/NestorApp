@@ -4,7 +4,7 @@ import React from 'react';
 import type { Project } from '@/types/project';
 import { ProjectCardTitle } from './ProjectCardContent/ProjectCardTitle';
 import { ProjectCardLocation } from './ProjectCardContent/ProjectCardLocation';
-import { ProjectCardProgress } from './ProjectCardContent/ProjectCardProgress';
+import { ProjectCardProgress } from './ProjectCardProgress';
 import { ProjectCardMetrics } from './ProjectCardContent/ProjectCardMetrics';
 
 interface ProjectCardContentProps {

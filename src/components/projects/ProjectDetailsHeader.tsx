@@ -9,16 +9,7 @@ import { cn } from '@/lib/utils';
 import type { Project, ProjectStatus } from '@/types/project';
 import { PROJECT_STATUS_LABELS } from '@/types/project';
 
-const getStatusColor = (status: ProjectStatus): string => {
-    const colors: Record<ProjectStatus, string> = {
-      planning: 'bg-yellow-500',
-      in_progress: 'bg-blue-500',
-      completed: 'bg-green-500',
-      on_hold: 'bg-gray-500',
-      cancelled: 'bg-red-500',
-    };
-    return colors[status];
-};
+// Removed hardcoded getStatusColor function - using centralized ProjectBadge instead
 
 
 interface ProjectDetailsHeaderProps {
@@ -30,19 +21,6 @@ export function ProjectDetailsHeader({ project }: ProjectDetailsHeaderProps) {
         <EntityDetailsHeader
             icon={Briefcase}
             title={project.name}
-            badges={[
-                {
-                    type: 'status',
-                    value: PROJECT_STATUS_LABELS[project.status] || project.status,
-                    size: 'sm'
-                },
-                {
-                    type: 'progress',
-                    value: `${project.progress}% ολοκληρωμένο`,
-                    variant: 'secondary',
-                    size: 'sm'
-                }
-            ]}
             actions={[
                 {
                     label: 'Επίδειξη Έργου',
@@ -52,6 +30,14 @@ export function ProjectDetailsHeader({ project }: ProjectDetailsHeaderProps) {
                 }
             ]}
             variant="detailed"
-        />
+        >
+            {/* Centralized ProjectBadge Components */}
+            <div className="flex gap-2 mt-2">
+                <ProjectBadge status={project.status} size="sm" />
+                <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-secondary text-secondary-foreground rounded-full">
+                    {project.progress}% ολοκληρωμένο
+                </span>
+            </div>
+        </EntityDetailsHeader>
     );
 }

@@ -54,7 +54,7 @@ export function BuildingListItem({
                 <BuildingListItemFooter completionDate={building.completionDate} />
 
                 {isSelected && (
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 rounded-r-full" />
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
                 )}
             </div>
         </TooltipProvider>

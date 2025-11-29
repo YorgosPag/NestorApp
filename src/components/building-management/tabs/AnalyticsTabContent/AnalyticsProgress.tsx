@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
+import { ThemeProgressBar } from '@/core/progress/ThemeProgressBar';
 import type { Building } from '../../BuildingsPageContent';
 
 export default function AnalyticsProgress({ building }: { building: Building }) {
@@ -17,13 +17,23 @@ export default function AnalyticsProgress({ building }: { building: Building }) 
                         <div className="text-center p-4 border rounded-lg">
                             <div className="text-3xl font-bold text-blue-600 mb-2">{building.progress}%</div>
                             <div className="text-sm text-muted-foreground">Συνολική Πρόοδος</div>
-                            <Progress value={building.progress} className="mt-2 h-3" />
+                            <ThemeProgressBar
+                              progress={building.progress}
+                              label=""
+                              size="md"
+                              showPercentage={false}
+                            />
                         </div>
 
                         <div className="text-center p-4 border rounded-lg">
                             <div className="text-3xl font-bold text-green-600 mb-2">88%</div>
                             <div className="text-sm text-muted-foreground">Αποδοτικότητα</div>
-                            <Progress value={88} className="mt-2 h-3" />
+                            <ThemeProgressBar
+                              progress={88}
+                              label=""
+                              size="md"
+                              showPercentage={false}
+                            />
                         </div>
 
                         <div className="text-center p-4 border rounded-lg">

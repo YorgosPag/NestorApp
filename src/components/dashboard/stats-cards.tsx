@@ -8,7 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { CommonBadge } from "@/core/badges";
-import { Progress } from "@/components/ui/progress";
+import { ThemeProgressBar } from "@/core/progress/ThemeProgressBar";
 import {
   Users,
   TrendingUp,
@@ -56,7 +56,14 @@ export function StatsCards({ stats }: StatsCardsProps) {
           <div className="flex items-center text-xs text-muted-foreground mt-2">
             <span>{t('stats.periods.thisMonth')}</span>
           </div>
-          <Progress value={65} className="mt-2 h-1" />
+          <div className="mt-2">
+            <ThemeProgressBar
+              progress={65}
+              label=""
+              size="sm"
+              showPercentage={false}
+            />
+          </div>
         </CardContent>
       </Card>
 

@@ -5,7 +5,7 @@ import type { Project } from '@/types/project';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Building } from 'lucide-react';
 import { BuildingBadge } from '@/core/badges';
-import { Progress } from '@/components/ui/progress';
+import { ThemeProgressBar } from '@/core/progress/ThemeProgressBar';
 import { getStatusColor, getStatusLabel } from '@/lib/project-utils';
 
 const mockBuildings = [
@@ -25,7 +25,14 @@ export function ProjectTimelineTab({ project }: { project: Project }) {
             <h3 className="text-lg font-semibold mb-4">Συνολική Πρόοδος Έργου</h3>
             <div className="flex items-center gap-4">
                 <span className="text-2xl font-bold text-primary">{project.progress}%</span>
-                <Progress value={project.progress} className="w-full" />
+                <div className="w-full">
+                  <ThemeProgressBar
+                    progress={project.progress}
+                    label=""
+                    size="md"
+                    showPercentage={false}
+                  />
+                </div>
             </div>
         </div>
 
@@ -47,7 +54,14 @@ export function ProjectTimelineTab({ project }: { project: Project }) {
                     </div>
                     <div className="flex items-center gap-4">
                         <span className="text-sm font-semibold text-primary">{building.progress}%</span>
-                        <Progress value={building.progress} className="w-full h-2" />
+                        <div className="w-full">
+                          <ThemeProgressBar
+                            progress={building.progress}
+                            label=""
+                            size="sm"
+                            showPercentage={false}
+                          />
+                        </div>
                     </div>
                 </div>
             ))}

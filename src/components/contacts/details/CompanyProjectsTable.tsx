@@ -3,11 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ProjectBadge } from '@/core/badges';
-import { Progress } from '@/components/ui/progress';
+import { ThemeProgressBar } from '@/core/progress/ThemeProgressBar';
 import { Briefcase } from 'lucide-react';
 import type { Project } from '@/types/project';
 import { cn } from '@/lib/utils';
-import { getProgressColor } from '@/lib/project-utils';
 import { getProjectLabel } from '@/lib/project-utils';
 import { getProjectsByCompanyId } from '@/services/projects.service';
 
@@ -71,11 +70,13 @@ function CompanyProjectsTable({ companyId }: { companyId: string }) {
                                     />
                                 </TableCell>
                                 <TableCell className="text-right">
-                                    <div className="flex items-center justify-end gap-2">
-                                        <span className={cn("text-xs font-semibold", getProgressColor(project.progress))}>
-                                            {project.progress}%
-                                        </span>
-                                        <Progress value={project.progress} className="w-20 h-1.5" />
+                                    <div className="w-20">
+                                        <ThemeProgressBar
+                                            progress={project.progress}
+                                            label=""
+                                            size="sm"
+                                            showPercentage={true}
+                                        />
                                     </div>
                                 </TableCell>
                             </TableRow>

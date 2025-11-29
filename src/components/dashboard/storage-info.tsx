@@ -6,7 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+import { ThemeProgressBar } from "@/core/progress/ThemeProgressBar";
 
 export function StorageInfo() {
   return (
@@ -20,7 +20,12 @@ export function StorageInfo() {
             <span>Χρησιμοποιημένος</span>
             <span className="font-medium">2.4 GB / 10 GB</span>
           </div>
-          <Progress value={24} className="h-2" />
+          <ThemeProgressBar
+            progress={24}
+            label=""
+            size="sm"
+            showPercentage={false}
+          />
           <p className="text-xs text-muted-foreground">
             Έχετε 7.6 GB διαθέσιμο χώρο για επαφές και αρχεία
           </p>

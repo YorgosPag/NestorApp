@@ -14,13 +14,13 @@ import type { Contact, ContactType, ContactStatus } from '@/types/contacts';
 import { getContactDisplayName, getContactInitials } from '@/types/contacts';
 import { cn } from '@/lib/utils';
 
-const TYPE_INFO: Record<ContactType, { icon: React.ElementType; color: string; name: string }> = {
-    individual: { icon: Users, color: 'bg-blue-500', name: 'Φυσικό Πρόσωπο' },
-    company: { icon: Building2, color: 'bg-purple-500', name: 'Νομικό Πρόσωπο' },
-    service: { icon: Landmark, color: 'bg-green-500', name: 'Δημόσια Υπηρεσία' }
+const TYPE_INFO: Record<ContactType, { icon: React.ElementType; name: string }> = {
+    individual: { icon: Users, name: 'Φυσικό Πρόσωπο' },
+    company: { icon: Building2, name: 'Νομικό Πρόσωπο' },
+    service: { icon: Landmark, name: 'Δημόσια Υπηρεσία' }
 };
 
-const TYPE_FALLBACK = { icon: Users, color: 'bg-gray-500', name: 'Άγνωστος Τύπος' };
+const TYPE_FALLBACK = { icon: Users, name: 'Άγνωστος Τύπος' };
 
 interface ContactDetailsHeaderProps {
   contact: Contact;
@@ -31,7 +31,7 @@ interface ContactDetailsHeaderProps {
 export function ContactDetailsHeader({ contact, onEditContact, onDeleteContact }: ContactDetailsHeaderProps) {
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const type = contact.type as ContactType;
-  const { icon: Icon, color, name: typeName } = TYPE_INFO[type] ?? TYPE_FALLBACK;
+  const { icon: Icon, name: typeName } = TYPE_INFO[type] ?? TYPE_FALLBACK;
   const status = (contact as any).status as ContactStatus | undefined;
   const displayName = getContactDisplayName(contact);
   const initials = getContactInitials(contact);
@@ -41,19 +41,6 @@ export function ContactDetailsHeader({ contact, onEditContact, onDeleteContact }
       <EntityDetailsHeader
         icon={Icon}
         title={displayName}
-        badges={[
-          {
-            type: 'category',
-            value: typeName,
-            variant: 'outline',
-            size: 'sm'
-          },
-          {
-            type: 'status',
-            value: status || 'unknown',
-            size: 'sm'
-          }
-        ]}
         avatarImageUrl={(contact as any).photoURL}
         onAvatarClick={(contact as any).photoURL ? () => setIsPhotoModalOpen(true) : undefined}
         actions={[
@@ -71,7 +58,13 @@ export function ContactDetailsHeader({ contact, onEditContact, onDeleteContact }
           }
         ]}
         variant="detailed"
-      />
+      >
+        {/* Centralized ContactBadge Components */}
+        <div className="flex gap-2 mt-2">
+          <ContactBadge status={type as any} variant="outline" size="sm" />
+          {status && <ContactBadge status={status} size="sm" />}
+        </div>
+      </EntityDetailsHeader>
 
     {/* Photo View Modal */}
     <Dialog open={isPhotoModalOpen} onOpenChange={setIsPhotoModalOpen}>

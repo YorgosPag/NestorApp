@@ -20,6 +20,7 @@ export interface FirestoreProject {
 }
 
 export function useFirestoreProjects() {
+  console.log('🔥 useFirestoreProjects hook initialized');
   const [projects, setProjects] = useState<FirestoreProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +28,11 @@ export function useFirestoreProjects() {
   useEffect(() => {
     async function fetchProjects() {
       try {
-        console.log('🔥 Fetching projects from Firestore...');
+        console.log('🔥 useFirestoreProjects: Starting...');
+        console.log('🔥 Firebase config check:', {
+          hasDb: !!db,
+          projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        });
         setLoading(true);
         setError(null);
 
@@ -60,9 +65,14 @@ export function useFirestoreProjects() {
         });
         setProjects(projectsData);
       } catch (err) {
-        console.error('❌ Error fetching projects from Firestore:', err);
-        setError(err instanceof Error ? err.message : 'Unknown error');
+        console.error('❌ ERROR in useFirestoreProjects:', err);
+        console.error('❌ Full error details:', JSON.stringify(err, null, 2));
+        console.error('❌ Error stack:', err instanceof Error ? err.stack : 'No stack');
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+        console.error('❌ Setting error state:', errorMessage);
+        setError(errorMessage);
       } finally {
+        console.log('🔥 useFirestoreProjects: Finally block - setting loading to false');
         setLoading(false);
       }
     }

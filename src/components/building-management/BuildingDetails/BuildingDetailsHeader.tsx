@@ -19,19 +19,6 @@ export function BuildingDetailsHeader({ building }: BuildingDetailsHeaderProps) 
         <EntityDetailsHeader
             icon={Building2}
             title={building.name}
-            badges={[
-                {
-                    type: 'status',
-                    value: getStatusLabel(building.status),
-                    size: 'sm'
-                },
-                {
-                    type: 'progress',
-                    value: `${building.progress}% ολοκληρωμένο`,
-                    variant: 'secondary',
-                    size: 'sm'
-                }
-            ]}
             actions={[
                 {
                     label: 'Προβολή Κτιρίου',
@@ -41,6 +28,14 @@ export function BuildingDetailsHeader({ building }: BuildingDetailsHeaderProps) 
                 }
             ]}
             variant="detailed"
-        />
+        >
+            {/* Centralized BuildingBadge Components */}
+            <div className="flex gap-2 mt-2">
+                <BuildingBadge status={building.status} size="sm" />
+                <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-secondary text-secondary-foreground rounded-full">
+                    {building.progress}% ολοκληρωμένο
+                </span>
+            </div>
+        </EntityDetailsHeader>
     );
 }

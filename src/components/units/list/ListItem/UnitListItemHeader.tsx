@@ -10,16 +10,12 @@ import type { Property } from '@/types/property-viewer';
 interface UnitListItemHeaderProps {
   unit: Property;
   getCategoryIcon: (category: string) => React.ElementType;
-  getStatusColor: (status: string) => string;
-  getStatusLabel: (status: string) => string;
   getCategoryLabel: (category: string) => string;
 }
 
 export function UnitListItemHeader({
   unit,
   getCategoryIcon,
-  getStatusColor,
-  getStatusLabel,
   getCategoryLabel
 }: UnitListItemHeaderProps) {
   const CategoryIcon = getCategoryIcon(unit.type);
@@ -28,22 +24,17 @@ export function UnitListItemHeader({
     <EntityDetailsHeader
       icon={CategoryIcon}
       title={unit.name}
-      badges={[
-        {
-          type: 'status',
-          value: getStatusLabel(unit.status),
-          size: 'sm'
-        },
-        {
-          type: 'category',
-          value: getCategoryLabel(unit.type),
-          variant: 'outline',
-          size: 'sm'
-        }
-      ]}
       variant="compact"
       className="mb-3 rounded-lg"
     >
+      {/* Centralized UnitBadge */}
+      <div className="flex gap-2 mt-2 mb-2">
+        <UnitBadge status={unit.status as any} size="sm" />
+        <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-muted text-muted-foreground rounded-full">
+          {getCategoryLabel(unit.type)}
+        </span>
+      </div>
+
       {/* Building Location Info */}
       {unit.building && (
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
