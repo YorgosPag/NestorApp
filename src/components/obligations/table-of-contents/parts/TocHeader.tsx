@@ -3,7 +3,7 @@
 import React from 'react';
 import { CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { CommonBadge } from '@/core/badges';
 import { BookOpen, ChevronDown, ChevronRight } from 'lucide-react';
 import type { TocHeaderProps } from '../types';
 import { cn } from '@/lib/utils';
@@ -23,9 +23,12 @@ export function TocHeader({
         <CardTitle className={cn("text-lg flex items-center gap-2", compact && "text-base")}>
           <BookOpen className="h-5 w-5" />
           Πίνακας Περιεχομένων
-          <Badge variant="secondary" className="text-xs">
-            {items.length} {items.length === 1 ? 'ενότητα' : 'ενότητες'}
-          </Badge>
+          <CommonBadge
+            status="company"
+            customLabel={`${items.length} ${items.length === 1 ? 'ενότητα' : 'ενότητες'}`}
+            variant="secondary"
+            className="text-xs"
+          />
         </CardTitle>
 
         <div className="flex items-center gap-1">

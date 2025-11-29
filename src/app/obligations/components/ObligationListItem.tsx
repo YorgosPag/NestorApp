@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { CommonBadge } from "@/core/badges";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -35,9 +35,12 @@ export function ObligationListItem({ obligation, onDelete, onDuplicate }: Obliga
           <div className="space-y-2 flex-1">
             <div className="flex items-center gap-3">
               <CardTitle className="text-lg">{obligation.title}</CardTitle>
-              <Badge variant="secondary" className={getStatusColor(obligation.status)}>
-                {getStatusLabel(obligation.status)}
-              </Badge>
+              <CommonBadge
+                status="company"
+                customLabel={getStatusLabel(obligation.status)}
+                variant="secondary"
+                className={getStatusColor(obligation.status)}
+              />
             </div>
             <CardDescription className="text-sm text-gray-600">
               <div className="space-y-1">

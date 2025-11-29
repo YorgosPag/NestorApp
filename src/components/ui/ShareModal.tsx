@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
+import { CommonBadge } from '@/core/badges';
 import { cn } from '@/lib/utils';
 import { getSocialShareUrls, trackShareEvent } from '@/lib/share-utils';
 import { EmailTemplatesService } from '@/services/email-templates.service';
@@ -499,12 +499,12 @@ export function ShareModal({
                     <div className="text-xs text-gray-500">
                       Θα εμφανιστεί στο {availableTemplates.find(t => t.id === selectedTemplate)?.name} template
                     </div>
-                    <Badge 
+                    <CommonBadge
+                      status="company"
+                      customLabel={`${remainingChars} χαρακτήρες`}
                       variant={remainingChars < 50 ? "destructive" : "secondary"}
                       className="text-xs"
-                    >
-                      {remainingChars} χαρακτήρες
-                    </Badge>
+                    />
                   </div>
                 </div>
 

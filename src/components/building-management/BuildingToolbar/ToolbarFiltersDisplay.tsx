@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Badge } from '@/components/ui/badge';
+import { CommonBadge } from '@/core/badges';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
 
@@ -28,19 +28,23 @@ export function ToolbarFiltersDisplay({
         <span className="text-xs text-muted-foreground">Ενεργά φίλτρα:</span>
         <div className="flex flex-wrap gap-1">
           {activeFilters.map((filter) => (
-            <Badge 
-              key={filter} 
-              variant="secondary" 
-              className="text-xs px-2 py-0.5 flex items-center gap-1"
-            >
-              {filter}
-              <button
-                onClick={() => handleRemoveFilter(filter)}
-                className="ml-1 hover:text-red-500"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </Badge>
+            <CommonBadge
+              key={filter}
+              status="building"
+              customLabel={
+                <div className="flex items-center gap-1">
+                  {filter}
+                  <button
+                    onClick={() => handleRemoveFilter(filter)}
+                    className="ml-1 hover:text-red-500"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              }
+              variant="secondary"
+              className="text-xs px-2 py-0.5"
+            />
           ))}
           <Button
             variant="ghost"

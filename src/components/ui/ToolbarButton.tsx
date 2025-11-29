@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { CommonBadge } from "@/core/badges";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
 
@@ -39,12 +39,12 @@ export function ToolbarButton({
             {children}
           </Button>
           {badge && (
-            <Badge 
-              variant="destructive" 
+            <CommonBadge
+              status="company"
+              customLabel={badge.toString()}
+              variant="destructive"
               className="absolute -top-1 -right-1 h-4 w-4 p-0 text-xs flex items-center justify-center"
-            >
-              {badge}
-            </Badge>
+            />
           )}
         </div>
       </TooltipTrigger>

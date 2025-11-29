@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { CardDescription, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { CommonBadge } from '@/core/badges';
 import type { ObligationSection } from '@/types/obligations';
 
 interface HeaderBarProps {
@@ -26,19 +26,28 @@ export function HeaderBar({
             {isEditing ? 'Επεξεργασία Άρθρου' : 'Προβολή Άρθρου'}
           </CardTitle>
           {editedSection.isRequired && (
-            <Badge variant="destructive">Απαραίτητο</Badge>
+            <CommonBadge
+              status="company"
+              customLabel="Απαραίτητο"
+              variant="destructive"
+            />
           )}
           {hasUnsavedChanges && (
-            <Badge variant="outline" className="text-orange-600">
-              Μη αποθηκευμένες αλλαγές
-            </Badge>
+            <CommonBadge
+              status="company"
+              customLabel="Μη αποθηκευμένες αλλαγές"
+              variant="outline"
+              className="text-orange-600"
+            />
           )}
         </div>
         
         <div className="flex items-center gap-2">
-          <Badge variant="outline">
-            {categoryBadgeLabel}
-          </Badge>
+          <CommonBadge
+            status="company"
+            customLabel={categoryBadgeLabel}
+            variant="outline"
+          />
         </div>
       </div>
       <CardDescription>

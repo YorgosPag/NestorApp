@@ -2,7 +2,7 @@
 "use client";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { CommonBadge } from "@/core/badges";
 import { FileText } from "lucide-react";
 import type { ObligationDocument } from "@/types/obligations";
 
@@ -25,11 +25,16 @@ export function DocumentInfoCard({ document }: DocumentInfoCardProps) {
               {document.contractorCompany}
             </p>
           </div>
-          <Badge variant="outline" className="text-blue-700 border-blue-300">
-            {document.status === "draft" && "📝 Προσχέδιο"}
-            {document.status === "completed" && "✅ Ολοκληρωμένο"}
-            {document.status === "approved" && "🔐 Εγκεκριμένο"}
-          </Badge>
+          <CommonBadge
+            status="company"
+            customLabel={
+              document.status === "draft" ? "📝 Προσχέδιο" :
+              document.status === "completed" ? "✅ Ολοκληρωμένο" :
+              document.status === "approved" ? "🔐 Εγκεκριμένο" : ""
+            }
+            variant="outline"
+            className="text-blue-700 border-blue-300"
+          />
         </div>
       </CardContent>
     </Card>

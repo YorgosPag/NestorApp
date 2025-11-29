@@ -3,7 +3,7 @@
 import React from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { PropertyBadge } from '@/core/badges';
 import { Home, Building, MapPin, Euro, Ruler } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Property } from '@/types/property-viewer';
@@ -68,7 +68,11 @@ function PropertyCard({ property, onSelect, isSelected }: { property: Property, 
                 </CardTitle>
                 <p className="text-xs text-muted-foreground">{property.type}</p>
             </div>
-            <Badge variant="outline" className={cn("text-xs", statusInfo.color, statusInfo.textColor)}>{statusInfo.label}</Badge>
+            <PropertyBadge
+              status={property.status as any}
+              variant="outline"
+              className={cn("text-xs", statusInfo.color, statusInfo.textColor)}
+            />
         </div>
       </CardHeader>
       <CardContent className="p-4 space-y-3">

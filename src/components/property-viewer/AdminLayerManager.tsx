@@ -8,7 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
+import { CommonBadge } from '@/core/badges';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   Layers, 
@@ -283,13 +283,19 @@ function LayerItem({
             </div>
             
             <div className="flex items-center gap-1">
-              <Badge variant="secondary" className="text-xs">
-                {layer.elements.length}
-              </Badge>
+              <CommonBadge
+                status="company"
+                customLabel={layer.elements.length.toString()}
+                variant="secondary"
+                className="text-xs"
+              />
               {layer.isSystem && (
-                <Badge variant="outline" className="text-xs">
-                  System
-                </Badge>
+                <CommonBadge
+                  status="company"
+                  customLabel="System"
+                  variant="outline"
+                  className="text-xs"
+                />
               )}
             </div>
           </div>
@@ -613,9 +619,12 @@ export function AdminLayerManager({
                     <div className="w-2 h-2 bg-red-500 rounded-full" title="Αποσυνδεδεμένο" />
                   )}
                   {syncState.pendingOperations > 0 && (
-                    <Badge variant="secondary" className="text-xs">
-                      {syncState.pendingOperations}
-                    </Badge>
+                    <CommonBadge
+                      status="company"
+                      customLabel={syncState.pendingOperations.toString()}
+                      variant="secondary"
+                      className="text-xs"
+                    />
                   )}
                 </div>
               )}
@@ -745,9 +754,12 @@ export function AdminLayerManager({
                       </>
                     )}
                     {category === 'other' && 'Άλλα'}
-                    <Badge variant="outline" className="text-xs">
-                      {layers.length}
-                    </Badge>
+                    <CommonBadge
+                      status="company"
+                      customLabel={layers.length.toString()}
+                      variant="outline"
+                      className="text-xs"
+                    />
                   </h4>
                   
                   {layers.map(layer => (

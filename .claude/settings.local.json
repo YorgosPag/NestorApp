@@ -63,7 +63,8 @@
       "WebFetch(domain:opendata.businessportal.gr)",
       "Bash(del temp_company_tabs.txt temp_extended_types_fix.txt temp_props.txt test-simple.dxf)",
       "Bash(git restore:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(rd:*)"
     ],
     "deny": [],
     "ask": []

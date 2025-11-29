@@ -2,7 +2,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { CommonBadge } from "@/core/badges";
 import { Separator } from "@/components/ui/separator";
 import { Settings } from "lucide-react";
 import type { ExportOptions } from "./types";
@@ -86,14 +86,14 @@ export function ExportOptionsCard({ exportOptions, onChange, contentSummary }: E
           <h4 className="font-medium text-sm">Προεπισκόπηση Εγγράφου</h4>
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div className="space-y-2">
-              <div className="flex justify-between"><span className="text-gray-600">Ενότητες:</span><Badge variant="outline">{contentSummary.sections}</Badge></div>
-              <div className="flex justify-between"><span className="text-gray-600">Άρθρα:</span><Badge variant="outline">{contentSummary.articles}</Badge></div>
-              <div className="flex justify-between"><span className="text-gray-600">Παράγραφοι:</span><Badge variant="outline">{contentSummary.paragraphs}</Badge></div>
+              <div className="flex justify-between"><span className="text-gray-600">Ενότητες:</span><CommonBadge status="company" customLabel={contentSummary.sections.toString()} variant="outline" /></div>
+              <div className="flex justify-between"><span className="text-gray-600">Άρθρα:</span><CommonBadge status="company" customLabel={contentSummary.articles.toString()} variant="outline" /></div>
+              <div className="flex justify-between"><span className="text-gray-600">Παράγραφοι:</span><CommonBadge status="company" customLabel={contentSummary.paragraphs.toString()} variant="outline" /></div>
             </div>
             <div className="space-y-2">
-              <div className="flex justify-between"><span className="text-gray-600">Λέξεις:</span><Badge variant="outline">{contentSummary.words.toLocaleString("el-GR")}</Badge></div>
-              <div className="flex justify-between"><span className="text-gray-600">Ανάγνωση:</span><Badge variant="outline">{contentSummary.readingTime} λεπτά</Badge></div>
-              <div className="flex justify-between"><span className="text-gray-600">Εκτιμώμενες σελίδες:</span><Badge variant="outline">~{Math.ceil(contentSummary.words / 300)}</Badge></div>
+              <div className="flex justify-between"><span className="text-gray-600">Λέξεις:</span><CommonBadge status="company" customLabel={contentSummary.words.toLocaleString("el-GR")} variant="outline" /></div>
+              <div className="flex justify-between"><span className="text-gray-600">Ανάγνωση:</span><CommonBadge status="company" customLabel={`${contentSummary.readingTime} λεπτά`} variant="outline" /></div>
+              <div className="flex justify-between"><span className="text-gray-600">Εκτιμώμενες σελίδες:</span><CommonBadge status="company" customLabel={`~${Math.ceil(contentSummary.words / 300)}`} variant="outline" /></div>
             </div>
           </div>
         </div>

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Badge } from '@/components/ui/badge';
+import { CommonBadge } from '@/core/badges';
 import { 
   Plus, 
   Minus, 
@@ -103,9 +103,12 @@ export function ParkingTableToolbar({
             </div>
             
             {selectedCount > 0 && (
-              <Badge variant="secondary" className="ml-2">
-                {selectedCount} επιλεγμένες
-              </Badge>
+              <CommonBadge
+                status="company"
+                customLabel={`${selectedCount} επιλεγμένες`}
+                variant="secondary"
+                className="ml-2"
+              />
             )}
           </div>
           

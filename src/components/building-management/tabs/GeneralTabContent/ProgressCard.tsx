@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { CommonBadge } from '@/core/badges';
 import { Progress } from '@/components/ui/progress';
 import { TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -25,9 +25,11 @@ export function ProgressCard({ progress }: ProgressCardProps) {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <Label>Ποσοστό Ολοκλήρωσης</Label>
-            <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
-              {progress}% Ολοκληρωμένο
-            </Badge>
+            <CommonBadge
+              status="building"
+              customLabel={`${progress}% Ολοκληρωμένο`}
+              className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+            />
           </div>
           <Progress value={progress} className="h-3" />
           

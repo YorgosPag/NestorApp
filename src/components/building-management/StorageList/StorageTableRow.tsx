@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { TableCell, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+import { CommonBadge } from "@/core/badges";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Link, Ruler, Euro, Building } from 'lucide-react';
 import type { StorageUnit, StorageType, StorageStatus } from '@/types/storage';
@@ -75,9 +75,11 @@ export function StorageTableRow({
         </div>
       </TableCell>
       <TableCell>
-        <Badge className={cn("text-xs text-white", getStatusColor(unit.status))}>
-          {getStatusLabel(unit.status)}
-        </Badge>
+        <CommonBadge
+          status="building"
+          customLabel={getStatusLabel(unit.status)}
+          className={cn("text-xs text-white", getStatusColor(unit.status))}
+        />
       </TableCell>
       <TableCell>
         {unit.linkedProperty ? (
