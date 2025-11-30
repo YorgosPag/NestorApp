@@ -5,7 +5,9 @@
  * Reusable button for navigation selections (based on SelectionButton)
  */
 import React from 'react';
-import { LucideIcon, AlertTriangle } from 'lucide-react';
+import { LucideIcon } from 'lucide-react';
+import { UnifiedBadge } from '../../../core/badges/UnifiedBadgeSystem';
+import { NavigationStatus } from '../../../core/types/BadgeTypes';
 
 interface NavigationButtonProps {
   onClick: () => void;
@@ -15,8 +17,12 @@ interface NavigationButtonProps {
   extraInfo?: string;
   isSelected?: boolean;
   variant?: 'default' | 'compact';
-  hasWarning?: boolean; // Για εταιρείες χωρίς έργα
-  warningText?: string; // Custom warning text
+  // Νέο κεντρικοποιημένο badge system
+  badgeStatus?: NavigationStatus;
+  badgeText?: string; // Override default badge text
+  // Backward compatibility
+  hasWarning?: boolean; // DEPRECATED: Use badgeStatus='no_projects' instead
+  warningText?: string; // DEPRECATED: Use badgeText instead
 }
 
 export function NavigationButton({
@@ -27,6 +33,9 @@ export function NavigationButton({
   extraInfo,
   isSelected = false,
   variant = 'default',
+  badgeStatus,
+  badgeText,
+  // Backward compatibility
   hasWarning = false,
   warningText
 }: NavigationButtonProps) {
@@ -37,10 +46,14 @@ export function NavigationButton({
     compact: "p-2 border-gray-200 dark:border-gray-600"
   };
 
+  // Backward compatibility: χρήση hasWarning για badgeStatus
+  const effectiveBadgeStatus = badgeStatus || (hasWarning ? 'no_projects' : undefined);
+  const effectiveBadgeText = badgeText || warningText;
+
   // Χρωματική διαφοροποίηση βάσει κατάστασης
   const selectedClasses = isSelected
     ? "border-blue-500 bg-blue-50 dark:bg-blue-900/30"
-    : hasWarning
+    : effectiveBadgeStatus
       ? "border-orange-300 bg-orange-50 dark:bg-orange-900/20 hover:border-orange-400 dark:hover:border-orange-500"
       : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500";
 
@@ -70,22 +83,24 @@ export function NavigationButton({
             <div className="text-gray-900 dark:text-foreground font-medium truncate">
               {title}
             </div>
-            {hasWarning && (
-              <div className="flex items-center gap-1 ml-2 px-2 py-1 bg-orange-100 dark:bg-orange-900/30 border border-orange-300 dark:border-orange-600 rounded-md shrink-0">
-                <AlertTriangle className="h-3 w-3 text-orange-600 dark:text-orange-400" />
-                <span className="text-xs font-medium text-orange-700 dark:text-orange-300">
-                  {warningText || 'Χωρίς έργα'}
-                </span>
+            {effectiveBadgeStatus && (
+              <div className="ml-2 shrink-0">
+                <UnifiedBadge
+                  domain="NAVIGATION"
+                  status={effectiveBadgeStatus}
+                  customLabel={effectiveBadgeText}
+                  size="sm"
+                />
               </div>
             )}
           </div>
           {subtitle && (
-            <div className={`text-sm truncate ${hasWarning ? 'text-orange-600 dark:text-orange-400' : 'text-gray-500 dark:text-muted-foreground'}`}>
+            <div className={`text-sm truncate ${effectiveBadgeStatus ? 'text-orange-600 dark:text-orange-400' : 'text-gray-500 dark:text-muted-foreground'}`}>
               {subtitle}
             </div>
           )}
           {extraInfo && (
-            <div className={`text-sm truncate ${hasWarning ? 'text-orange-500 dark:text-orange-400' : 'text-gray-400 dark:text-muted-foreground'}`}>
+            <div className={`text-sm truncate ${effectiveBadgeStatus ? 'text-orange-500 dark:text-orange-400' : 'text-gray-400 dark:text-muted-foreground'}`}>
               {extraInfo}
             </div>
           )}

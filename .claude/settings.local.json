@@ -73,7 +73,8 @@
       "Bash(npm run start:*)",
       "Bash(del fix-companies.js)",
       "Bash(del \"C:\\Nestor_Pagonis\\src\\app\\api\\projects\\fix-company-ids\\route.ts\")",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(del BACKUP_SUMMARY.json)"
     ],
     "deny": [],
     "ask": []

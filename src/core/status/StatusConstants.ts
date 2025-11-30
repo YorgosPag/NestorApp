@@ -249,6 +249,53 @@ export const UNIT_STATUSES = {
   }
 } as const;
 
+// ===== NAVIGATION STATUS DEFINITIONS =====
+
+export const NAVIGATION_STATUSES = {
+  no_projects: {
+    label: 'Χωρίς έργα',
+    variant: 'warning',
+    color: '#D97706',
+    backgroundColor: '#FFFBEB',
+    icon: 'alertTriangle'
+  },
+  empty: {
+    label: 'Κενό',
+    variant: 'outline',
+    color: '#6B7280',
+    backgroundColor: '#F9FAFB',
+    icon: 'circle'
+  },
+  warning: {
+    label: 'Προειδοποίηση',
+    variant: 'warning',
+    color: '#D97706',
+    backgroundColor: '#FFFBEB',
+    icon: 'alertTriangle'
+  },
+  alert: {
+    label: 'Προσοχή',
+    variant: 'destructive',
+    color: '#DC2626',
+    backgroundColor: '#FEF2F2',
+    icon: 'alert'
+  },
+  success: {
+    label: 'Επιτυχία',
+    variant: 'success',
+    color: '#059669',
+    backgroundColor: '#ECFDF5',
+    icon: 'check'
+  },
+  info: {
+    label: 'Πληροφορία',
+    variant: 'info',
+    color: '#3B82F6',
+    backgroundColor: '#EFF6FF',
+    icon: 'info'
+  }
+} as const;
+
 // ===== COMMON/SHARED STATUSES =====
 
 export const COMMON_STATUSES = {
@@ -290,7 +337,8 @@ export const UNIFIED_BADGE_SYSTEM: BadgeSystemConfig = {
     BUILDING: BUILDING_STATUSES,
     CONTACT: CONTACT_STATUSES,
     PROPERTY: PROPERTY_STATUSES,
-    UNIT: UNIT_STATUSES
+    UNIT: UNIT_STATUSES,
+    NAVIGATION: NAVIGATION_STATUSES
   },
   common: COMMON_STATUSES
 };

@@ -13,6 +13,7 @@ import type {
   ContactStatus,
   PropertyStatus,
   UnitStatus,
+  NavigationStatus,
   BadgeDefinition,
   BadgeFactoryOptions,
   BadgeVariant
@@ -98,6 +99,16 @@ export class BadgeFactory {
     options: BadgeFactoryOptions = {}
   ): BadgeDefinition {
     return this.create('UNIT', status, options);
+  }
+
+  /**
+   * Δημιουργεί navigation badge
+   */
+  static createNavigationBadge(
+    status: NavigationStatus,
+    options: BadgeFactoryOptions = {}
+  ): BadgeDefinition {
+    return this.create('NAVIGATION', status, options);
   }
 
   /**
@@ -280,3 +291,11 @@ export const createUnitBadge = (
   status: UnitStatus,
   options?: BadgeFactoryOptions
 ): BadgeDefinition => BadgeFactory.createUnitBadge(status, options);
+
+/**
+ * Shorthand function για navigation badges
+ */
+export const createNavigationBadge = (
+  status: NavigationStatus,
+  options?: BadgeFactoryOptions
+): BadgeDefinition => BadgeFactory.createNavigationBadge(status, options);
