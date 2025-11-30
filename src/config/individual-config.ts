@@ -110,7 +110,7 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
   {
     id: 'basicInfo',
     title: 'Βασικά Στοιχεία',
-    icon: '👤',
+    icon: 'user',
     description: 'Βασικές προσωπικές πληροφορίες',
     order: 1,
     fields: [
@@ -120,7 +120,7 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
         type: 'input',
         required: true,
         helpText: 'Το βαπτιστικό όνομα',
-        icon: '👤',
+        icon: 'user',
       },
       {
         id: 'lastName',
@@ -128,7 +128,7 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
         type: 'input',
         required: true,
         helpText: 'Το οικογενειακό όνομα',
-        icon: '👤',
+        icon: 'user',
       },
       {
         id: 'fatherName',
@@ -185,7 +185,7 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
   {
     id: 'identity',
     title: 'Ταυτότητα & ΑΦΜ',
-    icon: '💳',
+    icon: 'credit-card',
     description: 'Στοιχεία ταυτότητας και φορολογικά στοιχεία',
     order: 2,
     fields: [
@@ -252,7 +252,7 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
   {
     id: 'professional',
     title: 'Επαγγελματικά Στοιχεία',
-    icon: '💼',
+    icon: 'briefcase',
     description: 'Πληροφορίες σχετικά με την εργασία και το επάγγελμα',
     order: 3,
     fields: [
@@ -297,7 +297,7 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
   {
     id: 'contact',
     title: 'Στοιχεία Επικοινωνίας',
-    icon: '📞',
+    icon: 'phone',
     description: 'Τρόποι επικοινωνίας και στοιχεία επαφής',
     order: 4,
     fields: [

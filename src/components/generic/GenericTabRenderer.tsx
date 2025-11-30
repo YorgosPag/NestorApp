@@ -2,6 +2,7 @@
 
 import React from 'react';
 import type { FieldConfig, SectionConfig } from '@/config/company-gemi-config';
+import { getIconComponent } from './ConfigTabsHelper';
 
 // ============================================================================
 // INTERFACES
@@ -151,10 +152,13 @@ function CompactSectionRenderer({
   customRenderers?: Record<string, any>;
   valueFormatters?: Record<string, any>;
 }) {
+  const IconComponent = getIconComponent(section.icon);
+
   return (
     <div className="space-y-2">
-      <h5 className="font-medium text-sm">
-        {section.icon} {section.title}
+      <h5 className="font-medium text-sm flex items-center gap-2">
+        <IconComponent className="h-4 w-4" />
+        {section.title}
       </h5>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
         {section.fields.map(field => (
@@ -185,10 +189,13 @@ function FullSectionRenderer({
   customRenderers?: Record<string, any>;
   valueFormatters?: Record<string, any>;
 }) {
+  const IconComponent = getIconComponent(section.icon);
+
   return (
     <div className="p-4 border rounded-lg space-y-4">
-      <h4 className="font-semibold mb-3">
-        {section.icon} {section.title}
+      <h4 className="font-semibold mb-3 flex items-center gap-2">
+        <IconComponent className="h-5 w-5" />
+        {section.title}
       </h4>
       {section.description && (
         <p className="text-sm text-muted-foreground mb-4">{section.description}</p>

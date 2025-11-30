@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { AddNewContactDialog } from './AddNewContactDialog';
+import { TabbedAddNewContactDialog } from './TabbedAddNewContactDialog';
 import type { Contact } from '@/types/contacts';
 
 interface EditContactDialogProps {
@@ -13,7 +13,7 @@ interface EditContactDialogProps {
 
 export function EditContactDialog({ open, onOpenChange, contact, onContactUpdated }: EditContactDialogProps) {
   return (
-    <AddNewContactDialog
+    <TabbedAddNewContactDialog
       open={open}
       onOpenChange={onOpenChange}
       onContactAdded={onContactUpdated}

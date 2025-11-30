@@ -3,6 +3,9 @@
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LucideIcon } from 'lucide-react';
+
+// Re-export TabsContent for convenience
+export { TabsContent };
 import { cn } from '@/lib/utils';
 import { THEME_VARIANTS, getThemeVariant, type ThemeVariant } from '@/components/ui/theme/ThemeComponents';
 

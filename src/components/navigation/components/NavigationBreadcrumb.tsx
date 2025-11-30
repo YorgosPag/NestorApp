@@ -5,6 +5,7 @@
  * Shows current navigation path with clickable levels
  */
 import React from 'react';
+import { Building, Construction, Home } from 'lucide-react';
 import { useNavigation } from '../core/NavigationContext';
 import type { BreadcrumbItem } from '../core/types';
 
@@ -28,7 +29,7 @@ export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {
       items.push({
         id: selectedCompany.id,
         label: selectedCompany.companyName,
-        icon: '🏢',
+        icon: Building,
         level: 'companies',
         onClick: () => navigateToLevel('companies')
       });
@@ -38,7 +39,7 @@ export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {
       items.push({
         id: selectedProject.id,
         label: selectedProject.name,
-        icon: '🏗️',
+        icon: Construction,
         level: 'projects',
         onClick: () => navigateToLevel('projects')
       });
@@ -48,7 +49,7 @@ export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {
       items.push({
         id: selectedBuilding.id,
         label: selectedBuilding.name,
-        icon: '🏠',
+        icon: Home,
         level: 'buildings',
         onClick: () => navigateToLevel('buildings')
       });
@@ -58,7 +59,7 @@ export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {
       items.push({
         id: selectedFloor.id,
         label: selectedFloor.name,
-        icon: '🏠',
+        icon: Home,
         level: 'floors',
         onClick: () => navigateToLevel('floors')
       });
@@ -82,7 +83,13 @@ export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {
             className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1"
             title={`Μετάβαση σε ${item.label}`}
           >
-            <span>{item.icon}</span>
+            <span>
+              {typeof item.icon === 'string' ? (
+                item.icon
+              ) : (
+                <item.icon className="h-4 w-4" />
+              )}
+            </span>
             <span className="truncate max-w-[120px]">{item.label}</span>
           </button>
           {index < breadcrumbItems.length - 1 && (

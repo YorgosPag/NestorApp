@@ -4,7 +4,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CommonBadge } from '@/core/badges';
 import { Separator } from '@/components/ui/separator';
-import { TrendingUp } from 'lucide-react';
+import { TrendingUp, Lightbulb } from 'lucide-react';
 
 interface CompletionForecastCardProps {
     milestones: any[];
@@ -53,7 +53,10 @@ export function CompletionForecastCard({ milestones }: CompletionForecastCardPro
                     <Separator />
 
                     <div className="text-sm text-muted-foreground">
-                        <p className="mb-2">💡 <strong>Συμβουλή:</strong></p>
+                        <p className="mb-2 flex items-center gap-2">
+                            <Lightbulb className="h-4 w-4 text-yellow-500" />
+                            <strong>Συμβουλή:</strong>
+                        </p>
                         <p>Επιτάχυνση ηλ/μηχ εργασιών μπορεί να μειώσει την καθυστέρηση στις 2-3 ημέρες.</p>
                     </div>
                 </div>

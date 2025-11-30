@@ -5,6 +5,7 @@
  * Main navigation interface with hierarchical structure
  */
 import React from 'react';
+import { Building, Construction, Home, MapPin, Map } from 'lucide-react';
 import { useNavigation } from '../core/NavigationContext';
 import { NavigationButton } from './NavigationButton';
 import { NavigationBreadcrumb } from './NavigationBreadcrumb';
@@ -112,7 +113,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
                 <NavigationButton
                   key={company.id}
                   onClick={() => selectCompany(company.id)}
-                  icon="🏢"
+                  icon={Building}
                   title={company.companyName}
                   subtitle={company.industry}
                   extraInfo={company.vatNumber ? `ΑΦΜ: ${company.vatNumber}` : undefined}
@@ -135,7 +136,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
                 <NavigationButton
                   key={project.id}
                   onClick={() => selectProject(project.id)}
-                  icon="🏗️"
+                  icon={Construction}
                   title={project.name}
                   subtitle={`${project.buildings.length} κτίρια`}
                   isSelected={selectedProject?.id === project.id}
@@ -157,7 +158,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
                 <NavigationButton
                   key={building.id}
                   onClick={() => selectBuilding(building.id)}
-                  icon="🏠"
+                  icon={Home}
                   title={building.name}
                   subtitle={`${building.floors.length} όροφοι`}
                   isSelected={selectedBuilding?.id === building.id}
@@ -179,7 +180,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
                 <NavigationButton
                   key={floor.id}
                   onClick={() => selectFloor(floor.id)}
-                  icon="🏠"
+                  icon={Home}
                   title={floor.name}
                   subtitle={`${floor.units.length} μονάδες`}
                   isSelected={selectedFloor?.id === floor.id}
@@ -198,7 +199,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
 
             <NavigationButton
               onClick={() => handleNavigateToPage('properties')}
-              icon="🏡"
+              icon={MapPin}
               title="Προβολή Ακινήτων"
               subtitle={`${selectedFloor.units.length} μονάδες σε αυτόν τον όροφο`}
               variant="compact"
@@ -206,7 +207,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
 
             <NavigationButton
               onClick={() => handleNavigateToPage('floorplan')}
-              icon="🗺️"
+              icon={Map}
               title="Κάτοψη Ορόφου"
               subtitle="Προβολή της κάτοψης με όλες τις μονάδες"
               variant="compact"
@@ -215,7 +216,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
             {selectedProject && (
               <NavigationButton
                 onClick={() => handleNavigateToPage('projects')}
-                icon="🏗️"
+                icon={Construction}
                 title="Λεπτομέρειες Έργου"
                 subtitle={selectedProject.name}
                 variant="compact"
@@ -225,7 +226,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
             {selectedBuilding && (
               <NavigationButton
                 onClick={() => handleNavigateToPage('buildings')}
-                icon="🏠"
+                icon={Home}
                 title="Λεπτομέρειες Κτιρίου"
                 subtitle={selectedBuilding.name}
                 variant="compact"

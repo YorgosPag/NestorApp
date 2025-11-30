@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Info, FileText, Users, History, User, CreditCard, Briefcase, Phone } from 'lucide-react';
+import { Info, FileText, Users, History, User, CreditCard, Briefcase, Phone, MapPin, Gavel, UserCheck, Megaphone, Activity, DollarSign, Calendar, Construction, Building, Car, Landmark, Map, Settings, Home, Camera, Video, Clock, TrendingUp, Package, Ruler, BarChart, Handshake, Target, MessageCircle } from 'lucide-react';
 import type { SectionConfig } from '@/config/company-gemi-config';
 import type { IndividualSectionConfig } from '@/config/individual-config';
 import { GenericTabRenderer } from './GenericTabRenderer';
@@ -14,15 +14,67 @@ import { GenericTabRenderer } from './GenericTabRenderer';
  * Maps emoji icons to Lucide components
  */
 const ICON_MAPPING = {
-  '🏢': Info,
+  // Company GEMI icons - All using icon names now
+  'info': Info,
+  'file-text': FileText,
+  'dollar-sign': DollarSign,
+  'calendar': Calendar,
+  // Individual contact icons - Converted to Lucide names
+  'user': User,
+  'credit-card': CreditCard,
+  'briefcase': Briefcase,
+  'phone': Phone,
+  // GEMI categories - Using kebab-case naming
+  'map-pin': MapPin,
+  'users': Users,
+  'gavel': Gavel,
+  'history': History,
+  'user-check': UserCheck,
+  'megaphone': Megaphone,
+  'activity': Activity,
+  // Project/Building icons
+  'construction': Construction,
+  'building': Building,
+  'car': Car,
+  'landmark': Landmark,
+  'map': Map,
+  'settings': Settings,
+  'home': Home,
+  'camera': Camera,
+  'video': Video,
+  'clock': Clock,
+  'trending-up': TrendingUp,
+  'package': Package,
+  'ruler': Ruler,
+  'bar-chart': BarChart,
+  'handshake': Handshake,
+  'target': Target,
+  'message-circle': MessageCircle,
+  // Legacy emoji support (fallback) - Keep for backward compatibility
+  '🏢': Building,
+  '🏗️': Construction,
+  '🅿️': Car,
+  '🏛️': Landmark,
+  '🗺️': Map,
+  '⚙️': Settings,
+  '🏠': Home,
+  '📸': Camera,
+  '🎬': Video,
+  '🕐': Clock,
+  '📈': TrendingUp,
+  '📦': Package,
+  '📐': Ruler,
+  '📊': BarChart,
+  '🤝': Handshake,
+  '🎯': Target,
+  '💬': MessageCircle,
   '📋': FileText,
-  '💰': FileText,
-  '📅': History,
+  '💰': DollarSign,
+  '📅': Calendar,
   'ℹ️': Info,
   '👥': Users,
   '📄': FileText,
   '🗂️': FileText,
-  // Individual contact icons
   '👤': User,
   '💳': CreditCard,
   '💼': Briefcase,
@@ -30,10 +82,17 @@ const ICON_MAPPING = {
 } as const;
 
 /**
- * Gets the appropriate Lucide icon component for an emoji
+ * Gets the appropriate Lucide icon component for an icon name or emoji
  */
-export function getIconComponent(emoji: string) {
-  return ICON_MAPPING[emoji as keyof typeof ICON_MAPPING] || Info;
+export function getIconComponent(iconName: string) {
+  const iconComponent = ICON_MAPPING[iconName as keyof typeof ICON_MAPPING];
+  if (iconComponent) {
+    return iconComponent;
+  }
+
+  // If not found, log for debugging and return Info as fallback
+  console.warn(`Icon not found in mapping: "${iconName}". Available icons:`, Object.keys(ICON_MAPPING));
+  return Info;
 }
 
 // ============================================================================
@@ -43,7 +102,7 @@ export function getIconComponent(emoji: string) {
 export interface TabConfig {
   id: string;
   label: string;
-  icon: React.ComponentType<any>;
+  icon: React.ComponentType<any> | React.FC<any>;
   content: React.ReactNode;
 }
 

@@ -106,7 +106,7 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
   {
     id: 'basicInfo',
     title: 'Βασικά Στοιχεία ΓΕΜΗ',
-    icon: '🏢',
+    icon: 'info',
     description: 'Βασικές πληροφορίες εταιρείας από το ΓΕΜΗ',
     order: 1,
     fields: [
@@ -162,7 +162,7 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
   {
     id: 'activities',
     title: 'Δραστηριότητες & ΚΑΔ',
-    icon: '📋',
+    icon: 'file-text',
     description: 'Κωδικοί και περιγραφές επιχειρηματικής δραστηριότητας',
     order: 2,
     fields: [
@@ -202,7 +202,7 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
   {
     id: 'capital',
     title: 'Κεφάλαιο & Οικονομικά',
-    icon: '💰',
+    icon: 'dollar-sign',
     description: 'Κεφάλαιο και οικονομικά στοιχεία εταιρείας',
     order: 3,
     fields: [
@@ -236,7 +236,7 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
   {
     id: 'datesLocation',
     title: 'Ημερομηνίες & Τοποθεσία',
-    icon: '📅',
+    icon: 'calendar',
     description: 'Χρονολογικά και γεωγραφικά στοιχεία',
     order: 4,
     fields: [
@@ -269,6 +269,385 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
         label: 'Τοπική Υπηρεσία ΓΕΜΗ',
         type: 'input',
         helpText: 'Αρμόδια τοπική υπηρεσία ΓΕΜΗ',
+      },
+    ],
+  },
+
+  // -------------------------------------------------------------------------
+  // 5. ΔΙΕΥΘΥΝΣΕΙΣ & ΥΠΟΚΑΤΑΣΤΗΜΑΤΑ
+  // -------------------------------------------------------------------------
+  {
+    id: 'addresses',
+    title: 'Διευθύνσεις & Υποκαταστήματα',
+    icon: 'map-pin',
+    description: 'Έδρα και υποκαταστήματα εταιρείας',
+    order: 5,
+    fields: [
+      {
+        id: 'addressType',
+        label: 'Τύπος Διεύθυνσης',
+        type: 'select',
+        options: [
+          { value: 'headquarters', label: 'Έδρα' },
+          { value: 'branch', label: 'Υποκατάστημα' }
+        ],
+        helpText: 'Είδος διεύθυνσης (έδρα ή υποκατάστημα)',
+      },
+      {
+        id: 'street',
+        label: 'Οδός',
+        type: 'input',
+        helpText: 'Όνομα οδού',
+      },
+      {
+        id: 'streetNumber',
+        label: 'Αριθμός',
+        type: 'input',
+        helpText: 'Αριθμός οδού',
+      },
+      {
+        id: 'postalCode',
+        label: 'Ταχυδρομικός Κώδικας',
+        type: 'input',
+        maxLength: 5,
+        helpText: 'Πενταψήφιος ταχυδρομικός κώδικας',
+      },
+      {
+        id: 'city',
+        label: 'Πόλη',
+        type: 'input',
+        helpText: 'Πόλη διεύθυνσης',
+      },
+      {
+        id: 'region',
+        label: 'Περιφέρεια',
+        type: 'input',
+        helpText: 'Περιφέρεια Ελλάδας',
+      },
+    ],
+  },
+
+  // -------------------------------------------------------------------------
+  // 6. ΜΕΤΟΧΙΚΗ ΣΥΝΘΕΣΗ & ΕΤΑΙΡΟΙ
+  // -------------------------------------------------------------------------
+  {
+    id: 'shareholders',
+    title: 'Μετοχική Σύνθεση & Εταίροι',
+    icon: 'users',
+    description: 'Μέτοχοι και εταιρική σύνθεση',
+    order: 6,
+    fields: [
+      {
+        id: 'shareholderName',
+        label: 'Όνομα Μετόχου',
+        type: 'input',
+        helpText: 'Πλήρες όνομα μετόχου ή εταίρου',
+      },
+      {
+        id: 'shareholderType',
+        label: 'Τύπος Μετόχου',
+        type: 'select',
+        options: [
+          { value: 'individual', label: 'Φυσικό Πρόσωπο' },
+          { value: 'legal', label: 'Νομικό Πρόσωπο' }
+        ],
+        helpText: 'Τύπος μετόχου (φυσικό ή νομικό πρόσωπο)',
+      },
+      {
+        id: 'shareholderIdNumber',
+        label: 'ΑΦΜ/ΑΔΤ Μετόχου',
+        type: 'input',
+        helpText: 'Αριθμός ταυτότητας ή ΑΦΜ μετόχου',
+      },
+      {
+        id: 'shareType',
+        label: 'Είδος Μετοχών',
+        type: 'input',
+        helpText: 'Κατηγορία μετοχών (κοινές, προνομιούχες κλπ)',
+      },
+      {
+        id: 'sharePercentage',
+        label: 'Ποσοστό Συμμετοχής (%)',
+        type: 'number',
+        helpText: 'Ποσοστό συμμετοχής στο κεφάλαιο',
+      },
+      {
+        id: 'nominalValue',
+        label: 'Ονομαστική Αξία',
+        type: 'number',
+        helpText: 'Ονομαστική αξία μετοχών',
+      },
+    ],
+  },
+
+  // -------------------------------------------------------------------------
+  // 7. ΕΓΓΡΑΦΑ & ΠΙΣΤΟΠΟΙΗΤΙΚΑ
+  // -------------------------------------------------------------------------
+  {
+    id: 'documents',
+    title: 'Έγγραφα & Πιστοποιητικά',
+    icon: 'file-text',
+    description: 'Έγγραφα ΓΕΜΗ, ανακοινώσεις και πιστοποιητικά',
+    order: 7,
+    fields: [
+      {
+        id: 'documentType',
+        label: 'Τύπος Εγγράφου',
+        type: 'select',
+        options: [
+          { value: 'certificate', label: 'Πιστοποιητικό' },
+          { value: 'announcement', label: 'Ανακοίνωση' },
+          { value: 'registration', label: 'Έγγραφο Σύστασης' },
+          { value: 'amendment', label: 'Τροποποίηση Καταστατικού' }
+        ],
+        helpText: 'Κατηγορία εγγράφου ΓΕΜΗ',
+      },
+      {
+        id: 'documentDate',
+        label: 'Ημερομηνία Εγγράφου',
+        type: 'date',
+        helpText: 'Ημερομηνία έκδοσης εγγράφου',
+      },
+      {
+        id: 'documentSubject',
+        label: 'Θέμα Εγγράφου',
+        type: 'input',
+        helpText: 'Περιγραφή θέματος εγγράφου',
+      },
+      {
+        id: 'documentUrl',
+        label: 'Link Εγγράφου',
+        type: 'input',
+        helpText: 'URL για download εγγράφου',
+      },
+    ],
+  },
+
+  // -------------------------------------------------------------------------
+  // 8. ΑΠΟΦΑΣΕΙΣ ΟΡΓΑΝΩΝ
+  // -------------------------------------------------------------------------
+  {
+    id: 'decisions',
+    title: 'Αποφάσεις Οργάνων',
+    icon: 'gavel',
+    description: 'Αποφάσεις Γενικών Συνελεύσεων και Διοικητικών Συμβουλίων',
+    order: 8,
+    fields: [
+      {
+        id: 'decisionDate',
+        label: 'Ημερομηνία Απόφασης',
+        type: 'date',
+        helpText: 'Ημερομηνία λήψης απόφασης',
+      },
+      {
+        id: 'organType',
+        label: 'Όργανο',
+        type: 'select',
+        options: [
+          { value: 'general_assembly', label: 'Γενική Συνέλευση' },
+          { value: 'board_directors', label: 'Διοικητικό Συμβούλιο' },
+          { value: 'supervisory_board', label: 'Εποπτικό Συμβούλιο' }
+        ],
+        helpText: 'Όργανο που έλαβε την απόφαση',
+      },
+      {
+        id: 'decisionSubject',
+        label: 'Θέμα Απόφασης',
+        type: 'input',
+        helpText: 'Περιγραφή θέματος απόφασης',
+      },
+      {
+        id: 'protocolNumber',
+        label: 'Αριθμός Πρωτοκόλλου',
+        type: 'input',
+        helpText: 'Αριθμός πρωτοκόλλου απόφασης',
+      },
+      {
+        id: 'decisionSummary',
+        label: 'Περίληψη',
+        type: 'textarea',
+        helpText: 'Σύντομη περίληψη απόφασης',
+      },
+    ],
+  },
+
+  // -------------------------------------------------------------------------
+  // 9. ΙΣΤΟΡΙΚΟ & ΜΕΤΑΒΟΛΕΣ
+  // -------------------------------------------------------------------------
+  {
+    id: 'companyVersions',
+    title: 'Ιστορικό & Μεταβολές',
+    icon: 'history',
+    description: 'Ιστορικό εκδόσεων και μεταβολών εταιρείας',
+    order: 9,
+    fields: [
+      {
+        id: 'versionDate',
+        label: 'Ημερομηνία Μεταβολής',
+        type: 'date',
+        helpText: 'Ημερομηνία καταχώρησης μεταβολής',
+      },
+      {
+        id: 'changeDescription',
+        label: 'Περιγραφή Μεταβολής',
+        type: 'input',
+        helpText: 'Περιγραφή της μεταβολής (π.χ. αλλαγή επωνυμίας)',
+      },
+      {
+        id: 'previousValue',
+        label: 'Προηγούμενη Τιμή',
+        type: 'input',
+        helpText: 'Προηγούμενη τιμή πεδίου (αν εφαρμόζεται)',
+      },
+      {
+        id: 'newValue',
+        label: 'Νέα Τιμή',
+        type: 'input',
+        helpText: 'Νέα τιμή μετά τη μεταβολή',
+      },
+    ],
+  },
+
+  // -------------------------------------------------------------------------
+  // 10. ΕΚΠΡΟΣΩΠΟΙ & ΔΙΟΙΚΗΣΗ
+  // -------------------------------------------------------------------------
+  {
+    id: 'representatives',
+    title: 'Εκπρόσωποι & Διοίκηση',
+    icon: 'user-check',
+    description: 'Νόμιμοι εκπρόσωποι και διοικητικά στελέχη',
+    order: 10,
+    fields: [
+      {
+        id: 'representativeFullName',
+        label: 'Πλήρες Όνομα',
+        type: 'input',
+        helpText: 'Ονοματεπώνυμο εκπροσώπου',
+      },
+      {
+        id: 'representativeRole',
+        label: 'Ιδιότητα/Θέση',
+        type: 'select',
+        options: [
+          { value: 'ceo', label: 'Διευθύνων Σύμβουλος' },
+          { value: 'president', label: 'Πρόεδρος Δ.Σ.' },
+          { value: 'manager', label: 'Διαχειριστής' },
+          { value: 'legal_rep', label: 'Νόμιμος Εκπρόσωπος' },
+          { value: 'secretary', label: 'Γραμματέας' }
+        ],
+        helpText: 'Θέση ή ιδιότητα στην εταιρεία',
+      },
+      {
+        id: 'representativeTaxNumber',
+        label: 'ΑΦΜ Εκπροσώπου',
+        type: 'input',
+        maxLength: 9,
+        helpText: 'Αριθμός Φορολογικού Μητρώου εκπροσώπου',
+      },
+      {
+        id: 'representativeTaxOffice',
+        label: 'ΔΟΥ',
+        type: 'input',
+        helpText: 'Δημόσια Οικονομική Υπηρεσία',
+      },
+      {
+        id: 'representativeEmail',
+        label: 'Email',
+        type: 'email',
+        helpText: 'Email επικοινωνίας εκπροσώπου',
+      },
+      {
+        id: 'representativePhone',
+        label: 'Τηλέφωνο',
+        type: 'tel',
+        helpText: 'Τηλέφωνο επικοινωνίας εκπροσώπου',
+      },
+    ],
+  },
+
+  // -------------------------------------------------------------------------
+  // 11. ΑΝΑΚΟΙΝΩΣΕΙΣ & ΔΗΜΟΣΙΕΥΣΕΙΣ
+  // -------------------------------------------------------------------------
+  {
+    id: 'announcements',
+    title: 'Ανακοινώσεις & Δημοσιεύσεις',
+    icon: 'megaphone',
+    description: 'Ανακοινώσεις εταιρείας και δημοσιεύσεις σε επίσημα φύλλα',
+    order: 11,
+    fields: [
+      {
+        id: 'announcementDate',
+        label: 'Ημερομηνία Ανακοίνωσης',
+        type: 'date',
+        helpText: 'Ημερομηνία δημοσίευσης ανακοίνωσης',
+      },
+      {
+        id: 'issuePaper',
+        label: 'Φύλλο Δημοσίευσης',
+        type: 'input',
+        helpText: 'Όνομα επίσημου φύλλου (π.χ. ΦΕΚ)',
+      },
+      {
+        id: 'announcementSubject',
+        label: 'Θέμα Ανακοίνωσης',
+        type: 'input',
+        helpText: 'Περιγραφή θέματος ανακοίνωσης',
+      },
+      {
+        id: 'announcementSummary',
+        label: 'Περίληψη',
+        type: 'textarea',
+        helpText: 'Σύντομη περίληψη ανακοίνωσης',
+      },
+      {
+        id: 'announcementFile',
+        label: 'Αρχείο Ανακοίνωσης',
+        type: 'input',
+        helpText: 'Link ή path αρχείου ανακοίνωσης',
+      },
+    ],
+  },
+
+  // -------------------------------------------------------------------------
+  // 12. ΚΑΤΑΣΤΑΣΕΙΣ & LIFECYCLE
+  // -------------------------------------------------------------------------
+  {
+    id: 'statuses',
+    title: 'Καταστάσεις & Lifecycle',
+    icon: 'activity',
+    description: 'Ιστορικό καταστάσεων εταιρείας (ενεργή, διαγραφείσα κλπ)',
+    order: 12,
+    fields: [
+      {
+        id: 'currentStatus',
+        label: 'Τρέχουσα Κατάσταση',
+        type: 'select',
+        options: [
+          { value: 'active', label: 'Ενεργή' },
+          { value: 'inactive', label: 'Ανενεργή' },
+          { value: 'dissolved', label: 'Διαγραφείσα' },
+          { value: 'bankruptcy', label: 'Σε Πτώχευση' },
+          { value: 'liquidation', label: 'Υπό Εκκαθάριση' }
+        ],
+        helpText: 'Τρέχουσα κατάσταση εταιρείας',
+      },
+      {
+        id: 'statusChangeDate',
+        label: 'Ημερομηνία Αλλαγής',
+        type: 'date',
+        helpText: 'Ημερομηνία τελευταίας αλλαγής κατάστασης',
+      },
+      {
+        id: 'statusReason',
+        label: 'Λόγος Αλλαγής',
+        type: 'input',
+        helpText: 'Αιτιολογία αλλαγής κατάστασης',
+      },
+      {
+        id: 'previousStatus',
+        label: 'Προηγούμενη Κατάσταση',
+        type: 'input',
+        helpText: 'Κατάσταση πριν την τελευταία αλλαγή',
       },
     ],
   },

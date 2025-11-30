@@ -94,7 +94,7 @@ export interface NavigationOption {
 export interface BreadcrumbItem {
   id: string;
   label: string;
-  icon: string;
+  icon: string | any; // Support for both emoji strings and Lucide components
   level: NavigationLevel;
   onClick: () => void;
 }

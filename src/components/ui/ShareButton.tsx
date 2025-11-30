@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Share2, Copy, Check } from 'lucide-react';
+import { Share2, Copy, Check, Home, MapPin, Euro, Ruler } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { ShareModal, useShareModal } from '@/components/ui/ShareModal';
@@ -50,14 +50,14 @@ export function ShareButton({
   };
 
   const handleShareSuccess = (platform: string) => {
-    console.log(`✅ Successfully shared via ${platform}`);
+    console.log(`Successfully shared via ${platform}`);
     onShareSuccess?.();
     // Keep modal open briefly to show success, then close
     setTimeout(() => closeModal(), 1500);
   };
 
   const handleShareError = (platform: string, error: string) => {
-    console.error(`❌ Failed to share via ${platform}:`, error);
+    console.error(`Failed to share via ${platform}:`, error);
     onShareError?.(`Αποτυχία κοινοποίησης μέσω ${platform}: ${error}`);
   };
 
@@ -161,25 +161,25 @@ function generatePropertyShareText(property: {
   location?: string;
 }): string {
   let text = `🏠 ${property.title}`;
-  
+
   if (property.location) {
     text += `\n📍 ${property.location}`;
   }
-  
+
   if (property.price) {
     text += `\n💰 €${property.price.toLocaleString()}`;
   }
-  
+
   if (property.area) {
     text += `\n📐 ${property.area} τ.μ.`;
   }
-  
+
   if (property.description) {
     text += `\n\n${property.description}`;
   }
-  
+
   text += '\n\nΔείτε περισσότερα στο Nestor Construct!';
-  
+
   return text;
 }
 

@@ -5,6 +5,7 @@ import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { Star } from 'lucide-react';
 import type { Building } from './BuildingsPageContent';
 
 import { EntityDetailsHeader } from '@/core/entity-headers';
@@ -60,12 +61,15 @@ export function BuildingCard({
         ]}
         actions={[
           {
-            label: isFavorite ? '★' : '☆',
+            icon: Star,
             onClick: () => {
               setIsFavorite(!isFavorite);
             },
             variant: 'ghost',
-            className: 'w-8 h-8 p-0'
+            className: cn(
+              'w-8 h-8 p-0',
+              isFavorite ? 'text-yellow-500 fill-current' : 'text-gray-400'
+            )
           }
         ]}
         variant="compact"

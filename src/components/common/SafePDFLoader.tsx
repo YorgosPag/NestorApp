@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import { BarChart3, Link, Paperclip, FileText, X, CheckCircle, Circle, Chrome, Check } from 'lucide-react';
 
 interface SafePDFLoaderProps {
   file: string | File | null;
@@ -61,7 +62,7 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
           // SOLUTION: Convert blob to data URL for Chrome compatibility
           if (renderMethod === 'data') {
             url = await convertBlobToDataURL(file);
-            setDebugInfo('✅ Converted to data URL for Chrome');
+            setDebugInfo('Converted to data URL for Chrome');
           } else {
             url = URL.createObjectURL(file);
             setDebugInfo('Using blob URL (may be blocked in Chrome)');
@@ -75,7 +76,7 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
       } catch (error) {
         console.error('PDF processing error:', error);
         setStatus('error');
-        setDebugInfo(`❌ Error: ${(error as Error).message}`);
+        setDebugInfo(`Error: ${(error as Error).message}`);
         onLoadError?.(error as Error);
       }
     };
@@ -99,7 +100,8 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
           renderMethod === 'data' ? 'bg-green-600 text-white' : 'bg-gray-200'
         }`}
       >
-        📊 Data URL (Chrome-safe)
+        <BarChart3 className="h-4 w-4 mr-1" />
+        Data URL (Chrome-safe)
       </button>
       <button
         onClick={() => setRenderMethod('blob')}
@@ -107,7 +109,8 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
           renderMethod === 'blob' ? 'bg-blue-600 text-white' : 'bg-gray-200'
         }`}
       >
-        🔗 Blob URL
+        <Link className="h-4 w-4 mr-1" />
+        Blob URL
       </button>
       <button
         onClick={() => setRenderMethod('link')}
@@ -115,7 +118,8 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
           renderMethod === 'link' ? 'bg-purple-600 text-white' : 'bg-gray-200'
         }`}
       >
-        🖇️ Link Only
+        <Paperclip className="h-4 w-4 mr-1" />
+        Link Only
       </button>
     </div>
   );
@@ -128,7 +132,7 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
         style={{ width, height }}
       >
         <div className="text-center text-gray-500">
-          <div className="text-2xl mb-2">📄</div>
+          <FileText className="h-8 w-8 mx-auto mb-2" />
           <div className="text-sm">No PDF file</div>
         </div>
       </div>
@@ -145,7 +149,20 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
         <div><strong>Status:</strong> {status}</div>
         <div><strong>Method:</strong> {renderMethod}</div>
         <div><strong>Debug:</strong> {debugInfo}</div>
-        <div><strong>Browser:</strong> {navigator.userAgent.includes('Chrome') ? '🔴 Chrome (needs CSP fix)' : '✅ Non-Chrome'}</div>
+        <div className="flex items-center gap-1">
+          <strong>Browser:</strong>
+          {navigator.userAgent.includes('Chrome') ? (
+            <span className="flex items-center gap-1 text-red-600">
+              <Circle className="h-3 w-3 fill-current" />
+              Chrome (needs CSP fix)
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 text-green-600">
+              <CheckCircle className="h-3 w-3" />
+              Non-Chrome
+            </span>
+          )}
+        </div>
       </div>
 
       {/* PDF Display */}
@@ -162,7 +179,7 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
         {status === 'error' && (
           <div className="flex items-center justify-center h-full bg-red-50">
             <div className="text-center text-red-600">
-              <div className="text-2xl mb-2">❌</div>
+              <X className="h-8 w-8 mx-auto mb-2" />
               <p className="text-sm font-medium">PDF Error</p>
               <p className="text-xs">{debugInfo}</p>
             </div>
@@ -198,7 +215,7 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
             {renderMethod === 'link' && (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center">
-                  <div className="text-4xl mb-4">📄</div>
+                  <FileText className="h-16 w-16 mx-auto mb-4 text-blue-600" />
                   <p className="text-lg font-medium mb-4">PDF Ready</p>
                   <a
                     href={pdfUrl}
@@ -206,7 +223,8 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
                     rel="noopener noreferrer"
                     className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                   >
-                    📄 Open PDF in New Tab
+                    <FileText className="h-4 w-4 mr-2" />
+                    Open PDF in New Tab
                   </a>
                 </div>
               </div>
@@ -217,8 +235,9 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
 
       {/* Success indicator */}
       {status === 'success' && (
-        <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded text-xs">
-          ✅ PDF Loaded ({renderMethod})
+        <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded text-xs flex items-center gap-1">
+          <Check className="h-3 w-3" />
+          PDF Loaded ({renderMethod})
         </div>
       )}
     </div>

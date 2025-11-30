@@ -9,6 +9,10 @@
 export { GenericFormRenderer } from './GenericFormRenderer';
 export type { GenericFormRendererProps } from './GenericFormRenderer';
 
+// Form Tab Components
+export { GenericFormTabRenderer } from './GenericFormTabRenderer';
+export type { GenericFormTabRendererProps } from './GenericFormTabRenderer';
+
 // Tab Components
 export { GenericTabRenderer } from './GenericTabRenderer';
 export type { GenericTabRendererProps } from './GenericTabRenderer';

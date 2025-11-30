@@ -3,6 +3,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { Lightbulb } from 'lucide-react';
 import { costBreakdown, monthlyProgress } from './utils';
 
 export default function AnalyticsOverview() {
@@ -34,7 +35,10 @@ export default function AnalyticsOverview() {
                     </div>
 
                     <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
-                        <div className="text-sm font-medium text-blue-900 dark:text-blue-200 mb-2">💡 Ανάλυση</div>
+                        <div className="text-sm font-medium text-blue-900 dark:text-blue-200 mb-2 flex items-center gap-2">
+                            <Lightbulb className="h-4 w-4" />
+                            Ανάλυση
+                        </div>
                         <p className="text-sm text-blue-700 dark:text-blue-300">
                             Το κόστος υλικών είναι 5% υψηλότερο από τον μέσο όρο της αγοράς.
                             Συνιστάται επαναδιαπραγμάτευση με προμηθευτές.

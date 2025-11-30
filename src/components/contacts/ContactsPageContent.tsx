@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { ContactsList } from './list/ContactsList';
 import { ContactDetails } from './details/ContactDetails';
-import { AddNewContactDialog } from './dialogs/AddNewContactDialog';
+import { TabbedAddNewContactDialog } from './dialogs/TabbedAddNewContactDialog';
 import { EditContactDialog } from './dialogs/EditContactDialog';
 import { DeleteContactDialog } from './dialogs/DeleteContactDialog';
 import { ArchiveContactDialog } from './dialogs/ArchiveContactDialog';
@@ -380,7 +380,7 @@ export function ContactsPageContent() {
         </div>
 
         {/* Dialog για νέα επαφή */}
-        <AddNewContactDialog
+        <TabbedAddNewContactDialog
           open={showNewContactDialog}
           onOpenChange={setShowNewContactDialog}
           onContactAdded={handleContactAdded}

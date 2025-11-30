@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { FormField, FormInput } from '@/components/ui/form/FormComponents';
 import type { FieldConfig, SectionConfig } from '@/config/company-gemi-config';
+import { getIconComponent } from './ConfigTabsHelper';
 
 // ============================================================================
 // INTERFACES
@@ -253,38 +254,43 @@ export function GenericFormRenderer({
 
   return (
     <>
-      {sections.map((section, sectionIndex) => (
-        <React.Fragment key={section.id}>
-          {/* Section Header */}
-          <div className="col-span-2 border-t pt-4 mt-4">
-            <h4 className="font-semibold mb-3 text-sm">
-              {section.icon} {section.title}
-            </h4>
-            {section.description && (
-              <p className="text-xs text-muted-foreground mb-2">{section.description}</p>
-            )}
-          </div>
+      {sections.map((section, sectionIndex) => {
+        const IconComponent = getIconComponent(section.icon);
 
-          {/* Section Fields */}
-          {section.fields.map(field => (
-            <FormField
-              key={field.id}
-              label={field.label}
-              htmlFor={field.id}
-              required={field.required}
-            >
-              <FormInput>
-                {renderField(field, formData, onChange, onSelectChange, disabled, customRenderers)}
-              </FormInput>
-              {field.helpText && (
-                <div className="col-span-4">
-                  <p className="text-xs text-muted-foreground mt-1">{field.helpText}</p>
-                </div>
+        return (
+          <React.Fragment key={section.id}>
+            {/* Section Header */}
+            <div className="col-span-2 border-t pt-4 mt-4">
+              <h4 className="font-semibold mb-3 text-sm flex items-center gap-2">
+                <IconComponent className="h-4 w-4" />
+                {section.title}
+              </h4>
+              {section.description && (
+                <p className="text-xs text-muted-foreground mb-2">{section.description}</p>
               )}
-            </FormField>
-          ))}
-        </React.Fragment>
-      ))}
+            </div>
+
+            {/* Section Fields */}
+            {section.fields.map(field => (
+              <FormField
+                key={field.id}
+                label={field.label}
+                htmlFor={field.id}
+                required={field.required}
+              >
+                <FormInput>
+                  {renderField(field, formData, onChange, onSelectChange, disabled, customRenderers)}
+                </FormInput>
+                {field.helpText && (
+                  <div className="col-span-4">
+                    <p className="text-xs text-muted-foreground mt-1">{field.helpText}</p>
+                  </div>
+                )}
+              </FormField>
+            ))}
+          </React.Fragment>
+        );
+      })}
     </>
   );
 }

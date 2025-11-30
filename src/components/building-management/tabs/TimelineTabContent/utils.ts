@@ -2,6 +2,7 @@
 'use client';
 
 import { cn } from '@/lib/utils';
+import { Rocket, Building2, Zap, Palette, Target, ClipboardList } from 'lucide-react';
 
 export const milestones = [
     {
@@ -91,11 +92,11 @@ export const getStatusText = (status: string) => {
 
 export const getTypeIcon = (type: string) => {
     switch (type) {
-        case 'start': return '🚀';
-        case 'construction': return '🏗️';
-        case 'systems': return '⚡';
-        case 'finishing': return '🎨';
-        case 'delivery': return '🎯';
-        default: return '📋';
+        case 'start': return Rocket;
+        case 'construction': return Building2;
+        case 'systems': return Zap;
+        case 'finishing': return Palette;
+        case 'delivery': return Target;
+        default: return ClipboardList;
     }
 };
