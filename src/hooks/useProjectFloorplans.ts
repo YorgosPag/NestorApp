@@ -28,7 +28,6 @@ export function useProjectFloorplans(projectId: string | number): UseProjectFloo
       setLoading(true);
       setError(null);
       
-      console.log('🏗️ Fetching floorplans from Firestore for project:', projectIdStr);
       
       // Load both floorplan types in parallel
       const [projectData, parkingData] = await Promise.all([
@@ -39,10 +38,6 @@ export function useProjectFloorplans(projectId: string | number): UseProjectFloo
       setProjectFloorplan(projectData);
       setParkingFloorplan(parkingData);
       
-      console.log('✅ Floorplans loaded:', {
-        hasProjectFloorplan: !!projectData,
-        hasParkingFloorplan: !!parkingData
-      });
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';

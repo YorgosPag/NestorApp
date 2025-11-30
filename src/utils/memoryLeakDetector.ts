@@ -1,5 +1,7 @@
 'use client';
 
+import React from 'react';
+
 // Memory leak detection and prevention utilities
 
 interface MemorySnapshot {

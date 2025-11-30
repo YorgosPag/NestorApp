@@ -6,6 +6,7 @@ import { TabsOnlyTriggers } from '@/components/ui/navigation/TabsComponents';
 import { TabsContent } from '@/components/ui/tabs';
 import { createTabsFromConfig, getIconComponent } from './ConfigTabsHelper';
 import { GenericFormRenderer } from './GenericFormRenderer';
+import { EnterprisePhotoUpload } from '@/components/ui/EnterprisePhotoUpload';
 import type { SectionConfig } from '@/config/company-gemi-config';
 
 // ============================================================================
@@ -23,6 +24,8 @@ export interface GenericFormTabRendererProps {
   onSelectChange: (name: string, value: string) => void;
   /** Disabled state */
   disabled?: boolean;
+  /** Logo file change handler */
+  onLogoChange?: (file: File | null) => void;
   /** Custom field renderers for forms */
   customRenderers?: Record<string, (field: any, formData: any, onChange: any, onSelectChange: any, disabled: boolean) => React.ReactNode>;
 }
@@ -40,13 +43,37 @@ function createFormTabsFromConfig(
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void,
   onSelectChange: (name: string, value: string) => void,
   disabled: boolean,
+  onLogoChange?: (file: File | null) => void,
   customRenderers?: Record<string, any>
 ) {
   return sections.map(section => ({
     id: section.id,
     label: section.title,
     icon: getIconComponent(section.icon),
-    content: (
+    content: section.id === 'logo' ? (
+      // Special rendering for logo section
+      <div className="space-y-4">
+        <EnterprisePhotoUpload
+          purpose="logo"
+          maxSize={5 * 1024 * 1024} // 5MB
+          photoFile={formData.logoFile}
+          photoPreview={formData.logoPreview}
+          onFileChange={onLogoChange}
+          disabled={disabled}
+        />
+        <FormGrid>
+          <GenericFormRenderer
+            sections={[section]} // Regular fields (like description)
+            formData={formData}
+            onChange={onChange}
+            onSelectChange={onSelectChange}
+            disabled={disabled}
+            customRenderers={customRenderers}
+          />
+        </FormGrid>
+      </div>
+    ) : (
+      // Regular rendering for other sections
       <FormGrid>
         <GenericFormRenderer
           sections={[section]} // Single section per tab
@@ -93,6 +120,7 @@ export function GenericFormTabRenderer({
   onChange,
   onSelectChange,
   disabled = false,
+  onLogoChange,
   customRenderers
 }: GenericFormTabRendererProps) {
   if (!sections || sections.length === 0) {
@@ -107,6 +135,7 @@ export function GenericFormTabRenderer({
     onChange,
     onSelectChange,
     disabled,
+    onLogoChange,
     customRenderers
   );
 

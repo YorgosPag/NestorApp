@@ -8,6 +8,7 @@ interface CompanyContactTabbedSectionProps {
   formData: ContactFormData;
   handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   handleSelectChange: (name: string, value: string) => void;
+  handleLogoChange?: (file: File | null) => void;
   disabled?: boolean;
 }
 
@@ -19,6 +20,7 @@ export function CompanyContactTabbedSection({
   formData,
   handleChange,
   handleSelectChange,
+  handleLogoChange,
   disabled = false
 }: CompanyContactTabbedSectionProps) {
   // Get all company GEMI sections from centralized config
@@ -30,6 +32,7 @@ export function CompanyContactTabbedSection({
       formData={formData}
       onChange={handleChange}
       onSelectChange={handleSelectChange}
+      onLogoChange={handleLogoChange}
       disabled={disabled}
     />
   );

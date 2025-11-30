@@ -36,14 +36,10 @@ export function FloorplanViewerTab({
       const rect = container.getBoundingClientRect();
       canvas.width = rect.width;
       canvas.height = rect.height;
-      console.log('📐 Canvas sized to container:', { width: rect.width, height: rect.height });
     }
 
-    console.log('🏗️ Rendering floorplan to project tab:', floorplanData);
-    
     // Detect dark mode
     const isDarkMode = document.documentElement.classList.contains('dark');
-    console.log('🌙 Dark mode detected:', isDarkMode);
     
     // Clear canvas with appropriate background
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -77,25 +73,6 @@ export function FloorplanViewerTab({
       // To position top-left at (0,0), we need to adjust the drawing coordinates
       // Since DXF Y increases upward, we flip and offset by the drawing height
       
-      console.log('🎯 FloorplanViewerTab TOP-LEFT alignment - VERSION 2.4-ORIGINAL-COLORS:', {
-        bounds,
-        drawingSize: { width: drawingWidth, height: drawingHeight },
-        scale,
-        maxScale,
-        scaleX,
-        scaleY,
-        canvasSize: { width: canvas.width, height: canvas.height },
-        scaledDrawingSize: { width: drawingWidth * scale, height: drawingHeight * scale },
-        alignment: 'top-left-FULL-CONTAINER',
-        offsetX: offsetX,
-        offsetY: offsetY,
-        isDarkMode: isDarkMode,
-        backgroundColor: isDarkMode ? '#111827' : '#f8f9fa',
-        colorMode: 'ORIGINAL_LAYER_COLORS',
-        layersAvailable: Object.keys(floorplanData.layers || {}),
-        entitiesCount: floorplanData.entities.length,
-        timestamp: Date.now()
-      });
       
       // No debug border - removed as requested
       

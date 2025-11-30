@@ -18,11 +18,12 @@ const chunkArray = <T>(arr: T[], size: number): T[][] => {
 
 
 export class FirestoreProjectsRepository implements IProjectsRepository {
-  
+
   async getProjectsByCompanyId(companyId: string): Promise<Project[]> {
     // Debug logging removed: console.log(`🏗️ FirestoreProjectsRepository: Loading projects for companyId: "${companyId}"`);
-    
-    if (!db) {
+
+    const database = db();
+    if (!database) {
       // Error logging removed //('🏗️ FirestoreProjectsRepository: Firebase admin not initialized');
       // Error logging removed //('🏗️ FirestoreProjectsRepository: Check environment variables FIREBASE_PROJECT_ID and FIREBASE_SERVICE_ACCOUNT_KEY');
       return [];
@@ -33,18 +34,19 @@ export class FirestoreProjectsRepository implements IProjectsRepository {
     try {
       // First, let's see ALL projects to understand the data structure
       // Debug logging removed: console.log(`🔍 DEBUG: Fetching ALL projects to see available companyIds...`);
-      const allProjectsQuery = query(collection(db, 'projects'));
+      const allProjectsQuery = query(collection(database, 'projects'));
       const allSnapshot = await getDocs(allProjectsQuery);
       // Debug logging removed: console.log(`🔍 DEBUG: Total projects in Firestore: ${allSnapshot.docs.length}`);
-      
+
       allSnapshot.docs.forEach(doc => {
         const data = doc.data();
-        // Debug logging removed: console.log(`🔍 DEBUG: Project ID=${doc.id}, companyId="${data.companyId}", company="${data.company}", name="${data.name}"`);
+        // TEMP DEBUG για Γιώργο: Εμφάνιση όλων των projects και των company IDs τους
+        console.log(`🔍 DEBUG: Project ID=${doc.id}, companyId="${data.companyId}", company="${data.company}", name="${data.name}"`);
       });
-      
+
       // Now do the specific query
       const projectsQuery = query(
-        collection(db, 'projects'),
+        collection(database, 'projects'),
         where('companyId', '==', companyId)
       );
       
@@ -71,8 +73,9 @@ export class FirestoreProjectsRepository implements IProjectsRepository {
   }
   
   async getProjectById(projectId: number): Promise<Project | null> {
-    if (!db) return null;
-    const docRef = doc(db, 'projects', String(projectId));
+    const database = db();
+    if (!database) return null;
+    const docRef = doc(database, 'projects', String(projectId));
     const docSnap = await getDoc(docRef);
     if (!docSnap.exists()) {
       return null;
@@ -81,27 +84,30 @@ export class FirestoreProjectsRepository implements IProjectsRepository {
   }
 
   async getBuildingsByProjectId(projectId: number): Promise<Building[]> {
-    if (!db) return [];
-    const q = query(collection(db, 'buildings'), where('projectId', '==', projectId));
+    const database = db();
+    if (!database) return [];
+    const q = query(collection(database, 'buildings'), where('projectId', '==', projectId));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: parseInt(doc.id), ...doc.data() } as Building));
   }
   
   async getUnitsByBuildingId(buildingId: string): Promise<Property[]> {
-      if (!db) return [];
-      const q = query(collection(db, 'units'), where('buildingId', '==', buildingId));
+      const database = db();
+      if (!database) return [];
+      const q = query(collection(database, 'units'), where('buildingId', '==', buildingId));
       const snapshot = await getDocs(q);
       return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Property));
   }
 
   async getContactsByIds(ids: string[]): Promise<Contact[]> {
-    if (ids.length === 0 || !db) return [];
+    const database = db();
+    if (ids.length === 0 || !database) return [];
     
     const allContacts: Contact[] = [];
     const idChunks = chunkArray(ids, 10);
     
     for (const chunk of idChunks) {
-      const q = query(collection(db, 'contacts'), where(documentId(), 'in', chunk));
+      const q = query(collection(database, 'contacts'), where(documentId(), 'in', chunk));
       const snapshot = await getDocs(q);
       const contacts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Contact));
       allContacts.push(...contacts);

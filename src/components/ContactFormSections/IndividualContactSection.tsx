@@ -2,7 +2,7 @@
 
 import { GenericFormRenderer } from '@/components/generic';
 import { getIndividualSortedSections } from '@/config/individual-config';
-import { PhotoUploadSection } from '@/components/PhotoUpload/PhotoUploadSection';
+import { EnterprisePhotoUpload } from '@/components/ui/EnterprisePhotoUpload';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 
 interface IndividualContactSectionProps {
@@ -37,12 +37,12 @@ export function IndividualContactSection({
         disabled={disabled}
       />
 
-      <PhotoUploadSection
+      <EnterprisePhotoUpload
+        purpose="photo"
+        maxSize={5 * 1024 * 1024} // 5MB
         photoFile={formData.photoFile}
         photoPreview={formData.photoPreview}
         onFileChange={handleFileChange}
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
         disabled={disabled}
       />
     </>

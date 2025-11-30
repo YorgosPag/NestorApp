@@ -24,8 +24,6 @@ export function useBuildingFloorplans(buildingId: string | number): UseBuildingF
       setLoading(true);
       setError(null);
       
-      console.log('🏗️ Fetching building floorplans from Firestore for building:', buildingIdStr);
-      
       // Load both building floorplan types in parallel
       const [buildingData, storageData] = await Promise.all([
         BuildingFloorplanService.loadFloorplan(buildingIdStr, 'building'),
@@ -34,11 +32,6 @@ export function useBuildingFloorplans(buildingId: string | number): UseBuildingF
 
       setBuildingFloorplan(buildingData);
       setStorageFloorplan(storageData);
-      
-      console.log('✅ Building floorplans loaded:', {
-        hasBuildingFloorplan: !!buildingData,
-        hasStorageFloorplan: !!storageData
-      });
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';

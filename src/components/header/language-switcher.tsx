@@ -34,7 +34,6 @@ export function LanguageSwitcher() {
     setIsChanging(true);
     
     try {
-      console.log(`🌍 Changing language to: ${languageCode}`);
       
       // Preload critical namespaces for the new language
       await preloadCriticalNamespaces(languageCode as any);
@@ -51,7 +50,6 @@ export function LanguageSwitcher() {
       // Store preference in localStorage
       localStorage.setItem('preferred-language', languageCode);
       
-      console.log(`✅ Language changed successfully to: ${languageCode}`);
     } catch (error) {
       console.error('❌ Failed to change language:', error);
     } finally {

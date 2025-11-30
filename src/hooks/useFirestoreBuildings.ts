@@ -20,8 +20,6 @@ export function useFirestoreBuildings(): UseFirestoreBuildingsReturn {
       setLoading(true);
       setError(null);
       
-      console.log('🏗️ Fetching buildings from Firestore via API...');
-      
       const response = await fetch('/api/buildings');
       
       if (!response.ok) {
@@ -32,7 +30,6 @@ export function useFirestoreBuildings(): UseFirestoreBuildingsReturn {
       
       if (data.success) {
         setBuildings(data.buildings);
-        console.log(`✅ Successfully loaded ${data.buildings.length} buildings from Firestore`);
       } else {
         throw new Error(data.error || 'Failed to fetch buildings');
       }

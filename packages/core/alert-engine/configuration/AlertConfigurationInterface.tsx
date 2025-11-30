@@ -11,24 +11,41 @@ import {
   Rule,
   RuleCondition,
   RuleAction,
+  RuleCategory,
+  RulePriority,
   LogicalOperator,
   ComparisonOperator,
   RulesEngine
 } from '../rules/RulesEngine';
 import {
   AlertDetectionSystem,
-  AlertTemplate,
-  DetectionConfig
+  AlertTemplate
 } from '../detection/AlertDetectionSystem';
 import {
   NotificationDispatchEngine,
-  NotificationTemplate,
-  NotificationConfig
+  NotificationTemplate
 } from '../notifications/NotificationDispatchEngine';
 
 // ============================================================================
 // CONFIGURATION TYPES
 // ============================================================================
+
+interface DetectionConfig {
+  enableRealTimeDetection: boolean;
+  detectionInterval: number;
+  maxDetectionThreads: number;
+  alertThreshold: number;
+  enablePatternRecognition: boolean;
+}
+
+interface NotificationConfig {
+  enableEmail: boolean;
+  enableSMS: boolean;
+  enablePushNotifications: boolean;
+  defaultChannels: string[];
+  retryAttempts: number;
+  retryDelay: number;
+}
 
 interface AlertConfigurationData {
   rules: Rule[];
@@ -83,8 +100,7 @@ const ConfigurationCard: React.FC<{
         borderRadius: '8px',
         padding: '16px',
         cursor: 'pointer',
-        transition: 'all 0.2s ease',
-        ':hover': { borderColor: '#0EA5E9' }
+        transition: 'all 0.2s ease'
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
@@ -126,10 +142,17 @@ const RuleEditor: React.FC<{
       id: `rule_${Date.now()}`,
       name: '',
       description: '',
-      isActive: true,
-      priority: 5,
-      conditions: [],
-      actions: []
+      category: 'geospatial' as RuleCategory,
+      priority: 'low' as RulePriority,
+      isEnabled: true,
+      conditions: { type: 'logical', operator: 'AND', children: [] } as RuleCondition,
+      actions: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      createdBy: 'user',
+      triggerCount: 0,
+      averageExecutionTime: 0,
+      successRate: 100
     }
   );
 
@@ -192,8 +215,8 @@ const RuleEditor: React.FC<{
             Προτεραιότητα
           </label>
           <select
-            value={editingRule.priority || 5}
-            onChange={(e) => setEditingRule(prev => ({ ...prev, priority: parseInt(e.target.value) }))}
+            value={editingRule.priority || 'low'}
+            onChange={(e) => setEditingRule(prev => ({ ...prev, priority: e.target.value as RulePriority }))}
             style={{
               width: '100%',
               padding: '8px 12px',
@@ -216,8 +239,8 @@ const RuleEditor: React.FC<{
           <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <input
               type="checkbox"
-              checked={editingRule.isActive || false}
-              onChange={(e) => setEditingRule(prev => ({ ...prev, isActive: e.target.checked }))}
+              checked={editingRule.isEnabled || false}
+              onChange={(e) => setEditingRule(prev => ({ ...prev, isEnabled: e.target.checked }))}
             />
             <span style={{ fontSize: '14px' }}>Ενεργός κανόνας</span>
           </label>
@@ -542,9 +565,9 @@ export const AlertConfigurationInterface: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   // Service instances
-  const rulesEngine = RulesEngine.getInstance();
-  const alertDetection = AlertDetectionSystem.getInstance();
-  const notificationEngine = NotificationDispatchEngine.getInstance();
+  const rulesEngine = new RulesEngine();
+  const alertDetection = new AlertDetectionSystem();
+  const notificationEngine = new NotificationDispatchEngine();
 
   // ========================================================================
   // CONFIGURATION SECTIONS
@@ -607,19 +630,33 @@ export const AlertConfigurationInterface: React.FC = () => {
             id: 'rule_accuracy_degradation',
             name: 'Accuracy Degradation Alert',
             description: 'Triggers when coordinate accuracy drops below threshold',
-            isActive: true,
-            priority: 3,
-            conditions: [],
-            actions: []
+            category: 'geospatial' as RuleCategory,
+            isEnabled: true,
+            priority: 'medium' as RulePriority,
+            conditions: { type: 'logical', operator: 'AND', children: [] } as RuleCondition,
+            actions: [],
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            createdBy: 'system',
+            triggerCount: 0,
+            averageExecutionTime: 0,
+            successRate: 100
           },
           {
             id: 'rule_spatial_conflict',
             name: 'Spatial Conflict Detection',
             description: 'Detects overlapping control points',
-            isActive: true,
-            priority: 5,
-            conditions: [],
-            actions: []
+            category: 'geospatial' as RuleCategory,
+            isEnabled: true,
+            priority: 'low' as RulePriority,
+            conditions: { type: 'logical', operator: 'AND', children: [] } as RuleCondition,
+            actions: [],
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            createdBy: 'system',
+            triggerCount: 0,
+            averageExecutionTime: 0,
+            successRate: 100
           }
         ],
         alertTemplates: [],
@@ -776,10 +813,10 @@ export const AlertConfigurationInterface: React.FC = () => {
                       borderRadius: '12px',
                       fontSize: '10px',
                       fontWeight: '500',
-                      background: rule.isActive ? '#DCFCE7' : '#F3F4F6',
-                      color: rule.isActive ? '#166534' : '#6B7280'
+                      background: rule.isEnabled ? '#DCFCE7' : '#F3F4F6',
+                      color: rule.isEnabled ? '#166534' : '#6B7280'
                     }}>
-                      {rule.isActive ? 'ΕΝΕΡΓΟΣ' : 'ΑΝΕΝΕΡΓΟΣ'}
+                      {rule.isEnabled ? 'ΕΝΕΡΓΟΣ' : 'ΑΝΕΝΕΡΓΟΣ'}
                     </span>
                     <span style={{ fontSize: '12px', color: '#6B7280' }}>
                       Προτεραιότητα: {rule.priority}

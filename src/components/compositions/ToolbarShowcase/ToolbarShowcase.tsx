@@ -49,9 +49,9 @@ export function ToolbarShowcase() {
             onSearchChange={(term) => setBuildingState(prev => ({ ...prev, searchTerm: term }))}
             activeFilters={buildingState.activeFilters}
             onFiltersChange={(filters) => setBuildingState(prev => ({ ...prev, activeFilters: filters }))}
-            onNewBuilding={() => console.log('New building')}
-            onEditBuilding={(id) => console.log('Edit building:', id)}
-            onDeleteBuilding={(ids) => console.log('Delete buildings:', ids)}
+            onNewBuilding={() => {}}
+            onEditBuilding={(id) => {}}
+            onDeleteBuilding={(ids) => {}}
             onExport={() => console.log('Export buildings')}
             onRefresh={() => console.log('Refresh buildings')}
           />

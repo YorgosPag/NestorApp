@@ -8,9 +8,7 @@ interface IndividualContactTabbedSectionProps {
   formData: ContactFormData;
   handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   handleSelectChange: (name: string, value: string) => void;
-  handleFileChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  handleDrop?: (e: React.DragEvent<HTMLDivElement>) => void;
-  handleDragOver?: (e: React.DragEvent<HTMLDivElement>) => void;
+  handleFileChange?: (file: File | null) => void;
   disabled?: boolean;
 }
 
@@ -29,8 +27,6 @@ export function IndividualContactTabbedSection({
   handleChange,
   handleSelectChange,
   handleFileChange,
-  handleDrop,
-  handleDragOver,
   disabled = false
 }: IndividualContactTabbedSectionProps) {
   // Get all individual sections from centralized config
@@ -42,6 +38,7 @@ export function IndividualContactTabbedSection({
       formData={formData}
       onChange={handleChange}
       onSelectChange={handleSelectChange}
+      onPhotoChange={handleFileChange}
       disabled={disabled}
       customRenderers={{
         // Add any custom field renderers if needed for individual-specific fields

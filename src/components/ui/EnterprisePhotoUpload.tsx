@@ -4,6 +4,7 @@ import React, { useCallback } from 'react';
 import { Camera, Upload, X, CheckCircle, Loader2, AlertCircle } from 'lucide-react';
 import { useEnterpriseFileUpload } from '@/hooks/useEnterpriseFileUpload';
 import type { UseEnterpriseFileUploadConfig, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
+import { UI_COLORS } from '@/subapps/dxf-viewer/config/color-config';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -175,13 +176,26 @@ export function EnterprisePhotoUpload({
         <div
           className={`
             relative border-2 border-dashed rounded-lg p-3 text-center cursor-pointer transition-colors
-            ${currentPreview ? 'border-green-300 bg-green-50' : 'border-gray-300 bg-gray-100 hover:border-gray-400 hover:bg-gray-200'}
+            ${currentPreview ? 'border-green-300 bg-green-50' : `border-gray-300 hover:border-gray-400`}
             ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
             ${hasError ? 'border-red-300 bg-red-50' : ''}
           `}
+          style={{
+            backgroundColor: currentPreview ? undefined : UI_COLORS.UPLOAD_AREA_BG,
+          }}
           onDrop={disabled ? undefined : handleDrop}
           onDragOver={disabled ? undefined : handleDragOver}
           onClick={disabled ? undefined : handleClick}
+          onMouseEnter={(e) => {
+            if (!currentPreview && !disabled) {
+              e.currentTarget.style.backgroundColor = UI_COLORS.UPLOAD_AREA_BG_HOVER;
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!currentPreview && !disabled) {
+              e.currentTarget.style.backgroundColor = UI_COLORS.UPLOAD_AREA_BG;
+            }
+          }}
         >
           {currentPreview ? (
             <div className="flex items-center gap-2">
@@ -206,8 +220,8 @@ export function EnterprisePhotoUpload({
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <Camera className="w-4 h-4 text-gray-500" />
-              <span className="text-xs text-gray-600">Φωτογραφία</span>
+              <Camera className="w-4 h-4 text-gray-300" />
+              <span className="text-xs text-gray-300">Φωτογραφία</span>
             </div>
           )}
 
@@ -261,14 +275,28 @@ export function EnterprisePhotoUpload({
       <div
         className={`
           relative border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors min-h-[120px] flex flex-col items-center justify-center
-          ${currentPreview ? 'border-green-300 bg-green-50' : 'border-gray-300 bg-gray-100 hover:border-gray-400 hover:bg-gray-200'}
+          ${currentPreview ? 'border-green-300 bg-green-50' : 'border-gray-300 hover:border-gray-400'}
           ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
           ${hasError ? 'border-red-300 bg-red-50' : ''}
           ${isLoading ? 'pointer-events-none' : ''}
         `}
+        style={{
+          backgroundColor: currentPreview ? undefined : UI_COLORS.UPLOAD_AREA_BG,
+          borderColor: currentPreview ? undefined : UI_COLORS.UPLOAD_AREA_BORDER,
+        }}
         onDrop={disabled ? undefined : handleDrop}
         onDragOver={disabled ? undefined : handleDragOver}
         onClick={disabled || isLoading ? undefined : handleClick}
+        onMouseEnter={(e) => {
+          if (!currentPreview && !disabled && !isLoading) {
+            e.currentTarget.style.backgroundColor = UI_COLORS.UPLOAD_AREA_BG_HOVER;
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!currentPreview && !disabled && !isLoading) {
+            e.currentTarget.style.backgroundColor = UI_COLORS.UPLOAD_AREA_BG;
+          }
+        }}
       >
         {/* Loading State */}
         {isLoading && (
@@ -322,11 +350,11 @@ export function EnterprisePhotoUpload({
               </>
             ) : (
               <>
-                <Camera className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                <p className="text-sm font-medium text-gray-700 mb-1">
+                <Camera className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                <p className="text-sm font-medium text-gray-200 mb-1">
                   Κάντε κλικ ή σύρετε {purpose === 'logo' ? 'λογότυπο' : 'φωτογραφία'} εδώ
                 </p>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-gray-300">
                   Υποστηρίζονται JPG, PNG (μέγιστο {maxSize ? `${Math.round(maxSize / 1024 / 1024)}MB` : '5MB'})
                 </p>
               </>

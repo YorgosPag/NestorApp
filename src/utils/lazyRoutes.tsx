@@ -101,8 +101,8 @@ export const ListLoadingSkeleton = () => (
 );
 
 // Utility function to create lazy routes with different loading states
-export function createLazyRoute<T = {}>(
-  importFn: () => Promise<{ default: ComponentType<T> }>,
+export function createLazyRoute(
+  importFn: () => Promise<{ default: any }>,
   options: {
     loadingType?: 'spinner' | 'dashboard' | 'form' | 'list';
     ssr?: boolean;
@@ -157,18 +157,18 @@ export const LazyRoutes = {
     () => import('@/components/obligations/ObligationForm').then(mod => ({ default: mod.ObligationForm })),
     { loadingType: 'form', ssr: false }
   ),
-  
+
   ObligationsEdit: createLazyRoute(
     () => import('@/components/obligations/ObligationEditForm').then(mod => ({ default: mod.ObligationEditForm })),
     { loadingType: 'form', ssr: false }
   ),
-  
+
   // Landing (SEO important, keep SSR)
   Landing: createLazyRoute(
     () => import('@/components/landing/LandingPage').then(mod => ({ default: mod.LandingPage })),
     { loadingType: 'spinner', ssr: true }
   ),
-  
+
   // Heavy DXF Viewer (already optimized, but include for completeness)
   DXFViewer: createLazyRoute(
     () => import('@/subapps/dxf-viewer/DxfViewerApp').then(mod => ({ default: mod.default })),

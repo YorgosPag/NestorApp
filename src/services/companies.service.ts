@@ -78,13 +78,13 @@ export class CompaniesService {
       // Παίρνουμε τα IDs εταιρειών που είναι στην πλοήγηση (χειροκίνητα)
       const navigationCompanyIds = await getNavigationCompanyIds();
       if (DEBUG_COMPANIES_SERVICE) {
-        // Debug logging removed - navigation company IDs
+        // Debug removed
       }
 
       // Παίρνουμε τα IDs εταιρειών που έχουν έργα
       const companiesWithProjectIds = await this.getCompaniesWithProjects();
       if (DEBUG_COMPANIES_SERVICE) {
-        // Debug logging removed - companies with projects
+        // Debug removed
       }
 
       // Συνδυάζουμε και τα δύο (unique values)
@@ -95,7 +95,7 @@ export class CompaniesService {
       ]));
 
       if (DEBUG_COMPANIES_SERVICE) {
-        // Debug logging removed - all relevant company IDs
+        // Debug removed
       }
 
       // ΝΕΟ: Ακόμα κι αν δεν υπάρχουν companies με έργα,
@@ -119,7 +119,7 @@ export class CompaniesService {
         .map(doc => {
           const data = doc.data();
           if (DEBUG_COMPANIES_SERVICE) {
-            // Debug logging removed - Firestore doc info
+            // Debug removed
           }
           return data;
         })

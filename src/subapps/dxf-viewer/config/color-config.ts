@@ -58,6 +58,11 @@ export const UI_COLORS = {
   BUTTON_PRIMARY_HOVER: '#2563eb',
   BUTTON_SECONDARY: '#6b7280',
   BUTTON_SECONDARY_HOVER: '#4b5563',
+
+  // Custom Upload Area Color (Enterprise Dark Blue-Gray)
+  UPLOAD_AREA_BG: 'rgb(43, 59, 85)',
+  UPLOAD_AREA_BG_HOVER: 'rgb(55, 73, 99)',
+  UPLOAD_AREA_BORDER: 'rgb(75, 91, 115)',
   
   // Status colors
   SUCCESS: '#10b981',

@@ -98,6 +98,7 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
                 formData={formData}
                 handleChange={handleChange}
                 handleSelectChange={handleSelectChange}
+                handleLogoChange={handleLogoChange}
                 disabled={loading}
               />
             )}
@@ -109,8 +110,6 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
                 handleChange={handleChange}
                 handleSelectChange={handleSelectChange}
                 handleFileChange={handleFileChange}
-                handleDrop={handleDrop}
-                handleDragOver={handleDragOver}
                 disabled={loading}
               />
             )}

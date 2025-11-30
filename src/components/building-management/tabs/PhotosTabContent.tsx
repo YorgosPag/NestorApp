@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import type { Building } from '@/types/building/contracts';
 import type { Photo } from './PhotosTabContent/types';
-import { UploadZone } from './PhotosTabContent/UploadZone';
+import { EnterprisePhotoUpload } from '@/components/ui/EnterprisePhotoUpload';
 import { PhotoGrid } from './PhotosTabContent/PhotoGrid';
 
 interface PhotosTabContentProps {
@@ -23,44 +23,39 @@ const initialPhotos: Photo[] = [
 
 const PhotosTabContent = ({ building }: PhotosTabContentProps) => {
   const [photos, setPhotos] = useState<Photo[]>(initialPhotos);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const [currentFile, setCurrentFile] = useState<File | null>(null);
 
-  const handleFileUpload = (files: FileList | null) => {
-    if (!files || files.length === 0) return;
+  const handleFileChange = (file: File | null) => {
+    setCurrentFile(file);
+  };
 
-    setIsUploading(true);
-    setUploadProgress(0);
-
-    // Simulate upload progress
-    const interval = setInterval(() => {
-      setUploadProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsUploading(false);
-          // Here you would typically add the new photos to your state
-          const newPhotos: Photo[] = Array.from(files).map((file, index) => ({
-            id: Date.now() + index,
-            src: URL.createObjectURL(file), // Create a temporary URL for preview
-            alt: file.name,
-            name: file.name,
-            aiHint: 'newly uploaded',
-          }));
-          setPhotos(prevPhotos => [...prevPhotos, ...newPhotos]);
-          return 100;
-        }
-        return prev + 10;
-      });
-    }, 200);
+  const handleUploadComplete = (result: any) => {
+    if (currentFile) {
+      // Add the new photo to state
+      const newPhoto: Photo = {
+        id: Date.now(),
+        src: URL.createObjectURL(currentFile),
+        alt: currentFile.name,
+        name: currentFile.name,
+        aiHint: 'newly uploaded',
+      };
+      setPhotos(prevPhotos => [...prevPhotos, newPhoto]);
+      setCurrentFile(null);
+    }
   };
 
   return (
     <div className="space-y-6">
-      <UploadZone 
-        isUploading={isUploading}
-        uploadProgress={uploadProgress}
-        onFileUpload={handleFileUpload}
-      />
+      <div className="bg-white rounded-lg border p-6">
+        <h3 className="text-lg font-semibold mb-4">Φωτογραφίες Κτιρίου</h3>
+        <EnterprisePhotoUpload
+          purpose="photo"
+          maxSize={10 * 1024 * 1024} // 10MB για κτίρια
+          photoFile={currentFile}
+          onFileChange={handleFileChange}
+          onUploadComplete={handleUploadComplete}
+        />
+      </div>
       <PhotoGrid photos={photos} />
     </div>
   );

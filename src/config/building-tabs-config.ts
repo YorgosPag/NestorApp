@@ -323,11 +323,6 @@ export function validateBuildingTabsConfiguration(): {
  */
 export function debugBuildingTabs(): void {
   if (process.env.NODE_ENV === 'development') {
-    console.group('🏗️ Building Tabs Configuration Debug');
-    console.log('📊 Stats:', getBuildingTabsStats());
-    console.log('✅ Validation:', validateBuildingTabsConfiguration());
-    console.log('📋 Enabled tabs:', getEnabledBuildingTabs().map(t => t.label));
-    console.log('🎯 All tabs:', BUILDING_TABS.length);
     console.groupEnd();
   }
 }

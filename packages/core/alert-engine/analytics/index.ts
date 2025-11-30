@@ -9,7 +9,7 @@
 // ANALYTICS ENGINE
 // ============================================================================
 
-import { EventAnalyticsEngine } from './EventAnalyticsEngine';
+import { EventAnalyticsEngine, type AnalyticsTimeRange } from './EventAnalyticsEngine';
 
 export {
   EventAnalyticsEngine,
@@ -105,10 +105,10 @@ export const getSystemHealthMetrics = async () => {
   return {
     timestamp: now,
     eventCount: eventMetrics.totalEvents,
-    activeAlerts: alertMetrics.alertsByStatus.active || 0,
+    activeAlerts: alertMetrics.alertsByStatus.new || 0,
     ruleSuccessRate: ruleMetrics.ruleSuccessRate,
     notificationSuccessRate: notificationMetrics.deliverySuccessRate,
-    systemStatus: (alertMetrics.alertsByStatus.active || 0) > 5 ? 'degraded' : 'healthy'
+    systemStatus: (alertMetrics.alertsByStatus.new || 0) > 5 ? 'degraded' : 'healthy'
   };
 };
 

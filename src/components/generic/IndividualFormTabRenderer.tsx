@@ -6,6 +6,7 @@ import { TabsOnlyTriggers } from '@/components/ui/navigation/TabsComponents';
 import { TabsContent } from '@/components/ui/tabs';
 import { getIconComponent } from './ConfigTabsHelper';
 import { IndividualFormRenderer } from './IndividualFormRenderer';
+import { EnterprisePhotoUpload } from '@/components/ui/EnterprisePhotoUpload';
 import type { IndividualSectionConfig } from '@/config/individual-config';
 
 // ============================================================================
@@ -23,6 +24,8 @@ export interface IndividualFormTabRendererProps {
   onSelectChange: (name: string, value: string) => void;
   /** Disabled state */
   disabled?: boolean;
+  /** Photo file change handler */
+  onPhotoChange?: (file: File | null) => void;
   /** Custom field renderers for forms */
   customRenderers?: Record<string, (field: any, formData: any, onChange: any, onSelectChange: any, disabled: boolean) => React.ReactNode>;
 }
@@ -40,13 +43,37 @@ function createIndividualFormTabsFromConfig(
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void,
   onSelectChange: (name: string, value: string) => void,
   disabled: boolean,
+  onPhotoChange?: (file: File | null) => void,
   customRenderers?: Record<string, any>
 ) {
   return sections.map(section => ({
     id: section.id,
     label: section.title,
     icon: getIconComponent(section.icon),
-    content: (
+    content: section.id === 'photo' ? (
+      // Special rendering for photo section
+      <div className="space-y-4">
+        <EnterprisePhotoUpload
+          purpose="photo"
+          maxSize={5 * 1024 * 1024} // 5MB
+          photoFile={formData.photoFile}
+          photoPreview={formData.photoPreview}
+          onFileChange={onPhotoChange}
+          disabled={disabled}
+        />
+        <FormGrid>
+          <IndividualFormRenderer
+            sections={[section]} // Regular fields (like description)
+            formData={formData}
+            onChange={onChange}
+            onSelectChange={onSelectChange}
+            disabled={disabled}
+            customRenderers={customRenderers}
+          />
+        </FormGrid>
+      </div>
+    ) : (
+      // Regular rendering for other sections
       <FormGrid>
         <IndividualFormRenderer
           sections={[section]} // Single section per tab
@@ -99,6 +126,7 @@ export function IndividualFormTabRenderer({
   onChange,
   onSelectChange,
   disabled = false,
+  onPhotoChange,
   customRenderers
 }: IndividualFormTabRendererProps) {
   if (!sections || sections.length === 0) {
@@ -112,6 +140,7 @@ export function IndividualFormTabRenderer({
     onChange,
     onSelectChange,
     disabled,
+    onPhotoChange,
     customRenderers
   );
 

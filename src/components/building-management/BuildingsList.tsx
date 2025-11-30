@@ -112,9 +112,9 @@ export function BuildingsList({
           setSortBy(newSortBy);
           setSortOrder(newSortOrder);
         }}
-        onNewItem={() => console.log('New building')}
-        onEditItem={(id) => console.log('Edit building', id)}
-        onDeleteItems={(ids) => console.log('Delete buildings', ids)}
+        onNewItem={() => {}}
+        onEditItem={(id) => {}}
+        onDeleteItems={(ids) => {}}
         onExport={() => console.log('Export buildings')}
         onRefresh={() => console.log('Refresh buildings')}
       />
