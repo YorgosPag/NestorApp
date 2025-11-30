@@ -105,38 +105,38 @@ const REQUIRED_ENV_VARS = {
   export function logEnvironmentStatus(): void {
     const result = checkEnvironmentVariables();
     
-    console.log('\n🔧 Environment Variables Check:');
-    console.log('================================');
+    // Debug logging removed
+    // Debug logging removed
   
     if (result.valid) {
-      console.log('✅ All required environment variables are set');
+      // Debug logging removed
     } else {
-      console.log('❌ Missing required environment variables:');
-      result.missing.forEach(item => console.log(`   - ${item}`));
+      // Debug logging removed
+      // Debug logging removed
     }
   
     if (result.warnings.length > 0) {
-      console.log('\n⚠️  Warnings:');
-      result.warnings.forEach(warning => console.log(`   - ${warning}`));
+      // Debug logging removed
+      // Debug logging removed
     }
   
     if (result.optional.length > 0) {
-      console.log('\n💡 Optional variables not set:');
-      result.optional.forEach(item => console.log(`   - ${item}`));
+      // Debug logging removed
+      // Debug logging removed
     }
   
     if (result.recommendations.length > 0) {
-      console.log('\n📋 Recommendations:');
-      result.recommendations.forEach(rec => console.log(`   - ${rec}`));
+      // Debug logging removed
+      // Debug logging removed
     }
   
-    console.log('\n🚀 Telegram Bot Status:');
-    console.log(`   Bot Token: ${process.env.TELEGRAM_BOT_TOKEN ? '✅ Set' : '❌ Missing'}`);
-    console.log(`   Firebase: ${process.env.FIREBASE_PROJECT_ID ? '✅ Configured' : '❌ Missing'}`);
-    console.log(`   Company Info: ${process.env.NEXT_PUBLIC_COMPANY_NAME ? '✅ Set' : '⚠️  Using defaults'}`);
-    console.log(`   Security: ${process.env.TELEGRAM_WEBHOOK_SECRET ? '✅ Secured' : '⚠️  Unsecured'}`);
-    
-    console.log('\n================================\n');
+    // Debug logging removed
+    // Debug logging removed
+    // Debug logging removed
+    // Debug logging removed
+    // Debug logging removed
+
+    // Debug logging removed
   }
   
   /**
@@ -155,11 +155,11 @@ const REQUIRED_ENV_VARS = {
     const missing = requiredFirebaseVars.filter(key => !process.env[key]);
     
     if (missing.length > 0) {
-      console.error('❌ Firebase configuration incomplete. Missing:', missing);
+      // Error logging removed
       return false;
     }
   
-    console.log('✅ Firebase configuration complete');
+    // Debug logging removed
     return true;
   }
   
@@ -168,18 +168,18 @@ const REQUIRED_ENV_VARS = {
    */
   export function validateTelegramConfig(): boolean {
     if (!process.env.TELEGRAM_BOT_TOKEN) {
-      console.error('❌ Telegram Bot Token missing');
+      // Error logging removed
       return false;
     }
   
     // Validate token format (basic check)
     const tokenRegex = /^\d+:[A-Za-z0-9_-]+$/;
     if (!tokenRegex.test(process.env.TELEGRAM_BOT_TOKEN)) {
-      console.error('❌ Telegram Bot Token format appears invalid');
+      // Error logging removed
       return false;
     }
   
-    console.log('✅ Telegram configuration valid');
+    // Debug logging removed
     return true;
   }
   
@@ -187,7 +187,7 @@ const REQUIRED_ENV_VARS = {
    * Complete system validation
    */
   export function validateSystemConfiguration(): boolean {
-    console.log('🔍 Validating system configuration...\n');
+    // Debug logging removed
     
     const firebaseValid = validateFirebaseConfig();
     const telegramValid = validateTelegramConfig();
@@ -197,9 +197,9 @@ const REQUIRED_ENV_VARS = {
     const systemValid = firebaseValid && telegramValid;
     
     if (systemValid) {
-      console.log('🎉 System configuration valid - Telegram Bot ready to run!');
+      // Debug logging removed
     } else {
-      console.log('💥 System configuration invalid - please fix the issues above');
+      // Debug logging removed
     }
     
     return systemValid;

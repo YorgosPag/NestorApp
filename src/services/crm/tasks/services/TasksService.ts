@@ -12,7 +12,7 @@ class TasksService implements ITasksService {
       const { id } = await this.repository.add(taskData);
       return { id, success: true };
     } catch (error) {
-      console.error('Σφάλμα κατά την προσθήκη εργασίας:', error);
+      // Error logging removed
       throw error;
     }
   }
@@ -21,7 +21,7 @@ class TasksService implements ITasksService {
     try {
       return await this.repository.getAll();
     } catch (error) {
-      console.error('Σφάλμα κατά την ανάκτηση εργασιών:', error);
+      // Error logging removed
       throw error;
     }
   }
@@ -30,7 +30,7 @@ class TasksService implements ITasksService {
     try {
       return await this.repository.getByUser(userId);
     } catch (error) {
-      console.error('Σφάλμα κατά την ανάκτηση εργασιών χρήστη:', error);
+      // Error logging removed
       throw error;
     }
   }
@@ -39,7 +39,7 @@ class TasksService implements ITasksService {
     try {
       return await this.repository.getByLead(leadId);
     } catch (error) {
-      console.error('Σφάλμα κατά την ανάκτηση εργασιών lead:', error);
+      // Error logging removed
       throw error;
     }
   }
@@ -48,7 +48,7 @@ class TasksService implements ITasksService {
     try {
       return await this.repository.getByStatus(status);
     } catch (error) {
-      console.error('Σφάλμα κατά το φιλτράρισμα εργασιών:', error);
+      // Error logging removed
       throw error;
     }
   }
@@ -57,7 +57,7 @@ class TasksService implements ITasksService {
     try {
       return await this.repository.getOverdue();
     } catch (error) {
-      console.error('Σφάλμα κατά την ανάκτηση εκπρόθεσμων εργασιών:', error);
+      // Error logging removed
       throw error;
     }
   }
@@ -67,7 +67,7 @@ class TasksService implements ITasksService {
       await this.repository.update(taskId, updates);
       return { success: true };
     } catch (error) {
-      console.error('Σφάλμα κατά την ενημέρωση εργασίας:', error);
+      // Error logging removed
       throw error;
     }
   }
@@ -77,7 +77,7 @@ class TasksService implements ITasksService {
       await this.repository.delete(taskId);
       return { success: true };
     } catch (error) {
-      console.error('Σφάλμα κατά τη διαγραφή εργασίας:', error);
+      // Error logging removed
       throw error;
     }
   }
@@ -87,7 +87,7 @@ class TasksService implements ITasksService {
       const deletedCount = await this.repository.deleteAll();
       return { success: true, deletedCount };
     } catch (error) {
-      console.error('Σφάλμα κατά τη μαζική διαγραφή εργασιών:', error);
+      // Error logging removed
       throw error;
     }
   }
@@ -104,7 +104,7 @@ class TasksService implements ITasksService {
       await this.updateTask(taskId, updates);
       return { success: true };
     } catch (error) {
-      console.error('Σφάλμα κατά την ολοκλήρωση εργασίας:', error);
+      // Error logging removed
       throw error;
     }
   }
@@ -113,7 +113,7 @@ class TasksService implements ITasksService {
     try {
       return await this.repository.getStats(userId);
     } catch (error) {
-      console.error('Σφάλμα κατά την ανάκτηση στατιστικών εργασιών:', error);
+      // Error logging removed
       throw error;
     }
   }

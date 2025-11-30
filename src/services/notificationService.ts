@@ -166,7 +166,7 @@ export function subscribeToNotifications(
       onUpdate(notifications);
     },
     (error) => {
-      console.error('Firestore subscription error:', error);
+      // Error logging removed
       if (onError) onError(error);
     }
   );

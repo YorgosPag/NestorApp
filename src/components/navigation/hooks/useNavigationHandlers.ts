@@ -80,7 +80,6 @@ export function useNavigationHandlers(props: UseNavigationHandlersProps = {}): U
   };
 
   const handleUnitSelect = (unitId: string) => {
-    console.log('Unit selected:', unitId);
     if (isMobile) setMobileLevel('actions');
   };
 

@@ -73,14 +73,14 @@ export function TabsContainer({
     onTabChange?.(tabId);
   };
 
-  // Get theme configuration
-  const themeConfig = getThemeVariant(theme);
+  // Get theme configuration with fallback
+  const themeConfig = getThemeVariant(theme) || getThemeVariant('default');
 
   // Use flexible layout that allows proper wrapping with vertical spacing and auto height
   const flexWrapStyles = "flex flex-wrap gap-2 h-auto min-h-fit";
 
   return (
-    <div className={cn(themeConfig.container, className)}>
+    <div className={cn(themeConfig?.container, className)}>
       {/* Selection message */}
       {selectedItems.length > 0 && selectionMessage && (
         <div className="text-sm text-muted-foreground mb-2 px-2">
@@ -95,7 +95,7 @@ export function TabsContainer({
               key={tab.id}
               value={tab.id}
               disabled={tab.disabled}
-              className={themeConfig.tabTrigger}
+              className={themeConfig?.tabTrigger}
             >
               <tab.icon className="w-4 h-4" />
               <span className="hidden sm:inline">{tab.label}</span>
@@ -107,7 +107,7 @@ export function TabsContainer({
           <TabsContent
             key={tab.id}
             value={tab.id}
-            className={themeConfig.content}
+            className={themeConfig?.content}
           >
             <div className={TABS_STYLES.contentWrapper}>
               {tab.content}
@@ -181,14 +181,14 @@ export function TabsOnlyTriggers({
     onTabChange?.(tabId);
   };
 
-  // Get theme configuration
-  const themeConfig = getThemeVariant(theme);
+  // Get theme configuration with fallback
+  const themeConfig = getThemeVariant(theme) || getThemeVariant('default');
 
   // Use flexible layout that allows proper wrapping with vertical spacing and auto height
   const flexWrapStyles = "flex flex-wrap gap-2 h-auto min-h-fit";
 
   return (
-    <div className={cn(themeConfig.container, className)}>
+    <div className={cn(themeConfig?.container, className)}>
       {/* Selection message */}
       {selectedItems.length > 0 && selectionMessage && (
         <div className="text-sm text-muted-foreground mb-2 px-2">
@@ -203,7 +203,7 @@ export function TabsOnlyTriggers({
               key={tab.id}
               value={tab.id}
               disabled={tab.disabled}
-              className={themeConfig.tabTrigger}
+              className={themeConfig?.tabTrigger}
             >
               <tab.icon className="w-4 h-4" />
               <span className="hidden sm:inline">{tab.label}</span>

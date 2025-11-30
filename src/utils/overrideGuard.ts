@@ -23,9 +23,7 @@ export function guardGlobalAccess(tag: string): void {
   if (isOverrideOn()) {
     const err = new Error(`🚨 GLOBAL_${tag}_DURING_OVERRIDE - Πρόσβαση στις γενικές ρυθμίσεις ενώ το override είναι ενεργό!`);
 
-    // Προαιρετικά: εμφάνιση stack trace για debugging
-    console.error(`🔍 [Override Guard] Εντοπισμός πρόσβασης στις γενικές ρυθμίσεις:`, err);
-    console.trace(err);
+    // Stack trace για debugging (console removed for production)
 
     throw err;
   }
@@ -34,7 +32,7 @@ export function guardGlobalAccess(tag: string): void {
 // Εναλλακτική: "Ορατό καναρίνι" - επιστροφή εξωφρενικών τιμών αντί για crash
 export function guardWithCanary<T>(tag: string, normalValue: T, canaryValue: T): T {
   if (isOverrideOn()) {
-    console.warn(`🐤 [Override Canary] Χρήση γενικών ρυθμίσεων για ${tag} ενώ override ενεργό - επιστρέφω canary value`);
+    // Using canary value during override (console logging removed)
     return canaryValue;
   }
   return normalValue;
@@ -43,11 +41,11 @@ export function guardWithCanary<T>(tag: string, normalValue: T, canaryValue: T):
 // Helper για ενεργοποίηση του προσωρινού override flag (για testing)
 export function enableForceOverride(): void {
   (window as any).__FORCE_OVERRIDE__ = true;
-  console.log('🔧 [Override Guard] Force Override ενεργοποιήθηκε');
+  // Force Override enabled
 }
 
 // Helper για απενεργοποίηση του προσωρινού override flag
 export function disableForceOverride(): void {
   (window as any).__FORCE_OVERRIDE__ = false;
-  console.log('🔧 [Override Guard] Force Override απενεργοποιήθηκε');
+  // Force Override disabled
 }

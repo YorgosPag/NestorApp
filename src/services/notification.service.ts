@@ -178,7 +178,7 @@ export class NotificationService {
     const mapping = ERROR_CODE_MAPPING[errorCode];
     
     if (!mapping) {
-      console.warn(`Unknown error code: ${errorCode}`);
+      // Warning logging removed
       this.notificationHandler?.error('An unexpected error occurred', options);
       return;
     }
@@ -198,7 +198,7 @@ export class NotificationService {
     const i18nKey = SUCCESS_MESSAGE_MAPPING[successCode];
     
     if (!i18nKey) {
-      console.warn(`Unknown success code: ${successCode}`);
+      // Warning logging removed
       return;
     }
 

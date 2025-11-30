@@ -503,7 +503,7 @@ export class AnalyticsBridge {
 
       // For now, just log to console in dev mode
       if (this.config.debug) {
-        console.log('[AnalyticsBridge] Would send events:', analyticsEvents);
+        // Debug logging removed //('[AnalyticsBridge] Would send events:', analyticsEvents);
       }
 
       this.log('Events flushed', { count: this.eventQueue.length });
@@ -591,7 +591,7 @@ export class AnalyticsBridge {
 
   private log(message: string, data?: any): void {
     if (this.config.debug) {
-      console.log(`[AnalyticsBridge] ${message}`, data || '');
+      // Debug logging removed //(`[AnalyticsBridge] ${message}`, data || '');
     }
   }
 

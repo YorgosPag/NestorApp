@@ -393,7 +393,7 @@ class WebSocketService {
 
   private log(...args: any[]): void {
     if (this.config.enableLogging) {
-      console.log('[WebSocket]', ...args);
+      // WebSocket logging (console removed for production)
     }
   }
 

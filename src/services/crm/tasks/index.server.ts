@@ -10,16 +10,16 @@ class MockTasksRepository {
   }
 
   async addTask(taskData: Omit<CrmTask, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
-    console.log('Mock: Task would be added:', taskData);
+    // Debug logging removed
     return 'mock-id';
   }
 
   async updateTask(id: string, updates: Partial<CrmTask>): Promise<void> {
-    console.log('Mock: Task would be updated:', id, updates);
+    // Debug logging removed
   }
 
   async deleteTask(id: string): Promise<void> {
-    console.log('Mock: Task would be deleted:', id);
+    // Debug logging removed
   }
 
   async getTasksByUser(userId: string): Promise<CrmTask[]> {
@@ -39,7 +39,7 @@ class MockTasksRepository {
   }
 
   async completeTask(id: string, notes?: string): Promise<void> {
-    console.log('Mock: Task would be completed:', id, notes);
+    // Debug logging removed
   }
 
   async getTasksStats(userId?: string): Promise<any> {
@@ -47,7 +47,7 @@ class MockTasksRepository {
   }
 
   async deleteAllTasks(): Promise<void> {
-    console.log('Mock: All tasks would be deleted');
+    // Debug logging removed
   }
 }
 

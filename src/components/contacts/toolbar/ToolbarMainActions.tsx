@@ -20,9 +20,15 @@ interface ToolbarMainActionsProps {
 }
 
 export function ToolbarMainActions({ selectedItemsCount }: ToolbarMainActionsProps) {
-  const handleNew = () => console.log('Creating new contact...');
-  const handleEdit = () => console.log('Editing contact...');
-  const handleDelete = () => console.log('Deleting contact...');
+  const handleNew = () => {
+    // Debug logging removed
+  };
+  const handleEdit = () => {
+    // Debug logging removed
+  };
+  const handleDelete = () => {
+    // Debug logging removed
+  };
 
   return (
     <div className="flex items-center gap-1 mr-3">

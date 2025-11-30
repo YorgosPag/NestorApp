@@ -43,7 +43,7 @@ export async function addUnit(unitData: Omit<Property, 'id'>): Promise<{ id: str
     });
     return { id: docRef.id, success: true };
   } catch (error) {
-    console.error('Error adding unit:', error);
+    // Error logging removed
     throw error;
   }
 }
@@ -56,7 +56,7 @@ export async function getUnits(): Promise<Property[]> {
     
     return querySnapshot.docs.map(transformUnit);
   } catch (error) {
-    console.error('Error fetching units:', error);
+    // Error logging removed
     throw error;
   }
 }
@@ -71,7 +71,7 @@ export async function getUnitsByOwner(ownerId: string): Promise<Property[]> {
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(transformUnit);
   } catch (error) {
-    console.error(`Error fetching units for owner ${ownerId}:`, error);
+    // Error logging removed
     throw error;
   }
 }
@@ -86,7 +86,7 @@ export async function getUnitsByBuilding(buildingId: string): Promise<Property[]
       const querySnapshot = await getDocs(q);
       return querySnapshot.docs.map(transformUnit);
     } catch (error) {
-      console.error(`Error fetching units for building ${buildingId}:`, error);
+      // Error logging removed
       throw error;
     }
   }
@@ -101,7 +101,7 @@ export async function updateUnit(unitId: string, updates: Partial<Property>): Pr
     });
     return { success: true };
   } catch (error) {
-    console.error('Error updating unit:', error);
+    // Error logging removed
     throw error;
   }
 }
@@ -124,7 +124,7 @@ export async function updateMultipleUnitsOwner(unitIds: string[], contactId: str
         await batch.commit();
         return { success: true };
     } catch (error) {
-        console.error("Error updating multiple units:", error);
+        // Error logging removed
         throw error;
     }
 }
@@ -136,7 +136,7 @@ export async function deleteUnit(unitId: string): Promise<{ success: boolean }> 
     await deleteDoc(doc(db, UNITS_COLLECTION, unitId));
     return { success: true };
   } catch (error) {
-    console.error('Error deleting unit:', error);
+    // Error logging removed
     throw error;
   }
 }
@@ -153,7 +153,7 @@ export async function seedUnits(units: Omit<Property, 'id'>[]): Promise<{ succes
         await batch.commit();
         return { success: true, count: units.length };
     } catch(error) {
-        console.error("Error seeding units:", error);
+        // Error logging removed
         throw error;
     }
 }

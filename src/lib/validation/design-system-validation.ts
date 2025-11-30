@@ -38,7 +38,7 @@ export const validateColor = (color: string): ValidatedColor | null => {
   
   // Reject hardcoded colors
   if (HARDCODED_COLOR_PATTERN.test(color)) {
-    console.warn(`❌ Hardcoded color detected: ${color}. Use design tokens instead.`);
+    // Warning logging removed
     return null;
   }
   
@@ -59,7 +59,7 @@ export const validateSpacing = (spacing: string): ValidatedSpacing | null => {
   
   // Reject hardcoded spacing
   if (HARDCODED_SPACING_PATTERN.test(spacing)) {
-    console.warn(`❌ Hardcoded spacing detected: ${spacing}. Use design tokens instead.`);
+    // Warning logging removed
     return null;
   }
   
@@ -98,7 +98,7 @@ export const validateComponentProps = (props: any, componentName: string): boole
     classNames.forEach(className => {
       // Check for potential hardcoded values
       if (className.includes('#') || className.includes('rgb')) {
-        console.warn(`❌ ${componentName}: Potential hardcoded color in className: ${className}`);
+        // Warning logging removed
         isValid = false;
       }
     });
@@ -106,7 +106,7 @@ export const validateComponentProps = (props: any, componentName: string): boole
   
   // Discourage inline styles
   if (props.style && Object.keys(props.style).length > 0) {
-    console.warn(`⚠️ ${componentName}: Inline styles detected. Consider using design tokens instead.`);
+    // Warning logging removed
   }
   
   // Check for deprecated color props
@@ -114,7 +114,7 @@ export const validateComponentProps = (props: any, componentName: string): boole
   deprecatedColorProps.forEach(prop => {
     if (props[prop] && typeof props[prop] === 'string') {
       if (HARDCODED_COLOR_PATTERN.test(props[prop])) {
-        console.warn(`❌ ${componentName}: Hardcoded color in ${prop}: ${props[prop]}`);
+        // Warning logging removed
         isValid = false;
       }
     }
@@ -127,11 +127,11 @@ export const validateComponentProps = (props: any, componentName: string): boole
 export const enableDesignSystemValidation = (isDevelopment: boolean = process.env.NODE_ENV === 'development') => {
   if (!isDevelopment) return;
   
-  console.log('🎨 Design System Validation enabled');
+  // Debug logging removed
   
   // Warn about common anti-patterns
-  const originalConsoleWarn = console.warn;
-  console.warn = (...args) => {
+  // Console logging removed
+  // Console override removed
     const message = args.join(' ');
     
     // Enhance design system warnings

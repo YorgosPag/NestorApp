@@ -147,7 +147,7 @@ class BatchProcessingService {
       job.status = job.progress.failed > 0 ? 'failed' : 'completed';
     } catch (error) {
       job.status = 'failed';
-      console.error('Batch job execution failed:', error);
+      // Error logging removed //('Batch job execution failed:', error);
     } finally {
       job.completedAt = Date.now();
       this.activeJobs.delete(jobId);

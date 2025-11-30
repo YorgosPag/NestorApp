@@ -43,11 +43,11 @@ export class FloorplanService {
       const compressedData = btoa(String.fromCharCode(...compressed));
       const compressedSize = compressedData.length;
       
-      console.log(`🗜️ Scene compressed: ${originalSize} bytes → ${compressedSize} bytes (${((1 - compressedSize/originalSize) * 100).toFixed(1)}% reduction)`);
+      // Debug logging removed
       
       return { compressedData, originalSize, compressedSize };
     } catch (error) {
-      console.error('❌ Error compressing scene:', error);
+      // Error logging removed
       throw error;
     }
   }
@@ -70,7 +70,7 @@ export class FloorplanService {
       // Parse JSON
       return JSON.parse(decompressed);
     } catch (error) {
-      console.error('❌ Error decompressing scene:', error);
+      // Error logging removed
       throw error;
     }
   }
@@ -81,7 +81,7 @@ export class FloorplanService {
   static async saveFloorplan(projectId: string, type: 'project' | 'parking' | 'building' | 'storage', data: FloorplanData): Promise<boolean> {
     try {
       const docId = `${projectId}_${type}`;
-      console.log(`💾 Saving ${type} floorplan to Firestore:`, docId);
+      // Debug logging removed //(`💾 Saving ${type} floorplan to Firestore:`, docId);
       
       // Compress scene data
       const { compressedData, originalSize, compressedSize } = this.compressScene(data.scene);
@@ -103,24 +103,25 @@ export class FloorplanService {
         docData.buildingId = data.buildingId;
       }
 
-      console.log(`🗂️ Document data being saved:`, {
-        docId,
-        fileName: docData.fileName,
-        timestamp: docData.timestamp,
-        updatedAt: docData.updatedAt,
-        compressed: docData.compressed,
-        originalSize: docData.originalSize,
-        compressedSize: docData.compressedSize,
-        compressionRatio: `${((1 - docData.compressedSize/docData.originalSize) * 100).toFixed(1)}%`,
-        entitiesCount: data.scene?.entities?.length || 0
-      });
+      // Debug logging removed
+      // console.log(`🗂️ Document data being saved:`, {
+      //   docId,
+      //   fileName: docData.fileName,
+      //   timestamp: docData.timestamp,
+      //   updatedAt: docData.updatedAt,
+      //   compressed: docData.compressed,
+      //   originalSize: docData.originalSize,
+      //   compressedSize: docData.compressedSize,
+      //   compressionRatio: `${((1 - docData.compressedSize/docData.originalSize) * 100).toFixed(1)}%`,
+      //   entitiesCount: data.scene?.entities?.length || 0
+      // });
 
       await setDoc(doc(db, this.COLLECTION, docId), docData);
 
-      console.log(`✅ Successfully saved ${type} floorplan for project:`, projectId);
+      // Debug logging removed //(`✅ Successfully saved ${type} floorplan for project:`, projectId);
       return true;
     } catch (error) {
-      console.error(`❌ Error saving ${type} floorplan:`, error);
+      // Error logging removed //(`❌ Error saving ${type} floorplan:`, error);
       return false;
     }
   }
@@ -131,7 +132,7 @@ export class FloorplanService {
   static async loadFloorplan(projectId: string, type: 'project' | 'parking' | 'building' | 'storage'): Promise<FloorplanData | null> {
     try {
       const docId = `${projectId}_${type}`;
-      console.log(`📖 Loading ${type} floorplan from Firestore:`, docId);
+      // Debug logging removed //(`📖 Loading ${type} floorplan from Firestore:`, docId);
       
       const docSnap = await getDoc(doc(db, this.COLLECTION, docId));
       
@@ -140,7 +141,7 @@ export class FloorplanService {
         
         // Check if data is compressed
         if (rawData.compressed && rawData.compressedScene) {
-          console.log(`🗜️ Decompressing ${type} floorplan data...`);
+          // Debug logging removed //(`🗜️ Decompressing ${type} floorplan data...`);
           const compressedData = rawData as CompressedFloorplanData;
           
           // Decompress scene
@@ -156,7 +157,7 @@ export class FloorplanService {
             timestamp: compressedData.timestamp
           };
           
-          console.log(`✅ Successfully loaded ${type} floorplan for project:`, projectId, {
+          // Debug logging removed //(`✅ Successfully loaded ${type} floorplan for project:`, projectId, {
             fileName: data.fileName,
             timestamp: data.timestamp,
             updatedAt: rawData.updatedAt,
@@ -170,7 +171,7 @@ export class FloorplanService {
         } else {
           // Legacy uncompressed data
           const data = rawData as FloorplanData;
-          console.log(`✅ Successfully loaded ${type} floorplan for project:`, projectId, {
+          // Debug logging removed //(`✅ Successfully loaded ${type} floorplan for project:`, projectId, {
             fileName: data.fileName,
             timestamp: data.timestamp,
             updatedAt: rawData.updatedAt,
@@ -181,11 +182,11 @@ export class FloorplanService {
           return data;
         }
       } else {
-        console.log(`ℹ️ No ${type} floorplan found for project:`, projectId);
+        // Debug logging removed //(`ℹ️ No ${type} floorplan found for project:`, projectId);
         return null;
       }
     } catch (error) {
-      console.error(`❌ Error loading ${type} floorplan:`, error);
+      // Error logging removed //(`❌ Error loading ${type} floorplan:`, error);
       return null;
     }
   }
@@ -199,7 +200,7 @@ export class FloorplanService {
       const docSnap = await getDoc(doc(db, this.COLLECTION, docId));
       return docSnap.exists();
     } catch (error) {
-      console.error(`❌ Error checking ${type} floorplan:`, error);
+      // Error logging removed //(`❌ Error checking ${type} floorplan:`, error);
       return false;
     }
   }
@@ -210,7 +211,7 @@ export class FloorplanService {
   static async deleteFloorplan(projectId: string, type: 'project' | 'parking' | 'building' | 'storage'): Promise<boolean> {
     try {
       const docId = `${projectId}_${type}`;
-      console.log(`🗑️ Deleting ${type} floorplan from Firestore:`, docId);
+      // Debug logging removed //(`🗑️ Deleting ${type} floorplan from Firestore:`, docId);
       
       // Note: We could use deleteDoc here, but for now just mark as deleted
       await setDoc(doc(db, this.COLLECTION, docId), {
@@ -218,10 +219,10 @@ export class FloorplanService {
         deletedAt: new Date().toISOString()
       });
 
-      console.log(`✅ Successfully deleted ${type} floorplan for project:`, projectId);
+      // Debug logging removed //(`✅ Successfully deleted ${type} floorplan for project:`, projectId);
       return true;
     } catch (error) {
-      console.error(`❌ Error deleting ${type} floorplan:`, error);
+      // Error logging removed //(`❌ Error deleting ${type} floorplan:`, error);
       return false;
     }
   }

@@ -173,7 +173,7 @@ export async function searchProperties(searchInput: string | PropertySearchCrite
       message: `Βρέθηκαν ${properties.length} ακίνητα.`
     };
   } catch (error) {
-    console.error('❌ Property search error:', error);
+    // Error logging removed //('❌ Property search error:', error);
     return {
       success: false, properties: [], totalCount: 0, criteria: {}, message: 'Σφάλμα αναζήτησης.'
     };
@@ -205,7 +205,7 @@ export async function getPropertySummary(criteria?: Partial<PropertySearchCriter
     }
     return summary;
   } catch (error) {
-    console.error('Error getting property summary:', error);
+    // Error logging removed //('Error getting property summary:', error);
     throw error;
   }
 }

@@ -23,7 +23,7 @@ export function useCommunicationsHistory(contactId?: string) {
       }
     } catch (err) {
       if (isMounted) setError('Σφάλμα κατά τη φόρτωση επικοινωνιών');
-      console.error('Error fetching communications:', err);
+      // Error logging removed
     } finally {
       if (isMounted) setLoading(false);
     }

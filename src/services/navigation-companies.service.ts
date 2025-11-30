@@ -24,7 +24,7 @@ export class NavigationCompaniesService {
       // Ελέγχουμε αν υπάρχει ήδη
       const exists = await this.isCompanyInNavigation(contactId);
       if (exists) {
-        console.log(`Company ${contactId} already in navigation`);
+        // Debug logging removed //(`Company ${contactId} already in navigation`);
         return;
       }
 
@@ -35,9 +35,9 @@ export class NavigationCompaniesService {
       };
 
       await addDoc(collection(db, NAVIGATION_COMPANIES_COLLECTION), entry);
-      console.log(`✅ Company ${contactId} added to navigation`);
+      // Debug logging removed //(`✅ Company ${contactId} added to navigation`);
     } catch (error) {
-      console.error('Error adding company to navigation:', error);
+      // Error logging removed //('Error adding company to navigation:', error);
       throw error;
     }
   }
@@ -56,9 +56,9 @@ export class NavigationCompaniesService {
       const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
       await Promise.all(deletePromises);
 
-      console.log(`✅ Company ${contactId} removed from navigation`);
+      // Debug logging removed //(`✅ Company ${contactId} removed from navigation`);
     } catch (error) {
-      console.error('Error removing company from navigation:', error);
+      // Error logging removed //('Error removing company from navigation:', error);
       throw error;
     }
   }
@@ -76,7 +76,7 @@ export class NavigationCompaniesService {
       const snapshot = await getDocs(q);
       return !snapshot.empty;
     } catch (error) {
-      console.error('Error checking company in navigation:', error);
+      // Error logging removed //('Error checking company in navigation:', error);
       return false;
     }
   }
@@ -94,7 +94,7 @@ export class NavigationCompaniesService {
         return data.contactId;
       });
     } catch (error) {
-      console.error('Error fetching navigation company IDs:', error);
+      // Error logging removed //('Error fetching navigation company IDs:', error);
       return [];
     }
   }
@@ -112,7 +112,7 @@ export class NavigationCompaniesService {
         ...doc.data()
       } as NavigationCompanyEntry));
     } catch (error) {
-      console.error('Error fetching navigation companies:', error);
+      // Error logging removed //('Error fetching navigation companies:', error);
       return [];
     }
   }

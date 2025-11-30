@@ -522,27 +522,27 @@ export class ErrorTracker {
   }
 
   private interceptConsoleError(): void {
-    const originalError = console.error;
-    console.error = (...args: any[]) => {
-      const message = args.map(arg =>
-        typeof arg === 'string' ? arg : this.safeStringify(arg)
-      ).join(' ');
+    // const originalError = console.error;
+    // console.error = (...args: any[]) => {
+    //   const message = args.map(arg =>
+    //     typeof arg === 'string' ? arg : this.safeStringify(arg)
+    //   ).join(' ');
 
-      // ✅ ENTERPRISE FIX: Defer error capture to avoid setState during render
-      setTimeout(() => {
-        this.captureError(
-          new Error(message),
-          'error',
-          'system',
-          {
-            component: 'Console',
-            action: 'console.error'
-          }
-        );
-      }, 0);
+    //   // ✅ ENTERPRISE FIX: Defer error capture to avoid setState during render
+    //   setTimeout(() => {
+    //     this.captureError(
+    //       new Error(message),
+    //       'error',
+    //       'system',
+    //       {
+    //         component: 'Console',
+    //         action: 'console.error'
+    //       }
+    //     );
+    //   }, 0);
 
-      originalError.apply(console, args);
-    };
+    //   originalError.apply(console, args);
+    // };
   }
 
   // ============================================================================
@@ -607,7 +607,7 @@ export class ErrorTracker {
 
   private log(message: string, data?: any): void {
     if (this.config.debug) {
-      console.log(`[ErrorTracker] ${message}`, data || '');
+      // Debug logging removed //(`[ErrorTracker] ${message}`, data || '');
     }
   }
 }

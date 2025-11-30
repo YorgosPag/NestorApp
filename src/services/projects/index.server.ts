@@ -9,7 +9,7 @@ const mockRepo = new MockProjectsRepository();
 const service = new ProjectsService(firestoreRepo, mockRepo);
 
 export async function getProjectsByCompanyId(companyId: string) {
-    console.log(`🏗️ SERVER ACTION: getProjectsByCompanyId called with: "${companyId}"`);
+    // Debug logging removed: console.log(`🏗️ SERVER ACTION: getProjectsByCompanyId called with: "${companyId}"`);
     return await service.getProjectsByCompanyId(companyId);
 }
 

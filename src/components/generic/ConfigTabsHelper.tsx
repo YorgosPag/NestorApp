@@ -1,9 +1,10 @@
 'use client';
 
 import React from 'react';
-import { Info, FileText, Users, History, User, CreditCard, Briefcase, Phone, MapPin, Gavel, UserCheck, Megaphone, Activity, DollarSign, Calendar, Construction, Building, Car, Landmark, Map, Settings, Home, Camera, Video, Clock, TrendingUp, Package, Ruler, BarChart, Handshake, Target, MessageCircle } from 'lucide-react';
+import { Info, FileText, Users, History, User, CreditCard, Briefcase, Phone, MapPin, Gavel, UserCheck, Megaphone, Activity, DollarSign, Calendar, Construction, Building, Car, Landmark, Map, Settings, Home, Camera, Video, Clock, TrendingUp, Package, Ruler, BarChart, Handshake, Target, MessageCircle, Cake, Globe, Badge, Clipboard, Hash, Wrench, Factory, Smartphone, Shield, ClipboardList, Image } from 'lucide-react';
 import type { SectionConfig } from '@/config/company-gemi-config';
 import type { IndividualSectionConfig } from '@/config/individual-config';
+import type { ServiceSectionConfig } from '@/config/service-config';
 import { GenericTabRenderer } from './GenericTabRenderer';
 
 // ============================================================================
@@ -50,6 +51,20 @@ const ICON_MAPPING = {
   'handshake': Handshake,
   'target': Target,
   'message-circle': MessageCircle,
+  // Individual config icons
+  'user-check': UserCheck,
+  'cake': Cake,
+  'globe': Globe,
+  'badge': Badge,
+  'clipboard': Clipboard,
+  'hash': Hash,
+  'wrench': Wrench,
+  'factory': Factory,
+  'smartphone': Smartphone,
+  // Service config icons
+  'shield': Shield,
+  'clipboard-list': ClipboardList,
+  'image': Image,
   // Legacy emoji support (fallback) - Keep for backward compatibility
   '🏢': Building,
   '🏗️': Construction,
@@ -68,6 +83,22 @@ const ICON_MAPPING = {
   '🤝': Handshake,
   '🎯': Target,
   '💬': MessageCircle,
+  // Individual config emoji support
+  '👨': UserCheck,
+  '👩': UserCheck,
+  '🎂': Cake,
+  '🌍': Globe,
+  '🆔': Badge,
+  '📋': Clipboard,
+  '🏛️': Landmark,
+  '🔢': Hash,
+  '💰': DollarSign,
+  '🏢': Building,
+  '🛠️': Wrench,
+  '🎯': Target,
+  '🏭': Factory,
+  '👔': Briefcase,
+  '📱': Smartphone,
   '📋': FileText,
   '💰': DollarSign,
   '📅': Calendar,
@@ -90,8 +121,7 @@ export function getIconComponent(iconName: string) {
     return iconComponent;
   }
 
-  // If not found, log for debugging and return Info as fallback
-  console.warn(`Icon not found in mapping: "${iconName}". Available icons:`, Object.keys(ICON_MAPPING));
+  // If not found, return Info as fallback
   return Info;
 }
 
@@ -151,6 +181,31 @@ export function createTabsFromConfig(
  */
 export function createIndividualTabsFromConfig(
   sections: IndividualSectionConfig[],
+  data: Record<string, any>,
+  customRenderers?: Record<string, any>,
+  valueFormatters?: Record<string, any>
+): TabConfig[] {
+  return sections.map(section => ({
+    id: section.id,
+    label: section.title,
+    icon: getIconComponent(section.icon),
+    content: (
+      <GenericTabRenderer
+        section={section}
+        data={data}
+        mode="display"
+        customRenderers={customRenderers}
+        valueFormatters={valueFormatters}
+      />
+    ),
+  }));
+}
+
+/**
+ * Creates tab configuration objects from Service config sections
+ */
+export function createServiceTabsFromConfig(
+  sections: ServiceSectionConfig[],
   data: Record<string, any>,
   customRenderers?: Record<string, any>,
   valueFormatters?: Record<string, any>

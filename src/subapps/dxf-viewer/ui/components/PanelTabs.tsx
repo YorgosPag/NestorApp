@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { BarChart, Construction, Map, Settings } from 'lucide-react';
 import { useTranslation } from '../../../../i18n';
 
 type PanelType = 'overlay' | 'levels' | 'hierarchy' | 'colors';
@@ -15,14 +16,14 @@ interface PanelTabsProps {
 export function PanelTabs({ activePanel, onTabClick, disabledPanels, isCollapsed }: PanelTabsProps) {
   const { t } = useTranslation('dxf-viewer');
   
-  const topRowTabs: Array<{ id: PanelType; label: string; icon: string }> = [
-    { id: 'levels', label: t('panels.levels.title'), icon: '📊' },
-    { id: 'hierarchy', label: t('panels.hierarchy.title'), icon: '🏗️' },
+  const topRowTabs: Array<{ id: PanelType; label: string; icon: React.ComponentType<any> }> = [
+    { id: 'levels', label: t('panels.levels.title'), icon: BarChart },
+    { id: 'hierarchy', label: t('panels.hierarchy.title'), icon: Construction },
   ];
 
-  const bottomRowTabs: Array<{ id: PanelType; label: string; icon: string }> = [
-    { id: 'overlay', label: t('panels.overlay.title'), icon: '🗺️' },
-    { id: 'colors', label: 'Ρυθμίσεις DXF', icon: '⚙️' },
+  const bottomRowTabs: Array<{ id: PanelType; label: string; icon: React.ComponentType<any> }> = [
+    { id: 'overlay', label: t('panels.overlay.title'), icon: Map },
+    { id: 'colors', label: 'Ρυθμίσεις DXF', icon: Settings },
   ];
 
   const getTabClass = (tabId: PanelType) => {
@@ -40,7 +41,7 @@ export function PanelTabs({ activePanel, onTabClick, disabledPanels, isCollapsed
     return `${baseClass} text-gray-300 hover:text-white hover:bg-gray-700 border border-gray-500`;
   };
 
-  const renderTabRow = (tabs: Array<{ id: PanelType; label: string; icon: string }>) => (
+  const renderTabRow = (tabs: Array<{ id: PanelType; label: string; icon: React.ComponentType<any> }>) => (
     <div className="flex space-x-1">
       {tabs.map((tab) => (
         <button
@@ -49,7 +50,7 @@ export function PanelTabs({ activePanel, onTabClick, disabledPanels, isCollapsed
           disabled={disabledPanels[tab.id]}
           className={getTabClass(tab.id)}
         >
-          <span className="text-lg">{tab.icon}</span>
+          <tab.icon className="w-5 h-5" />
           {!isCollapsed && <span className="text-xs">{tab.label}</span>}
         </button>
       ))}

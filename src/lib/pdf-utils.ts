@@ -121,7 +121,7 @@ export async function uploadPDFToStorage(
         onProgress?.(progress);
       },
       (error) => {
-        console.error('PDF upload error:', error);
+        // Error logging removed
         
         // Provide user-friendly error messages
         let errorMessage = 'Σφάλμα κατά την αποστολή του αρχείου';
@@ -179,7 +179,7 @@ export async function updateFloorPDFInFirestore(
       updatedAt: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Firestore update error:', error);
+    // Error logging removed
     throw new Error('Σφάλμα κατά την ενημέρωση βάσης δεδομένων');
   }
 }
@@ -199,7 +199,7 @@ export async function getFloorPDFUrl(floorId: string): Promise<string | null> {
     
     return null;
   } catch (error) {
-    console.error('Error getting floor PDF URL:', error);
+    // Error logging removed
     return null;
   }
 }
@@ -222,14 +222,14 @@ export async function deleteOldPDFFromStorage(floorId: string): Promise<boolean>
     if (oldPdfPath && typeof oldPdfPath === 'string') {
       const oldRef = ref(storage, oldPdfPath);
       await deleteObject(oldRef);
-      console.log('Old PDF deleted successfully:', oldPdfPath);
+      // Debug logging removed
       return true;
     }
     
     return false;
   } catch (error) {
     // Don't throw error for deletion failures - just log and continue
-    console.warn('Could not delete old PDF:', error);
+    // Warning logging removed
     return false;
   }
 }
@@ -250,7 +250,7 @@ export async function listBuildingPDFs(buildingId: string): Promise<string[]> {
     
     return pdfUrls;
   } catch (error) {
-    console.error('Error listing building PDFs:', error);
+    // Error logging removed
     return [];
   }
 }
@@ -269,13 +269,13 @@ export async function deleteBuildingPDFs(buildingId: string): Promise<number> {
         await deleteObject(itemRef);
         deletedCount++;
       } catch (error) {
-        console.warn('Could not delete PDF:', itemRef.fullPath, error);
+        // Warning logging removed
       }
     }
     
     return deletedCount;
   } catch (error) {
-    console.error('Error deleting building PDFs:', error);
+    // Error logging removed
     return 0;
   }
 }
@@ -295,7 +295,7 @@ export async function getFloorPDFMetadata(floorId: string): Promise<PDFUploadRes
     
     return null;
   } catch (error) {
-    console.error('Error getting PDF metadata:', error);
+    // Error logging removed
     return null;
   }
 }
@@ -308,7 +308,7 @@ export async function validatePDFUrl(url: string): Promise<boolean> {
     const response = await fetch(url, { method: 'HEAD' });
     return response.ok;
   } catch (error) {
-    console.error('PDF URL validation failed:', error);
+    // Error logging removed
     return false;
   }
 }

@@ -25,7 +25,7 @@ export class SendGridShareService {
 
       return response.ok;
     } catch (error) {
-      console.error('SendGrid share failed:', error);
+      // Error logging removed //('SendGrid share failed:', error);
       return false;
     }
   }

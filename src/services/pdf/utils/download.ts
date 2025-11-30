@@ -7,7 +7,7 @@
  */
 export const downloadPDF = (pdfData: Uint8Array, filename: string) => {
   if (typeof window === 'undefined') {
-    console.error("Download function called on the server.");
+    // Error logging removed //("Download function called on the server.");
     return;
   }
 

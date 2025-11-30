@@ -13,8 +13,9 @@ import { ContactDetailsHeader } from './ContactDetailsHeader';
 import { ContactInfo } from './ContactInfo';
 import { AddUnitToContactDialog } from './AddUnitToContactDialog';
 import { TabsOnlyTriggers } from '@/components/ui/navigation/TabsComponents';
-import { createTabsFromConfig, createIndividualTabsFromConfig, getSortedSections } from '@/components/generic';
+import { createTabsFromConfig, createIndividualTabsFromConfig, createServiceTabsFromConfig, getSortedSections } from '@/components/generic';
 import { getIndividualSortedSections } from '@/config/individual-config';
+import { getServiceSortedSections } from '@/config/service-config';
 
 
 function EmptyState() {
@@ -59,104 +60,10 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact }: Cont
   ) : contact.type === 'individual' ? createIndividualTabsFromConfig(
     getIndividualSortedSections(),
     contact
-  ) : contact.type === 'service' ? [
-    {
-      id: 'serviceInfo',
-      label: 'Στοιχεία Υπηρεσίας',
-      icon: Info,
-      content: (
-        <div className="p-4 border rounded-lg space-y-4">
-          <h4 className="font-semibold mb-3">Στοιχεία Δημόσιας Υπηρεσίας</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium">Όνομα Υπηρεσίας</label>
-              <p className="text-sm text-muted-foreground">{(contact as any).serviceName || 'Δεν έχει οριστεί'}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Τύπος Υπηρεσίας</label>
-              <p className="text-sm text-muted-foreground">{(contact as any).serviceType || 'Δεν έχει οριστεί'}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Email</label>
-              <p className="text-sm text-muted-foreground">{(contact as any).emails?.[0]?.email || 'Δεν έχει οριστεί'}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Τηλέφωνο</label>
-              <p className="text-sm text-muted-foreground">{(contact as any).phones?.[0]?.number || 'Δεν έχει οριστεί'}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Κωδικός Υπηρεσίας</label>
-              <p className="text-sm text-muted-foreground">{(contact as any).serviceCode || 'Δεν έχει οριστεί'}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Κατάσταση</label>
-              <p className="text-sm text-muted-foreground">{(contact as any).status || 'Δεν έχει οριστεί'}</p>
-            </div>
-          </div>
-        </div>
-      )
-    },
-    {
-      id: 'contacts',
-      label: 'Στοιχεία Επικοινωνίας',
-      icon: Users,
-      content: (
-        <div className="p-4 border rounded-lg space-y-4">
-          <h4 className="font-semibold mb-3">Στοιχεία Επικοινωνίας</h4>
-
-          {(contact as any).responsiblePersons && (contact as any).responsiblePersons.length > 0 ? (
-            <div className="space-y-3">
-              <h5 className="font-medium">Υπεύθυνοι Επικοινωνίας</h5>
-              {(contact as any).responsiblePersons.map((person: any, index: number) => (
-                <div key={index} className="border border-gray-200 rounded p-3">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                    <div><span className="font-medium">Όνομα:</span> {person.name || 'Δεν έχει οριστεί'}</div>
-                    <div><span className="font-medium">Θέση:</span> {person.position || 'Δεν έχει οριστεί'}</div>
-                    <div><span className="font-medium">Email:</span> {person.email || 'Δεν έχει οριστεί'}</div>
-                    <div><span className="font-medium">Τηλέφωνο:</span> {person.phone || 'Δεν έχει οριστεί'}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">Δεν υπάρχουν στοιχεία υπεύθυνων</p>
-          )}
-        </div>
-      )
-    },
-    {
-      id: 'services',
-      label: 'Παρεχόμενες Υπηρεσίες',
-      icon: FileText,
-      content: (
-        <div className="p-4 border rounded-lg space-y-4">
-          <h4 className="font-semibold mb-3">Παρεχόμενες Υπηρεσίες</h4>
-
-          {(contact as any).servicesProvided && (contact as any).servicesProvided.length > 0 ? (
-            <ul className="space-y-2">
-              {(contact as any).servicesProvided.map((service: string, index: number) => (
-                <li key={index} className="flex items-center gap-2">
-                  <span className="w-2 h-2 bg-primary rounded-full"></span>
-                  <span className="text-sm">{service}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-muted-foreground">Δεν υπάρχουν καταχωρημένες υπηρεσίες</p>
-          )}
-
-          {(contact as any).operatingHours && (
-            <div className="mt-4">
-              <h5 className="font-medium mb-2">Ωράριο Λειτουργίας</h5>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                <div><span className="font-medium">Δευτέρα - Παρασκευή:</span> 08:00 - 16:00</div>
-              </div>
-            </div>
-          )}
-        </div>
-      )
-    }
-  ] : [];
+  ) : contact.type === 'service' ? createServiceTabsFromConfig(
+    getServiceSortedSections(),
+    contact
+  ) : [];
 
   return (
     <>

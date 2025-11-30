@@ -115,7 +115,7 @@ export function useRealEstateMatching(
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       setError(errorMessage);
-      console.error('Error checking property:', err);
+      // Error logging removed //('Error checking property:', err);
 
       // Return empty result
       return {
@@ -134,7 +134,7 @@ export function useRealEstateMatching(
     polygons: RealEstatePolygon[]
   ): Promise<void> => {
     if (isProcessing) {
-      console.warn('Already processing properties, skipping...');
+      // Warning logging removed //('Already processing properties, skipping...');
       return;
     }
 
@@ -142,7 +142,7 @@ export function useRealEstateMatching(
       setIsProcessing(true);
       setError(null);
 
-      console.log(`🔍 Starting batch processing: ${properties.length} properties against ${polygons.length} polygons`);
+      // Debug logging removed //(`🔍 Starting batch processing: ${properties.length} properties against ${polygons.length} polygons`);
 
       const batchResults = await checkMultiplePropertiesInRealEstatePolygons(
         properties,
@@ -164,12 +164,12 @@ export function useRealEstateMatching(
         onBatchComplete(batchResults);
       }
 
-      console.log(`✅ Batch processing complete: ${batchResults.length} results, ${getAlertableProperties(batchResults).length} alerts`);
+      // Debug logging removed //(`✅ Batch processing complete: ${batchResults.length} results, ${getAlertableProperties(batchResults).length} alerts`);
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Batch processing failed';
       setError(errorMessage);
-      console.error('Error in batch processing:', err);
+      // Error logging removed //('Error in batch processing:', err);
     } finally {
       setIsProcessing(false);
     }
@@ -183,11 +183,11 @@ export function useRealEstateMatching(
       // Check if polygon already exists
       const exists = prev.some(p => p.id === polygon.id);
       if (exists) {
-        console.warn('RealEstate polygon already exists:', polygon.id);
+        // Warning logging removed //('RealEstate polygon already exists:', polygon.id);
         return prev;
       }
 
-      console.log('✅ Added real estate polygon for monitoring:', polygon.id);
+      // Debug logging removed //('✅ Added real estate polygon for monitoring:', polygon.id);
       return [...prev, polygon];
     });
   }, []);
@@ -198,7 +198,7 @@ export function useRealEstateMatching(
   const removeRealEstatePolygon = useCallback((polygonId: string) => {
     setRealEstatePolygons(prev => {
       const filtered = prev.filter(p => p.id !== polygonId);
-      console.log('🗑️ Removed real estate polygon from monitoring:', polygonId);
+      // Debug logging removed //('🗑️ Removed real estate polygon from monitoring:', polygonId);
       return filtered;
     });
   }, []);
@@ -322,7 +322,7 @@ export function useRealEstateMatching(
   useEffect(() => {
     if (results.length > 0) {
       const stats = getStatistics();
-      console.log('📊 Real Estate Matching Stats:', stats);
+      // Debug logging removed //('📊 Real Estate Matching Stats:', stats);
     }
   }, [results, getStatistics]);
 
@@ -403,17 +403,17 @@ export function usePeriodicPropertyCheck(
     if (isMonitoring) return;
 
     setIsMonitoring(true);
-    console.log(`🔄 Starting periodic property monitoring (every ${intervalMinutes} minutes)`);
+    // Debug logging removed //(`🔄 Starting periodic property monitoring (every ${intervalMinutes} minutes)`);
 
     const interval = setInterval(async () => {
       try {
         const properties = await getProperties();
-        console.log(`🏠 Checking ${properties.length} properties...`);
+        // Debug logging removed //(`🏠 Checking ${properties.length} properties...`);
 
         await matching.checkMultipleProperties(properties, polygons);
         setLastCheck(new Date());
       } catch (error) {
-        console.error('Periodic check failed:', error);
+        // Error logging removed //('Periodic check failed:', error);
       }
     }, intervalMinutes * 60 * 1000);
 

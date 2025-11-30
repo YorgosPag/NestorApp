@@ -80,7 +80,6 @@ export function SelectCompanyContactModal({
       setContacts(companyContacts);
       setFilteredContacts(companyContacts);
     } catch (err) {
-      console.error('Error loading company contacts:', err);
       setError('Σφάλμα φόρτωσης επαφών νομικών προσώπων');
     } finally {
       setIsLoading(false);

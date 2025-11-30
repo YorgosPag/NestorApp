@@ -46,7 +46,7 @@ class MemoryLeakDetector {
       this.checkThresholds();
     }, intervalMs);
 
-    console.log('🔍 Memory leak detector started');
+    // Memory leak detector started
   }
 
   stop() {
@@ -55,7 +55,7 @@ class MemoryLeakDetector {
       this.intervalId = undefined;
     }
     this.isRunning = false;
-    console.log('🔍 Memory leak detector stopped');
+    // Memory leak detector stopped
   }
 
   private takeSnapshot(): MemorySnapshot | null {
@@ -165,9 +165,7 @@ class MemoryLeakDetector {
         this.warnings = this.warnings.slice(-50);
       }
 
-      // Log warning
-      const emoji = warning.severity === 'high' ? '🚨' : warning.severity === 'medium' ? '⚠️' : 'ℹ️';
-      console.warn(`${emoji} Memory Leak Warning:`, warning.message);
+      // Memory leak warning detected (console logging removed)
 
       // Trigger garbage collection in development
       if (process.env.NODE_ENV === 'development' && (window as any).gc) {
@@ -317,6 +315,6 @@ export function enableMemoryMonitoring() {
     // Add to window for debugging
     (window as any).__memoryDetector = memoryLeakDetector;
     
-    console.log('🔍 Memory monitoring enabled. Access via window.__memoryDetector');
+    // Memory monitoring enabled and available via window.__memoryDetector
   }
 }

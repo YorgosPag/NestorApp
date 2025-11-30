@@ -23,6 +23,7 @@ import { CommonContactSection } from '@/components/ContactFormSections/CommonCon
 import { IndividualContactSection } from '@/components/ContactFormSections/IndividualContactSection';
 import { IndividualContactTabbedSection } from '@/components/ContactFormSections/IndividualContactTabbedSection';
 import { CompanyContactTabbedSection } from '@/components/ContactFormSections/CompanyContactTabbedSection';
+import { ServiceContactTabbedSection } from '@/components/ContactFormSections/ServiceContactTabbedSection';
 import { ServiceContactSection } from '@/components/ContactFormSections/ServiceContactSection';
 
 export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, editContact }: AddNewContactDialogProps) {
@@ -114,25 +115,15 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
               />
             )}
 
-            {/* Service - Traditional Layout */}
+            {/* Service - Tabbed Layout */}
             {isService && (
-              <FormGrid>
-                <ServiceContactSection
-                  formData={formData}
-                  handleChange={handleChange}
-                  handleSelectChange={handleSelectChange}
-                  handleNestedChange={handleNestedChange}
-                  handleLogoChange={handleLogoChange}
-                  disabled={loading}
-                />
-
-                {/* Κοινά στοιχεία για υπηρεσίες */}
-                <CommonContactSection
-                  formData={formData}
-                  handleChange={handleChange}
-                  disabled={loading}
-                />
-              </FormGrid>
+              <ServiceContactTabbedSection
+                formData={formData}
+                handleChange={handleChange}
+                handleSelectChange={handleSelectChange}
+                handleLogoChange={handleLogoChange}
+                disabled={loading}
+              />
             )}
 
           </div>

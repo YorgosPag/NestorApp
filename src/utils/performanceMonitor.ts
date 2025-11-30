@@ -46,7 +46,7 @@ class PerformanceMonitor {
       try {
         this.observer.observe({ entryTypes: ['navigation', 'resource', 'measure'] });
       } catch (error) {
-        console.warn('Performance observer not fully supported:', error);
+        // Performance observer not fully supported
       }
     }
   }
@@ -216,18 +216,8 @@ export function enablePerformanceLogging() {
     setInterval(() => {
       const summary = performanceMonitor.getSummary();
       if (summary.totalMetrics > 0) {
-        console.group('🔍 Performance Summary');
-        console.log('Average component load time:', summary.avgComponentLoadTime.toFixed(2) + 'ms');
-        if (summary.slowestComponents.length > 0) {
-          console.log('Slowest components:', summary.slowestComponents);
-        }
-        if (summary.recentRoutes.length > 0) {
-          console.log('Recent route loads:', summary.recentRoutes.map(r => 
-            `${r.route}: ${r.loadTime.toFixed(2)}ms`
-          ));
-        }
-        console.groupEnd();
+        // Performance summary data available but console logging removed
       }
-    }, 30000); // Log every 30 seconds
+    }, 30000); // Check every 30 seconds
   }
 }

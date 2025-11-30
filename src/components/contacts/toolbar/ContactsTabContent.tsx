@@ -148,7 +148,9 @@ export function CommunicationTabContent({
         <Tooltip>
           <TooltipTrigger asChild>
             <ToolbarCallButton
-              onClick={() => console.log('Call selected contacts...')}
+              onClick={() => {
+                // Debug logging removed
+              }}
               disabled={selectedItems.length === 0}
             >
               Κλήση
@@ -164,7 +166,9 @@ export function CommunicationTabContent({
         <Tooltip>
           <TooltipTrigger asChild>
             <ToolbarEmailButton
-              onClick={() => console.log('Email selected contacts...')}
+              onClick={() => {
+                // Debug logging removed
+              }}
               disabled={selectedItems.length === 0}
             >
               Email
@@ -180,7 +184,9 @@ export function CommunicationTabContent({
         <Tooltip>
           <TooltipTrigger asChild>
             <ToolbarSMSButton
-              onClick={() => console.log('Send SMS...')}
+              onClick={() => {
+                // Debug logging removed
+              }}
               disabled={selectedItems.length === 0}
             >
               SMS
@@ -237,7 +243,9 @@ export function ManagementTabContent({
         <Tooltip>
           <TooltipTrigger asChild>
             <ToolbarImportButton
-              onClick={() => console.log('Import contacts...')}
+              onClick={() => {
+                // Debug logging removed
+              }}
             >
               Εισαγωγή
             </ToolbarImportButton>
@@ -276,7 +284,9 @@ export function ManagementTabContent({
         <Tooltip>
           <TooltipTrigger asChild>
             <ToolbarHelpButton
-              onClick={() => console.log('Show help...')}
+              onClick={() => {
+                // Debug logging removed
+              }}
             >
               Βοήθεια
             </ToolbarHelpButton>

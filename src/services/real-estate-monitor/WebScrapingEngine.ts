@@ -156,11 +156,11 @@ export class WebScrapingEngine {
     const results: ScrapingResult[] = [];
     const enabledTargets = this.targets.filter(t => t.enabled);
 
-    console.log(`🕷️ Starting web scraping: ${enabledTargets.length} targets`);
+    // Debug logging removed //(`🕷️ Starting web scraping: ${enabledTargets.length} targets`);
 
     for (const target of enabledTargets) {
       try {
-        console.log(`📊 Scraping ${target.name}...`);
+        // Debug logging removed //(`📊 Scraping ${target.name}...`);
         const result = await this.scrapeTarget(target, options);
         results.push(result);
 
@@ -173,7 +173,7 @@ export class WebScrapingEngine {
         target.lastScraped = new Date();
 
       } catch (error) {
-        console.error(`❌ Error scraping ${target.name}:`, error);
+        // Error logging removed //(`❌ Error scraping ${target.name}:`, error);
         results.push({
           target,
           success: false,
@@ -208,7 +208,7 @@ export class WebScrapingEngine {
       return this.scrapeViaDOM(target, options);
 
     } catch (error) {
-      console.error(`Scraping failed for ${target.name}:`, error);
+      // Error logging removed //(`Scraping failed for ${target.name}:`, error);
       return {
         target,
         success: false,
@@ -307,7 +307,7 @@ export class WebScrapingEngine {
     // Note: Client-side DOM scraping has limitations due to CORS
     // This would typically run server-side or use a proxy service
 
-    console.warn(`⚠️ DOM scraping for ${target.name} requires server-side implementation or proxy service`);
+    // Warning logging removed //(`⚠️ DOM scraping for ${target.name} requires server-side implementation or proxy service`);
 
     return {
       target,
@@ -330,7 +330,7 @@ export class WebScrapingEngine {
    */
   private async normalizeAPIData(data: any, target: ScrapingTarget): Promise<ScrapedProperty[]> {
     // This would be customized per API
-    console.log(`🔄 Normalizing data from ${target.name}...`);
+    // Debug logging removed //(`🔄 Normalizing data from ${target.name}...`);
 
     return []; // Placeholder - would implement based on actual API responses
   }
@@ -339,7 +339,7 @@ export class WebScrapingEngine {
    * Geocode property addresses
    */
   private async geocodeProperties(properties: ScrapedProperty[]): Promise<void> {
-    console.log(`🌍 Geocoding ${properties.length} properties...`);
+    // Debug logging removed //(`🌍 Geocoding ${properties.length} properties...`);
 
     for (const property of properties) {
       try {
@@ -352,7 +352,7 @@ export class WebScrapingEngine {
           property.geocodingResult = result;
         }
       } catch (error) {
-        console.warn(`Failed to geocode: ${property.address}`, error);
+        // Warning logging removed //(`Failed to geocode: ${property.address}`, error);
       }
 
       // Small delay between geocoding requests
@@ -375,7 +375,7 @@ export class WebScrapingEngine {
 
     if (elapsed < minInterval) {
       const delay = minInterval - elapsed;
-      console.log(`⏱️ Rate limiting: waiting ${delay}ms for ${target.name}`);
+      // Debug logging removed //(`⏱️ Rate limiting: waiting ${delay}ms for ${target.name}`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
 
@@ -396,9 +396,9 @@ export class WebScrapingEngine {
         }
       };
       localStorage.setItem(key, JSON.stringify(data));
-      console.log(`💾 Saved ${result.properties.length} properties for ${targetId}`);
+      // Debug logging removed //(`💾 Saved ${result.properties.length} properties for ${targetId}`);
     } catch (error) {
-      console.warn('Failed to save scraping results:', error);
+      // Warning logging removed //('Failed to save scraping results:', error);
     }
   }
 
@@ -411,10 +411,10 @@ export class WebScrapingEngine {
       if (stored) {
         const config = JSON.parse(stored);
         this.targets = { ...this.targets, ...config.targets };
-        console.log('📋 Loaded scraping configuration');
+        // Debug logging removed //('📋 Loaded scraping configuration');
       }
     } catch (error) {
-      console.warn('Failed to load scraping configuration:', error);
+      // Warning logging removed //('Failed to load scraping configuration:', error);
     }
   }
 
@@ -448,7 +448,7 @@ export class WebScrapingEngine {
       const config = { targets: this.targets };
       localStorage.setItem('geo_alert_scraping_config', JSON.stringify(config));
     } catch (error) {
-      console.warn('Failed to save scraping configuration:', error);
+      // Warning logging removed //('Failed to save scraping configuration:', error);
     }
   }
 
@@ -475,7 +475,7 @@ export const webScrapingEngine = new WebScrapingEngine();
  */
 export class ScrapingErrorHandler {
   static logError(target: ScrapingTarget, error: Error, context?: any): void {
-    console.error(`🚨 Scraping Error [${target.name}]:`, {
+    // Error logging removed //(`🚨 Scraping Error [${target.name}]:`, {
       error: error.message,
       stack: error.stack,
       target: target.id,

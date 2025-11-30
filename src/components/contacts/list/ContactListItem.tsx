@@ -64,7 +64,7 @@ export function ContactListItem({
 
     // Debug: log photoURL for this contact
     if ((contact as any).photoURL) {
-        console.log(`Contact ${displayName} has photoURL:`, (contact as any).photoURL?.substring(0, 50) + '...');
+        // Debug logging removed
     }
 
     // Get centralized contact card backgrounds

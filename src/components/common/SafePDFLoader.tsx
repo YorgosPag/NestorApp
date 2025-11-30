@@ -74,7 +74,7 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
         onLoadSuccess?.({ numPages: 1 });
 
       } catch (error) {
-        console.error('PDF processing error:', error);
+        // Error logging removed
         setStatus('error');
         setDebugInfo(`Error: ${(error as Error).message}`);
         onLoadError?.(error as Error);

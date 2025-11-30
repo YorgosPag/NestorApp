@@ -27,7 +27,7 @@ export async function getBuildingStats(buildingId: string): Promise<BuildingStat
 
     return { totalUnits, soldUnits, totalSoldArea };
   } catch (error) {
-    console.error(`Error fetching stats for building ${buildingId}:`, error);
+    // Error logging removed //(`Error fetching stats for building ${buildingId}:`, error);
     throw new Error('Failed to calculate building statistics');
   }
 }

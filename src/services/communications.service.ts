@@ -44,7 +44,7 @@ export async function addCommunication(communicationData: Omit<Communication, 'i
     });
     return { id: docRef.id, success: true };
   } catch (error) {
-    console.error('Σφάλμα κατά την προσθήκη επικοινωνίας:', error);
+    // Error logging removed //('Σφάλμα κατά την προσθήκη επικοινωνίας:', error);
     throw error;
   }
 }
@@ -60,7 +60,7 @@ export async function getCommunicationsByContact(contactId: string): Promise<Com
     
     return querySnapshot.docs.map(transformCommunication);
   } catch (error) {
-    console.error('Σφάλμα κατά την ανάκτηση επικοινωνιών:', error);
+    // Error logging removed //('Σφάλμα κατά την ανάκτηση επικοινωνιών:', error);
     throw error;
   }
 }
@@ -75,7 +75,7 @@ export async function updateCommunicationStatus(communicationId: string, status:
     
     return { success: true };
   } catch (error) {
-    console.error('Σφάλμα κατά την ενημέρωση επικοινωνίας:', error);
+    // Error logging removed //('Σφάλμα κατά την ενημέρωση επικοινωνίας:', error);
     throw error;
   }
 }
@@ -95,7 +95,7 @@ export async function deleteAllCommunications(): Promise<{ success: boolean; del
         await batch.commit();
         return { success: true, deletedCount };
     } catch (error) {
-        console.error('Σφάλμα κατά τη μαζική διαγραφή επικοινωνιών:', error);
+        // Error logging removed //('Σφάλμα κατά τη μαζική διαγραφή επικοινωνιών:', error);
         throw error;
     }
 }

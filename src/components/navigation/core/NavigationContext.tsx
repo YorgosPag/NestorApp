@@ -58,12 +58,10 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
 
         // Load all projects immediately after companies are loaded
         if (companies.length > 0) {
-          console.log('🎯 NavigationContext: Companies loaded, now loading projects...');
           await loadAllProjectsInternal(companies);
         }
 
       } catch (error) {
-        console.error('NavigationContext: Error initializing:', error);
         updateState({
           error: error instanceof Error ? error.message : 'Failed to load navigation data',
           loading: false
@@ -83,15 +81,12 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
 
       const projects = await dataHook.loadAllProjects(companies);
 
-      console.log('🎯 NavigationContext: Loaded projects:', projects.length, projects);
-
       updateState({
         projects,
         projectsLoading: false
       });
 
     } catch (error) {
-      console.error('NavigationContext: Error loading projects:', error);
       updateState({ projectsLoading: false });
     }
   };
@@ -103,7 +98,6 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
       const companies = await dataHook.loadCompanies();
       updateState({ companies, loading: false });
     } catch (error) {
-      console.error('NavigationContext: Error loading companies:', error);
       updateState({
         error: error instanceof Error ? error.message : 'Failed to load companies',
         loading: false
@@ -114,7 +108,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   const selectCompany = (companyId: string) => {
     actions.selectCompany(companyId, state, updateState);
     // Load projects for this specific company (optional, as we already have all projects)
-    dataHook.loadProjectsForCompany(companyId).catch(console.error);
+    dataHook.loadProjectsForCompany(companyId).catch(() => {});
   };
 
   const loadProjectsForCompany = async (companyId: string) => {
@@ -122,10 +116,8 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     // We don't need to fetch again since loadAllProjects already loaded everything
     updateState({ loading: true, error: null });
 
-    console.log(`🔄 NavigationContext: Selected company ${companyId}, keeping all projects for warnings`);
 
     const companyProjects = state.projects.filter(p => p.companyId === companyId);
-    console.log(`📋 NavigationContext: Company ${companyId} has ${companyProjects.length} projects from cached data`);
 
     // Just update the loading state, keep all projects intact
     updateState({ loading: false });

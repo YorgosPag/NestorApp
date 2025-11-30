@@ -15,11 +15,11 @@ export async function getStorageUnitById(id: string): Promise<StorageUnit | null
     if (docSnap.exists()) {
       return { id: docSnap.id, ...docSnap.data() } as StorageUnit;
     } else {
-      console.warn(`No storage unit found with id: ${id}`);
+      // Warning logging removed //(`No storage unit found with id: ${id}`);
       return null;
     }
   } catch (error) {
-    console.error(`Error fetching storage unit with id ${id}:`, error);
+    // Error logging removed //(`Error fetching storage unit with id ${id}:`, error);
     throw new Error('Failed to fetch storage unit details');
   }
 }

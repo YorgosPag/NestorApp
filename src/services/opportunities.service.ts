@@ -47,7 +47,7 @@ export async function addOpportunity(opportunityData: Omit<Opportunity, 'id' | '
     });
     return { id: docRef.id, success: true };
   } catch (error) {
-    console.error('Σφάλμα κατά την προσθήκη ευκαιρίας:', error);
+    // Error logging removed //('Σφάλμα κατά την προσθήκη ευκαιρίας:', error);
     throw error;
   }
 }
@@ -60,7 +60,7 @@ export async function getOpportunities(): Promise<Opportunity[]> {
     
     return querySnapshot.docs.map(transformOpportunity);
   } catch (error) {
-    console.error('Σφάλμα κατά την ανάκτηση ευκαιριών:', error);
+    // Error logging removed //('Σφάλμα κατά την ανάκτηση ευκαιριών:', error);
     throw error;
   }
 }
@@ -75,11 +75,11 @@ export async function getOpportunityById(id: string): Promise<Opportunity | null
         if (docSnap.exists()) {
             return transformOpportunity(docSnap);
         } else {
-            console.warn(`Opportunity with ID ${id} not found.`);
+            // Warning logging removed //(`Opportunity with ID ${id} not found.`);
             return null;
         }
     } catch (error) {
-        console.error(`Error fetching opportunity with ID ${id}:`, error);
+        // Error logging removed //(`Error fetching opportunity with ID ${id}:`, error);
         throw new Error('Failed to fetch opportunity');
     }
 }
@@ -95,7 +95,7 @@ export async function updateOpportunity(opportunityId: string, updates: Partial<
     
     return { success: true };
   } catch (error) {
-    console.error('Σφάλμα κατά την ενημέρωση ευκαιρίας:', error);
+    // Error logging removed //('Σφάλμα κατά την ενημέρωση ευκαιρίας:', error);
     throw error;
   }
 }
@@ -106,7 +106,7 @@ export async function deleteOpportunity(opportunityId: string): Promise<{ succes
     await deleteDoc(doc(db, OPPORTUNITIES_COLLECTION, opportunityId));
     return { success: true };
   } catch (error) {
-    console.error('Σφάλμα κατά τη διαγραφή ευκαιρίας:', error);
+    // Error logging removed //('Σφάλμα κατά τη διαγραφή ευκαιρίας:', error);
     throw error;
   }
 }
@@ -126,7 +126,7 @@ export async function deleteAllOpportunities(): Promise<{ success: boolean; dele
         await batch.commit();
         return { success: true, deletedCount };
     } catch (error) {
-        console.error('Σφάλμα κατά τη μαζική διαγραφή ευκαιριών:', error);
+        // Error logging removed //('Σφάλμα κατά τη μαζική διαγραφή ευκαιριών:', error);
         throw error;
     }
 }

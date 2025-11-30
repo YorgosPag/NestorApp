@@ -50,14 +50,12 @@ export function ShareButton({
   };
 
   const handleShareSuccess = (platform: string) => {
-    console.log(`Successfully shared via ${platform}`);
     onShareSuccess?.();
     // Keep modal open briefly to show success, then close
     setTimeout(() => closeModal(), 1500);
   };
 
   const handleShareError = (platform: string, error: string) => {
-    console.error(`Failed to share via ${platform}:`, error);
     onShareError?.(`Αποτυχία κοινοποίησης μέσω ${platform}: ${error}`);
   };
 

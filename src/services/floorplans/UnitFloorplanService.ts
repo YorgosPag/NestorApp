@@ -20,7 +20,7 @@ export class UnitFloorplanService {
   static async saveFloorplan(unitId: string, data: UnitFloorplanData): Promise<boolean> {
     try {
       const docId = `${unitId}_unit`;
-      console.log(`💾 Saving unit floorplan to Firestore:`, docId);
+      // Debug logging removed //(`💾 Saving unit floorplan to Firestore:`, docId);
       
       await setDoc(doc(db, this.COLLECTION, docId), {
         unitId,
@@ -31,10 +31,10 @@ export class UnitFloorplanService {
         updatedAt: new Date().toISOString()
       });
 
-      console.log(`✅ Successfully saved unit floorplan for unit:`, unitId);
+      // Debug logging removed //(`✅ Successfully saved unit floorplan for unit:`, unitId);
       return true;
     } catch (error) {
-      console.error(`❌ Error saving unit floorplan:`, error);
+      // Error logging removed //(`❌ Error saving unit floorplan:`, error);
       return false;
     }
   }
@@ -45,20 +45,20 @@ export class UnitFloorplanService {
   static async loadFloorplan(unitId: string): Promise<UnitFloorplanData | null> {
     try {
       const docId = `${unitId}_unit`;
-      console.log(`📖 Loading unit floorplan from Firestore:`, docId);
+      // Debug logging removed //(`📖 Loading unit floorplan from Firestore:`, docId);
       
       const docSnap = await getDoc(doc(db, this.COLLECTION, docId));
       
       if (docSnap.exists()) {
         const data = docSnap.data() as UnitFloorplanData;
-        console.log(`✅ Successfully loaded unit floorplan for unit:`, unitId);
+        // Debug logging removed //(`✅ Successfully loaded unit floorplan for unit:`, unitId);
         return data;
       } else {
-        console.log(`ℹ️ No unit floorplan found for unit:`, unitId);
+        // Debug logging removed //(`ℹ️ No unit floorplan found for unit:`, unitId);
         return null;
       }
     } catch (error) {
-      console.error(`❌ Error loading unit floorplan:`, error);
+      // Error logging removed //(`❌ Error loading unit floorplan:`, error);
       return null;
     }
   }
@@ -72,7 +72,7 @@ export class UnitFloorplanService {
       const docSnap = await getDoc(doc(db, this.COLLECTION, docId));
       return docSnap.exists();
     } catch (error) {
-      console.error(`❌ Error checking unit floorplan:`, error);
+      // Error logging removed //(`❌ Error checking unit floorplan:`, error);
       return false;
     }
   }
@@ -83,7 +83,7 @@ export class UnitFloorplanService {
   static async deleteFloorplan(unitId: string): Promise<boolean> {
     try {
       const docId = `${unitId}_unit`;
-      console.log(`🗑️ Deleting unit floorplan from Firestore:`, docId);
+      // Debug logging removed //(`🗑️ Deleting unit floorplan from Firestore:`, docId);
       
       // Note: We could use deleteDoc here, but for now just mark as deleted
       await setDoc(doc(db, this.COLLECTION, docId), {
@@ -91,10 +91,10 @@ export class UnitFloorplanService {
         deletedAt: new Date().toISOString()
       });
 
-      console.log(`✅ Successfully deleted unit floorplan for unit:`, unitId);
+      // Debug logging removed //(`✅ Successfully deleted unit floorplan for unit:`, unitId);
       return true;
     } catch (error) {
-      console.error(`❌ Error deleting unit floorplan:`, error);
+      // Error logging removed //(`❌ Error deleting unit floorplan:`, error);
       return false;
     }
   }

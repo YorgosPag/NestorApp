@@ -85,7 +85,7 @@ export class AddressResolver {
     if (this.options.useCache) {
       const cached = this.getFromCache(parsedAddress);
       if (cached) {
-        console.log('🎯 Address found in cache:', cached);
+        // Debug logging removed //('🎯 Address found in cache:', cached);
         return cached;
       }
     }
@@ -102,13 +102,13 @@ export class AddressResolver {
           return result;
         }
       } catch (error) {
-        console.warn(`⚠️ Provider ${provider} failed:`, error);
+        // Warning logging removed //(`⚠️ Provider ${provider} failed:`, error);
       }
     }
 
     // Fallback to area center if enabled
     if (this.options.fallbackToArea && parsedAddress.area) {
-      console.log('📍 Falling back to area center:', parsedAddress.area);
+      // Debug logging removed //('📍 Falling back to area center:', parsedAddress.area);
       return this.resolveAreaCenter(parsedAddress.area);
     }
 
@@ -296,7 +296,7 @@ export class AddressResolver {
         };
       }
     } catch (error) {
-      console.error('Nominatim error:', error);
+      // Error logging removed //('Nominatim error:', error);
     }
 
     return null;
@@ -308,7 +308,7 @@ export class AddressResolver {
   private async geocodeWithGoogle(address: GreekAddress): Promise<GeocodingResult | null> {
     // TODO: Implement Google Geocoding
     // Requires API key from environment
-    console.warn('Google Geocoding not implemented yet');
+    // Warning logging removed //('Google Geocoding not implemented yet');
     return null;
   }
 
@@ -318,7 +318,7 @@ export class AddressResolver {
   private async geocodeWithMapbox(address: GreekAddress): Promise<GeocodingResult | null> {
     // TODO: Implement Mapbox Geocoding
     // Requires API key from environment
-    console.warn('Mapbox Geocoding not implemented yet');
+    // Warning logging removed //('Mapbox Geocoding not implemented yet');
     return null;
   }
 
@@ -463,7 +463,7 @@ export class AddressResolver {
       const cacheData = Array.from(this.cache.entries());
       localStorage.setItem('geo_alert_address_cache', JSON.stringify(cacheData));
     } catch (error) {
-      console.warn('Failed to save cache:', error);
+      // Warning logging removed //('Failed to save cache:', error);
     }
   }
 
@@ -476,10 +476,10 @@ export class AddressResolver {
       if (stored) {
         const cacheData: [string, GeocodingResult][] = JSON.parse(stored);
         this.cache = new Map(cacheData);
-        console.log(`📍 Loaded ${this.cache.size} cached addresses`);
+        // Debug logging removed //(`📍 Loaded ${this.cache.size} cached addresses`);
       }
     } catch (error) {
-      console.warn('Failed to load cache:', error);
+      // Warning logging removed //('Failed to load cache:', error);
     }
   }
 

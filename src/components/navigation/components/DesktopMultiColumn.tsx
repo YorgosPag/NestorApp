@@ -185,7 +185,6 @@ export function DesktopMultiColumn({
     if (!selectedCompany) return;
 
     if (canDeleteCompany(selectedCompany)) {
-      console.log('🗑️ Deleting company:', selectedCompany.companyName);
       // TODO: Implement actual deletion logic
     } else {
       const companyProjects = projects.filter(p => p.companyId === selectedCompany.id);
@@ -197,7 +196,6 @@ export function DesktopMultiColumn({
     if (!selectedProject) return;
 
     if (canDeleteProject(selectedProject)) {
-      console.log('🗑️ Deleting project:', selectedProject.name);
       // TODO: Implement actual deletion logic
     } else {
       showDeleteWarning('έργο', selectedProject.buildings.length, 'κτίρια');
@@ -208,7 +206,6 @@ export function DesktopMultiColumn({
     if (!selectedBuilding) return;
 
     if (canDeleteBuilding(selectedBuilding)) {
-      console.log('🗑️ Deleting building:', selectedBuilding.name);
       // TODO: Implement actual deletion logic
     } else {
       showDeleteWarning('κτίριο', selectedBuilding.floors.length, 'όροφοι');
@@ -219,7 +216,6 @@ export function DesktopMultiColumn({
     if (!selectedFloor) return;
 
     if (canDeleteFloor(selectedFloor)) {
-      console.log('🗑️ Deleting floor:', selectedFloor.name);
       // TODO: Implement actual deletion logic
     } else {
       showDeleteWarning('όροφο', selectedFloor.units.length, 'μονάδες');
@@ -229,7 +225,6 @@ export function DesktopMultiColumn({
   const handleDeleteUnit = () => {
     if (!selectedUnit) return;
 
-    console.log('🗑️ Deleting unit:', selectedUnit.name);
     // Units can always be deleted as they have no dependencies
     // TODO: Implement actual deletion logic
 
@@ -239,22 +234,18 @@ export function DesktopMultiColumn({
 
   // Handlers for connecting items
   const handleProjectSelected = (project: any) => {
-    console.log('🔗 Connecting project to company:', project.name, 'to', selectedCompany?.companyName);
     // TODO: Implement actual connection logic
   };
 
   const handleBuildingSelected = (building: any) => {
-    console.log('🔗 Connecting building to project:', building.name, 'to', selectedProject?.name);
     // TODO: Implement actual connection logic
   };
 
   const handleFloorSelected = (floor: any) => {
-    console.log('🔗 Connecting floor to building:', floor.name, 'to', selectedBuilding?.name);
     // TODO: Implement actual connection logic
   };
 
   const handleUnitSelected = (unit: any) => {
-    console.log('🔗 Connecting unit to floor:', unit.name, 'to', selectedFloor?.name);
     // TODO: Implement actual connection logic
   };
 
@@ -278,15 +269,15 @@ export function DesktopMultiColumn({
             onFiltersChange={setCompaniesFilters}
             hasSelectedItems={!!selectedCompany}
             onNewItem={onAddCompanyClick}
-            onEditItem={() => console.log('Edit company')}
+            onEditItem={() => {/* TODO: Edit company */}}
             onDeleteItem={handleDeleteCompany}
-            onRefresh={() => console.log('Refresh companies')}
-            onExport={() => console.log('Export companies')}
-            onImport={() => console.log('Import companies')}
-            onSettings={() => console.log('Companies settings')}
-            onReports={() => console.log('Companies reports')}
-            onShare={() => console.log('Share companies')}
-            onHelp={() => console.log('Companies help')}
+            onRefresh={() => {/* TODO: Refresh companies */}}
+            onExport={() => {/* TODO: Export companies */}}
+            onImport={() => {/* TODO: Import companies */}}
+            onSettings={() => {/* TODO: Companies settings */}}
+            onReports={() => {/* TODO: Companies reports */}}
+            onShare={() => {/* TODO: Share companies */}}
+            onHelp={() => {/* TODO: Companies help */}}
           />
 
           <div className="space-y-2 max-h-64 overflow-y-auto">
@@ -295,10 +286,7 @@ export function DesktopMultiColumn({
               const companyProjects = projects.filter(p => p.companyId === company.id);
               const hasProjects = companyProjects.length > 0;
 
-              console.log(`🔍 Company "${company.companyName}" (ID: ${company.id}):`,
-                `Total projects available: ${projects.length}`,
-                `Company projects: ${companyProjects.length}`,
-                `Has projects: ${hasProjects}`);
+              // Debug: Company analysis complete
 
               // Ελέγχουμε αν είναι navigation company (προστέθηκε χειροκίνητα)
               const isNavigationCompany = navigationCompanyIds.includes(company.id);
@@ -349,14 +337,14 @@ export function DesktopMultiColumn({
               onFiltersChange={setProjectsFilters}
               hasSelectedItems={!!selectedProject}
               onNewItem={() => setIsProjectModalOpen(true)}
-              onEditItem={() => console.log('Edit project')}
+              onEditItem={() => {/* TODO: Edit project */}}
               onDeleteItem={handleDeleteProject}
-              onRefresh={() => console.log('Refresh projects')}
-              onExport={() => console.log('Export projects')}
-              onSettings={() => console.log('Projects settings')}
-              onReports={() => console.log('Projects reports')}
-              onShare={() => console.log('Share projects')}
-              onHelp={() => console.log('Projects help')}
+              onRefresh={() => {/* TODO: Refresh projects */}}
+              onExport={() => {/* TODO: Export projects */}}
+              onSettings={() => {/* TODO: Projects settings */}}
+              onReports={() => {/* TODO: Projects reports */}}
+              onShare={() => {/* TODO: Share projects */}}
+              onHelp={() => {/* TODO: Projects help */}}
             />
 
             <div className="space-y-2 max-h-64 overflow-y-auto">
@@ -399,13 +387,13 @@ export function DesktopMultiColumn({
               onFiltersChange={setBuildingsFilters}
               hasSelectedItems={!!selectedBuilding}
               onNewItem={() => setIsBuildingModalOpen(true)}
-              onEditItem={() => console.log('Edit building')}
+              onEditItem={() => {/* TODO: Edit building */}}
               onDeleteItem={handleDeleteBuilding}
-              onRefresh={() => console.log('Refresh buildings')}
-              onExport={() => console.log('Export buildings')}
-              onSettings={() => console.log('Buildings settings')}
-              onReports={() => console.log('Buildings reports')}
-              onHelp={() => console.log('Buildings help')}
+              onRefresh={() => {/* TODO: Refresh buildings */}}
+              onExport={() => {/* TODO: Export buildings */}}
+              onSettings={() => {/* TODO: Buildings settings */}}
+              onReports={() => {/* TODO: Buildings reports */}}
+              onHelp={() => {/* TODO: Buildings help */}}
             />
 
             <div className="space-y-2 max-h-64 overflow-y-auto">
@@ -448,13 +436,13 @@ export function DesktopMultiColumn({
               onFiltersChange={setFloorsFilters}
               hasSelectedItems={!!selectedFloor}
               onNewItem={() => setIsFloorModalOpen(true)}
-              onEditItem={() => console.log('Edit floor')}
+              onEditItem={() => {/* TODO: Edit floor */}}
               onDeleteItem={handleDeleteFloor}
-              onRefresh={() => console.log('Refresh floors')}
-              onExport={() => console.log('Export floors')}
-              onSettings={() => console.log('Floors settings')}
-              onReports={() => console.log('Floors reports')}
-              onHelp={() => console.log('Floors help')}
+              onRefresh={() => {/* TODO: Refresh floors */}}
+              onExport={() => {/* TODO: Export floors */}}
+              onSettings={() => {/* TODO: Floors settings */}}
+              onReports={() => {/* TODO: Floors reports */}}
+              onHelp={() => {/* TODO: Floors help */}}
             />
 
             <div className="space-y-2 max-h-64 overflow-y-auto">
@@ -497,13 +485,13 @@ export function DesktopMultiColumn({
               onFiltersChange={setUnitsFilters}
               hasSelectedItems={!!selectedUnit}
               onNewItem={() => setIsUnitModalOpen(true)}
-              onEditItem={() => console.log('Edit unit')}
+              onEditItem={() => {/* TODO: Edit unit */}}
               onDeleteItem={handleDeleteUnit}
-              onRefresh={() => console.log('Refresh units')}
-              onExport={() => console.log('Export units')}
-              onSettings={() => console.log('Units settings')}
-              onReports={() => console.log('Units reports')}
-              onHelp={() => console.log('Units help')}
+              onRefresh={() => {/* TODO: Refresh units */}}
+              onExport={() => {/* TODO: Export units */}}
+              onSettings={() => {/* TODO: Units settings */}}
+              onReports={() => {/* TODO: Units reports */}}
+              onHelp={() => {/* TODO: Units help */}}
             />
 
             <div className="space-y-2 max-h-64 overflow-y-auto">
@@ -511,7 +499,6 @@ export function DesktopMultiColumn({
                 <NavigationButton
                   key={unit.id}
                   onClick={() => {
-                    console.log('Unit selected:', unit.id);
                     setSelectedUnit(unit);
                   }}
                   icon={Home}
@@ -575,7 +562,7 @@ export function DesktopMultiColumn({
                   Παρκινγκ & Αποθήκες
                 </div>
                 <NavigationButton
-                  onClick={() => console.log('Parking spots')}
+                  onClick={() => {/* TODO: Parking spots */}}
                   icon={Car}
                   title="Θέσεις Στάθμευσης"
                   subtitle="Διαθέσιμες θέσεις"
@@ -583,7 +570,7 @@ export function DesktopMultiColumn({
                 />
 
                 <NavigationButton
-                  onClick={() => console.log('Storage units')}
+                  onClick={() => {/* TODO: Storage units */}}
                   icon={Package}
                   title="Αποθήκες"
                   subtitle="Αποθηκευτικοί χώροι"

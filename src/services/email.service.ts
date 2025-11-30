@@ -12,9 +12,9 @@ interface EmailPayload {
 }
 
 const mockSend = async (payload: any) => {
-    console.log("Mock Email Service: Sending email...", payload);
+    // Debug logging removed
     await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
-    console.log("Mock Email Service: Email sent successfully.");
+    // Debug logging removed
     return { success: true };
 };
 

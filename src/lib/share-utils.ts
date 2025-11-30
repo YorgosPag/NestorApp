@@ -49,7 +49,7 @@ export async function shareContent(data: ShareData): Promise<boolean> {
       await navigator.share(data);
       return true;
     } catch (error) {
-      console.log('Web Share cancelled or failed:', error);
+      // Debug logging removed
       // Fall through to clipboard fallback
     }
   }
@@ -78,7 +78,7 @@ export async function copyToClipboard(text: string): Promise<boolean> {
       return success;
     }
   } catch (error) {
-    console.error('Failed to copy to clipboard:', error);
+    // Error logging removed
     return false;
   }
 }
@@ -278,19 +278,18 @@ export function trackShareEvent(
   contentId: string
 ): void {
   // This would integrate with your analytics service
-  console.log('📊 Share event:', {
-    platform,
-    contentType,
-    contentId,
-    timestamp: new Date().toISOString()
-  });
-  
+  // Debug logging removed
+  // platform,
+  // contentType,
+  // contentId,
+  // timestamp: new Date().toISOString()
+
   // Example: Google Analytics 4 event
-  if (typeof gtag !== 'undefined') {
-    gtag('event', 'share', {
-      method: platform,
-      content_type: contentType,
-      item_id: contentId
-    });
-  }
+  // if (typeof gtag !== 'undefined') {
+  //   gtag('event', 'share', {
+  //     method: platform,
+  //     content_type: contentType,
+  //     item_id: contentId
+  //   });
+  // }
 }

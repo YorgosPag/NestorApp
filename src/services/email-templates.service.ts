@@ -314,7 +314,7 @@ export class EmailTemplatesService {
   static generateEmailHtml(templateId: EmailTemplateType, data: EmailTemplateData): string {
     const template = this.getTemplate(templateId);
     if (!template) {
-      console.warn(`Template ${templateId} not found, using default`);
+      // Warning logging removed //(`Template ${templateId} not found, using default`);
       return this.residentialTemplate(data); // Fallback to residential
     }
     return template.htmlTemplate(data);

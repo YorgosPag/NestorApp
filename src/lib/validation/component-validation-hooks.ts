@@ -35,14 +35,10 @@ export const useClassNameValidation = (
     const compliance = checkDesignSystemCompliance(className);
     
     if (!compliance.isCompliant) {
-      console.group(`🎨 ${componentName} - Design System Violations`);
-      compliance.violations.forEach(violation => {
-        console.warn(`❌ ${violation}`);
-      });
-      compliance.suggestions.forEach(suggestion => {
-        console.info(`💡 ${suggestion}`);
-      });
-      console.groupEnd();
+      // Group logging removed
+      // Warning logging removed
+      // Info logging removed
+      // Group logging removed
     }
   }, [className, componentName, enabled]);
 };
@@ -64,14 +60,7 @@ export const useDesignSystemAnalytics = (
     // Log design system usage statistics
     const logAnalytics = () => {
       const stats = analyticsRef.current;
-      console.log(`📊 ${componentName} Design System Stats:`, {
-        'Design Token Usage': stats.designTokenUsageCount,
-        'Hardcoded Values': stats.hardcodedValuesCount,
-        'Validation Errors': stats.validationErrors,
-        'Compliance Score': Math.round(
-          (stats.designTokenUsageCount / (stats.designTokenUsageCount + stats.hardcodedValuesCount)) * 100
-        ) || 100
-      });
+      // Debug logging removed
     };
     
     // Log analytics on unmount (component cleanup)
@@ -129,11 +118,9 @@ export const useAdvancedDesignSystemValidation = (
     
     // Display suggestions
     if (suggestions.length > 0) {
-      console.group(`💡 ${componentName} - Improvement Suggestions`);
-      suggestions.forEach(suggestion => {
-        console.info(`🔧 ${suggestion}`);
-      });
-      console.groupEnd();
+      // Group logging removed
+      // Info logging removed
+      // Group logging removed
     }
     
     // Update analytics

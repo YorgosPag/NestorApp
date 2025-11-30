@@ -214,7 +214,7 @@ class EmailIntegrationService {
   // Provider implementations
   private async sendViaSMTP(message: EmailMessage, provider: EmailProvider): Promise<EmailSendResult> {
     // Mock SMTP implementation
-    console.log('Sending email via SMTP:', { 
+    // Debug logging removed //('Sending email via SMTP:', { 
       to: message.to, 
       subject: message.subject,
       provider: provider.config 
@@ -232,7 +232,7 @@ class EmailIntegrationService {
 
   private async sendViaSendGrid(message: EmailMessage, provider: EmailProvider): Promise<EmailSendResult> {
     // Mock SendGrid implementation
-    console.log('Sending email via SendGrid:', { 
+    // Debug logging removed //('Sending email via SendGrid:', { 
       to: message.to, 
       subject: message.subject 
     });
@@ -248,7 +248,7 @@ class EmailIntegrationService {
 
   private async sendViaGmail(message: EmailMessage, provider: EmailProvider): Promise<EmailSendResult> {
     // Mock Gmail API implementation
-    console.log('Sending email via Gmail API:', { 
+    // Debug logging removed //('Sending email via Gmail API:', { 
       to: message.to, 
       subject: message.subject 
     });
@@ -264,7 +264,7 @@ class EmailIntegrationService {
 
   private async sendViaOutlook(message: EmailMessage, provider: EmailProvider): Promise<EmailSendResult> {
     // Mock Outlook API implementation
-    console.log('Sending email via Outlook API:', { 
+    // Debug logging removed //('Sending email via Outlook API:', { 
       to: message.to, 
       subject: message.subject 
     });
@@ -328,7 +328,7 @@ class EmailIntegrationService {
       try {
         await this.sendEmail(message);
       } catch (error) {
-        console.error('Failed to send queued email:', error);
+        // Error logging removed //('Failed to send queued email:', error);
       }
       
       // Small delay between queue processing

@@ -5,16 +5,16 @@ import { FormGrid } from '@/components/ui/form/FormComponents';
 import { TabsOnlyTriggers } from '@/components/ui/navigation/TabsComponents';
 import { TabsContent } from '@/components/ui/tabs';
 import { getIconComponent } from './ConfigTabsHelper';
-import { IndividualFormRenderer } from './IndividualFormRenderer';
-import type { IndividualSectionConfig } from '@/config/individual-config';
+import { ServiceFormRenderer } from './ServiceFormRenderer';
+import type { ServiceSectionConfig } from '@/config/service-config';
 
 // ============================================================================
 // INTERFACES
 // ============================================================================
 
-export interface IndividualFormTabRendererProps {
-  /** Sections configuration from individual config file */
-  sections: IndividualSectionConfig[];
+export interface ServiceFormTabRendererProps {
+  /** Sections configuration from service config file */
+  sections: ServiceSectionConfig[];
   /** Form data object */
   formData: Record<string, any>;
   /** Input change handler */
@@ -23,6 +23,8 @@ export interface IndividualFormTabRendererProps {
   onSelectChange: (name: string, value: string) => void;
   /** Disabled state */
   disabled?: boolean;
+  /** Logo change handler */
+  onLogoChange?: (file: File | null) => void;
   /** Custom field renderers for forms */
   customRenderers?: Record<string, (field: any, formData: any, onChange: any, onSelectChange: any, disabled: boolean) => React.ReactNode>;
 }
@@ -32,14 +34,15 @@ export interface IndividualFormTabRendererProps {
 // ============================================================================
 
 /**
- * Creates individual form tabs from configuration sections
+ * Creates service form tabs from configuration sections
  */
-function createIndividualFormTabsFromConfig(
-  sections: IndividualSectionConfig[],
+function createServiceFormTabsFromConfig(
+  sections: ServiceSectionConfig[],
   formData: Record<string, any>,
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void,
   onSelectChange: (name: string, value: string) => void,
   disabled: boolean,
+  onLogoChange?: (file: File | null) => void,
   customRenderers?: Record<string, any>
 ) {
   return sections.map(section => ({
@@ -48,12 +51,13 @@ function createIndividualFormTabsFromConfig(
     icon: getIconComponent(section.icon),
     content: (
       <FormGrid>
-        <IndividualFormRenderer
+        <ServiceFormRenderer
           sections={[section]} // Single section per tab
           formData={formData}
           onChange={onChange}
           onSelectChange={onSelectChange}
           disabled={disabled}
+          onLogoChange={onLogoChange}
           customRenderers={customRenderers}
         />
       </FormGrid>
@@ -66,52 +70,56 @@ function createIndividualFormTabsFromConfig(
 // ============================================================================
 
 /**
- * Individual Form Tab Renderer που δημιουργεί tabbed forms από individual configuration
+ * Service Form Tab Renderer που δημιουργεί tabbed forms από service configuration
  *
- * Creates tabs for Individual Contact forms:
- * - Βασικά Στοιχεία (user icon)
- * - Ταυτότητα & ΑΦΜ (credit-card icon)
- * - Επαγγελματικά Στοιχεία (briefcase icon)
+ * Creates tabs for Service Contact forms:
+ * - Βασικά Στοιχεία (landmark icon)
+ * - Διοικητικά Στοιχεία (shield icon)
  * - Στοιχεία Επικοινωνίας (phone icon)
+ * - Αρμοδιότητες & Υπηρεσίες (clipboard-list icon)
+ * - Λογότυπο & Εικόνα (image icon)
  *
  * @example
  * ```tsx
- * import { getIndividualSortedSections } from '@/config/individual-config';
+ * import { getServiceSortedSections } from '@/config/service-config';
  *
- * function MyIndividualTabbedForm() {
- *   const sections = getIndividualSortedSections();
+ * function MyServiceTabbedForm() {
+ *   const sections = getServiceSortedSections();
  *
  *   return (
- *     <IndividualFormTabRenderer
+ *     <ServiceFormTabRenderer
  *       sections={sections}
  *       formData={formData}
  *       onChange={handleChange}
  *       onSelectChange={handleSelectChange}
+ *       onLogoChange={handleLogoChange}
  *       disabled={loading}
  *     />
  *   );
  * }
  * ```
  */
-export function IndividualFormTabRenderer({
+export function ServiceFormTabRenderer({
   sections,
   formData,
   onChange,
   onSelectChange,
   disabled = false,
+  onLogoChange,
   customRenderers
-}: IndividualFormTabRendererProps) {
+}: ServiceFormTabRendererProps) {
   if (!sections || sections.length === 0) {
     return null;
   }
 
-  // Create tabs from individual sections
-  const tabs = createIndividualFormTabsFromConfig(
+  // Create tabs from service sections
+  const tabs = createServiceFormTabsFromConfig(
     sections,
     formData,
     onChange,
     onSelectChange,
     disabled,
+    onLogoChange,
     customRenderers
   );
 
@@ -120,7 +128,7 @@ export function IndividualFormTabRenderer({
       <TabsOnlyTriggers
         tabs={tabs}
         defaultTab={tabs[0]?.id || "basicInfo"}
-        theme="warning"
+        theme="info"
       >
         {tabs.map((tab) => (
           <TabsContent key={tab.id} value={tab.id} className="mt-4">
@@ -132,4 +140,4 @@ export function IndividualFormTabRenderer({
   );
 }
 
-export default IndividualFormTabRenderer;
+export default ServiceFormTabRenderer;

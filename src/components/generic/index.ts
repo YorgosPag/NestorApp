@@ -41,6 +41,7 @@ export type { GenericPeriodSelectorProps } from './GenericPeriodSelector';
 export {
   createTabsFromConfig,
   createIndividualTabsFromConfig,
+  createServiceTabsFromConfig,
   createTabFromSection,
   getIconComponent
 } from './ConfigTabsHelper';

@@ -32,11 +32,8 @@ export class NavigationApiService {
    */
   static async loadProjectsForCompany(companyId: string): Promise<NavigationProject[]> {
     try {
-      console.log(`🔍 NavigationApi: Fetching projects for company ${companyId}`);
-
       // Temporary fallback for the company that should have 3 projects
       if (companyId === '5djayaxc0X33wsE8T2uY') {
-        console.log('🎯 NavigationApi: Using hardcoded data for Ν.Χ.Γ. ΠΑΓΩΝΗΣ company');
         return [
           {
             id: '1001',
@@ -137,7 +134,6 @@ export class NavigationApiService {
       const response = await fetch(`/api/projects/by-company/${companyId}`);
       const result = await response.json();
 
-      console.log(`📊 NavigationApi: Company ${companyId} returned:`, result);
 
       if (result.success && result.projects) {
         return result.projects.map((project: any) => {
@@ -160,7 +156,6 @@ export class NavigationApiService {
 
       return [];
     } catch (error) {
-      console.error(`NavigationApi: Error loading projects for company ${companyId}:`, error);
       return [];
     }
   }
@@ -171,7 +166,6 @@ export class NavigationApiService {
   static async loadAllProjects(companies: NavigationCompany[]): Promise<NavigationProject[]> {
     if (companies.length === 0) return [];
 
-    console.log('🚀 NavigationApi: Loading all projects for companies:', companies.map(c => c.companyName));
 
     try {
       // Load projects for all companies in parallel
@@ -187,11 +181,9 @@ export class NavigationApiService {
         allProjects.push(...projects);
       });
 
-      console.log(`✅ NavigationApi: Loaded ${allProjects.length} total projects`);
       return allProjects;
 
     } catch (error) {
-      console.error('NavigationApi: Error loading all projects:', error);
       return [];
     }
   }

@@ -9,22 +9,22 @@ export class MockProjectsRepository implements Pick<IProjectsRepository, 'getPro
     // Simulate API call with a delay
     await new Promise(resolve => setTimeout(resolve, 300));
     
-    console.log(`🏗️ MockProjectsRepository: Searching for companyId: "${companyId}"`);
+    // Debug logging removed: console.log(`🏗️ MockProjectsRepository: Searching for companyId: "${companyId}"`);
     
     // Convert buildings data to projects data
     // The mock data has buildings, but we need to group them by project
     const dataArray = Array.isArray(buildingsData) ? buildingsData : [];
-    console.log(`🏗️ MockProjectsRepository: Available buildings:`, dataArray.map(b => ({
-      id: b.id,
-      name: b.name,
-      project: b.project,
-      company: b.company,
-      companyId: b.companyId
-    })));
+    // Debug logging removed: console.log(`🏗️ MockProjectsRepository: Available buildings:`, dataArray.map(b => ({
+    //   id: b.id,
+    //   name: b.name,
+    //   project: b.project,
+    //   company: b.company,
+    //   companyId: b.companyId
+    // })));
     
     // Filter buildings by company first
     const companyBuildings = dataArray.filter(b => b.companyId === companyId);
-    console.log(`🏗️ MockProjectsRepository: Found ${companyBuildings.length} buildings for companyId "${companyId}"`);
+    // Debug logging removed: console.log(`🏗️ MockProjectsRepository: Found ${companyBuildings.length} buildings for companyId "${companyId}"`);
     
     // Group buildings by project to create Project objects
     const projectsMap = new Map<string, Project>();
@@ -52,7 +52,7 @@ export class MockProjectsRepository implements Pick<IProjectsRepository, 'getPro
     });
     
     const projects = Array.from(projectsMap.values());
-    console.log(`🏗️ MockProjectsRepository: Created ${projects.length} projects:`, projects.map(p => p.name));
+    // Debug logging removed: console.log(`🏗️ MockProjectsRepository: Created ${projects.length} projects:`, projects.map(p => p.name));
     
     return projects;
   }

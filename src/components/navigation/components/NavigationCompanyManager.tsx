@@ -35,9 +35,9 @@ export function NavigationCompanyManager({ companies, children }: NavigationComp
       try {
         const ids = await getNavigationCompanyIds();
         setNavigationCompanyIds(ids);
-        console.log('📍 Navigation company IDs loaded:', ids);
+        // Navigation company IDs loaded
       } catch (error) {
-        console.error('Error loading navigation company IDs:', error);
+        // Error loading navigation company IDs
       }
     };
 
@@ -48,10 +48,7 @@ export function NavigationCompanyManager({ companies, children }: NavigationComp
 
   // Handler για επιλογή εταιρείας από επαφές
   const handleCompanySelected = async (contact: Contact) => {
-    console.log('Selected company contact:', contact);
-
     if (!contact.id) {
-      console.error('Contact ID is missing');
       return;
     }
 
@@ -66,12 +63,9 @@ export function NavigationCompanyManager({ companies, children }: NavigationComp
       // όταν χρησιμοποιηθεί το getNavigationCompanyIds στο companies.service
       setIsContactsModalOpen(false);
 
-      console.log(`✅ Εταιρεία "${contact.companyName}" προστέθηκε στην πλοήγηση!`);
+      // Company added to navigation successfully
     } catch (error) {
-      console.error('Error adding company to navigation:', error);
-
-      // Αν αποτύχει, κάνουμε fallback στο refresh
-      console.log('Falling back to page refresh...');
+      // Error adding company to navigation - fallback to page refresh
       window.location.reload();
     }
   };

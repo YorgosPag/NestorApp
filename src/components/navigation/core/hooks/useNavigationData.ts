@@ -32,11 +32,9 @@ export function useNavigationData(): UseNavigationDataReturn {
     setIsLoadingCompanies(true);
 
     try {
-      console.log('🎯 NavigationData: Loading companies...');
       const companies = await NavigationApiService.loadCompanies();
 
       companiesLoadedRef.current = true;
-      console.log('✅ NavigationData: Companies loaded:', companies.length);
 
       return companies;
 
@@ -69,11 +67,9 @@ export function useNavigationData(): UseNavigationDataReturn {
   };
 
   const loadProjectsForCompany = async (companyId: string): Promise<void> => {
-    console.log(`🔄 NavigationData: Loading projects for company ${companyId}`);
 
     try {
       const projects = await NavigationApiService.loadProjectsForCompany(companyId);
-      console.log(`📋 NavigationData: Company ${companyId} has ${projects.length} projects`);
 
     } catch (error) {
       console.error(`NavigationData: Error loading projects for company ${companyId}:`, error);

@@ -259,7 +259,7 @@ export class LayerSyncManager {
       // Fire and forget - δεν θέλουμε να μπλοκάρει η εφαρμογή
       doc(eventsCollection).set(fullEvent);
     } catch (error) {
-      console.warn('Failed to log event:', error);
+      // Warning logging removed
     }
   }
 
@@ -279,7 +279,7 @@ export class LayerSyncManager {
 
   private handleError(message: string, error: any): void {
     const errorMessage = `${message}: ${error?.message || error}`;
-    console.error(errorMessage);
+    // Error logging removed
     
     this.updateState({
       errors: [...this.state.errors.slice(-4), errorMessage], // Keep last 5 errors
@@ -316,7 +316,7 @@ export class LayerSyncManager {
 
   private log(message: string, ...args: any[]): void {
     if (this.options.enableLogging) {
-      console.log(`[LayerSync:${this.floorId}]`, message, ...args);
+      // Debug logging removed
     }
   }
 
@@ -431,10 +431,10 @@ export async function forceSyncLayers(
     } as Layer));
     
     await syncManager.syncLayersBatch(layers);
-    console.log(`Force sync completed for ${layers.length} layers`);
+    // Debug logging removed
     
   } catch (error) {
-    console.error('Force sync failed:', error);
+    // Error logging removed
     throw error;
   } finally {
     syncManager.destroy();

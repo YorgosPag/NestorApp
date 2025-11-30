@@ -117,12 +117,24 @@ export function UnitsList({
           setSortOrder(newSortOrder);
         }}
         hasSelectedContact={selectedUnitIds.length > 0}
-        onNewItem={() => console.log('New unit')}
-        onEditItem={(id) => console.log('Edit unit')}
-        onDeleteItems={(ids) => console.log('Delete units')}
-        onExport={() => console.log('Export units')}
-        onRefresh={() => console.log('Refresh units')}
-        onSettings={() => console.log('Unit settings')}
+        onNewItem={() => {
+          // Debug logging removed
+        }}
+        onEditItem={(id) => {
+          // Debug logging removed
+        }}
+        onDeleteItems={(ids) => {
+          // Debug logging removed
+        }}
+        onExport={() => {
+          // Debug logging removed
+        }}
+        onRefresh={() => {
+          // Debug logging removed
+        }}
+        onSettings={() => {
+          // Debug logging removed
+        }}
       />
 
       <ScrollArea className="flex-1">

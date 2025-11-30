@@ -65,7 +65,7 @@ export function ContactsList({
       onContactUpdated?.();
 
     } catch (error) {
-      console.error('Error toggling favorite:', error);
+      // Error logging removed
       toast.error('Αποτυχία ενημέρωσης αγαπημένου');
     } finally {
       // Remove from loading set
@@ -124,11 +124,21 @@ export function ContactsList({
         onNewItem={onNewContact}
         onEditItem={(id) => selectedContact && onEditContact?.()}
         onDeleteItems={(ids) => selectedContact && onDeleteContact?.([selectedContact.id!])}
-        onExport={() => console.log('Export contacts')}
-        onRefresh={() => console.log('Refresh contacts')}
-        onFavoritesManagement={() => console.log('Favorites management')}
-        onShare={() => console.log('Share contacts')}
-        onSettings={() => console.log('Contact settings')}
+        onExport={() => {
+          // Debug logging removed
+        }}
+        onRefresh={() => {
+          // Debug logging removed
+        }}
+        onFavoritesManagement={() => {
+          // Debug logging removed
+        }}
+        onShare={() => {
+          // Debug logging removed
+        }}
+        onSettings={() => {
+          // Debug logging removed
+        }}
       />
 
       <ScrollArea className="flex-1">

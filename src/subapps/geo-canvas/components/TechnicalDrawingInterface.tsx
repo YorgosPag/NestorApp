@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { HardHat, Ruler, FileText, ExternalLink, Settings, Database, AlertTriangle, Bell, Monitor, Zap, X } from 'lucide-react';
+import { HardHat, Ruler, FileText, ExternalLink, Settings, Database, AlertTriangle, Bell, Monitor, Zap, X, Home, Building, Crystal } from 'lucide-react';
 import { useCentralizedPolygonSystem } from '../systems/polygon-system';
 import { useRealEstateMatching } from '@/services/real-estate-monitor/useRealEstateMatching';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
@@ -433,9 +433,9 @@ export function TechnicalDrawingInterface({
 
               <div className="space-y-2">
                 {[
-                  { id: 'spitogatos', name: t('hardcodedTexts.values.spitogatosGr'), icon: '🏠' },
-                  { id: 'xe', name: t('hardcodedTexts.values.xeGr'), icon: '🏢' },
-                  { id: 'future-platform', name: t('drawingInterfaces.technical.automatedAlerts.morePlatforms'), icon: '🔮', disabled: true }
+                  { id: 'spitogatos', name: t('hardcodedTexts.values.spitogatosGr'), icon: Home },
+                  { id: 'xe', name: t('hardcodedTexts.values.xeGr'), icon: Building },
+                  { id: 'future-platform', name: t('drawingInterfaces.technical.automatedAlerts.morePlatforms'), icon: Crystal, disabled: true }
                 ].map((platform) => (
                   <label key={platform.id} className="flex items-center space-x-2">
                     <input
@@ -454,7 +454,7 @@ export function TechnicalDrawingInterface({
                       className="rounded border-gray-300 text-red-600 focus:ring-red-500"
                     />
                     <span className="text-sm text-gray-700 flex items-center gap-1">
-                      <span>{platform.icon}</span>
+                      <platform.icon className="w-4 h-4" />
                       {platform.name}
                       {platform.disabled && <span className="text-xs text-gray-400">{t('hardcodedTexts.values.comingSoon')}</span>}
                     </span>

@@ -20,26 +20,26 @@ const chunkArray = <T>(arr: T[], size: number): T[][] => {
 export class FirestoreProjectsRepository implements IProjectsRepository {
   
   async getProjectsByCompanyId(companyId: string): Promise<Project[]> {
-    console.log(`🏗️ FirestoreProjectsRepository: Loading projects for companyId: "${companyId}"`);
+    // Debug logging removed: console.log(`🏗️ FirestoreProjectsRepository: Loading projects for companyId: "${companyId}"`);
     
     if (!db) {
-      console.error('🏗️ FirestoreProjectsRepository: Firebase admin not initialized');
-      console.error('🏗️ FirestoreProjectsRepository: Check environment variables FIREBASE_PROJECT_ID and FIREBASE_SERVICE_ACCOUNT_KEY');
+      // Error logging removed //('🏗️ FirestoreProjectsRepository: Firebase admin not initialized');
+      // Error logging removed //('🏗️ FirestoreProjectsRepository: Check environment variables FIREBASE_PROJECT_ID and FIREBASE_SERVICE_ACCOUNT_KEY');
       return [];
     }
     
-    console.log('🏗️ FirestoreProjectsRepository: Firebase admin is initialized correctly');
+    // Debug logging removed: console.log('🏗️ FirestoreProjectsRepository: Firebase admin is initialized correctly');
     
     try {
       // First, let's see ALL projects to understand the data structure
-      console.log(`🔍 DEBUG: Fetching ALL projects to see available companyIds...`);
+      // Debug logging removed: console.log(`🔍 DEBUG: Fetching ALL projects to see available companyIds...`);
       const allProjectsQuery = query(collection(db, 'projects'));
       const allSnapshot = await getDocs(allProjectsQuery);
-      console.log(`🔍 DEBUG: Total projects in Firestore: ${allSnapshot.docs.length}`);
+      // Debug logging removed: console.log(`🔍 DEBUG: Total projects in Firestore: ${allSnapshot.docs.length}`);
       
       allSnapshot.docs.forEach(doc => {
         const data = doc.data();
-        console.log(`🔍 DEBUG: Project ID=${doc.id}, companyId="${data.companyId}", company="${data.company}", name="${data.name}"`);
+        // Debug logging removed: console.log(`🔍 DEBUG: Project ID=${doc.id}, companyId="${data.companyId}", company="${data.company}", name="${data.name}"`);
       });
       
       // Now do the specific query
@@ -49,23 +49,23 @@ export class FirestoreProjectsRepository implements IProjectsRepository {
       );
       
       const snapshot = await getDocs(projectsQuery);
-      console.log('🔍 Found', snapshot.docs.length, 'projects');
-      console.log(`🏗️ FirestoreProjectsRepository: Found ${snapshot.docs.length} projects for companyId "${companyId}"`);
+      // Debug logging removed: console.log('🔍 Found', snapshot.docs.length, 'projects');
+      // Debug logging removed: console.log(`🏗️ FirestoreProjectsRepository: Found ${snapshot.docs.length} projects for companyId "${companyId}"`);
       
       const projects: Project[] = snapshot.docs.map(doc => ({
         id: parseInt(doc.id),
         ...doc.data()
       } as Project));
       
-      console.log(`🏗️ FirestoreProjectsRepository: Projects:`, projects.map(p => ({
-        id: p.id,
-        name: p.name,
-        company: p.company
-      })));
+      // Debug logging removed: console.log(`🏗️ FirestoreProjectsRepository: Projects:`, projects.map(p => ({
+      //   id: p.id,
+      //   name: p.name,
+      //   company: p.company
+      // })));
       
       return projects;
     } catch (error) {
-      console.error('🏗️ FirestoreProjectsRepository: Error loading projects:', error);
+      // Error logging removed: console.error('🏗️ FirestoreProjectsRepository: Error loading projects:', error);
       return [];
     }
   }

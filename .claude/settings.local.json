@@ -74,7 +74,10 @@
       "Bash(del fix-companies.js)",
       "Bash(del \"C:\\Nestor_Pagonis\\src\\app\\api\\projects\\fix-company-ids\\route.ts\")",
       "Bash(python:*)",
-      "Bash(del BACKUP_SUMMARY.json)"
+      "Bash(del BACKUP_SUMMARY.json)",
+      "Bash(powershell:*)",
+      "Bash(PORT=3001 npm run dev)",
+      "Bash(PORT=3006 npm run dev)"
     ],
     "deny": [],
     "ask": []

@@ -113,7 +113,7 @@ export function ContactsPageContent() {
     try {
       setIsLoading(true);
       setError(null);
-      console.log('🔄 Starting to load contacts...');
+      // Debug logging removed
 
       const contactsResult = await ContactsService.getAllContacts({
         limitCount: 50,
@@ -122,16 +122,16 @@ export function ContactsPageContent() {
         includeArchived: filters.showArchived
       });
 
-      console.log('📋 Contacts loaded:', contactsResult);
+      // Debug logging removed
       setContacts(contactsResult.contacts);
 
       // Αν είναι άδεια η βάση, προσθέτουμε seed data
       if (contactsResult.contacts.length === 0) {
-        console.log('Empty database, seeding with initial data...');
+        // Debug logging removed
         await seedDatabase();
       }
     } catch (err) {
-      console.error('❌ Error loading contacts:', err);
+      // Error logging removed
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       setError(`Αποτυχία φόρτωσης επαφών: ${errorMessage}`);
     } finally {
@@ -141,16 +141,16 @@ export function ContactsPageContent() {
 
   const seedDatabase = async () => {
     try {
-      console.log('Seeding database with initial contacts...');
+      // Debug logging removed
       const promises = SEED_CONTACTS.map(contactData =>
         ContactsService.createContact(contactData)
       );
       await Promise.all(promises);
-      console.log('Database seeded successfully');
+      // Debug logging removed
       // Reload contacts after seeding
       await refreshContacts();
     } catch (err) {
-      console.error('Error seeding database:', err);
+      // Error logging removed
     }
   };
 

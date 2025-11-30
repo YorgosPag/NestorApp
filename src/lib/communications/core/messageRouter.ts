@@ -42,11 +42,11 @@ class MessageRouter {
       throw new Error('Channel type and provider are required');
     }
     if (this.providers.has(channelType)) {
-        console.warn(`Provider for channel ${channelType} is already registered. Skipping.`);
+        // Warning logging removed
         return;
     }
     this.providers.set(channelType, provider);
-    console.log(`Provider registered for channel: ${channelType}`);
+    // Debug logging removed
   }
 
   /**
@@ -83,7 +83,7 @@ class MessageRouter {
       };
 
     } catch (error: any) {
-      console.error('Error sending message:', error);
+      // Error logging removed
       
       if (messageRecordId) {
         await this.updateMessageStatus(messageRecordId, {
@@ -153,7 +153,7 @@ class MessageRouter {
       return { id: docRef.id, ...record };
 
     } catch (error) {
-      console.error('Error creating message record:', error);
+      // Error logging removed
       throw error;
     }
   }
@@ -169,7 +169,7 @@ class MessageRouter {
         updatedAt: serverTimestamp()
       });
     } catch (error) {
-      console.error('Error updating message status:', error);
+      // Error logging removed
       throw error;
     }
   }
@@ -185,7 +185,7 @@ class MessageRouter {
       }
       return entityId;
     } catch (error) {
-      console.error('Error in lead matching:', error);
+      // Error logging removed
       return null;
     }
   }
@@ -195,9 +195,9 @@ class MessageRouter {
    */
   async triggerNotifications(messageRecord: any) {
     try {
-      console.log('Notification triggered for message:', messageRecord.id);
+      // Debug logging removed
     } catch (error) {
-      console.error('Error triggering notifications:', error);
+      // Error logging removed
     }
   }
 

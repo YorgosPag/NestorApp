@@ -64,7 +64,7 @@ export class ContactsService {
       } as any);
       return docRef.id;
     } catch (error) {
-      console.error('Error creating contact:', error);
+      // Error logging removed //('Error creating contact:', error);
       throw new Error('Failed to create contact');
     }
   }
@@ -76,7 +76,7 @@ export class ContactsService {
       const docSnap = await getDoc(docRef);
       return docSnap.exists() ? (docSnap.data() as Contact) : null;
     } catch (error) {
-      console.error('Error getting contact:', error);
+      // Error logging removed //('Error getting contact:', error);
       throw new Error('Failed to get contact');
     }
   }
@@ -94,7 +94,7 @@ export class ContactsService {
       });
       return Array.from(ownerIds);
     } catch (error) {
-      console.error('Error getting owner contact IDs:', error);
+      // Error logging removed //('Error getting owner contact IDs:', error);
       throw new Error('Failed to get owner contact IDs');
     }
   }
@@ -105,7 +105,7 @@ export class ContactsService {
       const qs = await getDocs(getCol<Contact>(CONTACTS_COLLECTION, contactConverter));
       return qs.docs.map((d) => d.id);
     } catch (error) {
-      console.error('Error getting all contact IDs:', error);
+      // Error logging removed //('Error getting all contact IDs:', error);
       throw new Error('Failed to get all contact IDs');
     }
   }
@@ -177,7 +177,7 @@ export class ContactsService {
       const lastDoc = qs.docs[qs.docs.length - 1] || null;
       return { contacts: filtered, lastDoc, nextCursor: lastDoc?.id ?? null };
     } catch (error) {
-      console.error('Error getting contacts:', error);
+      // Error logging removed //('Error getting contacts:', error);
       throw new Error('Failed to get contacts');
     }
   }
@@ -188,7 +188,7 @@ export class ContactsService {
       const docRef = doc(getCol<Contact>(CONTACTS_COLLECTION, contactConverter), id);
       await updateDoc(docRef, { ...updates, updatedAt: serverTimestamp() } as any);
     } catch (error) {
-      console.error('Error updating contact:', error);
+      // Error logging removed //('Error updating contact:', error);
       throw new Error('Failed to update contact');
     }
   }
@@ -197,7 +197,7 @@ export class ContactsService {
     try {
       await this.updateContact(id, { isFavorite: !currentStatus } as any);
     } catch (error) {
-      console.error('Error toggling favorite:', error);
+      // Error logging removed //('Error toggling favorite:', error);
       throw new Error('Failed to toggle favorite');
     }
   }
@@ -218,7 +218,7 @@ export class ContactsService {
 
       await this.updateContact(id, updateData);
     } catch (error) {
-      console.error('Error archiving contact:', error);
+      // Error logging removed //('Error archiving contact:', error);
       throw new Error('Failed to archive contact');
     }
   }
@@ -231,7 +231,7 @@ export class ContactsService {
         restoredBy: 'current-user' // TODO: Get actual user ID
       } as any);
     } catch (error) {
-      console.error('Error restoring contact:', error);
+      // Error logging removed //('Error restoring contact:', error);
       throw new Error('Failed to restore contact');
     }
   }
@@ -260,7 +260,7 @@ export class ContactsService {
         await batch.commit();
       }
     } catch (error) {
-      console.error('Error archiving multiple contacts:', error);
+      // Error logging removed //('Error archiving multiple contacts:', error);
       throw new Error('Failed to archive contacts');
     }
   }
@@ -270,7 +270,7 @@ export class ContactsService {
     try {
       await deleteDoc(doc(getCol<Contact>(CONTACTS_COLLECTION, contactConverter), id));
     } catch (error) {
-      console.error('Error deleting contact:', error);
+      // Error logging removed //('Error deleting contact:', error);
       throw new Error('Failed to delete contact');
     }
   }
@@ -283,7 +283,7 @@ export class ContactsService {
         await batch.commit();
       }
     } catch (error) {
-      console.error('Error deleting multiple contacts:', error);
+      // Error logging removed //('Error deleting multiple contacts:', error);
       throw new Error('Failed to delete contacts');
     }
   }
@@ -325,7 +325,7 @@ export class ContactsService {
 
       return { total: qs.size, individuals, companies, services, favorites };
     } catch (error) {
-      console.error('Error getting statistics:', error);
+      // Error logging removed //('Error getting statistics:', error);
       throw new Error('Failed to get statistics');
     }
   }
@@ -356,7 +356,7 @@ export class ContactsService {
       if (countInBatch > 0) await batch.commit();
       return contacts.length;
     } catch (error) {
-      console.error('Error importing contacts:', error);
+      // Error logging removed //('Error importing contacts:', error);
       throw new Error('Failed to import contacts');
     }
   }
@@ -370,7 +370,7 @@ export class ContactsService {
       const snapshot = await getDocs(q);
       return mapDocs<Contact>(snapshot);
     } catch (error) {
-      console.error('Error exporting contacts:', error);
+      // Error logging removed //('Error exporting contacts:', error);
       throw new Error('Failed to export contacts');
     }
   }
@@ -426,7 +426,7 @@ export class ContactsService {
 
       return contacts;
     } catch (error) {
-      console.error('Error searching contacts:', error);
+      // Error logging removed //('Error searching contacts:', error);
       throw new Error('Failed to search contacts');
     }
   }

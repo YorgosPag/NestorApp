@@ -39,7 +39,6 @@ export function useNavigationActions(): UseNavigationActionsReturn {
       currentLevel: 'projects'
     });
 
-    console.log(`🏢 NavigationActions: Selected company ${company?.companyName || companyId}`);
   };
 
   const selectProject = (
@@ -56,7 +55,6 @@ export function useNavigationActions(): UseNavigationActionsReturn {
       currentLevel: 'buildings'
     });
 
-    console.log(`🏗️ NavigationActions: Selected project ${project?.name || projectId}`);
   };
 
   const selectBuilding = (
@@ -74,7 +72,6 @@ export function useNavigationActions(): UseNavigationActionsReturn {
       currentLevel: 'floors'
     });
 
-    console.log(`🏠 NavigationActions: Selected building ${building?.name || buildingId}`);
   };
 
   const selectFloor = (
@@ -91,7 +88,6 @@ export function useNavigationActions(): UseNavigationActionsReturn {
       currentLevel: 'units'
     });
 
-    console.log(`🏢 NavigationActions: Selected floor ${floor?.name || floorId}`);
   };
 
   const navigateToLevel = (
