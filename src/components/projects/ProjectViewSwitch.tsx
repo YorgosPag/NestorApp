@@ -13,10 +13,6 @@ interface ProjectViewSwitchProps {
 }
 
 export function ProjectViewSwitch({ projects, selectedProject, onSelectProject, companies }: ProjectViewSwitchProps) {
-  // Debug logging
-  console.log('📊 ProjectViewSwitch Debug:');
-  console.log('  - projects received:', projects?.length || 0);
-  console.log('  - selectedProject:', selectedProject?.name || 'null');
 
   const getProjectWithCompanyName = (project: Project) => {
     const company = companies.find(c => c.id === project.companyId);

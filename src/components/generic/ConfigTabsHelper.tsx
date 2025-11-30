@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Info, FileText, Users, History, User, CreditCard, Briefcase, Phone, MapPin, Gavel, UserCheck, Megaphone, Activity, DollarSign, Calendar, Construction, Building, Car, Landmark, Map, Settings, Home, Camera, Video, Clock, TrendingUp, Package, Ruler, BarChart, Handshake, Target, MessageCircle, Cake, Globe, Badge, Clipboard, Hash, Wrench, Factory, Smartphone, Shield, ClipboardList, Image } from 'lucide-react';
+import { Info, FileText, Users, History, User, CreditCard, Briefcase, Phone, MapPin, Gavel, UserCheck, Megaphone, Activity, DollarSign, Calendar, Construction, Building, Car, Landmark, Map, Settings, Home, Camera, Video, Clock, TrendingUp, Package, Ruler, BarChart, Target, MessageCircle, Cake, Globe, Badge, Clipboard, Hash, Wrench, Factory, Smartphone, Shield, ClipboardList, Image, Mail, Lock, AlertTriangle, CheckCircle, XCircle, Star, Search, Edit, Save, Upload, Download } from 'lucide-react';
 import type { SectionConfig } from '@/config/company-gemi-config';
 import type { IndividualSectionConfig } from '@/config/individual-config';
 import type { ServiceSectionConfig } from '@/config/service-config';
@@ -48,7 +48,7 @@ const ICON_MAPPING = {
   'package': Package,
   'ruler': Ruler,
   'bar-chart': BarChart,
-  'handshake': Handshake,
+  'handshake': UserCheck,
   'target': Target,
   'message-circle': MessageCircle,
   // Individual config icons
@@ -65,51 +65,20 @@ const ICON_MAPPING = {
   'shield': Shield,
   'clipboard-list': ClipboardList,
   'image': Image,
-  // Legacy emoji support (fallback) - Keep for backward compatibility
-  '🏢': Building,
-  '🏗️': Construction,
-  '🅿️': Car,
-  '🏛️': Landmark,
-  '🗺️': Map,
-  '⚙️': Settings,
-  '🏠': Home,
-  '📸': Camera,
-  '🎬': Video,
-  '🕐': Clock,
-  '📈': TrendingUp,
-  '📦': Package,
-  '📐': Ruler,
-  '📊': BarChart,
-  '🤝': Handshake,
-  '🎯': Target,
-  '💬': MessageCircle,
-  // Individual config emoji support
-  '👨': UserCheck,
-  '👩': UserCheck,
-  '🎂': Cake,
-  '🌍': Globe,
-  '🆔': Badge,
-  '📋': Clipboard,
-  '🏛️': Landmark,
-  '🔢': Hash,
-  '💰': DollarSign,
-  '🏢': Building,
-  '🛠️': Wrench,
-  '🎯': Target,
-  '🏭': Factory,
-  '👔': Briefcase,
-  '📱': Smartphone,
-  '📋': FileText,
-  '💰': DollarSign,
-  '📅': Calendar,
-  'ℹ️': Info,
-  '👥': Users,
-  '📄': FileText,
-  '🗂️': FileText,
-  '👤': User,
-  '💳': CreditCard,
-  '💼': Briefcase,
-  '📞': Phone,
+  // Common utility icons
+  'mail': Mail,
+  'lock': Lock,
+  'alert-triangle': AlertTriangle,
+  'check-circle': CheckCircle,
+  'x-circle': XCircle,
+  'star': Star,
+  'search': Search,
+  'edit': Edit,
+  'save': Save,
+  'upload': Upload,
+  'download': Download,
+  // All emoji have been replaced with Lucide icon names
+  // No backward compatibility needed since all configs use Lucide names now
 } as const;
 
 /**

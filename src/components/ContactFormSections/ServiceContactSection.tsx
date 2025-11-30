@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FormField, FormInput } from '@/components/ui/form/FormComponents';
 import { Building2, Users, MapPin, FileText, Plus, Trash2, Upload } from 'lucide-react';
+import { EnterprisePhotoUpload } from '@/components/ui/EnterprisePhotoUpload';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 
 interface ServiceContactSectionProps {
@@ -37,64 +38,19 @@ export function ServiceContactSection({
         <h4 className="font-semibold mb-3 text-sm">🏛️ Δημόσια Υπηρεσία / Φορέας</h4>
       </div>
 
-      {/* Λογότυπο Upload Section */}
+      {/* Enterprise Λογότυπο Upload */}
       <div className="col-span-2">
-        <div
-          className={`relative border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors min-h-[100px] flex flex-col items-center justify-center ${
-            formData.logoPreview
-              ? 'border-blue-300 bg-blue-50'
-              : 'border-gray-300 bg-gray-50 hover:border-gray-400 hover:bg-gray-100'
-          } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-          onClick={disabled ? undefined : () => {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = 'image/*';
-            input.onchange = (e) => {
-              const file = (e.target as HTMLInputElement).files?.[0];
-              handleLogoChange(file || null);
-            };
-            input.click();
-          }}
-        >
-          {formData.logoPreview ? (
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded overflow-hidden bg-white shadow-sm">
-                <img
-                  src={formData.logoPreview}
-                  alt="Λογότυπο φορέα"
-                  className="w-full h-full object-contain"
-                />
-              </div>
-              <div className="text-left">
-                <p className="text-sm font-medium text-blue-700">✅ Λογότυπο φορτώθηκε</p>
-                <p className="text-xs text-blue-600">{formData.logoFile?.name}</p>
-                <p className="text-xs text-gray-500 mt-1">Κάντε κλικ για αλλαγή</p>
-              </div>
-            </div>
-          ) : (
-            <div>
-              <Building2 className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-              <p className="text-sm font-medium text-gray-700">Λογότυπο Φορέα</p>
-              <p className="text-xs text-gray-500">Κάντε κλικ για προσθήκη</p>
-            </div>
-          )}
-
-          {formData.logoPreview && !disabled && (
-            <button
-              type="button"
-              className="absolute top-2 right-2 bg-red-100 text-red-600 rounded-full p-1 hover:bg-red-200 transition-colors"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleLogoChange(null);
-              }}
-              title="Αφαίρεση λογότυπου"
-            >
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-            </button>
-          )}
-        </div>
+        <EnterprisePhotoUpload
+          purpose="logo"
+          maxSize={5 * 1024 * 1024} // 5MB for logos
+          photoFile={formData.logoFile}
+          photoPreview={formData.logoPreview}
+          onFileChange={handleLogoChange}
+          disabled={disabled}
+          compact={true}
+          showProgress={true}
+          className="mt-2"
+        />
       </div>
 
       {/* Tabs για στοιχεία */}

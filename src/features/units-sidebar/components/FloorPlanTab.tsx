@@ -29,17 +29,6 @@ export function FloorPlanTab({
         refetch: refetchFloorplan
     } = useUnitFloorplans(selectedUnit?.id || 0);
 
-    // Debug logging
-    console.log('🏠 FloorPlanTab Debug:', {
-        selectedUnit: selectedUnit,
-        unitId: selectedUnit?.id,
-        unitIdType: typeof selectedUnit?.id,
-        hasUnitFloorplan: !!unitFloorplan,
-        floorplanLoading,
-        floorplanError,
-        unitFloorplan,
-        expectedUnitId: '6M9uqiAZjBmxf80tY5uC' // The one we know has floorplan
-    });
     
     if (!selectedUnit) {
         return (

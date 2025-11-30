@@ -4,9 +4,6 @@ import { useState, useEffect } from 'react';
 import type { Project } from '@/types/project';
 
 export function useProjectsState(initialProjects: Project[]) {
-  console.log('🎯 useProjectsState Debug:');
-  console.log('  - initialProjects received:', initialProjects?.length || 0);
-  console.log('  - initialProjects data:', initialProjects);
   
   const [projects, setProjects] = useState<Project[]>(initialProjects);
   const [selectedProject, setSelectedProject] = useState<Project | null>(

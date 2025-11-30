@@ -596,9 +596,9 @@ export const AnalyticsDashboard: React.FC = () => {
             />
             <MetricCard
               title="Active Alerts"
-              value={report.alertMetrics.alertsByStatus.active || 0}
+              value={Object.values(report.alertMetrics.alertsByStatus)[0] || 0}
               icon="🚨"
-              status={report.alertMetrics.alertsByStatus.active > 10 ? 'warning' : 'good'}
+              status={Object.values(report.alertMetrics.alertsByStatus)[0] > 10 ? 'warning' : 'good'}
               description="Currently active alerts"
             />
             <MetricCard

@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { FormField, FormInput } from '@/components/ui/form/FormComponents';
-import { PhotoUploadSection } from '@/components/PhotoUpload/PhotoUploadSection';
+import { EnterprisePhotoUpload } from '@/components/ui/EnterprisePhotoUpload';
 import type { ServiceFieldConfig, ServiceSectionConfig } from '@/config/service-config';
 import { getIconComponent } from './ConfigTabsHelper';
 
@@ -151,20 +151,15 @@ function renderLogoSection(
   const photoPreview = formData.logoPreview || '';
 
   return (
-    <PhotoUploadSection
+    <EnterprisePhotoUpload
+      purpose="logo"
+      maxSize={5 * 1024 * 1024} // 5MB for logos
       photoFile={photoFile}
       photoPreview={photoPreview}
       onFileChange={onLogoChange}
-      onDrop={(e: React.DragEvent) => {
-        e.preventDefault();
-        const files = Array.from(e.dataTransfer.files);
-        const imageFile = files.find(file => file.type.startsWith('image/'));
-        if (imageFile) onLogoChange(imageFile);
-      }}
-      onDragOver={(e: React.DragEvent) => {
-        e.preventDefault();
-      }}
       disabled={disabled}
+      compact={true}
+      showProgress={true}
     />
   );
 }

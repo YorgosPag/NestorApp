@@ -9,6 +9,8 @@
 // ANALYTICS ENGINE
 // ============================================================================
 
+import { EventAnalyticsEngine } from './EventAnalyticsEngine';
+
 export {
   EventAnalyticsEngine,
   eventAnalyticsEngine as defaultAnalyticsEngine

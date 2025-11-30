@@ -71,14 +71,6 @@ export function ProjectsPageContent() {
     }
   ];
 
-  // Debug logging για να δούμε τη ροή των δεδομένων
-  console.log('🔍 ProjectsPageContent Debug - UPDATED:');
-  console.log('  - firestoreProjects:', firestoreProjects?.length || 0, firestoreProjects);
-  console.log('  - filteredProjects:', filteredProjects?.length || 0, filteredProjects);
-  console.log('  - selectedProject:', selectedProject?.name || 'null');
-  console.log('  - filters:', filters);
-  console.log('  - loading:', loading);
-  console.log('  - error:', error);
 
   // Εμφάνιση loading state
   if (loading) {

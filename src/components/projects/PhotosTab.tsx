@@ -2,8 +2,9 @@
 
 import React, { useState } from 'react';
 import type { Photo } from './photos/types';
-import { UploadZone } from './photos/UploadZone';
+import { EnterprisePhotoUpload } from '@/components/ui/EnterprisePhotoUpload';
 import { PhotoGrid } from './photos/PhotoGrid';
+import type { FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 
 const initialPhotos: Photo[] = [
   {
@@ -24,42 +25,67 @@ const initialPhotos: Photo[] = [
 
 export function PhotosTab() {
   const [photos, setPhotos] = useState<Photo[]>(initialPhotos);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
-  const handleFileUpload = (files: FileList | null) => {
-    if (!files || files.length === 0) return;
+  const handleFileChange = (file: File | null) => {
+    if (file) {
+      setSelectedFiles([file]);
+    } else {
+      setSelectedFiles([]);
+    }
+  };
 
-    setIsUploading(true);
-    setUploadProgress(0);
+  const handleUploadComplete = (result: FileUploadResult) => {
+    if (selectedFiles.length > 0) {
+      const newPhotos: Photo[] = selectedFiles.map((file, index) => ({
+        id: Date.now() + index,
+        src: URL.createObjectURL(file),
+        alt: file.name,
+        name: file.name,
+        aiHint: 'newly uploaded',
+      }));
+      setPhotos(prevPhotos => [...prevPhotos, ...newPhotos]);
+      setSelectedFiles([]);
+    }
+  };
 
-    const interval = setInterval(() => {
-      setUploadProgress(prev => {
-        if (prev >= 100) {
+  // Custom upload handler for multiple files
+  const handleMultipleFileUpload = async (file: File, onProgress: (progress: any) => void) => {
+    // Simulate upload progress
+    return new Promise<FileUploadResult>((resolve) => {
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += 20;
+        onProgress({ progress, phase: progress < 100 ? 'upload' : 'complete' });
+
+        if (progress >= 100) {
           clearInterval(interval);
-          setIsUploading(false);
-          const newPhotos: Photo[] = Array.from(files).map((file, index) => ({
-            id: Date.now() + index,
-            src: URL.createObjectURL(file),
-            alt: file.name,
-            name: file.name,
-            aiHint: 'newly uploaded',
-          }));
-          setPhotos(prevPhotos => [...prevPhotos, ...newPhotos]);
-          return 100;
+          resolve({
+            url: URL.createObjectURL(file),
+            fileName: file.name,
+            fileSize: file.size,
+            mimeType: file.type
+          });
         }
-        return prev + 10;
-      });
-    }, 200);
+      }, 200);
+    });
   };
 
   return (
     <div className="space-y-6">
-      <UploadZone 
-        isUploading={isUploading}
-        uploadProgress={uploadProgress}
-        onFileUpload={handleFileUpload}
-      />
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">Φωτογραφίες Έργου</h3>
+        <EnterprisePhotoUpload
+          purpose="photo"
+          maxSize={10 * 1024 * 1024} // 10MB
+          photoFile={selectedFiles[0] || null}
+          onFileChange={handleFileChange}
+          onUploadComplete={handleUploadComplete}
+          uploadHandler={handleMultipleFileUpload}
+          compact={false}
+          showProgress={true}
+        />
+      </div>
       <PhotoGrid photos={photos} />
     </div>
   );

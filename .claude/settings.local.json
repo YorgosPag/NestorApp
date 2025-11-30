@@ -77,7 +77,11 @@
       "Bash(del BACKUP_SUMMARY.json)",
       "Bash(powershell:*)",
       "Bash(PORT=3001 npm run dev)",
-      "Bash(PORT=3006 npm run dev)"
+      "Bash(PORT=3006 npm run dev)",
+      "Bash(pnpm typecheck:*)",
+      "Bash(PORT=3002 npm run dev)",
+      "Bash(PORT=3003 npm run dev)",
+      "Bash(PORT=3007 npm run dev)"
     ],
     "deny": [],
     "ask": []

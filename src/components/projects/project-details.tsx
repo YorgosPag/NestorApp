@@ -23,16 +23,6 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
         refetch: refetchFloorplans
     } = useProjectFloorplans(project?.id || 0);
 
-    // Debug logging
-    console.log('🏗️ ProjectDetails Debug:', {
-        projectId: project?.id,
-        hasProjectFloorplan: !!projectFloorplan,
-        hasParkingFloorplan: !!parkingFloorplan,
-        floorplansLoading,
-        floorplansError,
-        projectFloorplan,
-        parkingFloorplan
-    });
 
     if (!project) return (
         <div className="flex-1 p-4 flex items-center justify-center bg-card border rounded-lg">

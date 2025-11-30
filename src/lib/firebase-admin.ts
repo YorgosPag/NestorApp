@@ -27,7 +27,6 @@ function initializeFirebaseAdmin() {
       process.env.FIREBASE_PROJECT_ID || 
       process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
     
-    console.log('🔥 Admin projectId =', projectId);
     
     if (!projectId) {
       console.warn('⚠️ No FIREBASE_PROJECT_ID or NEXT_PUBLIC_FIREBASE_PROJECT_ID found, skipping Firebase Admin initialization');

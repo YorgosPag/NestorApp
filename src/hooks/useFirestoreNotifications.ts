@@ -22,14 +22,12 @@ export function useFirestoreNotifications(opts: FirestoreNotificationOptions) {
     // Skip if disabled or SSR
     if (typeof window === 'undefined' || opts.enabled === false) return;
 
-    console.log('🔥 Starting Firestore real-time listener for user:', opts.userId);
 
     setStatus('loading');
 
     const unsubscribe = subscribeToNotifications(
       opts.userId,
       (notifications: Notification[]) => {
-        console.log('🔥 Firestore update received:', notifications.length, 'notifications');
         ingest(notifications);
         setStatus('ready');
       },
@@ -41,7 +39,6 @@ export function useFirestoreNotifications(opts: FirestoreNotificationOptions) {
     );
 
     return () => {
-      console.log('🔥 Stopping Firestore real-time listener');
       unsubscribe();
     };
     // ✅ FIX: Only re-run when userId or enabled changes, not when store functions change

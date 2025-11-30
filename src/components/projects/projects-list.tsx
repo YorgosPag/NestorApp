@@ -21,11 +21,6 @@ export function ProjectsList({
   onSelectProject,
   companies,
 }: ProjectsListProps) {
-  // Debug logging
-  console.log('📋 ProjectsList Debug:');
-  console.log('  - projects received:', projects?.length || 0);
-  console.log('  - projects data:', projects);
-  console.log('  - selectedProject:', selectedProject?.name || 'null');
   
   const [favorites, setFavorites] = useState<number[]>([1]);
 

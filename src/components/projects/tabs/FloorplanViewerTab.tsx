@@ -21,14 +21,6 @@ export function FloorplanViewerTab({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Debug logging
-  console.log(`🖼️ FloorplanViewerTab [${title}] Debug - VERSION 2.2:`, {
-    hasFloorplanData: !!floorplanData,
-    floorplanData: floorplanData ? 'DATA_EXISTS' : 'NO_DATA',
-    entitiesCount: floorplanData?.entities?.length || 0,
-    timestamp: Date.now(),
-    renderingPath: floorplanData ? 'WILL_RENDER_CANVAS' : 'WILL_SHOW_PLACEHOLDER'
-  });
 
   // Render DXF data to canvas (simplified - without grid/rulers)
   useEffect(() => {

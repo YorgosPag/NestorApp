@@ -81,7 +81,7 @@ export class FloorplanService {
   static async saveFloorplan(projectId: string, type: 'project' | 'parking' | 'building' | 'storage', data: FloorplanData): Promise<boolean> {
     try {
       const docId = `${projectId}_${type}`;
-      // Debug logging removed //(`💾 Saving ${type} floorplan to Firestore:`, docId);
+      // Debug logging removed - Saving floorplan to Firestore
       
       // Compress scene data
       const { compressedData, originalSize, compressedSize } = this.compressScene(data.scene);
@@ -118,7 +118,7 @@ export class FloorplanService {
 
       await setDoc(doc(db, this.COLLECTION, docId), docData);
 
-      // Debug logging removed //(`✅ Successfully saved ${type} floorplan for project:`, projectId);
+      // Debug logging removed - Successfully saved floorplan
       return true;
     } catch (error) {
       // Error logging removed //(`❌ Error saving ${type} floorplan:`, error);
@@ -132,7 +132,7 @@ export class FloorplanService {
   static async loadFloorplan(projectId: string, type: 'project' | 'parking' | 'building' | 'storage'): Promise<FloorplanData | null> {
     try {
       const docId = `${projectId}_${type}`;
-      // Debug logging removed //(`📖 Loading ${type} floorplan from Firestore:`, docId);
+      // Debug logging removed - Loading floorplan from Firestore
       
       const docSnap = await getDoc(doc(db, this.COLLECTION, docId));
       
@@ -141,7 +141,7 @@ export class FloorplanService {
         
         // Check if data is compressed
         if (rawData.compressed && rawData.compressedScene) {
-          // Debug logging removed //(`🗜️ Decompressing ${type} floorplan data...`);
+          // Debug logging removed - Decompressing floorplan data
           const compressedData = rawData as CompressedFloorplanData;
           
           // Decompress scene
@@ -157,36 +157,21 @@ export class FloorplanService {
             timestamp: compressedData.timestamp
           };
           
-          // Debug logging removed //(`✅ Successfully loaded ${type} floorplan for project:`, projectId, {
-            fileName: data.fileName,
-            timestamp: data.timestamp,
-            updatedAt: rawData.updatedAt,
-            compressed: true,
-            originalSize: compressedData.originalSize,
-            compressedSize: compressedData.compressedSize,
-            entitiesCount: data.scene?.entities?.length || 0
-          });
+          // Debug logging removed - Successfully loaded compressed floorplan
           
           return data;
         } else {
           // Legacy uncompressed data
           const data = rawData as FloorplanData;
-          // Debug logging removed //(`✅ Successfully loaded ${type} floorplan for project:`, projectId, {
-            fileName: data.fileName,
-            timestamp: data.timestamp,
-            updatedAt: rawData.updatedAt,
-            compressed: false,
-            entitiesCount: data.scene?.entities?.length || 0,
-            sceneExists: !!data.scene
-          });
+          // Debug logging removed - Successfully loaded uncompressed floorplan
           return data;
         }
       } else {
-        // Debug logging removed //(`ℹ️ No ${type} floorplan found for project:`, projectId);
+        // Debug logging removed - No floorplan found for project
         return null;
       }
     } catch (error) {
-      // Error logging removed //(`❌ Error loading ${type} floorplan:`, error);
+      // Error logging removed - Error loading floorplan
       return null;
     }
   }
@@ -211,7 +196,7 @@ export class FloorplanService {
   static async deleteFloorplan(projectId: string, type: 'project' | 'parking' | 'building' | 'storage'): Promise<boolean> {
     try {
       const docId = `${projectId}_${type}`;
-      // Debug logging removed //(`🗑️ Deleting ${type} floorplan from Firestore:`, docId);
+      // Debug logging removed - Deleting floorplan from Firestore
       
       // Note: We could use deleteDoc here, but for now just mark as deleted
       await setDoc(doc(db, this.COLLECTION, docId), {
@@ -219,7 +204,7 @@ export class FloorplanService {
         deletedAt: new Date().toISOString()
       });
 
-      // Debug logging removed //(`✅ Successfully deleted ${type} floorplan for project:`, projectId);
+      // Debug logging removed - Successfully deleted floorplan
       return true;
     } catch (error) {
       // Error logging removed //(`❌ Error deleting ${type} floorplan:`, error);

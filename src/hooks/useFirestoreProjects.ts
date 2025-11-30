@@ -20,7 +20,6 @@ export interface FirestoreProject {
 }
 
 export function useFirestoreProjects() {
-  console.log('🔥 useFirestoreProjects hook initialized');
   const [projects, setProjects] = useState<FirestoreProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -28,11 +27,6 @@ export function useFirestoreProjects() {
   useEffect(() => {
     async function fetchProjects() {
       try {
-        console.log('🔥 useFirestoreProjects: Starting...');
-        console.log('🔥 Firebase config check:', {
-          hasDb: !!db,
-          projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-        });
         setLoading(true);
         setError(null);
 
@@ -41,7 +35,6 @@ export function useFirestoreProjects() {
         const snapshot = await getDocs(projectsQuery);
 
         if (snapshot.empty) {
-          console.log('📂 No projects found in Firestore. Creating sample data...');
 
           // If no projects exist, create the sample projects we need for testing
           const { addDoc } = await import('firebase/firestore');
@@ -81,7 +74,6 @@ export function useFirestoreProjects() {
 
           for (const project of sampleProjects) {
             await addDoc(collection(db, 'projects'), project);
-            console.log(`✅ Created project: ${project.name}`);
           }
 
           // Fetch again after creating data
@@ -123,8 +115,6 @@ export function useFirestoreProjects() {
             } as FirestoreProject;
           });
 
-          console.log(`🔥 Loaded ${projectsData.length} projects from Firestore:`);
-          console.log('🔥 Project details:', projectsData);
           setProjects(projectsData);
         }
       } catch (err) {
@@ -145,7 +135,6 @@ export function useFirestoreProjects() {
           setError('Unknown Firestore error');
         }
       } finally {
-        console.log('🔥 useFirestoreProjects: Finally block - setting loading to false');
         setLoading(false);
       }
     }

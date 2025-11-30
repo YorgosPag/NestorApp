@@ -83,13 +83,6 @@ export function BuildingsPageContent() {
     }
   ];
 
-  // Debug logging
-  console.log('🏗️ BuildingsPageContent Debug:', {
-    buildingsCount: buildingsData.length,
-    buildingsLoading,
-    buildingsError,
-    filteredCount: filteredBuildings.length
-  });
   
   // Show loading state
   if (buildingsLoading) {

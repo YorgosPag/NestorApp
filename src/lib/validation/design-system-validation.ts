@@ -128,20 +128,8 @@ export const enableDesignSystemValidation = (isDevelopment: boolean = process.en
   if (!isDevelopment) return;
   
   // Debug logging removed
-  
-  // Warn about common anti-patterns
-  // Console logging removed
-  // Console override removed
-    const message = args.join(' ');
-    
-    // Enhance design system warnings
-    if (message.includes('hardcoded') || message.includes('inline style')) {
-      originalConsoleWarn('🎨 DESIGN SYSTEM:', ...args);
-      return;
-    }
-    
-    originalConsoleWarn(...args);
-  };
+
+  // Runtime validation logic can be added here in the future
 };
 
 // Design system compliance checker

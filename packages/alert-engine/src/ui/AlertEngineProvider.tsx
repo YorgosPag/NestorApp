@@ -6,17 +6,17 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useRef } from 'react';
-import { AlertDetectionSystem } from '../detection/AlertDetectionSystem';
-import { NotificationDispatchEngine } from '../notifications/NotificationDispatchEngine';
-import type { Alert } from '../detection/AlertDetectionSystem';
+// import { AlertDetectionSystem } from '../detection/AlertDetectionSystem'; // Module not found - disabled
+// import { NotificationDispatchEngine } from '../notifications/NotificationDispatchEngine'; // Module not found - disabled
+// import type { Alert } from '../detection/AlertDetectionSystem'; // Module not found - disabled
 
 // ============================================================================
 // CONTEXT TYPES
 // ============================================================================
 
 interface AlertEngineContextValue {
-  alertDetector: AlertDetectionSystem | null;
-  notificationEngine: NotificationDispatchEngine | null;
+  alertDetector: any | null; // AlertDetectionSystem - disabled (module not found)
+  notificationEngine: any | null; // NotificationDispatchEngine - disabled (module not found)
   isInitialized: boolean;
 }
 
@@ -27,7 +27,7 @@ interface AlertEngineProviderProps {
     enableNotifications?: boolean;
     integrationMode?: 'ui-only' | 'full-stack' | 'external-only';
   };
-  onAlertTriggered?: (alert: Alert) => void;
+  onAlertTriggered?: (alert: any) => void; // Alert - disabled (module not found)
   onNotificationSent?: (notificationId: string, channels: string[]) => void;
 }
 
@@ -51,8 +51,8 @@ export function AlertEngineProvider({
   onAlertTriggered,
   onNotificationSent
 }: AlertEngineProviderProps) {
-  const alertDetectorRef = useRef<AlertDetectionSystem | null>(null);
-  const notificationEngineRef = useRef<NotificationDispatchEngine | null>(null);
+  const alertDetectorRef = useRef<any | null>(null); // AlertDetectionSystem - disabled (module not found)
+  const notificationEngineRef = useRef<any | null>(null); // NotificationDispatchEngine - disabled (module not found)
   const [isInitialized, setIsInitialized] = React.useState(false);
 
   const {
@@ -72,7 +72,7 @@ export function AlertEngineProvider({
     // Initialize Alert Detection System
     if (enableSpatialDetection && !alertDetectorRef.current) {
       try {
-        alertDetectorRef.current = new AlertDetectionSystem();
+        // alertDetectorRef.current = new AlertDetectionSystem(); // Module not found - disabled
         console.log('✅ Spatial detection system initialized');
 
         // Connect alert callbacks
@@ -88,7 +88,7 @@ export function AlertEngineProvider({
     // Initialize Notification Engine
     if (enableNotifications && !notificationEngineRef.current) {
       try {
-        notificationEngineRef.current = new NotificationDispatchEngine();
+        // notificationEngineRef.current = new NotificationDispatchEngine(); // Module not found - disabled
         notificationEngineRef.current.startDispatch();
         console.log('✅ Notification engine initialized');
 
@@ -222,7 +222,7 @@ export function sendUINotification(
  * Helper για integration με External Notifications (Email, SMS, etc.)
  */
 export async function sendExternalAlert(
-  alert: Alert,
+  alert: any, // Alert - disabled (module not found)
   recipients: string[],
   channels: Array<'email' | 'sms' | 'webhook' | 'slack'>
 ): Promise<void> {

@@ -20,16 +20,6 @@ export function BuildingTabs({ building }: BuildingTabsProps) {
         refetch: refetchFloorplans
     } = useBuildingFloorplans(building?.id || 0);
 
-    // Debug logging
-    console.log('🏗️ BuildingTabs Debug:', {
-        buildingId: building?.id,
-        hasBuildingFloorplan: !!buildingFloorplan,
-        hasStorageFloorplan: !!storageFloorplan,
-        floorplansLoading,
-        floorplansError,
-        buildingFloorplan,
-        storageFloorplan
-    });
 
     // Get building tabs from centralized config
     const buildingTabs = getSortedBuildingTabs();

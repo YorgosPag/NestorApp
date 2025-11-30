@@ -4,11 +4,6 @@ import { useMemo } from 'react';
 import type { Project } from '@/types/project';
 
 export function useFilteredProjects(projects: Project[], searchTerm: string, filterCompany: string, filterStatus: string) {
-  console.log('🔎 useFilteredProjects Debug:');
-  console.log('  - input projects:', projects?.length || 0, projects);
-  console.log('  - searchTerm:', searchTerm);
-  console.log('  - filterCompany:', filterCompany);
-  console.log('  - filterStatus:', filterStatus);
   
   const filtered = useMemo(() => {
     const result = projects.filter(project => {

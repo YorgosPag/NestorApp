@@ -156,11 +156,11 @@ export class WebScrapingEngine {
     const results: ScrapingResult[] = [];
     const enabledTargets = this.targets.filter(t => t.enabled);
 
-    // Debug logging removed //(`🕷️ Starting web scraping: ${enabledTargets.length} targets`);
+    // Debug logging removed - Starting web scraping
 
     for (const target of enabledTargets) {
       try {
-        // Debug logging removed //(`📊 Scraping ${target.name}...`);
+        // Debug logging removed - Scraping target
         const result = await this.scrapeTarget(target, options);
         results.push(result);
 
@@ -330,7 +330,7 @@ export class WebScrapingEngine {
    */
   private async normalizeAPIData(data: any, target: ScrapingTarget): Promise<ScrapedProperty[]> {
     // This would be customized per API
-    // Debug logging removed //(`🔄 Normalizing data from ${target.name}...`);
+    // Debug logging removed - Normalizing data
 
     return []; // Placeholder - would implement based on actual API responses
   }
@@ -339,7 +339,7 @@ export class WebScrapingEngine {
    * Geocode property addresses
    */
   private async geocodeProperties(properties: ScrapedProperty[]): Promise<void> {
-    // Debug logging removed //(`🌍 Geocoding ${properties.length} properties...`);
+    // Debug logging removed - Geocoding properties
 
     for (const property of properties) {
       try {
@@ -375,7 +375,7 @@ export class WebScrapingEngine {
 
     if (elapsed < minInterval) {
       const delay = minInterval - elapsed;
-      // Debug logging removed //(`⏱️ Rate limiting: waiting ${delay}ms for ${target.name}`);
+      // Debug logging removed - Rate limiting delay
       await new Promise(resolve => setTimeout(resolve, delay));
     }
 
@@ -396,7 +396,7 @@ export class WebScrapingEngine {
         }
       };
       localStorage.setItem(key, JSON.stringify(data));
-      // Debug logging removed //(`💾 Saved ${result.properties.length} properties for ${targetId}`);
+      // Debug logging removed - Saved properties
     } catch (error) {
       // Warning logging removed //('Failed to save scraping results:', error);
     }
@@ -411,10 +411,10 @@ export class WebScrapingEngine {
       if (stored) {
         const config = JSON.parse(stored);
         this.targets = { ...this.targets, ...config.targets };
-        // Debug logging removed //('📋 Loaded scraping configuration');
+        // Debug logging removed - Loaded scraping configuration
       }
     } catch (error) {
-      // Warning logging removed //('Failed to load scraping configuration:', error);
+      // Warning logging removed - Failed to load scraping configuration
     }
   }
 
@@ -475,13 +475,7 @@ export const webScrapingEngine = new WebScrapingEngine();
  */
 export class ScrapingErrorHandler {
   static logError(target: ScrapingTarget, error: Error, context?: any): void {
-    // Error logging removed //(`🚨 Scraping Error [${target.name}]:`, {
-      error: error.message,
-      stack: error.stack,
-      target: target.id,
-      context,
-      timestamp: new Date().toISOString()
-    });
+    // Error logging removed - Scraping Error
 
     // Could integrate with ErrorTracker service
     // ErrorTracker.track(error, { source: 'web-scraping', target: target.id });

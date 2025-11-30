@@ -128,7 +128,7 @@ export function ServiceFormTabRenderer({
       <TabsOnlyTriggers
         tabs={tabs}
         defaultTab={tabs[0]?.id || "basicInfo"}
-        theme="info"
+        theme="warning"
       >
         {tabs.map((tab) => (
           <TabsContent key={tab.id} value={tab.id} className="mt-4">
