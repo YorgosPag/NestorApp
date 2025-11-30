@@ -20,7 +20,7 @@ const realBuildings = [
     progress: 95,
     totalValue: 1800000,
     company: "Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.",
-    companyId: "pagonis",
+    companyId: "5djayaxc0X33wsE8T2uY",
     project: "Παλαιολόγου Πολυκατοικία",
     projectId: "project_1_palaiologou", // From seedRealProjects.ts
     category: 'residential',
@@ -49,7 +49,7 @@ const realBuildings = [
     progress: 65,
     totalValue: 450000,
     company: "Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.",
-    companyId: "pagonis",
+    companyId: "5djayaxc0X33wsE8T2uY",
     project: "Παλαιολόγου Πολυκατοικία",
     projectId: "project_1_palaiologou", // From seedRealProjects.ts
     category: 'storage',

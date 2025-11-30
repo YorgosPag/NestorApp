@@ -5,11 +5,14 @@
  * Desktop: Multi-column layout (Finder-style)
  * Mobile: Drill-down navigation with back stack
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigation } from '../core/NavigationContext';
 import { NavigationButton } from './NavigationButton';
-import { ChevronLeft, ChevronRight, MapPin, Home, Building, Users, Package, Car } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, Home, Building, Users, Package, Car, Factory, Construction, Layers, Map, FileText, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { SelectCompanyContactModal } from '../dialogs/SelectCompanyContactModal';
+import type { Contact } from '@/types/contacts';
+import { addCompanyToNavigation, getNavigationCompanyIds } from '@/services/navigation-companies.service';
 
 interface AdaptiveMultiColumnNavigationProps {
   className?: string;
@@ -26,6 +29,7 @@ export function AdaptiveMultiColumnNavigation({ className }: AdaptiveMultiColumn
     selectedFloor,
     currentLevel,
     loading,
+    projectsLoading,
     error,
     selectCompany,
     selectProject,
@@ -37,6 +41,58 @@ export function AdaptiveMultiColumnNavigation({ className }: AdaptiveMultiColumn
 
   // Mobile navigation stack
   const [mobileLevel, setMobileLevel] = useState<'companies' | 'projects' | 'buildings' | 'floors' | 'units' | 'extras'>('companies');
+
+  // Modal state για επαφές
+  const [isContactsModalOpen, setIsContactsModalOpen] = useState(false);
+
+  // State για να κρατούμε ποιες εταιρείες είναι navigation companies
+  const [navigationCompanyIds, setNavigationCompanyIds] = useState<string[]>([]);
+
+  // Φορτώνουμε τα navigation company IDs όταν φορτώνουν οι εταιρείες
+  useEffect(() => {
+    const loadNavigationIds = async () => {
+      try {
+        const ids = await getNavigationCompanyIds();
+        setNavigationCompanyIds(ids);
+        console.log('📍 Navigation company IDs loaded:', ids);
+      } catch (error) {
+        console.error('Error loading navigation company IDs:', error);
+      }
+    };
+
+    if (companies.length > 0) {
+      loadNavigationIds();
+    }
+  }, [companies]);
+
+  // Handler για επιλογή εταιρείας από επαφές
+  const handleCompanySelected = async (contact: Contact) => {
+    console.log('Selected company contact:', contact);
+
+    if (!contact.id) {
+      console.error('Contact ID is missing');
+      return;
+    }
+
+    try {
+      // Προσθήκη εταιρείας στην πλοήγηση
+      await addCompanyToNavigation(contact.id);
+
+      // Ενημέρωση local state αντί για full refresh
+      setNavigationCompanyIds(prev => [...prev, contact.id!]);
+
+      // Απλά κλείνουμε το modal - το context θα ανανεωθεί αυτόματα
+      // όταν χρησιμοποιηθεί το getNavigationCompanyIds στο companies.service
+
+      console.log(`✅ Εταιρεία "${contact.companyName}" προστέθηκε στην πλοήγηση!`);
+    } catch (error) {
+      console.error('Error adding company to navigation:', error);
+
+      // Αν αποτύχει, κάνουμε fallback στο refresh
+      console.log('Falling back to page refresh...');
+      window.location.reload();
+    }
+  };
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
@@ -146,27 +202,49 @@ export function AdaptiveMultiColumnNavigation({ className }: AdaptiveMultiColumn
           {/* Companies */}
           {mobileLevel === 'companies' && (
             <>
-              {companies.map(company => (
-                <NavigationButton
-                  key={company.id}
-                  onClick={() => handleCompanySelect(company.id)}
-                  icon="🏢"
-                  title={company.companyName}
-                  subtitle={company.industry}
-                  extraInfo={company.vatNumber ? `ΑΦΜ: ${company.vatNumber}` : undefined}
-                />
-              ))}
+              {companies.map(company => {
+                // Ελέγχουμε αν η εταιρεία έχει έργα
+                const companyProjects = projects.filter(p => p.companyId === company.id);
+                const hasProjects = companyProjects.length > 0;
+
+                // Ελέγχουμε αν είναι navigation company (προστέθηκε χειροκίνητα)
+                const isNavigationCompany = navigationCompanyIds.includes(company.id);
+
+                // Διαφοροποίηση ανάλογα με το αν έχει έργα ή είναι navigation company
+                let subtitle = company.industry || 'Εταιρεία';
+                let extraInfo = company.vatNumber ? `ΑΦΜ: ${company.vatNumber}` : undefined;
+
+                if (!hasProjects) {
+                  subtitle = isNavigationCompany
+                    ? 'Προσθέστε έργα για αυτή την εταιρεία'
+                    : 'Εταιρεία χωρίς έργα';
+                  extraInfo = company.vatNumber ? `ΑΦΜ: ${company.vatNumber}` : undefined;
+                }
+
+                return (
+                  <NavigationButton
+                    key={company.id}
+                    onClick={() => handleCompanySelect(company.id)}
+                    icon={Factory}
+                    title={company.companyName}
+                    subtitle={subtitle}
+                    extraInfo={extraInfo}
+                    hasWarning={!projectsLoading && !hasProjects}
+                    warningText="Χωρίς έργα"
+                  />
+                );
+              })}
             </>
           )}
 
           {/* Projects */}
           {mobileLevel === 'projects' && selectedCompany && (
             <>
-              {projects.map(project => (
+              {projects.filter(project => project.companyId === selectedCompany.id).map(project => (
                 <NavigationButton
                   key={project.id}
                   onClick={() => handleProjectSelect(project.id)}
-                  icon="🏗️"
+                  icon={Construction}
                   title={project.name}
                   subtitle={`${project.buildings.length} κτίρια`}
                 />
@@ -181,7 +259,7 @@ export function AdaptiveMultiColumnNavigation({ className }: AdaptiveMultiColumn
                 <NavigationButton
                   key={building.id}
                   onClick={() => handleBuildingSelect(building.id)}
-                  icon="🏠"
+                  icon={Building}
                   title={building.name}
                   subtitle={`${building.floors.length} όροφοι`}
                 />
@@ -196,7 +274,7 @@ export function AdaptiveMultiColumnNavigation({ className }: AdaptiveMultiColumn
                 <NavigationButton
                   key={floor.id}
                   onClick={() => handleFloorSelect(floor.id)}
-                  icon="🏠"
+                  icon={Layers}
                   title={floor.name}
                   subtitle={`${floor.units.length} μονάδες`}
                 />
@@ -209,7 +287,7 @@ export function AdaptiveMultiColumnNavigation({ className }: AdaptiveMultiColumn
             <div className="space-y-3">
               <NavigationButton
                 onClick={() => handleNavigateToPage('properties')}
-                icon="🏡"
+                icon={Home}
                 title="Προβολή Μονάδων"
                 subtitle={`${selectedFloor.units.length} μονάδες σε αυτόν τον όροφο`}
                 variant="compact"
@@ -217,7 +295,7 @@ export function AdaptiveMultiColumnNavigation({ className }: AdaptiveMultiColumn
 
               <NavigationButton
                 onClick={() => handleNavigateToPage('floorplan')}
-                icon="🗺️"
+                icon={Map}
                 title="Κάτοψη Ορόφου"
                 subtitle="Προβολή της κάτοψης με όλες τις μονάδες"
                 variant="compact"
@@ -226,7 +304,7 @@ export function AdaptiveMultiColumnNavigation({ className }: AdaptiveMultiColumn
               {selectedProject && (
                 <NavigationButton
                   onClick={() => handleNavigateToPage('projects')}
-                  icon="🏗️"
+                  icon={Construction}
                   title="Λεπτομέρειες Έργου"
                   subtitle={selectedProject.name}
                   variant="compact"
@@ -236,7 +314,7 @@ export function AdaptiveMultiColumnNavigation({ className }: AdaptiveMultiColumn
               {selectedBuilding && (
                 <NavigationButton
                   onClick={() => handleNavigateToPage('buildings')}
-                  icon="🏠"
+                  icon={Building}
                   title="Λεπτομέρειες Κτιρίου"
                   subtitle={selectedBuilding.name}
                   variant="compact"
@@ -249,42 +327,75 @@ export function AdaptiveMultiColumnNavigation({ className }: AdaptiveMultiColumn
 
       {/* Desktop Multi-Column Navigation */}
       <div className="hidden md:block">
-        <div className="flex gap-6 overflow-x-auto pb-4 min-w-full">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
 
           {/* Column 1: Companies */}
-          <div className="flex-shrink-0 w-80 bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-4">
-              <Building className="h-5 w-5 text-blue-600" />
-              <h3 className="font-semibold text-gray-900 dark:text-foreground">Εταιρείες</h3>
+          <div className="bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Building className="h-5 w-5 text-blue-600" />
+                <h3 className="font-semibold text-gray-900 dark:text-foreground">Εταιρείες</h3>
+              </div>
+              <button
+                onClick={() => setIsContactsModalOpen(true)}
+                className="flex items-center gap-1 px-2 py-1 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-colors"
+                title="Προσθήκη νέας εταιρείας από επαφές"
+              >
+                <Plus className="h-4 w-4" />
+                Προσθήκη
+              </button>
             </div>
             <div className="space-y-2 max-h-96 overflow-y-auto">
-              {companies.map(company => (
-                <NavigationButton
-                  key={company.id}
-                  onClick={() => handleCompanySelect(company.id)}
-                  icon="🏢"
-                  title={company.companyName}
-                  subtitle={company.industry}
-                  isSelected={selectedCompany?.id === company.id}
-                  variant="compact"
-                />
-              ))}
+              {companies.map(company => {
+                // Ελέγχουμε αν η εταιρεία έχει έργα
+                const companyProjects = projects.filter(p => p.companyId === company.id);
+                const hasProjects = companyProjects.length > 0;
+
+                // Ελέγχουμε αν είναι navigation company (προστέθηκε χειροκίνητα)
+                const isNavigationCompany = navigationCompanyIds.includes(company.id);
+
+                // Διαφοροποίηση ανάλογα με το αν έχει έργα ή είναι navigation company
+                let subtitle = company.industry || 'Εταιρεία';
+                let extraInfo: string | undefined = undefined;
+
+                if (!hasProjects) {
+                  subtitle = isNavigationCompany
+                    ? 'Προσθέστε έργα για αυτή την εταιρεία'
+                    : 'Εταιρεία χωρίς έργα';
+                  extraInfo = company.vatNumber ? `ΑΦΜ: ${company.vatNumber}` : undefined;
+                }
+
+                return (
+                  <NavigationButton
+                    key={company.id}
+                    onClick={() => handleCompanySelect(company.id)}
+                    icon={Factory}
+                    title={company.companyName}
+                    subtitle={subtitle}
+                    extraInfo={extraInfo}
+                    isSelected={selectedCompany?.id === company.id}
+                    variant="compact"
+                    hasWarning={!projectsLoading && !hasProjects}
+                    warningText="Χωρίς έργα"
+                  />
+                );
+              })}
             </div>
           </div>
 
           {/* Column 2: Projects */}
           {selectedCompany && (
-            <div className="flex-shrink-0 w-80 bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+            <div className="bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-3">
               <div className="flex items-center gap-2 mb-4">
                 <Home className="h-5 w-5 text-green-600" />
                 <h3 className="font-semibold text-gray-900 dark:text-foreground">Έργα</h3>
               </div>
               <div className="space-y-2 max-h-96 overflow-y-auto">
-                {projects.map(project => (
+                {projects.filter(project => project.companyId === selectedCompany?.id).map(project => (
                   <NavigationButton
                     key={project.id}
                     onClick={() => handleProjectSelect(project.id)}
-                    icon="🏗️"
+                    icon={Construction}
                     title={project.name}
                     subtitle={`${project.buildings.length} κτίρια`}
                     isSelected={selectedProject?.id === project.id}
@@ -297,7 +408,7 @@ export function AdaptiveMultiColumnNavigation({ className }: AdaptiveMultiColumn
 
           {/* Column 3: Buildings */}
           {selectedProject && (
-            <div className="flex-shrink-0 w-80 bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+            <div className="bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-3">
               <div className="flex items-center gap-2 mb-4">
                 <Building className="h-5 w-5 text-purple-600" />
                 <h3 className="font-semibold text-gray-900 dark:text-foreground">Κτίρια</h3>
@@ -307,7 +418,7 @@ export function AdaptiveMultiColumnNavigation({ className }: AdaptiveMultiColumn
                   <NavigationButton
                     key={building.id}
                     onClick={() => handleBuildingSelect(building.id)}
-                    icon="🏠"
+                    icon={Building}
                     title={building.name}
                     subtitle={`${building.floors.length} όροφοι`}
                     isSelected={selectedBuilding?.id === building.id}
@@ -320,7 +431,7 @@ export function AdaptiveMultiColumnNavigation({ className }: AdaptiveMultiColumn
 
           {/* Column 4: Floors */}
           {selectedBuilding && (
-            <div className="flex-shrink-0 w-80 bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+            <div className="bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-3">
               <div className="flex items-center gap-2 mb-4">
                 <Users className="h-5 w-5 text-orange-600" />
                 <h3 className="font-semibold text-gray-900 dark:text-foreground">Όροφοι</h3>
@@ -330,7 +441,7 @@ export function AdaptiveMultiColumnNavigation({ className }: AdaptiveMultiColumn
                   <NavigationButton
                     key={floor.id}
                     onClick={() => handleFloorSelect(floor.id)}
-                    icon="🏠"
+                    icon={Layers}
                     title={floor.name}
                     subtitle={`${floor.units.length} μονάδες`}
                     isSelected={selectedFloor?.id === floor.id}
@@ -343,7 +454,7 @@ export function AdaptiveMultiColumnNavigation({ className }: AdaptiveMultiColumn
 
           {/* Column 5: Actions & Extras */}
           {selectedFloor && (
-            <div className="flex-shrink-0 w-80 bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+            <div className="bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-3">
               <div className="flex items-center gap-2 mb-4">
                 <MapPin className="h-5 w-5 text-red-600" />
                 <h3 className="font-semibold text-gray-900 dark:text-foreground">Ενέργειες</h3>
@@ -351,7 +462,7 @@ export function AdaptiveMultiColumnNavigation({ className }: AdaptiveMultiColumn
               <div className="space-y-2">
                 <NavigationButton
                   onClick={() => handleNavigateToPage('properties')}
-                  icon="🏡"
+                  icon={Home}
                   title="Προβολή Μονάδων"
                   subtitle={`${selectedFloor.units.length} μονάδες`}
                   variant="compact"
@@ -359,7 +470,7 @@ export function AdaptiveMultiColumnNavigation({ className }: AdaptiveMultiColumn
 
                 <NavigationButton
                   onClick={() => handleNavigateToPage('floorplan')}
-                  icon="🗺️"
+                  icon={Map}
                   title="Κάτοψη Ορόφου"
                   subtitle="Διαδραστική προβολή"
                   variant="compact"
@@ -368,7 +479,7 @@ export function AdaptiveMultiColumnNavigation({ className }: AdaptiveMultiColumn
                 {selectedProject && (
                   <NavigationButton
                     onClick={() => handleNavigateToPage('projects')}
-                    icon="🏗️"
+                    icon={Construction}
                     title="Λεπτομέρειες Έργου"
                     subtitle={selectedProject.name}
                     variant="compact"
@@ -378,7 +489,7 @@ export function AdaptiveMultiColumnNavigation({ className }: AdaptiveMultiColumn
                 {selectedBuilding && (
                   <NavigationButton
                     onClick={() => handleNavigateToPage('buildings')}
-                    icon="🏠"
+                    icon={Building}
                     title="Λεπτομέρειες Κτιρίου"
                     subtitle={selectedBuilding.name}
                     variant="compact"
@@ -392,7 +503,7 @@ export function AdaptiveMultiColumnNavigation({ className }: AdaptiveMultiColumn
                   </div>
                   <NavigationButton
                     onClick={() => console.log('Parking spots')}
-                    icon="🚗"
+                    icon={Car}
                     title="Θέσεις Στάθμευσης"
                     subtitle="Διαθέσιμες θέσεις"
                     variant="compact"
@@ -400,7 +511,7 @@ export function AdaptiveMultiColumnNavigation({ className }: AdaptiveMultiColumn
 
                   <NavigationButton
                     onClick={() => console.log('Storage units')}
-                    icon="📦"
+                    icon={Package}
                     title="Αποθήκες"
                     subtitle="Αποθηκευτικοί χώροι"
                     variant="compact"
@@ -412,6 +523,13 @@ export function AdaptiveMultiColumnNavigation({ className }: AdaptiveMultiColumn
 
         </div>
       </div>
+
+      {/* Modal για επιλογή εταιρείας από επαφές */}
+      <SelectCompanyContactModal
+        open={isContactsModalOpen}
+        onOpenChange={setIsContactsModalOpen}
+        onCompanySelected={handleCompanySelected}
+      />
     </div>
   );
 }

@@ -71,7 +71,9 @@
       "Bash(del \"C:\\Nestor_Pagonis\\src\\components\\units\\ProgressBarTest.tsx\")",
       "Bash(del \"C:\\Nestor_Pagonis\\src\\components\\projects\\projects\\ProjectCard\\ProjectCardContent\\ProjectCardProgress.tsx\")",
       "Bash(npm run start:*)",
-      "Bash(del fix-companies.js)"
+      "Bash(del fix-companies.js)",
+      "Bash(del \"C:\\Nestor_Pagonis\\src\\app\\api\\projects\\fix-company-ids\\route.ts\")",
+      "Bash(python:*)"
     ],
     "deny": [],
     "ask": []

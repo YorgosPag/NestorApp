@@ -31,8 +31,10 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     selectedFloor: null,
     currentLevel: 'companies',
     loading: false,
+    projectsLoading: false,
     error: null
   });
+
 
   // Ref to track loading state to prevent duplicate calls
   const companiesLoadingRef = React.useRef(false);
@@ -62,17 +64,8 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
       }, [] as typeof companies);
 
       // Filter companies that have projects
-      const companiesWithProjects = uniqueCompanies.filter(company => {
-        const projectCompatibleId = getProjectCompatibleCompanyId(company.id!, company.companyName);
-
-        // Show companies that we can map to project IDs
-        const hasProjects = projectCompatibleId === 'pagonis' ||
-                           company.companyName.includes('ΠΑΓΩΝΗΣ') ||
-                           company.companyName.includes('Παγώνης');
-
-
-        return hasProjects;
-      });
+      // Now we'll use the companies service to determine which companies have projects
+      const companiesWithProjects = uniqueCompanies;
 
 
       setState(prev => ({
@@ -83,6 +76,10 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
       }));
 
       companiesLoadedRef.current = true;
+
+      // Load projects for all companies immediately after companies are loaded
+      console.log('🎯 NavigationContext: Companies loaded, now loading projects...');
+      loadAllProjects(companiesWithProjects);
 
     } catch (error) {
       console.error('Error loading companies:', error);
@@ -115,79 +112,32 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
 
   // Company ID mapping: Firestore ID → Project companyId
   const getProjectCompatibleCompanyId = (firestoreCompanyId: string, companyName: string): string => {
-    // Known mapping for main company
-    const companyMappings: Record<string, string> = {
-      // Firestore ID → Project companyId
-      '5djayaxc0X33wsE8T2uY': 'pagonis',  // Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.
-    };
-
-    // Check if we have a known mapping
-    if (companyMappings[firestoreCompanyId]) {
-      return companyMappings[firestoreCompanyId];
-    }
-
-    // Fallback: try to generate slug from company name
-    if (companyName.includes('ΠΑΓΩΝΗΣ') || companyName.includes('Παγώνης')) {
-      return 'pagonis';
-    }
-
-
-    // Default: use original ID (for backwards compatibility)
+    // Now that we've updated the Firestore projects to use the correct Firebase IDs,
+    // we directly return the Firebase company ID (no more hardcoded mapping)
     return firestoreCompanyId;
   };
 
   // Load projects for selected company
   const loadProjectsForCompany = async (companyId: string) => {
+    // Don't replace all projects! Just set loading state
     setState(prev => ({ ...prev, loading: true, error: null }));
 
-    try {
-      // Find the company to get its name
-      const selectedCompany = state.companies.find(c => c.id === companyId);
-      const projectCompatibleId = getProjectCompatibleCompanyId(
-        companyId,
-        selectedCompany?.companyName || ''
-      );
+    console.log(`🔄 NavigationContext: Selected company ${companyId}, keeping all projects for warnings`);
 
+    // For navigation purposes, we just filter the existing projects
+    // We don't need to fetch again since loadAllProjects already loaded everything
+    const companyProjects = state.projects.filter(p => p.companyId === companyId);
 
-      const response = await fetch(`/api/projects/by-company/${projectCompatibleId}`);
-      const result = await response.json();
+    console.log(`📋 NavigationContext: Company ${companyId} has ${companyProjects.length} projects from cached data`);
 
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to load projects');
-      }
+    // Just update the loading state, keep all projects intact
+    setState(prev => ({
+      ...prev,
+      loading: false
+    }));
 
-      const projectsData = result.projects;
-
-      const projects: NavigationProject[] = projectsData.map((project: any) => {
-        const buildings = (project.buildings || []).map((building: any) => ({
-          id: building.id,
-          name: building.name,
-          floors: building.floors || []
-        }));
-
-        return {
-          id: project.id.toString(),
-          name: project.name,
-          company: project.company || 'Unknown',
-          buildings: buildings,
-          parkingSpots: []
-        };
-      });
-
-      setState(prev => ({
-        ...prev,
-        projects,
-        loading: false
-      }));
-
-    } catch (error) {
-      console.error('Error loading projects:', error);
-      setState(prev => ({
-        ...prev,
-        error: error instanceof Error ? error.message : 'Failed to load projects',
-        loading: false
-      }));
-    }
+    // Note: We keep all projects in state.projects so that the warning badges work correctly
+    // The navigation UI can filter projects by selectedCompany when displaying the projects view
   };
 
   // Select project
@@ -270,6 +220,71 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     router.push(url);
   };
 
+  // Load all projects for all companies
+  const loadAllProjects = async (companies: NavigationCompany[] = state.companies) => {
+    if (companies.length === 0) return;
+
+    console.log('🚀 NavigationContext: Loading all projects for companies:', companies.map(c => c.companyName));
+    setState(prev => ({ ...prev, projectsLoading: true }));
+
+    try {
+      const allProjects: NavigationProject[] = [];
+
+      // Φορτώνουμε τα projects όλων των εταιρειών παράλληλα
+      const projectPromises = companies.map(async (company) => {
+        try {
+          console.log(`🔍 NavigationContext: Fetching projects for company ${company.id} (${company.companyName})`);
+          const response = await fetch(`/api/projects/by-company/${company.id}`);
+          const result = await response.json();
+
+          console.log(`📊 NavigationContext: Company ${company.companyName} returned:`, result);
+
+          if (result.success) {
+            return result.projects.map((project: any) => {
+              const buildings = (project.buildings || []).map((building: any) => ({
+                id: building.id,
+                name: building.name,
+                floors: building.floors || []
+              }));
+
+              return {
+                id: project.id.toString(),
+                name: project.name,
+                company: project.company || 'Unknown',
+                buildings: buildings,
+                parkingSpots: [],
+                companyId: project.companyId || company.id // Ensure companyId is set
+              };
+            });
+          }
+          return [];
+        } catch (error) {
+          console.error(`Error loading projects for company ${company.id}:`, error);
+          return [];
+        }
+      });
+
+      const projectsResults = await Promise.all(projectPromises);
+
+      // Flatten όλα τα projects
+      projectsResults.forEach(projects => {
+        allProjects.push(...projects);
+      });
+
+      console.log(`✅ NavigationContext: Loaded ${allProjects.length} total projects:`, allProjects);
+
+      setState(prev => ({
+        ...prev,
+        projects: allProjects,
+        projectsLoading: false
+      }));
+
+    } catch (error) {
+      console.error('Error loading all projects:', error);
+      setState(prev => ({ ...prev, projectsLoading: false }));
+    }
+  };
+
   // Load companies on mount
   useEffect(() => {
     // Reset refs for fresh start
@@ -278,6 +293,14 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
 
     loadCompanies();
   }, []);
+
+  // Load all projects when companies are loaded
+  useEffect(() => {
+    if (state.companies.length > 0) {
+      console.log('🎯 NavigationContext: Companies loaded, triggering loadAllProjects');
+      loadAllProjects();
+    }
+  }, [state.companies.length]);
 
   const contextValue: NavigationContextType = {
     ...state,

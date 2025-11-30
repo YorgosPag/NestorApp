@@ -13,7 +13,7 @@ export default function NavigationPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-background">
       {/* Header */}
       <div className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-card">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-full mx-auto px-2 sm:px-3 lg:px-4">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
               <MapPin className="h-6 w-6 text-blue-600" />
@@ -27,13 +27,13 @@ export default function NavigationPage() {
 
       {/* Breadcrumb */}
       <div className="bg-white dark:bg-card border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+        <div className="max-w-full mx-auto px-2 sm:px-3 lg:px-4 py-3">
           <NavigationBreadcrumb />
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-full mx-auto px-2 sm:px-3 lg:px-4 py-6">
         <AdaptiveMultiColumnNavigation />
       </div>
     </div>

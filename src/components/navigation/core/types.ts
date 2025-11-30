@@ -14,6 +14,7 @@ export interface NavigationProject {
   id: string;
   name: string;
   company: string;
+  companyId?: string; // The ID of the company that owns this project
   buildings: NavigationBuilding[];
   parkingSpots?: NavigationParkingSpot[];
 }
@@ -58,6 +59,7 @@ export interface NavigationState {
   selectedFloor: NavigationFloor | null;
   currentLevel: NavigationLevel;
   loading: boolean;
+  projectsLoading: boolean;
   error: string | null;
 }
 

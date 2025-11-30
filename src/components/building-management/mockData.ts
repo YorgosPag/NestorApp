@@ -20,7 +20,7 @@ export const buildings: Building[] = [
     progress: 85,
     totalValue: 1475000,
     company: "Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.",
-    companyId: "pagonis", // TODO: Update with real Firestore company ID
+    companyId: "5djayaxc0X33wsE8T2uY", // TODO: Update with real Firestore company ID
     project: "Παλαιολόγου",
     projectId: 1,
     category: 'mixed',
@@ -42,7 +42,7 @@ export const buildings: Building[] = [
     progress: 45,
     totalValue: 1200000,
     company: "Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.",
-    companyId: "pagonis", // TODO: Update with real Firestore company ID
+    companyId: "5djayaxc0X33wsE8T2uY", // TODO: Update with real Firestore company ID
     project: "Παλαιολόγου",
     projectId: 1,
     category: 'residential',
@@ -64,7 +64,7 @@ export const buildings: Building[] = [
     progress: 5,
     totalValue: 2100000,
     company: "Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.",
-    companyId: "pagonis", // TODO: Update with real Firestore company ID
+    companyId: "5djayaxc0X33wsE8T2uY", // TODO: Update with real Firestore company ID
     project: "Παλαιολόγου",
     projectId: 1,
     category: 'commercial',
