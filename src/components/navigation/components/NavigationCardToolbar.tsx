@@ -10,7 +10,7 @@ import React from 'react';
 import { CompactToolbar } from '@/components/core/CompactToolbar/CompactToolbar';
 import type { CompactToolbarConfig } from '@/components/core/CompactToolbar/types';
 
-type NavigationLevel = 'companies' | 'projects' | 'buildings' | 'floors';
+type NavigationLevel = 'companies' | 'projects' | 'buildings' | 'floors' | 'units';
 
 interface NavigationCardToolbarProps {
   level: NavigationLevel;
@@ -18,6 +18,8 @@ interface NavigationCardToolbarProps {
   onSearchChange?: (term: string) => void;
   activeFilters?: string[];
   onFiltersChange?: (filters: string[]) => void;
+  selectedItems?: string[];
+  hasSelectedItems?: boolean;
   onNewItem?: () => void;
   onEditItem?: () => void;
   onDeleteItem?: () => void;
@@ -34,9 +36,9 @@ interface NavigationCardToolbarProps {
 const getToolbarConfig = (level: NavigationLevel): CompactToolbarConfig => {
   const baseConfig = {
     labels: {
-      newItem: 'Νέο',
+      newItem: level === 'companies' ? 'Προσθήκη' : 'Σύνδεση',
       editItem: 'Επεξεργασία',
-      deleteItems: 'Διαγραφή',
+      deleteItems: level === 'companies' ? 'Αφαίρεση' : 'Αποσύνδεση',
       filters: 'Φίλτρα',
       favorites: 'Αγαπημένα',
       archive: 'Αρχείο',
@@ -80,9 +82,9 @@ const getToolbarConfig = (level: NavigationLevel): CompactToolbarConfig => {
         ...baseConfig,
         tooltips: {
           ...baseConfig.tooltips,
-          newItem: 'Νέα εταιρεία',
+          newItem: 'Προσθήκη νέας εταιρείας',
           editItem: 'Επεξεργασία εταιρείας',
-          deleteItems: 'Διαγραφή εταιρείας'
+          deleteItems: 'Αφαίρεση εταιρείας'
         },
         filterCategories: [
           {
@@ -130,9 +132,9 @@ const getToolbarConfig = (level: NavigationLevel): CompactToolbarConfig => {
         ...baseConfig,
         tooltips: {
           ...baseConfig.tooltips,
-          newItem: 'Νέο έργο',
+          newItem: 'Σύνδεση έργου με επιλεγμένη εταιρεία',
           editItem: 'Επεξεργασία έργου',
-          deleteItems: 'Διαγραφή έργου'
+          deleteItems: 'Αποσύνδεση έργου'
         },
         filterCategories: [
           {
@@ -180,9 +182,9 @@ const getToolbarConfig = (level: NavigationLevel): CompactToolbarConfig => {
         ...baseConfig,
         tooltips: {
           ...baseConfig.tooltips,
-          newItem: 'Νέο κτίριο',
+          newItem: 'Σύνδεση κτιρίου με επιλεγμένο έργο',
           editItem: 'Επεξεργασία κτιρίου',
-          deleteItems: 'Διαγραφή κτιρίου'
+          deleteItems: 'Αποσύνδεση κτιρίου'
         },
         filterCategories: [
           {
@@ -228,9 +230,9 @@ const getToolbarConfig = (level: NavigationLevel): CompactToolbarConfig => {
         ...baseConfig,
         tooltips: {
           ...baseConfig.tooltips,
-          newItem: 'Νέος όροφος',
+          newItem: 'Σύνδεση ορόφου με επιλεγμένο κτίριο',
           editItem: 'Επεξεργασία ορόφου',
-          deleteItems: 'Διαγραφή ορόφου'
+          deleteItems: 'Αποσύνδεση ορόφου'
         },
         filterCategories: [
           {
@@ -270,6 +272,67 @@ const getToolbarConfig = (level: NavigationLevel): CompactToolbarConfig => {
         }
       };
 
+    case 'units':
+      return {
+        searchPlaceholder: 'Αναζήτηση μονάδας...',
+        ...baseConfig,
+        tooltips: {
+          ...baseConfig.tooltips,
+          newItem: 'Σύνδεση μονάδας με επιλεγμένο όροφο',
+          editItem: 'Επεξεργασία μονάδας',
+          deleteItems: 'Αποσύνδεση μονάδας'
+        },
+        filterCategories: [
+          {
+            id: 'type',
+            label: 'Τύπος Μονάδας',
+            options: [
+              { value: 'apartment', label: 'Διαμέρισμα' },
+              { value: 'office', label: 'Γραφείο' },
+              { value: 'shop', label: 'Κατάστημα' },
+              { value: 'storage', label: 'Αποθήκη' },
+              { value: 'parking', label: 'Θέση Στάθμευσης' }
+            ]
+          },
+          {
+            id: 'status',
+            label: 'Κατάσταση',
+            options: [
+              { value: 'available', label: 'Διαθέσιμη' },
+              { value: 'occupied', label: 'Κατειλημμένη' },
+              { value: 'reserved', label: 'Κρατημένη' },
+              { value: 'maintenance', label: 'Συντήρηση' }
+            ]
+          },
+          {
+            id: 'rooms',
+            label: 'Αριθμός Δωματίων',
+            options: [
+              { value: '1', label: '1 δωμάτιο' },
+              { value: '2', label: '2 δωμάτια' },
+              { value: '3', label: '3 δωμάτια' },
+              { value: '4+', label: '4+ δωμάτια' }
+            ]
+          }
+        ],
+        sortOptions: [
+          { field: 'name', ascLabel: 'Όνομα (Α-Ω)', descLabel: 'Όνομα (Ω-Α)' },
+          { field: 'area', ascLabel: 'Εμβαδόν (Μικρό-Μεγάλο)', descLabel: 'Εμβαδόν (Μεγάλο-Μικρό)' },
+          { field: 'rooms', ascLabel: 'Δωμάτια (Λίγα-Πολλά)', descLabel: 'Δωμάτια (Πολλά-Λίγα)' }
+        ],
+        availableActions: {
+          newItem: true,
+          editItem: true,
+          deleteItems: true,
+          filters: true,
+          refresh: true,
+          export: true,
+          sorting: true,
+          reports: true,
+          help: true
+        }
+      };
+
     default:
       throw new Error(`Unknown navigation level: ${level}`);
   }
@@ -281,6 +344,8 @@ export function NavigationCardToolbar({
   onSearchChange,
   activeFilters,
   onFiltersChange,
+  selectedItems = [],
+  hasSelectedItems = false,
   onNewItem,
   onEditItem,
   onDeleteItem,
@@ -301,6 +366,8 @@ export function NavigationCardToolbar({
       onSearchChange={onSearchChange}
       activeFilters={activeFilters}
       onFiltersChange={onFiltersChange}
+      selectedItems={selectedItems}
+      hasSelectedContact={hasSelectedItems}
       onNewItem={onNewItem}
       onEditItem={() => onEditItem?.()}
       onDeleteItems={() => onDeleteItem?.()}

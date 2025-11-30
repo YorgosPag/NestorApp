@@ -11,13 +11,14 @@ import { ChevronLeft, Factory, Construction, Building, Layers, Home, Map, Car, P
 import { useNavigation } from '../core/NavigationContext';
 
 interface MobileNavigationProps {
-  mobileLevel: 'companies' | 'projects' | 'buildings' | 'floors' | 'units' | 'extras';
+  mobileLevel: 'companies' | 'projects' | 'buildings' | 'floors' | 'units' | 'actions' | 'extras';
   onBack: () => void;
   getTitle: () => string;
   onCompanySelect: (companyId: string) => void;
   onProjectSelect: (projectId: string) => void;
   onBuildingSelect: (buildingId: string) => void;
   onFloorSelect: (floorId: string) => void;
+  onUnitSelect?: (unitId: string) => void;
   onNavigateToPage: (type: 'properties' | 'projects' | 'buildings' | 'floorplan') => void;
   navigationCompanyIds: string[];
 }
@@ -30,6 +31,7 @@ export function MobileNavigation({
   onProjectSelect,
   onBuildingSelect,
   onFloorSelect,
+  onUnitSelect,
   onNavigateToPage,
   navigationCompanyIds
 }: MobileNavigationProps) {
@@ -105,50 +107,86 @@ export function MobileNavigation({
         {/* Projects */}
         {mobileLevel === 'projects' && selectedCompany && (
           <>
-            {projects.filter(project => project.companyId === selectedCompany.id).map(project => (
-              <NavigationButton
-                key={project.id}
-                onClick={() => onProjectSelect(project.id)}
-                icon={Construction}
-                title={project.name}
-                subtitle={`${project.buildings.length} κτίρια`}
-              />
-            ))}
+            {projects.filter(project => project.companyId === selectedCompany.id).map(project => {
+              // Ελέγχουμε αν το έργο έχει κτίρια
+              const hasBuildings = project.buildings.length > 0;
+
+              return (
+                <NavigationButton
+                  key={project.id}
+                  onClick={() => onProjectSelect(project.id)}
+                  icon={Construction}
+                  title={project.name}
+                  subtitle={`${project.buildings.length} κτίρια`}
+                  badgeStatus={!hasBuildings ? 'no_projects' : undefined}
+                  badgeText={!hasBuildings ? 'Χωρίς κτίρια' : undefined}
+                />
+              );
+            })}
           </>
         )}
 
         {/* Buildings */}
         {mobileLevel === 'buildings' && selectedProject && (
           <>
-            {selectedProject.buildings.map(building => (
-              <NavigationButton
-                key={building.id}
-                onClick={() => onBuildingSelect(building.id)}
-                icon={Building}
-                title={building.name}
-                subtitle={`${building.floors.length} όροφοι`}
-              />
-            ))}
+            {selectedProject.buildings.map(building => {
+              // Ελέγχουμε αν το κτίριο έχει ορόφους
+              const hasFloors = building.floors.length > 0;
+
+              return (
+                <NavigationButton
+                  key={building.id}
+                  onClick={() => onBuildingSelect(building.id)}
+                  icon={Building}
+                  title={building.name}
+                  subtitle={`${building.floors.length} όροφοι`}
+                  badgeStatus={!hasFloors ? 'no_projects' : undefined}
+                  badgeText={!hasFloors ? 'Χωρίς ορόφους' : undefined}
+                />
+              );
+            })}
           </>
         )}
 
         {/* Floors */}
         {mobileLevel === 'floors' && selectedBuilding && (
           <>
-            {selectedBuilding.floors.map(floor => (
+            {selectedBuilding.floors.map(floor => {
+              // Ελέγχουμε αν ο όροφος έχει μονάδες
+              const hasUnits = floor.units.length > 0;
+
+              return (
+                <NavigationButton
+                  key={floor.id}
+                  onClick={() => onFloorSelect(floor.id)}
+                  icon={Layers}
+                  title={floor.name}
+                  subtitle={`${floor.units.length} μονάδες`}
+                  badgeStatus={!hasUnits ? 'no_projects' : undefined}
+                  badgeText={!hasUnits ? 'Χωρίς μονάδες' : undefined}
+                />
+              );
+            })}
+          </>
+        )}
+
+        {/* Units */}
+        {mobileLevel === 'units' && selectedFloor && (
+          <>
+            {selectedFloor.units.map(unit => (
               <NavigationButton
-                key={floor.id}
-                onClick={() => onFloorSelect(floor.id)}
-                icon={Layers}
-                title={floor.name}
-                subtitle={`${floor.units.length} μονάδες`}
+                key={unit.id}
+                onClick={() => onUnitSelect?.(unit.id)}
+                icon={Home}
+                title={unit.name}
+                subtitle={unit.type || 'Μονάδα'}
               />
             ))}
           </>
         )}
 
-        {/* Units & Actions */}
-        {mobileLevel === 'units' && selectedFloor && (
+        {/* Actions */}
+        {mobileLevel === 'actions' && selectedFloor && (
           <div className="space-y-3">
             <NavigationButton
               onClick={() => onNavigateToPage('properties')}

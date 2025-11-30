@@ -27,6 +27,7 @@ export function AdaptiveMultiColumnNavigation({ className }: AdaptiveMultiColumn
     handleProjectSelect,
     handleBuildingSelect,
     handleFloorSelect,
+    handleUnitSelect,
     handleNavigateToPage,
     handleMobileBack,
     getMobileTitle
@@ -69,6 +70,7 @@ export function AdaptiveMultiColumnNavigation({ className }: AdaptiveMultiColumn
               onProjectSelect={handleProjectSelect}
               onBuildingSelect={handleBuildingSelect}
               onFloorSelect={handleFloorSelect}
+              onUnitSelect={handleUnitSelect}
               onNavigateToPage={handleNavigateToPage}
               navigationCompanyIds={navigationCompanyIds}
             />

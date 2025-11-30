@@ -7,19 +7,20 @@ import { useState } from 'react';
 import { useNavigation } from '../core/NavigationContext';
 
 interface UseNavigationHandlersProps {
-  onMobileLevelChange?: (level: 'companies' | 'projects' | 'buildings' | 'floors' | 'units' | 'extras') => void;
+  onMobileLevelChange?: (level: 'companies' | 'projects' | 'buildings' | 'floors' | 'units' | 'actions' | 'extras') => void;
 }
 
 interface UseNavigationHandlersReturn {
   // Mobile navigation
-  mobileLevel: 'companies' | 'projects' | 'buildings' | 'floors' | 'units' | 'extras';
-  setMobileLevel: (level: 'companies' | 'projects' | 'buildings' | 'floors' | 'units' | 'extras') => void;
+  mobileLevel: 'companies' | 'projects' | 'buildings' | 'floors' | 'units' | 'actions' | 'extras';
+  setMobileLevel: (level: 'companies' | 'projects' | 'buildings' | 'floors' | 'units' | 'actions' | 'extras') => void;
 
   // Navigation handlers
   handleCompanySelect: (companyId: string) => void;
   handleProjectSelect: (projectId: string) => void;
   handleBuildingSelect: (buildingId: string) => void;
   handleFloorSelect: (floorId: string) => void;
+  handleUnitSelect: (unitId: string) => void;
   handleNavigateToPage: (type: 'properties' | 'projects' | 'buildings' | 'floorplan') => void;
 
   // Mobile navigation
@@ -78,6 +79,11 @@ export function useNavigationHandlers(props: UseNavigationHandlersProps = {}): U
     if (isMobile) setMobileLevel('units');
   };
 
+  const handleUnitSelect = (unitId: string) => {
+    console.log('Unit selected:', unitId);
+    if (isMobile) setMobileLevel('actions');
+  };
+
   const handleNavigateToPage = (type: 'properties' | 'projects' | 'buildings' | 'floorplan') => {
     navigateToExistingPages(type);
   };
@@ -97,8 +103,11 @@ export function useNavigationHandlers(props: UseNavigationHandlersProps = {}): U
       case 'units':
         setMobileLevel('floors');
         break;
-      case 'extras':
+      case 'actions':
         setMobileLevel('units');
+        break;
+      case 'extras':
+        setMobileLevel('actions');
         break;
     }
   };
@@ -111,6 +120,7 @@ export function useNavigationHandlers(props: UseNavigationHandlersProps = {}): U
       case 'buildings': return selectedProject?.name || 'Κτίρια';
       case 'floors': return selectedBuilding?.name || 'Όροφοι';
       case 'units': return selectedFloor?.name || 'Μονάδες';
+      case 'actions': return 'Ενέργειες';
       case 'extras': return 'Παρκινγκ & Αποθήκες';
     }
   };
@@ -122,6 +132,7 @@ export function useNavigationHandlers(props: UseNavigationHandlersProps = {}): U
     handleProjectSelect,
     handleBuildingSelect,
     handleFloorSelect,
+    handleUnitSelect,
     handleNavigateToPage,
     handleMobileBack,
     getMobileTitle,

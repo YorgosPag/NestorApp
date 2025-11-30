@@ -83,6 +83,8 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
 
       const projects = await dataHook.loadAllProjects(companies);
 
+      console.log('🎯 NavigationContext: Loaded projects:', projects.length, projects);
+
       updateState({
         projects,
         projectsLoading: false
