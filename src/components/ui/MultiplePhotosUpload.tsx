@@ -98,7 +98,7 @@ export function MultiplePhotosUpload({
       newPhotos[slotIndex] = {
         ...newPhotos[slotIndex],
         isUploading: true,
-        uploadProgress: progress.percentage,
+        uploadProgress: progress.progress,
         error: undefined
       };
       onPhotosChange?.(newPhotos);
@@ -109,15 +109,25 @@ export function MultiplePhotosUpload({
    * Handle upload completion for a specific slot
    */
   const handleUploadComplete = useCallback((slotIndex: number, result: FileUploadResult) => {
+    console.log(`🎯📸 MULTIPLE: Upload complete για slot ${slotIndex}:`, result.url);
+
     const newPhotos = [...normalizedPhotos];
     if (newPhotos[slotIndex]) {
-      newPhotos[slotIndex] = {
+      const updatedPhoto = {
         ...newPhotos[slotIndex],
         uploadUrl: result.url,
         isUploading: false,
         uploadProgress: 100,
         error: undefined
       };
+
+      newPhotos[slotIndex] = updatedPhoto;
+
+      console.log(`🔧 MULTIPLE: Setting isUploading=false για slot ${slotIndex}:`, {
+        before: normalizedPhotos[slotIndex]?.isUploading,
+        after: updatedPhoto.isUploading
+      });
+
       onPhotosChange?.(newPhotos);
 
       if (onPhotoUploadComplete) {
@@ -271,6 +281,7 @@ export function MultiplePhotosUpload({
                 disabled={disabled}
                 compact={true}
                 showProgress={showProgress}
+                isLoading={photo.isUploading}
                 className="h-full"
               />
             </div>
@@ -346,6 +357,7 @@ export function MultiplePhotosUpload({
               disabled={disabled}
               compact={true}
               showProgress={showProgress}
+              isLoading={photo.isUploading}
               className="h-full"
             />
           </div>

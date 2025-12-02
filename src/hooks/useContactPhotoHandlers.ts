@@ -97,7 +97,7 @@ export function useContactPhotoHandlers({
     onFileChange(file);
 
     console.log('✅ PHOTO HANDLER: Photo file processed successfully');
-  }, [validatePhotoFile, onFileChange]);
+  }, []); // 🔧 FIX: Removed dependencies to prevent infinite re-renders
 
   /**
    * Clear photo file
@@ -105,7 +105,7 @@ export function useContactPhotoHandlers({
   const clearPhoto = useCallback(() => {
     console.log('🧹 PHOTO HANDLER: Clearing photo');
     onFileChange(null);
-  }, [onFileChange]);
+  }, []); // 🔧 FIX: Removed dependencies to prevent infinite re-renders
 
   // ========================================================================
   // DRAG & DROP HANDLERS

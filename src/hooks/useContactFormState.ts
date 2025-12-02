@@ -276,24 +276,32 @@ export function useContactFormState(): UseContactFormStateReturn {
    * Reset form to initial state
    */
   const resetForm = useCallback(() => {
-    // 🧹 CLEANUP: Revoke any blob URLs before reset
-    if (formData.photoPreview && formData.photoPreview.startsWith('blob:')) {
-      URL.revokeObjectURL(formData.photoPreview);
-    }
-    if (formData.logoPreview && formData.logoPreview.startsWith('blob:')) {
-      URL.revokeObjectURL(formData.logoPreview);
-    }
+    console.log('🧹 FORM STATE: Resetting form to initial state');
 
-    // Cleanup multiple photos blob URLs
-    formData.multiplePhotos.forEach(photo => {
-      if (photo.preview && photo.preview.startsWith('blob:')) {
-        URL.revokeObjectURL(photo.preview);
+    // 🧹 CLEANUP: Revoke any blob URLs before reset
+    setFormData(prevFormData => {
+      // Cleanup photo preview URL
+      if (prevFormData.photoPreview && prevFormData.photoPreview.startsWith('blob:')) {
+        URL.revokeObjectURL(prevFormData.photoPreview);
       }
+
+      // Cleanup logo preview URL
+      if (prevFormData.logoPreview && prevFormData.logoPreview.startsWith('blob:')) {
+        URL.revokeObjectURL(prevFormData.logoPreview);
+      }
+
+      // Cleanup multiple photos blob URLs
+      prevFormData.multiplePhotos.forEach(photo => {
+        if (photo.preview && photo.preview.startsWith('blob:')) {
+          URL.revokeObjectURL(photo.preview);
+        }
+      });
+
+      return initialFormData;
     });
 
-    setFormData(initialFormData);
-    console.log('✅ Form reset to initial state');
-  }, [formData]);
+    console.log('✅ FORM STATE: Form reset completed');
+  }, []); // 🔧 FIX: Empty dependencies - prevents infinite loop
 
   // ========================================================================
   // RETURN API

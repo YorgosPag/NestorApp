@@ -105,7 +105,7 @@ export function useContactLogoHandlers({
     onLogoChange(file);
 
     console.log('✅ LOGO HANDLER: Logo file processed successfully');
-  }, [validateLogoFile, onLogoChange]);
+  }, []); // 🔧 FIX: Removed dependencies to prevent infinite re-renders
 
   /**
    * Clear logo file
@@ -113,7 +113,7 @@ export function useContactLogoHandlers({
   const clearLogo = useCallback(() => {
     console.log('🧹 LOGO HANDLER: Clearing logo');
     onLogoChange(null);
-  }, [onLogoChange]);
+  }, []); // 🔧 FIX: Removed dependencies to prevent infinite re-renders
 
   // ========================================================================
   // DRAG & DROP HANDLERS

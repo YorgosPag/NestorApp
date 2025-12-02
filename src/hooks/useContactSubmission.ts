@@ -222,7 +222,7 @@ export function useContactSubmission({
       setLoading(false);
       console.log('🔄 SUBMISSION: Loading state cleared');
     }
-  }, [loading, validateFormData, editContact, onContactAdded, onOpenChange, resetForm]);
+  }, [loading, validateFormData, editContact, onContactAdded, onOpenChange]); // 🔧 FIX: Removed resetForm from dependencies to prevent infinite loop
 
   // ========================================================================
   // RETURN API

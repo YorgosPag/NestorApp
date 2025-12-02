@@ -126,7 +126,7 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact }: Us
       console.log('🆕 ORCHESTRATOR: New contact mode, resetting form');
       resetForm();
     }
-  }, [editContact, setFormData, resetForm]);
+  }, [editContact]); // 🔧 FIX: Removed setFormData and resetForm from dependencies to prevent infinite loop
 
   // ========================================================================
   // FORM SUBMISSION WRAPPER
@@ -151,7 +151,7 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact }: Us
    */
   const handleEnterpriseMultiplePhotoUpload = useCallback(
     multiplePhotosHandlers.handleEnterpriseMultiplePhotoUpload,
-    [multiplePhotosHandlers]
+    [] // 🔧 FIX: Empty dependencies - handler is stable
   );
 
   // ========================================================================
@@ -161,13 +161,14 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact }: Us
   // Για backward compatibility με existing components που χρησιμοποιούν το hook
   const legacyHandlers = {
     // File handlers (με enterprise validation)
+    // 🔧 FIX: Removed dependencies to prevent unnecessary re-renders
     handleFileChange: useCallback((file: File | null) => {
       if (file) {
         photoHandlers.processPhotoFile(file);
       } else {
         photoHandlers.clearPhoto();
       }
-    }, [photoHandlers]),
+    }, []), // 🔧 FIX: Empty dependencies - handlers are stable
 
     handleLogoChange: useCallback((file: File | null) => {
       if (file) {
@@ -175,16 +176,16 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact }: Us
       } else {
         logoHandlers.clearLogo();
       }
-    }, [logoHandlers]),
+    }, []), // 🔧 FIX: Empty dependencies - handlers are stable
 
     // Drag & drop (enhanced με validation)
     handleDrop: useCallback((e: React.DragEvent) => {
       photoHandlers.handlePhotoDrop(e);
-    }, [photoHandlers]),
+    }, []), // 🔧 FIX: Empty dependencies - handlers are stable
 
     handleDragOver: useCallback((e: React.DragEvent) => {
       photoHandlers.handlePhotoDragOver(e);
-    }, [photoHandlers])
+    }, []) // 🔧 FIX: Empty dependencies - handlers are stable
   };
 
   // ========================================================================

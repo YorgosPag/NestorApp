@@ -129,7 +129,7 @@ export function useMultiplePhotosHandlers({
 
     // Update form state
     onMultiplePhotosChange(photoSlots);
-  }, [validateMultiplePhotos, onMultiplePhotosChange]);
+  }, []); // 🔧 FIX: Removed dependencies to prevent infinite re-renders
 
   /**
    * Clear all photos
@@ -137,7 +137,7 @@ export function useMultiplePhotosHandlers({
   const clearAllPhotos = useCallback(() => {
     console.log('🧹 MULTIPLE PHOTOS HANDLER: Clearing all photos');
     onMultiplePhotosChange([]);
-  }, [onMultiplePhotosChange]);
+  }, []); // 🔧 FIX: Removed dependencies to prevent infinite re-renders
 
   /**
    * Clear photo at specific index
@@ -159,7 +159,7 @@ export function useMultiplePhotosHandlers({
     newPhotos.splice(index, 1);
 
     onMultiplePhotosChange(newPhotos);
-  }, [onMultiplePhotosChange]);
+  }, []); // 🔧 FIX: Removed dependencies to prevent infinite re-renders
 
   // ========================================================================
   // ENTERPRISE UPLOAD HANDLER

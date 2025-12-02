@@ -29,6 +29,8 @@ export interface EnterprisePhotoUploadProps extends Omit<UseEnterpriseFileUpload
   showProgress?: boolean;
   /** Compact mode (smaller UI) */
   compact?: boolean;
+  /** External loading state (για sync με parent state) */
+  isLoading?: boolean;
 }
 
 // ============================================================================
@@ -61,7 +63,8 @@ export function EnterprisePhotoUpload({
   uploadHandler,
   className = '',
   showProgress = true,
-  compact = false
+  compact = false,
+  isLoading: externalIsLoading
 }: EnterprisePhotoUploadProps) {
   // ========================================================================
   // HOOKS & STATE
@@ -144,10 +147,20 @@ export function EnterprisePhotoUpload({
 
 
     const startAutoUpload = async () => {
-      const result = await upload.uploadFile(fileToUpload, uploadHandler);
-      if (result && onUploadComplete) {
-        console.log('✅ AUTOMATIC UPLOAD: Completed, calling onUploadComplete');
-        onUploadComplete(result);
+      console.log('🚀 AUTO-UPLOAD: Starting upload για file:', fileToUpload.name);
+
+      try {
+        const result = await upload.uploadFile(fileToUpload, uploadHandler);
+        console.log('🔍 AUTO-UPLOAD: Upload result:', result);
+
+        if (result && onUploadComplete) {
+          console.log('✅ AUTOMATIC UPLOAD: Completed, calling onUploadComplete');
+          onUploadComplete(result);
+        } else {
+          console.log('❌ AUTO-UPLOAD: No result or no callback:', { result: !!result, callback: !!onUploadComplete });
+        }
+      } catch (error) {
+        console.error('💥 AUTO-UPLOAD: Exception caught:', error);
       }
     };
 
@@ -171,7 +184,19 @@ export function EnterprisePhotoUpload({
   const currentPreview = photoPreview || upload.previewUrl;
   const currentFile = photoFile || upload.currentFile;
   const hasError = upload.error || upload.validationError;
-  const isLoading = upload.isUploading;
+  const isLoading = externalIsLoading ?? upload.isUploading;
+
+  // 🐞 DEBUG: Temporary logging για το delete button issue
+  if (currentPreview && compact) {
+    console.log('🔍 DELETE BUTTON DEBUG:', {
+      currentPreview: !!currentPreview,
+      disabled,
+      isLoading,
+      externalIsLoading,
+      uploadIsUploading: upload.isUploading,
+      showButton: currentPreview && !disabled && !isLoading
+    });
+  }
 
   // ========================================================================
   // RENDER
