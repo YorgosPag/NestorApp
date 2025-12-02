@@ -36,7 +36,9 @@ export function AddNewContactDialog({ open, onOpenChange, onContactAdded, editCo
     handleDrop,
     handleDragOver,
     handleNestedChange,
-    handleLogoChange
+    handleLogoChange,
+    handleUploadedPhotoURL,
+    handleUploadedLogoURL
   } = useContactForm({ onContactAdded, onOpenChange, editContact });
 
 
@@ -80,19 +82,25 @@ export function AddNewContactDialog({ open, onOpenChange, onContactAdded, editCo
                 handleFileChange={handleFileChange}
                 handleDrop={handleDrop}
                 handleDragOver={handleDragOver}
+                handleUploadedPhotoURL={handleUploadedPhotoURL}
                 disabled={loading}
               />
             )}
 
             {/* Πεδία για Εταιρεία */}
-            {formData.type === 'company' && (
-              <CompanyContactSection
-                formData={formData}
-                handleChange={handleChange}
-                handleSelectChange={handleSelectChange}
-                disabled={loading}
-              />
-            )}
+            {formData.type === 'company' && (() => {
+              console.log('🎯 DIALOG: About to render CompanyContactSection', { type: formData.type, loading });
+              return (
+                <CompanyContactSection
+                  formData={formData}
+                  handleChange={handleChange}
+                  handleSelectChange={handleSelectChange}
+                  handleLogoChange={handleLogoChange}
+                  handleUploadedLogoURL={handleUploadedLogoURL}
+                  disabled={loading}
+                />
+              );
+            })()}
 
             {/* Πεδία για Δημόσια Υπηρεσία */}
             {formData.type === 'service' && (
@@ -102,6 +110,9 @@ export function AddNewContactDialog({ open, onOpenChange, onContactAdded, editCo
                 handleSelectChange={handleSelectChange}
                 handleNestedChange={handleNestedChange}
                 handleLogoChange={handleLogoChange}
+                handleFileChange={handleFileChange}
+                handleUploadedLogoURL={handleUploadedLogoURL}
+                handleUploadedPhotoURL={handleUploadedPhotoURL}
                 disabled={loading}
               />
             )}

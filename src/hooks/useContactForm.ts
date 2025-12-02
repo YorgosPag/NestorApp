@@ -56,7 +56,7 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact }: Us
         workWebsite: editContact.type === 'individual' ? (editContact as any).workWebsite || '' : '',
         // Εταιρεία
         companyName: editContact.type === 'company' ? (editContact as any).companyName || '' : '',
-        companyVatNumber: editContact.type === 'company' ? (editContact as any).companyVatNumber || '' : '',
+        companyVatNumber: editContact.type === 'company' ? (editContact as any).vatNumber || (editContact as any).companyVatNumber || '' : '',
         // Υπηρεσία - Στοιχεία από ΓΕΜΗ
         serviceName: editContact.type === 'service' ? (editContact as any).serviceName || '' : '',
         serviceType: editContact.type === 'service' ? (editContact as any).serviceType || 'other' : 'other',
@@ -127,7 +127,7 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact }: Us
         logoPreview: editContact.type === 'service' ? (editContact as any).logoPreview || '' : '',
         // Φωτογραφία
         photoFile: null,
-        photoPreview: editContact.type === 'individual' ? (editContact as any).photoPreview || '' : '',
+        photoPreview: editContact.type === 'individual' ? (editContact as any).photoURL || '' : '',
         // Κοινά
         notes: (editContact as any).notes || '',
       };
@@ -158,6 +158,38 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact }: Us
     setLoading(true);
 
     try {
+      // Handle photo upload with fast simulated upload (based on Projects system)
+      let photoURL = '';
+      let logoURL = '';
+
+      // 🏢 COMPANY LOGO: Upload ήδη έγινε από EnterprisePhotoUpload component
+      if (formData.logoPreview && formData.type === 'company') {
+        // Use existing uploaded URL (από το EnterprisePhotoUpload)
+        logoURL = formData.logoPreview;
+        console.log('✅🏢 Using existing company logo URL:', logoURL);
+      }
+
+      // 🏛️ SERVICE LOGO: Upload ήδη έγινε από EnterprisePhotoUpload component
+      if (formData.logoPreview && formData.type === 'service') {
+        // Use existing uploaded URL (από το EnterprisePhotoUpload)
+        logoURL = formData.logoPreview;
+        console.log('✅🏛️ Using existing service logo URL:', logoURL);
+      }
+
+      // 🏛️ SERVICE PHOTO: Upload ήδη έγινε από EnterprisePhotoUpload component
+      if (formData.photoPreview && formData.type === 'service') {
+        // Use existing uploaded URL (από το EnterprisePhotoUpload)
+        photoURL = formData.photoPreview;
+        console.log('✅🏛️ Using existing service representative photo URL:', photoURL);
+      }
+
+      // 👤 INDIVIDUAL CONTACTS: Enterprise upload ήδη έγινε από EnterprisePhotoUpload component
+      if (formData.photoPreview && formData.type === 'individual') {
+        // Use existing uploaded URL (από το EnterprisePhotoUpload)
+        photoURL = formData.photoPreview;
+        console.log('✅👤 Using existing individual photo URL:', photoURL);
+      }
+
       // Δημιουργία contact object ανάλογα με τον τύπο
       let contactData: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>;
 
@@ -187,7 +219,7 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact }: Us
           workWebsite: formData.workWebsite,
           socialMedia: formData.socialMedia,
           websites: formData.websites,
-          photoURL: formData.photoPreview,
+          photoURL: photoURL,
           emails: formData.email ? [{ email: formData.email, type: 'work', isPrimary: true }] : [],
           phones: formData.phone ? [{ number: formData.phone, type: 'mobile', isPrimary: true }] : [],
           isFavorite: false,
@@ -204,6 +236,7 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact }: Us
           isFavorite: false,
           status: 'active',
           notes: formData.notes,
+          logoURL: logoURL || '', // 🏢 Enterprise logo URL
         } as any;
       } else {
         contactData = {
@@ -215,6 +248,8 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact }: Us
           isFavorite: false,
           status: 'active',
           notes: formData.notes,
+          logoURL: logoURL || '', // 🏛️ Enterprise service logo URL
+          photoURL: photoURL || '', // 🏛️ Enterprise service representative photo URL
         } as any;
       }
 
@@ -255,7 +290,13 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact }: Us
   };
 
   const handleFileChange = (file: File | null) => {
+    console.log('🔥 handleFileChange called με:', file?.name);
+
     if (!file) {
+      // 🧹 CLEANUP: Revoke old blob URL if exists
+      if (formData.photoPreview && formData.photoPreview.startsWith('blob:')) {
+        URL.revokeObjectURL(formData.photoPreview);
+      }
       setFormData({
         ...formData,
         photoFile: null,
@@ -274,15 +315,20 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact }: Us
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setFormData({
-        ...formData,
-        photoFile: file,
-        photoPreview: e.target?.result as string
-      });
-    };
-    reader.readAsDataURL(file);
+    // 🧹 CLEANUP: Revoke old blob URL if exists before creating new one
+    if (formData.photoPreview && formData.photoPreview.startsWith('blob:')) {
+      URL.revokeObjectURL(formData.photoPreview);
+    }
+
+    // 🚨 ENTERPRISE FIX: Μόνο File object, ΌΧΙ data URL!
+    // Το EnterprisePhotoUpload θα κάνει το upload με το enterprise handler
+    setFormData({
+      ...formData,
+      photoFile: file,
+      photoPreview: URL.createObjectURL(file) // Temporary URL for preview only
+    });
+
+    console.log('✅ handleFileChange: File αποθηκεύτηκε στο state χωρίς data URL');
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -313,7 +359,13 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact }: Us
 
   // Handler για logo upload
   const handleLogoChange = (file: File | null) => {
+    console.log('🔥 handleLogoChange called με:', file?.name);
+
     if (!file) {
+      // 🧹 CLEANUP: Revoke old blob URL if exists
+      if (formData.logoPreview && formData.logoPreview.startsWith('blob:')) {
+        URL.revokeObjectURL(formData.logoPreview);
+      }
       setFormData({
         ...formData,
         logoFile: null,
@@ -332,15 +384,51 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact }: Us
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setFormData({
-        ...formData,
-        logoFile: file,
-        logoPreview: e.target?.result as string
-      });
-    };
-    reader.readAsDataURL(file);
+    // 🧹 CLEANUP: Revoke old blob URL if exists before creating new one
+    if (formData.logoPreview && formData.logoPreview.startsWith('blob:')) {
+      URL.revokeObjectURL(formData.logoPreview);
+    }
+
+    // 🚨 ENTERPRISE FIX: Μόνο File object, ΌΧΙ data URL!
+    // Το EnterprisePhotoUpload θα κάνει το upload με το enterprise handler
+    setFormData({
+      ...formData,
+      logoFile: file,
+      logoPreview: URL.createObjectURL(file) // Temporary URL for preview only
+    });
+
+    console.log('✅ handleLogoChange: File αποθηκεύτηκε στο state χωρίς data URL');
+  };
+
+  // Handler για ενημέρωση uploaded URLs (enterprise upload completion)
+  const handleUploadedPhotoURL = (photoURL: string) => {
+    console.log('🎯📸 UPLOAD COMPLETE: Updating photoPreview με uploaded URL:', photoURL);
+
+    // 🧹 CLEANUP: Revoke old blob URL if exists
+    if (formData.photoPreview && formData.photoPreview.startsWith('blob:')) {
+      URL.revokeObjectURL(formData.photoPreview);
+    }
+
+    setFormData({
+      ...formData,
+      photoFile: null, // Καθαρισμός του file μετά successful upload
+      photoPreview: photoURL // Ενημέρωση με το uploaded URL
+    });
+  };
+
+  const handleUploadedLogoURL = (logoURL: string) => {
+    console.log('🎯🏢 UPLOAD COMPLETE: Updating logoPreview με uploaded URL:', logoURL);
+
+    // 🧹 CLEANUP: Revoke old blob URL if exists
+    if (formData.logoPreview && formData.logoPreview.startsWith('blob:')) {
+      URL.revokeObjectURL(formData.logoPreview);
+    }
+
+    setFormData({
+      ...formData,
+      logoFile: null, // Καθαρισμός του file μετά successful upload
+      logoPreview: logoURL // Ενημέρωση με το uploaded URL
+    });
   };
 
   const cleanUndefinedValues = (obj: any): any => {
@@ -374,6 +462,8 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact }: Us
     handleDrop,
     handleDragOver,
     handleNestedChange,
-    handleLogoChange
+    handleLogoChange,
+    handleUploadedPhotoURL,
+    handleUploadedLogoURL
   };
 }

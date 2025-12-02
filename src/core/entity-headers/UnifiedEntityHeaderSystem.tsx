@@ -9,6 +9,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -92,43 +93,39 @@ export const EntityDetailsHeader: React.FC<EntityHeaderProps> = ({
         {/* Left side: Icon + Content */}
         <div className="flex items-center gap-3 flex-1 min-w-0">
           {/* Icon or Avatar */}
-          <div
-            className={cn(
-              "flex items-center justify-center rounded-lg shadow-sm flex-shrink-0 overflow-hidden",
-              avatarImageUrl
-                ? "bg-gray-200"
-                : "bg-gradient-to-br from-blue-500 to-purple-600",
-              avatarImageUrl && onAvatarClick && "cursor-pointer hover:opacity-80 transition-opacity",
-              iconSizes[variant]
-            )}
-            onClick={avatarImageUrl && onAvatarClick ? onAvatarClick : undefined}
-          >
-            {avatarImageUrl ? (
-              <img
+          {avatarImageUrl ? (
+            <Avatar
+              className={cn(
+                "flex-shrink-0 shadow-sm cursor-pointer hover:opacity-80 transition-opacity",
+                iconSizes[variant]
+              )}
+              onClick={onAvatarClick}
+            >
+              <AvatarImage
                 src={avatarImageUrl}
                 alt={`${title} φωτογραφία`}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  // Fallback to icon if image fails to load
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
-                  const parent = target.parentElement;
-                  if (parent) {
-                    parent.className = parent.className.replace('bg-gray-200', 'bg-gradient-to-br from-blue-500 to-purple-600');
-                    const icon = document.createElement('div');
-                    icon.className = 'text-white';
-                    icon.innerHTML = `<svg style="width: ${variant === 'detailed' ? '24px' : variant === 'compact' ? '16px' : '20px'}; height: ${variant === 'detailed' ? '24px' : variant === 'compact' ? '16px' : '20px'};" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`;
-                    parent.appendChild(icon);
-                  }
-                }}
+                className="object-cover"
               />
-            ) : (
+              <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600">
+                <Icon className="text-white" style={{
+                  width: variant === 'detailed' ? '24px' : variant === 'compact' ? '16px' : '20px',
+                  height: variant === 'detailed' ? '24px' : variant === 'compact' ? '16px' : '20px'
+                }} />
+              </AvatarFallback>
+            </Avatar>
+          ) : (
+            <div
+              className={cn(
+                "flex items-center justify-center rounded-lg shadow-sm flex-shrink-0 bg-gradient-to-br from-blue-500 to-purple-600",
+                iconSizes[variant]
+              )}
+            >
               <Icon className="text-white" style={{
                 width: variant === 'detailed' ? '24px' : variant === 'compact' ? '16px' : '20px',
                 height: variant === 'detailed' ? '24px' : variant === 'compact' ? '16px' : '20px'
               }} />
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Content */}
           <div className="flex-1 min-w-0">

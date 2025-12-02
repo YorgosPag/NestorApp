@@ -370,6 +370,191 @@ export class ImageParser {
       }
     );
   }
+
+  /**
+   * 🔥 CONTACT PHOTO COMPRESSION METHODS
+   * Specialized compression για contact photos, avatars, and profile images
+   */
+
+  /**
+   * Compress contact photo με optimized settings for profile pictures
+   *
+   * @param file - Original image file
+   * @param size - Target size ('avatar' | 'thumbnail' | 'profile')
+   * @param quality - JPEG quality 0-1 (default: 0.85)
+   * @returns Optimized image blob optimized for contacts
+   */
+  async compressContactPhoto(
+    file: File,
+    size: 'avatar' | 'thumbnail' | 'profile' = 'profile',
+    quality: number = 0.85
+  ): Promise<{ blob: Blob; info: { originalSize: number; compressedSize: number; compressionRatio: number; dimensions: { width: number; height: number } } }> {
+    const img = await this.loadImage(file);
+
+    // Contact photo size configurations
+    const sizeConfig = {
+      avatar: { maxDimension: 200, quality: 0.8 },    // Small avatars
+      thumbnail: { maxDimension: 400, quality: 0.82 }, // List thumbnails
+      profile: { maxDimension: 800, quality: 0.85 }    // Full profile photos
+    };
+
+    const config = sizeConfig[size];
+    const maxDimension = config.maxDimension;
+    const targetQuality = quality || config.quality;
+
+    // Calculate new dimensions (always maintain aspect ratio)
+    const aspectRatio = img.naturalWidth / img.naturalHeight;
+    let newWidth = maxDimension;
+    let newHeight = maxDimension;
+
+    if (aspectRatio > 1) {
+      newHeight = maxDimension / aspectRatio;
+    } else {
+      newWidth = maxDimension * aspectRatio;
+    }
+
+    // Create canvas
+    const canvas = document.createElement('canvas');
+    canvas.width = newWidth;
+    canvas.height = newHeight;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      throw new Error('Failed to create canvas context για contact photo compression');
+    }
+
+    // Enable smooth scaling για better quality
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
+    // Draw resized image
+    ctx.drawImage(img, 0, 0, newWidth, newHeight);
+
+    // Convert to blob
+    const blob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        blob => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error('Failed to create compressed contact photo'));
+          }
+        },
+        'image/jpeg', // Always use JPEG for contacts (better compression)
+        targetQuality
+      );
+    });
+
+    // Calculate compression info
+    const originalSize = file.size;
+    const compressedSize = blob.size;
+    const compressionRatio = Math.round(((originalSize - compressedSize) / originalSize) * 100);
+
+    return {
+      blob,
+      info: {
+        originalSize,
+        compressedSize,
+        compressionRatio,
+        dimensions: { width: newWidth, height: newHeight }
+      }
+    };
+  }
+
+  /**
+   * Smart compression - automatically chooses best settings based on file size και usage
+   *
+   * @param file - Original image file
+   * @param usage - Intended usage context
+   * @returns Optimized image with smart compression
+   */
+  async smartCompressContactPhoto(
+    file: File,
+    usage: 'avatar' | 'list-item' | 'profile-modal' | 'print' = 'profile-modal'
+  ): Promise<{ blob: Blob; info: { strategy: string; settings: any; stats: any } }> {
+    const img = await this.loadImage(file);
+    const fileSize = file.size;
+    const megabytes = fileSize / (1024 * 1024);
+
+    // Smart compression strategy based on file size και usage
+    let strategy: string;
+    let settings: { maxDimension: number; quality: number; size: 'avatar' | 'thumbnail' | 'profile' };
+
+    if (usage === 'avatar') {
+      strategy = 'tiny-avatar';
+      settings = { maxDimension: 150, quality: 0.75, size: 'avatar' as const };
+    } else if (usage === 'list-item') {
+      strategy = 'list-thumbnail';
+      settings = { maxDimension: 300, quality: 0.8, size: 'thumbnail' as const };
+    } else if (usage === 'print') {
+      strategy = 'high-quality';
+      settings = { maxDimension: 1200, quality: 0.9, size: 'profile' as const };
+    } else {
+      // profile-modal - adaptive based on original file size
+      if (megabytes > 5) {
+        strategy = 'aggressive-compression';
+        settings = { maxDimension: 600, quality: 0.75, size: 'profile' as const };
+      } else if (megabytes > 2) {
+        strategy = 'moderate-compression';
+        settings = { maxDimension: 700, quality: 0.82, size: 'profile' as const };
+      } else {
+        strategy = 'light-compression';
+        settings = { maxDimension: 800, quality: 0.87, size: 'profile' as const };
+      }
+    }
+
+    const result = await this.compressContactPhoto(file, settings.size, settings.quality);
+
+    return {
+      blob: result.blob,
+      info: {
+        strategy,
+        settings,
+        stats: result.info
+      }
+    };
+  }
+
+  /**
+   * Check if contact photo needs compression
+   *
+   * @param file - Image file to check
+   * @param maxSizeKB - Maximum acceptable size in KB (default: 500KB)
+   * @returns Whether compression is recommended
+   */
+  static shouldCompressContactPhoto(file: File, maxSizeKB: number = 500): {
+    shouldCompress: boolean;
+    reason: string;
+    currentSizeKB: number;
+    recommendedAction: string;
+  } {
+    const currentSizeKB = Math.round(file.size / 1024);
+
+    if (currentSizeKB <= maxSizeKB) {
+      return {
+        shouldCompress: false,
+        reason: 'File size is acceptable',
+        currentSizeKB,
+        recommendedAction: 'No compression needed'
+      };
+    }
+
+    let recommendedAction: string;
+    if (currentSizeKB > 2000) { // > 2MB
+      recommendedAction = 'Aggressive compression recommended (file is very large)';
+    } else if (currentSizeKB > 1000) { // > 1MB
+      recommendedAction = 'Moderate compression recommended';
+    } else {
+      recommendedAction = 'Light compression recommended';
+    }
+
+    return {
+      shouldCompress: true,
+      reason: `File size (${currentSizeKB}KB) exceeds limit (${maxSizeKB}KB)`,
+      currentSizeKB,
+      recommendedAction
+    };
+  }
 }
 
 /**
@@ -378,4 +563,37 @@ export class ImageParser {
 export async function parseImage(file: File): Promise<ImageParserResult> {
   const parser = new ImageParser();
   return parser.parse(file);
+}
+
+/**
+ * 🎯 CONTACT PHOTO COMPRESSION UTILITIES
+ * Static methods για direct usage χωρίς instantiation
+ */
+
+/**
+ * Quick compress για contact photos (static method)
+ */
+export async function compressContactPhoto(
+  file: File,
+  size: 'avatar' | 'thumbnail' | 'profile' = 'profile',
+  quality: number = 0.85
+): Promise<Blob> {
+  const parser = new ImageParser();
+  const result = await parser.compressContactPhoto(file, size, quality);
+  return result.blob;
+}
+
+/**
+ * Smart compress with automatic settings (static method)
+ */
+export async function smartCompressContactPhoto(
+  file: File,
+  usage: 'avatar' | 'list-item' | 'profile-modal' | 'print' = 'profile-modal'
+): Promise<{ blob: Blob; compressionInfo: any }> {
+  const parser = new ImageParser();
+  const result = await parser.smartCompressContactPhoto(file, usage);
+  return {
+    blob: result.blob,
+    compressionInfo: result.info
+  };
 }

@@ -36,13 +36,29 @@ export function ContactDetailsHeader({ contact, onEditContact, onDeleteContact }
   const displayName = getContactDisplayName(contact);
   const initials = getContactInitials(contact);
 
+  // 🎯 SMART AVATAR LOGIC: Different URL based on contact type
+  const getAvatarImageUrl = () => {
+    switch (type) {
+      case 'individual':
+        return (contact as any).photoURL; // Personal photo
+      case 'company':
+        return (contact as any).logoURL; // Company logo
+      case 'service':
+        return (contact as any).logoURL; // Service logo (NOT photoURL which is for representative)
+      default:
+        return (contact as any).photoURL;
+    }
+  };
+
+  const avatarImageUrl = getAvatarImageUrl();
+
   return (
     <>
       <EntityDetailsHeader
         icon={Icon}
         title={displayName}
-        avatarImageUrl={(contact as any).photoURL}
-        onAvatarClick={(contact as any).photoURL ? () => setIsPhotoModalOpen(true) : undefined}
+        avatarImageUrl={avatarImageUrl}
+        onAvatarClick={avatarImageUrl ? () => setIsPhotoModalOpen(true) : undefined}
         actions={[
           {
             label: 'Επεξεργασία Επαφής',
@@ -68,7 +84,7 @@ export function ContactDetailsHeader({ contact, onEditContact, onDeleteContact }
 
     {/* Photo View Modal */}
     <Dialog open={isPhotoModalOpen} onOpenChange={setIsPhotoModalOpen}>
-      <DialogContent className="max-w-4xl max-h-[90vh] p-0">
+      <DialogContent className="max-w-4xl max-h-[90vh] p-0 [&>button]:hidden">
         <div className="relative">
           <button
             onClick={() => setIsPhotoModalOpen(false)}
@@ -78,14 +94,16 @@ export function ContactDetailsHeader({ contact, onEditContact, onDeleteContact }
           </button>
           <div className="flex items-center justify-center bg-black/5 min-h-[400px]">
             <img
-              src={(contact as any).photoURL}
-              alt={`${displayName} φωτογραφία`}
+              src={avatarImageUrl}
+              alt={`${displayName} ${type === 'individual' ? 'φωτογραφία' : 'λογότυπο'}`}
               className="max-w-full max-h-[80vh] object-contain rounded-lg"
             />
           </div>
           <div className="p-4 bg-white border-t">
             <h3 className="font-semibold text-lg text-gray-900">{displayName}</h3>
-            <p className="text-sm text-gray-600">Φωτογραφία επαφής</p>
+            <p className="text-sm text-gray-600">
+              {type === 'individual' ? 'Φωτογραφία επαφής' : 'Λογότυπο'}
+            </p>
           </div>
         </div>
       </DialogContent>

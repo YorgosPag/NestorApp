@@ -10,7 +10,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FormField, FormInput } from '@/components/ui/form/FormComponents';
 import { Building2, Users, MapPin, FileText, Plus, Trash2, Upload } from 'lucide-react';
 import { EnterprisePhotoUpload } from '@/components/ui/EnterprisePhotoUpload';
+import { PhotoUploadService } from '@/services/photo-upload.service';
 import type { ContactFormData } from '@/types/ContactFormTypes';
+import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 
 interface ServiceContactSectionProps {
   formData: ContactFormData;
@@ -18,6 +20,9 @@ interface ServiceContactSectionProps {
   handleSelectChange: (name: string, value: string) => void;
   handleNestedChange: (path: string, value: any) => void;
   handleLogoChange: (file: File | null) => void;
+  handleFileChange: (file: File | null) => void;
+  handleUploadedLogoURL: (logoURL: string) => void;
+  handleUploadedPhotoURL: (photoURL: string) => void;
   disabled?: boolean;
 }
 
@@ -27,9 +32,83 @@ export function ServiceContactSection({
   handleSelectChange,
   handleNestedChange,
   handleLogoChange,
+  handleFileChange,
+  handleUploadedLogoURL,
+  handleUploadedPhotoURL,
   disabled = false
 }: ServiceContactSectionProps) {
   const [activeTab, setActiveTab] = useState("gemi");
+
+  // 🔥 Enterprise Logo Upload Handler για Δημόσια Υπηρεσία
+  const handleEnterpriseLogoUpload = async (
+    file: File,
+    onProgress: (progress: FileUploadProgress) => void
+  ): Promise<FileUploadResult> => {
+    console.log('🚀🏛️ SERVICE: Starting enterprise logo upload με compression...', {
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type
+    });
+
+    const result = await PhotoUploadService.uploadCompanyLogo(
+      file,
+      undefined, // serviceId - θα προστεθεί αργότερα όταν save-άρουμε
+      onProgress
+    );
+
+    console.log('✅🏛️ SERVICE: Enterprise logo upload completed:', {
+      url: result.url,
+      originalSize: result.compressionInfo?.originalSize,
+      compressedSize: result.compressionInfo?.compressedSize,
+      savings: result.compressionInfo?.compressionRatio
+    });
+
+    return result;
+  };
+
+  // 🔥 Enterprise Photo Upload Handler για Αντιπρόσωπο
+  const handleEnterprisePhotoUpload = async (
+    file: File,
+    onProgress: (progress: FileUploadProgress) => void
+  ): Promise<FileUploadResult> => {
+    console.log('🚀🏛️ SERVICE: Starting enterprise photo upload για Representative με compression...', {
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type
+    });
+
+    const result = await PhotoUploadService.uploadContactPhoto(
+      file,
+      undefined, // contactId - θα προστεθεί αργότερα όταν save-άρουμε
+      onProgress,
+      'profile-modal' // Smart compression για representative photo
+    );
+
+    console.log('✅🏛️ SERVICE: Enterprise photo upload completed:', {
+      url: result.url,
+      originalSize: result.compressionInfo?.originalSize,
+      compressedSize: result.compressionInfo?.compressedSize,
+      savings: result.compressionInfo?.compressionRatio
+    });
+
+    return result;
+  };
+
+  // 🔗 Logo Upload Complete Handler - ενημέρωσε το formData
+  const handleLogoUploadComplete = (result: FileUploadResult) => {
+    console.log('🎯🏛️ SERVICE: Logo upload complete, updating formData με uploaded URL:', result.url);
+
+    // ✅ FIXED: Χρησιμοποιούμε το centralized handler από useContactForm
+    handleUploadedLogoURL(result.url);
+  };
+
+  // 🔗 Photo Upload Complete Handler - ενημέρωσε το formData
+  const handlePhotoUploadComplete = (result: FileUploadResult) => {
+    console.log('🎯🏛️ SERVICE: Photo upload complete, updating formData με uploaded URL:', result.url);
+
+    // ✅ FIXED: Χρησιμοποιούμε το centralized handler από useContactForm
+    handleUploadedPhotoURL(result.url);
+  };
 
   return (
     <>
@@ -46,6 +125,30 @@ export function ServiceContactSection({
           photoFile={formData.logoFile}
           photoPreview={formData.logoPreview}
           onFileChange={handleLogoChange}
+          uploadHandler={handleEnterpriseLogoUpload}
+          onUploadComplete={handleLogoUploadComplete}
+          disabled={disabled}
+          compact={true}
+          showProgress={true}
+          className="mt-2"
+        />
+      </div>
+
+      {/* Φωτογραφία Αντιπροσώπου Header */}
+      <div className="col-span-2 border-t pt-4 mt-4">
+        <h4 className="font-semibold mb-3 text-sm">👤 Φωτογραφία Αντιπροσώπου</h4>
+      </div>
+
+      {/* Enterprise Photo Upload για Αντιπρόσωπο */}
+      <div className="col-span-2">
+        <EnterprisePhotoUpload
+          purpose="photo"
+          maxSize={5 * 1024 * 1024} // 5MB for photos
+          photoFile={formData.photoFile}
+          photoPreview={formData.photoPreview}
+          onFileChange={handleFileChange}
+          uploadHandler={handleEnterprisePhotoUpload}
+          onUploadComplete={handlePhotoUploadComplete}
           disabled={disabled}
           compact={true}
           showProgress={true}

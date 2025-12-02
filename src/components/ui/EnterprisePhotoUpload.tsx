@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { Camera, Upload, X, CheckCircle, Loader2, AlertCircle } from 'lucide-react';
 import { useEnterpriseFileUpload } from '@/hooks/useEnterpriseFileUpload';
-import type { UseEnterpriseFileUploadConfig, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
+import type { UseEnterpriseFileUploadConfig, FileUploadResult, FileUploadProgress } from '@/hooks/useEnterpriseFileUpload';
 import { UI_COLORS } from '@/subapps/dxf-viewer/config/color-config';
 
 // ============================================================================
@@ -22,7 +22,7 @@ export interface EnterprisePhotoUploadProps extends Omit<UseEnterpriseFileUpload
   /** Disabled state */
   disabled?: boolean;
   /** Custom upload handler */
-  uploadHandler?: (file: File, onProgress: (progress: any) => void) => Promise<FileUploadResult>;
+  uploadHandler?: (file: File, onProgress: (progress: FileUploadProgress) => void) => Promise<FileUploadResult>;
   /** Custom CSS classes */
   className?: string;
   /** Show upload progress (default: true) */
@@ -136,17 +136,25 @@ export function EnterprisePhotoUpload({
   }, [disabled, handleFileSelection]);
 
   /**
-   * Handle upload
+   * 🔥 AUTOMATIC UPLOAD: Start upload immediately when file is selected
    */
-  const handleUpload = useCallback(async () => {
+  useEffect(() => {
     const fileToUpload = photoFile || upload.currentFile;
-    if (!fileToUpload) return;
+    if (!fileToUpload || upload.isUploading || upload.success) return;
 
-    const result = await upload.uploadFile(fileToUpload, uploadHandler);
-    if (result && onUploadComplete) {
-      onUploadComplete(result);
-    }
-  }, [photoFile, upload, uploadHandler, onUploadComplete]);
+
+    const startAutoUpload = async () => {
+      const result = await upload.uploadFile(fileToUpload, uploadHandler);
+      if (result && onUploadComplete) {
+        console.log('✅ AUTOMATIC UPLOAD: Completed, calling onUploadComplete');
+        onUploadComplete(result);
+      }
+    };
+
+    startAutoUpload().catch(error => {
+      console.error('❌ AUTOMATIC UPLOAD: Error:', error);
+    });
+  }, [photoFile, upload.currentFile, upload.isUploading, upload.success, uploadHandler, onUploadComplete]);
 
   /**
    * Handle remove photo
@@ -255,19 +263,8 @@ export function EnterprisePhotoUpload({
           <h4 className="font-semibold text-sm flex items-center gap-2">
             <Camera className="w-4 h-4" />
             {purpose === 'logo' ? 'Λογότυπο' : 'Φωτογραφία'}
+            {isLoading && <span className="text-xs text-blue-600 ml-2">Ανεβαίνει αυτόματα...</span>}
           </h4>
-
-          {currentFile && !isLoading && (
-            <button
-              type="button"
-              onClick={handleUpload}
-              className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors flex items-center gap-1"
-              disabled={disabled}
-            >
-              <Upload className="w-3 h-3" />
-              Ανέβασμα
-            </button>
-          )}
         </div>
       </div>
 
@@ -400,3 +397,5 @@ export function EnterprisePhotoUpload({
     </div>
   );
 }
+
+export default EnterprisePhotoUpload;
