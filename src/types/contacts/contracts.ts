@@ -79,8 +79,9 @@ export interface IndividualContact extends BaseContact {
   spouse?: string;
   children?: string[];
 
-  // 📷 Φωτογραφία
+  // 📷 Φωτογραφίες
   photoURL?: string;
+  multiplePhotoURLs?: string[]; // Πολλαπλές φωτογραφίες (έως 5)
 }
 
 // Interface για Νομικά Πρόσωπα (Εταιρείες)

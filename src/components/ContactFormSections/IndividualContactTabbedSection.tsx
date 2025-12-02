@@ -3,12 +3,16 @@
 import { IndividualFormTabRenderer } from '@/components/generic/IndividualFormTabRenderer';
 import { getIndividualSortedSections } from '@/config/individual-config';
 import type { ContactFormData } from '@/types/ContactFormTypes';
+import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
+import type { FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 
 interface IndividualContactTabbedSectionProps {
   formData: ContactFormData;
   handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   handleSelectChange: (name: string, value: string) => void;
   handleFileChange?: (file: File | null) => void;
+  handleMultiplePhotosChange?: (photos: PhotoSlot[]) => void;
+  handleMultiplePhotoUploadComplete?: (index: number, result: FileUploadResult) => void;
   disabled?: boolean;
 }
 
@@ -27,6 +31,8 @@ export function IndividualContactTabbedSection({
   handleChange,
   handleSelectChange,
   handleFileChange,
+  handleMultiplePhotosChange,
+  handleMultiplePhotoUploadComplete,
   disabled = false
 }: IndividualContactTabbedSectionProps) {
   // Get all individual sections from centralized config
@@ -39,6 +45,8 @@ export function IndividualContactTabbedSection({
       onChange={handleChange}
       onSelectChange={handleSelectChange}
       onPhotoChange={handleFileChange}
+      onMultiplePhotosChange={handleMultiplePhotosChange}
+      onMultiplePhotoUploadComplete={handleMultiplePhotoUploadComplete}
       disabled={disabled}
       customRenderers={{
         // Add any custom field renderers if needed for individual-specific fields

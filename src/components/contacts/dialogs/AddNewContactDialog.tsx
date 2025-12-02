@@ -38,7 +38,9 @@ export function AddNewContactDialog({ open, onOpenChange, onContactAdded, editCo
     handleNestedChange,
     handleLogoChange,
     handleUploadedPhotoURL,
-    handleUploadedLogoURL
+    handleUploadedLogoURL,
+    handleMultiplePhotosChange,
+    handleMultiplePhotoUploadComplete
   } = useContactForm({ onContactAdded, onOpenChange, editContact });
 
 
@@ -83,24 +85,25 @@ export function AddNewContactDialog({ open, onOpenChange, onContactAdded, editCo
                 handleDrop={handleDrop}
                 handleDragOver={handleDragOver}
                 handleUploadedPhotoURL={handleUploadedPhotoURL}
+                handleMultiplePhotosChange={handleMultiplePhotosChange}
+                handleMultiplePhotoUploadComplete={handleMultiplePhotoUploadComplete}
                 disabled={loading}
               />
             )}
 
             {/* Πεδία για Εταιρεία */}
-            {formData.type === 'company' && (() => {
-              console.log('🎯 DIALOG: About to render CompanyContactSection', { type: formData.type, loading });
-              return (
-                <CompanyContactSection
-                  formData={formData}
-                  handleChange={handleChange}
-                  handleSelectChange={handleSelectChange}
-                  handleLogoChange={handleLogoChange}
-                  handleUploadedLogoURL={handleUploadedLogoURL}
-                  disabled={loading}
-                />
-              );
-            })()}
+            {formData.type === 'company' && (
+              <CompanyContactSection
+                formData={formData}
+                handleChange={handleChange}
+                handleSelectChange={handleSelectChange}
+                handleLogoChange={handleLogoChange}
+                handleUploadedLogoURL={handleUploadedLogoURL}
+                handleMultiplePhotosChange={handleMultiplePhotosChange}
+                handleMultiplePhotoUploadComplete={handleMultiplePhotoUploadComplete}
+                disabled={loading}
+              />
+            )}
 
             {/* Πεδία για Δημόσια Υπηρεσία */}
             {formData.type === 'service' && (
@@ -113,6 +116,8 @@ export function AddNewContactDialog({ open, onOpenChange, onContactAdded, editCo
                 handleFileChange={handleFileChange}
                 handleUploadedLogoURL={handleUploadedLogoURL}
                 handleUploadedPhotoURL={handleUploadedPhotoURL}
+                handleMultiplePhotosChange={handleMultiplePhotosChange}
+                handleMultiplePhotoUploadComplete={handleMultiplePhotoUploadComplete}
                 disabled={loading}
               />
             )}

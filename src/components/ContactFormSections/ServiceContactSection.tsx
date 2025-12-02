@@ -10,9 +10,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FormField, FormInput } from '@/components/ui/form/FormComponents';
 import { Building2, Users, MapPin, FileText, Plus, Trash2, Upload } from 'lucide-react';
 import { EnterprisePhotoUpload } from '@/components/ui/EnterprisePhotoUpload';
+import { MultiplePhotosUpload } from '@/components/ui/MultiplePhotosUpload';
 import { PhotoUploadService } from '@/services/photo-upload.service';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
+import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 
 interface ServiceContactSectionProps {
   formData: ContactFormData;
@@ -23,6 +25,8 @@ interface ServiceContactSectionProps {
   handleFileChange: (file: File | null) => void;
   handleUploadedLogoURL: (logoURL: string) => void;
   handleUploadedPhotoURL: (photoURL: string) => void;
+  handleMultiplePhotosChange: (photos: PhotoSlot[]) => void;
+  handleMultiplePhotoUploadComplete: (index: number, result: FileUploadResult) => void;
   disabled?: boolean;
 }
 
@@ -35,6 +39,8 @@ export function ServiceContactSection({
   handleFileChange,
   handleUploadedLogoURL,
   handleUploadedPhotoURL,
+  handleMultiplePhotosChange,
+  handleMultiplePhotoUploadComplete,
   disabled = false
 }: ServiceContactSectionProps) {
   const [activeTab, setActiveTab] = useState("gemi");
@@ -85,6 +91,34 @@ export function ServiceContactSection({
     );
 
     console.log('✅🏛️ SERVICE: Enterprise photo upload completed:', {
+      url: result.url,
+      originalSize: result.compressionInfo?.originalSize,
+      compressedSize: result.compressionInfo?.compressedSize,
+      savings: result.compressionInfo?.compressionRatio
+    });
+
+    return result;
+  };
+
+  // 🔥 Enterprise Multiple Photos Upload Handler για Service Gallery
+  const handleEnterpriseMultiplePhotoUpload = async (
+    file: File,
+    onProgress: (progress: FileUploadProgress) => void
+  ): Promise<FileUploadResult> => {
+    console.log('🚀🏛️ SERVICE: Starting enterprise multiple photo upload για Service Gallery με compression...', {
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type
+    });
+
+    const result = await PhotoUploadService.uploadContactPhoto(
+      file,
+      undefined, // contactId - θα προστεθεί αργότερα όταν save-άρουμε
+      onProgress,
+      'profile-modal' // Smart compression για service gallery
+    );
+
+    console.log('✅🏛️ SERVICE: Enterprise multiple photo upload completed:', {
       url: result.url,
       originalSize: result.compressionInfo?.originalSize,
       compressedSize: result.compressionInfo?.compressedSize,
@@ -780,6 +814,20 @@ export function ServiceContactSection({
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Multiple Photos Upload για Δημόσια Υπηρεσία */}
+      <MultiplePhotosUpload
+        maxPhotos={5}
+        photos={formData.multiplePhotos}
+        onPhotosChange={handleMultiplePhotosChange}
+        onPhotoUploadComplete={handleMultiplePhotoUploadComplete}
+        uploadHandler={handleEnterpriseMultiplePhotoUpload}
+        disabled={disabled}
+        compact={true}
+        showProgress={true}
+        purpose="photo"
+        className="mt-4"
+      />
     </>
   );
 }

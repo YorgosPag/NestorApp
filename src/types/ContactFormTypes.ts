@@ -1,4 +1,5 @@
 import type { ContactType } from '@/types/contacts';
+import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 
 export interface AddNewContactDialogProps {
   open: boolean;
@@ -157,6 +158,8 @@ export interface ContactFormData {
   // Φωτογραφία
   photoFile: File | null;
   photoPreview: string;
+  // Πολλαπλές Φωτογραφίες (μέχρι 5)
+  multiplePhotos: PhotoSlot[];
   // Κοινά
   notes: string;
 }
@@ -263,6 +266,8 @@ export const initialFormData: ContactFormData = {
   // Φωτογραφία
   photoFile: null,
   photoPreview: '',
+  // Πολλαπλές Φωτογραφίες (μέχρι 5)
+  multiplePhotos: [],
   // Κοινά
   notes: '',
 };

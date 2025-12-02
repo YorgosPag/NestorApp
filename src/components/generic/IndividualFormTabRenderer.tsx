@@ -7,7 +7,11 @@ import { TabsContent } from '@/components/ui/tabs';
 import { getIconComponent } from './ConfigTabsHelper';
 import { IndividualFormRenderer } from './IndividualFormRenderer';
 import { EnterprisePhotoUpload } from '@/components/ui/EnterprisePhotoUpload';
+import { MultiplePhotosUpload } from '@/components/ui/MultiplePhotosUpload';
+import { PhotoUploadService } from '@/services/photo-upload.service';
 import type { IndividualSectionConfig } from '@/config/individual-config';
+import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
+import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 
 // ============================================================================
 // INTERFACES
@@ -26,6 +30,10 @@ export interface IndividualFormTabRendererProps {
   disabled?: boolean;
   /** Photo file change handler */
   onPhotoChange?: (file: File | null) => void;
+  /** Multiple photos change handler */
+  onMultiplePhotosChange?: (photos: PhotoSlot[]) => void;
+  /** Multiple photo upload complete handler */
+  onMultiplePhotoUploadComplete?: (index: number, result: FileUploadResult) => void;
   /** Custom field renderers for forms */
   customRenderers?: Record<string, (field: any, formData: any, onChange: any, onSelectChange: any, disabled: boolean) => React.ReactNode>;
 }
@@ -44,6 +52,9 @@ function createIndividualFormTabsFromConfig(
   onSelectChange: (name: string, value: string) => void,
   disabled: boolean,
   onPhotoChange?: (file: File | null) => void,
+  onMultiplePhotosChange?: (photos: PhotoSlot[]) => void,
+  onMultiplePhotoUploadComplete?: (index: number, result: FileUploadResult) => void,
+  handleEnterpriseMultiplePhotoUpload?: (file: File, onProgress: (progress: FileUploadProgress) => void) => Promise<FileUploadResult>,
   customRenderers?: Record<string, any>
 ) {
   return sections.map(section => ({
@@ -61,6 +72,21 @@ function createIndividualFormTabsFromConfig(
           onFileChange={onPhotoChange}
           disabled={disabled}
         />
+
+        {/* 📸 ΠΟΛΛΑΠΛΕΣ ΦΩΤΟΓΡΑΦΙΕΣ για Φυσικό Πρόσωπο (μέχρι 5) */}
+        <MultiplePhotosUpload
+          maxPhotos={5}
+          photos={formData.multiplePhotos || []}
+          onPhotosChange={onMultiplePhotosChange}
+          onPhotoUploadComplete={onMultiplePhotoUploadComplete}
+          uploadHandler={handleEnterpriseMultiplePhotoUpload}
+          disabled={disabled}
+          compact={true}
+          showProgress={true}
+          purpose="photo"
+          className="mt-4"
+        />
+
         <FormGrid>
           <IndividualFormRenderer
             sections={[section]} // Regular fields (like description)
@@ -127,11 +153,41 @@ export function IndividualFormTabRenderer({
   onSelectChange,
   disabled = false,
   onPhotoChange,
+  onMultiplePhotosChange,
+  onMultiplePhotoUploadComplete,
   customRenderers
 }: IndividualFormTabRendererProps) {
   if (!sections || sections.length === 0) {
     return null;
   }
+
+  // 🔥 Enterprise Multiple Photos Upload Handler
+  const handleEnterpriseMultiplePhotoUpload = async (
+    file: File,
+    onProgress: (progress: FileUploadProgress) => void
+  ): Promise<FileUploadResult> => {
+    console.log('🚀👤 INDIVIDUAL: Starting enterprise multiple photo upload με compression...', {
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type
+    });
+
+    const result = await PhotoUploadService.uploadContactPhoto(
+      file,
+      undefined, // contactId - θα προστεθεί αργότερα όταν save-άρουμε
+      onProgress,
+      'profile-modal' // Smart compression για individual multiple photos
+    );
+
+    console.log('✅👤 INDIVIDUAL: Enterprise multiple photo upload completed:', {
+      url: result.url,
+      originalSize: result.compressionInfo?.originalSize,
+      compressedSize: result.compressionInfo?.compressedSize,
+      savings: result.compressionInfo?.compressionRatio
+    });
+
+    return result;
+  };
 
   // Create tabs from individual sections
   const tabs = createIndividualFormTabsFromConfig(
@@ -141,6 +197,9 @@ export function IndividualFormTabRenderer({
     onSelectChange,
     disabled,
     onPhotoChange,
+    onMultiplePhotosChange,
+    onMultiplePhotoUploadComplete,
+    handleEnterpriseMultiplePhotoUpload,
     customRenderers
   );
 

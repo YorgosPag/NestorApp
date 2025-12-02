@@ -4,6 +4,8 @@ import type { Contact } from '@/types/contacts';
 import type { ContactFormData, AddNewContactDialogProps } from '@/types/ContactFormTypes';
 import { initialFormData } from '@/types/ContactFormTypes';
 import { ContactsService } from '@/services/contacts.service';
+import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
+import type { FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 
 interface UseContactFormProps {
   onContactAdded: () => void;
@@ -128,6 +130,19 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact }: Us
         // Φωτογραφία
         photoFile: null,
         photoPreview: editContact.type === 'individual' ? (editContact as any).photoURL || '' : '',
+        // Πολλαπλές Φωτογραφίες - Convert URLs to PhotoSlots
+        multiplePhotos: (editContact as any).multiplePhotoURLs
+          ? (editContact as any).multiplePhotoURLs.map((url: string) => {
+              console.log('🔄 Loading saved photo URL:', url);
+              return {
+                uploadUrl: url,
+                preview: url
+              };
+            })
+          : (() => {
+              console.log('❌ No multiplePhotoURLs found in editContact:', editContact);
+              return [];
+            })(),
         // Κοινά
         notes: (editContact as any).notes || '',
       };
@@ -190,6 +205,16 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact }: Us
         console.log('✅👤 Using existing individual photo URL:', photoURL);
       }
 
+      // 📸 MULTIPLE PHOTOS: Collect all uploaded URLs
+      const multiplePhotoURLs: string[] = [];
+      console.log('🔍 FormData multiplePhotos:', formData.multiplePhotos);
+      formData.multiplePhotos.forEach((photoSlot, index) => {
+        if (photoSlot.uploadUrl) {
+          multiplePhotoURLs.push(photoSlot.uploadUrl);
+          console.log(`✅📸 Multiple photo ${index + 1} URL:`, photoSlot.uploadUrl);
+        }
+      });
+
       // Δημιουργία contact object ανάλογα με τον τύπο
       let contactData: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>;
 
@@ -220,6 +245,10 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact }: Us
           socialMedia: formData.socialMedia,
           websites: formData.websites,
           photoURL: photoURL,
+          multiplePhotoURLs: (() => {
+            console.log('💾 Saving multiplePhotoURLs:', multiplePhotoURLs);
+            return multiplePhotoURLs;
+          })(), // 📸 Multiple photos array
           emails: formData.email ? [{ email: formData.email, type: 'work', isPrimary: true }] : [],
           phones: formData.phone ? [{ number: formData.phone, type: 'mobile', isPrimary: true }] : [],
           isFavorite: false,
@@ -431,6 +460,32 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact }: Us
     });
   };
 
+  // Handler για multiple photos changes
+  const handleMultiplePhotosChange = (photos: PhotoSlot[]) => {
+    console.log('🎯📸 MULTIPLE: Photos changed:', photos.length);
+    setFormData({
+      ...formData,
+      multiplePhotos: photos
+    });
+  };
+
+  // Handler για single multiple photo upload completion
+  const handleMultiplePhotoUploadComplete = (index: number, result: FileUploadResult) => {
+    console.log(`🎯📸 MULTIPLE: Photo ${index + 1} upload complete:`, result.url);
+
+    const newPhotos = [...formData.multiplePhotos];
+    if (newPhotos[index]) {
+      newPhotos[index] = {
+        ...newPhotos[index],
+        uploadUrl: result.url
+      };
+      setFormData({
+        ...formData,
+        multiplePhotos: newPhotos
+      });
+    }
+  };
+
   const cleanUndefinedValues = (obj: any): any => {
     const cleaned: any = {};
     Object.keys(obj).forEach(key => {
@@ -464,6 +519,8 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact }: Us
     handleNestedChange,
     handleLogoChange,
     handleUploadedPhotoURL,
-    handleUploadedLogoURL
+    handleUploadedLogoURL,
+    handleMultiplePhotosChange,
+    handleMultiplePhotoUploadComplete
   };
 }

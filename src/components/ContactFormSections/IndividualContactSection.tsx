@@ -3,9 +3,11 @@
 import { GenericFormRenderer } from '@/components/generic';
 import { getIndividualSortedSections } from '@/config/individual-config';
 import { EnterprisePhotoUpload } from '@/components/ui/EnterprisePhotoUpload';
+import { MultiplePhotosUpload } from '@/components/ui/MultiplePhotosUpload';
 import { PhotoUploadService } from '@/services/photo-upload.service';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
+import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 
 interface IndividualContactSectionProps {
   formData: ContactFormData;
@@ -15,6 +17,8 @@ interface IndividualContactSectionProps {
   handleDrop: (e: React.DragEvent) => void;
   handleDragOver: (e: React.DragEvent) => void;
   handleUploadedPhotoURL: (photoURL: string) => void;
+  handleMultiplePhotosChange: (photos: PhotoSlot[]) => void;
+  handleMultiplePhotoUploadComplete: (index: number, result: FileUploadResult) => void;
   disabled?: boolean;
 }
 
@@ -26,6 +30,8 @@ export function IndividualContactSection({
   handleDrop,
   handleDragOver,
   handleUploadedPhotoURL,
+  handleMultiplePhotosChange,
+  handleMultiplePhotoUploadComplete,
   disabled = false
 }: IndividualContactSectionProps) {
   // Get all individual sections from centralized config
@@ -87,6 +93,31 @@ export function IndividualContactSection({
         showProgress={true}
         className="mt-4"
       />
+
+      {/* 🚨 DEBUG: Simple test για πολλαπλές φωτογραφίες */}
+      <div style={{
+        padding: '20px',
+        border: '3px solid red',
+        margin: '20px 0',
+        backgroundColor: '#ffe6e6'
+      }}>
+        <h4 style={{ color: 'red', fontWeight: 'bold' }}>🔥 DEBUG: ΠΟΛΛΑΠΛΕΣ ΦΩΤΟΓΡΑΦΙΕΣ (μέχρι 5)</h4>
+        <p>Αυτό είναι ένα test component. Αν το βλέπεις, τότε το Individual modal δουλεύει!</p>
+        <p>Multiple photos length: {formData.multiplePhotos?.length || 0}</p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px', marginTop: '10px' }}>
+          {Array.from({ length: 5 }, (_, i) => (
+            <div key={i} style={{
+              border: '2px dashed #ccc',
+              padding: '20px',
+              textAlign: 'center',
+              backgroundColor: '#f9f9f9'
+            }}>
+              <p>📸</p>
+              <p>Slot {i + 1}</p>
+            </div>
+          ))}
+        </div>
+      </div>
     </>
   );
 }
