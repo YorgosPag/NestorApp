@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import type { Contact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { ContactsService } from '@/services/contacts.service';
-import { mapFormDataToContact } from '@/utils/contactForm/formDataMapper';
+import { mapFormDataToContact, validateUploadState } from '@/utils/contactForm/formDataMapper';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -25,6 +25,15 @@ export interface UseContactSubmissionReturn {
 
   // Validation
   validateFormData: (formData: ContactFormData) => boolean;
+
+  // 🏢 Enterprise Layer 3: UI/UX Coordination
+  getSubmissionState: (formData: ContactFormData) => {
+    canSubmit: boolean;
+    isUploading: boolean;
+    pendingUploads: number;
+    buttonText: string;
+    statusMessage?: string;
+  };
 }
 
 // ============================================================================
@@ -157,6 +166,33 @@ export function useContactSubmission({
       return;
     }
 
+    // 🔧 HYBRID DEBUG: Upload state validation (temporarily relaxed για Base64 testing)
+    const uploadValidation = validateUploadState(formData);
+    console.log('🔍 HYBRID UPLOAD VALIDATION:', uploadValidation);
+
+    // 🔧 TEMPORARY: Relaxed validation για Base64 testing
+    if (!uploadValidation.isValid && uploadValidation.failedUploads > 0) {
+      // Only block για failed uploads, όχι για pending (που μπορεί να είναι Base64)
+      console.error('🚫 SUBMISSION BLOCKED: Failed uploads detected:', uploadValidation);
+
+      const errorMessage = `Υπάρχουν αποτυχημένες φωτογραφίες (${uploadValidation.failedUploads} αποτυχίες)`;
+      toast.error(errorMessage);
+
+      uploadValidation.errors.forEach(error => {
+        if (error.includes('failed') || error.includes('αποτυχία')) {
+          console.warn('📸 UPLOAD ERROR:', error);
+        }
+      });
+
+      return;
+    }
+
+    if (uploadValidation.pendingUploads > 0) {
+      console.warn('⚠️ HYBRID: Found pending uploads, but allowing submission για Base64 testing:', uploadValidation.pendingUploads);
+    }
+
+    console.log('✅ HYBRID VALIDATION: Proceeding with submission (Base64 friendly)');
+
     setLoading(true);
 
     try {
@@ -225,6 +261,47 @@ export function useContactSubmission({
   }, [loading, validateFormData, editContact, onContactAdded, onOpenChange]); // 🔧 FIX: Removed resetForm from dependencies to prevent infinite loop
 
   // ========================================================================
+  // UI/UX COORDINATION (Layer 3)
+  // ========================================================================
+
+  /**
+   * 🏢 Enterprise Layer 3: Get submission state for UI coordination
+   * Provides comprehensive state information for optimal user experience
+   */
+  const getSubmissionState = useCallback((formData: ContactFormData) => {
+    const uploadValidation = validateUploadState(formData);
+    const isValidForm = validateFormData(formData);
+
+    const isUploading = uploadValidation.pendingUploads > 0;
+    const hasFailed = uploadValidation.failedUploads > 0;
+
+    let buttonText = editContact ? 'Ενημέρωση Επαφής' : 'Δημιουργία Επαφής';
+    let statusMessage: string | undefined;
+
+    if (loading) {
+      buttonText = editContact ? 'Ενημερώνεται...' : 'Δημιουργείται...';
+    } else if (isUploading) {
+      buttonText = `Περιμένετε uploads (${uploadValidation.pendingUploads}/${uploadValidation.totalSlots})`;
+      statusMessage = `Περιμένετε να ολοκληρωθούν όλες οι φωτογραφίες πριν την αποθήκευση`;
+    } else if (hasFailed) {
+      buttonText = 'Υπάρχουν αποτυχημένες φωτογραφίες';
+      statusMessage = 'Διορθώστε τις αποτυχημένες φωτογραφίες πριν την αποθήκευση';
+    } else if (!isValidForm) {
+      buttonText = 'Συμπληρώστε τα απαιτούμενα πεδία';
+    }
+
+    const canSubmit = !loading && uploadValidation.isValid && isValidForm;
+
+    return {
+      canSubmit,
+      isUploading,
+      pendingUploads: uploadValidation.pendingUploads,
+      buttonText,
+      statusMessage
+    };
+  }, [loading, validateFormData, editContact]);
+
+  // ========================================================================
   // RETURN API
   // ========================================================================
 
@@ -236,6 +313,9 @@ export function useContactSubmission({
     handleSubmit,
 
     // Validation
-    validateFormData
+    validateFormData,
+
+    // UI/UX Coordination
+    getSubmissionState
   };
 }

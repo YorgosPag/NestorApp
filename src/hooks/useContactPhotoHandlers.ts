@@ -82,22 +82,53 @@ export function useContactPhotoHandlers({
   // ========================================================================
 
   /**
-   * Process photo file (validate + update state)
+   * Process photo file (validate + direct Base64 conversion)
+   * 🔙 OLD WORKING SYSTEM: Pure Base64 approach - NO Firebase Storage
    *
    * @param file - File to process
    */
-  const processPhotoFile = useCallback((file: File) => {
-    console.log('🔥 PHOTO HANDLER: Processing photo file:', file.name);
+  const processPhotoFile = useCallback(async (file: File) => {
+    console.log('🔥 PHOTO HANDLER BASE64: Processing photo file:', file.name);
 
     if (!validatePhotoFile(file)) {
       return;
     }
 
-    // Update form state through callback
-    onFileChange(file);
+    console.log('🔙 OLD WORKING SYSTEM: Direct Base64 conversion - NO Firebase calls');
 
-    console.log('✅ PHOTO HANDLER: Photo file processed successfully');
-  }, []); // 🔧 FIX: Removed dependencies to prevent infinite re-renders
+    try {
+      // 🔙 ΠΑΛΙΟ WORKING SYSTEM: Direct FileReader conversion
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        const base64URL = e.target?.result as string;
+        console.log('✅ OLD WORKING: Photo converted to Base64 successfully');
+        console.log('📸 BASE64 URL:', base64URL.substring(0, 50) + '...');
+
+        // Update form state με το file (για διαχείριση)
+        onFileChange(file);
+
+        // Update form με το Base64 URL - ΠΑΛΙΟ WORKING APPROACH!
+        onUploadComplete(base64URL);
+
+        toast.success('Φωτογραφία φορτώθηκε επιτυχώς!');
+      };
+
+      reader.onerror = () => {
+        console.error('❌ OLD WORKING: Base64 conversion failed');
+        toast.error('Αποτυχία φόρτωσης φωτογραφίας');
+      };
+
+      // 🔙 ΠΑΛΙΟ WORKING: Convert directly to Base64 data URL
+      reader.readAsDataURL(file);
+
+    } catch (error) {
+      console.error('❌ OLD WORKING: Photo processing failed:', error);
+      toast.error('Αποτυχία φόρτωσης φωτογραφίας');
+    }
+
+    console.log('✅ PHOTO HANDLER BASE64: Photo file processed successfully');
+  }, [onFileChange, onUploadComplete]);
 
   /**
    * Clear photo file

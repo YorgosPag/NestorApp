@@ -161,7 +161,7 @@ export function ContactsPageContent() {
   // Load contacts on component mount and when archived filter changes
   useEffect(() => {
     loadContacts();
-  }, [loadContacts]);
+  }, []); // 🔧 FIX: Removed loadContacts to prevent infinite loop - load once on mount
 
   // Update selected contact when contacts list changes
   useEffect(() => {

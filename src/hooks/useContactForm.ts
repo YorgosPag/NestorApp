@@ -61,6 +61,7 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact }: Us
     handleUploadedPhotoURL,
     handleUploadedLogoURL,
     handleMultiplePhotoUploadComplete,
+    handleProfilePhotoSelection,
     handleDrop,
     handleDragOver,
     resetForm
@@ -70,7 +71,8 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact }: Us
   const {
     loading,
     handleSubmit: submitFormData,
-    validateFormData
+    validateFormData,
+    getSubmissionState
   } = useContactSubmission({
     editContact,
     onContactAdded,
@@ -219,6 +221,9 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact }: Us
     handleMultiplePhotoUploadComplete,
     handleEnterpriseMultiplePhotoUpload,
 
+    // Profile photo selection
+    handleProfilePhotoSelection,
+
     // Advanced handlers (για επέκταση)
     photoHandlers,
     logoHandlers,
@@ -226,6 +231,9 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact }: Us
 
     // Utilities
     validateFormData,
-    resetForm
+    resetForm,
+
+    // 🏢 Enterprise Layer 3: UI/UX Coordination
+    getSubmissionState
   };
 }

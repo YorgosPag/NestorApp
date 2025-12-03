@@ -21,7 +21,7 @@ export interface UseMultiplePhotosHandlersReturn {
   clearAllPhotos: () => void;
   clearPhotoAtIndex: (index: number, currentPhotos: PhotoSlot[]) => void;
 
-  // Enterprise upload handler
+  // Base64 conversion handler (OLD WORKING SYSTEM)
   handleEnterpriseMultiplePhotoUpload: (
     file: File,
     onProgress: (progress: any) => void
@@ -162,44 +162,65 @@ export function useMultiplePhotosHandlers({
   }, []); // 🔧 FIX: Removed dependencies to prevent infinite re-renders
 
   // ========================================================================
-  // ENTERPRISE UPLOAD HANDLER
+  // BASE64 CONVERSION HANDLER (OLD WORKING SYSTEM)
   // ========================================================================
 
   /**
-   * Enterprise upload handler for multiple photos
+   * Base64 conversion handler for multiple photos
+   * 🔙 OLD WORKING SYSTEM: Direct Base64 conversion - NO Firebase Storage
    *
-   * Integrates με το PhotoUploadService για enterprise-class upload.
-   *
-   * @param file - File to upload
+   * @param file - File to convert
    * @param onProgress - Progress callback
-   * @returns Upload result promise
+   * @returns Base64 conversion result
    */
   const handleEnterpriseMultiplePhotoUpload = useCallback(async (
     file: File,
     onProgress: (progress: any) => void
   ): Promise<FileUploadResult> => {
-    console.log('🚀📸 MULTIPLE PHOTOS HANDLER: Starting enterprise upload:', file.name);
-
-    // Import PhotoUploadService dynamically to avoid circular dependencies
-    const { PhotoUploadService } = await import('@/services/photo-upload.service');
+    console.log('🚀📸 MULTIPLE PHOTOS BASE64: Starting Base64 conversion:', file.name);
 
     try {
-      const result = await PhotoUploadService.uploadContactPhoto(
-        file,
-        undefined, // contactId - θα προστεθεί αργότερα
-        onProgress,
-        'profile-modal' // Smart compression για multiple photos
-      );
+      return new Promise<FileUploadResult>((resolve, reject) => {
+        const reader = new FileReader();
 
-      console.log('✅📸 MULTIPLE PHOTOS HANDLER: Enterprise upload completed:', {
-        url: result.url,
-        compressionRatio: result.compressionInfo?.compressionRatio
+        // Progress simulation για UI feedback
+        onProgress({ bytesTransferred: 0, totalBytes: file.size });
+
+        reader.onload = (e) => {
+          const base64URL = e.target?.result as string;
+
+          console.log('✅📸 MULTIPLE PHOTOS BASE64: Conversion completed:', file.name);
+          console.log('📸 BASE64 URL:', base64URL.substring(0, 50) + '...');
+
+          // Simulate final progress
+          onProgress({ bytesTransferred: file.size, totalBytes: file.size });
+
+          const result: FileUploadResult = {
+            success: true,
+            url: base64URL, // 🔙 OLD WORKING: Direct Base64 URL
+            fileName: file.name,
+            compressionInfo: {
+              originalSize: file.size,
+              compressedSize: file.size,
+              compressionRatio: 1.0,
+              quality: 1.0
+            }
+          };
+
+          resolve(result);
+        };
+
+        reader.onerror = () => {
+          console.error('❌📸 MULTIPLE PHOTOS BASE64: Conversion failed:', file.name);
+          reject(new Error('Base64 conversion failed'));
+        };
+
+        // 🔙 OLD WORKING SYSTEM: Direct Base64 conversion
+        reader.readAsDataURL(file);
       });
 
-      return result;
-
     } catch (error) {
-      console.error('❌📸 MULTIPLE PHOTOS HANDLER: Enterprise upload failed:', error);
+      console.error('❌📸 MULTIPLE PHOTOS BASE64: Conversion failed:', error);
       throw error;
     }
   }, []);
@@ -217,7 +238,7 @@ export function useMultiplePhotosHandlers({
     clearAllPhotos,
     clearPhotoAtIndex,
 
-    // Enterprise upload handler
+    // Base64 conversion handler (OLD WORKING SYSTEM)
     handleEnterpriseMultiplePhotoUpload
   };
 }

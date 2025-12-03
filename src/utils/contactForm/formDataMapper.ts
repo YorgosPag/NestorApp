@@ -48,39 +48,179 @@ export function cleanUndefinedValues(obj: any): any {
 
 /**
  * Extract uploaded photo URLs from form data
+ * 🔙 HYBRID SYSTEM: Base64 data URLs support
  *
  * @param formData - Contact form data
- * @returns Multiple photo URLs array
+ * @returns Multiple photo URLs array (Base64 data URLs)
  */
 export function extractMultiplePhotoURLs(formData: ContactFormData): string[] {
   const urls: string[] = [];
 
-  console.log('🔍 MAPPER: Extracting multiplePhotoURLs from formData');
+  console.log('🔍 MAPPER HYBRID: Extracting multiplePhotoURLs from formData');
 
   formData.multiplePhotos.forEach((photoSlot, index) => {
     if (photoSlot.uploadUrl) {
-      urls.push(photoSlot.uploadUrl);
-      console.log(`✅📸 MAPPER: Multiple photo ${index + 1} URL:`, photoSlot.uploadUrl);
+      // 🔙 HYBRID: Accept both Base64 data URLs and Firebase URLs
+      if (photoSlot.uploadUrl.startsWith('data:') || photoSlot.uploadUrl.includes('firebasestorage.googleapis.com')) {
+        urls.push(photoSlot.uploadUrl);
+        const urlType = photoSlot.uploadUrl.startsWith('data:') ? 'Base64' : 'Firebase';
+        console.log(`✅📸 MAPPER HYBRID: Multiple photo ${index + 1} URL (${urlType}):`, photoSlot.uploadUrl.substring(0, 50) + '...');
+      } else if (photoSlot.uploadUrl.startsWith('blob:')) {
+        console.warn(`⚠️ MAPPER HYBRID: Skipping blob URL for photo ${index + 1} - not permanent`);
+      }
     }
   });
 
-  console.log(`📊 MAPPER: Extracted ${urls.length} photo URLs`);
+  console.log(`📊 MAPPER HYBRID: Extracted ${urls.length} photo URLs`);
   return urls;
 }
 
 /**
+ * 🚨 Enterprise Upload State Validation
+ * Validates if all photos have completed upload before form submission
+ *
+ * @param formData - Contact form data
+ * @returns Validation result with pending uploads details
+ */
+export function validateUploadState(formData: ContactFormData): {
+  isValid: boolean;
+  pendingUploads: number;
+  failedUploads: number;
+  totalSlots: number;
+  errors: string[];
+} {
+  console.log('🔍 CRITICAL DEBUG: validateUploadState called with formData.multiplePhotos:', formData.multiplePhotos.map((photo, i) => ({
+    index: i,
+    hasFile: !!photo.file,
+    hasPreview: !!photo.preview,
+    hasUploadUrl: !!photo.uploadUrl,
+    isUploading: !!photo.isUploading,
+    error: photo.error
+  })));
+
+  const result = {
+    isValid: true,
+    pendingUploads: 0,
+    failedUploads: 0,
+    totalSlots: 0,
+    errors: [] as string[]
+  };
+
+  // Check multiple photos upload state
+  formData.multiplePhotos.forEach((photoSlot, index) => {
+    // 🔥 CRITICAL FIX: Check for uploads in progress even if file/preview are cleared
+    const hasContent = photoSlot.file || photoSlot.preview || photoSlot.uploadUrl || photoSlot.isUploading;
+
+    if (hasContent) {
+      result.totalSlots++;
+
+      // 🔙 HYBRID Enhanced check: Consider Base64 URLs as completed uploads
+      const hasValidUrl = photoSlot.uploadUrl && (photoSlot.uploadUrl.startsWith('data:') || photoSlot.uploadUrl.includes('firebasestorage.googleapis.com'));
+      const isUploadingButNotComplete = photoSlot.isUploading && !hasValidUrl;
+      const hasFileButNoUrl = (photoSlot.file || photoSlot.preview) && !hasValidUrl;
+
+      if (isUploadingButNotComplete || hasFileButNoUrl) {
+        if (photoSlot.isUploading) {
+          result.pendingUploads++;
+          result.errors.push(`Φωτογραφία ${index + 1}: Εκκρεμής upload`);
+          console.log(`⏳ VALIDATION HYBRID: Photo ${index + 1} still uploading (isUploading=${photoSlot.isUploading}, hasValidUrl=${hasValidUrl})`);
+        } else if (photoSlot.error) {
+          result.failedUploads++;
+          result.errors.push(`Φωτογραφία ${index + 1}: ${photoSlot.error}`);
+          console.log(`❌ VALIDATION HYBRID: Photo ${index + 1} upload failed:`, photoSlot.error);
+        } else {
+          // File selected but upload never started or stalled
+          result.pendingUploads++;
+          result.errors.push(`Φωτογραφία ${index + 1}: Upload δεν ξεκίνησε`);
+          console.log(`⚠️ VALIDATION HYBRID: Photo ${index + 1} upload never started`);
+        }
+      } else if (hasValidUrl) {
+        // 🔙 HYBRID: Photo has valid URL - consider it completed
+        console.log(`✅ VALIDATION HYBRID: Photo ${index + 1} completed successfully (${hasValidUrl ? 'Base64/Firebase URL' : 'no URL'})`);
+      }
+    }
+  });
+
+  // 🔙 HYBRID: Check main photo upload state (for Individual/Service contacts)
+  if ((formData.type === 'individual' || formData.type === 'service') && formData.photoFile) {
+    const hasValidPhotoUrl = formData.photoPreview && (formData.photoPreview.startsWith('data:') || formData.photoPreview.includes('firebasestorage.googleapis.com'));
+    if (!hasValidPhotoUrl) {
+      result.pendingUploads++;
+      result.errors.push('Κύρια φωτογραφία: Εκκρεμής upload');
+      console.log('⚠️ HYBRID VALIDATION: Main photo upload pending');
+    }
+  }
+
+  // 🔙 HYBRID: Check logo upload state (for Company/Service contacts)
+  if ((formData.type === 'company' || formData.type === 'service') && formData.logoFile) {
+    const hasValidLogoUrl = formData.logoPreview && (formData.logoPreview.startsWith('data:') || formData.logoPreview.includes('firebasestorage.googleapis.com'));
+    if (!hasValidLogoUrl) {
+      result.pendingUploads++;
+      result.errors.push('Logo: Εκκρεμής upload');
+      console.log('⚠️ HYBRID VALIDATION: Logo upload pending');
+    }
+  }
+
+  result.isValid = result.pendingUploads === 0 && result.failedUploads === 0;
+
+  console.log(`🔒 UPLOAD VALIDATION: isValid=${result.isValid}, pending=${result.pendingUploads}, failed=${result.failedUploads}, total=${result.totalSlots}`);
+
+  return result;
+}
+
+/**
  * Extract main photo URL from form data
+ * 🔙 HYBRID SYSTEM: Base64 data URLs + multiple photos support
  *
  * @param formData - Contact form data
  * @param contactType - Contact type for logging
- * @returns Photo URL string
+ * @returns Photo URL string (Base64 data URL or empty string)
  */
 export function extractPhotoURL(formData: ContactFormData, contactType: string): string {
-  if (formData.photoPreview && !formData.photoPreview.startsWith('blob:')) {
-    console.log(`✅📸 MAPPER: Using existing ${contactType} photo URL:`, formData.photoPreview);
+  // 🔍 DEBUG: Log what we're extracting
+  console.log(`🔍 EXTRACT PHOTO URL DEBUG για ${contactType}:`, {
+    photoPreview: formData.photoPreview?.substring(0, 50) + '...',
+    isBase64: formData.photoPreview?.startsWith('data:'),
+    isBlob: formData.photoPreview?.startsWith('blob:'),
+    multiplePhotosCount: formData.multiplePhotos?.length,
+    firstPhotoUploadUrl: formData.multiplePhotos?.[0]?.uploadUrl?.substring(0, 50) + '...'
+  });
+
+  // 🔙 HYBRID PRIORITY 1: Base64 data URLs from multiplePhotos (για individuals)
+  if (formData.multiplePhotos && formData.multiplePhotos.length > 0) {
+    const firstPhoto = formData.multiplePhotos[0];
+    if (firstPhoto.uploadUrl && firstPhoto.uploadUrl.startsWith('data:')) {
+      console.log(`✅📸 MAPPER HYBRID: Using Base64 URL from multiplePhotos for ${contactType}`);
+      return firstPhoto.uploadUrl;
+    }
+  }
+
+  // 🔙 HYBRID PRIORITY 2: Existing Base64 photoPreview
+  if (formData.photoPreview && formData.photoPreview.startsWith('data:')) {
+    console.log(`✅📸 MAPPER HYBRID: Using existing Base64 ${contactType} photo URL`);
     return formData.photoPreview;
   }
 
+  // 🔙 HYBRID PRIORITY 3: Extract Base64 URLs από multiplePhotoURLs
+  const multiplePhotoURLs = extractMultiplePhotoURLs(formData);
+  if (multiplePhotoURLs.length > 0 && multiplePhotoURLs[0].startsWith('data:')) {
+    console.log(`✅📸 MAPPER HYBRID: Using Base64 URL από multiplePhotoURLs for ${contactType}`);
+    return multiplePhotoURLs[0];
+  }
+
+  // 🔙 HYBRID FALLBACK: Support existing Firebase URLs (from old working contacts)
+  if (formData.photoPreview && formData.photoPreview.includes('firebasestorage.googleapis.com')) {
+    console.log(`✅📸 MAPPER HYBRID: Using existing Firebase URL για ${contactType}`);
+    return formData.photoPreview;
+  }
+
+  // 🚨 HYBRID RULE: NEVER return blob URLs - they are temporary!
+  if (formData.photoPreview && formData.photoPreview.startsWith('blob:')) {
+    console.warn(`⚠️ MAPPER HYBRID: Rejecting blob URL - not permanent storage για ${contactType}`);
+    return ''; // Κενό string αντί blob URL
+  }
+
+  console.log(`❌ MAPPER HYBRID: No valid photo URL found για ${contactType} - returning empty string`);
   return '';
 }
 
@@ -180,12 +320,16 @@ export function mapIndividualFormData(formData: ContactFormData): any {
  */
 export function mapCompanyFormData(formData: ContactFormData): any {
   const logoURL = extractLogoURL(formData, 'company');
+  const multiplePhotoURLs = extractMultiplePhotoURLs(formData); // 📸 Multiple photos για companies
+
+  console.log('💾 MAPPER: Saving company with multiplePhotoURLs:', multiplePhotoURLs);
 
   return {
     type: 'company',
     companyName: formData.companyName,
     vatNumber: formData.companyVatNumber,
     logoURL, // 🏢 Enterprise logo URL
+    multiplePhotoURLs, // 📸 Multiple photos array για company photos
     emails: createEmailsArray(formData.email),
     phones: createPhonesArray(formData.phone, 'work'),
     isFavorite: false,
@@ -203,6 +347,9 @@ export function mapCompanyFormData(formData: ContactFormData): any {
 export function mapServiceFormData(formData: ContactFormData): any {
   const logoURL = extractLogoURL(formData, 'service');
   const photoURL = extractPhotoURL(formData, 'service representative');
+  const multiplePhotoURLs = extractMultiplePhotoURLs(formData); // 📸 Multiple photos για services
+
+  console.log('💾 MAPPER: Saving service with multiplePhotoURLs:', multiplePhotoURLs);
 
   return {
     type: 'service',
@@ -210,6 +357,7 @@ export function mapServiceFormData(formData: ContactFormData): any {
     serviceType: formData.serviceType,
     logoURL, // 🏛️ Enterprise service logo URL
     photoURL, // 🏛️ Enterprise service representative photo URL
+    multiplePhotoURLs, // 📸 Multiple photos array για service photos
     emails: createEmailsArray(formData.email),
     phones: createPhonesArray(formData.phone, 'work'),
     isFavorite: false,

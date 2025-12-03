@@ -82,7 +82,7 @@ const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) =
 
   useEffect(() => {
     loadMessages();
-  }, [loadMessages]);
+  }, []); // 🔧 FIX: Removed loadMessages to prevent infinite loop - load once on mount
 
   const filteredMessages = useMemo(() => {
     let filtered = [...messages];

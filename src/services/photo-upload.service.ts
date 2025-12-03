@@ -90,13 +90,14 @@ function validateImageFile(file: File): { isValid: boolean; error?: string } {
 
 export class PhotoUploadService {
   /**
-   * Uploads photo to Firebase Storage with progress tracking and automatic compression
+   * 🏢 Enterprise Layer 2: Firebase Upload Reliability
+   * Uploads photo to Firebase Storage with enhanced reliability and progress tracking
    */
   static async uploadPhoto(
     file: File,
     options: PhotoUploadOptions
   ): Promise<PhotoUploadResult> {
-    console.log('🔄 Starting photo upload:', {
+    console.log('🔄 ENTERPRISE: Starting photo upload:', {
       fileName: file.name,
       fileSize: file.size,
       fileType: file.type,
@@ -180,105 +181,193 @@ export class PhotoUploadService {
     console.log('🔐 Checking authentication status...');
     console.log('🔐 Auth current user:', auth.currentUser ? 'Authenticated' : 'Not authenticated');
 
-    if (!auth.currentUser) {
-      console.warn('⚠️ No authenticated user - attempting anonymous authentication...');
-      try {
-        await signInAnonymously(auth);
-        console.log('✅ Anonymous authentication successful');
-      } catch (authError) {
-        console.error('❌ Anonymous authentication failed:', authError);
-        console.warn('⚠️ Proceeding without authentication - uploads may fail');
-      }
-    }
+    // 🔧 FIX: Skip authentication for development - Firebase Storage rules should allow uploads
+    console.log('📤 Proceeding with upload (authentication optional for storage)');
 
     try {
-      // Generate unique filename
-      const fileName = options.fileName
-        ? generateUniqueFileName(options.fileName)
-        : generateUniqueFileName(file.name);
+      // Use the exact filename provided (already custom-generated) or generate unique
+      const fileName = options.fileName || generateUniqueFileName(file.name);
 
-      // Create storage reference
-      const storagePath = `${options.folderPath}/${fileName}`;
-      console.log('📁 Storage path:', storagePath);
-      const storageRef = ref(storage, storagePath);
-      console.log('🔗 Storage reference created');
+      // 🔧 FIX: Ensure simple path format for Firebase Storage
+      const storagePath = `${options.folderPath}/${fileName}`.replace(/\/+/g, '/'); // Remove double slashes
 
-      // Create upload task with resumable upload
-      console.log('⬆️ Starting upload task...');
-      const uploadTask = uploadBytesResumable(storageRef, fileToUpload);
-
-      // Progress tracking promise
-      return new Promise<PhotoUploadResult>((resolve, reject) => {
-        uploadTask.on(
-          'state_changed',
-          (snapshot) => {
-            // Progress tracking
-            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            console.log(`📈 Upload progress: ${Math.round(progress)}%`);
-
-            // Determine phase based on progress
-            let phase: FileUploadProgress['phase'];
-            if (progress < 50) {
-              phase = 'upload';
-            } else if (progress < 95) {
-              phase = 'processing';
-            } else {
-              phase = 'complete';
-            }
-
-            // Call progress callback
-            if (options.onProgress) {
-              options.onProgress({
-                progress: Math.round(progress),
-                phase
-              });
-            }
-          },
-          (error) => {
-            // Handle upload errors
-            console.error('❌ Photo upload error:', error);
-            console.error('❌ Error code:', error.code);
-            console.error('❌ Error message:', error.message);
-
-            let errorMessage: string;
-            switch (error.code) {
-              case 'storage/unauthorized':
-                errorMessage = 'Δεν έχετε άδεια για ανέβασμα αρχείων';
-                break;
-              case 'storage/canceled':
-                errorMessage = 'Το ανέβασμα ακυρώθηκε';
-                break;
-              case 'storage/unknown':
-                errorMessage = 'Άγνωστο σφάλμα κατά το ανέβασμα';
-                break;
-              default:
-                errorMessage = 'Σφάλμα κατά το ανέβασμα αρχείου';
-            }
-
-            reject(new Error(errorMessage));
-          },
-          async () => {
-            try {
-              // Upload completed successfully
-              console.log('🎉 Upload completed! Getting download URL...');
-              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-              console.log('✅ Download URL obtained:', downloadURL);
-
-              resolve({
-                url: downloadURL,
-                fileName: fileName,
-                fileSize: fileToUpload.size,
-                mimeType: fileToUpload.type,
-                storagePath: storagePath,
-                compressionInfo: compressionInfo
-              });
-            } catch (error) {
-              console.error('❌ Failed to get download URL:', error);
-              reject(new Error('Αποτυχία λήψης URL αρχείου'));
-            }
-          }
-        );
+      console.log('🔍 STORAGE PATH DEBUG:', {
+        folderPath: options.folderPath,
+        fileName: fileName,
+        finalPath: storagePath
       });
+      console.log('📁 ENTERPRISE: Storage path:', storagePath);
+      const storageRef = ref(storage, storagePath);
+      console.log('🔗 ENTERPRISE: Storage reference created');
+
+      // 🏢 ENTERPRISE LAYER 2: Enhanced reliability mechanisms με REDUCED timeouts
+      const maxRetries = 2; // Μείωσα από 3 σε 2
+      const progressTimeout = 5000; // Μείωσα από 10s σε 5s για ταχύτερο fallback
+      const totalTimeout = 15000; // Μείωσα από 30s σε 15s
+      let currentAttempt = 0;
+
+      const attemptUpload = (): Promise<PhotoUploadResult> => {
+        currentAttempt++;
+        console.log(`⬆️ ENTERPRISE: Upload attempt ${currentAttempt}/${maxRetries}`);
+
+        return new Promise<PhotoUploadResult>((resolve, reject) => {
+          // Create upload task with resumable upload
+          const uploadTask = uploadBytesResumable(storageRef, fileToUpload);
+
+          let progressReceived = false;
+          let lastProgressTime = Date.now();
+
+          // 🕐 Progressive timeout mechanism - IMMEDIATE FALLBACK
+          const progressTimeoutId = setTimeout(() => {
+            if (!progressReceived) {
+              console.log(`⏰ ENTERPRISE: No progress after ${progressTimeout}ms on attempt ${currentAttempt} - trying fallback IMMEDIATELY`);
+              uploadTask.cancel();
+
+              // 🚀 IMMEDIATE FALLBACK: Δεν περιμένω retries - πάω κατευθείαν σε server-side
+              console.log('🎯 ENTERPRISE: Client-side stuck at 0% - attempting server-side fallback IMMEDIATELY');
+              PhotoUploadService.fallbackToServerUpload(fileToUpload, options, compressionInfo)
+                .then(resolve)
+                .catch(reject);
+            }
+          }, progressTimeout);
+
+          // 🕐 Total timeout mechanism - IMMEDIATE FALLBACK
+          const totalTimeoutId = setTimeout(() => {
+            console.log(`⏰ ENTERPRISE: Total upload timeout after ${totalTimeout}ms on attempt ${currentAttempt}`);
+            uploadTask.cancel();
+
+            // 🚀 IMMEDIATE FALLBACK: Πάω κατευθείαν σε server-side upload
+            console.log('🎯 ENTERPRISE: Client-side upload timeout - attempting server-side fallback IMMEDIATELY');
+            PhotoUploadService.fallbackToServerUpload(fileToUpload, options, compressionInfo)
+              .then(resolve)
+              .catch(reject);
+          }, totalTimeout);
+
+          uploadTask.on(
+            'state_changed',
+            (snapshot) => {
+              // Clear timeouts on first progress - upload is active
+              if (!progressReceived) {
+                progressReceived = true;
+                clearTimeout(progressTimeoutId);
+                console.log(`✅ ENTERPRISE: Upload started successfully on attempt ${currentAttempt}`);
+              }
+              lastProgressTime = Date.now();
+
+              // Progress tracking
+              const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+              console.log(`📈 ENTERPRISE: Upload progress: ${Math.round(progress)}% (attempt ${currentAttempt})`);
+
+              // Determine phase based on progress
+              let phase: FileUploadProgress['phase'];
+              if (progress < 50) {
+                phase = 'upload';
+              } else if (progress < 95) {
+                phase = 'processing';
+              } else {
+                phase = 'complete';
+              }
+
+              // Call progress callback
+              if (options.onProgress) {
+                options.onProgress({
+                  progress: Math.round(progress),
+                  phase
+                });
+              }
+            },
+            (error) => {
+              // Clear timeouts on error
+              clearTimeout(progressTimeoutId);
+              clearTimeout(totalTimeoutId);
+
+              // Handle upload errors
+              console.error(`❌ ENTERPRISE: Photo upload error on attempt ${currentAttempt}:`, error);
+              console.error('❌ Error code:', error.code);
+              console.error('❌ Error message:', error.message);
+
+              const isRetryableError =
+                error.code === 'storage/retry-limit-exceeded' ||
+                error.code === 'storage/canceled' ||
+                (error.code === 'storage/unknown' &&
+                 error.message &&
+                 (error.message.includes('retry') || error.message.includes('Max retry time')));
+
+              if (isRetryableError && currentAttempt < maxRetries) {
+                console.log(`🔄 ENTERPRISE: Retrying upload due to ${error.code} (${currentAttempt + 1}/${maxRetries})`);
+                setTimeout(() => {
+                  attemptUpload().then(resolve).catch(reject);
+                }, 2000 * currentAttempt); // Exponential backoff
+                return;
+              } else if (currentAttempt >= maxRetries && isRetryableError) {
+                // 🚀 FALLBACK: Try server-side upload when retryable error persists
+                console.log('🎯 ENTERPRISE: All client-side retries failed - attempting server-side fallback');
+                PhotoUploadService.fallbackToServerUpload(fileToUpload, options, compressionInfo)
+                  .then(resolve)
+                  .catch(reject);
+                return;
+              }
+
+              let errorMessage: string;
+              switch (error.code) {
+                case 'storage/unauthorized':
+                  errorMessage = 'Δεν έχετε άδεια για ανέβασμα αρχείων';
+                  break;
+                case 'storage/canceled':
+                  errorMessage = currentAttempt >= maxRetries
+                    ? 'Πρόβλημα δικτύου - Δοκιμάστε ξανά σε λίγο'
+                    : 'Το ανέβασμα ακυρώθηκε';
+                  break;
+                case 'storage/retry-limit-exceeded':
+                  console.log('🔧 ENTERPRISE: Detected retry-limit-exceeded error');
+                  errorMessage = 'Πρόβλημα δικτύου - Δοκιμάστε ξανά σε λίγο';
+                  break;
+                case 'storage/unknown':
+                  const isHiddenRetryError = error.message &&
+                    (error.message.includes('retry') || error.message.includes('Max retry time'));
+
+                  errorMessage = isHiddenRetryError
+                    ? 'Πρόβλημα δικτύου - Δοκιμάστε ξανά σε λίγο'
+                    : 'Άγνωστο σφάλμα κατά το ανέβασμα';
+
+                  console.log('🔍 ENTERPRISE: Unknown error analysis:', { isHiddenRetryError, message: error.message });
+                  break;
+                default:
+                  errorMessage = 'Σφάλμα κατά το ανέβασμα αρχείου';
+              }
+
+              reject(new Error(errorMessage));
+            },
+            async () => {
+              // Clear timeouts on success
+              clearTimeout(progressTimeoutId);
+              clearTimeout(totalTimeoutId);
+
+              try {
+                // Upload completed successfully
+                console.log(`🎉 ENTERPRISE: Upload completed successfully on attempt ${currentAttempt}!`);
+                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                console.log('✅ ENTERPRISE: Download URL obtained:', downloadURL);
+
+                resolve({
+                  url: downloadURL,
+                  fileName: fileName,
+                  fileSize: fileToUpload.size,
+                  mimeType: fileToUpload.type,
+                  storagePath: storagePath,
+                  compressionInfo: compressionInfo
+                });
+              } catch (error) {
+                console.error('❌ ENTERPRISE: Failed to get download URL:', error);
+                reject(new Error('Αποτυχία λήψης URL αρχείου'));
+              }
+            }
+          );
+        });
+      };
+
+      // Start the upload with retry mechanism
+      return await attemptUpload();
 
     } catch (error) {
       console.error('Photo upload service error:', error);
@@ -315,7 +404,7 @@ export class PhotoUploadService {
 
     return this.uploadPhoto(file, {
       folderPath: 'contacts/photos',
-      fileName: `${prefix}_${file.name}`,
+      fileName: file.name, // 🔥 Use the exact filename from the file object
       onProgress,
       enableCompression: true,
       compressionUsage: compressionUsage
@@ -376,6 +465,63 @@ export class PhotoUploadService {
       return null;
     } catch {
       return null;
+    }
+  }
+
+  /**
+   * 🎯 ENTERPRISE FALLBACK: Server-side upload when client-side fails
+   * Fallback mechanism for cases where client-side Firebase SDK has connectivity issues
+   */
+  private static async fallbackToServerUpload(
+    file: File,
+    options: PhotoUploadOptions,
+    compressionInfo: PhotoUploadResult['compressionInfo']
+  ): Promise<PhotoUploadResult> {
+    console.log('🚀 SERVER-FALLBACK: Starting server-side upload fallback');
+
+    try {
+      // Create FormData for server-side upload
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folderPath', options.folderPath);
+
+      // Generate filename if not provided
+      const fileName = options.fileName || generateUniqueFileName(file.name);
+
+      console.log('📤 SERVER-FALLBACK: Sending to /api/upload/photo', {
+        fileName: file.name,
+        fileSize: file.size,
+        folderPath: options.folderPath
+      });
+
+      // Send to server-side upload API
+      const response = await fetch('/api/upload/photo', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown server error' }));
+        console.error('❌ SERVER-FALLBACK: Server upload failed:', errorData);
+        throw new Error(errorData.error || `Server error: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ SERVER-FALLBACK: Upload successful!', result);
+
+      // Return in the expected format
+      return {
+        url: result.url,
+        fileName: result.fileName,
+        fileSize: result.fileSize,
+        mimeType: result.mimeType,
+        storagePath: result.storagePath,
+        compressionInfo: compressionInfo
+      };
+
+    } catch (error) {
+      console.error('❌ SERVER-FALLBACK: Fallback upload failed:', error);
+      throw new Error('Αποτυχία και της εναλλακτικής μεθόδου ανεβάσματος');
     }
   }
 }

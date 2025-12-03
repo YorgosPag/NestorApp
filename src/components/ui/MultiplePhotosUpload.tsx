@@ -3,7 +3,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Camera, Upload, X, CheckCircle, Loader2, AlertCircle, Plus, Image } from 'lucide-react';
 import { EnterprisePhotoUpload } from './EnterprisePhotoUpload';
-import { PhotoUploadService } from '@/services/photo-upload.service';
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 
 // ============================================================================
@@ -14,6 +13,7 @@ export interface PhotoSlot {
   file?: File | null;
   preview?: string;
   uploadUrl?: string;
+  fileName?: string; // 🔥 ΠΡΟΣΘΗΚΗ: Custom filename για εμφάνιση στο UI
   isUploading?: boolean;
   uploadProgress?: number;
   error?: string;
@@ -110,6 +110,7 @@ export function MultiplePhotosUpload({
    */
   const handleUploadComplete = useCallback((slotIndex: number, result: FileUploadResult) => {
     console.log(`🎯📸 MULTIPLE: Upload complete για slot ${slotIndex}:`, result.url);
+    console.log(`✅ Upload complete for ${slotIndex}: fileName=${result.fileName}`); // 🔥 DEBUG: Explicit filename tracking
 
     const newPhotos = [...normalizedPhotos];
     if (newPhotos[slotIndex]) {
@@ -127,6 +128,11 @@ export function MultiplePhotosUpload({
         before: normalizedPhotos[slotIndex]?.isUploading,
         after: updatedPhoto.isUploading
       });
+      console.log(`🆕 Updated photos state for slot ${slotIndex}:`, {
+        fileName: updatedPhoto.fileName,
+        uploadUrl: updatedPhoto.uploadUrl,
+        preview: updatedPhoto.preview
+      }); // 🔥 DEBUG: State change tracking
 
       onPhotosChange?.(newPhotos);
 
@@ -134,7 +140,7 @@ export function MultiplePhotosUpload({
         onPhotoUploadComplete(slotIndex, result);
       }
     }
-  }, [normalizedPhotos, onPhotosChange, onPhotoUploadComplete]);
+  }, [normalizedPhotos]); // 🔧 FIX: Removed callback dependencies to prevent infinite loop
 
   /**
    * Handle file selection for a specific slot
@@ -162,6 +168,7 @@ export function MultiplePhotosUpload({
       if (uploadHandler) {
         try {
           console.log(`🚀📸 Starting auto-upload for slot ${slotIndex + 1}:`, file.name);
+          console.log(`🔧 UPLOAD DEBUG: uploadHandler exists:`, !!uploadHandler); // 🔥 DEBUG: Handler check
 
           const result = await uploadHandler(file, (progress) => {
             handleUploadProgress(slotIndex, progress);
@@ -171,11 +178,20 @@ export function MultiplePhotosUpload({
           handleUploadComplete(slotIndex, result);
         } catch (error) {
           console.error(`❌📸 Auto-upload failed for slot ${slotIndex + 1}:`, error);
+          console.error(`📋 MULTIPLE: Error details:`, {
+            errorMessage: error instanceof Error ? error.message : 'Unknown error',
+            errorStack: error instanceof Error ? error.stack : undefined,
+            fileName: file.name,
+            fileSize: file.size,
+            slotIndex,
+            uploadHandlerExists: !!uploadHandler
+          });
+
           const errorPhotos = [...normalizedPhotos];
           errorPhotos[slotIndex] = {
             ...errorPhotos[slotIndex],
             isUploading: false,
-            error: 'Upload failed'
+            error: error instanceof Error ? error.message : 'Upload failed'
           };
           onPhotosChange?.(errorPhotos);
         }
@@ -188,7 +204,7 @@ export function MultiplePhotosUpload({
       newPhotos[slotIndex] = {};
       onPhotosChange?.(newPhotos);
     }
-  }, [normalizedPhotos, maxPhotos, onPhotosChange, uploadHandler, handleUploadProgress, handleUploadComplete]);
+  }, [normalizedPhotos, maxPhotos]); // 🔧 FIX: Removed callback dependencies to prevent infinite loop
 
   /**
    * Handle multiple files drop
@@ -218,30 +234,63 @@ export function MultiplePhotosUpload({
   }, [disabled, normalizedPhotos, maxPhotos, handleFileSelection]);
 
   /**
-   * Default enterprise upload handler
+   * Default Base64 conversion handler (OLD WORKING SYSTEM)
+   * 🔙 ΠΑΛΙΟ WORKING SYSTEM: Άμεση Base64 conversion - NO Firebase Storage
    */
   const defaultUploadHandler = useCallback(async (
     file: File,
     onProgress: (progress: FileUploadProgress) => void
   ): Promise<FileUploadResult> => {
-    console.log('🚀📸 MULTIPLE: Starting enterprise upload με compression...', {
+    console.log('🚀📸 MULTIPLE BASE64: Starting Base64 conversion...', {
       fileName: file.name,
-      purpose
+      purpose,
+      fileSize: file.size
     });
 
-    const result = await PhotoUploadService.uploadContactPhoto(
-      file,
-      undefined, // contactId - θα προστεθεί αργότερα
-      onProgress,
-      'profile-modal' // Smart compression για multiple photos
-    );
+    try {
+      return new Promise<FileUploadResult>((resolve, reject) => {
+        const reader = new FileReader();
 
-    console.log('✅📸 MULTIPLE: Enterprise upload completed:', {
-      url: result.url,
-      savings: result.compressionInfo?.compressionRatio
-    });
+        // Progress simulation για UI feedback
+        onProgress({ progress: 0, bytesTransferred: 0, totalBytes: file.size });
 
-    return result;
+        reader.onload = (e) => {
+          const base64URL = e.target?.result as string;
+
+          console.log('✅📸 MULTIPLE BASE64: Conversion completed:', file.name);
+          console.log('📸 BASE64 URL:', base64URL.substring(0, 50) + '...');
+
+          // Simulate final progress
+          onProgress({ progress: 100, bytesTransferred: file.size, totalBytes: file.size });
+
+          const result: FileUploadResult = {
+            success: true,
+            url: base64URL, // 🔙 OLD WORKING: Direct Base64 URL
+            fileName: file.name,
+            compressionInfo: {
+              originalSize: file.size,
+              compressedSize: file.size,
+              compressionRatio: 1.0,
+              quality: 1.0
+            }
+          };
+
+          resolve(result);
+        };
+
+        reader.onerror = () => {
+          console.error('❌📸 MULTIPLE BASE64: Conversion failed:', file.name);
+          reject(new Error('Base64 conversion failed'));
+        };
+
+        // 🔙 OLD WORKING SYSTEM: Direct Base64 conversion
+        reader.readAsDataURL(file);
+      });
+
+    } catch (error) {
+      console.error('❌📸 MULTIPLE BASE64: Conversion failed:', error);
+      throw error;
+    }
   }, [purpose]);
 
   // ========================================================================
@@ -266,10 +315,10 @@ export function MultiplePhotosUpload({
           </h4>
         </div>
 
-        {/* Compact Grid */}
-        <div className="grid grid-cols-5 gap-2">
+        {/* Compact Grid - 3x2 Layout */}
+        <div className="grid grid-cols-3 gap-6 p-2">
           {normalizedPhotos.map((photo, index) => (
-            <div key={index} className="aspect-square">
+            <div key={index} className="h-[300px] w-full">
               <EnterprisePhotoUpload
                 purpose={purpose}
                 maxSize={5 * 1024 * 1024} // 5MB
@@ -282,7 +331,7 @@ export function MultiplePhotosUpload({
                 compact={true}
                 showProgress={showProgress}
                 isLoading={photo.isUploading}
-                className="h-full"
+                className="h-[300px] w-full"
               />
             </div>
           ))}
@@ -342,26 +391,32 @@ export function MultiplePhotosUpload({
         </div>
       </div>
 
-      {/* Photo Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        {normalizedPhotos.map((photo, index) => (
-          <div key={index} className="aspect-square">
-            <EnterprisePhotoUpload
-              purpose={purpose}
-              maxSize={5 * 1024 * 1024} // 5MB
-              photoFile={photo.file}
-              photoPreview={photo.preview || photo.uploadUrl}
-              onFileChange={(file) => handleFileSelection(index, file)}
-              uploadHandler={uploadHandler || defaultUploadHandler}
-              onUploadComplete={(result) => handleUploadComplete(index, result)}
-              disabled={disabled}
-              compact={true}
-              showProgress={showProgress}
-              isLoading={photo.isUploading}
-              className="h-full"
-            />
-          </div>
-        ))}
+      {/* Photo Grid - 3x2 Layout */}
+      <div className="grid grid-cols-3 gap-8 p-6">
+        {normalizedPhotos.map((photo, index) => {
+          // 🔥 DEBUG: Log photo state
+          console.log(`📸 Photo ${index}: fileName=${photo.fileName}, preview=${photo.preview}, uploadUrl=${photo.uploadUrl}, file=${photo.file?.name}`);
+
+          return (
+            <div key={index} className="h-[300px] w-full">
+              <EnterprisePhotoUpload
+                purpose={purpose}
+                maxSize={5 * 1024 * 1024} // 5MB
+                photoFile={photo.file}
+                photoPreview={photo.preview || photo.uploadUrl}
+                customFileName={photo.fileName} // 🔥 ΔΙΟΡΘΩΣΗ: Περνάμε το custom filename
+                onFileChange={(file) => handleFileSelection(index, file)}
+                uploadHandler={uploadHandler || defaultUploadHandler}
+                onUploadComplete={(result) => handleUploadComplete(index, result)}
+                disabled={disabled}
+                compact={true}
+                showProgress={showProgress}
+                isLoading={photo.isUploading}
+                className="h-[300px] w-full"
+              />
+            </div>
+          );
+        })}
       </div>
 
       {/* Multiple Upload Zone */}

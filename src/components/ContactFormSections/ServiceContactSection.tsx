@@ -9,11 +9,10 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FormField, FormInput } from '@/components/ui/form/FormComponents';
 import { Building2, Users, MapPin, FileText, Plus, Trash2, Upload } from 'lucide-react';
-import { EnterprisePhotoUpload } from '@/components/ui/EnterprisePhotoUpload';
-import { MultiplePhotosUpload } from '@/components/ui/MultiplePhotosUpload';
-import { PhotoUploadService } from '@/services/photo-upload.service';
+import { UnifiedPhotoManager } from '@/components/ui/UnifiedPhotoManager';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
+import { generateContactFileWithCustomName, logFilenameGeneration } from '@/utils/contact-filename-generator';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 
 interface ServiceContactSectionProps {
@@ -22,11 +21,7 @@ interface ServiceContactSectionProps {
   handleSelectChange: (name: string, value: string) => void;
   handleNestedChange: (path: string, value: any) => void;
   handleLogoChange: (file: File | null) => void;
-  handleFileChange: (file: File | null) => void;
   handleUploadedLogoURL: (logoURL: string) => void;
-  handleUploadedPhotoURL: (photoURL: string) => void;
-  handleMultiplePhotosChange: (photos: PhotoSlot[]) => void;
-  handleMultiplePhotoUploadComplete: (index: number, result: FileUploadResult) => void;
   disabled?: boolean;
 }
 
@@ -36,11 +31,7 @@ export function ServiceContactSection({
   handleSelectChange,
   handleNestedChange,
   handleLogoChange,
-  handleFileChange,
   handleUploadedLogoURL,
-  handleUploadedPhotoURL,
-  handleMultiplePhotosChange,
-  handleMultiplePhotoUploadComplete,
   disabled = false
 }: ServiceContactSectionProps) {
   const [activeTab, setActiveTab] = useState("gemi");
@@ -50,26 +41,56 @@ export function ServiceContactSection({
     file: File,
     onProgress: (progress: FileUploadProgress) => void
   ): Promise<FileUploadResult> => {
-    console.log('🚀🏛️ SERVICE: Starting enterprise logo upload με compression...', {
+    console.log('🚀🏛️ SERVICE BASE64: Starting logo Base64 conversion...', {
       fileName: file.name,
       fileSize: file.size,
       fileType: file.type
     });
 
-    const result = await PhotoUploadService.uploadCompanyLogo(
-      file,
-      undefined, // serviceId - θα προστεθεί αργότερα όταν save-άρουμε
-      onProgress
-    );
+    try {
+      return new Promise<FileUploadResult>((resolve, reject) => {
+        const reader = new FileReader();
 
-    console.log('✅🏛️ SERVICE: Enterprise logo upload completed:', {
-      url: result.url,
-      originalSize: result.compressionInfo?.originalSize,
-      compressedSize: result.compressionInfo?.compressedSize,
-      savings: result.compressionInfo?.compressionRatio
-    });
+        // Progress simulation για UI feedback
+        onProgress({ progress: 0, bytesTransferred: 0, totalBytes: file.size });
 
-    return result;
+        reader.onload = (e) => {
+          const base64URL = e.target?.result as string;
+
+          console.log('✅🏛️ SERVICE BASE64: Logo conversion completed');
+          console.log('📸 BASE64 URL:', base64URL.substring(0, 50) + '...');
+
+          // Simulate final progress
+          onProgress({ progress: 100, bytesTransferred: file.size, totalBytes: file.size });
+
+          const result: FileUploadResult = {
+            success: true,
+            url: base64URL, // 🔙 OLD WORKING: Direct Base64 URL
+            fileName: file.name,
+            compressionInfo: {
+              originalSize: file.size,
+              compressedSize: file.size,
+              compressionRatio: 1.0,
+              quality: 1.0
+            }
+          };
+
+          resolve(result);
+        };
+
+        reader.onerror = () => {
+          console.error('❌🏛️ SERVICE BASE64: Logo conversion failed');
+          reject(new Error('Base64 logo conversion failed'));
+        };
+
+        // 🔙 OLD WORKING SYSTEM: Direct Base64 conversion
+        reader.readAsDataURL(file);
+      });
+
+    } catch (error) {
+      console.error('❌🏛️ SERVICE BASE64: Logo conversion failed:', error);
+      throw error;
+    }
   };
 
   // 🔥 Enterprise Photo Upload Handler για Αντιπρόσωπο
@@ -77,18 +98,47 @@ export function ServiceContactSection({
     file: File,
     onProgress: (progress: FileUploadProgress) => void
   ): Promise<FileUploadResult> => {
-    console.log('🚀🏛️ SERVICE: Starting enterprise photo upload για Representative με compression...', {
-      fileName: file.name,
+    // 🏷️ Χρήση κεντρικοποιημένης λειτουργικότητας filename generation
+    const { customFilename, customFile, originalFilename } = generateContactFileWithCustomName({
+      originalFile: file,
+      contactData: formData,
+      fileType: 'representative'
+    });
+
+    // 📝 Centralized logging
+    logFilenameGeneration(originalFilename, customFilename, formData, 'representative');
+
+    console.log('🚀🏛️ SERVICE: Starting enterprise photo upload με centralized filename...', {
+      originalFileName: originalFilename,
+      customFileName: customFilename,
       fileSize: file.size,
       fileType: file.type
     });
 
-    const result = await PhotoUploadService.uploadContactPhoto(
-      file,
-      undefined, // contactId - θα προστεθεί αργότερα όταν save-άρουμε
-      onProgress,
-      'profile-modal' // Smart compression για representative photo
-    );
+    // 🔙 OLD WORKING SYSTEM: Direct Base64 conversion
+    const result = await new Promise<FileUploadResult>((resolve, reject) => {
+      const reader = new FileReader();
+      onProgress({ progress: 0, bytesTransferred: 0, totalBytes: file.size });
+
+      reader.onload = (e) => {
+        const base64URL = e.target?.result as string;
+        onProgress({ progress: 100, bytesTransferred: file.size, totalBytes: file.size });
+        resolve({
+          success: true,
+          url: base64URL,
+          fileName: file.name,
+          compressionInfo: {
+            originalSize: file.size,
+            compressedSize: file.size,
+            compressionRatio: 1.0,
+            quality: 1.0
+          }
+        });
+      };
+
+      reader.onerror = () => reject(new Error('Base64 conversion failed'));
+      reader.readAsDataURL(file);
+    });
 
     console.log('✅🏛️ SERVICE: Enterprise photo upload completed:', {
       url: result.url,
@@ -111,12 +161,30 @@ export function ServiceContactSection({
       fileType: file.type
     });
 
-    const result = await PhotoUploadService.uploadContactPhoto(
-      file,
-      undefined, // contactId - θα προστεθεί αργότερα όταν save-άρουμε
-      onProgress,
-      'profile-modal' // Smart compression για service gallery
-    );
+    // 🔙 OLD WORKING SYSTEM: Direct Base64 conversion
+    const result = await new Promise<FileUploadResult>((resolve, reject) => {
+      const reader = new FileReader();
+      onProgress({ progress: 0, bytesTransferred: 0, totalBytes: file.size });
+
+      reader.onload = (e) => {
+        const base64URL = e.target?.result as string;
+        onProgress({ progress: 100, bytesTransferred: file.size, totalBytes: file.size });
+        resolve({
+          success: true,
+          url: base64URL,
+          fileName: file.name,
+          compressionInfo: {
+            originalSize: file.size,
+            compressedSize: file.size,
+            compressionRatio: 1.0,
+            quality: 1.0
+          }
+        });
+      };
+
+      reader.onerror = () => reject(new Error('Base64 conversion failed'));
+      reader.readAsDataURL(file);
+    });
 
     console.log('✅🏛️ SERVICE: Enterprise multiple photo upload completed:', {
       url: result.url,
@@ -151,41 +219,19 @@ export function ServiceContactSection({
         <h4 className="font-semibold mb-3 text-sm">🏛️ Δημόσια Υπηρεσία / Φορέας</h4>
       </div>
 
-      {/* Enterprise Λογότυπο Upload */}
+      {/* 🎯 Unified Photo Manager για Service - Μόνο λογότυπο */}
       <div className="col-span-2">
-        <EnterprisePhotoUpload
-          purpose="logo"
-          maxSize={5 * 1024 * 1024} // 5MB for logos
-          photoFile={formData.logoFile}
-          photoPreview={formData.logoPreview}
-          onFileChange={handleLogoChange}
-          uploadHandler={handleEnterpriseLogoUpload}
-          onUploadComplete={handleLogoUploadComplete}
+        <UnifiedPhotoManager
+          contactType="service"
+          formData={formData}
+          handlers={{
+            handleLogoChange,
+            handleUploadedLogoURL
+          }}
+          uploadHandlers={{
+            logoUploadHandler: handleEnterpriseLogoUpload
+          }}
           disabled={disabled}
-          compact={true}
-          showProgress={true}
-          className="mt-2"
-        />
-      </div>
-
-      {/* Φωτογραφία Αντιπροσώπου Header */}
-      <div className="col-span-2 border-t pt-4 mt-4">
-        <h4 className="font-semibold mb-3 text-sm">👤 Φωτογραφία Αντιπροσώπου</h4>
-      </div>
-
-      {/* Enterprise Photo Upload για Αντιπρόσωπο */}
-      <div className="col-span-2">
-        <EnterprisePhotoUpload
-          purpose="photo"
-          maxSize={5 * 1024 * 1024} // 5MB for photos
-          photoFile={formData.photoFile}
-          photoPreview={formData.photoPreview}
-          onFileChange={handleFileChange}
-          uploadHandler={handleEnterprisePhotoUpload}
-          onUploadComplete={handlePhotoUploadComplete}
-          disabled={disabled}
-          compact={true}
-          showProgress={true}
           className="mt-2"
         />
       </div>
@@ -815,19 +861,6 @@ export function ServiceContactSection({
         </Tabs>
       </div>
 
-      {/* Multiple Photos Upload για Δημόσια Υπηρεσία */}
-      <MultiplePhotosUpload
-        maxPhotos={5}
-        photos={formData.multiplePhotos}
-        onPhotosChange={handleMultiplePhotosChange}
-        onPhotoUploadComplete={handleMultiplePhotoUploadComplete}
-        uploadHandler={handleEnterpriseMultiplePhotoUpload}
-        disabled={disabled}
-        compact={true}
-        showProgress={true}
-        purpose="photo"
-        className="mt-4"
-      />
     </>
   );
 }

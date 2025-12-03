@@ -131,7 +131,7 @@ export function TasksTab() {
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+  }, []); // 🔧 FIX: Removed fetchData to prevent infinite loop - load once on mount
 
   const filteredTasks = useMemo(() => {
     let list = [...tasks];
@@ -188,7 +188,7 @@ export function TasksTab() {
     } catch (error) {
       toast.error(t('tasks.messages.completeError'));
     }
-  }, [fetchData, t]);
+  }, [t]); // 🔧 FIX: Removed fetchData to prevent infinite loop
 
   const handleDeleteTask = useCallback(async (taskId?: string, taskTitle?: string) => {
     if (!taskId || !taskTitle) return;
@@ -201,7 +201,7 @@ export function TasksTab() {
         toast.error(t('tasks.messages.deleteError'));
       }
     }
-  }, [fetchData, t]);
+  }, [t]); // 🔧 FIX: Removed fetchData to prevent infinite loop
 
   const getLeadName = useCallback((leadId?: string) => leads.find(l => l.id === leadId)?.fullName || null, [leads]);
 

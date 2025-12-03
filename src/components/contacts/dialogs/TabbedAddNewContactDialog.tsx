@@ -41,7 +41,8 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
     handleUploadedPhotoURL,
     handleUploadedLogoURL,
     handleMultiplePhotosChange,
-    handleMultiplePhotoUploadComplete
+    handleMultiplePhotoUploadComplete,
+    handleProfilePhotoSelection
   } = useContactForm({ onContactAdded, onOpenChange, editContact });
 
   const isCompany = formData.type === 'company';
@@ -116,6 +117,7 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
                 handleFileChange={handleFileChange}
                 handleMultiplePhotosChange={handleMultiplePhotosChange}
                 handleMultiplePhotoUploadComplete={handleMultiplePhotoUploadComplete}
+                handleProfilePhotoSelection={handleProfilePhotoSelection}
                 disabled={loading}
               />
             )}

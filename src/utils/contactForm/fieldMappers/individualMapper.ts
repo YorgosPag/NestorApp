@@ -20,19 +20,24 @@ export function mapIndividualContactToFormData(contact: Contact): ContactFormDat
 
   const individualContact = contact as any; // Cast for individual fields access
 
-  // 📸 MULTIPLE PHOTOS: Convert URLs to PhotoSlots
-  const multiplePhotos = getSafeArrayValue(individualContact, 'multiplePhotoURLs')
+  // 📸 MULTIPLE PHOTOS: Convert Firebase URLs to PhotoSlots για edit mode
+  const multiplePhotoURLs = getSafeArrayValue(individualContact, 'multiplePhotoURLs');
+  console.log('🔄 INDIVIDUAL MAPPER: Found multiplePhotoURLs in contact:', multiplePhotoURLs);
+
+  const multiplePhotos = multiplePhotoURLs
+    .filter((url: string) => url && !url.startsWith('blob:')) // Φίλτρα blob URLs
     .map((url: string) => {
-      console.log('🔄 INDIVIDUAL MAPPER: Loading saved photo URL:', url);
+      const urlType = url.startsWith('data:') ? 'Base64' : 'Firebase';
+      console.log(`🔄 INDIVIDUAL MAPPER: Converting ${urlType} URL to PhotoSlot:`, url.substring(0, 50) + '...');
       return {
-        uploadUrl: url,
-        preview: url
+        uploadUrl: url, // Base64 ή Firebase URL για display
+        preview: url,   // Base64 ή Firebase URL για preview
+        file: null,     // Κανένα αρχείο σε edit mode
+        isUploading: false
       };
     });
 
-  if (multiplePhotos.length === 0) {
-    console.log('❌ INDIVIDUAL MAPPER: No multiplePhotoURLs found in contact');
-  }
+  console.log(`📸 INDIVIDUAL MAPPER: Converted ${multiplePhotos.length} Firebase URLs to PhotoSlots`);
 
   const formData: ContactFormData = {
     // Basic info
@@ -139,6 +144,16 @@ export function mapIndividualContactToFormData(contact: Contact): ContactFormDat
     decisions: [],
     announcements: []
   };
+
+  // 🔍 DEBUG: Log photo fields για debugging
+  console.log('🔍 PHOTO DEBUG - Contact fields:', {
+    photoURL: getSafeFieldValue(individualContact, 'photoURL'),
+    avatarUrl: getSafeFieldValue(individualContact, 'avatarUrl'),
+    imageUrl: getSafeFieldValue(individualContact, 'imageUrl'),
+    multiplePhotoURLs: getSafeArrayValue(individualContact, 'multiplePhotoURLs'),
+    multiplePhotosCount: multiplePhotos.length,
+    formDataPhotoPreview: formData.photoPreview
+  });
 
   console.log('✅ INDIVIDUAL MAPPER: Individual contact mapping completed');
   return formData;

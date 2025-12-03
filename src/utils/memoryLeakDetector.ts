@@ -260,7 +260,7 @@ export function useMemoryTracker(componentName?: string) {
       detector.registerComponent(componentName);
       return () => detector.unregisterComponent(componentName);
     }
-  }, [detector, componentName]);
+  }, [componentName]); // 🔧 FIX: Removed detector to prevent infinite loop
 
   return {
     getStatus: () => detector.getStatus(),
@@ -293,7 +293,7 @@ export function useEventListenerCleanup() {
     element.addEventListener(event, handler, options);
     listenersRef.current.push({ element, event, handler });
     detector.registerListener(event);
-  }, [detector]);
+  }, []); // 🔧 FIX: Removed detector to prevent infinite loop
 
   React.useEffect(() => {
     return () => {
@@ -304,7 +304,7 @@ export function useEventListenerCleanup() {
       });
       listenersRef.current = [];
     };
-  }, [detector]);
+  }, []); // 🔧 FIX: Removed detector to prevent infinite loop
 
   return { addListener };
 }

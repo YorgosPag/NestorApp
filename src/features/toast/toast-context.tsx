@@ -55,8 +55,16 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'REMOVE_ALL_TOASTS' });
   }, []);
 
+  // 🔧 FIX: Memoize context value to prevent infinite re-renders
+  const contextValue = React.useMemo(() => ({
+    toasts: state.toasts,
+    addToast,
+    removeToast,
+    removeAllToasts
+  }), [state.toasts, addToast, removeToast, removeAllToasts]);
+
   return (
-    <ToastContext.Provider value={{ toasts: state.toasts, addToast, removeToast, removeAllToasts }}>
+    <ToastContext.Provider value={contextValue}>
       {children}
     </ToastContext.Provider>
   );

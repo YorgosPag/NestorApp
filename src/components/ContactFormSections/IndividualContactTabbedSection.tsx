@@ -13,6 +13,7 @@ interface IndividualContactTabbedSectionProps {
   handleFileChange?: (file: File | null) => void;
   handleMultiplePhotosChange?: (photos: PhotoSlot[]) => void;
   handleMultiplePhotoUploadComplete?: (index: number, result: FileUploadResult) => void;
+  handleProfilePhotoSelection?: (index: number) => void;
   disabled?: boolean;
 }
 
@@ -33,6 +34,7 @@ export function IndividualContactTabbedSection({
   handleFileChange,
   handleMultiplePhotosChange,
   handleMultiplePhotoUploadComplete,
+  handleProfilePhotoSelection,
   disabled = false
 }: IndividualContactTabbedSectionProps) {
   // Get all individual sections from centralized config
@@ -47,6 +49,7 @@ export function IndividualContactTabbedSection({
       onPhotoChange={handleFileChange}
       onMultiplePhotosChange={handleMultiplePhotosChange}
       onMultiplePhotoUploadComplete={handleMultiplePhotoUploadComplete}
+      onProfilePhotoSelection={handleProfilePhotoSelection}
       disabled={disabled}
       customRenderers={{
         // Add any custom field renderers if needed for individual-specific fields

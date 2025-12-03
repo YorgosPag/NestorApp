@@ -29,6 +29,9 @@ export interface UseContactFormStateReturn {
   handleUploadedLogoURL: (logoURL: string) => void;
   handleMultiplePhotoUploadComplete: (index: number, result: any) => void;
 
+  // Profile photo selection
+  handleProfilePhotoSelection: (index: number) => void;
+
   // Drag & drop handlers
   handleDrop: (e: React.DragEvent) => void;
   handleDragOver: (e: React.DragEvent) => void;
@@ -228,22 +231,46 @@ export function useContactFormState(): UseContactFormStateReturn {
    * Handle single multiple photo upload completion
    */
   const handleMultiplePhotoUploadComplete = useCallback((index: number, result: any) => {
-    console.log(`🎯📸 MULTIPLE: Photo ${index + 1} upload complete:`, result.url);
+    console.log(`🎯📸 MULTIPLE: Photo ${index + 1} upload complete:`, {
+      url: result.url,
+      customFileName: result.fileName,
+      originalSize: result.compressionInfo?.originalSize,
+      compressedSize: result.compressionInfo?.compressedSize
+    });
 
     setFormData(prev => {
-      const newPhotos = [...prev.multiplePhotos];
+      const newPhotos = JSON.parse(JSON.stringify([...prev.multiplePhotos])); // 🔥 Deep copy για να force re-render
       if (newPhotos[index]) {
         newPhotos[index] = {
           ...newPhotos[index],
-          uploadUrl: result.url
+          uploadUrl: result.url,
+          fileName: result.fileName // 🔥 ΔΙΟΡΘΩΣΗ: Αποθήκευση custom filename για UI εμφάνιση
         };
       }
+
+      console.log('🆕 Updated photos state:', newPhotos); // 🔥 DEBUG: Final state verification
 
       return {
         ...prev,
         multiplePhotos: newPhotos
       };
     });
+  }, []);
+
+  // ========================================================================
+  // PROFILE PHOTO SELECTION
+  // ========================================================================
+
+  /**
+   * Handle profile photo selection (for Individual - selects which photo from multiplePhotos is the profile)
+   */
+  const handleProfilePhotoSelection = useCallback((index: number) => {
+    console.log('🎯⭐ PROFILE: Setting profile photo index:', index);
+
+    setFormData(prev => ({
+      ...prev,
+      selectedProfilePhotoIndex: index
+    }));
   }, []);
 
   // ========================================================================
@@ -328,6 +355,9 @@ export function useContactFormState(): UseContactFormStateReturn {
     handleUploadedPhotoURL,
     handleUploadedLogoURL,
     handleMultiplePhotoUploadComplete,
+
+    // Profile photo selection
+    handleProfilePhotoSelection,
 
     // Drag & drop handlers
     handleDrop,

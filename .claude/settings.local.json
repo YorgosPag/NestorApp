@@ -89,7 +89,12 @@
       "Bash(TYPESCRIPT_CHECK=false PORT=3001 npm run dev)",
       "Bash(PORT=3000 npm run dev)",
       "Bash(del srccomponentsuiPhotoGallery.tsx)",
-      "Bash(SKIP_ENV_VALIDATION=true TYPESCRIPT_CHECK=false npm run dev)"
+      "Bash(SKIP_ENV_VALIDATION=true TYPESCRIPT_CHECK=false npm run dev)",
+      "Read(//c/**)",
+      "Bash(del \"C:\\Nestor_Pagonis\\src\\components\\ui\\UnifiedPhotoManager.tsx\")",
+      "Bash(SKIP_ENV_VALIDATION=true TYPESCRIPT_CHECK=false PORT=3001 npm run dev)",
+      "Bash(tasklist:*)",
+      "Bash(ping:*)"
     ],
     "deny": [],
     "ask": []

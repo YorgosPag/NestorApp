@@ -15,6 +15,8 @@ export interface EnterprisePhotoUploadProps extends Omit<UseEnterpriseFileUpload
   photoFile?: File | null;
   /** Current photo preview URL */
   photoPreview?: string;
+  /** Custom filename για εμφάνιση (όταν uploaded) */
+  customFileName?: string;
   /** File change handler */
   onFileChange: (file: File | null) => void;
   /** Upload completion handler */
@@ -57,6 +59,7 @@ export function EnterprisePhotoUpload({
   showToasts = true,
   photoFile,
   photoPreview,
+  customFileName,
   onFileChange,
   onUploadComplete,
   disabled = false,
@@ -97,7 +100,7 @@ export function EnterprisePhotoUpload({
     if (validation.isValid) {
       onFileChange(file);
     }
-  }, [upload, onFileChange]);
+  }, [upload]); // 🔧 FIX: Removed onFileChange to prevent infinite loop
 
   /**
    * Handle drag over
@@ -167,7 +170,7 @@ export function EnterprisePhotoUpload({
     startAutoUpload().catch(error => {
       console.error('❌ AUTOMATIC UPLOAD: Error:', error);
     });
-  }, [photoFile, upload.currentFile, upload.isUploading, upload.success, uploadHandler, onUploadComplete]);
+  }, [photoFile, upload.currentFile, upload.isUploading, upload.success]); // 🔧 FIX: Removed uploadHandler and onUploadComplete to prevent infinite loop
 
   /**
    * Handle remove photo
@@ -208,7 +211,7 @@ export function EnterprisePhotoUpload({
       <div className={`relative ${className}`}>
         <div
           className={`
-            relative border-2 border-dashed rounded-lg p-3 text-center cursor-pointer transition-colors
+            relative border-2 border-dashed rounded-lg p-6 min-h-[280px] flex flex-col items-center justify-center text-center cursor-pointer transition-colors
             ${currentPreview ? 'border-green-300 bg-green-50' : `border-gray-300 hover:border-gray-400`}
             ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
             ${hasError ? 'border-red-300 bg-red-50' : ''}
@@ -231,20 +234,23 @@ export function EnterprisePhotoUpload({
           }}
         >
           {currentPreview ? (
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded overflow-hidden bg-gray-200 shadow-sm">
+            <div className="flex flex-col items-center justify-center h-full w-full">
+              <div className="w-full h-40 rounded overflow-hidden bg-gray-200 shadow-sm mb-3">
                 <img
                   src={currentPreview}
                   alt="Προεπισκόπηση"
                   className="w-full h-full object-cover"
                 />
               </div>
-              <div className="text-left flex-1">
-                <p className="text-xs font-medium text-green-700"><CheckCircle className="w-3 h-3 inline mr-1" />{currentFile?.name}</p>
+              <div className="text-center w-full">
+                <p className="text-sm font-medium text-green-700"><CheckCircle className="w-4 h-4 inline mr-1" />{customFileName || currentFile?.name}</p>
+                {/* 🔥 DEBUG: Explicit filename labels */}
+                <p className="text-xs text-gray-500 mt-1">Original: {currentFile?.name || 'N/A'}</p>
+                <p className="text-xs text-blue-500 mt-1">Custom: {customFileName || 'Generating...'}</p>
                 {showProgress && isLoading && (
-                  <div className="w-full bg-gray-200 rounded-full h-1 mt-1">
+                  <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
                     <div
-                      className="bg-blue-600 h-1 rounded-full transition-all duration-300"
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                       style={{ width: `${upload.progress}%` }}
                     />
                   </div>
@@ -252,9 +258,10 @@ export function EnterprisePhotoUpload({
               </div>
             </div>
           ) : (
-            <div className="flex items-center gap-2">
-              <Camera className="w-4 h-4 text-gray-300" />
-              <span className="text-xs text-gray-300">Φωτογραφία</span>
+            <div className="flex flex-col items-center justify-center">
+              <Camera className="w-12 h-12 text-gray-400 mb-3" />
+              <span className="text-sm font-medium text-gray-500 mb-2">Προσθήκη φωτογραφίας</span>
+              <span className="text-xs text-gray-400">Κλικ ή σύρετε αρχείο</span>
             </div>
           )}
 

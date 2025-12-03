@@ -155,11 +155,15 @@ export interface ContactFormData {
   // Λογότυπο
   logoFile: File | null;
   logoPreview: string;
+  logoFileName?: string; // 🔥 ΠΡΟΣΘΗΚΗ: Custom filename για λογότυπο
   // Φωτογραφία
   photoFile: File | null;
   photoPreview: string;
-  // Πολλαπλές Φωτογραφίες (μέχρι 5)
+  photoFileName?: string; // 🔥 ΠΡΟΣΘΗΚΗ: Custom filename για φωτογραφία εκπροσώπου
+  // Πολλαπλές Φωτογραφίες (μέχρι 6 για Individual)
   multiplePhotos: PhotoSlot[];
+  // Επιλεγμένη φωτογραφία προφίλ (για Individual - index από multiplePhotos)
+  selectedProfilePhotoIndex?: number;
   // Κοινά
   notes: string;
 }
@@ -266,8 +270,10 @@ export const initialFormData: ContactFormData = {
   // Φωτογραφία
   photoFile: null,
   photoPreview: '',
-  // Πολλαπλές Φωτογραφίες (μέχρι 5)
+  // Πολλαπλές Φωτογραφίες (μέχρι 6 για Individual)
   multiplePhotos: [],
+  // Επιλεγμένη φωτογραφία προφίλ (default: 0 = πρώτη φωτογραφία)
+  selectedProfilePhotoIndex: undefined,
   // Κοινά
   notes: '',
 };

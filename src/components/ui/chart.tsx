@@ -23,8 +23,11 @@ const Chart = React.forwardRef<
   const uniqueId = React.useId()
   const chartId = `chart-${id || uniqueId.replace(/:/g, "")}`
 
+  // 🔧 FIX: Memoize context value to prevent infinite re-renders
+  const contextValue = React.useMemo(() => ({ config }), [config]);
+
   return (
-    <ChartContext.Provider value={{ config }}>
+    <ChartContext.Provider value={contextValue}>
       <ChartContainer
         id={chartId}
         ref={ref}
