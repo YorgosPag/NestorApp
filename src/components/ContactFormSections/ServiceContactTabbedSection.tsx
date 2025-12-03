@@ -9,6 +9,7 @@ interface ServiceContactTabbedSectionProps {
   handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   handleSelectChange: (name: string, value: string) => void;
   handleLogoChange?: (file: File | null) => void;
+  handleUploadedLogoURL?: (logoURL: string) => void;
   disabled?: boolean;
 }
 
@@ -28,6 +29,7 @@ export function ServiceContactTabbedSection({
   handleChange,
   handleSelectChange,
   handleLogoChange,
+  handleUploadedLogoURL,
   disabled = false
 }: ServiceContactTabbedSectionProps) {
   // Get all service sections from centralized config

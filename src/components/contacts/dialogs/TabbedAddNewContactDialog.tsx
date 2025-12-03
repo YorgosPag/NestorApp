@@ -22,8 +22,8 @@ import { getTypeIcon, getTypeLabel } from '@/utils/contactFormUtils';
 import { CommonContactSection } from '@/components/ContactFormSections/CommonContactSection';
 import { IndividualContactSection } from '@/components/ContactFormSections/IndividualContactSection';
 import { IndividualContactTabbedSection } from '@/components/ContactFormSections/IndividualContactTabbedSection';
-import { CompanyContactSection } from '@/components/ContactFormSections/CompanyContactSection';
-import { ServiceContactSection } from '@/components/ContactFormSections/ServiceContactSection';
+import { CompanyContactTabbedSection } from '@/components/ContactFormSections/CompanyContactTabbedSection';
+import { ServiceContactTabbedSection } from '@/components/ContactFormSections/ServiceContactTabbedSection';
 
 export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, editContact }: AddNewContactDialogProps) {
   const {
@@ -96,9 +96,9 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
               </FormField>
             </FormGrid>
 
-            {/* Company - Simple Layout (με Base64 upload handlers) */}
+            {/* Company - Tabbed Layout (με Base64 upload handlers) */}
             {isCompany && (
-              <CompanyContactSection
+              <CompanyContactTabbedSection
                 formData={formData}
                 handleChange={handleChange}
                 handleSelectChange={handleSelectChange}
@@ -124,9 +124,9 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
               />
             )}
 
-            {/* Service - Simple Layout (με Base64 upload handlers) */}
+            {/* Service - Tabbed Layout (με Base64 upload handlers) */}
             {isService && (
-              <ServiceContactSection
+              <ServiceContactTabbedSection
                 formData={formData}
                 handleChange={handleChange}
                 handleSelectChange={handleSelectChange}
