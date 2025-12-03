@@ -37,6 +37,9 @@ export function ProjectsPageContent() {
 
   const projectsStats = useProjectsStats(filteredProjects || []);
 
+  // 🔥 NEW: Dashboard card filtering state
+  const [activeCardFilter, setActiveCardFilter] = React.useState<string | null>(null);
+
   // Transform stats to UnifiedDashboard format
   const dashboardStats: DashboardStat[] = [
     {
@@ -71,6 +74,40 @@ export function ProjectsPageContent() {
     }
   ];
 
+  // 🔥 NEW: Handle dashboard card clicks για filtering
+  const handleCardClick = (stat: DashboardStat, index: number) => {
+    const cardTitle = stat.title;
+
+    // Toggle filter: αν κλικάρουμε την ίδια κάρτα, αφαιρούμε το φίλτρο
+    if (activeCardFilter === cardTitle) {
+      setActiveCardFilter(null);
+      // Reset filters to show all projects
+      setFilters({ ...filters, status: [] });
+    } else {
+      setActiveCardFilter(cardTitle);
+
+      // Apply filter based on card type
+      switch (cardTitle) {
+        case 'Σύνολο Έργων':
+          // Show all projects - reset filters
+          setFilters({ ...filters, status: [] });
+          break;
+        case 'Ενεργά Έργα':
+          // Filter only active projects (in_progress)
+          setFilters({ ...filters, status: ['in_progress'] });
+          break;
+        // Note: Other cards (Συνολική Αξία, Συνολική Επιφάνεια, Μέση Πρόοδος)
+        // are informational and don't apply specific filters
+        default:
+          // For other stats, just clear active filter without changing data
+          setActiveCardFilter(null);
+          break;
+      }
+
+      // Clear selected project when filtering changes
+      setSelectedProject(null);
+    }
+  };
 
   // Εμφάνιση loading state
   if (loading) {
@@ -111,7 +148,7 @@ export function ProjectsPageContent() {
             setShowDashboard={setShowDashboard}
         />
         
-        {showDashboard && <UnifiedDashboard stats={dashboardStats} columns={5} />}
+        {showDashboard && <UnifiedDashboard stats={dashboardStats} columns={5} onCardClick={handleCardClick} />}
 
         {/* Advanced Filters Panel */}
         <AdvancedFiltersPanel

@@ -15,13 +15,15 @@ interface UnifiedDashboardProps {
   columns?: number; // Default grid layout columns
   className?: string;
   additionalContainers?: React.ReactNode; // Optional additional containers below stats
+  onCardClick?: (stat: DashboardStat, index: number) => void; // 🔥 NEW: Click handler για filtering
 }
 
 export function UnifiedDashboard({
   stats,
   columns = 6,
   className = "p-4 border-b bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20",
-  additionalContainers
+  additionalContainers,
+  onCardClick
 }: UnifiedDashboardProps) {
 
   // Dynamic grid class based on columns
@@ -43,6 +45,7 @@ export function UnifiedDashboard({
             value={stat.value}
             icon={stat.icon}
             color={stat.color}
+            onClick={onCardClick ? () => onCardClick(stat, index) : undefined}
           />
         ))}
       </div>

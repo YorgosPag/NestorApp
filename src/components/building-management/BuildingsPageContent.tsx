@@ -43,6 +43,9 @@ export function BuildingsPageContent() {
 
   const buildingsStats = useBuildingStats(buildingsData);
 
+  // 🔥 NEW: Dashboard card filtering state
+  const [activeCardFilter, setActiveCardFilter] = React.useState<string | null>(null);
+
   // Transform stats to UnifiedDashboard format
   const dashboardStats: DashboardStat[] = [
     {
@@ -83,7 +86,41 @@ export function BuildingsPageContent() {
     }
   ];
 
-  
+  // 🔥 NEW: Handle dashboard card clicks για filtering
+  const handleCardClick = (stat: DashboardStat, index: number) => {
+    const cardTitle = stat.title;
+
+    // Toggle filter: αν κλικάρουμε την ίδια κάρτα, αφαιρούμε το φίλτρο
+    if (activeCardFilter === cardTitle) {
+      setActiveCardFilter(null);
+      // Reset filters to show all buildings
+      setFilters({ ...filters, status: [] });
+    } else {
+      setActiveCardFilter(cardTitle);
+
+      // Apply filter based on card type
+      switch (cardTitle) {
+        case 'Σύνολο Κτιρίων':
+          // Show all buildings - reset filters
+          setFilters({ ...filters, status: [] });
+          break;
+        case 'Ενεργά Έργα':
+          // Filter only active buildings
+          setFilters({ ...filters, status: ['active'] });
+          break;
+        // Note: Other cards (Συνολική Αξία, Συνολική Επιφάνεια, Μέση Πρόοδος, Σύνολο Μονάδων)
+        // are informational and don't apply specific filters
+        default:
+          // For other stats, just clear active filter without changing data
+          setActiveCardFilter(null);
+          break;
+      }
+
+      // Clear selected building when filtering changes
+      setSelectedBuilding(null);
+    }
+  };
+
   // Show loading state
   if (buildingsLoading) {
     return (
@@ -126,7 +163,7 @@ export function BuildingsPageContent() {
           setShowDashboard={setShowDashboard}
         />
 
-        {showDashboard && <UnifiedDashboard stats={dashboardStats} columns={6} />}
+        {showDashboard && <UnifiedDashboard stats={dashboardStats} columns={6} onCardClick={handleCardClick} />}
 
         {/* Advanced Filters Panel */}
         <AdvancedFiltersPanel

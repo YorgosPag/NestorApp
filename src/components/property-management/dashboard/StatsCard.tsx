@@ -8,9 +8,10 @@ interface StatsCardProps {
     value: string | number;
     icon: React.ElementType;
     color: string;
+    onClick?: () => void; // 🔥 NEW: Click handler για filtering
 }
 
-export function StatsCard({ title, value, icon: Icon, color }: StatsCardProps) {
+export function StatsCard({ title, value, icon: Icon, color, onClick }: StatsCardProps) {
     const colorClasses = {
         blue: 'border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400',
         gray: 'border-gray-200 bg-gray-50/50 dark:bg-gray-950/20 text-gray-600 dark:text-gray-400',
@@ -41,7 +42,10 @@ export function StatsCard({ title, value, icon: Icon, color }: StatsCardProps) {
     const colorKey = color as keyof typeof colorClasses;
     
     return (
-        <Card className={colorClasses[colorKey]}>
+        <Card
+            className={`${colorClasses[colorKey]} ${onClick ? 'cursor-pointer hover:scale-105 transition-transform duration-200 hover:shadow-md' : ''}`}
+            onClick={onClick}
+        >
             <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                     <div>

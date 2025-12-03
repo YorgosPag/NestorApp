@@ -90,6 +90,9 @@ export function ContactsPageContent() {
   // Search state (simplified - only for header search)
   const [searchTerm, setSearchTerm] = useState('');
 
+  // 🔥 NEW: Dashboard card filtering state
+  const [activeCardFilter, setActiveCardFilter] = useState<string | null>(null);
+
   // Advanced Filters state (unified - contains all filters)
   const [filters, setFilters] = useState<ContactFilterState>({
     searchTerm: '',
@@ -248,6 +251,32 @@ export function ContactsPageContent() {
 
   // Filter contacts based on unified filters
   const filteredContacts = contacts.filter(contact => {
+    // 🔥 NEW: Dashboard card filtering (highest priority)
+    if (activeCardFilter) {
+      switch (activeCardFilter) {
+        case 'Σύνολο':
+          // Show all contacts - no additional filtering needed
+          break;
+        case 'Φυσικά Πρόσωπα':
+          if (contact.type !== 'individual') return false;
+          break;
+        case 'Νομικά Πρόσωπα':
+          if (contact.type !== 'company') return false;
+          break;
+        case 'Υπηρεσίες':
+          if (contact.type !== 'service') return false;
+          break;
+        case 'Ενεργές':
+          if ((contact as any).status !== 'active') return false;
+          break;
+        case 'Νέες (Μήνας)':
+          const oneMonthAgo = new Date();
+          oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+          if (!contact.createdAt || new Date(contact.createdAt) <= oneMonthAgo) return false;
+          break;
+      }
+    }
+
     // Header search filter (separate from advanced filters search)
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
@@ -266,8 +295,8 @@ export function ContactsPageContent() {
       }
     }
 
-    // Contact type filter
-    if (filters.contactType !== 'all' && contact.type !== filters.contactType) {
+    // Contact type filter (unless overridden by card filter)
+    if (!activeCardFilter && filters.contactType !== 'all' && contact.type !== filters.contactType) {
       return false;
     }
 
@@ -331,7 +360,24 @@ export function ContactsPageContent() {
       color: "pink"
     }
   ];
-  
+
+  // 🔥 NEW: Handle dashboard card clicks για filtering
+  const handleCardClick = (stat: DashboardStat, index: number) => {
+    const cardTitle = stat.title;
+
+    // Toggle filter: αν κλικάρουμε την ίδια κάρτα, αφαιρούμε το φίλτρο
+    if (activeCardFilter === cardTitle) {
+      setActiveCardFilter(null);
+      console.log('🔄 FILTER: Removing card filter');
+    } else {
+      setActiveCardFilter(cardTitle);
+      console.log('🔽 FILTER: Applying card filter:', cardTitle);
+
+      // Clear selected contact when filtering changes
+      setSelectedContact(null);
+    }
+  };
+
   return (
     <TooltipProvider>
       <div className="h-full flex flex-col bg-background">
@@ -345,7 +391,7 @@ export function ContactsPageContent() {
           onNewContact={handleNewContact}
         />
 
-        {showDashboard && <UnifiedDashboard stats={dashboardStats} columns={6} />}
+        {showDashboard && <UnifiedDashboard stats={dashboardStats} columns={6} onCardClick={handleCardClick} />}
 
         {/* Advanced Filters Panel */}
         <AdvancedFiltersPanel

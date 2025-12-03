@@ -102,6 +102,9 @@ function UnitsPageContent() {
     forceDataRefresh,
   } = useUnitsViewerState();
 
+  // 🔥 NEW: Dashboard card filtering state
+  const [activeCardFilter, setActiveCardFilter] = React.useState<string | null>(null);
+
   const safeFloors = Array.isArray(floors) ? floors : [];
   const safeFilteredProperties = Array.isArray(filteredProperties) ? filteredProperties : [];
 
@@ -144,7 +147,48 @@ function UnitsPageContent() {
       color: "pink"
     }
   ];
-  
+
+  // 🔥 NEW: Handle dashboard card clicks για filtering
+  const handleCardClick = (stat: DashboardStat, index: number) => {
+    const cardTitle = stat.title;
+
+    // Toggle filter: αν κλικάρουμε την ίδια κάρτα, αφαιρούμε το φίλτρο
+    if (activeCardFilter === cardTitle) {
+      setActiveCardFilter(null);
+      // Reset filters to show all units
+      handleFiltersChange({ ...filters, status: [] });
+    } else {
+      setActiveCardFilter(cardTitle);
+
+      // Apply filter based on card type
+      switch (cardTitle) {
+        case 'Σύνολο Μονάδων':
+          // Show all units - reset filters
+          handleFiltersChange({ ...filters, status: [] });
+          break;
+        case 'Διαθέσιμες':
+          // Filter only available units
+          handleFiltersChange({ ...filters, status: ['available'] });
+          break;
+        case 'Πωληθείσες':
+          // Filter only sold units
+          handleFiltersChange({ ...filters, status: ['sold'] });
+          break;
+        // Note: Other cards (Συνολική Αξία, Συνολική Επιφάνεια, Μοναδικά Κτίρια)
+        // are informational and don't apply specific filters
+        default:
+          // For other stats, just clear active filter without changing data
+          setActiveCardFilter(null);
+          break;
+      }
+
+      // Clear selected unit when filtering changes
+      if (setSelectedProperties) {
+        setSelectedProperties([]);
+      }
+    }
+  };
+
   const handleAssignmentSuccess = useCallback(() => {
     forceDataRefresh();
     if (setSelectedProperties) {
@@ -208,6 +252,7 @@ function UnitsPageContent() {
           <UnifiedDashboard
             stats={unifiedDashboardStats}
             columns={6}
+            onCardClick={handleCardClick}
             additionalContainers={
               <>
                 <StatusCard statsByStatus={dashboardStats.propertiesByStatus} getStatusLabel={getStatusLabel} />
