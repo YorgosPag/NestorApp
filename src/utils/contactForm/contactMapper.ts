@@ -27,7 +27,6 @@ export interface ContactMappingResult {
  * @returns ContactFormData για το form + warnings array
  */
 export function mapContactToFormData(contact: Contact): ContactMappingResult {
-  console.log('🔄 MAPPER: Starting contact→formData mapping για type:', contact.type);
 
   const warnings: string[] = [];
 
@@ -56,7 +55,6 @@ export function mapContactToFormData(contact: Contact): ContactMappingResult {
         break;
     }
 
-    console.log('✅ MAPPER: Contact→FormData mapping completed');
     return { formData, warnings };
 
   } catch (error) {

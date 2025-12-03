@@ -30,17 +30,9 @@ function getContactValue(contact: any, fieldName: string): string {
  * @returns ContactFormData for company
  */
 export function mapCompanyContactToFormData(contact: Contact): ContactFormData {
-  console.log('🔄 COMPANY MAPPER: Starting company contact mapping');
 
   const companyContact = contact as any; // Cast for company fields access
 
-  // 🔍 DEBUG: Log what we're mapping from
-  console.log('🔍 COMPANY MAPPER DEBUG:', {
-    contactVatNumber: companyContact.vatNumber,
-    contactCustomFields: companyContact.customFields,
-    contactRegistrationNumber: companyContact.registrationNumber,
-    contactGemiNumber: companyContact.gemiNumber
-  });
 
   const formData: ContactFormData = {
     // Basic info
@@ -93,7 +85,7 @@ export function mapCompanyContactToFormData(contact: Contact): ContactFormData {
     },
     websites: '',
     photoFile: null,
-    photoPreview: '',
+    photoPreview: getSafeFieldValue(companyContact, 'photoURL'), // 🔧 FIX: Get representative photo from contact
     multiplePhotos: [],
 
     // Service fields (empty for company)
@@ -146,19 +138,6 @@ export function mapCompanyContactToFormData(contact: Contact): ContactFormData {
     announcements: []
   };
 
-  // 🔍 DEBUG: Log final formData before returning (για ΑΦΜ troubleshooting)
-  console.log('🔍 COMPANY MAPPER FINAL RESULT:', {
-    'formData.vatNumber': formData.vatNumber,
-    'formData.companyVatNumber': formData.companyVatNumber,
-    'formData.gemiNumber': formData.gemiNumber,
-    'formData.gemiStatus': formData.gemiStatus,
-    'formData.tradeName': formData.tradeName,
-    fullFormDataVatFields: {
-      vatNumber: formData.vatNumber,
-      companyVatNumber: formData.companyVatNumber
-    }
-  });
 
-  console.log('✅ COMPANY MAPPER: Company contact mapping completed');
   return formData;
 }

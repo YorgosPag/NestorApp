@@ -276,14 +276,7 @@ export function UnifiedPhotoManager({
   className
 }: UnifiedPhotoManagerProps) {
 
-  // Debug info
-  console.log('🎯 UnifiedPhotoManager render:', {
-    contactType,
-    formDataKeys: Object.keys(formData),
-    hasMultiplePhotos: !!formData.multiplePhotos,
-    multiplePhotosLength: formData.multiplePhotos?.length,
-    selectedProfilePhotoIndex: formData.selectedProfilePhotoIndex
-  });
+  // Photo management component for unified contact forms
 
   return (
     <div className={className}>

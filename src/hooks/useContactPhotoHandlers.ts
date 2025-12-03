@@ -56,7 +56,6 @@ export function useContactPhotoHandlers({
    * @returns true if valid, false if invalid
    */
   const validatePhotoFile = useCallback((file: File): boolean => {
-    console.log('🔍 PHOTO HANDLER: Validating file:', file.name);
 
     // Check file type
     if (!file.type.startsWith('image/')) {
@@ -73,7 +72,6 @@ export function useContactPhotoHandlers({
       return false;
     }
 
-    console.log('✅ PHOTO HANDLER: File validation passed');
     return true;
   }, []);
 
@@ -88,13 +86,11 @@ export function useContactPhotoHandlers({
    * @param file - File to process
    */
   const processPhotoFile = useCallback(async (file: File) => {
-    console.log('🔥 PHOTO HANDLER BASE64: Processing photo file:', file.name);
 
     if (!validatePhotoFile(file)) {
       return;
     }
 
-    console.log('🔙 OLD WORKING SYSTEM: Direct Base64 conversion - NO Firebase calls');
 
     try {
       // 🔙 ΠΑΛΙΟ WORKING SYSTEM: Direct FileReader conversion
@@ -102,8 +98,6 @@ export function useContactPhotoHandlers({
 
       reader.onload = (e) => {
         const base64URL = e.target?.result as string;
-        console.log('✅ OLD WORKING: Photo converted to Base64 successfully');
-        console.log('📸 BASE64 URL:', base64URL.substring(0, 50) + '...');
 
         // Update form state με το file (για διαχείριση)
         onFileChange(file);
@@ -127,7 +121,6 @@ export function useContactPhotoHandlers({
       toast.error('Αποτυχία φόρτωσης φωτογραφίας');
     }
 
-    console.log('✅ PHOTO HANDLER BASE64: Photo file processed successfully');
   }, [onFileChange, onUploadComplete]);
 
   /**

@@ -40,7 +40,6 @@ export function CompanyContactTabbedSection({
     file: File,
     onProgress: (progress: FileUploadProgress) => void
   ): Promise<FileUploadResult> => {
-    console.log('🚀🏢 COMPANY TABBED: Starting logo upload με simple Base64 conversion...');
 
     const result = await new Promise<FileUploadResult>((resolve, reject) => {
       const reader = new FileReader();
@@ -66,7 +65,6 @@ export function CompanyContactTabbedSection({
       reader.readAsDataURL(file);
     });
 
-    console.log('✅🏢 COMPANY TABBED: Logo upload completed');
     return result;
   };
 
@@ -75,7 +73,6 @@ export function CompanyContactTabbedSection({
     file: File,
     onProgress: (progress: FileUploadProgress) => void
   ): Promise<FileUploadResult> => {
-    console.log('🚀🏢 COMPANY TABBED: Starting representative photo upload με simple Base64...');
 
     const result = await new Promise<FileUploadResult>((resolve, reject) => {
       const reader = new FileReader();
@@ -101,7 +98,6 @@ export function CompanyContactTabbedSection({
       reader.readAsDataURL(file);
     });
 
-    console.log('✅🏢 COMPANY TABBED: Representative photo upload completed');
     return result;
   };
 

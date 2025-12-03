@@ -150,15 +150,5 @@ export function logFilenameGeneration(
   contactData: ContactFormData,
   fileType: string
 ): void {
-  console.log(`🏷️ FILENAME: Custom filename generated`, {
-    originalFilename,
-    customFilename,
-    fileType,
-    contactInfo: {
-      firstName: contactData.firstName,
-      lastName: contactData.lastName,
-      companyName: contactData.companyName,
-      serviceName: contactData.serviceName
-    }
-  });
+  // Custom filename generated successfully
 }

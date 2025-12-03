@@ -127,7 +127,6 @@ export function useContactSubmission({
    * @returns true if valid, false if invalid
    */
   const validateFormData = useCallback((formData: ContactFormData): boolean => {
-    console.log('🔍 SUBMISSION: Validating form data για type:', formData.type);
 
     switch (formData.type) {
       case 'individual':
@@ -161,7 +160,6 @@ export function useContactSubmission({
       return;
     }
 
-    console.log('🚀 SUBMISSION: Starting form submission για type:', formData.type);
 
     // Validate form data
     if (!validateFormData(formData)) {
@@ -171,7 +169,6 @@ export function useContactSubmission({
 
     // 🔧 HYBRID DEBUG: Upload state validation (temporarily relaxed για Base64 testing)
     const uploadValidation = validateUploadState(formData);
-    console.log('🔍 HYBRID UPLOAD VALIDATION:', uploadValidation);
 
     // 🔧 TEMPORARY: Relaxed validation για Base64 testing
     if (!uploadValidation.isValid && uploadValidation.failedUploads > 0) {
@@ -194,7 +191,6 @@ export function useContactSubmission({
       console.warn('⚠️ HYBRID: Found pending uploads, but allowing submission για Base64 testing:', uploadValidation.pendingUploads);
     }
 
-    console.log('✅ HYBRID VALIDATION: Proceeding with submission (Base64 friendly)');
 
     setLoading(true);
 
@@ -209,27 +205,18 @@ export function useContactSubmission({
       const { contactData } = mappingResult;
 
       // Log submission details
-      console.log('📊 SUBMISSION: Contact data prepared:', {
-        type: contactData.type,
-        hasPhoto: Boolean(mappingResult.photoURL),
-        hasLogo: Boolean(mappingResult.logoURL),
-        multiplePhotosCount: mappingResult.multiplePhotoURLs.length
-      });
 
       // Submit to API
       if (editContact) {
         // Update existing contact
-        console.log('🔄 SUBMISSION: Updating existing contact:', editContact.id);
         await ContactsService.updateContact(editContact.id, contactData);
         toast.success("Η επαφή ενημερώθηκε επιτυχώς.");
-        console.log('✅ SUBMISSION: Contact updated successfully');
 
       } else {
         // Create new contact
         console.log('🆕 SUBMISSION: Creating new contact');
         await ContactsService.createContact(contactData);
         toast.success("Η νέα επαφή δημιουργήθηκε επιτυχώς.");
-        console.log('✅ SUBMISSION: Contact created successfully');
       }
 
       // Success callbacks
@@ -237,7 +224,6 @@ export function useContactSubmission({
       onOpenChange(false);
       resetForm();
 
-      console.log('🎉 SUBMISSION: Form submission completed successfully');
 
     } catch (error) {
       console.error('❌ SUBMISSION: Form submission failed:', error);
@@ -259,7 +245,6 @@ export function useContactSubmission({
 
     } finally {
       setLoading(false);
-      console.log('🔄 SUBMISSION: Loading state cleared');
     }
   }, [loading, validateFormData, editContact, onContactAdded, onOpenChange]); // 🔧 FIX: Removed resetForm from dependencies to prevent infinite loop
 

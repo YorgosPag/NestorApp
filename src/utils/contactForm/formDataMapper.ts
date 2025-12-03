@@ -56,7 +56,6 @@ export function cleanUndefinedValues(obj: any): any {
 export function extractMultiplePhotoURLs(formData: ContactFormData): string[] {
   const urls: string[] = [];
 
-  console.log('🔍 MAPPER HYBRID: Extracting multiplePhotoURLs from formData');
 
   formData.multiplePhotos.forEach((photoSlot, index) => {
     if (photoSlot.uploadUrl) {
@@ -71,7 +70,6 @@ export function extractMultiplePhotoURLs(formData: ContactFormData): string[] {
     }
   });
 
-  console.log(`📊 MAPPER HYBRID: Extracted ${urls.length} photo URLs`);
   return urls;
 }
 
@@ -89,14 +87,6 @@ export function validateUploadState(formData: ContactFormData): {
   totalSlots: number;
   errors: string[];
 } {
-  console.log('🔍 CRITICAL DEBUG: validateUploadState called with formData.multiplePhotos:', formData.multiplePhotos.map((photo, i) => ({
-    index: i,
-    hasFile: !!photo.file,
-    hasPreview: !!photo.preview,
-    hasUploadUrl: !!photo.uploadUrl,
-    isUploading: !!photo.isUploading,
-    error: photo.error
-  })));
 
   const result = {
     isValid: true,
@@ -163,7 +153,6 @@ export function validateUploadState(formData: ContactFormData): {
 
   result.isValid = result.pendingUploads === 0 && result.failedUploads === 0;
 
-  console.log(`🔒 UPLOAD VALIDATION: isValid=${result.isValid}, pending=${result.pendingUploads}, failed=${result.failedUploads}, total=${result.totalSlots}`);
 
   return result;
 }
@@ -177,34 +166,23 @@ export function validateUploadState(formData: ContactFormData): {
  * @returns Photo URL string (Base64 data URL or empty string)
  */
 export function extractPhotoURL(formData: ContactFormData, contactType: string): string {
-  // 🔍 DEBUG: Log what we're extracting
-  console.log(`🔍 EXTRACT PHOTO URL DEBUG για ${contactType}:`, {
-    photoPreview: formData.photoPreview?.substring(0, 50) + '...',
-    isBase64: formData.photoPreview?.startsWith('data:'),
-    isBlob: formData.photoPreview?.startsWith('blob:'),
-    multiplePhotosCount: formData.multiplePhotos?.length,
-    firstPhotoUploadUrl: formData.multiplePhotos?.[0]?.uploadUrl?.substring(0, 50) + '...'
-  });
 
   // 🔙 HYBRID PRIORITY 1: Base64 data URLs from multiplePhotos (για individuals)
   if (formData.multiplePhotos && formData.multiplePhotos.length > 0) {
     const firstPhoto = formData.multiplePhotos[0];
     if (firstPhoto.uploadUrl && firstPhoto.uploadUrl.startsWith('data:')) {
-      console.log(`✅📸 MAPPER HYBRID: Using Base64 URL from multiplePhotos for ${contactType}`);
       return firstPhoto.uploadUrl;
     }
   }
 
   // 🔙 HYBRID PRIORITY 2: Existing Base64 photoPreview
   if (formData.photoPreview && formData.photoPreview.startsWith('data:')) {
-    console.log(`✅📸 MAPPER HYBRID: Using existing Base64 ${contactType} photo URL`);
     return formData.photoPreview;
   }
 
   // 🔙 HYBRID PRIORITY 3: Extract Base64 URLs από multiplePhotoURLs
   const multiplePhotoURLs = extractMultiplePhotoURLs(formData);
   if (multiplePhotoURLs.length > 0 && multiplePhotoURLs[0].startsWith('data:')) {
-    console.log(`✅📸 MAPPER HYBRID: Using Base64 URL από multiplePhotoURLs for ${contactType}`);
     return multiplePhotoURLs[0];
   }
 
@@ -220,7 +198,6 @@ export function extractPhotoURL(formData: ContactFormData, contactType: string):
     return ''; // Κενό string αντί blob URL
   }
 
-  console.log(`❌ MAPPER HYBRID: No valid photo URL found για ${contactType} - returning empty string`);
   return '';
 }
 
@@ -233,7 +210,6 @@ export function extractPhotoURL(formData: ContactFormData, contactType: string):
  */
 export function extractLogoURL(formData: ContactFormData, contactType: string): string {
   if (formData.logoPreview && !formData.logoPreview.startsWith('blob:')) {
-    console.log(`✅🏢 MAPPER: Using existing ${contactType} logo URL:`, formData.logoPreview);
     return formData.logoPreview;
   }
 
@@ -275,7 +251,6 @@ export function mapIndividualFormData(formData: ContactFormData): any {
   const multiplePhotoURLs = extractMultiplePhotoURLs(formData);
   const photoURL = extractPhotoURL(formData, 'individual');
 
-  console.log('💾 MAPPER: Saving individual with multiplePhotoURLs:', multiplePhotoURLs);
 
   return {
     type: 'individual',
@@ -330,17 +305,7 @@ export function mapCompanyFormData(formData: ContactFormData): any {
   const photoURL = extractPhotoURL(formData, 'company representative'); // 🔧 FIX: Εξαγωγή φωτογραφίας εκπροσώπου
   const multiplePhotoURLs = extractMultiplePhotoURLs(formData); // 📸 Multiple photos για companies
 
-  console.log('💾 MAPPER: Saving company with multiplePhotoURLs:', multiplePhotoURLs);
 
-  // 🔍 DEBUG: ΓΕΜΗ Fields Check
-  console.log('🔍 DEBUG ΓΕΜΗ FIELDS:', {
-    companyVatNumber: formData.companyVatNumber, // OLD field (legacy)
-    vatNumber: formData.vatNumber, // NEW field (should be used)
-    gemiNumber: formData.gemiNumber,
-    gemiStatus: formData.gemiStatus,
-    tradeName: formData.tradeName,
-    legalForm: formData.legalForm
-  });
 
   // Removed old return statement - using the consolidated one below
 
@@ -383,12 +348,6 @@ export function mapCompanyFormData(formData: ContactFormData): any {
     }
   };
 
-  console.log('🔍 DEBUG FINAL MAPPED COMPANY:', {
-    vatNumber: result.vatNumber,
-    registrationNumber: result.registrationNumber,
-    gemiNumber: result.gemiNumber,
-    customFields: result.customFields
-  });
 
   return result;
 }
@@ -407,7 +366,6 @@ export function mapServiceFormData(formData: ContactFormData): any {
   // 🔧 FIX: Support both serviceName (old) and name (service-config) fields
   const serviceName = formData.serviceName || formData.name || '';
 
-  console.log('💾 MAPPER: Saving service with multiplePhotoURLs:', multiplePhotoURLs);
 
   return {
     type: 'service',
@@ -457,7 +415,6 @@ export function mapServiceFormData(formData: ContactFormData): any {
  * @returns FormDataMappingResult with contact data and extracted URLs
  */
 export function mapFormDataToContact(formData: ContactFormData): FormDataMappingResult {
-  console.log('🔄 MAPPER: Starting formData→contact mapping για type:', formData.type);
 
   const warnings: string[] = [];
   let contactData: any;
@@ -494,7 +451,6 @@ export function mapFormDataToContact(formData: ContactFormData): FormDataMapping
     // Clean undefined values
     const cleanedData = cleanUndefinedValues(contactData);
 
-    console.log('✅ MAPPER: FormData→Contact mapping completed');
 
     return {
       contactData: cleanedData,
@@ -505,7 +461,6 @@ export function mapFormDataToContact(formData: ContactFormData): FormDataMapping
     };
 
   } catch (error) {
-    console.error('❌ MAPPER: FormData→Contact mapping failed:', error);
 
     return {
       contactData: {} as any,

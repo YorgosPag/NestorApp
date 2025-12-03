@@ -154,14 +154,11 @@ export function EnterprisePhotoUpload({
 
 
     const startAutoUpload = async () => {
-      console.log('🚀 AUTO-UPLOAD: Starting upload για file:', fileToUpload.name);
 
       try {
         const result = await upload.uploadFile(fileToUpload, uploadHandler);
-        console.log('🔍 AUTO-UPLOAD: Upload result:', result);
 
         if (result && onUploadComplete) {
-          console.log('✅ AUTOMATIC UPLOAD: Completed, calling onUploadComplete');
           onUploadComplete(result);
         } else {
           console.log('❌ AUTO-UPLOAD: No result or no callback:', { result: !!result, callback: !!onUploadComplete });
@@ -193,17 +190,7 @@ export function EnterprisePhotoUpload({
   const hasError = upload.error || upload.validationError;
   const isLoading = externalIsLoading ?? upload.isUploading;
 
-  // 🐞 DEBUG: Temporary logging για το delete button issue
-  if (currentPreview && compact) {
-    console.log('🔍 DELETE BUTTON DEBUG:', {
-      currentPreview: !!currentPreview,
-      disabled,
-      isLoading,
-      externalIsLoading,
-      uploadIsUploading: upload.isUploading,
-      showButton: currentPreview && !disabled && !isLoading
-    });
-  }
+  // Delete button visibility logic for compact mode
 
   // ========================================================================
   // RENDER

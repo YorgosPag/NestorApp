@@ -56,7 +56,6 @@ export function useContactLogoHandlers({
    * @returns true if valid, false if invalid
    */
   const validateLogoFile = useCallback((file: File): boolean => {
-    console.log('🔍 LOGO HANDLER: Validating file:', file.name);
 
     // Check file type
     if (!file.type.startsWith('image/')) {
@@ -81,7 +80,6 @@ export function useContactLogoHandlers({
       return false;
     }
 
-    console.log('✅ LOGO HANDLER: File validation passed');
     return true;
   }, []);
 
@@ -95,7 +93,6 @@ export function useContactLogoHandlers({
    * @param file - File to process
    */
   const processLogoFile = useCallback((file: File) => {
-    console.log('🔥 LOGO HANDLER: Processing logo file:', file.name);
 
     if (!validateLogoFile(file)) {
       return;
@@ -104,14 +101,12 @@ export function useContactLogoHandlers({
     // Update form state through callback
     onLogoChange(file);
 
-    console.log('✅ LOGO HANDLER: Logo file processed successfully');
   }, []); // 🔧 FIX: Removed dependencies to prevent infinite re-renders
 
   /**
    * Clear logo file
    */
   const clearLogo = useCallback(() => {
-    console.log('🧹 LOGO HANDLER: Clearing logo');
     onLogoChange(null);
   }, []); // 🔧 FIX: Removed dependencies to prevent infinite re-renders
 
@@ -130,7 +125,6 @@ export function useContactLogoHandlers({
 
     const files = Array.from(e.dataTransfer.files);
     if (files.length === 0) {
-      console.warn('⚠️ LOGO HANDLER: No files in drop event');
       return;
     }
 

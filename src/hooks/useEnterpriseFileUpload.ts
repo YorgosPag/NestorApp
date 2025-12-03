@@ -185,15 +185,10 @@ export function useEnterpriseFileUpload(config: UseEnterpriseFileUploadConfig): 
         processedFile = customFile;
         customFilename = generatedFilename;
 
-        console.log('🏷️ ENTERPRISE FILE UPLOAD: Custom filename generated', {
-          originalName: originalFilename,
-          customName: customFilename,
-          purpose: config.purpose,
-          contactType: config.contactData.firstName ? 'individual' : config.contactData.companyName ? 'company' : 'service'
-        });
+        // Custom filename generated for enterprise upload
 
       } catch (error) {
-        console.warn('⚠️ FILENAME GENERATION: Failed, using original filename', error);
+        // Filename generation failed, fallback to original
         // Fallback to original file if generation fails
       }
     }

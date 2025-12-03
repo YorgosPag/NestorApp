@@ -45,7 +45,6 @@ interface UseContactFormProps {
  * - Reusable specialized handlers
  */
 export function useContactForm({ onContactAdded, onOpenChange, editContact, isModalOpen, onLiveChange }: UseContactFormProps) {
-  console.log('🚀 ORCHESTRATOR: Initializing contact form για edit mode:', Boolean(editContact), 'modal open:', isModalOpen);
 
   // ========================================================================
   // CORE HOOKS
@@ -116,7 +115,6 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact, isMo
     }
 
     if (editContact) {
-      console.log('🔄 ORCHESTRATOR: Loading contact data για edit mode');
 
       try {
         const mappingResult = mapContactToFormData(editContact);
@@ -126,7 +124,6 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact, isMo
         }
 
         setFormData(mappingResult.formData);
-        console.log('✅ ORCHESTRATOR: Contact data loaded successfully');
 
       } catch (error) {
         console.error('❌ ORCHESTRATOR: Failed to load contact data:', error);
@@ -251,7 +248,6 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact, isMo
    */
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('📝 ORCHESTRATOR: Form submission initiated');
     await submitFormData(formData);
   }, [submitFormData, formData]);
 
@@ -306,7 +302,6 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact, isMo
   // RETURN API
   // ========================================================================
 
-  console.log('✅ ORCHESTRATOR: Contact form initialized successfully');
 
   return {
     // Core state

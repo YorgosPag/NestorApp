@@ -128,7 +128,6 @@ export function useContactFormState(): UseContactFormStateReturn {
    * Handle main photo file changes
    */
   const handleFileChange = useCallback((file: File | null) => {
-    console.log('🔥 handleFileChange called με:', file?.name);
 
     setFormData(prev => {
       // 🧹 CLEANUP: Revoke old blob URL if exists
@@ -152,14 +151,12 @@ export function useContactFormState(): UseContactFormStateReturn {
       };
     });
 
-    console.log('✅ handleFileChange: File updated in state');
   }, []);
 
   /**
    * Handle logo file changes
    */
   const handleLogoChange = useCallback((file: File | null) => {
-    console.log('🔥 handleLogoChange called με:', file?.name);
 
     setFormData(prev => {
       // 🧹 CLEANUP: Revoke old blob URL if exists
@@ -183,7 +180,6 @@ export function useContactFormState(): UseContactFormStateReturn {
       };
     });
 
-    console.log('✅ handleLogoChange: File updated in state');
   }, []);
 
   /**
@@ -205,7 +201,6 @@ export function useContactFormState(): UseContactFormStateReturn {
    * Handle uploaded photo URL update (after enterprise upload)
    */
   const handleUploadedPhotoURL = useCallback((photoURL: string) => {
-    console.log('🎯📸 UPLOAD COMPLETE: Updating photoPreview με uploaded URL:', photoURL);
 
     setFormData(prev => {
       // 🧹 CLEANUP: Revoke old blob URL if exists
@@ -225,7 +220,6 @@ export function useContactFormState(): UseContactFormStateReturn {
    * Handle uploaded logo URL update (after enterprise upload)
    */
   const handleUploadedLogoURL = useCallback((logoURL: string) => {
-    console.log('🎯🏢 UPLOAD COMPLETE: Updating logoPreview με uploaded URL:', logoURL);
 
     setFormData(prev => {
       // 🧹 CLEANUP: Revoke old blob URL if exists
@@ -317,7 +311,6 @@ export function useContactFormState(): UseContactFormStateReturn {
    * Reset form to initial state
    */
   const resetForm = useCallback(() => {
-    console.log('🧹 FORM STATE: Resetting form to initial state');
 
     // 🧹 CLEANUP: Revoke any blob URLs before reset
     setFormData(prevFormData => {
@@ -341,7 +334,6 @@ export function useContactFormState(): UseContactFormStateReturn {
       return initialFormData;
     });
 
-    console.log('✅ FORM STATE: Form reset completed');
   }, []); // 🔧 FIX: Empty dependencies - prevents infinite loop
 
   // ========================================================================
