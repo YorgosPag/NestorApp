@@ -21,6 +21,10 @@ export interface PhotoPreviewState {
   photoType: PhotoPreviewModalProps['photoType'];
   /** Index της φωτογραφίας (για gallery) */
   photoIndex?: number;
+  /** Array φωτογραφιών για gallery navigation */
+  galleryPhotos?: (string | null)[];
+  /** Current index στο gallery array */
+  currentGalleryIndex?: number;
 }
 
 export interface UsePhotoPreviewModalReturn {
@@ -41,6 +45,8 @@ export interface UsePhotoPreviewModalReturn {
     contact?: Contact;
     photoType: PhotoPreviewModalProps['photoType'];
     photoIndex?: number;
+    galleryPhotos?: (string | null)[];
+    currentGalleryIndex?: number;
   };
 }
 
@@ -55,6 +61,10 @@ export interface OpenModalParams {
   photoTitle?: string;
   /** Index φωτογραφίας για gallery (optional) */
   photoIndex?: number;
+  /** Array φωτογραφιών για gallery navigation (optional) */
+  galleryPhotos?: (string | null)[];
+  /** Current index στο gallery array (optional) */
+  currentGalleryIndex?: number;
 }
 
 // ============================================================================
@@ -130,7 +140,9 @@ export function usePhotoPreviewModal(): UsePhotoPreviewModalReturn {
       contact,
       photoType = 'avatar',
       photoTitle,
-      photoIndex
+      photoIndex,
+      galleryPhotos,
+      currentGalleryIndex
     } = params;
 
     // Αν δεν υπάρχει φωτογραφία, δεν ανοίγουμε modal
@@ -145,7 +157,9 @@ export function usePhotoPreviewModal(): UsePhotoPreviewModalReturn {
       contact,
       photoType,
       photoTitle,
-      photoIndex
+      photoIndex,
+      galleryPhotos,
+      currentGalleryIndex
     });
   }, []);
 
@@ -181,7 +195,9 @@ export function usePhotoPreviewModal(): UsePhotoPreviewModalReturn {
     photoTitle: state.photoTitle,
     contact: state.contact,
     photoType: state.photoType,
-    photoIndex: state.photoIndex
+    photoIndex: state.photoIndex,
+    galleryPhotos: state.galleryPhotos,
+    currentGalleryIndex: state.currentGalleryIndex
   };
 
   return {
@@ -248,13 +264,16 @@ export function openGalleryPhotoModal(
   contact: Contact,
   photoIndex: number
 ) {
-  const photoUrl = contact.multiplePhotoURLs?.[photoIndex] || null;
+  const galleryPhotos = contact.multiplePhotoURLs || [];
+  const photoUrl = galleryPhotos[photoIndex] || null;
 
   modal.openModal({
     photoUrl,
     contact,
     photoType: 'gallery',
-    photoIndex
+    photoIndex,
+    galleryPhotos,
+    currentGalleryIndex: photoIndex
   });
 }
 

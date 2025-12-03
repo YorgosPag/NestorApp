@@ -1,11 +1,13 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { X, Download, Share2, ZoomIn, ZoomOut, RotateCw, User, Building2 } from 'lucide-react';
+import { X, Download, Share2, ZoomIn, ZoomOut, RotateCw, User, Building2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import type { Contact } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts';
+import { BadgeFactory } from '@/core/badges/BadgeFactory';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -26,6 +28,10 @@ export interface PhotoPreviewModalProps {
   photoType?: 'avatar' | 'logo' | 'representative' | 'profile' | 'gallery';
   /** Index της φωτογραφίας (για gallery) */
   photoIndex?: number;
+  /** Array φωτογραφιών για gallery navigation (optional) */
+  galleryPhotos?: (string | null)[];
+  /** Current index στο gallery array (optional) */
+  currentGalleryIndex?: number;
   /** Custom CSS classes */
   className?: string;
 }
@@ -33,6 +39,45 @@ export interface PhotoPreviewModalProps {
 // ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
+
+/**
+ * Δημιουργεί gallery counter badge με κεντρικοποιημένο badge system
+ */
+function createGalleryCounterBadge(currentIndex: number, totalPhotos: number) {
+  return BadgeFactory.createCommonBadge('info', {
+    customLabel: `${currentIndex + 1}/${totalPhotos}`,
+    variant: 'outline',
+    size: 'sm',
+    className: 'text-muted-foreground'
+  });
+}
+
+/**
+ * Δημιουργεί contact type badge με κεντρικοποιημένο badge system
+ */
+function createContactTypeBadge(contactType: Contact['type']) {
+  let label = '';
+
+  switch (contactType) {
+    case 'individual':
+      label = 'Φυσικό Πρόσωπο';
+      break;
+    case 'company':
+      label = 'Νομικό Πρόσωπο';
+      break;
+    case 'service':
+      label = 'Δημόσια Υπηρεσία';
+      break;
+    default:
+      label = 'Άγνωστος Τύπος';
+  }
+
+  return BadgeFactory.createCommonBadge('info', {
+    customLabel: label,
+    variant: 'secondary',
+    size: 'sm'
+  });
+}
 
 /**
  * Δημιουργεί κατάλληλο τίτλο για τη φωτογραφία βάσει τύπου και επαφής
@@ -146,26 +191,115 @@ export function PhotoPreviewModal({
   contact,
   photoType = 'avatar',
   photoIndex,
+  galleryPhotos,
+  currentGalleryIndex,
   className
 }: PhotoPreviewModalProps) {
+  // ============================================================================
+  // ALL HOOKS MUST BE AT TOP LEVEL - BEFORE ANY EARLY RETURNS
+  // ============================================================================
+
   // State για zoom functionality (μελλοντική επέκταση)
-  const [zoom, setZoom] = React.useState(1);
-  const [rotation, setRotation] = React.useState(0);
+  const [zoom, setZoom] = useState(1);
+  const [rotation, setRotation] = useState(0);
+
+  // State για gallery navigation
+  const [currentIndex, setCurrentIndex] = useState(currentGalleryIndex || 0);
+
+  // Refs για keyboard navigation (αποφεύγουν stale closures)
+  const currentIndexRef = useRef(currentIndex);
+  const isGalleryModeRef = useRef(false);
+  const totalPhotosRef = useRef(0);
+
+  // Gallery logic - πάντα χρησιμοποιούμε το current gallery photo αν είμαστε σε gallery mode
+  const isGalleryMode = galleryPhotos && galleryPhotos.length > 0;
+  const currentPhoto = isGalleryMode ? galleryPhotos[currentIndex] : photoUrl;
+  const validPhotos = galleryPhotos?.filter(photo => photo !== null) || [];
+  const totalPhotos = validPhotos.length;
+
+  // Update refs when values change
+  currentIndexRef.current = currentIndex;
+  isGalleryModeRef.current = !!isGalleryMode;
+  totalPhotosRef.current = totalPhotos;
+
+  // Update currentIndex when currentGalleryIndex prop changes
+  useEffect(() => {
+    if (currentGalleryIndex !== undefined) {
+      setCurrentIndex(currentGalleryIndex);
+    }
+  }, [currentGalleryIndex]);
+
+  // Keyboard navigation με refs (χωρίς dependency issues)
+  useEffect(() => {
+    if (!open) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Χρησιμοποιούμε refs για fresh values
+      const currentGalleryMode = isGalleryModeRef.current;
+      const currentTotal = totalPhotosRef.current;
+
+      if (!currentGalleryMode || currentTotal <= 1) {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          onOpenChange(false);
+        }
+        return;
+      }
+
+      switch (event.key) {
+        case 'ArrowLeft':
+          event.preventDefault();
+          setCurrentIndex(prevIndex => prevIndex > 0 ? prevIndex - 1 : currentTotal - 1);
+          break;
+        case 'ArrowRight':
+          event.preventDefault();
+          setCurrentIndex(prevIndex => prevIndex < currentTotal - 1 ? prevIndex + 1 : 0);
+          break;
+        case 'Escape':
+          event.preventDefault();
+          onOpenChange(false);
+          break;
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [open, onOpenChange]);
+
+  // ============================================================================
+  // EARLY RETURNS AFTER ALL HOOKS
+  // ============================================================================
 
   // Αν δεν υπάρχει φωτογραφία, δεν εμφανίζουμε το modal
-  if (!photoUrl) {
+  if (!currentPhoto) {
     return null;
   }
 
+  // ============================================================================
+  // REGULAR LOGIC AFTER EARLY RETURNS
+  // ============================================================================
+
   // Δημιουργούμε τον τίτλο
-  const title = generatePhotoTitle(contact, photoType, photoIndex, photoTitle);
+  const displayIndex = isGalleryMode ? currentIndex : photoIndex;
+  const title = generatePhotoTitle(contact, photoType, displayIndex, photoTitle);
   const IconComponent = getPhotoTypeIcon(photoType);
+
+  // Navigation handlers για gallery
+  const handlePreviousPhoto = () => {
+    if (!isGalleryMode || totalPhotos <= 1) return;
+    setCurrentIndex(prevIndex => prevIndex > 0 ? prevIndex - 1 : totalPhotos - 1);
+  };
+
+  const handleNextPhoto = () => {
+    if (!isGalleryMode || totalPhotos <= 1) return;
+    setCurrentIndex(prevIndex => prevIndex < totalPhotos - 1 ? prevIndex + 1 : 0);
+  };
 
   // Handlers
   const handleDownload = () => {
     // Δημιουργούμε link για download
     const link = document.createElement('a');
-    link.href = photoUrl;
+    link.href = currentPhoto;
     link.download = `${title}.jpg`;
     link.click();
   };
@@ -188,7 +322,7 @@ export function PhotoPreviewModal({
         await navigator.share({
           title: title,
           text: `Δείτε τη φωτογραφία: ${title}`,
-          url: photoUrl,
+          url: currentPhoto,
         });
       } catch (err) {
         console.log('Share cancelled or failed');
@@ -196,7 +330,7 @@ export function PhotoPreviewModal({
     } else {
       // Fallback: Copy URL to clipboard
       try {
-        await navigator.clipboard.writeText(photoUrl);
+        await navigator.clipboard.writeText(currentPhoto);
         // TODO: Add toast notification
         console.log('URL copied to clipboard');
       } catch (err) {
@@ -207,15 +341,54 @@ export function PhotoPreviewModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`max-w-4xl h-[90vh] flex flex-col ${className}`}>
+      <DialogContent className={`max-w-4xl h-[90vh] flex flex-col ${className} [&>button]:hidden`}>
         <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <DialogTitle className="flex items-center gap-2 text-lg">
-            <IconComponent className="w-5 h-5" />
-            {title}
-          </DialogTitle>
+          <div className="flex items-center gap-3">
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <IconComponent className="w-5 h-5" />
+              {title}
+            </DialogTitle>
+
+            {/* Gallery Counter - Using Centralized Badge System */}
+            {isGalleryMode && totalPhotos > 1 && (() => {
+              const galleryBadge = createGalleryCounterBadge(currentIndex, totalPhotos);
+              return (
+                <Badge
+                  variant={galleryBadge.variant}
+                  className={galleryBadge.className}
+                >
+                  {galleryBadge.label}
+                </Badge>
+              );
+            })()}
+          </div>
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2">
+            {/* Gallery Navigation - μόνο αν έχουμε περισσότερες από 1 φωτογραφίες */}
+            {isGalleryMode && totalPhotos > 1 && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handlePreviousPhoto}
+                  title="Προηγούμενη φωτογραφία"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleNextPhoto}
+                  title="Επόμενη φωτογραφία"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+
+                <div className="w-px h-6 bg-border mx-1" />
+              </>
+            )}
             <Button
               variant="ghost"
               size="sm"
@@ -278,7 +451,7 @@ export function PhotoPreviewModal({
         <div className="flex-1 flex items-center justify-center overflow-hidden bg-gray-50 rounded-lg">
           <div className="relative max-w-full max-h-full">
             <img
-              src={photoUrl}
+              src={currentPhoto}
               alt={title}
               className="max-w-full max-h-full object-contain transition-transform duration-200"
               style={{
@@ -286,7 +459,7 @@ export function PhotoPreviewModal({
                 transformOrigin: 'center'
               }}
               onError={(e) => {
-                console.error('Failed to load image:', photoUrl);
+                console.error('Failed to load image:', currentPhoto);
                 // TODO: Show error state
               }}
             />
@@ -299,13 +472,17 @@ export function PhotoPreviewModal({
             <div className="flex items-center gap-2">
               <IconComponent className="w-4 h-4" />
               <span>{getContactDisplayName(contact)}</span>
-              {contact.type && (
-                <span className="text-xs bg-muted px-2 py-1 rounded">
-                  {contact.type === 'individual' ? 'Φυσικό Πρόσωπο' :
-                   contact.type === 'company' ? 'Νομικό Πρόσωπο' :
-                   'Δημόσια Υπηρεσία'}
-                </span>
-              )}
+              {contact.type && (() => {
+                const contactTypeBadge = createContactTypeBadge(contact.type);
+                return (
+                  <Badge
+                    variant={contactTypeBadge.variant}
+                    className={contactTypeBadge.className}
+                  >
+                    {contactTypeBadge.label}
+                  </Badge>
+                );
+              })()}
             </div>
             <div className="text-xs">
               Zoom: {Math.round(zoom * 100)}%
