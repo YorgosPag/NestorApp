@@ -127,7 +127,6 @@ export function useContactPhotoHandlers({
    * Clear photo file
    */
   const clearPhoto = useCallback(() => {
-    console.log('🧹 PHOTO HANDLER: Clearing photo');
     onFileChange(null);
   }, []); // 🔧 FIX: Removed dependencies to prevent infinite re-renders
 
@@ -142,7 +141,6 @@ export function useContactPhotoHandlers({
     e.preventDefault();
     e.stopPropagation();
 
-    console.log('📥 PHOTO HANDLER: Photo drop event');
 
     const files = Array.from(e.dataTransfer.files);
     if (files.length === 0) {

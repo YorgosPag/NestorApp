@@ -36,7 +36,6 @@ export function CompanyContactSection({
     file: File,
     onProgress: (progress: FileUploadProgress) => void
   ): Promise<FileUploadResult> => {
-    console.log('🚀🏢 COMPANY SIMPLIFIED: Starting logo upload με simple Base64 conversion...');
 
     // 🔙 OLD WORKING SYSTEM: Direct Base64 conversion (SAME AS INDIVIDUAL)
     const result = await new Promise<FileUploadResult>((resolve, reject) => {
@@ -63,12 +62,6 @@ export function CompanyContactSection({
       reader.readAsDataURL(file);
     });
 
-    console.log('✅🏢 COMPANY SIMPLIFIED: Logo upload completed:', {
-      url: result.url,
-      originalSize: result.compressionInfo?.originalSize,
-      compressedSize: result.compressionInfo?.compressedSize,
-      savings: result.compressionInfo?.compressionRatio
-    });
 
     return result;
   };
@@ -78,7 +71,6 @@ export function CompanyContactSection({
     file: File,
     onProgress: (progress: FileUploadProgress) => void
   ): Promise<FileUploadResult> => {
-    console.log('🚀🏢 COMPANY SIMPLIFIED: Starting representative photo upload με simple Base64...');
 
     // 🔙 OLD WORKING SYSTEM: Direct Base64 conversion (SAME AS INDIVIDUAL)
     const result = await new Promise<FileUploadResult>((resolve, reject) => {
@@ -105,7 +97,6 @@ export function CompanyContactSection({
       reader.readAsDataURL(file);
     });
 
-    console.log('✅🏢 COMPANY SIMPLIFIED: Representative photo upload completed');
     return result;
   };
 

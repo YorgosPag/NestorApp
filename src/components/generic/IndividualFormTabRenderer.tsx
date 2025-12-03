@@ -179,13 +179,6 @@ export function IndividualFormTabRenderer({
     // 📝 Centralized logging
     logFilenameGeneration(originalFilename, customFilename, formData, 'gallery');
 
-    console.log('🚀👤 INDIVIDUAL: Starting enterprise multiple photo upload με centralized filename...', {
-      originalFileName: originalFilename,
-      customFileName: customFilename,
-      photoIndex: photoIndex >= 0 ? photoIndex : currentPhotos.length,
-      fileSize: file.size,
-      fileType: file.type
-    });
 
     // Χρησιμοποιούμε το υπάρχον uploadContactPhoto για συμβατότητα
     // 🔙 OLD WORKING SYSTEM: Direct Base64 conversion
@@ -214,14 +207,6 @@ export function IndividualFormTabRenderer({
     });
 
 
-    console.log('✅👤 INDIVIDUAL: Enterprise multiple photo upload completed:', {
-      originalFileName: originalFilename,
-      uploadedFileName: customFilename,
-      url: result.url,
-      originalSize: result.compressionInfo?.originalSize,
-      compressedSize: result.compressionInfo?.compressedSize,
-      savings: result.compressionInfo?.compressionRatio
-    });
 
     return result;
   };

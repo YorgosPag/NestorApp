@@ -40,7 +40,6 @@ export function ServiceContactSection({
     file: File,
     onProgress: (progress: FileUploadProgress) => void
   ): Promise<FileUploadResult> => {
-    console.log('🚀🏛️ SERVICE SIMPLIFIED: Starting logo upload με simple Base64 conversion...');
 
     // 🔙 OLD WORKING SYSTEM: Direct Base64 conversion (SAME AS INDIVIDUAL)
     const result = await new Promise<FileUploadResult>((resolve, reject) => {
@@ -67,12 +66,6 @@ export function ServiceContactSection({
       reader.readAsDataURL(file);
     });
 
-    console.log('✅🏛️ SERVICE SIMPLIFIED: Logo upload completed:', {
-      url: result.url,
-      originalSize: result.compressionInfo?.originalSize,
-      compressedSize: result.compressionInfo?.compressedSize,
-      savings: result.compressionInfo?.compressionRatio
-    });
 
     return result;
   };

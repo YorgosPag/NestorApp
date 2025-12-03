@@ -16,7 +16,6 @@ import { getSafeFieldValue, getSafeArrayValue, getSafeNestedValue } from '../con
  * @returns ContactFormData for service
  */
 export function mapServiceContactToFormData(contact: Contact): ContactFormData {
-  console.log('🔄 SERVICE MAPPER: Starting service contact mapping');
 
   const serviceContact = contact as any; // Cast for service fields access
 
@@ -157,6 +156,5 @@ export function mapServiceContactToFormData(contact: Contact): ContactFormData {
     companyVatNumber: ''
   };
 
-  console.log('✅ SERVICE MAPPER: Service contact mapping completed');
   return formData;
 }

@@ -186,7 +186,6 @@ export function useContactFormState(): UseContactFormStateReturn {
    * Handle multiple photos changes
    */
   const handleMultiplePhotosChange = useCallback((photos: PhotoSlot[]) => {
-    console.log('🎯📸 MULTIPLE: Photos changed:', photos.length);
     setFormData(prev => ({
       ...prev,
       multiplePhotos: photos
@@ -239,12 +238,6 @@ export function useContactFormState(): UseContactFormStateReturn {
    * Handle single multiple photo upload completion
    */
   const handleMultiplePhotoUploadComplete = useCallback((index: number, result: any) => {
-    console.log(`🎯📸 MULTIPLE: Photo ${index + 1} upload complete:`, {
-      url: result.url,
-      customFileName: result.fileName,
-      originalSize: result.compressionInfo?.originalSize,
-      compressedSize: result.compressionInfo?.compressedSize
-    });
 
     setFormData(prev => {
       const newPhotos = JSON.parse(JSON.stringify([...prev.multiplePhotos])); // 🔥 Deep copy για να force re-render
@@ -256,7 +249,6 @@ export function useContactFormState(): UseContactFormStateReturn {
         };
       }
 
-      console.log('🆕 Updated photos state:', newPhotos); // 🔥 DEBUG: Final state verification
 
       return {
         ...prev,
@@ -273,7 +265,6 @@ export function useContactFormState(): UseContactFormStateReturn {
    * Handle profile photo selection (for Individual - selects which photo from multiplePhotos is the profile)
    */
   const handleProfilePhotoSelection = useCallback((index: number) => {
-    console.log('🎯⭐ PROFILE: Setting profile photo index:', index);
 
     setFormData(prev => ({
       ...prev,

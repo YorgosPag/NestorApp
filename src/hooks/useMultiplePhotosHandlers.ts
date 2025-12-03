@@ -61,7 +61,6 @@ export function useMultiplePhotosHandlers({
    * @returns Valid files array
    */
   const validateMultiplePhotos = useCallback((files: File[]): File[] => {
-    console.log('🔍 MULTIPLE PHOTOS HANDLER: Validating', files.length, 'files');
 
     const validFiles: File[] = [];
     const maxFiles = 5;
@@ -85,7 +84,6 @@ export function useMultiplePhotosHandlers({
       }
 
       validFiles.push(file);
-      console.log(`✅ MULTIPLE PHOTOS HANDLER: Valid file ${i + 1}:`, file.name);
     }
 
     if (files.length > maxFiles) {
@@ -93,7 +91,6 @@ export function useMultiplePhotosHandlers({
       console.warn('❌ MULTIPLE PHOTOS HANDLER: Too many files:', files.length);
     }
 
-    console.log(`✅ MULTIPLE PHOTOS HANDLER: ${validFiles.length}/${files.length} files validated`);
     return validFiles;
   }, []);
 
@@ -107,7 +104,6 @@ export function useMultiplePhotosHandlers({
    * @param files - Files to process
    */
   const processMultiplePhotos = useCallback((files: File[]) => {
-    console.log('🔥 MULTIPLE PHOTOS HANDLER: Processing', files.length, 'files');
 
     const validFiles = validateMultiplePhotos(files);
     if (validFiles.length === 0) {
@@ -125,7 +121,6 @@ export function useMultiplePhotosHandlers({
       error: undefined
     }));
 
-    console.log(`✅ MULTIPLE PHOTOS HANDLER: Created ${photoSlots.length} photo slots`);
 
     // Update form state
     onMultiplePhotosChange(photoSlots);
@@ -135,7 +130,6 @@ export function useMultiplePhotosHandlers({
    * Clear all photos
    */
   const clearAllPhotos = useCallback(() => {
-    console.log('🧹 MULTIPLE PHOTOS HANDLER: Clearing all photos');
     onMultiplePhotosChange([]);
   }, []); // 🔧 FIX: Removed dependencies to prevent infinite re-renders
 
@@ -146,7 +140,6 @@ export function useMultiplePhotosHandlers({
    * @param currentPhotos - Current photos array
    */
   const clearPhotoAtIndex = useCallback((index: number, currentPhotos: PhotoSlot[]) => {
-    console.log('🧹 MULTIPLE PHOTOS HANDLER: Clearing photo at index:', index);
 
     const newPhotos = [...currentPhotos];
 
@@ -177,7 +170,6 @@ export function useMultiplePhotosHandlers({
     file: File,
     onProgress: (progress: any) => void
   ): Promise<FileUploadResult> => {
-    console.log('🚀📸 MULTIPLE PHOTOS BASE64: Starting Base64 conversion:', file.name);
 
     try {
       return new Promise<FileUploadResult>((resolve, reject) => {
@@ -189,8 +181,6 @@ export function useMultiplePhotosHandlers({
         reader.onload = (e) => {
           const base64URL = e.target?.result as string;
 
-          console.log('✅📸 MULTIPLE PHOTOS BASE64: Conversion completed:', file.name);
-          console.log('📸 BASE64 URL:', base64URL.substring(0, 50) + '...');
 
           // Simulate final progress
           onProgress({ bytesTransferred: file.size, totalBytes: file.size });

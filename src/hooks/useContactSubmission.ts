@@ -1,9 +1,14 @@
 import { useState, useCallback } from 'react';
-import toast from 'react-hot-toast';
+import { useNotifications } from '@/providers/NotificationProvider';
 import type { Contact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { ContactsService } from '@/services/contacts.service';
 import { mapFormDataToContact, validateUploadState } from '@/utils/contactForm/formDataMapper';
+import {
+  validateDocumentDates,
+  isDatePastOrToday,
+  formatDateForDisplay
+} from '@/utils/validation';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -41,16 +46,64 @@ export interface UseContactSubmissionReturn {
 // ============================================================================
 
 /**
- * Validate individual contact form data
+ * Validate individual contact form data με Enterprise Date Validation
  *
  * @param formData - Form data to validate
+ * @param notifications - Notification service για user feedback
  * @returns true if valid, false if invalid
  */
-function validateIndividualContact(formData: ContactFormData): boolean {
+function validateIndividualContact(formData: ContactFormData, notifications: any): boolean {
+  // 🔧 Βασικά πεδία (υπάρχουν ήδη)
   if (!formData.firstName.trim() || !formData.lastName.trim()) {
-    toast.error("Συμπληρώστε όνομα και επώνυμο.");
+    notifications.error("Συμπληρώστε όνομα και επώνυμο.");
     return false;
   }
+
+  // 🏢 ENTERPRISE DATE VALIDATIONS με User-Friendly Notifications
+  // ============================================================
+
+  // 1. Ημερομηνία γέννησης - δεν μπορεί να είναι μελλοντική
+  if (formData.birthDate && formData.birthDate.trim() !== '') {
+    if (!isDatePastOrToday(formData.birthDate)) {
+      notifications.error(
+        "📅 Η ημερομηνία γέννησης δεν μπορεί να είναι μελλοντική. Παρακαλώ ελέγξτε την ημερομηνία.",
+        {
+          duration: 6000
+        }
+      );
+      return false;
+    }
+  }
+
+  // 2. Ημερομηνία έκδοσης εγγράφου - δεν μπορεί να είναι μελλοντική
+  if (formData.documentIssueDate && formData.documentIssueDate.trim() !== '') {
+    if (!isDatePastOrToday(formData.documentIssueDate)) {
+      notifications.error(
+        "🆔 Η ημερομηνία έκδοσης εγγράφου δεν μπορεί να είναι μελλοντική. Παρακαλώ επιλέξτε σωστή ημερομηνία.",
+        {
+          duration: 6000
+        }
+      );
+      return false;
+    }
+  }
+
+  // 3. Σχέση ημερομηνιών έκδοσης - λήξης
+  const documentDatesValidation = validateDocumentDates({
+    documentIssueDate: formData.documentIssueDate,
+    documentExpiryDate: formData.documentExpiryDate
+  });
+
+  if (!documentDatesValidation.isValid && documentDatesValidation.error) {
+    notifications.error(
+      `⚠️ ${documentDatesValidation.error} Παρακαλώ ελέγξτε τις ημερομηνίες.`,
+      {
+        duration: 6000
+      }
+    );
+    return false;
+  }
+
   return true;
 }
 
@@ -58,11 +111,12 @@ function validateIndividualContact(formData: ContactFormData): boolean {
  * Validate company contact form data
  *
  * @param formData - Form data to validate
+ * @param notifications - Notification service για user feedback
  * @returns true if valid, false if invalid
  */
-function validateCompanyContact(formData: ContactFormData): boolean {
+function validateCompanyContact(formData: ContactFormData, notifications: any): boolean {
   if (!formData.companyName.trim() || !formData.companyVatNumber.trim()) {
-    toast.error("Συμπληρώστε επωνυμία και ΑΦΜ εταιρείας.");
+    notifications.error("Συμπληρώστε επωνυμία και ΑΦΜ εταιρείας.");
     return false;
   }
   return true;
@@ -72,14 +126,15 @@ function validateCompanyContact(formData: ContactFormData): boolean {
  * Validate service contact form data
  *
  * @param formData - Form data to validate
+ * @param notifications - Notification service για user feedback
  * @returns true if valid, false if invalid
  */
-function validateServiceContact(formData: ContactFormData): boolean {
+function validateServiceContact(formData: ContactFormData, notifications: any): boolean {
   // 🔧 FIX: Support both serviceName (old) and name (service-config) fields
   const serviceName = formData.serviceName?.trim() || formData.name?.trim() || '';
 
   if (!serviceName) {
-    toast.error("Συμπληρώστε όνομα υπηρεσίας.");
+    notifications.error("Συμπληρώστε όνομα υπηρεσίας.");
     return false;
   }
   return true;
@@ -111,10 +166,11 @@ export function useContactSubmission({
 }: UseContactSubmissionProps): UseContactSubmissionReturn {
 
   // ========================================================================
-  // STATE
+  // STATE & DEPENDENCIES
   // ========================================================================
 
   const [loading, setLoading] = useState(false);
+  const notifications = useNotifications();
 
   // ========================================================================
   // VALIDATION
@@ -130,20 +186,20 @@ export function useContactSubmission({
 
     switch (formData.type) {
       case 'individual':
-        return validateIndividualContact(formData);
+        return validateIndividualContact(formData, notifications);
 
       case 'company':
-        return validateCompanyContact(formData);
+        return validateCompanyContact(formData, notifications);
 
       case 'service':
-        return validateServiceContact(formData);
+        return validateServiceContact(formData, notifications);
 
       default:
-        toast.error("Άγνωστος τύπος επαφής.");
+        notifications.error("Άγνωστος τύπος επαφής.");
         console.error('❌ SUBMISSION: Unknown contact type:', formData.type);
         return false;
     }
-  }, []);
+  }, [notifications]);
 
   // ========================================================================
   // SUBMISSION LOGIC
@@ -176,7 +232,7 @@ export function useContactSubmission({
       console.error('🚫 SUBMISSION BLOCKED: Failed uploads detected:', uploadValidation);
 
       const errorMessage = `Υπάρχουν αποτυχημένες φωτογραφίες (${uploadValidation.failedUploads} αποτυχίες)`;
-      toast.error(errorMessage);
+      notifications.error(errorMessage);
 
       uploadValidation.errors.forEach(error => {
         if (error.includes('failed') || error.includes('αποτυχία')) {
@@ -210,13 +266,13 @@ export function useContactSubmission({
       if (editContact) {
         // Update existing contact
         await ContactsService.updateContact(editContact.id, contactData);
-        toast.success("Η επαφή ενημερώθηκε επιτυχώς.");
+        notifications.success("Η επαφή ενημερώθηκε επιτυχώς.");
 
       } else {
         // Create new contact
         console.log('🆕 SUBMISSION: Creating new contact');
         await ContactsService.createContact(contactData);
-        toast.success("Η νέα επαφή δημιουργήθηκε επιτυχώς.");
+        notifications.success("Η νέα επαφή δημιουργήθηκε επιτυχώς.");
       }
 
       // Success callbacks
@@ -233,7 +289,7 @@ export function useContactSubmission({
         ? "Δεν ήταν δυνατή η ενημέρωση της επαφής."
         : "Δεν ήταν δυνατή η δημιουργία της επαφής.";
 
-      toast.error(errorMessage);
+      notifications.error(errorMessage);
 
       // Log detailed error for debugging
       console.error('💥 SUBMISSION: Detailed error:', {
@@ -246,7 +302,7 @@ export function useContactSubmission({
     } finally {
       setLoading(false);
     }
-  }, [loading, validateFormData, editContact, onContactAdded, onOpenChange]); // 🔧 FIX: Removed resetForm from dependencies to prevent infinite loop
+  }, [loading, validateFormData, editContact, onContactAdded, onOpenChange, notifications]); // 🔧 FIX: Added notifications dependency
 
   // ========================================================================
   // UI/UX COORDINATION (Layer 3)
@@ -287,7 +343,7 @@ export function useContactSubmission({
       buttonText,
       statusMessage
     };
-  }, [loading, validateFormData, editContact]);
+  }, [loading, validateFormData, editContact, notifications]);
 
   // ========================================================================
   // RETURN API

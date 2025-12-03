@@ -16,19 +16,16 @@ import { getSafeFieldValue, getSafeArrayValue } from '../contactMapper';
  * @returns ContactFormData for individual
  */
 export function mapIndividualContactToFormData(contact: Contact): ContactFormData {
-  console.log('🔄 INDIVIDUAL MAPPER: Starting individual contact mapping');
 
   const individualContact = contact as any; // Cast for individual fields access
 
   // 📸 MULTIPLE PHOTOS: Convert Firebase URLs to PhotoSlots για edit mode
   const multiplePhotoURLs = getSafeArrayValue(individualContact, 'multiplePhotoURLs');
-  console.log('🔄 INDIVIDUAL MAPPER: Found multiplePhotoURLs in contact:', multiplePhotoURLs);
 
   const multiplePhotos = multiplePhotoURLs
     .filter((url: string) => url && !url.startsWith('blob:')) // Φίλτρα blob URLs
     .map((url: string) => {
       const urlType = url.startsWith('data:') ? 'Base64' : 'Firebase';
-      console.log(`🔄 INDIVIDUAL MAPPER: Converting ${urlType} URL to PhotoSlot:`, url.substring(0, 50) + '...');
       return {
         uploadUrl: url, // Base64 ή Firebase URL για display
         preview: url,   // Base64 ή Firebase URL για preview
@@ -37,7 +34,6 @@ export function mapIndividualContactToFormData(contact: Contact): ContactFormDat
       };
     });
 
-  console.log(`📸 INDIVIDUAL MAPPER: Converted ${multiplePhotos.length} Firebase URLs to PhotoSlots`);
 
   const formData: ContactFormData = {
     // Basic info
@@ -145,16 +141,6 @@ export function mapIndividualContactToFormData(contact: Contact): ContactFormDat
     announcements: []
   };
 
-  // 🔍 DEBUG: Log photo fields για debugging
-  console.log('🔍 PHOTO DEBUG - Contact fields:', {
-    photoURL: getSafeFieldValue(individualContact, 'photoURL'),
-    avatarUrl: getSafeFieldValue(individualContact, 'avatarUrl'),
-    imageUrl: getSafeFieldValue(individualContact, 'imageUrl'),
-    multiplePhotoURLs: getSafeArrayValue(individualContact, 'multiplePhotoURLs'),
-    multiplePhotosCount: multiplePhotos.length,
-    formDataPhotoPreview: formData.photoPreview
-  });
 
-  console.log('✅ INDIVIDUAL MAPPER: Individual contact mapping completed');
   return formData;
 }

@@ -42,7 +42,6 @@ export function IndividualContactSection({
     file: File,
     onProgress: (progress: FileUploadProgress) => void
   ): Promise<FileUploadResult> => {
-    console.log('🚀👤 INDIVIDUAL: Starting enterprise upload με compression...');
 
     // 🔙 OLD WORKING SYSTEM: Direct Base64 conversion
     const result = await new Promise<FileUploadResult>((resolve, reject) => {
@@ -70,12 +69,6 @@ export function IndividualContactSection({
     });
 
 
-    console.log('✅👤 INDIVIDUAL: Enterprise upload completed:', {
-      url: result.url,
-      originalSize: result.compressionInfo?.originalSize,
-      compressedSize: result.compressionInfo?.compressedSize,
-      savings: result.compressionInfo?.compressionRatio
-    });
 
     return result;
   };

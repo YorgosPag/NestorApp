@@ -72,6 +72,107 @@ export const validationRules = {
       message: message || getValidationMessage('futureDate')
     }),
 
+  // 🏢 ENTERPRISE DATE VALIDATION SYSTEM για όλη την εφαρμογή
+  // ===============================================================
+
+  /**
+   * Ημερομηνία γέννησης - δεν μπορεί να είναι μελλοντική
+   */
+  birthDate: (message?: string) =>
+    z.string()
+      .optional()
+      .refine(dateStr => {
+        if (!dateStr || dateStr.trim() === '') return true; // Optional field
+        const date = new Date(dateStr);
+        return !isNaN(date.getTime()) && date <= new Date();
+      }, {
+        message: message || 'Η ημερομηνία γέννησης δεν μπορεί να είναι μελλοντική'
+      }),
+
+  /**
+   * Ημερομηνία έκδοσης εγγράφου - δεν μπορεί να είναι μελλοντική
+   */
+  documentIssueDate: (message?: string) =>
+    z.string()
+      .optional()
+      .refine(dateStr => {
+        if (!dateStr || dateStr.trim() === '') return true; // Optional field
+        const date = new Date(dateStr);
+        return !isNaN(date.getTime()) && date <= new Date();
+      }, {
+        message: message || 'Η ημερομηνία έκδοσης δεν μπορεί να είναι μελλοντική'
+      }),
+
+  /**
+   * Ημερομηνία λήξης εγγράφου - πρέπει να είναι μετά την ημερομηνία έκδοσης
+   */
+  documentExpiryDate: (issueDate?: string, message?: string) =>
+    z.string()
+      .optional()
+      .refine(dateStr => {
+        if (!dateStr || dateStr.trim() === '') return true; // Optional field
+        if (!issueDate || issueDate.trim() === '') return true; // No issue date to compare
+
+        const expiryDate = new Date(dateStr);
+        const issueDateObj = new Date(issueDate);
+
+        if (isNaN(expiryDate.getTime()) || isNaN(issueDateObj.getTime())) return true;
+
+        return expiryDate > issueDateObj;
+      }, {
+        message: message || 'Η ημερομηνία λήξης πρέπει να είναι μετά την ημερομηνία έκδοσης'
+      }),
+
+  /**
+   * Μελλοντική ημερομηνία - για events, meetings, deadlines κλπ
+   */
+  futureOrTodayDate: (message?: string) =>
+    z.string()
+      .optional()
+      .refine(dateStr => {
+        if (!dateStr || dateStr.trim() === '') return true; // Optional field
+        const date = new Date(dateStr);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Start of today
+        return !isNaN(date.getTime()) && date >= today;
+      }, {
+        message: message || 'Η ημερομηνία δεν μπορεί να είναι παρελθούσα'
+      }),
+
+  /**
+   * Ημερομηνία εντός εύλογου παρελθόντος (π.χ. max 150 χρόνια πίσω για γεννήσεις)
+   */
+  reasonablePastDate: (maxYearsAgo: number = 150, message?: string) =>
+    z.string()
+      .optional()
+      .refine(dateStr => {
+        if (!dateStr || dateStr.trim() === '') return true; // Optional field
+        const date = new Date(dateStr);
+        const minDate = new Date();
+        minDate.setFullYear(minDate.getFullYear() - maxYearsAgo);
+        return !isNaN(date.getTime()) && date >= minDate && date <= new Date();
+      }, {
+        message: message || `Η ημερομηνία δεν μπορεί να είναι πάνω από ${maxYearsAgo} χρόνια πίσω`
+      }),
+
+  /**
+   * Ημερομηνία εντός εύλογου μέλλοντος (π.χ. max 10 χρόνια μπροστά για events)
+   */
+  reasonableFutureDate: (maxYearsAhead: number = 10, message?: string) =>
+    z.string()
+      .optional()
+      .refine(dateStr => {
+        if (!dateStr || dateStr.trim() === '') return true; // Optional field
+        const date = new Date(dateStr);
+        const maxDate = new Date();
+        maxDate.setFullYear(maxDate.getFullYear() + maxYearsAhead);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return !isNaN(date.getTime()) && date >= today && date <= maxDate;
+      }, {
+        message: message || `Η ημερομηνία δεν μπορεί να είναι πάνω από ${maxYearsAhead} χρόνια μπροστά`
+      }),
+
   // Selection validation
   selection: (options: string[], message?: string) =>
     z.enum(options as [string, ...string[]], {
@@ -89,30 +190,93 @@ export const validationRules = {
     z.string().min(1, message || getValidationMessage('invalidCode')),
 };
 
+// 🏢 ENTERPRISE DATE UTILITY FUNCTIONS
+// ========================================
+
+/**
+ * Converts date string to Date object safely
+ */
+export const parseDate = (dateStr?: string): Date | null => {
+  if (!dateStr || dateStr.trim() === '') return null;
+  const date = new Date(dateStr);
+  return isNaN(date.getTime()) ? null : date;
+};
+
+/**
+ * Checks if date string is valid
+ */
+export const isValidDate = (dateStr?: string): boolean => {
+  return parseDate(dateStr) !== null;
+};
+
+/**
+ * Compare two dates for validation (returns true if firstDate <= secondDate)
+ */
+export const isDateBeforeOrEqual = (firstDate?: string, secondDate?: string): boolean => {
+  const date1 = parseDate(firstDate);
+  const date2 = parseDate(secondDate);
+  if (!date1 || !date2) return true; // Skip validation if either date is invalid/empty
+  return date1 <= date2;
+};
+
+/**
+ * Check if date is in the future (including today)
+ */
+export const isDateFutureOrToday = (dateStr?: string): boolean => {
+  const date = parseDate(dateStr);
+  if (!date) return true; // Skip validation if date is empty/invalid
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return date >= today;
+};
+
+/**
+ * Check if date is in the past or today
+ */
+export const isDatePastOrToday = (dateStr?: string): boolean => {
+  const date = parseDate(dateStr);
+  if (!date) return true; // Skip validation if date is empty/invalid
+  return date <= new Date();
+};
+
+/**
+ * Format date for user display (ΗΗ/ΜΜ/ΕΕΕΕ)
+ */
+export const formatDateForDisplay = (dateStr?: string): string => {
+  const date = parseDate(dateStr);
+  if (!date) return '';
+  return date.toLocaleDateString('el-GR');
+};
+
 // Common validation schemas
 export const commonSchemas = {
   // Contact information
   email: validationRules.email(),
   phone: validationRules.phone(),
-  
+
   // Property information
   area: validationRules.area(),
   price: validationRules.price(),
-  
+
   // Financial fields
   salePricePerSqm: validationRules.price(),
   costPerSqm: validationRules.price(),
   realizedValue: validationRules.nonNegative(),
   financing: validationRules.nonNegative(),
-  
+
   // Basic fields
   name: validationRules.required().pipe(validationRules.minLength(2)),
   description: validationRules.maxLength(1000),
   code: validationRules.required().pipe(validationRules.minLength(1)),
-  
+
   // Numbers
   floor: validationRules.integer(),
   percentage: validationRules.number().pipe(validationRules.minValue(0)).pipe(validationRules.maxValue(100)),
+
+  // 🏢 ENTERPRISE DATE SCHEMAS
+  birthDate: validationRules.birthDate(),
+  documentIssueDate: validationRules.documentIssueDate(),
+  // Note: documentExpiryDate requires dynamic validation with issue date
 };
 
 // Password validation
@@ -175,14 +339,48 @@ export const fieldValidations = {
     price: commonSchemas.price,
     floor: commonSchemas.floor,
   },
-  
+
   // Contact fields
   contact: {
     name: commonSchemas.name,
     email: commonSchemas.email,
     phone: commonSchemas.phone,
   },
-  
+
+  // 🏢 INDIVIDUAL CONTACT DATE VALIDATIONS
+  individual: {
+    // Basic info
+    firstName: validationRules.required('Το όνομα είναι υποχρεωτικό'),
+    lastName: validationRules.required('Το επώνυμο είναι υποχρεωτικό'),
+
+    // Date validations
+    birthDate: validationRules.reasonablePastDate(150, 'Η ημερομηνία γέννησης δεν είναι έγκυρη'),
+    documentIssueDate: validationRules.documentIssueDate(),
+
+    // Contact info
+    email: validationRules.email().optional(),
+    phone: validationRules.phone().optional(),
+
+    // VAT/AMKA numbers
+    vatNumber: validationRules.exactLength(9, 'Το ΑΦΜ πρέπει να είναι 9 ψηφία').optional(),
+    amka: validationRules.exactLength(11, 'Το ΑΜΚΑ πρέπει να είναι 11 ψηφία').optional(),
+  },
+
+  // 🏢 COMPANY CONTACT VALIDATIONS
+  company: {
+    companyName: validationRules.required('Η επωνυμία εταιρείας είναι υποχρεωτική'),
+    vatNumber: validationRules.exactLength(9, 'Το ΑΦΜ εταιρείας πρέπει να είναι 9 ψηφία'),
+    email: validationRules.email().optional(),
+    phone: validationRules.phone().optional(),
+  },
+
+  // 🏢 SERVICE CONTACT VALIDATIONS
+  service: {
+    serviceName: validationRules.required('Το όνομα υπηρεσίας είναι υποχρεωτικό'),
+    email: validationRules.email().optional(),
+    phone: validationRules.phone().optional(),
+  },
+
   // Financial fields
   financial: {
     salePricePerSqm: commonSchemas.salePricePerSqm,
@@ -190,4 +388,77 @@ export const fieldValidations = {
     realizedValue: commonSchemas.realizedValue,
     financing: commonSchemas.financing,
   },
+};
+
+// 🏢 ENTERPRISE DATE VALIDATION FUNCTIONS
+// =========================================
+// Χρησιμοποίησε αυτές τις functions για custom validation logic
+
+/**
+ * Validates document expiry date against issue date
+ * @param formData - Form data containing both dates
+ * @returns validation result
+ */
+export const validateDocumentDates = (formData: {
+  documentIssueDate?: string;
+  documentExpiryDate?: string;
+}) => {
+  const { documentIssueDate, documentExpiryDate } = formData;
+
+  // If either date is missing, skip validation
+  if (!documentIssueDate || !documentExpiryDate) return { isValid: true };
+
+  const issueDate = parseDate(documentIssueDate);
+  const expiryDate = parseDate(documentExpiryDate);
+
+  // If either date is invalid, skip validation (other validators will catch this)
+  if (!issueDate || !expiryDate) return { isValid: true };
+
+  const isValid = expiryDate > issueDate;
+
+  return {
+    isValid,
+    error: isValid ? undefined : 'Η ημερομηνία λήξης πρέπει να είναι μετά την ημερομηνία έκδοσης'
+  };
+};
+
+/**
+ * Creates a validation schema for contact forms with date validation
+ * @param contactType - Type of contact (individual, company, service)
+ * @returns Zod schema with appropriate validations
+ */
+export const createContactValidationSchema = (contactType: 'individual' | 'company' | 'service') => {
+  const baseFields = {
+    email: fieldValidations.contact.email,
+    phone: fieldValidations.contact.phone,
+  };
+
+  switch (contactType) {
+    case 'individual':
+      return createFormSchema({
+        ...baseFields,
+        firstName: fieldValidations.individual.firstName,
+        lastName: fieldValidations.individual.lastName,
+        birthDate: fieldValidations.individual.birthDate,
+        documentIssueDate: fieldValidations.individual.documentIssueDate,
+        vatNumber: fieldValidations.individual.vatNumber,
+        amka: fieldValidations.individual.amka,
+      });
+
+    case 'company':
+      return createFormSchema({
+        ...baseFields,
+        companyName: fieldValidations.company.companyName,
+        vatNumber: fieldValidations.company.vatNumber,
+      });
+
+    case 'service':
+      return createFormSchema({
+        ...baseFields,
+        serviceName: fieldValidations.service.serviceName,
+      });
+
+    default:
+      return createFormSchema(baseFields);
+  }
 };

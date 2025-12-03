@@ -109,8 +109,6 @@ export function MultiplePhotosUpload({
    * Handle upload completion for a specific slot
    */
   const handleUploadComplete = useCallback((slotIndex: number, result: FileUploadResult) => {
-    console.log(`🎯📸 MULTIPLE: Upload complete για slot ${slotIndex}:`, result.url);
-    console.log(`✅ Upload complete for ${slotIndex}: fileName=${result.fileName}`); // 🔥 DEBUG: Explicit filename tracking
 
     const newPhotos = [...normalizedPhotos];
     if (newPhotos[slotIndex]) {
@@ -124,15 +122,6 @@ export function MultiplePhotosUpload({
 
       newPhotos[slotIndex] = updatedPhoto;
 
-      console.log(`🔧 MULTIPLE: Setting isUploading=false για slot ${slotIndex}:`, {
-        before: normalizedPhotos[slotIndex]?.isUploading,
-        after: updatedPhoto.isUploading
-      });
-      console.log(`🆕 Updated photos state for slot ${slotIndex}:`, {
-        fileName: updatedPhoto.fileName,
-        uploadUrl: updatedPhoto.uploadUrl,
-        preview: updatedPhoto.preview
-      }); // 🔥 DEBUG: State change tracking
 
       onPhotosChange?.(newPhotos);
 
@@ -167,14 +156,11 @@ export function MultiplePhotosUpload({
       // Start upload automatically if uploadHandler is available
       if (uploadHandler) {
         try {
-          console.log(`🚀📸 Starting auto-upload for slot ${slotIndex + 1}:`, file.name);
-          console.log(`🔧 UPLOAD DEBUG: uploadHandler exists:`, !!uploadHandler); // 🔥 DEBUG: Handler check
 
           const result = await uploadHandler(file, (progress) => {
             handleUploadProgress(slotIndex, progress);
           });
 
-          console.log(`✅📸 Auto-upload completed for slot ${slotIndex + 1}:`, result.url);
           handleUploadComplete(slotIndex, result);
         } catch (error) {
           console.error(`❌📸 Auto-upload failed for slot ${slotIndex + 1}:`, error);
@@ -226,7 +212,6 @@ export function MultiplePhotosUpload({
     for (let i = 0; i < maxPhotos && fileIndex < files.length; i++) {
       if (!normalizedPhotos[i].file && !normalizedPhotos[i].uploadUrl) {
         const file = files[fileIndex];
-        console.log(`🎯📸 Drop upload for slot ${i + 1}:`, file.name);
         handleFileSelection(i, file); // This will auto-upload
         fileIndex++;
       }
@@ -241,11 +226,6 @@ export function MultiplePhotosUpload({
     file: File,
     onProgress: (progress: FileUploadProgress) => void
   ): Promise<FileUploadResult> => {
-    console.log('🚀📸 MULTIPLE BASE64: Starting Base64 conversion...', {
-      fileName: file.name,
-      purpose,
-      fileSize: file.size
-    });
 
     try {
       return new Promise<FileUploadResult>((resolve, reject) => {
@@ -257,8 +237,6 @@ export function MultiplePhotosUpload({
         reader.onload = (e) => {
           const base64URL = e.target?.result as string;
 
-          console.log('✅📸 MULTIPLE BASE64: Conversion completed:', file.name);
-          console.log('📸 BASE64 URL:', base64URL.substring(0, 50) + '...');
 
           // Simulate final progress
           onProgress({ progress: 100, bytesTransferred: file.size, totalBytes: file.size });
@@ -394,8 +372,7 @@ export function MultiplePhotosUpload({
       {/* Photo Grid - 3x2 Layout */}
       <div className="grid grid-cols-3 gap-8 p-6">
         {normalizedPhotos.map((photo, index) => {
-          // 🔥 DEBUG: Log photo state
-          console.log(`📸 Photo ${index}: fileName=${photo.fileName}, preview=${photo.preview}, uploadUrl=${photo.uploadUrl}, file=${photo.file?.name}`);
+          // Photo state available in component props
 
           return (
             <div key={index} className="h-[300px] w-full">

@@ -63,9 +63,7 @@ export function extractMultiplePhotoURLs(formData: ContactFormData): string[] {
       if (photoSlot.uploadUrl.startsWith('data:') || photoSlot.uploadUrl.includes('firebasestorage.googleapis.com')) {
         urls.push(photoSlot.uploadUrl);
         const urlType = photoSlot.uploadUrl.startsWith('data:') ? 'Base64' : 'Firebase';
-        console.log(`✅📸 MAPPER HYBRID: Multiple photo ${index + 1} URL (${urlType}):`, photoSlot.uploadUrl.substring(0, 50) + '...');
       } else if (photoSlot.uploadUrl.startsWith('blob:')) {
-        console.warn(`⚠️ MAPPER HYBRID: Skipping blob URL for photo ${index + 1} - not permanent`);
       }
     }
   });
@@ -113,20 +111,16 @@ export function validateUploadState(formData: ContactFormData): {
         if (photoSlot.isUploading) {
           result.pendingUploads++;
           result.errors.push(`Φωτογραφία ${index + 1}: Εκκρεμής upload`);
-          console.log(`⏳ VALIDATION HYBRID: Photo ${index + 1} still uploading (isUploading=${photoSlot.isUploading}, hasValidUrl=${hasValidUrl})`);
         } else if (photoSlot.error) {
           result.failedUploads++;
           result.errors.push(`Φωτογραφία ${index + 1}: ${photoSlot.error}`);
-          console.log(`❌ VALIDATION HYBRID: Photo ${index + 1} upload failed:`, photoSlot.error);
         } else {
           // File selected but upload never started or stalled
           result.pendingUploads++;
           result.errors.push(`Φωτογραφία ${index + 1}: Upload δεν ξεκίνησε`);
-          console.log(`⚠️ VALIDATION HYBRID: Photo ${index + 1} upload never started`);
         }
       } else if (hasValidUrl) {
         // 🔙 HYBRID: Photo has valid URL - consider it completed
-        console.log(`✅ VALIDATION HYBRID: Photo ${index + 1} completed successfully (${hasValidUrl ? 'Base64/Firebase URL' : 'no URL'})`);
       }
     }
   });
@@ -137,7 +131,6 @@ export function validateUploadState(formData: ContactFormData): {
     if (!hasValidPhotoUrl) {
       result.pendingUploads++;
       result.errors.push('Κύρια φωτογραφία: Εκκρεμής upload');
-      console.log('⚠️ HYBRID VALIDATION: Main photo upload pending');
     }
   }
 
@@ -147,7 +140,6 @@ export function validateUploadState(formData: ContactFormData): {
     if (!hasValidLogoUrl) {
       result.pendingUploads++;
       result.errors.push('Logo: Εκκρεμής upload');
-      console.log('⚠️ HYBRID VALIDATION: Logo upload pending');
     }
   }
 
@@ -188,13 +180,11 @@ export function extractPhotoURL(formData: ContactFormData, contactType: string):
 
   // 🔙 HYBRID FALLBACK: Support existing Firebase URLs (from old working contacts)
   if (formData.photoPreview && formData.photoPreview.includes('firebasestorage.googleapis.com')) {
-    console.log(`✅📸 MAPPER HYBRID: Using existing Firebase URL για ${contactType}`);
     return formData.photoPreview;
   }
 
   // 🚨 HYBRID RULE: NEVER return blob URLs - they are temporary!
   if (formData.photoPreview && formData.photoPreview.startsWith('blob:')) {
-    console.warn(`⚠️ MAPPER HYBRID: Rejecting blob URL - not permanent storage για ${contactType}`);
     return ''; // Κενό string αντί blob URL
   }
 
