@@ -1,7 +1,9 @@
 'use client';
 
-import { ServiceFormTabRenderer } from '@/components/generic/ServiceFormTabRenderer';
+import { GenericFormTabRenderer } from '@/components/generic';
 import { getServiceSortedSections } from '@/config/service-config';
+import { UnifiedPhotoManager } from '@/components/ui/UnifiedPhotoManager';
+import { PhotoUploadService } from '@/services/photoUploadService';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 
 interface ServiceContactTabbedSectionProps {
@@ -16,6 +18,7 @@ interface ServiceContactTabbedSectionProps {
 /**
  * Service Contact Section με tabs
  * Χρησιμοποιεί τα service sections από service-config αντί για ΓΕΜΙ
+ * Χρησιμοποιεί UnifiedPhotoManager όπως οι εταιρείες για σωστή λειτουργία upload
  *
  * Tabs:
  * - Βασικά Στοιχεία (landmark icon)
@@ -36,7 +39,7 @@ export function ServiceContactTabbedSection({
   const sections = getServiceSortedSections();
 
   return (
-    <ServiceFormTabRenderer
+    <GenericFormTabRenderer
       sections={sections}
       formData={formData}
       onChange={handleChange}
@@ -44,7 +47,22 @@ export function ServiceContactTabbedSection({
       onLogoChange={handleLogoChange}
       disabled={disabled}
       customRenderers={{
-        // Add any custom field renderers if needed for service-specific fields
+        // Custom renderer για το logo tab - θα περιέχει το UnifiedPhotoManager για services
+        logo: () => (
+          <UnifiedPhotoManager
+            contactType="service"
+            formData={formData}
+            handlers={{
+              handleLogoChange,
+              handleUploadedLogoURL
+            }}
+            uploadHandlers={{
+              logoUploadHandler: PhotoUploadService.handleLogoUpload
+            }}
+            disabled={disabled}
+            className="mt-4"
+          />
+        )
       }}
     />
   );

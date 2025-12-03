@@ -26,6 +26,8 @@ export interface ServiceFormRendererProps {
   disabled?: boolean;
   /** Logo change handler for photo upload */
   onLogoChange?: (file: File | null) => void;
+  /** Logo upload complete handler */
+  onUploadedLogoURL?: (logoURL: string) => void;
   /** Custom field renderers */
   customRenderers?: Record<string, (field: ServiceFieldConfig, formData: any, onChange: any, onSelectChange: any, disabled: boolean) => React.ReactNode>;
 }
@@ -140,6 +142,7 @@ function renderField(
 function renderLogoSection(
   formData: any,
   onLogoChange: ((file: File | null) => void) | undefined,
+  onUploadedLogoURL: ((logoURL: string) => void) | undefined,
   disabled: boolean
 ): React.ReactNode {
   if (!onLogoChange) {
@@ -157,6 +160,12 @@ function renderLogoSection(
       photoFile={photoFile}
       photoPreview={photoPreview}
       onFileChange={onLogoChange}
+      onUploadComplete={(result) => {
+        if (result.success && result.url && onUploadedLogoURL) {
+          onUploadedLogoURL(result.url);
+          // ✅ Note: logoFile cleanup is handled by handleUploadedLogoURL in useContactFormState
+        }
+      }}
       disabled={disabled}
       compact={true}
       showProgress={true}
@@ -184,6 +193,7 @@ export function ServiceFormRenderer({
   onSelectChange,
   disabled = false,
   onLogoChange,
+  onUploadedLogoURL,
   customRenderers
 }: ServiceFormRendererProps) {
   if (!sections || sections.length === 0) {
@@ -222,7 +232,7 @@ export function ServiceFormRenderer({
             <div className="mt-6">
               {/* Σταθερό πλάτος όπως τα γκρι πλαίσια των φυσικών προσώπων */}
               <div className="w-[400px] h-[300px] mx-auto">
-                {renderLogoSection(formData, onLogoChange, disabled)}
+                {renderLogoSection(formData, onLogoChange, onUploadedLogoURL, disabled)}
               </div>
             </div>
           )}

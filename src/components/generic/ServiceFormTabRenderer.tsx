@@ -25,6 +25,8 @@ export interface ServiceFormTabRendererProps {
   disabled?: boolean;
   /** Logo change handler */
   onLogoChange?: (file: File | null) => void;
+  /** Logo upload complete handler */
+  onUploadedLogoURL?: (logoURL: string) => void;
   /** Custom field renderers for forms */
   customRenderers?: Record<string, (field: any, formData: any, onChange: any, onSelectChange: any, disabled: boolean) => React.ReactNode>;
 }
@@ -43,6 +45,7 @@ function createServiceFormTabsFromConfig(
   onSelectChange: (name: string, value: string) => void,
   disabled: boolean,
   onLogoChange?: (file: File | null) => void,
+  onUploadedLogoURL?: (logoURL: string) => void,
   customRenderers?: Record<string, any>
 ) {
   return sections.map(section => ({
@@ -58,6 +61,7 @@ function createServiceFormTabsFromConfig(
           onSelectChange={onSelectChange}
           disabled={disabled}
           onLogoChange={onLogoChange}
+          onUploadedLogoURL={onUploadedLogoURL}
           customRenderers={customRenderers}
         />
       </FormGrid>
@@ -106,6 +110,7 @@ export function ServiceFormTabRenderer({
   onSelectChange,
   disabled = false,
   onLogoChange,
+  onUploadedLogoURL,
   customRenderers
 }: ServiceFormTabRendererProps) {
   if (!sections || sections.length === 0) {
@@ -120,6 +125,7 @@ export function ServiceFormTabRenderer({
     onSelectChange,
     disabled,
     onLogoChange,
+    onUploadedLogoURL,
     customRenderers
   );
 

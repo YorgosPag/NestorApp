@@ -4,8 +4,8 @@ import React from 'react';
 import { GenericFormTabRenderer } from '@/components/generic';
 import { getSortedSections } from '@/config/company-gemi-config';
 import { UnifiedPhotoManager } from '@/components/ui/UnifiedPhotoManager';
+import { PhotoUploadService } from '@/services/photoUploadService';
 import type { ContactFormData } from '@/types/ContactFormTypes';
-import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 
 interface CompanyContactTabbedSectionProps {
   formData: ContactFormData;
@@ -35,72 +35,6 @@ export function CompanyContactTabbedSection({
   // Get all company GEMI sections from centralized config
   const sections = getSortedSections();
 
-  // 🔥 Enterprise Logo Upload Handler για Company (SAME AS CompanyContactSection)
-  const handleEnterpriseLogoUpload = async (
-    file: File,
-    onProgress: (progress: FileUploadProgress) => void
-  ): Promise<FileUploadResult> => {
-
-    const result = await new Promise<FileUploadResult>((resolve, reject) => {
-      const reader = new FileReader();
-      onProgress({ progress: 0, bytesTransferred: 0, totalBytes: file.size });
-
-      reader.onload = (e) => {
-        const base64URL = e.target?.result as string;
-        onProgress({ progress: 100, bytesTransferred: file.size, totalBytes: file.size });
-        resolve({
-          success: true,
-          url: base64URL,
-          fileName: file.name,
-          compressionInfo: {
-            originalSize: file.size,
-            compressedSize: file.size,
-            compressionRatio: 1.0,
-            quality: 1.0
-          }
-        });
-      };
-
-      reader.onerror = () => reject(new Error('Base64 conversion failed'));
-      reader.readAsDataURL(file);
-    });
-
-    return result;
-  };
-
-  // 🔥 Enterprise Photo Upload Handler για Company (SAME AS CompanyContactSection)
-  const handleEnterprisePhotoUpload = async (
-    file: File,
-    onProgress: (progress: FileUploadProgress) => void
-  ): Promise<FileUploadResult> => {
-
-    const result = await new Promise<FileUploadResult>((resolve, reject) => {
-      const reader = new FileReader();
-      onProgress({ progress: 0, bytesTransferred: 0, totalBytes: file.size });
-
-      reader.onload = (e) => {
-        const base64URL = e.target?.result as string;
-        onProgress({ progress: 100, bytesTransferred: file.size, totalBytes: file.size });
-        resolve({
-          success: true,
-          url: base64URL,
-          fileName: file.name,
-          compressionInfo: {
-            originalSize: file.size,
-            compressedSize: file.size,
-            compressionRatio: 1.0,
-            quality: 1.0
-          }
-        });
-      };
-
-      reader.onerror = () => reject(new Error('Base64 conversion failed'));
-      reader.readAsDataURL(file);
-    });
-
-    return result;
-  };
-
   return (
     <GenericFormTabRenderer
       sections={sections}
@@ -122,8 +56,8 @@ export function CompanyContactTabbedSection({
               handleUploadedPhotoURL
             }}
             uploadHandlers={{
-              logoUploadHandler: handleEnterpriseLogoUpload,
-              photoUploadHandler: handleEnterprisePhotoUpload
+              logoUploadHandler: PhotoUploadService.handleLogoUpload,
+              photoUploadHandler: PhotoUploadService.handlePhotoUpload
             }}
             disabled={disabled}
             className="mt-4"

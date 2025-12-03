@@ -456,8 +456,8 @@ export function createServiceTabsFromConfig(
     name: data.serviceName || data.name, // Map serviceName → name για service-config compatibility
     email: data.emails?.[0]?.email || '', // 🔧 FIX: Map emails array → βασικό email field
     phone: data.phones?.[0]?.number || '', // 🔧 FIX: Map phones array → βασικό phone field
-    logoPreview: data.logoURL || data.logoPreview || '', // 🔧 FIX: Map αποθηκευμένο logoURL → logoPreview για display
-    photoPreview: data.photoURL || data.photoPreview || '', // 🔧 FIX: Map αποθηκευμένο photoURL → photoPreview για display
+    logoPreview: data.logoPreview || data.logoURL || '', // 🔧 FIX: Pending upload takes priority over stored logoURL
+    photoPreview: data.photoPreview || data.photoURL || '', // 🔧 FIX: Pending upload takes priority over stored photoURL
   };
 
   return sections.map(section => ({

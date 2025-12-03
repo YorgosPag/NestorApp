@@ -10,8 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FormField, FormInput } from '@/components/ui/form/FormComponents';
 import { Building2, Users, MapPin, FileText, Plus, Trash2, Upload } from 'lucide-react';
 import { UnifiedPhotoManager } from '@/components/ui/UnifiedPhotoManager';
+import { PhotoUploadService } from '@/services/photoUploadService';
 import type { ContactFormData } from '@/types/ContactFormTypes';
-import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 
 interface ServiceContactSectionProps {
@@ -35,40 +35,7 @@ export function ServiceContactSection({
 }: ServiceContactSectionProps) {
   const [activeTab, setActiveTab] = useState("gemi");
 
-  // 🔥 Enterprise Logo Upload Handler για Δημόσια Υπηρεσία (SIMPLIFIED από Individual)
-  const handleEnterpriseLogoUpload = async (
-    file: File,
-    onProgress: (progress: FileUploadProgress) => void
-  ): Promise<FileUploadResult> => {
-
-    // 🔙 OLD WORKING SYSTEM: Direct Base64 conversion (SAME AS INDIVIDUAL)
-    const result = await new Promise<FileUploadResult>((resolve, reject) => {
-      const reader = new FileReader();
-      onProgress({ progress: 0, bytesTransferred: 0, totalBytes: file.size });
-
-      reader.onload = (e) => {
-        const base64URL = e.target?.result as string;
-        onProgress({ progress: 100, bytesTransferred: file.size, totalBytes: file.size });
-        resolve({
-          success: true,
-          url: base64URL,
-          fileName: file.name,
-          compressionInfo: {
-            originalSize: file.size,
-            compressedSize: file.size,
-            compressionRatio: 1.0,
-            quality: 1.0
-          }
-        });
-      };
-
-      reader.onerror = () => reject(new Error('Base64 conversion failed'));
-      reader.readAsDataURL(file);
-    });
-
-
-    return result;
-  };
+  // 🌯 Unused - now using centralized PhotoUploadService
 
 
   return (
@@ -88,7 +55,7 @@ export function ServiceContactSection({
             handleUploadedLogoURL
           }}
           uploadHandlers={{
-            logoUploadHandler: handleEnterpriseLogoUpload
+            logoUploadHandler: PhotoUploadService.handleLogoUpload
           }}
           disabled={disabled}
           className="mt-2"
