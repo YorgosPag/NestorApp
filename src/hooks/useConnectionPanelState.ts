@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { Connection, ConnectionType, PropertyGroup } from '@/types/connections';
-import { useToast } from '@/hooks/useToast';
+import { useNotifications } from '@/providers/NotificationProvider';
 
 interface UseConnectionPanelStateProps {
     selectedPropertyIds: string[];
@@ -19,15 +19,15 @@ export function useConnectionPanelState({
     isConnecting,
     setIsConnecting,
 }: UseConnectionPanelStateProps) {
-    const { toast } = useToast();
+    const notifications = useNotifications();
     const [connectionType, setConnectionType] = useState<ConnectionType>('related');
 
     const toggleConnectionMode = () => {
         setIsConnecting(!isConnecting);
         if (!isConnecting) {
-            toast({ title: "Ενεργοποίηση Σύνδεσης", description: "Επιλέξτε δύο ακίνητα για να τα συνδέσετε."});
+            notifications.info('✏️ Ενεργοποίηση Σύνδεσης: Επιλέξτε δύο ακίνητα για να τα συνδέσετε');
         } else {
-            toast({ title: "Απενεργοποίηση Σύνδεσης", variant: "info" });
+            notifications.info('❌ Απενεργοποίηση Σύνδεσης');
         }
     };
 
@@ -36,7 +36,7 @@ export function useConnectionPanelState({
         if (!groupName) return;
 
         if (selectedPropertyIds.length < 2) {
-            toast({ title: "Αποτυχία Ομαδοποίησης", description: "Πρέπει να επιλέξετε τουλάχιστον 2 ακίνητα.", variant: "error" });
+            notifications.error('❌ Αποτυχία Ομαδοποίησης: Πρέπει να επιλέξετε τουλάχιστον 2 ακίνητα');
             return;
         }
 
@@ -48,12 +48,12 @@ export function useConnectionPanelState({
         };
 
         setGroups(prev => [...prev, newGroup]);
-        toast({ title: "Επιτυχία", description: `Η ομάδα "${groupName}" δημιουργήθηκε.`});
+        notifications.success(`✅ Η ομάδα "${groupName}" δημιουργήθηκε`);
     };
 
     const clearConnections = () => {
         setConnections([]);
-        toast({ title: "Επιτυχία", description: "Όλες οι συνδέσεις διαγράφηκαν."});
+        notifications.success('✅ Όλες οι συνδέσεις διαγράφηκαν');
     };
     
     const deleteGroup = (groupId: string) => {

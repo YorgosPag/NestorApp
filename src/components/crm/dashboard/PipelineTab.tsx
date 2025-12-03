@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Filter, Plus, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { useToast } from '@/hooks/useToast';
+// Removed: useToast import (migrated to useNotifications)
 import type { Opportunity } from '@/types/crm';
 
 import { useOpportunities } from '../hooks/useOpportunities';

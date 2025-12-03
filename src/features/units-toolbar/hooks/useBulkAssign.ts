@@ -4,18 +4,17 @@ import { ContactsService } from '@/services/contacts.service';
 import { updateMultipleUnitsOwner } from '@/services/units.service';
 import type { Contact } from '@/types/contacts';
 
-type ToastFn = (o: {
-  title: string;
-  description?: string;
-  variant?: 'success' | 'destructive' | 'default';
-}) => void;
+interface NotificationFunctions {
+  success: (message: string) => void;
+  error: (message: string) => void;
+}
 
 interface UseBulkAssignProps {
-  toast: ToastFn;
+  notifications: NotificationFunctions;
   onSuccess: () => void;
 }
 
-export function useBulkAssign({ toast, onSuccess }: UseBulkAssignProps) {
+export function useBulkAssign({ notifications, onSuccess }: UseBulkAssignProps) {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [selectedContactId, setSelectedContactId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
@@ -36,33 +35,21 @@ export function useBulkAssign({ toast, onSuccess }: UseBulkAssignProps) {
   const assignToContact = useCallback(
     async (ids: string[]) => {
       if (!selectedContactId) {
-        toast({
-          title: 'Σφάλμα',
-          description: 'Παρακαλώ επιλέξτε έναν πελάτη.',
-          variant: 'destructive',
-        });
+        notifications.error('❌ Παρακαλώ επιλέξτε έναν πελάτη');
         return;
       }
       setIsLoading(true);
       try {
         await updateMultipleUnitsOwner(ids, selectedContactId);
-        toast({
-          title: 'Επιτυχία',
-          description: 'Τα ακίνητα ανατέθηκαν στον επιλεγμένο πελάτη.',
-          variant: 'success',
-        });
+        notifications.success('✅ Τα ακίνητα ανατέθηκαν στον επιλεγμένο πελάτη');
         onSuccess();
       } catch {
-        toast({
-          title: 'Σφάλμα',
-          description: 'Η ανάθεση απέτυχε.',
-          variant: 'destructive',
-        });
+        notifications.error('❌ Η ανάθεση απέτυχε');
       } finally {
         setIsLoading(false);
       }
     },
-    [selectedContactId, toast, onSuccess]
+    [selectedContactId, notifications, onSuccess]
   );
 
   return {

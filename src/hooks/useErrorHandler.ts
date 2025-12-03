@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useTranslation } from '@/i18n';
-import { useToast } from '@/hooks/useToast';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { mapErrorToI18n, mapHttpStatusToError, type DomainError } from '@/lib/error-mapping';
 
 /**
@@ -9,7 +9,7 @@ import { mapErrorToI18n, mapHttpStatusToError, type DomainError } from '@/lib/er
  */
 export function useErrorHandler() {
   const { t } = useTranslation();
-  const { toast } = useToast();
+  const notifications = useNotifications();
 
   /**
    * Handle domain error with automatic i18n mapping
@@ -37,12 +37,8 @@ export function useErrorHandler() {
       ? t(`${mapping.namespace}:${mapping.key}`, mapping.context)
       : t(mapping.key, mapping.context);
 
-    // Show toast notification
-    toast({
-      title: t('errors:general.error', 'Σφάλμα'),
-      description: message || mapping.fallback,
-      variant: 'destructive',
-    });
+    // Show error notification
+    notifications.error(`❌ ${t('errors:general.error', 'Σφάλμα')}: ${message || mapping.fallback}`);
 
     // Log for debugging in development
     if (process.env.NODE_ENV === 'development') {
@@ -50,7 +46,7 @@ export function useErrorHandler() {
       console.log('i18n Mapping:', mapping);
       console.log('Localized Message:', message);
     }
-  }, [t, toast]);
+  }, [t, notifications]);
 
   /**
    * Handle HTTP response errors

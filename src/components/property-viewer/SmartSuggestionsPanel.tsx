@@ -3,7 +3,7 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/useToast';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { suggestionSystem } from './suggestion-system';
 import type { Property } from '@/types/property-viewer';
 import type { Suggestion } from '@/types/suggestions';
@@ -17,14 +17,14 @@ interface SmartSuggestionsPanelProps {
 }
 
 export function SmartSuggestionsPanel({ properties, onShowSuggestion, onAcceptSuggestion }: SmartSuggestionsPanelProps) {
-  const { toast } = useToast();
+  const notifications = useNotifications();
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [selectedSuggestionId, setSelectedSuggestionId] = useState<string | null>(null);
 
   const analyzePlacement = () => {
     const newSuggestions = suggestionSystem.analyzeFloorPlan(properties);
     setSuggestions(newSuggestions.sort((a, b) => b.score - a.score));
-    toast({ title: "Ανάλυση Ολοκληρώθηκε", description: `Βρέθηκαν ${newSuggestions.length} προτάσεις τοποθέτησης.` });
+    notifications.success(`🔍 Ανάλυση Ολοκληρώθηκε: Βρέθηκαν ${newSuggestions.length} προτάσεις τοποθέτησης`);
   };
 
   const handleSelectSuggestion = (id: string) => {

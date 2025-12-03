@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { updateOpportunity } from '@/services/opportunities.service';
-import { useToast } from '@/hooks/useToast';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,

@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import toast from 'react-hot-toast';
+import { useNotifications } from '@/providers/NotificationProvider';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 import type { FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 
@@ -51,6 +51,12 @@ export function useMultiplePhotosHandlers({
 }: UseMultiplePhotosHandlersProps): UseMultiplePhotosHandlersReturn {
 
   // ========================================================================
+  // DEPENDENCIES
+  // ========================================================================
+
+  const notifications = useNotifications();
+
+  // ========================================================================
   // VALIDATION HANDLERS
   // ========================================================================
 
@@ -71,14 +77,14 @@ export function useMultiplePhotosHandlers({
 
       // Check file type
       if (!file.type.startsWith('image/')) {
-        toast.error(`Αρχείο ${file.name}: Μόνο εικόνες επιτρέπονται`);
+        notifications.error(`📸 Αρχείο ${file.name}: Μόνο εικόνες επιτρέπονται`);
         console.warn('❌ MULTIPLE PHOTOS HANDLER: Invalid file type:', file.name, file.type);
         continue;
       }
 
       // Check file size
       if (file.size > maxSize) {
-        toast.error(`Αρχείο ${file.name}: Μέγεθος > 5MB`);
+        notifications.error(`📏 Αρχείο ${file.name}: Μέγεθος > 5MB`);
         console.warn('❌ MULTIPLE PHOTOS HANDLER: File too large:', file.name, file.size);
         continue;
       }
@@ -87,12 +93,12 @@ export function useMultiplePhotosHandlers({
     }
 
     if (files.length > maxFiles) {
-      toast.error(`Μπορείτε να προσθέσετε μέχρι ${maxFiles} φωτογραφίες`);
+      notifications.error(`📊 Μπορείτε να προσθέσετε μέχρι ${maxFiles} φωτογραφίες`);
       console.warn('❌ MULTIPLE PHOTOS HANDLER: Too many files:', files.length);
     }
 
     return validFiles;
-  }, []);
+  }, [notifications]);
 
   // ========================================================================
   // FILE PROCESSING HANDLERS

@@ -7,10 +7,10 @@ import {
     getOpportunities as apiGetOpportunities, 
     deleteOpportunity as apiDeleteOpportunity 
 } from '@/services/opportunities.service';
-import { useToast } from '@/hooks/useToast';
+import { useNotifications } from '@/providers/NotificationProvider';
 
 export function useOpportunities() {
-    const { toast } = useToast();
+    const notifications = useNotifications();
     const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);

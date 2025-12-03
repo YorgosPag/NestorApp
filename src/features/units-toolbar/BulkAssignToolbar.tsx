@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { User, Check, X } from 'lucide-react';
-import { useToast } from '@/hooks/useToast';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { getContactDisplayName } from '@/types/contacts';
 import { useBulkAssign } from './hooks/useBulkAssign';
 
@@ -23,14 +23,14 @@ export function BulkAssignToolbar({
   onClearSelection: () => void;
   onAssignmentSuccess: () => void;
 }) {
-  const { toast } = useToast();
+  const notifications = useNotifications();
   const {
     contacts,
     selectedContactId,
     setSelectedContactId,
     isLoading,
     assignToContact,
-  } = useBulkAssign({ toast, onSuccess: onAssignmentSuccess });
+  } = useBulkAssign({ notifications, onSuccess: onAssignmentSuccess });
 
   const handleAssign = () => assignToContact(selectedIds);
 

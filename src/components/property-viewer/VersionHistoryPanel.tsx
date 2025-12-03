@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/useToast';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { X } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
 import { Skeleton } from '../ui/skeleton';
@@ -49,7 +49,7 @@ const mockVersions = [
 ];
 
 export function VersionHistoryPanel({ buildingId, isOpen, onClose }: { buildingId: string; isOpen: boolean; onClose: () => void; }) {
-    const { toast } = useToast();
+    const notifications = useNotifications();
     const [versions, setVersions] = useState<any[]>([]);
     const [selectedVersion, setSelectedVersion] = useState<any | null>(null);
     const [loading, setLoading] = useState(false);
@@ -67,10 +67,10 @@ export function VersionHistoryPanel({ buildingId, isOpen, onClose }: { buildingI
 
     const handleRestore = async (versionId: string) => {
         if (!confirm('Είστε σίγουροι ότι θέλετε να επαναφέρετε αυτή την έκδοση; Η τρέχουσα κατάσταση θα αποθηκευτεί ως νέα έκδοση.')) return;
-        toast({ title: "Επαναφορά...", description: `Η έκδοση ${versionId} επαναφέρεται.`});
+        notifications.info(`💬 Η έκδοση ${versionId} επαναφέρεται...`);
         // In a real app, you would call the versioning system here.
         setTimeout(() => {
-             toast({ variant: 'success', title: 'Επιτυχία', description: 'Η έκδοση επαναφέρθηκε.' });
+             notifications.success('✅ Η έκδοση επαναφέρθηκε');
              onClose();
         }, 1000);
     };
@@ -78,7 +78,7 @@ export function VersionHistoryPanel({ buildingId, isOpen, onClose }: { buildingI
     const handleCreateMilestone = async () => {
         const name = prompt('Όνομα οροσήμου:');
         if (!name) return;
-        toast({ title: "Δημιουργία Οροσήμου...", description: `Το ορόσημο "${name}" δημιουργείται.`});
+        notifications.info(`🚯 Το ορόσημο "${name}" δημιουργείται...`);
     };
 
     if (!isOpen) return null;

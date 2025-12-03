@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback } from 'react';
-import toast from 'react-hot-toast';
+import { useNotifications } from '@/providers/NotificationProvider';
 
 // Centralized imports από τα νέα modules
 import {
@@ -91,6 +91,12 @@ export type { FileType, UploadPurpose, FileValidationResult, FileUploadProgress,
 export function useEnterpriseFileUpload(config: UseEnterpriseFileUploadConfig): UseEnterpriseFileUploadReturn {
 
   // ========================================================================
+  // DEPENDENCIES
+  // ========================================================================
+
+  const notifications = useNotifications();
+
+  // ========================================================================
   // CORE STATE MANAGEMENT
   // ========================================================================
 
@@ -141,7 +147,7 @@ export function useEnterpriseFileUpload(config: UseEnterpriseFileUploadConfig): 
       setFileWithPreview(file, false); // File μόνο, όχι preview για invalid files
 
       if (config.showToasts !== false) {
-        toast.error(validation.error || 'Μη έγκυρο αρχείο');
+        notifications.error(`❌ ${validation.error || 'Μη έγκυρο αρχείο'}`);
       }
 
       return validation;
@@ -199,11 +205,11 @@ export function useEnterpriseFileUpload(config: UseEnterpriseFileUploadConfig): 
 
     if (config.showToasts !== false) {
       const displayName = customFilename !== file.name ? customFilename : PURPOSE_CONFIG[config.purpose].label;
-      toast.success(`${displayName} επιλέχθηκε επιτυχώς`);
+      notifications.success(`✅ ${displayName} επιλέχθηκε επιτυχώς`);
     }
 
     return validation;
-  }, [config, clearAllErrors, setFileWithPreview]);
+  }, [config, clearAllErrors, setFileWithPreview, notifications]);
 
   // ========================================================================
   // FILE UPLOAD
@@ -257,7 +263,7 @@ export function useEnterpriseFileUpload(config: UseEnterpriseFileUploadConfig): 
       completeUpload(result);
 
       if (config.showToasts !== false) {
-        toast.success(`${PURPOSE_CONFIG[config.purpose].label} ανέβηκε επιτυχώς!`);
+        notifications.success(`🎉 ${PURPOSE_CONFIG[config.purpose].label} ανέβηκε επιτυχώς!`);
       }
 
       return result;
@@ -268,12 +274,12 @@ export function useEnterpriseFileUpload(config: UseEnterpriseFileUploadConfig): 
       failUpload(errorMessage);
 
       if (config.showToasts !== false) {
-        toast.error(`Σφάλμα: ${errorMessage}`);
+        notifications.error(`❌ Σφάλμα: ${errorMessage}`);
       }
 
       return null;
     }
-  }, [config, startUpload, setUploadProgress, completeUpload, failUpload, uploadControllerRef]);
+  }, [config, startUpload, setUploadProgress, completeUpload, failUpload, uploadControllerRef, notifications]);
 
   // ========================================================================
   // ACTION WRAPPERS (Backward Compatibility)
@@ -300,9 +306,9 @@ export function useEnterpriseFileUpload(config: UseEnterpriseFileUploadConfig): 
     cancelUploadState();
 
     if (config.showToasts !== false) {
-      toast.error('Το ανέβασμα ακυρώθηκε');
+      notifications.warning('⚠️ Το ανέβασμα ακυρώθηκε');
     }
-  }, [cancelUploadState, config.showToasts]);
+  }, [cancelUploadState, config.showToasts, notifications]);
 
   /**
    * Cleanup wrapper (Delegates to state management)

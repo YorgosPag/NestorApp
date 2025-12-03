@@ -4,7 +4,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { useObligations } from "@/hooks/useObligations";
 import { ObligationDocument } from "@/types/obligations";
-import { useToast } from "@/hooks/useToast";
+import { useNotifications } from '@/providers/NotificationProvider';
 
 export type ObligationStatus = 'draft' | 'completed' | 'approved';
 export type StatusFilter = 'all' | ObligationStatus;
@@ -17,7 +17,7 @@ interface Filters {
 export function useObligationsList() {
   const { obligations, loading, error, deleteObligation: apiDelete, duplicateObligation: apiDuplicate } = useObligations();
   const [filters, setFilters] = useState<Filters>({ searchTerm: '', status: 'all' });
-  const { toast } = useToast();
+  const notifications = useNotifications();
 
   const handleFilterChange = useCallback((key: keyof Filters, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -57,21 +57,21 @@ export function useObligationsList() {
     if (window.confirm(`Είστε σίγουροι ότι θέλετε να διαγράψετε τη συγγραφή "${title}"?`)) {
       const success = await apiDelete(id);
       if (success) {
-        toast({ title: "Επιτυχής Διαγραφή", description: `Η συγγραφή "${title}" διαγράφηκε.` });
+        notifications.success(`✅ Η συγγραφή "${title}" διαγράφηκε`);
       } else {
-        toast({ title: "Σφάλμα", description: "Η διαγραφή απέτυχε.", variant: "error" });
+        notifications.error('❌ Η διαγραφή απέτυχε');
       }
     }
-  }, [apiDelete, toast]);
+  }, [apiDelete, notifications]);
 
   const duplicateObligation = useCallback(async (id: string) => {
     const duplicated = await apiDuplicate(id);
     if (duplicated) {
-      toast({ title: "Επιτυχής Αντιγραφή", description: `Δημιουργήθηκε το αντίγραφο "${duplicated.title}".` });
+      notifications.success(`✅ Δημιουργήθηκε το αντίγραφο "${duplicated.title}"`);
     } else {
-      toast({ title: "Σφάλμα", description: "Η αντιγραφή απέτυχε.", variant: "error" });
+      notifications.error('❌ Η αντιγραφή απέτυχε');
     }
-  }, [apiDuplicate, toast]);
+  }, [apiDuplicate, notifications]);
 
   return {
     loading,

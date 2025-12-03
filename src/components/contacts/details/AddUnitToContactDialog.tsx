@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { addUnit } from '@/services/units.service';
 import { ContactsService } from '@/services/contacts.service';
-import { useToast } from '@/hooks/useToast';
+import { useNotifications } from '@/providers/NotificationProvider';
 import type { Property } from '@/types/property-viewer';
 import type { Contact } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts';
@@ -64,7 +64,7 @@ export function AddUnitToContactDialog({ open, onOpenChange, contactId, onUnitAd
   const [formData, setFormData] = useState<UnitFormData>(initialFormData);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
+  const notifications = useNotifications();
 
   useEffect(() => {
     let isMounted = true;
@@ -93,7 +93,7 @@ export function AddUnitToContactDialog({ open, onOpenChange, contactId, onUnitAd
     if (loading) return;
 
     if (!formData.name.trim() || !formData.soldTo || formData.price === '' || formData.area === '' || formData.floor === '') {
-        toast({ title: "Σφάλμα", description: "Συμπληρώστε όλα τα υποχρεωτικά πεδία.", variant: "destructive" });
+        notifications.error('❌ Συμπληρώστε όλα τα υποχρεωτικά πεδία');
         return;
     }
 
@@ -107,20 +107,12 @@ export function AddUnitToContactDialog({ open, onOpenChange, contactId, onUnitAd
         floor: Number(formData.floor),
         saleDate: new Date().toISOString(),
       } as Omit<Property, 'id'>);
-      toast({
-        title: "Επιτυχία",
-        description: "Το ακίνητο προστέθηκε στον πελάτη.",
-        variant: "success",
-      });
+      notifications.success('✅ Το ακίνητο προστέθηκε στον πελάτη');
       onUnitAdded();
       onOpenChange(false);
     } catch (error) {
       console.error(error);
-      toast({
-        title: "Σφάλμα",
-        description: "Δεν ήταν δυνατή η προσθήκη του ακινήτου.",
-        variant: "destructive",
-      });
+      notifications.error('❌ Δεν ήταν δυνατή η προσθήκη του ακινήτου');
     } finally {
       setLoading(false);
     }

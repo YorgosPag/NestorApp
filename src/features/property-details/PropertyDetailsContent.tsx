@@ -19,7 +19,7 @@ import { DatesBlock } from './components/DatesBlock';
 
 import { resolveAttachments } from './utils/attachments';
 import { makeSafeUpdate } from './utils/safeUpdate';
-import { useToast } from '@/hooks/useToast';
+import { useNotifications } from '@/providers/NotificationProvider';
 
 export function PropertyDetailsContent({
   property,
@@ -27,7 +27,7 @@ export function PropertyDetailsContent({
   onUpdateProperty,
   isReadOnly = false,
 }: PropertyDetailsContentProps) {
-  const { success, error } = useToast();
+  const notifications = useNotifications();
   const isMultiLevel = property.isMultiLevel || property.type === 'Μεζονέτα';
 
   // attachments (ίδια λογική με mock)
@@ -38,11 +38,11 @@ export function PropertyDetailsContent({
 
   // Share handlers
   const handleShareSuccess = () => {
-    success('Η κοινοποίηση ολοκληρώθηκε επιτυχώς!');
+    notifications.success('✅ Η κοινοποίηση ολοκληρώθηκε επιτυχώς!');
   };
 
   const handleShareError = (errorMessage: string) => {
-    error(`Αποτυχία κοινοποίησης: ${errorMessage}`);
+    notifications.error(`❌ Αποτυχία κοινοποίησης: ${errorMessage}`);
   };
 
   // === RENDER: ΑΠΑΡΑΛΛΑΚΤΟ DOM/Tailwind/labels ===

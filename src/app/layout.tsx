@@ -6,7 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppHeader } from "@/components/app-header";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { Toaster } from "react-hot-toast"; // 🚨 ΠΡΟΣΩΡΙΝΟ: Για backward compatibility
+// 🗑️ REMOVED: react-hot-toast Toaster (replaced by centralized NotificationProvider)
 import { NotificationProvider } from "../providers/NotificationProvider";
 import { SharedPropertiesProvider } from "@/contexts/SharedPropertiesProvider";
 import { UserRoleProvider } from "@/contexts/UserRoleContext";
@@ -82,8 +82,7 @@ export default function RootLayout({
                     </SidebarProvider>
                   </NavigationProvider>
                 </SharedPropertiesProvider>
-                {/* 🚨 ΠΡΟΣΩΡΙΝΟ: react-hot-toast Toaster για backward compatibility */}
-                <Toaster />
+                {/* ✅ ΜΟΝΟ το κεντρικοποιημένο NotificationProvider (sonner-based) */}
                 </NotificationProvider>
               </FloorplanProvider>
             </UserRoleProvider>

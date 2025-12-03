@@ -79,7 +79,7 @@ export function useContactPhotoHandlers({
     }
 
     return true;
-  }, []);
+  }, [notifications]);
 
   // ========================================================================
   // FILE PROCESSING HANDLERS
@@ -116,7 +116,7 @@ export function useContactPhotoHandlers({
 
       reader.onerror = () => {
         console.error('❌ OLD WORKING: Base64 conversion failed');
-        toast.error('Αποτυχία φόρτωσης φωτογραφίας');
+        notifications.error('❌ Αποτυχία φόρτωσης φωτογραφίας');
       };
 
       // 🔙 ΠΑΛΙΟ WORKING: Convert directly to Base64 data URL
@@ -124,10 +124,10 @@ export function useContactPhotoHandlers({
 
     } catch (error) {
       console.error('❌ OLD WORKING: Photo processing failed:', error);
-      toast.error('Αποτυχία φόρτωσης φωτογραφίας');
+      notifications.error('❌ Αποτυχία φόρτωσης φωτογραφίας');
     }
 
-  }, [onFileChange, onUploadComplete]);
+  }, [onFileChange, onUploadComplete, notifications, validatePhotoFile]);
 
   /**
    * Clear photo file

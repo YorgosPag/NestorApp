@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import toast from 'react-hot-toast';
+import { useNotifications } from '@/providers/NotificationProvider';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -46,6 +46,12 @@ export function useContactLogoHandlers({
 }: UseContactLogoHandlersProps): UseContactLogoHandlersReturn {
 
   // ========================================================================
+  // DEPENDENCIES
+  // ========================================================================
+
+  const notifications = useNotifications();
+
+  // ========================================================================
   // VALIDATION HANDLERS
   // ========================================================================
 
@@ -59,7 +65,7 @@ export function useContactLogoHandlers({
 
     // Check file type
     if (!file.type.startsWith('image/')) {
-      toast.error('Επιλέξτε μόνο αρχεία εικόνας (JPG, PNG, κλπ.)');
+      notifications.error('🖼️ Επιλέξτε μόνο αρχεία εικόνας (JPG, PNG, κλπ.)');
       console.warn('❌ LOGO HANDLER: Invalid file type:', file.type);
       return false;
     }
@@ -67,7 +73,7 @@ export function useContactLogoHandlers({
     // Check file size (5MB limit)
     const maxSize = 5 * 1024 * 1024; // 5MB
     if (file.size > maxSize) {
-      toast.error('Το αρχείο πρέπει να είναι μικρότερο από 5MB');
+      notifications.error('📏 Το αρχείο πρέπει να είναι μικρότερο από 5MB');
       console.warn('❌ LOGO HANDLER: File too large:', file.size);
       return false;
     }
@@ -75,13 +81,13 @@ export function useContactLogoHandlers({
     // Logo specific validations
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/svg+xml'];
     if (!allowedTypes.includes(file.type)) {
-      toast.error('Επιλέξτε JPG, PNG ή SVG αρχείο για το λογότυπο');
+      notifications.error('🎨 Επιλέξτε JPG, PNG ή SVG αρχείο για το λογότυπο');
       console.warn('❌ LOGO HANDLER: Invalid logo file type:', file.type);
       return false;
     }
 
     return true;
-  }, []);
+  }, [notifications]);
 
   // ========================================================================
   // FILE PROCESSING HANDLERS

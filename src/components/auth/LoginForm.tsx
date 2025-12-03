@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { useToast } from '@/hooks/useToast';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { useTranslation } from '@/i18n';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,7 +15,7 @@ export function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
+  const notifications = useNotifications();
   const { t } = useTranslation('auth');
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -24,19 +24,11 @@ export function LoginForm() {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      toast({
-        title: t('login.success.title'),
-        description: t('login.success.message'),
-        variant: "success",
-      });
+      notifications.success(`✅ ${t('login.success.title')}: ${t('login.success.message')}`);
       // Here you would typically redirect the user, e.g., router.push('/dashboard')
     } catch (error) {
       console.error("Login error:", error);
-      toast({
-        title: t('login.error.title'),
-        description: t('login.error.message'),
-        variant: "error",
-      });
+      notifications.error(`❌ ${t('login.error.title')}: ${t('login.error.message')}`);
     } finally {
       setLoading(false);
     }
