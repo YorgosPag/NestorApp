@@ -53,6 +53,17 @@ export interface ContactFormData {
   // Υπηρεσία - Στοιχεία από ΓΕΜΗ
   serviceName: string;
   serviceType: 'ministry' | 'tax_office' | 'municipality' | 'public_organization' | 'other';
+  // Service Config Support - Generic name field για service-config compatibility
+  name: string;
+  // Βασικά Στοιχεία Δημόσιας Υπηρεσίας (Service Config)
+  shortName: string; // Συντομογραφία
+  category: string; // Κατηγορία Φορέα
+  supervisionMinistry: string; // Εποπτεύον Υπουργείο
+  // Διοικητικά Στοιχεία (Service Config)
+  legalStatus: string; // Νομικό Καθεστώς
+  establishmentLaw: string; // Νόμος Ίδρυσης
+  headTitle: string; // Τίτλος Προϊσταμένου
+  headName: string; // Όνομα Προϊσταμένου
   // Γενικά Στοιχεία ΓΕΜΗ (basicInfo)
   gemiNumber: string;
   serviceVatNumber: string;
@@ -85,6 +96,17 @@ export interface ContactFormData {
   parentMinistry: string;
   serviceCategory: string;
   officialWebsite: string;
+  // Επικοινωνία Υπηρεσίας (Contact Section)
+  address: string;
+  postalCode: string;
+  city: string;
+  fax: string;
+  website: string;
+  // Υπηρεσίες Φορέα (Services Section)
+  mainResponsibilities: string;
+  citizenServices: string;
+  onlineServices: string;
+  serviceHours: string;
   // Διεύθυνση Έδρας
   serviceAddress: {
     street: string;
@@ -210,6 +232,17 @@ export const initialFormData: ContactFormData = {
   // Υπηρεσία - Στοιχεία από ΓΕΜΗ
   serviceName: '',
   serviceType: 'other',
+  // Service Config Support
+  name: '',
+  // Βασικά Στοιχεία Δημόσιας Υπηρεσίας (Service Config)
+  shortName: '',
+  category: '',
+  supervisionMinistry: '',
+  // Διοικητικά Στοιχεία (Service Config)
+  legalStatus: '',
+  establishmentLaw: '',
+  headTitle: '',
+  headName: '',
   // Γενικά Στοιχεία ΓΕΜΗ (basicInfo)
   gemiNumber: '',
   serviceVatNumber: '',
@@ -242,6 +275,17 @@ export const initialFormData: ContactFormData = {
   parentMinistry: '',
   serviceCategory: '',
   officialWebsite: '',
+  // Επικοινωνία Υπηρεσίας (Contact Section)
+  address: '',
+  postalCode: '',
+  city: '',
+  fax: '',
+  website: '',
+  // Υπηρεσίες Φορέα (Services Section)
+  mainResponsibilities: '',
+  citizenServices: '',
+  onlineServices: '',
+  serviceHours: '',
   // Διεύθυνση Έδρας
   serviceAddress: {
     street: '',

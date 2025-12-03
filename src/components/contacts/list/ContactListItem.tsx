@@ -3,7 +3,7 @@
 import React from 'react';
 import { ContactBadge } from '@/core/badges';
 import { EntityDetailsHeader } from '@/core/entity-headers';
-import { PhotoPreviewModal, usePhotoPreviewModal, openContactAvatarModal } from '@/core/modals';
+import { PhotoPreviewModal, usePhotoPreviewModal, openContactAvatarModal, openGalleryPhotoModal } from '@/core/modals';
 import {
   Users,
   Building2,
@@ -74,14 +74,63 @@ export function ContactListItem({
 
     const avatarImageUrl = getAvatarImageUrl();
 
-    // Handler για άνοιγμα photo modal
+    // Handler για άνοιγμα photo modal με smart gallery logic για όλους τους τύπους
     const handleAvatarClick = () => {
         if (!avatarImageUrl) return;
 
-        // Καθορίζουμε τον τύπο φωτογραφίας
-        const photoType = contact.type === 'company' || contact.type === 'service' ? 'logo' : 'profile';
+        // 🎯 SMART LOGIC: Gallery navigation για Individual με multiplePhotoURLs
+        if (contact.type === 'individual' && (contact as any).multiplePhotoURLs?.length > 0) {
+            const multiplePhotos = (contact as any).multiplePhotoURLs;
+            const currentPhotoIndex = multiplePhotos.findIndex((url: string) => url === avatarImageUrl);
+            const photoIndex = currentPhotoIndex >= 0 ? currentPhotoIndex : 0;
 
-        openContactAvatarModal(photoModal, contact, photoType);
+            // Άνοιγμα με gallery navigation (βελάκια working!)
+            openGalleryPhotoModal(photoModal, contact, photoIndex);
+
+        } else if (contact.type === 'company') {
+            // 🎯 NEW: Gallery navigation για Company [logoURL, photoURL]
+            const logoURL = (contact as any).logoURL;
+            const photoURL = (contact as any).photoURL; // Representative photo
+            const galleryPhotos = [logoURL, photoURL].filter(Boolean); // Remove null/undefined
+
+            if (galleryPhotos.length > 1) {
+                // Multiple photos available - use gallery navigation
+                const currentPhotoIndex = galleryPhotos.findIndex((url: string) => url === avatarImageUrl);
+                const photoIndex = currentPhotoIndex >= 0 ? currentPhotoIndex : 0;
+
+                // Create temporary contact with multiplePhotoURLs for gallery
+                const galleryContact = { ...contact, multiplePhotoURLs: galleryPhotos };
+                openGalleryPhotoModal(photoModal, galleryContact, photoIndex);
+            } else {
+                // Single photo fallback
+                const photoType = avatarImageUrl === logoURL ? 'logo' : 'profile';
+                openContactAvatarModal(photoModal, contact, photoType);
+            }
+
+        } else if (contact.type === 'service') {
+            // 🎯 NEW: Gallery navigation για Service [logoURL, photoURL]
+            const logoURL = (contact as any).logoURL;
+            const photoURL = (contact as any).photoURL; // Representative photo
+            const galleryPhotos = [logoURL, photoURL].filter(Boolean); // Remove null/undefined
+
+            if (galleryPhotos.length > 1) {
+                // Multiple photos available - use gallery navigation
+                const currentPhotoIndex = galleryPhotos.findIndex((url: string) => url === avatarImageUrl);
+                const photoIndex = currentPhotoIndex >= 0 ? currentPhotoIndex : 0;
+
+                // Create temporary contact with multiplePhotoURLs for gallery
+                const galleryContact = { ...contact, multiplePhotoURLs: galleryPhotos };
+                openGalleryPhotoModal(photoModal, galleryContact, photoIndex);
+            } else {
+                // Single photo fallback
+                const photoType = avatarImageUrl === logoURL ? 'logo' : 'profile';
+                openContactAvatarModal(photoModal, contact, photoType);
+            }
+
+        } else {
+            // Fallback για Individual χωρίς multiple photos ή other types
+            openContactAvatarModal(photoModal, contact, 'profile');
+        }
     };
 
     // Get centralized contact card backgrounds

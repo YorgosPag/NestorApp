@@ -41,7 +41,7 @@ export function AddNewContactDialog({ open, onOpenChange, onContactAdded, editCo
     handleUploadedLogoURL,
     handleMultiplePhotosChange,
     handleMultiplePhotoUploadComplete
-  } = useContactForm({ onContactAdded, onOpenChange, editContact });
+  } = useContactForm({ onContactAdded, onOpenChange, editContact, isModalOpen: open });
 
 
   return (

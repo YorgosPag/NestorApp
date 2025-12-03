@@ -42,7 +42,7 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
     handleMultiplePhotosChange,
     handleMultiplePhotoUploadComplete,
     handleProfilePhotoSelection
-  } = useContactForm({ onContactAdded, onOpenChange, editContact });
+  } = useContactForm({ onContactAdded, onOpenChange, editContact, isModalOpen: open });
 
   const isCompany = formData.type === 'company';
   const isIndividual = formData.type === 'individual';

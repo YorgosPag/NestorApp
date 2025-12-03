@@ -75,7 +75,10 @@ function validateCompanyContact(formData: ContactFormData): boolean {
  * @returns true if valid, false if invalid
  */
 function validateServiceContact(formData: ContactFormData): boolean {
-  if (!formData.serviceName.trim()) {
+  // 🔧 FIX: Support both serviceName (old) and name (service-config) fields
+  const serviceName = formData.serviceName?.trim() || formData.name?.trim() || '';
+
+  if (!serviceName) {
     toast.error("Συμπληρώστε όνομα υπηρεσίας.");
     return false;
   }

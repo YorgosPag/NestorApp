@@ -74,7 +74,21 @@ export function useContactFormState(): UseContactFormStateReturn {
    */
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+
+    setFormData(prev => {
+      const newFormData = { ...prev, [name]: value };
+
+      // 🔧 FIX: Service contact serviceName/name field synchronization
+      // Το service-config χρησιμοποιεί 'name' ενώ η βάση δεδομένων αποθηκεύει 'serviceName'
+      // Συγχρονίζουμε και τα δύο πεδία για compatibility
+      if (name === 'serviceName' && prev.type === 'service') {
+        newFormData.name = value; // Sync serviceName → name για service-config
+      } else if (name === 'name' && prev.type === 'service') {
+        newFormData.serviceName = value; // Sync name → serviceName για database
+      }
+
+      return newFormData;
+    });
   }, []);
 
   /**

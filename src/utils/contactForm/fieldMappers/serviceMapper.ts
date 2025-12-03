@@ -26,7 +26,19 @@ export function mapServiceContactToFormData(contact: Contact): ContactFormData {
 
     // 🏛️ Service Στοιχεία
     serviceName: getSafeFieldValue(serviceContact, 'serviceName'),
+    name: getSafeFieldValue(serviceContact, 'serviceName'), // 🔧 FIX: Support service-config compatibility
     serviceType: getSafeFieldValue(serviceContact, 'serviceType', 'other'),
+
+    // Βασικά Στοιχεία Δημόσιας Υπηρεσίας (Service Config)
+    shortName: getSafeFieldValue(serviceContact, 'shortName'),
+    category: getSafeFieldValue(serviceContact, 'category'),
+    supervisionMinistry: getSafeFieldValue(serviceContact, 'supervisionMinistry'),
+
+    // Διοικητικά Στοιχεία (Service Config)
+    legalStatus: getSafeFieldValue(serviceContact, 'legalStatus'),
+    establishmentLaw: getSafeFieldValue(serviceContact, 'establishmentLaw'),
+    headTitle: getSafeFieldValue(serviceContact, 'headTitle'),
+    headName: getSafeFieldValue(serviceContact, 'headName'),
 
     // 📞 Επικοινωνία
     email: contact.emails?.[0]?.email || '',
@@ -73,6 +85,19 @@ export function mapServiceContactToFormData(contact: Contact): ContactFormData {
     parentMinistry: getSafeFieldValue(serviceContact, 'parentMinistry'),
     serviceCategory: getSafeFieldValue(serviceContact, 'serviceCategory'),
     officialWebsite: getSafeFieldValue(serviceContact, 'officialWebsite'),
+
+    // Επικοινωνία Υπηρεσίας (Contact Section)
+    address: getSafeFieldValue(serviceContact, 'address'),
+    postalCode: getSafeFieldValue(serviceContact, 'postalCode'),
+    city: getSafeFieldValue(serviceContact, 'city'),
+    fax: getSafeFieldValue(serviceContact, 'fax'),
+    website: getSafeFieldValue(serviceContact, 'website'),
+
+    // Υπηρεσίες Φορέα (Services Section)
+    mainResponsibilities: getSafeFieldValue(serviceContact, 'mainResponsibilities'),
+    citizenServices: getSafeFieldValue(serviceContact, 'citizenServices'),
+    onlineServices: getSafeFieldValue(serviceContact, 'onlineServices'),
+    serviceHours: getSafeFieldValue(serviceContact, 'serviceHours'),
 
     // Διεύθυνση Έδρας
     serviceAddress: {

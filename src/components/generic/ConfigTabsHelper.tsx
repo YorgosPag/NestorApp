@@ -408,6 +408,18 @@ export function createServiceTabsFromConfig(
   customRenderers?: Record<string, any>,
   valueFormatters?: Record<string, any>
 ): TabConfig[] {
+  // 🔧 FIX: Service Field Mapping Adapter
+  // Το service-config χρησιμοποιεί 'name' ενώ η βάση δεδομένων αποθηκεύει 'serviceName'
+  // Επίσης κάνουμε mapping των emails/phones arrays στα βασικά fields για το GenericTabRenderer
+  const mappedData = {
+    ...data,
+    name: data.serviceName || data.name, // Map serviceName → name για service-config compatibility
+    email: data.emails?.[0]?.email || '', // 🔧 FIX: Map emails array → βασικό email field
+    phone: data.phones?.[0]?.number || '', // 🔧 FIX: Map phones array → βασικό phone field
+    logoPreview: data.logoURL || data.logoPreview || '', // 🔧 FIX: Map αποθηκευμένο logoURL → logoPreview για display
+    photoPreview: data.photoURL || data.photoPreview || '', // 🔧 FIX: Map αποθηκευμένο photoURL → photoPreview για display
+  };
+
   return sections.map(section => ({
     id: section.id,
     label: section.title,
@@ -415,12 +427,12 @@ export function createServiceTabsFromConfig(
     content: section.id === 'logo' ? (
       // Special rendering για Service Logo tab - εμφάνιση αποθηκευμένου λογότυπου
       <ServiceLogoPreview
-        logoUrl={data.logoPreview || data.logoURL}
+        logoUrl={mappedData.logoPreview || mappedData.logoURL}
       />
     ) : (
       <GenericTabRenderer
         section={section}
-        data={data}
+        data={mappedData} // 🔧 FIX: Χρησιμοποιούμε τα mapped data
         mode="display"
         customRenderers={customRenderers}
         valueFormatters={valueFormatters}

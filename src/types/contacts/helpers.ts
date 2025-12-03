@@ -33,7 +33,7 @@ export function getContactDisplayName(contact: Contact): string {
 
 export function getContactInitials(contact: Contact): string {
   const name = getContactDisplayName(contact);
-  return name
+  return (name || '')
     .split(' ')
     .map(word => word[0])
     .join('')

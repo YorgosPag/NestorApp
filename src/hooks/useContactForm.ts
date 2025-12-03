@@ -15,6 +15,7 @@ interface UseContactFormProps {
   onContactAdded: () => void;
   onOpenChange: (open: boolean) => void;
   editContact?: Contact | null;
+  isModalOpen?: boolean; // 🔧 FIX: Track modal state για clean form reset
 }
 
 // ============================================================================
@@ -41,8 +42,8 @@ interface UseContactFormProps {
  * - Enterprise code organization
  * - Reusable specialized handlers
  */
-export function useContactForm({ onContactAdded, onOpenChange, editContact }: UseContactFormProps) {
-  console.log('🚀 ORCHESTRATOR: Initializing contact form για edit mode:', Boolean(editContact));
+export function useContactForm({ onContactAdded, onOpenChange, editContact, isModalOpen }: UseContactFormProps) {
+  console.log('🚀 ORCHESTRATOR: Initializing contact form για edit mode:', Boolean(editContact), 'modal open:', isModalOpen);
 
   // ========================================================================
   // CORE HOOKS
@@ -103,9 +104,15 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact }: Us
   // ========================================================================
 
   /**
-   * Load contact data when editing
+   * Load contact data when editing OR reset form when modal opens for new contact
    */
   useEffect(() => {
+    // 🔧 FIX: Track modal state για proper form reset
+    if (isModalOpen === false) {
+      // Modal closed - no action needed
+      return;
+    }
+
     if (editContact) {
       console.log('🔄 ORCHESTRATOR: Loading contact data για edit mode');
 
@@ -124,11 +131,12 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact }: Us
         resetForm();
       }
 
-    } else {
-      console.log('🆕 ORCHESTRATOR: New contact mode, resetting form');
+    } else if (isModalOpen === true) {
+      // 🎯 FIX: Modal opens για νέα επαφή - reset form
+      console.log('🆕 ORCHESTRATOR: New contact mode, resetting form (modal opened)');
       resetForm();
     }
-  }, [editContact]); // 🔧 FIX: Removed setFormData and resetForm from dependencies to prevent infinite loop
+  }, [editContact, isModalOpen]); // 🔧 FIX: Track both editContact and modal state
 
   // ========================================================================
   // FORM SUBMISSION WRAPPER

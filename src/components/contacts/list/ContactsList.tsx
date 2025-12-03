@@ -93,8 +93,8 @@ export function ContactsList({
   });
 
   const sortedContacts = [...filteredContacts].sort((a, b) => {
-    const aValue = getContactDisplayName(a).toLowerCase();
-    const bValue = getContactDisplayName(b).toLowerCase();
+    const aValue = (getContactDisplayName(a) || '').toLowerCase();
+    const bValue = (getContactDisplayName(b) || '').toLowerCase();
 
     return sortOrder === 'asc'
       ? aValue.localeCompare(bValue)
