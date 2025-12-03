@@ -309,6 +309,13 @@ export function mapIndividualFormData(formData: ContactFormData): any {
     isFavorite: false,
     status: 'active',
     notes: formData.notes,
+
+    // 🔥 NEW: Additional Contact Information
+    address: formData.address,
+    city: formData.city,
+    postalCode: formData.postalCode,
+    email: formData.email, // Add raw email for compatibility
+    phone: formData.phone, // Add raw phone for compatibility
   };
 }
 
@@ -325,19 +332,65 @@ export function mapCompanyFormData(formData: ContactFormData): any {
 
   console.log('💾 MAPPER: Saving company with multiplePhotoURLs:', multiplePhotoURLs);
 
-  return {
+  // 🔍 DEBUG: ΓΕΜΗ Fields Check
+  console.log('🔍 DEBUG ΓΕΜΗ FIELDS:', {
+    companyVatNumber: formData.companyVatNumber, // OLD field (legacy)
+    vatNumber: formData.vatNumber, // NEW field (should be used)
+    gemiNumber: formData.gemiNumber,
+    gemiStatus: formData.gemiStatus,
+    tradeName: formData.tradeName,
+    legalForm: formData.legalForm
+  });
+
+  // Removed old return statement - using the consolidated one below
+
+  // 🔍 DEBUG: Final mapped object
+  const result = {
     type: 'company',
     companyName: formData.companyName,
-    vatNumber: formData.companyVatNumber,
-    logoURL, // 🏢 Enterprise logo URL
-    photoURL, // 🔧 FIX: Enterprise εκπρόσωπος φωτογραφία URL
-    multiplePhotoURLs, // 📸 Multiple photos array για company photos
+    vatNumber: formData.vatNumber, // 🔧 FIX: Use correct field name
+    logoURL,
+    photoURL,
+    multiplePhotoURLs,
     emails: createEmailsArray(formData.email),
     phones: createPhonesArray(formData.phone, 'work'),
     isFavorite: false,
     status: 'active',
     notes: formData.notes,
+    registrationNumber: formData.gemiNumber,
+    gemiNumber: formData.gemiNumber,
+    tradeName: formData.tradeName,
+    legalForm: formData.legalForm,
+    address: formData.address,
+    city: formData.city,
+    postalCode: formData.postalCode,
+    website: formData.website,
+    customFields: {
+      gemiStatus: formData.gemiStatus,
+      gemiStatusDate: formData.gemiStatusDate,
+      activityCodeKAD: formData.activityCodeKAD,
+      activityDescription: formData.activityDescription,
+      activityType: formData.activityType,
+      chamber: formData.chamber,
+      capitalAmount: formData.capitalAmount,
+      currency: formData.currency,
+      extraordinaryCapital: formData.extraordinaryCapital,
+      registrationDate: formData.registrationDate,
+      lastUpdateDate: formData.lastUpdateDate,
+      gemiDepartment: formData.gemiDepartment,
+      prefecture: formData.prefecture,
+      municipality: formData.municipality,
+    }
   };
+
+  console.log('🔍 DEBUG FINAL MAPPED COMPANY:', {
+    vatNumber: result.vatNumber,
+    registrationNumber: result.registrationNumber,
+    gemiNumber: result.gemiNumber,
+    customFields: result.customFields
+  });
+
+  return result;
 }
 
 /**

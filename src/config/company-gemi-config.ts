@@ -124,7 +124,7 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
         helpText: 'Εμπορική επωνυμία (αν διαφέρει από την επίσημη)',
       },
       {
-        id: 'companyVatNumber',
+        id: 'vatNumber', // 🔧 FIX: Changed from 'companyVatNumber' to 'vatNumber' to match Contact interface
         label: 'ΑΦΜ',
         type: 'input',
         required: true,

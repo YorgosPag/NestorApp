@@ -2,6 +2,20 @@ import type { Contact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { getSafeFieldValue } from '../contactMapper';
 
+/**
+ * Get value from contact object or customFields
+ * Tries root level first, then customFields
+ */
+function getContactValue(contact: any, fieldName: string): string {
+  // Try root level first
+  const rootValue = getSafeFieldValue(contact, fieldName);
+  if (rootValue) return rootValue;
+
+  // Try customFields
+  const customValue = contact.customFields?.[fieldName];
+  return customValue || '';
+}
+
 // ============================================================================
 // COMPANY CONTACT MAPPER
 // ============================================================================
@@ -20,14 +34,23 @@ export function mapCompanyContactToFormData(contact: Contact): ContactFormData {
 
   const companyContact = contact as any; // Cast for company fields access
 
+  // 🔍 DEBUG: Log what we're mapping from
+  console.log('🔍 COMPANY MAPPER DEBUG:', {
+    contactVatNumber: companyContact.vatNumber,
+    contactCustomFields: companyContact.customFields,
+    contactRegistrationNumber: companyContact.registrationNumber,
+    contactGemiNumber: companyContact.gemiNumber
+  });
+
   const formData: ContactFormData = {
     // Basic info
     type: 'company',
 
     // 🏢 Company Στοιχεία
     companyName: getSafeFieldValue(companyContact, 'companyName'),
+    vatNumber: getSafeFieldValue(companyContact, 'vatNumber'), // 🔧 FIX: Use correct field name
     companyVatNumber: getSafeFieldValue(companyContact, 'vatNumber') ||
-                     getSafeFieldValue(companyContact, 'companyVatNumber'),
+                     getSafeFieldValue(companyContact, 'companyVatNumber'), // Legacy compatibility
 
     // 📞 Επικοινωνία
     email: contact.emails?.[0]?.email || '',
@@ -54,7 +77,7 @@ export function mapCompanyContactToFormData(contact: Contact): ContactFormData {
     documentNumber: '',
     documentIssueDate: '',
     documentExpiryDate: '',
-    vatNumber: '',
+    // vatNumber: '', // 🔧 FIX: Removed - this was overriding the company vatNumber above!
     taxOffice: '',
     profession: '',
     specialty: '',
@@ -76,15 +99,17 @@ export function mapCompanyContactToFormData(contact: Contact): ContactFormData {
     // Service fields (empty for company)
     serviceName: '',
     serviceType: 'other',
-    gemiNumber: '',
+
+    // 🔧 ΓΕΜΗ Fields (get from root or customFields)
+    gemiNumber: getContactValue(companyContact, 'gemiNumber') || getContactValue(companyContact, 'registrationNumber'),
     serviceVatNumber: '',
     serviceTaxOffice: '',
     serviceTitle: '',
-    tradeName: '',
-    legalForm: '',
-    gemiStatus: '',
-    gemiStatusDate: '',
-    chamber: '',
+    tradeName: getContactValue(companyContact, 'tradeName'),
+    legalForm: getContactValue(companyContact, 'legalForm'),
+    gemiStatus: getContactValue(companyContact, 'gemiStatus'),
+    gemiStatusDate: getContactValue(companyContact, 'gemiStatusDate'),
+    chamber: getContactValue(companyContact, 'chamber'),
     isBranch: false,
     registrationMethod: '',
     registrationDate: '',
@@ -92,14 +117,14 @@ export function mapCompanyContactToFormData(contact: Contact): ContactFormData {
     gemiDepartment: '',
     prefecture: '',
     municipality: '',
-    activityCodeKAD: '',
-    activityDescription: '',
-    activityType: 'main',
-    activityValidFrom: '',
-    activityValidTo: '',
-    capitalAmount: '',
-    currency: '',
-    extraordinaryCapital: '',
+    activityCodeKAD: getContactValue(companyContact, 'activityCodeKAD'),
+    activityDescription: getContactValue(companyContact, 'activityDescription'),
+    activityType: getContactValue(companyContact, 'activityType') as 'main' | 'secondary' || 'main',
+    activityValidFrom: getContactValue(companyContact, 'activityValidFrom'),
+    activityValidTo: getContactValue(companyContact, 'activityValidTo'),
+    capitalAmount: getContactValue(companyContact, 'capitalAmount'),
+    currency: getContactValue(companyContact, 'currency'),
+    extraordinaryCapital: getContactValue(companyContact, 'extraordinaryCapital'),
     serviceCode: '',
     parentMinistry: '',
     serviceCategory: '',
@@ -120,6 +145,19 @@ export function mapCompanyContactToFormData(contact: Contact): ContactFormData {
     decisions: [],
     announcements: []
   };
+
+  // 🔍 DEBUG: Log final formData before returning (για ΑΦΜ troubleshooting)
+  console.log('🔍 COMPANY MAPPER FINAL RESULT:', {
+    'formData.vatNumber': formData.vatNumber,
+    'formData.companyVatNumber': formData.companyVatNumber,
+    'formData.gemiNumber': formData.gemiNumber,
+    'formData.gemiStatus': formData.gemiStatus,
+    'formData.tradeName': formData.tradeName,
+    fullFormDataVatFields: {
+      vatNumber: formData.vatNumber,
+      companyVatNumber: formData.companyVatNumber
+    }
+  });
 
   console.log('✅ COMPANY MAPPER: Company contact mapping completed');
   return formData;

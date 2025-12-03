@@ -64,6 +64,18 @@ function formatSelectValue(value: any, field: FieldConfig): string {
 
   if (field.options) {
     const option = field.options.find(opt => opt.value === value);
+
+    // 🔍 DEBUG: Log select value formatting for ΓΕΜΗ Status
+    if (field.id === 'gemiStatus') {
+      console.log('🔍 SELECT VALUE DEBUG [gemiStatus]:', {
+        inputValue: value,
+        valueType: typeof value,
+        availableOptions: field.options,
+        foundOption: option,
+        finalResult: option ? option.label : value
+      });
+    }
+
     return option ? option.label : value;
   }
 
@@ -124,7 +136,29 @@ function DisplayField({
     return customRenderers[field.id](field, data);
   }
 
-  const value = data[field.id];
+  // 🔍 Enhanced value lookup: Check both root level and customFields
+  let value = data[field.id];
+
+  // If value not found at root level, check customFields
+  if ((value === undefined || value === null || value === '') && data.customFields) {
+    value = data.customFields[field.id];
+  }
+
+  // 🔍 DEBUG: Log value lookup for ΑΦΜ and ΓΕΜΗ fields
+  if (field.id === 'vatNumber' || field.id === 'companyVatNumber' || field.id === 'gemiStatus' || field.id === 'gemiNumber') {
+    console.log(`🔍 FIELD LOOKUP DEBUG [${field.id}]:`, {
+      fieldId: field.id,
+      fieldLabel: field.label,
+      fieldType: field.type,
+      rootValue: data[field.id],
+      customFieldsValue: data.customFields?.[field.id],
+      finalValue: value,
+      hasCustomFields: !!data.customFields,
+      customFieldsKeys: data.customFields ? Object.keys(data.customFields) : [],
+      fieldOptions: field.options
+    });
+  }
+
   const formattedValue = formatFieldValue(value, field, valueFormatters);
 
   return (

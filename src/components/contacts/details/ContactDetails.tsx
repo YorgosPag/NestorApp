@@ -35,6 +35,22 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact }: Cont
   const [isAddUnitDialogOpen, setIsAddUnitDialogOpen] = useState(false);
   const photoModal = usePhotoPreviewModal();
 
+  // 🔍 DEBUG: Log contact data to see what we're working with
+  useEffect(() => {
+    if (contact) {
+      console.log('🔍 CONTACT DETAILS DEBUG:', {
+        id: contact.id,
+        type: contact.type,
+        companyName: contact.companyName,
+        vatNumber: (contact as any).vatNumber,
+        registrationNumber: (contact as any).registrationNumber,
+        gemiNumber: (contact as any).gemiNumber,
+        customFields: (contact as any).customFields,
+        allKeys: Object.keys(contact)
+      });
+    }
+  }, [contact]);
+
   const handleUnitAdded = useCallback(() => {
     // TODO: Refresh data when unit is added
   }, []);

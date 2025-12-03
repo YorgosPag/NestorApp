@@ -93,6 +93,9 @@ export function ContactsPageContent() {
   // 🔥 NEW: Dashboard card filtering state
   const [activeCardFilter, setActiveCardFilter] = useState<string | null>(null);
 
+  // 🔥 NEW: Live preview state for real-time editing
+  const [livePreviewContact, setLivePreviewContact] = useState<Contact | null>(null);
+
   // Advanced Filters state (unified - contains all filters)
   const [filters, setFilters] = useState<ContactFilterState>({
     searchTerm: '',
@@ -188,6 +191,21 @@ export function ContactsPageContent() {
   const handleEditContact = () => {
     if (selectedContact) {
       setShowEditContactDialog(true);
+      // 🔥 Initialize live preview with current contact data
+      setLivePreviewContact(selectedContact);
+    }
+  };
+
+  // 🔥 NEW: Handle live changes from edit form (memoized to prevent infinite loops)
+  const handleLiveChange = useCallback((updatedContact: Contact) => {
+    setLivePreviewContact(updatedContact);
+  }, []);
+
+  // 🔥 NEW: Reset live preview when edit dialog closes
+  const handleEditDialogClose = (open: boolean) => {
+    setShowEditContactDialog(open);
+    if (!open) {
+      setLivePreviewContact(null);
     }
   };
 
@@ -424,7 +442,11 @@ export function ContactsPageContent() {
                 onArchiveContact={handleArchiveContacts}
                 onContactUpdated={refreshContacts}
               />
-              <ContactDetails contact={selectedContact} onEditContact={handleEditContact} onDeleteContact={() => handleDeleteContacts()} />
+              <ContactDetails
+                contact={livePreviewContact || selectedContact}
+                onEditContact={handleEditContact}
+                onDeleteContact={() => handleDeleteContacts()}
+              />
             </>
           ) : (
             <div className="w-full text-center p-8 bg-card rounded-lg border">
@@ -443,9 +465,10 @@ export function ContactsPageContent() {
         {/* Dialog για επεξεργασία επαφής */}
         <EditContactDialog
           open={showEditContactDialog}
-          onOpenChange={setShowEditContactDialog}
+          onOpenChange={handleEditDialogClose}
           contact={selectedContact}
           onContactUpdated={handleContactUpdated}
+          onLiveChange={handleLiveChange}
         />
 
         {/* Dialog για διαγραφή επαφής */}

@@ -9,15 +9,17 @@ interface EditContactDialogProps {
   onOpenChange: (open: boolean) => void;
   contact: Contact | null;
   onContactUpdated: () => void;
+  onLiveChange?: (updatedContact: Contact) => void;
 }
 
-export function EditContactDialog({ open, onOpenChange, contact, onContactUpdated }: EditContactDialogProps) {
+export function EditContactDialog({ open, onOpenChange, contact, onContactUpdated, onLiveChange }: EditContactDialogProps) {
   return (
     <TabbedAddNewContactDialog
       open={open}
       onOpenChange={onOpenChange}
       onContactAdded={onContactUpdated}
       editContact={contact}
+      onLiveChange={onLiveChange}
     />
   );
 }

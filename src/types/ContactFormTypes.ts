@@ -6,6 +6,7 @@ export interface AddNewContactDialogProps {
   onOpenChange: (open: boolean) => void;
   onContactAdded: () => void;
   editContact?: Contact | null; // For edit mode
+  onLiveChange?: (updatedContact: Contact) => void; // 🔥 NEW: For real-time preview
 }
 
 // Import Contact type

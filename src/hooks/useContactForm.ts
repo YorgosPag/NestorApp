@@ -1,4 +1,5 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useMemo, useRef } from 'react';
+import React from 'react';
 import type { Contact } from '@/types/contacts';
 import { mapContactToFormData } from '@/utils/contactForm/contactMapper';
 import { useContactFormState } from './useContactFormState';
@@ -16,6 +17,7 @@ interface UseContactFormProps {
   onOpenChange: (open: boolean) => void;
   editContact?: Contact | null;
   isModalOpen?: boolean; // 🔧 FIX: Track modal state για clean form reset
+  onLiveChange?: (updatedContact: Contact) => void; // 🔥 NEW: For real-time preview
 }
 
 // ============================================================================
@@ -42,7 +44,7 @@ interface UseContactFormProps {
  * - Enterprise code organization
  * - Reusable specialized handlers
  */
-export function useContactForm({ onContactAdded, onOpenChange, editContact, isModalOpen }: UseContactFormProps) {
+export function useContactForm({ onContactAdded, onOpenChange, editContact, isModalOpen, onLiveChange }: UseContactFormProps) {
   console.log('🚀 ORCHESTRATOR: Initializing contact form για edit mode:', Boolean(editContact), 'modal open:', isModalOpen);
 
   // ========================================================================
@@ -137,6 +139,108 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact, isMo
       resetForm();
     }
   }, [editContact, isModalOpen]); // 🔧 FIX: Track both editContact and modal state
+
+  // ========================================================================
+  // 🔥 NEW: LIVE PREVIEW FUNCTIONALITY (Fixed Infinite Loop)
+  // ========================================================================
+
+  /**
+   * Handle live preview updates - convert formData to Contact and call onLiveChange
+   * Uses useMemo to prevent infinite loops by comparing only relevant form fields
+   */
+  // 🔧 FIX: Create a ref to track if we should enable live preview
+  const shouldEnableLivePreview = Boolean(onLiveChange && editContact && isModalOpen);
+
+  const livePreviewContact = useMemo(() => {
+    if (!shouldEnableLivePreview) {
+      return null;
+    }
+
+    try {
+      // Create a temporary contact with updated data
+      const updatedContact: Contact = {
+        ...editContact!,
+        // Map form data back to contact properties
+        type: formData.type,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        companyName: formData.companyName,
+        serviceName: formData.serviceName,
+
+        // 🏢 ΓΕΜΗ & Company Information
+        vatNumber: formData.vatNumber,
+        afm: formData.afm,
+        gemhNumber: formData.gemhNumber,
+        legalForm: formData.legalForm,
+        gemhStatus: formData.gemhStatus,
+        distintiveTitle: formData.distintiveTitle,
+        kadCode: formData.kadCode,
+        activityDescription: formData.activityDescription,
+        activityType: formData.activityType,
+        chamber: formData.chamber,
+
+        // 💰 Capital & Financial
+        capital: formData.capital,
+        currency: formData.currency,
+        extrabalanceCapital: formData.extrabalanceCapital,
+
+        // 📧 Contact Information
+        emails: editContact!.emails, // Keep existing structure
+        phones: editContact!.phones, // Keep existing structure
+
+        // Other fields that should be updated live...
+      };
+
+      return updatedContact;
+    } catch (error) {
+      console.error('❌ LIVE PREVIEW: Failed to create live contact:', error);
+      return null;
+    }
+  }, [
+    // 🎯 Only track form fields and essential flags
+    shouldEnableLivePreview,
+    formData.type,
+    formData.firstName,
+    formData.lastName,
+    formData.companyName,
+    formData.serviceName,
+    formData.vatNumber,
+    formData.afm,
+    formData.gemhNumber,
+    formData.legalForm,
+    formData.gemhStatus,
+    formData.distintiveTitle,
+    formData.kadCode,
+    formData.activityDescription,
+    formData.activityType,
+    formData.chamber,
+    formData.capital,
+    formData.currency,
+    formData.extrabalanceCapital,
+    editContact?.id // Track only ID to prevent deep comparison
+  ]);
+
+  // 🔧 FIX: Use ref to store onLiveChange to prevent it from changing dependencies
+  const onLiveChangeRef = useRef(onLiveChange);
+  onLiveChangeRef.current = onLiveChange;
+
+  /**
+   * Call onLiveChange when livePreviewContact changes (with debounce to prevent excessive calls)
+   */
+  useEffect(() => {
+    if (!livePreviewContact || !onLiveChangeRef.current) {
+      return;
+    }
+
+    // Debounce the onLiveChange call to prevent excessive updates
+    const timeoutId = setTimeout(() => {
+      onLiveChangeRef.current!(livePreviewContact);
+    }, 100); // 100ms debounce for stability
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [livePreviewContact]); // 🎯 Only depend on livePreviewContact, not onLiveChange
 
   // ========================================================================
   // FORM SUBMISSION WRAPPER

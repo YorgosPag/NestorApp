@@ -25,7 +25,7 @@ import { IndividualContactTabbedSection } from '@/components/ContactFormSections
 import { CompanyContactTabbedSection } from '@/components/ContactFormSections/CompanyContactTabbedSection';
 import { ServiceContactTabbedSection } from '@/components/ContactFormSections/ServiceContactTabbedSection';
 
-export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, editContact }: AddNewContactDialogProps) {
+export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, editContact, onLiveChange }: AddNewContactDialogProps) {
   const {
     formData,
     loading,
@@ -42,7 +42,7 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
     handleMultiplePhotosChange,
     handleMultiplePhotoUploadComplete,
     handleProfilePhotoSelection
-  } = useContactForm({ onContactAdded, onOpenChange, editContact, isModalOpen: open });
+  } = useContactForm({ onContactAdded, onOpenChange, editContact, isModalOpen: open, onLiveChange });
 
   const isCompany = formData.type === 'company';
   const isIndividual = formData.type === 'individual';
