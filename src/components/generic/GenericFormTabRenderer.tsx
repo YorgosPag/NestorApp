@@ -50,7 +50,13 @@ function createFormTabsFromConfig(
     id: section.id,
     label: section.title,
     icon: getIconComponent(section.icon),
-    content: (section.id === 'logo' || section.id === 'companyPhotos') ? (
+    content: (() => {
+      // Check for custom renderer FIRST
+      if (customRenderers?.[section.id]) {
+        return customRenderers[section.id]();
+      }
+
+      return (section.id === 'logo' || section.id === 'companyPhotos') ? (
       // Special rendering for logo/companyPhotos section
       section.id === 'companyPhotos' && customRenderers && customRenderers.companyPhotos ? (
         // Custom renderer για companyPhotos (UnifiedPhotoManager)
@@ -91,7 +97,8 @@ function createFormTabsFromConfig(
           customRenderers={customRenderers}
         />
       </FormGrid>
-    ),
+    );
+    })(),
   }));
 }
 

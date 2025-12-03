@@ -57,7 +57,7 @@ export function ServiceContactTabbedSection({
               handleUploadedLogoURL
             }}
             uploadHandlers={{
-              logoUploadHandler: PhotoUploadService.handleLogoUpload
+              logoUploadHandler: PhotoUploadService.handleLogoUpload  // Χρήση του κεντρικοποιημένου handler
             }}
             disabled={disabled}
             className="mt-4"

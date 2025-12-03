@@ -43,6 +43,11 @@ export async function handleEnterpriseLogoUpload(
 
     reader.onload = (e) => {
       const base64URL = e.target?.result as string;
+      console.log('🔍 PhotoUploadService: Converting to base64:', {
+        urlStart: base64URL?.substring(0, 50),
+        isBase64: base64URL?.startsWith('data:'),
+        fileType: file.type
+      });
       onProgress({ progress: 100, bytesTransferred: file.size, totalBytes: file.size });
       resolve({
         success: true,
@@ -87,6 +92,11 @@ export async function handleEnterprisePhotoUpload(
 
     reader.onload = (e) => {
       const base64URL = e.target?.result as string;
+      console.log('🔍 PhotoUploadService: Converting to base64:', {
+        urlStart: base64URL?.substring(0, 50),
+        isBase64: base64URL?.startsWith('data:'),
+        fileType: file.type
+      });
       onProgress({ progress: 100, bytesTransferred: file.size, totalBytes: file.size });
       resolve({
         success: true,

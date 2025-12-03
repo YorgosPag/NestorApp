@@ -148,30 +148,35 @@ export function EnterprisePhotoUpload({
   /**
    * 🔥 AUTOMATIC UPLOAD: Start upload immediately when file is selected
    */
+  // AUTO-UPLOAD: Εκτέλεση αμέσως μόλις επιλεγεί αρχείο
   useEffect(() => {
-    const fileToUpload = photoFile || upload.currentFile;
-    if (!fileToUpload || upload.isUploading || upload.success) return;
+    if (!photoFile || upload.isUploading || upload.success) return;
+    if (!uploadHandler && !onUploadComplete) return; // προστέθηκε για safety
 
+    console.log('AUTO-UPLOAD STARTED', {
+      hasFile: !!photoFile,
+      fileName: photoFile.name,
+      hasUploadHandler: !!uploadHandler,
+      hasOnUploadComplete: !!onUploadComplete
+    });
 
-    const startAutoUpload = async () => {
-
+    const startUpload = async () => {
       try {
-        const result = await upload.uploadFile(fileToUpload, uploadHandler);
+        const result = await upload.uploadFile(photoFile, uploadHandler);
 
-        if (result && onUploadComplete) {
-          onUploadComplete(result);
-        } else {
-          console.log('❌ AUTO-UPLOAD: No result or no callback:', { result: !!result, callback: !!onUploadComplete });
+        console.log('AUTO-UPLOAD FINISHED → result:', result);
+
+        if (result?.success && onUploadComplete) {
+          console.log('CALLING onUploadComplete WITH FULL RESULT');
+          onUploadComplete(result); // ← ΟΛΟΚΛΗΡΟ OBJECT
         }
-      } catch (error) {
-        console.error('💥 AUTO-UPLOAD: Exception caught:', error);
+      } catch (err) {
+        console.error('AUTO-UPLOAD FAILED', err);
       }
     };
 
-    startAutoUpload().catch(error => {
-      console.error('❌ AUTOMATIC UPLOAD: Error:', error);
-    });
-  }, [photoFile, upload.currentFile, upload.isUploading, upload.success]); // 🔧 FIX: Removed uploadHandler and onUploadComplete to prevent infinite loop
+    startUpload();
+  }, [photoFile, upload.isUploading, upload.success, uploadHandler, onUploadComplete, upload]);
 
   /**
    * Handle remove photo

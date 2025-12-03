@@ -243,9 +243,8 @@ export function useContactSubmission({
       return;
     }
 
-    if (uploadValidation.pendingUploads > 0) {
-      console.warn('⚠️ HYBRID: Found pending uploads, but allowing submission για Base64 testing:', uploadValidation.pendingUploads);
-    }
+    // Base64 uploads are considered completed - no warning needed
+    // Removed false warning for base64 uploads
 
 
     setLoading(true);

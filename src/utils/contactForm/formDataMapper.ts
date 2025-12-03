@@ -135,8 +135,13 @@ export function validateUploadState(formData: ContactFormData): {
   }
 
   // 🔙 HYBRID: Check logo upload state (for Company/Service contacts)
+  // Base64 URLs are considered complete - no need to check further
   if ((formData.type === 'company' || formData.type === 'service') && formData.logoFile) {
-    const hasValidLogoUrl = formData.logoPreview && (formData.logoPreview.startsWith('data:') || formData.logoPreview.includes('firebasestorage.googleapis.com'));
+    const hasValidLogoUrl = formData.logoPreview && (
+      formData.logoPreview.startsWith('data:') ||
+      formData.logoPreview.includes('firebasestorage.googleapis.com')
+    );
+    // Only count as pending if we have a file but NO valid URL (base64 or firebase)
     if (!hasValidLogoUrl) {
       result.pendingUploads++;
       result.errors.push('Logo: Εκκρεμής upload');
@@ -172,6 +177,11 @@ export function extractPhotoURL(formData: ContactFormData, contactType: string):
     return formData.photoPreview;
   }
 
+  // 🔙 HYBRID PRIORITY 2.5: Check photoURL if photoPreview is empty
+  if (formData.photoURL && formData.photoURL.startsWith('data:')) {
+    return formData.photoURL;
+  }
+
   // 🔙 HYBRID PRIORITY 3: Extract Base64 URLs από multiplePhotoURLs
   const multiplePhotoURLs = extractMultiplePhotoURLs(formData);
   if (multiplePhotoURLs.length > 0 && multiplePhotoURLs[0].startsWith('data:')) {
@@ -181,6 +191,11 @@ export function extractPhotoURL(formData: ContactFormData, contactType: string):
   // 🔙 HYBRID FALLBACK: Support existing Firebase URLs (from old working contacts)
   if (formData.photoPreview && formData.photoPreview.includes('firebasestorage.googleapis.com')) {
     return formData.photoPreview;
+  }
+
+  // Also check photoURL for Firebase URLs
+  if (formData.photoURL && formData.photoURL.includes('firebasestorage.googleapis.com')) {
+    return formData.photoURL;
   }
 
   // 🚨 HYBRID RULE: NEVER return blob URLs - they are temporary!
@@ -199,8 +214,14 @@ export function extractPhotoURL(formData: ContactFormData, contactType: string):
  * @returns Logo URL string
  */
 export function extractLogoURL(formData: ContactFormData, contactType: string): string {
+  // First check logoPreview (pending upload)
   if (formData.logoPreview && !formData.logoPreview.startsWith('blob:')) {
     return formData.logoPreview;
+  }
+
+  // Then check logoURL (existing logo from database)
+  if (formData.logoURL && !formData.logoURL.startsWith('blob:')) {
+    return formData.logoURL;
   }
 
   return '';

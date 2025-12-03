@@ -46,8 +46,10 @@ export function mapServiceContactToFormData(contact: Contact): ContactFormData {
     // 📷 Photos & Logo
     photoFile: null,
     photoPreview: getSafeFieldValue(serviceContact, 'photoURL'),
+    photoURL: getSafeFieldValue(serviceContact, 'photoURL'), // Added for tab display
     logoFile: null,
     logoPreview: getSafeFieldValue(serviceContact, 'logoURL'),
+    logoURL: getSafeFieldValue(serviceContact, 'logoURL'), // Added for tab display
 
     // 🏛️ ΓΕΜΗ Στοιχεία (από ΓΕΜΗ API data)
     gemiNumber: getSafeFieldValue(serviceContact, 'gemiNumber'),

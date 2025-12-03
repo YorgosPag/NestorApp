@@ -51,6 +51,7 @@ export function mapCompanyContactToFormData(contact: Contact): ContactFormData {
     // 🏢 Logo
     logoFile: null,
     logoPreview: getSafeFieldValue(companyContact, 'logoURL'),
+    logoURL: getSafeFieldValue(companyContact, 'logoURL'), // Added for tab display consistency
 
     // 📝 Notes
     notes: getSafeFieldValue(contact, 'notes'),
@@ -86,6 +87,7 @@ export function mapCompanyContactToFormData(contact: Contact): ContactFormData {
     websites: '',
     photoFile: null,
     photoPreview: getSafeFieldValue(companyContact, 'photoURL'), // 🔧 FIX: Get representative photo from contact
+    photoURL: getSafeFieldValue(companyContact, 'photoURL'), // Added for tab display
     multiplePhotos: [],
 
     // Service fields (empty for company)

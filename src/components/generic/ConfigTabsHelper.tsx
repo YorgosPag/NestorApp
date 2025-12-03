@@ -457,7 +457,9 @@ export function createServiceTabsFromConfig(
     email: data.emails?.[0]?.email || '', // 🔧 FIX: Map emails array → βασικό email field
     phone: data.phones?.[0]?.number || '', // 🔧 FIX: Map phones array → βασικό phone field
     logoPreview: data.logoPreview || data.logoURL || '', // 🔧 FIX: Pending upload takes priority over stored logoURL
+    logoURL: data.logoURL || '', // 🔧 FIX: Ensure logoURL is copied for fallback preview
     photoPreview: data.photoPreview || data.photoURL || '', // 🔧 FIX: Pending upload takes priority over stored photoURL
+    photoURL: data.photoURL || '', // 🔧 FIX: Ensure photoURL is copied for fallback preview
   };
 
   return sections.map(section => ({
