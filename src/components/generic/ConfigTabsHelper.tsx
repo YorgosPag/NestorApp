@@ -292,14 +292,26 @@ function IndividualPhotosPreview({ photoUrl, multiplePhotoURLs, onPhotoClick }: 
 
 interface ServiceLogoPreviewProps {
   logoUrl?: string;
+  onPhotoClick?: (photoUrl: string, photoIndex: number, galleryPhotos: (string | null)[]) => void;
 }
 
 /**
  * Component για προεπισκόπηση λογότυπου δημόσιας υπηρεσίας στο Contact Details
  * Δείχνει το λογότυπο όπως στο modal προσθήκης/επεξεργασίας
  */
-function ServiceLogoPreview({ logoUrl }: ServiceLogoPreviewProps) {
+function ServiceLogoPreview({ logoUrl, onPhotoClick }: ServiceLogoPreviewProps) {
   const hasLogo = logoUrl && logoUrl.length > 0;
+
+  // Δημιουργούμε gallery array με λογότυπο μόνο για services
+  const galleryPhotos: (string | null)[] = [
+    hasLogo ? logoUrl! : null    // Index 0: Λογότυπο υπηρεσίας
+  ];
+
+  const handlePhotoClick = () => {
+    if (onPhotoClick && hasLogo) {
+      onPhotoClick(logoUrl!, 0, galleryPhotos);
+    }
+  };
 
   return (
     <div className="mt-6">
@@ -308,11 +320,15 @@ function ServiceLogoPreview({ logoUrl }: ServiceLogoPreviewProps) {
         <Card className="h-full">
           <CardContent className="p-0 h-full">
             {hasLogo ? (
-              <div className="relative h-full w-full rounded overflow-hidden bg-gray-200 shadow-sm">
+              <div
+                className="relative h-full w-full rounded overflow-hidden bg-gray-200 shadow-sm cursor-pointer hover:shadow-lg transition-shadow duration-200"
+                onClick={handlePhotoClick}
+                title="Κλικ για προεπισκόπηση"
+              >
                 <img
                   src={logoUrl}
                   alt="Λογότυπο Δημόσιας Υπηρεσίας"
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
                 />
               </div>
             ) : (
@@ -429,7 +445,8 @@ export function createServiceTabsFromConfig(
   sections: ServiceSectionConfig[],
   data: Record<string, any>,
   customRenderers?: Record<string, any>,
-  valueFormatters?: Record<string, any>
+  valueFormatters?: Record<string, any>,
+  onPhotoClick?: (photoUrl: string, photoIndex: number, galleryPhotos?: (string | null)[]) => void
 ): TabConfig[] {
   // 🔧 FIX: Service Field Mapping Adapter
   // Το service-config χρησιμοποιεί 'name' ενώ η βάση δεδομένων αποθηκεύει 'serviceName'
@@ -451,6 +468,7 @@ export function createServiceTabsFromConfig(
       // Special rendering για Service Logo tab - εμφάνιση αποθηκευμένου λογότυπου
       <ServiceLogoPreview
         logoUrl={mappedData.logoPreview || mappedData.logoURL}
+        onPhotoClick={onPhotoClick}
       />
     ) : (
       <GenericTabRenderer

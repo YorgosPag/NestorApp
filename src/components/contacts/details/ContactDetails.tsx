@@ -77,7 +77,10 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact }: Cont
     handlePhotoClick // onPhotoClick callback
   ) : contact.type === 'service' ? createServiceTabsFromConfig(
     getServiceSortedSections(),
-    contact
+    contact,
+    undefined, // customRenderers
+    undefined, // valueFormatters
+    handlePhotoClick // onPhotoClick callback για δημόσιες υπηρεσίες
   ) : [];
 
   return (
