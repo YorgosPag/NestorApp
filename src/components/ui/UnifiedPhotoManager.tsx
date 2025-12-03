@@ -174,6 +174,7 @@ function CompanyPhotoManager({
               uploadHandler={uploadHandlers.logoUploadHandler}
               onUploadComplete={(result) => handlers.handleUploadedLogoURL?.(result.url)}
               disabled={disabled}
+              contactData={formData} // 🏷️ Pass contact data for filename generation
               compact={true}
               showProgress={true}
               className="w-full"
@@ -199,6 +200,7 @@ function CompanyPhotoManager({
               uploadHandler={uploadHandlers.photoUploadHandler}
               onUploadComplete={(result) => handlers.handleUploadedPhotoURL?.(result.url)}
               disabled={disabled}
+              contactData={formData} // 🏷️ Pass contact data for filename generation
               compact={true}
               showProgress={true}
               className="w-full"
@@ -243,6 +245,7 @@ function ServicePhotoManager({
           uploadHandler={uploadHandlers.logoUploadHandler}
           onUploadComplete={(result) => handlers.handleUploadedLogoURL?.(result.url)}
           disabled={disabled}
+          contactData={formData} // 🏷️ Pass contact data for filename generation
           compact={true}
           showProgress={true}
           className="w-full"

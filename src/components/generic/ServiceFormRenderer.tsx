@@ -161,6 +161,7 @@ function renderLogoSection(
       compact={true}
       showProgress={true}
       className="h-[300px] w-[400px]"
+      contactData={formData} // 🏷️ Pass contact data for filename generation
     />
   );
 }

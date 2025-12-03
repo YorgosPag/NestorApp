@@ -65,6 +65,7 @@ function createFormTabsFromConfig(
             photoPreview={formData.logoPreview}
             onFileChange={onLogoChange}
             disabled={disabled}
+            contactData={formData} // 🏷️ Pass contact data for filename generation
           />
           <FormGrid>
             <GenericFormRenderer

@@ -198,7 +198,11 @@ export function ContactsPageContent() {
       setSelectedContactIds(ids);
     } else {
       // Χρησιμοποίησε την τρέχουσα επιλεγμένη επαφή
-      setSelectedContactIds([]);
+      if (selectedContact?.id) {
+        setSelectedContactIds([selectedContact.id]);
+      } else {
+        setSelectedContactIds([]);
+      }
     }
     setShowDeleteContactDialog(true);
   };
@@ -220,7 +224,11 @@ export function ContactsPageContent() {
       setSelectedContactIds(ids);
     } else {
       // Χρησιμοποίησε την τρέχουσα επιλεγμένη επαφή
-      setSelectedContactIds([]);
+      if (selectedContact?.id) {
+        setSelectedContactIds([selectedContact.id]);
+      } else {
+        setSelectedContactIds([]);
+      }
     }
     setShowArchiveContactDialog(true);
   };

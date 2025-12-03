@@ -18,6 +18,12 @@ import {
   type FileUploadProgress,
   type FileUploadResult
 } from '@/hooks/useFileUploadState';
+import {
+  generateContactFileWithCustomName,
+  logFilenameGeneration,
+  type FilenameGeneratorOptions
+} from '@/utils/contact-filename-generator';
+import type { ContactFormData } from '@/types/ContactFormTypes';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -34,6 +40,10 @@ export interface UseEnterpriseFileUploadConfig {
   acceptedTypes?: string[];
   /** Show toast notifications (default: true) */
   showToasts?: boolean;
+  /** Contact form data for filename generation (optional) */
+  contactData?: ContactFormData;
+  /** Photo index for multiple photos (optional) */
+  photoIndex?: number;
 }
 
 export interface UseEnterpriseFileUploadActions {
@@ -113,7 +123,7 @@ export function useEnterpriseFileUpload(config: UseEnterpriseFileUploadConfig): 
   // ========================================================================
 
   /**
-   * Validates file and creates preview URL (Refactored)
+   * Validates file and creates preview URL (Refactored + Filename Generation)
    */
   const validateAndPreview = useCallback((file: File): FileValidationResult => {
     // Clear previous errors
@@ -137,12 +147,64 @@ export function useEnterpriseFileUpload(config: UseEnterpriseFileUploadConfig): 
       return validation;
     }
 
+    // 🏷️ CENTRALIZED FILENAME GENERATION
+    let processedFile = file;
+    let customFilename = file.name;
+
+    if (config.contactData && config.fileType === 'image') {
+      try {
+        // Map UploadPurpose to FilenameGeneratorOptions.fileType
+        let filenameFileType: 'logo' | 'representative' | 'profile' | 'gallery' = 'profile';
+
+        switch (config.purpose) {
+          case 'logo':
+            filenameFileType = 'logo';
+            break;
+          case 'representative':
+          case 'avatar':
+            filenameFileType = 'representative';
+            break;
+          case 'gallery':
+            filenameFileType = 'gallery';
+            break;
+          default:
+            filenameFileType = 'profile';
+        }
+
+        const { customFilename: generatedFilename, customFile, originalFilename } = generateContactFileWithCustomName({
+          originalFile: file,
+          contactData: config.contactData,
+          fileType: filenameFileType,
+          photoIndex: config.photoIndex
+        });
+
+        // Log filename generation
+        logFilenameGeneration(originalFilename, generatedFilename, config.contactData, filenameFileType);
+
+        // Use the custom file with renamed filename
+        processedFile = customFile;
+        customFilename = generatedFilename;
+
+        console.log('🏷️ ENTERPRISE FILE UPLOAD: Custom filename generated', {
+          originalName: originalFilename,
+          customName: customFilename,
+          purpose: config.purpose,
+          contactType: config.contactData.firstName ? 'individual' : config.contactData.companyName ? 'company' : 'service'
+        });
+
+      } catch (error) {
+        console.warn('⚠️ FILENAME GENERATION: Failed, using original filename', error);
+        // Fallback to original file if generation fails
+      }
+    }
+
     // Valid file - set με preview για images
-    const createPreview = config.fileType === 'image' && file.type.startsWith('image/');
-    setFileWithPreview(file, createPreview);
+    const createPreview = config.fileType === 'image' && processedFile.type.startsWith('image/');
+    setFileWithPreview(processedFile, createPreview);
 
     if (config.showToasts !== false) {
-      toast.success(`${PURPOSE_CONFIG[config.purpose].label} επιλέχθηκε επιτυχώς`);
+      const displayName = customFilename !== file.name ? customFilename : PURPOSE_CONFIG[config.purpose].label;
+      toast.success(`${displayName} επιλέχθηκε επιτυχώς`);
     }
 
     return validation;

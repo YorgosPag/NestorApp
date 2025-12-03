@@ -67,7 +67,9 @@ export function EnterprisePhotoUpload({
   className = '',
   showProgress = true,
   compact = false,
-  isLoading: externalIsLoading
+  isLoading: externalIsLoading,
+  contactData,
+  photoIndex
 }: EnterprisePhotoUploadProps) {
   // ========================================================================
   // HOOKS & STATE
@@ -78,7 +80,9 @@ export function EnterprisePhotoUpload({
     purpose,
     maxSize,
     acceptedTypes,
-    showToasts
+    showToasts,
+    contactData,
+    photoIndex
   });
 
   // ========================================================================

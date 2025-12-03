@@ -55,8 +55,8 @@ export function generateContactFilename(options: FilenameGeneratorOptions): stri
   // Extract contact names based on type
   const firstName = contactData.firstName?.trim() || '';
   const lastName = contactData.lastName?.trim() || '';
-  const companyName = contactData.companyName?.trim() || contactData.title?.trim() || '';
-  const serviceName = contactData.serviceName?.trim() || contactData.organizationName?.trim() || '';
+  const companyName = contactData.companyName?.trim() || '';
+  const serviceName = contactData.serviceName?.trim() || contactData.name?.trim() || '';
 
   let baseName = '';
 
