@@ -153,56 +153,59 @@ function CompanyPhotoManager({
   disabled?: boolean;
 }) {
   return (
-    <div className="space-y-4 mt-4">
-      {/* Λογότυπο Εταιρείας */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-sm">
-            <Building2 className="h-4 w-4" />
-            🏢 Λογότυπο Εταιρείας
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <EnterprisePhotoUpload
-            purpose="logo"
-            maxSize={5 * 1024 * 1024} // 5MB
-            photoFile={formData.logoFile}
-            photoPreview={formData.logoPreview}
-            onFileChange={handlers.handleLogoChange}
-            uploadHandler={uploadHandlers.logoUploadHandler}
-            onUploadComplete={(result) => handlers.handleUploadedLogoURL?.(result.url)}
-            disabled={disabled}
-            compact={true}
-            showProgress={true}
-            className="w-full"
-          />
-        </CardContent>
-      </Card>
+    <div className="mt-4">
+      {/* Grid layout για δύο containers δίπλα-δίπλα (πανομοιότυπα με Individual) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Λογότυπο Εταιρείας */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <Building2 className="h-4 w-4" />
+              Λογότυπο Εταιρείας
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <EnterprisePhotoUpload
+              purpose="logo"
+              maxSize={5 * 1024 * 1024} // 5MB
+              photoFile={formData.logoFile}
+              photoPreview={formData.logoPreview}
+              onFileChange={handlers.handleLogoChange}
+              uploadHandler={uploadHandlers.logoUploadHandler}
+              onUploadComplete={(result) => handlers.handleUploadedLogoURL?.(result.url)}
+              disabled={disabled}
+              compact={true}
+              showProgress={true}
+              className="w-full"
+            />
+          </CardContent>
+        </Card>
 
-      {/* Φωτογραφία Εκπροσώπου */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-sm">
-            <User className="h-4 w-4" />
-            👤 Φωτογραφία Εκπροσώπου
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <EnterprisePhotoUpload
-            purpose="photo"
-            maxSize={5 * 1024 * 1024} // 5MB
-            photoFile={formData.photoFile}
-            photoPreview={formData.photoPreview}
-            onFileChange={handlers.handleFileChange}
-            uploadHandler={uploadHandlers.photoUploadHandler}
-            onUploadComplete={(result) => handlers.handleUploadedPhotoURL?.(result.url)}
-            disabled={disabled}
-            compact={true}
-            showProgress={true}
-            className="w-full"
-          />
-        </CardContent>
-      </Card>
+        {/* Φωτογραφία Εκπροσώπου */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <User className="h-4 w-4" />
+              Φωτογραφία Εκπροσώπου
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <EnterprisePhotoUpload
+              purpose="photo"
+              maxSize={5 * 1024 * 1024} // 5MB
+              photoFile={formData.photoFile}
+              photoPreview={formData.photoPreview}
+              onFileChange={handlers.handleFileChange}
+              uploadHandler={uploadHandlers.photoUploadHandler}
+              onUploadComplete={(result) => handlers.handleUploadedPhotoURL?.(result.url)}
+              disabled={disabled}
+              compact={true}
+              showProgress={true}
+              className="w-full"
+            />
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

@@ -50,28 +50,34 @@ function createFormTabsFromConfig(
     id: section.id,
     label: section.title,
     icon: getIconComponent(section.icon),
-    content: section.id === 'logo' ? (
-      // Special rendering for logo section
-      <div className="space-y-4">
-        <EnterprisePhotoUpload
-          purpose="logo"
-          maxSize={5 * 1024 * 1024} // 5MB
-          photoFile={formData.logoFile}
-          photoPreview={formData.logoPreview}
-          onFileChange={onLogoChange}
-          disabled={disabled}
-        />
-        <FormGrid>
-          <GenericFormRenderer
-            sections={[section]} // Regular fields (like description)
-            formData={formData}
-            onChange={onChange}
-            onSelectChange={onSelectChange}
+    content: (section.id === 'logo' || section.id === 'companyPhotos') ? (
+      // Special rendering for logo/companyPhotos section
+      section.id === 'companyPhotos' && customRenderers && customRenderers.companyPhotos ? (
+        // Custom renderer για companyPhotos (UnifiedPhotoManager)
+        customRenderers.companyPhotos(section, formData, onChange, onSelectChange, disabled)
+      ) : (
+        // Default logo rendering για backward compatibility
+        <div className="space-y-4">
+          <EnterprisePhotoUpload
+            purpose="logo"
+            maxSize={5 * 1024 * 1024} // 5MB
+            photoFile={formData.logoFile}
+            photoPreview={formData.logoPreview}
+            onFileChange={onLogoChange}
             disabled={disabled}
-            customRenderers={customRenderers}
           />
-        </FormGrid>
-      </div>
+          <FormGrid>
+            <GenericFormRenderer
+              sections={[section]} // Regular fields (like description)
+              formData={formData}
+              onChange={onChange}
+              onSelectChange={onSelectChange}
+              disabled={disabled}
+              customRenderers={customRenderers}
+            />
+          </FormGrid>
+        </div>
+      )
     ) : (
       // Regular rendering for other sections
       <FormGrid>

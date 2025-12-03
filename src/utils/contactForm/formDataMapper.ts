@@ -320,6 +320,7 @@ export function mapIndividualFormData(formData: ContactFormData): any {
  */
 export function mapCompanyFormData(formData: ContactFormData): any {
   const logoURL = extractLogoURL(formData, 'company');
+  const photoURL = extractPhotoURL(formData, 'company representative'); // 🔧 FIX: Εξαγωγή φωτογραφίας εκπροσώπου
   const multiplePhotoURLs = extractMultiplePhotoURLs(formData); // 📸 Multiple photos για companies
 
   console.log('💾 MAPPER: Saving company with multiplePhotoURLs:', multiplePhotoURLs);
@@ -329,6 +330,7 @@ export function mapCompanyFormData(formData: ContactFormData): any {
     companyName: formData.companyName,
     vatNumber: formData.companyVatNumber,
     logoURL, // 🏢 Enterprise logo URL
+    photoURL, // 🔧 FIX: Enterprise εκπρόσωπος φωτογραφία URL
     multiplePhotoURLs, // 📸 Multiple photos array για company photos
     emails: createEmailsArray(formData.email),
     phones: createPhonesArray(formData.phone, 'work'),
@@ -395,12 +397,15 @@ export function mapFormDataToContact(formData: ContactFormData): FormDataMapping
       case 'company':
         contactData = mapCompanyFormData(formData);
         logoURL = contactData.logoURL;
+        photoURL = contactData.photoURL; // 🔧 FIX: Προσθήκη φωτογραφίας εκπροσώπου για εταιρείες
+        multiplePhotoURLs = contactData.multiplePhotoURLs; // 🔧 FIX: Προσθήκη multiple photos για εταιρείες
         break;
 
       case 'service':
         contactData = mapServiceFormData(formData);
         logoURL = contactData.logoURL;
         photoURL = contactData.photoURL;
+        multiplePhotoURLs = contactData.multiplePhotoURLs; // 🔧 FIX: Προσθήκη multiple photos για υπηρεσίες
         break;
 
       default:

@@ -106,33 +106,34 @@ export function CompanyContactTabbedSection({
   };
 
   return (
-    <>
-      <GenericFormTabRenderer
-        sections={sections}
-        formData={formData}
-        onChange={handleChange}
-        onSelectChange={handleSelectChange}
-        onLogoChange={handleLogoChange}
-        disabled={disabled}
-      />
-
-      {/* 🎯 Unified Photo Manager για Company - Λογότυπο + Εκπρόσωπος */}
-      <UnifiedPhotoManager
-        contactType="company"
-        formData={formData}
-        handlers={{
-          handleLogoChange,
-          handleFileChange,
-          handleUploadedLogoURL,
-          handleUploadedPhotoURL
-        }}
-        uploadHandlers={{
-          logoUploadHandler: handleEnterpriseLogoUpload,
-          photoUploadHandler: handleEnterprisePhotoUpload
-        }}
-        disabled={disabled}
-        className="mt-4"
-      />
-    </>
+    <GenericFormTabRenderer
+      sections={sections}
+      formData={formData}
+      onChange={handleChange}
+      onSelectChange={handleSelectChange}
+      onLogoChange={handleLogoChange}
+      disabled={disabled}
+      customRenderers={{
+        // Custom renderer για το companyPhotos tab - θα περιέχει το UnifiedPhotoManager
+        companyPhotos: () => (
+          <UnifiedPhotoManager
+            contactType="company"
+            formData={formData}
+            handlers={{
+              handleLogoChange,
+              handleFileChange,
+              handleUploadedLogoURL,
+              handleUploadedPhotoURL
+            }}
+            uploadHandlers={{
+              logoUploadHandler: handleEnterpriseLogoUpload,
+              photoUploadHandler: handleEnterprisePhotoUpload
+            }}
+            disabled={disabled}
+            className="mt-4"
+          />
+        )
+      }}
+    />
   );
 }

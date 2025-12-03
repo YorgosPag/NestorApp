@@ -236,13 +236,7 @@ const logoSection: ServiceSectionConfig = {
   title: 'Λογότυπο & Εικόνα',
   icon: 'image',
   fields: [
-    {
-      id: 'description',
-      type: 'textarea',
-      label: 'Περιγραφή Υπηρεσίας',
-      placeholder: 'Σύντομη περιγραφή της υπηρεσίας και του ρόλου της...',
-      helpText: 'Σύντομη περιγραφή για την ταυτότητα της υπηρεσίας'
-    }
+    // Removed description field - λογότυπο θα renderάρεται χωρίς επιπλέον fields
   ]
 };
 

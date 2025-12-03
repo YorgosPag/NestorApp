@@ -211,7 +211,7 @@ export function EnterprisePhotoUpload({
       <div className={`relative ${className}`}>
         <div
           className={`
-            relative border-2 border-dashed rounded-lg p-6 min-h-[280px] flex flex-col items-center justify-center text-center cursor-pointer transition-colors
+            relative border-2 border-dashed rounded-lg p-6 h-[280px] w-full flex flex-col items-center justify-center text-center cursor-pointer transition-colors overflow-hidden
             ${currentPreview ? 'border-green-300 bg-green-50' : `border-gray-300 hover:border-gray-400`}
             ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
             ${hasError ? 'border-red-300 bg-red-50' : ''}
@@ -234,8 +234,8 @@ export function EnterprisePhotoUpload({
           }}
         >
           {currentPreview ? (
-            <div className="flex flex-col items-center justify-center h-full w-full">
-              <div className="w-full h-40 rounded overflow-hidden bg-gray-200 shadow-sm mb-3">
+            <div className="flex flex-col items-center justify-center w-full max-h-full">
+              <div className="w-full h-[220px] rounded overflow-hidden bg-gray-200 shadow-sm mb-3">
                 <img
                   src={currentPreview}
                   alt="Προεπισκόπηση"

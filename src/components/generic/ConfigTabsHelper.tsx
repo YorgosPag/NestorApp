@@ -1,11 +1,12 @@
 'use client';
 
 import React from 'react';
-import { Info, FileText, Users, History, User, CreditCard, Briefcase, Phone, MapPin, Gavel, UserCheck, Megaphone, Activity, DollarSign, Calendar, Construction, Building, Car, Landmark, Map, Settings, Home, Camera, Video, Clock, TrendingUp, Package, Ruler, BarChart, Target, MessageCircle, Cake, Globe, Badge, Clipboard, Hash, Wrench, Factory, Smartphone, Shield, ClipboardList, Image, Mail, Lock, AlertTriangle, CheckCircle, XCircle, Star, Search, Edit, Save, Upload, Download } from 'lucide-react';
+import { Info, FileText, Users, History, User, CreditCard, Briefcase, Phone, MapPin, Gavel, UserCheck, Megaphone, Activity, DollarSign, Calendar, Construction, Building, Car, Landmark, Map, Settings, Home, Camera, Video, Clock, TrendingUp, Package, Ruler, BarChart, Target, MessageCircle, Cake, Globe, Badge, Clipboard, Hash, Wrench, Factory, Smartphone, Shield, ClipboardList, Image, Mail, Lock, AlertTriangle, CheckCircle, XCircle, Star, Search, Edit, Save, Upload, Download, Building2 } from 'lucide-react';
 import type { SectionConfig } from '@/config/company-gemi-config';
 import type { IndividualSectionConfig } from '@/config/individual-config';
 import type { ServiceSectionConfig } from '@/config/service-config';
 import { GenericTabRenderer } from './GenericTabRenderer';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 // ============================================================================
 // ICON MAPPING
@@ -95,6 +96,217 @@ export function getIconComponent(iconName: string) {
 }
 
 // ============================================================================
+// COMPANY PHOTOS PREVIEW COMPONENT
+// ============================================================================
+
+interface CompanyPhotosPreviewProps {
+  logoUrl?: string;
+  photoUrl?: string;
+}
+
+/**
+ * Component για προεπισκόπηση φωτογραφιών εταιρείας στο Contact Details
+ */
+function CompanyPhotosPreview({ logoUrl, photoUrl }: CompanyPhotosPreviewProps) {
+  const hasLogo = logoUrl && logoUrl.length > 0;
+  const hasPhoto = photoUrl && photoUrl.length > 0;
+
+  if (!hasLogo && !hasPhoto) {
+    return (
+      <div className="text-center text-muted-foreground p-8">
+        <Camera className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+        <p>Δεν υπάρχουν αποθηκευμένες φωτογραφίες</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Λογότυπο Εταιρείας */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <Building2 className="h-4 w-4" />
+              Λογότυπο Εταιρείας
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {hasLogo ? (
+              <div className="w-full h-[220px] rounded overflow-hidden bg-gray-200 shadow-sm">
+                <img
+                  src={logoUrl}
+                  alt="Λογότυπο Εταιρείας"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ) : (
+              <div className="w-full h-[220px] rounded border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50">
+                <div className="text-center text-gray-400">
+                  <Building2 className="w-12 h-12 mx-auto mb-2" />
+                  <p className="text-sm">Δεν υπάρχει λογότυπο</p>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Φωτογραφία Εκπροσώπου */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <User className="h-4 w-4" />
+              Φωτογραφία Εκπροσώπου
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {hasPhoto ? (
+              <div className="w-full h-[220px] rounded overflow-hidden bg-gray-200 shadow-sm">
+                <img
+                  src={photoUrl}
+                  alt="Φωτογραφία Εκπροσώπου"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ) : (
+              <div className="w-full h-[220px] rounded border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50">
+                <div className="text-center text-gray-400">
+                  <User className="w-12 h-12 mx-auto mb-2" />
+                  <p className="text-sm">Δεν υπάρχει φωτογραφία</p>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// INDIVIDUAL PHOTOS PREVIEW COMPONENT
+// ============================================================================
+
+interface IndividualPhotosPreviewProps {
+  photoUrl?: string;
+  multiplePhotoURLs?: string[];
+}
+
+/**
+ * Component για προεπισκόπηση φωτογραφιών φυσικού προσώπου στο Contact Details
+ * Δείχνει 6 φωτογραφίες σε 3x2 grid όπως στο modal προσθήκης/επεξεργασίας
+ */
+function IndividualPhotosPreview({ photoUrl, multiplePhotoURLs }: IndividualPhotosPreviewProps) {
+  // Δημιουργούμε array 6 φωτογραφιών (όπως στο modal)
+  const allPhotos = React.useMemo(() => {
+    const result = [];
+
+    // Βάζουμε την κύρια φωτογραφία πρώτη (αν υπάρχει)
+    if (photoUrl) {
+      result.push(photoUrl);
+    }
+
+    // Προσθέτουμε τις multiple photos
+    if (multiplePhotoURLs && multiplePhotoURLs.length > 0) {
+      result.push(...multiplePhotoURLs);
+    }
+
+    // Συμπληρώνουμε με άδεια slots μέχρι τα 6
+    while (result.length < 6) {
+      result.push(null);
+    }
+
+    return result.slice(0, 6);
+  }, [photoUrl, multiplePhotoURLs]);
+
+  const totalPhotos = allPhotos.filter(photo => photo).length;
+
+  return (
+    <div className="mt-4">
+      {/* Header όπως στο modal */}
+      <div className="flex items-center justify-between mb-6">
+        <h4 className="font-semibold text-sm flex items-center gap-2">
+          <Camera className="w-4 h-4" />
+          Φωτογραφίες ({totalPhotos}/6)
+        </h4>
+      </div>
+
+      {/* Photo Grid - 3x2 Layout όπως στο modal */}
+      <div className="grid grid-cols-3 gap-8 p-6">
+        {allPhotos.map((photo, index) => (
+          <div key={index} className="h-[300px] w-full">
+            <Card className="h-full">
+              <CardContent className="p-0 h-full">
+                {photo ? (
+                  <div className="relative h-full w-full rounded overflow-hidden bg-gray-200 shadow-sm">
+                    <img
+                      src={photo}
+                      alt={`Φωτογραφία ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="h-full w-full rounded border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50">
+                    <div className="text-center text-gray-400">
+                      <Camera className="w-12 h-12 mx-auto mb-2" />
+                      <p className="text-sm">Κενή φωτογραφία</p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// SERVICE LOGO PREVIEW COMPONENT
+// ============================================================================
+
+interface ServiceLogoPreviewProps {
+  logoUrl?: string;
+}
+
+/**
+ * Component για προεπισκόπηση λογότυπου δημόσιας υπηρεσίας στο Contact Details
+ * Δείχνει το λογότυπο όπως στο modal προσθήκης/επεξεργασίας
+ */
+function ServiceLogoPreview({ logoUrl }: ServiceLogoPreviewProps) {
+  const hasLogo = logoUrl && logoUrl.length > 0;
+
+  return (
+    <div className="mt-6">
+      {/* Σταθερό πλάτος όπως στο modal */}
+      <div className="w-[400px] h-[300px] mx-auto">
+        <Card className="h-full">
+          <CardContent className="p-0 h-full">
+            {hasLogo ? (
+              <div className="relative h-full w-full rounded overflow-hidden bg-gray-200 shadow-sm">
+                <img
+                  src={logoUrl}
+                  alt="Λογότυπο Δημόσιας Υπηρεσίας"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ) : (
+              <div className="h-full w-full rounded border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50">
+                <div className="text-center text-gray-400">
+                  <Building2 className="w-12 h-12 mx-auto mb-2" />
+                  <p className="text-sm">Δεν υπάρχει λογότυπο</p>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
 // TAB CREATION HELPER
 // ============================================================================
 
@@ -133,7 +345,13 @@ export function createTabsFromConfig(
     id: section.id,
     label: section.title,
     icon: getIconComponent(section.icon),
-    content: (
+    content: section.id === 'companyPhotos' ? (
+      // Special rendering για Company Photos tab - εμφάνιση αποθηκευμένων φωτογραφιών
+      <CompanyPhotosPreview
+        logoUrl={data.logoPreview || data.logoURL}
+        photoUrl={data.photoPreview || data.photoURL || data.representativePhotoURL}
+      />
+    ) : (
       <GenericTabRenderer
         section={section}
         data={data}
@@ -158,7 +376,13 @@ export function createIndividualTabsFromConfig(
     id: section.id,
     label: section.title,
     icon: getIconComponent(section.icon),
-    content: (
+    content: section.id === 'photo' ? (
+      // Special rendering για Individual Photos tab - εμφάνιση αποθηκευμένων φωτογραφιών
+      <IndividualPhotosPreview
+        photoUrl={data.photoPreview || data.photoURL}
+        multiplePhotoURLs={data.multiplePhotoURLs || []}
+      />
+    ) : (
       <GenericTabRenderer
         section={section}
         data={data}
@@ -183,7 +407,12 @@ export function createServiceTabsFromConfig(
     id: section.id,
     label: section.title,
     icon: getIconComponent(section.icon),
-    content: (
+    content: section.id === 'logo' ? (
+      // Special rendering για Service Logo tab - εμφάνιση αποθηκευμένου λογότυπου
+      <ServiceLogoPreview
+        logoUrl={data.logoPreview || data.logoURL}
+      />
+    ) : (
       <GenericTabRenderer
         section={section}
         data={data}

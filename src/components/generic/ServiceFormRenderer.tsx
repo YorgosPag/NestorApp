@@ -160,6 +160,7 @@ function renderLogoSection(
       disabled={disabled}
       compact={true}
       showProgress={true}
+      className="h-[300px] w-[400px]"
     />
   );
 }
@@ -218,7 +219,10 @@ export function ServiceFormRenderer({
           {/* Logo Upload Section - Only for logo section */}
           {section.id === 'logo' && (
             <div className="mt-6">
-              {renderLogoSection(formData, onLogoChange, disabled)}
+              {/* Σταθερό πλάτος όπως τα γκρι πλαίσια των φυσικών προσώπων */}
+              <div className="w-[400px] h-[300px] mx-auto">
+                {renderLogoSection(formData, onLogoChange, disabled)}
+              </div>
             </div>
           )}
         </div>
