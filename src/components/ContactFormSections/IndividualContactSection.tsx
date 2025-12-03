@@ -80,14 +80,6 @@ export function IndividualContactSection({
     return result;
   };
 
-  // 🔗 Enterprise Upload Complete Handler - ενημέρωσε το formData με το uploaded URL
-  const handlePhotoUploadComplete = (result: FileUploadResult) => {
-    console.log('🎯👤 INDIVIDUAL: Photo upload complete, updating formData με uploaded URL:', result.url);
-
-    // ✅ FIXED: Χρησιμοποιούμε το centralized handler από useContactForm
-    // Αυτό θα ενημερώσει σωστά το formData.photoPreview με το uploaded URL
-    handleUploadedPhotoURL(result.url);
-  };
 
   return (
     <>

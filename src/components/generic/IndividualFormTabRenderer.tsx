@@ -7,6 +7,7 @@ import { TabsContent } from '@/components/ui/tabs';
 import { getIconComponent } from './ConfigTabsHelper';
 import { IndividualFormRenderer } from './IndividualFormRenderer';
 import { MultiplePhotosUpload } from '@/components/ui/MultiplePhotosUpload';
+import { UnifiedPhotoManager } from '@/components/ui/UnifiedPhotoManager';
 import type { IndividualSectionConfig } from '@/config/individual-config';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';

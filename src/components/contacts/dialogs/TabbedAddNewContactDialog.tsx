@@ -22,8 +22,7 @@ import { getTypeIcon, getTypeLabel } from '@/utils/contactFormUtils';
 import { CommonContactSection } from '@/components/ContactFormSections/CommonContactSection';
 import { IndividualContactSection } from '@/components/ContactFormSections/IndividualContactSection';
 import { IndividualContactTabbedSection } from '@/components/ContactFormSections/IndividualContactTabbedSection';
-import { CompanyContactTabbedSection } from '@/components/ContactFormSections/CompanyContactTabbedSection';
-import { ServiceContactTabbedSection } from '@/components/ContactFormSections/ServiceContactTabbedSection';
+import { CompanyContactSection } from '@/components/ContactFormSections/CompanyContactSection';
 import { ServiceContactSection } from '@/components/ContactFormSections/ServiceContactSection';
 
 export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, editContact }: AddNewContactDialogProps) {
@@ -97,13 +96,16 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
               </FormField>
             </FormGrid>
 
-            {/* Company - Tabbed Layout */}
+            {/* Company - Simple Layout (με Base64 upload handlers) */}
             {isCompany && (
-              <CompanyContactTabbedSection
+              <CompanyContactSection
                 formData={formData}
                 handleChange={handleChange}
                 handleSelectChange={handleSelectChange}
                 handleLogoChange={handleLogoChange}
+                handleFileChange={handleFileChange}
+                handleUploadedLogoURL={handleUploadedLogoURL}
+                handleUploadedPhotoURL={handleUploadedPhotoURL}
                 disabled={loading}
               />
             )}
@@ -122,13 +124,14 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
               />
             )}
 
-            {/* Service - Tabbed Layout */}
+            {/* Service - Simple Layout (με Base64 upload handlers) */}
             {isService && (
-              <ServiceContactTabbedSection
+              <ServiceContactSection
                 formData={formData}
                 handleChange={handleChange}
                 handleSelectChange={handleSelectChange}
                 handleLogoChange={handleLogoChange}
+                handleUploadedLogoURL={handleUploadedLogoURL}
                 disabled={loading}
               />
             )}

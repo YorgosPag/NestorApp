@@ -5,7 +5,7 @@
  * Χρησιμοποιείται από PhotoUploadService και ImageParser για consistent compression settings.
  *
  * @location src/config/photo-compression-config.ts
- * @uses PhotoUploadService, ImageParser, EnterprisePhotoUpload
+ * @uses EnterprisePhotoUpload, Base64 conversion
  */
 
 // ============================================================================

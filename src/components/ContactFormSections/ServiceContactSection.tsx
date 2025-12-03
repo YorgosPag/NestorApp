@@ -12,7 +12,6 @@ import { Building2, Users, MapPin, FileText, Plus, Trash2, Upload } from 'lucide
 import { UnifiedPhotoManager } from '@/components/ui/UnifiedPhotoManager';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
-import { generateContactFileWithCustomName, logFilenameGeneration } from '@/utils/contact-filename-generator';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 
 interface ServiceContactSectionProps {
@@ -36,86 +35,14 @@ export function ServiceContactSection({
 }: ServiceContactSectionProps) {
   const [activeTab, setActiveTab] = useState("gemi");
 
-  // 🔥 Enterprise Logo Upload Handler για Δημόσια Υπηρεσία
+  // 🔥 Enterprise Logo Upload Handler για Δημόσια Υπηρεσία (SIMPLIFIED από Individual)
   const handleEnterpriseLogoUpload = async (
     file: File,
     onProgress: (progress: FileUploadProgress) => void
   ): Promise<FileUploadResult> => {
-    console.log('🚀🏛️ SERVICE BASE64: Starting logo Base64 conversion...', {
-      fileName: file.name,
-      fileSize: file.size,
-      fileType: file.type
-    });
+    console.log('🚀🏛️ SERVICE SIMPLIFIED: Starting logo upload με simple Base64 conversion...');
 
-    try {
-      return new Promise<FileUploadResult>((resolve, reject) => {
-        const reader = new FileReader();
-
-        // Progress simulation για UI feedback
-        onProgress({ progress: 0, bytesTransferred: 0, totalBytes: file.size });
-
-        reader.onload = (e) => {
-          const base64URL = e.target?.result as string;
-
-          console.log('✅🏛️ SERVICE BASE64: Logo conversion completed');
-          console.log('📸 BASE64 URL:', base64URL.substring(0, 50) + '...');
-
-          // Simulate final progress
-          onProgress({ progress: 100, bytesTransferred: file.size, totalBytes: file.size });
-
-          const result: FileUploadResult = {
-            success: true,
-            url: base64URL, // 🔙 OLD WORKING: Direct Base64 URL
-            fileName: file.name,
-            compressionInfo: {
-              originalSize: file.size,
-              compressedSize: file.size,
-              compressionRatio: 1.0,
-              quality: 1.0
-            }
-          };
-
-          resolve(result);
-        };
-
-        reader.onerror = () => {
-          console.error('❌🏛️ SERVICE BASE64: Logo conversion failed');
-          reject(new Error('Base64 logo conversion failed'));
-        };
-
-        // 🔙 OLD WORKING SYSTEM: Direct Base64 conversion
-        reader.readAsDataURL(file);
-      });
-
-    } catch (error) {
-      console.error('❌🏛️ SERVICE BASE64: Logo conversion failed:', error);
-      throw error;
-    }
-  };
-
-  // 🔥 Enterprise Photo Upload Handler για Αντιπρόσωπο
-  const handleEnterprisePhotoUpload = async (
-    file: File,
-    onProgress: (progress: FileUploadProgress) => void
-  ): Promise<FileUploadResult> => {
-    // 🏷️ Χρήση κεντρικοποιημένης λειτουργικότητας filename generation
-    const { customFilename, customFile, originalFilename } = generateContactFileWithCustomName({
-      originalFile: file,
-      contactData: formData,
-      fileType: 'representative'
-    });
-
-    // 📝 Centralized logging
-    logFilenameGeneration(originalFilename, customFilename, formData, 'representative');
-
-    console.log('🚀🏛️ SERVICE: Starting enterprise photo upload με centralized filename...', {
-      originalFileName: originalFilename,
-      customFileName: customFilename,
-      fileSize: file.size,
-      fileType: file.type
-    });
-
-    // 🔙 OLD WORKING SYSTEM: Direct Base64 conversion
+    // 🔙 OLD WORKING SYSTEM: Direct Base64 conversion (SAME AS INDIVIDUAL)
     const result = await new Promise<FileUploadResult>((resolve, reject) => {
       const reader = new FileReader();
       onProgress({ progress: 0, bytesTransferred: 0, totalBytes: file.size });
@@ -140,7 +67,7 @@ export function ServiceContactSection({
       reader.readAsDataURL(file);
     });
 
-    console.log('✅🏛️ SERVICE: Enterprise photo upload completed:', {
+    console.log('✅🏛️ SERVICE SIMPLIFIED: Logo upload completed:', {
       url: result.url,
       originalSize: result.compressionInfo?.originalSize,
       compressedSize: result.compressionInfo?.compressedSize,
@@ -150,67 +77,6 @@ export function ServiceContactSection({
     return result;
   };
 
-  // 🔥 Enterprise Multiple Photos Upload Handler για Service Gallery
-  const handleEnterpriseMultiplePhotoUpload = async (
-    file: File,
-    onProgress: (progress: FileUploadProgress) => void
-  ): Promise<FileUploadResult> => {
-    console.log('🚀🏛️ SERVICE: Starting enterprise multiple photo upload για Service Gallery με compression...', {
-      fileName: file.name,
-      fileSize: file.size,
-      fileType: file.type
-    });
-
-    // 🔙 OLD WORKING SYSTEM: Direct Base64 conversion
-    const result = await new Promise<FileUploadResult>((resolve, reject) => {
-      const reader = new FileReader();
-      onProgress({ progress: 0, bytesTransferred: 0, totalBytes: file.size });
-
-      reader.onload = (e) => {
-        const base64URL = e.target?.result as string;
-        onProgress({ progress: 100, bytesTransferred: file.size, totalBytes: file.size });
-        resolve({
-          success: true,
-          url: base64URL,
-          fileName: file.name,
-          compressionInfo: {
-            originalSize: file.size,
-            compressedSize: file.size,
-            compressionRatio: 1.0,
-            quality: 1.0
-          }
-        });
-      };
-
-      reader.onerror = () => reject(new Error('Base64 conversion failed'));
-      reader.readAsDataURL(file);
-    });
-
-    console.log('✅🏛️ SERVICE: Enterprise multiple photo upload completed:', {
-      url: result.url,
-      originalSize: result.compressionInfo?.originalSize,
-      compressedSize: result.compressionInfo?.compressedSize,
-      savings: result.compressionInfo?.compressionRatio
-    });
-
-    return result;
-  };
-
-  // 🔗 Logo Upload Complete Handler - ενημέρωσε το formData
-  const handleLogoUploadComplete = (result: FileUploadResult) => {
-    console.log('🎯🏛️ SERVICE: Logo upload complete, updating formData με uploaded URL:', result.url);
-
-    // ✅ FIXED: Χρησιμοποιούμε το centralized handler από useContactForm
-    handleUploadedLogoURL(result.url);
-  };
-
-  // 🔗 Photo Upload Complete Handler - ενημέρωσε το formData
-  const handlePhotoUploadComplete = (result: FileUploadResult) => {
-    console.log('🎯🏛️ SERVICE: Photo upload complete, updating formData με uploaded URL:', result.url);
-
-    // ✅ FIXED: Χρησιμοποιούμε το centralized handler από useContactForm
-    handleUploadedPhotoURL(result.url);
-  };
 
   return (
     <>

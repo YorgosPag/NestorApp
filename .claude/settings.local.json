@@ -94,7 +94,9 @@
       "Bash(del \"C:\\Nestor_Pagonis\\src\\components\\ui\\UnifiedPhotoManager.tsx\")",
       "Bash(SKIP_ENV_VALIDATION=true TYPESCRIPT_CHECK=false PORT=3001 npm run dev)",
       "Bash(tasklist:*)",
-      "Bash(ping:*)"
+      "Bash(ping:*)",
+      "Bash(del \"C:\\Nestor_Pagonis\\src\\components\\ContactFormSections\\CompanyContactSection_BROKEN.tsx\")",
+      "Bash(del \"C:\\Nestor_Pagonis\\BACKUP_SUMMARY.json\")"
     ],
     "deny": [],
     "ask": []

@@ -1,12 +1,11 @@
 'use client';
 
 import { GenericFormRenderer } from '@/components/generic';
-import { getCompanySortedSections } from '@/config/company-config';
+import { getSortedSections } from '@/config/company-gemi-config';
 import { UnifiedPhotoManager } from '@/components/ui/UnifiedPhotoManager';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
-import { generateContactFileWithCustomName, logFilenameGeneration } from '@/utils/contact-filename-generator';
 
 interface CompanyContactSectionProps {
   formData: ContactFormData;
@@ -30,31 +29,16 @@ export function CompanyContactSection({
   disabled = false
 }: CompanyContactSectionProps) {
   // Get all company sections from centralized config
-  const sections = getCompanySortedSections();
+  const sections = getSortedSections();
 
-  // 🔥 Enterprise Logo Upload Handler για Εταιρεία
+  // 🔥 Enterprise Logo Upload Handler για Εταιρεία (SIMPLIFIED από Individual)
   const handleEnterpriseLogoUpload = async (
     file: File,
     onProgress: (progress: FileUploadProgress) => void
   ): Promise<FileUploadResult> => {
-    // 🏷️ Χρήση κεντρικοποιημένης λειτουργικότητας filename generation
-    const { customFilename, customFile, originalFilename } = generateContactFileWithCustomName({
-      originalFile: file,
-      contactData: formData,
-      fileType: 'logo'
-    });
+    console.log('🚀🏢 COMPANY SIMPLIFIED: Starting logo upload με simple Base64 conversion...');
 
-    // 📝 Centralized logging
-    logFilenameGeneration(originalFilename, customFilename, formData, 'logo');
-
-    console.log('🚀🏢 COMPANY: Starting enterprise logo upload με centralized filename...', {
-      originalFileName: originalFilename,
-      customFileName: customFilename,
-      fileSize: file.size,
-      fileType: file.type
-    });
-
-    // 🔙 OLD WORKING SYSTEM: Direct Base64 conversion
+    // 🔙 OLD WORKING SYSTEM: Direct Base64 conversion (SAME AS INDIVIDUAL)
     const result = await new Promise<FileUploadResult>((resolve, reject) => {
       const reader = new FileReader();
       onProgress({ progress: 0, bytesTransferred: 0, totalBytes: file.size });
@@ -79,7 +63,7 @@ export function CompanyContactSection({
       reader.readAsDataURL(file);
     });
 
-    console.log('✅🏢 COMPANY: Enterprise logo upload completed:', {
+    console.log('✅🏢 COMPANY SIMPLIFIED: Logo upload completed:', {
       url: result.url,
       originalSize: result.compressionInfo?.originalSize,
       compressedSize: result.compressionInfo?.compressedSize,
@@ -89,29 +73,14 @@ export function CompanyContactSection({
     return result;
   };
 
-  // 🔥 Enterprise Photo Upload Handler για Representative Photo
+  // 🔥 Simple Photo Upload Handler για Representative Photo (SAME AS INDIVIDUAL)
   const handleEnterprisePhotoUpload = async (
     file: File,
     onProgress: (progress: FileUploadProgress) => void
   ): Promise<FileUploadResult> => {
-    // 🏷️ Χρήση κεντρικοποιημένης λειτουργικότητας filename generation
-    const { customFilename, customFile, originalFilename } = generateContactFileWithCustomName({
-      originalFile: file,
-      contactData: formData,
-      fileType: 'representative'
-    });
+    console.log('🚀🏢 COMPANY SIMPLIFIED: Starting representative photo upload με simple Base64...');
 
-    // 📝 Centralized logging
-    logFilenameGeneration(originalFilename, customFilename, formData, 'representative');
-
-    console.log('🚀🏢 COMPANY: Starting enterprise photo upload με centralized filename...', {
-      originalFileName: originalFilename,
-      customFileName: customFilename,
-      fileSize: file.size,
-      fileType: file.type
-    });
-
-    // 🔙 OLD WORKING SYSTEM: Direct Base64 conversion
+    // 🔙 OLD WORKING SYSTEM: Direct Base64 conversion (SAME AS INDIVIDUAL)
     const result = await new Promise<FileUploadResult>((resolve, reject) => {
       const reader = new FileReader();
       onProgress({ progress: 0, bytesTransferred: 0, totalBytes: file.size });
@@ -136,22 +105,8 @@ export function CompanyContactSection({
       reader.readAsDataURL(file);
     });
 
-    console.log('✅🏢 COMPANY: Enterprise photo upload completed:', {
-      url: result.url,
-      originalSize: result.compressionInfo?.originalSize,
-      compressedSize: result.compressionInfo?.compressedSize,
-      savings: result.compressionInfo?.compressionRatio
-    });
-
+    console.log('✅🏢 COMPANY SIMPLIFIED: Representative photo upload completed');
     return result;
-  };
-
-  // 🔗 Logo Upload Complete Handler - ενημέρωσε το formData
-  const handleLogoUploadComplete = (result: FileUploadResult) => {
-    console.log('🎯🏢 COMPANY: Logo upload complete, updating formData με uploaded URL:', result.url);
-
-    // ✅ FIXED: Χρησιμοποιούμε το centralized handler από useContactForm
-    handleUploadedLogoURL(result.url);
   };
 
   return (
