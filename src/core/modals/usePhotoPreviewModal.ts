@@ -262,9 +262,11 @@ export function openContactAvatarModal(
 export function openGalleryPhotoModal(
   modal: UsePhotoPreviewModalReturn,
   contact: Contact,
-  photoIndex: number
+  photoIndex: number,
+  customGalleryPhotos?: (string | null)[]
 ) {
-  const galleryPhotos = contact.multiplePhotoURLs || [];
+  // Use custom gallery photos if provided, otherwise fall back to contact.multiplePhotoURLs
+  const galleryPhotos = customGalleryPhotos || contact.multiplePhotoURLs || [];
   const photoUrl = galleryPhotos[photoIndex] || null;
 
   modal.openModal({

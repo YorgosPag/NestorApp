@@ -48,11 +48,11 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact }: Cont
     // TODO: Refresh contact data
   }, []);
 
-  // Handler για photo click στο Individual photos tab
-  const handlePhotoClick = useCallback((photoUrl: string, photoIndex: number) => {
+  // Handler για photo click στα Individual και Company photos
+  const handlePhotoClick = useCallback((photoUrl: string, photoIndex: number, galleryPhotos?: (string | null)[]) => {
     if (!contact) return;
 
-    openGalleryPhotoModal(photoModal, contact, photoIndex);
+    openGalleryPhotoModal(photoModal, contact, photoIndex, galleryPhotos);
   }, [photoModal, contact]);
 
   if (!contact) {
@@ -65,7 +65,10 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact }: Cont
   // Get tabs from centralized config based on contact type
   const tabs = isCompanyContact ? createTabsFromConfig(
     getSortedSections(),
-    contact
+    contact,
+    undefined, // customRenderers
+    undefined, // valueFormatters
+    handlePhotoClick // onPhotoClick callback για εταιρείες
   ) : contact.type === 'individual' ? createIndividualTabsFromConfig(
     getIndividualSortedSections(),
     contact,

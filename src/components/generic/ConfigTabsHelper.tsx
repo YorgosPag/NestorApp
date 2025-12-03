@@ -102,14 +102,27 @@ export function getIconComponent(iconName: string) {
 interface CompanyPhotosPreviewProps {
   logoUrl?: string;
   photoUrl?: string;
+  onPhotoClick?: (photoUrl: string, photoIndex: number, galleryPhotos: (string | null)[]) => void;
 }
 
 /**
  * Component για προεπισκόπηση φωτογραφιών εταιρείας στο Contact Details
  */
-function CompanyPhotosPreview({ logoUrl, photoUrl }: CompanyPhotosPreviewProps) {
+function CompanyPhotosPreview({ logoUrl, photoUrl, onPhotoClick }: CompanyPhotosPreviewProps) {
   const hasLogo = logoUrl && logoUrl.length > 0;
   const hasPhoto = photoUrl && photoUrl.length > 0;
+
+  // Δημιουργούμε gallery array με λογότυπο και φωτογραφία εκπροσώπου
+  const galleryPhotos: (string | null)[] = [
+    hasLogo ? logoUrl! : null,    // Index 0: Λογότυπο
+    hasPhoto ? photoUrl! : null   // Index 1: Φωτογραφία εκπροσώπου
+  ];
+
+  const handlePhotoClick = (photoUrl: string, photoIndex: number) => {
+    if (onPhotoClick) {
+      onPhotoClick(photoUrl, photoIndex, galleryPhotos);
+    }
+  };
 
   if (!hasLogo && !hasPhoto) {
     return (
@@ -133,11 +146,15 @@ function CompanyPhotosPreview({ logoUrl, photoUrl }: CompanyPhotosPreviewProps) 
           </CardHeader>
           <CardContent>
             {hasLogo ? (
-              <div className="w-full h-[220px] rounded overflow-hidden bg-gray-200 shadow-sm">
+              <div
+                className="w-full h-[220px] rounded overflow-hidden bg-gray-200 shadow-sm cursor-pointer hover:shadow-lg transition-shadow duration-200"
+                onClick={() => handlePhotoClick(logoUrl!, 0)}
+                title="Κλικ για προεπισκόπηση"
+              >
                 <img
                   src={logoUrl}
                   alt="Λογότυπο Εταιρείας"
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
                 />
               </div>
             ) : (
@@ -161,11 +178,15 @@ function CompanyPhotosPreview({ logoUrl, photoUrl }: CompanyPhotosPreviewProps) 
           </CardHeader>
           <CardContent>
             {hasPhoto ? (
-              <div className="w-full h-[220px] rounded overflow-hidden bg-gray-200 shadow-sm">
+              <div
+                className="w-full h-[220px] rounded overflow-hidden bg-gray-200 shadow-sm cursor-pointer hover:shadow-lg transition-shadow duration-200"
+                onClick={() => handlePhotoClick(photoUrl!, 1)}
+                title="Κλικ για προεπισκόπηση"
+              >
                 <img
                   src={photoUrl}
                   alt="Φωτογραφία Εκπροσώπου"
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
                 />
               </div>
             ) : (
@@ -245,7 +266,7 @@ function IndividualPhotosPreview({ photoUrl, multiplePhotoURLs, onPhotoClick }: 
                     <img
                       src={photo}
                       alt={`Φωτογραφία ${index + 1}`}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
                     />
                   </div>
                 ) : (
@@ -342,7 +363,8 @@ export function createTabsFromConfig(
   sections: SectionConfig[],
   data: Record<string, any>,
   customRenderers?: Record<string, any>,
-  valueFormatters?: Record<string, any>
+  valueFormatters?: Record<string, any>,
+  onPhotoClick?: (photoUrl: string, photoIndex: number, galleryPhotos?: (string | null)[]) => void
 ): TabConfig[] {
   return sections.map(section => ({
     id: section.id,
@@ -353,6 +375,7 @@ export function createTabsFromConfig(
       <CompanyPhotosPreview
         logoUrl={data.logoPreview || data.logoURL}
         photoUrl={data.photoPreview || data.photoURL || data.representativePhotoURL}
+        onPhotoClick={onPhotoClick}
       />
     ) : (
       <GenericTabRenderer
