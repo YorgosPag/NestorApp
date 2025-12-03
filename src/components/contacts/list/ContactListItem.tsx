@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { ContactBadge } from '@/core/badges';
 import { EntityDetailsHeader } from '@/core/entity-headers';
+import { PhotoPreviewModal, usePhotoPreviewModal, openContactAvatarModal } from '@/core/modals';
 import {
   Users,
   Building2,
@@ -12,7 +13,6 @@ import {
   Mail,
   Loader2,
   Archive,
-  X,
 } from "lucide-react";
 import {
   Tooltip,
@@ -20,10 +20,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  Dialog,
-  DialogContent,
-} from "@/components/ui/dialog";
 import { cn } from '@/lib/utils';
 import type { Contact } from '@/types/contacts';
 import { getContactDisplayName, getContactInitials, getPrimaryEmail, getPrimaryPhone } from '@/types/contacts';
@@ -54,7 +50,7 @@ export function ContactListItem({
     onToggleFavorite,
     isTogglingFavorite = false
 }: ContactListItemProps) {
-    const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
+    const photoModal = usePhotoPreviewModal();
     const { icon: Icon } = typeInfoMap[contact.type];
     const displayName = getContactDisplayName(contact);
     const initials = getContactInitials(contact);
@@ -77,6 +73,16 @@ export function ContactListItem({
     };
 
     const avatarImageUrl = getAvatarImageUrl();
+
+    // Handler για άνοιγμα photo modal
+    const handleAvatarClick = () => {
+        if (!avatarImageUrl) return;
+
+        // Καθορίζουμε τον τύπο φωτογραφίας
+        const photoType = contact.type === 'company' || contact.type === 'service' ? 'logo' : 'profile';
+
+        openContactAvatarModal(photoModal, contact, photoType);
+    };
 
     // Get centralized contact card backgrounds
     const cardBackgrounds = getContactCardBackgrounds();
@@ -133,7 +139,7 @@ export function ContactListItem({
                     title={displayName}
                     subtitle={contact.type === 'individual' ? (contact as any).profession : (contact as any).vatNumber || ''}
                     avatarImageUrl={avatarImageUrl}
-                    onAvatarClick={avatarImageUrl ? () => setIsPhotoModalOpen(true) : undefined}
+                    onAvatarClick={avatarImageUrl ? handleAvatarClick : undefined}
                     variant="compact"
                     className="mb-2"
                 >
@@ -173,32 +179,8 @@ export function ContactListItem({
                 )}
             </div>
 
-            {/* Photo View Modal */}
-            <Dialog open={isPhotoModalOpen} onOpenChange={setIsPhotoModalOpen}>
-                <DialogContent className="max-w-4xl max-h-[90vh] p-0 [&>button]:hidden">
-                    <div className="relative">
-                        <button
-                            onClick={() => setIsPhotoModalOpen(false)}
-                            className="absolute top-4 right-4 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-colors"
-                        >
-                            <X className="w-5 h-5" />
-                        </button>
-                        <div className="flex items-center justify-center bg-black/5 min-h-[400px]">
-                            <img
-                                src={avatarImageUrl}
-                                alt={`${displayName} ${contact.type === 'individual' ? 'φωτογραφία' : 'λογότυπο'}`}
-                                className="max-w-full max-h-[80vh] object-contain rounded-lg"
-                            />
-                        </div>
-                        <div className="p-4 bg-white border-t">
-                            <h3 className="font-semibold text-lg text-gray-900">{displayName}</h3>
-                            <p className="text-sm text-gray-600">
-                                {contact.type === 'individual' ? 'Φωτογραφία επαφής' : 'Λογότυπο'}
-                            </p>
-                        </div>
-                    </div>
-                </DialogContent>
-            </Dialog>
+            {/* ✅ Κεντρικοποιημένο Photo Preview Modal */}
+            <PhotoPreviewModal {...photoModal.modalProps} />
         </TooltipProvider>
     );
 }

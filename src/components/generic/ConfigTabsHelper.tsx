@@ -190,25 +190,25 @@ function CompanyPhotosPreview({ logoUrl, photoUrl }: CompanyPhotosPreviewProps) 
 interface IndividualPhotosPreviewProps {
   photoUrl?: string;
   multiplePhotoURLs?: string[];
+  onPhotoClick?: (photoUrl: string, photoIndex: number) => void;
 }
 
 /**
  * Component για προεπισκόπηση φωτογραφιών φυσικού προσώπου στο Contact Details
  * Δείχνει 6 φωτογραφίες σε 3x2 grid όπως στο modal προσθήκης/επεξεργασίας
  */
-function IndividualPhotosPreview({ photoUrl, multiplePhotoURLs }: IndividualPhotosPreviewProps) {
+function IndividualPhotosPreview({ photoUrl, multiplePhotoURLs, onPhotoClick }: IndividualPhotosPreviewProps) {
   // Δημιουργούμε array 6 φωτογραφιών (όπως στο modal)
   const allPhotos = React.useMemo(() => {
     const result = [];
 
-    // Βάζουμε την κύρια φωτογραφία πρώτη (αν υπάρχει)
-    if (photoUrl) {
-      result.push(photoUrl);
-    }
-
-    // Προσθέτουμε τις multiple photos
+    // Για φυσικά πρόσωπα, χρησιμοποιούμε μόνο τα multiplePhotoURLs
+    // γιατί όλες οι φωτογραφίες αποθηκεύονται εκεί (δεν υπάρχει ξεχωριστό profile photo)
     if (multiplePhotoURLs && multiplePhotoURLs.length > 0) {
       result.push(...multiplePhotoURLs);
+    } else if (photoUrl && !multiplePhotoURLs?.length) {
+      // Fallback για backward compatibility αν υπάρχει μόνο photoUrl
+      result.push(photoUrl);
     }
 
     // Συμπληρώνουμε με άδεια slots μέχρι τα 6
@@ -238,7 +238,10 @@ function IndividualPhotosPreview({ photoUrl, multiplePhotoURLs }: IndividualPhot
             <Card className="h-full">
               <CardContent className="p-0 h-full">
                 {photo ? (
-                  <div className="relative h-full w-full rounded overflow-hidden bg-gray-200 shadow-sm">
+                  <div
+                    className="relative h-full w-full rounded overflow-hidden bg-gray-200 shadow-sm cursor-pointer hover:shadow-lg transition-shadow"
+                    onClick={() => onPhotoClick?.(photo, index)}
+                  >
                     <img
                       src={photo}
                       alt={`Φωτογραφία ${index + 1}`}
@@ -370,7 +373,8 @@ export function createIndividualTabsFromConfig(
   sections: IndividualSectionConfig[],
   data: Record<string, any>,
   customRenderers?: Record<string, any>,
-  valueFormatters?: Record<string, any>
+  valueFormatters?: Record<string, any>,
+  onPhotoClick?: (photoUrl: string, photoIndex: number) => void
 ): TabConfig[] {
   return sections.map(section => ({
     id: section.id,
@@ -381,6 +385,7 @@ export function createIndividualTabsFromConfig(
       <IndividualPhotosPreview
         photoUrl={data.photoPreview || data.photoURL}
         multiplePhotoURLs={data.multiplePhotoURLs || []}
+        onPhotoClick={onPhotoClick}
       />
     ) : (
       <GenericTabRenderer

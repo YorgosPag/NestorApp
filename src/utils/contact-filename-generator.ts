@@ -56,7 +56,7 @@ export function generateContactFilename(options: FilenameGeneratorOptions): stri
   const firstName = contactData.firstName?.trim() || '';
   const lastName = contactData.lastName?.trim() || '';
   const companyName = contactData.companyName?.trim() || '';
-  const serviceName = contactData.serviceName?.trim() || contactData.name?.trim() || '';
+  const serviceName = contactData.serviceName?.trim() || '';
 
   let baseName = '';
 
