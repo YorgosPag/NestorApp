@@ -6,8 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppHeader } from "@/components/app-header";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { Toaster } from "@/components/ui/toaster";
-import { ToastProvider } from "@/features/toast/toast-context";
+import { Toaster } from "react-hot-toast"; // 🚨 ΠΡΟΣΩΡΙΝΟ: Για backward compatibility
 import { NotificationProvider } from "../providers/NotificationProvider";
 import { SharedPropertiesProvider } from "@/contexts/SharedPropertiesProvider";
 import { UserRoleProvider } from "@/contexts/UserRoleContext";
@@ -66,25 +65,25 @@ export default function RootLayout({
           <I18nProvider>
             <UserRoleProvider>
               <FloorplanProvider>
+                {/* 🏢 ENTERPRISE: Κεντρικοποιημένο Notification System */}
                 <NotificationProvider>
-                  <ToastProvider>
-                    <SharedPropertiesProvider>
-                      <NavigationProvider>
-                        <SidebarProvider>
-                        <div className="flex h-screen w-full overflow-hidden">
-                          <AppSidebar />
-                          <SidebarInset className="flex flex-1 flex-col">
-                            <AppHeader />
-                            <main className="flex-1 overflow-y-auto bg-background/95">
-                                {children}
-                            </main>
-                          </SidebarInset>
-                        </div>
-                      </SidebarProvider>
-                    </NavigationProvider>
-                  </SharedPropertiesProvider>
-                    <Toaster />
-                  </ToastProvider>
+                  <SharedPropertiesProvider>
+                    <NavigationProvider>
+                      <SidebarProvider>
+                      <div className="flex h-screen w-full overflow-hidden">
+                        <AppSidebar />
+                        <SidebarInset className="flex flex-1 flex-col">
+                          <AppHeader />
+                          <main className="flex-1 overflow-y-auto bg-background/95">
+                              {children}
+                          </main>
+                        </SidebarInset>
+                      </div>
+                    </SidebarProvider>
+                  </NavigationProvider>
+                </SharedPropertiesProvider>
+                {/* 🚨 ΠΡΟΣΩΡΙΝΟ: react-hot-toast Toaster για backward compatibility */}
+                <Toaster />
                 </NotificationProvider>
               </FloorplanProvider>
             </UserRoleProvider>
