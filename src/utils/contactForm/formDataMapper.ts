@@ -351,14 +351,33 @@ export function extractPhotoURL(formData: ContactFormData, contactType: string):
  * @returns Logo URL string
  */
 export function extractLogoURL(formData: ContactFormData, contactType: string): string {
-  // 🆕 ΚΡΙΣΙΜΟ: First check logoPreview (pending upload) - ΜΕ ΕΛΕΓΧΟ ΚΕΝΟΥ STRING
-  if (formData.logoPreview && formData.logoPreview.trim() !== '' && !formData.logoPreview.startsWith('blob:')) {
-    return formData.logoPreview;
+  // 🏢 ENTERPRISE CENTRALIZED: First check multiplePhotos[0] (κεντρικοποιημένο σύστημα για logos)
+  const multiplePhotoURLs = extractMultiplePhotoURLs(formData);
+  if (multiplePhotoURLs.length > 0) {
+    const firstPhoto = multiplePhotoURLs[0];
+    // Accept both Base64 and Firebase Storage URLs
+    if (firstPhoto.startsWith('data:') || firstPhoto.includes('firebasestorage.googleapis.com')) {
+      console.log('🏢 EXTRACT LOGO: Using centralized multiplePhotos[0]:', firstPhoto.substring(0, 50) + '...');
+      return firstPhoto;
+    }
   }
 
-  // 🆕 ΚΡΙΣΙΜΟ: Then check logoURL (existing logo from database) - ΜΕ ΕΛΕΓΧΟ ΚΕΝΟΥ STRING
+  // 🆕 ΚΡΙΣΙΜΟ: Then check logoPreview (παλιό σύστημα) - HYBRID support Base64 & Firebase URLs
+  if (formData.logoPreview && formData.logoPreview.trim() !== '' && !formData.logoPreview.startsWith('blob:')) {
+    // Accept both Base64 and Firebase Storage URLs
+    if (formData.logoPreview.startsWith('data:') || formData.logoPreview.includes('firebasestorage.googleapis.com')) {
+      console.log('🔙 EXTRACT LOGO: Using legacy logoPreview:', formData.logoPreview.substring(0, 50) + '...');
+      return formData.logoPreview;
+    }
+  }
+
+  // 🆕 ΚΡΙΣΙΜΟ: Finally check logoURL (existing logo from database) - HYBRID support Base64 & Firebase URLs
   if (formData.logoURL && formData.logoURL.trim() !== '' && !formData.logoURL.startsWith('blob:')) {
-    return formData.logoURL;
+    // Accept both Base64 and Firebase Storage URLs
+    if (formData.logoURL.startsWith('data:') || formData.logoURL.includes('firebasestorage.googleapis.com')) {
+      console.log('🗃️ EXTRACT LOGO: Using existing logoURL:', formData.logoURL.substring(0, 50) + '...');
+      return formData.logoURL;
+    }
   }
 
   return '';

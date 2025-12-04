@@ -23,10 +23,8 @@ export interface ServiceFormTabRendererProps {
   onSelectChange: (name: string, value: string) => void;
   /** Disabled state */
   disabled?: boolean;
-  /** Logo change handler */
-  onLogoChange?: (file: File | null) => void;
-  /** Logo upload complete handler */
-  onUploadedLogoURL?: (logoURL: string) => void;
+  /** Multiple photos change handler (now used for logos too) */
+  onPhotosChange?: (photos: any[]) => void;
   /** Custom field renderers for forms */
   customRenderers?: Record<string, (field: any, formData: any, onChange: any, onSelectChange: any, disabled: boolean) => React.ReactNode>;
 }
@@ -44,8 +42,7 @@ function createServiceFormTabsFromConfig(
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void,
   onSelectChange: (name: string, value: string) => void,
   disabled: boolean,
-  onLogoChange?: (file: File | null) => void,
-  onUploadedLogoURL?: (logoURL: string) => void,
+  onPhotosChange?: (photos: any[]) => void,
   customRenderers?: Record<string, any>
 ) {
   return sections.map(section => ({
@@ -60,8 +57,7 @@ function createServiceFormTabsFromConfig(
           onChange={onChange}
           onSelectChange={onSelectChange}
           disabled={disabled}
-          onLogoChange={onLogoChange}
-          onUploadedLogoURL={onUploadedLogoURL}
+          onPhotosChange={onPhotosChange}
           customRenderers={customRenderers}
         />
       </FormGrid>

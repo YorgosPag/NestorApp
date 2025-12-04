@@ -115,7 +115,10 @@ function validateIndividualContact(formData: ContactFormData, notifications: any
  * @returns true if valid, false if invalid
  */
 function validateCompanyContact(formData: ContactFormData, notifications: any): boolean {
-  if (!formData.companyName.trim() || !formData.companyVatNumber.trim()) {
+  // 🔧 FIX: Support both vatNumber and companyVatNumber field names
+  const vatNumber = formData.companyVatNumber?.trim() || formData.vatNumber?.trim() || '';
+
+  if (!formData.companyName.trim() || !vatNumber) {
     notifications.error("Συμπληρώστε επωνυμία και ΑΦΜ εταιρείας.");
     return false;
   }

@@ -125,14 +125,13 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
               />
             )}
 
-            {/* Service - Tabbed Layout (με Base64 upload handlers) */}
+            {/* Service - Tabbed Layout (κεντρικοποιημένο σύστημα upload) */}
             {isService && (
               <ServiceContactTabbedSection
                 formData={formData}
                 handleChange={handleChange}
                 handleSelectChange={handleSelectChange}
-                handleLogoChange={handleLogoChange}
-                handleUploadedLogoURL={handleUploadedLogoURL}
+                onPhotosChange={handleMultiplePhotosChange}
                 setFormData={setFormData}
                 disabled={loading}
               />

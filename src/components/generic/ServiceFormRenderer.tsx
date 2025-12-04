@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { FormField, FormInput } from '@/components/ui/form/FormComponents';
-import { EnterprisePhotoUpload } from '@/components/ui/EnterprisePhotoUpload';
+import { MultiplePhotosUpload } from '@/components/ui/MultiplePhotosUpload';
 import type { ServiceFieldConfig, ServiceSectionConfig } from '@/config/service-config';
 import { getIconComponent } from './ConfigTabsHelper';
 
@@ -24,10 +24,8 @@ export interface ServiceFormRendererProps {
   onSelectChange: (name: string, value: string) => void;
   /** Disabled state */
   disabled?: boolean;
-  /** Logo change handler for photo upload */
-  onLogoChange?: (file: File | null) => void;
-  /** Logo upload complete handler */
-  onUploadedLogoURL?: (logoURL: string) => void;
+  /** Multiple photos change handler (now used for logos too) */
+  onPhotosChange?: (photos: any[]) => void;
   /** Custom field renderers */
   customRenderers?: Record<string, (field: ServiceFieldConfig, formData: any, onChange: any, onSelectChange: any, disabled: boolean) => React.ReactNode>;
 }
@@ -137,40 +135,29 @@ function renderField(
 }
 
 /**
- * Renders the logo upload section for services
+ * 🏢 ENTERPRISE CENTRALIZED: Renders the photo upload section using MultiplePhotosUpload
+ * Now unified with individuals - no more duplicate upload systems!
  */
-function renderLogoSection(
+function renderPhotosSection(
   formData: any,
-  onLogoChange: ((file: File | null) => void) | undefined,
-  onUploadedLogoURL: ((logoURL: string) => void) | undefined,
-  disabled: boolean
+  onPhotosChange: ((photos: any[]) => void) | undefined,
+  disabled: boolean,
+  maxPhotos: number = 1 // For logos, we use 1 slot
 ): React.ReactNode {
-  if (!onLogoChange) {
+  if (!onPhotosChange) {
     return null;
   }
 
-  // Get photo data from formData
-  const photoFile = formData.logoFile || null;
-  const photoPreview = formData.logoPreview || '';
+  // Get photos data from formData - now centralized!
+  const photos = formData.multiplePhotos || [];
 
   return (
-    <EnterprisePhotoUpload
-      purpose="logo"
-      maxSize={5 * 1024 * 1024} // 5MB for logos
-      photoFile={photoFile}
-      photoPreview={photoPreview}
-      onFileChange={onLogoChange}
-      onUploadComplete={(result) => {
-        if (result.success && result.url && onUploadedLogoURL) {
-          onUploadedLogoURL(result.url);
-          // ✅ Note: logoFile cleanup is handled by handleUploadedLogoURL in useContactFormState
-        }
-      }}
+    <MultiplePhotosUpload
+      photos={photos}
+      maxPhotos={maxPhotos}
+      onPhotosChange={onPhotosChange}
       disabled={disabled}
-      compact={true}
-      showProgress={true}
-      className="h-[300px] w-[400px]"
-      contactData={formData} // 🏷️ Pass contact data for filename generation
+      className="w-[400px] h-[300px] mx-auto"
     />
   );
 }
@@ -192,8 +179,7 @@ export function ServiceFormRenderer({
   onChange,
   onSelectChange,
   disabled = false,
-  onLogoChange,
-  onUploadedLogoURL,
+  onPhotosChange,
   customRenderers
 }: ServiceFormRendererProps) {
   if (!sections || sections.length === 0) {
@@ -227,13 +213,10 @@ export function ServiceFormRenderer({
             ))}
           </div>
 
-          {/* Logo Upload Section - Only for logo section */}
+          {/* 🏢 ENTERPRISE CENTRALIZED: Photos/Logo Upload Section */}
           {section.id === 'logo' && (
             <div className="mt-6">
-              {/* Σταθερό πλάτος όπως τα γκρι πλαίσια των φυσικών προσώπων */}
-              <div className="w-[400px] h-[300px] mx-auto">
-                {renderLogoSection(formData, onLogoChange, onUploadedLogoURL, disabled)}
-              </div>
+              {renderPhotosSection(formData, onPhotosChange, disabled, 1)}
             </div>
           )}
         </div>

@@ -145,14 +145,27 @@ export function EnterprisePhotoUpload({
   /**
    * 🔥 AUTOMATIC UPLOAD: Start upload immediately when file is selected
    */
+  // 🏢 ENTERPRISE: Default upload handler using Firebase Storage
+  const defaultUploadHandler = useCallback(async (file: File, onProgress: (progress: FileUploadProgress) => void) => {
+    // Dynamic import για to avoid circular dependencies
+    const { PhotoUploadService } = await import('@/services/photo-upload.service');
+
+    return await PhotoUploadService.uploadPhoto(file, {
+      folderPath: 'contacts/photos',
+      enableCompression: true,
+      onProgress
+    });
+  }, []);
+
   // AUTO-UPLOAD: Εκτέλεση αμέσως μόλις επιλεγεί αρχείο
   useEffect(() => {
     if (!photoFile || upload.isUploading || upload.success) return;
-    if (!uploadHandler && !onUploadComplete) return; // προστέθηκε για safety
 
     const startUpload = async () => {
       try {
-        const result = await upload.uploadFile(photoFile, uploadHandler);
+        // Use provided uploadHandler or default Firebase Storage handler
+        const handlerToUse = uploadHandler || defaultUploadHandler;
+        const result = await upload.uploadFile(photoFile, handlerToUse);
 
         if (result?.success && onUploadComplete) {
           onUploadComplete(result); // ← ΟΛΟΚΛΗΡΟ OBJECT
@@ -163,7 +176,7 @@ export function EnterprisePhotoUpload({
     };
 
     startUpload();
-  }, [photoFile, upload.isUploading, upload.success, uploadHandler, onUploadComplete, upload]);
+  }, [photoFile, upload.isUploading, upload.success, uploadHandler, onUploadComplete, upload, defaultUploadHandler]);
 
   /**
    * Handle remove photo

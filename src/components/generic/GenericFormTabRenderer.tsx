@@ -6,7 +6,7 @@ import { TabsOnlyTriggers } from '@/components/ui/navigation/TabsComponents';
 import { TabsContent } from '@/components/ui/tabs';
 import { createTabsFromConfig, getIconComponent } from './ConfigTabsHelper';
 import { GenericFormRenderer } from './GenericFormRenderer';
-import { EnterprisePhotoUpload } from '@/components/ui/EnterprisePhotoUpload';
+import { MultiplePhotosUpload } from '@/components/ui/MultiplePhotosUpload';
 import type { SectionConfig } from '@/config/company-gemi-config';
 
 // ============================================================================
@@ -24,8 +24,8 @@ export interface GenericFormTabRendererProps {
   onSelectChange: (name: string, value: string) => void;
   /** Disabled state */
   disabled?: boolean;
-  /** Logo file change handler */
-  onLogoChange?: (file: File | null) => void;
+  /** Multiple photos change handler (now used for logos too) */
+  onPhotosChange?: (photos: any[]) => void;
   /** Custom field renderers for forms */
   customRenderers?: Record<string, (field: any, formData: any, onChange: any, onSelectChange: any, disabled: boolean) => React.ReactNode>;
 }
@@ -43,7 +43,7 @@ function createFormTabsFromConfig(
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void,
   onSelectChange: (name: string, value: string) => void,
   disabled: boolean,
-  onLogoChange?: (file: File | null) => void,
+  onPhotosChange?: (photos: any[]) => void,
   customRenderers?: Record<string, any>
 ) {
   return sections.map(section => ({
@@ -62,16 +62,14 @@ function createFormTabsFromConfig(
         // Custom renderer για companyPhotos (UnifiedPhotoManager)
         customRenderers.companyPhotos(section, formData, onChange, onSelectChange, disabled)
       ) : (
-        // Default logo rendering για backward compatibility
+        // 🏢 ENTERPRISE CENTRALIZED: Logo upload using MultiplePhotosUpload
         <div className="space-y-4">
-          <EnterprisePhotoUpload
-            purpose="logo"
-            maxSize={5 * 1024 * 1024} // 5MB
-            photoFile={formData.logoFile}
-            photoPreview={formData.logoPreview}
-            onFileChange={onLogoChange}
+          <MultiplePhotosUpload
+            photos={formData.multiplePhotos || []}
+            maxPhotos={1} // For logos, we use 1 slot
+            onPhotosChange={onPhotosChange}
             disabled={disabled}
-            contactData={formData} // 🏷️ Pass contact data for filename generation
+            className="w-[400px] h-[300px] mx-auto"
           />
           <FormGrid>
             <GenericFormRenderer
@@ -134,7 +132,7 @@ export function GenericFormTabRenderer({
   onChange,
   onSelectChange,
   disabled = false,
-  onLogoChange,
+  onPhotosChange,
   customRenderers
 }: GenericFormTabRendererProps) {
   if (!sections || sections.length === 0) {
@@ -149,7 +147,7 @@ export function GenericFormTabRenderer({
     onChange,
     onSelectChange,
     disabled,
-    onLogoChange,
+    onPhotosChange,
     customRenderers
   );
 

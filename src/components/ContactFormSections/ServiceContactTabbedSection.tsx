@@ -2,16 +2,13 @@
 
 import { GenericFormTabRenderer } from '@/components/generic';
 import { getServiceSortedSections } from '@/config/service-config';
-import { UnifiedPhotoManager } from '@/components/ui/UnifiedPhotoManager';
-import { PhotoUploadService } from '@/services/photoUploadService';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 
 interface ServiceContactTabbedSectionProps {
   formData: ContactFormData;
   handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   handleSelectChange: (name: string, value: string) => void;
-  handleLogoChange?: (file: File | null) => void;
-  handleUploadedLogoURL?: (logoURL: string) => void;
+  onPhotosChange?: (photos: any[]) => void;
   setFormData?: (data: ContactFormData) => void;
   disabled?: boolean;
 }
@@ -32,8 +29,7 @@ export function ServiceContactTabbedSection({
   formData,
   handleChange,
   handleSelectChange,
-  handleLogoChange,
-  handleUploadedLogoURL,
+  onPhotosChange,
   setFormData,
   disabled = false
 }: ServiceContactTabbedSectionProps) {
@@ -46,27 +42,8 @@ export function ServiceContactTabbedSection({
       formData={formData}
       onChange={handleChange}
       onSelectChange={handleSelectChange}
-      onLogoChange={handleLogoChange}
+      onPhotosChange={onPhotosChange}
       disabled={disabled}
-      customRenderers={{
-        // Custom renderer για το logo tab - θα περιέχει το UnifiedPhotoManager για services
-        logo: () => (
-          <UnifiedPhotoManager
-            contactType="service"
-            formData={formData}
-            handlers={{
-              handleLogoChange,
-              handleUploadedLogoURL,
-              setFormData
-            }}
-            uploadHandlers={{
-              logoUploadHandler: PhotoUploadService.handleLogoUpload  // Χρήση του κεντρικοποιημένου handler
-            }}
-            disabled={disabled}
-            className="mt-4"
-          />
-        )
-      }}
     />
   );
 }
