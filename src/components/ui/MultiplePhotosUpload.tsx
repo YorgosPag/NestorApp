@@ -373,40 +373,76 @@ export function MultiplePhotosUpload({
 
     try {
       return new Promise<FileUploadResult>((resolve, reject) => {
-        const reader = new FileReader();
+        // 🔥 CRITICAL FIX: Compress image before Base64 to avoid Firebase size limit
+        // Firebase Document Limit: 1MB, Base64 images are ~33% larger than originals
+        const compressAndConvert = (imageFile: File) => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          const img = new Image();
+
+          img.onload = () => {
+            // Resize if too large (max 1200px width/height)
+            const maxDimension = 1200;
+            let { width, height } = img;
+
+            if (width > maxDimension || height > maxDimension) {
+              if (width > height) {
+                height = (height * maxDimension) / width;
+                width = maxDimension;
+              } else {
+                width = (width * maxDimension) / height;
+                height = maxDimension;
+              }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            ctx?.drawImage(img, 0, 0, width, height);
+
+            // Compress with 70% quality for JPEG
+            const compressedDataURL = canvas.toDataURL('image/jpeg', 0.7);
+
+            console.log('🚨 IMAGE COMPRESSION: Results:', {
+              originalFileName: imageFile.name,
+              originalFileSize: imageFile.size,
+              originalDimensions: `${img.width}x${img.height}`,
+              compressedDimensions: `${width}x${height}`,
+              compressedDataURLLength: compressedDataURL.length,
+              compressionRatio: (compressedDataURL.length / imageFile.size).toFixed(2),
+              sizeSavedBytes: imageFile.size - compressedDataURL.length,
+              quality: 0.7
+            });
+
+            onProgress({ progress: 100, bytesTransferred: imageFile.size, totalBytes: imageFile.size });
+
+            resolve({
+              success: true,
+              url: compressedDataURL,
+              fileName: imageFile.name,
+              fileSize: imageFile.size,
+              mimeType: imageFile.type,
+              compressionInfo: {
+                originalSize: imageFile.size,
+                compressedSize: compressedDataURL.length,
+                compressionRatio: compressedDataURL.length / imageFile.size,
+                quality: 0.7
+              }
+            });
+          };
+
+          img.onerror = () => {
+            console.error('❌📸 MULTIPLE COMPRESSION: Image load failed:', imageFile.name);
+            reject(new Error('Image compression failed'));
+          };
+
+          img.src = URL.createObjectURL(imageFile);
+        };
 
         // Progress simulation για UI feedback
         onProgress({ progress: 0, bytesTransferred: 0, totalBytes: file.size });
 
-        reader.onload = (e) => {
-          const base64URL = e.target?.result as string;
-
-
-          // Simulate final progress
-          onProgress({ progress: 100, bytesTransferred: file.size, totalBytes: file.size });
-
-          const result: FileUploadResult = {
-            success: true,
-            url: base64URL, // 🔙 OLD WORKING: Direct Base64 URL
-            fileName: file.name,
-            compressionInfo: {
-              originalSize: file.size,
-              compressedSize: file.size,
-              compressionRatio: 1.0,
-              quality: 1.0
-            }
-          };
-
-          resolve(result);
-        };
-
-        reader.onerror = () => {
-          console.error('❌📸 MULTIPLE BASE64: Conversion failed:', file.name);
-          reject(new Error('Base64 conversion failed'));
-        };
-
-        // 🔙 OLD WORKING SYSTEM: Direct Base64 conversion
-        reader.readAsDataURL(file);
+        // Start compression
+        compressAndConvert(file);
       });
 
     } catch (error) {

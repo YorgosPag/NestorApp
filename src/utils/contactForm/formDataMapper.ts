@@ -131,6 +131,17 @@ export function validateUploadState(formData: ContactFormData): {
   totalSlots: number;
   errors: string[];
 } {
+  console.log('🚨 VALIDATE UPLOAD: Starting validation with multiplePhotos:', {
+    count: formData.multiplePhotos.length,
+    slots: formData.multiplePhotos.map((p, i) => ({
+      index: i,
+      hasFile: !!p.file,
+      hasPreview: !!p.preview,
+      hasUploadUrl: !!p.uploadUrl,
+      isUploading: p.isUploading,
+      hasError: !!p.error
+    }))
+  });
 
   const result = {
     isValid: true,
@@ -195,6 +206,14 @@ export function validateUploadState(formData: ContactFormData): {
   }
 
   result.isValid = result.pendingUploads === 0 && result.failedUploads === 0;
+
+  console.log('🚨 VALIDATE UPLOAD: Final result:', {
+    isValid: result.isValid,
+    pendingUploads: result.pendingUploads,
+    failedUploads: result.failedUploads,
+    totalSlots: result.totalSlots,
+    errors: result.errors
+  });
 
 
   return result;
