@@ -1,6 +1,8 @@
 'use client';
 
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
+import type { ContactFormData } from '@/types/ContactFormTypes';
+import { FileNamingService } from './FileNamingService';
 
 // ============================================================================
 // 🏢 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΟ PHOTO UPLOAD SERVICE - SINGLE SOURCE OF TRUTH
@@ -17,6 +19,9 @@ import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterprise
  *
  * SINGLE SOURCE OF TRUTH για upload logic
  * Εξαλείφει 4+ διπλότυπα handleEnterpriseLogoUpload/handleEnterprisePhotoUpload
+ *
+ * 📝 AUTOMATIC FILE NAMING:
+ * Όλα τα αρχεία παίρνουν αυτόματα σωστά ονόματα με βάση την επαφή!
  */
 
 /**
@@ -30,32 +35,47 @@ import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterprise
  *
  * @param file - The file to upload
  * @param onProgress - Progress callback
+ * @param formData - Optional: Contact form data για automatic renaming
  * @returns Upload result with Base64 URL
  */
 export async function handleEnterpriseLogoUpload(
   file: File,
-  onProgress: (progress: FileUploadProgress) => void
+  onProgress: (progress: FileUploadProgress) => void,
+  formData?: ContactFormData
 ): Promise<FileUploadResult> {
+
+  // 📝 AUTO-RENAME: Αν έχουμε formData, μετονομάζουμε το αρχείο
+  let processedFile = file;
+  if (formData) {
+    processedFile = FileNamingService.generateProperFilename(
+      file,
+      formData,
+      'logo'
+    );
+    console.log(`📝 Auto-renamed: "${file.name}" → "${processedFile.name}"`);
+  }
 
   const result = await new Promise<FileUploadResult>((resolve, reject) => {
     const reader = new FileReader();
-    onProgress({ progress: 0, bytesTransferred: 0, totalBytes: file.size });
+    onProgress({ progress: 0, bytesTransferred: 0, totalBytes: processedFile.size });
 
     reader.onload = (e) => {
       const base64URL = e.target?.result as string;
       console.log('🔍 PhotoUploadService: Converting to base64:', {
+        originalName: file.name,
+        renamedName: processedFile.name,
         urlStart: base64URL?.substring(0, 50),
         isBase64: base64URL?.startsWith('data:'),
-        fileType: file.type
+        fileType: processedFile.type
       });
-      onProgress({ progress: 100, bytesTransferred: file.size, totalBytes: file.size });
+      onProgress({ progress: 100, bytesTransferred: processedFile.size, totalBytes: processedFile.size });
       resolve({
         success: true,
         url: base64URL,
-        fileName: file.name,
+        fileName: processedFile.name, // Χρήση του renamed filename
         compressionInfo: {
-          originalSize: file.size,
-          compressedSize: file.size,
+          originalSize: processedFile.size,
+          compressedSize: processedFile.size,
           compressionRatio: 1.0,
           quality: 1.0
         }
@@ -63,7 +83,7 @@ export async function handleEnterpriseLogoUpload(
     };
 
     reader.onerror = () => reject(new Error('Base64 conversion failed'));
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(processedFile);
   });
 
   return result;
@@ -79,32 +99,52 @@ export async function handleEnterpriseLogoUpload(
  *
  * @param file - The file to upload
  * @param onProgress - Progress callback
+ * @param formData - Optional: Contact form data για automatic renaming
+ * @param purpose - Optional: 'photo' | 'representative' για σωστό naming
+ * @param index - Optional: Index για multiple photos
  * @returns Upload result with Base64 URL
  */
 export async function handleEnterprisePhotoUpload(
   file: File,
-  onProgress: (progress: FileUploadProgress) => void
+  onProgress: (progress: FileUploadProgress) => void,
+  formData?: ContactFormData,
+  purpose: 'photo' | 'representative' = 'photo',
+  index?: number
 ): Promise<FileUploadResult> {
+
+  // 📝 AUTO-RENAME: Αν έχουμε formData, μετονομάζουμε το αρχείο
+  let processedFile = file;
+  if (formData) {
+    processedFile = FileNamingService.generateProperFilename(
+      file,
+      formData,
+      purpose,
+      index
+    );
+    console.log(`📝 Auto-renamed: "${file.name}" → "${processedFile.name}"`);
+  }
 
   const result = await new Promise<FileUploadResult>((resolve, reject) => {
     const reader = new FileReader();
-    onProgress({ progress: 0, bytesTransferred: 0, totalBytes: file.size });
+    onProgress({ progress: 0, bytesTransferred: 0, totalBytes: processedFile.size });
 
     reader.onload = (e) => {
       const base64URL = e.target?.result as string;
       console.log('🔍 PhotoUploadService: Converting to base64:', {
+        originalName: file.name,
+        renamedName: processedFile.name,
         urlStart: base64URL?.substring(0, 50),
         isBase64: base64URL?.startsWith('data:'),
-        fileType: file.type
+        fileType: processedFile.type
       });
-      onProgress({ progress: 100, bytesTransferred: file.size, totalBytes: file.size });
+      onProgress({ progress: 100, bytesTransferred: processedFile.size, totalBytes: processedFile.size });
       resolve({
         success: true,
         url: base64URL,
-        fileName: file.name,
+        fileName: processedFile.name, // Χρήση του renamed filename
         compressionInfo: {
-          originalSize: file.size,
-          compressedSize: file.size,
+          originalSize: processedFile.size,
+          compressedSize: processedFile.size,
           compressionRatio: 1.0,
           quality: 1.0
         }
@@ -112,7 +152,7 @@ export async function handleEnterprisePhotoUpload(
     };
 
     reader.onerror = () => reject(new Error('Base64 conversion failed'));
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(processedFile);
   });
 
   return result;

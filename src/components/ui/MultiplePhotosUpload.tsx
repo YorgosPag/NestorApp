@@ -187,8 +187,30 @@ export function MultiplePhotosUpload({
       if (newPhotos[slotIndex].preview && newPhotos[slotIndex].preview?.startsWith('blob:')) {
         URL.revokeObjectURL(newPhotos[slotIndex].preview!);
       }
-      newPhotos[slotIndex] = {};
+
+      // ΚΡΙΣΙΜΟ: Καθαρισμός slot με πλήρη null values
+      newPhotos[slotIndex] = {
+        file: null,
+        preview: undefined,
+        uploadUrl: undefined,
+        fileName: undefined,
+        isUploading: false,
+        uploadProgress: 0,
+        error: undefined
+      };
+
       onPhotosChange?.(newPhotos);
+
+      // ΚΡΙΣΙΜΟ: Καλούμε το onUploadComplete με κενό result για να καθαρίσει και το parent state
+      if (onPhotoUploadComplete) {
+        onPhotoUploadComplete(slotIndex, {
+          success: true,
+          url: '',
+          fileName: '',
+          fileSize: 0,
+          mimeType: ''
+        });
+      }
     }
   }, [normalizedPhotos, maxPhotos]); // 🔧 FIX: Removed callback dependencies to prevent infinite loop
 

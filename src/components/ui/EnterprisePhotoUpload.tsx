@@ -15,8 +15,6 @@ export interface EnterprisePhotoUploadProps extends Omit<UseEnterpriseFileUpload
   photoFile?: File | null;
   /** Current photo preview URL */
   photoPreview?: string;
-  /** Custom filename για εμφάνιση (όταν uploaded) */
-  customFileName?: string;
   /** File change handler */
   onFileChange: (file: File | null) => void;
   /** Upload completion handler */
@@ -59,7 +57,6 @@ export function EnterprisePhotoUpload({
   showToasts = true,
   photoFile,
   photoPreview,
-  customFileName,
   onFileChange,
   onUploadComplete,
   disabled = false,
@@ -104,7 +101,7 @@ export function EnterprisePhotoUpload({
     if (validation.isValid) {
       onFileChange(file);
     }
-  }, [upload]); // 🔧 FIX: Removed onFileChange to prevent infinite loop
+  }, [upload, onFileChange]);
 
   /**
    * Handle drag over
@@ -153,25 +150,15 @@ export function EnterprisePhotoUpload({
     if (!photoFile || upload.isUploading || upload.success) return;
     if (!uploadHandler && !onUploadComplete) return; // προστέθηκε για safety
 
-    console.log('AUTO-UPLOAD STARTED', {
-      hasFile: !!photoFile,
-      fileName: photoFile.name,
-      hasUploadHandler: !!uploadHandler,
-      hasOnUploadComplete: !!onUploadComplete
-    });
-
     const startUpload = async () => {
       try {
         const result = await upload.uploadFile(photoFile, uploadHandler);
 
-        console.log('AUTO-UPLOAD FINISHED → result:', result);
-
         if (result?.success && onUploadComplete) {
-          console.log('CALLING onUploadComplete WITH FULL RESULT');
           onUploadComplete(result); // ← ΟΛΟΚΛΗΡΟ OBJECT
         }
       } catch (err) {
-        console.error('AUTO-UPLOAD FAILED', err);
+        console.error('⚠️ Auto-upload failed:', err);
       }
     };
 
@@ -182,9 +169,27 @@ export function EnterprisePhotoUpload({
    * Handle remove photo
    */
   const handleRemove = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
-    handleFileSelection(null);
-  }, [handleFileSelection]);
+
+    console.log('X BUTTON PRESSED - FORCING REMOVAL');
+
+    // ΚΑΘΑΡΙΖΟΥΜΕ ΜΕ ΤΗ ΒΙΑ ΤΑ ΠΑΝΤΑ
+    onFileChange(null);
+
+    // ΑΜΕΣΗ ΚΛΗΣΗ ΤΟΥ HANDLER ΜΕ ΚΕΕΕΕ ΤΗ ΒΙΑ
+    if (onUploadComplete) {
+      onUploadComplete({
+        success: true,
+        url: '',
+        fileName: '',
+        compressionInfo: { originalSize: 0, compressedSize: 0, compressionRatio: 1, quality: 1 }
+      });
+    }
+
+    // ΚΑΙ ΑΚΟΜΑ ΠΙΟ ΒΙΑΙΑ - ΑΝ ΥΠΑΡΧΕΙ setFormData, ΤΟ ΚΑΛΟΥΜΕ ΑΠΕΥΘΕΙΑΣ
+    // (αν το component έχει πρόσβαση)
+  }, [onFileChange, onUploadComplete]);
 
   // ========================================================================
   // COMPUTED VALUES
@@ -196,6 +201,8 @@ export function EnterprisePhotoUpload({
   const isLoading = externalIsLoading ?? upload.isUploading;
 
   // Delete button visibility logic for compact mode
+
+  console.log('EnterprisePhotoUpload rendered - has onUploadComplete:', !!onUploadComplete);
 
   // ========================================================================
   // RENDER
@@ -239,10 +246,7 @@ export function EnterprisePhotoUpload({
                 />
               </div>
               <div className="text-center w-full">
-                <p className="text-sm font-medium text-green-700"><CheckCircle className="w-4 h-4 inline mr-1" />{customFileName || currentFile?.name}</p>
-                {/* 🔥 DEBUG: Explicit filename labels */}
-                <p className="text-xs text-gray-500 mt-1">Original: {currentFile?.name || 'N/A'}</p>
-                <p className="text-xs text-blue-500 mt-1">Custom: {customFileName || 'Generating...'}</p>
+                <p className="text-sm font-medium text-green-700"><CheckCircle className="w-4 h-4 inline mr-1" />{currentFile?.name}</p>
                 {showProgress && isLoading && (
                   <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
                     <div
@@ -265,8 +269,12 @@ export function EnterprisePhotoUpload({
           {currentPreview && !disabled && !isLoading && (
             <button
               type="button"
-              className="absolute top-1 right-1 bg-red-100 text-red-600 rounded-full p-1 hover:bg-red-200 transition-colors"
-              onClick={handleRemove}
+              className="absolute top-1 right-1 bg-red-100 text-red-600 rounded-full p-1 hover:bg-red-200 transition-colors z-10"
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                handleRemove(e);
+              }}
               title="Αφαίρεση φωτογραφίας"
             >
               <X className="w-3 h-3" />
@@ -391,8 +399,12 @@ export function EnterprisePhotoUpload({
         {currentPreview && !disabled && !isLoading && (
           <button
             type="button"
-            className="absolute top-2 right-2 bg-red-100 text-red-600 rounded-full p-2 hover:bg-red-200 transition-colors"
-            onClick={handleRemove}
+            className="absolute top-2 right-2 bg-red-100 text-red-600 rounded-full p-2 hover:bg-red-200 transition-colors z-10"
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              handleRemove(e);
+            }}
             title={`Αφαίρεση ${purpose === 'logo' ? 'λογότυπου' : 'φωτογραφίας'}`}
           >
             <X className="w-4 h-4" />

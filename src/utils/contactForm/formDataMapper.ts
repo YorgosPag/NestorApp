@@ -56,14 +56,15 @@ export function cleanUndefinedValues(obj: any): any {
 export function extractMultiplePhotoURLs(formData: ContactFormData): string[] {
   const urls: string[] = [];
 
-
   formData.multiplePhotos.forEach((photoSlot, index) => {
-    if (photoSlot.uploadUrl) {
+    // 🆕 ΚΡΙΣΙΜΟ: Ελέγχουμε αν το uploadUrl είναι κενό/διαγραμμένο
+    if (photoSlot.uploadUrl && photoSlot.uploadUrl.trim() !== '') {
       // 🔙 HYBRID: Accept both Base64 data URLs and Firebase URLs
       if (photoSlot.uploadUrl.startsWith('data:') || photoSlot.uploadUrl.includes('firebasestorage.googleapis.com')) {
         urls.push(photoSlot.uploadUrl);
         const urlType = photoSlot.uploadUrl.startsWith('data:') ? 'Base64' : 'Firebase';
       } else if (photoSlot.uploadUrl.startsWith('blob:')) {
+        // 😫 Απορρίπτουμε blob URLs - είναι temporary!
       }
     }
   });
@@ -167,18 +168,19 @@ export function extractPhotoURL(formData: ContactFormData, contactType: string):
   // 🔙 HYBRID PRIORITY 1: Base64 data URLs from multiplePhotos (για individuals)
   if (formData.multiplePhotos && formData.multiplePhotos.length > 0) {
     const firstPhoto = formData.multiplePhotos[0];
-    if (firstPhoto.uploadUrl && firstPhoto.uploadUrl.startsWith('data:')) {
+    // 🆕 ΚΡΙΣΙΜΟ: Ελέγχουμε αν είναι κενό
+    if (firstPhoto.uploadUrl && firstPhoto.uploadUrl.trim() !== '' && firstPhoto.uploadUrl.startsWith('data:')) {
       return firstPhoto.uploadUrl;
     }
   }
 
   // 🔙 HYBRID PRIORITY 2: Existing Base64 photoPreview
-  if (formData.photoPreview && formData.photoPreview.startsWith('data:')) {
+  if (formData.photoPreview && formData.photoPreview.trim() !== '' && formData.photoPreview.startsWith('data:')) {
     return formData.photoPreview;
   }
 
   // 🔙 HYBRID PRIORITY 2.5: Check photoURL if photoPreview is empty
-  if (formData.photoURL && formData.photoURL.startsWith('data:')) {
+  if (formData.photoURL && formData.photoURL.trim() !== '' && formData.photoURL.startsWith('data:')) {
     return formData.photoURL;
   }
 
@@ -189,12 +191,12 @@ export function extractPhotoURL(formData: ContactFormData, contactType: string):
   }
 
   // 🔙 HYBRID FALLBACK: Support existing Firebase URLs (from old working contacts)
-  if (formData.photoPreview && formData.photoPreview.includes('firebasestorage.googleapis.com')) {
+  if (formData.photoPreview && formData.photoPreview.trim() !== '' && formData.photoPreview.includes('firebasestorage.googleapis.com')) {
     return formData.photoPreview;
   }
 
   // Also check photoURL for Firebase URLs
-  if (formData.photoURL && formData.photoURL.includes('firebasestorage.googleapis.com')) {
+  if (formData.photoURL && formData.photoURL.trim() !== '' && formData.photoURL.includes('firebasestorage.googleapis.com')) {
     return formData.photoURL;
   }
 
@@ -214,13 +216,13 @@ export function extractPhotoURL(formData: ContactFormData, contactType: string):
  * @returns Logo URL string
  */
 export function extractLogoURL(formData: ContactFormData, contactType: string): string {
-  // First check logoPreview (pending upload)
-  if (formData.logoPreview && !formData.logoPreview.startsWith('blob:')) {
+  // 🆕 ΚΡΙΣΙΜΟ: First check logoPreview (pending upload) - ΜΕ ΕΛΕΓΧΟ ΚΕΝΟΥ STRING
+  if (formData.logoPreview && formData.logoPreview.trim() !== '' && !formData.logoPreview.startsWith('blob:')) {
     return formData.logoPreview;
   }
 
-  // Then check logoURL (existing logo from database)
-  if (formData.logoURL && !formData.logoURL.startsWith('blob:')) {
+  // 🆕 ΚΡΙΣΙΜΟ: Then check logoURL (existing logo from database) - ΜΕ ΕΛΕΓΧΟ ΚΕΝΟΥ STRING
+  if (formData.logoURL && formData.logoURL.trim() !== '' && !formData.logoURL.startsWith('blob:')) {
     return formData.logoURL;
   }
 

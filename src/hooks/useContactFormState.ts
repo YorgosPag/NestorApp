@@ -65,6 +65,9 @@ export function useContactFormState(): UseContactFormStateReturn {
 
   const [formData, setFormData] = useState<ContactFormData>(initialFormData);
 
+  // ΒΡΩΜΙΚΟ FORCE UPDATE - ΜΟΝΟ ΓΙΑ ΔΗΜΟΣΙΕΣ ΥΠΗΡΕΣΙΕΣ
+  const [forceUpdate, setForceUpdate] = useState(0);
+
   // ========================================================================
   // BASIC FIELD HANDLERS
   // ========================================================================
@@ -168,7 +171,8 @@ export function useContactFormState(): UseContactFormStateReturn {
         return {
           ...prev,
           logoFile: null,
-          logoPreview: ''
+          logoPreview: '',
+          logoURL: '' // Καθαρισμός και του logoURL
         };
       }
 
@@ -219,36 +223,56 @@ export function useContactFormState(): UseContactFormStateReturn {
    * Handle uploaded logo URL update (after enterprise upload)
    */
   const handleUploadedLogoURL = useCallback((logoURL: string) => {
+    console.log('🟢 handleUploadedLogoURL called with:', logoURL);
 
     setFormData(prev => {
-      // 🧹 CLEANUP: Revoke old blob URL if exists
-      if (prev.logoPreview && prev.logoPreview.startsWith('blob:')) {
-        URL.revokeObjectURL(prev.logoPreview);
+      if (logoURL === '' || logoURL == null) {
+        console.log('🟢 CLEARING LOGO - EMPTY URL RECEIVED');
+        return {
+          ...prev,
+          logoFile: null,
+          logoPreview: '',
+          logoURL: ''
+        };
       }
 
       return {
         ...prev,
-        logoFile: null, // Καθαρισμός του file μετά successful upload
-        logoPreview: logoURL // Ενημέρωση με το uploaded URL
+        logoFile: null,
+        logoPreview: logoURL,
+        logoURL: logoURL
       };
     });
-  }, []);
+  }, [setFormData]);
 
   /**
    * Handle single multiple photo upload completion
    */
   const handleMultiplePhotoUploadComplete = useCallback((index: number, result: any) => {
-
     setFormData(prev => {
       const newPhotos = JSON.parse(JSON.stringify([...prev.multiplePhotos])); // 🔥 Deep copy για να force re-render
-      if (newPhotos[index]) {
-        newPhotos[index] = {
-          ...newPhotos[index],
-          uploadUrl: result.url,
-          fileName: result.fileName // 🔥 ΔΙΟΡΘΩΣΗ: Αποθήκευση custom filename για UI εμφάνιση
-        };
-      }
 
+      if (newPhotos[index]) {
+        // ΑΝ ΕΙΝΑΙ ΚΕΝΟ URL → ΚΑΘΑΡΙΖΟΥΜΕ ΤΟ SLOT ΕΝΤΕΛΩΣ
+        if (!result.url || result.url === '') {
+          newPhotos[index] = {
+            file: null,
+            preview: undefined,
+            uploadUrl: undefined,
+            fileName: undefined,
+            isUploading: false,
+            uploadProgress: 0,
+            error: undefined
+          };
+        } else {
+          // ΚΑΝΟΝΙΚΟ UPLOAD
+          newPhotos[index] = {
+            ...newPhotos[index],
+            uploadUrl: result.url,
+            fileName: result.fileName // 🔥 ΔΙΟΡΘΩΣΗ: Αποθήκευση custom filename για UI εμφάνιση
+          };
+        }
+      }
 
       return {
         ...prev,

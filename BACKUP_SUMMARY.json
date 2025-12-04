@@ -1,0 +1,43 @@
+{
+  "category": "FIX",
+  "shortDescription": "Service Logo Upload & Preview System - Complete Solution",
+  "timestamp": "2024-12-04T18:30:00",
+  "problem": "Οι δημόσιες υπηρεσίες δεν εμφάνιζαν τα λογότυπα στην προεπισκόπηση μετά το upload και save. Το warning 'HYBRID: Found pending uploads' εμφανιζόταν συνεχώς.",
+  "cause": "Πολλαπλά προβλήματα: 1) Ο ServicePhotoManager στο UnifiedPhotoManager χρησιμοποιούσε EnterprisePhotoUpload που δεν έκανε trigger το handleUploadedLogoURL callback, 2) Τα field mappers δεν είχαν το logoURL field για tab display, 3) Το mappedData στο ConfigTabsHelper δεν αντέγραφε το logoURL από τα original data",
+  "filesChanged": [
+    "src/components/ui/UnifiedPhotoManager.tsx",
+    "src/utils/contactForm/fieldMappers/serviceMapper.ts",
+    "src/utils/contactForm/fieldMappers/companyMapper.ts",
+    "src/components/generic/ConfigTabsHelper.tsx",
+    "src/components/ContactFormSections/ServiceContactTabbedSection.tsx",
+    "src/components/generic/GenericFormTabRenderer.tsx",
+    "src/components/ui/EnterprisePhotoUpload.tsx",
+    "src/hooks/useContactSubmission.ts",
+    "src/services/photoUploadService.ts",
+    "src/utils/contactForm/formDataMapper.ts"
+  ],
+  "solution": {
+    "phase1": "Απλοποίηση ServicePhotoManager με direct file input και inline handlers",
+    "phase2": "Προσθήκη logoURL & photoURL fields στους field mappers",
+    "phase3": "Ενημέρωση mappedData στο ConfigTabsHelper για να περιλαμβάνει τα URL fields",
+    "phase4": "Direct Base64 conversion με FileReader για immediate preview",
+    "phase5": "Προσθήκη X button για καθαρισμό προηγούμενων uploads"
+  },
+  "testing": "Δοκιμάστηκε upload λογότυπου σε δημόσιες υπηρεσίες, save, reload - το λογότυπο εμφανίζεται σωστά στην προεπισκόπηση",
+  "notes": "Η λύση βασίστηκε στην παρατήρηση ότι οι εταιρείες λειτουργούσαν σωστά και εφαρμόστηκε παρόμοια λογική για τις υπηρεσίες",
+  "contributors": {
+    "user": "Γιώργος",
+    "assistant": "Claude Code",
+    "sessionDate": "2024-12-04"
+  },
+  "relatedBackups": [
+    "2024-12-04 - SAFETY CHECKPOINT - Enterprise Contact Form System Refactoring",
+    "2024-12-04 - SAFETY CHECKPOINT - Contact Form System + Photo Upload Enhancements"
+  ],
+  "commits": [
+    {
+      "hash": "dad4374",
+      "message": "FIX: Service Logo Upload & Preview System - Complete Solution"
+    }
+  ]
+}

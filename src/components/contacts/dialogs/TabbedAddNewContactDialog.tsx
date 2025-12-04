@@ -28,6 +28,7 @@ import { ServiceContactTabbedSection } from '@/components/ContactFormSections/Se
 export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, editContact, onLiveChange }: AddNewContactDialogProps) {
   const {
     formData,
+    setFormData,
     loading,
     handleSubmit,
     handleChange,
@@ -132,6 +133,7 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
                 handleSelectChange={handleSelectChange}
                 handleLogoChange={handleLogoChange}
                 handleUploadedLogoURL={handleUploadedLogoURL}
+                setFormData={setFormData}
                 disabled={loading}
               />
             )}

@@ -12,6 +12,7 @@ interface ServiceContactTabbedSectionProps {
   handleSelectChange: (name: string, value: string) => void;
   handleLogoChange?: (file: File | null) => void;
   handleUploadedLogoURL?: (logoURL: string) => void;
+  setFormData?: (data: ContactFormData) => void;
   disabled?: boolean;
 }
 
@@ -33,6 +34,7 @@ export function ServiceContactTabbedSection({
   handleSelectChange,
   handleLogoChange,
   handleUploadedLogoURL,
+  setFormData,
   disabled = false
 }: ServiceContactTabbedSectionProps) {
   // Get all service sections from centralized config
@@ -54,7 +56,8 @@ export function ServiceContactTabbedSection({
             formData={formData}
             handlers={{
               handleLogoChange,
-              handleUploadedLogoURL
+              handleUploadedLogoURL,
+              setFormData
             }}
             uploadHandlers={{
               logoUploadHandler: PhotoUploadService.handleLogoUpload  // Χρήση του κεντρικοποιημένου handler

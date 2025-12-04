@@ -95,6 +95,7 @@ export const EntityDetailsHeader: React.FC<EntityHeaderProps> = ({
           {/* Icon or Avatar */}
           {avatarImageUrl ? (
             <Avatar
+              key={avatarImageUrl || 'empty-avatar'}
               className={cn(
                 "flex-shrink-0 shadow-sm cursor-pointer hover:opacity-80 transition-opacity",
                 iconSizes[variant]

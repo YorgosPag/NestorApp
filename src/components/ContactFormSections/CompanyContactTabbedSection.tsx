@@ -56,8 +56,10 @@ export function CompanyContactTabbedSection({
               handleUploadedPhotoURL
             }}
             uploadHandlers={{
-              logoUploadHandler: PhotoUploadService.handleLogoUpload,
-              photoUploadHandler: PhotoUploadService.handlePhotoUpload
+              logoUploadHandler: (file, onProgress) =>
+                PhotoUploadService.handleLogoUpload(file, onProgress, formData),
+              photoUploadHandler: (file, onProgress) =>
+                PhotoUploadService.handlePhotoUpload(file, onProgress, formData, 'representative')
             }}
             disabled={disabled}
             className="mt-4"

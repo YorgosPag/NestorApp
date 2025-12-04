@@ -18,11 +18,7 @@ import {
   type FileUploadProgress,
   type FileUploadResult
 } from '@/hooks/useFileUploadState';
-import {
-  generateContactFileWithCustomName,
-  logFilenameGeneration,
-  type FilenameGeneratorOptions
-} from '@/utils/contact-filename-generator';
+import { FileNamingService } from '@/services/FileNamingService';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 
 // ============================================================================
@@ -153,48 +149,38 @@ export function useEnterpriseFileUpload(config: UseEnterpriseFileUploadConfig): 
       return validation;
     }
 
-    // 🏷️ CENTRALIZED FILENAME GENERATION
+    // 🏷️ CENTRALIZED FILENAME GENERATION WITH NEW FileNamingService
     let processedFile = file;
     let customFilename = file.name;
 
     if (config.contactData && config.fileType === 'image') {
       try {
-        // Map UploadPurpose to FilenameGeneratorOptions.fileType
-        let filenameFileType: 'logo' | 'representative' | 'profile' | 'gallery' = 'profile';
+        // Map UploadPurpose to FileNamingService purpose
+        let purpose: 'logo' | 'photo' | 'representative' = 'photo';
 
         switch (config.purpose) {
           case 'logo':
-            filenameFileType = 'logo';
+            purpose = 'logo';
             break;
           case 'representative':
           case 'avatar':
-            filenameFileType = 'representative';
-            break;
-          case 'gallery':
-            filenameFileType = 'gallery';
+            purpose = 'representative';
             break;
           default:
-            filenameFileType = 'profile';
+            purpose = 'photo';
         }
 
-        const { customFilename: generatedFilename, customFile, originalFilename } = generateContactFileWithCustomName({
-          originalFile: file,
-          contactData: config.contactData,
-          fileType: filenameFileType,
-          photoIndex: config.photoIndex
-        });
+        // Use new FileNamingService for automatic renaming
+        processedFile = FileNamingService.generateProperFilename(
+          file,
+          config.contactData,
+          purpose,
+          config.photoIndex
+        );
 
-        // Log filename generation
-        logFilenameGeneration(originalFilename, generatedFilename, config.contactData, filenameFileType);
-
-        // Use the custom file with renamed filename
-        processedFile = customFile;
-        customFilename = generatedFilename;
-
-        // Custom filename generated for enterprise upload
-
+        customFilename = processedFile.name;
       } catch (error) {
-        // Filename generation failed, fallback to original
+        console.error('Filename generation failed:', error);
         // Fallback to original file if generation fails
       }
     }

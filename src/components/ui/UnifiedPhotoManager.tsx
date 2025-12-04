@@ -37,6 +37,9 @@ interface UnifiedPhotoManagerProps {
 
     // Για Profile Selection (Individual - ποια φωτογραφία είναι η κύρια)
     handleProfilePhotoSelection?: (index: number) => void;
+
+    // Για ΒΡΩΜΙΚΕΣ λύσεις με setFormData
+    setFormData?: (data: ContactFormData) => void;
   };
   /** Upload handlers για διαφορετικούς σκοπούς */
   uploadHandlers: {
@@ -192,7 +195,7 @@ function CompanyPhotoManager({
           </CardHeader>
           <CardContent>
             <EnterprisePhotoUpload
-              purpose="photo"
+              purpose="representative"
               maxSize={5 * 1024 * 1024} // 5MB
               photoFile={formData.photoFile}
               photoPreview={formData.photoPreview}
@@ -227,7 +230,6 @@ function ServicePhotoManager({
   uploadHandlers: UnifiedPhotoManagerProps['uploadHandlers'];
   disabled?: boolean;
 }) {
-
   return (
     <Card className="mt-4">
       <CardHeader>
@@ -236,59 +238,37 @@ function ServicePhotoManager({
           🏛️ Λογότυπο Δημόσιας Υπηρεσίας
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
-          <label className="cursor-pointer block">
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => {
-                const file = e.target.files?.[0] || null;
-                if (!file) return;
+      <CardContent>
+        <EnterprisePhotoUpload
+          purpose="logo"
+          maxSize={5 * 1024 * 1024}
+          photoFile={formData.logoFile || null}
+          photoPreview={formData.logoPreview || undefined}
+          contactData={formData}
+          onFileChange={(file) => {
+            handlers.handleLogoChange?.(file);
 
-                handlers.handleLogoChange?.(file);
-
-                const reader = new FileReader();
-                reader.onload = (ev) => {
-                  const url = ev.target?.result as string;
-                  handlers.handleUploadedLogoURL?.(url);
-                };
-                reader.readAsDataURL(file);
-              }}
-              disabled={disabled}
-              className="sr-only"
-            />
-            <div className="space-y-2">
-              <Building2 className="mx-auto h-12 w-12 text-gray-400" />
-              <div className="text-sm text-gray-600">
-                <span className="font-semibold text-blue-600 hover:text-blue-500">
-                  Κάντε κλικ για επιλογή λογότυπου
-                </span>
-                <p className="text-xs text-gray-500 mt-1">PNG, JPG έως 5MB</p>
-              </div>
-            </div>
-          </label>
-        </div>
-
-        {formData.logoPreview && (
-          <div className="relative">
-            <img
-              src={formData.logoPreview}
-              alt="Logo preview"
-              className="w-full max-h-48 object-contain rounded-lg border border-gray-200"
-            />
-            <button
-              type="button"
-              onClick={() => {
-                handlers.handleLogoChange?.(null);
-                handlers.handleUploadedLogoURL?.('');
-              }}
-              className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        )}
+            // Η ΑΠΟΛΥΤΗ, ΒΡΩΜΙΚΟΤΕΡΗ, ΑΛΛΑ ΑΠΟΛΥΤΗ ΛΥΣΗ
+            if (file === null) {
+              // ΚΑΘΑΡΙΖΟΥΜΕ ΜΕ ΤΗ ΒΙΑ ΤΑ ΠΕΔΙΑ ΑΠΕΥΘΕΙΑΣ
+              setTimeout(() => {
+                handlers.setFormData?.({
+                  ...formData,
+                  logoFile: null,
+                  logoPreview: '',
+                  logoURL: '',
+                  _forceDeleteLogo: Date.now() // ΑΥΤΟ ΕΙΝΑΙ ΤΟ ΜΑΓΙΚΟ
+                } as ContactFormData);
+              }, 10);
+            }
+          }}
+          onUploadComplete={(result) => {
+            handlers.handleUploadedLogoURL?.(result.url || '');
+          }}
+          disabled={disabled}
+          compact={true}
+          showProgress={true}
+        />
       </CardContent>
     </Card>
   );
