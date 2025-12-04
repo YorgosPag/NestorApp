@@ -22,10 +22,7 @@ export interface UseMultiplePhotosHandlersReturn {
   clearPhotoAtIndex: (index: number, currentPhotos: PhotoSlot[]) => void;
 
   // Base64 conversion handler
-  handleEnterpriseMultiplePhotoUpload: (
-    file: File,
-    onProgress: (progress: any) => void
-  ) => Promise<FileUploadResult>;
+  // handleEnterpriseMultiplePhotoUpload removed - using centralized defaultUploadHandler
 }
 
 // ============================================================================
@@ -164,62 +161,7 @@ export function useMultiplePhotosHandlers({
   // BASE64 CONVERSION HANDLER
   // ========================================================================
 
-  /**
-   * Base64 conversion handler for multiple photos
-   * Direct Base64 conversion
-   *
-   * @param file - File to convert
-   * @param onProgress - Progress callback
-   * @returns Base64 conversion result
-   */
-  const handleEnterpriseMultiplePhotoUpload = useCallback(async (
-    file: File,
-    onProgress: (progress: any) => void
-  ): Promise<FileUploadResult> => {
-
-    try {
-      return new Promise<FileUploadResult>((resolve, reject) => {
-        const reader = new FileReader();
-
-        // Progress simulation για UI feedback
-        onProgress({ bytesTransferred: 0, totalBytes: file.size });
-
-        reader.onload = (e) => {
-          const base64URL = e.target?.result as string;
-
-
-          // Simulate final progress
-          onProgress({ bytesTransferred: file.size, totalBytes: file.size });
-
-          const result: FileUploadResult = {
-            success: true,
-            url: base64URL,
-            fileName: file.name,
-            compressionInfo: {
-              originalSize: file.size,
-              compressedSize: file.size,
-              compressionRatio: 1.0,
-              quality: 1.0
-            }
-          };
-
-          resolve(result);
-        };
-
-        reader.onerror = () => {
-          console.error('❌📸 MULTIPLE PHOTOS BASE64: Conversion failed:', file.name);
-          reject(new Error('Base64 conversion failed'));
-        };
-
-        // Direct Base64 conversion
-        reader.readAsDataURL(file);
-      });
-
-    } catch (error) {
-      console.error('❌📸 MULTIPLE PHOTOS BASE64: Conversion failed:', error);
-      throw error;
-    }
-  }, []);
+  // 🚀 CENTRALIZATION: Removed duplicate Base64 upload handler - now using centralized defaultUploadHandler from MultiplePhotosUpload
 
   // ========================================================================
   // RETURN API
@@ -234,7 +176,6 @@ export function useMultiplePhotosHandlers({
     clearAllPhotos,
     clearPhotoAtIndex,
 
-    // Base64 conversion handler
-    handleEnterpriseMultiplePhotoUpload
+    // Base64 conversion handler removed - using centralized defaultUploadHandler
   };
 }

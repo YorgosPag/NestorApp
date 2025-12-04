@@ -274,14 +274,7 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact, isMo
   // ENTERPRISE UPLOAD WRAPPER
   // ========================================================================
 
-  /**
-   * Enterprise upload handler για multiple photos
-   * Wrapper γύρω από το specialized handler
-   */
-  const handleEnterpriseMultiplePhotoUpload = useCallback(
-    multiplePhotosHandlers.handleEnterpriseMultiplePhotoUpload,
-    [] // 🔧 FIX: Empty dependencies - handler is stable
-  );
+  // 🚀 CENTRALIZATION: Removed duplicate enterprise upload handler - now using centralized defaultUploadHandler
 
   // ========================================================================
   // LEGACY API COMPATIBILITY
@@ -345,7 +338,7 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact, isMo
     handleUploadedLogoURL,
     handleMultiplePhotosChange,
     handleMultiplePhotoUploadComplete,
-    handleEnterpriseMultiplePhotoUpload,
+    // handleEnterpriseMultiplePhotoUpload removed - using centralized handler
 
     // Profile photo selection
     handleProfilePhotoSelection,

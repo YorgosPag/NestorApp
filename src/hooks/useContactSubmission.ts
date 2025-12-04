@@ -263,6 +263,57 @@ export function useContactSubmission({
 
       // Submit to API
       if (editContact) {
+        // 🏢 ENTERPRISE CLEANUP: Compare old vs new photos and delete orphaned Firebase Storage files
+        console.log('🧹 ENTERPRISE CLEANUP: Starting photo comparison for contact update...');
+
+        try {
+          // Collect old photo URLs
+          const oldPhotoUrls: string[] = [];
+          if (editContact.photoURL) oldPhotoUrls.push(editContact.photoURL);
+          if (editContact.multiplePhotoURLs) oldPhotoUrls.push(...editContact.multiplePhotoURLs);
+
+          // Collect new photo URLs
+          const newPhotoUrls: string[] = [];
+          if (contactData.photoURL) newPhotoUrls.push(contactData.photoURL);
+          if (contactData.multiplePhotoURLs) newPhotoUrls.push(...contactData.multiplePhotoURLs);
+
+          // Find orphaned URLs (in old but not in new)
+          const orphanedUrls = oldPhotoUrls.filter(oldUrl =>
+            oldUrl &&
+            oldUrl.trim() !== '' &&
+            !newPhotoUrls.includes(oldUrl)
+          );
+
+          console.log('🧹 ENTERPRISE CLEANUP: Photo comparison result:', {
+            oldPhotosCount: oldPhotoUrls.length,
+            newPhotosCount: newPhotoUrls.length,
+            orphanedCount: orphanedUrls.length,
+            orphanedUrls: orphanedUrls.map(url => url.substring(0, 50) + '...')
+          });
+
+          // Cleanup orphaned Firebase Storage files
+          if (orphanedUrls.length > 0) {
+            const { PhotoUploadService } = await import('@/services/photo-upload.service');
+            const cleanupPromises = orphanedUrls.map(async (url) => {
+              try {
+                await PhotoUploadService.deletePhotoByURL(url);
+                console.log('✅ ENTERPRISE CLEANUP: Deleted orphaned file:', url.substring(0, 50) + '...');
+              } catch (error) {
+                console.warn('⚠️ ENTERPRISE CLEANUP: Failed to delete orphaned file:', url.substring(0, 50) + '...', error);
+                // Non-blocking - continue with other files
+              }
+            });
+
+            await Promise.allSettled(cleanupPromises);
+            console.log('✅ ENTERPRISE CLEANUP: Completed cleanup of', orphanedUrls.length, 'orphaned files');
+          } else {
+            console.log('✅ ENTERPRISE CLEANUP: No orphaned files to clean');
+          }
+        } catch (cleanupError) {
+          console.warn('⚠️ ENTERPRISE CLEANUP: Photo cleanup failed, but continuing with contact update:', cleanupError);
+          // Non-blocking - contact update continues
+        }
+
         // Update existing contact
         await ContactsService.updateContact(editContact.id, contactData);
         notifications.success("Η επαφή ενημερώθηκε επιτυχώς.");

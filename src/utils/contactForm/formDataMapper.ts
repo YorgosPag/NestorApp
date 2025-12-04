@@ -18,10 +18,36 @@ export interface FormDataMappingResult {
 // ============================================================================
 
 /**
+ * 🏢 ENTERPRISE: Detect if URL is Firebase Storage URL
+ */
+function isFirebaseStorageURL(url: string | undefined | null): boolean {
+  if (typeof url !== 'string') return false;
+  return url.includes('firebasestorage.googleapis.com') || url.includes('appspot.com');
+}
+
+/**
+ * 🏢 ENTERPRISE: Detect if URL requires special deletion handling
+ */
+function requiresSpecialDeletion(key: string, value: any): boolean {
+  // Always preserve photoURL fields (Base64 or Firebase Storage)
+  if (key === 'photoURL') return true;
+
+  // Always preserve multiplePhotoURLs arrays (even empty for deletion)
+  if (key === 'multiplePhotoURLs') return true;
+
+  // Preserve Firebase Storage URLs for proper cleanup
+  if (typeof value === 'string' && isFirebaseStorageURL(value)) return true;
+
+  return false;
+}
+
+/**
  * Clean undefined/null/empty values from object
  *
  * ⚠️ ΚΡΙΣΙΜΗ ΣΗΜΕΙΩΣΗ: Αυτή η function ήταν η αιτία του bug με τις φωτογραφίες!
  * ΜΗ ΑΛΛΑΞΕΙΣ την συμπεριφορά του multiplePhotoURLs - παίζουμε πάνω από 1 ημέρα!
+ *
+ * 🚀 ENTERPRISE UPGRADE (2025-12-04): Τώρα υποστηρίζει Firebase Storage URLs!
  *
  * @param obj - Object to clean
  * @returns Cleaned object
@@ -42,8 +68,9 @@ export function cleanUndefinedValues(obj: any): any {
     // ⚠️ ΤΟ ΠΡΟΒΛΗΜΑ ΗΤΑΝ: photoURL: '' → γινόταν undefined → δεν έφτανε στη Firebase
     // ⚠️ Η ΛΥΣΗ: Εξαίρεση για photoURL ώστε κενά strings να περνάνε στη βάση
     //
+    // 🚀 ENTERPRISE UPGRADE (2025-12-04): Τώρα υποστηρίζει και Firebase Storage URLs!
     // 🚨 ΜΗ ΑΛΛΑΞΕΙΣ ΑΥΤΗ ΤΗ ΓΡΑΜΜΗ - TESTED & WORKING! 🚨
-    if (value !== undefined && value !== null && (value !== '' || key === 'photoURL')) {
+    if (value !== undefined && value !== null && (value !== '' || requiresSpecialDeletion(key, value))) {
       if (Array.isArray(value)) {
         // 🚨 CRITICAL FIX - ΜΗ ΑΓΓΙΖΕΙΣ ΑΥΤΟΝ ΤΟΝ ΚΩΔΙΚΑ! 🚨
         // ΠΡΟΒΛΗΜΑ: Πριν από αυτή τη διόρθωση, τα κενά arrays δεν έφταναν στη βάση
@@ -233,19 +260,26 @@ export function extractPhotoURL(formData: ContactFormData, contactType: string):
   console.log('🔍 FORM MAPPER: formData.multiplePhotos:', formData.multiplePhotos);
   console.log('🔍 FORM MAPPER: formData.photoPreview:', formData.photoPreview);
 
-  // 🔥 CRITICAL FIX: Check for intentional deletion
-  // If ALL photo slots are empty AND photoPreview is empty, user wants to DELETE photo
-  const allSlotsEmpty = formData.multiplePhotos && formData.multiplePhotos.length > 0 ?
-    formData.multiplePhotos.every(slot => !slot.uploadUrl || slot.uploadUrl.trim() === '') :
-    true; // If array is empty, consider it as all slots empty
+  // 🔥 CRITICAL FIX: Check for intentional deletion vs pending uploads
+  // Only consider it deletion if BOTH conditions are met:
+  // 1. No uploaded URLs
+  // 2. No files with uploading/pending state
 
-  const isIntentionalDeletion = allSlotsEmpty &&
+  const hasFiles = formData.multiplePhotos && formData.multiplePhotos.length > 0 &&
+    formData.multiplePhotos.some(slot => slot.file || slot.isUploading || slot.uploadProgress > 0);
+
+  const hasUploadedUrls = formData.multiplePhotos && formData.multiplePhotos.length > 0 &&
+    formData.multiplePhotos.some(slot => slot.uploadUrl && slot.uploadUrl.trim() !== '');
+
+  // True deletion: no files AND no URLs
+  const isIntentionalDeletion = !hasFiles && !hasUploadedUrls &&
                                (!formData.photoPreview || formData.photoPreview.trim() === '');
 
   console.log('🔍 FORM MAPPER: isIntentionalDeletion check:', {
     isArray: Array.isArray(formData.multiplePhotos),
     length: formData.multiplePhotos?.length,
-    allSlotsEmpty: allSlotsEmpty,
+    hasFiles: hasFiles,
+    hasUploadedUrls: hasUploadedUrls,
     photoPreviewEmpty: (!formData.photoPreview || formData.photoPreview.trim() === ''),
     result: isIntentionalDeletion
   });
@@ -253,6 +287,13 @@ export function extractPhotoURL(formData: ContactFormData, contactType: string):
   if (isIntentionalDeletion) {
     console.log('🛠️ FORM MAPPER: 🔥 DETECTED INTENTIONAL PHOTO DELETION - RETURNING EMPTY STRING! 🔥');
     return '';
+  }
+
+  // 🚀 UPLOAD IN PROGRESS: If we have files but no URLs yet, wait for upload
+  if (hasFiles && !hasUploadedUrls) {
+    console.log('⏳ FORM MAPPER: Upload in progress - preserving existing photoURL');
+    // Return existing photoURL or empty string to preserve state
+    return formData.photoURL || '';
   }
 
   // 🔙 HYBRID PRIORITY 1: Base64 data URLs from multiplePhotos (για individuals)

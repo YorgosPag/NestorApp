@@ -194,38 +194,45 @@ export function MultiplePhotosUpload({
 
     const newPhotos = [...normalizedPhotos];
 
-    // 🔥 CRITICAL FIX: When URL is empty, REMOVE the slot completely
+    // ✅ SUCCESS CASE: Update the slot with Firebase Storage URL
+    if (result.url && result.url.trim() !== '') {
+      console.log('✅ MULTIPLE PHOTOS: Upload success - updating slot', slotIndex, 'with URL:', result.url.substring(0, 50) + '...');
+
+      if (newPhotos[slotIndex]) {
+        const updatedPhoto = {
+          ...newPhotos[slotIndex],
+          uploadUrl: result.url,
+          isUploading: false,
+          uploadProgress: 100,
+          error: undefined
+        };
+
+        newPhotos[slotIndex] = updatedPhoto;
+
+        console.log('✅ MULTIPLE PHOTOS: Slot updated, calling onPhotosChange with', newPhotos.length, 'photos');
+        onPhotosChange?.(newPhotos);
+
+        if (onPhotoUploadComplete) {
+          onPhotoUploadComplete(slotIndex, result);
+        }
+      }
+      return;
+    }
+
+    // 🚨 FAILURE CASE: Handle failed uploads (empty URL)
     if (!result.url || result.url.trim() === '') {
-      console.log('🛠️ MULTIPLE PHOTOS: Removing slot', slotIndex, 'because URL is empty');
-      console.log('🛠️ MULTIPLE PHOTOS: Current photos before filtering:', newPhotos.map((p, i) => ({
-        index: i,
-        hasUploadUrl: !!p.uploadUrl,
-        uploadUrl: p.uploadUrl?.substring(0, 50) + '...',
-        hasPreview: !!p.preview
-      })));
+      console.error('❌ MULTIPLE PHOTOS: Upload failed - no URL returned for slot', slotIndex);
 
-      // First filter out the specific slot that was removed
-      const withoutRemovedSlot = newPhotos.filter((_, index) => index !== slotIndex);
-      console.log('🛠️ MULTIPLE PHOTOS: After removing slot', slotIndex, ':', withoutRemovedSlot.length, 'slots remain');
-
-      // Then filter out ALL empty slots (no uploadUrl or preview)
-      const filteredPhotos = withoutRemovedSlot.filter(photo =>
-        (photo.uploadUrl && photo.uploadUrl.trim() !== '') ||
-        (photo.preview && photo.preview.trim() !== '')
-      );
-      console.log('🛠️ MULTIPLE PHOTOS: After removing empty slots:', filteredPhotos.length, 'actual photos remain');
-
-      // If no photos remain, send empty array for database deletion
-      const finalPhotos = filteredPhotos.length > 0 ? filteredPhotos : [];
-      console.log('🛠️ MULTIPLE PHOTOS: Final photos to send to form:', {
-        length: finalPhotos.length,
-        isEmpty: finalPhotos.length === 0,
-        photos: finalPhotos.map((p, i) => ({ index: i, url: p.uploadUrl?.substring(0, 30) + '...' }))
-      });
-
-      console.log('🛠️ MULTIPLE PHOTOS: Calling onPhotosChange with', finalPhotos.length, 'photos...');
-      onPhotosChange?.(finalPhotos);
-      console.log('🛠️ MULTIPLE PHOTOS: onPhotosChange called successfully!');;
+      // Mark slot as failed
+      if (newPhotos[slotIndex]) {
+        newPhotos[slotIndex] = {
+          ...newPhotos[slotIndex],
+          isUploading: false,
+          uploadProgress: 0,
+          error: 'Αποτυχία ανεβάσματος'
+        };
+        onPhotosChange?.(newPhotos);
+      }
 
       if (onPhotoUploadComplete) {
         onPhotoUploadComplete(slotIndex, result);
@@ -233,24 +240,7 @@ export function MultiplePhotosUpload({
       return;
     }
 
-    // Normal case: Update the slot with new URL
-    if (newPhotos[slotIndex]) {
-      const updatedPhoto = {
-        ...newPhotos[slotIndex],
-        uploadUrl: result.url,
-        isUploading: false,
-        uploadProgress: 100,
-        error: undefined
-      };
-
-      newPhotos[slotIndex] = updatedPhoto;
-
-      onPhotosChange?.(newPhotos);
-
-      if (onPhotoUploadComplete) {
-        onPhotoUploadComplete(slotIndex, result);
-      }
-    }
+    // 🚨 This should never happen as the previous conditions handle all cases
   }, [normalizedPhotos]);
 
   /**
@@ -310,6 +300,25 @@ export function MultiplePhotosUpload({
         URL.revokeObjectURL(newPhotos[slotIndex].preview!);
       }
 
+      // 🏢 ENTERPRISE CLEANUP: Delete Firebase Storage file if exists
+      const currentPhoto = newPhotos[slotIndex];
+      if (currentPhoto.uploadUrl) {
+        console.log('🧹 ENTERPRISE CLEANUP: Starting cleanup for slot', slotIndex, 'URL:', currentPhoto.uploadUrl.substring(0, 50) + '...');
+
+        // Dynamic import για enterprise cleanup
+        import('@/services/photo-upload.service')
+          .then(({ PhotoUploadService }) => {
+            return PhotoUploadService.deletePhotoByURL(currentPhoto.uploadUrl!);
+          })
+          .then(() => {
+            console.log('✅ ENTERPRISE CLEANUP: Successfully deleted Firebase Storage file');
+          })
+          .catch((error) => {
+            console.warn('⚠️ ENTERPRISE CLEANUP: Failed to delete Firebase Storage file:', error);
+            // Non-blocking error - continues with slot clearing
+          });
+      }
+
       // ΚΡΙΣΙΜΟ: Καθαρισμός slot με πλήρη null values
       newPhotos[slotIndex] = {
         file: null,
@@ -363,90 +372,46 @@ export function MultiplePhotosUpload({
   }, [disabled, normalizedPhotos, maxPhotos, handleFileSelection]);
 
   /**
-   * Default Base64 conversion handler (OLD WORKING SYSTEM)
-   * 🔙 ΠΑΛΙΟ WORKING SYSTEM: Άμεση Base64 conversion - NO Firebase Storage
+   * Firebase Storage upload handler (ENTERPRISE SOLUTION)
+   * 🚀 ΝΕΟΣ ENTERPRISE ΤΡΟΠΟΣ: Firebase Storage με unlimited capacity
    */
   const defaultUploadHandler = useCallback(async (
     file: File,
     onProgress: (progress: FileUploadProgress) => void
   ): Promise<FileUploadResult> => {
 
+    console.log('🚀 FIREBASE STORAGE: Starting upload with PhotoUploadService');
+
     try {
-      return new Promise<FileUploadResult>((resolve, reject) => {
-        // 🔥 CRITICAL FIX: Compress image before Base64 to avoid Firebase size limit
-        // Firebase Document Limit: 1MB, Base64 images are ~33% larger than originals
-        const compressAndConvert = (imageFile: File) => {
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          const img = new Image();
+      // 🔥 ENTERPRISE: Use existing PhotoUploadService για Firebase Storage
+      const { PhotoUploadService } = await import('@/services/photo-upload.service');
 
-          img.onload = () => {
-            // Resize if too large (max 1200px width/height)
-            const maxDimension = 1200;
-            let { width, height } = img;
+      const result = await PhotoUploadService.uploadContactPhoto(
+        file,
+        undefined, // contactId - will be set by filename generation
+        onProgress,
+        purpose === 'logo' ? 'company-logo' : 'profile-modal'
+      );
 
-            if (width > maxDimension || height > maxDimension) {
-              if (width > height) {
-                height = (height * maxDimension) / width;
-                width = maxDimension;
-              } else {
-                width = (width * maxDimension) / height;
-                height = maxDimension;
-              }
-            }
-
-            canvas.width = width;
-            canvas.height = height;
-            ctx?.drawImage(img, 0, 0, width, height);
-
-            // Compress with 70% quality for JPEG
-            const compressedDataURL = canvas.toDataURL('image/jpeg', 0.7);
-
-            console.log('🚨 IMAGE COMPRESSION: Results:', {
-              originalFileName: imageFile.name,
-              originalFileSize: imageFile.size,
-              originalDimensions: `${img.width}x${img.height}`,
-              compressedDimensions: `${width}x${height}`,
-              compressedDataURLLength: compressedDataURL.length,
-              compressionRatio: (compressedDataURL.length / imageFile.size).toFixed(2),
-              sizeSavedBytes: imageFile.size - compressedDataURL.length,
-              quality: 0.7
-            });
-
-            onProgress({ progress: 100, bytesTransferred: imageFile.size, totalBytes: imageFile.size });
-
-            resolve({
-              success: true,
-              url: compressedDataURL,
-              fileName: imageFile.name,
-              fileSize: imageFile.size,
-              mimeType: imageFile.type,
-              compressionInfo: {
-                originalSize: imageFile.size,
-                compressedSize: compressedDataURL.length,
-                compressionRatio: compressedDataURL.length / imageFile.size,
-                quality: 0.7
-              }
-            });
-          };
-
-          img.onerror = () => {
-            console.error('❌📸 MULTIPLE COMPRESSION: Image load failed:', imageFile.name);
-            reject(new Error('Image compression failed'));
-          };
-
-          img.src = URL.createObjectURL(imageFile);
-        };
-
-        // Progress simulation για UI feedback
-        onProgress({ progress: 0, bytesTransferred: 0, totalBytes: file.size });
-
-        // Start compression
-        compressAndConvert(file);
+      console.log('✅ FIREBASE STORAGE: Upload completed successfully:', {
+        originalFileName: file.name,
+        uploadedURL: result.url.substring(0, 100) + '...',
+        fileSize: result.fileSize,
+        storagePath: result.storagePath,
+        compressionApplied: result.compressionInfo?.wasCompressed || false
       });
 
+      // Return in the format expected by MultiplePhotosUpload
+      return {
+        success: true,
+        url: result.url,
+        fileName: result.fileName,
+        fileSize: result.fileSize,
+        mimeType: result.mimeType
+      };
+
     } catch (error) {
-      console.error('❌📸 MULTIPLE BASE64: Conversion failed:', error);
+      console.error('❌📸 FIREBASE STORAGE: Upload failed:', error);
       throw error;
     }
   }, [purpose]);

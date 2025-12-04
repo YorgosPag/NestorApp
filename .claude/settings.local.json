@@ -98,7 +98,10 @@
       "Bash(del \"C:\\Nestor_Pagonis\\src\\components\\ContactFormSections\\CompanyContactSection_BROKEN.tsx\")",
       "Bash(del \"C:\\Nestor_Pagonis\\BACKUP_SUMMARY.json\")",
       "Bash(PORT=3005 npm run dev)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(del clear-photos.js)",
+      "Bash(del test-firebase-upload.js)",
+      "Bash(del clear-test-files.js)"
     ],
     "deny": [],
     "ask": []

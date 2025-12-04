@@ -3,7 +3,7 @@
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 import { storage, auth } from '@/lib/firebase';
 import { onAuthStateChanged, signInAnonymously } from 'firebase/auth';
-import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
+import type { FileUploadProgress, FileUploadResult } from '@/hooks/useFileUploadState';
 import { smartCompressContactPhoto, ImageParser } from '@/subapps/geo-canvas/floor-plan-system/parsers/raster/ImageParser';
 import compressionConfig, { type UsageContext } from '@/config/photo-compression-config';
 
@@ -200,10 +200,10 @@ export class PhotoUploadService {
       const storageRef = ref(storage, storagePath);
       console.log('🔗 ENTERPRISE: Storage reference created');
 
-      // 🏢 ENTERPRISE LAYER 2: Enhanced reliability mechanisms με REDUCED timeouts
+      // 🏢 ENTERPRISE LAYER 2: Enhanced reliability mechanisms με INCREASED timeouts για Firebase Storage
       const maxRetries = 2; // Μείωσα από 3 σε 2
-      const progressTimeout = 5000; // Μείωσα από 10s σε 5s για ταχύτερο fallback
-      const totalTimeout = 15000; // Μείωσα από 30s σε 15s
+      const progressTimeout = 10000; // Αύξησα από 5s σε 10s για καλύτερη σταθερότητα
+      const totalTimeout = 45000; // Αύξησα από 15s σε 45s για Firebase Storage
       let currentAttempt = 0;
 
       const attemptUpload = (): Promise<PhotoUploadResult> => {
@@ -376,19 +376,86 @@ export class PhotoUploadService {
   }
 
   /**
-   * Deletes photo from Firebase Storage
+   * 🏢 ENTERPRISE: Deletes photo from Firebase Storage with smart cleanup
    */
   static async deletePhoto(storagePath: string): Promise<void> {
     try {
+      console.log('🗑️ ENTERPRISE CLEANUP: Starting photo deletion:', storagePath);
+
       const storageRef = ref(storage, storagePath);
       await deleteObject(storageRef);
+
+      console.log('✅ ENTERPRISE CLEANUP: Photo deleted successfully from storage');
     } catch (error) {
-      console.error('Photo delete error:', error);
+      console.error('❌ ENTERPRISE CLEANUP: Photo delete error:', error);
       // Don't throw error if file doesn't exist
       if ((error as any)?.code !== 'storage/object-not-found') {
+        console.log('⚠️ ENTERPRISE CLEANUP: File not found - probably already deleted');
+      } else {
+        console.error('💥 ENTERPRISE CLEANUP: Actual deletion error:', error);
         throw new Error('Αποτυχία διαγραφής αρχείου');
       }
     }
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Smart photo cleanup from URL (Base64 or Firebase Storage)
+   */
+  static async deletePhotoByURL(photoURL: string): Promise<void> {
+    if (!photoURL || photoURL.trim() === '') {
+      console.log('🗑️ ENTERPRISE CLEANUP: Empty URL - nothing to delete');
+      return;
+    }
+
+    try {
+      if (this.isFirebaseStorageURL(photoURL)) {
+        console.log('🏢 ENTERPRISE CLEANUP: Deleting Firebase Storage photo');
+        const storagePath = this.extractStoragePathFromURL(photoURL);
+        if (storagePath) {
+          await this.deletePhoto(storagePath);
+        }
+      } else if (photoURL.startsWith('data:image/')) {
+        console.log('📄 ENTERPRISE CLEANUP: Base64 photo - no storage cleanup needed');
+        // Base64 photos don't need storage cleanup
+      } else {
+        console.log('⚠️ ENTERPRISE CLEANUP: Unknown photo URL format:', photoURL.substring(0, 50));
+      }
+    } catch (error) {
+      console.error('❌ ENTERPRISE CLEANUP: Error deleting photo by URL:', error);
+      // Don't throw - deletion failures shouldn't break the app
+    }
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Cleanup multiple photos with batch processing
+   */
+  static async cleanupMultiplePhotos(photoURLs: string[]): Promise<void> {
+    if (!Array.isArray(photoURLs) || photoURLs.length === 0) {
+      console.log('🗑️ ENTERPRISE CLEANUP: No photos to cleanup');
+      return;
+    }
+
+    console.log('🏢 ENTERPRISE CLEANUP: Starting batch cleanup of', photoURLs.length, 'photos');
+
+    const deletePromises = photoURLs.map(async (url, index) => {
+      try {
+        console.log(`🗑️ ENTERPRISE CLEANUP: Deleting photo ${index + 1}/${photoURLs.length}`);
+        await this.deletePhotoByURL(url);
+      } catch (error) {
+        console.error(`❌ ENTERPRISE CLEANUP: Failed to delete photo ${index + 1}:`, error);
+        // Continue with other photos even if one fails
+      }
+    });
+
+    await Promise.allSettled(deletePromises);
+    console.log('✅ ENTERPRISE CLEANUP: Batch cleanup completed');
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Check if URL is Firebase Storage URL
+   */
+  static isFirebaseStorageURL(url: string): boolean {
+    return url.includes('firebasestorage.googleapis.com') || url.includes('appspot.com');
   }
 
   /**

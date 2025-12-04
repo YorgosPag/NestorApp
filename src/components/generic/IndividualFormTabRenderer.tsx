@@ -57,7 +57,7 @@ function createIndividualFormTabsFromConfig(
   onMultiplePhotosChange?: (photos: PhotoSlot[]) => void,
   onMultiplePhotoUploadComplete?: (index: number, result: FileUploadResult) => void,
   onProfilePhotoSelection?: (index: number) => void,
-  handleEnterpriseMultiplePhotoUpload?: (file: File, onProgress: (progress: FileUploadProgress) => void) => Promise<FileUploadResult>,
+  // handleEnterpriseMultiplePhotoUpload removed - using centralized handler
   customRenderers?: Record<string, any>
 ) {
   return sections.map(section => ({
@@ -74,7 +74,7 @@ function createIndividualFormTabsFromConfig(
           onPhotosChange={onMultiplePhotosChange}
           onPhotoUploadComplete={onMultiplePhotoUploadComplete}
           onProfilePhotoSelection={onProfilePhotoSelection}
-          uploadHandler={handleEnterpriseMultiplePhotoUpload}
+          // uploadHandler removed - using default centralized handler from MultiplePhotosUpload
           disabled={disabled}
           compact={false}
           showProgress={true}
@@ -159,57 +159,7 @@ export function IndividualFormTabRenderer({
 
 // Import κεντρικοποιημένης λειτουργικότητας
 
-  // 🔥 Enterprise Multiple Photos Upload Handler
-  const handleEnterpriseMultiplePhotoUpload = async (
-    file: File,
-    onProgress: (progress: FileUploadProgress) => void
-  ): Promise<FileUploadResult> => {
-    // Βρίσκουμε ποιο index είναι αυτή η φωτογραφία
-    const currentPhotos = formData.multiplePhotos || [];
-    const photoIndex = currentPhotos.findIndex(photo => !photo.file && !photo.uploadUrl);
-
-    // 🏷️ Χρήση κεντρικοποιημένης λειτουργικότητας filename generation
-    const { customFilename, customFile, originalFilename } = generateContactFileWithCustomName({
-      originalFile: file,
-      contactData: formData,
-      fileType: 'gallery',
-      photoIndex: photoIndex >= 0 ? photoIndex : currentPhotos.length
-    });
-
-    // 📝 Centralized logging
-    logFilenameGeneration(originalFilename, customFilename, formData, 'gallery');
-
-
-    // Χρησιμοποιούμε το υπάρχον uploadContactPhoto για συμβατότητα
-    // 🔙 OLD WORKING SYSTEM: Direct Base64 conversion
-    const result = await new Promise<FileUploadResult>((resolve, reject) => {
-      const reader = new FileReader();
-      onProgress({ progress: 0, bytesTransferred: 0, totalBytes: file.size });
-
-      reader.onload = (e) => {
-        const base64URL = e.target?.result as string;
-        onProgress({ progress: 100, bytesTransferred: file.size, totalBytes: file.size });
-        resolve({
-          success: true,
-          url: base64URL,
-          fileName: file.name,
-          compressionInfo: {
-            originalSize: file.size,
-            compressedSize: file.size,
-            compressionRatio: 1.0,
-            quality: 1.0
-          }
-        });
-      };
-
-      reader.onerror = () => reject(new Error('Base64 conversion failed'));
-      reader.readAsDataURL(file);
-    });
-
-
-
-    return result;
-  };
+  // 🚀 CENTRALIZATION: Removed duplicate upload handler - now using centralized defaultUploadHandler from MultiplePhotosUpload
 
   // Create tabs from individual sections
   const tabs = createIndividualFormTabsFromConfig(
@@ -222,7 +172,7 @@ export function IndividualFormTabRenderer({
     onMultiplePhotosChange,
     onMultiplePhotoUploadComplete,
     onProfilePhotoSelection,
-    handleEnterpriseMultiplePhotoUpload,
+    // handleEnterpriseMultiplePhotoUpload removed
     customRenderers
   );
 
