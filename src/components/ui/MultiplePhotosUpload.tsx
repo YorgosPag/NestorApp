@@ -78,11 +78,16 @@ export function MultiplePhotosUpload({
 
   // Ensure photos array has the correct length
   const normalizedPhotos = React.useMemo(() => {
-    const result = [...photos];
-    while (result.length < maxPhotos) {
-      result.push({});
+    const emptySlot = {};
+
+    // 🔥 ΚΡΙΣΙΜΗ ΔΙΟΡΘΩΣΗ: ΑΝ photos είναι κενό array [], force clear όλα
+    if (Array.isArray(photos) && photos.length === 0) {
+      console.log('🛠️ MULTIPLE PHOTOS: Force clearing - received empty array');
+      // Επιστρέφουμε μόνο empty slots
+      return Array(maxPhotos).fill(emptySlot);
     }
-    return result.slice(0, maxPhotos);
+
+    return photos.filter(Boolean).concat(Array(Math.max(0, maxPhotos - photos.filter(Boolean).length)).fill(emptySlot));
   }, [photos, maxPhotos]);
 
   // ========================================================================
@@ -129,7 +134,7 @@ export function MultiplePhotosUpload({
         onPhotoUploadComplete(slotIndex, result);
       }
     }
-  }, [normalizedPhotos]); // 🔧 FIX: Removed callback dependencies to prevent infinite loop
+  }, [normalizedPhotos]);
 
   /**
    * Handle file selection for a specific slot
@@ -212,7 +217,7 @@ export function MultiplePhotosUpload({
         });
       }
     }
-  }, [normalizedPhotos, maxPhotos]); // 🔧 FIX: Removed callback dependencies to prevent infinite loop
+  }, [normalizedPhotos, maxPhotos, uploadHandler, onPhotosChange, onPhotoUploadComplete]);
 
   /**
    * Handle multiple files drop

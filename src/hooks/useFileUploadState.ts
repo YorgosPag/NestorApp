@@ -215,7 +215,7 @@ export function useFileUploadState(): UseFileUploadStateReturn {
     }
 
     setState(INITIAL_STATE);
-  }, []); // 🔧 FIX: Removed state dependency to prevent infinite loop
+  }, []);
 
   // ========================================================================
   // UPLOAD CONTROL ACTIONS
@@ -303,7 +303,7 @@ export function useFileUploadState(): UseFileUploadStateReturn {
       URL.revokeObjectURL(state.previewUrl);
       setPreviewUrl(null);
     }
-  }, []); // 🔧 FIX: Removed state dependencies to prevent infinite loop
+  }, []);
 
   /**
    * Full cleanup - preview URL και upload controller
@@ -317,7 +317,7 @@ export function useFileUploadState(): UseFileUploadStateReturn {
       uploadControllerRef.current.abort();
       uploadControllerRef.current = null;
     }
-  }, []); // 🔧 FIX: Removed state dependency to prevent infinite loop
+  }, []);
 
   // ========================================================================
   // RETURN API

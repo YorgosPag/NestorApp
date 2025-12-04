@@ -3,6 +3,7 @@
 import { GenericFormRenderer } from '@/components/generic';
 import { getIndividualSortedSections } from '@/config/individual-config';
 import { UnifiedPhotoManager } from '@/components/ui/UnifiedPhotoManager';
+import { PhotoUploadService } from '@/services/photoUploadService';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
@@ -37,41 +38,7 @@ export function IndividualContactSection({
   // Get all individual sections from centralized config
   const sections = getIndividualSortedSections();
 
-  // 🔥 Enterprise Upload Handler με Compression
-  const handleEnterpriseUpload = async (
-    file: File,
-    onProgress: (progress: FileUploadProgress) => void
-  ): Promise<FileUploadResult> => {
-
-    // 🔙 OLD WORKING SYSTEM: Direct Base64 conversion
-    const result = await new Promise<FileUploadResult>((resolve, reject) => {
-      const reader = new FileReader();
-      onProgress({ progress: 0, bytesTransferred: 0, totalBytes: file.size });
-
-      reader.onload = (e) => {
-        const base64URL = e.target?.result as string;
-        onProgress({ progress: 100, bytesTransferred: file.size, totalBytes: file.size });
-        resolve({
-          success: true,
-          url: base64URL,
-          fileName: file.name,
-          compressionInfo: {
-            originalSize: file.size,
-            compressedSize: file.size,
-            compressionRatio: 1.0,
-            quality: 1.0
-          }
-        });
-      };
-
-      reader.onerror = () => reject(new Error('Base64 conversion failed'));
-      reader.readAsDataURL(file);
-    });
-
-
-
-    return result;
-  };
+  // Use centralized PhotoUploadService instead of duplicate handler
 
 
   return (
@@ -96,7 +63,7 @@ export function IndividualContactSection({
           handleProfilePhotoSelection
         }}
         uploadHandlers={{
-          photoUploadHandler: handleEnterpriseUpload
+          photoUploadHandler: PhotoUploadService.handlePhotoUpload
         }}
         disabled={disabled}
         className="mt-4"

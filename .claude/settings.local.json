@@ -97,7 +97,8 @@
       "Bash(ping:*)",
       "Bash(del \"C:\\Nestor_Pagonis\\src\\components\\ContactFormSections\\CompanyContactSection_BROKEN.tsx\")",
       "Bash(del \"C:\\Nestor_Pagonis\\BACKUP_SUMMARY.json\")",
-      "Bash(PORT=3005 npm run dev)"
+      "Bash(PORT=3005 npm run dev)",
+      "Bash(echo:*)"
     ],
     "deny": [],
     "ask": []

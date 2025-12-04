@@ -65,8 +65,6 @@ export function useContactFormState(): UseContactFormStateReturn {
 
   const [formData, setFormData] = useState<ContactFormData>(initialFormData);
 
-  // ΒΡΩΜΙΚΟ FORCE UPDATE - ΜΟΝΟ ΓΙΑ ΔΗΜΟΣΙΕΣ ΥΠΗΡΕΣΙΕΣ
-  const [forceUpdate, setForceUpdate] = useState(0);
 
   // ========================================================================
   // BASIC FIELD HANDLERS
@@ -223,11 +221,8 @@ export function useContactFormState(): UseContactFormStateReturn {
    * Handle uploaded logo URL update (after enterprise upload)
    */
   const handleUploadedLogoURL = useCallback((logoURL: string) => {
-    console.log('🟢 handleUploadedLogoURL called with:', logoURL);
-
     setFormData(prev => {
       if (logoURL === '' || logoURL == null) {
-        console.log('🟢 CLEARING LOGO - EMPTY URL RECEIVED');
         return {
           ...prev,
           logoFile: null,
@@ -274,9 +269,25 @@ export function useContactFormState(): UseContactFormStateReturn {
         }
       }
 
+      // 🔧 ΚΡΙΣΙΜΗ ΔΙΟΡΘΩΣΗ: Reset του selectedProfilePhotoIndex αν χρειάζεται
+      let newSelectedIndex = prev.selectedProfilePhotoIndex;
+
+      // Αν το επιλεγμένο slot αφαιρέθηκε, reset στο πρώτο valid slot ή undefined
+      if (newSelectedIndex !== undefined) {
+        const selectedSlot = newPhotos[newSelectedIndex];
+        if (!selectedSlot?.uploadUrl && !selectedSlot?.preview) {
+          // Βρες το πρώτο valid slot
+          const firstValidIndex = newPhotos.findIndex(photo =>
+            photo?.uploadUrl || photo?.preview
+          );
+          newSelectedIndex = firstValidIndex >= 0 ? firstValidIndex : undefined;
+        }
+      }
+
       return {
         ...prev,
-        multiplePhotos: newPhotos
+        multiplePhotos: newPhotos,
+        selectedProfilePhotoIndex: newSelectedIndex
       };
     });
   }, []);

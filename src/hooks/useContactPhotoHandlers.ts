@@ -87,7 +87,7 @@ export function useContactPhotoHandlers({
 
   /**
    * Process photo file (validate + direct Base64 conversion)
-   * 🔙 OLD WORKING SYSTEM: Pure Base64 approach - NO Firebase Storage
+   * Pure Base64 approach
    *
    * @param file - File to process
    */
@@ -115,15 +115,15 @@ export function useContactPhotoHandlers({
       };
 
       reader.onerror = () => {
-        console.error('❌ OLD WORKING: Base64 conversion failed');
+        console.error('❌ BASE64: Conversion failed');
         notifications.error('❌ Αποτυχία φόρτωσης φωτογραφίας');
       };
 
-      // 🔙 ΠΑΛΙΟ WORKING: Convert directly to Base64 data URL
+      // Convert directly to Base64 data URL
       reader.readAsDataURL(file);
 
     } catch (error) {
-      console.error('❌ OLD WORKING: Photo processing failed:', error);
+      console.error('❌ PHOTO: Processing failed:', error);
       notifications.error('❌ Αποτυχία φόρτωσης φωτογραφίας');
     }
 
@@ -134,7 +134,7 @@ export function useContactPhotoHandlers({
    */
   const clearPhoto = useCallback(() => {
     onFileChange(null);
-  }, []); // 🔧 FIX: Removed dependencies to prevent infinite re-renders
+  }, []);
 
   // ========================================================================
   // DRAG & DROP HANDLERS

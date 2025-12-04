@@ -1,7 +1,7 @@
 import {
   collection, doc, getDocs, getDoc, addDoc, updateDoc, deleteDoc, query, where,
   orderBy, limit, startAfter, DocumentSnapshot, QueryConstraint, Timestamp,
-  writeBatch, serverTimestamp, onSnapshot, Unsubscribe,
+  writeBatch, serverTimestamp, onSnapshot, Unsubscribe, deleteField,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import {
@@ -186,9 +186,30 @@ export class ContactsService {
   static async updateContact(id: string, updates: Partial<Contact>): Promise<void> {
     try {
       const docRef = doc(getCol<Contact>(CONTACTS_COLLECTION, contactConverter), id);
-      await updateDoc(docRef, { ...updates, updatedAt: serverTimestamp() } as any);
+
+      // 🔥 ΚΡΙΣΙΜΗ ΔΙΟΡΘΩΣΗ: Εξασφαλίζουμε ότι κενό array στέλνεται ως κενό array
+      const updateData: any = { ...updates, updatedAt: serverTimestamp() };
+
+      // Εάν υπάρχει το multiplePhotoURLs και είναι κενό array, το στέλνουμε ρητά
+      if ('multiplePhotoURLs' in updates) {
+        if (Array.isArray(updates.multiplePhotoURLs) && updates.multiplePhotoURLs.length === 0) {
+          console.log('🛠️ CONTACTS SERVICE: Sending EMPTY array for multiplePhotoURLs');
+          updateData.multiplePhotoURLs = [];
+        } else if (updates.multiplePhotoURLs === null || updates.multiplePhotoURLs === undefined) {
+          // Αν θέλουμε να διαγράψουμε το field τελείως από τη βάση
+          updateData.multiplePhotoURLs = deleteField();
+        }
+      }
+
+      await updateDoc(docRef, updateData);
+
+      console.log('✅ CONTACTS SERVICE: Update successful', {
+        id,
+        hadPhotos: updates.multiplePhotoURLs ? updates.multiplePhotoURLs.length : 0
+      });
+
     } catch (error) {
-      // Error logging removed //('Error updating contact:', error);
+      console.error('❌ CONTACTS SERVICE: Update failed', error);
       throw new Error('Failed to update contact');
     }
   }

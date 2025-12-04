@@ -172,12 +172,10 @@ export function EnterprisePhotoUpload({
     e.preventDefault();
     e.stopPropagation();
 
-    console.log('X BUTTON PRESSED - FORCING REMOVAL');
-
     // ΚΑΘΑΡΙΖΟΥΜΕ ΜΕ ΤΗ ΒΙΑ ΤΑ ΠΑΝΤΑ
     onFileChange(null);
 
-    // ΑΜΕΣΗ ΚΛΗΣΗ ΤΟΥ HANDLER ΜΕ ΚΕΕΕΕ ΤΗ ΒΙΑ
+    // ΑΜΕΣΗ ΚΛΗΣΗ ΤΟΥ HANDLER
     if (onUploadComplete) {
       onUploadComplete({
         success: true,
@@ -186,9 +184,6 @@ export function EnterprisePhotoUpload({
         compressionInfo: { originalSize: 0, compressedSize: 0, compressionRatio: 1, quality: 1 }
       });
     }
-
-    // ΚΑΙ ΑΚΟΜΑ ΠΙΟ ΒΙΑΙΑ - ΑΝ ΥΠΑΡΧΕΙ setFormData, ΤΟ ΚΑΛΟΥΜΕ ΑΠΕΥΘΕΙΑΣ
-    // (αν το component έχει πρόσβαση)
   }, [onFileChange, onUploadComplete]);
 
   // ========================================================================
@@ -202,7 +197,6 @@ export function EnterprisePhotoUpload({
 
   // Delete button visibility logic for compact mode
 
-  console.log('EnterprisePhotoUpload rendered - has onUploadComplete:', !!onUploadComplete);
 
   // ========================================================================
   // RENDER

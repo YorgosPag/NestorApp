@@ -38,7 +38,7 @@ interface UnifiedPhotoManagerProps {
     // Για Profile Selection (Individual - ποια φωτογραφία είναι η κύρια)
     handleProfilePhotoSelection?: (index: number) => void;
 
-    // Για ΒΡΩΜΙΚΕΣ λύσεις με setFormData
+    // Για επειγόντα state updates
     setFormData?: (data: ContactFormData) => void;
   };
   /** Upload handlers για διαφορετικούς σκοπούς */
@@ -248,16 +248,16 @@ function ServicePhotoManager({
           onFileChange={(file) => {
             handlers.handleLogoChange?.(file);
 
-            // Η ΑΠΟΛΥΤΗ, ΒΡΩΜΙΚΟΤΕΡΗ, ΑΛΛΑ ΑΠΟΛΥΤΗ ΛΥΣΗ
+            // Καθαρισμός state κατά την αφαίρεση
             if (file === null) {
-              // ΚΑΘΑΡΙΖΟΥΜΕ ΜΕ ΤΗ ΒΙΑ ΤΑ ΠΕΔΙΑ ΑΠΕΥΘΕΙΑΣ
+              // Ασύνχρονος καθαρισμός του state για force re-render
               setTimeout(() => {
                 handlers.setFormData?.({
                   ...formData,
                   logoFile: null,
                   logoPreview: '',
                   logoURL: '',
-                  _forceDeleteLogo: Date.now() // ΑΥΤΟ ΕΙΝΑΙ ΤΟ ΜΑΓΙΚΟ
+                  _forceDeleteLogo: Date.now()
                 } as ContactFormData);
               }, 10);
             }

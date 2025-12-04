@@ -1,5 +1,6 @@
 import type { Contact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
+import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 import { getSafeFieldValue, getSafeArrayValue } from '../contactMapper';
 
 // ============================================================================
@@ -19,20 +20,42 @@ export function mapIndividualContactToFormData(contact: Contact): ContactFormDat
 
   const individualContact = contact as any; // Cast for individual fields access
 
-  // 📸 MULTIPLE PHOTOS: Convert Firebase URLs to PhotoSlots για edit mode
-  const multiplePhotoURLs = getSafeArrayValue(individualContact, 'multiplePhotoURLs');
+  // 📸 MULTIPLE PHOTOS - ENTERPRISE SOLUTION (2025 STANDARD)
+  const multiplePhotoURLs = getSafeArrayValue(individualContact, 'multiplePhotoURLs') || [];
 
-  const multiplePhotos = multiplePhotoURLs
-    .filter((url: string) => url && !url.startsWith('blob:')) // Φίλτρα blob URLs
-    .map((url: string) => {
-      const urlType = url.startsWith('data:') ? 'Base64' : 'Firebase';
-      return {
-        uploadUrl: url, // Base64 ή Firebase URL για display
-        preview: url,   // Base64 ή Firebase URL για preview
-        file: null,     // Κανένα αρχείο σε edit mode
-        isUploading: false
-      };
-    });
+  // 🚨 CRITICAL FIX - ΜΗ ΑΛΛΑΞΕΙΣ ΑΥΤΗ ΤΗ ΛΟΓΙΚΗ! 🚨
+  // BUG HISTORY: Πριν από αυτή τη διόρθωση, το filtering αφαίρεσε κενά arrays
+  // ΠΡΟΒΛΗΜΑ: Τα κενά arrays δεν έφταναν ποτέ στη βάση δεδομένων
+  // ΛΥΣΗ: Explicit handling για empty arrays ώστε να διαγράφονται οι φωτογραφίες
+  // TESTED: 2025-12-04 - Επιτυχής διόρθωση μετά από 5+ ώρες debugging
+  // 🔥 ΚΡΙΣΙΜΗ ΔΙΟΡΘΩΣΗ: Preserve empty arrays for proper database deletion
+  let multiplePhotos: PhotoSlot[] = [];
+
+  if (multiplePhotoURLs.length === 0) {
+    // ✅ ΚΕΝΟ ARRAY: Κρατάμε κενό για proper deletion στη βάση
+    multiplePhotos = [];
+    console.log('🛠️ INDIVIDUAL MAPPER: Empty photos array - will delete from database');
+  } else {
+    // ✅ ΥΠΑΡΧΟΥΝ ΦΩΤΟΓΡΑΦΙΕΣ: Normal processing
+    multiplePhotos = multiplePhotoURLs
+      // Βήμα 1: Κρατάμε ΜΟΝΟ strings
+      .filter((url): url is string => typeof url === 'string')
+      // Βήμα 2: Αφαιρούμε blob URLs και invalid formats (αλλά ΟΧΙ κενά strings)
+      .filter(url => {
+        const trimmed = url.trim();
+        return trimmed !== '' &&
+               !trimmed.startsWith('blob:') &&
+               (trimmed.startsWith('data:') || trimmed.startsWith('https://'));
+      })
+      // Βήμα 3: Μετατρέπουμε σε PhotoSlot με απόλυτη ασφάλεια
+      .map(url => ({
+        preview: url.trim(),
+        uploadUrl: url.trim(),
+        isUploading: false,
+        error: null,
+        file: null
+      }));
+  }
 
 
   const formData: ContactFormData = {
@@ -82,7 +105,7 @@ export function mapIndividualContactToFormData(contact: Contact): ContactFormDat
     // 📷 Φωτογραφίες
     photoFile: null,
     photoPreview: getSafeFieldValue(individualContact, 'photoURL'),
-    multiplePhotos, // 📸 Multiple photos array
+    multiplePhotos: multiplePhotos.length > 0 ? multiplePhotos : [], // 📸 Multiple photos array
 
     // 📝 Notes
     notes: getSafeFieldValue(contact, 'notes'),

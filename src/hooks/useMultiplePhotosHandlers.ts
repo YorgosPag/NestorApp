@@ -21,7 +21,7 @@ export interface UseMultiplePhotosHandlersReturn {
   clearAllPhotos: () => void;
   clearPhotoAtIndex: (index: number, currentPhotos: PhotoSlot[]) => void;
 
-  // Base64 conversion handler (OLD WORKING SYSTEM)
+  // Base64 conversion handler
   handleEnterpriseMultiplePhotoUpload: (
     file: File,
     onProgress: (progress: any) => void
@@ -130,14 +130,14 @@ export function useMultiplePhotosHandlers({
 
     // Update form state
     onMultiplePhotosChange(photoSlots);
-  }, []); // 🔧 FIX: Removed dependencies to prevent infinite re-renders
+  }, []);
 
   /**
    * Clear all photos
    */
   const clearAllPhotos = useCallback(() => {
     onMultiplePhotosChange([]);
-  }, []); // 🔧 FIX: Removed dependencies to prevent infinite re-renders
+  }, []);
 
   /**
    * Clear photo at specific index
@@ -158,15 +158,15 @@ export function useMultiplePhotosHandlers({
     newPhotos.splice(index, 1);
 
     onMultiplePhotosChange(newPhotos);
-  }, []); // 🔧 FIX: Removed dependencies to prevent infinite re-renders
+  }, []);
 
   // ========================================================================
-  // BASE64 CONVERSION HANDLER (OLD WORKING SYSTEM)
+  // BASE64 CONVERSION HANDLER
   // ========================================================================
 
   /**
    * Base64 conversion handler for multiple photos
-   * 🔙 OLD WORKING SYSTEM: Direct Base64 conversion - NO Firebase Storage
+   * Direct Base64 conversion
    *
    * @param file - File to convert
    * @param onProgress - Progress callback
@@ -193,7 +193,7 @@ export function useMultiplePhotosHandlers({
 
           const result: FileUploadResult = {
             success: true,
-            url: base64URL, // 🔙 OLD WORKING: Direct Base64 URL
+            url: base64URL,
             fileName: file.name,
             compressionInfo: {
               originalSize: file.size,
@@ -211,7 +211,7 @@ export function useMultiplePhotosHandlers({
           reject(new Error('Base64 conversion failed'));
         };
 
-        // 🔙 OLD WORKING SYSTEM: Direct Base64 conversion
+        // Direct Base64 conversion
         reader.readAsDataURL(file);
       });
 
@@ -234,7 +234,7 @@ export function useMultiplePhotosHandlers({
     clearAllPhotos,
     clearPhotoAtIndex,
 
-    // Base64 conversion handler (OLD WORKING SYSTEM)
+    // Base64 conversion handler
     handleEnterpriseMultiplePhotoUpload
   };
 }

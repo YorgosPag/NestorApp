@@ -20,6 +20,9 @@ export interface FormDataMappingResult {
 /**
  * Clean undefined/null/empty values from object
  *
+ * ⚠️ ΚΡΙΣΙΜΗ ΣΗΜΕΙΩΣΗ: Αυτή η function ήταν η αιτία του bug με τις φωτογραφίες!
+ * ΜΗ ΑΛΛΑΞΕΙΣ την συμπεριφορά του multiplePhotoURLs - παίζουμε πάνω από 1 ημέρα!
+ *
  * @param obj - Object to clean
  * @returns Cleaned object
  */
@@ -31,7 +34,18 @@ export function cleanUndefinedValues(obj: any): any {
 
     if (value !== undefined && value !== null && value !== '') {
       if (Array.isArray(value)) {
-        if (value.length > 0) cleaned[key] = value;
+        // 🚨 CRITICAL FIX - ΜΗ ΑΓΓΙΖΕΙΣ ΑΥΤΟΝ ΤΟΝ ΚΩΔΙΚΑ! 🚨
+        // ΠΡΟΒΛΗΜΑ: Πριν από αυτή τη διόρθωση, τα κενά arrays δεν έφταναν στη βάση
+        // ΛΥΣΗ: Preserve empty arrays για multiplePhotoURLs ώστε η Firebase να διαγράφει
+        // TESTED: 2025-12-04 - Λύθηκε μετά από 5+ ώρες debugging
+        // 🔥 ΚΡΙΣΙΜΗ ΔΙΟΡΘΩΣΗ: Preserve empty arrays για proper database deletion
+        // Ειδικά για multiplePhotoURLs, πρέπει να στέλνουμε [] για διαγραφή
+        if (key === 'multiplePhotoURLs' || value.length > 0) {
+          cleaned[key] = value;
+          if (key === 'multiplePhotoURLs' && value.length === 0) {
+            console.log('🛠️ FORM MAPPER: Preserving empty multiplePhotoURLs array for database deletion');
+          }
+        }
       } else if (typeof value === 'object') {
         const cleanedNestedObj = cleanUndefinedValues(value);
         if (Object.keys(cleanedNestedObj).length > 0) {

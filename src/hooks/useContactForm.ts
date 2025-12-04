@@ -123,7 +123,26 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact, isMo
           console.warn('⚠️ ORCHESTRATOR: Contact mapping warnings:', mappingResult.warnings);
         }
 
-        setFormData(mappingResult.formData);
+        setFormData({
+          ...mappingResult.formData,
+          // 🔥 ΚΡΙΣΙΜΗ ΔΙΟΡΘΩΣΗ: Force clear photos array όταν η βάση έχει κενό array
+          multiplePhotos: Array.isArray(mappingResult.formData.multiplePhotos) &&
+                          mappingResult.formData.multiplePhotos.length === 0
+                          ? []
+                          : mappingResult.formData.multiplePhotos || []
+        });
+
+        // Επιπλέον: Force update το UI state για φωτογραφίες
+        setTimeout(() => {
+          if (Array.isArray(mappingResult.formData.multiplePhotos) &&
+              mappingResult.formData.multiplePhotos.length === 0) {
+            console.log('🛠️ USECONTACTFORM: Database has empty photos array - forcing UI update');
+            // Καλεί την συνάρτηση που ενημερώνει τα photos στο UI
+            if (typeof handleMultiplePhotosChange === 'function') {
+              handleMultiplePhotosChange([]);
+            }
+          }
+        }, 50);
 
       } catch (error) {
         console.error('❌ ORCHESTRATOR: Failed to load contact data:', error);
@@ -135,7 +154,7 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact, isMo
       console.log('🆕 ORCHESTRATOR: New contact mode, resetting form (modal opened)');
       resetForm();
     }
-  }, [editContact, isModalOpen]); // 🔧 FIX: Track both editContact and modal state
+  }, [editContact?.id, isModalOpen, editContact?.updatedAt]); // 🔥 FINAL FIX: Force refresh on every edit - track ID + timestamp
 
   // ========================================================================
   // 🔥 NEW: LIVE PREVIEW FUNCTIONALITY (Fixed Infinite Loop)
