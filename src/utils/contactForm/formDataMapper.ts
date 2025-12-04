@@ -315,10 +315,14 @@ export function extractPhotoURL(formData: ContactFormData, contactType: string):
     return formData.photoURL;
   }
 
-  // 🔙 HYBRID PRIORITY 3: Extract Base64 URLs από multiplePhotoURLs
+  // 🔙 HYBRID PRIORITY 3: Extract URLs από multiplePhotoURLs (Base64 OR Firebase)
   const multiplePhotoURLs = extractMultiplePhotoURLs(formData);
-  if (multiplePhotoURLs.length > 0 && multiplePhotoURLs[0].startsWith('data:')) {
-    return multiplePhotoURLs[0];
+  if (multiplePhotoURLs.length > 0) {
+    const firstPhoto = multiplePhotoURLs[0];
+    // Accept both Base64 and Firebase Storage URLs
+    if (firstPhoto.startsWith('data:') || firstPhoto.includes('firebasestorage.googleapis.com')) {
+      return firstPhoto;
+    }
   }
 
   // 🔙 HYBRID FALLBACK: Support existing Firebase URLs (from old working contacts)
