@@ -276,6 +276,24 @@ export function useContactSubmission({
 
       // Success callbacks
       onContactAdded();
+
+      // 🔥 ENTERPRISE CACHE INVALIDATION: Forced component refresh
+      // Αυτό εξασφαλίζει ότι όλα τα cached UI components θα ενημερωθούν
+      console.log('🔄 SUBMISSION: Triggering enterprise cache invalidation...');
+
+      // Small delay για να ολοκληρωθεί το database update
+      setTimeout(() => {
+        // Trigger ενός custom event για global cache invalidation
+        window.dispatchEvent(new CustomEvent('contactsUpdated', {
+          detail: {
+            contactId: editContact?.id || 'new',
+            action: editContact ? 'updated' : 'created',
+            affectedFields: Object.keys(formData).filter(key => formData[key as keyof typeof formData])
+          }
+        }));
+        console.log('📡 SUBMISSION: Global cache invalidation event dispatched');
+      }, 100);
+
       onOpenChange(false);
       resetForm();
 

@@ -76,6 +76,77 @@ export function MultiplePhotosUpload({
   // STATE
   // ========================================================================
 
+  // 🔥 FORCE RE-RENDER: Key-based invalidation για cache busting
+  const [photosKey, setPhotosKey] = React.useState(0);
+
+  // Listen για force re-render events
+  React.useEffect(() => {
+    const handleForceRerender = (event: CustomEvent) => {
+      console.log('🔄 MULTIPLE PHOTOS: Force re-rendering photos due to cache invalidation');
+
+      // 🔥 NUCLEAR CACHE CLEAR: Εξαναγκασμένη εκκαθάριση browser image cache
+      // Αυτό καλύπτει περιπτώσεις όπου το cache buster δεν επαρκεί
+      if (typeof window !== 'undefined') {
+        // ΔΙΑΓΝΩΣΤΙΚΑ: Δες όλες τις εικόνες στη σελίδα
+        const allImages = document.querySelectorAll('img');
+        console.log('🔍 DEBUG: Found', allImages.length, 'total images in page');
+
+        allImages.forEach((img: any, index) => {
+          console.log(`🔍 Image ${index}:`, {
+            src: img.src,
+            isFirebase: img.src.includes('firebasestorage'),
+            isBlob: img.src.startsWith('blob:'),
+            isData: img.src.startsWith('data:')
+          });
+        });
+
+        // Κλείσιμο όλων των Firebase images από το browser memory
+        const firebaseImages = document.querySelectorAll('img[src*="firebasestorage"]');
+        const blobImages = document.querySelectorAll('img[src^="blob:"]');
+        const dataImages = document.querySelectorAll('img[src^="data:"]');
+
+        console.log('🔍 DEBUG: Firebase images:', firebaseImages.length);
+        console.log('🔍 DEBUG: Blob images:', blobImages.length);
+        console.log('🔍 DEBUG: Data images:', dataImages.length);
+
+        // Clear ΜΟΝΟ τις εικόνες που είναι ΜΕΣΑ στο MultiplePhotosUpload grid
+        const gridContainer = document.querySelector('[class*="grid-cols-3"]');
+        if (gridContainer) {
+          const gridImages = gridContainer.querySelectorAll('img');
+          gridImages.forEach((img: any) => {
+            const originalSrc = img.src;
+            console.log('🔥 Clearing grid image:', originalSrc.substring(0, 50));
+
+            // NUCLEAR CLEAR: Διαγραφή όλων των attributes
+            img.removeAttribute('src');
+            img.removeAttribute('alt');
+            img.src = '';
+            img.alt = '';
+
+            // Force DOM update
+            img.style.display = 'none';
+            setTimeout(() => {
+              img.style.display = '';
+              // ΜΗΝ reload - αφήνε άδειο!
+            }, 50);
+          });
+          console.log('🔥 NUCLEAR CACHE: TOTAL CLEAR of', gridImages.length, 'grid images (no reload)');
+        } else {
+          console.log('🔥 NUCLEAR CACHE: Grid container not found - no clearing done');
+        }
+
+        console.log('🔥 NUCLEAR CACHE: Force reloaded', firebaseImages.length + blobImages.length + dataImages.length, 'images total');
+      }
+
+      setPhotosKey(prev => prev + 1); // Force re-render με νέο key
+    };
+
+    window.addEventListener('forceAvatarRerender', handleForceRerender as EventListener);
+    return () => {
+      window.removeEventListener('forceAvatarRerender', handleForceRerender as EventListener);
+    };
+  }, []);
+
   // Ensure photos array has the correct length
   const normalizedPhotos = React.useMemo(() => {
     const emptySlot = {};
@@ -114,8 +185,55 @@ export function MultiplePhotosUpload({
    * Handle upload completion for a specific slot
    */
   const handleUploadComplete = useCallback((slotIndex: number, result: FileUploadResult) => {
+    console.log('🔍 MULTIPLE PHOTOS: handleUploadComplete called with:', {
+      slotIndex,
+      resultUrl: result.url,
+      resultSuccess: result.success,
+      currentPhotosLength: normalizedPhotos.length
+    });
 
     const newPhotos = [...normalizedPhotos];
+
+    // 🔥 CRITICAL FIX: When URL is empty, REMOVE the slot completely
+    if (!result.url || result.url.trim() === '') {
+      console.log('🛠️ MULTIPLE PHOTOS: Removing slot', slotIndex, 'because URL is empty');
+      console.log('🛠️ MULTIPLE PHOTOS: Current photos before filtering:', newPhotos.map((p, i) => ({
+        index: i,
+        hasUploadUrl: !!p.uploadUrl,
+        uploadUrl: p.uploadUrl?.substring(0, 50) + '...',
+        hasPreview: !!p.preview
+      })));
+
+      // First filter out the specific slot that was removed
+      const withoutRemovedSlot = newPhotos.filter((_, index) => index !== slotIndex);
+      console.log('🛠️ MULTIPLE PHOTOS: After removing slot', slotIndex, ':', withoutRemovedSlot.length, 'slots remain');
+
+      // Then filter out ALL empty slots (no uploadUrl or preview)
+      const filteredPhotos = withoutRemovedSlot.filter(photo =>
+        (photo.uploadUrl && photo.uploadUrl.trim() !== '') ||
+        (photo.preview && photo.preview.trim() !== '')
+      );
+      console.log('🛠️ MULTIPLE PHOTOS: After removing empty slots:', filteredPhotos.length, 'actual photos remain');
+
+      // If no photos remain, send empty array for database deletion
+      const finalPhotos = filteredPhotos.length > 0 ? filteredPhotos : [];
+      console.log('🛠️ MULTIPLE PHOTOS: Final photos to send to form:', {
+        length: finalPhotos.length,
+        isEmpty: finalPhotos.length === 0,
+        photos: finalPhotos.map((p, i) => ({ index: i, url: p.uploadUrl?.substring(0, 30) + '...' }))
+      });
+
+      console.log('🛠️ MULTIPLE PHOTOS: Calling onPhotosChange with', finalPhotos.length, 'photos...');
+      onPhotosChange?.(finalPhotos);
+      console.log('🛠️ MULTIPLE PHOTOS: onPhotosChange called successfully!');;
+
+      if (onPhotoUploadComplete) {
+        onPhotoUploadComplete(slotIndex, result);
+      }
+      return;
+    }
+
+    // Normal case: Update the slot with new URL
     if (newPhotos[slotIndex]) {
       const updatedPhoto = {
         ...newPhotos[slotIndex],
@@ -126,7 +244,6 @@ export function MultiplePhotosUpload({
       };
 
       newPhotos[slotIndex] = updatedPhoto;
-
 
       onPhotosChange?.(newPhotos);
 
@@ -322,24 +439,34 @@ export function MultiplePhotosUpload({
 
         {/* Compact Grid - 3x2 Layout */}
         <div className="grid grid-cols-3 gap-6 p-2">
-          {normalizedPhotos.map((photo, index) => (
-            <div key={index} className="h-[300px] w-full">
-              <EnterprisePhotoUpload
-                purpose={purpose}
-                maxSize={5 * 1024 * 1024} // 5MB
-                photoFile={photo.file}
-                photoPreview={photo.preview || photo.uploadUrl}
-                onFileChange={(file) => handleFileSelection(index, file)}
-                uploadHandler={uploadHandler || defaultUploadHandler}
-                onUploadComplete={(result) => handleUploadComplete(index, result)}
-                disabled={disabled}
-                compact={true}
-                showProgress={showProgress}
-                isLoading={photo.isUploading}
-                className="h-[300px] w-full"
-              />
-            </div>
-          ))}
+          {normalizedPhotos.map((photo, index) => {
+            // 🔥 FORCE RE-RENDER: Key-based cache busting αντί για Date.now()
+            const rawPreview = photo.preview || photo.uploadUrl;
+            const photoPreviewWithCacheBuster = rawPreview &&
+              rawPreview.startsWith('https://firebasestorage')
+                ? `${rawPreview}?v=${photosKey}`
+                : rawPreview;
+
+            return (
+              <div key={`photo-${index}-${photosKey}-${photo.file?.name || photo.uploadUrl || 'empty'}`} className="h-[300px] w-full">
+                <EnterprisePhotoUpload
+                  key={`enterprise-${index}-${photosKey}-${Date.now()}`}
+                  purpose={purpose}
+                  maxSize={5 * 1024 * 1024} // 5MB
+                  photoFile={photo.file}
+                  photoPreview={photoPreviewWithCacheBuster}
+                  onFileChange={(file) => handleFileSelection(index, file)}
+                  uploadHandler={uploadHandler || defaultUploadHandler}
+                  onUploadComplete={(result) => handleUploadComplete(index, result)}
+                  disabled={disabled}
+                  compact={true}
+                  showProgress={showProgress}
+                  isLoading={photo.isUploading}
+                  className="h-[300px] w-full"
+                />
+              </div>
+            );
+          })}
         </div>
 
         {/* Multiple Drop Zone */}

@@ -128,7 +128,11 @@ export function ContactsPageContent() {
         includeArchived: filters.showArchived
       });
 
-      // Debug logging removed
+      // 🔄 CACHE INVALIDATION: Log fresh contact data
+      console.log('🔄 CONTACTS PAGE: Loaded fresh contacts from database', {
+        count: contactsResult.contacts.length,
+        contactsWithPhotos: contactsResult.contacts.filter(c => (c as any).multiplePhotoURLs?.length > 0).length
+      });
       setContacts(contactsResult.contacts);
 
       // Αν είναι άδεια η βάση, προσθέτουμε seed data
@@ -169,12 +173,51 @@ export function ContactsPageContent() {
     loadContacts();
   }, []); // 🔧 FIX: Removed loadContacts to prevent infinite loop - load once on mount
 
+  // 🔥 ENTERPRISE CACHE INVALIDATION: Global event listener
+  useEffect(() => {
+    const handleContactsUpdate = (event: CustomEvent) => {
+      console.log('🔄 CONTACTS PAGE: Received cache invalidation event', event.detail);
+      // Force immediate refresh of all contact data
+      refreshContacts();
+
+      // 🔥 CRITICAL: Update selectedContact if it was the one modified
+      const { contactId } = event.detail;
+      if (selectedContact?.id === contactId) {
+        console.log('🔄 CONTACTS PAGE: Selected contact was modified, will update after refresh');
+        // The selectedContact will be updated by the useEffect below after contacts reload
+      }
+    };
+
+    // Listen για global cache invalidation events
+    window.addEventListener('contactsUpdated', handleContactsUpdate as EventListener);
+
+    return () => {
+      window.removeEventListener('contactsUpdated', handleContactsUpdate as EventListener);
+    };
+  }, [selectedContact]);
+
   // Update selected contact when contacts list changes
   useEffect(() => {
     if (selectedContact?.id) {
       const updatedContact = contacts.find(c => c.id === selectedContact.id);
       if (updatedContact && JSON.stringify(updatedContact) !== JSON.stringify(selectedContact)) {
+        console.log('🔄 CONTACTS PAGE: Updating selectedContact with fresh data', {
+          contactId: selectedContact.id,
+          oldPhotos: (selectedContact as any).multiplePhotoURLs?.length || 0,
+          newPhotos: (updatedContact as any).multiplePhotoURLs?.length || 0
+        });
         setSelectedContact(updatedContact);
+
+        // 🔥 FORCE RE-RENDER: Avatar components need key-based invalidation
+        const photoCount = (updatedContact as any).multiplePhotoURLs?.length || 0;
+        window.dispatchEvent(new CustomEvent('forceAvatarRerender', {
+          detail: {
+            contactId: selectedContact.id,
+            photoCount,
+            timestamp: Date.now()
+          }
+        }));
+        console.log('🔄 CONTACTS PAGE: Dispatched force avatar re-render event');
       }
     }
   }, [contacts, selectedContact?.id]);

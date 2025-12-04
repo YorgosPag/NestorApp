@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { flushSync } from 'react-dom';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { initialFormData } from '@/types/ContactFormTypes';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
@@ -188,10 +189,36 @@ export function useContactFormState(): UseContactFormStateReturn {
    * Handle multiple photos changes
    */
   const handleMultiplePhotosChange = useCallback((photos: PhotoSlot[]) => {
-    setFormData(prev => ({
-      ...prev,
-      multiplePhotos: photos
-    }));
+    console.log('🚨 FORM STATE: handleMultiplePhotosChange called with:', {
+      length: photos.length,
+      isEmpty: photos.length === 0,
+      photos: photos.map((p, i) => ({
+        index: i,
+        hasUploadUrl: !!p.uploadUrl,
+        uploadUrl: p.uploadUrl?.substring(0, 50) + '...'
+      }))
+    });
+
+    // 🔥 CRITICAL FIX: Use flushSync for synchronous state update
+    flushSync(() => {
+      setFormData(prev => {
+        const newFormData = {
+          ...prev,
+          multiplePhotos: photos,
+          // 🔥 CRITICAL FIX: Clear photoPreview when no photos remain
+          photoPreview: photos.length === 0 ? '' : prev.photoPreview
+        };
+        console.log('🚨 FORM STATE: SYNCHRONOUSLY Updated formData:', {
+          multiplePhotosLength: newFormData.multiplePhotos.length,
+          multiplePhotosEmpty: newFormData.multiplePhotos.length === 0,
+          photoPreviewCleared: photos.length === 0 ? 'YES' : 'NO',
+          photoPreviewValue: newFormData.photoPreview
+        });
+        return newFormData;
+      });
+    });
+
+    console.log('🚨 FORM STATE: Synchronous update completed');
   }, []);
 
   // ========================================================================

@@ -184,6 +184,15 @@ export class ContactsService {
 
   // Update
   static async updateContact(id: string, updates: Partial<Contact>): Promise<void> {
+    console.log('🚨 CONTACTS SERVICE: updateContact called for ID:', id);
+    console.log('🚨 CONTACTS SERVICE: Received updates:', {
+      hasMultiplePhotoURLs: 'multiplePhotoURLs' in updates,
+      multiplePhotoURLsValue: updates.multiplePhotoURLs,
+      multiplePhotoURLsLength: Array.isArray(updates.multiplePhotoURLs) ? updates.multiplePhotoURLs.length : 'not array',
+      hasPhotoURL: 'photoURL' in updates,
+      photoURLValue: updates.photoURL
+    });
+
     try {
       const docRef = doc(getCol<Contact>(CONTACTS_COLLECTION, contactConverter), id);
 
@@ -193,7 +202,7 @@ export class ContactsService {
       // Εάν υπάρχει το multiplePhotoURLs και είναι κενό array, το στέλνουμε ρητά
       if ('multiplePhotoURLs' in updates) {
         if (Array.isArray(updates.multiplePhotoURLs) && updates.multiplePhotoURLs.length === 0) {
-          console.log('🛠️ CONTACTS SERVICE: Sending EMPTY array for multiplePhotoURLs');
+          console.log('🛠️ CONTACTS SERVICE: 🔥 CONFIRMED: Sending EMPTY array for multiplePhotoURLs to Firebase! 🔥');
           updateData.multiplePhotoURLs = [];
         } else if (updates.multiplePhotoURLs === null || updates.multiplePhotoURLs === undefined) {
           // Αν θέλουμε να διαγράψουμε το field τελείως από τη βάση
@@ -201,11 +210,19 @@ export class ContactsService {
         }
       }
 
+      console.log('🚨 CONTACTS SERVICE: About to send updateData to Firebase:', {
+        id,
+        updateDataMultiplePhotoURLs: updateData.multiplePhotoURLs,
+        updateDataPhotoURL: updateData.photoURL,
+        fullUpdateDataKeys: Object.keys(updateData)
+      });
+
       await updateDoc(docRef, updateData);
 
-      console.log('✅ CONTACTS SERVICE: Update successful', {
+      console.log('✅ CONTACTS SERVICE: 🔥 Firebase UPDATE COMPLETED! 🔥 Check the database now!', {
         id,
-        hadPhotos: updates.multiplePhotoURLs ? updates.multiplePhotoURLs.length : 0
+        sentEmptyMultiplePhotos: Array.isArray(updateData.multiplePhotoURLs) && updateData.multiplePhotoURLs.length === 0,
+        sentEmptyPhotoURL: updateData.photoURL === ''
       });
 
     } catch (error) {

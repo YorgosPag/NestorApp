@@ -18,10 +18,14 @@ import { getSafeFieldValue, getSafeArrayValue } from '../contactMapper';
  */
 export function mapIndividualContactToFormData(contact: Contact): ContactFormData {
 
+  console.log('🔍 INDIVIDUAL MAPPER: Starting mapping for contact', contact.id);
+
   const individualContact = contact as any; // Cast for individual fields access
 
   // 📸 MULTIPLE PHOTOS - ENTERPRISE SOLUTION (2025 STANDARD)
-  const multiplePhotoURLs = getSafeArrayValue(individualContact, 'multiplePhotoURLs') || [];
+  const rawUrls = getSafeArrayValue(individualContact, 'multiplePhotoURLs') || [];
+
+  console.log('🔍 INDIVIDUAL MAPPER: rawUrls from database:', rawUrls);
 
   // 🚨 CRITICAL FIX - ΜΗ ΑΛΛΑΞΕΙΣ ΑΥΤΗ ΤΗ ΛΟΓΙΚΗ! 🚨
   // BUG HISTORY: Πριν από αυτή τη διόρθωση, το filtering αφαίρεσε κενά arrays
@@ -31,13 +35,14 @@ export function mapIndividualContactToFormData(contact: Contact): ContactFormDat
   // 🔥 ΚΡΙΣΙΜΗ ΔΙΟΡΘΩΣΗ: Preserve empty arrays for proper database deletion
   let multiplePhotos: PhotoSlot[] = [];
 
-  if (multiplePhotoURLs.length === 0) {
+  if (rawUrls.length === 0) {
     // ✅ ΚΕΝΟ ARRAY: Κρατάμε κενό για proper deletion στη βάση
     multiplePhotos = [];
     console.log('🛠️ INDIVIDUAL MAPPER: Empty photos array - will delete from database');
+    console.log('🛠️ INDIVIDUAL MAPPER: Also clearing photoURL field for complete deletion');
   } else {
     // ✅ ΥΠΑΡΧΟΥΝ ΦΩΤΟΓΡΑΦΙΕΣ: Normal processing
-    multiplePhotos = multiplePhotoURLs
+    multiplePhotos = rawUrls
       // Βήμα 1: Κρατάμε ΜΟΝΟ strings
       .filter((url): url is string => typeof url === 'string')
       // Βήμα 2: Αφαιρούμε blob URLs και invalid formats (αλλά ΟΧΙ κενά strings)
@@ -104,7 +109,8 @@ export function mapIndividualContactToFormData(contact: Contact): ContactFormDat
 
     // 📷 Φωτογραφίες
     photoFile: null,
-    photoPreview: getSafeFieldValue(individualContact, 'photoURL'),
+    // 🔥 CRITICAL FIX: Clear photoURL όταν δεν υπάρχουν φωτογραφίες
+    photoPreview: multiplePhotos.length === 0 ? '' : getSafeFieldValue(individualContact, 'photoURL'),
     multiplePhotos: multiplePhotos.length > 0 ? multiplePhotos : [], // 📸 Multiple photos array
 
     // 📝 Notes

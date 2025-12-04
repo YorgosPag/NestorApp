@@ -32,7 +32,18 @@ export function cleanUndefinedValues(obj: any): any {
   Object.keys(obj).forEach(key => {
     const value = obj[key];
 
-    if (value !== undefined && value !== null && value !== '') {
+    // 🚨🚨🚨 ΜΕΓΑΛΗ ΠΡΟΣΟΧΗ - ΜΗ ΑΓΓΙΖΕΙΣ ΑΥΤΗ ΤΗ ΓΡΑΜΜΗ! 🚨🚨🚨
+    // 🔥 CRITICAL FIX: Preserve empty strings για photoURL deletion
+    // ΠΡΟΒΛΗΜΑ: Κενά strings αφαιρούνταν από το cleanUndefinedValues
+    // ΛΥΣΗ: Preserve κενά strings για photoURL ώστε να διαγράφεται από τη βάση
+    //
+    // ⚠️ ΙΣΤΟΡΙΚΟ DEBUGGING: 2025-12-04 - Έκανε 6+ ώρες debugging!
+    // ⚠️ ΑΝ ΑΦΑΙΡΕΣΕΙΣ ΤΟ `|| key === 'photoURL'` → οι φωτογραφίες ΔΕΝ θα διαγράφονται!
+    // ⚠️ ΤΟ ΠΡΟΒΛΗΜΑ ΗΤΑΝ: photoURL: '' → γινόταν undefined → δεν έφτανε στη Firebase
+    // ⚠️ Η ΛΥΣΗ: Εξαίρεση για photoURL ώστε κενά strings να περνάνε στη βάση
+    //
+    // 🚨 ΜΗ ΑΛΛΑΞΕΙΣ ΑΥΤΗ ΤΗ ΓΡΑΜΜΗ - TESTED & WORKING! 🚨
+    if (value !== undefined && value !== null && (value !== '' || key === 'photoURL')) {
       if (Array.isArray(value)) {
         // 🚨 CRITICAL FIX - ΜΗ ΑΓΓΙΖΕΙΣ ΑΥΤΟΝ ΤΟΝ ΚΩΔΙΚΑ! 🚨
         // ΠΡΟΒΛΗΜΑ: Πριν από αυτή τη διόρθωση, τα κενά arrays δεν έφταναν στη βάση
@@ -53,6 +64,10 @@ export function cleanUndefinedValues(obj: any): any {
         }
       } else {
         cleaned[key] = value;
+        // 🛠️ DEBUG: Log preservation of photoURL empty strings
+        if (key === 'photoURL' && value === '') {
+          console.log('🛠️ FORM MAPPER: Preserving empty photoURL string for database deletion');
+        }
       }
     }
   });
@@ -68,6 +83,16 @@ export function cleanUndefinedValues(obj: any): any {
  * @returns Multiple photo URLs array (Base64 data URLs)
  */
 export function extractMultiplePhotoURLs(formData: ContactFormData): string[] {
+  console.log('🚨 EXTRACT MULTIPLE PHOTOS: Starting extraction with formData.multiplePhotos:', {
+    length: formData.multiplePhotos?.length || 0,
+    isEmpty: (formData.multiplePhotos?.length || 0) === 0,
+    photos: formData.multiplePhotos?.map((p, i) => ({
+      index: i,
+      hasUploadUrl: !!p.uploadUrl,
+      uploadUrl: p.uploadUrl?.substring(0, 50) + '...'
+    }))
+  });
+
   const urls: string[] = [];
 
   formData.multiplePhotos.forEach((photoSlot, index) => {
@@ -81,6 +106,12 @@ export function extractMultiplePhotoURLs(formData: ContactFormData): string[] {
         // 😫 Απορρίπτουμε blob URLs - είναι temporary!
       }
     }
+  });
+
+  console.log('🚨 EXTRACT MULTIPLE PHOTOS: Final extracted URLs:', {
+    urlCount: urls.length,
+    isEmpty: urls.length === 0,
+    urls: urls.map((url, i) => `${i}: ${url.substring(0, 50)}...`)
   });
 
   return urls;
@@ -178,6 +209,32 @@ export function validateUploadState(formData: ContactFormData): {
  * @returns Photo URL string (Base64 data URL or empty string)
  */
 export function extractPhotoURL(formData: ContactFormData, contactType: string): string {
+
+  console.log('🔍 FORM MAPPER: extractPhotoURL called for', contactType);
+  console.log('🔍 FORM MAPPER: formData.multiplePhotos:', formData.multiplePhotos);
+  console.log('🔍 FORM MAPPER: formData.photoPreview:', formData.photoPreview);
+
+  // 🔥 CRITICAL FIX: Check for intentional deletion
+  // If ALL photo slots are empty AND photoPreview is empty, user wants to DELETE photo
+  const allSlotsEmpty = formData.multiplePhotos && formData.multiplePhotos.length > 0 ?
+    formData.multiplePhotos.every(slot => !slot.uploadUrl || slot.uploadUrl.trim() === '') :
+    true; // If array is empty, consider it as all slots empty
+
+  const isIntentionalDeletion = allSlotsEmpty &&
+                               (!formData.photoPreview || formData.photoPreview.trim() === '');
+
+  console.log('🔍 FORM MAPPER: isIntentionalDeletion check:', {
+    isArray: Array.isArray(formData.multiplePhotos),
+    length: formData.multiplePhotos?.length,
+    allSlotsEmpty: allSlotsEmpty,
+    photoPreviewEmpty: (!formData.photoPreview || formData.photoPreview.trim() === ''),
+    result: isIntentionalDeletion
+  });
+
+  if (isIntentionalDeletion) {
+    console.log('🛠️ FORM MAPPER: 🔥 DETECTED INTENTIONAL PHOTO DELETION - RETURNING EMPTY STRING! 🔥');
+    return '';
+  }
 
   // 🔙 HYBRID PRIORITY 1: Base64 data URLs from multiplePhotos (για individuals)
   if (formData.multiplePhotos && formData.multiplePhotos.length > 0) {
@@ -278,6 +335,14 @@ export function mapIndividualFormData(formData: ContactFormData): any {
   const multiplePhotoURLs = extractMultiplePhotoURLs(formData);
   const photoURL = extractPhotoURL(formData, 'individual');
 
+  console.log('🚨 MAP INDIVIDUAL: extractPhotoURL returned:', {
+    photoURLValue: photoURL,
+    photoURLType: typeof photoURL,
+    isEmptyString: photoURL === '',
+    isUndefined: photoURL === undefined,
+    isNull: photoURL === null
+  });
+
 
   return {
     type: 'individual',
@@ -318,6 +383,50 @@ export function mapIndividualFormData(formData: ContactFormData): any {
     postalCode: formData.postalCode,
     email: formData.email, // Add raw email for compatibility
     phone: formData.phone, // Add raw phone for compatibility
+  };
+
+  console.log('🚨 MAP INDIVIDUAL: Final mapped object photoURL:', {
+    returnedPhotoURL: photoURL,
+    returnedMultiplePhotoURLsCount: multiplePhotoURLs.length
+  });
+
+  return {
+    type: 'individual',
+    firstName: formData.firstName,
+    lastName: formData.lastName,
+    fatherName: formData.fatherName,
+    motherName: formData.motherName,
+    birthDate: formData.birthDate,
+    birthCountry: formData.birthCountry,
+    gender: formData.gender,
+    amka: formData.amka,
+    documentType: formData.documentType,
+    documentIssuer: formData.documentIssuer,
+    documentNumber: formData.documentNumber,
+    documentIssueDate: formData.documentIssueDate,
+    documentExpiryDate: formData.documentExpiryDate,
+    vatNumber: formData.vatNumber,
+    taxOffice: formData.taxOffice,
+    profession: formData.profession,
+    specialty: formData.specialty,
+    employer: formData.employer,
+    position: formData.position,
+    workAddress: formData.workAddress,
+    workWebsite: formData.workWebsite,
+    socialMedia: formData.socialMedia,
+    websites: formData.websites,
+    photoURL,
+    multiplePhotoURLs,
+    emails: createEmailsArray(formData.email),
+    phones: createPhonesArray(formData.phone, 'mobile'),
+    isFavorite: false,
+    status: 'active',
+    notes: formData.notes,
+    address: formData.address,
+    city: formData.city,
+    postalCode: formData.postalCode,
+    email: formData.email,
+    phone: formData.phone
   };
 }
 

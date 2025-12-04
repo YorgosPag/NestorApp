@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ContactBadge, CommonBadge } from '@/core/badges';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -28,6 +28,25 @@ interface ContactDetailsHeaderProps {
 export function ContactDetailsHeader({ contact, onEditContact, onDeleteContact }: ContactDetailsHeaderProps) {
   const photoModal = usePhotoPreviewModal();
   const type = contact.type as ContactType;
+
+  // 🔥 FORCE RE-RENDER: Key-based avatar invalidation
+  const [avatarKey, setAvatarKey] = useState(0);
+
+  // Listen για force avatar re-render events
+  useEffect(() => {
+    const handleForceRerender = (event: CustomEvent) => {
+      const { contactId } = event.detail;
+      if (contactId === contact.id) {
+        console.log('🔄 CONTACT HEADER: Force re-rendering avatar for contact', contactId);
+        setAvatarKey(prev => prev + 1); // Force re-render με νέο key
+      }
+    };
+
+    window.addEventListener('forceAvatarRerender', handleForceRerender as EventListener);
+    return () => {
+      window.removeEventListener('forceAvatarRerender', handleForceRerender as EventListener);
+    };
+  }, [contact.id]);
   const { icon: Icon, name: typeName } = TYPE_INFO[type] ?? TYPE_FALLBACK;
   const status = (contact as any).status as ContactStatus | undefined;
   const displayName = getContactDisplayName(contact);
@@ -47,7 +66,22 @@ export function ContactDetailsHeader({ contact, onEditContact, onDeleteContact }
     }
   };
 
-  const avatarImageUrl = getAvatarImageUrl();
+  const rawAvatarImageUrl = getAvatarImageUrl();
+
+  // 🔥 ULTIMATE FIX: Cache buster για browser image cache ΜΟΝΟ για Individuals
+  // ΠΡΟΒΛΗΜΑ: Browser cache κρατάει τις Firebase images για 1 χρόνο (Cache-Control: public, max-age=31536000)
+  // ΛΥΣΗ: Προσθήκη timestamp στην URL ώστε ο browser να φορτώσει fresh εικόνα
+  // TESTED: 2025-12-04 - Τελική λύση μετά από 12+ ώρες debugging με browser cache
+  // ΣΗΜΕΙΩΣΗ: Cache buster μόνο όταν ΠΡΑΓΜΑΤΙΚΑ χρειάζεται
+  const needsCacheBuster = type === 'individual' &&
+                          Array.isArray((contact as any).multiplePhotoURLs) &&
+                          (contact as any).multiplePhotoURLs.length === 0;
+
+  const avatarImageUrl = rawAvatarImageUrl
+    ? (needsCacheBuster
+        ? `${rawAvatarImageUrl}?v=${contact.updatedAt || Date.now()}`
+        : rawAvatarImageUrl)
+    : undefined;
 
   // Handler για άνοιγμα photo modal με smart gallery logic για όλους τους τύπους
   const handleAvatarClick = () => {
@@ -111,6 +145,7 @@ export function ContactDetailsHeader({ contact, onEditContact, onDeleteContact }
   return (
     <>
       <EntityDetailsHeader
+        key={`contact-header-${contact.id}-${avatarKey}`}
         icon={Icon}
         title={displayName}
         avatarImageUrl={avatarImageUrl}

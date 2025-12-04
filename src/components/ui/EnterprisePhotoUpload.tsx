@@ -190,7 +190,14 @@ export function EnterprisePhotoUpload({
   // COMPUTED VALUES
   // ========================================================================
 
-  const currentPreview = photoPreview || upload.previewUrl;
+  const rawCurrentPreview = photoPreview || upload.previewUrl;
+
+  // 🔥 CONDITIONAL CACHE BUSTER: Μόνο όταν χρειάζεται (όχι πάντα)
+  // ΠΡΟΒΛΗΜΑ: Browser cache κρατάει τις Firebase images για 1 χρόνο
+  // ΛΥΣΗ: Cache buster μόνο όταν υπάρχει λόγος (π.χ. διαγραφή φωτογραφίας)
+  // ΣΗΜΕΙΩΣΗ: Για τώρα κρατάμε το default - χρειάζεται smart logic εδώ
+  const currentPreview = rawCurrentPreview;
+
   const currentFile = photoFile || upload.currentFile;
   const hasError = upload.error || upload.validationError;
   const isLoading = externalIsLoading ?? upload.isUploading;
