@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import type { Contact } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts';
 import { BadgeFactory } from '@/core/badges/BadgeFactory';
+import { FileNamingService } from '@/services/FileNamingService';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -297,11 +298,78 @@ export function PhotoPreviewModal({
 
   // Handlers
   const handleDownload = () => {
-    // Δημιουργούμε link για download
-    const link = document.createElement('a');
-    link.href = currentPhoto;
-    link.download = `${title}.jpg`;
-    link.click();
+    try {
+      // 🏢 ENTERPRISE: Extract extension from Firebase URL
+      const url = new URL(currentPhoto);
+      const pathParts = url.pathname.split('/');
+      const fileName = pathParts[pathParts.length - 1];
+      const extension = fileName.includes('.') ? '.' + fileName.split('.').pop() : '.jpg';
+
+      // 🎯 CENTRALIZED: Generate proper filename using FileNamingService
+      let downloadFilename = `${title}${extension}`;
+
+      if (contact) {
+        try {
+          // Convert Contact to ContactFormData format for FileNamingService
+          const contactFormData = {
+            type: contact.type,
+            firstName: contact.firstName,
+            lastName: contact.lastName,
+            companyName: contact.companyName,
+            serviceName: contact.serviceName || contact.name,
+            tradeName: contact.tradeName,
+            legalName: contact.legalName
+          };
+
+          // Determine purpose based on photoType
+          let purpose: 'logo' | 'photo' | 'representative' = 'photo';
+          if (photoType === 'logo') purpose = 'logo';
+          else if (photoType === 'representative') purpose = 'representative';
+
+          // Generate professional filename using FileNamingService
+          downloadFilename = FileNamingService.generateFilenameFromBase64(
+            contactFormData,
+            purpose,
+            `image/${extension.replace('.', '')}`,
+            photoIndex
+          );
+
+        } catch (error) {
+          console.warn('FileNamingService generation failed, using fallback:', error);
+          downloadFilename = `${title}${extension}`;
+        }
+      }
+
+      // 🏢 ENTERPRISE DOWNLOAD: Use server-side proxy API
+      const downloadApiUrl = `/api/download?` + new URLSearchParams({
+        url: currentPhoto,
+        filename: downloadFilename
+      });
+
+      console.log('📁 ENTERPRISE DOWNLOAD:', {
+        originalUrl: currentPhoto,
+        filename: downloadFilename,
+        apiUrl: downloadApiUrl
+      });
+
+      // 🎯 FORCE DOWNLOAD: Direct link to API endpoint
+      const link = document.createElement('a');
+      link.href = downloadApiUrl;
+      link.download = downloadFilename;
+      link.style.display = 'none';
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+    } catch (error) {
+      console.error('Download failed:', error);
+      // Fallback: Basic download
+      const link = document.createElement('a');
+      link.href = currentPhoto;
+      link.download = `${title}.jpg`;
+      link.click();
+    }
   };
 
   const handleZoomIn = () => {

@@ -24,6 +24,12 @@ export interface PhotoUploadOptions {
   compressionUsage?: UsageContext;
   /** Maximum file size before compression is forced (default: 500KB) */
   maxSizeKB?: number;
+  /** Contact data for FileNamingService (optional) */
+  contactData?: any;
+  /** Upload purpose for FileNamingService (optional) */
+  purpose?: string;
+  /** Photo index for FileNamingService (optional) */
+  photoIndex?: number;
 }
 
 export interface PhotoUploadResult extends FileUploadResult {
@@ -185,8 +191,50 @@ export class PhotoUploadService {
     console.log('📤 Proceeding with upload (authentication optional for storage)');
 
     try {
-      // Use the exact filename provided (already custom-generated) or generate unique
-      const fileName = options.fileName || generateUniqueFileName(file.name);
+      // 🏢 ENTERPRISE: Use FileNamingService για client-side uploads
+      let fileName: string;
+
+      if (options.fileName) {
+        // Use provided custom filename
+        fileName = options.fileName;
+      } else if (options.contactData && fileToUpload.type.startsWith('image/')) {
+        // Use FileNamingService για professional naming
+        try {
+          const { FileNamingService } = await import('@/services/FileNamingService');
+
+          // Map purpose string to FileNamingService purpose type
+          let servicePurpose: 'logo' | 'photo' | 'representative' = 'photo';
+          if (options.purpose === 'logo') {
+            servicePurpose = 'logo';
+          } else if (options.purpose === 'representative' || options.purpose === 'avatar') {
+            servicePurpose = 'representative';
+          }
+
+          // Generate professional filename
+          const renamedFile = FileNamingService.generateProperFilename(
+            fileToUpload,
+            options.contactData,
+            servicePurpose,
+            options.photoIndex
+          );
+
+          fileName = renamedFile.name;
+
+          console.log('🏷️ CLIENT-SIDE: FileNamingService applied:', {
+            original: fileToUpload.name,
+            renamed: fileName,
+            purpose: servicePurpose,
+            contactType: options.contactData.type
+          });
+
+        } catch (error) {
+          console.error('❌ CLIENT-SIDE: FileNamingService failed, using fallback:', error);
+          fileName = generateUniqueFileName(fileToUpload.name);
+        }
+      } else {
+        // Fallback to unique filename generation
+        fileName = generateUniqueFileName(fileToUpload.name);
+      }
 
       // 🔧 FIX: Ensure simple path format for Firebase Storage
       const storagePath = `${options.folderPath}/${fileName}`.replace(/\/+/g, '/'); // Remove double slashes
@@ -552,13 +600,27 @@ export class PhotoUploadService {
       formData.append('file', file);
       formData.append('folderPath', options.folderPath);
 
+      // 🏢 ENTERPRISE: Send contact data for FileNamingService
+      if (options.contactData) {
+        formData.append('contactData', JSON.stringify(options.contactData));
+      }
+      if (options.purpose) {
+        formData.append('purpose', options.purpose);
+      }
+      if (options.photoIndex !== undefined) {
+        formData.append('photoIndex', options.photoIndex.toString());
+      }
+
       // Generate filename if not provided
       const fileName = options.fileName || generateUniqueFileName(file.name);
 
       console.log('📤 SERVER-FALLBACK: Sending to /api/upload/photo', {
         fileName: file.name,
         fileSize: file.size,
-        folderPath: options.folderPath
+        folderPath: options.folderPath,
+        hasContactData: !!options.contactData,
+        purpose: options.purpose,
+        photoIndex: options.photoIndex
       });
 
       // Send to server-side upload API

@@ -213,6 +213,43 @@ export function useEnterpriseFileUpload(config: UseEnterpriseFileUploadConfig): 
     startUpload();
 
     try {
+      // 🏷️ ENTERPRISE: Apply filename transformation before upload
+      let fileToUpload = file;
+
+      // Check if this file needs proper naming (from contact form)
+      if (config.contactData && config.fileType === 'image') {
+        try {
+          let purpose: 'logo' | 'photo' | 'representative' = 'photo';
+
+          if (config.purpose === 'logo') {
+            purpose = 'logo';
+          } else if (config.purpose === 'representative') {
+            purpose = 'representative';
+          } else {
+            purpose = 'photo';
+          }
+
+          // Generate proper filename using FileNamingService
+          fileToUpload = FileNamingService.generateProperFilename(
+            file,
+            config.contactData,
+            purpose,
+            config.photoIndex
+          );
+
+          console.log('🏷️ FILE RENAMED FOR UPLOAD:', {
+            original: file.name,
+            renamed: fileToUpload.name,
+            purpose: purpose,
+            contactType: config.contactData.type
+          });
+
+        } catch (error) {
+          console.error('Filename generation failed during upload:', error);
+          // Fallback to original file if generation fails
+        }
+      }
+
       // Progress callback που συνδέει με το state management
       const onProgress = (progress: FileUploadProgress) => {
         setUploadProgress(progress);
@@ -222,7 +259,7 @@ export function useEnterpriseFileUpload(config: UseEnterpriseFileUploadConfig): 
 
       // Use provided upload handler or create default
       if (uploadHandler) {
-        result = await uploadHandler(file, onProgress);
+        result = await uploadHandler(fileToUpload, onProgress);  // ✅ Use renamed file
       } else {
         // Default upload simulation για demonstration
         onProgress({ progress: 25, phase: 'upload' });
@@ -232,10 +269,10 @@ export function useEnterpriseFileUpload(config: UseEnterpriseFileUploadConfig): 
         await new Promise(resolve => setTimeout(resolve, 500));
 
         result = {
-          url: URL.createObjectURL(file),
-          fileName: file.name,
-          fileSize: file.size,
-          mimeType: file.type
+          url: URL.createObjectURL(fileToUpload),
+          fileName: fileToUpload.name,  // ✅ Use renamed file
+          fileSize: fileToUpload.size,
+          mimeType: fileToUpload.type
         };
       }
 

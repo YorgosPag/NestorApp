@@ -87,6 +87,7 @@ function IndividualPhotoManager({
           compact={true}
           showProgress={true}
           purpose="photo"
+          contactData={formData} // 🏢 ENTERPRISE: Pass contact data for FileNamingService
           className="w-full"
         />
 

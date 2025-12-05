@@ -69,6 +69,8 @@ function createFormTabsFromConfig(
             maxPhotos={1} // For logos, we use 1 slot
             onPhotosChange={onPhotosChange}
             disabled={disabled}
+            purpose="logo" // For companies/services
+            contactData={formData} // 🏢 ENTERPRISE: Pass contact data for FileNamingService
             className="w-[400px] h-[300px] mx-auto"
           />
           <FormGrid>

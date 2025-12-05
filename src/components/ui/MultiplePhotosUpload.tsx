@@ -40,6 +40,8 @@ export interface MultiplePhotosUploadProps {
   compact?: boolean;
   /** Purpose for validation and compression */
   purpose?: 'photo' | 'logo';
+  /** Contact data for FileNamingService (optional) */
+  contactData?: any;
 }
 
 // ============================================================================
@@ -70,7 +72,8 @@ export function MultiplePhotosUpload({
   className = '',
   showProgress = true,
   compact = false,
-  purpose = 'photo'
+  purpose = 'photo',
+  contactData
 }: MultiplePhotosUploadProps) {
   // ========================================================================
   // STATE
@@ -386,11 +389,18 @@ export function MultiplePhotosUpload({
       // 🔥 ENTERPRISE: Use existing PhotoUploadService για Firebase Storage
       const { PhotoUploadService } = await import('@/services/photo-upload.service');
 
-      const result = await PhotoUploadService.uploadContactPhoto(
+      // 🏢 ENTERPRISE: Use uploadPhoto with contact data για FileNamingService
+      const result = await PhotoUploadService.uploadPhoto(
         file,
-        undefined, // contactId - will be set by filename generation
-        onProgress,
-        purpose === 'logo' ? 'company-logo' : 'profile-modal'
+        {
+          folderPath: 'contacts/photos',
+          onProgress,
+          enableCompression: true,
+          compressionUsage: purpose === 'logo' ? 'company-logo' : 'profile-modal',
+          contactData: contactData, // Pass contact data για FileNamingService
+          purpose: purpose,
+          photoIndex: undefined // Will be handled by server-side
+        }
       );
 
       console.log('✅ FIREBASE STORAGE: Upload completed successfully:', {
@@ -414,7 +424,7 @@ export function MultiplePhotosUpload({
       console.error('❌📸 FIREBASE STORAGE: Upload failed:', error);
       throw error;
     }
-  }, [purpose]);
+  }, [purpose, contactData]);
 
   // ========================================================================
   // COMPUTED VALUES

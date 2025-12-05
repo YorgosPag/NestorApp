@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStorage } from 'firebase-admin/storage';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { FileNamingService } from '@/services/FileNamingService';
 
 export async function POST(request: NextRequest) {
   try {
@@ -39,6 +40,11 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File;
     const folderPath = formData.get('folderPath') as string || 'contacts/photos';
 
+    // 🏢 ENTERPRISE: Get contact data for proper filename generation
+    const contactDataJson = formData.get('contactData') as string;
+    const purpose = formData.get('purpose') as string || 'photo';
+    const photoIndex = formData.get('photoIndex') as string;
+
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
@@ -46,18 +52,68 @@ export async function POST(request: NextRequest) {
     console.log('📁 SERVER: File received:', {
       name: file.name,
       size: file.size,
-      type: file.type
+      type: file.type,
+      hasContactData: !!contactDataJson,
+      purpose,
+      photoIndex
     });
 
     // Convert File to Buffer
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Generate unique filename
-    const timestamp = Date.now();
-    const randomString = Math.random().toString(36).substring(2, 15);
-    const extension = file.name.split('.').pop();
-    const fileName = `${timestamp}_${randomString}.${extension}`;
+    // 🏢 ENTERPRISE FILENAME GENERATION: Use FileNamingService for professional names
+    let fileName: string;
+
+    if (contactDataJson) {
+      try {
+        const contactData = JSON.parse(contactDataJson);
+
+        // Map purpose string to FileNamingService purpose type
+        let servicePurpose: 'logo' | 'photo' | 'representative' = 'photo';
+        if (purpose === 'logo') {
+          servicePurpose = 'logo';
+        } else if (purpose === 'representative' || purpose === 'avatar') {
+          servicePurpose = 'representative';
+        } else {
+          servicePurpose = 'photo';
+        }
+
+        // Generate professional filename using FileNamingService
+        const renamedFile = FileNamingService.generateProperFilename(
+          file,
+          contactData,
+          servicePurpose,
+          photoIndex ? parseInt(photoIndex) : undefined
+        );
+
+        fileName = renamedFile.name;
+
+        console.log('🏷️ SERVER: FileNamingService applied:', {
+          original: file.name,
+          renamed: fileName,
+          purpose: servicePurpose,
+          contactType: contactData.type
+        });
+
+      } catch (error) {
+        console.error('❌ SERVER: FileNamingService failed, using fallback:', error);
+
+        // Fallback to timestamp naming if FileNamingService fails
+        const timestamp = Date.now();
+        const randomString = Math.random().toString(36).substring(2, 15);
+        const extension = file.name.split('.').pop();
+        fileName = `${timestamp}_${randomString}.${extension}`;
+      }
+    } else {
+      // No contact data - use fallback timestamp naming
+      const timestamp = Date.now();
+      const randomString = Math.random().toString(36).substring(2, 15);
+      const extension = file.name.split('.').pop();
+      fileName = `${timestamp}_${randomString}.${extension}`;
+
+      console.log('⚠️ SERVER: No contact data provided, using fallback naming');
+    }
 
     const storagePath = `${folderPath}/${fileName}`;
     console.log('📍 SERVER: Upload path:', storagePath);

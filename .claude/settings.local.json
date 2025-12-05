@@ -101,7 +101,8 @@
       "Bash(echo:*)",
       "Bash(del clear-photos.js)",
       "Bash(del test-firebase-upload.js)",
-      "Bash(del clear-test-files.js)"
+      "Bash(del clear-test-files.js)",
+      "Bash(del \"C:\\Nestor_Pagonis\\src\\utils\\contact-filename-generator.ts\")"
     ],
     "deny": [],
     "ask": []

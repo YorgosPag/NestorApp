@@ -11,7 +11,6 @@ import { UnifiedPhotoManager } from '@/components/ui/UnifiedPhotoManager';
 import type { IndividualSectionConfig } from '@/config/individual-config';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
-import { generateContactFileWithCustomName, logFilenameGeneration } from '@/utils/contact-filename-generator';
 
 // ============================================================================
 // INTERFACES
@@ -79,6 +78,7 @@ function createIndividualFormTabsFromConfig(
           compact={false}
           showProgress={true}
           purpose="photo"
+          contactData={formData} // 🏢 ENTERPRISE: Pass contact data for FileNamingService
           className="mt-4"
         />
 

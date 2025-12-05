@@ -157,6 +157,8 @@ function renderPhotosSection(
       maxPhotos={maxPhotos}
       onPhotosChange={onPhotosChange}
       disabled={disabled}
+      purpose="logo" // For services
+      contactData={formData} // 🏢 ENTERPRISE: Pass contact data for FileNamingService
       className="w-[400px] h-[300px] mx-auto"
     />
   );
