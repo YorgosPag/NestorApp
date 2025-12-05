@@ -111,7 +111,8 @@
       "Bash(PORT=3009 npm run dev)",
       "Bash(PORT=3010 npm run dev)",
       "Bash(del \"C:\\Nestor_Pagonis\\src\\components\\projects\\photos\\PhotoItem.tsx\")",
-      "Bash(del \"C:\\Nestor_Pagonis\\src\\components\\projects\\photos\\types.ts\")"
+      "Bash(del \"C:\\Nestor_Pagonis\\src\\components\\projects\\photos\\types.ts\")",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []
