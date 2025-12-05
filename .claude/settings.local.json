@@ -113,7 +113,8 @@
       "Bash(del \"C:\\Nestor_Pagonis\\src\\components\\projects\\photos\\PhotoItem.tsx\")",
       "Bash(del \"C:\\Nestor_Pagonis\\src\\components\\projects\\photos\\types.ts\")",
       "Bash(git push:*)",
-      "Bash(tar:*)"
+      "Bash(tar:*)",
+      "Bash(del \"C:\\Nestor_Pagonis\\src\\hooks\\usePhotoSlotHandlers.ts\")"
     ],
     "deny": [],
     "ask": []

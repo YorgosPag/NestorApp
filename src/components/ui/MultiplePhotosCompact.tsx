@@ -34,14 +34,10 @@ export interface MultiplePhotosCompactProps {
   purpose?: string;
   /** Upload handler */
   uploadHandler?: (file: File, onProgress: (progress: FileUploadProgress) => void) => Promise<FileUploadResult>;
-  /** File selection handler */
-  handleFileSelection: (slotIndex: number, file: File | null) => Promise<void>;
   /** Upload complete handler */
-  handleUploadComplete: (slotIndex: number, result: FileUploadResult) => void;
-  /** Create upload handler with index */
-  createUploadHandlerWithIndex: (photoIndex: number) => (file: File, onProgress: (progress: FileUploadProgress) => void) => Promise<FileUploadResult>;
-  /** Multiple drop handler */
-  handleMultipleDrop: (e: React.DragEvent) => void;
+  handleUploadComplete?: (slotIndex: number, result: FileUploadResult) => void;
+  /** Photos change callback to update parent state */
+  onPhotosChange?: (photos: any[]) => void;
   /** Disabled state */
   disabled?: boolean;
   /** Show progress indicators */
@@ -54,6 +50,8 @@ export interface MultiplePhotosCompactProps {
   selectedProfilePhotoIndex?: number;
   /** Profile photo selection callback */
   onProfilePhotoSelection?: (index: number) => void;
+  /** 🔥 RESTORED: Contact data for FileNamingService */
+  contactData?: any;
 }
 
 // ============================================================================
@@ -95,16 +93,15 @@ export function MultiplePhotosCompact({
   addCacheBuster,
   purpose,
   uploadHandler,
-  handleFileSelection,
   handleUploadComplete,
-  createUploadHandlerWithIndex,
-  handleMultipleDrop,
+  onPhotosChange,
   disabled,
   showProgress,
   className = '',
   showProfileSelector = false,
   selectedProfilePhotoIndex,
-  onProfilePhotoSelection
+  onProfilePhotoSelection,
+  contactData
 }: MultiplePhotosCompactProps) {
 
   // ========================================================================
@@ -124,6 +121,48 @@ export function MultiplePhotosCompact({
       return 'Λογότυπο';
     }
     return `Φωτογραφίες (${usedSlots}/${maxPhotos})`;
+  };
+
+  // 🎯 Multiple drop handler για bulk upload
+  const handleMultipleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (disabled) return;
+
+    const files = Array.from(e.dataTransfer.files).filter(file =>
+      file.type.startsWith('image/')
+    );
+
+    if (files.length === 0) return;
+
+    // Βρίσκουμε empty slots για τα νέα αρχεία
+    const newPhotos = [...normalizedPhotos];
+    let slotIndex = 0;
+
+    for (const file of files) {
+      // Βρίσκουμε το επόμενο κενό slot
+      while (slotIndex < maxPhotos && (newPhotos[slotIndex].file || newPhotos[slotIndex].uploadUrl)) {
+        slotIndex++;
+      }
+
+      // Αν έχουμε φτάσει το όριο, σταματάμε
+      if (slotIndex >= maxPhotos) break;
+
+      // Προσθέτουμε το αρχείο στο slot
+      newPhotos[slotIndex] = {
+        ...newPhotos[slotIndex],
+        file,
+        preview: URL.createObjectURL(file),
+        isUploading: false,
+        uploadProgress: 0
+      };
+
+      slotIndex++;
+    }
+
+    // Ενημερώνουμε το parent component
+    onPhotosChange?.(newPhotos);
   };
 
   // ========================================================================
@@ -157,14 +196,24 @@ export function MultiplePhotosCompact({
                 maxSize={5 * 1024 * 1024} // 5MB
                 photoFile={photo.file}
                 photoPreview={photoPreviewWithCacheBuster}
-                onFileChange={(file) => handleFileSelection(index, file)}
-                uploadHandler={uploadHandler || createUploadHandlerWithIndex(index)}
-                onUploadComplete={(result) => handleUploadComplete(index, result)}
+                onFileChange={(file) => {
+                  // Handle file change for multiple photos context
+                  const newPhotos = [...normalizedPhotos];
+                  newPhotos[index] = { ...newPhotos[index], file };
+                  onPhotosChange?.(newPhotos);
+                }}
+                uploadHandler={uploadHandler}
+                onUploadComplete={(result) => {
+                  if (handleUploadComplete) handleUploadComplete(index, result);
+                }}
                 disabled={disabled}
                 compact={true}
                 showProgress={showProgress}
                 isLoading={photo.isUploading}
                 className={slotSize}
+                contactData={contactData}
+                photoIndex={index}
+// Enterprise standard - let EnterprisePhotoUpload handle uploads naturally
               />
             </div>
           );

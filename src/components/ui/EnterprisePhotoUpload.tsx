@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Camera, Loader2, AlertCircle } from 'lucide-react';
 import { useEnterpriseFileUpload } from '@/hooks/useEnterpriseFileUpload';
 import type { UseEnterpriseFileUploadConfig, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
@@ -34,6 +34,12 @@ export interface EnterprisePhotoUploadProps extends Omit<UseEnterpriseFileUpload
   compact?: boolean;
   /** External loading state (για sync με parent state) */
   isLoading?: boolean;
+  /** 🔥 RESTORED: Contact data for FileNamingService */
+  contactData?: any;
+  /** 🔥 RESTORED: Photo index for FileNamingService */
+  photoIndex?: number;
+  /** 🔥 RESTORED: Custom filename override */
+  customFileName?: string;
 }
 
 // ============================================================================
@@ -69,7 +75,8 @@ export function EnterprisePhotoUpload({
   compact = false,
   isLoading: externalIsLoading,
   contactData,
-  photoIndex
+  photoIndex,
+  customFileName
 }: EnterprisePhotoUploadProps) {
   // ========================================================================
   // HOOKS & STATE
@@ -82,8 +89,20 @@ export function EnterprisePhotoUpload({
     acceptedTypes,
     showToasts,
     contactData,
-    photoIndex
+    photoIndex,
+    customFileName
   });
+
+  // 🔥 DEBUG: Log photoFile value to identify undefined issues
+  useEffect(() => {
+    console.log('🎯 ENTERPRISE: PhotoFile value changed:', {
+      hasPhotoFile: !!photoFile,
+      isFileInstance: photoFile instanceof File,
+      fileName: photoFile?.name,
+      fileSize: photoFile?.size,
+      fileType: photoFile?.type
+    });
+  }, [photoFile]);
 
   // 🔥 EXTRACTED: Photo upload logic (70+ lines extracted)
   const uploadLogic = usePhotoUploadLogic({
@@ -91,7 +110,10 @@ export function EnterprisePhotoUpload({
     upload,
     onUploadComplete,
     uploadHandler,
-    purpose
+    purpose,
+    contactData,
+    photoIndex,
+    customFileName
   });
 
   // ========================================================================

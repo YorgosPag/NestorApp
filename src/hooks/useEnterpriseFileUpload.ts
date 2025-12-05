@@ -40,6 +40,8 @@ export interface UseEnterpriseFileUploadConfig {
   contactData?: ContactFormData;
   /** Photo index for multiple photos (optional) */
   photoIndex?: number;
+  /** Custom filename override (optional) */
+  customFileName?: string;
 }
 
 export interface UseEnterpriseFileUploadActions {

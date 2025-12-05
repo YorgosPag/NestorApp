@@ -8,7 +8,7 @@ import { EnterprisePhotoUpload } from './EnterprisePhotoUpload';
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 import { PHOTO_STYLES, PHOTO_SIZES, PHOTO_TEXT_COLORS, PHOTO_COLORS } from '@/components/generic/config/photo-dimensions';
 import { useCacheBusting } from '@/hooks/useCacheBusting';
-import { usePhotoSlotHandlers } from '@/hooks/usePhotoSlotHandlers';
+// Removed usePhotoSlotHandlers - using enterprise standard EnterprisePhotoUpload
 import { MultiplePhotosCompact } from './MultiplePhotosCompact';
 import { MultiplePhotosFull } from './MultiplePhotosFull';
 
@@ -110,23 +110,7 @@ export function MultiplePhotosUpload({
     return photos.filter(Boolean).concat(Array(Math.max(0, maxPhotos - photos.filter(Boolean).length)).fill(emptySlot));
   }, [photos, maxPhotos]);
 
-  // 🔥 PHOTO SLOT HANDLERS: Extracted to dedicated hook
-  const {
-    handleUploadProgress,
-    handleUploadComplete,
-    handleFileSelection,
-    handleMultipleDrop,
-    createUploadHandlerWithIndex
-  } = usePhotoSlotHandlers({
-    normalizedPhotos,
-    maxPhotos,
-    uploadHandler,
-    contactData,
-    purpose,
-    onPhotosChange,
-    onPhotoUploadComplete,
-    disabled
-  });
+  // Using enterprise standard EnterprisePhotoUpload - no additional handlers needed
 
 
   // ========================================================================
@@ -143,16 +127,15 @@ export function MultiplePhotosUpload({
         addCacheBuster={addCacheBuster}
         purpose={purpose}
         uploadHandler={uploadHandler}
-        handleFileSelection={handleFileSelection}
-        handleUploadComplete={handleUploadComplete}
-        createUploadHandlerWithIndex={createUploadHandlerWithIndex}
-        handleMultipleDrop={handleMultipleDrop}
+        handleUploadComplete={onPhotoUploadComplete}
+        onPhotosChange={onPhotosChange}
         disabled={disabled}
         showProgress={showProgress}
         className={className}
         showProfileSelector={showProfileSelector}
         selectedProfilePhotoIndex={selectedProfilePhotoIndex}
         onProfilePhotoSelection={onProfilePhotoSelection}
+        contactData={contactData}
       />
     );
   }
@@ -166,13 +149,12 @@ export function MultiplePhotosUpload({
       addCacheBuster={addCacheBuster}
       purpose={purpose}
       uploadHandler={uploadHandler}
-      handleFileSelection={handleFileSelection}
-      handleUploadComplete={handleUploadComplete}
-      createUploadHandlerWithIndex={createUploadHandlerWithIndex}
-      handleMultipleDrop={handleMultipleDrop}
+      handleUploadComplete={onPhotoUploadComplete}
+      onPhotosChange={onPhotosChange}
       disabled={disabled}
       showProgress={showProgress}
       className={className}
+      contactData={contactData}
     />
   );
 }

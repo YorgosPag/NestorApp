@@ -6,6 +6,7 @@ import { onAuthStateChanged, signInAnonymously } from 'firebase/auth';
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useFileUploadState';
 import { smartCompressContactPhoto, ImageParser } from '@/subapps/geo-canvas/floor-plan-system/parsers/raster/ImageParser';
 import compressionConfig, { type UsageContext } from '@/config/photo-compression-config';
+import { validateImageFile, type FileValidationResult } from '@/utils/file-validation';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -65,30 +66,6 @@ function generateUniqueFileName(originalName: string, prefix?: string): string {
     : `${baseName}_${timestamp}_${random}${extension}`;
 }
 
-/**
- * Validates image file for upload
- */
-function validateImageFile(file: File): { isValid: boolean; error?: string } {
-  // Check file type
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-  if (!allowedTypes.includes(file.type)) {
-    return {
-      isValid: false,
-      error: 'Μόνο αρχεία εικόνας επιτρέπονται (JPG, PNG, GIF, WebP)'
-    };
-  }
-
-  // Check file size (5MB limit)
-  const maxSize = 5 * 1024 * 1024; // 5MB
-  if (file.size > maxSize) {
-    return {
-      isValid: false,
-      error: 'Το αρχείο πρέπει να είναι μικρότερο από 5MB'
-    };
-  }
-
-  return { isValid: true };
-}
 
 // ============================================================================
 // MAIN SERVICE
@@ -111,7 +88,7 @@ export class PhotoUploadService {
       compressionEnabled: options.enableCompression !== false
     });
 
-    // Validate file
+    // Validate file using enterprise validation
     const validation = validateImageFile(file);
     if (!validation.isValid) {
       console.error('❌ File validation failed:', validation.error);

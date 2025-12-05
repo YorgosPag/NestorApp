@@ -21,6 +21,12 @@ export interface UsePhotoUploadLogicProps {
   uploadHandler?: (file: File, onProgress: (progress: FileUploadProgress) => void) => Promise<FileUploadResult>;
   /** Purpose για logging */
   purpose?: string;
+  /** 🔥 RESTORED: Contact data για FileNamingService */
+  contactData?: any;
+  /** 🔥 RESTORED: Photo index για multiple photos */
+  photoIndex?: number;
+  /** 🔥 RESTORED: Custom filename override */
+  customFileName?: string;
 }
 
 export interface PhotoUploadHandlers {
@@ -59,7 +65,10 @@ export function usePhotoUploadLogic({
   upload,
   onUploadComplete,
   uploadHandler,
-  purpose = 'photo'
+  purpose = 'photo',
+  contactData,
+  photoIndex,
+  customFileName
 }: UsePhotoUploadLogicProps): PhotoUploadHandlers {
 
   // ========================================================================
@@ -76,9 +85,13 @@ export function usePhotoUploadLogic({
       enableCompression: true,
       compressionUsage: 'profile-modal',
       onProgress,
-      purpose: 'representative'
+      purpose: purpose || 'representative',
+      // 🔥 RESTORED: Pass FileNamingService options
+      contactData,
+      photoIndex,
+      fileName: customFileName
     });
-  }, []);
+  }, [purpose, contactData, photoIndex, customFileName]);
 
   // ========================================================================
   // FILE SELECTION LOGIC
@@ -165,9 +178,21 @@ export function usePhotoUploadLogic({
       purpose
     });
 
-    if (!photoFile || upload.isUploading || upload.success) {
+    // 🔥 CRITICAL: Enhanced validation to prevent undefined uploads
+    const isValidFile = photoFile && photoFile instanceof File && photoFile.name && photoFile.size > 0;
+
+    if (!isValidFile || upload.isUploading || upload.success) {
       console.log('🛑 LOGIC: Skipping upload:', {
-        reason: !photoFile ? 'No file' : upload.isUploading ? 'Already uploading' : 'Already successful'
+        reason: !photoFile ? 'No file'
+              : !(photoFile instanceof File) ? 'Not a File object'
+              : !photoFile.name ? 'File has no name'
+              : photoFile.size <= 0 ? 'File is empty'
+              : upload.isUploading ? 'Already uploading'
+              : 'Already successful',
+        hasPhotoFile: !!photoFile,
+        isFileInstance: photoFile instanceof File,
+        fileName: photoFile?.name,
+        fileSize: photoFile?.size
       });
       return;
     }
@@ -218,7 +243,16 @@ export function usePhotoUploadLogic({
           });
         }
       } catch (err) {
-        console.error('⚠️ LOGIC: Auto-upload failed:', err, { purpose, fileName: photoFile.name });
+        console.error('⚠️ LOGIC: Auto-upload failed:', err, { purpose, fileName: photoFile?.name });
+
+        // 🔥 CRITICAL: Call onUploadComplete even on failure to prevent hanging
+        if (onUploadComplete) {
+          console.log('🔧 LOGIC: Calling onUploadComplete with error result');
+          onUploadComplete({
+            success: false,
+            error: err instanceof Error ? err.message : 'Upload failed'
+          });
+        }
       }
     };
 
