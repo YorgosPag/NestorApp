@@ -3,6 +3,7 @@
 import React from 'react';
 import { Camera, Building2, User } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { PHOTO_SIZES, PHOTO_STYLES, PHOTO_TEXT_COLORS } from '../config/photo-dimensions';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -62,7 +63,7 @@ export function PhotoPreviewCard({
   altText,
   emptyText,
   onPhotoClick,
-  height = 'h-[220px]',
+  height = PHOTO_SIZES.COMPACT_PREVIEW,
   className = '',
   showHeader = true
 }: PhotoPreviewCardProps) {
@@ -127,20 +128,20 @@ export function PhotoPreviewCard({
         {hasPhoto ? (
           /* 🖼️ PHOTO STATE: Unified photo display */
           <div
-            className={`w-full ${height} rounded overflow-hidden bg-gray-200 shadow-sm cursor-pointer hover:shadow-lg transition-shadow duration-200 ${!showHeader ? 'h-full' : ''}`}
+            className={`${height} ${PHOTO_STYLES.PHOTO_CONTAINER} ${!showHeader ? 'h-full' : ''}`}
             onClick={handleClick}
             title="Κλικ για προεπισκόπηση"
           >
             <img
               src={photoUrl}
               alt={altText}
-              className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
+              className={PHOTO_STYLES.PHOTO_IMAGE}
             />
           </div>
         ) : (
           /* 🚫 EMPTY STATE: Unified empty display - ΑΚΡΙΒΩΣ όπως στο modal */
-          <div className={`w-full ${height} rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 text-center cursor-pointer transition-colors hover:border-gray-400 ${!showHeader ? 'h-full' : ''}`}>
-            <div className="text-gray-400">
+          <div className={`${height} ${PHOTO_STYLES.EMPTY_STATE} ${!showHeader ? 'h-full' : ''}`}>
+            <div className={PHOTO_TEXT_COLORS.MUTED}>
               <EmptyIcon className="w-12 h-12 mx-auto mb-2" />
               <p className="text-sm">{emptyText}</p>
             </div>

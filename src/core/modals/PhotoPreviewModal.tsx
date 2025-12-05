@@ -9,6 +9,7 @@ import type { Contact } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts';
 import { BadgeFactory } from '@/core/badges/BadgeFactory';
 import { FileNamingService } from '@/services/FileNamingService';
+import { PHOTO_STYLES } from '@/components/generic/config/photo-dimensions';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -516,7 +517,7 @@ export function PhotoPreviewModal({
         </DialogHeader>
 
         {/* Photo Content */}
-        <div className="flex-1 flex items-center justify-center overflow-hidden bg-gray-50 rounded-lg">
+        <div className={`flex-1 flex items-center justify-center overflow-hidden ${PHOTO_STYLES.EMPTY_STATE_BACKGROUND} rounded-lg`}>
           <div className="relative max-w-full max-h-full">
             <img
               src={currentPhoto}

@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Camera, Upload, X, CheckCircle, Loader2, AlertCircle, Plus, Image } from 'lucide-react';
 import { EnterprisePhotoUpload } from './EnterprisePhotoUpload';
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
+import { PHOTO_STYLES, PHOTO_SIZES, PHOTO_TEXT_COLORS } from '@/components/generic/config/photo-dimensions';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -496,7 +497,7 @@ export function MultiplePhotosUpload({
                 ? `${rawPreview}?v=${photosKey}`
                 : rawPreview;
 
-            const slotSize = maxPhotos === 1 ? "h-64 w-64" : "h-[300px] w-full"; // Square for logo, full width for photos
+            const slotSize = maxPhotos === 1 ? "h-64 w-64" : PHOTO_SIZES.STANDARD_PREVIEW; // Square for logo, full width for photos
 
             return (
               <div key={`photo-${index}-${photosKey}-${photo.file?.name || photo.uploadUrl || 'empty'}`} className={slotSize}>
@@ -523,7 +524,7 @@ export function MultiplePhotosUpload({
         {/* Multiple Drop Zone - Hidden for logo mode (maxPhotos=1) */}
         {availableSlots > 0 && maxPhotos > 1 && (
           <div
-            className="border-2 border-dashed border-gray-300 rounded-lg p-3 text-center cursor-pointer transition-colors hover:border-gray-400 bg-gray-50"
+            className={`${PHOTO_STYLES.EMPTY_STATE} p-3`}
             onDrop={handleMultipleDrop}
             onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
             onClick={() => {
@@ -546,8 +547,8 @@ export function MultiplePhotosUpload({
               input.click();
             }}
           >
-            <Plus className="w-4 h-4 mx-auto mb-1 text-gray-400" />
-            <p className="text-xs text-gray-500">
+            <Plus className={`w-4 h-4 mx-auto mb-1 ${PHOTO_TEXT_COLORS.MUTED}`} />
+            <p className={`text-xs ${PHOTO_TEXT_COLORS.LIGHT_MUTED}`}>
               Προσθήκη {availableSlots} ακόμη
             </p>
           </div>
@@ -567,7 +568,7 @@ export function MultiplePhotosUpload({
             {getHeaderText()}
           </h4>
           {availableSlots > 0 && maxPhotos > 1 && (
-            <span className="text-xs text-gray-500">
+            <span className={`text-xs ${PHOTO_TEXT_COLORS.LIGHT_MUTED}`}>
 {getSubText()}
             </span>
           )}
@@ -580,7 +581,7 @@ export function MultiplePhotosUpload({
           // Photo state available in component props
 
           return (
-            <div key={index} className="h-[300px] w-full">
+            <div key={index} className={PHOTO_SIZES.STANDARD_PREVIEW}>
               <EnterprisePhotoUpload
                 purpose={purpose}
                 maxSize={5 * 1024 * 1024} // 5MB
@@ -594,7 +595,7 @@ export function MultiplePhotosUpload({
                 compact={true}
                 showProgress={showProgress}
                 isLoading={photo.isUploading}
-                className="h-[300px] w-full"
+                className={PHOTO_SIZES.STANDARD_PREVIEW}
               />
             </div>
           );
@@ -604,7 +605,7 @@ export function MultiplePhotosUpload({
       {/* Multiple Upload Zone - Hidden for logo mode (maxPhotos=1) */}
       {availableSlots > 0 && maxPhotos > 1 && (
         <div
-          className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer transition-colors hover:border-gray-400"
+          className={`${PHOTO_STYLES.EMPTY_STATE} p-6`}
           onDrop={handleMultipleDrop}
           onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
           onClick={() => {
@@ -627,11 +628,11 @@ export function MultiplePhotosUpload({
             input.click();
           }}
         >
-          <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-          <p className="text-sm font-medium text-gray-600 mb-1">
+          <Upload className={`w-8 h-8 ${PHOTO_TEXT_COLORS.MUTED} mx-auto mb-2`} />
+          <p className={`text-sm font-medium ${PHOTO_TEXT_COLORS.MEDIUM} mb-1`}>
 {getDragDropText()}
           </p>
-          <p className="text-xs text-gray-500">
+          <p className={`text-xs ${PHOTO_TEXT_COLORS.LIGHT_MUTED}`}>
 {getSubText()}
           </p>
         </div>

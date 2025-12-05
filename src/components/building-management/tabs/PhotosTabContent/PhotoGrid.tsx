@@ -3,6 +3,7 @@
 import React from 'react';
 import { PhotoItem, type Photo } from '@/components/generic/utils/PhotoItem';
 import { Image as ImageIcon } from 'lucide-react';
+import { PHOTO_STYLES, PHOTO_TEXT_COLORS } from '@/components/generic/config/photo-dimensions';
 
 interface PhotoGridProps {
   photos: Photo[];
@@ -16,10 +17,10 @@ export function PhotoGrid({ photos }: PhotoGridProps) {
         <PhotoItem key={photo.id} photo={photo} />
       ))}
       {Array.from({ length: placeholderCount }).map((_, index) => (
-         <div key={`placeholder-${index}`} className="aspect-square bg-muted rounded-lg flex items-center justify-center border-2 border-dashed border-border hover:border-primary transition-colors cursor-pointer group">
+         <div key={`placeholder-${index}`} className={`aspect-square ${PHOTO_STYLES.EMPTY_STATE} group`}>
             <div className="text-center">
-              <ImageIcon className="w-8 h-8 text-muted-foreground group-hover:text-primary mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">Προσθήκη Φωτογραφίας</p>
+              <ImageIcon className={`w-8 h-8 ${PHOTO_STYLES.ICON_HOVER} mx-auto mb-2`} />
+              <p className={`text-sm ${PHOTO_TEXT_COLORS.FOREGROUND_MUTED}`}>Προσθήκη Φωτογραφίας</p>
             </div>
           </div>
       ))}

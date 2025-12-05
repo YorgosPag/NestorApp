@@ -3,6 +3,7 @@
 import React from 'react';
 import { Camera } from 'lucide-react';
 import { CompanyLogoCard, RepresentativePhotoCard, IndividualPhotoCard, ServiceLogoCard } from './PhotoPreviewCard';
+import { PHOTO_LAYOUTS, PHOTO_SIZES, PHOTO_TEXT_COLORS } from '../config/photo-dimensions';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -83,7 +84,7 @@ export function PhotosPreview({
     if (!hasLogo && !hasPhoto) {
       return (
         <div className={`text-center text-muted-foreground p-8 ${className}`}>
-          <Camera className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+          <Camera className={`w-16 h-16 mx-auto mb-4 ${PHOTO_TEXT_COLORS.MUTED}`} />
           <p>Δεν υπάρχουν αποθηκευμένες φωτογραφίες</p>
         </div>
       );
@@ -100,22 +101,22 @@ export function PhotosPreview({
           </h4>
         </div>
 
-        {/* Company Grid - 2x1 Layout με compact style όπως στο modal */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-2">
-          <div className="h-[300px] w-full">
+        {/* Company Grid - 2x1 Layout με centralized dimensions */}
+        <div className={PHOTO_LAYOUTS.COMPANY_GRID.container}>
+          <div className={PHOTO_LAYOUTS.COMPANY_GRID.itemWrapper}>
             <CompanyLogoCard
               photoUrl={logoUrl}
               title="Λογότυπο Εταιρείας"
-              height="h-[300px]" // ΑΚΡΙΒΕΣ ΔΙΑΣΤΑΣΕΙΣ όπως στο modal
+              height={PHOTO_SIZES.STANDARD_PREVIEW}
               onPhotoClick={hasLogo ? () => handlePhotoClick(logoUrl!, 0) : undefined}
             />
           </div>
 
-          <div className="h-[300px] w-full">
+          <div className={PHOTO_LAYOUTS.COMPANY_GRID.itemWrapper}>
             <RepresentativePhotoCard
               photoUrl={photoUrl}
               title="Φωτογραφία Εκπροσώπου"
-              height="h-[300px]" // ΑΚΡΙΒΕΣ ΔΙΑΣΤΑΣΕΙΣ όπως στο modal
+              height={PHOTO_SIZES.STANDARD_PREVIEW}
               onPhotoClick={hasPhoto ? () => handlePhotoClick(photoUrl!, 1) : undefined}
             />
           </div>
@@ -169,16 +170,16 @@ export function PhotosPreview({
           </h4>
         </div>
 
-        {/* Photo Grid - ΑΚΡΙΒΩΣ 3x2 Layout όπως στο modal */}
-        <div className="grid grid-cols-3 gap-8 p-6">
+        {/* Photo Grid - 3x2 Layout με centralized dimensions */}
+        <div className={PHOTO_LAYOUTS.INDIVIDUAL_GRID.container}>
           {allPhotos.map((photo, index) => (
-            <div key={index} className="h-[300px] w-full">
+            <div key={index} className={PHOTO_LAYOUTS.INDIVIDUAL_GRID.itemWrapper}>
               <IndividualPhotoCard
                 photoUrl={photo || undefined}
                 photoIndex={index + 1}
                 title="" // No header για grid layout
                 showHeader={false}
-                height="h-[300px]" // ΑΚΡΙΒΕΣ ΔΙΑΣΤΑΣΕΙΣ όπως στο modal
+                height={PHOTO_SIZES.STANDARD_PREVIEW}
                 onPhotoClick={photo ? () => handlePhotoClick(photo, index) : undefined}
               />
             </div>
@@ -216,14 +217,14 @@ export function PhotosPreview({
           </h4>
         </div>
 
-        {/* Service Logo - Centered με compact style όπως στο modal */}
-        <div className="flex justify-center p-2">
-          <div className="w-[400px] h-[300px]">
+        {/* Service Logo - Centered με centralized dimensions */}
+        <div className={PHOTO_LAYOUTS.SERVICE_CENTER.container}>
+          <div className={PHOTO_LAYOUTS.SERVICE_CENTER.itemWrapper}>
             <ServiceLogoCard
               photoUrl={logoUrl}
               title="" // No header για centered layout
               showHeader={false}
-              height="h-[300px]" // ΑΚΡΙΒΕΣ ΔΙΑΣΤΑΣΕΙΣ όπως στο modal
+              height={PHOTO_SIZES.STANDARD_PREVIEW}
               onPhotoClick={hasLogo ? handlePhotoClick : undefined}
             />
           </div>
@@ -238,7 +239,7 @@ export function PhotosPreview({
 
   return (
     <div className={`text-center text-muted-foreground p-8 ${className}`}>
-      <Camera className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+      <Camera className={`w-16 h-16 mx-auto mb-4 ${PHOTO_TEXT_COLORS.MUTED}`} />
       <p>Μη υποστηριζόμενος τύπος επαφής: {contactType}</p>
     </div>
   );

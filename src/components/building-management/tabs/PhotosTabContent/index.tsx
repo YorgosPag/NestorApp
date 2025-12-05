@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import type { Photo } from './types';
+import { type Photo } from '@/components/generic/utils/PhotoItem';
 import { EnterprisePhotoUpload } from '@/components/ui/EnterprisePhotoUpload';
 import { PhotoGrid } from './PhotoGrid';
 

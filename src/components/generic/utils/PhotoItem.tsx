@@ -3,6 +3,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Eye, Download } from 'lucide-react';
+import { PHOTO_STYLES } from '../config/photo-dimensions';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -48,7 +49,7 @@ export interface PhotoItemProps {
 export function PhotoItem({ photo }: PhotoItemProps) {
   return (
     <div className="relative group">
-      <div className="aspect-square bg-muted rounded-lg overflow-hidden">
+      <div className={`aspect-square ${PHOTO_STYLES.PLACEHOLDER} overflow-hidden`}>
         <img
           data-ai-hint={photo.aiHint}
           src={photo.src}
@@ -56,8 +57,8 @@ export function PhotoItem({ photo }: PhotoItemProps) {
           className="w-full h-full object-cover"
         />
       </div>
-      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all rounded-lg flex items-center justify-center">
-        <div className="opacity-0 group-hover:opacity-100 flex gap-2">
+      <div className={PHOTO_STYLES.HOVER_OVERLAY}>
+        <div className={PHOTO_STYLES.OVERLAY_CONTENT}>
           <Button size="sm" variant="secondary">
             <Eye className="w-4 h-4" />
           </Button>
@@ -66,7 +67,7 @@ export function PhotoItem({ photo }: PhotoItemProps) {
           </Button>
         </div>
       </div>
-      <div className="absolute bottom-2 left-2 bg-black bg-opacity-60 text-white text-xs px-2 py-1 rounded">
+      <div className={PHOTO_STYLES.PHOTO_LABEL}>
         {photo.name}
       </div>
     </div>

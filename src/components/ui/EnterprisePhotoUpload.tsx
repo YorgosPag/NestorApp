@@ -7,6 +7,7 @@ import type { UseEnterpriseFileUploadConfig, FileUploadResult } from '@/hooks/us
 import { UI_COLORS } from '@/subapps/dxf-viewer/config/color-config';
 import { PhotoPreview } from './utils/PhotoPreview';
 import { usePhotoUploadLogic } from './utils/usePhotoUploadLogic';
+import { PHOTO_STYLES, PHOTO_HEIGHTS, PHOTO_TEXT_COLORS, PHOTO_COLORS, PHOTO_HOVER_EFFECTS } from '@/components/generic/config/photo-dimensions';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -182,8 +183,8 @@ export function EnterprisePhotoUpload({
       <div className={`relative ${className}`}>
         <div
           className={`
-            relative border-2 border-dashed rounded-lg p-6 h-[280px] w-full flex flex-col items-center justify-center text-center cursor-pointer transition-colors overflow-hidden
-            ${currentPreview ? 'border-green-300 bg-green-50' : `border-gray-300 hover:border-gray-400`}
+            relative rounded-lg p-6 ${PHOTO_HEIGHTS.UPLOAD_ZONE} w-full flex flex-col items-center justify-center text-center cursor-pointer ${PHOTO_HOVER_EFFECTS.COLOR_TRANSITION} overflow-hidden
+            ${currentPreview ? 'border-2 border-dashed border-green-300 bg-green-50' : PHOTO_STYLES.EMPTY_STATE}
             ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
             ${hasError ? 'border-red-300 bg-red-50' : ''}
           `}
@@ -217,9 +218,9 @@ export function EnterprisePhotoUpload({
             />
           ) : (
             <div className="flex flex-col items-center justify-center">
-              <Camera className="w-12 h-12 text-gray-400 mb-3" />
-              <span className="text-sm font-medium text-gray-500 mb-2">Προσθήκη φωτογραφίας</span>
-              <span className="text-xs text-gray-400">Κλικ ή σύρετε αρχείο</span>
+              <Camera className={`w-12 h-12 ${PHOTO_TEXT_COLORS.MUTED} mb-3`} />
+              <span className={`text-sm font-medium ${PHOTO_TEXT_COLORS.LIGHT_MUTED} mb-2`}>Προσθήκη φωτογραφίας</span>
+              <span className={`text-xs ${PHOTO_TEXT_COLORS.MUTED}`}>Κλικ ή σύρετε αρχείο</span>
             </div>
           )}
 
@@ -251,8 +252,8 @@ export function EnterprisePhotoUpload({
       {/* Upload Area */}
       <div
         className={`
-          relative border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors min-h-[120px] flex flex-col items-center justify-center
-          ${currentPreview ? 'border-green-300 bg-green-50' : 'border-gray-300 hover:border-gray-400'}
+          relative rounded-lg p-6 text-center cursor-pointer ${PHOTO_HOVER_EFFECTS.COLOR_TRANSITION} ${PHOTO_HEIGHTS.UPLOAD_MIN} flex flex-col items-center justify-center
+          ${currentPreview ? 'border-2 border-dashed border-green-300 bg-green-50' : PHOTO_STYLES.EMPTY_STATE}
           ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
           ${hasError ? 'border-red-300 bg-red-50' : ''}
           ${isLoading ? 'pointer-events-none' : ''}
@@ -277,7 +278,7 @@ export function EnterprisePhotoUpload({
       >
         {/* Loading State */}
         {isLoading && (
-          <div className="absolute inset-0 bg-gray-100 bg-opacity-75 flex items-center justify-center">
+          <div className={`absolute inset-0 ${PHOTO_COLORS.LOADING_OVERLAY} flex items-center justify-center`}>
             <div className="text-center">
               <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-2" />
               <p className="text-sm font-medium text-blue-700">
@@ -286,9 +287,9 @@ export function EnterprisePhotoUpload({
                 {upload.uploadPhase === 'complete' && 'Ολοκληρώθηκε!'}
               </p>
               {showProgress && (
-                <div className="w-32 bg-gray-200 rounded-full h-2 mt-2 mx-auto">
+                <div className={`w-32 ${PHOTO_COLORS.PROGRESS_BACKGROUND} rounded-full h-2 mt-2 mx-auto`}>
                   <div
-                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                    className={`bg-blue-600 h-2 rounded-full ${PHOTO_HOVER_EFFECTS.ALL_TRANSITION}`}
                     style={{ width: `${upload.progress}%` }}
                   />
                 </div>
@@ -319,11 +320,11 @@ export function EnterprisePhotoUpload({
               </>
             ) : (
               <>
-                <Camera className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                <Camera className={`w-12 h-12 ${PHOTO_TEXT_COLORS.ICON_LIGHT} mx-auto mb-2`} />
                 <p className="text-sm font-medium text-gray-200 mb-1">
                   Κάντε κλικ ή σύρετε {purpose === 'logo' ? 'λογότυπο' : 'φωτογραφία'} εδώ
                 </p>
-                <p className="text-xs text-gray-300">
+                <p className={`text-xs ${PHOTO_TEXT_COLORS.ICON_LIGHT}`}>
                   Υποστηρίζονται JPG, PNG (μέγιστο {maxSize ? `${Math.round(maxSize / 1024 / 1024)}MB` : '5MB'})
                 </p>
               </>
@@ -350,7 +351,7 @@ export function EnterprisePhotoUpload({
           <button
             type="button"
             onClick={upload.cancelUpload}
-            className="px-3 py-1 bg-gray-300 text-gray-700 text-xs rounded hover:bg-gray-400 transition-colors"
+            className={`px-3 py-1 ${PHOTO_COLORS.CANCEL_BUTTON} ${PHOTO_TEXT_COLORS.LABEL} text-xs rounded ${PHOTO_HOVER_EFFECTS.CANCEL_BUTTON}`}
           >
             Ακύρωση
           </button>

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { CheckCircle, X } from 'lucide-react';
+import { PHOTO_SIZES, PHOTO_STYLES, PHOTO_TEXT_COLORS, PHOTO_HOVER_EFFECTS } from '@/components/generic/config/photo-dimensions';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -90,7 +91,7 @@ export function PhotoPreview({
     return (
       <div className={`flex flex-col items-center justify-center w-full max-h-full ${className}`}>
         <div
-          className={`w-full h-[220px] rounded overflow-hidden bg-gray-200 shadow-sm mb-3 relative ${onPreviewClick ? 'cursor-pointer' : ''}`}
+          className={`${PHOTO_SIZES.COMPACT_PREVIEW} ${PHOTO_STYLES.PHOTO_CONTAINER} mb-3 relative ${onPreviewClick ? 'cursor-pointer' : ''}`}
           onClick={handlePreviewClick}
         >
           <img
@@ -103,7 +104,7 @@ export function PhotoPreview({
           {showRemoveButton && (
             <button
               type="button"
-              className="absolute top-1 right-1 bg-red-100 text-red-600 rounded-full p-1 hover:bg-red-200 transition-colors z-10"
+              className={`absolute top-1 right-1 bg-red-100 text-red-600 rounded-full p-1 ${PHOTO_HOVER_EFFECTS.REMOVE_BUTTON} z-10`}
               onClick={handleRemoveClick}
               title={`Αφαίρεση ${displayName}`}
             >
@@ -128,7 +129,7 @@ export function PhotoPreview({
       className={`flex items-center gap-4 ${className} ${onPreviewClick ? 'cursor-pointer' : ''}`}
       onClick={handlePreviewClick}
     >
-      <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-200 shadow-sm relative">
+      <div className={`${PHOTO_SIZES.THUMBNAIL} ${PHOTO_STYLES.THUMBNAIL}`}>
         <img
           src={previewUrl}
           alt="Προεπισκόπηση"
@@ -155,7 +156,7 @@ export function PhotoPreview({
         </p>
         <p className="text-xs text-green-600">{fileName}</p>
         {onPreviewClick && (
-          <p className="text-xs text-gray-500 mt-1">Κάντε κλικ για αλλαγή</p>
+          <p className={`text-xs ${PHOTO_TEXT_COLORS.LIGHT_MUTED} mt-1`}>Κάντε κλικ για αλλαγή</p>
         )}
       </div>
     </div>

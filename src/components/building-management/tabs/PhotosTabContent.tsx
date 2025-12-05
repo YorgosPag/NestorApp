@@ -3,7 +3,7 @@
 
 import React, { useState } from 'react';
 import type { Building } from '@/types/building/contracts';
-import type { Photo } from './PhotosTabContent/types';
+import { type Photo } from '@/components/generic/utils/PhotoItem';
 import { EnterprisePhotoUpload } from '@/components/ui/EnterprisePhotoUpload';
 import { PhotoGrid } from './PhotosTabContent/PhotoGrid';
 
