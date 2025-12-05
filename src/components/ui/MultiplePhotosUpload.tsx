@@ -1,10 +1,12 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Camera, Upload, X, CheckCircle, Loader2, AlertCircle, Plus, Image } from 'lucide-react';
+import { Camera, Upload, X, CheckCircle, Loader2, AlertCircle, Plus, Image, Star, StarIcon } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { EnterprisePhotoUpload } from './EnterprisePhotoUpload';
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
-import { PHOTO_STYLES, PHOTO_SIZES, PHOTO_TEXT_COLORS } from '@/components/generic/config/photo-dimensions';
+import { PHOTO_STYLES, PHOTO_SIZES, PHOTO_TEXT_COLORS, PHOTO_COLORS } from '@/components/generic/config/photo-dimensions';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -43,6 +45,10 @@ export interface MultiplePhotosUploadProps {
   purpose?: 'photo' | 'logo';
   /** Contact data for FileNamingService (optional) */
   contactData?: any;
+  /** 🆕 Profile selection props */
+  showProfileSelector?: boolean;
+  selectedProfilePhotoIndex?: number;
+  onProfilePhotoSelection?: (index: number) => void;
 }
 
 // ============================================================================
@@ -74,7 +80,10 @@ export function MultiplePhotosUpload({
   showProgress = true,
   compact = false,
   purpose = 'photo',
-  contactData
+  contactData,
+  showProfileSelector = false,
+  selectedProfilePhotoIndex,
+  onProfilePhotoSelection
 }: MultiplePhotosUploadProps) {
   // ========================================================================
   // STATE
@@ -525,6 +534,7 @@ export function MultiplePhotosUpload({
         {availableSlots > 0 && maxPhotos > 1 && (
           <div
             className={`${PHOTO_STYLES.EMPTY_STATE} p-3`}
+            style={{ backgroundColor: PHOTO_COLORS.EMPTY_STATE_BACKGROUND }}
             onDrop={handleMultipleDrop}
             onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
             onClick={() => {
@@ -551,6 +561,55 @@ export function MultiplePhotosUpload({
             <p className={`text-xs ${PHOTO_TEXT_COLORS.LIGHT_MUTED}`}>
               Προσθήκη {availableSlots} ακόμη
             </p>
+          </div>
+        )}
+
+        {/* 🆕 ENTERPRISE: Profile Photo Selector για compact mode */}
+        {showProfileSelector && availableSlots < maxPhotos && (
+          <div className="border-t pt-4 mt-4">
+            <h4 className="font-medium text-sm mb-3 flex items-center gap-2">
+              <Star className="h-4 w-4 text-yellow-500" />
+              Επιλογή Φωτογραφίας Προφίλ
+            </h4>
+            <div className="grid grid-cols-3 gap-2">
+              {normalizedPhotos.map((photo, index) => (
+                <div key={`profile-${index}`} className="relative">
+                  {photo.preview || photo.uploadUrl ? (
+                    <div className="relative">
+                      <img
+                        src={photo.preview || photo.uploadUrl}
+                        alt={`Φωτογραφία ${index + 1}`}
+                        className="w-full h-20 object-cover rounded border"
+                      />
+                      <Button
+                        type="button"
+                        variant={selectedProfilePhotoIndex === index ? "default" : "outline"}
+                        size="sm"
+                        className="absolute bottom-1 right-1 h-6 px-2 text-xs"
+                        onClick={() => onProfilePhotoSelection?.(index)}
+                        disabled={disabled}
+                      >
+                        {selectedProfilePhotoIndex === index ? (
+                          <Star className="h-3 w-3 fill-current" />
+                        ) : (
+                          <StarIcon className="h-3 w-3" />
+                        )}
+                      </Button>
+                      {selectedProfilePhotoIndex === index && (
+                        <Badge className="absolute top-1 left-1 text-xs">Προφίλ</Badge>
+                      )}
+                    </div>
+                  ) : (
+                    <div
+                      className={`w-full h-20 ${PHOTO_STYLES.EMPTY_STATE}`}
+                      style={{ backgroundColor: PHOTO_COLORS.EMPTY_STATE_BACKGROUND }}
+                    >
+                      <span className={`text-xs ${PHOTO_TEXT_COLORS.MUTED}`}>Κενό {index + 1}</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -606,6 +665,7 @@ export function MultiplePhotosUpload({
       {availableSlots > 0 && maxPhotos > 1 && (
         <div
           className={`${PHOTO_STYLES.EMPTY_STATE} p-6`}
+          style={{ backgroundColor: PHOTO_COLORS.EMPTY_STATE_BACKGROUND }}
           onDrop={handleMultipleDrop}
           onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
           onClick={() => {

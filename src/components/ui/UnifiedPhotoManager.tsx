@@ -4,7 +4,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Building2, User, Camera, Star, StarIcon, X } from 'lucide-react';
+import { Building2, User, Camera, X } from 'lucide-react';
 import { EnterprisePhotoUpload } from './EnterprisePhotoUpload';
 import { MultiplePhotosUpload } from './MultiplePhotosUpload';
 import type { ContactType } from '@/types/contacts';
@@ -90,56 +90,11 @@ function IndividualPhotoManager({
           purpose="photo"
           contactData={formData} // 🏢 ENTERPRISE: Pass contact data for FileNamingService
           className="w-full"
+          showProfileSelector={true}
+          selectedProfilePhotoIndex={formData.selectedProfilePhotoIndex}
+          onProfilePhotoSelection={handlers.handleProfilePhotoSelection}
         />
 
-        {/* Profile Photo Selector */}
-        {formData.multiplePhotos && formData.multiplePhotos.length > 0 && (
-          <div className="border-t pt-4">
-            <h4 className="font-medium text-sm mb-3 flex items-center gap-2">
-              <Star className="h-4 w-4 text-yellow-500" />
-              Επιλογή Φωτογραφίας Προφίλ
-            </h4>
-            <div className="grid grid-cols-3 gap-2">
-              {formData.multiplePhotos.map((photo, index) => (
-                <div key={index} className="relative">
-                  {photo.preview || photo.uploadUrl ? (
-                    <div className="relative">
-                      <img
-                        src={photo.preview || photo.uploadUrl}
-                        alt={`Φωτογραφία ${index + 1}`}
-                        className="w-full h-20 object-cover rounded border"
-                      />
-                      <Button
-                        type="button"
-                        variant={formData.selectedProfilePhotoIndex === index ? "default" : "outline"}
-                        size="sm"
-                        className="absolute bottom-1 right-1 h-6 px-2 text-xs"
-                        onClick={() => handlers.handleProfilePhotoSelection?.(index)}
-                        disabled={disabled}
-                      >
-                        {formData.selectedProfilePhotoIndex === index ? (
-                          <Star className="h-3 w-3 fill-current" />
-                        ) : (
-                          <StarIcon className="h-3 w-3" />
-                        )}
-                      </Button>
-                      {formData.selectedProfilePhotoIndex === index && (
-                        <Badge className="absolute top-1 left-1 text-xs">Προφίλ</Badge>
-                      )}
-                    </div>
-                  ) : (
-                    <div
-                      className={`w-full h-20 ${PHOTO_STYLES.EMPTY_STATE}`}
-                      style={{ backgroundColor: PHOTO_COLORS.EMPTY_STATE_BACKGROUND }}
-                    >
-                      <span className={`text-xs ${PHOTO_TEXT_COLORS.MUTED}`}>Κενό {index + 1}</span>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </CardContent>
     </Card>
   );

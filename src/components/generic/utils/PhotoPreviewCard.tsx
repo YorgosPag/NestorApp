@@ -3,7 +3,7 @@
 import React from 'react';
 import { Camera, Building2, User } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { PHOTO_SIZES, PHOTO_STYLES, PHOTO_TEXT_COLORS } from '../config/photo-dimensions';
+import { PHOTO_SIZES, PHOTO_STYLES, PHOTO_TEXT_COLORS, PHOTO_COLORS, PHOTO_HEIGHTS } from '../config/photo-dimensions';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -63,7 +63,7 @@ export function PhotoPreviewCard({
   altText,
   emptyText,
   onPhotoClick,
-  height = PHOTO_SIZES.COMPACT_PREVIEW,
+  height = PHOTO_SIZES.STANDARD_PREVIEW,
   className = '',
   showHeader = true
 }: PhotoPreviewCardProps) {
@@ -124,29 +124,33 @@ export function PhotoPreviewCard({
         </CardHeader>
       )}
 
-      <CardContent className={showHeader ? '' : 'p-0 h-full'}>
-        {hasPhoto ? (
-          /* 🖼️ PHOTO STATE: Unified photo display */
-          <div
-            className={`${height} ${PHOTO_STYLES.PHOTO_CONTAINER} ${!showHeader ? 'h-full' : ''}`}
-            onClick={handleClick}
-            title="Κλικ για προεπισκόπηση"
-          >
+      <CardContent className={showHeader ? '' : 'p-0'}>
+        <div
+          className={`relative rounded-lg p-6 ${height} w-full flex flex-col items-center justify-center text-center cursor-pointer transition-colors overflow-hidden border-2 border-dashed`}
+          style={{
+            backgroundColor: hasPhoto ? undefined : PHOTO_COLORS.EMPTY_STATE_BACKGROUND,
+            borderColor: hasPhoto ? '#22c55e' : '#9ca3af'
+          }}
+          onClick={handleClick}
+        >
+          {hasPhoto ? (
+            /* 🖼️ PHOTO STATE: Ακριβώς όπως στο Modal */
             <img
               src={photoUrl}
               alt={altText}
-              className={PHOTO_STYLES.PHOTO_IMAGE}
+              className="w-full h-full object-cover rounded cursor-pointer"
+              onClick={handleClick}
+              title="Κλικ για προεπισκόπηση"
             />
-          </div>
-        ) : (
-          /* 🚫 EMPTY STATE: Unified empty display - ΑΚΡΙΒΩΣ όπως στο modal */
-          <div className={`${height} ${PHOTO_STYLES.EMPTY_STATE} ${!showHeader ? 'h-full' : ''}`}>
-            <div className={PHOTO_TEXT_COLORS.MUTED}>
-              <EmptyIcon className="w-12 h-12 mx-auto mb-2" />
-              <p className="text-sm">{emptyText}</p>
+          ) : (
+            /* 🚫 EMPTY STATE: Ακριβώς όπως στο Modal */
+            <div className="flex flex-col items-center justify-center">
+              <EmptyIcon className={`w-12 h-12 ${PHOTO_TEXT_COLORS.MUTED} mb-3`} />
+              <span className={`text-sm font-medium ${PHOTO_TEXT_COLORS.LIGHT_MUTED} mb-2`}>{emptyText}</span>
+              <span className={`text-xs ${PHOTO_TEXT_COLORS.MUTED}`}>Κλικ ή σύρετε αρχείο</span>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </CardContent>
     </Card>
   );

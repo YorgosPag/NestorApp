@@ -3,7 +3,7 @@
 import React from 'react';
 import { Camera } from 'lucide-react';
 import { CompanyLogoCard, RepresentativePhotoCard, IndividualPhotoCard, ServiceLogoCard } from './PhotoPreviewCard';
-import { PHOTO_LAYOUTS, PHOTO_SIZES, PHOTO_TEXT_COLORS } from '../config/photo-dimensions';
+import { PHOTO_LAYOUTS, PHOTO_SIZES, PHOTO_TEXT_COLORS, PHOTO_HEIGHTS } from '../config/photo-dimensions';
 
 // ============================================================================
 // TYPES & INTERFACES

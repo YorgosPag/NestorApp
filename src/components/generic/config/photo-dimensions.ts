@@ -23,7 +23,7 @@ export const PHOTO_HEIGHTS = {
   COMPACT: 'h-[220px]',
 
   /** Thumbnail size - χρήση για small thumbnails */
-  THUMBNAIL: 'h-16',
+  THUMBNAIL: 'h-20',
 
   /** Avatar size - χρήση για user avatars */
   AVATAR: 'h-12',
@@ -112,11 +112,11 @@ export const PHOTO_LAYOUTS = {
     itemWrapper: `${PHOTO_HEIGHTS.STANDARD} ${PHOTO_WIDTHS.FULL}`
   },
 
-  /** Individual photos: 6 photos (3x2 grid) */
+  /** Individual photos: 6 photos (3x2 grid) - UNIFIED με Modal */
   INDIVIDUAL_GRID: {
-    container: 'grid grid-cols-3 gap-8 p-6',
+    container: 'grid grid-cols-3 gap-6 p-2',
     item: PHOTO_SIZES.STANDARD_PREVIEW,
-    itemWrapper: `${PHOTO_HEIGHTS.STANDARD} ${PHOTO_WIDTHS.FULL}`
+    itemWrapper: PHOTO_SIZES.STANDARD_PREVIEW
   },
 
   /** Service logo: centered single logo */
