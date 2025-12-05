@@ -89,23 +89,36 @@ export function PhotosPreview({
       );
     }
 
-    // Company grid layout
+    // Company grid layout - ΠΑΝΟΜΟΙΟΤΗΤΑ με individual
     return (
       <div className={`mt-4 ${className}`}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Λογότυπο Εταιρείας */}
-          <CompanyLogoCard
-            photoUrl={logoUrl}
-            title="Λογότυπο Εταιρείας"
-            onPhotoClick={hasLogo ? () => handlePhotoClick(logoUrl!, 0) : undefined}
-          />
+        {/* Header ακριβώς όπως στο individual */}
+        <div className="flex items-center justify-between mb-6">
+          <h4 className="font-semibold text-sm flex items-center gap-2">
+            <Camera className="w-4 h-4" />
+            Φωτογραφίες Εταιρείας (2)
+          </h4>
+        </div>
 
-          {/* Φωτογραφία Εκπροσώπου */}
-          <RepresentativePhotoCard
-            photoUrl={photoUrl}
-            title="Φωτογραφία Εκπροσώπου"
-            onPhotoClick={hasPhoto ? () => handlePhotoClick(photoUrl!, 1) : undefined}
-          />
+        {/* Company Grid - 2x1 Layout με compact style όπως στο modal */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-2">
+          <div className="h-[300px] w-full">
+            <CompanyLogoCard
+              photoUrl={logoUrl}
+              title="Λογότυπο Εταιρείας"
+              height="h-[300px]" // ΑΚΡΙΒΕΣ ΔΙΑΣΤΑΣΕΙΣ όπως στο modal
+              onPhotoClick={hasLogo ? () => handlePhotoClick(logoUrl!, 0) : undefined}
+            />
+          </div>
+
+          <div className="h-[300px] w-full">
+            <RepresentativePhotoCard
+              photoUrl={photoUrl}
+              title="Φωτογραφία Εκπροσώπου"
+              height="h-[300px]" // ΑΚΡΙΒΕΣ ΔΙΑΣΤΑΣΕΙΣ όπως στο modal
+              onPhotoClick={hasPhoto ? () => handlePhotoClick(photoUrl!, 1) : undefined}
+            />
+          </div>
         </div>
       </div>
     );
@@ -137,6 +150,7 @@ export function PhotosPreview({
     }, [photoUrl, multiplePhotoURLs]);
 
     const totalPhotos = allPhotos.filter(photo => photo).length;
+    const mainPhoto = allPhotos[0]; // Κύρια φωτογραφία προφίλ
 
     const handlePhotoClick = (photoUrl: string, photoIndex: number) => {
       if (onPhotoClick) {
@@ -144,9 +158,10 @@ export function PhotosPreview({
       }
     };
 
+    // 🎯 ΠΑΝΟΜΟΙΟΤΥΠΟ LAYOUT ΜΕ ΤΟ MODAL: 6 slots, ίδια πλαίσια, ίδια χρώματα
     return (
       <div className={`mt-4 ${className}`}>
-        {/* Header όπως στο modal */}
+        {/* Header ακριβώς όπως στο modal */}
         <div className="flex items-center justify-between mb-6">
           <h4 className="font-semibold text-sm flex items-center gap-2">
             <Camera className="w-4 h-4" />
@@ -154,7 +169,7 @@ export function PhotosPreview({
           </h4>
         </div>
 
-        {/* Photo Grid - 3x2 Layout όπως στο modal */}
+        {/* Photo Grid - ΑΚΡΙΒΩΣ 3x2 Layout όπως στο modal */}
         <div className="grid grid-cols-3 gap-8 p-6">
           {allPhotos.map((photo, index) => (
             <div key={index} className="h-[300px] w-full">
@@ -163,7 +178,7 @@ export function PhotosPreview({
                 photoIndex={index + 1}
                 title="" // No header για grid layout
                 showHeader={false}
-                height="h-full"
+                height="h-[300px]" // ΑΚΡΙΒΕΣ ΔΙΑΣΤΑΣΕΙΣ όπως στο modal
                 onPhotoClick={photo ? () => handlePhotoClick(photo, index) : undefined}
               />
             </div>
@@ -192,16 +207,26 @@ export function PhotosPreview({
     };
 
     return (
-      <div className={`mt-6 ${className}`}>
-        {/* Σταθερό πλάτος όπως στο modal */}
-        <div className="w-[400px] h-[300px] mx-auto">
-          <ServiceLogoCard
-            photoUrl={logoUrl}
-            title="" // No header για centered layout
-            showHeader={false}
-            height="h-full"
-            onPhotoClick={hasLogo ? handlePhotoClick : undefined}
-          />
+      <div className={`mt-4 ${className}`}>
+        {/* Header ακριβώς όπως στα άλλα contact types */}
+        <div className="flex items-center justify-between mb-6">
+          <h4 className="font-semibold text-sm flex items-center gap-2">
+            <Camera className="w-4 h-4" />
+            Λογότυπο Δημόσιας Υπηρεσίας
+          </h4>
+        </div>
+
+        {/* Service Logo - Centered με compact style όπως στο modal */}
+        <div className="flex justify-center p-2">
+          <div className="w-[400px] h-[300px]">
+            <ServiceLogoCard
+              photoUrl={logoUrl}
+              title="" // No header για centered layout
+              showHeader={false}
+              height="h-[300px]" // ΑΚΡΙΒΕΣ ΔΙΑΣΤΑΣΕΙΣ όπως στο modal
+              onPhotoClick={hasLogo ? handlePhotoClick : undefined}
+            />
+          </div>
         </div>
       </div>
     );

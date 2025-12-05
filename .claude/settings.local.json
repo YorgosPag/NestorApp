@@ -108,7 +108,10 @@
       "Bash(del \"C:\\Nestor_Pagonis\\src\\services\\photoUploadService.ts\")",
       "Bash(PORT=3008 npm run dev)",
       "Bash(del \"C:\\Nestor_Pagonis\\src\\components\\ContactFormSections\\IndividualContactTabbedSection.tsx\")",
-      "Bash(PORT=3009 npm run dev)"
+      "Bash(PORT=3009 npm run dev)",
+      "Bash(PORT=3010 npm run dev)",
+      "Bash(del \"C:\\Nestor_Pagonis\\src\\components\\projects\\photos\\PhotoItem.tsx\")",
+      "Bash(del \"C:\\Nestor_Pagonis\\src\\components\\projects\\photos\\types.ts\")"
     ],
     "deny": [],
     "ask": []

@@ -1,8 +1,7 @@
 'use client';
 
 import React from 'react';
-import type { Photo } from './types';
-import { PhotoItem } from './PhotoItem';
+import { PhotoItem, type Photo } from '@/components/generic/utils/PhotoItem';
 import { Image as ImageIcon } from 'lucide-react';
 
 interface PhotoGridProps {

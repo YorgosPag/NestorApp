@@ -138,9 +138,9 @@ export function PhotoPreviewCard({
             />
           </div>
         ) : (
-          /* 🚫 EMPTY STATE: Unified empty display */
-          <div className={`w-full ${height} rounded border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 ${!showHeader ? 'h-full' : ''}`}>
-            <div className="text-center text-gray-400">
+          /* 🚫 EMPTY STATE: Unified empty display - ΑΚΡΙΒΩΣ όπως στο modal */
+          <div className={`w-full ${height} rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 text-center cursor-pointer transition-colors hover:border-gray-400 ${!showHeader ? 'h-full' : ''}`}>
+            <div className="text-gray-400">
               <EmptyIcon className="w-12 h-12 mx-auto mb-2" />
               <p className="text-sm">{emptyText}</p>
             </div>

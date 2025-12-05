@@ -45,7 +45,7 @@ export {
   createServiceTabsFromConfig,
   createTabFromSection,
   getIconComponent
-} from './ConfigTabsHelper';
+} from './utils/TabConfigFactory';
 export type { TabConfig } from './ConfigTabsHelper';
 
 // Re-export config for convenience

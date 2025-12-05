@@ -6,6 +6,9 @@ import { getIconComponent } from './IconMapping';
 import { CompanyPhotosPreview, IndividualPhotosPreview, ServiceLogoPreview } from './PhotosPreview';
 import { GenericTabRenderer } from '../GenericTabRenderer';
 
+// Re-export IconMapping για convenience
+export { getIconComponent } from './IconMapping';
+
 // ============================================================================
 // TYPES & INTERFACES
 // ============================================================================
