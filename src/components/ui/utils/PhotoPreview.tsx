@@ -1,0 +1,165 @@
+'use client';
+
+import React from 'react';
+import { CheckCircle, X } from 'lucide-react';
+
+// ============================================================================
+// TYPES & INTERFACES
+// ============================================================================
+
+export interface PhotoPreviewProps {
+  /** Preview URL */
+  previewUrl: string;
+  /** File name */
+  fileName?: string;
+  /** Compact mode styling */
+  compact?: boolean;
+  /** Purpose text (e.g., 'logo', 'representative') */
+  purpose?: string;
+  /** Remove button click handler */
+  onRemove?: (e: React.MouseEvent) => void;
+  /** Preview click handler */
+  onPreviewClick?: () => void;
+  /** Disabled state */
+  disabled?: boolean;
+  /** Hide remove button */
+  hideRemoveButton?: boolean;
+  /** Custom className */
+  className?: string;
+}
+
+// ============================================================================
+// 🔥 EXTRACTED: PHOTO PREVIEW COMPONENT
+// ============================================================================
+
+/**
+ * Photo Preview Component - Unified για όλα τα preview displays
+ *
+ * Extracted από EnterprisePhotoUpload για Single Responsibility Principle.
+ * Χειρίζεται μόνο την εμφάνιση preview images με consistent styling.
+ *
+ * Features:
+ * - Compact vs Full mode styling
+ * - Remove button με proper event handling
+ * - Responsive image display
+ * - Success state indicators
+ * - Click handler για preview interaction
+ * - Zero duplication με conditional rendering
+ */
+export function PhotoPreview({
+  previewUrl,
+  fileName,
+  compact = false,
+  purpose = 'φωτογραφία',
+  onRemove,
+  onPreviewClick,
+  disabled = false,
+  hideRemoveButton = false,
+  className = ''
+}: PhotoPreviewProps) {
+
+  // ========================================================================
+  // COMPUTED VALUES
+  // ========================================================================
+
+  const showRemoveButton = !hideRemoveButton && !disabled && onRemove;
+  const displayName = purpose === 'logo' ? 'λογότυπο' : 'φωτογραφία';
+
+  // ========================================================================
+  // HANDLERS
+  // ========================================================================
+
+  const handleRemoveClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onRemove?.(e);
+  };
+
+  const handlePreviewClick = () => {
+    if (!disabled && onPreviewClick) {
+      onPreviewClick();
+    }
+  };
+
+  // ========================================================================
+  // RENDER
+  // ========================================================================
+
+  if (compact) {
+    // 🎯 COMPACT MODE: For modal/card contexts με height constraints
+    return (
+      <div className={`flex flex-col items-center justify-center w-full max-h-full ${className}`}>
+        <div
+          className={`w-full h-[220px] rounded overflow-hidden bg-gray-200 shadow-sm mb-3 relative ${onPreviewClick ? 'cursor-pointer' : ''}`}
+          onClick={handlePreviewClick}
+        >
+          <img
+            src={previewUrl}
+            alt="Προεπισκόπηση"
+            className="w-full h-full object-cover"
+          />
+
+          {/* Remove button για compact mode */}
+          {showRemoveButton && (
+            <button
+              type="button"
+              className="absolute top-1 right-1 bg-red-100 text-red-600 rounded-full p-1 hover:bg-red-200 transition-colors z-10"
+              onClick={handleRemoveClick}
+              title={`Αφαίρεση ${displayName}`}
+            >
+              <X className="w-3 h-3" />
+            </button>
+          )}
+        </div>
+
+        <div className="text-center w-full">
+          <p className="text-sm font-medium text-green-700">
+            <CheckCircle className="w-4 h-4 inline mr-1" />
+            {fileName || `${displayName} φορτώθηκε`}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // 🎯 FULL MODE: For standard form contexts με flexible layout
+  return (
+    <div
+      className={`flex items-center gap-4 ${className} ${onPreviewClick ? 'cursor-pointer' : ''}`}
+      onClick={handlePreviewClick}
+    >
+      <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-200 shadow-sm relative">
+        <img
+          src={previewUrl}
+          alt="Προεπισκόπηση"
+          className="w-full h-full object-cover"
+        />
+
+        {/* Remove button για full mode */}
+        {showRemoveButton && (
+          <button
+            type="button"
+            className="absolute top-1 right-1 bg-red-100 text-red-600 rounded-full p-1 hover:bg-red-200 transition-colors z-10"
+            onClick={handleRemoveClick}
+            title={`Αφαίρεση ${displayName}`}
+          >
+            <X className="w-3 h-3" />
+          </button>
+        )}
+      </div>
+
+      <div className="text-left">
+        <p className="text-sm font-medium text-green-700 flex items-center gap-1">
+          <CheckCircle className="w-4 h-4" />
+          {purpose === 'logo' ? 'Λογότυπο' : 'Φωτογραφία'} φορτώθηκε
+        </p>
+        <p className="text-xs text-green-600">{fileName}</p>
+        {onPreviewClick && (
+          <p className="text-xs text-gray-500 mt-1">Κάντε κλικ για αλλαγή</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default PhotoPreview;

@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useCallback, useEffect } from 'react';
-import { Camera, Upload, X, CheckCircle, Loader2, AlertCircle } from 'lucide-react';
+import React from 'react';
+import { Camera, Loader2, AlertCircle } from 'lucide-react';
 import { useEnterpriseFileUpload } from '@/hooks/useEnterpriseFileUpload';
-import type { UseEnterpriseFileUploadConfig, FileUploadResult, FileUploadProgress } from '@/hooks/useEnterpriseFileUpload';
+import type { UseEnterpriseFileUploadConfig, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 import { UI_COLORS } from '@/subapps/dxf-viewer/config/color-config';
+import { PhotoPreview } from './utils/PhotoPreview';
+import { usePhotoUploadLogic } from './utils/usePhotoUploadLogic';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -22,7 +24,7 @@ export interface EnterprisePhotoUploadProps extends Omit<UseEnterpriseFileUpload
   /** Disabled state */
   disabled?: boolean;
   /** Custom upload handler */
-  uploadHandler?: (file: File, onProgress: (progress: FileUploadProgress) => void) => Promise<FileUploadResult>;
+  uploadHandler?: (file: File, onProgress: (progress: any) => void) => Promise<FileUploadResult>;
   /** Custom CSS classes */
   className?: string;
   /** Show upload progress (default: true) */
@@ -82,14 +84,20 @@ export function EnterprisePhotoUpload({
     photoIndex
   });
 
+  // 🔥 EXTRACTED: Photo upload logic (70+ lines extracted)
+  const uploadLogic = usePhotoUploadLogic({
+    photoFile,
+    upload,
+    onUploadComplete,
+    uploadHandler,
+    purpose
+  });
+
   // ========================================================================
-  // HANDLERS
+  // ENHANCED HANDLERS (WITH VALIDATION)
   // ========================================================================
 
-  /**
-   * Handle file selection
-   */
-  const handleFileSelection = useCallback((file: File | null) => {
+  const handleFileSelectionWithValidation = (file: File | null) => {
     if (!file) {
       onFileChange(null);
       upload.clearState();
@@ -100,36 +108,22 @@ export function EnterprisePhotoUpload({
     const validation = upload.validateAndPreview(file);
     if (validation.isValid) {
       onFileChange(file);
+      uploadLogic.handleFileSelection(file);
     }
-  }, [upload, onFileChange]);
+  };
 
-  /**
-   * Handle drag over
-   */
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  }, []);
-
-  /**
-   * Handle drop
-   */
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
+  const handleDropWithValidation = (e: React.DragEvent) => {
     if (disabled) return;
+    e.preventDefault();
+    e.stopPropagation();
 
     const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) {
-      handleFileSelection(files[0]);
+      handleFileSelectionWithValidation(files[0]);
     }
-  }, [disabled, handleFileSelection]);
+  };
 
-  /**
-   * Handle click to select file
-   */
-  const handleClick = useCallback(() => {
+  const handleClickWithValidation = () => {
     if (disabled) return;
 
     const input = document.createElement('input');
@@ -137,120 +131,15 @@ export function EnterprisePhotoUpload({
     input.accept = 'image/*';
     input.onchange = (e) => {
       const file = (e.target as HTMLInputElement).files?.[0] || null;
-      handleFileSelection(file);
+      handleFileSelectionWithValidation(file);
     };
     input.click();
-  }, [disabled, handleFileSelection]);
+  };
 
-  /**
-   * 🔥 AUTOMATIC UPLOAD: Start upload immediately when file is selected
-   */
-  // 🏢 ENTERPRISE: Default upload handler using CORRECT Firebase Storage
-  const defaultUploadHandler = useCallback(async (file: File, onProgress: (progress: FileUploadProgress) => void) => {
-    // 🔥 CRITICAL FIX: Use the CORRECT Firebase Storage service, not Base64
-    const { PhotoUploadService: FirebasePhotoUploadService } = await import('@/services/photo-upload.service');
-
-    return await FirebasePhotoUploadService.uploadPhoto(file, {
-      folderPath: 'contacts/photos',
-      enableCompression: true,
-      compressionUsage: 'profile-modal',
-      onProgress,
-      purpose: 'representative'
-    });
-  }, []);
-
-  // AUTO-UPLOAD: Εκτέλεση αμέσως μόλις επιλεγεί αρχείο
-  useEffect(() => {
-    console.log('🔄 ENTERPRISE AUTO-UPLOAD EFFECT TRIGGERED:', {
-      hasPhotoFile: !!photoFile,
-      photoFileName: photoFile?.name,
-      isUploading: upload.isUploading,
-      uploadSuccess: upload.success,
-      hasUploadHandler: !!uploadHandler,
-      hasOnUploadComplete: !!onUploadComplete,
-      purpose
-    });
-
-    if (!photoFile || upload.isUploading || upload.success) {
-      console.log('🛑 ENTERPRISE: Skipping upload:', {
-        reason: !photoFile ? 'No file' : upload.isUploading ? 'Already uploading' : 'Already successful'
-      });
-      return;
-    }
-
-    console.log('🚀 ENTERPRISE: Starting auto-upload for:', photoFile.name);
-
-    const startUpload = async () => {
-      try {
-        // Use provided uploadHandler or default Firebase Storage handler
-        const handlerToUse = uploadHandler || defaultUploadHandler;
-        console.log('📡 ENTERPRISE: Using upload handler:', {
-          isCustomHandler: !!uploadHandler,
-          isDefaultHandler: !uploadHandler,
-          handlerName: handlerToUse.name || 'anonymous'
-        });
-
-        const result = await upload.uploadFile(photoFile, handlerToUse);
-
-        console.log('🎉 ENTERPRISE: Upload result received!', {
-          hasResult: !!result,
-          result: result,
-          hasSuccess: !!result?.success,
-          hasUrl: !!result?.url,
-          url: result?.url?.substring(0, 80) + '...',
-          fileName: result?.fileName,
-          purpose
-        });
-
-        if (result?.success && onUploadComplete) {
-          console.log('✅ ENTERPRISE: Branch 1 - Explicit success flag present, calling onUploadComplete');
-          onUploadComplete(result);
-        } else if (result?.url && onUploadComplete) {
-          console.log('🔧 ENTERPRISE: Branch 2 - No explicit success flag but has URL, assuming success');
-          const enhancedResult = {
-            ...result,
-            success: true
-          };
-          console.log('📤 ENTERPRISE: Calling onUploadComplete with enhanced result:', enhancedResult);
-          onUploadComplete(enhancedResult);
-        } else {
-          console.error('❌ ENTERPRISE: Upload callback NOT called!', {
-            hasResult: !!result,
-            hasSuccess: !!result?.success,
-            hasUrl: !!result?.url,
-            hasCallback: !!onUploadComplete,
-            callbackName: onUploadComplete?.name || 'anonymous',
-            purpose
-          });
-        }
-      } catch (err) {
-        console.error('⚠️ ENTERPRISE: Auto-upload failed:', err, { purpose, fileName: photoFile.name });
-      }
-    };
-
-    startUpload();
-  }, [photoFile, upload.isUploading, upload.success, uploadHandler, onUploadComplete, upload, defaultUploadHandler, purpose]);
-
-  /**
-   * Handle remove photo
-   */
-  const handleRemove = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    // ΚΑΘΑΡΙΖΟΥΜΕ ΜΕ ΤΗ ΒΙΑ ΤΑ ΠΑΝΤΑ
+  const handleRemoveWithCleanup = (e: React.MouseEvent) => {
     onFileChange(null);
-
-    // ΑΜΕΣΗ ΚΛΗΣΗ ΤΟΥ HANDLER
-    if (onUploadComplete) {
-      onUploadComplete({
-        success: true,
-        url: '',
-        fileName: '',
-        compressionInfo: { originalSize: 0, compressedSize: 0, compressionRatio: 1, quality: 1 }
-      });
-    }
-  }, [onFileChange, onUploadComplete]);
+    uploadLogic.handleRemove(e);
+  };
 
   // ========================================================================
   // COMPUTED VALUES
@@ -301,9 +190,9 @@ export function EnterprisePhotoUpload({
           style={{
             backgroundColor: currentPreview ? undefined : UI_COLORS.UPLOAD_AREA_BG,
           }}
-          onDrop={disabled ? undefined : handleDrop}
-          onDragOver={disabled ? undefined : handleDragOver}
-          onClick={disabled ? undefined : handleClick}
+          onDrop={disabled ? undefined : handleDropWithValidation}
+          onDragOver={disabled ? undefined : uploadLogic.handleDragOver}
+          onClick={disabled ? undefined : handleClickWithValidation}
           onMouseEnter={(e) => {
             if (!currentPreview && !disabled) {
               e.currentTarget.style.backgroundColor = UI_COLORS.UPLOAD_AREA_BG_HOVER;
@@ -316,26 +205,16 @@ export function EnterprisePhotoUpload({
           }}
         >
           {currentPreview ? (
-            <div className="flex flex-col items-center justify-center w-full max-h-full">
-              <div className="w-full h-[220px] rounded overflow-hidden bg-gray-200 shadow-sm mb-3">
-                <img
-                  src={currentPreview}
-                  alt="Προεπισκόπηση"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="text-center w-full">
-                <p className="text-sm font-medium text-green-700"><CheckCircle className="w-4 h-4 inline mr-1" />{currentFile?.name}</p>
-                {showProgress && isLoading && (
-                  <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                    <div
-                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${upload.progress}%` }}
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
+            <PhotoPreview
+              previewUrl={currentPreview}
+              fileName={currentFile?.name}
+              compact={true}
+              purpose={purpose}
+              onRemove={!disabled && !isLoading ? handleRemoveWithCleanup : undefined}
+              onPreviewClick={handleClickWithValidation}
+              disabled={disabled}
+              className="w-full"
+            />
           ) : (
             <div className="flex flex-col items-center justify-center">
               <Camera className="w-12 h-12 text-gray-400 mb-3" />
@@ -344,21 +223,7 @@ export function EnterprisePhotoUpload({
             </div>
           )}
 
-          {/* Remove button */}
-          {currentPreview && !disabled && !isLoading && (
-            <button
-              type="button"
-              className="absolute top-1 right-1 bg-red-100 text-red-600 rounded-full p-1 hover:bg-red-200 transition-colors z-10"
-              onClick={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                handleRemove(e);
-              }}
-              title="Αφαίρεση φωτογραφίας"
-            >
-              <X className="w-3 h-3" />
-            </button>
-          )}
+          {/* Remove button handled by PhotoPreview component */}
         </div>
 
         {/* Error display */}
@@ -396,9 +261,9 @@ export function EnterprisePhotoUpload({
           backgroundColor: currentPreview ? undefined : UI_COLORS.UPLOAD_AREA_BG,
           borderColor: currentPreview ? undefined : UI_COLORS.UPLOAD_AREA_BORDER,
         }}
-        onDrop={disabled ? undefined : handleDrop}
-        onDragOver={disabled ? undefined : handleDragOver}
-        onClick={disabled || isLoading ? undefined : handleClick}
+        onDrop={disabled ? undefined : handleDropWithValidation}
+        onDragOver={disabled ? undefined : uploadLogic.handleDragOver}
+        onClick={disabled || isLoading ? undefined : handleClickWithValidation}
         onMouseEnter={(e) => {
           if (!currentPreview && !disabled && !isLoading) {
             e.currentTarget.style.backgroundColor = UI_COLORS.UPLOAD_AREA_BG_HOVER;
@@ -434,23 +299,15 @@ export function EnterprisePhotoUpload({
 
         {/* Preview State */}
         {currentPreview ? (
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-200 shadow-sm">
-              <img
-                src={currentPreview}
-                alt="Προεπισκόπηση"
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <div className="text-left">
-              <p className="text-sm font-medium text-green-700 flex items-center gap-1">
-                <CheckCircle className="w-4 h-4" />
-                {purpose === 'logo' ? 'Λογότυπο' : 'Φωτογραφία'} φορτώθηκε
-              </p>
-              <p className="text-xs text-green-600">{currentFile?.name}</p>
-              <p className="text-xs text-gray-500 mt-1">Κάντε κλικ για αλλαγή</p>
-            </div>
-          </div>
+          <PhotoPreview
+            previewUrl={currentPreview}
+            fileName={currentFile?.name}
+            compact={false}
+            purpose={purpose}
+            onRemove={!disabled && !isLoading ? handleRemoveWithCleanup : undefined}
+            onPreviewClick={handleClickWithValidation}
+            disabled={disabled}
+          />
         ) : (
           /* Empty State */
           <div>
@@ -474,21 +331,7 @@ export function EnterprisePhotoUpload({
           </div>
         )}
 
-        {/* Remove Button */}
-        {currentPreview && !disabled && !isLoading && (
-          <button
-            type="button"
-            className="absolute top-2 right-2 bg-red-100 text-red-600 rounded-full p-2 hover:bg-red-200 transition-colors z-10"
-            onClick={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-              handleRemove(e);
-            }}
-            title={`Αφαίρεση ${purpose === 'logo' ? 'λογότυπου' : 'φωτογραφίας'}`}
-          >
-            <X className="w-4 h-4" />
-          </button>
-        )}
+        {/* Remove Button handled by PhotoPreview component */}
       </div>
 
       {/* Upload Actions */}
