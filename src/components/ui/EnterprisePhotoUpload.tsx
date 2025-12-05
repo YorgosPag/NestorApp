@@ -191,6 +191,9 @@ export function EnterprisePhotoUpload({
           onDrop={disabled ? undefined : handleDropWithValidation}
           onDragOver={disabled ? undefined : uploadLogic.handleDragOver}
           onClick={disabled ? undefined : handleClickWithValidation}
+          style={{
+            backgroundColor: currentPreview ? undefined : PHOTO_COLORS.EMPTY_STATE_BACKGROUND,
+          }}
         >
           {currentPreview ? (
             <PhotoPreview
@@ -248,6 +251,9 @@ export function EnterprisePhotoUpload({
         onDrop={disabled ? undefined : handleDropWithValidation}
         onDragOver={disabled ? undefined : uploadLogic.handleDragOver}
         onClick={disabled || isLoading ? undefined : handleClickWithValidation}
+        style={{
+          backgroundColor: currentPreview ? undefined : PHOTO_COLORS.EMPTY_STATE_BACKGROUND,
+        }}
       >
         {/* Loading State */}
         {isLoading && (

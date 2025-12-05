@@ -128,7 +128,10 @@ function IndividualPhotoManager({
                       )}
                     </div>
                   ) : (
-                    <div className={`w-full h-20 ${PHOTO_STYLES.EMPTY_STATE}`}>
+                    <div
+                      className={`w-full h-20 ${PHOTO_STYLES.EMPTY_STATE}`}
+                      style={{ backgroundColor: PHOTO_COLORS.EMPTY_STATE_BACKGROUND }}
+                    >
                       <span className={`text-xs ${PHOTO_TEXT_COLORS.MUTED}`}>Κενό {index + 1}</span>
                     </div>
                   )}
