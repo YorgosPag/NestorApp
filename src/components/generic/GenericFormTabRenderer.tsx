@@ -67,17 +67,17 @@ function createFormTabsFromConfig(
         // 🏢 ENTERPRISE CENTRALIZED: Logo upload using MultiplePhotosUpload (1 slot)
         return (
           <div className="flex flex-col items-center space-y-4 p-6">
-          <MultiplePhotosUpload
-            key={`logo-upload-${(formData.multiplePhotos || []).length}-${(formData.multiplePhotos || [])[0]?.uploadUrl || 'empty'}`}
-            photos={formData.multiplePhotos || []}
-            maxPhotos={1} // For service logos, we use exactly 1 slot
-            onPhotosChange={onPhotosChange}
-            disabled={disabled}
-            purpose="logo" // For services
-            contactData={formData} // 🏢 ENTERPRISE: Pass contact data for FileNamingService
-            compact={true} // Use compact mode for better layout
-            className=""
-          />
+            <MultiplePhotosUpload
+              key={`logo-upload-${(formData.multiplePhotos || []).length}-${(formData.multiplePhotos || [])[0]?.uploadUrl || 'empty'}`}
+              photos={formData.multiplePhotos || []}
+              maxPhotos={1} // For service logos, we use exactly 1 slot
+              onPhotosChange={onPhotosChange}
+              disabled={disabled}
+              purpose="logo" // For services
+              contactData={formData} // 🏢 ENTERPRISE: Pass contact data for FileNamingService
+              compact={true} // Use compact mode for better layout
+              className=""
+            />
           </div>
         );
       }

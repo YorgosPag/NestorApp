@@ -40,6 +40,7 @@ export type { GenericPeriodSelectorProps } from './GenericPeriodSelector';
 // Helper Components
 export {
   createTabsFromConfig,
+  createCompanyTabsFromConfig,
   createIndividualTabsFromConfig,
   createServiceTabsFromConfig,
   createTabFromSection,

@@ -9,7 +9,7 @@ import { ContactDetailsHeader } from './ContactDetailsHeader';
 import { ContactInfo } from './ContactInfo';
 import { AddUnitToContactDialog } from './AddUnitToContactDialog';
 import { TabsOnlyTriggers } from '@/components/ui/navigation/TabsComponents';
-import { createTabsFromConfig, createIndividualTabsFromConfig, createServiceTabsFromConfig, getSortedSections } from '@/components/generic';
+import { createCompanyTabsFromConfig, createIndividualTabsFromConfig, createServiceTabsFromConfig, getSortedSections } from '@/components/generic';
 import { PhotoPreviewModal, usePhotoPreviewModal, openGalleryPhotoModal } from '@/core/modals';
 import { getIndividualSortedSections } from '@/config/individual-config';
 import { getServiceSortedSections } from '@/config/service-config';
@@ -63,7 +63,7 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact }: Cont
   const isCompanyContact = contact.type === 'company';
 
   // Get tabs from centralized config based on contact type
-  const tabs = isCompanyContact ? createTabsFromConfig(
+  const tabs = isCompanyContact ? createCompanyTabsFromConfig(
     getSortedSections(),
     contact,
     undefined, // customRenderers
