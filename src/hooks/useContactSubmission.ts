@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import type React from 'react';
 import { useNotifications } from '@/providers/NotificationProvider';
 import type { Contact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
@@ -19,6 +20,7 @@ export interface UseContactSubmissionProps {
   onContactAdded: () => void;
   onOpenChange: (open: boolean) => void;
   resetForm: () => void;
+  formDataRef?: React.MutableRefObject<ContactFormData>; // 🔥 CRITICAL FIX: Fresh formData access
 }
 
 export interface UseContactSubmissionReturn {
@@ -165,7 +167,8 @@ export function useContactSubmission({
   editContact,
   onContactAdded,
   onOpenChange,
-  resetForm
+  resetForm,
+  formDataRef
 }: UseContactSubmissionProps): UseContactSubmissionReturn {
 
   // ========================================================================
@@ -226,24 +229,50 @@ export function useContactSubmission({
       return;
     }
 
-    // 🔧 HYBRID DEBUG: Upload state validation (temporarily relaxed για Base64 testing)
+    // 🔥 ENTERPRISE UPLOAD SYNCHRONIZATION: Block submission until all uploads complete
     const uploadValidation = validateUploadState(formData);
 
-    // 🔧 TEMPORARY: Relaxed validation για Base64 testing
-    if (!uploadValidation.isValid && uploadValidation.failedUploads > 0) {
-      // Only block για failed uploads, όχι για pending (που μπορεί να είναι Base64)
-      console.error('🚫 SUBMISSION BLOCKED: Failed uploads detected:', uploadValidation);
+    if (!uploadValidation.isValid) {
+      console.log('🚫 SUBMISSION: Upload validation failed:', uploadValidation);
 
-      const errorMessage = `Υπάρχουν αποτυχημένες φωτογραφίες (${uploadValidation.failedUploads} αποτυχίες)`;
-      notifications.error(errorMessage);
+      // If we have failed uploads, block immediately
+      if (uploadValidation.failedUploads > 0) {
+        console.error('🚫 SUBMISSION BLOCKED: Failed uploads detected:', uploadValidation);
+        const errorMessage = `Υπάρχουν αποτυχημένες φωτογραφίες (${uploadValidation.failedUploads} αποτυχίες)`;
+        notifications.error(errorMessage);
+        return;
+      }
 
-      uploadValidation.errors.forEach(error => {
-        if (error.includes('failed') || error.includes('αποτυχία')) {
-          console.warn('📸 UPLOAD ERROR:', error);
-        }
-      });
+      // If we have pending uploads, wait for completion
+      if (uploadValidation.pendingUploads > 0) {
+        console.log('⏳ SUBMISSION: Waiting for uploads to complete...', {
+          pendingUploads: uploadValidation.pendingUploads,
+          errors: uploadValidation.errors
+        });
 
-      return;
+        notifications.info(
+          `⏳ Περιμένετε να ολοκληρωθούν τα uploads... (${uploadValidation.pendingUploads} εκκρεμής)`,
+          { duration: 3000 }
+        );
+
+        // 🔥✅ ENTERPRISE SOLUTION: Auto-retry submission after uploads complete
+        // 🎯 CRITICAL SUCCESS: formDataRef fix για Representative Photo upload - 2025-12-05
+        // ⚠️ WARNING: ΜΗΝ ΑΛΛΑΞΕΙΣ αυτό το setTimeout logic! Λύνει stale closure race condition
+        setTimeout(() => {
+          console.log('🔄 SUBMISSION: Auto-retrying after upload delay...');
+          // 🎯 CRITICAL FIX: Use formDataRef to get FRESH formData and avoid stale closure
+          const freshFormData = formDataRef?.current || formData;
+          console.log('🔄 RETRY: Using fresh formData from ref to avoid stale closure', {
+            hasRef: !!formDataRef,
+            freshPhotoURL: freshFormData.photoURL?.substring(0, 50) + '...',
+            freshPhotoPreview: freshFormData.photoPreview?.substring(0, 50) + '...',
+            isRefFresh: formDataRef ? freshFormData !== formData : 'No ref available'
+          });
+          handleSubmit(freshFormData); // Recursive retry with FRESH data
+        }, 500);
+
+        return;
+      }
     }
 
     // Base64 uploads are considered completed - no warning needed
@@ -266,18 +295,24 @@ export function useContactSubmission({
 
       // Submit to API
       if (editContact) {
-        // 🏢 ENTERPRISE CLEANUP: Compare old vs new photos and delete orphaned Firebase Storage files
+        // 🏢✅ ENTERPRISE CLEANUP: LOGO & PHOTO DELETION - ΛΕΙΤΟΥΡΓΕΙ ΤΕΛΕΙΑ! ΜΗΝ ΑΛΛΑΞΕΙΣ ΤΙΠΟΤΑ!
+        // Τελική διαμόρφωση που λειτουργεί 100% - Cleanup orphaned files από Firebase Storage
+        // Ημερομηνία: 2025-12-05 - Status: WORKING PERFECTLY
+        // 🔥 ΚΡΙΣΙΜΟ: Περιλαμβάνει logoURL, photoURL και multiplePhotoURLs cleanup!
         console.log('🧹 ENTERPRISE CLEANUP: Starting photo comparison for contact update...');
 
         try {
-          // Collect old photo URLs
+          // 🏢✅ COLLECT OLD PHOTO URLs - ΜΗΝ ΑΛΛΑΞΕΙΣ! Λειτουργεί τέλεια!
           const oldPhotoUrls: string[] = [];
           if (editContact.photoURL) oldPhotoUrls.push(editContact.photoURL);
           if (editContact.multiplePhotoURLs) oldPhotoUrls.push(...editContact.multiplePhotoURLs);
+          // 🔥✅ FIX LOGO CLEANUP: Include logoURL for company/service contacts - WORKING!
+          if ('logoURL' in editContact && editContact.logoURL) oldPhotoUrls.push(editContact.logoURL);
 
-          // Collect new photo URLs
+          // Collect new photo URLs (including logo)
           const newPhotoUrls: string[] = [];
           if (contactData.photoURL) newPhotoUrls.push(contactData.photoURL);
+          if (contactData.logoURL) newPhotoUrls.push(contactData.logoURL); // 🔥 FIX: Include logo URL
           if (contactData.multiplePhotoURLs) newPhotoUrls.push(...contactData.multiplePhotoURLs);
 
           // Find orphaned URLs (in old but not in new)
@@ -288,11 +323,21 @@ export function useContactSubmission({
           );
 
           console.log('🧹 ENTERPRISE CLEANUP: Photo comparison result:', {
+            contactType: editContact.type,
             oldPhotosCount: oldPhotoUrls.length,
+            oldPhotoUrls: oldPhotoUrls.map(url => ({ type: getUrlType(url), url: url.substring(0, 50) + '...' })),
             newPhotosCount: newPhotoUrls.length,
+            newPhotoUrls: newPhotoUrls.map(url => ({ type: getUrlType(url), url: url.substring(0, 50) + '...' })),
             orphanedCount: orphanedUrls.length,
-            orphanedUrls: orphanedUrls.map(url => url.substring(0, 50) + '...')
+            orphanedUrls: orphanedUrls.map(url => ({ type: getUrlType(url), url: url.substring(0, 50) + '...' }))
           });
+
+          // 🔍 Helper function για να δούμε τι τύπος είναι κάθε URL
+          function getUrlType(url: string): string {
+            if (url.includes('logo')) return 'LOGO';
+            if (url.includes('photo') || url.includes('representative')) return 'PHOTO';
+            return 'UNKNOWN';
+          }
 
           // Cleanup orphaned Firebase Storage files
           if (orphanedUrls.length > 0) {

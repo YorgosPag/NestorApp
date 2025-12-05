@@ -9,6 +9,8 @@ import { getIndividualSortedSections } from '@/config/individual-config';
 import type { ContactFormData, ContactType } from '@/types/ContactFormTypes';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 import type { FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
+import { UnifiedPhotoManager } from '@/components/ui/UnifiedPhotoManager';
+import { PhotoUploadService as FirebasePhotoUploadService } from '@/services/photo-upload.service';
 
 /**
  * 🏢 ENTERPRISE CENTRALIZED CONTACT FORM SECTION
@@ -126,7 +128,57 @@ export function UnifiedContactTabbedSection({
       onChange: handleChange,
       onSelectChange: handleSelectChange,
       disabled,
-      customRenderers: {}
+      customRenderers: contactType === 'company' ? {
+        // 🏢 ENTERPRISE: Custom renderer για companyPhotos (UnifiedPhotoManager)
+        companyPhotos: () => (
+          <UnifiedPhotoManager
+            contactType="company"
+            formData={formData}
+            handlers={{
+              handleLogoChange,
+              handleFileChange,
+              handleUploadedLogoURL,
+              handleUploadedPhotoURL
+            }}
+            uploadHandlers={{
+              // 🏢✅ COMPANY LOGO UPLOAD & DELETION - ΛΕΙΤΟΥΡΓΕΙ ΤΕΛΕΙΑ! ΜΗΝ ΑΛΛΑΞΕΙΣ ΤΙΠΟΤΑ!
+              // Τελική διαμόρφωση που λειτουργεί 100% - Firebase Storage path: contacts/photos
+              // ✅ UPLOAD: Σώζει στο Firebase Storage και αποθηκεύει το URL στη βάση
+              // ✅ DELETION: Διαγράφει από Firebase Storage όταν αφαιρείται από UI
+              // Ημερομηνία: 2025-12-05 - Status: WORKING PERFECTLY
+              // 🔗 Related cleanup code: src/hooks/useContactSubmission.ts:285-297
+              logoUploadHandler: (file, onProgress) =>
+                FirebasePhotoUploadService.uploadPhoto(file, {
+                  folderPath: 'contacts/photos',
+                  onProgress,
+                  enableCompression: true,
+                  compressionUsage: 'company-logo',
+                  contactData: formData,
+                  purpose: 'logo'
+                }),
+              photoUploadHandler: (file, onProgress) => {
+                console.log('🔍 DEBUG: Representative photo upload starting:', {
+                  fileName: file.name,
+                  fileSize: file.size,
+                  folderPath: 'contacts/photos',
+                  compressionUsage: 'profile-modal',
+                  purpose: 'representative'
+                });
+                return FirebasePhotoUploadService.uploadPhoto(file, {
+                  folderPath: 'contacts/photos',
+                  onProgress,
+                  enableCompression: true,
+                  compressionUsage: 'profile-modal',
+                  contactData: formData,
+                  purpose: 'representative'
+                });
+              }
+            }}
+            disabled={disabled}
+            className="mt-4"
+          />
+        )
+      } : {}
     };
 
     // 👤 Individual-specific props

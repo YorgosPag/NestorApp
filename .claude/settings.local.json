@@ -102,7 +102,10 @@
       "Bash(del clear-photos.js)",
       "Bash(del test-firebase-upload.js)",
       "Bash(del clear-test-files.js)",
-      "Bash(del \"C:\\Nestor_Pagonis\\src\\utils\\contact-filename-generator.ts\")"
+      "Bash(del \"C:\\Nestor_Pagonis\\src\\utils\\contact-filename-generator.ts\")",
+      "Bash(del \"C:\\Nestor_Pagonis\\src\\components\\generic\\ServiceFormTabRenderer.tsx\")",
+      "Bash(del \"C:\\Nestor_Pagonis\\localhost.log\")",
+      "Bash(del \"C:\\Nestor_Pagonis\\src\\services\\photoUploadService.ts\")"
     ],
     "deny": [],
     "ask": []

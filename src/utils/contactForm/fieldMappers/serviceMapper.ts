@@ -151,7 +151,16 @@ export function mapServiceContactToFormData(contact: Contact): ContactFormData {
       twitter: ''
     },
     websites: '',
-    multiplePhotos: [],
+    // 🔧 FIX: Convert existing logoURL to multiplePhotos format for services
+    multiplePhotos: getSafeFieldValue(serviceContact, 'logoURL') ?
+      [{
+        file: null,
+        preview: undefined,
+        uploadUrl: getSafeFieldValue(serviceContact, 'logoURL'),
+        isUploading: false,
+        uploadProgress: 0,
+        error: undefined
+      }] : [],
 
     // Company fields (empty for service)
     companyName: '',

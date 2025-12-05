@@ -229,27 +229,64 @@ export function useContactFormState(): UseContactFormStateReturn {
    * Handle uploaded photo URL update (after enterprise upload)
    */
   const handleUploadedPhotoURL = useCallback((photoURL: string) => {
-
-    setFormData(prev => {
-      // 🧹 CLEANUP: Revoke old blob URL if exists
-      if (prev.photoPreview && prev.photoPreview.startsWith('blob:')) {
-        URL.revokeObjectURL(prev.photoPreview);
-      }
-
-      return {
-        ...prev,
-        photoFile: null, // Καθαρισμός του file μετά successful upload
-        photoPreview: photoURL // Ενημέρωση με το uploaded URL
-      };
+    console.log('🔥🔥🔥 FORM STATE: handleUploadedPhotoURL called!', {
+      photoURL: photoURL?.substring(0, 80) + '...',
+      fullPhotoURL: photoURL,
+      isEmpty: photoURL === '' || photoURL == null,
+      isFirebase: photoURL?.includes('firebasestorage.googleapis.com'),
+      isBlobURL: photoURL?.startsWith('blob:'),
+      photoURLLength: photoURL?.length,
+      timestamp: new Date().toISOString()
     });
+
+    // 🔥 CRITICAL FIX: Use flushSync for synchronous state update (same as handleMultiplePhotosChange)
+    flushSync(() => {
+      setFormData(prev => {
+        console.log('🔥🔥🔥 FORM STATE: Before update - previous formData:', {
+          prevPhotoFile: !!prev.photoFile,
+          prevPhotoPreview: prev.photoPreview?.substring(0, 50) + '...',
+          prevPhotoURL: prev.photoURL?.substring(0, 50) + '...',
+          prevPhotoPreviewType: prev.photoPreview?.startsWith('blob:') ? 'BLOB' : 'OTHER'
+        });
+
+        // 🧹 CLEANUP: Revoke old blob URL if exists
+        if (prev.photoPreview && prev.photoPreview.startsWith('blob:')) {
+          console.log('🧹 FORM STATE: Revoking old blob URL:', prev.photoPreview.substring(0, 50));
+          URL.revokeObjectURL(prev.photoPreview);
+        }
+
+        const newFormData = {
+          ...prev,
+          photoFile: null, // Καθαρισμός του file μετά successful upload
+          photoPreview: photoURL, // Ενημέρωση με το uploaded URL (legacy)
+          photoURL: photoURL // 🔥 FIX: Also update photoURL field for UnifiedPhotoManager validation
+        };
+
+        console.log('🔥🔥🔥 FORM STATE: SYNCHRONOUSLY Updated formData:', {
+          newPhotoFile: !!newFormData.photoFile,
+          newPhotoPreview: newFormData.photoPreview?.substring(0, 50) + '...',
+          newPhotoURL: newFormData.photoURL?.substring(0, 50) + '...',
+          bothFieldsSet: !!newFormData.photoPreview && !!newFormData.photoURL,
+          bothFieldsMatch: newFormData.photoPreview === newFormData.photoURL,
+          isFirebaseURL: newFormData.photoURL?.includes('firebasestorage.googleapis.com')
+        });
+
+        return newFormData;
+      });
+    });
+
+    console.log('✅ FORM STATE: handleUploadedPhotoURL SYNCHRONOUS update completed successfully');
   }, []);
 
   /**
    * Handle uploaded logo URL update (after enterprise upload)
    */
   const handleUploadedLogoURL = useCallback((logoURL: string) => {
+    console.log('🔍 DEBUG: handleUploadedLogoURL called with:', { logoURL, isEmpty: logoURL === '' || logoURL == null });
+
     setFormData(prev => {
       if (logoURL === '' || logoURL == null) {
+        console.log('🧹 DEBUG: Clearing logo URL');
         return {
           ...prev,
           logoFile: null,
@@ -258,6 +295,7 @@ export function useContactFormState(): UseContactFormStateReturn {
         };
       }
 
+      console.log('✅ DEBUG: Setting logo URL in formData:', logoURL.substring(0, 50) + '...');
       return {
         ...prev,
         logoFile: null,

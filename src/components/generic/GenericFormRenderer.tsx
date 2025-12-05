@@ -23,6 +23,8 @@ export interface GenericFormRendererProps {
   onSelectChange: (name: string, value: string) => void;
   /** Disabled state */
   disabled?: boolean;
+  /** Multiple photos change handler */
+  onPhotosChange?: (photos: any[]) => void;
   /** Custom field renderers */
   customRenderers?: Record<string, (field: FieldConfig, formData: any, onChange: any, onSelectChange: any, disabled: boolean) => React.ReactNode>;
 }

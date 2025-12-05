@@ -145,38 +145,91 @@ export function EnterprisePhotoUpload({
   /**
    * 🔥 AUTOMATIC UPLOAD: Start upload immediately when file is selected
    */
-  // 🏢 ENTERPRISE: Default upload handler using Firebase Storage
+  // 🏢 ENTERPRISE: Default upload handler using CORRECT Firebase Storage
   const defaultUploadHandler = useCallback(async (file: File, onProgress: (progress: FileUploadProgress) => void) => {
-    // Dynamic import για to avoid circular dependencies
-    const { PhotoUploadService } = await import('@/services/photo-upload.service');
+    // 🔥 CRITICAL FIX: Use the CORRECT Firebase Storage service, not Base64
+    const { PhotoUploadService: FirebasePhotoUploadService } = await import('@/services/photo-upload.service');
 
-    return await PhotoUploadService.uploadPhoto(file, {
+    return await FirebasePhotoUploadService.uploadPhoto(file, {
       folderPath: 'contacts/photos',
       enableCompression: true,
-      onProgress
+      compressionUsage: 'profile-modal',
+      onProgress,
+      purpose: 'representative'
     });
   }, []);
 
   // AUTO-UPLOAD: Εκτέλεση αμέσως μόλις επιλεγεί αρχείο
   useEffect(() => {
-    if (!photoFile || upload.isUploading || upload.success) return;
+    console.log('🔄 ENTERPRISE AUTO-UPLOAD EFFECT TRIGGERED:', {
+      hasPhotoFile: !!photoFile,
+      photoFileName: photoFile?.name,
+      isUploading: upload.isUploading,
+      uploadSuccess: upload.success,
+      hasUploadHandler: !!uploadHandler,
+      hasOnUploadComplete: !!onUploadComplete,
+      purpose
+    });
+
+    if (!photoFile || upload.isUploading || upload.success) {
+      console.log('🛑 ENTERPRISE: Skipping upload:', {
+        reason: !photoFile ? 'No file' : upload.isUploading ? 'Already uploading' : 'Already successful'
+      });
+      return;
+    }
+
+    console.log('🚀 ENTERPRISE: Starting auto-upload for:', photoFile.name);
 
     const startUpload = async () => {
       try {
         // Use provided uploadHandler or default Firebase Storage handler
         const handlerToUse = uploadHandler || defaultUploadHandler;
+        console.log('📡 ENTERPRISE: Using upload handler:', {
+          isCustomHandler: !!uploadHandler,
+          isDefaultHandler: !uploadHandler,
+          handlerName: handlerToUse.name || 'anonymous'
+        });
+
         const result = await upload.uploadFile(photoFile, handlerToUse);
 
+        console.log('🎉 ENTERPRISE: Upload result received!', {
+          hasResult: !!result,
+          result: result,
+          hasSuccess: !!result?.success,
+          hasUrl: !!result?.url,
+          url: result?.url?.substring(0, 80) + '...',
+          fileName: result?.fileName,
+          purpose
+        });
+
         if (result?.success && onUploadComplete) {
-          onUploadComplete(result); // ← ΟΛΟΚΛΗΡΟ OBJECT
+          console.log('✅ ENTERPRISE: Branch 1 - Explicit success flag present, calling onUploadComplete');
+          onUploadComplete(result);
+        } else if (result?.url && onUploadComplete) {
+          console.log('🔧 ENTERPRISE: Branch 2 - No explicit success flag but has URL, assuming success');
+          const enhancedResult = {
+            ...result,
+            success: true
+          };
+          console.log('📤 ENTERPRISE: Calling onUploadComplete with enhanced result:', enhancedResult);
+          onUploadComplete(enhancedResult);
+        } else {
+          console.error('❌ ENTERPRISE: Upload callback NOT called!', {
+            hasResult: !!result,
+            hasSuccess: !!result?.success,
+            hasUrl: !!result?.url,
+            hasCallback: !!onUploadComplete,
+            callbackName: onUploadComplete?.name || 'anonymous',
+            purpose
+          });
         }
       } catch (err) {
-        console.error('⚠️ Auto-upload failed:', err);
+        console.error('⚠️ ENTERPRISE: Auto-upload failed:', err, { purpose, fileName: photoFile.name });
       }
     };
 
     startUpload();
-  }, [photoFile, upload.isUploading, upload.success, uploadHandler, onUploadComplete, upload, defaultUploadHandler]);
+  }, [photoFile, upload.isUploading, upload.success, uploadHandler, onUploadComplete, upload, defaultUploadHandler, purpose]);
 
   /**
    * Handle remove photo
@@ -204,6 +257,18 @@ export function EnterprisePhotoUpload({
   // ========================================================================
 
   const rawCurrentPreview = photoPreview || upload.previewUrl;
+
+  // 🔍 DEBUG: Log photo display values
+  React.useEffect(() => {
+    console.log(`🔍 DEBUG EnterprisePhotoUpload [${purpose}]:`, {
+      photoPreview,
+      uploadPreviewUrl: upload.previewUrl,
+      rawCurrentPreview,
+      photoFile,
+      currentFile: upload.currentFile,
+      uploadSuccess: upload.success
+    });
+  }, [purpose, photoPreview, upload.previewUrl, rawCurrentPreview, photoFile, upload.currentFile, upload.success]);
 
   // 🔥 CONDITIONAL CACHE BUSTER: Μόνο όταν χρειάζεται (όχι πάντα)
   // ΠΡΟΒΛΗΜΑ: Browser cache κρατάει τις Firebase images για 1 χρόνο

@@ -222,7 +222,18 @@ export function MultiplePhotosUpload({
       return;
     }
 
-    // 🚨 FAILURE CASE: Handle failed uploads (empty URL)
+    // 🔧 REMOVAL CASE: Handle photo removal (empty URL + isRemoval flag)
+    if ((!result.url || result.url.trim() === '') && (result as any).isRemoval) {
+      console.log('🗑️ MULTIPLE PHOTOS: Photo removal confirmed for slot', slotIndex);
+
+      // Photo already cleared in handleFileSelection - just notify parent
+      if (onPhotoUploadComplete) {
+        onPhotoUploadComplete(slotIndex, result);
+      }
+      return;
+    }
+
+    // 🚨 FAILURE CASE: Handle failed uploads (empty URL without removal flag)
     if (!result.url || result.url.trim() === '') {
       console.error('❌ MULTIPLE PHOTOS: Upload failed - no URL returned for slot', slotIndex);
 
@@ -335,14 +346,15 @@ export function MultiplePhotosUpload({
 
       onPhotosChange?.(newPhotos);
 
-      // ΚΡΙΣΙΜΟ: Καλούμε το onUploadComplete με κενό result για να καθαρίσει και το parent state
+      // ΚΡΙΣΙΜΟ: Καλούμε το onUploadComplete με removal flag για να καθαρίσει και το parent state
       if (onPhotoUploadComplete) {
         onPhotoUploadComplete(slotIndex, {
           success: true,
           url: '',
           fileName: '',
           fileSize: 0,
-          mimeType: ''
+          mimeType: '',
+          isRemoval: true // 🔧 FIX: Flag to indicate this is a removal, not a failed upload
         });
       }
     }
@@ -434,22 +446,48 @@ export function MultiplePhotosUpload({
   const availableSlots = maxPhotos - usedSlots;
 
   // ========================================================================
+  // HELPER FUNCTIONS
+  // ========================================================================
+
+  // 🎯 Δυναμικά κείμενα ανάλογα με purpose και maxPhotos
+  const getHeaderText = () => {
+    if (purpose === 'logo' && maxPhotos === 1) {
+      return 'Λογότυπο';
+    }
+    return `Φωτογραφίες (${usedSlots}/${maxPhotos})`;
+  };
+
+  const getDragDropText = () => {
+    if (purpose === 'logo' && maxPhotos === 1) {
+      return 'Σύρετε το λογότυπο εδώ ή κάντε κλικ';
+    }
+    return 'Σύρετε πολλαπλές φωτογραφίες εδώ ή κάντε κλικ';
+  };
+
+  const getSubText = () => {
+    if (purpose === 'logo' && maxPhotos === 1) {
+      return 'Μόνο ένα λογότυπο (JPG, PNG - μέχρι 5MB)';
+    }
+    return `Μπορείτε να προσθέσετε ${availableSlots} ακόμη φωτογραφίες (JPG, PNG - μέχρι 5MB η καθεμία)`;
+  };
+
+  // ========================================================================
   // RENDER
   // ========================================================================
 
   if (compact) {
     return (
       <div className={`space-y-3 ${className}`}>
-        {/* Header */}
-        <div className="flex items-center justify-between">
+        {/* Header - Centered for logo mode */}
+        <div className={maxPhotos === 1 ? "flex justify-center" : "flex items-center justify-between"}>
           <h4 className="font-semibold text-sm flex items-center gap-2">
             <Image className="w-4 h-4" />
-            Φωτογραφίες ({usedSlots}/{maxPhotos})
+            {getHeaderText()}
           </h4>
         </div>
 
-        {/* Compact Grid - 3x2 Layout */}
-        <div className="grid grid-cols-3 gap-6 p-2">
+        {/* Compact Grid - Dynamic Layout */}
+        <div className={maxPhotos === 1 ? "flex justify-center" : "grid grid-cols-3 gap-6 p-2"}>
           {normalizedPhotos.map((photo, index) => {
             // 🔥 FORCE RE-RENDER: Key-based cache busting αντί για Date.now()
             const rawPreview = photo.preview || photo.uploadUrl;
@@ -458,8 +496,10 @@ export function MultiplePhotosUpload({
                 ? `${rawPreview}?v=${photosKey}`
                 : rawPreview;
 
+            const slotSize = maxPhotos === 1 ? "h-64 w-64" : "h-[300px] w-full"; // Square for logo, full width for photos
+
             return (
-              <div key={`photo-${index}-${photosKey}-${photo.file?.name || photo.uploadUrl || 'empty'}`} className="h-[300px] w-full">
+              <div key={`photo-${index}-${photosKey}-${photo.file?.name || photo.uploadUrl || 'empty'}`} className={slotSize}>
                 <EnterprisePhotoUpload
                   key={`enterprise-${index}-${photosKey}-${Date.now()}`}
                   purpose={purpose}
@@ -473,15 +513,15 @@ export function MultiplePhotosUpload({
                   compact={true}
                   showProgress={showProgress}
                   isLoading={photo.isUploading}
-                  className="h-[300px] w-full"
+                  className={slotSize}
                 />
               </div>
             );
           })}
         </div>
 
-        {/* Multiple Drop Zone */}
-        {availableSlots > 0 && (
+        {/* Multiple Drop Zone - Hidden for logo mode (maxPhotos=1) */}
+        {availableSlots > 0 && maxPhotos > 1 && (
           <div
             className="border-2 border-dashed border-gray-300 rounded-lg p-3 text-center cursor-pointer transition-colors hover:border-gray-400 bg-gray-50"
             onDrop={handleMultipleDrop}
@@ -519,16 +559,16 @@ export function MultiplePhotosUpload({
   // Full mode
   return (
     <div className={`space-y-4 ${className}`}>
-      {/* Header */}
+      {/* Header - Centered for logo mode */}
       <div className="border-t pt-4 mt-4">
-        <div className="flex items-center justify-between">
+        <div className={maxPhotos === 1 ? "flex justify-center" : "flex items-center justify-between"}>
           <h4 className="font-semibold text-sm flex items-center gap-2">
             <Image className="w-4 h-4" />
-            Φωτογραφίες ({usedSlots}/{maxPhotos})
+            {getHeaderText()}
           </h4>
-          {availableSlots > 0 && (
+          {availableSlots > 0 && maxPhotos > 1 && (
             <span className="text-xs text-gray-500">
-              Μπορείτε να προσθέσετε {availableSlots} ακόμη φωτογραφίες
+{getSubText()}
             </span>
           )}
         </div>
@@ -561,8 +601,8 @@ export function MultiplePhotosUpload({
         })}
       </div>
 
-      {/* Multiple Upload Zone */}
-      {availableSlots > 0 && (
+      {/* Multiple Upload Zone - Hidden for logo mode (maxPhotos=1) */}
+      {availableSlots > 0 && maxPhotos > 1 && (
         <div
           className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer transition-colors hover:border-gray-400"
           onDrop={handleMultipleDrop}
@@ -589,10 +629,10 @@ export function MultiplePhotosUpload({
         >
           <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
           <p className="text-sm font-medium text-gray-600 mb-1">
-            Σύρετε πολλαπλές φωτογραφίες εδώ ή κάντε κλικ
+{getDragDropText()}
           </p>
           <p className="text-xs text-gray-500">
-            Μπορείτε να προσθέσετε {availableSlots} ακόμη φωτογραφίες (JPG, PNG - μέχρι 5MB η καθεμία)
+{getSubText()}
           </p>
         </div>
       )}

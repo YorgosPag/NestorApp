@@ -190,7 +190,7 @@ export function useEnterpriseFileUpload(config: UseEnterpriseFileUploadConfig): 
     setFileWithPreview(processedFile, createPreview);
 
     if (config.showToasts !== false) {
-      const displayName = customFilename !== file.name ? customFilename : PURPOSE_CONFIG[config.purpose].label;
+      const displayName = customFilename !== file.name ? customFilename : PURPOSE_CONFIG[config.purpose]?.label || 'Αρχείο';
       notifications.success(`✅ ${displayName} επιλέχθηκε επιτυχώς`);
     }
 
@@ -286,7 +286,7 @@ export function useEnterpriseFileUpload(config: UseEnterpriseFileUploadConfig): 
       completeUpload(result);
 
       if (config.showToasts !== false) {
-        notifications.success(`🎉 ${PURPOSE_CONFIG[config.purpose].label} ανέβηκε επιτυχώς!`);
+        notifications.success(`🎉 ${PURPOSE_CONFIG[config.purpose]?.label || 'Αρχείο'} ανέβηκε επιτυχώς!`);
       }
 
       return result;

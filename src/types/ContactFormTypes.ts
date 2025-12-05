@@ -189,6 +189,13 @@ export interface ContactFormData {
   multiplePhotos: PhotoSlot[];
   // Επιλεγμένη φωτογραφία προφίλ (για Individual - index από multiplePhotos)
   selectedProfilePhotoIndex?: number;
+
+  // 🔥 ENTERPRISE UPLOAD STATE TRACKING (για synchronization)
+  // Internal tracking fields - ΔΕΝ αποθηκεύονται στη βάση
+  _isLogoUploading?: boolean;    // Logo upload in progress
+  _isPhotoUploading?: boolean;   // Representative photo upload in progress
+  _forceDeleteLogo?: number;     // Timestamp για force logo deletion state reset
+
   // Κοινά
   notes: string;
 }

@@ -1,10 +1,10 @@
 import { useEffect, useCallback, useMemo, useRef } from 'react';
 import React from 'react';
 import type { Contact } from '@/types/contacts';
+import type { ContactFormData } from '@/types/ContactFormTypes';
 import { mapContactToFormData } from '@/utils/contactForm/contactMapper';
 import { useContactFormState } from './useContactFormState';
 import { useContactSubmission } from './useContactSubmission';
-import { useContactPhotoHandlers } from './useContactPhotoHandlers';
 import { useContactLogoHandlers } from './useContactLogoHandlers';
 import { useMultiplePhotosHandlers } from './useMultiplePhotosHandlers';
 
@@ -33,7 +33,6 @@ interface UseContactFormProps {
  * Architecture:
  * - useContactFormState: Core state management
  * - useContactSubmission: Form submission logic
- * - useContactPhotoHandlers: Photo upload handling
  * - useContactLogoHandlers: Logo upload handling
  * - useMultiplePhotosHandlers: Multiple photos handling
  * - Contact/FormData mappers: Data transformation utilities
@@ -69,6 +68,10 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact, isMo
     resetForm
   } = useContactFormState();
 
+  // 🔥 CRITICAL FIX: FormData ref to prevent stale closure in handleSubmit
+  const formDataRef = useRef<ContactFormData>(formData);
+  formDataRef.current = formData;
+
   // 2️⃣ Form submission logic
   const {
     loading,
@@ -79,14 +82,11 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact, isMo
     editContact,
     onContactAdded,
     onOpenChange,
-    resetForm
+    resetForm,
+    formDataRef // 🔥 CRITICAL FIX: Pass formDataRef for fresh state access
   });
 
-  // 3️⃣ Photo upload handlers
-  const photoHandlers = useContactPhotoHandlers({
-    onFileChange: handleFileChange,
-    onUploadComplete: handleUploadedPhotoURL
-  });
+  // 3️⃣ Photo upload handlers (removed - now handled by UnifiedPhotoManager)
 
   // 4️⃣ Logo upload handlers
   const logoHandlers = useContactLogoHandlers({
@@ -264,11 +264,19 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact, isMo
 
   /**
    * Handle form submission (wraps submission hook)
+   * 🔥 CRITICAL FIX: Use formDataRef.current to get fresh formData and prevent stale closure
    */
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    await submitFormData(formData);
-  }, [submitFormData, formData]);
+    console.log('🔥 HANDLE SUBMIT: Using fresh formData via ref:', {
+      refValue: formDataRef.current.photoURL?.substring(0, 50) + '...',
+      refPhotoPreview: formDataRef.current.photoPreview?.substring(0, 50) + '...',
+      formDataInClosure: formData.photoURL?.substring(0, 50) + '...',
+      areTheSame: formDataRef.current === formData,
+      timestamp: new Date().toISOString()
+    });
+    await submitFormData(formDataRef.current); // 🔥 Use ref instead of closure variable!
+  }, [submitFormData]); // 🔥 Remove formData from dependencies to prevent stale closure
 
   // ========================================================================
   // ENTERPRISE UPLOAD WRAPPER
@@ -285,12 +293,9 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact, isMo
     // File handlers (με enterprise validation)
     // 🔧 FIX: Removed dependencies to prevent unnecessary re-renders
     handleFileChange: useCallback((file: File | null) => {
-      if (file) {
-        photoHandlers.processPhotoFile(file);
-      } else {
-        photoHandlers.clearPhoto();
-      }
-    }, []), // 🔧 FIX: Empty dependencies - handlers are stable
+      // Photo handling now done by UnifiedPhotoManager directly
+      handleFileChange(file);
+    }, [handleFileChange]),
 
     handleLogoChange: useCallback((file: File | null) => {
       if (file) {
@@ -300,14 +305,14 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact, isMo
       }
     }, []), // 🔧 FIX: Empty dependencies - handlers are stable
 
-    // Drag & drop (enhanced με validation)
+    // Drag & drop (enhanced με validation) - 🔧 FIX: Simplified to standard HTML5 drag behavior
     handleDrop: useCallback((e: React.DragEvent) => {
-      photoHandlers.handlePhotoDrop(e);
-    }, []), // 🔧 FIX: Empty dependencies - handlers are stable
+      handleDrop(e);
+    }, [handleDrop]), // Using existing form drag handler
 
     handleDragOver: useCallback((e: React.DragEvent) => {
-      photoHandlers.handlePhotoDragOver(e);
-    }, []) // 🔧 FIX: Empty dependencies - handlers are stable
+      handleDragOver(e);
+    }, [handleDragOver]) // Using existing form drag handler
   };
 
   // ========================================================================
@@ -344,7 +349,6 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact, isMo
     handleProfilePhotoSelection,
 
     // Advanced handlers (για επέκταση)
-    photoHandlers,
     logoHandlers,
     multiplePhotosHandlers,
 

@@ -32,6 +32,9 @@ function requiresSpecialDeletion(key: string, value: any): boolean {
   // Always preserve photoURL fields (Base64 or Firebase Storage)
   if (key === 'photoURL') return true;
 
+  // 🏢 ENTERPRISE FIX: Always preserve logoURL fields for company logo deletion
+  if (key === 'logoURL') return true;
+
   // Always preserve multiplePhotoURLs arrays (even empty for deletion)
   if (key === 'multiplePhotoURLs') return true;
 
@@ -145,11 +148,10 @@ export function extractMultiplePhotoURLs(formData: ContactFormData): string[] {
 }
 
 /**
- * 🚨 Enterprise Upload State Validation
- * Validates if all photos have completed upload before form submission
+ * 🏢 ENTERPRISE CENTRALIZED VALIDATION (Legacy Wrapper)
  *
- * @param formData - Contact form data
- * @returns Validation result with pending uploads details
+ * @deprecated Use validateAllPhotos from '@/utils/photo/validation' instead
+ * This function is kept for backward compatibility
  */
 export function validateUploadState(formData: ContactFormData): {
   isValid: boolean;
@@ -158,92 +160,9 @@ export function validateUploadState(formData: ContactFormData): {
   totalSlots: number;
   errors: string[];
 } {
-  console.log('🚨 VALIDATE UPLOAD: Starting validation with multiplePhotos:', {
-    count: formData.multiplePhotos.length,
-    slots: formData.multiplePhotos.map((p, i) => ({
-      index: i,
-      hasFile: !!p.file,
-      hasPreview: !!p.preview,
-      hasUploadUrl: !!p.uploadUrl,
-      isUploading: p.isUploading,
-      hasError: !!p.error
-    }))
-  });
-
-  const result = {
-    isValid: true,
-    pendingUploads: 0,
-    failedUploads: 0,
-    totalSlots: 0,
-    errors: [] as string[]
-  };
-
-  // Check multiple photos upload state
-  formData.multiplePhotos.forEach((photoSlot, index) => {
-    // 🔥 CRITICAL FIX: Check for uploads in progress even if file/preview are cleared
-    const hasContent = photoSlot.file || photoSlot.preview || photoSlot.uploadUrl || photoSlot.isUploading;
-
-    if (hasContent) {
-      result.totalSlots++;
-
-      // 🔙 HYBRID Enhanced check: Consider Base64 URLs as completed uploads
-      const hasValidUrl = photoSlot.uploadUrl && (photoSlot.uploadUrl.startsWith('data:') || photoSlot.uploadUrl.includes('firebasestorage.googleapis.com'));
-      const isUploadingButNotComplete = photoSlot.isUploading && !hasValidUrl;
-      const hasFileButNoUrl = (photoSlot.file || photoSlot.preview) && !hasValidUrl;
-
-      if (isUploadingButNotComplete || hasFileButNoUrl) {
-        if (photoSlot.isUploading) {
-          result.pendingUploads++;
-          result.errors.push(`Φωτογραφία ${index + 1}: Εκκρεμής upload`);
-        } else if (photoSlot.error) {
-          result.failedUploads++;
-          result.errors.push(`Φωτογραφία ${index + 1}: ${photoSlot.error}`);
-        } else {
-          // File selected but upload never started or stalled
-          result.pendingUploads++;
-          result.errors.push(`Φωτογραφία ${index + 1}: Upload δεν ξεκίνησε`);
-        }
-      } else if (hasValidUrl) {
-        // 🔙 HYBRID: Photo has valid URL - consider it completed
-      }
-    }
-  });
-
-  // 🔙 HYBRID: Check main photo upload state (for Individual/Service contacts)
-  if ((formData.type === 'individual' || formData.type === 'service') && formData.photoFile) {
-    const hasValidPhotoUrl = formData.photoPreview && (formData.photoPreview.startsWith('data:') || formData.photoPreview.includes('firebasestorage.googleapis.com'));
-    if (!hasValidPhotoUrl) {
-      result.pendingUploads++;
-      result.errors.push('Κύρια φωτογραφία: Εκκρεμής upload');
-    }
-  }
-
-  // 🔙 HYBRID: Check logo upload state (for Company/Service contacts)
-  // Base64 URLs are considered complete - no need to check further
-  if ((formData.type === 'company' || formData.type === 'service') && formData.logoFile) {
-    const hasValidLogoUrl = formData.logoPreview && (
-      formData.logoPreview.startsWith('data:') ||
-      formData.logoPreview.includes('firebasestorage.googleapis.com')
-    );
-    // Only count as pending if we have a file but NO valid URL (base64 or firebase)
-    if (!hasValidLogoUrl) {
-      result.pendingUploads++;
-      result.errors.push('Logo: Εκκρεμής upload');
-    }
-  }
-
-  result.isValid = result.pendingUploads === 0 && result.failedUploads === 0;
-
-  console.log('🚨 VALIDATE UPLOAD: Final result:', {
-    isValid: result.isValid,
-    pendingUploads: result.pendingUploads,
-    failedUploads: result.failedUploads,
-    totalSlots: result.totalSlots,
-    errors: result.errors
-  });
-
-
-  return result;
+  // 🔄 FORWARD TO CENTRALIZED VALIDATION
+  const { validateAllPhotos } = require('@/utils/photo/validation');
+  return validateAllPhotos(formData);
 }
 
 /**
@@ -257,8 +176,35 @@ export function validateUploadState(formData: ContactFormData): {
 export function extractPhotoURL(formData: ContactFormData, contactType: string): string {
 
   console.log('🔍 FORM MAPPER: extractPhotoURL called for', contactType);
-  console.log('🔍 FORM MAPPER: formData.multiplePhotos:', formData.multiplePhotos);
+  console.log('🔍 FORM MAPPER: formData.photoURL:', formData.photoURL);
   console.log('🔍 FORM MAPPER: formData.photoPreview:', formData.photoPreview);
+  console.log('🔍 FORM MAPPER: formData.multiplePhotos:', formData.multiplePhotos);
+
+  // 🏢 COMPANY SPECIAL CASE: For company representative photo, check photoURL first
+  if (contactType.includes('company') || contactType.includes('representative')) {
+    console.log('🏢 COMPANY MODE: Checking photoURL for representative photo');
+
+    // Check photoURL first (from UnifiedPhotoManager)
+    if (formData.photoURL && formData.photoURL.trim() !== '' && !formData.photoURL.startsWith('blob:')) {
+      // Accept both Base64 and Firebase Storage URLs
+      if (formData.photoURL.startsWith('data:') || formData.photoURL.includes('firebasestorage.googleapis.com')) {
+        console.log('🏢 EXTRACT PHOTO: Using photoURL (company representative):', formData.photoURL.substring(0, 50) + '...');
+        return formData.photoURL;
+      }
+    }
+
+    // Check photoPreview as fallback
+    if (formData.photoPreview && formData.photoPreview.trim() !== '' && !formData.photoPreview.startsWith('blob:')) {
+      // Accept both Base64 and Firebase Storage URLs
+      if (formData.photoPreview.startsWith('data:') || formData.photoPreview.includes('firebasestorage.googleapis.com')) {
+        console.log('🏢 EXTRACT PHOTO: Using photoPreview (company representative fallback):', formData.photoPreview.substring(0, 50) + '...');
+        return formData.photoPreview;
+      }
+    }
+
+    console.log('🏢 EXTRACT PHOTO: No company representative photo found');
+    return '';
+  }
 
   // 🔥 CRITICAL FIX: Check for intentional deletion vs pending uploads
   // Only consider it deletion if BOTH conditions are met:
@@ -266,7 +212,7 @@ export function extractPhotoURL(formData: ContactFormData, contactType: string):
   // 2. No files with uploading/pending state
 
   const hasFiles = formData.multiplePhotos && formData.multiplePhotos.length > 0 &&
-    formData.multiplePhotos.some(slot => slot.file || slot.isUploading || slot.uploadProgress > 0);
+    formData.multiplePhotos.some(slot => slot.file || slot.isUploading || (slot.uploadProgress && slot.uploadProgress > 0));
 
   const hasUploadedUrls = formData.multiplePhotos && formData.multiplePhotos.length > 0 &&
     formData.multiplePhotos.some(slot => slot.uploadUrl && slot.uploadUrl.trim() !== '');
@@ -351,18 +297,20 @@ export function extractPhotoURL(formData: ContactFormData, contactType: string):
  * @returns Logo URL string
  */
 export function extractLogoURL(formData: ContactFormData, contactType: string): string {
-  // 🏢 ENTERPRISE CENTRALIZED: First check multiplePhotos[0] (κεντρικοποιημένο σύστημα για logos)
-  const multiplePhotoURLs = extractMultiplePhotoURLs(formData);
-  if (multiplePhotoURLs.length > 0) {
-    const firstPhoto = multiplePhotoURLs[0];
+  console.log('🔍 EXTRACT LOGO: contactType:', contactType);
+  console.log('🔍 EXTRACT LOGO: logoURL:', formData.logoURL);
+  console.log('🔍 EXTRACT LOGO: logoPreview:', formData.logoPreview);
+
+  // 🏢 COMPANY/SERVICE PRIORITY: Check logoURL first (από UnifiedPhotoManager)
+  if (formData.logoURL && formData.logoURL.trim() !== '' && !formData.logoURL.startsWith('blob:')) {
     // Accept both Base64 and Firebase Storage URLs
-    if (firstPhoto.startsWith('data:') || firstPhoto.includes('firebasestorage.googleapis.com')) {
-      console.log('🏢 EXTRACT LOGO: Using centralized multiplePhotos[0]:', firstPhoto.substring(0, 50) + '...');
-      return firstPhoto;
+    if (formData.logoURL.startsWith('data:') || formData.logoURL.includes('firebasestorage.googleapis.com')) {
+      console.log('🏢 EXTRACT LOGO: Using logoURL (UnifiedPhotoManager):', formData.logoURL.substring(0, 50) + '...');
+      return formData.logoURL;
     }
   }
 
-  // 🆕 ΚΡΙΣΙΜΟ: Then check logoPreview (παλιό σύστημα) - HYBRID support Base64 & Firebase URLs
+  // 🔄 FALLBACK: Check logoPreview (legacy EnterprisePhotoUpload system)
   if (formData.logoPreview && formData.logoPreview.trim() !== '' && !formData.logoPreview.startsWith('blob:')) {
     // Accept both Base64 and Firebase Storage URLs
     if (formData.logoPreview.startsWith('data:') || formData.logoPreview.includes('firebasestorage.googleapis.com')) {
@@ -371,15 +319,18 @@ export function extractLogoURL(formData: ContactFormData, contactType: string): 
     }
   }
 
-  // 🆕 ΚΡΙΣΙΜΟ: Finally check logoURL (existing logo from database) - HYBRID support Base64 & Firebase URLs
-  if (formData.logoURL && formData.logoURL.trim() !== '' && !formData.logoURL.startsWith('blob:')) {
+  // 🏢 ENTERPRISE CENTRALIZED: Check multiplePhotos[0] (για service logos που χρησιμοποιούν MultiplePhotosUpload)
+  const multiplePhotoURLs = extractMultiplePhotoURLs(formData);
+  if (multiplePhotoURLs.length > 0) {
+    const firstPhoto = multiplePhotoURLs[0];
     // Accept both Base64 and Firebase Storage URLs
-    if (formData.logoURL.startsWith('data:') || formData.logoURL.includes('firebasestorage.googleapis.com')) {
-      console.log('🗃️ EXTRACT LOGO: Using existing logoURL:', formData.logoURL.substring(0, 50) + '...');
-      return formData.logoURL;
+    if (firstPhoto.startsWith('data:') || firstPhoto.includes('firebasestorage.googleapis.com')) {
+      console.log('🏢 EXTRACT LOGO: Using centralized multiplePhotos[0] (fallback):', firstPhoto.substring(0, 50) + '...');
+      return firstPhoto;
     }
   }
 
+  console.log('🔍 EXTRACT LOGO: No logo found, returning empty string');
   return '';
 }
 

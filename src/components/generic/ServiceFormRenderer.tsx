@@ -5,7 +5,6 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { FormField, FormInput } from '@/components/ui/form/FormComponents';
-import { MultiplePhotosUpload } from '@/components/ui/MultiplePhotosUpload';
 import type { ServiceFieldConfig, ServiceSectionConfig } from '@/config/service-config';
 import { getIconComponent } from './ConfigTabsHelper';
 
@@ -134,35 +133,6 @@ function renderField(
   }
 }
 
-/**
- * 🏢 ENTERPRISE CENTRALIZED: Renders the photo upload section using MultiplePhotosUpload
- * Now unified with individuals - no more duplicate upload systems!
- */
-function renderPhotosSection(
-  formData: any,
-  onPhotosChange: ((photos: any[]) => void) | undefined,
-  disabled: boolean,
-  maxPhotos: number = 1 // For logos, we use 1 slot
-): React.ReactNode {
-  if (!onPhotosChange) {
-    return null;
-  }
-
-  // Get photos data from formData - now centralized!
-  const photos = formData.multiplePhotos || [];
-
-  return (
-    <MultiplePhotosUpload
-      photos={photos}
-      maxPhotos={maxPhotos}
-      onPhotosChange={onPhotosChange}
-      disabled={disabled}
-      purpose="logo" // For services
-      contactData={formData} // 🏢 ENTERPRISE: Pass contact data for FileNamingService
-      className="w-[400px] h-[300px] mx-auto"
-    />
-  );
-}
 
 // ============================================================================
 // MAIN COMPONENT
@@ -215,12 +185,6 @@ export function ServiceFormRenderer({
             ))}
           </div>
 
-          {/* 🏢 ENTERPRISE CENTRALIZED: Photos/Logo Upload Section */}
-          {section.id === 'logo' && (
-            <div className="mt-6">
-              {renderPhotosSection(formData, onPhotosChange, disabled, 1)}
-            </div>
-          )}
         </div>
       ))}
     </div>

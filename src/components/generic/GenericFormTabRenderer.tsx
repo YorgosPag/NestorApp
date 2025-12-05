@@ -51,53 +51,51 @@ function createFormTabsFromConfig(
     label: section.title,
     icon: getIconComponent(section.icon),
     content: (() => {
-      // Check for custom renderer FIRST
-      if (customRenderers?.[section.id]) {
+      // Check for custom renderer FIRST (but exclude companyPhotos which has special logic)
+      if (customRenderers?.[section.id] && section.id !== 'companyPhotos') {
+        console.log('🔧 DEBUG: Using generic custom renderer for section:', section.id);
         return customRenderers[section.id]();
       }
 
-      return (section.id === 'logo' || section.id === 'companyPhotos') ? (
-      // Special rendering for logo/companyPhotos section
-      section.id === 'companyPhotos' && customRenderers && customRenderers.companyPhotos ? (
-        // Custom renderer για companyPhotos (UnifiedPhotoManager)
-        customRenderers.companyPhotos(section, formData, onChange, onSelectChange, disabled)
-      ) : (
-        // 🏢 ENTERPRISE CENTRALIZED: Logo upload using MultiplePhotosUpload
-        <div className="space-y-4">
+      if (section.id === 'companyPhotos' && customRenderers && customRenderers.companyPhotos) {
+        // 🏢 ENTERPRISE: Custom renderer για companyPhotos (UnifiedPhotoManager)
+        console.log('🏢 DEBUG: Using companyPhotos custom renderer');
+        return customRenderers.companyPhotos();
+      }
+
+      if (section.id === 'logo') {
+        // 🏢 ENTERPRISE CENTRALIZED: Logo upload using MultiplePhotosUpload (1 slot)
+        return (
+          <div className="flex flex-col items-center space-y-4 p-6">
           <MultiplePhotosUpload
+            key={`logo-upload-${(formData.multiplePhotos || []).length}-${(formData.multiplePhotos || [])[0]?.uploadUrl || 'empty'}`}
             photos={formData.multiplePhotos || []}
-            maxPhotos={1} // For logos, we use 1 slot
+            maxPhotos={1} // For service logos, we use exactly 1 slot
             onPhotosChange={onPhotosChange}
             disabled={disabled}
-            purpose="logo" // For companies/services
+            purpose="logo" // For services
             contactData={formData} // 🏢 ENTERPRISE: Pass contact data for FileNamingService
-            className="w-[400px] h-[300px] mx-auto"
+            compact={true} // Use compact mode for better layout
+            className=""
           />
-          <FormGrid>
-            <GenericFormRenderer
-              sections={[section]} // Regular fields (like description)
-              formData={formData}
-              onChange={onChange}
-              onSelectChange={onSelectChange}
-              disabled={disabled}
-              customRenderers={customRenderers}
-            />
-          </FormGrid>
-        </div>
-      )
-    ) : (
+          </div>
+        );
+      }
+
       // Regular rendering for other sections
-      <FormGrid>
-        <GenericFormRenderer
-          sections={[section]} // Single section per tab
-          formData={formData}
-          onChange={onChange}
-          onSelectChange={onSelectChange}
-          disabled={disabled}
-          customRenderers={customRenderers}
-        />
-      </FormGrid>
-    );
+      return (
+        <FormGrid>
+          <GenericFormRenderer
+            sections={[section]} // Single section per tab
+            formData={formData}
+            onChange={onChange}
+            onSelectChange={onSelectChange}
+            disabled={disabled}
+            onPhotosChange={onPhotosChange} // Pass photo handler to GenericFormRenderer
+            customRenderers={customRenderers}
+          />
+        </FormGrid>
+      );
     })(),
   }));
 }

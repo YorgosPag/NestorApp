@@ -14,7 +14,7 @@
 // ============================================================================
 
 export type FileType = 'image' | 'pdf' | 'document' | 'any';
-export type UploadPurpose = 'photo' | 'logo' | 'document' | 'floorplan' | 'avatar';
+export type UploadPurpose = 'photo' | 'logo' | 'document' | 'floorplan' | 'avatar' | 'representative';
 
 export interface FileTypeConfig {
   mimeTypes: string[];
@@ -91,6 +91,10 @@ export const PURPOSE_CONFIG: Record<UploadPurpose, PurposeConfig> = {
   avatar: {
     label: 'Φωτογραφία Προφίλ',
     description: 'Κάντε κλικ ή σύρετε φωτογραφία προφίλ εδώ'
+  },
+  representative: {
+    label: 'Φωτογραφία Εκπροσώπου',
+    description: 'Κάντε κλικ ή σύρετε φωτογραφία εκπροσώπου εδώ'
   }
 };
 

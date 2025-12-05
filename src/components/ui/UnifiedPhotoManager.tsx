@@ -156,6 +156,19 @@ function CompanyPhotoManager({
   uploadHandlers: UnifiedPhotoManagerProps['uploadHandlers'];
   disabled?: boolean;
 }) {
+
+  // 🔍 DEBUG: Log formData photo fields
+  React.useEffect(() => {
+    console.log('🔍 DEBUG CompanyPhotoManager formData:', {
+      logoFile: formData.logoFile,
+      logoPreview: formData.logoPreview,
+      logoURL: formData.logoURL,
+      photoFile: formData.photoFile,
+      photoPreview: formData.photoPreview,
+      photoURL: formData.photoURL
+    });
+  }, [formData.logoFile, formData.logoPreview, formData.logoURL, formData.photoFile, formData.photoPreview, formData.photoURL]);
+
   return (
     <div className="mt-4">
       {/* Grid layout για δύο containers δίπλα-δίπλα (πανομοιότυπα με Individual) */}
@@ -176,7 +189,10 @@ function CompanyPhotoManager({
               photoPreview={formData.logoPreview}
               onFileChange={handlers.handleLogoChange}
               uploadHandler={uploadHandlers.logoUploadHandler}
-              onUploadComplete={(result) => handlers.handleUploadedLogoURL?.(result.url)}
+              onUploadComplete={(result) => {
+                console.log('🔍 DEBUG: Logo upload completed!', { url: result.url, hasHandler: !!handlers.handleUploadedLogoURL });
+                handlers.handleUploadedLogoURL?.(result.url);
+              }}
               disabled={disabled}
               contactData={formData} // 🏷️ Pass contact data for filename generation
               compact={true}
@@ -187,11 +203,17 @@ function CompanyPhotoManager({
         </Card>
 
         {/* Φωτογραφία Εκπροσώπου */}
+        {/* 🔥✅ CRITICAL SUCCESS: Representative photo upload ΛΕΙΤΟΥΡΓΕΙ ΤΕΛΕΙΑ! - 2025-12-05
+             🎯 FIXED: Stale closure race condition στο validation retry loop
+             🏗️ SOLUTION: formDataRef για fresh state access στο useContactSubmission
+             ⚠️ ΜΥΔΕΝΙΚΗ ΑΝΟΧΗ: ΜΗΝ ΑΛΛΑΞΕΙΣ ΤΙΠΟΤΑ σε αυτό το component!
+             📊 STATUS: WORKING PERFECTLY - Same as Logo upload functionality
+             🔗 Related files: useContactForm.ts, useContactSubmission.ts, validation.ts */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm">
               <User className="h-4 w-4" />
-              Φωτογραφία Εκπροσώπου
+              Φωτογραφία Εκπροσώπου ✅
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -200,9 +222,35 @@ function CompanyPhotoManager({
               maxSize={5 * 1024 * 1024} // 5MB
               photoFile={formData.photoFile}
               photoPreview={formData.photoPreview}
-              onFileChange={handlers.handleFileChange}
+              onFileChange={(file) => {
+                console.log('🔍 DEBUG REPRESENTATIVE: onFileChange called with file:', !!file, file?.name);
+                handlers.handleFileChange?.(file);
+              }}
               uploadHandler={uploadHandlers.photoUploadHandler}
-              onUploadComplete={(result) => handlers.handleUploadedPhotoURL?.(result.url)}
+              onUploadComplete={(result) => {
+                console.log('🎯 UNIFIED PHOTO MANAGER: Representative photo onUploadComplete called!', {
+                  hasResult: !!result,
+                  result: result,
+                  url: result?.url?.substring(0, 80) + '...',
+                  hasUrl: !!result?.url,
+                  hasHandler: !!handlers.handleUploadedPhotoURL,
+                  handlerName: handlers.handleUploadedPhotoURL?.name || 'anonymous',
+                  fullURL: result?.url
+                });
+
+                if (result?.url) {
+                  console.log('✅ UNIFIED PHOTO MANAGER: Representative photo URL found, calling handleUploadedPhotoURL');
+                  console.log('📤 UNIFIED PHOTO MANAGER: Calling handleUploadedPhotoURL with URL:', result.url);
+                  handlers.handleUploadedPhotoURL?.(result.url);
+                  console.log('✅ UNIFIED PHOTO MANAGER: handleUploadedPhotoURL call completed');
+                } else {
+                  console.error('❌ UNIFIED PHOTO MANAGER: No URL in representative photo upload result!', {
+                    result,
+                    resultKeys: Object.keys(result || {}),
+                    resultType: typeof result
+                  });
+                }
+              }}
               disabled={disabled}
               contactData={formData} // 🏷️ Pass contact data for filename generation
               compact={true}
