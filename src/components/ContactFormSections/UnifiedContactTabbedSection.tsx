@@ -1,16 +1,12 @@
 'use client';
 
 import { useMemo } from 'react';
-import { GenericFormTabRenderer } from '@/components/generic';
-import { IndividualFormTabRenderer } from '@/components/generic/IndividualFormTabRenderer';
-import { getSortedSections } from '@/config/company-gemi-config';
-import { getServiceSortedSections } from '@/config/service-config';
-import { getIndividualSortedSections } from '@/config/individual-config';
 import type { ContactFormData, ContactType } from '@/types/ContactFormTypes';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 import type { FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 import { UnifiedPhotoManager } from '@/components/ui/UnifiedPhotoManager';
-import { PhotoUploadService as FirebasePhotoUploadService } from '@/services/photo-upload.service';
+import { getContactFormConfig, getContactFormSections, getContactTypeDisplayName, getContactFormRenderer } from './utils/ContactFormConfigProvider';
+import { getPhotoUploadHandlers, createUnifiedPhotosChangeHandler, buildRendererPropsForContactType } from './utils/PhotoUploadConfiguration';
 
 /**
  * 🏢 ENTERPRISE CENTRALIZED CONTACT FORM SECTION
@@ -51,36 +47,7 @@ interface UnifiedContactTabbedSectionProps {
   disabled?: boolean;
 }
 
-/**
- * 📋 Get configuration based on contact type
- */
-function getConfigByContactType(contactType: ContactType) {
-  switch (contactType) {
-    case 'individual':
-      return {
-        getSections: getIndividualSortedSections,
-        renderer: IndividualFormTabRenderer,
-        name: 'Φυσικό Πρόσωπο'
-      };
-
-    case 'company':
-      return {
-        getSections: getSortedSections, // ΓΕΜΙ config
-        renderer: GenericFormTabRenderer,
-        name: 'Εταιρεία'
-      };
-
-    case 'service':
-      return {
-        getSections: getServiceSortedSections,
-        renderer: GenericFormTabRenderer,
-        name: 'Δημόσια Υπηρεσία'
-      };
-
-    default:
-      throw new Error(`Unsupported contact type: ${contactType}`);
-  }
-}
+// Configuration logic moved to ContactFormConfigProvider utility
 
 export function UnifiedContactTabbedSection({
   contactType,
@@ -100,27 +67,24 @@ export function UnifiedContactTabbedSection({
 }: UnifiedContactTabbedSectionProps) {
 
   // 🏢 ENTERPRISE: Get configuration dynamically based on contact type
-  const config = useMemo(() => getConfigByContactType(contactType), [contactType]);
-  const sections = useMemo(() => config.getSections(), [config]);
+  const config = useMemo(() => getContactFormConfig(contactType), [contactType]);
+  const sections = useMemo(() => getContactFormSections(contactType), [contactType]);
 
-  // 🔄 UNIFIED PHOTO HANDLER: Consolidate all photo change handlers
-  const unifiedPhotosChange = useMemo(() => {
-    return onPhotosChange || handleMultiplePhotosChange || ((photos: PhotoSlot[]) => {
-      console.log('🏢 UNIFIED: Photos changed:', photos.length, 'photos');
-      // Default behavior: update formData if available
-      if (setFormData && formData) {
-        setFormData({
-          ...formData,
-          multiplePhotos: photos
-        });
-      }
-    });
-  }, [onPhotosChange, handleMultiplePhotosChange, setFormData, formData]);
+  // 🔄 UNIFIED PHOTO HANDLER: Consolidate all photo change handlers (extracted)
+  const unifiedPhotosChange = useMemo(() =>
+    createUnifiedPhotosChangeHandler({
+      onPhotosChange,
+      handleMultiplePhotosChange,
+      setFormData,
+      formData
+    }),
+    [onPhotosChange, handleMultiplePhotosChange, setFormData, formData]
+  );
 
   // 🎯 DYNAMIC RENDERER: Choose the right renderer for this contact type
-  const RendererComponent = config.renderer;
+  const RendererComponent = getContactFormRenderer(contactType);
 
-  // 🏗️ DYNAMIC PROPS: Build props object based on renderer type
+  // 🏗️ DYNAMIC PROPS: Build props object based on renderer type (extracted)
   const rendererProps = useMemo(() => {
     const baseProps = {
       sections,
@@ -140,40 +104,7 @@ export function UnifiedContactTabbedSection({
               handleUploadedLogoURL,
               handleUploadedPhotoURL
             }}
-            uploadHandlers={{
-              // 🏢✅ COMPANY LOGO UPLOAD & DELETION - ΛΕΙΤΟΥΡΓΕΙ ΤΕΛΕΙΑ! ΜΗΝ ΑΛΛΑΞΕΙΣ ΤΙΠΟΤΑ!
-              // Τελική διαμόρφωση που λειτουργεί 100% - Firebase Storage path: contacts/photos
-              // ✅ UPLOAD: Σώζει στο Firebase Storage και αποθηκεύει το URL στη βάση
-              // ✅ DELETION: Διαγράφει από Firebase Storage όταν αφαιρείται από UI
-              // Ημερομηνία: 2025-12-05 - Status: WORKING PERFECTLY
-              // 🔗 Related cleanup code: src/hooks/useContactSubmission.ts:285-297
-              logoUploadHandler: (file, onProgress) =>
-                FirebasePhotoUploadService.uploadPhoto(file, {
-                  folderPath: 'contacts/photos',
-                  onProgress,
-                  enableCompression: true,
-                  compressionUsage: 'company-logo',
-                  contactData: formData,
-                  purpose: 'logo'
-                }),
-              photoUploadHandler: (file, onProgress) => {
-                console.log('🔍 DEBUG: Representative photo upload starting:', {
-                  fileName: file.name,
-                  fileSize: file.size,
-                  folderPath: 'contacts/photos',
-                  compressionUsage: 'profile-modal',
-                  purpose: 'representative'
-                });
-                return FirebasePhotoUploadService.uploadPhoto(file, {
-                  folderPath: 'contacts/photos',
-                  onProgress,
-                  enableCompression: true,
-                  compressionUsage: 'profile-modal',
-                  contactData: formData,
-                  purpose: 'representative'
-                });
-              }
-            }}
+            uploadHandlers={getPhotoUploadHandlers(formData)}
             disabled={disabled}
             className="mt-4"
           />
@@ -181,26 +112,18 @@ export function UnifiedContactTabbedSection({
       } : {}
     };
 
-    // 👤 Individual-specific props
-    if (contactType === 'individual') {
-      return {
-        ...baseProps,
-        onPhotoChange: handleFileChange,
-        onMultiplePhotosChange: unifiedPhotosChange,
-        onMultiplePhotoUploadComplete: handleMultiplePhotoUploadComplete,
-        onProfilePhotoSelection: handleProfilePhotoSelection
-      };
-    }
-
-    // 🏢 Company & Service props
-    return {
-      ...baseProps,
-      onPhotosChange: unifiedPhotosChange,
-      onLogoChange: handleLogoChange,
+    // Use utility function για props building
+    return buildRendererPropsForContactType(contactType, baseProps, {
+      handleLogoChange,
+      handleFileChange,
       handleUploadedLogoURL,
       handleUploadedPhotoURL,
-      setFormData
-    };
+      unifiedPhotosChange,
+      handleMultiplePhotoUploadComplete,
+      handleProfilePhotoSelection,
+      setFormData,
+      formData
+    });
   }, [
     sections, formData, handleChange, handleSelectChange, disabled, contactType,
     handleFileChange, unifiedPhotosChange, handleMultiplePhotoUploadComplete,
@@ -213,7 +136,7 @@ export function UnifiedContactTabbedSection({
       {/* 🔍 DEBUG INFO (remove in production) */}
       {process.env.NODE_ENV === 'development' && (
         <div className="text-xs text-gray-500 mb-2">
-          🏢 Unified Contact Section: {config.name} ({sections.length} sections)
+          🏢 Unified Contact Section: {getContactTypeDisplayName(contactType)} ({sections.length} sections)
         </div>
       )}
 

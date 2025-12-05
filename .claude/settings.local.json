@@ -105,7 +105,8 @@
       "Bash(del \"C:\\Nestor_Pagonis\\src\\utils\\contact-filename-generator.ts\")",
       "Bash(del \"C:\\Nestor_Pagonis\\src\\components\\generic\\ServiceFormTabRenderer.tsx\")",
       "Bash(del \"C:\\Nestor_Pagonis\\localhost.log\")",
-      "Bash(del \"C:\\Nestor_Pagonis\\src\\services\\photoUploadService.ts\")"
+      "Bash(del \"C:\\Nestor_Pagonis\\src\\services\\photoUploadService.ts\")",
+      "Bash(PORT=3008 npm run dev)"
     ],
     "deny": [],
     "ask": []
