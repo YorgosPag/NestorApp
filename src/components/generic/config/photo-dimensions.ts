@@ -284,13 +284,13 @@ export function buildResponsivePhotoClass(
  */
 export const PHOTO_COLORS = {
   /** Main photo container background */
-  PHOTO_BACKGROUND: 'bg-red-200',
+  PHOTO_BACKGROUND: 'bg-gray-200',
 
   /** Empty state background */
-  EMPTY_STATE_BACKGROUND: 'bg-red-100',
+  EMPTY_STATE_BACKGROUND: 'rgb(43, 59, 85)',
 
   /** Muted background για placeholders */
-  MUTED_BACKGROUND: 'bg-red-50',
+  MUTED_BACKGROUND: 'bg-muted',
 
   /** Overlay background για hover effects */
   OVERLAY_BACKGROUND: 'bg-black',
@@ -299,16 +299,16 @@ export const PHOTO_COLORS = {
   LABEL_BACKGROUND: 'bg-black bg-opacity-60',
 
   /** Light background για upload zones */
-  UPLOAD_BACKGROUND: 'bg-red-100',
+  UPLOAD_BACKGROUND: 'bg-gray-100',
 
   /** Loading overlay background */
-  LOADING_OVERLAY: 'bg-red-100 bg-opacity-75',
+  LOADING_OVERLAY: 'bg-gray-100 bg-opacity-75',
 
   /** Progress bar background */
-  PROGRESS_BACKGROUND: 'bg-red-200',
+  PROGRESS_BACKGROUND: 'bg-gray-200',
 
   /** Cancel button background */
-  CANCEL_BUTTON: 'bg-red-300'
+  CANCEL_BUTTON: 'bg-gray-300'
 } as const;
 
 /**
@@ -319,7 +319,7 @@ export const PHOTO_BORDERS = {
   EMPTY_STATE: 'border-2 border-dashed border-gray-300',
 
   /** Hover border για empty states */
-  EMPTY_HOVER: 'hover:border-gray-400',
+  EMPTY_HOVER: 'hover:border-blue-500',
 
   /** Primary border για active states */
   PRIMARY: 'border-primary',
@@ -402,8 +402,8 @@ export const PHOTO_STYLES = {
   /** Photo image με subtle scale effect */
   PHOTO_IMAGE: `w-full h-full object-cover ${PHOTO_HOVER_EFFECTS.SCALE_SUBTLE}`,
 
-  /** Empty state styling με consistent hover */
-  EMPTY_STATE: `${PHOTO_COLORS.EMPTY_STATE_BACKGROUND} ${PHOTO_BORDERS.EMPTY_STATE} rounded-lg flex items-center justify-center text-center cursor-pointer transition-colors ${PHOTO_BORDERS.EMPTY_HOVER}`,
+  /** Empty state styling με consistent hover και background color */
+  EMPTY_STATE: `${PHOTO_COLORS.PHOTO_BACKGROUND} ${PHOTO_BORDERS.EMPTY_STATE} rounded-lg flex items-center justify-center text-center cursor-pointer transition-colors ${PHOTO_BORDERS.EMPTY_HOVER}`,
 
   /** Placeholder styling */
   PLACEHOLDER: `${PHOTO_COLORS.MUTED_BACKGROUND} rounded-lg flex items-center justify-center`,

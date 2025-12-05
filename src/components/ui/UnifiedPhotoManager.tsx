@@ -11,6 +11,7 @@ import type { ContactType } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 import type { PhotoSlot } from './MultiplePhotosUpload';
+import { PHOTO_COLORS, PHOTO_TEXT_COLORS, PHOTO_STYLES } from '@/components/generic/config/photo-dimensions';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -127,8 +128,8 @@ function IndividualPhotoManager({
                       )}
                     </div>
                   ) : (
-                    <div className="w-full h-20 bg-gray-100 rounded border flex items-center justify-center">
-                      <span className="text-xs text-gray-400">Κενό {index + 1}</span>
+                    <div className={`w-full h-20 ${PHOTO_STYLES.EMPTY_STATE}`}>
+                      <span className={`text-xs ${PHOTO_TEXT_COLORS.MUTED}`}>Κενό {index + 1}</span>
                     </div>
                   )}
                 </div>

@@ -188,22 +188,9 @@ export function EnterprisePhotoUpload({
             ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
             ${hasError ? 'border-red-300 bg-red-50' : ''}
           `}
-          style={{
-            backgroundColor: currentPreview ? undefined : UI_COLORS.UPLOAD_AREA_BG,
-          }}
           onDrop={disabled ? undefined : handleDropWithValidation}
           onDragOver={disabled ? undefined : uploadLogic.handleDragOver}
           onClick={disabled ? undefined : handleClickWithValidation}
-          onMouseEnter={(e) => {
-            if (!currentPreview && !disabled) {
-              e.currentTarget.style.backgroundColor = UI_COLORS.UPLOAD_AREA_BG_HOVER;
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!currentPreview && !disabled) {
-              e.currentTarget.style.backgroundColor = UI_COLORS.UPLOAD_AREA_BG;
-            }
-          }}
         >
           {currentPreview ? (
             <PhotoPreview
@@ -258,23 +245,9 @@ export function EnterprisePhotoUpload({
           ${hasError ? 'border-red-300 bg-red-50' : ''}
           ${isLoading ? 'pointer-events-none' : ''}
         `}
-        style={{
-          backgroundColor: currentPreview ? undefined : UI_COLORS.UPLOAD_AREA_BG,
-          borderColor: currentPreview ? undefined : UI_COLORS.UPLOAD_AREA_BORDER,
-        }}
         onDrop={disabled ? undefined : handleDropWithValidation}
         onDragOver={disabled ? undefined : uploadLogic.handleDragOver}
         onClick={disabled || isLoading ? undefined : handleClickWithValidation}
-        onMouseEnter={(e) => {
-          if (!currentPreview && !disabled && !isLoading) {
-            e.currentTarget.style.backgroundColor = UI_COLORS.UPLOAD_AREA_BG_HOVER;
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (!currentPreview && !disabled && !isLoading) {
-            e.currentTarget.style.backgroundColor = UI_COLORS.UPLOAD_AREA_BG;
-          }
-        }}
       >
         {/* Loading State */}
         {isLoading && (
@@ -321,7 +294,7 @@ export function EnterprisePhotoUpload({
             ) : (
               <>
                 <Camera className={`w-12 h-12 ${PHOTO_TEXT_COLORS.ICON_LIGHT} mx-auto mb-2`} />
-                <p className="text-sm font-medium text-gray-200 mb-1">
+                <p className={`text-sm font-medium ${PHOTO_TEXT_COLORS.ICON_LIGHT} mb-1`}>
                   Κάντε κλικ ή σύρετε {purpose === 'logo' ? 'λογότυπο' : 'φωτογραφία'} εδώ
                 </p>
                 <p className={`text-xs ${PHOTO_TEXT_COLORS.ICON_LIGHT}`}>
