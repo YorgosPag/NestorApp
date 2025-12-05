@@ -19,10 +19,7 @@ import { Loader2, User, Building, Shield } from 'lucide-react';
 import type { AddNewContactDialogProps, ContactFormData } from '@/types/ContactFormTypes';
 import { useContactForm } from '@/hooks/useContactForm';
 import { getTypeIcon, getTypeLabel } from '@/utils/contactFormUtils';
-import { CommonContactSection } from '@/components/ContactFormSections/CommonContactSection';
-import { IndividualContactSection } from '@/components/ContactFormSections/IndividualContactSection';
-import { CompanyContactSection } from '@/components/ContactFormSections/CompanyContactSection';
-import { ServiceContactSection } from '@/components/ContactFormSections/ServiceContactSection';
+import { UnifiedContactTabbedSection } from '@/components/ContactFormSections/UnifiedContactTabbedSection';
 
 
 export function AddNewContactDialog({ open, onOpenChange, onContactAdded, editContact }: AddNewContactDialogProps) {
@@ -75,61 +72,20 @@ export function AddNewContactDialog({ open, onOpenChange, onContactAdded, editCo
               </FormInput>
             </FormField>
 
-            {/* Πεδία για Φυσικό Πρόσωπο */}
-            {formData.type === 'individual' && (
-              <IndividualContactSection
-                formData={formData}
-                handleChange={handleChange}
-                handleSelectChange={handleSelectChange}
-                handleFileChange={handleFileChange}
-                handleDrop={handleDrop}
-                handleDragOver={handleDragOver}
-                handleUploadedPhotoURL={handleUploadedPhotoURL}
-                handleMultiplePhotosChange={handleMultiplePhotosChange}
-                handleMultiplePhotoUploadComplete={handleMultiplePhotoUploadComplete}
-                disabled={loading}
-              />
-            )}
-
-            {/* Πεδία για Εταιρεία */}
-            {formData.type === 'company' && (
-              <CompanyContactSection
-                formData={formData}
-                handleChange={handleChange}
-                handleSelectChange={handleSelectChange}
-                handleLogoChange={handleLogoChange}
-                handleUploadedLogoURL={handleUploadedLogoURL}
-                handleMultiplePhotosChange={handleMultiplePhotosChange}
-                handleMultiplePhotoUploadComplete={handleMultiplePhotoUploadComplete}
-                disabled={loading}
-              />
-            )}
-
-            {/* Πεδία για Δημόσια Υπηρεσία */}
-            {formData.type === 'service' && (
-              <ServiceContactSection
-                formData={formData}
-                handleChange={handleChange}
-                handleSelectChange={handleSelectChange}
-                handleNestedChange={handleNestedChange}
-                handleLogoChange={handleLogoChange}
-                handleFileChange={handleFileChange}
-                handleUploadedLogoURL={handleUploadedLogoURL}
-                handleUploadedPhotoURL={handleUploadedPhotoURL}
-                handleMultiplePhotosChange={handleMultiplePhotosChange}
-                handleMultiplePhotoUploadComplete={handleMultiplePhotoUploadComplete}
-                disabled={loading}
-              />
-            )}
-
-            {/* Κοινά στοιχεία μόνο για εταιρείες και υπηρεσίες */}
-            {formData.type !== 'individual' && (
-              <CommonContactSection
-                formData={formData}
-                handleChange={handleChange}
-                disabled={loading}
-              />
-            )}
+            {/* 🏢 UNIFIED CONTACT SECTION - All contact types centralized */}
+            <UnifiedContactTabbedSection
+              contactType={formData.type}
+              formData={formData}
+              handleChange={handleChange}
+              handleSelectChange={handleSelectChange}
+              handleLogoChange={handleLogoChange}
+              handleFileChange={handleFileChange}
+              handleMultiplePhotosChange={handleMultiplePhotosChange}
+              handleMultiplePhotoUploadComplete={handleMultiplePhotoUploadComplete}
+              handleUploadedLogoURL={handleUploadedLogoURL}
+              handleUploadedPhotoURL={handleUploadedPhotoURL}
+              disabled={loading}
+            />
 
             {/* Σημειώσεις για φυσικά πρόσωπα */}
             {formData.type === 'individual' && (

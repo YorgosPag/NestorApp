@@ -19,11 +19,7 @@ import { Loader2, User, Building, Shield, Building2, Landmark } from 'lucide-rea
 import type { AddNewContactDialogProps, ContactFormData } from '@/types/ContactFormTypes';
 import { useContactForm } from '@/hooks/useContactForm';
 import { getTypeIcon, getTypeLabel } from '@/utils/contactFormUtils';
-import { CommonContactSection } from '@/components/ContactFormSections/CommonContactSection';
-import { IndividualContactSection } from '@/components/ContactFormSections/IndividualContactSection';
-import { IndividualContactTabbedSection } from '@/components/ContactFormSections/IndividualContactTabbedSection';
-import { CompanyContactTabbedSection } from '@/components/ContactFormSections/CompanyContactTabbedSection';
-import { ServiceContactTabbedSection } from '@/components/ContactFormSections/ServiceContactTabbedSection';
+import { UnifiedContactTabbedSection } from '@/components/ContactFormSections/UnifiedContactTabbedSection';
 
 export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, editContact, onLiveChange }: AddNewContactDialogProps) {
   const {
@@ -97,45 +93,22 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
               </FormField>
             </FormGrid>
 
-            {/* Company - Tabbed Layout (με Base64 upload handlers) */}
-            {isCompany && (
-              <CompanyContactTabbedSection
-                formData={formData}
-                handleChange={handleChange}
-                handleSelectChange={handleSelectChange}
-                handleLogoChange={handleLogoChange}
-                handleFileChange={handleFileChange}
-                handleUploadedLogoURL={handleUploadedLogoURL}
-                handleUploadedPhotoURL={handleUploadedPhotoURL}
-                disabled={loading}
-              />
-            )}
-
-            {/* Individual - Tabbed Layout */}
-            {isIndividual && (
-              <IndividualContactTabbedSection
-                formData={formData}
-                handleChange={handleChange}
-                handleSelectChange={handleSelectChange}
-                handleFileChange={handleFileChange}
-                handleMultiplePhotosChange={handleMultiplePhotosChange}
-                handleMultiplePhotoUploadComplete={handleMultiplePhotoUploadComplete}
-                handleProfilePhotoSelection={handleProfilePhotoSelection}
-                disabled={loading}
-              />
-            )}
-
-            {/* Service - Tabbed Layout (κεντρικοποιημένο σύστημα upload) */}
-            {isService && (
-              <ServiceContactTabbedSection
-                formData={formData}
-                handleChange={handleChange}
-                handleSelectChange={handleSelectChange}
-                onPhotosChange={handleMultiplePhotosChange}
-                setFormData={setFormData}
-                disabled={loading}
-              />
-            )}
+            {/* 🏢 UNIFIED CONTACT SECTION - All contact types centralized */}
+            <UnifiedContactTabbedSection
+              contactType={formData.type}
+              formData={formData}
+              handleChange={handleChange}
+              handleSelectChange={handleSelectChange}
+              handleLogoChange={handleLogoChange}
+              handleFileChange={handleFileChange}
+              handleMultiplePhotosChange={handleMultiplePhotosChange}
+              handleMultiplePhotoUploadComplete={handleMultiplePhotoUploadComplete}
+              handleProfilePhotoSelection={handleProfilePhotoSelection}
+              handleUploadedLogoURL={handleUploadedLogoURL}
+              handleUploadedPhotoURL={handleUploadedPhotoURL}
+              setFormData={setFormData}
+              disabled={loading}
+            />
 
           </div>
 
