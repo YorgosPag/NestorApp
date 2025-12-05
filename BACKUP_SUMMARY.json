@@ -1,0 +1,50 @@
+{
+  "category": "FIX",
+  "shortDescription": "PhotoIndex Bug Resolution & Hook Extraction",
+  "problem": "Το πρόβλημα με τις διπλότυπες φωτογραφίες οφείλονταν σε έλλειψη photoIndex parameter στο upload handler, με αποτέλεσμα οι φωτογραφίες να παίρνουν τα ίδια filenames και να αντικαθιστάνται μεταξύ τους στο Firebase Storage.",
+  "cause": "Ο defaultUploadHandler στο MultiplePhotosUpload.tsx έστελνε photoIndex: undefined στο PhotoUploadService, με αποτέλεσμα όλες οι φωτογραφίες να λαμβάνουν τα ίδια filenames και να αντικαθιστάνται στο Storage.",
+  "filesChanged": [
+    ".claude/settings.local.json",
+    "src/components/ui/MultiplePhotosUpload.tsx",
+    "src/hooks/useCacheBusting.ts",
+    "src/hooks/usePhotoSlotHandlers.ts"
+  ],
+  "solution": {
+    "phase1": "Extracted cache busting logic από το MultiplePhotosUpload component σε dedicated useCacheBusting hook για καλύτερη οργάνωση κώδικα",
+    "phase2": "Extracted όλους τους photo slot handlers σε dedicated usePhotoSlotHandlers hook για modular architecture",
+    "phase3": "Δημιουργήσαμε createUploadHandlerWithIndex function που παίρνει photoIndex parameter και το περνάει στο PhotoUploadService",
+    "phase4": "Αντικαταστήσαμε τον defaultUploadHandler με createUploadHandlerWithIndex(index) για unique photo indexing",
+    "phase5": "Verified ότι όλες οι αναφορές στον handler χρησιμοποιούν το νέο indexed approach"
+  },
+  "testing": "Η λύση χρειάζεται δοκιμή με upload 2 διαφορετικών φωτογραφιών στα individual contacts για επιβεβαίωση ότι δημιουργούνται unique filenames στο Firebase Storage",
+  "notes": [
+    "Τα νέα hooks βελτιώνουν τη modularity και maintainability του κώδικα",
+    "Η enterprise architecture τώρα ακολουθεί separation of concerns principles",
+    "Cache busting mechanism παραμένει intact αλλά τώρα είναι centralized",
+    "Photo slot management είναι τώρα reusable μέσω του dedicated hook",
+    "Backward compatibility διατηρείται πλήρως"
+  ],
+  "contributors": {
+    "user": "Γιώργος",
+    "assistant": "Claude",
+    "sessionDate": "2025-12-05"
+  },
+  "relatedBackups": [
+    "Previous photo upload service improvements",
+    "Generic component centralization work",
+    "Enterprise architecture refactoring"
+  ],
+  "commits": [
+    {
+      "hash": "42cc80d",
+      "message": "🔧 FIX: PhotoIndex Bug Resolution & Hook Extraction",
+      "details": "Fixed duplicate photo upload bug due to missing photoIndex parameter. Extracted cache busting logic to useCacheBusting hook. Extracted photo slot handlers to usePhotoSlotHandlers hook. Created createUploadHandlerWithIndex function for unique photo indexing. Improved enterprise code organization with modular hooks architecture."
+    }
+  ],
+  "backupMetadata": {
+    "timestamp": "2025-12-05T22:07:00.000Z",
+    "backupType": "ENTERPRISE_FIX",
+    "priority": "HIGH",
+    "qualityAssurance": "Pending user testing for photo upload verification"
+  }
+}
