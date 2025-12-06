@@ -114,7 +114,7 @@ export const PHOTO_LAYOUTS = {
 
   /** Individual photos: 6 photos (3x2 grid) - UNIFIED με Modal */
   INDIVIDUAL_GRID: {
-    container: 'grid grid-cols-3 gap-6 p-2',
+    container: 'grid grid-cols-3 gap-8 p-2',
     item: PHOTO_SIZES.STANDARD_PREVIEW,
     itemWrapper: PHOTO_SIZES.STANDARD_PREVIEW
   },
@@ -392,6 +392,56 @@ export const PHOTO_HOVER_EFFECTS = {
   ALL_TRANSITION: 'transition-all duration-300'
 } as const;
 
+// ============================================================================
+// PHOTO TYPOGRAPHY
+// ============================================================================
+
+/**
+ * Photo typography styles για consistent text rendering
+ */
+export const PHOTO_TYPOGRAPHY = {
+  /** Header text για photo sections */
+  HEADER: 'font-semibold text-sm',
+
+  /** Subheader text για photo descriptions */
+  SUBHEADER: 'text-xs',
+
+  /** Caption text για photo labels */
+  CAPTION: 'text-xs',
+
+  /** Body text για photo content */
+  BODY: 'text-sm font-medium',
+
+  /** Error text για photo errors */
+  ERROR: 'text-xs',
+
+  /** Success text για photo confirmations */
+  SUCCESS: 'text-sm',
+
+  /** Loading text για photo uploads */
+  LOADING: 'text-sm font-medium'
+} as const;
+
+/**
+ * Photo semantic colors για consistent meaning
+ */
+export const PHOTO_SEMANTIC_COLORS = {
+  /** Error states */
+  ERROR: 'text-red-600',
+
+  /** Success states */
+  SUCCESS: 'text-green-600',
+
+  /** Loading states */
+  LOADING: 'text-blue-600',
+
+  /** Warning states */
+  WARNING: 'text-yellow-600',
+
+  /** Info states */
+  INFO: 'text-blue-700'
+} as const;
+
 /**
  * Combined photo styling classes για common use cases
  */
@@ -468,6 +518,8 @@ export default {
   textColors: PHOTO_TEXT_COLORS,
   hoverEffects: PHOTO_HOVER_EFFECTS,
   styles: PHOTO_STYLES,
+  typography: PHOTO_TYPOGRAPHY,
+  semanticColors: PHOTO_SEMANTIC_COLORS,
   getDimensions: getPhotoDimensions,
   getLayout: getPhotoLayout,
   getColorScheme: getPhotoColorScheme,

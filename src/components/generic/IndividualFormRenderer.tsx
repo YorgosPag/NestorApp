@@ -159,11 +159,7 @@ export function IndividualFormRenderer({
     <div className="space-y-6">
       {sections.map((section) => (
         <div key={section.id} className="space-y-4">
-          {/* Section Header */}
-          <div className="flex items-center gap-2 pb-2 border-b">
-            {getIconComponent(section.icon) && React.createElement(getIconComponent(section.icon), { className: "w-4 h-4" })}
-            <h3 className="font-semibold text-sm">{section.title}</h3>
-          </div>
+          {/* Section Header αφαιρέθηκε - δεν θέλουμε το Camera εικονίδιο και το κείμενο "Φωτογραφία" */}
 
           {/* Section Fields */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

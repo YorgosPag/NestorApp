@@ -4,7 +4,7 @@ import React from 'react';
 import { Image, Upload } from 'lucide-react';
 import { EnterprisePhotoUpload } from './EnterprisePhotoUpload';
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
-import { PHOTO_STYLES, PHOTO_SIZES, PHOTO_TEXT_COLORS, PHOTO_COLORS } from '@/components/generic/config/photo-dimensions';
+import { PHOTO_STYLES, PHOTO_SIZES, PHOTO_TEXT_COLORS, PHOTO_COLORS, PHOTO_LAYOUTS } from '@/components/generic/config/photo-dimensions';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -174,23 +174,10 @@ export function MultiplePhotosFull({
 
   return (
     <div className={`space-y-4 ${className}`}>
-      {/* Header - Centered for logo mode */}
-      <div className="border-t pt-4 mt-4">
-        <div className={maxPhotos === 1 ? "flex justify-center" : "flex items-center justify-between"}>
-          <h4 className="font-semibold text-sm flex items-center gap-2">
-            <Image className="w-4 h-4" />
-            {getHeaderText()}
-          </h4>
-          {availableSlots > 0 && maxPhotos > 1 && (
-            <span className={`text-xs ${PHOTO_TEXT_COLORS.LIGHT_MUTED}`}>
-              {getSubText()}
-            </span>
-          )}
-        </div>
-      </div>
+      {/* Header αφαιρέθηκε - δεν θέλουμε το "Φωτογραφία" text και Image icon */}
 
       {/* Photo Grid - 3x2 Layout */}
-      <div className="grid grid-cols-3 gap-8 p-6">
+      <div className={PHOTO_LAYOUTS.INDIVIDUAL_GRID.container}>
         {normalizedPhotos.map((photo, index) => {
           // 🔥 CACHE BUSTING: Using extracted hook
           const rawPreview = photo.preview || photo.uploadUrl;
@@ -216,10 +203,10 @@ export function MultiplePhotosFull({
                   if (handleUploadComplete) handleUploadComplete(index, result);
                 }}
                 disabled={disabled}
-                compact={false}
+                compact={true}
                 showProgress={showProgress}
                 isLoading={photo.isUploading}
-                className={PHOTO_SIZES.STANDARD_PREVIEW}
+                className="w-full h-full"
                 contactData={contactData}
                 photoIndex={index}
 // Enterprise standard - let EnterprisePhotoUpload handle uploads naturally
@@ -232,7 +219,7 @@ export function MultiplePhotosFull({
       {/* Multiple Upload Zone - Hidden for logo mode (maxPhotos=1) */}
       {availableSlots > 0 && maxPhotos > 1 && (
         <div
-          className={`${PHOTO_STYLES.EMPTY_STATE} p-6`}
+          className={`${PHOTO_STYLES.EMPTY_STATE} p-6 mt-8`}
           style={{ backgroundColor: PHOTO_COLORS.EMPTY_STATE_BACKGROUND }}
           onDrop={handleMultipleDrop}
           onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}

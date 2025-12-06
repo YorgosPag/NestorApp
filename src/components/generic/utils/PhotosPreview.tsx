@@ -3,7 +3,7 @@
 import React from 'react';
 import { Camera } from 'lucide-react';
 import { CompanyLogoCard, RepresentativePhotoCard, IndividualPhotoCard, ServiceLogoCard } from './PhotoPreviewCard';
-import { PHOTO_LAYOUTS, PHOTO_SIZES, PHOTO_TEXT_COLORS, PHOTO_HEIGHTS } from '../config/photo-dimensions';
+import { PHOTO_LAYOUTS, PHOTO_SIZES, PHOTO_TEXT_COLORS, PHOTO_HEIGHTS, PHOTO_TYPOGRAPHY } from '../config/photo-dimensions';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -95,7 +95,7 @@ export function PhotosPreview({
       <div className={`mt-4 ${className}`}>
         {/* Header ακριβώς όπως στο individual */}
         <div className="flex items-center justify-between mb-6">
-          <h4 className="font-semibold text-sm flex items-center gap-2">
+          <h4 className={`${PHOTO_TYPOGRAPHY.HEADER} flex items-center gap-2`}>
             <Camera className="w-4 h-4" />
             Φωτογραφίες Εταιρείας (2)
           </h4>
@@ -164,7 +164,7 @@ export function PhotosPreview({
       <div className={`mt-4 ${className}`}>
         {/* Header ακριβώς όπως στο modal */}
         <div className="flex items-center justify-between mb-6">
-          <h4 className="font-semibold text-sm flex items-center gap-2">
+          <h4 className={`${PHOTO_TYPOGRAPHY.HEADER} flex items-center gap-2`}>
             <Camera className="w-4 h-4" />
             Φωτογραφίες ({totalPhotos}/6)
           </h4>
@@ -211,7 +211,7 @@ export function PhotosPreview({
       <div className={`mt-4 ${className}`}>
         {/* Header ακριβώς όπως στα άλλα contact types */}
         <div className="flex items-center justify-between mb-6">
-          <h4 className="font-semibold text-sm flex items-center gap-2">
+          <h4 className={`${PHOTO_TYPOGRAPHY.HEADER} flex items-center gap-2`}>
             <Camera className="w-4 h-4" />
             Λογότυπο Δημόσιας Υπηρεσίας
           </h4>

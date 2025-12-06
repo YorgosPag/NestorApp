@@ -66,7 +66,7 @@ function createFormTabsFromConfig(
       if (section.id === 'logo') {
         // 🏢 ENTERPRISE CENTRALIZED: Logo upload using MultiplePhotosUpload (1 slot)
         return (
-          <div className="flex flex-col items-center space-y-4 p-6">
+          <div className="flex flex-col items-center space-y-4 p-6 min-h-[360px]">
             <MultiplePhotosUpload
               key={`logo-upload-${(formData.multiplePhotos || []).length}-${(formData.multiplePhotos || [])[0]?.uploadUrl || 'empty'}`}
               photos={formData.multiplePhotos || []}

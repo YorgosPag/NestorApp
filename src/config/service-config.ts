@@ -233,7 +233,7 @@ const servicesSection: ServiceSectionConfig = {
  */
 const logoSection: ServiceSectionConfig = {
   id: 'logo',
-  title: 'Λογότυπο & Εικόνα',
+  title: 'Λογότυπο',
   icon: 'image',
   fields: [
     // Removed description field - λογότυπο θα renderάρεται χωρίς επιπλέον fields

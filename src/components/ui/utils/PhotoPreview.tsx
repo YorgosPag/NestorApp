@@ -87,37 +87,40 @@ export function PhotoPreview({
   // ========================================================================
 
   if (compact) {
-    // 🎯 COMPACT MODE: For modal/card contexts με height constraints
+    // 🎯 COMPACT MODE: Φωτογραφία πιάνει όλο το slot, κείμενα κάτω από τη φωτογραφία
     return (
-      <div className={`flex flex-col items-center justify-center w-full max-h-full ${className}`}>
+      <div className={`flex flex-col w-full h-full ${className}`}>
+        {/* Φωτογραφία πιάνει όλο το διαθέσιμο χώρο */}
         <div
-          className={`${PHOTO_SIZES.COMPACT_PREVIEW} ${PHOTO_STYLES.PHOTO_CONTAINER} mb-3 relative ${onPreviewClick ? 'cursor-pointer' : ''}`}
+          className={`relative flex-1 w-full ${PHOTO_STYLES.PHOTO_CONTAINER} ${onPreviewClick ? 'cursor-pointer' : ''}`}
           onClick={handlePreviewClick}
         >
           <img
             src={previewUrl}
             alt="Προεπισκόπηση"
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover rounded-lg"
           />
 
           {/* Remove button για compact mode */}
           {showRemoveButton && (
             <button
               type="button"
-              className={`absolute top-1 right-1 bg-red-100 text-red-600 rounded-full p-1 ${PHOTO_HOVER_EFFECTS.REMOVE_BUTTON} z-10`}
+              className={`absolute top-2 right-2 bg-red-100 text-red-600 rounded-full p-1.5 ${PHOTO_HOVER_EFFECTS.REMOVE_BUTTON} z-10`}
               onClick={handleRemoveClick}
               title={`Αφαίρεση ${displayName}`}
             >
-              <X className="w-3 h-3" />
+              <X className="w-4 h-4" />
             </button>
           )}
         </div>
 
-        <div className="text-center w-full">
-          <p className="text-sm font-medium text-green-700">
-            <CheckCircle className="w-4 h-4 inline mr-1" />
-            {fileName || `${displayName} φορτώθηκε`}
+        {/* Κείμενα κάτω από τη φωτογραφία */}
+        <div className="mt-2 text-center w-full px-2">
+          <p className="text-xs font-medium text-green-700 flex items-center justify-center gap-1">
+            <CheckCircle className="w-3 h-3" />
+            Φωτογραφία φορτώθηκε
           </p>
+          <p className="text-xs text-gray-600 mt-1 truncate">Κάντε κλικ για αλλαγή</p>
         </div>
       </div>
     );

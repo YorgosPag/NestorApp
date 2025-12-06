@@ -7,7 +7,7 @@ import type { UseEnterpriseFileUploadConfig, FileUploadResult } from '@/hooks/us
 import { UI_COLORS } from '@/subapps/dxf-viewer/config/color-config';
 import { PhotoPreview } from './utils/PhotoPreview';
 import { usePhotoUploadLogic } from './utils/usePhotoUploadLogic';
-import { PHOTO_STYLES, PHOTO_HEIGHTS, PHOTO_TEXT_COLORS, PHOTO_COLORS, PHOTO_HOVER_EFFECTS } from '@/components/generic/config/photo-dimensions';
+import { PHOTO_STYLES, PHOTO_HEIGHTS, PHOTO_TEXT_COLORS, PHOTO_COLORS, PHOTO_HOVER_EFFECTS, PHOTO_TYPOGRAPHY, PHOTO_SEMANTIC_COLORS } from '@/components/generic/config/photo-dimensions';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -205,8 +205,8 @@ export function EnterprisePhotoUpload({
       <div className={`relative ${className}`}>
         <div
           className={`
-            relative rounded-lg p-6 ${PHOTO_HEIGHTS.UPLOAD_ZONE} w-full flex flex-col items-center justify-center text-center cursor-pointer ${PHOTO_HOVER_EFFECTS.COLOR_TRANSITION} overflow-hidden
-            ${currentPreview ? 'border-2 border-dashed border-green-300 bg-green-50' : PHOTO_STYLES.EMPTY_STATE}
+            relative rounded-lg ${PHOTO_HEIGHTS.STANDARD} w-full text-center cursor-pointer ${PHOTO_HOVER_EFFECTS.COLOR_TRANSITION} overflow-hidden
+            ${currentPreview ? 'border-2 border-dashed border-green-300 bg-green-50' : `${PHOTO_STYLES.EMPTY_STATE} p-6 flex flex-col items-center justify-center`}
             ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
             ${hasError ? 'border-red-300 bg-red-50' : ''}
           `}
@@ -226,13 +226,13 @@ export function EnterprisePhotoUpload({
               onRemove={!disabled && !isLoading ? handleRemoveWithCleanup : undefined}
               onPreviewClick={handleClickWithValidation}
               disabled={disabled}
-              className="w-full"
+              className="w-full h-full"
             />
           ) : (
             <div className="flex flex-col items-center justify-center">
               <Camera className={`w-12 h-12 ${PHOTO_TEXT_COLORS.MUTED} mb-3`} />
-              <span className={`text-sm font-medium ${PHOTO_TEXT_COLORS.LIGHT_MUTED} mb-2`}>Προσθήκη φωτογραφίας</span>
-              <span className={`text-xs ${PHOTO_TEXT_COLORS.MUTED}`}>Κλικ ή σύρετε αρχείο</span>
+              <span className={`${PHOTO_TYPOGRAPHY.BODY} ${PHOTO_TEXT_COLORS.LIGHT_MUTED} mb-2`}>Προσθήκη {purpose === 'logo' ? 'λογοτύπου' : 'φωτογραφίας'}</span>
+              <span className={`${PHOTO_TYPOGRAPHY.CAPTION} ${PHOTO_TEXT_COLORS.MUTED}`}>Κλικ ή σύρετε αρχείο</span>
             </div>
           )}
 
@@ -241,7 +241,7 @@ export function EnterprisePhotoUpload({
 
         {/* Error display */}
         {hasError && (
-          <p className="text-xs text-red-600 mt-1">{hasError}</p>
+          <p className={`${PHOTO_TYPOGRAPHY.ERROR} ${PHOTO_SEMANTIC_COLORS.ERROR} mt-1`}>{hasError}</p>
         )}
       </div>
     );
@@ -250,21 +250,12 @@ export function EnterprisePhotoUpload({
   // Full mode
   return (
     <div className={`space-y-4 ${className}`}>
-      {/* Header */}
-      <div className="border-t pt-4 mt-4">
-        <div className="flex items-center justify-between">
-          <h4 className="font-semibold text-sm flex items-center gap-2">
-            <Camera className="w-4 h-4" />
-            {purpose === 'logo' ? 'Λογότυπο' : 'Φωτογραφία'}
-            {isLoading && <span className="text-xs text-blue-600 ml-2">Ανεβαίνει αυτόματα...</span>}
-          </h4>
-        </div>
-      </div>
+      {/* Header αφαιρέθηκε - δεν θέλουμε το "Φωτογραφία" text και Camera icon πάνω από κάθε slot */}
 
       {/* Upload Area */}
       <div
         className={`
-          relative rounded-lg p-6 text-center cursor-pointer ${PHOTO_HOVER_EFFECTS.COLOR_TRANSITION} ${PHOTO_HEIGHTS.UPLOAD_MIN} flex flex-col items-center justify-center
+          relative rounded-lg p-6 text-center cursor-pointer ${PHOTO_HOVER_EFFECTS.COLOR_TRANSITION} ${PHOTO_HEIGHTS.STANDARD} flex flex-col items-center justify-center
           ${currentPreview ? 'border-2 border-dashed border-green-300 bg-green-50' : PHOTO_STYLES.EMPTY_STATE}
           ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
           ${hasError ? 'border-red-300 bg-red-50' : ''}
@@ -281,8 +272,8 @@ export function EnterprisePhotoUpload({
         {isLoading && (
           <div className={`absolute inset-0 ${PHOTO_COLORS.LOADING_OVERLAY} flex items-center justify-center`}>
             <div className="text-center">
-              <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-2" />
-              <p className="text-sm font-medium text-blue-700">
+              <Loader2 className={`w-8 h-8 animate-spin ${PHOTO_SEMANTIC_COLORS.LOADING} mx-auto mb-2`} />
+              <p className={`${PHOTO_TYPOGRAPHY.LOADING} ${PHOTO_SEMANTIC_COLORS.INFO}`}>
                 {upload.uploadPhase === 'upload' && 'Ανέβασμα...'}
                 {upload.uploadPhase === 'processing' && 'Επεξεργασία...'}
                 {upload.uploadPhase === 'complete' && 'Ολοκληρώθηκε!'}
@@ -315,14 +306,14 @@ export function EnterprisePhotoUpload({
           <div>
             {hasError ? (
               <>
-                <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-2" />
-                <p className="text-sm font-medium text-red-700 mb-1">Σφάλμα επιλογής αρχείου</p>
-                <p className="text-xs text-red-600">{hasError}</p>
+                <AlertCircle className={`w-12 h-12 ${PHOTO_SEMANTIC_COLORS.ERROR} mx-auto mb-2`} />
+                <p className={`${PHOTO_TYPOGRAPHY.BODY} ${PHOTO_SEMANTIC_COLORS.ERROR} mb-1`}>Σφάλμα επιλογής αρχείου</p>
+                <p className={`${PHOTO_TYPOGRAPHY.ERROR} ${PHOTO_SEMANTIC_COLORS.ERROR}`}>{hasError}</p>
               </>
             ) : (
               <>
                 <Camera className={`w-12 h-12 ${PHOTO_TEXT_COLORS.ICON_LIGHT} mx-auto mb-2`} />
-                <p className={`text-sm font-medium ${PHOTO_TEXT_COLORS.ICON_LIGHT} mb-1`}>
+                <p className={`${PHOTO_TYPOGRAPHY.BODY} ${PHOTO_TEXT_COLORS.ICON_LIGHT} mb-1`}>
                   Κάντε κλικ ή σύρετε {purpose === 'logo' ? 'λογότυπο' : 'φωτογραφία'} εδώ
                 </p>
                 <p className={`text-xs ${PHOTO_TEXT_COLORS.ICON_LIGHT}`}>
@@ -339,7 +330,7 @@ export function EnterprisePhotoUpload({
       {/* Upload Actions */}
       {currentFile && !isLoading && upload.success && (
         <div className="text-center">
-          <p className="text-sm text-green-600 flex items-center justify-center gap-1">
+          <p className={`${PHOTO_TYPOGRAPHY.SUCCESS} ${PHOTO_SEMANTIC_COLORS.SUCCESS} flex items-center justify-center gap-1`}>
             <CheckCircle className="w-4 h-4" />
             Το {purpose === 'logo' ? 'λογότυπο' : 'φωτογραφία'} ανέβηκε επιτυχώς!
           </p>
