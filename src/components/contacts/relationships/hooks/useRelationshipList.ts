@@ -108,7 +108,9 @@ export const useRelationshipList = (
    * 🔄 Refresh relationships (public API)
    */
   const refreshRelationships = useCallback(async () => {
+    console.log('🔄 RELATIONSHIP LIST: refreshRelationships called - reloading relationships...');
     await loadRelationships();
+    console.log('✅ RELATIONSHIP LIST: refreshRelationships completed - relationships should be updated');
   }, [loadRelationships]);
 
   // ============================================================================
@@ -162,7 +164,7 @@ export const useRelationshipList = (
 
     // Operations
     refreshRelationships,
-    deleteRelationship,
-    toggleExpanded
+    handleDelete: deleteRelationship,
+    handleToggleExpanded: toggleExpanded
   };
 };

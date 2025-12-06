@@ -62,7 +62,10 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+      console.log('🚨 TabbedAddNewContactDialog: onOpenChange called with:', isOpen);
+      onOpenChange(isOpen);
+    }}>
       <DialogContent className={`sm:max-w-[900px] max-h-[90vh] overflow-y-auto z-50`}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">

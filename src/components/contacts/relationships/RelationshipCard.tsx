@@ -67,9 +67,13 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
           <div className="flex items-center space-x-3">
             {/* Expand/Collapse Button */}
             <Button
+              type="button"
               variant="ghost"
               size="sm"
-              onClick={onToggleExpanded}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleExpanded();
+              }}
               className="p-1"
             >
               {isExpanded ? (
@@ -98,9 +102,13 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
             <div className="flex space-x-2">
               {onEdit && (
                 <Button
+                  type="button"
                   variant="ghost"
                   size="sm"
-                  onClick={onEdit}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (onEdit) onEdit();
+                  }}
                   className="h-8 w-8 p-0"
                   title="Επεξεργασία σχέσης"
                 >
@@ -109,9 +117,13 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
               )}
               {onDelete && (
                 <Button
+                  type="button"
                   variant="ghost"
                   size="sm"
-                  onClick={onDelete}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (onDelete) onDelete();
+                  }}
                   className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
                   title="Διαγραφή σχέσης"
                 >
@@ -166,6 +178,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
                 <a
                   href={`mailto:${relationship.contactInfo.businessEmail}`}
                   className="text-sm text-blue-600 hover:underline"
+                  onClick={(e) => e.stopPropagation()}
                 >
                   {relationship.contactInfo.businessEmail}
                 </a>

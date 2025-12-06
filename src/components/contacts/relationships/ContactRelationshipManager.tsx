@@ -23,6 +23,7 @@ import { AlertCircle, Users, Plus, RefreshCw } from 'lucide-react';
 
 // 🏢 ENTERPRISE: Import centralized types
 import type { ContactType } from '@/types/contacts';
+import type { ContactRelationship } from '@/types/contacts/relationships';
 
 // 🏢 ENTERPRISE: Import modular components
 import { RelationshipForm } from './RelationshipForm';
@@ -134,6 +135,14 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
   const handleHideForm = () => {
     setShowFormCard(false);
     handleCancel();
+  };
+
+  /**
+   * ✏️ Handle edit relationship (show form with data)
+   */
+  const handleEditRelationship = (relationship: ContactRelationship) => {
+    handleEdit(relationship); // Load data into form
+    setShowFormCard(true);     // Show the form
   };
 
   // ============================================================================
@@ -297,7 +306,7 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
         readonly={readonly}
         expandedRelationships={expandedRelationships}
         onToggleExpanded={handleToggleExpanded}
-        onEdit={handleEdit}
+        onEdit={handleEditRelationship}
         onDelete={handleDelete}
       />
 

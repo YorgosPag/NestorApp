@@ -677,8 +677,14 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
     description: 'Διαχείριση μετόχων, διοικητικού συμβουλίου και εργαζομένων',
     order: 14,
     fields: [
-      // Fields are handled by ContactRelationshipManager component
-      // No individual fields needed as this is a complex UI component
+      // Main tab displays RelationshipsSummary component with overview
+      // Full management happens in modal via ContactRelationshipManager
+      {
+        id: 'relationshipsSummary',
+        label: 'Περίληψη Σχέσεων',
+        type: 'input', // Dummy field - actual rendering handled by custom renderer
+        helpText: 'Στατιστικά και περίληψη σχέσεων εταιρείας'
+      }
     ],
   },
 

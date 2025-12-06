@@ -182,8 +182,8 @@ export interface UseRelationshipListReturn {
   error: string | null;
   expandedRelationships: Set<string>;
   refreshRelationships: () => Promise<void>;
-  deleteRelationship: (id: string) => Promise<void>;
-  toggleExpanded: (id: string) => void;
+  handleDelete: (id: string) => Promise<void>;
+  handleToggleExpanded: (id: string) => void;
 }
 
 /**
@@ -194,4 +194,5 @@ export interface UseOrganizationTreeReturn {
   loading: boolean;
   error: string | null;
   refreshTree: () => Promise<void>;
+  shouldShowTree: boolean; // Computed value for conditional display
 }

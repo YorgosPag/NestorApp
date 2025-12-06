@@ -72,3 +72,10 @@ This file has been refactored into Enterprise modular architecture:
 `);
 
 // Note: This file provides full backward compatibility while encouraging migration to the new modular structure
+
+// ============================================================================
+// BACKWARD COMPATIBILITY EXPORTS
+// ============================================================================
+
+// Re-export everything from the new modular structure
+export * from './relationships/index';

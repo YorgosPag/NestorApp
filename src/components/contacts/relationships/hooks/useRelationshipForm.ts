@@ -164,7 +164,11 @@ export const useRelationshipForm = (
 
       // Call success callback to refresh data
       if (onSuccess) {
+        console.log('🔄 RELATIONSHIP FORM: Calling onSuccess callback to refresh relationships list...');
         await onSuccess();
+        console.log('✅ RELATIONSHIP FORM: onSuccess callback completed - relationships list should be refreshed');
+      } else {
+        console.warn('⚠️ RELATIONSHIP FORM: No onSuccess callback provided - relationships list will NOT be refreshed');
       }
 
     } catch (err) {

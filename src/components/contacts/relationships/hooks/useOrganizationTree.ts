@@ -98,9 +98,12 @@ export const useOrganizationTree = (
 
   /**
    * 📊 Check if organization tree should be displayed
+   * Show for companies/services even if tree is empty to provide feedback
    */
   const shouldShowTree = (contactType === 'company' || contactType === 'service') &&
-    organizationTree !== null;
+    contactId &&
+    contactId !== 'new-contact' &&
+    contactId.trim() !== '';
 
   // ============================================================================
   // RETURN API
@@ -115,7 +118,7 @@ export const useOrganizationTree = (
     // Operations
     refreshTree,
 
-    // Computed values (for convenience)
+    // Computed values
     shouldShowTree
-  } as UseOrganizationTreeReturn & { shouldShowTree: boolean };
+  };
 };

@@ -21,6 +21,7 @@ import {
   ChevronUp,
   Loader2
 } from 'lucide-react';
+import { PHOTO_COLORS } from '@/components/generic/config/photo-config';
 
 // 🏢 ENTERPRISE: Import centralized contact types
 import type { ContactType } from '@/types/contacts';
@@ -173,7 +174,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
   required = false,
   error,
   className = '',
-  maxResults = 10
+  maxResults = 50
 }) => {
   // ============================================================================
   // 🏢 ENTERPRISE: STATE MANAGEMENT
@@ -267,6 +268,8 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // ✅ CLEAN SOLUTION: Background colors handled directly in renderContactItem with inline styles
 
   // ============================================================================
   // 🏢 ENTERPRISE: HANDLERS
@@ -374,8 +377,9 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
     return (
       <div
         key={contact.id}
-        className={`p-3 cursor-pointer border-b last:border-b-0 hover:bg-gray-50 transition-colors ${
-          isHighlighted ? 'bg-blue-50 border-blue-200' : ''
+        data-dropdown-contact-item="true"
+        className={`p-3 border-b last:border-b-0 transition-colors cursor-pointer ${
+          isHighlighted ? 'bg-blue-100 border-blue-200' : 'bg-gray-100 hover:bg-gray-200'
         }`}
         onClick={() => selectContact(contact)}
         onMouseEnter={() => setHighlightedIndex(index)}
@@ -559,17 +563,19 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
           {showDropdown && (
             <Card
               ref={dropdownRef}
-              className="absolute z-50 w-full mt-1 shadow-lg border border-gray-200 bg-white"
+              className="absolute z-50 w-full mt-1 shadow-lg border border-gray-200 bg-gray-50"
             >
-              <CardContent className="p-0">
+              <CardContent className="p-0" style={{ backgroundColor: 'transparent' }}>
                 {isSearching ? (
                   <div className="p-4 text-center text-gray-500">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
                     <span className="text-sm">Αναζήτηση...</span>
                   </div>
                 ) : searchResults.length > 0 ? (
-                  <ScrollArea className="max-h-80">
-                    {searchResults.map((contact, index) => renderContactItem(contact, index))}
+                  <ScrollArea className="max-h-96 overflow-auto">
+                    <div className="max-h-96 overflow-y-auto">
+                      {searchResults.map((contact, index) => renderContactItem(contact, index))}
+                    </div>
                   </ScrollArea>
                 ) : (
                   <div className="p-4 text-center text-gray-500">
@@ -601,3 +607,23 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
 };
 
 export default EmployeeSelector;
+
+// Custom CSS για force background colors με !important
+const customStyles = `
+  [data-dropdown-contact-item="true"] {
+    background-color: #f3f4f6 !important;
+  }
+  [data-dropdown-contact-item="true"]:hover {
+    background-color: #e5e7eb !important;
+  }
+  [data-dropdown-contact-item="true"].bg-blue-100 {
+    background-color: #dbeafe !important;
+  }
+`;
+
+// Inject custom CSS στο head
+if (typeof document !== 'undefined') {
+  const styleElement = document.createElement('style');
+  styleElement.textContent = customStyles;
+  document.head.appendChild(styleElement);
+}

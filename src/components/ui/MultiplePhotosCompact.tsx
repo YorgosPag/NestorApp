@@ -172,7 +172,9 @@ export function MultiplePhotosCompact({
     }
 
     // Ενημερώνουμε το parent component
-    onPhotosChange?.(newPhotos);
+    if (onPhotosChange) {
+      onPhotosChange(newPhotos);
+    }
   };
 
   // ========================================================================
@@ -204,7 +206,9 @@ export function MultiplePhotosCompact({
                   // Handle file change for multiple photos context
                   const newPhotos = [...normalizedPhotos];
                   newPhotos[index] = { ...newPhotos[index], file };
-                  onPhotosChange?.(newPhotos);
+                  if (onPhotosChange) {
+      onPhotosChange(newPhotos);
+    }
                 }}
                 uploadHandler={uploadHandler}
                 onUploadComplete={(result) => {
@@ -287,7 +291,11 @@ export function MultiplePhotosCompact({
                       variant={selectedProfilePhotoIndex === index ? "default" : "outline"}
                       size="sm"
                       className="absolute bottom-1 right-1 h-6 w-6 p-0"
-                      onClick={() => onProfilePhotoSelection?.(index)}
+                      onClick={() => {
+                        if (onProfilePhotoSelection) {
+                          onProfilePhotoSelection(index);
+                        }
+                      }}
                     >
                       <Star className={`h-3 w-3 ${selectedProfilePhotoIndex === index ? 'fill-current' : ''}`} />
                     </Button>

@@ -132,7 +132,7 @@ export function buildRendererPropsForContactType(
   // 👤 Individual-specific props
   if (contactType === 'individual') {
     return {
-      ...baseProps,
+      ...baseProps, // ✅ ΚΡΙΣΙΜΟ: Περιλαμβάνει ΟΛΑ τα baseProps συμπεριλαμβανομένου του relationships renderer!
       onPhotoChange: photoHandlers.handleFileChange,
       onMultiplePhotosChange: photoHandlers.unifiedPhotosChange,
       onMultiplePhotoUploadComplete: photoHandlers.handleMultiplePhotoUploadComplete,
@@ -142,7 +142,7 @@ export function buildRendererPropsForContactType(
 
   // 🏢 Company & Service props
   return {
-    ...baseProps,
+    ...baseProps, // ✅ ΚΡΙΣΙΜΟ: Περιλαμβάνει ΟΛΑ τα baseProps συμπεριλαμβανομένου του relationships renderer!
     onPhotosChange: photoHandlers.unifiedPhotosChange,
     onLogoChange: photoHandlers.handleLogoChange,
     handleUploadedLogoURL: photoHandlers.handleUploadedLogoURL,

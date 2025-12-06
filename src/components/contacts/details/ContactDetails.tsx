@@ -13,6 +13,8 @@ import { createCompanyTabsFromConfig, createIndividualTabsFromConfig, createServ
 import { PhotoPreviewModal, usePhotoPreviewModal, openGalleryPhotoModal } from '@/core/modals';
 import { getIndividualSortedSections } from '@/config/individual-config';
 import { getServiceSortedSections } from '@/config/service-config';
+import { ContactRelationshipManager } from '@/components/contacts/relationships';
+import { RelationshipsSummary } from '@/components/contacts/relationships/RelationshipsSummary';
 
 
 function EmptyState() {
@@ -55,6 +57,39 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact }: Cont
     openGalleryPhotoModal(photoModal, contact, photoIndex, galleryPhotos);
   }, [photoModal, contact]);
 
+  // 🏢 ENTERPRISE: Custom renderers for specialized tabs
+  const customRenderers = {
+    relationships: () => {
+      console.log('🔍 DEBUG: Relationships custom renderer called!', {
+        contactId: contact.id,
+        contactType: contact.type
+      });
+
+      try {
+        return (
+          <RelationshipsSummary
+            contactId={contact.id}
+            contactType={contact.type}
+            readonly={false}
+            onManageRelationships={() => {
+              console.log('🏢 Opening relationships management modal...');
+              // TODO: Open relationships management modal with ContactRelationshipManager
+            }}
+          />
+        );
+      } catch (error) {
+        console.error('❌ ERROR: RelationshipsSummary crashed!', error);
+        return (
+          <div className="p-4 border border-red-300 bg-red-50 rounded-lg">
+            <h3 className="text-red-800 font-bold">Error Loading Relationships</h3>
+            <p className="text-red-600">{error?.message || 'Unknown error'}</p>
+            <p className="text-xs text-gray-600 mt-2">Check console for details</p>
+          </div>
+        );
+      }
+    }
+  };
+
   if (!contact) {
     return <EmptyState />;
   }
@@ -66,19 +101,19 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact }: Cont
   const tabs = isCompanyContact ? createCompanyTabsFromConfig(
     getSortedSections(),
     contact,
-    undefined, // customRenderers
+    customRenderers, // customRenderers για relationships tab
     undefined, // valueFormatters
     handlePhotoClick // onPhotoClick callback για εταιρείες
   ) : contact.type === 'individual' ? createIndividualTabsFromConfig(
     getIndividualSortedSections(),
     contact,
-    undefined, // customRenderers
+    customRenderers, // customRenderers για relationships tab
     undefined, // valueFormatters
     handlePhotoClick // onPhotoClick callback
   ) : contact.type === 'service' ? createServiceTabsFromConfig(
     getServiceSortedSections(),
     contact,
-    undefined, // customRenderers
+    customRenderers, // customRenderers για relationships tab
     undefined, // valueFormatters
     handlePhotoClick // onPhotoClick callback για δημόσιες υπηρεσίες
   ) : [];

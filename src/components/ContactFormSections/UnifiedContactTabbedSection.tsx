@@ -6,6 +6,7 @@ import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 import type { FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 import { UnifiedPhotoManager } from '@/components/ui/UnifiedPhotoManager';
 import { ContactRelationshipManager } from '@/components/contacts/relationships/ContactRelationshipManager';
+import { RelationshipsSummary } from '@/components/contacts/relationships/RelationshipsSummary';
 import { getContactFormConfig, getContactFormSections, getContactTypeDisplayName, getContactFormRenderer } from './utils/ContactFormConfigProvider';
 import { getPhotoUploadHandlers, createUnifiedPhotosChangeHandler, buildRendererPropsForContactType } from './utils/PhotoUploadConfiguration';
 
@@ -46,6 +47,9 @@ interface UnifiedContactTabbedSectionProps {
   // 📝 Form state
   setFormData?: (data: ContactFormData) => void;
   disabled?: boolean;
+
+  // 🔗 Relationships mode control
+  relationshipsMode?: 'summary' | 'full'; // 'summary' for main tab, 'full' for modal
 }
 
 // Configuration logic moved to ContactFormConfigProvider utility
@@ -64,7 +68,8 @@ export function UnifiedContactTabbedSection({
   handleUploadedLogoURL,
   handleUploadedPhotoURL,
   setFormData,
-  disabled = false
+  disabled = false,
+  relationshipsMode = 'full'
 }: UnifiedContactTabbedSectionProps) {
 
   // 🏢 ENTERPRISE: Get configuration dynamically based on contact type
@@ -118,6 +123,23 @@ export function UnifiedContactTabbedSection({
           // ✅ FIXED: Now formData.id is correctly included from the contact mappers
           const contactId = formData.id || 'new-contact';
 
+          // Choose between summary and full mode based on relationshipsMode prop
+          if (relationshipsMode === 'summary') {
+            return (
+              <RelationshipsSummary
+                contactId={contactId}
+                contactType={contactType}
+                readonly={disabled}
+                className="mt-4"
+                onManageRelationships={() => {
+                  console.log('🏢 User clicked manage relationships - this should open modal');
+                  // Future: add modal opening logic here
+                }}
+              />
+            );
+          }
+
+          // Full management mode (default for modal)
           return (
             <ContactRelationshipManager
               contactId={contactId}
@@ -150,7 +172,7 @@ export function UnifiedContactTabbedSection({
     sections, formData, handleChange, handleSelectChange, disabled, contactType,
     handleFileChange, unifiedPhotosChange, handleMultiplePhotoUploadComplete,
     handleProfilePhotoSelection, handleLogoChange, handleUploadedLogoURL,
-    handleUploadedPhotoURL, setFormData
+    handleUploadedPhotoURL, setFormData, relationshipsMode
   ]);
 
   return (

@@ -113,10 +113,22 @@ export class ContactRelationshipService {
       throw new Error('Cannot create relationship with self');
     }
 
-    // Check for duplicate relationships
-    const existing = await this.getRelationship(data.sourceContactId, data.targetContactId, data.relationshipType);
-    if (existing) {
-      throw new Error('Relationship already exists');
+    // Check for duplicate relationships (handle Firebase index errors gracefully)
+    try {
+      const existing = await this.getRelationship(data.sourceContactId, data.targetContactId, data.relationshipType);
+      if (existing) {
+        throw new Error('Relationship already exists');
+      }
+    } catch (error: any) {
+      // 🔧 If Firebase index is missing, log warning but continue with creation
+      // This prevents the relationship creation from failing due to missing composite index
+      if (error?.message?.includes('query requires an index')) {
+        console.warn('⚠️ Firebase index missing for duplicate check - proceeding with relationship creation');
+        console.warn('📋 Create the composite index at Firebase Console for better performance');
+      } else {
+        // Re-throw other errors (actual duplicate relationships, validation errors, etc.)
+        throw error;
+      }
     }
 
     // Validate contacts exist
@@ -860,9 +872,14 @@ export class ContactRelationshipService {
     try {
       const colRef = collection(db, RELATIONSHIPS_COLLECTION);
 
+      // 🔧 Filter out undefined values (Firestore doesn't accept undefined)
+      const cleanedRelationship = Object.fromEntries(
+        Object.entries(relationship).filter(([_, value]) => value !== undefined)
+      );
+
       // Convert to Firestore-friendly format
       const firestoreData = {
-        ...relationship,
+        ...cleanedRelationship,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       };

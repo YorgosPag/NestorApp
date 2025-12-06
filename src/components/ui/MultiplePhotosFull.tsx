@@ -175,7 +175,9 @@ export function MultiplePhotosFull({
     }
 
     // Ενημερώνουμε το parent component
-    onPhotosChange?.(newPhotos);
+    if (onPhotosChange) {
+      onPhotosChange(newPhotos);
+    }
   };
 
   // ========================================================================
@@ -206,7 +208,9 @@ export function MultiplePhotosFull({
                   // Handle file change for multiple photos context
                   const newPhotos = [...normalizedPhotos];
                   newPhotos[index] = { ...newPhotos[index], file };
-                  onPhotosChange?.(newPhotos);
+                  if (onPhotosChange) {
+      onPhotosChange(newPhotos);
+    }
                 }}
                 uploadHandler={uploadHandler}
                 onUploadComplete={(result) => {

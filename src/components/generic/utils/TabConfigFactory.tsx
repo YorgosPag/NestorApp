@@ -152,12 +152,26 @@ export function createTabsFromConfig(
   // TAB CREATION LOGIC
   // ========================================================================
 
-  return sections.map((section: AnySectionConfig) => ({
-    id: section.id,
-    label: section.title,
-    icon: getIconComponent(section.icon),
-    content: getPhotoTabContent(section),
-  }));
+  return sections.map((section: AnySectionConfig) => {
+    // ========================================================================
+    // SMART LABEL LOGIC για relationships tab
+    // ========================================================================
+
+    let displayLabel = section.title;
+
+    // Αν είναι relationships section και υπάρχει custom renderer, προσθέτουμε indicator
+    if (section.id === 'relationships' && customRenderers?.relationships) {
+      // Προσθέτουμε ένα visual indicator που δείχνει ότι υπάρχει ενεργό content
+      displayLabel = `${section.title} 🔗`;
+    }
+
+    return {
+      id: section.id,
+      label: displayLabel,
+      icon: getIconComponent(section.icon),
+      content: getPhotoTabContent(section),
+    };
+  });
 }
 
 // ============================================================================

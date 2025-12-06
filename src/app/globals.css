@@ -7,7 +7,7 @@
     --background: 212 22% 95%; /* Adjusted for a very light grey */
     --foreground: 222.2 47.4% 11.2%;
     
-    --card: 0 0% 100%;
+    --card: 210 40% 96.1%; /* Changed to gray-100 equivalent for dropdown cards */
     --card-foreground: 222.2 47.4% 11.2%;
     
     --popover: 0 0% 100%;
@@ -110,4 +110,24 @@
 .dxf-viewer-root,
 .dxf-viewer-root * {
   cursor: none !important;
+}
+
+/* 🎯 DROPDOWN CONTACT CARDS - FORCE GRAY BACKGROUND */
+/* Αυτό override το bg-card CSS variable μόνο για τα dropdown contact items */
+[data-dropdown-contact-item="true"] {
+  background-color: #f3f4f6 !important; /* Force gray-100 equivalent */
+  background: #f3f4f6 !important; /* Double override για safety */
+  background-image: none !important; /* Prevent any background images */
+}
+
+[data-dropdown-contact-item="true"]:hover {
+  background-color: #e5e7eb !important; /* Force gray-200 on hover */
+  background: #e5e7eb !important;
+}
+
+/* Special case για highlighted items (blue background) */
+[data-dropdown-contact-item="true"].bg-blue-100,
+[data-dropdown-contact-item="true"][class*="bg-blue"] {
+  background-color: #dbeafe !important; /* Force blue-100 */
+  background: #dbeafe !important;
 }

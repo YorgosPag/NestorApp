@@ -113,17 +113,22 @@ export const RelationshipList: React.FC<RelationshipListProps> = ({
   const renderRelationshipList = () => (
     <ScrollArea className="h-[600px]">
       <div className="space-y-4">
-        {relationships.map((relationship) => (
-          <RelationshipCard
-            key={relationship.id}
-            relationship={relationship}
-            isExpanded={expandedRelationships.has(relationship.id!)}
-            onToggleExpanded={() => onToggleExpanded(relationship.id!)}
-            readonly={readonly}
-            onEdit={onEdit ? () => onEdit(relationship) : undefined}
-            onDelete={onDelete ? () => onDelete(relationship.id!) : undefined}
-          />
-        ))}
+        {relationships.map((relationship) => {
+          const relationshipId = relationship.id;
+          if (!relationshipId) return null;
+
+          return (
+            <RelationshipCard
+              key={relationshipId}
+              relationship={relationship}
+              isExpanded={expandedRelationships.has(relationshipId)}
+              onToggleExpanded={() => onToggleExpanded(relationshipId)}
+              readonly={readonly}
+              onEdit={onEdit ? () => onEdit(relationship) : undefined}
+              onDelete={onDelete ? () => onDelete(relationshipId) : undefined}
+            />
+          );
+        })}
       </div>
     </ScrollArea>
   );
