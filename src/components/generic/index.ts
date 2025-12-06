@@ -38,15 +38,7 @@ export { GenericPeriodSelector } from './GenericPeriodSelector';
 export type { GenericPeriodSelectorProps } from './GenericPeriodSelector';
 
 // Helper Components
-export {
-  createTabsFromConfig,
-  createCompanyTabsFromConfig,
-  createIndividualTabsFromConfig,
-  createServiceTabsFromConfig,
-  createTabFromSection,
-  getIconComponent
-} from './utils/TabConfigFactory';
-export type { TabConfig } from './ConfigTabsHelper';
+export { getIconComponent } from './utils/IconMapping';
 
 // Re-export config for convenience
 export {

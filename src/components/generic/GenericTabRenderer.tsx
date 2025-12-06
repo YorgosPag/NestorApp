@@ -2,7 +2,7 @@
 
 import React from 'react';
 import type { FieldConfig, SectionConfig } from '@/config/company-gemi-config';
-import { getIconComponent } from './ConfigTabsHelper';
+import { getIconComponent } from './utils/IconMapping';
 
 // ============================================================================
 // INTERFACES

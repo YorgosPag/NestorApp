@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { FormField, FormInput } from '@/components/ui/form/FormComponents';
 import type { ServiceFieldConfig, ServiceSectionConfig } from '@/config/service-config';
-import { getIconComponent } from './ConfigTabsHelper';
+import { getIconComponent } from './utils/IconMapping';
 
 // ============================================================================
 // INTERFACES

@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { FormField, FormInput } from '@/components/ui/form/FormComponents';
 import type { FieldConfig, SectionConfig } from '@/config/company-gemi-config';
-import { getIconComponent } from './ConfigTabsHelper';
+import { getIconComponent } from './utils/IconMapping';
 
 // ============================================================================
 // INTERFACES

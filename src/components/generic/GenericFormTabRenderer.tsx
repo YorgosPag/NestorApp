@@ -4,7 +4,7 @@ import React from 'react';
 import { FormGrid } from '@/components/ui/form/FormComponents';
 import { TabsOnlyTriggers } from '@/components/ui/navigation/TabsComponents';
 import { TabsContent } from '@/components/ui/tabs';
-import { createTabsFromConfig, getIconComponent } from './ConfigTabsHelper';
+import { getIconComponent } from './utils/IconMapping';
 import { GenericFormRenderer } from './GenericFormRenderer';
 import { MultiplePhotosUpload } from '@/components/ui/MultiplePhotosUpload';
 import type { SectionConfig } from '@/config/company-gemi-config';
@@ -46,10 +46,23 @@ function createFormTabsFromConfig(
   onPhotosChange?: (photos: any[]) => void,
   customRenderers?: Record<string, any>
 ) {
-  return sections.map(section => ({
-    id: section.id,
-    label: section.title,
-    icon: getIconComponent(section.icon),
+  return sections.map(section => {
+    // ========================================================================
+    // SMART LABEL LOGIC για relationships tab
+    // ========================================================================
+
+    let displayLabel = section.title;
+
+    // Αν είναι relationships section και υπάρχει custom renderer, προσθέτουμε indicator
+    if (section.id === 'relationships' && customRenderers?.relationships) {
+      // Προσθέτουμε ένα visual indicator που δείχνει ότι υπάρχει ενεργό content
+      displayLabel = `${section.title} 🔗`;
+    }
+
+    return {
+      id: section.id,
+      label: displayLabel,
+      icon: getIconComponent(section.icon),
     content: (() => {
       // Check for custom renderer FIRST (but exclude companyPhotos and relationships which have special logic)
       if (customRenderers?.[section.id] && section.id !== 'companyPhotos' && section.id !== 'relationships') {
@@ -102,8 +115,9 @@ function createFormTabsFromConfig(
           />
         </FormGrid>
       );
-    })(),
-  }));
+    })()
+    };
+  });
 }
 
 // ============================================================================

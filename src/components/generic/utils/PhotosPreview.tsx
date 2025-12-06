@@ -38,11 +38,6 @@ export interface PhotosPreviewProps {
 /**
  * UNIFIED Photos Preview Component
  *
- * Εξαλείφει τα τριπλότυπα από ConfigTabsHelper:
- * - CompanyPhotosPreview (γραμμές 111-205) ❌ → PhotosPreview ✅
- * - IndividualPhotosPreview (γραμμές 221-287) ❌ → PhotosPreview ✅
- * - ServiceLogoPreview (γραμμές 302-347) ❌ → PhotosPreview ✅
- *
  * Single component που handle όλους τους contact types με:
  * - Conditional layouts based on contact type
  * - Unified photo click handlers

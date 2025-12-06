@@ -16,12 +16,7 @@ import {
  * ENTERPRISE ICON MAPPING SYSTEM
  *
  * Centralized icon mapping που εξαλείφει τα διπλότυπα από όλα τα generic components.
- * Αυτό το αρχείο αντικαθιστά τις διάσπαρτες ICON_MAPPING implementations σε:
- * - ConfigTabsHelper.tsx
- * - GenericCRMDashboardTabsRenderer.tsx
- * - GenericBuildingTabsRenderer.tsx
- * - GenericProjectTabsRenderer.tsx
- * - GenericUnitsTabsRenderer.tsx
+ * Αυτό το αρχείο παρέχει unified ICON_MAPPING για όλα τα renderer components:
  *
  * Features:
  * - Unified Lucide icons mapping

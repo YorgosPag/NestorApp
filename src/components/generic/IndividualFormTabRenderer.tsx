@@ -4,7 +4,7 @@ import React from 'react';
 import { FormGrid } from '@/components/ui/form/FormComponents';
 import { TabsOnlyTriggers } from '@/components/ui/navigation/TabsComponents';
 import { TabsContent } from '@/components/ui/tabs';
-import { getIconComponent } from './ConfigTabsHelper';
+import { getIconComponent } from './utils/IconMapping';
 import { IndividualFormRenderer } from './IndividualFormRenderer';
 import { MultiplePhotosUpload } from '@/components/ui/MultiplePhotosUpload';
 import { UnifiedPhotoManager } from '@/components/ui/UnifiedPhotoManager';

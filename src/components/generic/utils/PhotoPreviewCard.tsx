@@ -44,10 +44,7 @@ export interface PhotoPreviewCardProps {
 /**
  * UNIFIED Photo Preview Card Component
  *
- * Εξαλείφει τα τριπλότυπα από ConfigTabsHelper:
- * - CompanyPhotosPreview (γραμμές 140-201) ❌
- * - IndividualPhotosPreview (γραμμές 258-282) ❌
- * - ServiceLogoPreview (γραμμές 320-345) ❌
+ * Reusable photo card component που χρησιμοποιείται από το PhotosPreview:
  *
  * Unified logic για όλα τα photo preview contexts με:
  * - Conditional styling based on type
