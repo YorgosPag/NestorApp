@@ -66,6 +66,7 @@ export function mapIndividualContactToFormData(contact: Contact): ContactFormDat
   const formData: ContactFormData = {
     // Basic info
     type: 'individual',
+    id: contact.id, // 🔥 CRITICAL FIX: Include contact ID for relationship management
 
     // 👤 Βασικά Στοιχεία Φυσικού Προσώπου
     firstName: getSafeFieldValue(individualContact, 'firstName'),

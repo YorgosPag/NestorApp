@@ -22,6 +22,7 @@ export function mapServiceContactToFormData(contact: Contact): ContactFormData {
   const formData: ContactFormData = {
     // Basic info
     type: 'service',
+    id: contact.id, // 🔥 CRITICAL FIX: Include contact ID for relationship management
 
     // 🏛️ Service Στοιχεία
     serviceName: getSafeFieldValue(serviceContact, 'serviceName'),

@@ -114,18 +114,23 @@ export function UnifiedContactTabbedSection({
         } : {}),
 
         // 🏢 ENTERPRISE: Custom renderer for relationships tab - for ALL contact types
-        relationships: () => (
-          <ContactRelationshipManager
-            contactId={formData.id || 'new-contact'} // Handle new contacts
-            contactType={contactType}
-            readonly={disabled}
-            className="mt-4"
-            onRelationshipsChange={(relationships) => {
-              // Optionally update form data with relationship count for display
-              console.log('🏢 Relationships updated:', relationships.length, 'relationships');
-            }}
-          />
-        )
+        relationships: () => {
+          // ✅ FIXED: Now formData.id is correctly included from the contact mappers
+          const contactId = formData.id || 'new-contact';
+
+          return (
+            <ContactRelationshipManager
+              contactId={contactId}
+              contactType={contactType}
+              readonly={disabled}
+              className="mt-4"
+              onRelationshipsChange={(relationships) => {
+                // Optionally update form data with relationship count for display
+                console.log('🏢 Relationships updated:', relationships.length, 'relationships');
+              }}
+            />
+          );
+        }
       }
     };
 

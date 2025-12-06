@@ -26,6 +26,30 @@ import {
   getRelationshipPriorityScore
 } from '@/types/contacts/relationships';
 import { Contact, ContactType } from '@/types/contacts';
+import { ContactsService } from '@/services/contacts.service';
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  addDoc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  orderBy,
+  serverTimestamp,
+  or,
+  and
+} from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+
+// ============================================================================
+// FIREBASE CONFIGURATION
+// ============================================================================
+
+const RELATIONSHIPS_COLLECTION = 'contact_relationships';
 
 // ============================================================================
 // SERVICE CLASS - ENTERPRISE ARCHITECTURE
@@ -211,7 +235,7 @@ export class ContactRelationshipService {
     relationshipType: RelationshipType
   ): Promise<ContactRelationship | null> {
     try {
-      const relationship = await this.queryDatabase(`
+      const relationships = await this.queryDatabase(`
         SELECT * FROM contact_relationships
         WHERE source_contact_id = ?
         AND target_contact_id = ?
@@ -219,7 +243,8 @@ export class ContactRelationshipService {
         AND status != 'deleted'
       `, [sourceId, targetId, relationshipType]);
 
-      return relationship || null;
+      // queryDatabase returns an array, get the first item
+      return (relationships && relationships.length > 0) ? relationships[0] : null;
     } catch (error) {
       console.error('❌ Failed to get specific relationship:', error);
       return null;
@@ -831,29 +856,257 @@ export class ContactRelationshipService {
    * 💾 Save Relationship to Database
    */
   private static async saveRelationship(relationship: ContactRelationship): Promise<void> {
-    // Implementation: Save to Firebase/database
     console.log('💾 Saving relationship to database', relationship.id);
-    // This would be implemented with actual database operations
+    try {
+      const colRef = collection(db, RELATIONSHIPS_COLLECTION);
+
+      // Convert to Firestore-friendly format
+      const firestoreData = {
+        ...relationship,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      };
+
+      // Use setDoc with custom ID
+      const docRef = doc(colRef, relationship.id);
+      await setDoc(docRef, firestoreData);
+
+      console.log('✅ Relationship saved to Firestore:', relationship.id);
+    } catch (error) {
+      console.error('❌ Error saving relationship to Firestore:', error);
+      throw error;
+    }
   }
 
   /**
-   * 🔍 Query Database
+   * 🔍 Query Database (Legacy SQL-to-Firestore Bridge)
    */
-  private static async queryDatabase(query: string, params: any[]): Promise<any> {
-    // Implementation: Execute database query
-    console.log('🔍 Executing database query', { query, params });
-    // This would be implemented with actual database query execution
-    return null;
+  private static async queryDatabase(sqlQuery: string, params: any[]): Promise<ContactRelationship[]> {
+    console.log('🔍 Executing database query', { query: sqlQuery, params });
+
+    try {
+      // Convert SQL queries to Firestore queries
+      if (sqlQuery.includes('SELECT * FROM contact_relationships')) {
+        if (sqlQuery.includes('source_contact_id = ?') && sqlQuery.includes('target_contact_id = ?') && sqlQuery.includes('relationship_type = ?')) {
+          // This is a specific relationship lookup
+          return await this.getSpecificRelationshipFromFirestore(params);
+        } else {
+          // This is a general relationship query
+          return await this.getRelationshipsFromFirestore(params);
+        }
+      } else if (sqlQuery.includes('SELECT cr.*, c.* FROM contact_relationships cr')) {
+        // This is a JOIN query - handle specially
+        return await this.getOrganizationEmployeesFromFirestore(params);
+      } else {
+        console.warn('⚠️ Unsupported SQL query, returning empty array:', sqlQuery);
+        return [];
+      }
+    } catch (error) {
+      console.error('❌ Error in queryDatabase:', error);
+      return [];
+    }
+  }
+
+  /**
+   * 🔥 Get Relationships from Firestore (Simplified - No Compound Indexes)
+   */
+  private static async getRelationshipsFromFirestore(params: any[]): Promise<ContactRelationship[]> {
+    try {
+      const colRef = collection(db, RELATIONSHIPS_COLLECTION);
+
+      // If we have contact ID parameters, get relationships where this contact is source OR target
+      if (params.length >= 2 && params[0] === params[1]) {
+        const contactId = params[0];
+        console.log('🔥 Fetching relationships for contact:', contactId);
+
+        // Query 1: Where this contact is the source
+        const sourceQuery = query(
+          colRef,
+          where('sourceContactId', '==', contactId),
+          where('status', '==', 'active')
+        );
+
+        // Query 2: Where this contact is the target
+        const targetQuery = query(
+          colRef,
+          where('targetContactId', '==', contactId),
+          where('status', '==', 'active')
+        );
+
+        // Execute both queries in parallel
+        const [sourceSnapshot, targetSnapshot] = await Promise.all([
+          getDocs(sourceQuery),
+          getDocs(targetQuery)
+        ]);
+
+        const relationships: ContactRelationship[] = [];
+        const processedIds = new Set<string>(); // Avoid duplicates
+
+        // Process source relationships
+        sourceSnapshot.forEach((doc) => {
+          if (!processedIds.has(doc.id)) {
+            relationships.push({
+              id: doc.id,
+              ...doc.data()
+            } as ContactRelationship);
+            processedIds.add(doc.id);
+          }
+        });
+
+        // Process target relationships
+        targetSnapshot.forEach((doc) => {
+          if (!processedIds.has(doc.id)) {
+            relationships.push({
+              id: doc.id,
+              ...doc.data()
+            } as ContactRelationship);
+            processedIds.add(doc.id);
+          }
+        });
+
+        // Sort by createdAt manually (since we can't use orderBy with OR)
+        relationships.sort((a, b) => {
+          const aTime = a.createdAt?.toMillis?.() || 0;
+          const bTime = b.createdAt?.toMillis?.() || 0;
+          return bTime - aTime; // Descending
+        });
+
+        console.log('🔥 Firestore query returned', relationships.length, 'relationships');
+        return relationships;
+      }
+
+      // Default case - return empty
+      return [];
+    } catch (error) {
+      console.error('❌ Error querying Firestore relationships:', error);
+      return [];
+    }
+  }
+
+  /**
+   * 🏢 Get Organization Employees from Firestore (Simplified - No Compound Indexes)
+   */
+  private static async getOrganizationEmployeesFromFirestore(params: any[]): Promise<ContactRelationship[]> {
+    try {
+      const colRef = collection(db, RELATIONSHIPS_COLLECTION);
+
+      // Parse parameters: [organizationId, relationshipType1, relationshipType2, ...]
+      const organizationId = params[0];
+      const relationshipTypes = params.slice(1);
+
+      console.log('🏢 Querying employees for organization:', organizationId, 'types:', relationshipTypes);
+
+      // Simplified query: Just get all relationships for this organization
+      const q = query(
+        colRef,
+        where('targetContactId', '==', organizationId),
+        where('status', '==', 'active')
+      );
+
+      const snapshot = await getDocs(q);
+      const relationships: ContactRelationship[] = [];
+
+      snapshot.forEach((doc) => {
+        const relationship = {
+          id: doc.id,
+          ...doc.data()
+        } as ContactRelationship;
+
+        // Filter by relationship types in-memory (to avoid compound index)
+        if (relationshipTypes.includes(relationship.relationshipType)) {
+          relationships.push(relationship);
+        }
+      });
+
+      // Sort in-memory
+      relationships.sort((a, b) => {
+        // Sort by relationship type first, then by position
+        if (a.relationshipType !== b.relationshipType) {
+          return a.relationshipType.localeCompare(b.relationshipType);
+        }
+        return (a.position || '').localeCompare(b.position || '');
+      });
+
+      console.log('🏢 Organization employees query returned', relationships.length, 'relationships');
+      return relationships;
+    } catch (error) {
+      console.error('❌ Error querying organization employees from Firestore:', error);
+      return [];
+    }
+  }
+
+  /**
+   * 🔍 Get Specific Relationship from Firestore (για duplicate checking)
+   *
+   * @param params [sourceContactId, targetContactId, relationshipType]
+   * @returns ContactRelationship ή null αν δεν υπάρχει
+   */
+  private static async getSpecificRelationshipFromFirestore(params: string[]): Promise<ContactRelationship[]> {
+    console.log('🔍 Getting specific relationship from Firestore with params:', params);
+
+    if (params.length < 3) {
+      console.error('❌ Missing parameters for specific relationship query');
+      return [];
+    }
+
+    const [sourceId, targetId, relationshipType] = params;
+
+    try {
+      const colRef = collection(db, 'contact_relationships');
+
+      // Create query για την specific relationship
+      const q = query(
+        colRef,
+        where('sourceContactId', '==', sourceId),
+        where('targetContactId', '==', targetId),
+        where('relationshipType', '==', relationshipType),
+        where('status', '!=', 'deleted')
+      );
+
+      console.log('🔍 Executing specific relationship query for:', {
+        sourceId,
+        targetId,
+        relationshipType
+      });
+
+      const snapshot = await getDocs(q);
+      const relationships: ContactRelationship[] = [];
+
+      snapshot.forEach((doc) => {
+        const relationship = {
+          id: doc.id,
+          ...doc.data()
+        } as ContactRelationship;
+        relationships.push(relationship);
+      });
+
+      console.log('🔍 Specific relationship query returned', relationships.length, 'results');
+
+      if (relationships.length > 0) {
+        console.log('🔍 Found existing relationship:', relationships[0].id);
+      }
+
+      return relationships;
+
+    } catch (error) {
+      console.error('❌ Error getting specific relationship from Firestore:', error);
+      return [];
+    }
   }
 
   /**
    * 👤 Get Contact by ID
    */
   private static async getContactById(contactId: string): Promise<Contact | null> {
-    // Implementation: Fetch contact from contacts service
     console.log('👤 Fetching contact by ID', contactId);
-    // This would integrate with the existing contacts.service.ts
-    return null;
+    try {
+      const contact = await ContactsService.getContact(contactId);
+      console.log('👤 Contact found:', contact ? 'YES' : 'NO', contact?.name || 'N/A');
+      return contact;
+    } catch (error) {
+      console.error('👤 Error fetching contact:', error);
+      return null;
+    }
   }
 
   /**

@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Plus,
   Edit,
@@ -25,7 +26,8 @@ import {
   Users,
   Crown,
   UserCheck,
-  Briefcase
+  Briefcase,
+  CheckCircle
 } from 'lucide-react';
 
 // 🏢 ENTERPRISE: Import centralized relationship types & services
@@ -136,6 +138,8 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
   const [editingId, setEditingId] = useState<string | null>(null);
   const [expandedRelationships, setExpandedRelationships] = useState<Set<string>>(new Set());
   const [organizationTree, setOrganizationTree] = useState<OrganizationTree | null>(null);
@@ -162,9 +166,16 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
   // ============================================================================
 
   useEffect(() => {
-    loadRelationships();
-    if (contactType === 'company' || contactType === 'service') {
-      loadOrganizationTree();
+    // Only load relationships if we have a real contact ID
+    if (contactId && contactId !== 'new-contact' && contactId.trim() !== '') {
+      loadRelationships();
+      if (contactType === 'company' || contactType === 'service') {
+        loadOrganizationTree();
+      }
+    } else {
+      // For new contacts or no ID, show empty state
+      setRelationships([]);
+      setOrganizationTree(null);
     }
   }, [contactId]);
 
@@ -196,12 +207,41 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
   // 🏢 ENTERPRISE: FORM HANDLERS
   // ============================================================================
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent | React.MouseEvent) => {
+    console.log('🔥 RELATIONSHIP FORM: handleSubmit called');
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    // Don't allow form submission for new contacts
+    if (!contactId || contactId === 'new-contact') {
+      setError('Αποθηκεύστε πρώτα την επαφή για να προσθέσετε σχέσεις');
+      return;
+    }
 
     try {
       setLoading(true);
       setError(null);
+
+      // 🔍 VALIDATION: Check required fields
+      if (!formData.targetContactId) {
+        setError('Παρακαλώ επιλέξτε μια επαφή');
+        setLoading(false);
+        return;
+      }
+
+      if (!formData.relationshipType) {
+        setError('Παρακαλώ επιλέξτε τύπο σχέσης');
+        setLoading(false);
+        return;
+      }
+
+      console.log('🔍 VALIDATION PASSED:', {
+        targetContactId: formData.targetContactId,
+        relationshipType: formData.relationshipType,
+        contactId
+      });
 
       const relationshipData: Partial<ContactRelationship> = {
         sourceContactId: contactId,
@@ -223,16 +263,60 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
         await ContactRelationshipService.createRelationship(relationshipData);
       }
 
-      // Reset form and reload data
-      resetForm();
+      console.log('🔥 RELATIONSHIP FORM: Relationship saved successfully!');
+
+      // Reset form (but keep modal open) and reload data
+      console.log('🔥 RELATIONSHIP FORM: Resetting form data...');
+      setFormData({
+        targetContactId: '',
+        relationshipType: 'employee' as RelationshipType,
+        position: '',
+        department: '',
+        startDate: '',
+        endDate: '',
+        notes: '',
+        contactInfo: {
+          businessPhone: '',
+          businessEmail: '',
+          businessAddress: '',
+          extensionNumber: ''
+        }
+      });
+      setEditingId(null);
+      // Don't close modal - let user close it manually
+
+      console.log('🔥 RELATIONSHIP FORM: Loading relationships...');
       await loadRelationships();
+
       if (contactType === 'company' || contactType === 'service') {
+        console.log('🔥 RELATIONSHIP FORM: Loading organization tree...');
         await loadOrganizationTree();
       }
 
+      console.log('🔥 RELATIONSHIP FORM: All operations completed successfully!');
+
+      // Show success message
+      setError(null);
+      const message = editingId ? 'Η σχέση ενημερώθηκε επιτυχώς!' : 'Η σχέση δημιουργήθηκε επιτυχώς! Μην ξεχάσετε να πατήσετε "Ενημέρωση Επαφής" για οριστική αποθήκευση.';
+      setSuccessMessage(message);
+      console.log('✅ SUCCESS:', message);
+
+      // Auto-hide success message after 5 seconds
+      setTimeout(() => {
+        setSuccessMessage(null);
+      }, 5000);
+
     } catch (err) {
-      setError(editingId ? 'Σφάλμα ενημέρωσης σχέσης' : 'Σφάλμα δημιουργίας σχέσης');
-      console.error('Error saving relationship:', err);
+      const errorMsg = editingId ? 'Σφάλμα ενημέρωσης σχέσης' : 'Σφάλμα δημιουργίας σχέσης';
+      setError(errorMsg);
+      console.error('🚨 RELATIONSHIP ERROR:', errorMsg, err);
+      console.error('🚨 ERROR DETAILS:', {
+        errorMessage: err instanceof Error ? err.message : String(err),
+        errorStack: err instanceof Error ? err.stack : 'No stack',
+        formData: JSON.stringify(formData, null, 2),
+        editingId,
+        contactId
+      });
     } finally {
       setLoading(false);
     }
@@ -457,7 +541,7 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Target Contact - Enterprise EmployeeSelector */}
             <div className="md:col-span-2">
@@ -591,7 +675,11 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
             <Button type="button" variant="outline" onClick={resetForm}>
               Ακύρωση
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button
+              type="button"
+              disabled={loading}
+              onClick={handleSubmit}
+            >
               {loading ? 'Αποθήκευση...' : (editingId ? 'Ενημέρωση' : 'Προσθήκη')}
             </Button>
           </div>
@@ -619,10 +707,17 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
         {!readonly && (
           <Button
             onClick={() => setShowAddForm(!showAddForm)}
+            type="button"
             className="flex items-center space-x-2"
+            disabled={!contactId || contactId === 'new-contact'}
           >
             <Plus className="h-4 w-4" />
-            <span>Προσθήκη Σχέσης</span>
+            <span>
+              {(!contactId || contactId === 'new-contact')
+                ? 'Αποθηκεύστε πρώτα την επαφή'
+                : 'Προσθήκη Σχέσης'
+              }
+            </span>
           </Button>
         )}
       </div>
@@ -636,11 +731,39 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
         </Card>
       )}
 
+      {/* Success message */}
+      {successMessage && (
+        <Alert className="border-green-200 bg-green-50">
+          <CheckCircle className="h-4 w-4 text-green-600" />
+          <AlertDescription className="text-green-700 font-medium">
+            {successMessage}
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Add/Edit form */}
       {showAddForm && renderAddEditForm()}
 
       {/* Relationships list */}
-      {loading && relationships.length === 0 ? (
+      {(!contactId || contactId === 'new-contact') ? (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center text-gray-500">
+              <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+              <p className="font-medium">Δημιουργία σχέσεων</p>
+              <p className="text-sm mt-2">
+                Για να δημιουργήσετε σχέσεις, πρώτα αποθηκεύστε την επαφή.
+                Μετά την αποθήκευση θα μπορείτε να προσθέσετε επαγγελματικές σχέσεις.
+              </p>
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                <p className="text-xs text-blue-600">
+                  💡 <strong>Συμβουλή:</strong> Συμπληρώστε τα βασικά στοιχεία και κάντε κλικ "Ενημέρωση Επαφής"
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ) : loading && relationships.length === 0 ? (
         <Card>
           <CardContent className="pt-6">
             <p className="text-center text-gray-500">Φόρτωση σχέσεων...</p>
@@ -677,9 +800,9 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
           </CardHeader>
           <CardContent>
             <div className="text-sm text-gray-600">
-              <p><strong>Συνολικοί εργαζόμενοι:</strong> {organizationTree.totalEmployees}</p>
-              <p><strong>Τμήματα:</strong> {organizationTree.departments.join(', ') || 'Κανένα'}</p>
-              <p><strong>Ενεργά άτομα:</strong> {organizationTree.children?.length || 0}</p>
+              <p><strong>Συνολικοί εργαζόμενοι:</strong> {organizationTree.statistics?.totalEmployees || 0}</p>
+              <p><strong>Τμήματα:</strong> {Object.keys(organizationTree.departments || {}).join(', ') || 'Κανένα'}</p>
+              <p><strong>Επίπεδα ιεραρχίας:</strong> {organizationTree.statistics?.hierarchyDepth || 0}</p>
             </div>
             {organizationTree.children && organizationTree.children.length > 0 && (
               <div className="mt-4">

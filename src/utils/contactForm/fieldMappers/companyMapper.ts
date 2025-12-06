@@ -37,6 +37,7 @@ export function mapCompanyContactToFormData(contact: Contact): ContactFormData {
   const formData: ContactFormData = {
     // Basic info
     type: 'company',
+    id: contact.id, // 🔥 CRITICAL FIX: Include contact ID for relationship management
 
     // 🏢 Company Στοιχεία
     companyName: getSafeFieldValue(companyContact, 'companyName'),

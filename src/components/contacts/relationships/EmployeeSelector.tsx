@@ -68,100 +68,93 @@ interface EmployeeSelectorProps {
 }
 
 // ============================================================================
-// 🏢 ENTERPRISE: MOCK DATA SERVICE
+// 🏢 ENTERPRISE: REAL CONTACTS SERVICE INTEGRATION
 // ============================================================================
-// This will be replaced with actual API calls in production
 
-const mockContactSearch = async (query: string, filters: {
+import { ContactsService } from '@/services/contacts.service';
+
+const realContactSearch = async (query: string, filters: {
   allowedTypes?: ContactType[];
   excludeIds?: string[];
   maxResults?: number;
 }): Promise<ContactSummary[]> => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 300));
+  try {
+    console.log('🔍 EMPLOYEE SELECTOR: Searching contacts with query:', query, 'filters:', filters);
 
-  const mockContacts: ContactSummary[] = [
-    {
-      id: '1',
-      name: 'Γιάννης Παπαδόπουλος',
-      type: 'individual',
-      email: 'giannis.papadopoulos@example.com',
-      phone: '+30 210 1234567',
-      company: 'Τεχνολογικές Λύσεις ΑΕ',
-      department: 'Πληροφορικής',
-      lastActivity: '2024-12-05'
-    },
-    {
-      id: '2',
-      name: 'Μαρία Νικολάου',
-      type: 'individual',
-      email: 'maria.nikolaou@example.com',
-      phone: '+30 210 2345678',
-      company: 'Δημόσια Υπηρεσία Α',
-      department: 'Διοικητικού',
-      lastActivity: '2024-12-04'
-    },
-    {
-      id: '3',
-      name: 'Τεχνολογικές Λύσεις ΑΕ',
-      type: 'company',
-      email: 'info@techsolutions.gr',
-      phone: '+30 210 3456789',
-      address: 'Βασιλίσσης Σοφίας 123, Αθήνα',
-      lastActivity: '2024-12-03'
-    },
-    {
-      id: '4',
-      name: 'Υπηρεσία Πολεοδομίας Αθήνας',
-      type: 'service',
-      email: 'info@cityplanning.athens.gov.gr',
-      phone: '+30 213 1357911',
-      address: 'Πατησίων 85, Αθήνα',
-      lastActivity: '2024-12-02'
-    },
-    {
-      id: '5',
-      name: 'Κώστας Γεωργίου',
-      type: 'individual',
-      email: 'kostas.georgiou@example.com',
-      phone: '+30 210 4567890',
-      company: 'Υπηρεσία Πολεοδομίας Αθήνας',
-      department: 'Τεχνικού',
-      lastActivity: '2024-12-01'
+    // Get all contacts from database
+    const result = await ContactsService.getAllContacts();
+    const allContacts = result?.contacts || [];
+    console.log('🔍 EMPLOYEE SELECTOR: Found', allContacts.length, 'total contacts in database');
+
+    if (!Array.isArray(allContacts)) {
+      console.error('❌ EMPLOYEE SELECTOR: ContactsService.getAllContacts() returned invalid contacts array:', result);
+      return [];
     }
-  ];
 
-  // Filter by query (name, email, company)
-  let filtered = mockContacts.filter(contact => {
-    if (!query.trim()) return true;
-    const searchTerm = query.toLowerCase();
-    return (
-      contact.name.toLowerCase().includes(searchTerm) ||
-      contact.email?.toLowerCase().includes(searchTerm) ||
-      contact.company?.toLowerCase().includes(searchTerm) ||
-      contact.department?.toLowerCase().includes(searchTerm)
-    );
-  });
+    // Convert to ContactSummary format
+    let filtered = allContacts.map(contact => {
+      const summary: ContactSummary = {
+        id: contact.id,
+        name: contact.type === 'individual'
+          ? `${(contact as any).firstName || ''} ${(contact as any).lastName || ''}`.trim()
+          : contact.type === 'company'
+          ? (contact as any).companyName || ''
+          : (contact as any).serviceName || '',
+        type: contact.type,
+        email: contact.emails?.[0]?.email || '',
+        phone: contact.phones?.[0]?.number || '',
+        company: contact.type === 'individual' ? (contact as any).employer || '' : undefined,
+        department: contact.type === 'individual' ? (contact as any).position || '' : undefined,
+        lastActivity: contact.updatedAt ? new Date(contact.updatedAt).toISOString().split('T')[0] : undefined
+      };
+      return summary;
+    }).filter(contact => contact.name.length > 0); // Only contacts with names
 
-  // Apply filters
-  if (filters.allowedTypes && filters.allowedTypes.length > 0) {
-    filtered = filtered.filter(contact => filters.allowedTypes!.includes(contact.type));
+    console.log('🔍 EMPLOYEE SELECTOR: After mapping, have', filtered.length, 'valid contacts');
+
+    // Filter by query (name, email, company)
+    if (query.trim()) {
+      const searchTerm = query.toLowerCase();
+      filtered = filtered.filter(contact =>
+        contact.name.toLowerCase().includes(searchTerm) ||
+        contact.email?.toLowerCase().includes(searchTerm) ||
+        contact.company?.toLowerCase().includes(searchTerm) ||
+        contact.department?.toLowerCase().includes(searchTerm)
+      );
+      console.log('🔍 EMPLOYEE SELECTOR: After text filter, have', filtered.length, 'matching contacts');
+    }
+
+    // Filter by contact type
+    if (filters.allowedTypes?.length) {
+      filtered = filtered.filter(contact =>
+        filters.allowedTypes!.includes(contact.type)
+      );
+      console.log('🔍 EMPLOYEE SELECTOR: After type filter, have', filtered.length, 'contacts');
+    }
+
+    // Exclude specific IDs
+    if (filters.excludeIds?.length) {
+      filtered = filtered.filter(contact =>
+        !filters.excludeIds!.includes(contact.id)
+      );
+      console.log('🔍 EMPLOYEE SELECTOR: After excluding IDs, have', filtered.length, 'contacts');
+    }
+
+    // Limit results
+    if (filters.maxResults) {
+      filtered = filtered.slice(0, filters.maxResults);
+      console.log('🔍 EMPLOYEE SELECTOR: After limit, returning', filtered.length, 'contacts');
+    }
+
+    return filtered;
+  } catch (error) {
+    console.error('❌ EMPLOYEE SELECTOR: Failed to search contacts:', error);
+    return [];
   }
-
-  if (filters.excludeIds && filters.excludeIds.length > 0) {
-    filtered = filtered.filter(contact => !filters.excludeIds!.includes(contact.id));
-  }
-
-  // Limit results
-  if (filters.maxResults) {
-    filtered = filtered.slice(0, filters.maxResults);
-  }
-
-  return filtered;
 };
 
 const getContactById = async (id: string): Promise<ContactSummary | null> => {
-  const results = await mockContactSearch('', { excludeIds: [], maxResults: 100 });
+  const results = await realContactSearch('', { excludeIds: [], maxResults: 100 });
   return results.find(contact => contact.id === id) || null;
 };
 
@@ -290,16 +283,27 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
 
   const performSearch = async (query: string) => {
     try {
-      setIsSearching(true);
-      const results = await mockContactSearch(query, {
+      console.log('🔍 EMPLOYEE SELECTOR: performSearch called with query:', query);
+      console.log('🔍 EMPLOYEE SELECTOR: Search filters:', {
         allowedTypes: allowedContactTypes,
         excludeIds: excludeContactIds,
         maxResults
       });
+
+      setIsSearching(true);
+      const results = await realContactSearch(query, {
+        allowedTypes: allowedContactTypes,
+        excludeIds: excludeContactIds,
+        maxResults
+      });
+
+      console.log('🔍 EMPLOYEE SELECTOR: Search completed, got', results.length, 'results');
+      console.log('🔍 EMPLOYEE SELECTOR: Results:', results);
+
       setSearchResults(results);
       setHighlightedIndex(-1);
     } catch (error) {
-      console.error('Search error:', error);
+      console.error('❌ EMPLOYEE SELECTOR: Search failed:', error);
       setSearchResults([]);
     } finally {
       setIsSearching(false);

@@ -14,6 +14,7 @@ import type { Contact } from '@/types/contacts';
 
 export interface ContactFormData {
   type: ContactType;
+  id?: string; // 🔥 CRITICAL: Contact ID for relationship management
   // Βασικά Στοιχεία Φυσικού Προσώπου
   firstName: string;
   lastName: string;
