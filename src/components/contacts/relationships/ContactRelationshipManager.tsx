@@ -1,821 +1,317 @@
+// ============================================================================
+// CONTACT RELATIONSHIP MANAGER - ENTERPRISE ORCHESTRATOR
+// ============================================================================
+//
+// 🎯 Main orchestrator component for managing contact relationships
+// Refactored from 825-line monolith into modular Enterprise architecture
+//
+// Architecture:
+// - Uses custom hooks for state management and API operations
+// - Imports modular UI components for clean separation of concerns
+// - Centralized error handling and loading states
+// - Responsive design with optimized performance
+//
+// ============================================================================
+
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Separator } from '@/components/ui/separator';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import React from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import {
-  Plus,
-  Edit,
-  Trash2,
-  Building2,
-  User,
-  MapPin,
-  Phone,
-  Mail,
-  Calendar,
-  ChevronDown,
-  ChevronRight,
-  Users,
-  Crown,
-  UserCheck,
-  Briefcase,
-  CheckCircle
-} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AlertCircle, Users, Plus, RefreshCw } from 'lucide-react';
 
-// 🏢 ENTERPRISE: Import centralized relationship types & services
-import type {
-  ContactRelationship,
-  RelationshipType,
-  ContactWithRelationship,
-  ProfessionalContactInfo,
-  OrganizationTree
-} from '@/types/contacts/relationships';
+// 🏢 ENTERPRISE: Import centralized types
 import type { ContactType } from '@/types/contacts';
-import { ContactRelationshipService } from '@/services/contact-relationships.service';
-import { EmployeeSelector, type ContactSummary } from './EmployeeSelector';
 
-// ============================================================================
-// 🏢 ENTERPRISE: TYPES & INTERFACES
-// ============================================================================
+// 🏢 ENTERPRISE: Import modular components
+import { RelationshipForm } from './RelationshipForm';
+import { RelationshipList } from './RelationshipList';
+import { OrganizationTree } from './OrganizationTree';
 
-interface ContactRelationshipManagerProps {
-  /** Κύρια επαφή για την οποία διαχειριζόμαστε τις σχέσεις */
-  contactId: string;
-  /** Τύπος κύριας επαφής (individual, company, service) */
-  contactType: ContactType;
-  /** Read-only mode για προβολή μόνο */
-  readonly?: boolean;
-  /** Custom styling className */
-  className?: string;
-  /** Callback όταν αλλάζουν οι σχέσεις */
-  onRelationshipsChange?: (relationships: ContactRelationship[]) => void;
-}
+// 🏢 ENTERPRISE: Import custom hooks for state management
+import { useRelationshipList } from './hooks/useRelationshipList';
+import { useRelationshipForm } from './hooks/useRelationshipForm';
+import { useOrganizationTree } from './hooks/useOrganizationTree';
 
-interface RelationshipFormData {
-  targetContactId: string;
-  relationshipType: RelationshipType;
-  position?: string;
-  department?: string;
-  startDate?: string;
-  endDate?: string;
-  notes?: string;
-  contactInfo?: Partial<ProfessionalContactInfo>;
-}
+// 🏢 ENTERPRISE: Import types
+import type { ContactRelationshipManagerProps } from './types/relationship-manager.types';
 
-// ============================================================================
-// 🏢 ENTERPRISE: RELATIONSHIP TYPE CONFIGURATIONS
-// ============================================================================
-
-const RELATIONSHIP_TYPES_CONFIG = {
-  employee: {
-    icon: User,
-    label: 'Εργαζόμενος',
-    color: 'bg-blue-100 text-blue-800',
-    allowedFor: ['company', 'service'] as ContactType[]
-  },
-  manager: {
-    icon: Crown,
-    label: 'Διευθυντής',
-    color: 'bg-purple-100 text-purple-800',
-    allowedFor: ['company', 'service'] as ContactType[]
-  },
-  shareholder: {
-    icon: Briefcase,
-    label: 'Μέτοχος',
-    color: 'bg-green-100 text-green-800',
-    allowedFor: ['company'] as ContactType[]
-  },
-  board_member: {
-    icon: Users,
-    label: 'Μέλος Διοικητικού Συμβουλίου',
-    color: 'bg-orange-100 text-orange-800',
-    allowedFor: ['company'] as ContactType[]
-  },
-  civil_servant: {
-    icon: UserCheck,
-    label: 'Δημόσιος Υπάλληλος',
-    color: 'bg-indigo-100 text-indigo-800',
-    allowedFor: ['service'] as ContactType[]
-  },
-  department_head: {
-    icon: Crown,
-    label: 'Προϊστάμενος Τμήματος',
-    color: 'bg-red-100 text-red-800',
-    allowedFor: ['service'] as ContactType[]
-  },
-  consultant: {
-    icon: User,
-    label: 'Σύμβουλος',
-    color: 'bg-teal-100 text-teal-800',
-    allowedFor: ['company', 'service'] as ContactType[]
-  }
-} as const;
-
-// ============================================================================
-// 🏢 ENTERPRISE: MAIN COMPONENT
-// ============================================================================
+/**
+ * 🎯 ContactRelationshipManager - Enterprise Orchestrator Component
+ *
+ * Main controller component that orchestrates relationship management functionality
+ *
+ * Features:
+ * - Modular architecture with separation of concerns
+ * - Integrated form and list management
+ * - Organization hierarchy tree (for companies/services)
+ * - Comprehensive error handling and loading states
+ * - Responsive design with optimized performance
+ * - Real-time data synchronization
+ *
+ * @param contactId - The ID of the contact to manage relationships for
+ * @param contactType - The type of contact (individual, company, service)
+ * @param readonly - Whether the component should be in read-only mode
+ */
 
 export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProps> = ({
   contactId,
   contactType,
-  readonly = false,
-  className = '',
-  onRelationshipsChange
+  readonly = false
 }) => {
   // ============================================================================
-  // 🏢 ENTERPRISE: STATE MANAGEMENT
+  // HOOK INTEGRATIONS
   // ============================================================================
 
-  const [relationships, setRelationships] = useState<ContactRelationship[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  // 📋 Relationship list management hook
+  const {
+    relationships,
+    loading: listLoading,
+    error: listError,
+    expandedRelationships,
+    handleToggleExpanded,
+    handleDelete,
+    refreshRelationships
+  } = useRelationshipList(contactId, contactType);
 
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [expandedRelationships, setExpandedRelationships] = useState<Set<string>>(new Set());
-  const [organizationTree, setOrganizationTree] = useState<OrganizationTree | null>(null);
+  // 📝 Relationship form management hook
+  const {
+    formData,
+    setFormData,
+    loading: formLoading,
+    error: formError,
+    editingId,
+    successMessage,
+    handleSubmit,
+    handleEdit,
+    handleCancel
+  } = useRelationshipForm(contactId, contactType, refreshRelationships);
 
-  // Form state for add/edit
-  const [formData, setFormData] = useState<RelationshipFormData>({
-    targetContactId: '',
-    relationshipType: 'employee' as RelationshipType,
-    position: '',
-    department: '',
-    startDate: '',
-    endDate: '',
-    notes: '',
-    contactInfo: {
-      businessPhone: '',
-      businessEmail: '',
-      businessAddress: '',
-      extensionNumber: ''
-    }
-  });
+  // 🌳 Organization tree management hook (for companies/services)
+  const {
+    organizationTree,
+    loading: treeLoading,
+    error: treeError,
+    refreshTree,
+    shouldShowTree
+  } = useOrganizationTree(contactId, contactType);
 
   // ============================================================================
-  // 🏢 ENTERPRISE: DATA LOADING
+  // COMPUTED VALUES
   // ============================================================================
 
-  useEffect(() => {
-    // Only load relationships if we have a real contact ID
-    if (contactId && contactId !== 'new-contact' && contactId.trim() !== '') {
-      loadRelationships();
-      if (contactType === 'company' || contactType === 'service') {
-        loadOrganizationTree();
-      }
-    } else {
-      // For new contacts or no ID, show empty state
-      setRelationships([]);
-      setOrganizationTree(null);
-    }
-  }, [contactId]);
+  const isNewContact = !contactId || contactId === 'new-contact';
+  const showForm = !readonly && !isNewContact;
+  const anyLoading = listLoading || formLoading || treeLoading;
+  const hasAnyError = listError || formError || treeError;
 
-  const loadRelationships = async () => {
+  // ============================================================================
+  // EVENT HANDLERS
+  // ============================================================================
+
+  /**
+   * 🔄 Handle global refresh of all relationship data
+   */
+  const handleGlobalRefresh = async () => {
     try {
-      setLoading(true);
-      setError(null);
-      const data = await ContactRelationshipService.getContactRelationships(contactId);
-      setRelationships(data);
-      onRelationshipsChange?.(data);
+      // Refresh relationships and organization tree in parallel
+      await Promise.all([
+        refreshRelationships(),
+        shouldShowTree ? refreshTree() : Promise.resolve()
+      ]);
     } catch (err) {
-      setError('Σφάλμα φόρτωσης σχέσεων επαφής');
-      console.error('Error loading relationships:', err);
-    } finally {
-      setLoading(false);
+      console.error('❌ Error refreshing relationship data:', err);
     }
   };
 
-  const loadOrganizationTree = async () => {
-    try {
-      const tree = await ContactRelationshipService.buildOrganizationHierarchy(contactId);
-      setOrganizationTree(tree);
-    } catch (err) {
-      console.error('Error loading organization tree:', err);
-    }
+  /**
+   * 📝 Handle form show/hide state
+   */
+  const [showFormCard, setShowFormCard] = React.useState(false);
+
+  const handleShowForm = () => setShowFormCard(true);
+  const handleHideForm = () => {
+    setShowFormCard(false);
+    handleCancel();
   };
 
   // ============================================================================
-  // 🏢 ENTERPRISE: FORM HANDLERS
+  // RENDER HELPERS
   // ============================================================================
 
-  const handleSubmit = async (e?: React.FormEvent | React.MouseEvent) => {
-    console.log('🔥 RELATIONSHIP FORM: handleSubmit called');
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
+  /**
+   * 📊 Render header with statistics and actions
+   */
+  const renderHeader = () => (
+    <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center space-x-3">
+        <Users className="h-6 w-6 text-gray-600" />
+        <div>
+          <h3 className="text-lg font-medium">Σχέσεις Επαφής</h3>
+          {!isNewContact && (
+            <p className="text-sm text-gray-500">
+              Σύνολο: {relationships.length} σχέσεις
+            </p>
+          )}
+        </div>
+      </div>
 
-    // Don't allow form submission for new contacts
-    if (!contactId || contactId === 'new-contact') {
-      setError('Αποθηκεύστε πρώτα την επαφή για να προσθέσετε σχέσεις');
-      return;
-    }
+      {!readonly && !isNewContact && (
+        <div className="flex space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleGlobalRefresh}
+            disabled={anyLoading}
+            title="Ανανέωση δεδομένων"
+          >
+            <RefreshCw className={`h-4 w-4 ${anyLoading ? 'animate-spin' : ''}`} />
+          </Button>
 
-    try {
-      setLoading(true);
-      setError(null);
+          {!showFormCard && (
+            <Button
+              onClick={handleShowForm}
+              disabled={anyLoading}
+              size="sm"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Προσθήκη Σχέσης
+            </Button>
+          )}
+        </div>
+      )}
+    </div>
+  );
 
-      // 🔍 VALIDATION: Check required fields
-      if (!formData.targetContactId) {
-        setError('Παρακαλώ επιλέξτε μια επαφή');
-        setLoading(false);
-        return;
-      }
-
-      if (!formData.relationshipType) {
-        setError('Παρακαλώ επιλέξτε τύπο σχέσης');
-        setLoading(false);
-        return;
-      }
-
-      console.log('🔍 VALIDATION PASSED:', {
-        targetContactId: formData.targetContactId,
-        relationshipType: formData.relationshipType,
-        contactId
-      });
-
-      const relationshipData: Partial<ContactRelationship> = {
-        sourceContactId: contactId,
-        targetContactId: formData.targetContactId,
-        relationshipType: formData.relationshipType,
-        position: formData.position || undefined,
-        department: formData.department || undefined,
-        startDate: formData.startDate || undefined,
-        endDate: formData.endDate || undefined,
-        notes: formData.notes || undefined,
-        contactInfo: formData.contactInfo?.businessPhone || formData.contactInfo?.businessEmail
-          ? formData.contactInfo as ProfessionalContactInfo
-          : undefined
-      };
-
-      if (editingId) {
-        await ContactRelationshipService.updateRelationship(editingId, relationshipData);
-      } else {
-        await ContactRelationshipService.createRelationship(relationshipData);
-      }
-
-      console.log('🔥 RELATIONSHIP FORM: Relationship saved successfully!');
-
-      // Reset form (but keep modal open) and reload data
-      console.log('🔥 RELATIONSHIP FORM: Resetting form data...');
-      setFormData({
-        targetContactId: '',
-        relationshipType: 'employee' as RelationshipType,
-        position: '',
-        department: '',
-        startDate: '',
-        endDate: '',
-        notes: '',
-        contactInfo: {
-          businessPhone: '',
-          businessEmail: '',
-          businessAddress: '',
-          extensionNumber: ''
-        }
-      });
-      setEditingId(null);
-      // Don't close modal - let user close it manually
-
-      console.log('🔥 RELATIONSHIP FORM: Loading relationships...');
-      await loadRelationships();
-
-      if (contactType === 'company' || contactType === 'service') {
-        console.log('🔥 RELATIONSHIP FORM: Loading organization tree...');
-        await loadOrganizationTree();
-      }
-
-      console.log('🔥 RELATIONSHIP FORM: All operations completed successfully!');
-
-      // Show success message
-      setError(null);
-      const message = editingId ? 'Η σχέση ενημερώθηκε επιτυχώς!' : 'Η σχέση δημιουργήθηκε επιτυχώς! Μην ξεχάσετε να πατήσετε "Ενημέρωση Επαφής" για οριστική αποθήκευση.';
-      setSuccessMessage(message);
-      console.log('✅ SUCCESS:', message);
-
-      // Auto-hide success message after 5 seconds
-      setTimeout(() => {
-        setSuccessMessage(null);
-      }, 5000);
-
-    } catch (err) {
-      const errorMsg = editingId ? 'Σφάλμα ενημέρωσης σχέσης' : 'Σφάλμα δημιουργίας σχέσης';
-      setError(errorMsg);
-      console.error('🚨 RELATIONSHIP ERROR:', errorMsg, err);
-      console.error('🚨 ERROR DETAILS:', {
-        errorMessage: err instanceof Error ? err.message : String(err),
-        errorStack: err instanceof Error ? err.stack : 'No stack',
-        formData: JSON.stringify(formData, null, 2),
-        editingId,
-        contactId
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleEdit = (relationship: ContactRelationship) => {
-    setEditingId(relationship.id);
-    setFormData({
-      targetContactId: relationship.targetContactId,
-      relationshipType: relationship.relationshipType,
-      position: relationship.position || '',
-      department: relationship.department || '',
-      startDate: relationship.startDate || '',
-      endDate: relationship.endDate || '',
-      notes: relationship.notes || '',
-      contactInfo: relationship.contactInfo || {
-        businessPhone: '',
-        businessEmail: '',
-        businessAddress: '',
-        extensionNumber: ''
-      }
-    });
-    setShowAddForm(true);
-  };
-
-  const handleDelete = async (relationshipId: string) => {
-    if (!confirm('Είστε σίγουροι ότι θέλετε να διαγράψετε αυτή τη σχέση;')) {
-      return;
-    }
-
-    try {
-      setLoading(true);
-      await ContactRelationshipService.deleteRelationship(relationshipId);
-      await loadRelationships();
-      if (contactType === 'company' || contactType === 'service') {
-        await loadOrganizationTree();
-      }
-    } catch (err) {
-      setError('Σφάλμα διαγραφής σχέσης');
-      console.error('Error deleting relationship:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      targetContactId: '',
-      relationshipType: 'employee' as RelationshipType,
-      position: '',
-      department: '',
-      startDate: '',
-      endDate: '',
-      notes: '',
-      contactInfo: {
-        businessPhone: '',
-        businessEmail: '',
-        businessAddress: '',
-        extensionNumber: ''
-      }
-    });
-    setEditingId(null);
-    setShowAddForm(false);
-  };
-
-  // ============================================================================
-  // 🏢 ENTERPRISE: UTILITY FUNCTIONS
-  // ============================================================================
-
-  const getAvailableRelationshipTypes = (): RelationshipType[] => {
-    return Object.entries(RELATIONSHIP_TYPES_CONFIG)
-      .filter(([_, config]) => config.allowedFor.includes(contactType))
-      .map(([type]) => type as RelationshipType);
-  };
-
-  const toggleRelationshipExpansion = (relationshipId: string) => {
-    const newExpanded = new Set(expandedRelationships);
-    if (newExpanded.has(relationshipId)) {
-      newExpanded.delete(relationshipId);
-    } else {
-      newExpanded.add(relationshipId);
-    }
-    setExpandedRelationships(newExpanded);
-  };
-
-  const getRelationshipTypeConfig = (type: RelationshipType) => {
-    return RELATIONSHIP_TYPES_CONFIG[type] || {
-      icon: User,
-      label: type,
-      color: 'bg-gray-100 text-gray-800',
-      allowedFor: []
-    };
-  };
-
-  // ============================================================================
-  // 🏢 ENTERPRISE: RENDER FUNCTIONS
-  // ============================================================================
-
-  const renderRelationshipCard = (relationship: ContactRelationship) => {
-    const config = getRelationshipTypeConfig(relationship.relationshipType);
-    const Icon = config.icon;
-    const isExpanded = expandedRelationships.has(relationship.id);
+  /**
+   * ⚠️ Render error alerts
+   */
+  const renderErrors = () => {
+    if (!hasAnyError) return null;
 
     return (
-      <Card key={relationship.id} className="mb-4 border-l-4 border-l-blue-500">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => toggleRelationshipExpansion(relationship.id)}
-                className="p-1"
-              >
-                {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-              </Button>
-
-              <Icon className="h-5 w-5 text-gray-600" />
-
-              <div>
-                <Badge className={config.color}>
-                  {config.label}
-                </Badge>
-                {relationship.position && (
-                  <p className="text-sm text-gray-600 mt-1">{relationship.position}</p>
-                )}
-              </div>
-            </div>
-
-            {!readonly && (
-              <div className="flex space-x-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleEdit(relationship)}
-                  className="h-8 w-8 p-0"
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleDelete(relationship.id)}
-                  className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
-          </div>
-        </CardHeader>
-
-        {isExpanded && (
-          <CardContent className="pt-0">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {relationship.department && (
-                <div className="flex items-center space-x-2">
-                  <Building2 className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm">{relationship.department}</span>
-                </div>
-              )}
-
-              {relationship.startDate && (
-                <div className="flex items-center space-x-2">
-                  <Calendar className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm">Από: {new Date(relationship.startDate).toLocaleDateString('el-GR')}</span>
-                </div>
-              )}
-
-              {relationship.contactInfo?.businessPhone && (
-                <div className="flex items-center space-x-2">
-                  <Phone className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm">{relationship.contactInfo.businessPhone}</span>
-                  {relationship.contactInfo.extensionNumber && (
-                    <span className="text-xs text-gray-400">ext. {relationship.contactInfo.extensionNumber}</span>
-                  )}
-                </div>
-              )}
-
-              {relationship.contactInfo?.businessEmail && (
-                <div className="flex items-center space-x-2">
-                  <Mail className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm">{relationship.contactInfo.businessEmail}</span>
-                </div>
-              )}
-
-              {relationship.contactInfo?.businessAddress && (
-                <div className="flex items-start space-x-2 md:col-span-2">
-                  <MapPin className="h-4 w-4 text-gray-500 mt-0.5" />
-                  <span className="text-sm">{relationship.contactInfo.businessAddress}</span>
-                </div>
-              )}
-
-              {relationship.notes && (
-                <div className="md:col-span-2">
-                  <Label className="text-xs font-medium text-gray-500">Σημειώσεις</Label>
-                  <p className="text-sm mt-1 p-2 bg-gray-50 rounded">{relationship.notes}</p>
-                </div>
-              )}
-            </div>
-
-            {/* Relationship metadata */}
-            <Separator className="my-4" />
-            <div className="flex justify-between text-xs text-gray-400">
-              <span>Δημιουργήθηκε: {new Date(relationship.createdAt).toLocaleDateString('el-GR')}</span>
-              {relationship.updatedAt && relationship.updatedAt !== relationship.createdAt && (
-                <span>Ενημερώθηκε: {new Date(relationship.updatedAt).toLocaleDateString('el-GR')}</span>
-              )}
-            </div>
-          </CardContent>
+      <div className="space-y-3 mb-6">
+        {listError && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Σφάλμα λίστας σχέσεων:</strong> {listError}
+            </AlertDescription>
+          </Alert>
         )}
-      </Card>
+
+        {formError && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Σφάλμα φόρμας:</strong> {formError}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {treeError && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Σφάλμα οργανωσιακού διαγράμματος:</strong> {treeError}
+            </AlertDescription>
+          </Alert>
+        )}
+      </div>
     );
   };
 
-  const renderAddEditForm = () => (
-    <Card className="mb-6">
-      <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <Plus className="h-5 w-5" />
-          <span>{editingId ? 'Επεξεργασία Σχέσης' : 'Προσθήκη Νέας Σχέσης'}</span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Target Contact - Enterprise EmployeeSelector */}
-            <div className="md:col-span-2">
-              <EmployeeSelector
-                value={formData.targetContactId}
-                onContactSelect={(contact: ContactSummary | null) => {
-                  setFormData(prev => ({
-                    ...prev,
-                    targetContactId: contact?.id || ''
-                  }));
-                }}
-                label="Επαφή*"
-                placeholder="Αναζήτηση επαφής..."
-                allowedContactTypes={['individual', 'company', 'service']}
-                excludeContactIds={[contactId]} // Exclude current contact
-                required
-                error={!formData.targetContactId ? 'Η επιλογή επαφής είναι υποχρεωτική' : undefined}
-              />
-            </div>
+  /**
+   * ✅ Render success messages
+   */
+  const renderSuccess = () => {
+    if (!successMessage) return null;
 
-            <div>
-              <Label htmlFor="relationshipType">Τύπος Σχέσης*</Label>
-              <Select
-                value={formData.relationshipType}
-                onValueChange={(value: RelationshipType) =>
-                  setFormData(prev => ({ ...prev, relationshipType: value }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Επιλέξτε τύπο σχέσης" />
-                </SelectTrigger>
-                <SelectContent>
-                  {getAvailableRelationshipTypes().map((type) => {
-                    const config = getRelationshipTypeConfig(type);
-                    return (
-                      <SelectItem key={type} value={type}>
-                        <div className="flex items-center space-x-2">
-                          <config.icon className="h-4 w-4" />
-                          <span>{config.label}</span>
-                        </div>
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
+    return (
+      <Alert className="mb-6 border-green-200 bg-green-50">
+        <AlertCircle className="h-4 w-4 text-green-600" />
+        <AlertDescription className="text-green-700">
+          {successMessage}
+        </AlertDescription>
+      </Alert>
+    );
+  };
 
-            <div>
-              <Label htmlFor="position">Θέση</Label>
-              <Input
-                id="position"
-                value={formData.position}
-                onChange={(e) => setFormData(prev => ({ ...prev, position: e.target.value }))}
-                placeholder="π.χ. Διευθυντής Πωλήσεων"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="department">Τμήμα</Label>
-              <Input
-                id="department"
-                value={formData.department}
-                onChange={(e) => setFormData(prev => ({ ...prev, department: e.target.value }))}
-                placeholder="π.χ. Οικονομικό Τμήμα"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="startDate">Ημερομηνία Έναρξης</Label>
-              <Input
-                id="startDate"
-                type="date"
-                value={formData.startDate}
-                onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
-              />
-            </div>
-
-            {/* Professional Contact Info */}
-            <div className="md:col-span-2">
-              <Label className="text-sm font-medium">Επαγγελματικά Στοιχεία Επικοινωνίας</Label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
-                <Input
-                  placeholder="Επαγγελματικό τηλέφωνο"
-                  value={formData.contactInfo?.businessPhone || ''}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    contactInfo: { ...prev.contactInfo, businessPhone: e.target.value }
-                  }))}
-                />
-                <Input
-                  placeholder="Επαγγελματικό email"
-                  type="email"
-                  value={formData.contactInfo?.businessEmail || ''}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    contactInfo: { ...prev.contactInfo, businessEmail: e.target.value }
-                  }))}
-                />
-                <Input
-                  placeholder="Εσωτερικό τηλέφωνο"
-                  value={formData.contactInfo?.extensionNumber || ''}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    contactInfo: { ...prev.contactInfo, extensionNumber: e.target.value }
-                  }))}
-                />
-                <Input
-                  placeholder="Διεύθυνση εργασίας"
-                  value={formData.contactInfo?.businessAddress || ''}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    contactInfo: { ...prev.contactInfo, businessAddress: e.target.value }
-                  }))}
-                />
-              </div>
-            </div>
-
-            <div className="md:col-span-2">
-              <Label htmlFor="notes">Σημειώσεις</Label>
-              <Textarea
-                id="notes"
-                value={formData.notes}
-                onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                placeholder="Πρόσθετες πληροφορίες..."
-                rows={3}
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end space-x-2">
-            <Button type="button" variant="outline" onClick={resetForm}>
-              Ακύρωση
-            </Button>
-            <Button
-              type="button"
-              disabled={loading}
-              onClick={handleSubmit}
-            >
-              {loading ? 'Αποθήκευση...' : (editingId ? 'Ενημέρωση' : 'Προσθήκη')}
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
-  );
 
   // ============================================================================
-  // 🏢 ENTERPRISE: MAIN RENDER
+  // MAIN RENDER
   // ============================================================================
 
   return (
-    <div className={`space-y-6 ${className}`}>
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <Users className="h-6 w-6 text-blue-600" />
-          <h2 className="text-xl font-semibold">Σχέσεις Επαφής</h2>
-          {relationships.length > 0 && (
-            <Badge variant="secondary">{relationships.length}</Badge>
-          )}
-        </div>
+    <div className="space-y-6">
+      {/* Header with title and actions */}
+      {renderHeader()}
 
-        {!readonly && (
-          <Button
-            onClick={() => setShowAddForm(!showAddForm)}
-            type="button"
-            className="flex items-center space-x-2"
-            disabled={!contactId || contactId === 'new-contact'}
-          >
-            <Plus className="h-4 w-4" />
-            <span>
-              {(!contactId || contactId === 'new-contact')
-                ? 'Αποθηκεύστε πρώτα την επαφή'
-                : 'Προσθήκη Σχέσης'
-              }
-            </span>
-          </Button>
-        )}
-      </div>
+      {/* Error alerts */}
+      {renderErrors()}
 
-      {/* Error message */}
-      {error && (
-        <Card className="border-red-200 bg-red-50">
-          <CardContent className="pt-6">
-            <p className="text-red-600 text-sm">{error}</p>
-          </CardContent>
-        </Card>
+      {/* Success messages */}
+      {renderSuccess()}
+
+      {/* Relationship Form (conditionally shown) */}
+      {showForm && showFormCard && (
+        <RelationshipForm
+          formData={formData}
+          setFormData={setFormData}
+          contactType={contactType}
+          loading={formLoading}
+          error={formError}
+          editingId={editingId}
+          onSubmit={handleSubmit}
+          onCancel={handleHideForm}
+        />
       )}
 
-      {/* Success message */}
-      {successMessage && (
-        <Alert className="border-green-200 bg-green-50">
-          <CheckCircle className="h-4 w-4 text-green-600" />
-          <AlertDescription className="text-green-700 font-medium">
-            {successMessage}
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* Add/Edit form */}
-      {showAddForm && renderAddEditForm()}
-
-      {/* Relationships list */}
-      {(!contactId || contactId === 'new-contact') ? (
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center text-gray-500">
-              <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-              <p className="font-medium">Δημιουργία σχέσεων</p>
-              <p className="text-sm mt-2">
-                Για να δημιουργήσετε σχέσεις, πρώτα αποθηκεύστε την επαφή.
-                Μετά την αποθήκευση θα μπορείτε να προσθέσετε επαγγελματικές σχέσεις.
-              </p>
-              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                <p className="text-xs text-blue-600">
-                  💡 <strong>Συμβουλή:</strong> Συμπληρώστε τα βασικά στοιχεία και κάντε κλικ "Ενημέρωση Επαφής"
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ) : loading && relationships.length === 0 ? (
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-center text-gray-500">Φόρτωση σχέσεων...</p>
-          </CardContent>
-        </Card>
-      ) : relationships.length === 0 ? (
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center text-gray-500">
-              <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-              <p>Δεν υπάρχουν καταχωρημένες σχέσεις</p>
-              {!readonly && (
-                <p className="text-sm">Κάντε κλικ στο κουμπί "Προσθήκη Σχέσης" για να προσθέσετε την πρώτη σχέση.</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <ScrollArea className="h-[600px]">
-          <div className="space-y-4">
-            {relationships.map(renderRelationshipCard)}
-          </div>
-        </ScrollArea>
-      )}
-
-      {/* Organization Tree Preview (for companies/services) */}
-      {organizationTree && (contactType === 'company' || contactType === 'service') && (
+      {/* Organization Tree (for companies/services only) */}
+      {shouldShowTree && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <Building2 className="h-5 w-5" />
+              <Users className="h-5 w-5" />
               <span>Οργανωτικό Διάγραμμα</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-sm text-gray-600">
-              <p><strong>Συνολικοί εργαζόμενοι:</strong> {organizationTree.statistics?.totalEmployees || 0}</p>
-              <p><strong>Τμήματα:</strong> {Object.keys(organizationTree.departments || {}).join(', ') || 'Κανένα'}</p>
-              <p><strong>Επίπεδα ιεραρχίας:</strong> {organizationTree.statistics?.hierarchyDepth || 0}</p>
+            <OrganizationTree
+              tree={organizationTree}
+              loading={treeLoading}
+              error={treeError}
+              readonly={readonly}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Relationship List */}
+      <RelationshipList
+        relationships={relationships}
+        contactType={contactType}
+        loading={listLoading}
+        contactId={contactId}
+        readonly={readonly}
+        expandedRelationships={expandedRelationships}
+        onToggleExpanded={handleToggleExpanded}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+      />
+
+      {/* Footer note for new contacts */}
+      {isNewContact && (
+        <Card className="border-blue-200 bg-blue-50">
+          <CardContent className="pt-6">
+            <div className="text-center text-blue-700">
+              <p className="font-medium">💡 Σημείωση</p>
+              <p className="text-sm mt-2">
+                Για να δημιουργήσετε σχέσεις, αποθηκεύστε πρώτα την επαφή.
+                Μετά την αποθήκευση θα εμφανιστούν οι επιλογές διαχείρισης σχέσεων.
+              </p>
             </div>
-            {organizationTree.children && organizationTree.children.length > 0 && (
-              <div className="mt-4">
-                <Label className="text-xs font-medium text-gray-500">Πρόσφατες προσθήκες:</Label>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {organizationTree.children.slice(0, 5).map((child, index) => (
-                    <Badge key={index} variant="outline" className="text-xs">
-                      {child.position || 'Εργαζόμενος'}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
           </CardContent>
         </Card>
       )}

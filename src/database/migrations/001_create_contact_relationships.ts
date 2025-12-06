@@ -1,15 +1,33 @@
 // ============================================================================
-// CONTACT RELATIONSHIPS MIGRATION SCRIPT
+// CONTACT RELATIONSHIPS MIGRATION SCRIPT - MODULAR ARCHITECTURE
 // ============================================================================
 //
 // 🏢 Enterprise Database Migration for Contact Relationship Management
 // Professional-grade migration script with rollback capability
 // Supports Firebase/Firestore and SQL databases
 //
+// 🏗️ NEW: Uses modular schema architecture for better maintainability
+// Executes: 01-tables → 02-indexes → 03-triggers → 04-views → 05-procedures → 07-maintenance → schema-info
+//
 // ============================================================================
 
 import { readFileSync } from 'fs';
 import { join } from 'path';
+
+/**
+ * 🏗️ Modular Schema Files Configuration
+ * Defines the execution order for enterprise modular schema
+ */
+const MODULAR_SCHEMA_FILES = [
+  '01-tables.sql',        // Core table definitions
+  '02-indexes.sql',       // Performance optimization indexes
+  '03-triggers.sql',      // Automated triggers & functions
+  '04-views.sql',         // Business intelligence views
+  '05-procedures.sql',    // Stored procedures & functions
+  '07-maintenance.sql',   // Database maintenance procedures
+  'schema-info.sql'       // Version tracking & metadata
+  // Note: 06-seed-data.sql is intentionally skipped for production safety
+] as const;
 
 /**
  * 🏗️ Migration Interface
@@ -33,12 +51,23 @@ export interface Migration {
 /**
  * 🏢 Contact Relationships Migration - Version 001
  *
- * Creates the initial database structure for contact relationship management
- * Includes all tables, indexes, triggers, and initial data
+ * Creates the complete enterprise database structure for contact relationship management
+ * using the new modular architecture for better maintainability and deployment flexibility
+ *
+ * Executes in order:
+ * - 01-tables.sql: Core table definitions
+ * - 02-indexes.sql: Performance optimization indexes
+ * - 03-triggers.sql: Automated triggers & functions
+ * - 04-views.sql: Business intelligence views
+ * - 05-procedures.sql: Stored procedures & functions
+ * - 07-maintenance.sql: Database maintenance procedures
+ * - schema-info.sql: Version tracking & metadata
+ *
+ * Note: 06-seed-data.sql is skipped in migrations for production safety
  */
 export class CreateContactRelationshipsMigration implements Migration {
   version = '001';
-  description = 'Create contact relationships tables with enterprise features';
+  description = 'Create contact relationships schema with modular enterprise architecture';
 
   /**
    * 📈 Forward Migration - Create Database Structure
@@ -170,11 +199,22 @@ export class CreateContactRelationshipsMigration implements Migration {
     try {
       console.log('🐘 Running PostgreSQL migration...');
 
-      // Read and execute SQL schema file
-      const schemaPath = join(__dirname, '../schemas/contact-relationships.sql');
-      const schema = readFileSync(schemaPath, 'utf8');
+      // Execute modular schema files in correct order
+      const schemaDir = join(__dirname, '../schemas/contact-relationships');
 
-      await pool.query(schema);
+      for (const fileName of MODULAR_SCHEMA_FILES) {
+        const filePath = join(schemaDir, fileName);
+        console.log(`📄 Executing: ${fileName}`);
+
+        try {
+          const sql = readFileSync(filePath, 'utf8');
+          await pool.query(sql);
+          console.log(`✅ ${fileName} completed`);
+        } catch (error) {
+          console.error(`❌ Failed to execute ${fileName}:`, error);
+          throw error;
+        }
+      }
 
       console.log('✅ PostgreSQL migration completed');
     } finally {
@@ -266,7 +306,7 @@ export class CreateContactRelationshipsMigration implements Migration {
       const migrationCheck = await pool.query(`
         SELECT COUNT(*) as count
         FROM schema_migrations
-        WHERE version = '001_initial_schema'
+        WHERE version = '001_modular_schema'
       `);
 
       if (migrationCheck.rows[0].count === '0') {
@@ -297,8 +337,10 @@ export class CreateContactRelationshipsMigration implements Migration {
 
     try {
       console.log('🐬 Running MySQL migration...');
+      console.log('⚠️  Note: Using simplified MySQL schema. For full enterprise features, use PostgreSQL.');
 
-      // MySQL-specific schema (simplified version)
+      // For MySQL, we use a simplified schema as MySQL lacks some PostgreSQL features
+      // For production MySQL deployments, consider using the manual SQL files with MySQL-specific syntax
       const mysqlSchema = `
         CREATE TABLE contact_relationships (
           id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
@@ -345,12 +387,13 @@ export class CreateContactRelationshipsMigration implements Migration {
         );
 
         INSERT INTO schema_migrations (version, description, applied_by)
-        VALUES ('001_initial_schema', 'Initial contact relationships schema (MySQL)', 'system');
+        VALUES ('001_modular_schema', 'Contact relationships schema with modular architecture (MySQL)', 'system');
       `;
 
       await connection.execute(mysqlSchema);
 
       console.log('✅ MySQL migration completed');
+      console.log('🏗️  For full enterprise features, consider migrating to PostgreSQL and using the modular SQL files.');
     } finally {
       await connection.end();
     }
@@ -442,7 +485,7 @@ export class CreateContactRelationshipsMigration implements Migration {
         );
 
         INSERT INTO schema_migrations (version, description, applied_by)
-        VALUES ('001_initial_schema', 'Initial contact relationships schema (SQLite)', 'system');
+        VALUES ('001_modular_schema', 'Contact relationships schema with modular architecture (SQLite)', 'system');
       `;
 
       db.exec(sqliteSchema);
@@ -520,10 +563,10 @@ export class CreateContactRelationshipsMigration implements Migration {
       });
 
       // Create schema migration record
-      const migrationDoc = doc(db, 'schema_migrations', '001_initial_schema');
+      const migrationDoc = doc(db, 'schema_migrations', '001_modular_schema');
       await setDoc(migrationDoc, {
-        version: '001_initial_schema',
-        description: 'Initial contact relationships setup (Firestore)',
+        version: '001_modular_schema',
+        description: 'Contact relationships setup with modular architecture (Firestore)',
         applied_at: new Date(),
         applied_by: 'system'
       });
@@ -587,7 +630,7 @@ export class CreateContactRelationshipsMigration implements Migration {
       const db = getFirestore();
 
       // Check if migration record exists
-      const migrationDoc = await getDoc(doc(db, 'schema_migrations', '001_initial_schema'));
+      const migrationDoc = await getDoc(doc(db, 'schema_migrations', '001_modular_schema'));
 
       if (!migrationDoc.exists()) {
         console.error('❌ Migration record not found in Firestore');
