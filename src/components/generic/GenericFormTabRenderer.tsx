@@ -51,10 +51,16 @@ function createFormTabsFromConfig(
     label: section.title,
     icon: getIconComponent(section.icon),
     content: (() => {
-      // Check for custom renderer FIRST (but exclude companyPhotos which has special logic)
-      if (customRenderers?.[section.id] && section.id !== 'companyPhotos') {
+      // Check for custom renderer FIRST (but exclude companyPhotos and relationships which have special logic)
+      if (customRenderers?.[section.id] && section.id !== 'companyPhotos' && section.id !== 'relationships') {
         console.log('🔧 DEBUG: Using generic custom renderer for section:', section.id);
         return customRenderers[section.id]();
+      }
+
+      // 🏢 ENTERPRISE: Custom renderer for relationships tab
+      if (section.id === 'relationships' && customRenderers && customRenderers.relationships) {
+        console.log('🏢 DEBUG: Using relationships custom renderer');
+        return customRenderers.relationships();
       }
 
       if (section.id === 'companyPhotos' && customRenderers && customRenderers.companyPhotos) {

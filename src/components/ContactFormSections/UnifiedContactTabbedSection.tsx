@@ -5,6 +5,7 @@ import type { ContactFormData, ContactType } from '@/types/ContactFormTypes';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 import type { FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 import { UnifiedPhotoManager } from '@/components/ui/UnifiedPhotoManager';
+import { ContactRelationshipManager } from '@/components/contacts/relationships/ContactRelationshipManager';
 import { getContactFormConfig, getContactFormSections, getContactTypeDisplayName, getContactFormRenderer } from './utils/ContactFormConfigProvider';
 import { getPhotoUploadHandlers, createUnifiedPhotosChangeHandler, buildRendererPropsForContactType } from './utils/PhotoUploadConfiguration';
 
@@ -92,24 +93,40 @@ export function UnifiedContactTabbedSection({
       onChange: handleChange,
       onSelectChange: handleSelectChange,
       disabled,
-      customRenderers: contactType === 'company' ? {
-        // 🏢 ENTERPRISE: Custom renderer για companyPhotos (UnifiedPhotoManager)
-        companyPhotos: () => (
-          <UnifiedPhotoManager
-            contactType="company"
-            formData={formData}
-            handlers={{
-              handleLogoChange,
-              handleFileChange,
-              handleUploadedLogoURL,
-              handleUploadedPhotoURL
-            }}
-            uploadHandlers={getPhotoUploadHandlers(formData)}
-            disabled={disabled}
+      customRenderers: {
+        // 🏢 ENTERPRISE: Custom renderer για companyPhotos (UnifiedPhotoManager) - only for companies
+        ...(contactType === 'company' ? {
+          companyPhotos: () => (
+            <UnifiedPhotoManager
+              contactType="company"
+              formData={formData}
+              handlers={{
+                handleLogoChange,
+                handleFileChange,
+                handleUploadedLogoURL,
+                handleUploadedPhotoURL
+              }}
+              uploadHandlers={getPhotoUploadHandlers(formData)}
+              disabled={disabled}
+              className="mt-4"
+            />
+          )
+        } : {}),
+
+        // 🏢 ENTERPRISE: Custom renderer for relationships tab - for ALL contact types
+        relationships: () => (
+          <ContactRelationshipManager
+            contactId={formData.id || 'new-contact'} // Handle new contacts
+            contactType={contactType}
+            readonly={disabled}
             className="mt-4"
+            onRelationshipsChange={(relationships) => {
+              // Optionally update form data with relationship count for display
+              console.log('🏢 Relationships updated:', relationships.length, 'relationships');
+            }}
           />
         )
-      } : {}
+      }
     };
 
     // Use utility function για props building

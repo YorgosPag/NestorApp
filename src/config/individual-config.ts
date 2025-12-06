@@ -333,6 +333,21 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
       // Αφαιρέθηκε το textarea field για σημειώσεις φωτογραφίας
     ],
   },
+
+  // -------------------------------------------------------------------------
+  // 6. ΣΧΕΣΕΙΣ - 🏢 ENTERPRISE RELATIONSHIP MANAGEMENT
+  // -------------------------------------------------------------------------
+  {
+    id: 'relationships',
+    title: 'Σχέσεις',
+    icon: 'users',
+    description: 'Διαχείριση επαγγελματικών σχέσεων και οργανωτικής ιεραρχίας',
+    order: 6,
+    fields: [
+      // Fields are handled by ContactRelationshipManager component
+      // No individual fields needed as this is a complex UI component
+    ],
+  },
 ];
 
 // ============================================================================

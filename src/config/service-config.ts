@@ -247,12 +247,26 @@ const logoSection: ServiceSectionConfig = {
 /**
  * Όλα τα sections για δημόσιες υπηρεσίες
  */
+// -------------------------------------------------------------------------
+// 6. ΣΧΕΣΕΙΣ - 🏢 ENTERPRISE RELATIONSHIP MANAGEMENT
+// -------------------------------------------------------------------------
+const relationshipsSection: ServiceSectionConfig = {
+  id: 'relationships',
+  title: 'Υπάλληλοι & Οργάνωση',
+  icon: 'users',
+  fields: [
+    // Fields are handled by ContactRelationshipManager component
+    // No individual fields needed as this is a complex UI component
+  ]
+};
+
 export const SERVICE_SECTIONS: ServiceSectionConfig[] = [
   basicInfoSection,
   administrativeSection,
   contactSection,
   servicesSection,
-  logoSection
+  logoSection,
+  relationshipsSection
 ];
 
 /**

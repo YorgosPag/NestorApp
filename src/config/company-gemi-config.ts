@@ -667,6 +667,21 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
     ],
   },
 
+  // -------------------------------------------------------------------------
+  // 14. ΣΧΕΣΕΙΣ - 🏢 ENTERPRISE RELATIONSHIP MANAGEMENT
+  // -------------------------------------------------------------------------
+  {
+    id: 'relationships',
+    title: 'Μέτοχοι & Εργαζόμενοι',
+    icon: 'users',
+    description: 'Διαχείριση μετόχων, διοικητικού συμβουλίου και εργαζομένων',
+    order: 14,
+    fields: [
+      // Fields are handled by ContactRelationshipManager component
+      // No individual fields needed as this is a complex UI component
+    ],
+  },
+
 ];
 
 // ============================================================================

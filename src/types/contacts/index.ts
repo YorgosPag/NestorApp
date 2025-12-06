@@ -4,3 +4,4 @@
 
 export * from './contracts';
 export * from './helpers';
+export * from './relationships'; // 🏢 ENTERPRISE: Contact Relationship Management Types
