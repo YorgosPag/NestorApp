@@ -115,7 +115,8 @@
       "Bash(git push:*)",
       "Bash(tar:*)",
       "Bash(del \"C:\\Nestor_Pagonis\\src\\hooks\\usePhotoSlotHandlers.ts\")",
-      "Bash(del C:Nestor_Pagonislocalhost.log)"
+      "Bash(del C:Nestor_Pagonislocalhost.log)",
+      "Bash(git rm:*)"
     ],
     "deny": [],
     "ask": []
