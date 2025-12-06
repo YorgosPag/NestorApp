@@ -2,13 +2,10 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { TabsContent } from '@/components/ui/tabs';
-import { User, CreditCard, Phone, MapPin, Briefcase, StickyNote, Users, Info, FileText, History } from 'lucide-react';
+import { Users } from 'lucide-react';
 import type { Contact } from '@/types/contacts';
 import { ContactDetailsHeader } from './ContactDetailsHeader';
-import { ContactInfo } from './ContactInfo';
 import { AddUnitToContactDialog } from './AddUnitToContactDialog';
-import { TabsOnlyTriggers } from '@/components/ui/navigation/TabsComponents';
 import { UnifiedContactTabbedSection } from '@/components/ContactFormSections/UnifiedContactTabbedSection';
 import { PhotoPreviewModal, usePhotoPreviewModal, openGalleryPhotoModal } from '@/core/modals';
 
