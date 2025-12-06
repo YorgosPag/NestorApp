@@ -19,6 +19,8 @@ import {
   type FileUploadResult
 } from '@/hooks/useFileUploadState';
 import { FileNamingService } from '@/services/FileNamingService';
+import { PhotoUploadService } from '@/services/photo-upload.service';
+import type { UsageContext } from '@/config/photo-compression-config';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 
 // ============================================================================
@@ -259,23 +261,50 @@ export function useEnterpriseFileUpload(config: UseEnterpriseFileUploadConfig): 
 
       let result: FileUploadResult;
 
-      // Use provided upload handler or create default
+      // Use provided upload handler or create default with compression
       if (uploadHandler) {
         result = await uploadHandler(fileToUpload, onProgress);  // ✅ Use renamed file
       } else {
-        // Default upload simulation για demonstration
-        onProgress({ progress: 25, phase: 'upload' });
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // 🏢 ENTERPRISE: Use PhotoUploadService με automatic compression
+        console.log('🚀 ENTERPRISE: Using PhotoUploadService with compression');
 
-        onProgress({ progress: 75, phase: 'processing' });
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Map UploadPurpose to compression UsageContext
+        let compressionUsage: UsageContext = 'profile-modal';
+        switch (config.purpose) {
+          case 'logo':
+            compressionUsage = 'company-logo';
+            break;
+          case 'representative':
+          case 'avatar':
+            compressionUsage = 'avatar';
+            break;
+          case 'business-card':
+            compressionUsage = 'business-card';
+            break;
+          case 'document':
+            compressionUsage = 'document-scan';
+            break;
+          default:
+            compressionUsage = 'profile-modal';
+        }
 
-        result = {
-          url: URL.createObjectURL(fileToUpload),
-          fileName: fileToUpload.name,  // ✅ Use renamed file
-          fileSize: fileToUpload.size,
-          mimeType: fileToUpload.type
-        };
+        // Upload with PhotoUploadService
+        result = await PhotoUploadService.uploadPhoto(fileToUpload, {
+          folderPath: config.fileType === 'image' ? 'contacts/photos' : 'uploads',
+          onProgress,
+          enableCompression: config.fileType === 'image', // Only compress images
+          compressionUsage,
+          contactData: config.contactData,
+          purpose: config.purpose,
+          photoIndex: config.photoIndex
+        });
+
+        console.log('✅ ENTERPRISE: PhotoUploadService completed', {
+          originalSize: fileToUpload.size,
+          resultSize: result.fileSize,
+          compressionApplied: result.compressionInfo?.wasCompressed || false,
+          compressionRatio: result.compressionInfo?.compressionRatio || 0
+        });
       }
 
       // Check if upload was cancelled
@@ -288,7 +317,20 @@ export function useEnterpriseFileUpload(config: UseEnterpriseFileUploadConfig): 
       completeUpload(result);
 
       if (config.showToasts !== false) {
-        notifications.success(`🎉 ${PURPOSE_CONFIG[config.purpose]?.label || 'Αρχείο'} ανέβηκε επιτυχώς!`);
+        const baseMessage = `🎉 ${PURPOSE_CONFIG[config.purpose]?.label || 'Αρχείο'} ανέβηκε επιτυχώς!`;
+
+        // Add compression info if available
+        if (result.compressionInfo?.wasCompressed) {
+          const originalKB = Math.round(result.compressionInfo.originalSize / 1024);
+          const compressedKB = Math.round(result.compressionInfo.compressedSize / 1024);
+          const savingsPercent = result.compressionInfo.compressionRatio;
+
+          notifications.success(
+            `${baseMessage}\n🗜️ Συμπιέστηκε: ${originalKB}KB → ${compressedKB}KB (${savingsPercent}% εξοικονόμηση)`
+          );
+        } else {
+          notifications.success(baseMessage);
+        }
       }
 
       return result;

@@ -52,6 +52,8 @@ export interface MultiplePhotosCompactProps {
   onProfilePhotoSelection?: (index: number) => void;
   /** 🔥 RESTORED: Contact data for FileNamingService */
   contactData?: any;
+  /** 🏢 ENTERPRISE: Photo click handler για gallery preview */
+  onPhotoClick?: (index: number) => void;
 }
 
 // ============================================================================
@@ -101,7 +103,8 @@ export function MultiplePhotosCompact({
   showProfileSelector = false,
   selectedProfilePhotoIndex,
   onProfilePhotoSelection,
-  contactData
+  contactData,
+  onPhotoClick
 }: MultiplePhotosCompactProps) {
 
   // ========================================================================
@@ -207,6 +210,13 @@ export function MultiplePhotosCompact({
                 className={slotSize}
                 contactData={contactData}
                 photoIndex={index}
+                onPreviewClick={() => {
+                  // 🏢 ENTERPRISE: Photo click handler για gallery modal
+                  if (photoPreviewWithCacheBuster && onPhotoClick) {
+                    console.log('🖱️ MultiplePhotosCompact: Photo clicked at index', index);
+                    onPhotoClick(index);
+                  }
+                }}
 // Enterprise standard - let EnterprisePhotoUpload handle uploads naturally
               />
             </div>

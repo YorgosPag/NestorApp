@@ -53,6 +53,8 @@ export interface MultiplePhotosUploadProps {
   showProfileSelector?: boolean;
   selectedProfilePhotoIndex?: number;
   onProfilePhotoSelection?: (index: number) => void;
+  /** 🏢 ENTERPRISE: Photo click handler για gallery preview */
+  onPhotoClick?: (index: number) => void;
 }
 
 // ============================================================================
@@ -87,7 +89,8 @@ export function MultiplePhotosUpload({
   contactData,
   showProfileSelector = false,
   selectedProfilePhotoIndex,
-  onProfilePhotoSelection
+  onProfilePhotoSelection,
+  onPhotoClick
 }: MultiplePhotosUploadProps) {
   // ========================================================================
   // HOOKS
@@ -136,6 +139,7 @@ export function MultiplePhotosUpload({
         selectedProfilePhotoIndex={selectedProfilePhotoIndex}
         onProfilePhotoSelection={onProfilePhotoSelection}
         contactData={contactData}
+        onPhotoClick={onPhotoClick} // 🏢 ENTERPRISE: Photo click handler
       />
     );
   }
@@ -155,6 +159,7 @@ export function MultiplePhotosUpload({
       showProgress={showProgress}
       className={className}
       contactData={contactData}
+      onPhotoClick={onPhotoClick} // 🏢 ENTERPRISE: Photo click handler
     />
   );
 }

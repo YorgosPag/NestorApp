@@ -45,6 +45,8 @@ export interface MultiplePhotosFullProps {
   className?: string;
   /** 🔥 RESTORED: Contact data for FileNamingService */
   contactData?: any;
+  /** 🏢 ENTERPRISE: Photo click handler για gallery preview */
+  onPhotoClick?: (index: number) => void;
 }
 
 // ============================================================================
@@ -90,7 +92,8 @@ export function MultiplePhotosFull({
   disabled,
   showProgress,
   className = '',
-  contactData
+  contactData,
+  onPhotoClick
 }: MultiplePhotosFullProps) {
 
   // ========================================================================
@@ -209,6 +212,13 @@ export function MultiplePhotosFull({
                 className="w-full h-full"
                 contactData={contactData}
                 photoIndex={index}
+                onPreviewClick={() => {
+                  // 🏢 ENTERPRISE: Photo click handler για gallery modal
+                  if (photoPreviewWithCacheBuster && onPhotoClick) {
+                    console.log('🖱️ MultiplePhotosFull: Photo clicked at index', index);
+                    onPhotoClick(index);
+                  }
+                }}
 // Enterprise standard - let EnterprisePhotoUpload handle uploads naturally
               />
             </div>

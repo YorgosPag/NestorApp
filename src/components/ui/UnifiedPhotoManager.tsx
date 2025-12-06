@@ -12,6 +12,8 @@ import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 import type { PhotoSlot } from './MultiplePhotosUpload';
 import { PHOTO_COLORS, PHOTO_TEXT_COLORS, PHOTO_STYLES } from '@/components/generic/config/photo-dimensions';
+import { usePhotoPreviewModal, openGalleryPhotoModal } from '@/core/modals/usePhotoPreviewModal';
+import { PhotoPreviewModal } from '@/core/modals/PhotoPreviewModal';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -68,6 +70,34 @@ function IndividualPhotoManager({
   uploadHandlers: UnifiedPhotoManagerProps['uploadHandlers'];
   disabled?: boolean;
 }) {
+  // 🏢 ENTERPRISE: PhotoPreviewModal hook για gallery functionality
+  const photoPreviewModal = usePhotoPreviewModal();
+
+  // 🎯 Photo click handler για το gallery modal
+  const handlePhotoClick = React.useCallback((photoIndex: number) => {
+    console.log('🖱️ IndividualPhotoManager: Photo clicked at index', photoIndex);
+
+    // Δημιουργούμε το gallery photos array από τα multiplePhotos
+    const galleryPhotos = (formData.multiplePhotos || []).map(photo =>
+      photo.uploadUrl || photo.preview || null
+    );
+
+    // Μετατρέπουμε το formData σε Contact-like object για το modal
+    const contactLike = {
+      ...formData,
+      type: formData.type || 'individual',
+      multiplePhotoURLs: galleryPhotos.filter(url => url !== null)
+    };
+
+    console.log('🖼️ IndividualPhotoManager: Opening gallery modal with:', {
+      photoIndex,
+      totalPhotos: galleryPhotos.length,
+      photoUrl: galleryPhotos[photoIndex],
+      contact: contactLike.firstName + ' ' + contactLike.lastName
+    });
+
+    openGalleryPhotoModal(photoPreviewModal, contactLike as any, photoIndex, galleryPhotos);
+  }, [formData, photoPreviewModal]);
   return (
     <Card className="mt-4">
       <CardHeader>
@@ -93,9 +123,13 @@ function IndividualPhotoManager({
           showProfileSelector={true}
           selectedProfilePhotoIndex={formData.selectedProfilePhotoIndex}
           onProfilePhotoSelection={handlers.handleProfilePhotoSelection}
+          onPhotoClick={handlePhotoClick} // 🏢 ENTERPRISE: Photo click handler για gallery modal
         />
 
       </CardContent>
+
+      {/* 🏢 ENTERPRISE: PhotoPreviewModal για gallery functionality */}
+      <PhotoPreviewModal {...photoPreviewModal.modalProps} />
     </Card>
   );
 }

@@ -45,6 +45,22 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
   const isIndividual = formData.type === 'individual';
   const isService = formData.type === 'service';
 
+  // 🏷️ GET CONTACT NAME: Helper function to get contact name based on type
+  const getContactName = () => {
+    if (isIndividual) {
+      return formData.firstName && formData.lastName
+        ? `${formData.firstName} ${formData.lastName}`
+        : 'Χωρίς όνομα';
+    }
+    if (isCompany) {
+      return formData.companyName || 'Χωρίς επωνυμία';
+    }
+    if (isService) {
+      return formData.serviceName || formData.name || 'Χωρίς επωνυμία';
+    }
+    return '';
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={`sm:max-w-[900px] max-h-[90vh] overflow-y-auto z-50`}>
@@ -52,6 +68,7 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
           <DialogTitle className="flex items-center gap-2">
             {getTypeIcon(formData.type)}
             {editContact ? 'Επεξεργασία' : 'Προσθήκη Νέας'} Επαφής - {getTypeLabel(formData.type)}
+            {editContact && getContactName() && ` - ${getContactName()}`}
           </DialogTitle>
           <DialogDescription>
             {editContact ? 'Επεξεργαστείτε τα στοιχεία της επαφής.' : 'Καταχωρήστε τα βασικά στοιχεία της νέας επαφής.'}
