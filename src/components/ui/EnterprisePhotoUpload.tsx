@@ -7,7 +7,16 @@ import type { UseEnterpriseFileUploadConfig, FileUploadResult } from '@/hooks/us
 import { UI_COLORS } from '@/subapps/dxf-viewer/config/color-config';
 import { PhotoPreview } from './utils/PhotoPreview';
 import { usePhotoUploadLogic } from './utils/usePhotoUploadLogic';
-import { PHOTO_STYLES, PHOTO_HEIGHTS, PHOTO_TEXT_COLORS, PHOTO_COLORS, PHOTO_HOVER_EFFECTS, PHOTO_TYPOGRAPHY, PHOTO_SEMANTIC_COLORS } from '@/components/generic/config/photo-dimensions';
+import {
+  PHOTO_HEIGHTS,
+  PHOTO_TEXT_COLORS,
+  PHOTO_COLORS,
+  PHOTO_HOVER_EFFECTS,
+  PHOTO_TYPOGRAPHY,
+  PHOTO_SEMANTIC_COLORS,
+  PHOTO_COMBINED_EFFECTS,
+  PHOTO_BORDERS
+} from '@/components/generic/config/photo-config';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -206,7 +215,7 @@ export function EnterprisePhotoUpload({
         <div
           className={`
             relative rounded-lg ${PHOTO_HEIGHTS.STANDARD} w-full text-center cursor-pointer ${PHOTO_HOVER_EFFECTS.COLOR_TRANSITION} overflow-hidden
-            ${currentPreview ? 'border-2 border-dashed border-green-300 bg-green-50' : `${PHOTO_STYLES.EMPTY_STATE} p-6 flex flex-col items-center justify-center`}
+            ${currentPreview ? 'border-2 border-dashed border-green-300 bg-green-50' : `${PHOTO_COLORS.PHOTO_BACKGROUND} ${PHOTO_BORDERS.EMPTY_STATE} rounded-lg flex items-center justify-center text-center cursor-pointer transition-colors ${PHOTO_BORDERS.EMPTY_HOVER} p-6 flex-col`}
             ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
             ${hasError ? 'border-red-300 bg-red-50' : ''}
           `}
@@ -256,7 +265,7 @@ export function EnterprisePhotoUpload({
       <div
         className={`
           relative rounded-lg p-6 text-center cursor-pointer ${PHOTO_HOVER_EFFECTS.COLOR_TRANSITION} ${PHOTO_HEIGHTS.STANDARD} flex flex-col items-center justify-center
-          ${currentPreview ? 'border-2 border-dashed border-green-300 bg-green-50' : PHOTO_STYLES.EMPTY_STATE}
+          ${currentPreview ? 'border-2 border-dashed border-green-300 bg-green-50' : `${PHOTO_COLORS.PHOTO_BACKGROUND} ${PHOTO_BORDERS.EMPTY_STATE} rounded-lg flex items-center justify-center text-center cursor-pointer transition-colors ${PHOTO_BORDERS.EMPTY_HOVER}`}
           ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
           ${hasError ? 'border-red-300 bg-red-50' : ''}
           ${isLoading ? 'pointer-events-none' : ''}

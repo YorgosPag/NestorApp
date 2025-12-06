@@ -3,7 +3,12 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Eye, Download } from 'lucide-react';
-import { PHOTO_STYLES } from '../config/photo-dimensions';
+import {
+  PHOTO_COLORS,
+  PHOTO_BORDERS,
+  PHOTO_COMBINED_EFFECTS,
+  PHOTO_TEXT_COLORS
+} from '../config/photo-config';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -49,7 +54,7 @@ export interface PhotoItemProps {
 export function PhotoItem({ photo }: PhotoItemProps) {
   return (
     <div className="relative group">
-      <div className={`aspect-square ${PHOTO_STYLES.PLACEHOLDER} overflow-hidden`}>
+      <div className={`aspect-square ${PHOTO_COLORS.PHOTO_BACKGROUND} rounded overflow-hidden shadow-sm ${PHOTO_COMBINED_EFFECTS.INTERACTIVE_CARD}`}>
         <img
           data-ai-hint={photo.aiHint}
           src={photo.src}
@@ -57,8 +62,8 @@ export function PhotoItem({ photo }: PhotoItemProps) {
           className="w-full h-full object-cover"
         />
       </div>
-      <div className={PHOTO_STYLES.HOVER_OVERLAY}>
-        <div className={PHOTO_STYLES.OVERLAY_CONTENT}>
+      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-300 ease-in-out flex items-center justify-center opacity-0 group-hover:opacity-100">
+        <div className="flex gap-2">
           <Button size="sm" variant="secondary">
             <Eye className="w-4 h-4" />
           </Button>
@@ -67,7 +72,7 @@ export function PhotoItem({ photo }: PhotoItemProps) {
           </Button>
         </div>
       </div>
-      <div className={PHOTO_STYLES.PHOTO_LABEL}>
+      <div className={`absolute bottom-0 left-0 right-0 ${PHOTO_COLORS.PHOTO_BACKGROUND} bg-opacity-75 p-2 ${PHOTO_TEXT_COLORS.FOREGROUND} text-sm font-medium`}>
         {photo.name}
       </div>
     </div>

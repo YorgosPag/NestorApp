@@ -6,7 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { EnterprisePhotoUpload } from './EnterprisePhotoUpload';
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
-import { PHOTO_STYLES, PHOTO_SIZES, PHOTO_TEXT_COLORS, PHOTO_COLORS } from '@/components/generic/config/photo-dimensions';
+import {
+  PHOTO_SIZES,
+  PHOTO_TEXT_COLORS,
+  PHOTO_COLORS,
+  PHOTO_BORDERS,
+  PHOTO_COMBINED_EFFECTS
+} from '@/components/generic/config/photo-config';
 import { useCacheBusting } from '@/hooks/useCacheBusting';
 // Removed usePhotoSlotHandlers - using enterprise standard EnterprisePhotoUpload
 import { MultiplePhotosCompact } from './MultiplePhotosCompact';

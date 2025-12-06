@@ -2,7 +2,13 @@
 
 import React from 'react';
 import { CheckCircle, X } from 'lucide-react';
-import { PHOTO_SIZES, PHOTO_STYLES, PHOTO_TEXT_COLORS, PHOTO_HOVER_EFFECTS } from '@/components/generic/config/photo-dimensions';
+import {
+  PHOTO_SIZES,
+  PHOTO_TEXT_COLORS,
+  PHOTO_COMBINED_EFFECTS,
+  PHOTO_COLORS,
+  PHOTO_HOVER_EFFECTS
+} from '@/components/generic/config/photo-config';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -92,7 +98,7 @@ export function PhotoPreview({
       <div className={`flex flex-col w-full h-full ${className}`}>
         {/* Φωτογραφία πιάνει όλο το διαθέσιμο χώρο */}
         <div
-          className={`relative flex-1 w-full ${PHOTO_STYLES.PHOTO_CONTAINER} ${onPreviewClick ? 'cursor-pointer' : ''}`}
+          className={`relative flex-1 w-full ${PHOTO_COLORS.PHOTO_BACKGROUND} rounded overflow-hidden shadow-sm ${PHOTO_COMBINED_EFFECTS.INTERACTIVE_CARD} ${onPreviewClick ? 'cursor-pointer' : ''}`}
           onClick={handlePreviewClick}
         >
           <img
@@ -132,7 +138,7 @@ export function PhotoPreview({
       className={`flex items-center gap-4 ${className} ${onPreviewClick ? 'cursor-pointer' : ''}`}
       onClick={handlePreviewClick}
     >
-      <div className={`${PHOTO_SIZES.THUMBNAIL} ${PHOTO_STYLES.THUMBNAIL}`}>
+      <div className={`${PHOTO_SIZES.THUMBNAIL} ${PHOTO_COLORS.PHOTO_BACKGROUND} rounded-lg overflow-hidden shadow-sm relative`}>
         <img
           src={previewUrl}
           alt="Προεπισκόπηση"

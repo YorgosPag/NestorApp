@@ -3,7 +3,14 @@
 import React from 'react';
 import { Camera, Building2, User } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { PHOTO_SIZES, PHOTO_STYLES, PHOTO_TEXT_COLORS, PHOTO_COLORS, PHOTO_HEIGHTS } from '../config/photo-dimensions';
+import {
+  PHOTO_SIZES,
+  PHOTO_TEXT_COLORS,
+  PHOTO_COLORS,
+  PHOTO_HEIGHTS,
+  PHOTO_BORDERS,
+  PHOTO_COMBINED_EFFECTS
+} from '../config/photo-config';
 
 // ============================================================================
 // TYPES & INTERFACES

@@ -11,7 +11,12 @@ import type { ContactType } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 import type { PhotoSlot } from './MultiplePhotosUpload';
-import { PHOTO_COLORS, PHOTO_TEXT_COLORS, PHOTO_STYLES } from '@/components/generic/config/photo-dimensions';
+import {
+  PHOTO_COLORS,
+  PHOTO_TEXT_COLORS,
+  PHOTO_BORDERS,
+  PHOTO_COMBINED_EFFECTS
+} from '@/components/generic/config/photo-config';
 import { usePhotoPreviewModal, openGalleryPhotoModal } from '@/core/modals/usePhotoPreviewModal';
 import { PhotoPreviewModal } from '@/core/modals/PhotoPreviewModal';
 
