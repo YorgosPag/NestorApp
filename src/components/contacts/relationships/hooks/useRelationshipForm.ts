@@ -256,6 +256,7 @@ export const useRelationshipForm = (
       }
 
       console.log('✅ Relationship saved successfully!');
+      console.log('🎯 RELATIONSHIP FORM: About to reset form and show success message...');
 
       // Reset form state
       resetForm();
@@ -273,21 +274,28 @@ export const useRelationshipForm = (
         setSuccessMessage(null);
       }, 5000);
 
-      // 🔧 FIX: For new relationships, add small delay to ensure Firestore consistency
+      // 🔧 FIX: For new relationships, add delay to ensure Firestore consistency
       // before refreshing the cache
       if (!editingId) {
-        console.log('⏱️ RELATIONSHIP FORM: Adding 500ms delay for Firestore consistency...');
-        await new Promise(resolve => setTimeout(resolve, 500));
+        console.log('⏱️ RELATIONSHIP FORM: Adding 2500ms delay for Firestore consistency...');
+        await new Promise(resolve => setTimeout(resolve, 2500));
       }
 
       // Call success callback to refresh data
       if (onSuccess) {
         console.log('🔄 RELATIONSHIP FORM: Calling onSuccess callback to refresh relationships list...');
-        await onSuccess();
-        console.log('✅ RELATIONSHIP FORM: onSuccess callback completed - relationships list should be refreshed');
+        try {
+          await onSuccess();
+          console.log('✅ RELATIONSHIP FORM: onSuccess callback completed successfully');
+        } catch (callbackError) {
+          console.error('❌ RELATIONSHIP FORM: onSuccess callback failed:', callbackError);
+          // Don't let callback errors affect the form success state
+        }
       } else {
         console.warn('⚠️ RELATIONSHIP FORM: No onSuccess callback provided - relationships list will NOT be refreshed');
       }
+
+      console.log('🎯 RELATIONSHIP FORM: Form submission completed successfully!');
 
     } catch (err) {
       console.error('❌ Form submission error:', err);

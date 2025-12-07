@@ -76,6 +76,71 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
     refreshRelationships
   } = useRelationshipContext();
 
+  // 🌳 Organization tree management hook (for companies/services)
+  const {
+    organizationTree,
+    loading: treeLoading,
+    error: treeError,
+    refreshTree,
+    shouldShowTree
+  } = useOrganizationTree(contactId, contactType);
+
+  // 🔄 Global refresh callback that updates both relationships and organization tree
+  const handleGlobalRefresh = React.useCallback(async () => {
+    try {
+      console.log('🔄 GLOBAL REFRESH: Refreshing relationships and organization tree after relationship creation...');
+
+      // Add retry mechanism for Firestore consistency
+      const maxRetries = 3;
+      let retryCount = 0;
+      let lastRelationshipsCount = 0;
+
+      while (retryCount < maxRetries) {
+        // Force clear relationship cache first
+        console.log('🗑️ GLOBAL REFRESH: Clearing all caches before refresh...');
+
+        // Clear organization tree cache if it exists
+        if (shouldShowTree && window.localStorage) {
+          const orgCacheKeys = Object.keys(window.localStorage).filter(key =>
+            key.includes('organization:') && key.includes(contactId)
+          );
+          orgCacheKeys.forEach(key => {
+            console.log(`🗑️ GLOBAL REFRESH: Clearing organization cache key: ${key}`);
+            window.localStorage.removeItem(key);
+          });
+        }
+
+        // Refresh relationships and organization tree in parallel
+        await Promise.all([
+          refreshRelationships(),
+          shouldShowTree ? refreshTree() : Promise.resolve()
+        ]);
+
+        // Check if relationships were updated by looking at current count
+        const currentRelationshipsCount = relationships?.length || 0;
+        console.log(`🔄 GLOBAL REFRESH: Retry ${retryCount + 1}/${maxRetries}, relationships count: ${currentRelationshipsCount}`);
+
+        // If we have relationships or this isn't the first attempt, we're done
+        if (currentRelationshipsCount > lastRelationshipsCount || retryCount === maxRetries - 1) {
+          break;
+        }
+
+        // Wait before retrying
+        retryCount++;
+        if (retryCount < maxRetries) {
+          console.log(`⏱️ GLOBAL REFRESH: Waiting 1500ms before retry ${retryCount + 1}...`);
+          await new Promise(resolve => setTimeout(resolve, 1500));
+        }
+
+        lastRelationshipsCount = currentRelationshipsCount;
+      }
+
+      console.log('✅ GLOBAL REFRESH: Successfully refreshed all relationship data');
+    } catch (err) {
+      console.error('❌ GLOBAL REFRESH: Error refreshing relationship data:', err);
+    }
+  }, [refreshRelationships, refreshTree, shouldShowTree, relationships]);
+
   // 📝 Relationship form management hook
   const {
     formData,
@@ -87,16 +152,7 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
     handleSubmit,
     handleEdit,
     handleCancel
-  } = useRelationshipForm(contactId, contactType, refreshRelationships);
-
-  // 🌳 Organization tree management hook (for companies/services)
-  const {
-    organizationTree,
-    loading: treeLoading,
-    error: treeError,
-    refreshTree,
-    shouldShowTree
-  } = useOrganizationTree(contactId, contactType);
+  } = useRelationshipForm(contactId, contactType, handleGlobalRefresh);
 
   // ============================================================================
   // COMPUTED VALUES
@@ -111,20 +167,6 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
   // EVENT HANDLERS
   // ============================================================================
 
-  /**
-   * 🔄 Handle global refresh of all relationship data
-   */
-  const handleGlobalRefresh = async () => {
-    try {
-      // Refresh relationships and organization tree in parallel
-      await Promise.all([
-        refreshRelationships(),
-        shouldShowTree ? refreshTree() : Promise.resolve()
-      ]);
-    } catch (err) {
-      console.error('❌ Error refreshing relationship data:', err);
-    }
-  };
 
   /**
    * 📝 Handle form show/hide state

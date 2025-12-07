@@ -17,6 +17,42 @@ import { Building2, Users } from 'lucide-react';
 // 🏢 ENTERPRISE: Import centralized types
 import type { OrganizationTree as OrganizationTreeType } from '@/types/contacts/relationships';
 
+// 🪝 Import contact name hook
+import { useContactName } from './hooks/useContactName';
+
+// 🏢 ENTERPRISE: Helper component for contact badge
+interface ContactBadgeProps {
+  contactId: string;
+  position?: string;
+  relationshipType?: string;
+}
+
+const ContactBadge: React.FC<ContactBadgeProps> = ({ contactId, position, relationshipType }) => {
+  const { contactName, loading } = useContactName(contactId);
+
+  if (loading) {
+    return (
+      <Badge variant="outline" className="text-xs bg-gray-50 border-gray-200 text-gray-500">
+        Φόρτωση...
+      </Badge>
+    );
+  }
+
+  // Display contact name with position if available
+  const displayText = contactName && contactName !== 'Άγνωστη Επαφή'
+    ? (position ? `${contactName} (${position})` : contactName)
+    : (position || relationshipType || 'Εργαζόμενος');
+
+  return (
+    <Badge
+      variant="outline"
+      className="text-xs bg-blue-50 border-blue-200 text-blue-700"
+    >
+      {displayText}
+    </Badge>
+  );
+};
+
 // 🏢 ENTERPRISE: Component props interface
 interface OrganizationTreeProps {
   /** The organization tree data */
@@ -210,13 +246,12 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
         <h4 className="text-sm font-medium text-gray-700 mb-3">Πρόσφατες Προσθήκες</h4>
         <div className="flex flex-wrap gap-2">
           {tree.children.slice(0, 8).map((child, index) => (
-            <Badge
-              key={index}
-              variant="outline"
-              className="text-xs bg-blue-50 border-blue-200 text-blue-700"
-            >
-              {child.position || child.relationshipType || 'Εργαζόμενος'}
-            </Badge>
+            <ContactBadge
+              key={child.id || index}
+              contactId={child.id}
+              position={child.position}
+              relationshipType={child.relationshipType}
+            />
           ))}
           {tree.children.length > 8 && (
             <Badge variant="outline" className="text-xs text-gray-500">
