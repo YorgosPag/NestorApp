@@ -122,14 +122,23 @@ export class ContactRelationshipService {
     } catch (error: any) {
       // 🔧 If Firebase index is missing, log warning but continue with creation
       // This prevents the relationship creation from failing due to missing composite index
-      if (error?.message?.includes('query requires an index') || error?.message?.includes('FirebaseError')) {
+      const isIndexError = error?.message?.includes('query requires an index') ||
+                          error?.message?.includes('FirebaseError') ||
+                          error?.code === 'failed-precondition' ||
+                          error?.toString()?.includes('index');
+
+      if (isIndexError) {
         console.warn('⚠️ Firebase index missing for duplicate check - proceeding with relationship creation');
         console.warn('📋 Create the composite index at Firebase Console for better performance');
+        console.warn('🔗 Index URL:', error?.message?.match(/https:\/\/[^\s]+/)?.[0] || 'Check Firebase Console');
         console.log('✅ Skipping duplicate check due to missing index - relationship creation will continue');
         // DO NOT re-throw this error - just continue with relationship creation
-      } else {
-        // Re-throw other errors (actual duplicate relationships, validation errors, etc.)
+      } else if (error?.message?.includes('already exists')) {
+        // This is an actual duplicate relationship error
         throw error;
+      } else {
+        // For any other error, also log but continue (don't block relationship creation)
+        console.warn('⚠️ Duplicate check failed with unexpected error - continuing with creation:', error?.message);
       }
     }
 

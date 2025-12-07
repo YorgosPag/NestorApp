@@ -28,7 +28,7 @@ class RelationshipCache {
     expires: number;
   }>();
 
-  private static readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+  private static readonly CACHE_TTL = 30 * 1000; // 30 seconds (shorter για better real-time updates)
 
   static get(contactId: string): ContactRelationship[] | null {
     const entry = this.cache.get(contactId);
@@ -162,16 +162,23 @@ export const useRelationshipListOptimized = (
       console.log('📋 Loading relationships for contact:', contactId);
       const data = await RequestDeduplicator.get(contactId);
 
-      // Only update state if data actually changed
+      // Only update state if data actually changed (compare by IDs only)
       setRelationships(prevRelationships => {
-        const hasChanged = JSON.stringify(prevRelationships) !== JSON.stringify(data);
+        // Compare by IDs only (timestamps may differ due to serverTimestamp)
+        const prevIds = new Set(prevRelationships.map(rel => rel.id));
+        const newIds = new Set(data.map(rel => rel.id));
+
+        const hasChanged = prevRelationships.length !== data.length ||
+                          !Array.from(newIds).every(id => prevIds.has(id)) ||
+                          forceRefresh;
+
         if (hasChanged) {
           lastUpdateTimestamp.current = Date.now();
           callbackRef.current?.(data);
-          console.log('✅ Relationships updated:', data.length);
+          console.log('✅ OPTIMIZED: Relationships updated:', data.length);
           return data;
         }
-        console.log('ℹ️ Relationships unchanged, skipping update');
+        console.log('ℹ️ OPTIMIZED: Relationships unchanged, skipping update');
         return prevRelationships;
       });
 

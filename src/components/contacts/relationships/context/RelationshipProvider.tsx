@@ -89,8 +89,14 @@ export const RelationshipProvider: React.FC<RelationshipProviderProps> = ({
       const data = await RequestDeduplicator.get(contactId);
 
       setRelationships(prevRelationships => {
-        const hasChanged = JSON.stringify(prevRelationships) !== JSON.stringify(data);
-        if (hasChanged) {
+        // Compare by IDs only (timestamps may differ due to serverTimestamp)
+        const prevIds = new Set(prevRelationships.map(rel => rel.id));
+        const newIds = new Set(data.map(rel => rel.id));
+
+        const hasChanged = prevRelationships.length !== data.length ||
+                          !Array.from(newIds).every(id => prevIds.has(id));
+
+        if (hasChanged || forceRefresh) {
           onRelationshipsChange?.(data);
           console.log('✅ PROVIDER: Relationships updated:', data.length);
           return data;
@@ -114,7 +120,16 @@ export const RelationshipProvider: React.FC<RelationshipProviderProps> = ({
    */
   const refreshRelationships = useCallback(async () => {
     console.log('🔄 PROVIDER: Force refreshing relationships for', contactId);
+
+    // 🔧 FIX: Ensure cache is fully invalidated before reload
+    RequestDeduplicator.invalidate(contactId);
+
+    // Small delay για Firestore eventual consistency
+    await new Promise(resolve => setTimeout(resolve, 200));
+
+    console.log('🔄 PROVIDER: Cache invalidated, now reloading...');
     await loadRelationships(true);
+    console.log('🔄 PROVIDER: Refresh completed');
   }, [contactId, loadRelationships]);
 
   /**
