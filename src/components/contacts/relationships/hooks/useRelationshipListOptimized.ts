@@ -10,7 +10,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type { ContactRelationship } from '@/types/contacts/relationships';
 import type { ContactType } from '@/types/contacts';
-import { ContactRelationshipService } from '@/services/contact-relationships.service';
+import { ContactRelationshipService } from '@/services/contact-relationships/ContactRelationshipService';
 import type { UseRelationshipListReturn } from '../types/relationship-manager.types';
 
 // ============================================================================

@@ -20,6 +20,7 @@ import type { AddNewContactDialogProps, ContactFormData } from '@/types/ContactF
 import { useContactForm } from '@/hooks/useContactForm';
 import { getTypeIcon, getTypeLabel } from '@/utils/contactFormUtils';
 import { UnifiedContactTabbedSection } from '@/components/ContactFormSections/UnifiedContactTabbedSection';
+import { RelationshipProvider } from '@/components/contacts/relationships/context/RelationshipProvider';
 
 export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, editContact, onLiveChange }: AddNewContactDialogProps) {
   const {
@@ -114,21 +115,27 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
             </FormGrid>
 
             {/* 🏢 UNIFIED CONTACT SECTION - All contact types centralized */}
-            <UnifiedContactTabbedSection
+            {/* 🔧 FIX: Wrap με RelationshipProvider για proper state management */}
+            <RelationshipProvider
+              contactId={formData.id || 'new-contact'}
               contactType={formData.type}
-              formData={formData}
-              handleChange={handleChange}
-              handleSelectChange={handleSelectChange}
-              handleLogoChange={handleLogoChange}
-              handleFileChange={handleFileChange}
-              handleMultiplePhotosChange={handleMultiplePhotosChange}
-              handleMultiplePhotoUploadComplete={handleMultiplePhotoUploadComplete}
-              handleProfilePhotoSelection={handleProfilePhotoSelection}
-              handleUploadedLogoURL={handleUploadedLogoURL}
-              handleUploadedPhotoURL={handleUploadedPhotoURL}
-              setFormData={setFormData}
-              disabled={loading}
-            />
+            >
+              <UnifiedContactTabbedSection
+                contactType={formData.type}
+                formData={formData}
+                handleChange={handleChange}
+                handleSelectChange={handleSelectChange}
+                handleLogoChange={handleLogoChange}
+                handleFileChange={handleFileChange}
+                handleMultiplePhotosChange={handleMultiplePhotosChange}
+                handleMultiplePhotoUploadComplete={handleMultiplePhotoUploadComplete}
+                handleProfilePhotoSelection={handleProfilePhotoSelection}
+                handleUploadedLogoURL={handleUploadedLogoURL}
+                handleUploadedPhotoURL={handleUploadedPhotoURL}
+                setFormData={setFormData}
+                disabled={loading}
+              />
+            </RelationshipProvider>
 
           </div>
 

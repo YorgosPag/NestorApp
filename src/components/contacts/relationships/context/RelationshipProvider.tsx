@@ -143,7 +143,7 @@ export const RelationshipProvider: React.FC<RelationshipProviderProps> = ({
       console.log('🗑️ PROVIDER: Deleting relationship:', relationshipId);
 
       // Import dynamically to avoid circular dependencies
-      const { ContactRelationshipService } = await import('@/services/contact-relationships.service');
+      const { ContactRelationshipService } = await import('@/services/contact-relationships/ContactRelationshipService');
       await ContactRelationshipService.deleteRelationship(relationshipId, 'user');
 
       // Invalidate cache

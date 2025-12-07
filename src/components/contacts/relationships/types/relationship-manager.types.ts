@@ -64,6 +64,9 @@ export interface RelationshipFormProps {
   /** Contact type for filtering relationship types */
   contactType: ContactType;
 
+  /** Current contact ID (to exclude from dropdown) */
+  currentContactId: string;
+
   /** Loading state */
   loading: boolean;
 

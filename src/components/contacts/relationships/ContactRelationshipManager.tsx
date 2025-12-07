@@ -269,6 +269,7 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
           formData={formData}
           setFormData={setFormData}
           contactType={contactType}
+          currentContactId={contactId}
           loading={formLoading}
           error={formError}
           editingId={editingId}

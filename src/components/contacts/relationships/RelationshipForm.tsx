@@ -42,6 +42,7 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
   formData,
   setFormData,
   contactType,
+  currentContactId,
   loading,
   error,
   editingId,
@@ -103,7 +104,7 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
                 label="Επαφή*"
                 placeholder="Αναζήτηση επαφής..."
                 allowedContactTypes={['individual', 'company', 'service']}
-                excludeContactIds={[]} // Note: Will be passed from parent
+                excludeContactIds={[currentContactId]} // 🚫 Exclude current contact από το dropdown
                 required
                 error={!formData.targetContactId ? 'Η επιλογή επαφής είναι υποχρεωτική' : undefined}
               />

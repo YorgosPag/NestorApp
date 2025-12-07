@@ -14,7 +14,7 @@ import type {
   ProfessionalContactInfo
 } from '@/types/contacts/relationships';
 import type { ContactType } from '@/types/contacts';
-import { ContactRelationshipService } from '@/services/contact-relationships.service';
+import { ContactRelationshipService } from '@/services/contact-relationships/ContactRelationshipService';
 import type {
   RelationshipFormData,
   UseRelationshipFormReturn
