@@ -15,14 +15,17 @@ interface AdvancedFiltersPanelProps<T extends GenericFilterState> {
   config: FilterPanelConfig;
   filters: T;
   onFiltersChange: (filters: T) => void;
+  defaultOpen?: boolean; // Control if panel is open by default
 }
 
 export function AdvancedFiltersPanel<T extends GenericFilterState>({
   config,
   filters,
-  onFiltersChange
+  onFiltersChange,
+  defaultOpen = false
 }: AdvancedFiltersPanelProps<T>) {
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [isPanelOpen, setIsPanelOpen] = useState(defaultOpen);
 
   const {
     handleFilterChange,
@@ -63,7 +66,7 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
 
   return (
     <div className="px-1 pt-4 sm:px-4 sm:pt-4 shrink-0 w-full overflow-hidden">
-      <Collapsible className="border bg-card rounded-lg">
+      <Collapsible open={isPanelOpen} onOpenChange={setIsPanelOpen} className="border bg-card rounded-lg">
         <CollapsibleTrigger asChild>
           <Button variant="ghost" className="w-full justify-start p-4 text-sm font-semibold">
             <Filter className="w-4 h-4 mr-2" />

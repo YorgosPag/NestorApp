@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Users, Hash, Ruler, Star } from 'lucide-react';
+import { Users, Hash, Ruler, Star, Filter } from 'lucide-react';
 import { PageHeader } from '@/core/headers';
 import type { ViewMode as CoreViewMode } from '@/core/headers';
 import type { UnitsCountFilter, AreaFilter, ContactTypeFilter, ViewMode } from '@/hooks/useContactsState';
@@ -15,6 +15,9 @@ interface ContactsHeaderProps {
   searchTerm: string;
   setSearchTerm: (term: string) => void;
   onNewContact?: () => void;
+  // Mobile-only filter toggle
+  showFilters?: boolean;
+  setShowFilters?: (show: boolean) => void;
 }
 
 export function ContactsHeader({
@@ -25,6 +28,8 @@ export function ContactsHeader({
   searchTerm,
   setSearchTerm,
   onNewContact,
+  showFilters,
+  setShowFilters,
 }: ContactsHeaderProps) {
   return (
     <PageHeader
@@ -50,7 +55,22 @@ export function ContactsHeader({
         addButton: {
           label: 'Νέα Επαφή',
           onClick: () => onNewContact?.()
-        }
+        },
+        // Mobile-only filter button
+        customActions: setShowFilters ? [
+          <button
+            key="mobile-filter"
+            onClick={() => setShowFilters(!showFilters)}
+            className={`md:hidden p-2 rounded-md border transition-colors ${
+              showFilters
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-background border-border hover:bg-accent'
+            }`}
+            aria-label="Toggle filters"
+          >
+            <Filter className="h-4 w-4" />
+          </button>
+        ] : undefined
       }}
     />
   );

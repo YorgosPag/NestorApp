@@ -100,6 +100,9 @@ export function ContactsPageContent() {
   const [showArchiveContactDialog, setShowArchiveContactDialog] = useState(false);
   const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
 
+  // Mobile-only filter toggle state
+  const [showFilters, setShowFilters] = useState(false);
+
   // Search state (simplified - only for header search)
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -544,6 +547,8 @@ export function ContactsPageContent() {
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
           onNewContact={handleNewContact}
+          showFilters={showFilters}
+          setShowFilters={setShowFilters}
         />
 
         {/* 🏷️ Filter Indicator - εμφανίζεται όταν υπάρχει URL filter */}
@@ -561,11 +566,26 @@ export function ContactsPageContent() {
         )}
 
         {/* Advanced Filters Panel */}
-        <AdvancedFiltersPanel
-          config={contactFiltersConfig}
-          filters={filters}
-          onFiltersChange={setFilters}
-        />
+        <div className="hidden md:block">
+          {/* Desktop: Always visible */}
+          <AdvancedFiltersPanel
+            config={contactFiltersConfig}
+            filters={filters}
+            onFiltersChange={setFilters}
+          />
+        </div>
+
+        {/* Mobile: Show only when showFilters is true */}
+        {showFilters && (
+          <div className="md:hidden">
+            <AdvancedFiltersPanel
+              config={contactFiltersConfig}
+              filters={filters}
+              onFiltersChange={setFilters}
+              defaultOpen={true}
+            />
+          </div>
+        )}
 
         <div className="flex-1 flex overflow-hidden px-1 py-4 sm:px-4 sm:py-4 gap-1 sm:gap-4">
           {error ? (

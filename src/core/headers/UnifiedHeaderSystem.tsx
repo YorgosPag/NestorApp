@@ -358,6 +358,67 @@ export const HeaderViewToggle: React.FC<{
   );
 };
 
+// ===== MOBILE VIEW TOGGLE COMPONENT =====
+
+export const MobileHeaderViewToggle: React.FC<{
+  viewMode: ViewMode;
+  onViewModeChange: (mode: ViewMode) => void;
+  viewModes?: ViewMode[];
+}> = ({
+  viewMode,
+  onViewModeChange,
+  viewModes = ['list', 'grid']
+}) => {
+  const getViewIcon = (mode: ViewMode) => {
+    switch (mode) {
+      case 'list': return List;
+      case 'grid': return LayoutGrid;
+      case 'byType': return Filter;
+      case 'byStatus': return BarChart3;
+      default: return List;
+    }
+  };
+
+  const getViewLabel = (mode: ViewMode) => {
+    switch (mode) {
+      case 'list': return 'Προβολή λίστας';
+      case 'grid': return 'Προβολή πλέγματος';
+      case 'byType': return 'Ομαδοποίηση κατά τύπο';
+      case 'byStatus': return 'Ομαδοποίηση κατά κατάσταση';
+      default: return 'Προβολή';
+    }
+  };
+
+  // Find the next view mode to toggle to
+  const getNextViewMode = () => {
+    const currentIndex = viewModes.indexOf(viewMode);
+    const nextIndex = (currentIndex + 1) % viewModes.length;
+    return viewModes[nextIndex];
+  };
+
+  const nextMode = getNextViewMode();
+  const NextIcon = getViewIcon(nextMode);
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onViewModeChange(nextMode)}
+          className="h-8 px-2"
+          aria-label={getViewLabel(nextMode)}
+        >
+          <NextIcon className="h-4 w-4" />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom">
+        <p>{getViewLabel(nextMode)}</p>
+      </TooltipContent>
+    </Tooltip>
+  );
+};
+
 // ===== HEADER ACTIONS COMPONENT =====
 
 export const HeaderActions: React.FC<HeaderActionsProps> = ({
@@ -389,11 +450,25 @@ export const HeaderActions: React.FC<HeaderActionsProps> = ({
 
       {/* View Mode Toggle */}
       {viewMode && onViewModeChange && (
-        <HeaderViewToggle
-          viewMode={viewMode}
-          onViewModeChange={onViewModeChange}
-          viewModes={viewModes}
-        />
+        <>
+          {/* Desktop: Multiple buttons */}
+          <div className="hidden md:block">
+            <HeaderViewToggle
+              viewMode={viewMode}
+              onViewModeChange={onViewModeChange}
+              viewModes={viewModes}
+            />
+          </div>
+
+          {/* Mobile: Single toggle button */}
+          <div className="md:hidden">
+            <MobileHeaderViewToggle
+              viewMode={viewMode}
+              onViewModeChange={onViewModeChange}
+              viewModes={viewModes}
+            />
+          </div>
+        </>
       )}
 
       {/* Custom Actions */}
