@@ -75,7 +75,7 @@ export const useRelationshipList = (
       setError(null);
 
       console.log('🗑️ Deleting relationship:', relationshipId);
-      await ContactRelationshipService.deleteRelationship(relationshipId);
+      await ContactRelationshipService.deleteRelationship(relationshipId, 'user');
 
       // Remove from local state immediately for better UX
       setRelationships(prev => {

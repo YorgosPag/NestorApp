@@ -31,7 +31,7 @@ import { RelationshipList } from './RelationshipList';
 import { OrganizationTree } from './OrganizationTree';
 
 // 🏢 ENTERPRISE: Import custom hooks for state management
-import { useRelationshipList } from './hooks/useRelationshipList';
+import { useRelationshipContext } from './context/RelationshipProvider';
 import { useRelationshipForm } from './hooks/useRelationshipForm';
 import { useOrganizationTree } from './hooks/useOrganizationTree';
 
@@ -71,10 +71,10 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
     loading: listLoading,
     error: listError,
     expandedRelationships,
-    handleToggleExpanded,
-    handleDelete,
+    toggleExpanded: handleToggleExpanded,
+    deleteRelationship: handleDelete,
     refreshRelationships
-  } = useRelationshipList(contactId, contactType);
+  } = useRelationshipContext();
 
   // 📝 Relationship form management hook
   const {

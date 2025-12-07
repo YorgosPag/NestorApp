@@ -7,6 +7,7 @@ import type { FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 import { UnifiedPhotoManager } from '@/components/ui/UnifiedPhotoManager';
 import { ContactRelationshipManager } from '@/components/contacts/relationships/ContactRelationshipManager';
 import { RelationshipsSummary } from '@/components/contacts/relationships/RelationshipsSummary';
+import { RelationshipProvider } from '@/components/contacts/relationships/context/RelationshipProvider';
 import { getContactFormConfig, getContactFormSections, getContactTypeDisplayName, getContactFormRenderer } from './utils/ContactFormConfigProvider';
 import { getPhotoUploadHandlers, createUnifiedPhotosChangeHandler, buildRendererPropsForContactType } from './utils/PhotoUploadConfiguration';
 
@@ -50,6 +51,9 @@ interface UnifiedContactTabbedSectionProps {
 
   // 🔗 Relationships mode control
   relationshipsMode?: 'summary' | 'full'; // 'summary' for main tab, 'full' for modal
+
+  // 🎯 Relationship management callback
+  onOpenRelationshipModal?: () => void;
 }
 
 // Configuration logic moved to ContactFormConfigProvider utility
@@ -69,7 +73,8 @@ export function UnifiedContactTabbedSection({
   handleUploadedPhotoURL,
   setFormData,
   disabled = false,
-  relationshipsMode = 'full'
+  relationshipsMode = 'full',
+  onOpenRelationshipModal
 }: UnifiedContactTabbedSectionProps) {
 
   // 🏢 ENTERPRISE: Get configuration dynamically based on contact type
@@ -123,34 +128,39 @@ export function UnifiedContactTabbedSection({
           // ✅ FIXED: Now formData.id is correctly included from the contact mappers
           const contactId = formData.id || 'new-contact';
 
-          // Choose between summary and full mode based on relationshipsMode prop
-          if (relationshipsMode === 'summary') {
-            return (
-              <RelationshipsSummary
-                contactId={contactId}
-                contactType={contactType}
-                readonly={disabled}
-                className="mt-4"
-                onManageRelationships={() => {
-                  console.log('🏢 User clicked manage relationships - this should open modal');
-                  // Future: add modal opening logic here
-                }}
-              />
-            );
-          }
-
-          // Full management mode (default for modal)
+          // 🚀 PERFORMANCE: Wrap με RelationshipProvider to prevent duplicate API calls
           return (
-            <ContactRelationshipManager
+            <RelationshipProvider
               contactId={contactId}
               contactType={contactType}
-              readonly={disabled}
-              className="mt-4"
               onRelationshipsChange={(relationships) => {
-                // Optionally update form data with relationship count for display
                 console.log('🏢 Relationships updated:', relationships.length, 'relationships');
               }}
-            />
+            >
+              {relationshipsMode === 'summary' ? (
+                <RelationshipsSummary
+                  contactId={contactId}
+                  contactType={contactType}
+                  readonly={disabled}
+                  className="mt-4"
+                  onManageRelationships={() => {
+                    console.log('🏢 User clicked manage relationships - opening modal');
+                    onOpenRelationshipModal?.();
+                  }}
+                />
+              ) : (
+                <ContactRelationshipManager
+                  contactId={contactId}
+                  contactType={contactType}
+                  readonly={disabled}
+                  className="mt-4"
+                  onRelationshipsChange={(relationships) => {
+                    // Optionally update form data with relationship count for display
+                    console.log('🏢 Relationships updated:', relationships.length, 'relationships');
+                  }}
+                />
+              )}
+            </RelationshipProvider>
           );
         }
       }

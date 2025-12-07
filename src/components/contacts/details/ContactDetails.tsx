@@ -43,6 +43,12 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact }: Cont
     // TODO: Refresh contact data
   }, []);
 
+  // 🎯 Handler για άνοιγμα του relationship management modal
+  const handleOpenRelationshipModal = useCallback(() => {
+    console.log('🏢 Opening edit modal for relationship management');
+    onEditContact?.(); // Χρησιμοποιούμε το existing edit modal
+  }, [onEditContact]);
+
   // Handler για photo click στα Individual και Company photos
   const handlePhotoClick = useCallback((photoUrl: string, photoIndex: number, galleryPhotos?: (string | null)[]) => {
     if (!contact) return;
@@ -67,6 +73,7 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact }: Cont
               handleSelectChange={() => {}} // Read-only για details view
               disabled={true} // Read-only mode
               relationshipsMode="summary" // 🎯 KEY: Summary mode για main view
+              onOpenRelationshipModal={handleOpenRelationshipModal} // 🎯 Handler για relationships management
             />
           </div>
         </ScrollArea>

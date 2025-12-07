@@ -25,7 +25,7 @@ import {
 
 // 🏢 ENTERPRISE: Import centralized types and hooks
 import type { ContactType } from '@/types/contacts';
-import { useRelationshipList } from './hooks/useRelationshipList';
+import { useRelationshipContext } from './context/RelationshipProvider';
 import { useOrganizationTree } from './hooks/useOrganizationTree';
 import { getRelationshipDisplayProps } from './utils/relationship-types';
 
@@ -73,7 +73,7 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
     relationships,
     loading: relationshipsLoading,
     error: relationshipsError
-  } = useRelationshipList(contactId, contactType);
+  } = useRelationshipContext();
 
   const {
     organizationTree,
@@ -107,14 +107,19 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
 
   // Organization statistics
   const orgStats = React.useMemo(() => {
-    if (!organizationTree) return { employees: 0, departments: 0, hierarchyLevels: 0 };
+    // Calculate employees from actual relationships, not organizationTree
+    const employees = relationships.filter(rel => rel.relationshipType === 'employee').length;
+
+    if (!organizationTree) {
+      return { employees, departments: 0, hierarchyLevels: 0 };
+    }
 
     return {
-      employees: organizationTree.totalEmployees || 0,
+      employees: Math.max(employees, organizationTree.totalEmployees || 0), // Use the higher count
       departments: organizationTree.departments?.length || 0,
       hierarchyLevels: organizationTree.hierarchyDepth || 0
     };
-  }, [organizationTree]);
+  }, [relationships, organizationTree]);
 
   // ============================================================================
   // RENDER HELPERS
@@ -208,54 +213,94 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
   );
 
   /**
-   * 📊 Render statistics cards
+   * 📊 Render statistics cards - Adaptive based on contact type
    */
-  const renderStatistics = () => (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-      {/* Total Relationships */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center space-x-3">
-            <Users className="h-8 w-8 text-blue-500" />
-            <div>
-              <p className="text-2xl font-bold">{stats.total}</p>
-              <p className="text-sm text-gray-600">Σύνολο Σχέσεων</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+  const renderStatistics = () => {
+    // Different statistics for different contact types
+    const isCompanyOrService = contactType === 'company' || contactType === 'service';
 
-      {/* Organization Chart Stats (for companies/services) */}
-      {shouldShowTree && (
+
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        {/* Total Relationships - Always show */}
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center space-x-3">
-              <Building2 className="h-8 w-8 text-green-500" />
+              <Users className="h-8 w-8 text-blue-500" />
               <div>
-                <p className="text-2xl font-bold">{orgStats.employees}</p>
-                <p className="text-sm text-gray-600">Εργαζόμενοι</p>
+                <p className="text-2xl font-bold">{stats.total}</p>
+                <p className="text-sm text-gray-600">Σύνολο Σχέσεων</p>
               </div>
             </div>
           </CardContent>
         </Card>
-      )}
 
-      {/* Most Common Relationship */}
-      {stats.mostCommon && (
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center space-x-3">
-              <UserCheck className="h-8 w-8 text-purple-500" />
-              <div>
-                <p className="text-lg font-bold">{getRelationshipDisplayProps(stats.mostCommon).label}</p>
-                <p className="text-sm text-gray-600">Συχνότερη Σχέση</p>
+        {/* Employees - Only for companies/services AND only if there are employees */}
+        {isCompanyOrService && orgStats.employees > 0 && (
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center space-x-3">
+                <Building2 className="h-8 w-8 text-green-500" />
+                <div>
+                  <p className="text-2xl font-bold">{orgStats.employees}</p>
+                  <p className="text-sm text-gray-600">Εργαζόμενοι</p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  );
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Most Common Relationship - Only if exists */}
+        {stats.mostCommon && (
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center space-x-3">
+                <UserCheck className="h-8 w-8 text-purple-500" />
+                <div>
+                  <p className="text-lg font-bold">{getRelationshipDisplayProps(stats.mostCommon).label}</p>
+                  <p className="text-sm text-gray-600">Συχνότερη Σχέση</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Professional Contacts - For individuals with professional relationships */}
+        {contactType === 'individual' && stats.byType['professional'] > 0 && (
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center space-x-3">
+                <UserCheck className="h-8 w-8 text-blue-500" />
+                <div>
+                  <p className="text-2xl font-bold">{stats.byType['professional']}</p>
+                  <p className="text-sm text-gray-600">Επαγγελματικές</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Business Partners - For companies with partnerships */}
+        {isCompanyOrService && (stats.byType['partner'] > 0 || stats.byType['supplier'] > 0 || stats.byType['client'] > 0) && (
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center space-x-3">
+                <Building2 className="h-8 w-8 text-orange-500" />
+                <div>
+                  <p className="text-2xl font-bold">{
+                    (stats.byType['partner'] || 0) +
+                    (stats.byType['supplier'] || 0) +
+                    (stats.byType['client'] || 0)
+                  }</p>
+                  <p className="text-sm text-gray-600">Συνεργάτες</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    );
+  };
 
   /**
    * 🔍 Render recent relationships preview
@@ -279,16 +324,39 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
                   <div className="flex items-center space-x-3">
                     <Icon className="h-5 w-5 text-gray-600" />
                     <div>
-                      <Badge className={displayProps.color} variant="outline">
-                        {displayProps.label}
-                      </Badge>
-                      {relationship.position && (
-                        <p className="text-sm text-gray-600 mt-1">{relationship.position}</p>
-                      )}
+                      {/* Contact name and relationship type */}
+                      <div className="flex items-start flex-col">
+                        {relationship.relatedContact ? (
+                          <>
+                            <span className="text-sm font-medium text-gray-900">
+                              {relationship.relatedContact.firstName} {relationship.relatedContact.lastName}
+                            </span>
+                            <div className="flex items-center gap-2 mt-1">
+                              <Badge className={displayProps.color} variant="outline">
+                                {displayProps.label}
+                              </Badge>
+                              {relationship.position && (
+                                <span className="text-xs text-gray-600">• {relationship.position}</span>
+                              )}
+                            </div>
+                          </>
+                        ) : (
+                          <Badge className={displayProps.color} variant="outline">
+                            {displayProps.label}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="text-xs text-gray-400">
-                    {new Date(relationship.createdAt || '').toLocaleDateString('el-GR')}
+                    {relationship.createdAt ?
+                      new Date(relationship.createdAt).toLocaleDateString('el-GR', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit'
+                      }) :
+                      'Πρόσφατα'
+                    }
                   </div>
                 </div>
               );

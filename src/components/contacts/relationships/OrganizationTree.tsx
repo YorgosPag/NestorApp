@@ -86,32 +86,66 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
   );
 
   /**
-   * 🏗️ Render organization statistics
+   * 🏗️ Render organization statistics - ADAPTIVE & USER-FRIENDLY
    */
   const renderStatistics = () => {
     if (!tree?.statistics) return null;
 
     const { totalEmployees, hierarchyDepth, departmentCount } = tree.statistics;
 
+    // Only show statistics that have meaningful values > 0
+    const stats = [];
+
+    if ((totalEmployees || 0) > 0) {
+      stats.push({
+        value: totalEmployees,
+        label: 'Συνολικοί Εργαζόμενοι',
+        icon: Users,
+        color: 'blue'
+      });
+    }
+
+    if ((departmentCount || 0) > 0) {
+      stats.push({
+        value: departmentCount,
+        label: 'Ενεργά Τμήματα',
+        icon: Building2,
+        color: 'green'
+      });
+    }
+
+    if ((hierarchyDepth || 0) > 1) { // Only show if > 1 (meaningful hierarchy)
+      stats.push({
+        value: hierarchyDepth,
+        label: 'Επίπεδα Διοίκησης',
+        icon: Building2,
+        color: 'purple'
+      });
+    }
+
+    // If no meaningful stats, show user-friendly message
+    if (stats.length === 0) {
+      return (
+        <div className="text-center p-6 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+          <Building2 className="h-8 w-8 mx-auto mb-3 text-gray-400" />
+          <h3 className="font-medium text-gray-700 mb-1">Απλό Οργανωτικό Σχήμα</h3>
+          <p className="text-sm text-gray-500">
+            Αυτή η εταιρεία έχει βασική οργανωσιακή δομή χωρίς πολύπλοκη ιεραρχία.
+          </p>
+        </div>
+      );
+    }
+
+    // Render only meaningful statistics
     return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="text-center p-4 bg-blue-50 rounded-lg">
-          <Users className="h-6 w-6 mx-auto mb-2 text-blue-600" />
-          <p className="text-2xl font-bold text-blue-800">{totalEmployees || 0}</p>
-          <p className="text-sm text-blue-600">Συνολικοί Εργαζόμενοι</p>
-        </div>
-
-        <div className="text-center p-4 bg-green-50 rounded-lg">
-          <Building2 className="h-6 w-6 mx-auto mb-2 text-green-600" />
-          <p className="text-2xl font-bold text-green-800">{departmentCount || 0}</p>
-          <p className="text-sm text-green-600">Τμήματα</p>
-        </div>
-
-        <div className="text-center p-4 bg-purple-50 rounded-lg">
-          <Building2 className="h-6 w-6 mx-auto mb-2 text-purple-600" />
-          <p className="text-2xl font-bold text-purple-800">{hierarchyDepth || 0}</p>
-          <p className="text-sm text-purple-600">Επίπεδα Ιεραρχίας</p>
-        </div>
+      <div className={`grid grid-cols-1 ${stats.length > 1 ? 'md:grid-cols-' + Math.min(stats.length, 3) : ''} gap-4 mb-6`}>
+        {stats.map(({ value, label, icon: Icon, color }, index) => (
+          <div key={index} className={`text-center p-4 bg-${color}-50 rounded-lg`}>
+            <Icon className={`h-6 w-6 mx-auto mb-2 text-${color}-600`} />
+            <p className={`text-2xl font-bold text-${color}-800`}>{value}</p>
+            <p className={`text-sm text-${color}-600`}>{label}</p>
+          </div>
+        ))}
       </div>
     );
   };

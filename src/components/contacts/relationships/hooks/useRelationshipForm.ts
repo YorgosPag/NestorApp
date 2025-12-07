@@ -121,9 +121,13 @@ export const useRelationshipForm = (
       });
 
       // Prepare relationship data
+      // 🔧 FIX: For employment relationships (employee, manager, director),
+      // the employee should be source, company should be target
+      const isEmploymentRelation = ['employee', 'manager', 'director', 'executive'].includes(formData.relationshipType);
+
       const relationshipData: Partial<ContactRelationship> = {
-        sourceContactId: contactId,
-        targetContactId: formData.targetContactId,
+        sourceContactId: isEmploymentRelation ? formData.targetContactId : contactId,
+        targetContactId: isEmploymentRelation ? contactId : formData.targetContactId,
         relationshipType: formData.relationshipType,
         position: formData.position || undefined,
         department: formData.department || undefined,
@@ -134,6 +138,14 @@ export const useRelationshipForm = (
           ? formData.contactInfo as ProfessionalContactInfo
           : undefined
       };
+
+      console.log('🔧 RELATIONSHIP DIRECTION FIX:', {
+        isEmploymentRelation,
+        relationshipType: formData.relationshipType,
+        source: relationshipData.sourceContactId,
+        target: relationshipData.targetContactId,
+        'Expected for OrganizationTree': 'source=employee, target=company'
+      });
 
       // Create or update relationship
       if (editingId) {
