@@ -9,10 +9,12 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { UnifiedDashboard, type DashboardStat } from '@/core/dashboards/UnifiedDashboard';
 import {
   Users,
   Building2,
@@ -20,13 +22,23 @@ import {
   TrendingUp,
   Eye,
   Settings,
-  Plus
+  Plus,
+  ChevronUp,
+  ChevronDown,
+  Briefcase,
+  Calendar,
+  Star,
+  Target,
+  Award,
+  Zap
 } from 'lucide-react';
 
 // 🏢 ENTERPRISE: Import centralized types and hooks
 import type { ContactType } from '@/types/contacts';
+import { ContactsService } from '@/services/contacts.service';
 import { useRelationshipContext } from './context/RelationshipProvider';
 import { useOrganizationTree } from './hooks/useOrganizationTree';
+import { OrganizationTree } from './OrganizationTree';
 import { getRelationshipDisplayProps } from './utils/relationship-types';
 
 // ============================================================================
@@ -69,10 +81,13 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
   // HOOKS
   // ============================================================================
 
+  const router = useRouter();
+
   const {
     relationships,
     loading: relationshipsLoading,
-    error: relationshipsError
+    error: relationshipsError,
+    refreshRelationships
   } = useRelationshipContext();
 
   const {
@@ -81,6 +96,114 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
     error: treeError,
     shouldShowTree
   } = useOrganizationTree(contactId, contactType);
+
+  // ============================================================================
+  // LOCAL STATE
+  // ============================================================================
+
+  const [showAllRelationships, setShowAllRelationships] = useState(false);
+  const [contactNames, setContactNames] = useState<Record<string, string>>({});
+
+  // ============================================================================
+  // EFFECTS
+  // ============================================================================
+
+  // Fetch contact names για relationships
+  useEffect(() => {
+    const fetchContactNames = async () => {
+      if (relationships.length === 0) return;
+
+      console.log('🔍 RELATIONSHIPS: Fetching contact names for relationships:', relationships.length);
+      console.log('🔍 RELATIONSHIPS: Current contactId:', contactId);
+
+      const names: Record<string, string> = {};
+
+      // Φέρνω τα contact names για κάθε relationship
+      for (const relationship of relationships) {
+        // Για κάθε relationship, φέρνω το target contact (την άλλη επαφή)
+        const targetContactId = relationship.targetContactId === contactId
+          ? relationship.sourceContactId  // Αν είμαι target, φέρνω το source
+          : relationship.targetContactId; // Αν είμαι source, φέρνω το target
+
+        console.log('🔍 RELATIONSHIPS: Processing relationship:', {
+          id: relationship.id,
+          sourceId: relationship.sourceContactId,
+          targetId: relationship.targetContactId,
+          type: relationship.relationshipType,
+          resolvedTargetId: targetContactId
+        });
+
+        if (!names[targetContactId]) {
+          try {
+            console.log('🔍 RELATIONSHIPS: Fetching contact for ID:', targetContactId);
+            const contact = await ContactsService.getContact(targetContactId);
+            if (contact) {
+              console.log('🔍 RELATIONSHIPS: Contact object structure:', contact);
+
+              // Try different name fields με προτεραιότητα στο πλήρες όνομα
+              let contactName = 'Άγνωστη Επαφή';
+
+              if (contact.name) {
+                // Primary name field (πλήρες όνομα)
+                contactName = contact.name;
+              } else if (contact.firstName && contact.lastName) {
+                // Συνδυασμός ονόματος και επωνύμου
+                contactName = `${contact.firstName} ${contact.lastName}`;
+              } else if (contact.companyName) {
+                // Company name
+                contactName = contact.companyName;
+              } else if (contact.serviceName) {
+                // Service name
+                contactName = contact.serviceName;
+              } else if (contact.firstName) {
+                // Μόνο το όνομα αν δεν υπάρχει επώνυμο
+                contactName = contact.firstName;
+              }
+
+              names[targetContactId] = contactName;
+              console.log('✅ RELATIONSHIPS: Found contact:', contactName);
+            } else {
+              console.warn('⚠️ RELATIONSHIPS: Contact not found for ID:', targetContactId);
+              names[targetContactId] = 'Άγνωστη Επαφή';
+            }
+          } catch (error) {
+            console.error('❌ RELATIONSHIPS: Failed to fetch contact name:', targetContactId, error);
+            names[targetContactId] = 'Άγνωστη Επαφή';
+          }
+        }
+      }
+
+      console.log('✅ RELATIONSHIPS: Final contact names:', names);
+      setContactNames(names);
+    };
+
+    fetchContactNames();
+  }, [relationships, contactId]);
+
+  // ============================================================================
+  // HANDLERS
+  // ============================================================================
+
+  /**
+   * 🔗 Handle click στη σχέση - μεταβαίνει στη λίστα επαφών με filter
+   */
+  const handleRelationshipClick = (relationship: any) => {
+    // Βρίσκω το target contact ID (την επαφή που θα φιλτραριστεί)
+    const targetContactId = relationship.targetContactId === contactId
+      ? relationship.sourceContactId
+      : relationship.targetContactId;
+
+    const contactName = contactNames[targetContactId];
+
+    console.log('🔗 NAVIGATION: Navigating to contacts with filter:', {
+      targetContactId,
+      contactName,
+      relationshipType: relationship.relationshipType
+    });
+
+    // Μεταβαίνω στη λίστα επαφών με query parameter για filtering
+    router.push(`/contacts?filter=${encodeURIComponent(contactName || targetContactId)}`);
+  };
 
   // ============================================================================
   // COMPUTED VALUES
@@ -92,10 +215,15 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
 
   // Statistics calculation
   const stats = React.useMemo(() => {
+    console.log('📊 RELATIONSHIPS STATS: Current relationships for contactId', contactId, ':', relationships);
+    console.log('📊 RELATIONSHIPS TYPES:', relationships.map(r => ({ id: r.id, type: r.relationshipType, source: r.sourceContactId, target: r.targetContactId })));
+
     const relationshipsByType = relationships.reduce((acc, rel) => {
       acc[rel.relationshipType] = (acc[rel.relationshipType] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
+
+    console.log('📊 RELATIONSHIPS BY TYPE:', relationshipsByType);
 
     return {
       total: relationships.length,
@@ -103,7 +231,7 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
       mostCommon: Object.entries(relationshipsByType)
         .sort(([, a], [, b]) => b - a)[0]?.[0] || null
     };
-  }, [relationships]);
+  }, [relationships, contactId]);
 
   // Organization statistics
   const orgStats = React.useMemo(() => {
@@ -213,91 +341,226 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
   );
 
   /**
-   * 📊 Render statistics cards - Adaptive based on contact type
+   * 🎯 Handle dashboard card click - navigate to contacts with relationship filtering
+   */
+  const handleDashboardCardClick = (stat: DashboardStat, index: number) => {
+    const cardTitle = stat.title;
+    console.log('🎯 DASHBOARD CLICK: Relationship filtering for card:', cardTitle);
+
+    // Get the contact names that have the specific relationship types
+    const getContactNamesForFilter = () => {
+      switch (cardTitle) {
+        case 'Εργαζόμενοι':
+          return relationships
+            .filter(rel => rel.relationshipType === 'employee')
+            .map(rel => {
+              const targetContactId = rel.targetContactId === contactId ? rel.sourceContactId : rel.targetContactId;
+              return contactNames[targetContactId];
+            })
+            .filter(Boolean);
+
+        case 'Μέτοχοι/Εταίροι':
+          return relationships
+            .filter(rel => rel.relationshipType === 'shareholder')
+            .map(rel => {
+              const targetContactId = rel.targetContactId === contactId ? rel.sourceContactId : rel.targetContactId;
+              return contactNames[targetContactId];
+            })
+            .filter(Boolean);
+
+        case 'Σύμβουλοι':
+          return relationships
+            .filter(rel => rel.relationshipType === 'consultant')
+            .map(rel => {
+              const targetContactId = rel.targetContactId === contactId ? rel.sourceContactId : rel.targetContactId;
+              return contactNames[targetContactId];
+            })
+            .filter(Boolean);
+
+        case 'Διευθυντικά Στελέχη':
+          // 🏢 Enhanced Management filtering - consistent με την calculation logic
+          const managementTypes = ['director', 'manager', 'executive', 'ceo', 'chairman'];
+          return relationships
+            .filter(rel =>
+              managementTypes.includes(rel.relationshipType) ||
+              (rel.position && (
+                rel.position.toLowerCase().includes('διευθυντής') ||
+                rel.position.toLowerCase().includes('manager') ||
+                rel.position.toLowerCase().includes('ceo') ||
+                rel.position.toLowerCase().includes('cto') ||
+                rel.position.toLowerCase().includes('γενικός διευθυντής') ||
+                rel.position.toLowerCase().includes('ανώτερο στέλεχος')
+              ))
+            )
+            .map(rel => {
+              const targetContactId = rel.targetContactId === contactId ? rel.sourceContactId : rel.targetContactId;
+              return contactNames[targetContactId];
+            })
+            .filter(Boolean);
+
+        default:
+          // For other cards, use generic relationship search
+          return relationships
+            .map(rel => {
+              const targetContactId = rel.targetContactId === contactId ? rel.sourceContactId : rel.targetContactId;
+              return contactNames[targetContactId];
+            })
+            .filter(Boolean);
+      }
+    };
+
+    const relatedContactNames = getContactNamesForFilter();
+
+    if (relatedContactNames.length > 0) {
+      // Pick the first contact name for filtering (you could also use the relationship type itself)
+      const searchTerm = relatedContactNames[0];
+      router.push(`/contacts?filter=${encodeURIComponent(searchTerm)}`);
+      console.log('🔗 NAVIGATION: Navigated to contacts with filter:', searchTerm, 'Related contacts:', relatedContactNames.length);
+    } else {
+      // Fallback to type-based search
+      const relationshipFilters: Record<string, string> = {
+        'Σύνολο Σχέσεων': 'σχέση',
+        'Εργαζόμενοι': 'εργαζόμενος',
+        'Μέτοχοι/Εταίροι': 'μέτοχος',
+        'Συνεργάτες': 'συνεργάτης',
+        'Διευθυντικά Στελέχη': 'διευθυντής',
+        'Πρόσφατες Σχέσεις': 'πρόσφατη σχέση',
+        'Κύριες Σχέσεις': 'κύρια σχέση',
+        'Τμήματα': 'τμήμα'
+      };
+
+      const searchTerm = relationshipFilters[cardTitle] || cardTitle;
+      router.push(`/contacts?filter=${encodeURIComponent(searchTerm)}`);
+      console.log('🔗 NAVIGATION: Fallback to generic filter:', searchTerm);
+    }
+  };
+
+  /**
+   * 📊 Centralized Relationships Dashboard - Using UnifiedDashboard
    */
   const renderStatistics = () => {
-    // Different statistics for different contact types
-    const isCompanyOrService = contactType === 'company' || contactType === 'service';
+    // Calculate enhanced statistics
+    const employeesCount = stats.byType['employee'] || 0;
+    const shareholdersCount = stats.byType['shareholder'] || 0;
+    const advisorsCount = stats.byType['consultant'] || 0;
+    // 🏢 Enhanced Management Count - Include all management types
+    const managementRelationshipTypes = ['director', 'manager', 'executive', 'ceo', 'chairman'];
+    const directManagementCount = relationships.filter(rel =>
+      managementRelationshipTypes.includes(rel.relationshipType)
+    ).length;
 
+    // Additional management based on position field
+    const positionBasedManagementCount = relationships.filter(rel =>
+      rel.position && (
+        rel.position.toLowerCase().includes('διευθυντής') ||
+        rel.position.toLowerCase().includes('manager') ||
+        rel.position.toLowerCase().includes('ceo') ||
+        rel.position.toLowerCase().includes('cto') ||
+        rel.position.toLowerCase().includes('γενικός διευθυντής') ||
+        rel.position.toLowerCase().includes('ανώτερο στέλεχος')
+      ) && !managementRelationshipTypes.includes(rel.relationshipType) // Avoid double counting
+    ).length;
 
+    const managementCount = directManagementCount + positionBasedManagementCount;
+
+    console.log('🏢 MANAGEMENT STATS:', {
+      directManagementCount,
+      positionBasedManagementCount,
+      totalManagementCount: managementCount,
+      relationshipsByType: stats.byType,
+      managementRelationships: relationships.filter(rel =>
+        managementRelationshipTypes.includes(rel.relationshipType) ||
+        (rel.position && (
+          rel.position.toLowerCase().includes('διευθυντής') ||
+          rel.position.toLowerCase().includes('manager') ||
+          rel.position.toLowerCase().includes('ceo')
+        ))
+      ).map(r => ({ type: r.relationshipType, position: r.position }))
+    });
+
+    const recentRelationshipsCount = relationships.filter(rel => {
+      if (!rel.createdAt) return false;
+      const oneMonthAgo = new Date();
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+      return new Date(rel.createdAt) > oneMonthAgo;
+    }).length;
+
+    const keyRelationshipsCount = relationships.filter(rel =>
+      rel.relationshipType === 'employee' ||
+      rel.relationshipType === 'shareholder' ||
+      rel.relationshipType === 'partner'
+    ).length;
+
+    const departmentsCount = new Set(
+      relationships
+        .filter(rel => rel.department)
+        .map(rel => rel.department)
+    ).size;
+
+    // 🏢 Create centralized dashboard stats array
+    const relationshipDashboardStats: DashboardStat[] = [
+      // 🔝 Πάνω σειρά (4 κάρτες) - Βασικά Στοιχεία
+      {
+        title: "Σύνολο Σχέσεων",
+        value: stats.total,
+        icon: Users,
+        color: "blue"
+      },
+      {
+        title: "Εργαζόμενοι",
+        value: employeesCount,
+        icon: Briefcase,
+        color: "green"
+      },
+      {
+        title: "Μέτοχοι/Εταίροι",
+        value: shareholdersCount,
+        icon: Award,
+        color: "purple"
+      },
+      {
+        title: "Σύμβουλοι",
+        value: advisorsCount,
+        icon: Zap,
+        color: "orange"
+      },
+
+      // 🔽 Κάτω σειρά (4 κάρτες) - Λεπτομέρειες
+      {
+        title: "Διευθυντικά Στελέχη",
+        value: managementCount,
+        icon: UserCheck,
+        color: "indigo"
+      },
+      {
+        title: "Πρόσφατες Σχέσεις",
+        value: recentRelationshipsCount,
+        icon: Calendar,
+        color: "pink"
+      },
+      {
+        title: "Κύριες Σχέσεις",
+        value: keyRelationshipsCount,
+        icon: Star,
+        color: "yellow"
+      },
+      {
+        title: "Τμήματα",
+        value: departmentsCount,
+        icon: Target,
+        color: "cyan"
+      }
+    ];
+
+    // 🎯 Use centralized UnifiedDashboard component with click functionality
     return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        {/* Total Relationships - Always show */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center space-x-3">
-              <Users className="h-8 w-8 text-blue-500" />
-              <div>
-                <p className="text-2xl font-bold">{stats.total}</p>
-                <p className="text-sm text-gray-600">Σύνολο Σχέσεων</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Employees - Only for companies/services AND only if there are employees */}
-        {isCompanyOrService && orgStats.employees > 0 && (
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center space-x-3">
-                <Building2 className="h-8 w-8 text-green-500" />
-                <div>
-                  <p className="text-2xl font-bold">{orgStats.employees}</p>
-                  <p className="text-sm text-gray-600">Εργαζόμενοι</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Most Common Relationship - Only if exists */}
-        {stats.mostCommon && (
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center space-x-3">
-                <UserCheck className="h-8 w-8 text-purple-500" />
-                <div>
-                  <p className="text-lg font-bold">{getRelationshipDisplayProps(stats.mostCommon).label}</p>
-                  <p className="text-sm text-gray-600">Συχνότερη Σχέση</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Professional Contacts - For individuals with professional relationships */}
-        {contactType === 'individual' && stats.byType['professional'] > 0 && (
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center space-x-3">
-                <UserCheck className="h-8 w-8 text-blue-500" />
-                <div>
-                  <p className="text-2xl font-bold">{stats.byType['professional']}</p>
-                  <p className="text-sm text-gray-600">Επαγγελματικές</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Business Partners - For companies with partnerships */}
-        {isCompanyOrService && (stats.byType['partner'] > 0 || stats.byType['supplier'] > 0 || stats.byType['client'] > 0) && (
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center space-x-3">
-                <Building2 className="h-8 w-8 text-orange-500" />
-                <div>
-                  <p className="text-2xl font-bold">{
-                    (stats.byType['partner'] || 0) +
-                    (stats.byType['supplier'] || 0) +
-                    (stats.byType['client'] || 0)
-                  }</p>
-                  <p className="text-sm text-gray-600">Συνεργάτες</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+      <div className="mb-6">
+        <UnifiedDashboard
+          stats={relationshipDashboardStats}
+          columns={4}
+          className="p-4 border-b bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 rounded-lg"
+          onCardClick={handleDashboardCardClick}
+        />
       </div>
     );
   };
@@ -306,7 +569,10 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
    * 🔍 Render recent relationships preview
    */
   const renderRecentRelationships = () => {
-    const recentRelationships = relationships.slice(0, 3);
+    // Show 3 relationships initially, all when expanded
+    const recentRelationships = showAllRelationships
+      ? relationships
+      : relationships.slice(0, 3);
 
     return (
       <Card className="mb-6">
@@ -319,31 +585,42 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
               const displayProps = getRelationshipDisplayProps(relationship.relationshipType);
               const Icon = displayProps.icon;
 
+              // Get το contact name για αυτή τη σχέση
+              const targetContactId = relationship.targetContactId === contactId
+                ? relationship.sourceContactId
+                : relationship.targetContactId;
+              const contactName = contactNames[targetContactId];
+
               return (
-                <div key={relationship.id} className="flex items-center justify-between p-3 border rounded-lg">
+                <div
+                  key={relationship.id}
+                  onClick={() => handleRelationshipClick(relationship)}
+                  className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                >
                   <div className="flex items-center space-x-3">
                     <Icon className="h-5 w-5 text-gray-600" />
                     <div>
-                      {/* Contact name and relationship type */}
-                      <div className="flex items-start flex-col">
-                        {relationship.relatedContact ? (
+                      {/* Contact name and relationship type - σε μία σειρά */}
+                      <div className="flex items-center gap-2">
+                        {contactName ? (
                           <>
                             <span className="text-sm font-medium text-gray-900">
-                              {relationship.relatedContact.firstName} {relationship.relatedContact.lastName}
+                              {contactName}
                             </span>
-                            <div className="flex items-center gap-2 mt-1">
-                              <Badge className={displayProps.color} variant="outline">
-                                {displayProps.label}
-                              </Badge>
-                              {relationship.position && (
-                                <span className="text-xs text-gray-600">• {relationship.position}</span>
-                              )}
-                            </div>
+                            <Badge className={displayProps.color} variant="outline">
+                              {displayProps.label}
+                            </Badge>
+                            {relationship.position && (
+                              <span className="text-xs text-gray-600">• {relationship.position}</span>
+                            )}
                           </>
                         ) : (
-                          <Badge className={displayProps.color} variant="outline">
-                            {displayProps.label}
-                          </Badge>
+                          <>
+                            <div className="animate-pulse bg-gray-200 h-4 w-24 rounded"></div>
+                            <Badge className={displayProps.color} variant="outline">
+                              {displayProps.label}
+                            </Badge>
+                          </>
                         )}
                       </div>
                     </div>
@@ -367,11 +644,20 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={onManageRelationships}
-                  className="text-blue-600"
+                  onClick={() => setShowAllRelationships(!showAllRelationships)}
+                  className="text-blue-600 hover:bg-blue-50"
                 >
-                  <Eye className="h-4 w-4 mr-2" />
-                  Προβολή όλων ({relationships.length - 3} ακόμα)
+                  {showAllRelationships ? (
+                    <>
+                      <ChevronUp className="h-4 w-4 mr-2" />
+                      Προβολή λίγων
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="h-4 w-4 mr-2" />
+                      Προβολή όλων ({relationships.length - 3} ακόμα)
+                    </>
+                  )}
                 </Button>
               </div>
             )}
@@ -435,21 +721,51 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
               <span>Σχέσεις Επαφής</span>
               <TrendingUp className="h-4 w-4 text-green-500" />
             </div>
-            {!readonly && onManageRelationships && (
+            <div className="flex space-x-2">
               <Button
-                onClick={onManageRelationships}
+                onClick={refreshRelationships}
                 size="sm"
                 variant="outline"
+                className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                disabled={relationshipsLoading}
+                title="🔄 DEBUG: Ανανέωση σχέσεων (Κρυφό για testing)"
               >
-                <Settings className="h-4 w-4 mr-2" />
-                Διαχείριση
+                🔄
               </Button>
-            )}
+              {!readonly && onManageRelationships && (
+                <Button
+                  onClick={onManageRelationships}
+                  size="sm"
+                  variant="outline"
+                >
+                  <Settings className="h-4 w-4 mr-2" />
+                  Διαχείριση
+                </Button>
+              )}
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent>
           {/* Statistics */}
           {renderStatistics()}
+
+          {/* Organization Tree (για companies/services) */}
+          {shouldShowTree && (
+            <div className="mt-6 mb-6">
+              <div className="flex items-center space-x-2 mb-4">
+                <Building2 className="h-5 w-5 text-blue-600" />
+                <h4 className="text-sm font-medium text-gray-900">Οργανωτικό Διάγραμμα</h4>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-4 border">
+                <OrganizationTree
+                  tree={organizationTree}
+                  loading={treeLoading}
+                  error={treeError}
+                  readonly={readonly}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Recent relationships */}
           {renderRecentRelationships()}

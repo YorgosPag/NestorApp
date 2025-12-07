@@ -15,6 +15,8 @@ import type {
 } from '@/types/contacts/relationships';
 import type { ContactType } from '@/types/contacts';
 import { ContactRelationshipService } from '@/services/contact-relationships/ContactRelationshipService';
+import { ContactsService } from '@/services/contacts.service';
+import { RelationshipValidationService } from '@/services/contact-relationships/core/RelationshipValidationService';
 import type {
   RelationshipFormData,
   UseRelationshipFormReturn
@@ -69,9 +71,9 @@ export const useRelationshipForm = (
   // ============================================================================
 
   /**
-   * 🔍 Validate form data before submission
+   * 🔍 Validate form data before submission using centralized validation service
    */
-  const validateFormData = useCallback((): string | null => {
+  const validateFormData = async (): Promise<string | null> => {
     if (!contactId || contactId === 'new-contact') {
       return 'Αποθηκεύστε πρώτα την επαφή για να προσθέσετε σχέσεις';
     }
@@ -84,8 +86,80 @@ export const useRelationshipForm = (
       return 'Παρακαλώ επιλέξτε τύπο σχέσης';
     }
 
+    // 🏢 Business Logic Validation using CENTRALIZED RelationshipValidationService
+    try {
+      console.log('🚨 VALIDATION: Starting centralized business rule validation', {
+        targetContactId: formData.targetContactId,
+        relationshipType: formData.relationshipType,
+        sourceContactId: contactId
+      });
+
+      // Get both contacts for validation
+      const [sourceContact, targetContact] = await Promise.all([
+        ContactsService.getContact(contactId),
+        ContactsService.getContact(formData.targetContactId)
+      ]);
+
+      if (!targetContact) {
+        return 'Η επιλεγμένη επαφή δεν βρέθηκε';
+      }
+
+      if (!sourceContact) {
+        return 'Σφάλμα φόρτωσης της επαφής προέλευσης';
+      }
+
+      // 🔧 FIX: Contact object uses 'type' field, not 'contactType'
+      const sourceType = sourceContact.type || sourceContact.contactType;
+      const targetType = (targetContact as any).type || targetContact.contactType;
+
+      console.log('🚨 VALIDATION: Contact details for centralized validation:', {
+        source: {
+          id: sourceContact.id,
+          type: sourceType,
+          name: sourceContact.name || sourceContact.companyName
+        },
+        target: {
+          id: targetContact.id,
+          type: targetType,
+          name: targetContact.name || targetContact.companyName
+        },
+        relationshipType: formData.relationshipType
+      });
+
+      // For employment relationships, the employee should be source, company should be target
+      // So we need to swap the validation parameters
+      const isEmploymentRelation = ['employee', 'manager', 'director', 'executive'].includes(formData.relationshipType);
+
+      if (isEmploymentRelation) {
+        // Employee = target contact, Company = source contact (current contact being viewed)
+        RelationshipValidationService.validateBusinessRules(
+          targetType,
+          sourceType,
+          formData.relationshipType
+        );
+      } else {
+        // For non-employment relationships, use normal order
+        RelationshipValidationService.validateBusinessRules(
+          sourceType,
+          targetType,
+          formData.relationshipType
+        );
+      }
+
+    } catch (error) {
+      console.error('❌ CENTRALIZED VALIDATION: Validation failed:', error);
+
+      if (error instanceof Error) {
+        // Return the validation error message directly
+        return error.message;
+      }
+
+      return 'Σφάλμα ελέγχου επαφής. Παρακαλώ δοκιμάστε ξανά.';
+    }
+
+    console.log('✅ CENTRALIZED VALIDATION: All business rules passed, relationship is valid');
     return null; // Valid
-  }, [contactId, formData.targetContactId, formData.relationshipType]);
+  };
 
   // ============================================================================
   // FORM OPERATIONS
@@ -108,7 +182,7 @@ export const useRelationshipForm = (
       setSuccessMessage(null);
 
       // Validate form data
-      const validationError = validateFormData();
+      const validationError = await validateFormData();
       if (validationError) {
         setError(validationError);
         return;

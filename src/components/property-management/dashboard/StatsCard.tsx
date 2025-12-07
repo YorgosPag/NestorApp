@@ -18,7 +18,11 @@ export function StatsCard({ title, value, icon: Icon, color, onClick }: StatsCar
         green: 'border-green-200 bg-green-50/50 dark:bg-green-950/20 text-green-600 dark:text-green-400',
         purple: 'border-purple-200 bg-purple-50/50 dark:bg-purple-950/20 text-purple-600 dark:text-purple-400',
         red: 'border-red-200 bg-red-50/50 dark:bg-red-950/20 text-red-600 dark:text-red-400',
-        orange: 'border-orange-200 bg-orange-50/50 dark:bg-orange-950/20 text-orange-600 dark:text-orange-400'
+        orange: 'border-orange-200 bg-orange-50/50 dark:bg-orange-950/20 text-orange-600 dark:text-orange-400',
+        cyan: 'border-cyan-200 bg-cyan-50/50 dark:bg-cyan-950/20 text-cyan-600 dark:text-cyan-400',
+        pink: 'border-pink-200 bg-pink-50/50 dark:bg-pink-950/20 text-pink-600 dark:text-pink-400',
+        yellow: 'border-yellow-200 bg-yellow-50/50 dark:bg-yellow-950/20 text-yellow-600 dark:text-yellow-400',
+        indigo: 'border-indigo-200 bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400'
     };
 
     const valueColorClasses = {
@@ -27,7 +31,11 @@ export function StatsCard({ title, value, icon: Icon, color, onClick }: StatsCar
         green: 'text-green-700 dark:text-green-300',
         purple: 'text-purple-700 dark:text-purple-300',
         red: 'text-red-700 dark:text-red-300',
-        orange: 'text-orange-700 dark:text-orange-300'
+        orange: 'text-orange-700 dark:text-orange-300',
+        cyan: 'text-cyan-700 dark:text-cyan-300',
+        pink: 'text-pink-700 dark:text-pink-300',
+        yellow: 'text-yellow-700 dark:text-yellow-300',
+        indigo: 'text-indigo-700 dark:text-indigo-300'
     };
 
     const iconColorClasses = {
@@ -36,7 +44,11 @@ export function StatsCard({ title, value, icon: Icon, color, onClick }: StatsCar
         green: 'text-green-500',
         purple: 'text-purple-500',
         red: 'text-red-500',
-        orange: 'text-orange-500'
+        orange: 'text-orange-500',
+        cyan: 'text-cyan-500',
+        pink: 'text-pink-500',
+        yellow: 'text-yellow-500',
+        indigo: 'text-indigo-500'
     };
     
     const colorKey = color as keyof typeof colorClasses;

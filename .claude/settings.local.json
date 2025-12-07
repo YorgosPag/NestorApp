@@ -118,7 +118,8 @@
       "Bash(del C:Nestor_Pagonislocalhost.log)",
       "Bash(git rm:*)",
       "Bash(SKIP_ENV_VALIDATION=true PORT=3002 npm run dev)",
-      "Bash(SKIP_ENV_VALIDATION=true PORT=3005 npm run dev)"
+      "Bash(SKIP_ENV_VALIDATION=true PORT=3005 npm run dev)",
+      "Bash(SKIP_ENV_VALIDATION=true PORT=3006 npm run dev)"
     ],
     "deny": [],
     "ask": []

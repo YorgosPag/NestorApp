@@ -12,10 +12,7 @@
 
 import {
   ContactRelationship,
-  RelationshipType,
-  isEmploymentRelationship,
-  isOwnershipRelationship,
-  isGovernmentRelationship
+  RelationshipType
 } from '@/types/contacts/relationships';
 import { Contact, ContactType } from '@/types/contacts';
 
@@ -127,25 +124,32 @@ export class RelationshipValidationService {
   }
 
   /**
-   * 🎯 Validate Business Rules
+   * 🎯 Validate Business Rules - Simplified to avoid circular dependencies
    *
    * Validates business-specific rules για relationship creation
    */
-  static async validateBusinessRules(
-    source: Contact,
-    target: Contact,
+  static validateBusinessRules(
+    sourceType: string,
+    targetType: string,
     relationshipType: RelationshipType
-  ): Promise<void> {
+  ): void {
+    // Employment relationship types
+    const employmentTypes = ['employee', 'manager', 'director', 'executive', 'intern', 'contractor', 'civil_servant', 'department_head', 'ministry_official'];
+    const isEmployment = employmentTypes.includes(relationshipType);
+
+    // Government relationship types
+    const governmentTypes = ['civil_servant', 'elected_official', 'appointed_official', 'department_head', 'ministry_official', 'mayor', 'deputy_mayor', 'regional_governor'];
+    const isGovernment = governmentTypes.includes(relationshipType);
+
     // Individual can't be an employee of another individual
-    if (source.type === 'individual' && target.type === 'individual' &&
-        ['employee', 'manager', 'director'].includes(relationshipType)) {
+    if (sourceType === 'individual' && targetType === 'individual' && isEmployment) {
       throw new InvalidRelationshipError(
         'Individual cannot have employment relationship with another individual'
       );
     }
 
     // Service contacts can only have government-related relationships
-    if (target.type === 'service' && !isGovernmentRelationship({ relationshipType } as ContactRelationship)) {
+    if (targetType === 'service' && !isGovernment) {
       // Allow some general relationships για services
       const allowedForServices = ['representative', 'advisor', 'consultant', 'client'];
       if (!allowedForServices.includes(relationshipType)) {
@@ -156,15 +160,30 @@ export class RelationshipValidationService {
     }
 
     // Company ownership validation
-    if (relationshipType === 'shareholder' && target.type !== 'company') {
+    if (relationshipType === 'shareholder' && targetType !== 'company') {
       throw new InvalidRelationshipError(
         'Shareholder relationships can only be created with companies'
       );
     }
 
     // Employment relationship validation
-    if (isEmploymentRelationship({ relationshipType } as ContactRelationship)) {
-      if (target.type === 'individual') {
+    if (isEmployment) {
+      // Company cannot be employee of another company
+      if (sourceType === 'company') {
+        throw new InvalidRelationshipError(
+          'Μία εταιρεία δεν μπορεί να είναι εργαζόμενη σε άλλη εταιρεία. Επιλέξτε άλλο τύπο σχέσης (π.χ. Σύμβουλος, Συνεργάτης).'
+        );
+      }
+
+      // Service cannot be employee of company
+      if (sourceType === 'service') {
+        throw new InvalidRelationshipError(
+          'Μία υπηρεσία δεν μπορεί να είναι εργαζόμενη σε εταιρεία. Επιλέξτε άλλο τύπο σχέσης (π.χ. Σύμβουλος, Προμηθευτής).'
+        );
+      }
+
+      // Original rule: Employment relationships require a company or service as target
+      if (targetType === 'individual') {
         throw new InvalidRelationshipError(
           'Employment relationships require a company or service as target'
         );
@@ -172,8 +191,8 @@ export class RelationshipValidationService {
     }
 
     // Government relationship validation
-    if (isGovernmentRelationship({ relationshipType } as ContactRelationship)) {
-      if (target.type !== 'service') {
+    if (isGovernment) {
+      if (targetType !== 'service') {
         throw new InvalidRelationshipError(
           'Government relationships can only be created with public services'
         );

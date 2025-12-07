@@ -7,7 +7,7 @@ interface DashboardStat {
   title: string;
   value: string | number;
   icon: React.ElementType;
-  color: 'blue' | 'green' | 'purple' | 'orange' | 'cyan' | 'pink' | 'gray' | 'red';
+  color: 'blue' | 'green' | 'purple' | 'orange' | 'cyan' | 'pink' | 'gray' | 'red' | 'yellow' | 'indigo';
 }
 
 interface UnifiedDashboardProps {
@@ -29,6 +29,7 @@ export function UnifiedDashboard({
   // Dynamic grid class based on columns
   const getGridClass = (cols: number) => {
     switch (cols) {
+      case 4: return "grid-cols-2 md:grid-cols-4 lg:grid-cols-4"; // 🔥 NEW: 4 columns layout (2 rows of 4)
       case 5: return "grid-cols-1 md:grid-cols-2 lg:grid-cols-5";
       case 6: return "grid-cols-2 md:grid-cols-3 lg:grid-cols-6";
       default: return "grid-cols-2 md:grid-cols-3 lg:grid-cols-6";

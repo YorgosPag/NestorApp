@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { Contact } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts';
@@ -13,6 +14,14 @@ import {
   Landmark,
   Activity,
   UserPlus,
+  X,
+  Filter,
+  BrainCircuit,
+  TrendingUp,
+  Crown,
+  Calendar,
+  Star,
+  Briefcase,
 } from 'lucide-react';
 import { ContactsList } from './list/ContactsList';
 import { ContactDetails } from './details/ContactDetails';
@@ -72,6 +81,10 @@ const SEED_CONTACTS = [
 ];
 
 export function ContactsPageContent() {
+  // URL parameters
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
   // Database state
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -172,6 +185,25 @@ export function ContactsPageContent() {
   useEffect(() => {
     loadContacts();
   }, []); // 🔧 FIX: Removed loadContacts to prevent infinite loop - load once on mount
+
+  // 🎯 URL FILTERING: Read filter parameter from URL and apply to search
+  useEffect(() => {
+    const filterParam = searchParams.get('filter');
+    if (filterParam) {
+      console.log('🔍 FILTERING: Applying URL filter:', filterParam);
+      setSearchTerm(decodeURIComponent(filterParam));
+      // Καθαρίσαμε και άλλα φίλτρα για να εστιάσουμε στο όνομα
+      setActiveCardFilter(null);
+    }
+  }, [searchParams]);
+
+  // 🧹 CLEAR FILTER: Function για καθάρισμα του URL filter
+  const handleClearURLFilter = () => {
+    console.log('🧹 FILTERING: Clearing URL filter');
+    setSearchTerm('');
+    // Navigate back to contacts without filter parameter
+    router.push('/contacts');
+  };
 
   // 🔥 ENTERPRISE CACHE INVALIDATION: Global event listener
   useEffect(() => {
@@ -315,25 +347,31 @@ export function ContactsPageContent() {
     // 🔥 NEW: Dashboard card filtering (highest priority)
     if (activeCardFilter) {
       switch (activeCardFilter) {
-        case 'Σύνολο':
+        case 'Σύνολο Επαφών':
           // Show all contacts - no additional filtering needed
           break;
-        case 'Φυσικά Πρόσωπα':
+        case 'Σύνολο Προσωπικού':
           if (contact.type !== 'individual') return false;
           break;
         case 'Νομικά Πρόσωπα':
           if (contact.type !== 'company') return false;
           break;
+        case 'Ενεργές Επαφές':
+          if ((contact as any).status === 'inactive') return false;
+          break;
         case 'Υπηρεσίες':
           if (contact.type !== 'service') return false;
           break;
-        case 'Ενεργές':
-          if ((contact as any).status !== 'active') return false;
-          break;
-        case 'Νέες (Μήνας)':
+        case 'Πρόσφατες Προσθήκες':
           const oneMonthAgo = new Date();
           oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
           if (!contact.createdAt || new Date(contact.createdAt) <= oneMonthAgo) return false;
+          break;
+        case 'Αγαπημένες':
+          if (!contact.isFavorite) return false;
+          break;
+        case 'Επαφές με Σχέσεις':
+          if (contact.type === 'service') return false;
           break;
       }
     }
@@ -378,18 +416,23 @@ export function ContactsPageContent() {
     return true;
   });
 
-  // Transform stats to UnifiedDashboard format
+  // 📊 Enhanced Dashboard Stats (8 κάρτες σε 4+4 layout)
   const dashboardStats: DashboardStat[] = [
+    // 🔝 Πάνω σειρά (4 κάρτες) - Βασικά Στοιχεία
     {
-      title: "Σύνολο",
+      title: "Σύνολο Επαφών",
       value: contacts.length,
       icon: Users,
       color: "blue"
     },
     {
-      title: "Φυσικά Πρόσωπα",
-      value: contacts.filter(c => c.type === 'individual').length,
-      icon: Users,
+      title: "Σύνολο Προσωπικού",
+      value: contacts.filter((c: any) =>
+        // Count all relationships where someone is an employee
+        // This is a placeholder - will be enhanced with relationship data
+        c.type === 'individual'
+      ).length,
+      icon: Briefcase,
       color: "green"
     },
     {
@@ -399,26 +442,44 @@ export function ContactsPageContent() {
       color: "purple"
     },
     {
+      title: "Ενεργές Επαφές",
+      value: contacts.filter((c: any) => c.status === 'active' || !c.status).length,
+      icon: Activity,
+      color: "cyan"
+    },
+
+    // 🔽 Κάτω σειρά (4 κάρτες) - Λεπτομέρειες
+    {
       title: "Υπηρεσίες",
       value: contacts.filter(c => c.type === 'service').length,
       icon: Landmark,
       color: "orange"
     },
     {
-      title: "Ενεργές",
-      value: contacts.filter((c: any) => c.status === 'active').length,
-      icon: Activity,
-      color: "cyan"
-    },
-    {
-      title: "Νέες (Μήνας)",
+      title: "Πρόσφατες Προσθήκες",
       value: contacts.filter(c => {
         const oneMonthAgo = new Date();
         oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
         return c.createdAt && new Date(c.createdAt) > oneMonthAgo;
       }).length,
-      icon: UserPlus,
+      icon: Calendar,
       color: "pink"
+    },
+    {
+      title: "Αγαπημένες",
+      value: contacts.filter(c => c.isFavorite).length,
+      icon: Star,
+      color: "yellow"
+    },
+    {
+      title: "Επαφές με Σχέσεις",
+      value: contacts.filter(c => {
+        // This is a placeholder - will be enhanced with relationship data
+        // For now, count non-service contacts (individuals + companies that might have relationships)
+        return c.type === 'individual' || c.type === 'company';
+      }).length,
+      icon: TrendingUp,
+      color: "indigo"
     }
   ];
 
@@ -439,6 +500,39 @@ export function ContactsPageContent() {
     }
   };
 
+  // 🏷️ RENDER: Filter indicator component
+  const renderFilterIndicator = () => {
+    const filterParam = searchParams.get('filter');
+
+    if (!filterParam) return null;
+
+    const filterValue = decodeURIComponent(filterParam);
+
+    return (
+      <div className="px-4 py-2 bg-blue-50 border-b border-blue-200">
+        <div className="flex items-center justify-between max-w-full">
+          <div className="flex items-center space-x-2">
+            <Filter className="h-4 w-4 text-blue-600" />
+            <span className="text-sm text-blue-800">
+              Φιλτράρισμα για: <strong>"{filterValue}"</strong>
+            </span>
+            <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">
+              {filteredContacts.length} επαφή{filteredContacts.length !== 1 ? 'ς' : ''}
+            </span>
+          </div>
+          <button
+            onClick={handleClearURLFilter}
+            className="flex items-center space-x-1 px-2 py-1 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded transition-colors"
+            title="Εμφάνιση όλων των επαφών"
+          >
+            <X className="h-4 w-4" />
+            <span>Καθάρισμα</span>
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <TooltipProvider>
       <div className="h-full flex flex-col bg-background">
@@ -452,7 +546,10 @@ export function ContactsPageContent() {
           onNewContact={handleNewContact}
         />
 
-        {showDashboard && <UnifiedDashboard stats={dashboardStats} columns={6} onCardClick={handleCardClick} />}
+        {/* 🏷️ Filter Indicator - εμφανίζεται όταν υπάρχει URL filter */}
+        {renderFilterIndicator()}
+
+        {showDashboard && <UnifiedDashboard stats={dashboardStats} columns={4} onCardClick={handleCardClick} />}
 
         {/* Advanced Filters Panel */}
         <AdvancedFiltersPanel

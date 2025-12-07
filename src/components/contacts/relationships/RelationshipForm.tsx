@@ -9,18 +9,20 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Plus, AlertTriangle } from 'lucide-react';
 
 // 🏢 ENTERPRISE: Import centralized types and utilities
 import type { RelationshipType } from '@/types/contacts/relationships';
 import { EmployeeSelector, type ContactSummary } from './EmployeeSelector';
+import { RelationshipValidationService } from '@/services/contact-relationships/core/RelationshipValidationService';
 import {
   getRelationshipTypeConfig,
   getAvailableRelationshipTypes
@@ -50,6 +52,14 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
   onCancel
 }) => {
   // ============================================================================
+  // LOCAL STATE FOR PROACTIVE VALIDATION
+  // ============================================================================
+
+  const [selectedContact, setSelectedContact] = useState<ContactSummary | null>(null);
+  // Temporarily disabled proactive validation to fix infinite loop
+  // const [validationWarning, setValidationWarning] = useState<string | null>(null);
+
+  // ============================================================================
   // HELPER FUNCTIONS
   // ============================================================================
 
@@ -57,6 +67,15 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
    * 📋 Get available relationship types for current contact type
    */
   const availableRelationshipTypes = getAvailableRelationshipTypes(contactType);
+
+  // Temporarily disabled proactive validation to fix infinite loop
+  // Will re-implement with simpler approach later
+
+  // ============================================================================
+  // EFFECTS
+  // ============================================================================
+
+  // Temporarily disabled useEffect for proactive validation to fix infinite loop
 
   /**
    * 🎯 Handle form field changes with type safety
@@ -96,10 +115,14 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
               <EmployeeSelector
                 value={formData.targetContactId}
                 onContactSelect={(contact: ContactSummary | null) => {
+                  // Update form data
                   setFormData(prev => ({
                     ...prev,
                     targetContactId: contact?.id || ''
                   }));
+
+                  // Store contact details for validation
+                  setSelectedContact(contact);
                 }}
                 label="Επαφή*"
                 placeholder="Αναζήτηση επαφής..."
@@ -141,6 +164,8 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Temporarily disabled proactive validation warning to fix infinite loop */}
 
             {/* Position Field */}
             <div>
@@ -215,6 +240,16 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
               />
             </div>
           </div>
+
+          {/* Backend Validation Error Display */}
+          {error && (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription className="font-medium">
+                {error}
+              </AlertDescription>
+            </Alert>
+          )}
 
           {/* Form Actions */}
           <div className="flex justify-end space-x-2">
