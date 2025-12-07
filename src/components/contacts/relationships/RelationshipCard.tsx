@@ -28,6 +28,7 @@ import {
 // 🏢 ENTERPRISE: Import centralized utilities
 import { getRelationshipDisplayProps } from './utils/relationship-types';
 import type { RelationshipCardProps } from './types/relationship-manager.types';
+import { useContactName } from './hooks/useContactName';
 
 /**
  * 🃏 RelationshipCard Component
@@ -49,6 +50,12 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
   onEdit,
   onDelete
 }) => {
+  // ============================================================================
+  // 🏢 ENTERPRISE: Use centralized contact name hook
+  // ============================================================================
+
+  const { contactName } = useContactName(relationship.targetContactId);
+
   // ============================================================================
   // COMPUTED VALUES
   // ============================================================================
@@ -86,14 +93,31 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
             {/* Relationship Icon */}
             <Icon className="h-5 w-5 text-gray-600" />
 
-            {/* Relationship Info */}
+            {/* Relationship Info - Contact name and relationship type */}
             <div>
-              <Badge className={displayProps.color}>
-                {displayProps.label}
-              </Badge>
-              {relationship.position && (
-                <p className="text-sm text-gray-600 mt-1">{relationship.position}</p>
-              )}
+              {/* Contact name and relationship type - σε μία σειρά */}
+              <div className="flex items-center gap-2">
+                {contactName ? (
+                  <>
+                    <span className="text-sm font-medium text-gray-900">
+                      {contactName}
+                    </span>
+                    <Badge className={displayProps.color} variant="outline">
+                      {displayProps.label}
+                    </Badge>
+                    {relationship.position && (
+                      <span className="text-xs text-gray-600">• {relationship.position}</span>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div className="animate-pulse bg-gray-200 h-4 w-24 rounded"></div>
+                    <Badge className={displayProps.color} variant="outline">
+                      {displayProps.label}
+                    </Badge>
+                  </>
+                )}
+              </div>
             </div>
           </div>
 
@@ -214,10 +238,18 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
 
             {/* Relationship Metadata */}
             <div className="md:col-span-2 text-xs text-gray-400 border-t pt-2">
-              <span>Δημιουργήθηκε: {new Date(relationship.createdAt || '').toLocaleDateString('el-GR')}</span>
+              <span>
+                Δημιουργήθηκε: {
+                  relationship.createdAt
+                    ? new Date(relationship.createdAt.seconds ? relationship.createdAt.seconds * 1000 : relationship.createdAt).toLocaleDateString('el-GR')
+                    : 'Πρόσφατα'
+                }
+              </span>
               {relationship.updatedAt && relationship.updatedAt !== relationship.createdAt && (
                 <span className="ml-4">
-                  Ενημερώθηκε: {new Date(relationship.updatedAt).toLocaleDateString('el-GR')}
+                  Ενημερώθηκε: {
+                    new Date(relationship.updatedAt.seconds ? relationship.updatedAt.seconds * 1000 : relationship.updatedAt).toLocaleDateString('el-GR')
+                  }
                 </span>
               )}
             </div>

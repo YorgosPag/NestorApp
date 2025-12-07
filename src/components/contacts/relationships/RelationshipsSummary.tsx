@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { UnifiedDashboard, type DashboardStat } from '@/core/dashboards/UnifiedDashboard';
+import { useContactNames } from './hooks/useContactNames';
 import {
   Users,
   Building2,
@@ -102,83 +103,18 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
   // ============================================================================
 
   const [showAllRelationships, setShowAllRelationships] = useState(false);
-  const [contactNames, setContactNames] = useState<Record<string, string>>({});
+
+  // ============================================================================
+  // 🏢 ENTERPRISE: Use centralized contact names hook
+  // ============================================================================
+
+  const { contactNames } = useContactNames(relationships, contactId);
 
   // ============================================================================
   // EFFECTS
   // ============================================================================
 
-  // Fetch contact names για relationships
-  useEffect(() => {
-    const fetchContactNames = async () => {
-      if (relationships.length === 0) return;
-
-      console.log('🔍 RELATIONSHIPS: Fetching contact names for relationships:', relationships.length);
-      console.log('🔍 RELATIONSHIPS: Current contactId:', contactId);
-
-      const names: Record<string, string> = {};
-
-      // Φέρνω τα contact names για κάθε relationship
-      for (const relationship of relationships) {
-        // Για κάθε relationship, φέρνω το target contact (την άλλη επαφή)
-        const targetContactId = relationship.targetContactId === contactId
-          ? relationship.sourceContactId  // Αν είμαι target, φέρνω το source
-          : relationship.targetContactId; // Αν είμαι source, φέρνω το target
-
-        console.log('🔍 RELATIONSHIPS: Processing relationship:', {
-          id: relationship.id,
-          sourceId: relationship.sourceContactId,
-          targetId: relationship.targetContactId,
-          type: relationship.relationshipType,
-          resolvedTargetId: targetContactId
-        });
-
-        if (!names[targetContactId]) {
-          try {
-            console.log('🔍 RELATIONSHIPS: Fetching contact for ID:', targetContactId);
-            const contact = await ContactsService.getContact(targetContactId);
-            if (contact) {
-              console.log('🔍 RELATIONSHIPS: Contact object structure:', contact);
-
-              // Try different name fields με προτεραιότητα στο πλήρες όνομα
-              let contactName = 'Άγνωστη Επαφή';
-
-              if (contact.name) {
-                // Primary name field (πλήρες όνομα)
-                contactName = contact.name;
-              } else if (contact.firstName && contact.lastName) {
-                // Συνδυασμός ονόματος και επωνύμου
-                contactName = `${contact.firstName} ${contact.lastName}`;
-              } else if (contact.companyName) {
-                // Company name
-                contactName = contact.companyName;
-              } else if (contact.serviceName) {
-                // Service name
-                contactName = contact.serviceName;
-              } else if (contact.firstName) {
-                // Μόνο το όνομα αν δεν υπάρχει επώνυμο
-                contactName = contact.firstName;
-              }
-
-              names[targetContactId] = contactName;
-              console.log('✅ RELATIONSHIPS: Found contact:', contactName);
-            } else {
-              console.warn('⚠️ RELATIONSHIPS: Contact not found for ID:', targetContactId);
-              names[targetContactId] = 'Άγνωστη Επαφή';
-            }
-          } catch (error) {
-            console.error('❌ RELATIONSHIPS: Failed to fetch contact name:', targetContactId, error);
-            names[targetContactId] = 'Άγνωστη Επαφή';
-          }
-        }
-      }
-
-      console.log('✅ RELATIONSHIPS: Final contact names:', names);
-      setContactNames(names);
-    };
-
-    fetchContactNames();
-  }, [relationships, contactId]);
+  // 🏢 ENTERPRISE: Contact names are now handled by centralized useContactNames hook
 
   // ============================================================================
   // HANDLERS
@@ -478,11 +414,53 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
       ).map(r => ({ type: r.relationshipType, position: r.position }))
     });
 
+    // 🐛 DEBUG: Recent relationships calculation με enhanced logging
+    console.log('🔍 DEBUG RELATIONSHIPS DATA:', relationships.map(rel => ({
+      id: rel.id,
+      type: rel.relationshipType,
+      createdAt: rel.createdAt,
+      createdAtType: typeof rel.createdAt,
+      department: rel.department,
+      departmentType: typeof rel.department
+    })));
+
     const recentRelationshipsCount = relationships.filter(rel => {
+      console.log('🔍 RECENT CHECK:', {
+        id: rel.id,
+        createdAt: rel.createdAt,
+        createdAtExists: !!rel.createdAt,
+        createdAtType: typeof rel.createdAt
+      });
+
       if (!rel.createdAt) return false;
+
       const oneMonthAgo = new Date();
       oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-      return new Date(rel.createdAt) > oneMonthAgo;
+
+      let relCreatedAt: Date;
+
+      // Handle different createdAt formats (Firestore timestamp vs string)
+      if (typeof rel.createdAt === 'string') {
+        relCreatedAt = new Date(rel.createdAt);
+      } else if (rel.createdAt && typeof rel.createdAt === 'object' && 'toDate' in rel.createdAt) {
+        // Firestore Timestamp object
+        relCreatedAt = rel.createdAt.toDate();
+      } else if (rel.createdAt instanceof Date) {
+        relCreatedAt = rel.createdAt;
+      } else {
+        console.warn('❌ RECENT: Unknown createdAt format:', rel.createdAt);
+        return false;
+      }
+
+      const isRecent = relCreatedAt > oneMonthAgo;
+      console.log('🔍 RECENT RESULT:', {
+        id: rel.id,
+        relCreatedAt: relCreatedAt.toISOString(),
+        oneMonthAgo: oneMonthAgo.toISOString(),
+        isRecent
+      });
+
+      return isRecent;
     }).length;
 
     const keyRelationshipsCount = relationships.filter(rel =>
@@ -491,11 +469,28 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
       rel.relationshipType === 'partner'
     ).length;
 
+    // 🐛 DEBUG: Departments calculation με enhanced filtering
+    const departmentsWithData = relationships.filter(rel => {
+      const hasDept = !!(rel.department && rel.department.trim());
+      console.log('🔍 DEPT CHECK:', {
+        id: rel.id,
+        department: rel.department,
+        departmentTrimmed: rel.department?.trim(),
+        hasDept,
+        type: rel.relationshipType
+      });
+      return hasDept;
+    });
+
     const departmentsCount = new Set(
-      relationships
-        .filter(rel => rel.department)
-        .map(rel => rel.department)
+      departmentsWithData.map(rel => rel.department.trim())
     ).size;
+
+    console.log('🔍 DEPARTMENTS FINAL:', {
+      departmentsWithData: departmentsWithData.length,
+      uniqueDepartments: Array.from(new Set(departmentsWithData.map(rel => rel.department.trim()))),
+      departmentsCount
+    });
 
     // 🏢 Create centralized dashboard stats array
     const relationshipDashboardStats: DashboardStat[] = [
@@ -626,14 +621,26 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
                     </div>
                   </div>
                   <div className="text-xs text-gray-400">
-                    {relationship.createdAt ?
-                      new Date(relationship.createdAt).toLocaleDateString('el-GR', {
+                    {relationship.createdAt ? (() => {
+                      // Handle Firestore timestamp format
+                      let date;
+                      if (relationship.createdAt.seconds) {
+                        // Firestore Timestamp {seconds: number, nanoseconds: number}
+                        date = new Date(relationship.createdAt.seconds * 1000);
+                      } else if (typeof relationship.createdAt === 'object' && 'toDate' in relationship.createdAt) {
+                        // Firestore Timestamp with toDate() method
+                        date = relationship.createdAt.toDate();
+                      } else {
+                        // Regular Date string/object
+                        date = new Date(relationship.createdAt);
+                      }
+
+                      return date.toLocaleDateString('el-GR', {
                         year: 'numeric',
                         month: '2-digit',
                         day: '2-digit'
-                      }) :
-                      'Πρόσφατα'
-                    }
+                      });
+                    })() : 'Πρόσφατα'}
                   </div>
                 </div>
               );

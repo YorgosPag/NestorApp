@@ -146,6 +146,31 @@ export const useRelationshipForm = (
         );
       }
 
+      // 🔍 DUPLICATE VALIDATION: Check for same contact - same relationship type
+      console.log('🚨 DUPLICATE VALIDATION: Checking for duplicate relationships...');
+
+      try {
+        // Fetch existing relationships for this contact to check for duplicates
+        const existingRelationships = await ContactRelationshipService.getContactRelationships(contactId);
+
+        RelationshipValidationService.validateSameContactSameType(
+          existingRelationships,
+          formData.targetContactId,
+          formData.relationshipType,
+          editingId // Exclude current relationship if editing
+        );
+
+        console.log('✅ DUPLICATE VALIDATION: No duplicates found');
+      } catch (duplicateError) {
+        console.error('❌ DUPLICATE VALIDATION: Duplicate relationship detected:', duplicateError);
+
+        if (duplicateError instanceof Error) {
+          return duplicateError.message;
+        }
+
+        return 'Η σχέση υπάρχει ήδη. Παρακαλώ επιλέξτε διαφορετικό τύπο σχέσης ή επαφή.';
+      }
+
     } catch (error) {
       console.error('❌ CENTRALIZED VALIDATION: Validation failed:', error);
 

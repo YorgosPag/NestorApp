@@ -291,6 +291,62 @@ export class RelationshipValidationService {
     }
   }
 
+  /**
+   * 🔍 Validate Same Contact - Same Relationship Type Duplicates
+   *
+   * Prevents the same contact from being added multiple times with the same relationship type.
+   * E.g., prevents the same person from being "Employee" twice, or same company from being "Consultant" twice.
+   *
+   * @param existingRelationships - Array of existing relationships for the source contact
+   * @param targetContactId - The target contact ID to check
+   * @param relationshipType - The relationship type to check
+   * @param editingId - Optional ID of relationship being edited (to exclude from duplicate check)
+   */
+  static validateSameContactSameType(
+    existingRelationships: ContactRelationship[],
+    targetContactId: string,
+    relationshipType: RelationshipType,
+    editingId?: string
+  ): void {
+    // Check if the same contact already has the same relationship type
+    const duplicate = existingRelationships.find(rel =>
+      rel.id !== editingId && // Exclude the relationship being edited
+      (rel.sourceContactId === targetContactId || rel.targetContactId === targetContactId) &&
+      rel.relationshipType === relationshipType
+    );
+
+    if (duplicate) {
+      throw new DuplicateRelationshipError(
+        `Αυτή η επαφή έχει ήδη δηλωθεί ως "${this.getRelationshipTypeLabel(relationshipType)}". ` +
+        `Δεν μπορείτε να προσθέσετε την ίδια επαφή με τον ίδιο τύπο σχέσης δύο φορές.`
+      );
+    }
+  }
+
+  /**
+   * 🏷️ Get Greek label for relationship type (for error messages)
+   */
+  private static getRelationshipTypeLabel(relationshipType: RelationshipType): string {
+    const labels: Record<RelationshipType, string> = {
+      'employee': 'Εργαζόμενος',
+      'manager': 'Διευθυντής',
+      'director': 'Διευθυντής',
+      'executive': 'Στέλεχος',
+      'consultant': 'Σύμβουλος',
+      'partner': 'Εταίρος',
+      'client': 'Πελάτης',
+      'supplier': 'Προμηθευτής',
+      'contractor': 'Ανάδοχος',
+      'shareholder': 'Μέτοχος',
+      'board_member': 'Μέλος ΔΣ',
+      'advisor': 'Σύμβουλος',
+      'investor': 'Επενδυτής',
+      'ceo': 'Διευθύνων Σύμβουλος',
+      'chairman': 'Πρόεδρος'
+    };
+    return labels[relationshipType] || relationshipType;
+  }
+
   // ========================================================================
   // HELPER VALIDATION METHODS
   // ========================================================================
