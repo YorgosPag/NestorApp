@@ -100,9 +100,19 @@
   * {
     @apply border-border;
   }
+  html {
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100%;
+  }
+
   body {
     @apply bg-background text-foreground;
     font-feature-settings: 'rlig' 1, 'calt' 1;
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100%;
+    position: relative;
   }
 }
 
@@ -130,4 +140,50 @@
 [data-dropdown-contact-item="true"][class*="bg-blue"] {
   background-color: #dbeafe !important; /* Force blue-100 */
   background: #dbeafe !important;
+}
+
+/* 🔥 UNIVERSAL MOBILE OVERFLOW PROTECTION */
+@layer utilities {
+  /* Force all containers to respect viewport boundaries */
+  * {
+    box-sizing: border-box;
+  }
+
+  /* Prevent horizontal overflow on mobile */
+  .container,
+  [class*="container"],
+  header,
+  main,
+  section,
+  div {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* Mobile-specific fixes */
+  @media (max-width: 640px) {
+    /* Force all flex containers to wrap and constrain */
+    .flex {
+      max-width: 100% !important;
+      overflow-x: hidden !important;
+    }
+
+    /* Force all grid containers to fit viewport */
+    .grid {
+      max-width: 100% !important;
+      overflow-x: hidden !important;
+    }
+
+    /* Constrain all text elements */
+    h1, h2, h3, h4, h5, h6, p, span, div {
+      max-width: 100% !important;
+      word-wrap: break-word !important;
+      overflow-wrap: break-word !important;
+    }
+
+    /* Force sidebar to hide on mobile if needed */
+    [data-sidebar] {
+      max-width: 100vw !important;
+    }
+  }
 }

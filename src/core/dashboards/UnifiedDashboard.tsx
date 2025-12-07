@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { StatsCard } from '@/components/property-management/dashboard/StatsCard';
 
 interface DashboardStat {
@@ -26,19 +26,42 @@ export function UnifiedDashboard({
   onCardClick
 }: UnifiedDashboardProps) {
 
-  // Dynamic grid class based on columns
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Dynamic grid class based on columns - Mobile-First Responsive
   const getGridClass = (cols: number) => {
     switch (cols) {
-      case 4: return "grid-cols-2 md:grid-cols-4 lg:grid-cols-4"; // 🔥 NEW: 4 columns layout (2 rows of 4)
-      case 5: return "grid-cols-1 md:grid-cols-2 lg:grid-cols-5";
-      case 6: return "grid-cols-2 md:grid-cols-3 lg:grid-cols-6";
-      default: return "grid-cols-2 md:grid-cols-3 lg:grid-cols-6";
+      case 4: return "sm:grid-cols-2 lg:grid-cols-4"; // 🔥 MOBILE: 2 on small, 4 on large
+      case 5: return "sm:grid-cols-3 lg:grid-cols-5"; // 🔥 MOBILE: 3, then 5
+      case 6: return "sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6"; // 🔥 MOBILE: 3→4→6
+      default: return "sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6"; // 🔥 MOBILE: 3→4→6
     }
+  };
+
+  // Get dynamic grid template columns for mobile
+  const getGridStyle = () => {
+    if (isMobile) {
+      return { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' };
+    }
+    return {};
   };
 
   return (
     <div className={className}>
-      <div className={`grid ${getGridClass(columns)} gap-4`}>
+      <div
+        className={`grid ${getGridClass(columns)} gap-1 sm:gap-4 w-full min-w-0 overflow-hidden`}
+        style={getGridStyle()}
+      >
         {stats.map((stat, index) => (
           <StatsCard
             key={`${stat.title}-${index}`}

@@ -62,7 +62,7 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
   };
 
   return (
-    <div className="px-4 pt-4 shrink-0">
+    <div className="px-1 pt-4 sm:px-4 sm:pt-4 shrink-0 w-full overflow-hidden">
       <Collapsible className="border bg-card rounded-lg">
         <CollapsibleTrigger asChild>
           <Button variant="ghost" className="w-full justify-start p-4 text-sm font-semibold">
@@ -75,7 +75,7 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
             <CardContent className="space-y-4 p-2">
               {/* Render filter rows */}
               {config.rows.map(row => (
-                <div key={row.id} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                <div key={row.id} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-1 sm:gap-4 items-end w-full min-w-0 overflow-hidden">
                   {row.fields.map(field => (
                     <FilterField
                       key={field.id}
@@ -98,7 +98,7 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
                     </Button>
                   </CollapsibleTrigger>
                   <CollapsibleContent className="mt-4 p-4 border rounded-lg bg-background animate-in fade-in-0 zoom-in-95">
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-1 sm:gap-4 w-full min-w-0 overflow-hidden">
                       {config.advancedFilters.options.map(option => (
                         <div key={option.id} className="flex items-center space-x-2">
                           <Checkbox

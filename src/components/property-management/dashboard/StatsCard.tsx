@@ -55,16 +55,16 @@ export function StatsCard({ title, value, icon: Icon, color, onClick }: StatsCar
     
     return (
         <Card
-            className={`${colorClasses[colorKey]} ${onClick ? 'cursor-pointer hover:scale-105 transition-transform duration-200 hover:shadow-md' : ''}`}
+            className={`${colorClasses[colorKey]} ${onClick ? 'cursor-pointer hover:scale-105 transition-transform duration-200 hover:shadow-md' : ''} min-w-0 max-w-full overflow-hidden`}
             onClick={onClick}
         >
-            <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <p className={`text-xs font-medium ${colorClasses[colorKey]}`}>{title}</p>
-                        <p className={`text-2xl font-bold ${valueColorClasses[colorKey]}`}>{value}</p>
+            <CardContent className="p-2 sm:p-4 min-w-0">
+                <div className="flex items-center justify-between min-w-0 max-w-full">
+                    <div className="min-w-0 flex-1 mr-1 sm:mr-2 overflow-hidden">
+                        <p className={`text-xs font-medium ${colorClasses[colorKey]} truncate leading-tight`}>{title}</p>
+                        <p className={`text-lg sm:text-xl lg:text-2xl font-bold ${valueColorClasses[colorKey]} truncate leading-tight`}>{value}</p>
                     </div>
-                    <Icon className={`h-8 w-8 ${iconColorClasses[colorKey]}`} />
+                    <Icon className={`h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 ${iconColorClasses[colorKey]} flex-shrink-0`} />
                 </div>
             </CardContent>
         </Card>

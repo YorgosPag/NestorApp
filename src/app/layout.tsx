@@ -70,11 +70,11 @@ export default function RootLayout({
                   <SharedPropertiesProvider>
                     <NavigationProvider>
                       <SidebarProvider>
-                      <div className="flex h-screen w-full overflow-hidden">
+                      <div className="flex h-screen w-full max-w-full overflow-hidden">
                         <AppSidebar />
-                        <SidebarInset className="flex flex-1 flex-col">
+                        <SidebarInset className="flex flex-1 flex-col w-full max-w-full overflow-hidden">
                           <AppHeader />
-                          <main className="flex-1 overflow-y-auto bg-background/95">
+                          <main className="flex-1 overflow-y-auto overflow-x-hidden bg-background/95 w-full max-w-full">
                               {children}
                           </main>
                         </SidebarInset>

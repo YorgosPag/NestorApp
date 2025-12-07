@@ -535,7 +535,7 @@ export function ContactsPageContent() {
 
   return (
     <TooltipProvider>
-      <div className="h-full flex flex-col bg-background">
+      <div className="h-full flex flex-col bg-background w-full overflow-hidden">
         <ContactsHeader
           viewMode={viewMode}
           setViewMode={setViewMode}
@@ -549,7 +549,16 @@ export function ContactsPageContent() {
         {/* 🏷️ Filter Indicator - εμφανίζεται όταν υπάρχει URL filter */}
         {renderFilterIndicator()}
 
-        {showDashboard && <UnifiedDashboard stats={dashboardStats} columns={4} onCardClick={handleCardClick} />}
+        {showDashboard && (
+          <div className="w-full overflow-hidden">
+            <UnifiedDashboard
+              stats={dashboardStats}
+              columns={4}
+              onCardClick={handleCardClick}
+              className="px-1 py-4 sm:px-4 sm:py-4 border-b bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 overflow-hidden"
+            />
+          </div>
+        )}
 
         {/* Advanced Filters Panel */}
         <AdvancedFiltersPanel
@@ -558,7 +567,7 @@ export function ContactsPageContent() {
           onFiltersChange={setFilters}
         />
 
-        <div className="flex-1 flex overflow-hidden p-4 gap-4">
+        <div className="flex-1 flex overflow-hidden px-1 py-4 sm:px-4 sm:py-4 gap-1 sm:gap-4">
           {error ? (
             <div className="w-full text-center p-8 bg-card rounded-lg border border-destructive/20">
               <p className="text-destructive font-medium">⚠️ {error}</p>

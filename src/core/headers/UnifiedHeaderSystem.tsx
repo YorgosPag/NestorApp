@@ -198,7 +198,7 @@ export const HeaderSearch: React.FC<HeaderSearchProps> = ({
   }, [value]);
 
   return (
-    <div className={cn("relative flex-1 min-w-[300px]", className)}>
+    <div className={cn("relative flex-1 min-w-0 w-full sm:min-w-[300px]", className)}>
       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
       <Input
         placeholder={placeholder}
@@ -221,7 +221,7 @@ export const HeaderFilters: React.FC<HeaderFiltersProps> = ({
   hasActiveFilters = false
 }) => {
   return (
-    <div className="flex flex-wrap items-center gap-4">
+    <div className="flex flex-wrap items-center gap-2 sm:gap-4 w-full">
       {/* Select Filters */}
       {filters.map((filter) => (
         <div key={filter.key} className="flex items-center gap-2">
@@ -368,7 +368,7 @@ export const HeaderActions: React.FC<HeaderActionsProps> = ({
   customActions = []
 }) => {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-center sm:justify-end">
       {/* Dashboard Toggle */}
       {onDashboardToggle && (
         <Tooltip>
@@ -435,16 +435,16 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
     floating: "rounded-lg border bg-card shadow-sm"
   };
 
-  // Spacing classes
+  // Spacing classes - UNIFIED MOBILE-FIRST SYSTEM
   const spacingClasses = {
-    tight: "p-2",
-    normal: "p-4",
-    loose: "p-6"
+    tight: "px-1 py-2 sm:px-2 sm:py-2",
+    normal: "px-1 py-4 sm:px-4 sm:py-4",
+    loose: "px-1 py-6 sm:px-6 sm:py-6"
   };
 
-  // Layout classes
+  // Layout classes with mobile-first responsive design
   const layoutClasses = {
-    'single-row': "flex items-center justify-between",
+    'single-row': "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between",
     'multi-row': "space-y-4",
     'stacked': "space-y-6"
   };
@@ -453,6 +453,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
     <div className={cn(
       variantClasses[variant],
       spacingClasses[spacing],
+      "overflow-hidden", // UNIFIED: Prevent overflow
       className
     )}>
       <div className={layoutClasses[layout]}>
@@ -469,7 +470,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         {layout === 'multi-row' && (
           <>
             {/* Top Row: Title + Actions */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <HeaderTitle {...title} />
               {actions && <HeaderActions {...actions} />}
             </div>
@@ -485,7 +486,11 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
                 )}
 
                 {/* Filters Row */}
-                {filters && <HeaderFilters {...filters} />}
+                {filters && (
+                  <div className="w-full overflow-hidden">
+                    <HeaderFilters {...filters} />
+                  </div>
+                )}
               </div>
             )}
           </>
