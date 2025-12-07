@@ -199,7 +199,7 @@ export function NotificationDrawer() {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/50 z-[9998]"
+        className="fixed inset-0 bg-black/50 z-[99998]"
         onClick={close}
       />
 
@@ -209,7 +209,7 @@ export function NotificationDrawer() {
         role="dialog"
         aria-modal="true"
         aria-labelledby="notif-title"
-        className="fixed right-0 top-0 h-screen w-[420px] bg-background shadow-xl flex flex-col z-[9999] border-l"
+        className="fixed right-0 top-0 h-screen w-[420px] bg-background shadow-xl flex flex-col z-[99999] border-l"
       >
         {/* ✅ ENTERPRISE: Live region for screen readers */}
         <div aria-live="polite" aria-atomic="true" className="sr-only">

@@ -14,7 +14,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   User,
   Settings,
@@ -39,11 +38,9 @@ export function UserMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-          <Avatar className="h-9 w-9">
-            <AvatarImage data-ai-hint="avatar man" src="https://placehold.co/40x40.png" alt="Χρήστης" />
-            <AvatarFallback>ΧΡ</AvatarFallback>
-          </Avatar>
+        <Button variant="outline" size="icon">
+          <User className="h-4 w-4" />
+          <span className="sr-only">Μενού χρήστη</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>

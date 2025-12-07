@@ -60,15 +60,15 @@ export function LanguageSwitcher() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="flex items-center gap-2"
+        <Button
+          variant="outline"
+          size="icon"
+          className="relative"
           disabled={isChanging}
         >
           <Globe className={`h-4 w-4 ${isChanging ? 'animate-spin' : ''}`} />
-          <span className="hidden sm:inline">{currentLanguage.flag} {currentLanguage.name}</span>
-          <span className="sm:hidden">{currentLanguage.flag}</span>
+          <span className="absolute -bottom-0.5 -right-0.5 text-xs leading-none">{currentLanguage.flag}</span>
+          <span className="sr-only">Αλλαγή γλώσσας - {currentLanguage.name}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">

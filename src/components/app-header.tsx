@@ -7,7 +7,6 @@ import { ThemeToggle } from "@/components/header/theme-toggle"
 import { UserMenu } from "@/components/header/user-menu"
 import { LanguageSwitcher } from "@/components/header/language-switcher"
 import { NotificationBell } from "@/components/NotificationBell.enterprise"
-import { NotificationDrawer } from "@/components/NotificationDrawer.enterprise"
 import { useFirestoreNotifications } from "@/hooks/useFirestoreNotifications"
 
 export function AppHeader() {
@@ -23,7 +22,7 @@ export function AppHeader() {
       <div className="flex h-16 items-center justify-between px-1 sm:px-4 w-full max-w-full overflow-hidden">
         <SidebarTrigger />
 
-        <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
           <LanguageSwitcher />
           <Separator orientation="vertical" className="h-6 hidden sm:block" />
           <NotificationBell />
@@ -33,9 +32,6 @@ export function AppHeader() {
           <UserMenu />
         </div>
       </div>
-
-      {/* Notification Drawer */}
-      <NotificationDrawer />
     </header>
   )
 }

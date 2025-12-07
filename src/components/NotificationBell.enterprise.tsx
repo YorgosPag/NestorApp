@@ -2,6 +2,7 @@
 'use client';
 
 import { Bell } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useNotificationDrawer } from './NotificationDrawer.enterprise';
 import { useNotificationCenter } from '@/stores/notificationCenter';
 
@@ -11,20 +12,22 @@ export function NotificationBell() {
   const unread = useNotificationCenter(s => s.unread);
 
   return (
-    <button
-      type="button"
+    <Button
+      variant="outline"
+      size="icon"
       onClick={open}
       aria-label="Notifications"
       aria-expanded={isOpen}
       aria-controls="notification-drawer"
-      className="relative p-2 hover:bg-accent rounded-md transition-colors"
+      className="relative"
     >
-      <Bell className="w-6 h-6" />
+      <Bell className="h-4 w-4" />
       {unread > 0 && (
-        <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs px-1.5 rounded-full min-w-[20px] h-5 flex items-center justify-center font-medium">
+        <span className="absolute top-0 -right-0.5 bg-red-600 text-white text-xs px-1.5 rounded-full min-w-[20px] h-5 flex items-center justify-center font-medium">
           {unread > 99 ? '99+' : unread}
         </span>
       )}
-    </button>
+      <span className="sr-only">Ειδοποιήσεις</span>
+    </Button>
   );
 }
