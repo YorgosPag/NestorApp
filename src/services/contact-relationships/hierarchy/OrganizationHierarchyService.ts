@@ -92,6 +92,7 @@ export class OrganizationHierarchyService {
    */
   static async buildOrganizationHierarchy(organizationId: string): Promise<OrganizationTree> {
     console.log('🌳 HIERARCHY: Building REAL organization hierarchy for:', organizationId);
+    console.log('🔧 HIERARCHY: FIXED - Now building children array with contact IDs for UI component');
 
     try {
       // Get organization contact από Firebase
@@ -153,12 +154,24 @@ export class OrganizationHierarchyService {
         relationshipType: emp.relationship.relationshipType
       }));
 
+      // 🔧 CRITICAL FIX: Create children array for OrganizationTree component
+      const children = employees.map(emp => ({
+        id: emp.contact.id!, // The contact ID of the employee
+        position: emp.relationship.position,
+        relationshipType: emp.relationship.relationshipType
+      }));
+
+      console.log('👥 HIERARCHY: Created children array with', children.length, 'employees:',
+        children.map(c => ({ id: c.id, position: c.position, type: c.relationshipType }))
+      );
+
       const result: OrganizationTree = {
         organization,
         topLevel,
         statistics,
         departments,
-        lastUpdated: new Date().toISOString()
+        lastUpdated: new Date().toISOString(),
+        children // 🔧 FIX: Add children array for UI component
       };
 
       console.log('✅ HIERARCHY: REAL organization hierarchy built successfully', {

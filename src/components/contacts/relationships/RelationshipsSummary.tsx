@@ -13,7 +13,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Users, Building2, TrendingUp, Settings } from 'lucide-react';
+import { Users, Building2, TrendingUp, Settings, RefreshCw } from 'lucide-react';
 
 // 🏢 ENTERPRISE: Import centralized components και hooks
 import type { ContactType } from '@/types/contacts';
@@ -131,6 +131,19 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
     );
   };
 
+  /**
+   * 🔄 Handle refresh button click με enhanced feedback
+   */
+  const handleRefresh = async () => {
+    try {
+      console.log('🔄 SUMMARY: Manual refresh triggered by user');
+      await refreshRelationships();
+      console.log('✅ SUMMARY: Manual refresh completed successfully');
+    } catch (error) {
+      console.error('❌ SUMMARY: Manual refresh failed:', error);
+    }
+  };
+
   // ============================================================================
   // EARLY RETURNS FOR DIFFERENT STATES
   // ============================================================================
@@ -169,14 +182,14 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
             </div>
             <div className="flex space-x-2">
               <Button
-                onClick={refreshRelationships}
+                onClick={handleRefresh}
                 size="sm"
                 variant="outline"
                 className="text-blue-600 border-blue-300 hover:bg-blue-50"
                 disabled={relationshipsLoading}
-                title="🔄 DEBUG: Ανανέωση σχέσεων (Κρυφό για testing)"
+                title="Ανανέωση σχέσεων"
               >
-                🔄
+                <RefreshCw className={`h-4 w-4 ${relationshipsLoading ? 'animate-spin' : ''}`} />
               </Button>
               {!readonly && onManageRelationships && (
                 <Button

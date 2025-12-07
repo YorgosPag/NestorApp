@@ -54,7 +54,18 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
   // 🏢 ENTERPRISE: Use centralized contact name hook
   // ============================================================================
 
-  const { contactName } = useContactName(relationship.targetContactId);
+  // 🔧 CRITICAL FIX: For employment relationships, show employee name (source), not company name (target)
+  const isEmploymentRelation = ['employee', 'manager', 'director', 'executive'].includes(relationship.relationshipType);
+  const contactIdToShow = isEmploymentRelation ? relationship.sourceContactId : relationship.targetContactId;
+
+  console.log('🃏 RELATIONSHIP CARD: Relationship type:', relationship.relationshipType,
+    'isEmployment:', isEmploymentRelation,
+    'showing contactId:', contactIdToShow,
+    'source:', relationship.sourceContactId,
+    'target:', relationship.targetContactId
+  );
+
+  const { contactName } = useContactName(contactIdToShow);
 
   // ============================================================================
   // COMPUTED VALUES
