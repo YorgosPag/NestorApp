@@ -21,7 +21,7 @@ export function useProjectsState(initialProjects: Project[]) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCompany, setFilterCompany] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [showDashboard, setShowDashboard] = useState(true);
+  const [showDashboard, setShowDashboard] = useState(false);
 
   return {
     projects,

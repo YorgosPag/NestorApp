@@ -21,7 +21,7 @@ export function usePropertyEditor() {
   const [isConnecting, setIsConnecting] = useState(false);
   const [firstConnectionPoint, setFirstConnectionPoint] = useState(null);
   const [viewMode, setViewMode] = useState('list');
-  const [showDashboard, setShowDashboard] = useState(true);
+  const [showDashboard, setShowDashboard] = useState(false);
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
 
   return {

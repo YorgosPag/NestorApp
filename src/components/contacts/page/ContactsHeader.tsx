@@ -28,8 +28,9 @@ export function ContactsHeader({
 }: ContactsHeaderProps) {
   return (
     <PageHeader
-      variant="sticky"
-      layout="single-row"
+      variant="sticky-rounded"
+      layout="compact"
+      spacing="compact"
       title={{
         icon: Users,
         title: "Διαχείριση Επαφών",

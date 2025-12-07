@@ -7,7 +7,7 @@ import { defaultBuildingFilters, type BuildingFilterState } from '@/components/c
 export function useBuildingsPageState(initialBuildings: Building[]) {
   const [selectedBuilding, setSelectedBuilding] = useState<Building | null>(initialBuildings.length > 0 ? initialBuildings[0] : null);
   const [viewMode, setViewMode] = useState<'list' | 'grid' | 'byType' | 'byStatus'>('list');
-  const [showDashboard, setShowDashboard] = useState(true);
+  const [showDashboard, setShowDashboard] = useState(false);
 
   // Use centralized filter state
   const [filters, setFilters] = useState<BuildingFilterState>(defaultBuildingFilters);

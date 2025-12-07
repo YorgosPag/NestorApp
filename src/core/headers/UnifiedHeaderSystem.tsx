@@ -50,6 +50,7 @@ export interface HeaderTitleProps {
   subtitle?: string;
   badge?: React.ReactNode;
   className?: string;
+  hideSubtitle?: boolean;
 }
 
 export interface HeaderSearchProps {
@@ -109,7 +110,7 @@ export interface HeaderActionsProps {
 
 export interface PageHeaderProps {
   // Layout & Styling
-  variant?: 'sticky' | 'static' | 'floating';
+  variant?: 'sticky' | 'static' | 'floating' | 'sticky-rounded';
   className?: string;
 
   // Title Section
@@ -125,8 +126,8 @@ export interface PageHeaderProps {
   actions?: HeaderActionsProps;
 
   // Layout Control
-  layout?: 'single-row' | 'multi-row' | 'stacked';
-  spacing?: 'tight' | 'normal' | 'loose';
+  layout?: 'single-row' | 'multi-row' | 'stacked' | 'compact';
+  spacing?: 'tight' | 'normal' | 'loose' | 'compact';
 }
 
 // ===== HEADER ICON COMPONENT =====
@@ -156,17 +157,18 @@ export const HeaderTitle: React.FC<HeaderTitleProps> = ({
   title,
   subtitle,
   badge,
-  className
+  className,
+  hideSubtitle = false
 }) => {
   return (
     <div className={cn("flex items-center gap-3", className)}>
       {icon && <HeaderIcon icon={icon} />}
-      <div>
+      <div className="sm:flex-shrink-0">
         <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-bold text-foreground">{title}</h1>
+          <h1 className="text-lg sm:text-2xl font-bold text-foreground sm:whitespace-nowrap">{title}</h1>
           {badge}
         </div>
-        {subtitle && (
+        {subtitle && !hideSubtitle && (
           <p className="text-sm text-muted-foreground">{subtitle}</p>
         )}
       </div>
@@ -375,15 +377,13 @@ export const HeaderActions: React.FC<HeaderActionsProps> = ({
           <TooltipTrigger asChild>
             <Button
               variant={showDashboard ? "default" : "outline"}
-              size="sm"
+              size="icon"
               onClick={onDashboardToggle}
-              className="h-8"
             >
-              {showDashboard ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
-              {showDashboard ? 'Απόκρυψη' : 'Εμφάνιση'} Dashboard
+              {showDashboard ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Εναλλαγή Dashboard</TooltipContent>
+          <TooltipContent>{showDashboard ? 'Απόκρυψη' : 'Εμφάνιση'} Dashboard</TooltipContent>
         </Tooltip>
       )}
 
@@ -403,14 +403,18 @@ export const HeaderActions: React.FC<HeaderActionsProps> = ({
 
       {/* Add Button */}
       {addButton && (
-        <Button size="sm" onClick={addButton.onClick} className="h-8">
-          {addButton.icon ? (
-            <addButton.icon className="w-4 h-4 mr-2" />
-          ) : (
-            <Plus className="w-4 h-4 mr-2" />
-          )}
-          {addButton.label}
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button size="icon" onClick={addButton.onClick} variant="outline">
+              {addButton.icon ? (
+                <addButton.icon className="w-4 h-4" />
+              ) : (
+                <Plus className="w-4 h-4" />
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{addButton.label}</TooltipContent>
+        </Tooltip>
       )}
     </div>
   );
@@ -432,19 +436,22 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   const variantClasses = {
     sticky: "border-b bg-card/50 backdrop-blur-sm sticky top-0 z-40",
     static: "border-b bg-card",
-    floating: "rounded-lg border bg-card shadow-sm"
+    floating: "rounded-lg border bg-card shadow-sm",
+    "sticky-rounded": "rounded-lg border bg-card/50 backdrop-blur-sm sticky top-0 z-40 shadow-sm mx-1 mt-1 sm:mx-4 sm:mt-4"
   };
 
   // Spacing classes - UNIFIED MOBILE-FIRST SYSTEM
   const spacingClasses = {
     tight: "px-1 py-2 sm:px-2 sm:py-2",
     normal: "px-1 py-4 sm:px-4 sm:py-4",
-    loose: "px-1 py-6 sm:px-6 sm:py-6"
+    loose: "px-1 py-6 sm:px-6 sm:py-6",
+    compact: "px-3 py-2 sm:px-4 sm:py-3"
   };
 
   // Layout classes with mobile-first responsive design
   const layoutClasses = {
     'single-row': "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between",
+    'compact': "flex flex-row items-center justify-between gap-2",
     'multi-row': "space-y-4",
     'stacked': "space-y-6"
   };
@@ -462,6 +469,19 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         {layout === 'single-row' && (
           <>
             <HeaderTitle {...title} />
+            {actions && <HeaderActions {...actions} />}
+          </>
+        )}
+
+        {/* Compact Layout - Mobile First */}
+        {layout === 'compact' && (
+          <>
+            <div className="flex items-center gap-2 min-w-0 sm:min-w-fit">
+              <HeaderTitle
+                {...title}
+                hideSubtitle={true}
+              />
+            </div>
             {actions && <HeaderActions {...actions} />}
           </>
         )}

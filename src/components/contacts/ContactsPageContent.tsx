@@ -93,7 +93,7 @@ export function ContactsPageContent() {
   // UI state
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
-  const [showDashboard, setShowDashboard] = useState(true);
+  const [showDashboard, setShowDashboard] = useState(false);
   const [showNewContactDialog, setShowNewContactDialog] = useState(false);
   const [showEditContactDialog, setShowEditContactDialog] = useState(false);
   const [showDeleteContactDialog, setShowDeleteContactDialog] = useState(false);

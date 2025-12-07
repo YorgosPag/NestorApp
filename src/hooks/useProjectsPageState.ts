@@ -9,7 +9,7 @@ export function useProjectsPageState(initialProjects: Project[]) {
     initialProjects.length > 0 ? initialProjects[0] : null
   );
   const [viewMode, setViewMode] = useState<'list' | 'byType' | 'byStatus'>('list');
-  const [showDashboard, setShowDashboard] = useState(true);
+  const [showDashboard, setShowDashboard] = useState(false);
 
   // Use centralized filter state
   const [filters, setFilters] = useState<ProjectFilterState>(defaultProjectFilters);

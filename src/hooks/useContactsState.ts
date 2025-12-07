@@ -28,7 +28,7 @@ export function useContactsState() {
   const [allUnits, setAllUnits] = useState<Property[]>([]);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
-  const [showDashboard, setShowDashboard] = useState(true);
+  const [showDashboard, setShowDashboard] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
   
