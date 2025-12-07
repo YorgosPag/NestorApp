@@ -28,7 +28,9 @@ interface ContactBadgeProps {
 }
 
 const ContactBadge: React.FC<ContactBadgeProps> = ({ contactId, position, relationshipType }) => {
+  console.log('🎫 CONTACT BADGE: Rendering for contactId:', contactId, 'position:', position, 'type:', relationshipType);
   const { contactName, loading } = useContactName(contactId);
+  console.log('🎫 CONTACT BADGE: Hook result - name:', contactName, 'loading:', loading);
 
   if (loading) {
     return (
@@ -237,10 +239,15 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
    * 👥 Render recent additions
    */
   const renderRecentAdditions = () => {
+    console.log('🌳 ORG TREE: renderRecentAdditions called with tree:', tree);
+    console.log('🌳 ORG TREE: tree.children:', tree?.children);
+
     if (!tree?.children || tree.children.length === 0) {
+      console.log('🌳 ORG TREE: No children found, returning null');
       return null;
     }
 
+    console.log('🌳 ORG TREE: About to render', tree.children.length, 'children');
     return (
       <div>
         <h4 className="text-sm font-medium text-gray-700 mb-3">Πρόσφατες Προσθήκες</h4>
