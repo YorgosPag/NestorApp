@@ -13,8 +13,11 @@ import {
   BarChart3,
   MapPin,
   Calendar,
-  Home
+  Home,
+  Edit,
+  Trash2
 } from 'lucide-react';
+import { MobileDetailsSlideIn } from '@/core/layouts';
 import { BuildingsGroupedView } from './BuildingsPage/BuildingsGroupedView';
 import { useBuildingsPageState } from '@/hooks/useBuildingsPageState';
 import { useBuildingStats } from '@/hooks/useBuildingStats';
@@ -212,12 +215,51 @@ export function BuildingsPageContent() {
         <ListContainer>
           {viewMode === 'list' ? (
             <>
-              <BuildingsList
-                buildings={finalFilteredBuildings}
-                selectedBuilding={selectedBuilding!}
-                onSelectBuilding={setSelectedBuilding}
-              />
-              <BuildingDetails building={selectedBuilding!} />
+              {/* 🖥️ DESKTOP: Standard split layout */}
+              <div className="hidden md:flex flex-1 gap-4 min-h-0">
+                <BuildingsList
+                  buildings={finalFilteredBuildings}
+                  selectedBuilding={selectedBuilding!}
+                  onSelectBuilding={setSelectedBuilding}
+                />
+                <BuildingDetails building={selectedBuilding!} />
+              </div>
+
+              {/* 📱 MOBILE: Show only BuildingsList when no building is selected */}
+              <div className={`md:hidden w-full ${selectedBuilding ? 'hidden' : 'block'}`}>
+                <BuildingsList
+                  buildings={finalFilteredBuildings}
+                  selectedBuilding={selectedBuilding!}
+                  onSelectBuilding={setSelectedBuilding}
+                />
+              </div>
+
+              {/* 📱 MOBILE: Slide-in BuildingDetails when building is selected */}
+              <MobileDetailsSlideIn
+                isOpen={!!selectedBuilding}
+                onClose={() => setSelectedBuilding(null)}
+                title={selectedBuilding?.name || 'Λεπτομέρειες Κτιρίου'}
+                actionButtons={
+                  <>
+                    <button
+                      onClick={() => {/* TODO: Edit building handler */}}
+                      className="p-2 rounded-md border transition-colors bg-background border-border hover:bg-accent"
+                      aria-label="Επεξεργασία Κτιρίου"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => {/* TODO: Delete building handler */}}
+                      className="p-2 rounded-md border transition-colors bg-background border-border hover:bg-accent text-destructive hover:text-destructive"
+                      aria-label="Διαγραφή Κτιρίου"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </>
+                }
+              >
+                {selectedBuilding && <BuildingDetails building={selectedBuilding} />}
+              </MobileDetailsSlideIn>
             </>
           ) : (
             <BuildingsGroupedView

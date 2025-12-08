@@ -1,0 +1,1 @@
+export { MobileDetailsSlideIn } from './MobileDetailsSlideIn';
