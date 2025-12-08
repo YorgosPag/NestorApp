@@ -5,37 +5,7 @@ import { TabsContent } from "@/components/ui/tabs";
 import { TabsOnlyTriggers, type TabDefinition } from "@/components/ui/navigation/TabsComponents";
 import type { BuildingTabConfig } from '@/config/building-tabs-config';
 import type { Building } from '@/components/building-management/BuildingsPageContent';
-import {
-  Home, Clock, Map, TrendingUp, Archive, FileText,
-  Settings, Camera, Video, PackageSearch
-} from 'lucide-react';
-
-// ============================================================================
-// ICON MAPPING
-// ============================================================================
-
-/**
- * Mapping από emoji icons σε Lucide React icons
- */
-const ICON_MAPPING = {
-  '🏠': Home,
-  '🕐': Clock,
-  '🗺️': Map,
-  '📈': TrendingUp,
-  '📦': Archive,
-  '📄': FileText,
-  '⚙️': Settings,
-  '📸': Camera,
-  '🎬': Video,
-  '🔍': PackageSearch,
-} as const;
-
-/**
- * Helper function για την μετατροπή emoji icon σε Lucide icon
- */
-function getIconComponent(emojiIcon: string) {
-  return ICON_MAPPING[emojiIcon as keyof typeof ICON_MAPPING] || Home;
-}
+import { getIconComponent } from './utils/IconMapping';
 
 // ============================================================================
 // COMPONENT MAPPING
@@ -49,6 +19,7 @@ import VideosTabContent from '../building-management/tabs/VideosTabContent';
 import PlaceholderTab from '../building-management/tabs/PlaceholderTab';
 import { FloorplanViewerTab } from '../projects/tabs/FloorplanViewerTab';
 import { StorageTab } from '../building-management/StorageTab';
+import { FileText, Settings } from 'lucide-react';
 
 /**
  * Component mapping για την αντιστοίχιση component names σε actual components
@@ -219,7 +190,7 @@ export function GenericBuildingTabsRenderer({
       id: tab.value,
       label: tab.label,
       icon: IconComponent,
-      content: <Component {...componentProps} />,
+      content: React.createElement(Component, componentProps),
       disabled: tab.enabled === false,
     };
   });

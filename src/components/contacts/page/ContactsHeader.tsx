@@ -33,16 +33,6 @@ export function ContactsHeader({
 }: ContactsHeaderProps) {
   return (
     <div className="mobile-search-container">
-      <style jsx>{`
-        @media (max-width: 767px) {
-          .mobile-search-container:has(input:focus) > div > div > div:first-child {
-            display: none !important;
-          }
-          .mobile-search-container:has(input:focus) > div > div > div:last-child {
-            display: none !important;
-          }
-        }
-      `}</style>
       <PageHeader
         variant="sticky-rounded"
         layout="compact"
@@ -67,24 +57,21 @@ export function ContactsHeader({
             label: 'Νέα Επαφή',
             onClick: () => onNewContact?.()
           },
-          // Mobile-only filter button
           customActions: setShowFilters ? [
-            <button
-              key="mobile-filter"
-              onClick={() => setShowFilters(!showFilters)}
-              className={`md:hidden p-2 rounded-md border transition-colors ${
+            React.createElement('button', {
+              key: 'mobile-filter',
+              onClick: () => setShowFilters(!showFilters),
+              className: `md:hidden p-2 rounded-md border transition-colors ${
                 showFilters
                   ? 'bg-primary text-primary-foreground border-primary'
                   : 'bg-background border-border hover:bg-accent'
-              }`}
-              aria-label="Toggle filters"
-            >
-              <Filter className="h-4 w-4" />
-            </button>
+              }`,
+              'aria-label': 'Toggle filters',
+              children: React.createElement(Filter, { className: 'h-4 w-4' })
+            })
           ] : undefined
         }}
       />
-
     </div>
   );
 }

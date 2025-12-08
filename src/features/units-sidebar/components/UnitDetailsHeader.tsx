@@ -14,35 +14,44 @@ export function UnitDetailsHeader({ unit }: { unit: Property | null }) {
   // Empty State - No unit selected
   if (!unit) {
     return (
-      <EntityDetailsHeader
-        icon={Home}
-        title="Επιλέξτε μια μονάδα"
-        subtitle="Δεν έχει επιλεγεί μονάδα"
-        variant="detailed"
-        className="h-[81px] flex items-center"
-      />
+      <div className="hidden md:block">
+        <EntityDetailsHeader
+          icon={Home}
+          title="Επιλέξτε μια μονάδα"
+          subtitle="Δεν έχει επιλεγεί μονάδα"
+          variant="detailed"
+          className="h-[81px] flex items-center"
+        />
+      </div>
     );
   }
 
   // Selected State - Unit is selected
   return (
-    <EntityDetailsHeader
-      icon={Home}
-      title={unit.name}
-      actions={[
-        {
-          label: 'Επίδειξη Μονάδας',
-          onClick: () => console.log('Show unit details'),
-          icon: Eye,
-          className: 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700'
-        }
-      ]}
-      variant="detailed"
-    >
-      {/* Centralized UnitBadge Component */}
-      <div className="flex gap-2 mt-2">
-        <UnitBadge status={unit.status as any} size="sm" />
+    <>
+      {/* 🖥️ DESKTOP: Show full header with actions */}
+      <div className="hidden md:block">
+        <EntityDetailsHeader
+          icon={Home}
+          title={unit.name}
+          actions={[
+            {
+              label: 'Επίδειξη Μονάδας',
+              onClick: () => console.log('Show unit details'),
+              icon: Eye,
+              className: 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700'
+            }
+          ]}
+          variant="detailed"
+        >
+          {/* Centralized UnitBadge Component */}
+          <div className="flex gap-2 mt-2">
+            <UnitBadge status={unit.status as any} size="sm" />
+          </div>
+        </EntityDetailsHeader>
       </div>
-    </EntityDetailsHeader>
+
+      {/* 📱 MOBILE: Hidden (no header duplication) */}
+    </>
   );
 }

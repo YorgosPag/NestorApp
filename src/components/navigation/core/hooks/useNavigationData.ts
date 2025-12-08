@@ -22,9 +22,16 @@ export function useNavigationData(): UseNavigationDataReturn {
   // Refs to track loading state and prevent duplicate calls
   const companiesLoadingRef = useRef(false);
   const companiesLoadedRef = useRef(false);
+  const companiesDataRef = useRef<NavigationCompany[]>([]);
 
   const loadCompanies = async (): Promise<NavigationCompany[]> => {
-    if (companiesLoadingRef.current || companiesLoadedRef.current) {
+    // If already loaded, return cached companies
+    if (companiesLoadedRef.current && companiesDataRef.current.length > 0) {
+      return companiesDataRef.current;
+    }
+
+    // If currently loading, wait and return empty array
+    if (companiesLoadingRef.current) {
       return [];
     }
 
@@ -34,6 +41,8 @@ export function useNavigationData(): UseNavigationDataReturn {
     try {
       const companies = await NavigationApiService.loadCompanies();
 
+      // Cache the companies data
+      companiesDataRef.current = companies;
       companiesLoadedRef.current = true;
 
       return companies;
@@ -81,6 +90,7 @@ export function useNavigationData(): UseNavigationDataReturn {
   const resetRefs = () => {
     companiesLoadingRef.current = false;
     companiesLoadedRef.current = false;
+    companiesDataRef.current = [];
   };
 
   return {

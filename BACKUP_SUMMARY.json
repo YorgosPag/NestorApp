@@ -1,38 +1,40 @@
 {
-  "category": "REFACTOR",
-  "shortDescription": "DetailsContainer Integration & Centralized Layout Management",
-  "problem": "Components χρησιμοποιούσαν διάσπαρτα layout patterns χωρίς centralized container structure",
-  "cause": "Έλλειψη κεντρικοποιημένου DetailsContainer για consistent layout management σε details pages",
+  "category": "FEATURE",
+  "shortDescription": "Mobile Layout Components & System Integration",
+  "problem": "Έλλειψη mobile-responsive layout components για details views και ανάγκη συστημικής ενοποίησης",
+  "cause": "Components χρειάζονταν mobile layout support με slide-in functionality και centralized layout management",
   "filesChanged": [
-    "src/core/containers/DetailsContainer.tsx",
-    "src/core/containers/index.ts",
-    "src/components/building-management/BuildingDetails.tsx",
-    "src/components/contacts/details/ContactDetails.tsx",
-    "src/components/projects/project-details.tsx",
+    "src/core/layouts/MobileDetailsSlideIn.tsx",
+    "src/core/layouts/index.ts",
+    "src/components/contacts/ContactsPageContent.tsx",
+    "src/components/building-management/BuildingsPageContent.tsx",
+    "src/components/projects/ProjectViewSwitch.tsx",
+    "src/features/units-sidebar/UnitsSidebar.tsx",
+    ".claude/settings.local.json",
     "BACKUP_SUMMARY.json"
   ],
   "solution": {
-    "phase1": "Δημιουργία DetailsContainer με standardized layout structure",
-    "phase2": "Integration του DetailsContainer στο core containers export",
-    "phase3": "Refactoring BuildingDetails component για χρήση DetailsContainer",
-    "phase4": "Refactoring ContactDetails component για χρήση DetailsContainer",
-    "phase5": "Refactoring project-details component για χρήση DetailsContainer"
+    "phase1": "Δημιουργία MobileDetailsSlideIn component με responsive slide-in functionality",
+    "phase2": "Δημιουργία core/layouts export structure για centralized access",
+    "phase3": "Integration του MobileDetailsSlideIn στο ContactsPageContent",
+    "phase4": "Updates σε BuildingsPageContent, ProjectViewSwitch για consistent behavior",
+    "phase5": "UnitsSidebar enhancements και Claude settings configuration"
   },
-  "testing": "Git commit επιτυχημένο - 6 αρχεία, 168 προσθήκες, 160 διαγραφές. Δημιουργία νέου αρχείου DetailsContainer.tsx",
-  "notes": "Κεντρικοποίηση layout management με DetailsContainer. Consistent structure για όλα τα details components. Improved maintainability και reusability.",
+  "testing": "Git commit επιτυχημένο - 8 αρχεία, 309 προσθήκες, 114 διαγραφές. Δημιουργία νέων layout components",
+  "notes": "Mobile-first approach με responsive slide-in components. Centralized layouts structure για better maintainability. Enhanced user experience σε mobile devices.",
   "contributors": {
     "user": "Γιώργος",
     "assistant": "Claude Code",
     "sessionDate": "2025-12-08"
   },
   "relatedBackups": [
-    "Previous component structure preserved in git history",
-    "DetailsContainer centralizes layout patterns"
+    "Previous layout structure preserved in git history",
+    "MobileDetailsSlideIn provides reusable mobile layout pattern"
   ],
   "commits": [
     {
-      "hash": "001625d",
-      "message": "🏗️ SAFETY: DetailsContainer Integration & Component Updates"
+      "hash": "b099980",
+      "message": "📱 SAFETY: Mobile Layout Components & System Integration"
     }
   ]
 }

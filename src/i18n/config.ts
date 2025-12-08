@@ -8,16 +8,20 @@ import { initReactI18next } from 'react-i18next';
 import ICU from 'i18next-icu';
 import { loadNamespace } from './lazy-config';
 
-// Load only essential translations for initial boot
+// Load essential translations for initial boot
 import commonEl from './locales/el/common.json';
 import commonEn from './locales/en/common.json';
 import commonPseudo from './locales/pseudo/common.json';
+// Pre-load landing for homepage
+import landingEl from './locales/el/landing.json';
+import landingEn from './locales/en/landing.json';
+import landingPseudo from './locales/pseudo/landing.json';
 
-// Minimal initial resources - only common namespace
+// Initial resources - common and landing for homepage
 const resources = {
-  el: { common: commonEl },
-  en: { common: commonEn },
-  pseudo: { common: commonPseudo },
+  el: { common: commonEl, landing: landingEl },
+  en: { common: commonEn, landing: landingEn },
+  pseudo: { common: commonPseudo, landing: landingPseudo },
 };
 
 // Detect preferred language

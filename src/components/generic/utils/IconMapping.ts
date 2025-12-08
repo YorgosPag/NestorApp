@@ -5,7 +5,8 @@ import {
   Package, Ruler, BarChart, Target, MessageCircle, Cake, Globe, Badge, Clipboard,
   Hash, Wrench, Factory, Smartphone, Shield, ClipboardList, Image, Mail, Lock,
   AlertTriangle, CheckCircle, XCircle, Star, Search, Edit, Save, Upload, Download,
-  Building2
+  Building2, Warehouse, LayoutGrid, FileSignature, ClipboardCheck, PlayCircle,
+  BarChart3
 } from 'lucide-react';
 
 // ============================================================================
@@ -92,6 +93,12 @@ export const ICON_MAPPING = {
   'upload': Upload,
   'download': Download,
   'building-2': Building2,
+  'warehouse': Warehouse,
+  'layout-grid': LayoutGrid,
+  'file-signature': FileSignature,
+  'clipboard-check': ClipboardCheck,
+  'play-circle': PlayCircle,
+  'bar-chart-3': BarChart3,
 
   // 📊 CRM/Dashboard icons (from GenericCRMDashboardTabsRenderer)
   '📊': BarChart,
