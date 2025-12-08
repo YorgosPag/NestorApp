@@ -27,6 +27,7 @@ export function BuildingsList({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
+  const [showToolbar, setShowToolbar] = useState(false);
 
   const toggleFavorite = (buildingId: number) => {
     setFavorites(prev => 
@@ -97,27 +98,59 @@ export function BuildingsList({
         buildingCount={buildings.length}
         activeProjectsCount={buildings.filter(b => b.status === 'active' || b.status === 'construction').length}
         totalValue={buildings.reduce((sum, b) => sum + (b.totalValue || 0), 0)}
-      />
-
-      <CompactToolbar
-        config={buildingsConfig}
-        selectedItems={selectedItems}
-        onSelectionChange={setSelectedItems}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
-        activeFilters={activeFilters}
-        onFiltersChange={setActiveFilters}
-        sortBy={sortBy}
-        onSortChange={(newSortBy, newSortOrder) => {
-          setSortBy(newSortBy);
-          setSortOrder(newSortOrder);
-        }}
-        onNewItem={() => {}}
-        onEditItem={(id) => {}}
-        onDeleteItems={(ids) => {}}
-        onExport={() => console.log('Export buildings')}
-        onRefresh={() => console.log('Refresh buildings')}
+        showToolbar={showToolbar}
+        onToolbarToggle={setShowToolbar}
       />
+
+      {/* CompactToolbar - Always visible on Desktop, Toggleable on Mobile */}
+      <div className="hidden md:block">
+        <CompactToolbar
+          config={buildingsConfig}
+          selectedItems={selectedItems}
+          onSelectionChange={setSelectedItems}
+          searchTerm=""
+          onSearchChange={() => {}}
+          activeFilters={activeFilters}
+          onFiltersChange={setActiveFilters}
+          sortBy={sortBy}
+          onSortChange={(newSortBy, newSortOrder) => {
+            setSortBy(newSortBy);
+            setSortOrder(newSortOrder);
+          }}
+          onNewItem={() => {}}
+          onEditItem={(id) => {}}
+          onDeleteItems={(ids) => {}}
+          onExport={() => console.log('Export buildings')}
+          onRefresh={() => console.log('Refresh buildings')}
+        />
+      </div>
+
+      {/* CompactToolbar - Toggleable on Mobile */}
+      <div className="md:hidden">
+        {showToolbar && (
+          <CompactToolbar
+            config={buildingsConfig}
+            selectedItems={selectedItems}
+            onSelectionChange={setSelectedItems}
+            searchTerm=""
+            onSearchChange={() => {}}
+            activeFilters={activeFilters}
+            onFiltersChange={setActiveFilters}
+            sortBy={sortBy}
+            onSortChange={(newSortBy, newSortOrder) => {
+              setSortBy(newSortBy);
+              setSortOrder(newSortOrder);
+            }}
+            onNewItem={() => {}}
+            onEditItem={(id) => {}}
+            onDeleteItems={(ids) => {}}
+            onExport={() => console.log('Export buildings')}
+            onRefresh={() => console.log('Refresh buildings')}
+          />
+        )}
+      </div>
 
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-2">

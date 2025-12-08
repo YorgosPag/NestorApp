@@ -31,6 +31,7 @@ export function UnitsList({
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
+  const [showToolbar, setShowToolbar] = useState(false);
 
   const toggleFavorite = (unitId: string) => {
     setFavorites(prev => 
@@ -101,41 +102,87 @@ export function UnitsList({
         unitCount={units.length}
         availableCount={availableCount}
         totalValue={totalValue}
-      />
-
-      <CompactToolbar
-        config={unitsConfig}
-        selectedItems={selectedItems}
-        onSelectionChange={setSelectedItems}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
-        activeFilters={activeFilters}
-        onFiltersChange={setActiveFilters}
-        sortBy={sortBy as any}
-        onSortChange={(newSortBy, newSortOrder) => {
-          setSortBy(newSortBy as UnitSortKey);
-          setSortOrder(newSortOrder);
-        }}
-        hasSelectedContact={selectedUnitIds.length > 0}
-        onNewItem={() => {
-          // Debug logging removed
-        }}
-        onEditItem={(id) => {
-          // Debug logging removed
-        }}
-        onDeleteItems={(ids) => {
-          // Debug logging removed
-        }}
-        onExport={() => {
-          // Debug logging removed
-        }}
-        onRefresh={() => {
-          // Debug logging removed
-        }}
-        onSettings={() => {
-          // Debug logging removed
-        }}
+        showToolbar={showToolbar}
+        onToolbarToggle={setShowToolbar}
       />
+
+      {/* CompactToolbar - Always visible on Desktop, Toggleable on Mobile */}
+      <div className="hidden md:block">
+        <CompactToolbar
+          config={unitsConfig}
+          selectedItems={selectedItems}
+          onSelectionChange={setSelectedItems}
+          searchTerm=""
+          onSearchChange={() => {}}
+          activeFilters={activeFilters}
+          onFiltersChange={setActiveFilters}
+          sortBy={sortBy as any}
+          onSortChange={(newSortBy, newSortOrder) => {
+            setSortBy(newSortBy as UnitSortKey);
+            setSortOrder(newSortOrder);
+          }}
+          hasSelectedContact={selectedUnitIds.length > 0}
+          onNewItem={() => {
+            // Debug logging removed
+          }}
+          onEditItem={(id) => {
+            // Debug logging removed
+          }}
+          onDeleteItems={(ids) => {
+            // Debug logging removed
+          }}
+          onExport={() => {
+            // Debug logging removed
+          }}
+          onRefresh={() => {
+            // Debug logging removed
+          }}
+          onSettings={() => {
+            // Debug logging removed
+          }}
+        />
+      </div>
+
+      {/* CompactToolbar - Toggleable on Mobile */}
+      <div className="md:hidden">
+        {showToolbar && (
+          <CompactToolbar
+            config={unitsConfig}
+            selectedItems={selectedItems}
+            onSelectionChange={setSelectedItems}
+            searchTerm=""
+            onSearchChange={() => {}}
+            activeFilters={activeFilters}
+            onFiltersChange={setActiveFilters}
+            sortBy={sortBy as any}
+            onSortChange={(newSortBy, newSortOrder) => {
+              setSortBy(newSortBy as UnitSortKey);
+              setSortOrder(newSortOrder);
+            }}
+            hasSelectedContact={selectedUnitIds.length > 0}
+            onNewItem={() => {
+              // Debug logging removed
+            }}
+            onEditItem={(id) => {
+              // Debug logging removed
+            }}
+            onDeleteItems={(ids) => {
+              // Debug logging removed
+            }}
+            onExport={() => {
+              // Debug logging removed
+            }}
+            onRefresh={() => {
+              // Debug logging removed
+            }}
+            onSettings={() => {
+              // Debug logging removed
+            }}
+          />
+        )}
+      </div>
 
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-2">
