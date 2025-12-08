@@ -7,7 +7,6 @@ import { useFirestoreProjects } from '@/hooks/useFirestoreProjects';
 import { companies } from '@/components/building-management/mockData';
 import { AdvancedFiltersPanel, projectFiltersConfig } from '@/components/core/AdvancedFilters';
 import { useProjectsStats } from '@/hooks/useProjectsStats';
-import { MobileCompactHeader } from '@/core/headers';
 import { projectsConfig } from '@/components/core/CompactToolbar';
 
 import { ProjectsHeader } from './ProjectsHeader';
@@ -187,31 +186,6 @@ export function ProjectsPageContent() {
           </div>
         )}
 
-        {/* Mobile Compact Header - Only visible on mobile */}
-        <div className="md:hidden">
-          <MobileCompactHeader
-            entityName="Έργα"
-            entityIcon={Building2}
-            entityCount={filteredProjects?.length || 0}
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            searchPlaceholder="Αναζήτηση έργων..."
-            selectedItems={selectedProject ? [1] : []}
-            showFilters={showFilters}
-            onFiltersToggle={setShowFilters}
-            toolbarConfig={projectsConfig}
-            toolbarProps={{
-              selectedItems: selectedProject ? [1] : [],
-              onNewItem: () => console.log('Add new project'),
-              onEditItem: () => console.log('Edit project'),
-              onDeleteItems: () => console.log('Delete projects'),
-              onExport: () => console.log('Export projects'),
-              onImport: () => console.log('Import projects'),
-              onRefresh: () => window.location.reload(),
-              hasSelectedContact: !!selectedProject
-            }}
-          />
-        </div>
 
         <main className="flex-1 flex overflow-x-auto overflow-y-hidden p-4 gap-4">
           <ProjectViewSwitch

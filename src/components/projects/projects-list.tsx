@@ -21,8 +21,10 @@ export function ProjectsList({
   onSelectProject,
   companies,
 }: ProjectsListProps) {
-  
+
   const [favorites, setFavorites] = useState<number[]>([1]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showToolbar, setShowToolbar] = useState(false);
 
   const toggleFavorite = (projectId: number) => {
     setFavorites(prev =>
@@ -39,15 +41,34 @@ export function ProjectsList({
   return (
     <div className="min-w-[300px] max-w-[420px] w-full bg-card border rounded-lg flex flex-col shrink-0 shadow-sm h-fit overflow-hidden">
       <ProjectListHeader
-        projects={displayProjects}
+        projectCount={displayProjects.length}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        showToolbar={showToolbar}
+        onToolbarToggle={setShowToolbar}
       />
 
-      <CompactToolbar
-        config={projectsConfig}
-        data={displayProjects}
-        onFiltersChange={() => {}}
-        onSortChange={() => {}}
-      />
+      {/* CompactToolbar - Always visible on Desktop, Toggleable on Mobile */}
+      <div className="hidden md:block">
+        <CompactToolbar
+          config={projectsConfig}
+          data={displayProjects}
+          onFiltersChange={() => {}}
+          onSortChange={() => {}}
+        />
+      </div>
+
+      {/* CompactToolbar - Toggleable on Mobile */}
+      <div className="md:hidden">
+        {showToolbar && (
+          <CompactToolbar
+            config={projectsConfig}
+            data={displayProjects}
+            onFiltersChange={() => {}}
+            onSortChange={() => {}}
+          />
+        )}
+      </div>
 
       <ScrollArea className="flex-1 overflow-y-auto w-full">
         <div className="p-2 space-y-2 min-h-0 w-full">
