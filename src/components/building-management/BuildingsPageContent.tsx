@@ -21,6 +21,7 @@ import { useBuildingStats } from '@/hooks/useBuildingStats';
 import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
 import { companies, projects } from './mockData';
 import { AdvancedFiltersPanel, buildingFiltersConfig } from '@/components/core/AdvancedFilters';
+import { ListContainer } from '@/core/containers';
 
 // Re-export Building type for backward compatibility
 export type { Building } from '@/types/building/contracts';
@@ -208,7 +209,7 @@ export function BuildingsPageContent() {
           </div>
         )}
 
-        <div className="flex-1 flex overflow-hidden p-4 gap-4">
+        <ListContainer>
           {viewMode === 'list' ? (
             <>
               <BuildingsList
@@ -226,7 +227,7 @@ export function BuildingsPageContent() {
               setSelectedBuilding={setSelectedBuilding}
             />
           )}
-        </div>
+        </ListContainer>
       </div>
     </TooltipProvider>
   );

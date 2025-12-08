@@ -31,6 +31,7 @@ import { EditContactDialog } from './dialogs/EditContactDialog';
 import { DeleteContactDialog } from './dialogs/DeleteContactDialog';
 import { ArchiveContactDialog } from './dialogs/ArchiveContactDialog';
 import { AdvancedFiltersPanel, type ContactFilterState, contactFiltersConfig } from '@/components/core/AdvancedFilters';
+import { ListContainer } from '@/core/containers';
 import { MobileCompactHeader } from '@/core/headers';
 import { CompactToolbar, contactsConfig } from '@/components/core/CompactToolbar';
 import { Button } from '@/components/ui/button';
@@ -597,7 +598,7 @@ export function ContactsPageContent() {
           </div>
         )}
 
-        <div className="flex-1 flex overflow-hidden px-1 py-4 sm:px-4 sm:py-4 gap-1 sm:gap-4">
+        <ListContainer>
           {error ? (
             <div className="w-full text-center p-8 bg-card rounded-lg border border-destructive/20">
               <p className="text-destructive font-medium">⚠️ {error}</p>
@@ -632,7 +633,7 @@ export function ContactsPageContent() {
                 Προβολή πλέγματος (Grid View) θα υλοποιηθεί σύντομα.
             </div>
           )}
-        </div>
+        </ListContainer>
 
         {/* Dialog για νέα επαφή */}
         <TabbedAddNewContactDialog

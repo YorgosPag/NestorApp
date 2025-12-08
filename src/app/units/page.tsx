@@ -16,6 +16,7 @@ import {
 import { StatusCard } from '@/components/property-management/dashboard/StatusCard';
 import { DetailsCard } from '@/components/property-management/dashboard/DetailsCard';
 import { AdvancedFiltersPanel, unitFiltersConfig, defaultUnitFilters, type UnitFilterState } from '@/components/core/AdvancedFilters';
+import { ListContainer } from '@/core/containers';
 import { UnitsSidebar } from '@/components/units/UnitsSidebar';
 import { PropertyGridView } from '@/features/property-grid/PropertyGridView';
 
@@ -316,7 +317,7 @@ function UnitsPageContent() {
           </div>
         )}
 
-        <main className="flex-1 flex overflow-hidden p-4 gap-4">
+        <ListContainer>
           {viewMode === 'list' ? (
             <UnitsSidebar
               units={searchFilteredProperties as any}
@@ -331,7 +332,7 @@ function UnitsPageContent() {
           ) : (
             <PropertyGridView />
           )}
-        </main>
+        </ListContainer>
 
         {showHistoryPanel && (
           <div className="fixed inset-0 z-50">

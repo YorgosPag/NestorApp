@@ -6,6 +6,7 @@ import { useProjectsPageState } from '@/hooks/useProjectsPageState';
 import { useFirestoreProjects } from '@/hooks/useFirestoreProjects';
 import { companies } from '@/components/building-management/mockData';
 import { AdvancedFiltersPanel, projectFiltersConfig } from '@/components/core/AdvancedFilters';
+import { ListContainer } from '@/core/containers';
 import { useProjectsStats } from '@/hooks/useProjectsStats';
 import { projectsConfig } from '@/components/core/CompactToolbar';
 
@@ -187,14 +188,14 @@ export function ProjectsPageContent() {
         )}
 
 
-        <main className="flex-1 flex overflow-x-auto overflow-y-hidden p-4 gap-4">
+        <ListContainer>
           <ProjectViewSwitch
             projects={filteredProjects}
             selectedProject={selectedProject}
             onSelectProject={setSelectedProject}
             companies={companies}
           />
-        </main>
+        </ListContainer>
       </div>
     </TooltipProvider>
   );
