@@ -3,7 +3,7 @@
 import React, { useCallback, Suspense } from 'react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useUnitsViewerState } from '@/hooks/useUnitsViewerState';
-import { HeaderControls } from '@/components/units/HeaderControls';
+import { UnitsHeader } from '@/components/units/page/UnitsHeader';
 import { UnifiedDashboard, type DashboardStat } from '@/core/dashboards/UnifiedDashboard';
 import {
   Home,
@@ -102,11 +102,29 @@ function UnitsPageContent() {
     forceDataRefresh,
   } = useUnitsViewerState();
 
+  // Search state (for header search)
+  const [searchTerm, setSearchTerm] = React.useState('');
+
+  // Mobile-only filter toggle state
+  const [showFilters, setShowFilters] = React.useState(false);
+
   // 🔥 NEW: Dashboard card filtering state
   const [activeCardFilter, setActiveCardFilter] = React.useState<string | null>(null);
 
   const safeFloors = Array.isArray(floors) ? floors : [];
   const safeFilteredProperties = Array.isArray(filteredProperties) ? filteredProperties : [];
+
+  // Apply search to filtered properties
+  const searchFilteredProperties = React.useMemo(() => {
+    if (!searchTerm.trim()) return safeFilteredProperties;
+
+    return safeFilteredProperties.filter(property =>
+      property.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      property.propertyType?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      property.address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      property.status?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [safeFilteredProperties, searchTerm]);
 
   // Transform dashboardStats object to DashboardStat array
   const unifiedDashboardStats: DashboardStat[] = [
@@ -209,7 +227,7 @@ function UnitsPageContent() {
     canUndo,
     canRedo,
     setSelectedProperties,
-    floors: safeFloors, 
+    floors: safeFloors,
     activeTool,
     setActiveTool,
     showGrid,
@@ -241,11 +259,15 @@ function UnitsPageContent() {
   return (
     <TooltipProvider>
       <div className="h-full flex flex-col bg-background">
-        <HeaderControls
-          viewMode={viewMode as 'list' | 'grid' | 'byType' | 'byStatus'}
+        <UnitsHeader
+          viewMode={viewMode as 'list' | 'grid'}
           setViewMode={setViewMode}
           showDashboard={showDashboard}
           setShowDashboard={setShowDashboard}
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          showFilters={showFilters}
+          setShowFilters={setShowFilters}
         />
 
         {showDashboard && (
@@ -272,22 +294,37 @@ function UnitsPageContent() {
             }
           />
         )}
-        
-        <AdvancedFiltersPanel
-          config={unitFiltersConfig}
-          filters={filters as UnitFilterState}
-          onFiltersChange={handleFiltersChange}
-        />
+
+        {/* Desktop: Always visible filters */}
+        <div className="hidden md:block">
+          <AdvancedFiltersPanel
+            config={unitFiltersConfig}
+            filters={filters as UnitFilterState}
+            onFiltersChange={handleFiltersChange}
+          />
+        </div>
+
+        {/* Mobile: Show only when showFilters is true */}
+        {showFilters && (
+          <div className="md:hidden">
+            <AdvancedFiltersPanel
+              config={unitFiltersConfig}
+              filters={filters as UnitFilterState}
+              onFiltersChange={handleFiltersChange}
+              defaultOpen={true}
+            />
+          </div>
+        )}
 
         <main className="flex-1 flex overflow-hidden p-4 gap-4">
           {viewMode === 'list' ? (
             <UnitsSidebar
-              units={safeFilteredProperties as any}
+              units={searchFilteredProperties as any}
               selectedUnit={selectedUnit || null}
               onSelectUnit={handlePolygonSelect}
               selectedUnitIds={selectedPropertyIds}
               viewerProps={viewerProps}
-              floors={safeFloors} 
+              floors={safeFloors}
               setShowHistoryPanel={setShowHistoryPanel}
               onAssignmentSuccess={handleAssignmentSuccess}
             />
@@ -295,7 +332,7 @@ function UnitsPageContent() {
             <PropertyGridView />
           )}
         </main>
-        
+
         {showHistoryPanel && (
           <div className="fixed inset-0 z-50">
             {/* Placeholder for VersionHistoryPanel */}

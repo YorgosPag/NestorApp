@@ -36,12 +36,29 @@ export function BuildingsPageContent() {
     setViewMode,
     showDashboard,
     setShowDashboard,
-    filteredBuildings,
+    filteredBuildings: baseFilteredBuildings,
     filters,
     setFilters,
   } = useBuildingsPageState(buildingsData);
 
-  const buildingsStats = useBuildingStats(buildingsData);
+  // Search state (for header search)
+  const [searchTerm, setSearchTerm] = React.useState('');
+
+  // Mobile-only filter toggle state
+  const [showFilters, setShowFilters] = React.useState(false);
+
+  // Apply search to the already filtered buildings from hook
+  const finalFilteredBuildings = React.useMemo(() => {
+    if (!searchTerm.trim()) return baseFilteredBuildings;
+
+    return baseFilteredBuildings.filter(building =>
+      building.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      building.address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      building.type?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [baseFilteredBuildings, searchTerm]);
+
+  const buildingsStats = useBuildingStats(finalFilteredBuildings);
 
   // 🔥 NEW: Dashboard card filtering state
   const [activeCardFilter, setActiveCardFilter] = React.useState<string | null>(null);
@@ -161,22 +178,41 @@ export function BuildingsPageContent() {
           setViewMode={setViewMode}
           showDashboard={showDashboard}
           setShowDashboard={setShowDashboard}
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          showFilters={showFilters}
+          setShowFilters={setShowFilters}
         />
 
         {showDashboard && <UnifiedDashboard stats={dashboardStats} columns={6} onCardClick={handleCardClick} />}
 
         {/* Advanced Filters Panel */}
-        <AdvancedFiltersPanel
-          config={buildingFiltersConfig}
-          filters={filters}
-          onFiltersChange={setFilters}
-        />
+        <div className="hidden md:block">
+          {/* Desktop: Always visible */}
+          <AdvancedFiltersPanel
+            config={buildingFiltersConfig}
+            filters={filters}
+            onFiltersChange={setFilters}
+          />
+        </div>
+
+        {/* Mobile: Show only when showFilters is true */}
+        {showFilters && (
+          <div className="md:hidden">
+            <AdvancedFiltersPanel
+              config={buildingFiltersConfig}
+              filters={filters}
+              onFiltersChange={setFilters}
+              defaultOpen={true}
+            />
+          </div>
+        )}
 
         <div className="flex-1 flex overflow-hidden p-4 gap-4">
           {viewMode === 'list' ? (
             <>
               <BuildingsList
-                buildings={filteredBuildings}
+                buildings={finalFilteredBuildings}
                 selectedBuilding={selectedBuilding!}
                 onSelectBuilding={setSelectedBuilding}
               />
@@ -185,7 +221,7 @@ export function BuildingsPageContent() {
           ) : (
             <BuildingsGroupedView
               viewMode={viewMode}
-              filteredBuildings={filteredBuildings}
+              filteredBuildings={finalFilteredBuildings}
               selectedBuilding={selectedBuilding}
               setSelectedBuilding={setSelectedBuilding}
             />

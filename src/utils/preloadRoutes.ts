@@ -3,11 +3,10 @@
 // Route preloading utilities for better performance
 // These functions can preload components before user navigation
 
-type PreloadableRoute = 
+type PreloadableRoute =
   | 'crm-dashboard'
   | 'buildings'
   | 'contacts'
-  | 'units'
   | 'properties'
   | 'dxf-viewer'
   | 'obligations-new'
@@ -17,7 +16,6 @@ const routePreloaders: Record<PreloadableRoute, () => Promise<any>> = {
   'crm-dashboard': () => import('@/components/crm/dashboard/CRMDashboardPageContent'),
   'buildings': () => import('@/components/building-management/BuildingsPageContent'),
   'contacts': () => import('@/components/contacts/ContactsPageContent'),
-  'units': () => import('@/components/units/UnitsPageContent'),
   'properties': () => import('@/components/properties/PropertiesPageContent'),
   'dxf-viewer': () => import('@/subapps/dxf-viewer/DxfViewerApp'),
   'obligations-new': () => import('@/components/obligations/ObligationForm'),
@@ -92,4 +90,4 @@ export const CRITICAL_ROUTES: PreloadableRoute[] = ['buildings', 'contacts'];
 export const ADMIN_ROUTES: PreloadableRoute[] = ['dxf-viewer', 'crm-dashboard'];
 
 // Routes that can be preloaded on idle
-export const IDLE_ROUTES: PreloadableRoute[] = ['properties', 'units'];
+export const IDLE_ROUTES: PreloadableRoute[] = ['properties'];

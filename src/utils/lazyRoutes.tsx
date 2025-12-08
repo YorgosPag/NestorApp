@@ -142,10 +142,6 @@ export const LazyRoutes = {
     { loadingType: 'list', ssr: false }
   ),
   
-  Units: createLazyRoute(
-    () => import('@/components/units/UnitsPageContent').then(mod => ({ default: mod.UnitsPageContent })),
-    { loadingType: 'list', ssr: false }
-  ),
   
   Properties: createLazyRoute(
     () => import('@/components/properties/PropertiesPageContent').then(mod => ({ default: mod.PropertiesPageContent })),
