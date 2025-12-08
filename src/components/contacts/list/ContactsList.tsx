@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ContactsListHeader } from './ContactsListHeader';
+import { GenericListHeader } from '@/components/shared/GenericListHeader';
 import { ContactListItem } from './ContactListItem';
 import { CompactToolbar, contactsConfig } from '@/components/core/CompactToolbar';
 import type { Contact } from '@/types/contacts';
@@ -110,10 +110,13 @@ export function ContactsList({
 
       {/* Header with conditional CompactToolbar */}
       <div>
-        <ContactsListHeader
-          contactCount={contacts.length}
+        <GenericListHeader
+          icon={Users}
+          entityName="Επαφές"
+          itemCount={contacts.length}
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
+          searchPlaceholder="Αναζήτηση επαφών..."
           showToolbar={showToolbar}
           onToolbarToggle={setShowToolbar}
         />

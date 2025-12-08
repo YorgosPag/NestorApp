@@ -4,9 +4,10 @@
 import React, { useState, useMemo } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Project } from '@/types/project';
-import { ProjectListHeader } from './list/ProjectListHeader';
+import { GenericListHeader } from '@/components/shared/GenericListHeader';
 import { ProjectListItem } from './project-list-item'; // Updated import path
 import { CompactToolbar, projectsConfig } from '@/components/core/CompactToolbar';
+import { Briefcase } from 'lucide-react';
 
 interface ProjectsListProps {
   projects: Project[];
@@ -40,10 +41,13 @@ export function ProjectsList({
 
   return (
     <div className="min-w-[300px] max-w-[420px] w-full bg-card border rounded-lg flex flex-col shrink-0 shadow-sm h-fit overflow-hidden">
-      <ProjectListHeader
-        projectCount={displayProjects.length}
+      <GenericListHeader
+        icon={Briefcase}
+        entityName="Έργα"
+        itemCount={displayProjects.length}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
+        searchPlaceholder="Αναζήτηση έργων..."
         showToolbar={showToolbar}
         onToolbarToggle={setShowToolbar}
       />
