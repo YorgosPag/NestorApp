@@ -15,10 +15,19 @@ import { mainMenuItems, toolsMenuItems, settingsMenuItem } from "@/config/naviga
 import { useSidebarState } from "@/hooks/useSidebarState"
 import { useTranslationLazy } from "@/i18n/hooks/useTranslationLazy"
 import { MapPin } from "lucide-react"
+import { useSidebar } from "@/components/ui/sidebar"
 
 export function AppSidebar() {
     const { expandedItems, toggleExpanded, isItemActive } = useSidebarState()
     const { t, isLoading } = useTranslationLazy('navigation')
+    const { isMobile, setOpenMobile } = useSidebar()
+
+    // Handle navigation click with mobile sidebar auto-close
+    const handleNavigationClick = () => {
+        if (isMobile) {
+            setOpenMobile(false)
+        }
+    }
 
     return (
         <Sidebar collapsible="icon">
@@ -39,6 +48,7 @@ export function AppSidebar() {
                 <div className="px-3 py-2">
                     <a
                         href="/navigation"
+                        onClick={handleNavigationClick}
                         className="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors py-2 px-1 w-full text-left rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
                     >
                         <MapPin className="h-4 w-4" />

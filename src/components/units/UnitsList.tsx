@@ -97,7 +97,7 @@ export function UnitsList({
   const totalValue = units.reduce((sum, u) => sum + (u.price || 0), 0);
 
   return (
-    <div className="min-w-[420px] max-w-[420px] w-full bg-card border rounded-lg flex flex-col shrink-0 shadow-sm max-h-full overflow-hidden">
+    <div className="min-w-[300px] max-w-[420px] w-full bg-card border rounded-lg flex flex-col shrink-0 shadow-sm max-h-full overflow-hidden">
       <UnitsListHeader
         unitCount={units.length}
         availableCount={availableCount}

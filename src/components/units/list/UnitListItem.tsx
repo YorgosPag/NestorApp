@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import type { Property } from '@/types/property-viewer';
 
@@ -37,23 +36,14 @@ export function UnitListItem({
         <TooltipProvider>
             <div
                 className={cn(
-                    "relative p-3 rounded-lg border cursor-pointer transition-all duration-200 hover:shadow-md group flex items-start gap-3",
+                    "relative p-3 rounded-lg border cursor-pointer transition-all duration-200 hover:shadow-md group",
                     isSelected
                     ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20 shadow-sm"
                     : "border-border hover:border-blue-300 bg-card hover:bg-accent/50"
                 )}
                 onClick={() => onSelect(false)}
             >
-                <div className="pt-1">
-                    <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={(checked) => onSelect(true)}
-                        onClick={(e) => e.stopPropagation()}
-                        aria-label={`Select unit ${unit.name}`}
-                    />
-                </div>
-
-                <div className="flex-1">
+                <div className="w-full">
                     <UnitListItemActions
                         isFavorite={isFavorite}
                         onToggleFavorite={onToggleFavorite}

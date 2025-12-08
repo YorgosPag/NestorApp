@@ -9,6 +9,7 @@ import {
   SidebarMenuSub,
   SidebarMenuSubItem,
   SidebarMenuSubButton,
+  useSidebar,
 } from "@/components/ui/sidebar"
 import { SidebarBadge } from "@/components/sidebar/sidebar-badge"
 import { cn } from "@/lib/utils"
@@ -27,6 +28,14 @@ export function SidebarMenuItem({
   isActive,
   onToggleExpanded,
 }: SidebarMenuItemProps) {
+  const { isMobile, setOpenMobile } = useSidebar();
+
+  // Handle navigation click with mobile sidebar auto-close
+  const handleNavigationClick = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
   return (
     <SidebarMenuItemPrimitive>
       {item.subItems ? (
@@ -66,7 +75,7 @@ export function SidebarMenuItem({
                       isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
                     )}
                   >
-                    <Link href={subItem.href}>
+                    <Link href={subItem.href} onClick={handleNavigationClick}>
                       <subItem.icon className="h-4 w-4" />
                       <span>{subItem.title}</span>
                     </Link>
@@ -85,7 +94,7 @@ export function SidebarMenuItem({
             isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
           )}
         >
-          <Link href={item.href}>
+          <Link href={item.href} onClick={handleNavigationClick}>
             <item.icon
               className={cn(
                 "transition-all duration-200",

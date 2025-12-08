@@ -32,7 +32,17 @@ export function ContactsHeader({
   setShowFilters,
 }: ContactsHeaderProps) {
   return (
-    <div>
+    <div className="mobile-search-container">
+      <style jsx>{`
+        @media (max-width: 767px) {
+          .mobile-search-container:has(input:focus) > div > div > div:first-child {
+            display: none !important;
+          }
+          .mobile-search-container:has(input:focus) > div > div > div:last-child {
+            display: none !important;
+          }
+        }
+      `}</style>
       <PageHeader
         variant="sticky-rounded"
         layout="compact"
