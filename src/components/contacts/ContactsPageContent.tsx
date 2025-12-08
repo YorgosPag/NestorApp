@@ -23,6 +23,8 @@ import {
   Calendar,
   Star,
   Briefcase,
+  Edit,
+  Trash2,
 } from 'lucide-react';
 import { ContactsList } from './list/ContactsList';
 import { ContactDetails } from './details/ContactDetails';
@@ -611,22 +613,95 @@ export function ContactsPageContent() {
             </div>
           ) : viewMode === 'list' ? (
             <>
-              <ContactsList
-                contacts={filteredContacts}
-                selectedContact={selectedContact}
-                onSelectContact={setSelectedContact}
-                isLoading={isLoading}
-                onNewContact={handleNewContact}
-                onEditContact={handleEditContact}
-                onDeleteContact={handleDeleteContacts}
-                onArchiveContact={handleArchiveContacts}
-                onContactUpdated={refreshContacts}
-              />
-              <ContactDetails
-                contact={livePreviewContact || selectedContact}
-                onEditContact={handleEditContact}
-                onDeleteContact={() => handleDeleteContacts()}
-              />
+              {/* 🖥️ DESKTOP: Standard split layout - Same as Units/Projects/Buildings */}
+              <div className="hidden md:flex flex-1 gap-4 min-h-0">
+                <ContactsList
+                  contacts={filteredContacts}
+                  selectedContact={selectedContact}
+                  onSelectContact={setSelectedContact}
+                  isLoading={isLoading}
+                  onNewContact={handleNewContact}
+                  onEditContact={handleEditContact}
+                  onDeleteContact={handleDeleteContacts}
+                  onArchiveContact={handleArchiveContacts}
+                  onContactUpdated={refreshContacts}
+                />
+                <ContactDetails
+                  contact={livePreviewContact || selectedContact}
+                  onEditContact={handleEditContact}
+                  onDeleteContact={() => handleDeleteContacts()}
+                />
+              </div>
+
+              {/* 📱 MOBILE: Show only ContactsList when no contact is selected */}
+              <div className={`md:hidden w-full ${selectedContact ? 'hidden' : 'block'}`}>
+                <ContactsList
+                  contacts={filteredContacts}
+                  selectedContact={selectedContact}
+                  onSelectContact={setSelectedContact}
+                  isLoading={isLoading}
+                  onNewContact={handleNewContact}
+                  onEditContact={handleEditContact}
+                  onDeleteContact={handleDeleteContacts}
+                  onArchiveContact={handleArchiveContacts}
+                  onContactUpdated={refreshContacts}
+                />
+              </div>
+
+              {/* 📱 MOBILE: Slide-in ContactDetails when contact is selected */}
+              {selectedContact && (
+                <div className="md:hidden fixed inset-0 z-50 bg-background flex flex-col animate-in slide-in-from-right duration-300">
+                  {/* 📱 MINIMAL Mobile header - FIXED HEIGHT */}
+                  <div
+                    className="flex items-center gap-2 px-2 border-b bg-background"
+                    style={{ height: '48px', minHeight: '48px', maxHeight: '48px' }}
+                  >
+                    <button
+                      onClick={() => setSelectedContact(null)}
+                      className="p-1 rounded-md hover:bg-accent"
+                      style={{ width: '32px', height: '32px' }}
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                    <h2 className="text-sm font-medium truncate flex-1">
+                      {selectedContact ? getContactDisplayName(selectedContact) : 'Λεπτομέρειες'}
+                    </h2>
+
+                    {/* 📱 COMPACT Action Buttons - Same style as ContactsHeader */}
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleEditContact()}
+                        className="p-2 rounded-md border transition-colors bg-background border-border hover:bg-accent"
+                        aria-label="Επεξεργασία Επαφής"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteContacts()}
+                        className="p-2 rounded-md border transition-colors bg-background border-border hover:bg-accent text-destructive hover:text-destructive"
+                        aria-label="Διαγραφή Επαφής"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 📱 ContactDetails - FULL REMAINING HEIGHT */}
+                  <div
+                    className="overflow-y-auto bg-background"
+                    style={{
+                      height: 'calc(100vh - 48px)',
+                      flex: '1 1 auto'
+                    }}
+                  >
+                    <ContactDetails
+                      contact={livePreviewContact || selectedContact}
+                      onEditContact={handleEditContact}
+                      onDeleteContact={() => handleDeleteContacts()}
+                    />
+                  </div>
+                </div>
+              )}
             </>
           ) : (
             <div className="w-full text-center p-8 bg-card rounded-lg border">

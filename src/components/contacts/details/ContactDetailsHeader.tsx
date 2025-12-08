@@ -144,34 +144,45 @@ export function ContactDetailsHeader({ contact, onEditContact, onDeleteContact }
 
   return (
     <>
-      <EntityDetailsHeader
-        key={`contact-header-${contact.id}-${avatarKey}`}
-        icon={Icon}
-        title={displayName}
-        avatarImageUrl={avatarImageUrl}
-        onAvatarClick={avatarImageUrl ? handleAvatarClick : undefined}
-        actions={[
-          {
-            label: 'Επεξεργασία Επαφής',
-            onClick: () => onEditContact?.(),
-            icon: Edit,
-            className: 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700'
-          },
-          {
-            label: 'Διαγραφή Επαφής',
-            onClick: () => onDeleteContact?.(),
-            icon: Trash2,
-            className: 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700'
-          }
-        ]}
-        variant="detailed"
-      >
-        {/* Centralized ContactBadge Components */}
-        <div className="flex gap-2 mt-2">
+      {/* 🖥️ DESKTOP: Show full header with actions */}
+      <div className="hidden md:block">
+        <EntityDetailsHeader
+          key={`contact-header-${contact.id}-${avatarKey}`}
+          icon={Icon}
+          title={displayName}
+          avatarImageUrl={avatarImageUrl}
+          onAvatarClick={avatarImageUrl ? handleAvatarClick : undefined}
+          actions={[
+            {
+              label: 'Επεξεργασία Επαφής',
+              onClick: () => onEditContact?.(),
+              icon: Edit,
+              className: 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700'
+            },
+            {
+              label: 'Διαγραφή Επαφής',
+              onClick: () => onDeleteContact?.(),
+              icon: Trash2,
+              className: 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700'
+            }
+          ]}
+          variant="detailed"
+        >
+          {/* Centralized ContactBadge Components */}
+          <div className="flex gap-2 mt-2">
+            <ContactBadge status={type as any} variant="outline" size="sm" />
+            {status && <ContactBadge status={status} size="sm" />}
+          </div>
+        </EntityDetailsHeader>
+      </div>
+
+      {/* 📱 MOBILE: Show only badges (no header duplication) */}
+      <div className="md:hidden p-4">
+        <div className="flex gap-2">
           <ContactBadge status={type as any} variant="outline" size="sm" />
           {status && <ContactBadge status={status} size="sm" />}
         </div>
-      </EntityDetailsHeader>
+      </div>
 
       {/* ✅ Κεντρικοποιημένο Photo Preview Modal */}
       <PhotoPreviewModal {...photoModal.modalProps} />

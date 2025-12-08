@@ -144,6 +144,50 @@
 
 /* 🔥 UNIVERSAL MOBILE OVERFLOW PROTECTION */
 @layer utilities {
+  /* Hide scrollbars while maintaining scroll functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* Internet Explorer 10+ */
+    scrollbar-width: none;  /* Firefox */
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;  /* Safari and Chrome */
+  }
+
+  /* Mobile slide-in animations */
+  @keyframes slide-in-from-right {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes slide-out-to-right {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(100%);
+    }
+  }
+
+  .animate-in {
+    animation-fill-mode: both;
+  }
+
+  .slide-in-from-right {
+    animation-name: slide-in-from-right;
+  }
+
+  .slide-out-to-right {
+    animation-name: slide-out-to-right;
+  }
+
+  .duration-300 {
+    animation-duration: 300ms;
+  }
+
   /* Force all containers to respect viewport boundaries */
   * {
     box-sizing: border-box;

@@ -223,10 +223,11 @@ export function ContactListItem({
 
                 {/* 📱 RESPONSIVE LAYOUT: Mobile Compact vs Desktop Standard */}
                 <div className="block">
-                    {/* 🎯 MOBILE COMPACT LAYOUT (< 640px) */}
+                    {/* 🎯 MOBILE SWIPEABLE LAYOUT (< 640px) */}
                     <div className="sm:hidden">
-                        <div className="flex items-center gap-2 min-w-0 w-full">
-                            {/* Compact Avatar */}
+                        {/* Container with absolute width constraint */}
+                        <div className="flex items-center gap-2 w-full">
+                            {/* Fixed Avatar on the left - never scrolls */}
                             <div
                                 onClick={avatarImageUrl ? handleAvatarClick : undefined}
                                 className={cn("shrink-0", avatarImageUrl && "cursor-pointer")}
@@ -237,20 +238,48 @@ export function ContactListItem({
                                 </Avatar>
                             </div>
 
-                            {/* Compact Info - Single Line with proper truncation */}
-                            <div className="flex-1 min-w-0 flex items-center gap-1 overflow-hidden">
-                                <span className="font-medium text-sm truncate min-w-0 max-w-[140px]">{displayName}</span>
+                            {/* Scrollable content with explicit width calculation */}
+                            <div
+                                className="overflow-x-auto scrollbar-hide"
+                                style={{
+                                    width: 'calc(100vw - 120px)', // Full viewport minus avatar, padding, margins
+                                    scrollBehavior: 'smooth'
+                                }}
+                            >
+                                <div className="flex items-center gap-3" style={{ width: 'max-content' }}>
+                                    {/* Section 1: Name Only (no badges on mobile) */}
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <span className="font-medium text-sm whitespace-nowrap">{displayName}</span>
+                                        {isArchived && <Archive className="w-3 h-3 text-muted-foreground" />}
+                                    </div>
 
-                                {/* Inline badges and actions with overflow protection */}
-                                <div className="flex items-center gap-1 shrink-0 min-w-0">
-                                    <ContactBadge status={contact.type as any} variant="outline" size="xs" />
-                                    {isArchived && <Archive className="w-3 h-3 text-muted-foreground shrink-0" />}
+                                    {/* Section 2: Phone */}
                                     {phone && (
-                                        <span className="text-xs text-muted-foreground shrink-0 max-w-12 truncate">
-                                            {phone.length > 8 ? phone.substring(0, 3) + '...' : phone}
-                                        </span>
+                                        <div className="flex items-center gap-1 shrink-0 text-xs text-muted-foreground">
+                                            <Phone className="w-3 h-3" />
+                                            <span className="whitespace-nowrap">{phone}</span>
+                                        </div>
                                     )}
-                                    {email && <Mail className="w-3 h-3 text-muted-foreground shrink-0" />}
+
+                                    {/* Section 3: Email */}
+                                    {email && (
+                                        <div className="flex items-center gap-1 shrink-0 text-xs text-muted-foreground">
+                                            <Mail className="w-3 h-3" />
+                                            <span className="whitespace-nowrap">{email}</span>
+                                        </div>
+                                    )}
+
+                                    {/* Section 4: Additional Info */}
+                                    {contact.type === 'individual' && (contact as any).profession && (
+                                        <div className="shrink-0 text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full whitespace-nowrap">
+                                            {(contact as any).profession}
+                                        </div>
+                                    )}
+                                    {(contact.type === 'company' || contact.type === 'service') && (contact as any).vatNumber && (
+                                        <div className="shrink-0 text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full whitespace-nowrap">
+                                            ΑΦΜ: {(contact as any).vatNumber}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
