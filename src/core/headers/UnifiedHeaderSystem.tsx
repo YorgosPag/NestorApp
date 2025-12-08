@@ -515,10 +515,10 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
 }) => {
   // Base classes for different variants
   const variantClasses = {
-    sticky: "border-b bg-card/50 backdrop-blur-sm sticky top-0 z-40",
+    sticky: "border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50",
     static: "border-b bg-card",
     floating: "rounded-lg border bg-card shadow-sm",
-    "sticky-rounded": "rounded-lg border bg-card/50 backdrop-blur-sm sticky top-0 z-40 shadow-sm mx-1 mt-1 sm:mx-4 sm:mt-4"
+    "sticky-rounded": "rounded-lg border bg-card/50 backdrop-blur-sm sticky top-0 z-50 shadow-sm mx-1 mt-1 sm:mx-4 sm:mt-4"
   };
 
   // Spacing classes - UNIFIED MOBILE-FIRST SYSTEM
