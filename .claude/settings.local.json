@@ -125,7 +125,10 @@
       "Bash(del \"C:\\Nestor_Pagonis\\src\\components\\units\\UnitsPageContent.tsx\")",
       "Bash(del \"C:\\Nestor_Pagonis\\src\\components\\units\\HeaderControls.tsx\")",
       "Bash(del /S /Q node_modules.cache)",
-      "Bash(SKIP_ENV_VALIDATION=true TYPESCRIPT_CHECK=false PORT=3003 npm run dev)"
+      "Bash(SKIP_ENV_VALIDATION=true TYPESCRIPT_CHECK=false PORT=3003 npm run dev)",
+      "Bash(del /S /Q \"C:\\Nestor_Pagonis\\.next\")",
+      "Bash(/bashes)",
+      "Bash(SKIP_ENV_VALIDATION=true TYPESCRIPT_CHECK=false PORT=3005 npm run dev)"
     ],
     "deny": [],
     "ask": []

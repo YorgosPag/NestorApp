@@ -1,0 +1,15 @@
+/* Mobile Search Focus Feature for Contacts Header */
+@media (max-width: 767px) {
+  .contacts-header-mobile-container:has(input:focus) > div > div > div:first-child {
+    display: none !important;
+  }
+
+  .contacts-header-mobile-container:has(input:focus) > div > div > div:last-child {
+    display: none !important;
+  }
+
+  .contacts-header-mobile-container:has(input:focus) > div > div > div:nth-child(2) {
+    flex: 1 !important;
+    max-width: 100% !important;
+  }
+}

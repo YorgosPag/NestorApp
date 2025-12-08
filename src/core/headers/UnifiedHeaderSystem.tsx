@@ -61,6 +61,7 @@ export interface HeaderSearchProps {
   placeholder?: string;
   debounceMs?: number;
   className?: string;
+  onFocusChange?: (focused: boolean) => void;
 }
 
 export interface HeaderFilterOption {
@@ -185,7 +186,8 @@ export const HeaderSearch: React.FC<HeaderSearchProps> = ({
   onChange,
   placeholder = "Αναζήτηση...",
   debounceMs = 250,
-  className
+  className,
+  onFocusChange
 }) => {
   const [localValue, setLocalValue] = useState(value);
 
@@ -208,6 +210,8 @@ export const HeaderSearch: React.FC<HeaderSearchProps> = ({
         placeholder={placeholder}
         value={localValue}
         onChange={(e) => setLocalValue(e.target.value)}
+        onFocus={() => onFocusChange?.(true)}
+        onBlur={() => onFocusChange?.(false)}
         className="pl-10 h-9"
       />
     </div>

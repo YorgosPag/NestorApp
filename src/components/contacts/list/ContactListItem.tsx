@@ -172,9 +172,14 @@ export function ContactListItem({
 
     return (
         <TooltipProvider>
+            {/* 📱 MOBILE COMPACT LAYOUT - Responsive Design */}
             <div
                 className={cn(
-                    "relative p-3 rounded-lg border cursor-pointer transition-all duration-200 hover:shadow-md group",
+                    // Base layout
+                    "relative rounded-lg border cursor-pointer transition-all duration-200 hover:shadow-md group",
+                    // 🎯 RESPONSIVE PADDING: Compact on mobile, normal on desktop
+                    "p-2 sm:p-3",
+                    // Color states
                     isArchived && `opacity-60 ${cardBackgrounds.archived}`,
                     isSelected
                     ? `border-blue-500 ${cardBackgrounds.selected} shadow-sm`
@@ -216,46 +221,84 @@ export function ContactListItem({
                     </TooltipContent>
                 </Tooltip>
 
-                {/* Contact Header - EntityDetailsHeader with centralized ContactBadge */}
-                <EntityDetailsHeader
-                    key={`contact-list-item-${contact.id}-${avatarKey}`}
-                    icon={Icon}
-                    title={displayName}
-                    subtitle={contact.type === 'individual' ? (contact as any).profession : (contact as any).vatNumber || ''}
-                    avatarImageUrl={avatarImageUrl}
-                    onAvatarClick={avatarImageUrl ? handleAvatarClick : undefined}
-                    variant="compact"
-                    className="mb-2"
-                >
-                    {/* Centralized ContactBadge */}
-                    <div className="flex gap-2 mt-2 mb-2">
-                        <ContactBadge status={contact.type as any} variant="outline" size="sm" />
-                        {isArchived && (
-                            <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-muted text-muted-foreground rounded-full">
-                                <Archive className="w-3 h-3 mr-1" />
-                                Αρχειοθετημένο
-                            </span>
-                        )}
-                    </div>
+                {/* 📱 RESPONSIVE LAYOUT: Mobile Compact vs Desktop Standard */}
+                <div className="block">
+                    {/* 🎯 MOBILE COMPACT LAYOUT (< 640px) */}
+                    <div className="sm:hidden">
+                        <div className="flex items-center gap-2 min-w-0 w-full">
+                            {/* Compact Avatar */}
+                            <div
+                                onClick={avatarImageUrl ? handleAvatarClick : undefined}
+                                className={cn("shrink-0", avatarImageUrl && "cursor-pointer")}
+                            >
+                                <Avatar className="h-8 w-8">
+                                    <AvatarImage src={avatarImageUrl} alt={displayName} />
+                                    <AvatarFallback className="text-xs bg-blue-100">{initials}</AvatarFallback>
+                                </Avatar>
+                            </div>
 
-                    {/* Contact Info */}
-                    <div className="flex items-center gap-3">
-                        <div className="flex-1 min-w-0 space-y-1">
-                            {email && (
-                                <div className={cn("flex items-center gap-2", getTypography('labelSmall'))}>
-                                    <Mail className="w-3 h-3" />
-                                    <span className="truncate">{email}</span>
+                            {/* Compact Info - Single Line with proper truncation */}
+                            <div className="flex-1 min-w-0 flex items-center gap-1 overflow-hidden">
+                                <span className="font-medium text-sm truncate min-w-0 max-w-[140px]">{displayName}</span>
+
+                                {/* Inline badges and actions with overflow protection */}
+                                <div className="flex items-center gap-1 shrink-0 min-w-0">
+                                    <ContactBadge status={contact.type as any} variant="outline" size="xs" />
+                                    {isArchived && <Archive className="w-3 h-3 text-muted-foreground shrink-0" />}
+                                    {phone && (
+                                        <span className="text-xs text-muted-foreground shrink-0 max-w-12 truncate">
+                                            {phone.length > 8 ? phone.substring(0, 3) + '...' : phone}
+                                        </span>
+                                    )}
+                                    {email && <Mail className="w-3 h-3 text-muted-foreground shrink-0" />}
                                 </div>
-                            )}
-                            {phone && (
-                                <div className={cn("flex items-center gap-2", getTypography('labelSmall'))}>
-                                    <Phone className="w-3 h-3" />
-                                    <span className="truncate">{phone}</span>
-                                </div>
-                            )}
+                            </div>
                         </div>
                     </div>
-                </EntityDetailsHeader>
+
+                    {/* 🖥️ DESKTOP STANDARD LAYOUT (>= 640px) */}
+                    <div className="hidden sm:block">
+                        <EntityDetailsHeader
+                            key={`contact-list-item-${contact.id}-${avatarKey}`}
+                            icon={Icon}
+                            title={displayName}
+                            subtitle={contact.type === 'individual' ? (contact as any).profession : (contact as any).vatNumber || ''}
+                            avatarImageUrl={avatarImageUrl}
+                            onAvatarClick={avatarImageUrl ? handleAvatarClick : undefined}
+                            variant="compact"
+                            className="mb-2"
+                        >
+                            {/* Centralized ContactBadge */}
+                            <div className="flex gap-2 mt-2 mb-2">
+                                <ContactBadge status={contact.type as any} variant="outline" size="sm" />
+                                {isArchived && (
+                                    <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-muted text-muted-foreground rounded-full">
+                                        <Archive className="w-3 h-3 mr-1" />
+                                        Αρχειοθετημένο
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* Contact Info */}
+                            <div className="flex items-center gap-3">
+                                <div className="flex-1 min-w-0 space-y-1">
+                                    {email && (
+                                        <div className={cn("flex items-center gap-2", getTypography('labelSmall'))}>
+                                            <Mail className="w-3 h-3" />
+                                            <span className="truncate">{email}</span>
+                                        </div>
+                                    )}
+                                    {phone && (
+                                        <div className={cn("flex items-center gap-2", getTypography('labelSmall'))}>
+                                            <Phone className="w-3 h-3" />
+                                            <span className="truncate">{phone}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </EntityDetailsHeader>
+                    </div>
+                </div>
 
 
                 {isSelected && (
