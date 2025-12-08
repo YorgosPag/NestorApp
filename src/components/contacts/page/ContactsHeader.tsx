@@ -1,10 +1,10 @@
 'use client';
 
 import React from 'react';
-import { Users, Hash, Ruler, Star, Filter } from 'lucide-react';
+import { Users, Filter } from 'lucide-react';
 import { PageHeader } from '@/core/headers';
 import type { ViewMode as CoreViewMode } from '@/core/headers';
-import type { UnitsCountFilter, AreaFilter, ContactTypeFilter, ViewMode } from '@/hooks/useContactsState';
+import type { ViewMode } from '@/hooks/useContactsState';
 
 
 interface ContactsHeaderProps {
@@ -32,46 +32,49 @@ export function ContactsHeader({
   setShowFilters,
 }: ContactsHeaderProps) {
   return (
-    <PageHeader
-      variant="sticky-rounded"
-      layout="compact"
-      spacing="compact"
-      title={{
-        icon: Users,
-        title: "Διαχείριση Επαφών",
-        subtitle: "Κεντρικό ευρετήριο όλων των επαφών σας"
-      }}
-      search={{
-        value: searchTerm,
-        onChange: setSearchTerm,
-        placeholder: "Αναζήτηση επαφών..."
-      }}
-      actions={{
-        showDashboard,
-        onDashboardToggle: () => setShowDashboard(!showDashboard),
-        viewMode: viewMode as CoreViewMode,
-        onViewModeChange: (mode) => setViewMode(mode as ViewMode),
-        viewModes: ['list', 'grid'] as CoreViewMode[],
-        addButton: {
-          label: 'Νέα Επαφή',
-          onClick: () => onNewContact?.()
-        },
-        // Mobile-only filter button
-        customActions: setShowFilters ? [
-          <button
-            key="mobile-filter"
-            onClick={() => setShowFilters(!showFilters)}
-            className={`md:hidden p-2 rounded-md border transition-colors ${
-              showFilters
-                ? 'bg-primary text-primary-foreground border-primary'
-                : 'bg-background border-border hover:bg-accent'
-            }`}
-            aria-label="Toggle filters"
-          >
-            <Filter className="h-4 w-4" />
-          </button>
-        ] : undefined
-      }}
-    />
+    <div>
+      <PageHeader
+        variant="sticky-rounded"
+        layout="compact"
+        spacing="compact"
+        title={{
+          icon: Users,
+          title: "Διαχείριση Επαφών",
+          subtitle: "Κεντρικό ευρετήριο όλων των επαφών σας"
+        }}
+        search={{
+          value: searchTerm,
+          onChange: setSearchTerm,
+          placeholder: "Αναζήτηση επαφών..."
+        }}
+        actions={{
+          showDashboard,
+          onDashboardToggle: () => setShowDashboard(!showDashboard),
+          viewMode: viewMode as CoreViewMode,
+          onViewModeChange: (mode) => setViewMode(mode as ViewMode),
+          viewModes: ['list', 'grid'] as CoreViewMode[],
+          addButton: {
+            label: 'Νέα Επαφή',
+            onClick: () => onNewContact?.()
+          },
+          // Mobile-only filter button
+          customActions: setShowFilters ? [
+            <button
+              key="mobile-filter"
+              onClick={() => setShowFilters(!showFilters)}
+              className={`md:hidden p-2 rounded-md border transition-colors ${
+                showFilters
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-background border-border hover:bg-accent'
+              }`}
+              aria-label="Toggle filters"
+            >
+              <Filter className="h-4 w-4" />
+            </button>
+          ] : undefined
+        }}
+      />
+
+    </div>
   );
 }

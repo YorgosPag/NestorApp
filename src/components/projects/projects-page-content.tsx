@@ -1,12 +1,14 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useProjectsPageState } from '@/hooks/useProjectsPageState';
 import { useFirestoreProjects } from '@/hooks/useFirestoreProjects';
 import { companies } from '@/components/building-management/mockData';
 import { AdvancedFiltersPanel, projectFiltersConfig } from '@/components/core/AdvancedFilters';
 import { useProjectsStats } from '@/hooks/useProjectsStats';
+import { MobileCompactHeader } from '@/core/headers';
+import { projectsConfig } from '@/components/core/CompactToolbar';
 
 import { ProjectsHeader } from './ProjectsHeader';
 import { UnifiedDashboard, type DashboardStat } from '@/core/dashboards/UnifiedDashboard';
@@ -16,6 +18,11 @@ import {
   BarChart3,
   Ruler,
   Calendar,
+  Building2,
+  Plus,
+  Edit,
+  Trash2,
+  Archive,
 } from 'lucide-react';
 import { ProjectViewSwitch } from './ProjectViewSwitch';
 
@@ -39,6 +46,10 @@ export function ProjectsPageContent() {
 
   // 🔥 NEW: Dashboard card filtering state
   const [activeCardFilter, setActiveCardFilter] = React.useState<string | null>(null);
+
+  // Mobile-only states
+  const [showFilters, setShowFilters] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Transform stats to UnifiedDashboard format
   const dashboardStats: DashboardStat[] = [
@@ -146,16 +157,61 @@ export function ProjectsPageContent() {
             setViewMode={setViewMode}
             showDashboard={showDashboard}
             setShowDashboard={setShowDashboard}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            onNewProject={() => console.log('Add new project')}
+            showFilters={showFilters}
+            setShowFilters={setShowFilters}
         />
         
         {showDashboard && <UnifiedDashboard stats={dashboardStats} columns={5} onCardClick={handleCardClick} />}
 
-        {/* Advanced Filters Panel */}
-        <AdvancedFiltersPanel
-          config={projectFiltersConfig}
-          filters={filters}
-          onFiltersChange={setFilters}
-        />
+        {/* Advanced Filters Panel - Desktop */}
+        <div className="hidden md:block">
+          <AdvancedFiltersPanel
+            config={projectFiltersConfig}
+            filters={filters}
+            onFiltersChange={setFilters}
+          />
+        </div>
+
+        {/* Advanced Filters Panel - Mobile (conditional) */}
+        {showFilters && (
+          <div className="md:hidden">
+            <AdvancedFiltersPanel
+              config={projectFiltersConfig}
+              filters={filters}
+              onFiltersChange={setFilters}
+              defaultOpen={true}
+            />
+          </div>
+        )}
+
+        {/* Mobile Compact Header - Only visible on mobile */}
+        <div className="md:hidden">
+          <MobileCompactHeader
+            entityName="Έργα"
+            entityIcon={Building2}
+            entityCount={filteredProjects?.length || 0}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            searchPlaceholder="Αναζήτηση έργων..."
+            selectedItems={selectedProject ? [1] : []}
+            showFilters={showFilters}
+            onFiltersToggle={setShowFilters}
+            toolbarConfig={projectsConfig}
+            toolbarProps={{
+              selectedItems: selectedProject ? [1] : [],
+              onNewItem: () => console.log('Add new project'),
+              onEditItem: () => console.log('Edit project'),
+              onDeleteItems: () => console.log('Delete projects'),
+              onExport: () => console.log('Export projects'),
+              onImport: () => console.log('Import projects'),
+              onRefresh: () => window.location.reload(),
+              hasSelectedContact: !!selectedProject
+            }}
+          />
+        </div>
 
         <main className="flex-1 flex overflow-x-auto overflow-y-hidden p-4 gap-4">
           <ProjectViewSwitch

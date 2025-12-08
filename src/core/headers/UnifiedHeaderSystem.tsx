@@ -33,6 +33,8 @@ import {
   LucideIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { CompactToolbar } from '@/components/core/CompactToolbar/CompactToolbar';
+import type { CompactToolbarConfig, CompactToolbarProps } from '@/components/core/CompactToolbar/types';
 
 // ===== TYPES & INTERFACES =====
 
@@ -644,6 +646,88 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
           )}
         </div>
       </div>
+    </div>
+  );
+};
+
+// ===== MOBILE COMPACT HEADER COMPONENT =====
+
+export interface MobileCompactHeaderProps {
+  entityName: string; // "Επαφές", "Έργα", "Κτίρια", etc.
+  entityIcon: LucideIcon;
+  entityCount: number;
+  searchTerm: string;
+  onSearchChange: (term: string) => void;
+  searchPlaceholder?: string;
+  selectedItems?: number[];
+  showFilters?: boolean;
+  onFiltersToggle?: (show: boolean) => void;
+  className?: string;
+  // CompactToolbar props
+  toolbarConfig: CompactToolbarConfig;
+  toolbarProps: Omit<CompactToolbarProps, 'config' | 'searchTerm' | 'onSearchChange'>;
+}
+
+export const MobileCompactHeader: React.FC<MobileCompactHeaderProps> = ({
+  entityName,
+  entityIcon: EntityIcon,
+  entityCount,
+  searchTerm,
+  onSearchChange,
+  searchPlaceholder,
+  selectedItems = [],
+  showFilters = false,
+  onFiltersToggle,
+  className,
+  toolbarConfig,
+  toolbarProps
+}) => {
+  const defaultPlaceholder = `Αναζήτηση ${entityName.toLowerCase()}...`;
+
+  return (
+    <div className={cn(
+      "border-b bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20",
+      className
+    )}>
+      {/* Main Row: Title + Search + Filter */}
+      <div className="p-3 flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <EntityIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          <span className="font-medium text-sm whitespace-nowrap">
+            {entityName} ({entityCount})
+          </span>
+        </div>
+
+        <div className="relative flex-1">
+          <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+          <Input
+            placeholder={searchPlaceholder || defaultPlaceholder}
+            value={searchTerm}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="pl-7 h-8 text-sm"
+          />
+        </div>
+
+        {showFilters && onFiltersToggle && (
+          <Button
+            onClick={() => onFiltersToggle(!showFilters)}
+            size="sm"
+            variant={showFilters ? "default" : "outline"}
+            className="h-8 px-2 flex-shrink-0"
+          >
+            <Filter className="h-3 w-3" />
+          </Button>
+        )}
+      </div>
+
+      {/* CompactToolbar - Full desktop functionality */}
+      <CompactToolbar
+        config={toolbarConfig}
+        searchTerm={searchTerm}
+        onSearchChange={onSearchChange}
+        selectedItems={selectedItems}
+        {...toolbarProps}
+      />
     </div>
   );
 };

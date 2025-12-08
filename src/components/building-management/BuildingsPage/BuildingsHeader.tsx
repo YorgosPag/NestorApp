@@ -2,8 +2,9 @@
 'use client';
 
 import React from 'react';
-import { Building2 } from 'lucide-react';
+import { Building2, Filter } from 'lucide-react';
 import { PageHeader } from '@/core/headers';
+import { CompactToolbar, buildingsConfig } from '@/components/core/CompactToolbar';
 import type { ViewMode } from '@/core/headers';
 
 interface BuildingsHeaderProps {

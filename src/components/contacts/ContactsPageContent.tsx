@@ -16,6 +16,7 @@ import {
   UserPlus,
   X,
   Filter,
+  Search,
   BrainCircuit,
   TrendingUp,
   Crown,
@@ -30,6 +31,10 @@ import { EditContactDialog } from './dialogs/EditContactDialog';
 import { DeleteContactDialog } from './dialogs/DeleteContactDialog';
 import { ArchiveContactDialog } from './dialogs/ArchiveContactDialog';
 import { AdvancedFiltersPanel, type ContactFilterState, contactFiltersConfig } from '@/components/core/AdvancedFilters';
+import { MobileCompactHeader } from '@/core/headers';
+import { CompactToolbar, contactsConfig } from '@/components/core/CompactToolbar';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 // Initial seed data for database (μόνο για πρώτη φόρτωση)
 const SEED_CONTACTS = [
@@ -102,6 +107,9 @@ export function ContactsPageContent() {
 
   // Mobile-only filter toggle state
   const [showFilters, setShowFilters] = useState(false);
+
+  // Mobile-only compact toolbar toggle state
+  const [showCompactToolbar, setShowCompactToolbar] = useState(false);
 
   // Search state (simplified - only for header search)
   const [searchTerm, setSearchTerm] = useState('');
@@ -539,6 +547,7 @@ export function ContactsPageContent() {
   return (
     <TooltipProvider>
       <div className="h-full flex flex-col bg-background w-full overflow-hidden">
+        {/* Main Header - Works for both desktop and mobile */}
         <ContactsHeader
           viewMode={viewMode}
           setViewMode={setViewMode}
@@ -550,6 +559,7 @@ export function ContactsPageContent() {
           showFilters={showFilters}
           setShowFilters={setShowFilters}
         />
+
 
         {/* 🏷️ Filter Indicator - εμφανίζεται όταν υπάρχει URL filter */}
         {renderFilterIndicator()}

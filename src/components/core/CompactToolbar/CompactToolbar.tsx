@@ -74,38 +74,9 @@ export function CompactToolbar({
   return (
     <div className="flex flex-col gap-2 p-2 border-b bg-muted/30">
 
-      {/* First row - Search */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="relative flex-1 max-w-64">
-          <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-          <Input
-            placeholder={config.searchPlaceholder}
-            value={searchTerm}
-            onChange={(e) => onSearchChange?.(e.target.value)}
-            className="pl-7 pr-7 h-8 text-xs"
-          />
-          {searchTerm && onSearchChange && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="absolute right-0 top-0 h-8 w-8 p-0"
-              onClick={() => onSearchChange('')}
-            >
-              <X className="h-3 w-3" />
-            </Button>
-          )}
-        </div>
-
-        {/* Selection indicator */}
-        {selectedItems.length > 0 && (
-          <div className="text-xs text-muted-foreground whitespace-nowrap">
-            {selectedItems.length} επιλεγμένα
-          </div>
-        )}
-      </div>
-
-      {/* Second row - All action icons with wrapping */}
-      <div className="flex items-center flex-wrap gap-1">
+      {/* Action icons row with selection indicator */}
+      <div className="flex items-center justify-between flex-wrap gap-1">
+        <div className="flex items-center flex-wrap gap-1">
 
         {/* New Item */}
         {config.availableActions.newItem && (
@@ -397,6 +368,15 @@ export function CompactToolbar({
           >
             <HelpCircle className={`h-4 w-4 ${getIconColor('help')}`} />
           </Button>
+        )}
+
+        </div>
+
+        {/* Selection indicator */}
+        {selectedItems.length > 0 && (
+          <div className="text-xs text-muted-foreground whitespace-nowrap">
+            {selectedItems.length} επιλεγμένα
+          </div>
         )}
 
       </div>

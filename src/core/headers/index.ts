@@ -15,7 +15,8 @@ export {
   HeaderSearch,
   HeaderFilters,
   HeaderActions,
-  HeaderViewToggle
+  HeaderViewToggle,
+  MobileCompactHeader
 } from './UnifiedHeaderSystem';
 
 // Types & Interfaces
@@ -28,7 +29,8 @@ export type {
   HeaderFiltersProps,
   HeaderActionsProps,
   PageHeaderProps,
-  SectionHeaderProps
+  SectionHeaderProps,
+  MobileCompactHeaderProps
 } from './UnifiedHeaderSystem';
 
 // Default export
