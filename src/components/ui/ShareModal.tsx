@@ -179,7 +179,7 @@ export function ShareModal({
       let url = socialUrls[platformId as keyof typeof socialUrls];
 
       if (platformId === 'facebook' && shareData.url.includes('/share/photo/')) {
-        // Για Facebook, στείλε direct Firebase URL (χωρίς webpage)
+        // Για Facebook, στείλε direct Firebase URL (χωρίς webpage, όπως πριν)
         const urlObj = new URL(shareData.url);
         const dataParam = urlObj.searchParams.get('data');
 
@@ -192,9 +192,13 @@ export function ShareModal({
             url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(directUrl)}&quote=${encodeURIComponent(shareData.title + '\n' + shareData.text)}`;
             console.log('🚨 FACEBOOK: Direct Firebase URL:', directUrl);
           } catch (e) {
+            console.error('Error parsing data for Facebook:', e);
             // Fallback to original logic if parsing fails
             url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareData.url)}`;
           }
+        } else {
+          console.log('No data parameter found for Facebook sharing');
+          url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareData.url)}`;
         }
       }
       if (url) {
