@@ -499,7 +499,10 @@ export function PhotoPreviewModal({
       sessionStorage.setItem(`photo_share_${photoId}`, JSON.stringify(photoShareData));
     }
 
-    const baseUrl = `${window.location.origin}/share/photo/${photoId}`;
+    // Always use production URL for social media sharing
+    const productionUrl = 'https://nestor-app.vercel.app';
+    const currentUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    const baseUrl = currentUrl.includes('localhost') ? `${productionUrl}/share/photo/${photoId}` : `${currentUrl}/share/photo/${photoId}`;
     const params = new URLSearchParams({
       utm_source: 'photo_modal',
       utm_medium: 'social_share',
