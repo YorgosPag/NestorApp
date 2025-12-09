@@ -10,7 +10,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const dataParam = searchParams.data;
   let title = 'Φωτογραφία από Nestor Construct';
   let description = 'Δείτε τη φωτογραφία στο Nestor Construct!';
-  let imageUrl = 'https://nestor-app.vercel.app/default-photo.jpg'; // Default fallback
+  let imageUrl = 'https://nestor-app.vercel.app/default-photo.jpg';
 
   if (dataParam) {
     try {
@@ -48,7 +48,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
 
 export default function PhotoSharePage({ params, searchParams }: Props) {
   const dataParam = searchParams.data;
-  let photoUrl = 'https://nestor-app.vercel.app/default-photo.jpg'; // Default
+  let photoUrl = 'https://nestor-app.vercel.app/default-photo.jpg';
   let photoTitle = 'Φωτογραφία';
   let photoDescription = 'Δείτε τη φωτογραφία στο Nestor Construct!';
 
