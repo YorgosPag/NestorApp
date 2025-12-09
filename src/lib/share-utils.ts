@@ -5,6 +5,7 @@ export interface ShareData {
   text?: string;
   url: string;
   files?: File[];
+  isPhoto?: boolean;
 }
 
 export interface UTMParams {
@@ -258,7 +259,7 @@ export function generateOGTags(data: {
 export function getSocialShareUrls(url: string, text: string) {
   const encodedUrl = encodeURIComponent(url);
   const encodedText = encodeURIComponent(text);
-  
+
   return {
     facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
     twitter: `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedText}`,
@@ -266,6 +267,24 @@ export function getSocialShareUrls(url: string, text: string) {
     whatsapp: `https://wa.me/?text=${encodedText} ${encodedUrl}`,
     telegram: `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}`,
     email: `mailto:?subject=${encodedText}&body=${encodedText}%0A%0A${encodedUrl}`
+  };
+}
+
+/**
+ * Enhanced social sharing URLs for photos with better Facebook handling
+ */
+export function getPhotoSocialShareUrls(photoUrl: string, text: string, pageUrl?: string) {
+  const encodedPhotoUrl = encodeURIComponent(photoUrl);
+  const encodedText = encodeURIComponent(text);
+  const encodedPageUrl = pageUrl ? encodeURIComponent(pageUrl) : encodedPhotoUrl;
+
+  return {
+    facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedPhotoUrl}&quote=${encodedText}`,
+    twitter: `https://twitter.com/intent/tweet?url=${encodedPhotoUrl}&text=${encodedText}`,
+    linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedPageUrl}`,
+    whatsapp: `https://wa.me/?text=${encodedText} ${encodedPhotoUrl}`,
+    telegram: `https://t.me/share/url?url=${encodedPhotoUrl}&text=${encodedText}`,
+    email: `mailto:?subject=${encodedText}&body=${encodedText}%0A%0A${encodedPhotoUrl}`
   };
 }
 

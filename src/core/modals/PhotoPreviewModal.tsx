@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect, useRef } from 'react'; // TypeScript refresh
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { X, Download, Share2, ZoomIn, ZoomOut, RotateCw, User, Building2, ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react';
+import { X, Download, ZoomIn, ZoomOut, RotateCw, User, Building2, ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { ShareButton } from '@/components/ui/ShareButton';
 import type { Contact } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts';
 import { BadgeFactory } from '@/core/badges/BadgeFactory';
@@ -472,27 +473,62 @@ export function PhotoPreviewModal({
     }
   };
 
-  const handleShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: title,
-          text: `Δείτε τη φωτογραφία: ${title}`,
-          url: currentPhoto,
-        });
-      } catch (err) {
-        console.log('Share cancelled or failed');
+  // Generate photo share URL pointing to our dedicated sharing page with Open Graph tags
+  const generatePhotoShareUrl = () => {
+    // Create a unique photo ID for the sharing page
+    const photoId = generatePhotoId();
+
+    // Store photo data for the sharing page to access
+    const photoShareData = {
+      id: photoId,
+      url: currentPhoto,
+      title: title,
+      description: contact ? `Φωτογραφία από ${getContactDisplayName(contact)}` : `Φωτογραφία από ${title}`,
+      contact: contact ? {
+        name: getContactDisplayName(contact),
+        type: contact.type
+      } : undefined,
+      metadata: {
+        uploadedAt: new Date().toISOString(),
+        photoType: photoType
       }
-    } else {
-      // Fallback: Copy URL to clipboard
-      try {
-        await navigator.clipboard.writeText(currentPhoto);
-        // TODO: Add toast notification
-        console.log('URL copied to clipboard');
-      } catch (err) {
-        console.error('Failed to copy URL');
-      }
+    };
+
+    // Store in sessionStorage for the sharing page to access
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(`photo_share_${photoId}`, JSON.stringify(photoShareData));
     }
+
+    const baseUrl = `${window.location.origin}/share/photo/${photoId}`;
+    const params = new URLSearchParams({
+      utm_source: 'photo_modal',
+      utm_medium: 'social_share',
+      utm_campaign: 'photo_sharing',
+      utm_content: `${photoType}_photo`,
+      shared: 'true',
+      // Include encoded data as backup
+      data: encodeURIComponent(JSON.stringify(photoShareData))
+    });
+
+    return `${baseUrl}?${params.toString()}`;
+  };
+
+  // Generate unique photo ID for sharing
+  const generatePhotoId = () => {
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(2, 8);
+    const contactName = contact ? getContactDisplayName(contact).replace(/\s+/g, '_') : 'photo';
+    const photoTypePrefix = photoType || 'gallery';
+
+    return `${contactName}_${photoTypePrefix}_${timestamp}_${random}`;
+  };
+
+  const shareData = {
+    title: `📸 ${title}`,
+    text: `📸 ${title}${contact ? `\n👤 ${getContactDisplayName(contact)}` : ''}\n\nΔείτε τη φωτογραφία στο Nestor Construct!`,
+    url: generatePhotoShareUrl(), // Use webpage URL with Open Graph tags for proper social media preview
+    // Mark as photo for ShareModal to handle correctly
+    isPhoto: true,
   };
 
   return (
@@ -613,15 +649,13 @@ export function PhotoPreviewModal({
               <Maximize2 className="w-4 h-4" />
             </Button>
 
-            <Button
+            <ShareButton
+              shareData={shareData}
               variant="ghost"
               size="sm"
-              onClick={handleShare}
-              title="Κοινοποίηση"
+              showLabel={false}
               className="h-8 w-8 p-0"
-            >
-              <Share2 className="w-4 h-4" />
-            </Button>
+            />
 
             <Button
               variant="ghost"

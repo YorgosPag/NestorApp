@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { CommonBadge } from '@/core/badges';
 import { cn } from '@/lib/utils';
-import { getSocialShareUrls, trackShareEvent } from '@/lib/share-utils';
+import { getSocialShareUrls, getPhotoSocialShareUrls, trackShareEvent } from '@/lib/share-utils';
 import { EmailTemplatesService } from '@/services/email-templates.service';
 import type { EmailTemplateType } from '@/types/email-templates';
 
@@ -20,6 +20,7 @@ export interface ShareModalProps {
     title: string;
     text?: string;
     url: string;
+    isPhoto?: boolean;
   };
   onCopySuccess?: () => void;
   onShareSuccess?: (platform: string) => void;
@@ -153,7 +154,18 @@ export function ShareModal({
     }
   }, [isOpen]);
 
-  const socialUrls = getSocialShareUrls(shareData.url, shareData.text || shareData.title);
+  // Check if we're sharing a direct photo URL (Firebase Storage or image files)
+  // Note: shareData.isPhoto is now used for webpage URLs with Open Graph tags
+  const isDirectPhotoUrl = shareData.url.includes('firebasestorage.googleapis.com') ||
+                           shareData.url.match(/\.(jpg|jpeg|png|gif|webp)(\?|$)/i);
+
+  // For webpage URLs (like /share/photo/:id), use standard sharing even if isPhoto=true
+  const isWebpagePhotoShare = shareData.isPhoto && shareData.url.includes('/share/photo/');
+
+  // Use standard sharing for webpage photo shares, special handling only for direct photo URLs
+  const socialUrls = isDirectPhotoUrl && !isWebpagePhotoShare
+    ? getPhotoSocialShareUrls(shareData.url, shareData.text || shareData.title)
+    : getSocialShareUrls(shareData.url, shareData.text || shareData.title);
 
   const handlePlatformShare = async (platformId: string) => {
     if (platformId === 'email') {
@@ -166,16 +178,67 @@ export function ShareModal({
     try {
       const url = socialUrls[platformId as keyof typeof socialUrls];
       if (url) {
-        const shareWindow = window.open(url, '_blank', 'width=600,height=400,scrollbars=yes,resizable=yes');
-        
-        if (shareWindow) {
-          trackShareEvent(platformId, 'property', shareData.url);
-          setTimeout(() => {
-            onShareSuccess?.(platformId);
-          }, 1500);
+        // Handle direct photo URLs differently from webpage photo shares
+        if (isDirectPhotoUrl && !isWebpagePhotoShare) {
+          // Direct photo URLs: Handle mobile vs desktop differently to avoid popup blocking
+          if (/Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+            // Mobile: Direct navigation in same tab
+            window.location.href = url;
+          } else {
+            // Desktop: Use popup
+            const shareWindow = window.open(
+              url,
+              '_blank',
+              'width=600,height=400,scrollbars=yes,resizable=yes,noopener=yes,noreferrer=yes'
+            );
+
+            if (!shareWindow) {
+              // Fallback: copy to clipboard
+              await navigator.clipboard.writeText(url);
+            }
+          }
         } else {
-          throw new Error('Popup blocked or failed to open');
+          // For non-photo URLs, use Web Share API if available
+          if (navigator.share && platformId !== 'facebook' && platformId !== 'twitter' && platformId !== 'linkedin') {
+            try {
+              await navigator.share({
+                title: shareData.title,
+                text: shareData.text,
+                url: shareData.url,
+              });
+            } catch (shareError) {
+              // If Web Share API fails, fallback to popup
+              console.log('Web Share API failed, falling back to popup:', shareError);
+              const shareWindow = window.open(
+                url,
+                '_blank',
+                'width=600,height=400,scrollbars=yes,resizable=yes,noopener=yes,noreferrer=yes'
+              );
+
+              if (!shareWindow) {
+                await navigator.clipboard.writeText(url);
+                // Silent fallback - no annoying alerts
+              }
+            }
+          } else {
+            // Open in new tab/popup for specified platforms or when Web Share not available
+            const shareWindow = window.open(
+              url,
+              '_blank',
+              'width=600,height=400,scrollbars=yes,resizable=yes,noopener=yes,noreferrer=yes'
+            );
+
+            if (!shareWindow) {
+              await navigator.clipboard.writeText(url);
+              // Silent fallback - no annoying alerts
+            }
+          }
         }
+
+        trackShareEvent(platformId, 'property', shareData.url);
+        setTimeout(() => {
+          onShareSuccess?.(platformId);
+        }, 1500);
       }
     } catch (error) {
       onShareError?.(platformId, error instanceof Error ? error.message : 'Unknown error');
