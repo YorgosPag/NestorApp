@@ -7,7 +7,8 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { AppHeader } from "@/components/app-header";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { NotificationDrawer } from "@/components/NotificationDrawer.enterprise";
-// 🗑️ REMOVED: react-hot-toast Toaster (replaced by centralized NotificationProvider)
+// 🔧 TEMPORARY: Keep react-hot-toast Toaster until full migration to NotificationProvider
+import { Toaster } from 'react-hot-toast';
 import { NotificationProvider } from "../providers/NotificationProvider";
 import { SharedPropertiesProvider } from "@/contexts/SharedPropertiesProvider";
 import { UserRoleProvider } from "@/contexts/UserRoleContext";
@@ -90,7 +91,19 @@ export default function RootLayout({
                 {/* ✅ Notification Drawer - Outside all containers for proper z-index */}
                 <NotificationDrawer />
 
-                {/* ✅ ΜΟΝΟ το κεντρικοποιημένο NotificationProvider (sonner-based) */}
+                {/* 🔧 TEMPORARY: Both toast systems until migration completes */}
+                <Toaster
+                  position="top-right"
+                  toastOptions={{
+                    duration: 3000,
+                    style: {
+                      background: '#363636',
+                      color: '#fff',
+                    },
+                  }}
+                />
+
+                {/* ✅ το κεντρικοποιημένο NotificationProvider (sonner-based) */}
                 </NotificationProvider>
               </FloorplanProvider>
             </UserRoleProvider>
