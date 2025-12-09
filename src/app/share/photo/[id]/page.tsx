@@ -20,7 +20,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
       const data = JSON.parse(doubleDecoded);
       title = data.title || title;
       description = data.description || description;
-      imageUrl = data.url || imageUrl;
+      imageUrl = `/api/og-image?url=${encodeURIComponent(data.url)}`;
     } catch (e) {
       console.error('Parse error:', e);
     }
