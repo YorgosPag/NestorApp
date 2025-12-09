@@ -1,7 +1,5 @@
-'use client';
-
-import React, { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import React, { useEffect, useState, Suspense } from 'react';
+import { useParams, useSearchParams } from 'next/navigation';
 import { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -12,7 +10,7 @@ import { Button } from '@/components/ui/button';
 // TYPES & INTERFACES
 // ============================================================================
 
-interface PhotoData {
+interface PhotoShareData {
   id: string;
   url: string;
   title: string;
@@ -25,6 +23,74 @@ interface PhotoData {
     uploadedAt: string;
     size?: number;
     dimensions?: { width: number; height: number };
+    photoType?: string;
+  };
+}
+
+// ============================================================================
+// SERVER-SIDE METADATA GENERATION
+// ============================================================================
+
+/**
+ * Decode photo share data from URL parameters (server-side compatible)
+ */
+function decodePhotoDataFromParams(searchParams: { [key: string]: string | undefined }): PhotoShareData | null {
+  try {
+    const encodedData = searchParams.data;
+    if (encodedData) {
+      const decodedData = JSON.parse(decodeURIComponent(encodedData));
+      return decodedData;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error decoding photo data from params:', error);
+    return null;
+  }
+}
+
+/**
+ * Generate metadata for Facebook/Twitter scrapers (server-side)
+ */
+export async function generateMetadata({
+  params,
+  searchParams
+}: {
+  params: { id: string };
+  searchParams: { [key: string]: string | undefined }
+}): Promise<Metadata> {
+  // Try to decode photo data from URL params
+  const photoData = decodePhotoDataFromParams(searchParams);
+
+  // Default values
+  const title = photoData?.title || '📸 Φωτογραφία από Nestor Construct';
+  const description = photoData?.description || 'Δείτε αυτή την όμορφη φωτογραφία στο Nestor Construct!';
+  const imageUrl = photoData?.url || '/favicon.ico'; // Fallback to favicon
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      images: [
+        {
+          url: imageUrl,
+          width: photoData?.metadata?.dimensions?.width || 1200,
+          height: photoData?.metadata?.dimensions?.height || 630,
+          alt: title,
+        },
+      ],
+      type: 'article',
+      siteName: 'Nestor Construct',
+      url: `/share/photo/${params.id}`,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [imageUrl],
+      site: '@NestorConstruct',
+    },
   };
 }
 
@@ -33,24 +99,27 @@ interface PhotoData {
 // ============================================================================
 
 /**
- * Decode photo share data from URL parameters or localStorage
+ * Decode photo share data from URL parameters or localStorage (client-side)
  */
-function decodePhotoData(photoId: string): PhotoData | null {
+function decodePhotoData(photoId: string, searchParams: URLSearchParams): PhotoShareData | null {
   try {
-    // Try to get from URL search params (if passed)
+    // First try URL search params
+    const encodedData = searchParams.get('data');
+    if (encodedData) {
+      const decodedData = JSON.parse(decodeURIComponent(encodedData));
+      return decodedData;
+    }
+
+    // Fallback: Try to reconstruct from localStorage or sessionStorage
     if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search);
-      const encodedData = urlParams.get('data');
-
-      if (encodedData) {
-        const decodedData = JSON.parse(decodeURIComponent(encodedData));
-        return decodedData;
-      }
-
-      // Fallback: Try to reconstruct from localStorage or sessionStorage
       const localData = localStorage.getItem(`photo_share_${photoId}`);
       if (localData) {
         return JSON.parse(localData);
+      }
+
+      const sessionData = sessionStorage.getItem(`photo_share_${photoId}`);
+      if (sessionData) {
+        return JSON.parse(sessionData);
       }
 
       // Last resort: Basic data from photoId (if it contains info)
@@ -78,39 +147,16 @@ function decodePhotoData(photoId: string): PhotoData | null {
   }
 }
 
-/**
- * Generate Open Graph meta tags for the photo
- */
-function generateOpenGraphTags(photo: PhotoData): { [key: string]: string } {
-  return {
-    'og:title': photo.title,
-    'og:description': photo.description || 'Δείτε αυτή την όμορφη φωτογραφία στο Nestor Construct!',
-    'og:image': photo.url,
-    'og:url': typeof window !== 'undefined' ? window.location.href : '',
-    'og:type': 'article',
-    'og:site_name': 'Nestor Construct',
-    'og:image:width': photo.metadata?.dimensions?.width?.toString() || '1200',
-    'og:image:height': photo.metadata?.dimensions?.height?.toString() || '630',
-    'og:image:alt': photo.title,
-
-    // Twitter Card tags
-    'twitter:card': 'summary_large_image',
-    'twitter:title': photo.title,
-    'twitter:description': photo.description || 'Δείτε αυτή την όμορφη φωτογραφία στο Nestor Construct!',
-    'twitter:image': photo.url,
-    'twitter:site': '@NestorConstruct',
-  };
-}
-
 // ============================================================================
-// MAIN COMPONENT
+// CLIENT COMPONENT
 // ============================================================================
 
-export default function PhotoSharePage() {
+function PhotoSharePageContent() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const photoId = params?.id as string;
 
-  const [photoData, setPhotoData] = useState<PhotoData | null>(null);
+  const [photoData, setPhotoData] = useState<PhotoShareData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -122,7 +168,7 @@ export default function PhotoSharePage() {
     }
 
     try {
-      const decoded = decodePhotoData(photoId);
+      const decoded = decodePhotoData(photoId, searchParams);
       if (!decoded) {
         setError('Could not load photo data');
         setLoading(false);
@@ -138,30 +184,13 @@ export default function PhotoSharePage() {
 
       setPhotoData(decoded);
 
-      // Set dynamic meta tags
-      const metaTags = generateOpenGraphTags(decoded);
-      Object.entries(metaTags).forEach(([property, content]) => {
-        let metaElement = document.querySelector(`meta[property="${property}"]`);
-
-        if (!metaElement) {
-          metaElement = document.createElement('meta');
-          metaElement.setAttribute('property', property);
-          document.head.appendChild(metaElement);
-        }
-
-        metaElement.setAttribute('content', content);
-      });
-
-      // Set page title
-      document.title = decoded.title;
-
     } catch (err) {
       console.error('Error loading photo:', err);
       setError('Failed to load photo');
     } finally {
       setLoading(false);
     }
-  }, [photoId]);
+  }, [photoId, searchParams]);
 
   // Loading state
   if (loading) {
@@ -326,5 +355,24 @@ export default function PhotoSharePage() {
         </div>
       </footer>
     </div>
+  );
+}
+
+// ============================================================================
+// MAIN COMPONENT WITH SUSPENSE
+// ============================================================================
+
+export default function PhotoSharePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Φόρτωση φωτογραφίας...</p>
+        </div>
+      </div>
+    }>
+      <PhotoSharePageContent />
+    </Suspense>
   );
 }
