@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react'; // TypeScript refresh
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { X, Download, Share2, ZoomIn, ZoomOut, RotateCw, User, Building2, ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -206,6 +206,19 @@ export function PhotoPreviewModal({
   const isGalleryModeRef = useRef(false);
   const totalPhotosRef = useRef(0);
 
+  // 📱 Pinch-to-zoom και Pan state για mobile (MOVED TO TOP LEVEL)
+  const [initialDistance, setInitialDistance] = useState<number | undefined>(undefined);
+  const [initialZoom, setInitialZoom] = useState(1);
+
+  // Pan state για image dragging (MOVED TO TOP LEVEL)
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+  const [initialPanOffset, setInitialPanOffset] = useState({ x: 0, y: 0 });
+
+  // Image dimensions state για adaptive sizing (MOVED TO TOP LEVEL)
+  const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0, aspectRatio: 1 });
+
   // Gallery logic - πάντα χρησιμοποιούμε το current gallery photo αν είμαστε σε gallery mode
   const isGalleryMode = galleryPhotos && galleryPhotos.length > 0;
   const currentPhoto = isGalleryMode ? galleryPhotos[currentIndex] : photoUrl;
@@ -378,7 +391,7 @@ export function PhotoPreviewModal({
   };
 
   const handleZoomIn = () => {
-    setZoom(prev => Math.min(prev + 0.25, 5));
+    setZoom(prev => Math.min(prev + 0.25, 8));
   };
 
   const handleZoomOut = () => {
@@ -394,16 +407,6 @@ export function PhotoPreviewModal({
     setRotation(0); // Reset rotation για καθαρή εμφάνιση
     setPanOffset({ x: 0, y: 0 }); // Reset pan position για κεντραρισμένη εμφάνιση
   };
-
-  // 📱 Pinch-to-zoom και Pan για mobile
-  const [initialDistance, setInitialDistance] = useState<number | null>(null);
-  const [initialZoom, setInitialZoom] = useState(1);
-
-  // Pan state για image dragging
-  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
-  const [isPanning, setIsPanning] = useState(false);
-  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
-  const [initialPanOffset, setInitialPanOffset] = useState({ x: 0, y: 0 });
 
   const getTouchDistance = (touch1: React.Touch, touch2: React.Touch) => {
     const dx = touch1.clientX - touch2.clientX;
@@ -430,12 +433,12 @@ export function PhotoPreviewModal({
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (e.touches.length === 2 && initialDistance && isMobile) {
+    if (e.touches.length === 2 && initialDistance !== undefined && isMobile) {
       // Pinch-to-zoom
       e.preventDefault();
       const currentDistance = getTouchDistance(e.touches[0], e.touches[1]);
       const scale = currentDistance / initialDistance;
-      const newZoom = Math.min(Math.max(initialZoom * scale, 0.25), 5);
+      const newZoom = Math.min(Math.max(initialZoom * scale, 0.25), 8);
       setZoom(newZoom);
     } else if (e.touches.length === 1 && isPanning && isMobile && zoom > 1) {
       // Pan/drag
@@ -444,9 +447,14 @@ export function PhotoPreviewModal({
       const deltaX = touch.clientX - panStart.x;
       const deltaY = touch.clientY - panStart.y;
 
-      // Calculate new pan offset with boundaries
-      const maxPanX = (zoom - 1) * 150; // Limit pan based on zoom level
-      const maxPanY = (zoom - 1) * 150;
+      // Calculate new pan offset with proper boundaries based on container size
+      const containerRect = (e.target as HTMLElement).getBoundingClientRect();
+      const imageWidth = containerRect.width;
+      const imageHeight = containerRect.height;
+
+      // Calculate maximum pan distance based on how much the zoomed image exceeds the container
+      const maxPanX = Math.max(0, (imageWidth * (zoom - 1)) / 2);
+      const maxPanY = Math.max(0, (imageHeight * (zoom - 1)) / 2);
 
       const newX = Math.max(-maxPanX, Math.min(maxPanX, initialPanOffset.x + deltaX));
       const newY = Math.max(-maxPanY, Math.min(maxPanY, initialPanOffset.y + deltaY));
@@ -457,7 +465,7 @@ export function PhotoPreviewModal({
 
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (e.touches.length < 2) {
-      setInitialDistance(null);
+      setInitialDistance(undefined);
     }
     if (e.touches.length === 0) {
       setIsPanning(false);
@@ -578,7 +586,7 @@ export function PhotoPreviewModal({
               variant="ghost"
               size="sm"
               onClick={handleZoomIn}
-              disabled={zoom >= 5}
+              disabled={zoom >= 8}
               title="Μεγαλύτερο"
               className="h-8 w-8 p-0"
             >
@@ -639,19 +647,34 @@ export function PhotoPreviewModal({
 
         {/* Photo Content */}
         <div className={`flex-1 flex items-center justify-center overflow-hidden ${PHOTO_COLORS.PHOTO_BACKGROUND} rounded-none`}>
-          <div className="relative max-w-full max-h-full">
+          <div className="relative w-full h-full flex items-center justify-center">
             <img
               src={currentPhoto}
               alt={title}
               className="max-w-full max-h-full object-contain transition-transform duration-200"
               style={{
-                transform: `scale(${zoom}) rotate(${rotation}deg) translate(${panOffset.x}px, ${panOffset.y}px)`,
+                transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom}) rotate(${rotation}deg)`,
                 transformOrigin: 'center',
                 touchAction: isMobile ? 'none' : 'auto' // Disable default touch behaviors για custom pinch
               }}
               onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
+              onLoad={(e) => {
+                const img = e.target as HTMLImageElement;
+                const aspectRatio = img.naturalWidth / img.naturalHeight;
+                setImageDimensions({
+                  width: img.naturalWidth,
+                  height: img.naturalHeight,
+                  aspectRatio
+                });
+                console.log('🖼️ Image loaded:', {
+                  naturalWidth: img.naturalWidth,
+                  naturalHeight: img.naturalHeight,
+                  aspectRatio: aspectRatio.toFixed(2),
+                  orientation: aspectRatio > 1 ? 'landscape' : aspectRatio < 1 ? 'portrait' : 'square'
+                });
+              }}
               onError={(e) => {
                 console.error('Failed to load image:', currentPhoto);
                 // TODO: Show error state
