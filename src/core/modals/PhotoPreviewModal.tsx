@@ -392,6 +392,76 @@ export function PhotoPreviewModal({
   const handleFitToView = () => {
     setZoom(1); // Reset zoom to 100% για fit to view
     setRotation(0); // Reset rotation για καθαρή εμφάνιση
+    setPanOffset({ x: 0, y: 0 }); // Reset pan position για κεντραρισμένη εμφάνιση
+  };
+
+  // 📱 Pinch-to-zoom και Pan για mobile
+  const [initialDistance, setInitialDistance] = useState<number | null>(null);
+  const [initialZoom, setInitialZoom] = useState(1);
+
+  // Pan state για image dragging
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+  const [initialPanOffset, setInitialPanOffset] = useState({ x: 0, y: 0 });
+
+  const getTouchDistance = (touch1: React.Touch, touch2: React.Touch) => {
+    const dx = touch1.clientX - touch2.clientX;
+    const dy = touch1.clientY - touch2.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2 && isMobile) {
+      // Pinch-to-zoom με δύο δάχτυλα
+      e.preventDefault();
+      const distance = getTouchDistance(e.touches[0], e.touches[1]);
+      setInitialDistance(distance);
+      setInitialZoom(zoom);
+      setIsPanning(false); // Disable panning during pinch
+    } else if (e.touches.length === 1 && isMobile && zoom > 1) {
+      // Pan με ένα δάχτυλο (μόνο αν έχει zoom)
+      e.preventDefault();
+      const touch = e.touches[0];
+      setIsPanning(true);
+      setPanStart({ x: touch.clientX, y: touch.clientY });
+      setInitialPanOffset({ ...panOffset });
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 2 && initialDistance && isMobile) {
+      // Pinch-to-zoom
+      e.preventDefault();
+      const currentDistance = getTouchDistance(e.touches[0], e.touches[1]);
+      const scale = currentDistance / initialDistance;
+      const newZoom = Math.min(Math.max(initialZoom * scale, 0.25), 5);
+      setZoom(newZoom);
+    } else if (e.touches.length === 1 && isPanning && isMobile && zoom > 1) {
+      // Pan/drag
+      e.preventDefault();
+      const touch = e.touches[0];
+      const deltaX = touch.clientX - panStart.x;
+      const deltaY = touch.clientY - panStart.y;
+
+      // Calculate new pan offset with boundaries
+      const maxPanX = (zoom - 1) * 150; // Limit pan based on zoom level
+      const maxPanY = (zoom - 1) * 150;
+
+      const newX = Math.max(-maxPanX, Math.min(maxPanX, initialPanOffset.x + deltaX));
+      const newY = Math.max(-maxPanY, Math.min(maxPanY, initialPanOffset.y + deltaY));
+
+      setPanOffset({ x: newX, y: newY });
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (e.touches.length < 2) {
+      setInitialDistance(null);
+    }
+    if (e.touches.length === 0) {
+      setIsPanning(false);
+    }
   };
 
   const handleShare = async () => {
@@ -575,9 +645,13 @@ export function PhotoPreviewModal({
               alt={title}
               className="max-w-full max-h-full object-contain transition-transform duration-200"
               style={{
-                transform: `scale(${zoom}) rotate(${rotation}deg)`,
-                transformOrigin: 'center'
+                transform: `scale(${zoom}) rotate(${rotation}deg) translate(${panOffset.x}px, ${panOffset.y}px)`,
+                transformOrigin: 'center',
+                touchAction: isMobile ? 'none' : 'auto' // Disable default touch behaviors για custom pinch
               }}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
               onError={(e) => {
                 console.error('Failed to load image:', currentPhoto);
                 // TODO: Show error state
