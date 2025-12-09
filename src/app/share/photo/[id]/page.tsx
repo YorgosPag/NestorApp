@@ -14,8 +14,10 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
 
   if (dataParam) {
     try {
-      const decodedData = decodeURIComponent(dataParam);
-      const data = JSON.parse(decodedData);
+      // Double decode for double-encoded data
+      const singleDecoded = decodeURIComponent(dataParam);
+      const doubleDecoded = decodeURIComponent(singleDecoded);
+      const data = JSON.parse(doubleDecoded);
       title = data.title || title;
       description = data.description || description;
       imageUrl = data.url || imageUrl;
@@ -52,8 +54,10 @@ export default function PhotoSharePage({ params, searchParams }: Props) {
 
   if (dataParam) {
     try {
-      const decodedData = decodeURIComponent(dataParam);
-      const data = JSON.parse(decodedData);
+      // Double decode for double-encoded data
+      const singleDecoded = decodeURIComponent(dataParam);
+      const doubleDecoded = decodeURIComponent(singleDecoded);
+      const data = JSON.parse(doubleDecoded);
       photoUrl = data.url || photoUrl;
       photoTitle = data.title || photoTitle;
       photoDescription = data.description || photoDescription;
