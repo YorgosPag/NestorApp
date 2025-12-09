@@ -112,7 +112,7 @@ export function PhotoPreview({
           <img
             src={previewUrl}
             alt="Προεπισκόπηση"
-            className="w-full h-full object-cover rounded-lg"
+            className="w-full h-full object-contain rounded-lg"
           />
 
           {/* Remove button για compact mode */}
@@ -128,14 +128,7 @@ export function PhotoPreview({
           )}
         </div>
 
-        {/* Κείμενα κάτω από τη φωτογραφία */}
-        <div className="mt-2 text-center w-full px-2">
-          <p className="text-xs font-medium text-green-700 flex items-center justify-center gap-1">
-            <CheckCircle className="w-3 h-3" />
-            Φωτογραφία φορτώθηκε
-          </p>
-          <p className="text-xs text-gray-600 mt-1 truncate">Κάντε κλικ για αλλαγή</p>
-        </div>
+        {/* Κείμενα κάτω από τη φωτογραφία - Κρυφά στα contact details */}
       </div>
     );
   }
@@ -150,7 +143,7 @@ export function PhotoPreview({
         <img
           src={previewUrl}
           alt="Προεπισκόπηση"
-          className="w-full h-full object-cover"
+          className="w-full h-full object-contain"
         />
 
         {/* Remove button για full mode */}

@@ -217,7 +217,7 @@ export function EnterprisePhotoUpload({
       <div className={`relative ${className}`}>
         <div
           className={`
-            relative rounded-lg ${PHOTO_HEIGHTS.STANDARD} w-full text-center cursor-pointer ${PHOTO_HOVER_EFFECTS.COLOR_TRANSITION} overflow-hidden
+            relative rounded-lg h-full w-full text-center cursor-pointer ${PHOTO_HOVER_EFFECTS.COLOR_TRANSITION} overflow-hidden
             ${currentPreview ? 'border-2 border-dashed border-green-300 bg-green-50' : `${PHOTO_COLORS.PHOTO_BACKGROUND} ${PHOTO_BORDERS.EMPTY_STATE} rounded-lg flex items-center justify-center text-center cursor-pointer transition-colors ${PHOTO_BORDERS.EMPTY_HOVER} p-6 flex-col`}
             ${disabled && !currentPreview ? 'opacity-50 cursor-not-allowed' : disabled ? 'cursor-default' : ''}
             ${hasError ? 'border-red-300 bg-red-50' : ''}

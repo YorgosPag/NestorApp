@@ -22,9 +22,9 @@ export const PHOTO_LAYOUTS = {
     itemWrapper: `${PHOTO_HEIGHTS.STANDARD} ${PHOTO_WIDTHS.FULL}`
   },
 
-  /** Individual photos: 6 photos (3x2 grid) - UNIFIED με Modal */
+  /** Individual photos: 6 photos (responsive grid) - UNIFIED με Modal */
   INDIVIDUAL_GRID: {
-    container: 'grid grid-cols-3 gap-8 p-2',
+    container: 'grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-8 p-2',
     item: PHOTO_SIZES.STANDARD_PREVIEW,
     itemWrapper: PHOTO_SIZES.STANDARD_PREVIEW
   },

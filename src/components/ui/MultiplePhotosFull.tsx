@@ -187,47 +187,97 @@ export function MultiplePhotosFull({
   // RENDER
   // ========================================================================
 
+  console.log('📸 MultiplePhotosFull: Rendering with', normalizedPhotos.length, 'slots');
+
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Header αφαιρέθηκε - δεν θέλουμε το "Φωτογραφία" text και Image icon */}
 
       {/* Photo Grid - 3x2 Layout */}
       <div className={PHOTO_LAYOUTS.INDIVIDUAL_GRID.container}>
-        {normalizedPhotos
-          // ✅ CRITICAL FIX: Στο disabled mode εμφανίζουμε μόνο τα slots με φωτογραφίες
-          .filter((photo, index) => {
-            if (!disabled || showPhotosWhenDisabled) {
-              return true; // Normal mode: εμφάνιση όλων
-            }
-            return photo.file || photo.uploadUrl; // Disabled mode: μόνο τα με φωτογραφίες
-          })
-          .map((photo, originalIndex) => {
-            // Βρίσκουμε το πραγματικό index στο original array
-            const index = normalizedPhotos.findIndex(p => p === photo);
+        {normalizedPhotos.map((photo, index) => {
+          // 🎯 MOBILE + DESKTOP FIX: Calculate responsive style first
+          const responsiveStyle = {
+            // Mobile: Fixed 240x320 (3:4 ratio - πιο ψηλά)
+            width: '240px',
+            height: '320px',
+            minWidth: '240px',
+            minHeight: '320px',
+            maxWidth: '240px',
+            maxHeight: '320px'
+          };
+
+          // Desktop media query override - Force exact 3:4 ratio
+          const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 640;
+          if (isDesktop) {
+            responsiveStyle.width = '100%';
+            responsiveStyle.height = 'auto'; // Let aspect-ratio control height
+            responsiveStyle.aspectRatio = '3/4'; // Force exact 3:4 ratio (πιο ψηλά)
+            responsiveStyle.minWidth = 'auto';
+            responsiveStyle.maxWidth = 'none';
+            responsiveStyle.minHeight = 'auto';
+            responsiveStyle.maxHeight = 'none';
+          }
+
+          // 🚨 CRITICAL: Skip filtering that changes indexes! Always render exactly 6 slots
+          if (disabled && !showPhotosWhenDisabled && !photo.file && !photo.uploadUrl) {
+            // Render empty slot placeholder in disabled mode
+            return (
+              <div
+                key={`full-empty-slot-${index}-${photosKey}`}
+                className="overflow-hidden flex-shrink-0 mx-auto opacity-50"
+                style={responsiveStyle}
+              >
+                <div className="w-full h-full bg-gray-100 rounded-lg"></div>
+              </div>
+            );
+          }
+
           // 🔥 CACHE BUSTING: Using extracted hook
           const rawPreview = photo.preview || photo.uploadUrl;
           const photoPreviewWithCacheBuster = addCacheBuster(rawPreview);
 
           return (
-            <div key={`photo-${index}-${photosKey}-${photo.file?.name || photo.uploadUrl || 'empty'}`} className={PHOTO_SIZES.STANDARD_PREVIEW}>
+            <div
+              key={`full-photo-slot-${index}-${photosKey}`}
+              className="overflow-hidden flex-shrink-0 mx-auto"
+              style={responsiveStyle}
+            >
               <EnterprisePhotoUpload
-                key={`enterprise-${index}-${photosKey}-${Date.now()}`}
+                key={`full-enterprise-slot-${index}-${photosKey}`}
                 purpose={purpose}
                 maxSize={5 * 1024 * 1024} // 5MB
                 photoFile={photo.file}
                 photoPreview={photoPreviewWithCacheBuster}
                 customFileName={photo.fileName} // 🔥 ΔΙΟΡΘΩΣΗ: Περνάμε το custom filename
                 onFileChange={(file) => {
-                  // Handle file change for multiple photos context
+                  // 🚨 STOP INFINITE LOOPS: Only update if file actually changed
+                  const currentFile = normalizedPhotos[index]?.file;
+                  if (currentFile === file) {
+                    console.log('📸 MultiplePhotosFull: SKIPPING - File unchanged for slot', index);
+                    return;
+                  }
+
+                  console.log('📸 MultiplePhotosFull: File changed for slot', index, file?.name);
                   const newPhotos = [...normalizedPhotos];
-                  newPhotos[index] = { ...newPhotos[index], file };
+                  newPhotos[index] = {
+                    ...newPhotos[index],
+                    file,
+                    isUploading: false, // Reset upload state
+                    uploadProgress: 0,
+                    error: undefined
+                  };
+                  console.log('📸 MultiplePhotosFull: Calling onPhotosChange with', newPhotos.length, 'photos');
                   if (onPhotosChange) {
-      onPhotosChange(newPhotos);
-    }
+                    onPhotosChange(newPhotos);
+                  }
                 }}
                 uploadHandler={uploadHandler}
                 onUploadComplete={(result) => {
-                  if (handleUploadComplete) handleUploadComplete(index, result);
+                  console.log('📸 MultiplePhotosFull: Upload completed for slot', index, result.success);
+                  if (handleUploadComplete) {
+                    handleUploadComplete(index, result);
+                  }
                 }}
                 disabled={disabled}
                 compact={true}

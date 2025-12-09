@@ -189,7 +189,7 @@ export function MultiplePhotosCompact({
       {/* Header αφαιρέθηκε - δεν θέλουμε το "Φωτογραφία" text και Image icon */}
 
       {/* Compact Grid - Dynamic Layout */}
-      <div className={maxPhotos === 1 ? "flex justify-center" : PHOTO_LAYOUTS.INDIVIDUAL_GRID.container}>
+      <div className={maxPhotos === 1 ? "flex justify-center" : "flex flex-col space-y-4 sm:grid sm:grid-cols-3 sm:gap-8 sm:p-2 sm:space-y-0"}>
         {normalizedPhotos
           // ✅ CRITICAL FIX: Στο disabled mode εμφανίζουμε μόνο τα slots με φωτογραφίες
           .filter((photo, index) => {
@@ -205,23 +205,52 @@ export function MultiplePhotosCompact({
           const rawPreview = photo.preview || photo.uploadUrl;
           const photoPreviewWithCacheBuster = addCacheBuster(rawPreview);
 
-          const slotSize = maxPhotos === 1 ? "h-64 w-64" : PHOTO_SIZES.STANDARD_PREVIEW; // Square for logo, full width for photos
+          // 🎯 MOBILE FIX: Fixed 4:3 ratio
+          const slotSize = maxPhotos === 1
+            ? "h-64 w-64 overflow-hidden"
+            : "w-[320px] h-[240px] flex-shrink-0 mx-auto overflow-hidden sm:w-full sm:h-[300px]"; // Clean 4:3 ratio
+
+          const mobileStyle = maxPhotos === 1 ? {} : {
+            width: '240px',
+            height: '320px',
+            minWidth: '240px',
+            minHeight: '320px',
+            maxWidth: '240px',
+            maxHeight: '320px'
+          };
 
           return (
-            <div key={`photo-${index}-${photosKey}-${photo.file?.name || photo.uploadUrl || 'empty'}`} className={slotSize}>
+            <div
+              key={`compact-photo-slot-${index}-${photosKey}`}
+              className={slotSize}
+              style={mobileStyle}
+            >
               <EnterprisePhotoUpload
-                key={`enterprise-${index}-${photosKey}-${Date.now()}`}
+                key={`compact-enterprise-slot-${index}-${photosKey}`}
                 purpose={purpose}
                 maxSize={5 * 1024 * 1024} // 5MB
                 photoFile={photo.file}
                 photoPreview={photoPreviewWithCacheBuster}
                 onFileChange={(file) => {
-                  // Handle file change for multiple photos context
+                  // 🚨 STOP INFINITE LOOPS: Only update if file actually changed
+                  const currentFile = normalizedPhotos[index]?.file;
+                  if (currentFile === file) {
+                    console.log('📸 MultiplePhotosCompact: SKIPPING - File unchanged for slot', index);
+                    return;
+                  }
+
+                  console.log('📸 MultiplePhotosCompact: File changed for slot', index, file?.name);
                   const newPhotos = [...normalizedPhotos];
-                  newPhotos[index] = { ...newPhotos[index], file };
+                  newPhotos[index] = {
+                    ...newPhotos[index],
+                    file,
+                    isUploading: false, // Reset upload state
+                    uploadProgress: 0,
+                    error: undefined
+                  };
                   if (onPhotosChange) {
-      onPhotosChange(newPhotos);
-    }
+                    onPhotosChange(newPhotos);
+                  }
                 }}
                 uploadHandler={uploadHandler}
                 onUploadComplete={(result) => {
@@ -231,7 +260,6 @@ export function MultiplePhotosCompact({
                 compact={true}
                 showProgress={showProgress}
                 isLoading={photo.isUploading}
-                className={slotSize}
                 contactData={contactData}
                 photoIndex={index}
                 onPreviewClick={() => {
