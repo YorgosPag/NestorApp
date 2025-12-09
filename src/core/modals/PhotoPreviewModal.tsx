@@ -481,7 +481,7 @@ export function PhotoPreviewModal({
     // Store photo data for the sharing page to access
     const photoShareData = {
       id: photoId,
-      url: currentPhoto,
+      url: currentPhoto.replace(/\?alt=media&token=.*$/, '?alt=media'),  // Αφαιρεί το token
       title: title,
       description: contact ? `Φωτογραφία από ${getContactDisplayName(contact)}` : `Φωτογραφία από ${title}`,
       contact: contact ? {
