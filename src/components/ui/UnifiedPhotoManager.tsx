@@ -17,8 +17,8 @@ import {
   PHOTO_BORDERS,
   PHOTO_COMBINED_EFFECTS
 } from '@/components/generic/config/photo-config';
-import { usePhotoPreviewModal, openGalleryPhotoModal } from '@/core/modals/usePhotoPreviewModal';
-import { PhotoPreviewModal } from '@/core/modals/PhotoPreviewModal';
+import { openGalleryPhotoModal } from '@/core/modals/usePhotoPreviewModal';
+import { useGlobalPhotoPreview } from '@/providers/PhotoPreviewProvider';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -75,8 +75,8 @@ function IndividualPhotoManager({
   uploadHandlers: UnifiedPhotoManagerProps['uploadHandlers'];
   disabled?: boolean;
 }) {
-  // 🏢 ENTERPRISE: PhotoPreviewModal hook για gallery functionality
-  const photoPreviewModal = usePhotoPreviewModal();
+  // 🏢 ENTERPRISE: Global PhotoPreviewModal για gallery functionality
+  const photoPreviewModal = useGlobalPhotoPreview();
 
   // 🎯 Photo click handler για το gallery modal
   const handlePhotoClick = React.useCallback((photoIndex: number) => {
@@ -133,8 +133,7 @@ function IndividualPhotoManager({
 
       </CardContent>
 
-      {/* 🏢 ENTERPRISE: PhotoPreviewModal για gallery functionality */}
-      <PhotoPreviewModal {...photoPreviewModal.modalProps} />
+      {/* ✅ PhotoPreviewModal τώρα global - δεν χρειάζεται εδώ */}
     </Card>
   );
 }

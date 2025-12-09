@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { ContactBadge, CommonBadge } from '@/core/badges';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { EntityDetailsHeader } from '@/core/entity-headers';
-import { PhotoPreviewModal, usePhotoPreviewModal, openContactAvatarModal, openGalleryPhotoModal } from '@/core/modals';
+import { openContactAvatarModal, openGalleryPhotoModal } from '@/core/modals';
+import { useGlobalPhotoPreview } from '@/providers/PhotoPreviewProvider';
 import { Users, Building2, Landmark, Edit, Trash2 } from 'lucide-react';
 import type { Contact, ContactType, ContactStatus } from '@/types/contacts';
 import { getContactDisplayName, getContactInitials } from '@/types/contacts';
@@ -26,7 +27,7 @@ interface ContactDetailsHeaderProps {
 }
 
 export function ContactDetailsHeader({ contact, onEditContact, onDeleteContact }: ContactDetailsHeaderProps) {
-  const photoModal = usePhotoPreviewModal();
+  const photoModal = useGlobalPhotoPreview();
   const type = contact.type as ContactType;
 
   // 🔥 FORCE RE-RENDER: Key-based avatar invalidation
@@ -184,8 +185,7 @@ export function ContactDetailsHeader({ contact, onEditContact, onDeleteContact }
         </div>
       </div>
 
-      {/* ✅ Κεντρικοποιημένο Photo Preview Modal */}
-      <PhotoPreviewModal {...photoModal.modalProps} />
+      {/* ✅ PhotoPreviewModal τώρα global - δεν χρειάζεται εδώ */}
     </>
   );
 }

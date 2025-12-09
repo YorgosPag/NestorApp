@@ -6,7 +6,8 @@ import type { Contact } from '@/types/contacts';
 import { ContactDetailsHeader } from './ContactDetailsHeader';
 import { AddUnitToContactDialog } from './AddUnitToContactDialog';
 import { UnifiedContactTabbedSection } from '@/components/ContactFormSections/UnifiedContactTabbedSection';
-import { PhotoPreviewModal, usePhotoPreviewModal } from '@/core/modals';
+import { openGalleryPhotoModal } from '@/core/modals';
+import { useGlobalPhotoPreview } from '@/providers/PhotoPreviewProvider';
 import { DetailsContainer } from '@/core/containers';
 
 interface ContactDetailsProps {
@@ -17,7 +18,7 @@ interface ContactDetailsProps {
 
 export function ContactDetails({ contact, onEditContact, onDeleteContact }: ContactDetailsProps) {
   const [isAddUnitDialogOpen, setIsAddUnitDialogOpen] = useState(false);
-  const photoModal = usePhotoPreviewModal();
+  const photoModal = useGlobalPhotoPreview();
 
   const handleUnitAdded = useCallback(() => {
     // TODO: Refresh data when unit is added
@@ -28,6 +29,43 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact }: Cont
     console.log('🏢 Opening edit modal for relationship management');
     onEditContact?.(); // Χρησιμοποιούμε το existing edit modal
   }, [onEditContact]);
+
+  // 📸 Convert multiplePhotoURLs to PhotoSlot format for MultiplePhotosUpload
+  const enhancedFormData = React.useMemo(() => {
+    if (!contact) return {};
+
+    const multiplePhotoURLs = (contact as any).multiplePhotoURLs || [];
+    const multiplePhotos = multiplePhotoURLs.map((url: string) => ({
+      file: null,
+      preview: undefined,
+      uploadUrl: url,
+      fileName: undefined,
+      isUploading: false,
+      uploadProgress: 0,
+      error: undefined
+    }));
+
+    return {
+      ...contact,
+      multiplePhotos
+    };
+  }, [contact]);
+
+  // 🖼️ Photo click handler για gallery preview
+  const handlePhotoClick = React.useCallback((index: number) => {
+    console.log('🔍 DEBUG ContactDetails: Photo click triggered', {
+      index,
+      contactExists: !!contact,
+      photoModalExists: !!photoModal,
+      openModalExists: !!photoModal?.openModal,
+      multiplePhotoURLs: (contact as any)?.multiplePhotoURLs?.length || 0
+    });
+
+    if (contact) {
+      console.log('🖼️ ContactDetails: Opening photo gallery at index:', index);
+      openGalleryPhotoModal(photoModal, contact, index);
+    }
+  }, [contact, photoModal]);
 
   return (
     <>
@@ -48,12 +86,13 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact }: Cont
       >
         <UnifiedContactTabbedSection
           contactType={contact?.type || 'individual'}
-          formData={contact || {}}
+          formData={enhancedFormData} // 📸 Use enhanced data with multiplePhotos
           handleChange={() => {}} // Read-only για details view
           handleSelectChange={() => {}} // Read-only για details view
           disabled={true} // Read-only mode
           relationshipsMode="summary" // 🎯 KEY: Summary mode για main view
           onOpenRelationshipModal={handleOpenRelationshipModal} // 🎯 Handler για relationships management
+          onPhotoClick={handlePhotoClick} // 🖼️ Photo click handler για gallery preview
         />
       </DetailsContainer>
 
@@ -66,8 +105,7 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact }: Cont
         />
       )}
 
-      {/* ✅ Κεντρικοποιημένο Photo Preview Modal */}
-      <PhotoPreviewModal {...photoModal.modalProps} />
+      {/* ✅ PhotoPreviewModal τώρα global - δεν χρειάζεται εδώ */}
     </>
   );
 }

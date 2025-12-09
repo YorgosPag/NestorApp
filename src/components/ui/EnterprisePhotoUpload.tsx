@@ -49,6 +49,8 @@ export interface EnterprisePhotoUploadProps extends Omit<UseEnterpriseFileUpload
   photoIndex?: number;
   /** 🔥 RESTORED: Custom filename override */
   customFileName?: string;
+  /** Photo preview click handler (for gallery modal) */
+  onPreviewClick?: () => void;
 }
 
 // ============================================================================
@@ -85,7 +87,8 @@ export function EnterprisePhotoUpload({
   isLoading: externalIsLoading,
   contactData,
   photoIndex,
-  customFileName
+  customFileName,
+  onPreviewClick
 }: EnterprisePhotoUploadProps) {
   // ========================================================================
   // HOOKS & STATE
@@ -216,7 +219,7 @@ export function EnterprisePhotoUpload({
           className={`
             relative rounded-lg ${PHOTO_HEIGHTS.STANDARD} w-full text-center cursor-pointer ${PHOTO_HOVER_EFFECTS.COLOR_TRANSITION} overflow-hidden
             ${currentPreview ? 'border-2 border-dashed border-green-300 bg-green-50' : `${PHOTO_COLORS.PHOTO_BACKGROUND} ${PHOTO_BORDERS.EMPTY_STATE} rounded-lg flex items-center justify-center text-center cursor-pointer transition-colors ${PHOTO_BORDERS.EMPTY_HOVER} p-6 flex-col`}
-            ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
+            ${disabled && !currentPreview ? 'opacity-50 cursor-not-allowed' : disabled ? 'cursor-default' : ''}
             ${hasError ? 'border-red-300 bg-red-50' : ''}
           `}
           onDrop={disabled ? undefined : handleDropWithValidation}
@@ -233,7 +236,10 @@ export function EnterprisePhotoUpload({
               compact={true}
               purpose={purpose}
               onRemove={!disabled && !isLoading ? handleRemoveWithCleanup : undefined}
-              onPreviewClick={handleClickWithValidation}
+              onPreviewClick={disabled && onPreviewClick ? () => {
+                console.log('🔍 DEBUG EnterprisePhotoUpload: Preview click triggered (disabled mode)', { onPreviewClickExists: !!onPreviewClick });
+                onPreviewClick();
+              } : handleClickWithValidation}
               disabled={disabled}
               className="w-full h-full"
             />
@@ -266,7 +272,7 @@ export function EnterprisePhotoUpload({
         className={`
           relative rounded-lg p-6 text-center cursor-pointer ${PHOTO_HOVER_EFFECTS.COLOR_TRANSITION} ${PHOTO_HEIGHTS.STANDARD} flex flex-col items-center justify-center
           ${currentPreview ? 'border-2 border-dashed border-green-300 bg-green-50' : `${PHOTO_COLORS.PHOTO_BACKGROUND} ${PHOTO_BORDERS.EMPTY_STATE} rounded-lg flex items-center justify-center text-center cursor-pointer transition-colors ${PHOTO_BORDERS.EMPTY_HOVER}`}
-          ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
+          ${disabled && !currentPreview ? 'opacity-50 cursor-not-allowed' : disabled ? 'cursor-default' : ''}
           ${hasError ? 'border-red-300 bg-red-50' : ''}
           ${isLoading ? 'pointer-events-none' : ''}
         `}
@@ -307,7 +313,10 @@ export function EnterprisePhotoUpload({
             compact={false}
             purpose={purpose}
             onRemove={!disabled && !isLoading ? handleRemoveWithCleanup : undefined}
-            onPreviewClick={handleClickWithValidation}
+            onPreviewClick={disabled && onPreviewClick ? () => {
+              console.log('🔍 DEBUG EnterprisePhotoUpload: Preview click triggered (full/disabled mode)', { onPreviewClickExists: !!onPreviewClick });
+              onPreviewClick();
+            } : handleClickWithValidation}
             disabled={disabled}
           />
         ) : (

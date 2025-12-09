@@ -127,6 +127,7 @@ export function buildRendererPropsForContactType(
     handleProfilePhotoSelection?: (index: number) => void;
     setFormData?: (data: ContactFormData) => void;
     formData: ContactFormData;
+    onPhotoClick?: (index: number) => void;
   }
 ) {
   // 👤 Individual-specific props
@@ -136,7 +137,8 @@ export function buildRendererPropsForContactType(
       onPhotoChange: photoHandlers.handleFileChange,
       onMultiplePhotosChange: photoHandlers.unifiedPhotosChange,
       onMultiplePhotoUploadComplete: photoHandlers.handleMultiplePhotoUploadComplete,
-      onProfilePhotoSelection: photoHandlers.handleProfilePhotoSelection
+      onProfilePhotoSelection: photoHandlers.handleProfilePhotoSelection,
+      onPhotoClick: photoHandlers.onPhotoClick
     };
   }
 

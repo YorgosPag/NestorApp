@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { ContactBadge } from '@/core/badges';
 import { EntityDetailsHeader } from '@/core/entity-headers';
-import { PhotoPreviewModal, usePhotoPreviewModal, openContactAvatarModal, openGalleryPhotoModal } from '@/core/modals';
+import { openContactAvatarModal, openGalleryPhotoModal } from '@/core/modals';
+import { useGlobalPhotoPreview } from '@/providers/PhotoPreviewProvider';
 import {
   Users,
   Building2,
@@ -50,7 +51,7 @@ export function ContactListItem({
     onToggleFavorite,
     isTogglingFavorite = false
 }: ContactListItemProps) {
-    const photoModal = usePhotoPreviewModal();
+    const photoModal = useGlobalPhotoPreview();
     const { icon: Icon } = typeInfoMap[contact.type];
 
     // 🔥 FORCE RE-RENDER: Key-based avatar invalidation
@@ -335,8 +336,7 @@ export function ContactListItem({
                 )}
             </div>
 
-            {/* ✅ Κεντρικοποιημένο Photo Preview Modal */}
-            <PhotoPreviewModal {...photoModal.modalProps} />
+            {/* ✅ PhotoPreviewModal τώρα global - δεν χρειάζεται εδώ */}
         </TooltipProvider>
     );
 }

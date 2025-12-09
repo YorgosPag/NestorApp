@@ -83,7 +83,15 @@ export function PhotoPreview({
   };
 
   const handlePreviewClick = () => {
-    if (!disabled && onPreviewClick) {
+    console.log('🔍 DEBUG PhotoPreview: Click triggered', {
+      disabled,
+      onPreviewClickExists: !!onPreviewClick,
+      allowClick: !disabled || !!onPreviewClick
+    });
+
+    // ✅ CRITICAL FIX: Allow preview click even in disabled mode if onPreviewClick exists
+    if (onPreviewClick && (!disabled || !!onPreviewClick)) {
+      console.log('🖼️ PhotoPreview: Executing onPreviewClick');
       onPreviewClick();
     }
   };

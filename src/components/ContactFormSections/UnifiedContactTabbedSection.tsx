@@ -54,6 +54,8 @@ interface UnifiedContactTabbedSectionProps {
 
   // 🎯 Relationship management callback
   onOpenRelationshipModal?: () => void;
+  // 🖼️ Photo click handler για gallery preview
+  onPhotoClick?: (index: number) => void;
 }
 
 // Configuration logic moved to ContactFormConfigProvider utility
@@ -74,7 +76,8 @@ export function UnifiedContactTabbedSection({
   setFormData,
   disabled = false,
   relationshipsMode = 'full',
-  onOpenRelationshipModal
+  onOpenRelationshipModal,
+  onPhotoClick
 }: UnifiedContactTabbedSectionProps) {
 
   // 🏢 ENTERPRISE: Get configuration dynamically based on contact type
@@ -176,13 +179,14 @@ export function UnifiedContactTabbedSection({
       handleMultiplePhotoUploadComplete,
       handleProfilePhotoSelection,
       setFormData,
-      formData
+      formData,
+      onPhotoClick
     });
   }, [
     sections, formData, handleChange, handleSelectChange, disabled, contactType,
     handleFileChange, unifiedPhotosChange, handleMultiplePhotoUploadComplete,
     handleProfilePhotoSelection, handleLogoChange, handleUploadedLogoURL,
-    handleUploadedPhotoURL, setFormData, relationshipsMode
+    handleUploadedPhotoURL, setFormData, relationshipsMode, onPhotoClick
   ]);
 
   return (

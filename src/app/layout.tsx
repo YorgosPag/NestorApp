@@ -15,6 +15,7 @@ import { FloorplanProvider } from "@/contexts/FloorplanContext";
 import { cn } from "@/lib/utils";
 import { I18nProvider } from '@/components/providers/I18nProvider';
 import { NavigationProvider } from '@/components/navigation';
+import { PhotoPreviewProvider } from '@/providers/PhotoPreviewProvider';
 
 const roboto = Roboto({
   subsets: ["latin", "greek"],
@@ -70,7 +71,8 @@ export default function RootLayout({
                 <NotificationProvider>
                   <SharedPropertiesProvider>
                     <NavigationProvider>
-                      <SidebarProvider>
+                      <PhotoPreviewProvider>
+                        <SidebarProvider>
                       <div className="flex h-screen w-full max-w-full overflow-hidden">
                         <AppSidebar />
                         <SidebarInset className="flex flex-1 flex-col w-full max-w-full overflow-hidden">
@@ -80,9 +82,10 @@ export default function RootLayout({
                           </main>
                         </SidebarInset>
                       </div>
-                    </SidebarProvider>
-                  </NavigationProvider>
-                </SharedPropertiesProvider>
+                        </SidebarProvider>
+                      </PhotoPreviewProvider>
+                    </NavigationProvider>
+                  </SharedPropertiesProvider>
 
                 {/* ✅ Notification Drawer - Outside all containers for proper z-index */}
                 <NotificationDrawer />

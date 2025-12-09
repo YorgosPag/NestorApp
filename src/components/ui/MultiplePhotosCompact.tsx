@@ -61,6 +61,8 @@ export interface MultiplePhotosCompactProps {
   contactData?: any;
   /** 🏢 ENTERPRISE: Photo click handler για gallery preview */
   onPhotoClick?: (index: number) => void;
+  /** Show photos even when component is disabled (for read-only views) */
+  showPhotosWhenDisabled?: boolean;
 }
 
 // ============================================================================
@@ -111,7 +113,8 @@ export function MultiplePhotosCompact({
   selectedProfilePhotoIndex,
   onProfilePhotoSelection,
   contactData,
-  onPhotoClick
+  onPhotoClick,
+  showPhotosWhenDisabled = false
 }: MultiplePhotosCompactProps) {
 
   // ========================================================================
@@ -187,7 +190,17 @@ export function MultiplePhotosCompact({
 
       {/* Compact Grid - Dynamic Layout */}
       <div className={maxPhotos === 1 ? "flex justify-center" : PHOTO_LAYOUTS.INDIVIDUAL_GRID.container}>
-        {normalizedPhotos.map((photo, index) => {
+        {normalizedPhotos
+          // ✅ CRITICAL FIX: Στο disabled mode εμφανίζουμε μόνο τα slots με φωτογραφίες
+          .filter((photo, index) => {
+            if (!disabled || showPhotosWhenDisabled) {
+              return true; // Normal mode: εμφάνιση όλων
+            }
+            return photo.file || photo.uploadUrl; // Disabled mode: μόνο τα με φωτογραφίες
+          })
+          .map((photo, originalIndex) => {
+            // Βρίσκουμε το πραγματικό index στο original array
+            const index = normalizedPhotos.findIndex(p => p === photo);
           // 🔥 CACHE BUSTING: Using extracted hook
           const rawPreview = photo.preview || photo.uploadUrl;
           const photoPreviewWithCacheBuster = addCacheBuster(rawPreview);

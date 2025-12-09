@@ -61,6 +61,8 @@ export interface MultiplePhotosUploadProps {
   onProfilePhotoSelection?: (index: number) => void;
   /** 🏢 ENTERPRISE: Photo click handler για gallery preview */
   onPhotoClick?: (index: number) => void;
+  /** Show photos even when component is disabled (for read-only views) */
+  showPhotosWhenDisabled?: boolean;
 }
 
 // ============================================================================
@@ -96,7 +98,8 @@ export function MultiplePhotosUpload({
   showProfileSelector = false,
   selectedProfilePhotoIndex,
   onProfilePhotoSelection,
-  onPhotoClick
+  onPhotoClick,
+  showPhotosWhenDisabled = false
 }: MultiplePhotosUploadProps) {
   // ========================================================================
   // HOOKS
@@ -146,6 +149,7 @@ export function MultiplePhotosUpload({
         onProfilePhotoSelection={onProfilePhotoSelection}
         contactData={contactData}
         onPhotoClick={onPhotoClick} // 🏢 ENTERPRISE: Photo click handler
+        showPhotosWhenDisabled={showPhotosWhenDisabled}
       />
     );
   }
@@ -166,6 +170,7 @@ export function MultiplePhotosUpload({
       className={className}
       contactData={contactData}
       onPhotoClick={onPhotoClick} // 🏢 ENTERPRISE: Photo click handler
+      showPhotosWhenDisabled={showPhotosWhenDisabled}
     />
   );
 }

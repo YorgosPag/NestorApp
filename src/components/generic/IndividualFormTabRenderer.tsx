@@ -37,6 +37,8 @@ export interface IndividualFormTabRendererProps {
   onProfilePhotoSelection?: (index: number) => void;
   /** Custom field renderers for forms */
   customRenderers?: Record<string, (field: any, formData: any, onChange: any, onSelectChange: any, disabled: boolean) => React.ReactNode>;
+  /** Photo click handler για gallery preview */
+  onPhotoClick?: (index: number) => void;
 }
 
 // ============================================================================
@@ -57,14 +59,15 @@ function createIndividualFormTabsFromConfig(
   onMultiplePhotoUploadComplete?: (index: number, result: FileUploadResult) => void,
   onProfilePhotoSelection?: (index: number) => void,
   // handleEnterpriseMultiplePhotoUpload removed - using centralized handler
-  customRenderers?: Record<string, any>
+  customRenderers?: Record<string, any>,
+  onPhotoClick?: (index: number) => void
 ) {
   return sections.map(section => ({
     id: section.id,
     label: section.title,
     icon: getIconComponent(section.icon),
     content: section.id === 'photo' ? (
-      // Photo section - μόνο MultiplePhotosUpload για Individual
+      // Photo section - MultiplePhotosUpload για Individual (και σε disabled mode)
       <div className="space-y-4">
         {/* 📸 ΠΟΛΛΑΠΛΕΣ ΦΩΤΟΓΡΑΦΙΕΣ για Φυσικό Πρόσωπο (μέχρι 6) */}
         <MultiplePhotosUpload
@@ -76,10 +79,17 @@ function createIndividualFormTabsFromConfig(
           // uploadHandler removed - using default centralized handler from MultiplePhotosUpload
           disabled={disabled}
           compact={false}
-          showProgress={true}
+          showProgress={!disabled} // Hide progress in disabled mode
           purpose="photo"
           contactData={formData} // 🏢 ENTERPRISE: Pass contact data for FileNamingService
           className="mt-4"
+          // ✅ CRITICAL FIX: Εμφάνιση φωτογραφιών και στο disabled mode
+          showPhotosWhenDisabled={true}
+          // 🖼️ Photo click handler για gallery preview
+          onPhotoClick={(index) => {
+            console.log('🔍 DEBUG IndividualFormTabRenderer: Photo click received', { index, onPhotoClickExists: !!onPhotoClick });
+            onPhotoClick?.(index);
+          }}
         />
 
         <FormGrid>
@@ -151,7 +161,8 @@ export function IndividualFormTabRenderer({
   onMultiplePhotosChange,
   onMultiplePhotoUploadComplete,
   onProfilePhotoSelection,
-  customRenderers
+  customRenderers,
+  onPhotoClick
 }: IndividualFormTabRendererProps) {
   if (!sections || sections.length === 0) {
     return null;
@@ -173,7 +184,8 @@ export function IndividualFormTabRenderer({
     onMultiplePhotoUploadComplete,
     onProfilePhotoSelection,
     // handleEnterpriseMultiplePhotoUpload removed
-    customRenderers
+    customRenderers,
+    onPhotoClick
   );
 
   return (
