@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { X, Download, Share2, ZoomIn, ZoomOut, RotateCw, User, Building2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, Download, Share2, ZoomIn, ZoomOut, RotateCw, User, Building2, ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { Contact } from '@/types/contacts';
@@ -378,7 +378,7 @@ export function PhotoPreviewModal({
   };
 
   const handleZoomIn = () => {
-    setZoom(prev => Math.min(prev + 0.25, 3));
+    setZoom(prev => Math.min(prev + 0.25, 5));
   };
 
   const handleZoomOut = () => {
@@ -387,6 +387,11 @@ export function PhotoPreviewModal({
 
   const handleRotate = () => {
     setRotation(prev => (prev + 90) % 360);
+  };
+
+  const handleFitToView = () => {
+    setZoom(1); // Reset zoom to 100% για fit to view
+    setRotation(0); // Reset rotation για καθαρή εμφάνιση
   };
 
   const handleShare = async () => {
@@ -417,7 +422,7 @@ export function PhotoPreviewModal({
       <DialogContent
         className={`${isMobile
           ? 'fixed inset-x-0 top-0 max-w-none w-screen rounded-none border-0'
-          : 'max-w-4xl h-[90vh]'
+          : 'fixed inset-0 max-w-none w-screen h-screen rounded-none border-0'
         } flex flex-col ${className} [&>button]:hidden`}
         style={isMobile ? {
           margin: 0,
@@ -426,7 +431,16 @@ export function PhotoPreviewModal({
           bottom: 'env(safe-area-inset-bottom)',
           height: 'calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom))',
           paddingBottom: 'max(env(safe-area-inset-bottom), 80px)' // Ελάχιστο 80px για mobile nav bars
-        } : undefined}
+        } : {
+          margin: 0,
+          transform: 'none',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          width: '100vw',
+          height: '100vh'
+        }}
       >
         <DialogHeader className="flex flex-col space-y-3 pb-2">
           {/* Πρώτη σειρά: Τίτλος και Badge */}
@@ -494,7 +508,7 @@ export function PhotoPreviewModal({
               variant="ghost"
               size="sm"
               onClick={handleZoomIn}
-              disabled={zoom >= 3}
+              disabled={zoom >= 5}
               title="Μεγαλύτερο"
               className="h-8 w-8 p-0"
             >
@@ -509,6 +523,16 @@ export function PhotoPreviewModal({
               className="h-8 w-8 p-0"
             >
               <RotateCw className="w-4 h-4" />
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleFitToView}
+              title="Fit to View"
+              className="h-8 w-8 p-0"
+            >
+              <Maximize2 className="w-4 h-4" />
             </Button>
 
             <Button
@@ -544,7 +568,7 @@ export function PhotoPreviewModal({
         </DialogHeader>
 
         {/* Photo Content */}
-        <div className={`flex-1 flex items-center justify-center overflow-hidden ${PHOTO_COLORS.PHOTO_BACKGROUND} ${isMobile ? 'rounded-none' : 'rounded-lg'}`}>
+        <div className={`flex-1 flex items-center justify-center overflow-hidden ${PHOTO_COLORS.PHOTO_BACKGROUND} rounded-none`}>
           <div className="relative max-w-full max-h-full">
             <img
               src={currentPhoto}
@@ -563,7 +587,7 @@ export function PhotoPreviewModal({
         </div>
 
         {/* Footer Info - Contact Type και Zoom */}
-        <div className={`flex items-center justify-between text-sm text-muted-foreground pt-2 border-t ${isMobile ? 'pb-safe pb-8' : ''}`}>
+        <div className={`flex items-center justify-between text-sm text-muted-foreground pt-2 border-t ${isMobile ? 'pb-safe pb-8' : 'pb-2'}`}>
           <div className="flex items-center">
             {/* Μόνο η ετικέτα τύπου contact - όχι εικονίδιο και όνομα */}
             {contact?.type && (() => {
