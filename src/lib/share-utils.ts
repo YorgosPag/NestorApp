@@ -92,7 +92,12 @@ export function generateShareableURL(
   utmParams: UTMParams,
   additionalParams?: Record<string, string>
 ): string {
-  const url = new URL(baseUrl, window.location.origin);
+  // Always use production URL for social media sharing
+  const productionOrigin = 'https://nestor-app.vercel.app';
+  const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+  const fallbackOrigin = currentOrigin.includes('localhost') ? productionOrigin : currentOrigin;
+
+  const url = new URL(baseUrl, fallbackOrigin);
   
   // Add UTM parameters
   url.searchParams.set('utm_source', utmParams.source);
