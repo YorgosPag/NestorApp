@@ -119,22 +119,8 @@ function generatePhotoTitle(
   // Παίρνουμε το όνομα της επαφής
   const contactName = getContactDisplayName(contact);
 
-  // Δημιουργούμε τίτλο βάσει τύπου φωτογραφίας
-  switch (photoType) {
-    case 'avatar':
-    case 'profile':
-      return `${contactName} - Φωτογραφία Προφίλ`;
-    case 'logo':
-      return `${contactName} - Λογότυπο`;
-    case 'representative':
-      return `${contactName} - Φωτογραφία Εκπροσώπου`;
-    case 'gallery':
-      return photoIndex !== undefined
-        ? `${contactName} - Φωτογραφία ${photoIndex + 1}`
-        : `${contactName} - Φωτογραφία`;
-    default:
-      return `${contactName} - Φωτογραφία`;
-  }
+  // Επιστρέφουμε μόνο το όνομα - η ετικέτα δεξιά δείχνει τον τύπο/αριθμό
+  return contactName;
 }
 
 /**
@@ -212,6 +198,9 @@ export function PhotoPreviewModal({
   // State για gallery navigation
   const [currentIndex, setCurrentIndex] = useState(currentGalleryIndex || 0);
 
+  // 📱 Mobile detection για responsive modal positioning
+  const [isMobile, setIsMobile] = useState(false);
+
   // Refs για keyboard navigation (αποφεύγουν stale closures)
   const currentIndexRef = useRef(currentIndex);
   const isGalleryModeRef = useRef(false);
@@ -234,6 +223,17 @@ export function PhotoPreviewModal({
       setCurrentIndex(currentGalleryIndex);
     }
   }, [currentGalleryIndex]);
+
+  // Mobile detection effect για responsive modal
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640); // sm breakpoint
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Keyboard navigation με refs (χωρίς dependency issues)
   useEffect(() => {
@@ -414,15 +414,29 @@ export function PhotoPreviewModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`max-w-4xl h-[90vh] flex flex-col ${className} [&>button]:hidden`}>
-        <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <div className="flex items-center gap-3">
+      <DialogContent
+        className={`${isMobile
+          ? 'fixed inset-x-0 top-0 max-w-none w-screen rounded-none border-0'
+          : 'max-w-4xl h-[90vh]'
+        } flex flex-col ${className} [&>button]:hidden`}
+        style={isMobile ? {
+          margin: 0,
+          transform: 'none',
+          top: 'env(safe-area-inset-top)',
+          bottom: 'env(safe-area-inset-bottom)',
+          height: 'calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom))',
+          paddingBottom: 'max(env(safe-area-inset-bottom), 80px)' // Ελάχιστο 80px για mobile nav bars
+        } : undefined}
+      >
+        <DialogHeader className="flex flex-col space-y-3 pb-2">
+          {/* Πρώτη σειρά: Τίτλος και Badge */}
+          <div className="flex items-center justify-between">
             <DialogTitle className="flex items-center gap-2 text-lg">
               <IconComponent className="w-5 h-5" />
               {title}
             </DialogTitle>
 
-            {/* Gallery Counter - Using Centralized Badge System */}
+            {/* Gallery Counter - δεξιά από το όνομα */}
             {isGalleryMode && totalPhotos > 1 && (() => {
               const galleryBadge = createGalleryCounterBadge(currentIndex, totalPhotos);
               return (
@@ -436,9 +450,9 @@ export function PhotoPreviewModal({
             })()}
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex items-center gap-2">
-            {/* Gallery Navigation - μόνο αν έχουμε περισσότερες από 1 φωτογραφίες */}
+          {/* Δεύτερη σειρά: Κεντραρισμένα buttons με κοντά spacing */}
+          <div className="flex items-center justify-center gap-1">
+            {/* Gallery Navigation */}
             {isGalleryMode && totalPhotos > 1 && (
               <>
                 <Button
@@ -446,6 +460,7 @@ export function PhotoPreviewModal({
                   size="sm"
                   onClick={handlePreviousPhoto}
                   title="Προηγούμενη φωτογραφία"
+                  className="h-8 w-8 p-0"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
@@ -455,19 +470,22 @@ export function PhotoPreviewModal({
                   size="sm"
                   onClick={handleNextPhoto}
                   title="Επόμενη φωτογραφία"
+                  className="h-8 w-8 p-0"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </Button>
 
-                <div className="w-px h-6 bg-border mx-1" />
+                <div className="w-px h-4 bg-border mx-1" />
               </>
             )}
+
             <Button
               variant="ghost"
               size="sm"
               onClick={handleZoomOut}
               disabled={zoom <= 0.25}
               title="Μικρότερο"
+              className="h-8 w-8 p-0"
             >
               <ZoomOut className="w-4 h-4" />
             </Button>
@@ -478,6 +496,7 @@ export function PhotoPreviewModal({
               onClick={handleZoomIn}
               disabled={zoom >= 3}
               title="Μεγαλύτερο"
+              className="h-8 w-8 p-0"
             >
               <ZoomIn className="w-4 h-4" />
             </Button>
@@ -487,6 +506,7 @@ export function PhotoPreviewModal({
               size="sm"
               onClick={handleRotate}
               title="Περιστροφή"
+              className="h-8 w-8 p-0"
             >
               <RotateCw className="w-4 h-4" />
             </Button>
@@ -496,6 +516,7 @@ export function PhotoPreviewModal({
               size="sm"
               onClick={handleShare}
               title="Κοινοποίηση"
+              className="h-8 w-8 p-0"
             >
               <Share2 className="w-4 h-4" />
             </Button>
@@ -505,6 +526,7 @@ export function PhotoPreviewModal({
               size="sm"
               onClick={handleDownload}
               title="Λήψη"
+              className="h-8 w-8 p-0"
             >
               <Download className="w-4 h-4" />
             </Button>
@@ -514,6 +536,7 @@ export function PhotoPreviewModal({
               size="sm"
               onClick={() => onOpenChange(false)}
               title="Κλείσιμο"
+              className="h-8 w-8 p-0"
             >
               <X className="w-4 h-4" />
             </Button>
@@ -521,7 +544,7 @@ export function PhotoPreviewModal({
         </DialogHeader>
 
         {/* Photo Content */}
-        <div className={`flex-1 flex items-center justify-center overflow-hidden ${PHOTO_COLORS.PHOTO_BACKGROUND} rounded-lg`}>
+        <div className={`flex-1 flex items-center justify-center overflow-hidden ${PHOTO_COLORS.PHOTO_BACKGROUND} ${isMobile ? 'rounded-none' : 'rounded-lg'}`}>
           <div className="relative max-w-full max-h-full">
             <img
               src={currentPhoto}
@@ -539,29 +562,26 @@ export function PhotoPreviewModal({
           </div>
         </div>
 
-        {/* Footer Info */}
-        {contact && (
-          <div className="flex items-center justify-between text-sm text-muted-foreground pt-2 border-t">
-            <div className="flex items-center gap-2">
-              <IconComponent className="w-4 h-4" />
-              <span>{getContactDisplayName(contact)}</span>
-              {contact.type && (() => {
-                const contactTypeBadge = createContactTypeBadge(contact.type);
-                return (
-                  <Badge
-                    variant={contactTypeBadge.variant}
-                    className={contactTypeBadge.className}
-                  >
-                    {contactTypeBadge.label}
-                  </Badge>
-                );
-              })()}
-            </div>
-            <div className="text-xs">
-              Zoom: {Math.round(zoom * 100)}%
-            </div>
+        {/* Footer Info - Contact Type και Zoom */}
+        <div className={`flex items-center justify-between text-sm text-muted-foreground pt-2 border-t ${isMobile ? 'pb-safe pb-8' : ''}`}>
+          <div className="flex items-center">
+            {/* Μόνο η ετικέτα τύπου contact - όχι εικονίδιο και όνομα */}
+            {contact?.type && (() => {
+              const contactTypeBadge = createContactTypeBadge(contact.type);
+              return (
+                <Badge
+                  variant={contactTypeBadge.variant}
+                  className={contactTypeBadge.className}
+                >
+                  {contactTypeBadge.label}
+                </Badge>
+              );
+            })()}
           </div>
-        )}
+          <div className="text-xs">
+            Zoom: {Math.round(zoom * 100)}%
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
