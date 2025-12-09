@@ -24,15 +24,11 @@ export function useOpportunities() {
         } catch (err) {
             const errorMessage = "Δεν ήταν δυνατή η φόρτωση των ευκαιριών.";
             setError(errorMessage);
-            toast({
-                title: "Σφάλμα",
-                description: errorMessage,
-                variant: "destructive"
-            });
+            notifications.error(errorMessage);
         } finally {
             setLoading(false);
         }
-    }, [toast]);
+    }, [notifications]);
     
     const addOpportunity = async (data: Partial<Omit<Opportunity, 'id' | 'createdAt' | 'updatedAt'>>) => {
         try {
@@ -44,20 +40,12 @@ export function useOpportunities() {
               lastActivity: new Date(),
           } as any);
     
-          toast({
-              title: "Επιτυχία",
-              description: "Το lead προστέθηκε επιτυχώς!",
-              variant: "success",
-          });
+          notifications.success("Το lead προστέθηκε επιτυχώς!");
           
           fetchOpportunities();
         } catch (error) {
           console.error(error);
-          toast({
-              title: "Σφάλμα",
-              description: "Δεν ήταν δυνατή η προσθήκη του lead.",
-              variant: "destructive",
-          });
+          notifications.error("Δεν ήταν δυνατή η προσθήκη του lead.");
           throw error;
         }
       };
@@ -65,18 +53,10 @@ export function useOpportunities() {
     const deleteOpportunity = async (id: string, name: string) => {
         try {
             await apiDeleteOpportunity(id);
-            toast({
-                title: "Επιτυχής Διαγραφή",
-                description: `Η ευκαιρία "${name}" διαγράφηκε.`,
-                variant: "success",
-            });
+            notifications.success(`Η ευκαιρία "${name}" διαγράφηκε.`);
             fetchOpportunities();
         } catch (error) {
-            toast({
-                title: "Σφάλμα Διαγραφής",
-                description: "Δεν ήταν δυνατή η διαγραφή της ευκαιρίας.",
-                variant: "destructive",
-            });
+            notifications.error("Δεν ήταν δυνατή η διαγραφή της ευκαιρίας.");
             console.error("Error deleting opportunity:", error);
             throw error;
         }

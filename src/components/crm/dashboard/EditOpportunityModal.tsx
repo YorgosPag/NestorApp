@@ -43,7 +43,7 @@ const EMPTY_FORM_DATA: Partial<Opportunity> = {};
 export function EditOpportunityModal({ opportunity, isOpen, onClose, onLeadUpdated }: EditOpportunityModalProps) {
   const [formData, setFormData] = useState<Partial<Opportunity>>(EMPTY_FORM_DATA);
   const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
+  const notifications = useNotifications();
 
   useEffect(() => {
     if (isOpen && opportunity) {
@@ -66,19 +66,11 @@ export function EditOpportunityModal({ opportunity, isOpen, onClose, onLeadUpdat
 
     try {
       await updateOpportunity(opportunity.id, formData);
-      toast({
-        title: "Επιτυχία",
-        description: "Η ευκαιρία ενημερώθηκε επιτυχώς!",
-        variant: "success",
-      });
+      notifications.success("Η ευκαιρία ενημερώθηκε επιτυχώς!");
       onLeadUpdated();
       handleClose();
     } catch (error) {
-      toast({
-        title: "Σφάλμα",
-        description: "Δεν ήταν δυνατή η ενημέρωση της ευκαιρίας.",
-        variant: "destructive",
-      });
+      notifications.error("Δεν ήταν δυνατή η ενημέρωση της ευκαιρίας.");
       console.error('Error updating opportunity:', error);
     } finally {
       setLoading(false);
