@@ -178,25 +178,24 @@ export function ShareModal({
     try {
       let url = socialUrls[platformId as keyof typeof socialUrls];
 
-      // For Facebook, keep essential data but remove heavy UTM parameters
       if (platformId === 'facebook' && shareData.url.includes('/share/photo/')) {
+        // Για Facebook, στείλε direct Firebase URL (χωρίς webpage)
         const urlObj = new URL(shareData.url);
-
-        // Keep only the essential data parameter, remove UTM and other heavy params
         const dataParam = urlObj.searchParams.get('data');
-        let facebookUrl = `${urlObj.origin}${urlObj.pathname}`;
 
         if (dataParam) {
-          // Keep data parameter for Facebook to show image preview
-          facebookUrl += `?data=${dataParam}`;
-        } else {
-          // Fallback to shared=true if no data
-          facebookUrl += '?shared=true';
+          try {
+            const singleDecoded = decodeURIComponent(dataParam);
+            const doubleDecoded = decodeURIComponent(singleDecoded);
+            const data = JSON.parse(doubleDecoded);
+            const directUrl = data.url.replace(/\?alt=media&token=.*$/, '?alt=media');  // Χωρίς token
+            url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(directUrl)}&quote=${encodeURIComponent(shareData.title + '\n' + shareData.text)}`;
+            console.log('🚨 FACEBOOK: Direct Firebase URL:', directUrl);
+          } catch (e) {
+            // Fallback to original logic if parsing fails
+            url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareData.url)}`;
+          }
         }
-
-        url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(facebookUrl)}`;
-        console.log('🚨 FACEBOOK: Using optimized URL with data:', facebookUrl);
-        console.log('🚨 FACEBOOK: Final share URL:', url);
       }
       if (url) {
         // Handle direct photo URLs differently from webpage photo shares
