@@ -513,17 +513,17 @@ export function PhotoPreviewModal({
       data: encodeURIComponent(JSON.stringify(photoShareData))
     });
 
-    return `${baseUrl}?${params.toString()}`;
+    const finalUrl = `${baseUrl}?${params.toString()}`;
+    console.log('🚨 DEBUG: Generated share URL:', finalUrl);
+    return finalUrl;
   };
 
-  // Generate unique photo ID for sharing
+  // Generate unique photo ID for sharing - ΧΩΡΙΣ όνομα, μόνο hash για URL safety
   const generatePhotoId = () => {
     const timestamp = Date.now();
-    const random = Math.random().toString(36).substring(2, 8);
-    const contactName = contact ? getContactDisplayName(contact).replace(/\s+/g, '_') : 'photo';
+    const random = Math.random().toString(36).substring(2, 10); // Μακρύτερο random
     const photoTypePrefix = photoType || 'gallery';
-
-    return `${contactName}_${photoTypePrefix}_${timestamp}_${random}`;
+    return `${photoTypePrefix}_${timestamp}_${random}`;
   };
 
   const shareData = {

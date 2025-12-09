@@ -176,7 +176,28 @@ export function ShareModal({
     onClose();
 
     try {
-      const url = socialUrls[platformId as keyof typeof socialUrls];
+      let url = socialUrls[platformId as keyof typeof socialUrls];
+
+      // For Facebook, keep essential data but remove heavy UTM parameters
+      if (platformId === 'facebook' && shareData.url.includes('/share/photo/')) {
+        const urlObj = new URL(shareData.url);
+
+        // Keep only the essential data parameter, remove UTM and other heavy params
+        const dataParam = urlObj.searchParams.get('data');
+        let facebookUrl = `${urlObj.origin}${urlObj.pathname}`;
+
+        if (dataParam) {
+          // Keep data parameter for Facebook to show image preview
+          facebookUrl += `?data=${dataParam}`;
+        } else {
+          // Fallback to shared=true if no data
+          facebookUrl += '?shared=true';
+        }
+
+        url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(facebookUrl)}`;
+        console.log('🚨 FACEBOOK: Using optimized URL with data:', facebookUrl);
+        console.log('🚨 FACEBOOK: Final share URL:', url);
+      }
       if (url) {
         // Handle direct photo URLs differently from webpage photo shares
         if (isDirectPhotoUrl && !isWebpagePhotoShare) {
