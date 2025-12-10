@@ -1,4 +1,4 @@
-import type { ContactType } from '@/types/contacts';
+import type { ContactType, PhoneInfo, EmailInfo, WebsiteInfo, SocialMediaInfo } from '@/types/contacts';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 
 export interface AddNewContactDialogProps {
@@ -32,7 +32,7 @@ export interface ContactFormData {
   documentExpiryDate: string;
   vatNumber: string;
   taxOffice: string;
-  // Επικοινωνία & Socials
+  // Επικοινωνία & Socials (Legacy flat fields)
   email: string;
   phone: string;
   socialMedia: {
@@ -42,6 +42,18 @@ export interface ContactFormData {
     twitter: string;
   };
   websites: string;
+
+  // 🚀 DYNAMIC ARRAYS: Enterprise contact management
+  phones?: PhoneInfo[];
+  emails?: EmailInfo[];
+  websites?: WebsiteInfo[];
+  socialMediaArray?: SocialMediaInfo[];
+
+  // Address fields (separate from arrays)
+  street: string;
+  streetNumber: string;
+  city: string;
+  postalCode: string;
   // Επαγγελματικά
   profession: string;
   specialty: string;
@@ -99,9 +111,6 @@ export interface ContactFormData {
   serviceCategory: string;
   officialWebsite: string;
   // Επικοινωνία Υπηρεσίας (Contact Section)
-  address: string;
-  postalCode: string;
-  city: string;
   fax: string;
   website: string;
   // Υπηρεσίες Φορέα (Services Section)
@@ -220,7 +229,7 @@ export const initialFormData: ContactFormData = {
   documentExpiryDate: '',
   vatNumber: '',
   taxOffice: '',
-  // Επικοινωνία & Socials
+  // Επικοινωνία & Socials (Legacy)
   email: '',
   phone: '',
   socialMedia: {
@@ -230,6 +239,18 @@ export const initialFormData: ContactFormData = {
     twitter: '',
   },
   websites: '',
+
+  // 🚀 DYNAMIC ARRAYS: Enterprise contact management
+  phones: [],
+  emails: [],
+  websites: [],
+  socialMediaArray: [],
+
+  // Address fields
+  street: '',
+  streetNumber: '',
+  city: '',
+  postalCode: '',
   // Επαγγελματικά
   profession: '',
   specialty: '',
@@ -287,9 +308,6 @@ export const initialFormData: ContactFormData = {
   serviceCategory: '',
   officialWebsite: '',
   // Επικοινωνία Υπηρεσίας (Contact Section)
-  address: '',
-  postalCode: '',
-  city: '',
   fax: '',
   website: '',
   // Υπηρεσίες Φορέα (Services Section)

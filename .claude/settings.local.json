@@ -142,7 +142,8 @@
       "Bash(npm run test:*)",
       "Bash(sed:*)",
       "Bash(awk:*)",
-      "Bash(PORT=3004 npm run dev)"
+      "Bash(PORT=3004 npm run dev)",
+      "Bash(git ls-tree:*)"
     ],
     "deny": [],
     "ask": []

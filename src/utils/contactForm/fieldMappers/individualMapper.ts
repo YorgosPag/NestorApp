@@ -119,7 +119,6 @@ export function mapIndividualContactToFormData(contact: Contact): ContactFormDat
       linkedin: getSafeFieldValue(individualContact.socialMedia, 'linkedin'),
       twitter: getSafeFieldValue(individualContact.socialMedia, 'twitter'),
     },
-    websites: getSafeFieldValue(individualContact, 'websites'),
 
     // 📷 Φωτογραφίες
     photoFile: null,
