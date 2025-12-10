@@ -29,25 +29,25 @@ export interface DynamicContactArraysProps {
 // ============================================================================
 
 const PHONE_TYPES = [
-  { value: 'mobile', label: '📱 Κινητό' },
-  { value: 'home', label: '🏠 Σπίτι' },
-  { value: 'work', label: '💼 Εργασία' },
-  { value: 'fax', label: '📠 Φαξ' },
-  { value: 'other', label: '📞 Άλλο' }
+  { value: 'mobile', label: 'Κινητό' },
+  { value: 'home', label: 'Σπίτι' },
+  { value: 'work', label: 'Εργασία' },
+  { value: 'fax', label: 'Φαξ' },
+  { value: 'other', label: 'Άλλο' }
 ];
 
 const EMAIL_TYPES = [
-  { value: 'personal', label: '👤 Προσωπικό' },
-  { value: 'work', label: '💼 Εργασία' },
-  { value: 'other', label: '📧 Άλλο' }
+  { value: 'personal', label: 'Προσωπικό' },
+  { value: 'work', label: 'Εργασία' },
+  { value: 'other', label: 'Άλλο' }
 ];
 
 const WEBSITE_TYPES = [
-  { value: 'personal', label: '👤 Προσωπική' },
-  { value: 'company', label: '🏢 Εταιρική' },
-  { value: 'portfolio', label: '💼 Χαρτοφυλάκιο' },
-  { value: 'blog', label: '📝 Blog' },
-  { value: 'other', label: '🌐 Άλλη' }
+  { value: 'personal', label: 'Προσωπική' },
+  { value: 'company', label: 'Εταιρική' },
+  { value: 'portfolio', label: 'Χαρτοφυλάκιο' },
+  { value: 'blog', label: 'Blog' },
+  { value: 'other', label: 'Άλλη' }
 ];
 
 // ============================================================================

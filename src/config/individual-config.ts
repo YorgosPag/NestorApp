@@ -347,7 +347,14 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
     description: 'Δυναμική διαχείριση τηλεφώνων, emails, ιστοσελίδων και social media',
     order: 5,
     fields: [
-      // Χωρίς static fields - θα renderάρεται με DynamicContactArrays + SocialMediaManager
+      // 🎯 DUMMY FIELD για custom renderer triggering
+      // Αυτό το field δεν εμφανίζεται - χρησιμοποιείται μόνο για να trigger το customRenderers['communication']
+      {
+        id: 'communication',
+        label: 'Επικοινωνία',
+        type: 'input',
+        helpText: 'Dummy field για custom renderer'
+      }
     ],
   },
 
