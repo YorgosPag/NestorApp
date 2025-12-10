@@ -84,6 +84,7 @@ export function AddNewContactDialog({ open, onOpenChange, onContactAdded, editCo
               handleMultiplePhotoUploadComplete={handleMultiplePhotoUploadComplete}
               handleUploadedLogoURL={handleUploadedLogoURL}
               handleUploadedPhotoURL={handleUploadedPhotoURL}
+              setFormData={setFormData} // 🔧 FIX: Pass setFormData for dynamic arrays
               disabled={loading}
             />
 

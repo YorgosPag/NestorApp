@@ -187,6 +187,7 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
           formData={isEditing ? editedData : enhancedFormData} // 🎯 Use edited data when editing
           handleChange={handleFieldChange} // 🎯 Enable changes when editing
           handleSelectChange={handleSelectChange} // 🎯 Enable select changes when editing
+          setFormData={isEditing ? setEditedData : undefined} // 🔧 FIX: Pass setFormData when in edit mode
           disabled={!isEditing} // 🎯 Enable editing when in edit mode
           relationshipsMode="summary" // 🎯 KEY: Summary mode για main view
           onOpenRelationshipModal={handleOpenRelationshipModal} // 🎯 Handler για relationships management
