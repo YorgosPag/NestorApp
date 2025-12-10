@@ -9,7 +9,6 @@ import { ContactRelationshipManager } from '@/components/contacts/relationships/
 import { RelationshipsSummary } from '@/components/contacts/relationships/RelationshipsSummary';
 import { RelationshipProvider } from '@/components/contacts/relationships/context/RelationshipProvider';
 import { DynamicContactArrays } from '@/components/contacts/dynamic/DynamicContactArrays';
-import { SocialMediaManager } from '@/components/contacts/dynamic/SocialMediaManager';
 import { getContactFormConfig, getContactFormSections, getContactTypeDisplayName, getContactFormRenderer } from './utils/ContactFormConfigProvider';
 import { getPhotoUploadHandlers, createUnifiedPhotosChangeHandler, buildRendererPropsForContactType } from './utils/PhotoUploadConfiguration';
 
@@ -111,11 +110,12 @@ export function UnifiedContactTabbedSection({
       customRenderers: {
         // 🚀 DYNAMIC COMMUNICATION: Custom renderer for communication & social media
         communication: (field: any, fieldFormData: any, fieldOnChange: any, fieldOnSelectChange: any, fieldDisabled: boolean) => (
-          <div className="w-full space-y-6">
+          <div className="w-full">
             <DynamicContactArrays
               phones={formData.phones || []}
               emails={formData.emails || []}
               websites={formData.websites || []}
+              socialMedia={formData.socialMediaArray || []}
               disabled={fieldDisabled}
               onPhonesChange={(phones) => {
                 // Use synthetic events to trigger form updates through existing handlers
@@ -147,11 +147,7 @@ export function UnifiedContactTabbedSection({
                 } as React.ChangeEvent<HTMLInputElement>;
                 handleChange(syntheticEvent);
               }}
-            />
-            <SocialMediaManager
-              socialMedia={formData.socialMediaArray || []}
-              disabled={fieldDisabled}
-              onChange={(socialMedia) => {
+              onSocialMediaChange={(socialMedia) => {
                 // Use synthetic events to trigger form updates through existing handlers
                 const syntheticEvent = {
                   target: {

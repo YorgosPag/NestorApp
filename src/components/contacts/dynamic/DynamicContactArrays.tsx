@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Plus, Trash2, Star, Phone, Mail, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { SocialMediaManager } from '@/components/contacts/dynamic/SocialMediaManager';
 import type { PhoneInfo, EmailInfo, WebsiteInfo } from '@/types/contacts';
 
 // ============================================================================
@@ -17,10 +18,12 @@ export interface DynamicContactArraysProps {
   phones?: PhoneInfo[];
   emails?: EmailInfo[];
   websites?: WebsiteInfo[];
+  socialMedia?: any[];
   disabled?: boolean;
   onPhonesChange?: (phones: PhoneInfo[]) => void;
   onEmailsChange?: (emails: EmailInfo[]) => void;
   onWebsitesChange?: (websites: WebsiteInfo[]) => void;
+  onSocialMediaChange?: (socialMedia: any[]) => void;
 }
 
 // ============================================================================
@@ -242,7 +245,7 @@ function EmailManager({ emails, disabled = false, onChange }: EmailManagerProps)
   }, [emails, onChange]);
 
   return (
-    <div className="space-y-4">
+    <div className="w-full space-y-4">
       <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
         <Mail className="h-4 w-4" />
         E-mails
@@ -373,7 +376,7 @@ function WebsiteManager({ websites, disabled = false, onChange }: WebsiteManager
   }, [websites, onChange]);
 
   return (
-    <div className="space-y-4">
+    <div className="w-full space-y-4">
       <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
         <Globe className="h-4 w-4" />
         Ιστοσελίδες
@@ -440,8 +443,10 @@ function WebsiteManager({ websites, disabled = false, onChange }: WebsiteManager
         ))}
 
         {websites.length === 0 && (
-          <div className="text-center text-gray-500 py-4">
-            Δεν έχουν οριστεί ιστοσελίδες
+          <div className="text-center text-gray-500 py-8 border rounded-lg bg-gray-50/30">
+            <Globe className="w-8 h-8 mb-2 mx-auto" />
+            <p>Δεν έχουν οριστεί ιστοσελίδες</p>
+            <p className="text-sm mt-1">Προσθέστε τις ιστοσελίδες σας</p>
           </div>
         )}
 
@@ -466,11 +471,21 @@ export function DynamicContactArrays({
   phones = [],
   emails = [],
   websites = [],
+  socialMedia = [],
   disabled = false,
   onPhonesChange,
   onEmailsChange,
-  onWebsitesChange
+  onWebsitesChange,
+  onSocialMediaChange
 }: DynamicContactArraysProps) {
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const checkIsDesktop = () => setIsDesktop(window.innerWidth >= 768);
+    checkIsDesktop();
+    window.addEventListener('resize', checkIsDesktop);
+    return () => window.removeEventListener('resize', checkIsDesktop);
+  }, []);
 
   // Ensure we always have at least one entry for essential fields
   const normalizedPhones = phones.length === 0 ? [{
@@ -489,8 +504,15 @@ export function DynamicContactArrays({
 
   return (
     <div
-      className="w-full max-w-none min-w-full space-y-8"
-      style={{ width: '100%', maxWidth: 'none', minWidth: '100%' }}
+      className="w-full max-w-none min-w-full grid grid-cols-1 md:grid-cols-2 gap-8"
+      style={{
+        width: '100%',
+        maxWidth: 'none',
+        minWidth: '100%',
+        display: 'grid',
+        gridTemplateColumns: isDesktop ? '1fr 1fr' : '1fr',
+        gap: '2rem'
+      }}
     >
       <PhoneManager
         phones={normalizedPhones}
@@ -509,6 +531,19 @@ export function DynamicContactArrays({
         disabled={disabled}
         onChange={onWebsitesChange || (() => {})}
       />
+
+      {/* Social Media Manager - 4th grid item */}
+      <div className="w-full space-y-4">
+        <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+          <Globe className="h-4 w-4" />
+          Social Media
+        </div>
+        <SocialMediaManager
+          socialMedia={socialMedia}
+          disabled={disabled}
+          onChange={onSocialMediaChange || (() => {})}
+        />
+      </div>
     </div>
   );
 }

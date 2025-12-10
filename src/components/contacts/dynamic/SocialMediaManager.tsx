@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { SocialMediaInfo } from '@/types/contacts';
 
 // ============================================================================
@@ -149,14 +148,7 @@ export function SocialMediaManager({
   }, []);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Globe className="w-5 h-5" />
-          Social Media
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div className="space-y-4">
         {socialMedia.map((item, index) => {
           const platformInfo = getPlatformInfo(item.platform);
 
@@ -298,8 +290,7 @@ export function SocialMediaManager({
             })}
           </div>
         )}
-      </CardContent>
-    </Card>
+    </div>
   );
 }
 
