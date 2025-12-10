@@ -35,6 +35,44 @@ export interface IndividualFormRendererProps {
  * Renders an input field for individuals
  */
 function renderInputField(field: IndividualFieldConfig, formData: any, onChange: any, disabled: boolean): React.ReactNode {
+  const value = formData[field.id] || '';
+
+  // 🎯 CLICKABLE LINKS: Όταν disabled και έχουμε email/tel, εμφάνισε clickable link
+  if (disabled && value) {
+    if (field.type === 'email') {
+      return (
+        <div className="min-h-10 flex items-center px-3 py-2 border border-input bg-background rounded-md text-sm">
+          <a
+            href={`https://mail.google.com/mail/?view=cm&to=${value}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+            onClick={(e) => e.stopPropagation()}
+            title={`Αποστολή email στο ${value} μέσω Gmail`}
+          >
+            {value}
+          </a>
+        </div>
+      );
+    }
+
+    if (field.type === 'tel') {
+      return (
+        <div className="min-h-10 flex items-center px-3 py-2 border border-input bg-background rounded-md text-sm">
+          <a
+            href={`tel:${value}`}
+            className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+            onClick={(e) => e.stopPropagation()}
+            title={`Κλήση στο ${value}`}
+          >
+            {value}
+          </a>
+        </div>
+      );
+    }
+  }
+
+  // 📝 NORMAL INPUT: Για edit mode ή άδεια values ή άλλους τύπους
   const inputType = field.type === 'email' ? 'email' : field.type === 'tel' ? 'tel' : field.type === 'date' ? 'date' : field.type === 'number' ? 'number' : 'text';
 
   return (
@@ -42,7 +80,7 @@ function renderInputField(field: IndividualFieldConfig, formData: any, onChange:
       id={field.id}
       name={field.id}
       type={inputType}
-      value={formData[field.id] || ''}
+      value={value}
       onChange={onChange}
       disabled={disabled}
       required={field.required}

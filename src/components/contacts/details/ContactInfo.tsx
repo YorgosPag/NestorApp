@@ -28,9 +28,12 @@ export function ContactInfo({ contact, onAddUnit, onRefresh }: ContactInfoProps)
                 <div className="flex items-center gap-2 text-sm">
                     <Mail className="w-4 h-4 text-muted-foreground" />
                     <a
-                        href={`mailto:${email}`}
+                        href={`https://mail.google.com/mail/?view=cm&to=${email}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
-                        title={`Αποστολή email στο ${email}`}
+                        title={`Αποστολή email στο ${email} μέσω Gmail`}
+                        onClick={(e) => e.stopPropagation()}
                     >
                         {email}
                     </a>
@@ -43,6 +46,7 @@ export function ContactInfo({ contact, onAddUnit, onRefresh }: ContactInfoProps)
                         href={`tel:${phone}`}
                         className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
                         title={`Κλήση στο ${phone}`}
+                        onClick={(e) => e.stopPropagation()}
                     >
                         {phone}
                     </a>

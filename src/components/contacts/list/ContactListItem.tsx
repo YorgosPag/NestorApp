@@ -274,9 +274,11 @@ export function ContactListItem({
                                         <div className="flex items-center gap-1 shrink-0 text-xs text-muted-foreground">
                                             <Mail className="w-3 h-3" />
                                             <a
-                                                href={`mailto:${email}`}
+                                                href={`https://mail.google.com/mail/?view=cm&to=${email}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
                                                 className="whitespace-nowrap text-blue-600 hover:text-blue-800 hover:underline"
-                                                title={`Αποστολή email στο ${email}`}
+                                                title={`Αποστολή email στο ${email} μέσω Gmail`}
                                                 onClick={(e) => e.stopPropagation()}
                                             >
                                                 {email}
@@ -330,9 +332,11 @@ export function ContactListItem({
                                         <div className={cn("flex items-center gap-2", getTypography('labelSmall'))}>
                                             <Mail className="w-3 h-3" />
                                             <a
-                                                href={`mailto:${email}`}
+                                                href={`https://mail.google.com/mail/?view=cm&to=${email}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
                                                 className="truncate text-blue-600 hover:text-blue-800 hover:underline"
-                                                title={`Αποστολή email στο ${email}`}
+                                                title={`Αποστολή email στο ${email} μέσω Gmail`}
                                                 onClick={(e) => e.stopPropagation()}
                                             >
                                                 {email}

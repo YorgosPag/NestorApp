@@ -92,7 +92,16 @@ export function ContactCard({
                 <div className="flex items-center gap-3">
                   <Mail className="w-4 h-4 text-muted-foreground" />
                   <div className="flex-1">
-                    <p className="text-sm font-medium">{lead.email}</p>
+                    <a
+                      href={`https://mail.google.com/mail/?view=cm&to=${lead.email}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                      onClick={(e) => e.stopPropagation()}
+                      title={`Αποστολή email στο ${lead.email} μέσω Gmail`}
+                    >
+                      {lead.email}
+                    </a>
                     <p className="text-xs text-muted-foreground">Email</p>
                   </div>
                 </div>
@@ -101,7 +110,14 @@ export function ContactCard({
                 <div className="flex items-center gap-3">
                   <Phone className="w-4 h-4 text-muted-foreground" />
                   <div className="flex-1">
-                    <p className="text-sm font-medium">{lead.phone}</p>
+                    <a
+                      href={`tel:${lead.phone}`}
+                      className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                      onClick={(e) => e.stopPropagation()}
+                      title={`Κλήση στο ${lead.phone}`}
+                    >
+                      {lead.phone}
+                    </a>
                     <p className="text-xs text-muted-foreground">Τηλέφωνο</p>
                   </div>
                 </div>
