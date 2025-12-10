@@ -5,6 +5,12 @@ const config = {
     '**/__tests__/**/*.test.[jt]s?(x)',
     '**/?(*.)+(spec|test).[jt]s?(x)'
   ],
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '/e2e/',
+    '\\.spec\\.(ts|tsx|js|jsx)$',
+    'visual-cross-browser'
+  ],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@subapps/(.*)$': '<rootDir>/src/subapps/$1',

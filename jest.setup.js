@@ -1,6 +1,24 @@
 // Jest Setup File
 import '@testing-library/jest-dom';
 
+// Add custom Jest matchers
+expect.extend({
+  toBeOneOf(received, expectedArray) {
+    const pass = expectedArray.includes(received);
+    if (pass) {
+      return {
+        message: () => `expected ${received} not to be one of ${expectedArray.join(', ')}`,
+        pass: true,
+      };
+    } else {
+      return {
+        message: () => `expected ${received} to be one of ${expectedArray.join(', ')}`,
+        pass: false,
+      };
+    }
+  },
+});
+
 // Mock για localStorage
 const localStorageMock = {
   getItem: jest.fn(),
@@ -58,6 +76,23 @@ beforeAll(() => {
 afterAll(() => {
   console.error = originalError;
 });
+
+// Mock Firebase για tests
+jest.mock('./src/lib/firebase', () => ({
+  db: {},
+  auth: {},
+  functions: {},
+  storage: {},
+  default: {}
+}));
+
+// Mock Firebase environment variables
+process.env.FIREBASE_API_KEY = 'test-api-key';
+process.env.FIREBASE_AUTH_DOMAIN = 'test-project.firebaseapp.com';
+process.env.FIREBASE_PROJECT_ID = 'test-project';
+process.env.FIREBASE_STORAGE_BUCKET = 'test-project.appspot.com';
+process.env.FIREBASE_MESSAGING_SENDER_ID = '123456789';
+process.env.FIREBASE_APP_ID = '1:123456789:web:abcdef123456';
 
 // Clean up after each test
 afterEach(() => {

@@ -136,7 +136,10 @@
       "Bash(git remote get-url:*)",
       "Bash(git remote add:*)",
       "Bash(pnpm add:*)",
-      "Bash(del test-email.json)"
+      "Bash(del test-email.json)",
+      "WebFetch(domain:github.com)",
+      "Bash(gh run list:*)",
+      "Bash(npm run test:*)"
     ],
     "deny": [],
     "ask": []
