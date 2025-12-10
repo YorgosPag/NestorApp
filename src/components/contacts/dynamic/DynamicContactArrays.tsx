@@ -104,25 +104,26 @@ function PhoneManager({ phones, disabled = false, onChange }: PhoneManagerProps)
         Τηλέφωνα
       </div>
         {phones.map((phone, index) => (
-          <div key={index} className="w-full p-4 border rounded-lg">
-            <div className="w-full grid grid-cols-1 gap-4">
-              <div>
+          <div key={index} className="w-full max-w-none min-w-full p-4 border rounded-lg">
+            <div className="w-full max-w-none min-w-full space-y-4">
+              <div className="w-full max-w-none min-w-full">
                 <Label>Αριθμός</Label>
                 <Input
                   value={phone.number}
                   onChange={(e) => updatePhone(index, 'number', e.target.value)}
                   placeholder="π.χ. 6971234567"
                   disabled={disabled}
+                  className="w-full"
                 />
               </div>
-              <div>
+              <div className="w-full max-w-none min-w-full">
                 <Label>Τύπος</Label>
                 <Select
                   value={phone.type}
                   onValueChange={(value) => updatePhone(index, 'type', value)}
                   disabled={disabled}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -134,13 +135,14 @@ function PhoneManager({ phones, disabled = false, onChange }: PhoneManagerProps)
                   </SelectContent>
                 </Select>
               </div>
-              <div>
+              <div className="w-full max-w-none min-w-full">
                 <Label>Ετικέτα</Label>
                 <Input
                   value={phone.label || ''}
                   onChange={(e) => updatePhone(index, 'label', e.target.value)}
                   placeholder="π.χ. Κινητό εργασίας"
                   disabled={disabled}
+                  className="w-full"
                 />
               </div>
             </div>
@@ -246,9 +248,9 @@ function EmailManager({ emails, disabled = false, onChange }: EmailManagerProps)
         E-mails
       </div>
         {emails.map((email, index) => (
-          <div key={index} className="w-full p-4 border rounded-lg">
-            <div className="w-full grid grid-cols-1 gap-4">
-              <div>
+          <div key={index} className="w-full max-w-none min-w-full p-4 border rounded-lg">
+            <div className="w-full max-w-none min-w-full space-y-4">
+              <div className="w-full max-w-none min-w-full">
                 <Label>Διεύθυνση E-mail</Label>
                 <Input
                   type="email"
@@ -256,16 +258,17 @@ function EmailManager({ emails, disabled = false, onChange }: EmailManagerProps)
                   onChange={(e) => updateEmail(index, 'email', e.target.value)}
                   placeholder="π.χ. john@example.com"
                   disabled={disabled}
+                  className="w-full"
                 />
               </div>
-              <div>
+              <div className="w-full max-w-none min-w-full">
                 <Label>Τύπος</Label>
                 <Select
                   value={email.type}
                   onValueChange={(value) => updateEmail(index, 'type', value)}
                   disabled={disabled}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -277,13 +280,14 @@ function EmailManager({ emails, disabled = false, onChange }: EmailManagerProps)
                   </SelectContent>
                 </Select>
               </div>
-              <div>
+              <div className="w-full max-w-none min-w-full">
                 <Label>Ετικέτα</Label>
                 <Input
                   value={email.label || ''}
                   onChange={(e) => updateEmail(index, 'label', e.target.value)}
                   placeholder="π.χ. E-mail εργασίας"
                   disabled={disabled}
+                  className="w-full"
                 />
               </div>
             </div>
@@ -375,9 +379,9 @@ function WebsiteManager({ websites, disabled = false, onChange }: WebsiteManager
         Ιστοσελίδες
       </div>
         {websites.map((website, index) => (
-          <div key={index} className="w-full p-4 border rounded-lg">
-            <div className="w-full grid grid-cols-1 gap-4">
-              <div>
+          <div key={index} className="w-full max-w-none min-w-full p-4 border rounded-lg">
+            <div className="w-full max-w-none min-w-full space-y-4">
+              <div className="w-full max-w-none min-w-full">
                 <Label>URL</Label>
                 <Input
                   type="url"
@@ -385,16 +389,17 @@ function WebsiteManager({ websites, disabled = false, onChange }: WebsiteManager
                   onChange={(e) => updateWebsite(index, 'url', e.target.value)}
                   placeholder="π.χ. https://example.com"
                   disabled={disabled}
+                  className="w-full"
                 />
               </div>
-              <div>
+              <div className="w-full max-w-none min-w-full">
                 <Label>Τύπος</Label>
                 <Select
                   value={website.type}
                   onValueChange={(value) => updateWebsite(index, 'type', value)}
                   disabled={disabled}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -406,13 +411,14 @@ function WebsiteManager({ websites, disabled = false, onChange }: WebsiteManager
                   </SelectContent>
                 </Select>
               </div>
-              <div>
+              <div className="w-full max-w-none min-w-full">
                 <Label>Ετικέτα</Label>
                 <Input
                   value={website.label || ''}
                   onChange={(e) => updateWebsite(index, 'label', e.target.value)}
                   placeholder="π.χ. Προσωπική σελίδα"
                   disabled={disabled}
+                  className="w-full"
                 />
               </div>
             </div>
@@ -482,7 +488,10 @@ export function DynamicContactArrays({
   }] : emails;
 
   return (
-    <div className="w-full space-y-8">
+    <div
+      className="w-full max-w-none min-w-full space-y-8"
+      style={{ width: '100%', maxWidth: 'none', minWidth: '100%' }}
+    >
       <PhoneManager
         phones={normalizedPhones}
         disabled={disabled}

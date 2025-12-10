@@ -164,7 +164,7 @@ export function IndividualFormRenderer({
           {/* Section Header αφαιρέθηκε - δεν θέλουμε το Camera εικονίδιο και το κείμενο "Φωτογραφία" */}
 
           {/* Section Fields - Enhanced Mobile Layout */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-4">
+          <div className="w-full space-y-4">
             {section.fields.map((field) => (
               <FormField
                 key={field.id}
@@ -172,6 +172,7 @@ export function IndividualFormRenderer({
                 htmlFor={field.id}
                 required={field.required}
                 helpText={field.helpText}
+                className="w-full"
               >
                 <FormInput>
                   {renderField(field, formData, onChange, onSelectChange, disabled, customRenderers)}

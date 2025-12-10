@@ -44,14 +44,14 @@ interface FormFieldProps {
 
 export function FormField({ label, htmlFor, required = false, children, className, helpText }: FormFieldProps) {
   return (
-    <div className={cn(FORM_STYLES.grid.field, className)}>
+    <div className={cn("w-full space-y-2", className)}>
       <FormLabel htmlFor={htmlFor} required={required}>
         {label}
       </FormLabel>
-      <div className="col-span-1 md:col-span-3">
+      <div className="w-full">
         {children}
         {helpText && (
-          <p className="text-xs text-muted-foreground mt-1 whitespace-nowrap overflow-hidden text-ellipsis">{helpText}</p>
+          <p className="text-xs text-muted-foreground mt-1">{helpText}</p>
         )}
       </div>
     </div>
@@ -70,7 +70,7 @@ export function FormLabel({ htmlFor, required = false, children, className }: Fo
   return (
     <Label
       htmlFor={htmlFor}
-      className={cn(FORM_STYLES.label.base, className)}
+      className={cn("text-left font-medium text-sm", className)}
     >
       {children}
       {required && <span className="text-destructive ml-1">*</span>}
@@ -86,7 +86,7 @@ interface FormInputProps {
 
 export function FormInput({ children, className }: FormInputProps) {
   return (
-    <div className={cn("", className)}>
+    <div className={cn("w-full", className)}>
       {children}
     </div>
   );

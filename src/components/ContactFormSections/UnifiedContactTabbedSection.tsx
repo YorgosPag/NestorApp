@@ -111,7 +111,7 @@ export function UnifiedContactTabbedSection({
       customRenderers: {
         // 🚀 DYNAMIC COMMUNICATION: Custom renderer for communication & social media
         communication: (field: any, fieldFormData: any, fieldOnChange: any, fieldOnSelectChange: any, fieldDisabled: boolean) => (
-          <div className="space-y-6">
+          <div className="w-full space-y-6">
             <DynamicContactArrays
               phones={formData.phones || []}
               emails={formData.emails || []}
