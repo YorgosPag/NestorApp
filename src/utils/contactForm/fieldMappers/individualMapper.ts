@@ -95,9 +95,14 @@ export function mapIndividualContactToFormData(contact: Contact): ContactFormDat
     workAddress: getSafeFieldValue(individualContact, 'workAddress'),
     workWebsite: getSafeFieldValue(individualContact, 'workWebsite'),
 
-    // 📞 Επικοινωνία
-    email: contact.emails?.[0]?.email || '',
+    // 📞 Επικοινωνία - Standardized Address Fields
+    street: getSafeFieldValue(individualContact, 'street'),
+    streetNumber: getSafeFieldValue(individualContact, 'streetNumber'),
+    city: getSafeFieldValue(individualContact, 'city'),
+    postalCode: getSafeFieldValue(individualContact, 'postalCode'),
     phone: contact.phones?.[0]?.number || '',
+    email: contact.emails?.[0]?.email || '',
+    website: getSafeFieldValue(individualContact, 'website'),
 
     // 🌐 Social Media
     socialMedia: {

@@ -1,7 +1,6 @@
 import type { Contact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { getSafeFieldValue, getSafeArrayValue, getSafeNestedValue } from '../contactMapper';
-import { ContactFieldAccessor } from '@/utils/contacts/ContactFieldAccessor';
 
 // ============================================================================
 // SERVICE CONTACT MAPPER
@@ -20,23 +19,43 @@ export function mapServiceContactToFormData(contact: Contact): ContactFormData {
 
   const serviceContact = contact as any; // Cast for service fields access
 
-  // 🔍 DEBUG: Service contact data loading with centralized accessor
-  ContactFieldAccessor.debugFieldAccess(contact);
+  // 🔍 QUICK FIX: Find email/phone/website from any possible location
+  const contactAny = contact as any;
 
-  console.log('🏛️ CENTRALIZED ACCESS RESULTS:', {
-    email: ContactFieldAccessor.getEmail(contact),
-    phone: ContactFieldAccessor.getPhone(contact),
-    website: ContactFieldAccessor.getWebsite(contact)
+  // Try multiple sources for email
+  const foundEmail = contact.emails?.[0]?.email ||
+                    contactAny.email ||
+                    contactAny.contactEmail ||
+                    contactAny.officialEmail || '';
+
+  // Try multiple sources for phone
+  const foundPhone = contact.phones?.[0]?.number ||
+                    contactAny.phone ||
+                    contactAny.telephone ||
+                    contactAny.centralPhone || '';
+
+  // Try multiple sources for website
+  const foundWebsite = contactAny.website ||
+                      contactAny.officialWebsite ||
+                      contactAny.url || '';
+
+  console.log('🔧 QUICK FIX - FOUND DATA:', {
+    contactId: contact.id,
+    contactType: contact.type,
+    foundEmail,
+    foundPhone,
+    foundWebsite,
+    rawContact: JSON.stringify(contactAny, null, 2)
   });
 
   const formData: ContactFormData = {
     // Basic info
     type: 'service',
-    id: contact.id, // 🔥 CRITICAL FIX: Include contact ID for relationship management
+    id: contact.id,
 
     // 🏛️ Service Στοιχεία
     serviceName: getSafeFieldValue(serviceContact, 'serviceName'),
-    name: getSafeFieldValue(serviceContact, 'serviceName'), // 🔧 FIX: Support service-config compatibility
+    name: getSafeFieldValue(serviceContact, 'serviceName'),
     serviceType: getSafeFieldValue(serviceContact, 'serviceType', 'other'),
 
     // Βασικά Στοιχεία Δημόσιας Υπηρεσίας (Service Config)
@@ -50,9 +69,9 @@ export function mapServiceContactToFormData(contact: Contact): ContactFormData {
     headTitle: getSafeFieldValue(serviceContact, 'headTitle'),
     headName: getSafeFieldValue(serviceContact, 'headName'),
 
-    // 📞 Επικοινωνία - Using centralized field accessor (eliminates scattered logic)
-    email: ContactFieldAccessor.getEmail(contact),
-    phone: ContactFieldAccessor.getPhone(contact),
+    // 📞 Επικοινωνία - QUICK FIX: Direct field access
+    email: foundEmail,
+    phone: foundPhone,
 
     // 📷 Photos & Logo
     photoFile: null,
@@ -98,12 +117,13 @@ export function mapServiceContactToFormData(contact: Contact): ContactFormData {
     serviceCategory: getSafeFieldValue(serviceContact, 'serviceCategory'),
     officialWebsite: getSafeFieldValue(serviceContact, 'officialWebsite'),
 
-    // Επικοινωνία Υπηρεσίας (Contact Section)
-    address: getSafeFieldValue(serviceContact, 'address'),
-    postalCode: getSafeFieldValue(serviceContact, 'postalCode'),
+    // Επικοινωνία Υπηρεσίας (Contact Section) - Separate Address Fields
+    street: getSafeFieldValue(serviceContact, 'street'),
+    streetNumber: getSafeFieldValue(serviceContact, 'streetNumber'),
     city: getSafeFieldValue(serviceContact, 'city'),
+    postalCode: getSafeFieldValue(serviceContact, 'postalCode'),
     fax: getSafeFieldValue(serviceContact, 'fax'),
-    website: getSafeFieldValue(serviceContact, 'website') || getSafeFieldValue(serviceContact, 'officialWebsite') || '',
+    website: foundWebsite,
 
     // Υπηρεσίες Φορέα (Services Section)
     mainResponsibilities: getSafeFieldValue(serviceContact, 'mainResponsibilities'),

@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { FormField, FormInput } from '@/components/ui/form/FormComponents';
+import { UniversalClickableField } from '@/components/ui/form/UniversalClickableField';
 import type { IndividualFieldConfig, IndividualSectionConfig } from '@/config/individual-config';
 import { getIconComponent } from './utils/IconMapping';
 
@@ -37,49 +38,12 @@ export interface IndividualFormRendererProps {
 function renderInputField(field: IndividualFieldConfig, formData: any, onChange: any, disabled: boolean): React.ReactNode {
   const value = formData[field.id] || '';
 
-  // 🎯 CLICKABLE LINKS: Όταν disabled και έχουμε email/tel, εμφάνισε clickable link
-  if (disabled && value) {
-    if (field.type === 'email') {
-      return (
-        <div className="min-h-10 flex items-center px-3 py-2 border border-input bg-background rounded-md text-sm">
-          <a
-            href={`https://mail.google.com/mail/?view=cm&to=${value}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
-            onClick={(e) => e.stopPropagation()}
-            title={`Αποστολή email στο ${value} μέσω Gmail`}
-          >
-            {value}
-          </a>
-        </div>
-      );
-    }
-
-    if (field.type === 'tel') {
-      return (
-        <div className="min-h-10 flex items-center px-3 py-2 border border-input bg-background rounded-md text-sm">
-          <a
-            href={`tel:${value}`}
-            className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
-            onClick={(e) => e.stopPropagation()}
-            title={`Κλήση στο ${value}`}
-          >
-            {value}
-          </a>
-        </div>
-      );
-    }
-  }
-
-  // 📝 NORMAL INPUT: Για edit mode ή άδεια values ή άλλους τύπους
-  const inputType = field.type === 'email' ? 'email' : field.type === 'tel' ? 'tel' : field.type === 'date' ? 'date' : field.type === 'number' ? 'number' : 'text';
-
+  // 🏢 ENTERPRISE: Use Universal Clickable Field - ZERO διασπορά!
   return (
-    <Input
+    <UniversalClickableField
       id={field.id}
       name={field.id}
-      type={inputType}
+      type={field.type}
       value={value}
       onChange={onChange}
       disabled={disabled}

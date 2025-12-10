@@ -631,6 +631,7 @@ export function ContactsPageContent() {
                   contact={livePreviewContact || selectedContact}
                   onEditContact={handleEditContact}
                   onDeleteContact={() => handleDeleteContacts()}
+                  onContactUpdated={refreshContacts}
                 />
               </div>
 
@@ -678,6 +679,7 @@ export function ContactsPageContent() {
                     contact={livePreviewContact || selectedContact}
                     onEditContact={handleEditContact}
                     onDeleteContact={() => handleDeleteContacts()}
+                    onContactUpdated={refreshContacts}
                   />
                 )}
               </MobileDetailsSlideIn>

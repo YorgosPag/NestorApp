@@ -45,9 +45,14 @@ export function mapCompanyContactToFormData(contact: Contact): ContactFormData {
     companyVatNumber: getSafeFieldValue(companyContact, 'vatNumber') ||
                      getSafeFieldValue(companyContact, 'companyVatNumber'), // Legacy compatibility
 
-    // 📞 Επικοινωνία
-    email: contact.emails?.[0]?.email || '',
+    // 📞 Επικοινωνία - Standardized Address Fields
+    street: getSafeFieldValue(companyContact, 'street'),
+    streetNumber: getSafeFieldValue(companyContact, 'streetNumber'),
+    city: getSafeFieldValue(companyContact, 'city'),
+    postalCode: getSafeFieldValue(companyContact, 'postalCode'),
     phone: contact.phones?.[0]?.number || '',
+    email: contact.emails?.[0]?.email || '',
+    website: getSafeFieldValue(companyContact, 'website'),
 
     // 🏢 Logo
     logoFile: null,

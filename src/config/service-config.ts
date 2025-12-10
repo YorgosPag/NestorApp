@@ -137,26 +137,37 @@ const contactSection: ServiceSectionConfig = {
   icon: 'phone',
   fields: [
     {
-      id: 'address',
-      type: 'textarea',
-      label: 'Διεύθυνση Έδρας',
-      placeholder: 'Πλήρη διεύθυνση',
+      id: 'street',
+      type: 'input',
+      label: 'Οδός',
+      placeholder: 'π.χ. Βασιλίσσης Σοφίας',
       required: true,
-      helpText: 'Η επίσημη διεύθυνση της έδρας της υπηρεσίας'
+      helpText: 'Όνομα οδού χωρίς αριθμό'
+    },
+    {
+      id: 'streetNumber',
+      type: 'input',
+      label: 'Αριθμός',
+      placeholder: 'π.χ. 125',
+      required: true,
+      helpText: 'Αριθμός οδού (μπορεί να περιλαμβάνει γράμματα π.χ. 25Α)'
+    },
+    {
+      id: 'city',
+      type: 'input',
+      label: 'Πόλη',
+      placeholder: 'π.χ. Θεσσαλονίκη',
+      required: true,
+      helpText: 'Πόλη ή δήμος'
     },
     {
       id: 'postalCode',
       type: 'input',
       label: 'Τ.Κ.',
       placeholder: '12345',
-      maxLength: 5
-    },
-    {
-      id: 'city',
-      type: 'input',
-      label: 'Πόλη',
-      placeholder: 'Αθήνα',
-      required: true
+      maxLength: 5,
+      required: true,
+      helpText: 'Ταχυδρομικός κώδικας (5 ψηφία)'
     },
     {
       id: 'phone',

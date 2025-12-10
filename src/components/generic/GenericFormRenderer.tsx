@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { FormField, FormInput } from '@/components/ui/form/FormComponents';
+import { UniversalClickableField } from '@/components/ui/form/UniversalClickableField';
 import type { FieldConfig, SectionConfig } from '@/config/company-gemi-config';
 import { getIconComponent } from './utils/IconMapping';
 
@@ -34,14 +35,18 @@ export interface GenericFormRendererProps {
 // ============================================================================
 
 /**
- * Renders an input field
+ * Renders an input field - NOW USING UNIVERSAL CLICKABLE FIELD
  */
 function renderInputField(field: FieldConfig, formData: any, onChange: any, disabled: boolean): React.ReactNode {
+  const value = formData[field.id] || '';
+
+  // 🏢 ENTERPRISE: Use Universal Clickable Field - ZERO διασπορά!
   return (
-    <Input
+    <UniversalClickableField
       id={field.id}
       name={field.id}
-      value={formData[field.id] || ''}
+      type={field.type}
+      value={value}
       onChange={onChange}
       disabled={disabled}
       required={field.required}
@@ -102,15 +107,17 @@ function renderTextareaField(field: FieldConfig, formData: any, onChange: any, d
 }
 
 /**
- * Renders a date field
+ * Renders a date field - NOW USING UNIVERSAL CLICKABLE FIELD
  */
 function renderDateField(field: FieldConfig, formData: any, onChange: any, disabled: boolean): React.ReactNode {
+  const value = formData[field.id] || '';
+
   return (
-    <Input
+    <UniversalClickableField
       id={field.id}
       name={field.id}
       type="date"
-      value={formData[field.id] || ''}
+      value={value}
       onChange={onChange}
       disabled={disabled}
       required={field.required}
@@ -120,15 +127,17 @@ function renderDateField(field: FieldConfig, formData: any, onChange: any, disab
 }
 
 /**
- * Renders a number field
+ * Renders a number field - NOW USING UNIVERSAL CLICKABLE FIELD
  */
 function renderNumberField(field: FieldConfig, formData: any, onChange: any, disabled: boolean): React.ReactNode {
+  const value = formData[field.id] || '';
+
   return (
-    <Input
+    <UniversalClickableField
       id={field.id}
       name={field.id}
       type="number"
-      value={formData[field.id] || ''}
+      value={value}
       onChange={onChange}
       disabled={disabled}
       required={field.required}
@@ -139,15 +148,17 @@ function renderNumberField(field: FieldConfig, formData: any, onChange: any, dis
 }
 
 /**
- * Renders an email field
+ * Renders an email field - NOW USING UNIVERSAL CLICKABLE FIELD
  */
 function renderEmailField(field: FieldConfig, formData: any, onChange: any, disabled: boolean): React.ReactNode {
+  const value = formData[field.id] || '';
+
   return (
-    <Input
+    <UniversalClickableField
       id={field.id}
       name={field.id}
       type="email"
-      value={formData[field.id] || ''}
+      value={value}
       onChange={onChange}
       disabled={disabled}
       required={field.required}
@@ -158,15 +169,17 @@ function renderEmailField(field: FieldConfig, formData: any, onChange: any, disa
 }
 
 /**
- * Renders a tel field
+ * Renders a tel field - NOW USING UNIVERSAL CLICKABLE FIELD
  */
 function renderTelField(field: FieldConfig, formData: any, onChange: any, disabled: boolean): React.ReactNode {
+  const value = formData[field.id] || '';
+
   return (
-    <Input
+    <UniversalClickableField
       id={field.id}
       name={field.id}
       type="tel"
-      value={formData[field.id] || ''}
+      value={value}
       onChange={onChange}
       disabled={disabled}
       required={field.required}

@@ -17,9 +17,10 @@ interface ContactDetailsProps {
   contact: Contact | null;
   onEditContact?: () => void;
   onDeleteContact?: () => void;
+  onContactUpdated?: () => void;
 }
 
-export function ContactDetails({ contact, onEditContact, onDeleteContact }: ContactDetailsProps) {
+export function ContactDetails({ contact, onEditContact, onDeleteContact, onContactUpdated }: ContactDetailsProps) {
   const [isAddUnitDialogOpen, setIsAddUnitDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedData, setEditedData] = useState<any>({});
@@ -94,13 +95,17 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact }: Cont
       setIsEditing(false);
       setEditedData({});
 
-      // TODO: Trigger refresh/revalidation of contact data
+      // 🔄 TRIGGER REFRESH: Notify parent component to refresh data
       console.log('✅ Contact updated successfully');
+      if (onContactUpdated) {
+        console.log('🔄 CONTACT DETAILS: Triggering parent refresh after save');
+        onContactUpdated();
+      }
     } catch (error) {
       console.error('❌ Failed to update contact:', error);
       // TODO: Show error toast
     }
-  }, [contact?.id, editedData]);
+  }, [contact?.id, editedData, onContactUpdated]);
 
   const handleFieldChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;

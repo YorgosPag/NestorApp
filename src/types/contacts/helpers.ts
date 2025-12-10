@@ -42,15 +42,51 @@ export function getContactInitials(contact: Contact): string {
 }
 
 export function getPrimaryEmail(contact: Contact): string | undefined {
+  // 🔄 QUICK FIX: Enhanced data search for service contacts
+  const contactAny = contact as any;
+
+  // Try standard structure first (Individual, Company with emails array)
   const emails = contact.emails || [];
   const primaryEmail = emails.find(e => e.isPrimary);
-  return primaryEmail?.email || emails[0]?.email;
+  const standardEmail = primaryEmail?.email || emails[0]?.email;
+
+  if (standardEmail) {
+    return standardEmail;
+  }
+
+  // 🏛️ SERVICE CONTACT: Try service-specific fields
+  if (contact.type === 'service' || contactAny.serviceName) {
+    return contactAny.email ||
+           contactAny.contactEmail ||
+           contactAny.officialEmail ||
+           undefined;
+  }
+
+  return undefined;
 }
 
 export function getPrimaryPhone(contact: Contact): string | undefined {
+  // 🔄 QUICK FIX: Enhanced data search for service contacts
+  const contactAny = contact as any;
+
+  // Try standard structure first (Individual, Company with phones array)
   const phones = contact.phones || [];
   const primaryPhone = phones.find(p => p.isPrimary);
-  return primaryPhone?.number || phones[0]?.number;
+  const standardPhone = primaryPhone?.number || phones[0]?.number;
+
+  if (standardPhone) {
+    return standardPhone;
+  }
+
+  // 🏛️ SERVICE CONTACT: Try service-specific fields
+  if (contact.type === 'service' || contactAny.serviceName) {
+    return contactAny.phone ||
+           contactAny.telephone ||
+           contactAny.centralPhone ||
+           undefined;
+  }
+
+  return undefined;
 }
 
 export function getPrimaryAddress(contact: Contact): AddressInfo | undefined {

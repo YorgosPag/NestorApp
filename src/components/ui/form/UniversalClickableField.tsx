@@ -1,0 +1,208 @@
+'use client';
+
+import React from 'react';
+import { Input } from '@/components/ui/input';
+
+// ============================================================================
+// 🏢 ENTERPRISE UNIVERSAL CLICKABLE FIELD RENDERER
+// ============================================================================
+
+/**
+ * 🎯 UNIVERSAL CLICKABLE FIELD COMPONENT
+ *
+ * ΕΞΑΛΕΙΦΕΙ την διασπορά μεταξύ Individual, Company, Service contacts.
+ *
+ * ΠΡΟΒΛΗΜΑ ΔΙΑΣΠΟΡΑΣ ΠΟΥ ΛΥΝΕΙ:
+ * ❌ IndividualFormRenderer - δική του clickable logic
+ * ❌ ServiceFormRenderer - δική του clickable logic
+ * ❌ GenericFormRenderer - δική του clickable logic
+ * ❌ Διαφορετική συμπεριφορά ανάλογα με contact type
+ *
+ * ΛΥΣΗ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗΣ:
+ * ✅ ΕΝΑ και ΜΟΝΑΔΙΚΟ component για clickable fields
+ * ✅ ΙΔΙΑ συμπεριφορά για ΟΛΟΥΣ τους contact types
+ * ✅ Centralized logic για email/phone/website links
+ * ✅ Enterprise-class consistency
+ */
+
+export interface UniversalClickableFieldProps {
+  /** Field unique identifier */
+  id: string;
+  /** Field name for form handling */
+  name: string;
+  /** Input type (email, tel, url, text, etc.) */
+  type: string;
+  /** Current field value */
+  value: string;
+  /** Placeholder text */
+  placeholder?: string;
+  /** Field is disabled (view mode) */
+  disabled?: boolean;
+  /** Field is required */
+  required?: boolean;
+  /** Field is readonly */
+  readonly?: boolean;
+  /** Max length */
+  maxLength?: number;
+  /** CSS classes */
+  className?: string;
+  /** Change handler */
+  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}
+
+/**
+ * 🎯 UNIVERSAL CLICKABLE FIELD
+ *
+ * Renders clickable links when disabled AND has value.
+ * Renders normal input when enabled OR has no value.
+ *
+ * GUARANTEED CONSISTENCY across ALL contact types.
+ */
+export function UniversalClickableField({
+  id,
+  name,
+  type,
+  value,
+  placeholder,
+  disabled = false,
+  required = false,
+  readonly = false,
+  maxLength,
+  className,
+  onChange
+}: UniversalClickableFieldProps) {
+
+  // 🎯 CLICKABLE LOGIC: Only when disabled AND has value
+  const shouldBeClickable = disabled && value && value.trim() !== '';
+
+  if (shouldBeClickable) {
+    return renderClickableLink(type, value, id);
+  }
+
+  // 📝 NORMAL INPUT: For edit mode or empty values
+  return (
+    <Input
+      id={id}
+      name={name}
+      type={getInputType(type)}
+      value={value}
+      onChange={onChange}
+      disabled={disabled}
+      readOnly={readonly}
+      required={required}
+      placeholder={placeholder}
+      maxLength={maxLength}
+      className={className}
+    />
+  );
+}
+
+// ============================================================================
+// INTERNAL HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * 🔗 Render clickable link based on field type
+ */
+function renderClickableLink(type: string, value: string, fieldId: string): React.ReactNode {
+  // 📧 EMAIL LINK - Always use Gmail web interface
+  if (type === 'email') {
+    return (
+      <div className="min-h-10 flex items-center px-3 py-2 border border-input bg-background rounded-md text-sm">
+        <a
+          href={`https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(value)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer transition-colors"
+          onClick={(e) => e.stopPropagation()}
+          title={`Αποστολή email στο ${value} μέσω Gmail`}
+          data-field-id={fieldId}
+          data-field-type="email"
+        >
+          {value}
+        </a>
+      </div>
+    );
+  }
+
+  // 📞 PHONE LINK - Use tel: protocol
+  if (type === 'tel') {
+    return (
+      <div className="min-h-10 flex items-center px-3 py-2 border border-input bg-background rounded-md text-sm">
+        <a
+          href={`tel:${value}`}
+          className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer transition-colors"
+          onClick={(e) => e.stopPropagation()}
+          title={`Κλήση στο ${value}`}
+          data-field-id={fieldId}
+          data-field-type="phone"
+        >
+          {value}
+        </a>
+      </div>
+    );
+  }
+
+  // 🌐 WEBSITE LINK - Handle URL formatting
+  if (type === 'url' || type === 'website') {
+    const websiteUrl = value.startsWith('http') ? value : `https://${value}`;
+    return (
+      <div className="min-h-10 flex items-center px-3 py-2 border border-input bg-background rounded-md text-sm">
+        <a
+          href={websiteUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer transition-colors"
+          onClick={(e) => e.stopPropagation()}
+          title={`Άνοιγμα ιστοσελίδας ${value}`}
+          data-field-id={fieldId}
+          data-field-type="website"
+        >
+          {value}
+        </a>
+      </div>
+    );
+  }
+
+  // 📝 FALLBACK - Other field types as disabled input
+  return (
+    <div className="min-h-10 flex items-center px-3 py-2 border border-input bg-background rounded-md text-sm text-muted-foreground">
+      {value}
+    </div>
+  );
+}
+
+/**
+ * 🎯 Map field type to HTML input type
+ */
+function getInputType(fieldType: string): string {
+  switch (fieldType) {
+    case 'email': return 'email';
+    case 'tel': return 'tel';
+    case 'url':
+    case 'website': return 'url';
+    case 'date': return 'date';
+    case 'number': return 'number';
+    case 'password': return 'password';
+    default: return 'text';
+  }
+}
+
+// ============================================================================
+// CONVENIENCE COMPONENTS για specific use cases
+// ============================================================================
+
+export interface ClickableEmailFieldProps extends Omit<UniversalClickableFieldProps, 'type'> {}
+export function ClickableEmailField(props: ClickableEmailFieldProps) {
+  return <UniversalClickableField {...props} type="email" />;
+}
+
+export interface ClickablePhoneFieldProps extends Omit<UniversalClickableFieldProps, 'type'> {}
+export function ClickablePhoneField(props: ClickablePhoneFieldProps) {
+  return <UniversalClickableField {...props} type="tel" />;
+}
+
+export interface ClickableWebsiteFieldProps extends Omit<UniversalClickableFieldProps, 'type'> {}
+export function ClickableWebsiteField(props: ClickableWebsiteFieldProps) {
+  return <UniversalClickableField {...props} type="url" />;
+}
