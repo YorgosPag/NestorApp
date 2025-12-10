@@ -95,14 +95,14 @@ export function mapIndividualContactToFormData(contact: Contact): ContactFormDat
     workAddress: getSafeFieldValue(individualContact, 'workAddress'),
     workWebsite: getSafeFieldValue(individualContact, 'workWebsite'),
 
-    // 📞 Επικοινωνία - Standardized Address Fields
-    street: getSafeFieldValue(individualContact, 'street'),
-    streetNumber: getSafeFieldValue(individualContact, 'streetNumber'),
-    city: getSafeFieldValue(individualContact, 'city'),
-    postalCode: getSafeFieldValue(individualContact, 'postalCode'),
+    // 📞 Επικοινωνία - ENTERPRISE Arrays Structure
+    street: contact.addresses?.[0]?.street || '',
+    streetNumber: contact.addresses?.[0]?.number || '',
+    city: contact.addresses?.[0]?.city || '',
+    postalCode: contact.addresses?.[0]?.postalCode || '',
     phone: contact.phones?.[0]?.number || '',
     email: contact.emails?.[0]?.email || '',
-    website: getSafeFieldValue(individualContact, 'website'),
+    website: contact.websites?.[0]?.url || '',
 
     // 🌐 Social Media
     socialMedia: {

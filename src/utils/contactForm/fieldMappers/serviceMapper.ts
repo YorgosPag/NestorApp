@@ -117,13 +117,13 @@ export function mapServiceContactToFormData(contact: Contact): ContactFormData {
     serviceCategory: getSafeFieldValue(serviceContact, 'serviceCategory'),
     officialWebsite: getSafeFieldValue(serviceContact, 'officialWebsite'),
 
-    // Επικοινωνία Υπηρεσίας (Contact Section) - Separate Address Fields
-    street: getSafeFieldValue(serviceContact, 'street'),
-    streetNumber: getSafeFieldValue(serviceContact, 'streetNumber'),
-    city: getSafeFieldValue(serviceContact, 'city'),
-    postalCode: getSafeFieldValue(serviceContact, 'postalCode'),
+    // Επικοινωνία Υπηρεσίας - ENTERPRISE Arrays Structure
+    street: contact.addresses?.[0]?.street || '',
+    streetNumber: contact.addresses?.[0]?.number || '',
+    city: contact.addresses?.[0]?.city || '',
+    postalCode: contact.addresses?.[0]?.postalCode || '',
     fax: getSafeFieldValue(serviceContact, 'fax'),
-    website: foundWebsite,
+    website: contact.websites?.[0]?.url || foundWebsite,
 
     // Υπηρεσίες Φορέα (Services Section)
     mainResponsibilities: getSafeFieldValue(serviceContact, 'mainResponsibilities'),

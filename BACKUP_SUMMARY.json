@@ -1,54 +1,56 @@
 {
-  "category": "MAJOR",
-  "shortDescription": "Contact Forms Centralization & Service Form Architecture Enhancement",
-  "problem": "Εκτεταμένος refactoring για κεντρικοποίηση contact forms και αναβάθμιση service form architecture με centralized field accessors",
-  "cause": "Ανάγκη για enterprise-grade form architecture, elimination scattered contact logic, και βελτίωση UX σε contact editing",
+  "category": "HOTFIX",
+  "shortDescription": "Universal Contact Field Access & Live Contact Refresh Enhancement",
+  "problem": "Hotfix για universal contact field access, live refresh after edits, και enterprise-grade form field rendering across all contact types",
+  "cause": "Ανάγκη για unified contact field interaction, elimination hardcoded email/phone/website logic, και live data refresh after contact updates",
   "filesChanged": [
-    "src/components/generic/ServiceFormTabRenderer.tsx",
-    "src/utils/contacts/ContactFieldAccessor.ts",
-    "src/components/ContactFormSections/ServiceContactTabbedSection.tsx",
-    "src/components/ContactFormSections/utils/ContactFormConfigProvider.ts",
+    "src/components/ui/form/UniversalClickableField.tsx",
+    "src/config/company-config.ts",
+    "src/components/contacts/ContactsPageContent.tsx",
     "src/components/contacts/details/ContactDetails.tsx",
-    "src/components/contacts/details/ContactDetailsHeader.tsx",
     "src/components/generic/GenericFormRenderer.tsx",
-    "src/components/generic/GenericTabRenderer.tsx",
     "src/components/generic/IndividualFormRenderer.tsx",
     "src/components/generic/ServiceFormRenderer.tsx",
-    "src/components/generic/index.ts",
-    "src/components/ui/EditableText.tsx",
-    "src/components/ui/form/FormComponents.tsx",
-    "src/components/ui/input.tsx",
-    "src/components/ui/textarea.tsx",
+    "src/config/individual-config.ts",
     "src/config/service-config.ts",
+    "src/types/contacts/helpers.ts",
+    "src/utils/contactForm/fieldMappers/companyMapper.ts",
+    "src/utils/contactForm/fieldMappers/individualMapper.ts",
     "src/utils/contactForm/fieldMappers/serviceMapper.ts",
     "BACKUP_SUMMARY.json"
   ],
   "solution": {
-    "phase1": "Δημιουργία ContactFieldAccessor για centralized email/phone/website access",
-    "phase2": "Υλοποίηση ServiceFormTabRenderer για unified service contact rendering",
-    "phase3": "Enhancement όλων των generic form renderers με improved field mapping",
-    "phase4": "Αναβάθμιση EditableText component με hover states και edit icons",
-    "phase5": "Centralization contact form configuration και service field mapping architecture"
+    "phase1": "Δημιουργία UniversalClickableField για enterprise-grade email/phone/website links",
+    "phase2": "Enhancement serviceMapper με multi-source field detection (QUICK FIX)",
+    "phase3": "Update όλων των form renderers να χρησιμοποιούν UniversalClickableField",
+    "phase4": "Προσθήκη onContactUpdated callback στο ContactDetails για live refresh",
+    "phase5": "Δημιουργία company-config.ts για centralized company field configuration"
   },
-  "testing": "Major architectural changes pushed to production - Vercel auto-deployment σε εξέλιξη",
+  "testing": "Hotfix changes pushed to production - Vercel auto-deployment σε εξέλιξη",
   "notes": {
-    "critical": "🔧 MAJOR REFACTORING: Contact Forms Architecture Overhaul",
+    "critical": "🔧 HOTFIX: Universal Contact Field Access & Live Refresh",
+    "improvements": [
+      "UniversalClickableField: Enterprise-grade contact field interaction",
+      "Multi-source field detection: Handles scattered contact data",
+      "Live contact refresh: Real-time updates after edits",
+      "Zero διασπορά: Universal form field rendering",
+      "Enhanced mappers: Improved contact data extraction"
+    ],
     "architecture": [
-      "ContactFieldAccessor: Centralized email/phone/website field access logic",
-      "ServiceFormTabRenderer: Enterprise-grade service contact rendering",
-      "Enhanced FormComponents: Improved validation and UX patterns",
-      "EditableText: Advanced inline editing with hover states",
-      "Centralized service-config: Comprehensive field definitions"
+      "UniversalClickableField: Centralized contact field rendering",
+      "Enhanced serviceMapper: Multi-source field detection logic",
+      "Live refresh: onContactUpdated callback pattern",
+      "Company-config: Centralized company field configuration",
+      "Universal form renderers: ZERO hardcoded field logic"
     ],
-    "benefits": [
-      "🎯 Eliminates scattered contact field access logic",
-      "🏛️ Enterprise-grade form rendering architecture",
-      "📱 Enhanced mobile and desktop contact editing experience",
-      "🔄 Centralized configuration for all service contact fields",
-      "✨ Improved UX with hover states and inline editing"
+    "fixes": [
+      "🎯 Eliminates hardcoded email/phone/website display logic",
+      "🔄 Implements live contact refresh after edits",
+      "🏛️ Universal form field rendering across all contact types",
+      "📱 Enhanced mobile and desktop contact field interaction",
+      "🔍 Multi-source contact field detection (QUICK FIX)"
     ],
-    "deployment": "Push στο GitHub → Auto-deployment στο Vercel production",
-    "impact": "Major architectural improvement affecting all contact forms"
+    "deployment": "Push στο GitHub → Auto-deployment στο Vercel production"
   },
   "contributors": {
     "user": "Γιώργος Παγώνης",
@@ -56,21 +58,21 @@
     "sessionDate": "2025-12-10"
   },
   "relatedBackups": [
-    "Contact-forms-centralization",
-    "Service-form-architecture-enhancement",
-    "ContactFieldAccessor-implementation",
-    "EditableText-component-improvements",
-    "Enterprise-form-rendering-system"
+    "Universal-contact-field-access",
+    "Live-contact-refresh-enhancement",
+    "UniversalClickableField-implementation",
+    "Multi-source-field-detection",
+    "Enterprise-form-rendering-hotfix"
   ],
   "commits": [
     {
-      "hash": "82314de",
-      "message": "🔧 MAJOR: Contact Forms Centralization & Service Form Enhancements",
-      "files": 18,
-      "changes": "+660 -117",
+      "hash": "de8949f",
+      "message": "🔧 HOTFIX: Universal Contact Field Access & Contact Refresh Enhancement",
+      "files": 14,
+      "changes": "+722 -202",
       "newFiles": [
-        "ServiceFormTabRenderer.tsx",
-        "ContactFieldAccessor.ts"
+        "UniversalClickableField.tsx",
+        "company-config.ts"
       ],
       "status": "pushed_to_production"
     }
