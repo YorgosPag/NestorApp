@@ -119,17 +119,17 @@ interface I18n_Dashboard_Welcome_Actions {
   search: string;
 }
 
-interface I18n_Dxf-viewer {
-  layers: I18n_Dxf-viewer_Layers;
+interface I18n_DxfViewer {
+  layers: I18n_DxfViewer_Layers;
 }
 
-interface I18n_Dxf-viewer_Layers {
+interface I18n_DxfViewer_Layers {
   title: string;
   clickToSelect: string;
-  delete: I18n_Dxf-viewer_Layers_Delete;
+  delete: I18n_DxfViewer_Layers_Delete;
 }
 
-interface I18n_Dxf-viewer_Layers_Delete {
+interface I18n_DxfViewer_Layers_Delete {
   confirm: string;
   success: string;
   error: string;
@@ -171,13 +171,13 @@ interface I18n_Forms_Labels {
   financing: string;
 }
 
-interface I18n_Geo-canvas {
+interface I18n_GeoCanvas {
   title: string;
   subtitle: string;
-  phases: I18n_Geo-canvas_Phases;
+  phases: I18n_GeoCanvas_Phases;
 }
 
-interface I18n_Geo-canvas_Phases {
+interface I18n_GeoCanvas_Phases {
   foundation: string;
   transformation: string;
   mapping: string;
@@ -332,10 +332,10 @@ export interface I18nKeys {
   contacts: I18n_Contacts;
   crm: I18n_Crm;
   dashboard: I18n_Dashboard;
-  dxf-viewer: I18n_Dxf-viewer;
+  'dxf-viewer': I18n_DxfViewer;
   errors: I18n_Errors;
   forms: I18n_Forms;
-  geo-canvas: I18n_Geo-canvas;
+  'geo-canvas': I18n_GeoCanvas;
   landing: I18n_Landing;
   navigation: I18n_Navigation;
   projects: I18n_Projects;
