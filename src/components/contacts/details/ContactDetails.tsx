@@ -141,6 +141,10 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
           <ContactDetailsHeader
             contact={contact!}
             onDeleteContact={onDeleteContact}
+            isEditing={isEditing}
+            onStartEdit={handleStartEdit}
+            onSaveEdit={handleSaveEdit}
+            onCancelEdit={handleCancelEdit}
           />
         }
         emptyStateProps={{
@@ -149,38 +153,40 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
           description: "Επιλέξτε μια επαφή από τη λίστα για να δείτε τις λεπτομέρειές της."
         }}
       >
-        {/* 🎯 EDIT MODE TOOLBAR */}
-        {!isEditing ? (
-          <div className="flex justify-end mb-4">
-            <Button
-              onClick={handleStartEdit}
-              className="flex items-center gap-2"
-              variant="outline"
-            >
-              <Edit className="w-4 h-4" />
-              Επεξεργασία
-            </Button>
-          </div>
-        ) : (
-          <div className="flex justify-end gap-2 mb-4">
-            <Button
-              onClick={handleSaveEdit}
-              className="flex items-center gap-2"
-              variant="default"
-            >
-              <Check className="w-4 h-4" />
-              Αποθήκευση
-            </Button>
-            <Button
-              onClick={handleCancelEdit}
-              className="flex items-center gap-2"
-              variant="outline"
-            >
-              <X className="w-4 h-4" />
-              Ακύρωση
-            </Button>
-          </div>
-        )}
+        {/* 🎯 EDIT MODE TOOLBAR - Μόνο για Mobile (Desktop κουμπιά στην επικεφαλίδα) */}
+        <div className="md:hidden">
+          {!isEditing ? (
+            <div className="flex justify-end mb-4">
+              <Button
+                onClick={handleStartEdit}
+                className="flex items-center gap-2"
+                variant="outline"
+              >
+                <Edit className="w-4 h-4" />
+                Επεξεργασία
+              </Button>
+            </div>
+          ) : (
+            <div className="flex justify-end gap-2 mb-4">
+              <Button
+                onClick={handleSaveEdit}
+                className="flex items-center gap-2"
+                variant="default"
+              >
+                <Check className="w-4 h-4" />
+                Αποθήκευση
+              </Button>
+              <Button
+                onClick={handleCancelEdit}
+                className="flex items-center gap-2"
+                variant="outline"
+              >
+                <X className="w-4 h-4" />
+                Ακύρωση
+              </Button>
+            </div>
+          )}
+        </div>
 
         <UnifiedContactTabbedSection
           contactType={contact?.type || 'individual'}

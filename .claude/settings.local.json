@@ -143,7 +143,8 @@
       "Bash(sed:*)",
       "Bash(awk:*)",
       "Bash(PORT=3004 npm run dev)",
-      "Bash(git ls-tree:*)"
+      "Bash(git ls-tree:*)",
+      "Bash(del \"C:\\Nestor_Pagonis\\src\\components\\contacts\\dynamic\\SocialMediaManager.tsx\")"
     ],
     "deny": [],
     "ask": []

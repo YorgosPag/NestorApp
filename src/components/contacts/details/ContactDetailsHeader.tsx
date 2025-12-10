@@ -8,7 +8,7 @@ import { EntityDetailsHeader } from '@/core/entity-headers';
 import { EditableText } from '@/components/ui/EditableText';
 import { openContactAvatarModal, openGalleryPhotoModal } from '@/core/modals';
 import { useGlobalPhotoPreview } from '@/providers/PhotoPreviewProvider';
-import { Users, Building2, Landmark, Edit, Trash2 } from 'lucide-react';
+import { Users, Building2, Landmark, Edit, Trash2, Check, X } from 'lucide-react';
 import type { Contact, ContactType, ContactStatus } from '@/types/contacts';
 import { getContactDisplayName, getContactInitials } from '@/types/contacts';
 import { ContactsService } from '@/services/contacts.service';
@@ -27,9 +27,23 @@ interface ContactDetailsHeaderProps {
   onEditContact?: () => void;
   onDeleteContact?: () => void;
   onContactUpdate?: (updatedContact: Partial<Contact>) => void;
+  // 🎯 NEW: Edit mode props για κουμπιά στην επικεφαλίδα
+  isEditing?: boolean;
+  onStartEdit?: () => void;
+  onSaveEdit?: () => void;
+  onCancelEdit?: () => void;
 }
 
-export function ContactDetailsHeader({ contact, onEditContact, onDeleteContact, onContactUpdate }: ContactDetailsHeaderProps) {
+export function ContactDetailsHeader({
+  contact,
+  onEditContact,
+  onDeleteContact,
+  onContactUpdate,
+  isEditing,
+  onStartEdit,
+  onSaveEdit,
+  onCancelEdit
+}: ContactDetailsHeaderProps) {
   const photoModal = useGlobalPhotoPreview();
   const type = contact.type as ContactType;
 
@@ -177,14 +191,37 @@ export function ContactDetailsHeader({ contact, onEditContact, onDeleteContact, 
           title={displayName}
           avatarImageUrl={avatarImageUrl}
           onAvatarClick={avatarImageUrl ? handleAvatarClick : undefined}
-          actions={onDeleteContact ? [
-            {
+          actions={[
+            // 🎯 Edit Mode Actions - Μόνο για Desktop
+            ...(!isEditing ? [
+              {
+                label: 'Επεξεργασία',
+                onClick: () => onStartEdit?.(),
+                icon: Edit,
+                className: 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700'
+              }
+            ] : [
+              {
+                label: 'Αποθήκευση',
+                onClick: () => onSaveEdit?.(),
+                icon: Check,
+                className: 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'
+              },
+              {
+                label: 'Ακύρωση',
+                onClick: () => onCancelEdit?.(),
+                icon: X,
+                className: 'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700'
+              }
+            ]),
+            // Delete Action - Μόνο αν υπάρχει το callback
+            ...(onDeleteContact ? [{
               label: 'Διαγραφή Επαφής',
               onClick: () => onDeleteContact?.(),
               icon: Trash2,
               className: 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700'
-            }
-          ] : []}
+            }] : [])
+          ]}
           variant="detailed"
         >
           {/* Centralized ContactBadge Components */}

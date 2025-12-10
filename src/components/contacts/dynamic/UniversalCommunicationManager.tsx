@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useCallback } from 'react';
-import { Plus, Trash2, Star, Phone, Mail, Globe, LucideIcon } from 'lucide-react';
+import React, { useCallback, useState, useEffect } from 'react';
+import { Plus, Trash2, Phone, Mail, Globe, LucideIcon } from 'lucide-react';
+import { CommonBadge } from '@/core/badges';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import type { PhoneInfo, EmailInfo, WebsiteInfo, SocialMediaInfo } from '@/types/contacts';
 
 // ============================================================================
@@ -184,6 +184,16 @@ export function UniversalCommunicationManager({
   onChange
 }: UniversalCommunicationManagerProps) {
 
+  // 🎯 RESPONSIVE STATE για desktop detection
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const checkIsDesktop = () => setIsDesktop(window.innerWidth >= 768);
+    checkIsDesktop();
+    window.addEventListener('resize', checkIsDesktop);
+    return () => window.removeEventListener('resize', checkIsDesktop);
+  }, []);
+
   // ============================================================================
   // CRUD OPERATIONS
   // ============================================================================
@@ -280,7 +290,360 @@ export function UniversalCommunicationManager({
   // RENDER FUNCTIONS
   // ============================================================================
 
+  const renderPhoneItemRow = (item: CommunicationItem, index: number, isDesktop: boolean) => {
+    // 🎯 ΜΟΝΟ ΓΙΑ DESKTOP: Οριζόντιο layout σε γραμμή
+    if (isDesktop) {
+      return (
+        <div key={index} className="grid grid-cols-5 gap-3 items-center py-2 border-b border-gray-100 last:border-b-0">
+          {/* 1. Τύπος (Κινητό, Σπίτι, κτλ.) */}
+          <div>
+            <Select
+              value={item.type}
+              onValueChange={(value) => updateItem(index, 'type', value)}
+              disabled={disabled}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {config.types.map(type => (
+                  <SelectItem key={type.value} value={type.value}>
+                    {type.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* 2. Κωδικός Χώρας */}
+          <div>
+            <Input
+              value={item.countryCode || '+30'}
+              onChange={(e) => updateItem(index, 'countryCode', e.target.value)}
+              placeholder="+30"
+              disabled={disabled}
+              className="w-full"
+            />
+          </div>
+
+          {/* 3. Αριθμός Τηλεφώνου */}
+          <div>
+            <Input
+              type="tel"
+              value={item.number || ''}
+              onChange={(e) => updateItem(index, 'number', e.target.value)}
+              placeholder="2310 123456"
+              disabled={disabled}
+              className="w-full"
+            />
+          </div>
+
+          {/* 4. Ετικέτα */}
+          <div>
+            <Input
+              value={item.label || ''}
+              onChange={(e) => updateItem(index, 'label', e.target.value)}
+              placeholder={config.labelPlaceholder}
+              disabled={disabled}
+              className="w-full"
+            />
+          </div>
+
+          {/* 5. Actions - Κάδος & Primary */}
+          <div className="flex items-center justify-end gap-2">
+            {/* Primary Badge/Button */}
+            {config.supportsPrimary && (
+              <div className="flex items-center">
+                {item.isPrimary ? (
+                  <CommonBadge status="primary" size="sm" />
+                ) : (
+                  <CommonBadge
+                    status="secondary"
+                    size="sm"
+                    className="cursor-pointer hover:opacity-80"
+                    onClick={() => setPrimary(index)}
+                  />
+                )}
+              </div>
+            )}
+
+            {/* Delete Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => removeItem(index)}
+              disabled={disabled}
+              className="text-red-600 hover:text-red-700"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    // 🎯 ΓΙΑ ΚΙΝΗΤΑ: Κανονικό κάθετο layout
+    return null; // Θα χρησιμοποιηθεί το κανονικό renderItemFields
+  };
+
+  const renderEmailItemRow = (item: CommunicationItem, index: number, isDesktop: boolean) => {
+    // 🎯 ΜΟΝΟ ΓΙΑ DESKTOP: Οριζόντιο layout σε γραμμή για emails
+    if (isDesktop) {
+      return (
+        <div key={index} className="grid grid-cols-4 gap-3 items-center py-2 border-b border-gray-100 last:border-b-0">
+          {/* 1. Τύπος (Προσωπικό, Εργασία, κτλ.) */}
+          <div>
+            <Select
+              value={item.type}
+              onValueChange={(value) => updateItem(index, 'type', value)}
+              disabled={disabled}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {config.types.map(type => (
+                  <SelectItem key={type.value} value={type.value}>
+                    {type.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* 2. Διεύθυνση E-mail */}
+          <div>
+            <Input
+              type="email"
+              value={item.email || ''}
+              onChange={(e) => updateItem(index, 'email', e.target.value)}
+              placeholder="john@example.com"
+              disabled={disabled}
+              className="w-full"
+            />
+          </div>
+
+          {/* 3. Ετικέτα */}
+          <div>
+            <Input
+              value={item.label || ''}
+              onChange={(e) => updateItem(index, 'label', e.target.value)}
+              placeholder={config.labelPlaceholder}
+              disabled={disabled}
+              className="w-full"
+            />
+          </div>
+
+          {/* 4. Actions - Κάδος & Primary */}
+          <div className="flex items-center justify-end gap-2">
+            {/* Primary Badge/Button */}
+            {config.supportsPrimary && (
+              <div className="flex items-center">
+                {item.isPrimary ? (
+                  <CommonBadge status="primary" size="sm" />
+                ) : (
+                  <CommonBadge
+                    status="secondary"
+                    size="sm"
+                    className="cursor-pointer hover:opacity-80"
+                    onClick={() => setPrimary(index)}
+                  />
+                )}
+              </div>
+            )}
+
+            {/* Delete Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => removeItem(index)}
+              disabled={disabled}
+              className="text-red-600 hover:text-red-700"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    // 🎯 ΓΙΑ ΚΙΝΗΤΑ: Κανονικό κάθετο layout
+    return null; // Θα χρησιμοποιηθεί το κανονικό renderItemFields
+  };
+
+  const renderWebsiteItemRow = (item: CommunicationItem, index: number, isDesktop: boolean) => {
+    // 🎯 ΜΟΝΟ ΓΙΑ DESKTOP: Οριζόντιο layout σε γραμμή για websites
+    if (isDesktop) {
+      return (
+        <div key={index} className="grid grid-cols-4 gap-3 items-center py-2 border-b border-gray-100 last:border-b-0">
+          {/* 1. Τύπος (Προσωπική, Εταιρική, κτλ.) */}
+          <div>
+            <Select
+              value={item.type}
+              onValueChange={(value) => updateItem(index, 'type', value)}
+              disabled={disabled}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {config.types.map(type => (
+                  <SelectItem key={type.value} value={type.value}>
+                    {type.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* 2. URL */}
+          <div>
+            <Input
+              type="url"
+              value={item.url || ''}
+              onChange={(e) => updateItem(index, 'url', e.target.value)}
+              placeholder="https://example.com"
+              disabled={disabled}
+              className="w-full"
+            />
+          </div>
+
+          {/* 3. Ετικέτα */}
+          <div>
+            <Input
+              value={item.label || ''}
+              onChange={(e) => updateItem(index, 'label', e.target.value)}
+              placeholder={config.labelPlaceholder}
+              disabled={disabled}
+              className="w-full"
+            />
+          </div>
+
+          {/* 4. Actions - Μόνο Κάδος (δεν υπάρχει Primary για websites) */}
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => removeItem(index)}
+              disabled={disabled}
+              className="text-red-600 hover:text-red-700"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    // 🎯 ΓΙΑ ΚΙΝΗΤΑ: Κανονικό κάθετο layout
+    return null; // Θα χρησιμοποιηθεί το κανονικό renderItemFields
+  };
+
+  const renderSocialItemRow = (item: CommunicationItem, index: number, isDesktop: boolean) => {
+    // 🎯 ΜΟΝΟ ΓΙΑ DESKTOP: Οριζόντιο layout σε γραμμή για social media
+    if (isDesktop) {
+      return (
+        <div key={index} className="grid grid-cols-6 gap-3 items-center py-2 border-b border-gray-100 last:border-b-0">
+          {/* 1. Τύπος (Προσωπικό, Επαγγελματικό, κτλ.) */}
+          <div>
+            <Select
+              value={item.type}
+              onValueChange={(value) => updateItem(index, 'type', value)}
+              disabled={disabled}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {config.types.map(type => (
+                  <SelectItem key={type.value} value={type.value}>
+                    {type.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* 2. Πλατφόρμα */}
+          <div>
+            <Select
+              value={item.platform || item.type || config.defaultType}
+              onValueChange={(value) => updateItem(index, 'platform', value)}
+              disabled={disabled}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(config.platformTypes || config.types).map(type => (
+                  <SelectItem key={type.value} value={type.value}>
+                    {type.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* 3. Username */}
+          <div>
+            <Input
+              value={item.username || ''}
+              onChange={(e) => updateItem(index, 'username', e.target.value)}
+              placeholder="john-doe"
+              disabled={disabled}
+              className="w-full"
+            />
+          </div>
+
+          {/* 4. Auto-generated URL */}
+          <div>
+            <Input
+              value={item.url || ''}
+              onChange={(e) => updateItem(index, 'url', e.target.value)}
+              placeholder="https://..."
+              disabled={disabled}
+              className="w-full text-sm"
+            />
+          </div>
+
+          {/* 5. Ετικέτα */}
+          <div>
+            <Input
+              value={item.label || ''}
+              onChange={(e) => updateItem(index, 'label', e.target.value)}
+              placeholder={config.labelPlaceholder}
+              disabled={disabled}
+              className="w-full"
+            />
+          </div>
+
+          {/* 6. Actions - Μόνο Κάδος (δεν υπάρχει Primary για social) */}
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => removeItem(index)}
+              disabled={disabled}
+              className="text-red-600 hover:text-red-700"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    // 🎯 ΓΙΑ ΚΙΝΗΤΑ: Κανονικό κάθετο layout
+    return null; // Θα χρησιμοποιηθεί το κανονικό renderItemFields
+  };
+
   const renderItemFields = (item: CommunicationItem, index: number) => {
+    // 🎯 Ειδικό grouped layout για όλους τους τύπους στον desktop
+    if (isDesktop) {
+      return null; // Handled in main render με grouped layout
+    }
+
+    // 🎯 Κανονικό layout για όλα τα άλλα (emails, websites, social)
     const IconComponent = config.icon;
 
     return (
@@ -426,50 +789,111 @@ export function UniversalCommunicationManager({
         {config.title}
       </div>
 
-      {/* Items List */}
-      {items.map((item, index) => (
-        <div key={index} className="w-full max-w-none min-w-full p-4 border rounded-lg">
-          {renderItemFields(item, index)}
+      {/* 🎯 ΕΙΔΙΚΟ GROUPED LAYOUT ΓΙΑ ΤΗΛΕΦΩΝΑ ΣΤΟ DESKTOP */}
+      {config.type === 'phone' && isDesktop && items.length > 0 ? (
+        <div className="w-full max-w-none min-w-full border rounded-lg">
+          {/* Header Row με τίτλους στηλών για τηλέφωνα */}
+          <div className="grid grid-cols-5 gap-3 p-4 bg-gray-50 border-b font-medium text-sm text-gray-700">
+            <div>Τύπος</div>
+            <div>Κωδικός</div>
+            <div>Αριθμός</div>
+            <div>Ετικέτα</div>
+            <div className="text-right">Ενέργειες</div>
+          </div>
 
-          {/* Action buttons row */}
-          <div className="flex items-center justify-between mt-4 pt-3 border-t">
-            <div className="flex items-center gap-2">
-              {/* Primary Badge (μόνο για phones & emails) */}
-              {config.supportsPrimary && (
-                <div className="flex items-center gap-2">
-                  {item.isPrimary ? (
-                    <Badge variant="default" className="text-xs">
-                      <Star className="w-3 h-3 mr-1" />
-                      Κύριο
-                    </Badge>
-                  ) : (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setPrimary(index)}
-                      disabled={disabled}
-                      className="text-xs text-gray-500"
-                    >
-                      <Star className="w-3 h-3 mr-1" />
-                      Ως κύριο
-                    </Button>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => removeItem(index)}
-              disabled={disabled}
-              className="text-red-600 hover:text-red-700"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+          {/* Phone Rows - Όλα τα τηλέφωνα σε γραμμές */}
+          <div className="p-4 space-y-0">
+            {items.map((item, index) => renderPhoneItemRow(item, index, isDesktop))}
           </div>
         </div>
-      ))}
+      ) : config.type === 'email' && isDesktop && items.length > 0 ? (
+        <div className="w-full max-w-none min-w-full border rounded-lg">
+          {/* Header Row με τίτλους στηλών για emails */}
+          <div className="grid grid-cols-4 gap-3 p-4 bg-gray-50 border-b font-medium text-sm text-gray-700">
+            <div>Τύπος</div>
+            <div>Διεύθυνση E-mail</div>
+            <div>Ετικέτα</div>
+            <div className="text-right">Ενέργειες</div>
+          </div>
+
+          {/* Email Rows - Όλα τα emails σε γραμμές */}
+          <div className="p-4 space-y-0">
+            {items.map((item, index) => renderEmailItemRow(item, index, isDesktop))}
+          </div>
+        </div>
+      ) : config.type === 'website' && isDesktop ? (
+        <div className="w-full max-w-none min-w-full border rounded-lg">
+          {/* Header Row με τίτλους στηλών για websites */}
+          <div className="grid grid-cols-4 gap-3 p-4 bg-gray-50 border-b font-medium text-sm text-gray-700">
+            <div>Τύπος</div>
+            <div>URL</div>
+            <div>Ετικέτα</div>
+            <div className="text-right">Ενέργειες</div>
+          </div>
+
+          {/* Website Rows - Όλες οι ιστοσελίδες σε γραμμές */}
+          <div className="p-4 space-y-0">
+            {items.map((item, index) => renderWebsiteItemRow(item, index, isDesktop))}
+          </div>
+        </div>
+      ) : config.type === 'social' && isDesktop ? (
+        <div className="w-full max-w-none min-w-full border rounded-lg">
+          {/* Header Row με τίτλους στηλών για social media */}
+          <div className="grid grid-cols-6 gap-3 p-4 bg-gray-50 border-b font-medium text-sm text-gray-700">
+            <div>Τύπος</div>
+            <div>Πλατφόρμα</div>
+            <div>Username</div>
+            <div>URL</div>
+            <div>Ετικέτα</div>
+            <div className="text-right">Ενέργειες</div>
+          </div>
+
+          {/* Social Media Rows - Όλα τα social media σε γραμμές */}
+          <div className="p-4 space-y-0">
+            {items.map((item, index) => renderSocialItemRow(item, index, isDesktop))}
+          </div>
+        </div>
+      ) : (
+        /* ΚΑΝΟΝΙΚΟ LAYOUT για όλα τα άλλα (emails, websites, social) και phones σε mobile */
+        items.map((item, index) => (
+          <div key={index} className="w-full max-w-none min-w-full p-4 border rounded-lg">
+            {renderItemFields(item, index)}
+
+            {/* Action buttons row - Μόνο για mobile layout (όταν ΔΕΝ είναι desktop) */}
+            {!isDesktop && (
+              <div className="flex items-center justify-between mt-4 pt-3 border-t">
+                <div className="flex items-center gap-2">
+                  {/* Primary Badge (μόνο για phones & emails) */}
+                  {config.supportsPrimary && (
+                    <div className="flex items-center gap-2">
+                      {item.isPrimary ? (
+                        <CommonBadge status="primary" size="sm" />
+                      ) : (
+                        <CommonBadge
+                          status="secondary"
+                          size="sm"
+                          className="cursor-pointer hover:opacity-80"
+                          onClick={() => setPrimary(index)}
+                        />
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeItem(index)}
+                  disabled={disabled}
+                  className="text-red-600 hover:text-red-700"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+          </div>
+        ))
+      )}
 
       {/* Empty State */}
       {items.length === 0 && (

@@ -326,6 +326,20 @@ export const COMMON_STATUSES = {
     color: '#6B7280',
     backgroundColor: '#F3F4F6',
     icon: 'building'
+  },
+  primary: {
+    label: 'Κύριο',
+    variant: 'default',
+    color: '#FFFFFF',
+    backgroundColor: '#FF0000',
+    icon: 'star'
+  },
+  secondary: {
+    label: 'Δευτερεύον',
+    variant: 'outline',
+    color: '#6B7280',
+    backgroundColor: '#F9FAFB',
+    icon: 'circle'
   }
 } as const;
 
