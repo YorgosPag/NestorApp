@@ -194,13 +194,13 @@ export function IndividualFormRenderer({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 md:space-y-6">
       {sections.map((section) => (
-        <div key={section.id} className="space-y-4">
+        <div key={section.id} className="space-y-6 md:space-y-4">
           {/* Section Header αφαιρέθηκε - δεν θέλουμε το Camera εικονίδιο και το κείμενο "Φωτογραφία" */}
 
-          {/* Section Fields */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Section Fields - Enhanced Mobile Layout */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-4">
             {section.fields.map((field) => (
               <FormField
                 key={field.id}

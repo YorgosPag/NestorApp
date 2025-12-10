@@ -11,6 +11,7 @@ import { openGalleryPhotoModal } from '@/core/modals';
 import { useGlobalPhotoPreview } from '@/providers/PhotoPreviewProvider';
 import { DetailsContainer } from '@/core/containers';
 import { ContactsService } from '@/services/contacts.service';
+import { mapContactToFormData } from '@/utils/contactForm/contactMapper';
 
 interface ContactDetailsProps {
   contact: Contact | null;
@@ -34,31 +35,48 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact }: Cont
     onEditContact?.(); // Χρησιμοποιούμε το existing edit modal
   }, [onEditContact]);
 
-  // 📸 Convert multiplePhotoURLs to PhotoSlot format for MultiplePhotosUpload
+  // 🔧 FIX: Use proper mapper to convert Contact to ContactFormData
   const enhancedFormData = React.useMemo(() => {
     if (!contact) return {};
 
-    const multiplePhotoURLs = (contact as any).multiplePhotoURLs || [];
-    const multiplePhotos = multiplePhotoURLs.map((url: string) => ({
-      file: null,
-      preview: undefined,
-      uploadUrl: url,
-      fileName: undefined,
-      isUploading: false,
-      uploadProgress: 0,
-      error: undefined
-    }));
+    // Use the enterprise mapper system instead of manual conversion
+    const mappingResult = mapContactToFormData(contact);
+    console.log('🔧 ContactDetails: Using mapper for contact type:', contact.type, {
+      contactId: contact.id,
+      mappingWarnings: mappingResult.warnings,
+      email: mappingResult.formData.email,
+      phone: mappingResult.formData.phone,
+      website: mappingResult.formData.website
+    });
 
-    return {
-      ...contact,
-      multiplePhotos
-    };
+    // Additional multiplePhotoURLs conversion for backward compatibility
+    const multiplePhotoURLs = (contact as any).multiplePhotoURLs || [];
+    if (multiplePhotoURLs.length > 0) {
+      const multiplePhotos = multiplePhotoURLs.map((url: string) => ({
+        file: null,
+        preview: undefined,
+        uploadUrl: url,
+        fileName: undefined,
+        isUploading: false,
+        uploadProgress: 0,
+        error: undefined
+      }));
+
+      return {
+        ...mappingResult.formData,
+        multiplePhotos: [...(mappingResult.formData.multiplePhotos || []), ...multiplePhotos]
+      };
+    }
+
+    return mappingResult.formData;
   }, [contact]);
 
   // 🎯 EDIT MODE HANDLERS
   const handleStartEdit = useCallback(() => {
     if (contact) {
-      setEditedData({ ...contact });
+      // Use mapper for consistent data structure in edit mode
+      const mappingResult = mapContactToFormData(contact);
+      setEditedData(mappingResult.formData);
       setIsEditing(true);
     }
   }, [contact]);

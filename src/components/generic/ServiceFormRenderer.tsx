@@ -37,14 +37,76 @@ export interface ServiceFormRendererProps {
  * Renders an input field for services
  */
 function renderInputField(field: ServiceFieldConfig, formData: any, onChange: any, disabled: boolean): React.ReactNode {
-  const inputType = field.type === 'email' ? 'email' : field.type === 'tel' ? 'tel' : field.type === 'date' ? 'date' : field.type === 'number' ? 'number' : 'text';
+  const value = formData[field.id] || '';
+
+  // 🎯 CLICKABLE LINKS: Όταν disabled και έχουμε email/tel/website, εμφάνισε clickable link
+  // Debug μόνο για contact fields
+  if (['phone', 'email', 'website'].includes(field.id)) {
+    console.log('🔍 CONTACT FIELD DEBUG:', { fieldId: field.id, fieldType: field.type, value, disabled });
+  }
+
+  if (disabled && value) {
+    if (field.type === 'email') {
+      return (
+        <div className="min-h-10 flex items-center px-3 py-2 border border-input bg-background rounded-md text-sm">
+          <a
+            href={`https://mail.google.com/mail/?view=cm&to=${value}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+            onClick={(e) => e.stopPropagation()}
+            title={`Αποστολή email στο ${value} μέσω Gmail`}
+          >
+            {value}
+          </a>
+        </div>
+      );
+    }
+
+    if (field.type === 'tel') {
+      return (
+        <div className="min-h-10 flex items-center px-3 py-2 border border-input bg-background rounded-md text-sm">
+          <a
+            href={`tel:${value}`}
+            className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+            onClick={(e) => e.stopPropagation()}
+            title={`Κλήση στο ${value}`}
+          >
+            {value}
+          </a>
+        </div>
+      );
+    }
+
+    // 🌐 WEBSITE/URL LINKS: Για ιστοσελίδες
+    if (field.id === 'website' || field.id === 'websiteURL' || field.type === 'url') {
+      const websiteUrl = value.startsWith('http') ? value : `https://${value}`;
+      return (
+        <div className="min-h-10 flex items-center px-3 py-2 border border-input bg-background rounded-md text-sm">
+          <a
+            href={websiteUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+            onClick={(e) => e.stopPropagation()}
+            title={`Άνοιγμα ιστοσελίδας ${value}`}
+          >
+            {value}
+          </a>
+        </div>
+      );
+    }
+  }
+
+  // 📝 NORMAL INPUT: Για edit mode ή άδεια values ή άλλους τύπους
+  const inputType = field.type === 'email' ? 'email' : field.type === 'tel' ? 'tel' : field.type === 'date' ? 'date' : field.type === 'number' ? 'number' : field.type === 'url' ? 'url' : 'text';
 
   return (
     <Input
       id={field.id}
       name={field.id}
       type={inputType}
-      value={formData[field.id] || ''}
+      value={value}
       onChange={onChange}
       disabled={disabled}
       required={field.required}
@@ -123,6 +185,7 @@ function renderField(
     case 'tel':
     case 'date':
     case 'number':
+    case 'url':
       return renderInputField(field, formData, onChange, disabled);
     case 'textarea':
       return renderTextareaField(field, formData, onChange, disabled);
@@ -159,9 +222,9 @@ export function ServiceFormRenderer({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 md:space-y-6">
       {sections.map((section) => (
-        <div key={section.id} className="space-y-4">
+        <div key={section.id} className="space-y-6 md:space-y-4">
           {/* Section Header */}
           <div className="flex items-center gap-2 pb-2 border-b">
             {getIconComponent(section.icon) && React.createElement(getIconComponent(section.icon), { className: "w-4 h-4" })}
@@ -169,7 +232,7 @@ export function ServiceFormRenderer({
           </div>
 
           {/* Section Fields */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-4">
             {section.fields.map((field) => (
               <FormField
                 key={field.id}

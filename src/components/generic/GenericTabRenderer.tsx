@@ -142,7 +142,7 @@ function DisplayField({
       <label className="text-sm font-medium">{field.label}</label>
       <p className="text-sm text-muted-foreground">{formattedValue}</p>
       {field.helpText && (
-        <p className="text-xs text-muted-foreground/60 mt-1">{field.helpText}</p>
+        <p className="text-xs text-muted-foreground/60 mt-1 whitespace-nowrap overflow-hidden text-ellipsis">{field.helpText}</p>
       )}
     </div>
   );

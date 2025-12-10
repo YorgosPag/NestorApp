@@ -9,9 +9,15 @@
 export { GenericFormRenderer } from './GenericFormRenderer';
 export type { GenericFormRendererProps } from './GenericFormRenderer';
 
+export { ServiceFormRenderer } from './ServiceFormRenderer';
+export type { ServiceFormRendererProps } from './ServiceFormRenderer';
+
 // Form Tab Components
 export { GenericFormTabRenderer } from './GenericFormTabRenderer';
 export type { GenericFormTabRendererProps } from './GenericFormTabRenderer';
+
+export { ServiceFormTabRenderer } from './ServiceFormTabRenderer';
+export type { ServiceFormTabRendererProps } from './ServiceFormTabRenderer';
 
 // Tab Components
 export { GenericTabRenderer } from './GenericTabRenderer';

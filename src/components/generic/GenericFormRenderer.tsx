@@ -255,45 +255,43 @@ export function GenericFormRenderer({
   }
 
   return (
-    <>
+    <div className="space-y-8 md:space-y-6">
       {sections.map((section, sectionIndex) => {
         const IconComponent = getIconComponent(section.icon);
 
         return (
-          <React.Fragment key={section.id}>
+          <div key={section.id} className="space-y-6 md:space-y-4">
             {/* Section Header */}
-            <div className="col-span-2 border-t pt-4 mt-4">
-              <h4 className="font-semibold mb-3 text-sm flex items-center gap-2">
-                <IconComponent className="h-4 w-4" />
-                {section.title}
-              </h4>
-              {section.description && (
-                <p className="text-xs text-muted-foreground mb-2">{section.description}</p>
-              )}
+            <div className="flex items-center gap-2 pb-2 border-b">
+              <IconComponent className="h-4 w-4" />
+              <h3 className="font-semibold text-sm">{section.title}</h3>
             </div>
+            {section.description && (
+              <p className="text-xs text-muted-foreground -mt-2">{section.description}</p>
+            )}
 
-            {/* Section Fields */}
-            {section.fields.map(field => (
-              <FormField
-                key={field.id}
-                label={field.label}
-                htmlFor={field.id}
-                required={field.required}
-              >
-                <FormInput>
-                  {renderField(field, formData, onChange, onSelectChange, disabled, customRenderers)}
-                </FormInput>
-                {field.helpText && (
-                  <div className="col-span-4">
-                    <p className="text-xs text-muted-foreground mt-1">{field.helpText}</p>
-                  </div>
-                )}
-              </FormField>
-            ))}
-          </React.Fragment>
+            {/* Section Fields - Enhanced Mobile Layout */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-4">
+              {section.fields.map(field => (
+                <FormField
+                  key={field.id}
+                  label={field.label}
+                  htmlFor={field.id}
+                  required={field.required}
+                >
+                  <FormInput>
+                    {renderField(field, formData, onChange, onSelectChange, disabled, customRenderers)}
+                  </FormInput>
+                  {field.helpText && (
+                    <p className="text-xs text-muted-foreground mt-1 whitespace-nowrap overflow-hidden text-ellipsis">{field.helpText}</p>
+                  )}
+                </FormField>
+              ))}
+            </div>
+          </div>
         );
       })}
-    </>
+    </div>
   );
 }
 

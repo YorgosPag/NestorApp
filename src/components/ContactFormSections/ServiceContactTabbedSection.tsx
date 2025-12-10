@@ -1,6 +1,6 @@
 'use client';
 
-import { GenericFormTabRenderer } from '@/components/generic';
+import { ServiceFormTabRenderer } from '@/components/generic';
 import { getServiceSortedSections } from '@/config/service-config';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 
@@ -37,7 +37,7 @@ export function ServiceContactTabbedSection({
   const sections = getServiceSortedSections();
 
   return (
-    <GenericFormTabRenderer
+    <ServiceFormTabRenderer
       sections={sections}
       formData={formData}
       onChange={handleChange}

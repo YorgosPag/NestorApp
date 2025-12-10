@@ -1,6 +1,7 @@
 import type { Contact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { getSafeFieldValue, getSafeArrayValue, getSafeNestedValue } from '../contactMapper';
+import { ContactFieldAccessor } from '@/utils/contacts/ContactFieldAccessor';
 
 // ============================================================================
 // SERVICE CONTACT MAPPER
@@ -18,6 +19,15 @@ import { getSafeFieldValue, getSafeArrayValue, getSafeNestedValue } from '../con
 export function mapServiceContactToFormData(contact: Contact): ContactFormData {
 
   const serviceContact = contact as any; // Cast for service fields access
+
+  // 🔍 DEBUG: Service contact data loading with centralized accessor
+  ContactFieldAccessor.debugFieldAccess(contact);
+
+  console.log('🏛️ CENTRALIZED ACCESS RESULTS:', {
+    email: ContactFieldAccessor.getEmail(contact),
+    phone: ContactFieldAccessor.getPhone(contact),
+    website: ContactFieldAccessor.getWebsite(contact)
+  });
 
   const formData: ContactFormData = {
     // Basic info
@@ -40,9 +50,9 @@ export function mapServiceContactToFormData(contact: Contact): ContactFormData {
     headTitle: getSafeFieldValue(serviceContact, 'headTitle'),
     headName: getSafeFieldValue(serviceContact, 'headName'),
 
-    // 📞 Επικοινωνία
-    email: contact.emails?.[0]?.email || '',
-    phone: contact.phones?.[0]?.number || '',
+    // 📞 Επικοινωνία - Using centralized field accessor (eliminates scattered logic)
+    email: ContactFieldAccessor.getEmail(contact),
+    phone: ContactFieldAccessor.getPhone(contact),
 
     // 📷 Photos & Logo
     photoFile: null,
@@ -93,7 +103,7 @@ export function mapServiceContactToFormData(contact: Contact): ContactFormData {
     postalCode: getSafeFieldValue(serviceContact, 'postalCode'),
     city: getSafeFieldValue(serviceContact, 'city'),
     fax: getSafeFieldValue(serviceContact, 'fax'),
-    website: getSafeFieldValue(serviceContact, 'website'),
+    website: getSafeFieldValue(serviceContact, 'website') || getSafeFieldValue(serviceContact, 'officialWebsite') || '',
 
     // Υπηρεσίες Φορέα (Services Section)
     mainResponsibilities: getSafeFieldValue(serviceContact, 'mainResponsibilities'),
@@ -167,6 +177,15 @@ export function mapServiceContactToFormData(contact: Contact): ContactFormData {
     companyName: '',
     companyVatNumber: ''
   };
+
+  // 🔍 DEBUG: Final formData values for clickable fields
+  console.log('🔍 SERVICE MAPPER FINAL RESULT:', {
+    email: formData.email,
+    phone: formData.phone,
+    website: formData.website,
+    serviceName: formData.serviceName,
+    id: formData.id
+  });
 
   return formData;
 }

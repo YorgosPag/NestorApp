@@ -11,7 +11,7 @@
 
 export interface ServiceFieldConfig {
   id: string;
-  type: 'input' | 'textarea' | 'select' | 'email' | 'tel' | 'number' | 'date';
+  type: 'input' | 'textarea' | 'select' | 'email' | 'tel' | 'number' | 'date' | 'url';
   label: string;
   placeholder?: string;
   required?: boolean;
@@ -166,12 +166,6 @@ const contactSection: ServiceSectionConfig = {
       helpText: 'Κεντρικό τηλέφωνο της υπηρεσίας'
     },
     {
-      id: 'fax',
-      type: 'tel',
-      label: 'Fax',
-      placeholder: '2101234568'
-    },
-    {
       id: 'email',
       type: 'email',
       label: 'E-mail Επικοινωνίας',
@@ -180,7 +174,7 @@ const contactSection: ServiceSectionConfig = {
     },
     {
       id: 'website',
-      type: 'input',
+      type: 'url',
       label: 'Ιστοσελίδα',
       placeholder: 'https://www.service.gov.gr',
       helpText: 'Επίσημη ιστοσελίδα της υπηρεσίας'

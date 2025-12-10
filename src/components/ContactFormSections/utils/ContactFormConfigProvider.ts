@@ -1,7 +1,7 @@
 import { getSortedSections } from '@/config/company-gemi-config';
 import { getServiceSortedSections } from '@/config/service-config';
 import { getIndividualSortedSections } from '@/config/individual-config';
-import { GenericFormTabRenderer } from '@/components/generic';
+import { GenericFormTabRenderer, ServiceFormTabRenderer } from '@/components/generic';
 import { IndividualFormTabRenderer } from '@/components/generic/IndividualFormTabRenderer';
 import type { ContactType } from '@/types/ContactFormTypes';
 
@@ -58,7 +58,7 @@ export function getContactFormConfig(contactType: ContactType): ContactFormConfi
     case 'service':
       return {
         getSections: getServiceSortedSections,
-        renderer: GenericFormTabRenderer,
+        renderer: ServiceFormTabRenderer,
         name: 'Δημόσια Υπηρεσία'
       };
 

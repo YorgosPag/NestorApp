@@ -7,14 +7,14 @@ import { cn } from '@/lib/utils';
 // Design tokens για centralized styling
 export const FORM_STYLES = {
   grid: {
-    container: "grid gap-4 py-4",
-    field: "grid grid-cols-4 items-center gap-4",
+    container: "grid gap-6 md:gap-4 py-6 md:py-4",
+    field: "grid grid-cols-1 md:grid-cols-4 items-start md:items-center gap-2 md:gap-4",
   },
   label: {
-    base: "text-right font-medium",
+    base: "text-left md:text-right font-medium text-base md:text-sm",
   },
   input: {
-    span: "col-span-3",
+    span: "col-span-1 md:col-span-3",
   }
 } as const;
 
@@ -39,15 +39,21 @@ interface FormFieldProps {
   required?: boolean;
   children: React.ReactNode;
   className?: string;
+  helpText?: string;
 }
 
-export function FormField({ label, htmlFor, required = false, children, className }: FormFieldProps) {
+export function FormField({ label, htmlFor, required = false, children, className, helpText }: FormFieldProps) {
   return (
     <div className={cn(FORM_STYLES.grid.field, className)}>
       <FormLabel htmlFor={htmlFor} required={required}>
         {label}
       </FormLabel>
-      {children}
+      <div className="col-span-1 md:col-span-3">
+        {children}
+        {helpText && (
+          <p className="text-xs text-muted-foreground mt-1 whitespace-nowrap overflow-hidden text-ellipsis">{helpText}</p>
+        )}
+      </div>
     </div>
   );
 }
@@ -80,7 +86,7 @@ interface FormInputProps {
 
 export function FormInput({ children, className }: FormInputProps) {
   return (
-    <div className={cn(FORM_STYLES.input.span, className)}>
+    <div className={cn("", className)}>
       {children}
     </div>
   );

@@ -174,16 +174,7 @@ export function ContactDetailsHeader({ contact, onEditContact, onDeleteContact, 
         <EntityDetailsHeader
           key={`contact-header-${contact.id}-${avatarKey}`}
           icon={Icon}
-          title={
-            <EditableText
-              value={displayName}
-              onSave={handleNameUpdate}
-              placeholder="Κλικ για επεξεργασία ονόματος..."
-              className="text-2xl font-bold text-foreground"
-              required={true}
-              maxLength={100}
-            />
-          }
+          title={displayName}
           avatarImageUrl={avatarImageUrl}
           onAvatarClick={avatarImageUrl ? handleAvatarClick : undefined}
           actions={onDeleteContact ? [

@@ -141,7 +141,7 @@ export function EditableText({
         {value || placeholder || "Κλικ για επεξεργασία..."}
       </span>
 
-      {showEditIcon && !disabled && (isHovered || isEditing) && (
+      {showEditIcon && !disabled && isHovered && !isEditing && (
         <Edit className="w-3 h-3 text-muted-foreground opacity-70" />
       )}
     </div>
