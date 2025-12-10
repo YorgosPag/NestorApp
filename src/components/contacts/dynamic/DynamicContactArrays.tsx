@@ -99,14 +99,11 @@ function PhoneManager({ phones, disabled = false, onChange }: PhoneManagerProps)
   }, [phones, onChange]);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Phone className="h-5 w-5" />
-          Τηλέφωνα
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+        <Phone className="h-4 w-4" />
+        Τηλέφωνα
+      </div>
         {phones.map((phone, index) => (
           <div key={index} className="flex items-center gap-2 p-3 border rounded-lg">
             <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-2">

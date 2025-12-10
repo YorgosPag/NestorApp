@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback } from 'react';
-import { Plus, Trash2, ExternalLink } from 'lucide-react';
+import { Plus, Trash2, ExternalLink, Briefcase, Users, Camera, MessageCircle, Play, Monitor, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,42 +27,42 @@ const SOCIAL_PLATFORMS = [
   {
     value: 'linkedin',
     label: 'LinkedIn',
-    icon: '💼',
+    icon: Briefcase,
     urlTemplate: 'https://linkedin.com/in/{username}',
     placeholder: 'π.χ. john-doe-profile'
   },
   {
     value: 'facebook',
     label: 'Facebook',
-    icon: '📘',
+    icon: Users,
     urlTemplate: 'https://facebook.com/{username}',
     placeholder: 'π.χ. john.doe'
   },
   {
     value: 'instagram',
     label: 'Instagram',
-    icon: '📷',
+    icon: Camera,
     urlTemplate: 'https://instagram.com/{username}',
     placeholder: 'π.χ. johndoe'
   },
   {
     value: 'twitter',
     label: 'Twitter/X',
-    icon: '🐦',
+    icon: MessageCircle,
     urlTemplate: 'https://x.com/{username}',
     placeholder: 'π.χ. johndoe'
   },
   {
     value: 'youtube',
     label: 'YouTube',
-    icon: '📹',
+    icon: Play,
     urlTemplate: 'https://youtube.com/@{username}',
     placeholder: 'π.χ. johndoe'
   },
   {
     value: 'github',
     label: 'GitHub',
-    icon: '💻',
+    icon: Monitor,
     urlTemplate: 'https://github.com/{username}',
     placeholder: 'π.χ. johndoe'
   },
@@ -76,7 +76,7 @@ const SOCIAL_PLATFORMS = [
   {
     value: 'other',
     label: 'Άλλο',
-    icon: '🌐',
+    icon: Globe,
     urlTemplate: '',
     placeholder: 'Όνομα χρήστη'
   }
@@ -152,7 +152,7 @@ export function SocialMediaManager({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <span className="text-lg">🌐</span>
+          <Globe className="w-5 h-5" />
           Social Media
         </CardTitle>
       </CardHeader>
@@ -177,7 +177,7 @@ export function SocialMediaManager({
                       {SOCIAL_PLATFORMS.map(platform => (
                         <SelectItem key={platform.value} value={platform.value}>
                           <span className="flex items-center gap-2">
-                            <span>{platform.icon}</span>
+                            <platform.icon className="w-4 h-4" />
                             {platform.label}
                           </span>
                         </SelectItem>
@@ -250,7 +250,7 @@ export function SocialMediaManager({
 
         {socialMedia.length === 0 && (
           <div className="text-center text-gray-500 py-8 border rounded-lg bg-gray-50/30">
-            <span className="text-2xl mb-2 block">🌐</span>
+            <Globe className="w-8 h-8 mb-2 mx-auto" />
             <p>Δεν έχουν οριστεί social media</p>
             <p className="text-sm mt-1">Προσθέστε τα προφίλ σας στα social media</p>
           </div>

@@ -118,18 +118,27 @@ export function UnifiedContactTabbedSection({
               websites={formData.websites || []}
               disabled={disabled}
               onPhonesChange={(phones) => {
+                console.log('🔧 PHONES CHANGE:', { phones, setFormDataExists: !!setFormData });
                 if (setFormData) {
                   setFormData({ ...formData, phones });
+                } else {
+                  console.error('❌ setFormData not available for phones update');
                 }
               }}
               onEmailsChange={(emails) => {
+                console.log('🔧 EMAILS CHANGE:', { emails, setFormDataExists: !!setFormData });
                 if (setFormData) {
                   setFormData({ ...formData, emails });
+                } else {
+                  console.error('❌ setFormData not available for emails update');
                 }
               }}
               onWebsitesChange={(websites) => {
+                console.log('🔧 WEBSITES CHANGE:', { websites, setFormDataExists: !!setFormData });
                 if (setFormData) {
                   setFormData({ ...formData, websites });
+                } else {
+                  console.error('❌ setFormData not available for websites update');
                 }
               }}
             />
