@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useState, useEffect } from 'react';
-import { Plus, Trash2, Phone, Mail, Globe, LucideIcon } from 'lucide-react';
+import { Plus, Trash2, Phone, Mail, Globe, LucideIcon, IdCard, Briefcase, MapPin } from 'lucide-react';
 import { CommonBadge } from '@/core/badges';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,8 +15,8 @@ import type { PhoneInfo, EmailInfo, WebsiteInfo, SocialMediaInfo } from '@/types
 
 const COMMUNICATION_STYLES = {
   groupedTable: {
-    header: 'bg-card/50 border-b font-medium text-sm text-muted-foreground',
-    container: 'border rounded-lg bg-card p-4',
+    header: 'bg-muted border-b font-medium text-sm text-muted-foreground',
+    container: 'border rounded-lg bg-card p-4 w-full max-w-none',
     row: 'grid gap-3 p-4 border-b last:border-b-0 bg-card hover:bg-accent/50 transition-colors',
     emptyState: 'text-center text-muted-foreground py-8 border rounded-lg bg-muted/30',
     input: 'bg-background border-input focus:bg-background focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20'
@@ -43,7 +43,7 @@ const COMMUNICATION_STYLES = {
 // TYPES & INTERFACES
 // ============================================================================
 
-export type CommunicationType = 'phone' | 'email' | 'website' | 'social';
+export type CommunicationType = 'phone' | 'email' | 'website' | 'social' | 'identity' | 'professional' | 'address';
 
 export interface CommunicationItem {
   // Common fields για όλους τους τύπους
@@ -52,12 +52,14 @@ export interface CommunicationItem {
   isPrimary?: boolean;
 
   // Specific fields ανάλογα με τον τύπο
-  number?: string; // phones
+  number?: string; // phones, identity
   countryCode?: string; // phones
   email?: string; // emails
   url?: string; // websites, social
   username?: string; // social
   platform?: string; // social
+  value?: string; // professional, general purpose
+  address?: string; // addresses
 }
 
 export interface TypeOption {
@@ -184,6 +186,72 @@ export const COMMUNICATION_CONFIGS: Record<CommunicationType, CommunicationConfi
     supportsPrimary: false,
     emptyStateText: 'Δεν έχουν οριστεί social media',
     addButtonText: 'Προσθήκη Social Media'
+  },
+
+  // === ΤΑΥΤΟΤΗΤΑ & ΑΦΜ ===
+  identity: {
+    type: 'identity',
+    title: 'Στοιχεία Ταυτότητας',
+    icon: IdCard,
+    fields: { primary: 'number', secondary: 'type' },
+    types: [
+      { value: 'id_card', label: 'Δελτίο Ταυτότητας' },
+      { value: 'passport', label: 'Διαβατήριο' },
+      { value: 'afm', label: 'ΑΦΜ' },
+      { value: 'amka', label: 'ΑΜΚΑ' },
+      { value: 'license', label: 'Άδεια Οδήγησης' },
+      { value: 'other', label: 'Άλλο' }
+    ],
+    defaultType: 'id_card',
+    placeholder: 'Αριθμός εγγράφου',
+    labelPlaceholder: 'π.χ. Κύριο ΑΦΜ',
+    supportsPrimary: true,
+    emptyStateText: 'Δεν έχουν οριστεί στοιχεία ταυτότητας',
+    addButtonText: 'Προσθήκη Στοιχείου'
+  },
+
+  // === ΕΠΑΓΓΕΛΜΑΤΙΚΑ ===
+  professional: {
+    type: 'professional',
+    title: 'Επαγγελματικά Στοιχεία',
+    icon: Briefcase,
+    fields: { primary: 'value', secondary: 'type' },
+    types: [
+      { value: 'company_phone', label: 'Τηλέφωνο Εταιρείας' },
+      { value: 'company_email', label: 'Email Εταιρείας' },
+      { value: 'company_website', label: 'Website Εταιρείας' },
+      { value: 'linkedin', label: 'LinkedIn' },
+      { value: 'position', label: 'Θέση Εργασίας' },
+      { value: 'department', label: 'Τμήμα' },
+      { value: 'other', label: 'Άλλο' }
+    ],
+    defaultType: 'company_phone',
+    placeholder: 'Τιμή',
+    labelPlaceholder: 'π.χ. Κύριο τηλέφωνο εταιρείας',
+    supportsPrimary: true,
+    emptyStateText: 'Δεν έχουν οριστεί επαγγελματικά στοιχεία',
+    addButtonText: 'Προσθήκη Επαγγελματικού'
+  },
+
+  // === ΔΙΕΥΘΥΝΣΕΙΣ ===
+  address: {
+    type: 'address',
+    title: 'Διευθύνσεις',
+    icon: MapPin,
+    fields: { primary: 'address', secondary: 'type' },
+    types: [
+      { value: 'home', label: 'Κατοικία' },
+      { value: 'work', label: 'Εργασία' },
+      { value: 'mailing', label: 'Αλληλογραφία' },
+      { value: 'billing', label: 'Χρέωση' },
+      { value: 'other', label: 'Άλλο' }
+    ],
+    defaultType: 'home',
+    placeholder: 'Οδός, αριθμός, περιοχή',
+    labelPlaceholder: 'π.χ. Κύρια διεύθυνση',
+    supportsPrimary: true,
+    emptyStateText: 'Δεν έχουν οριστεί διευθύνσεις',
+    addButtonText: 'Προσθήκη Διεύθυνσης'
   }
 };
 
@@ -796,7 +864,7 @@ export function UniversalCommunicationManager({
   const IconComponent = config.icon;
 
   return (
-    <div className="w-full space-y-4">
+    <div className="w-full max-w-none min-w-full space-y-4">
       {/* Header */}
       <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
         <IconComponent className="h-4 w-4" />
@@ -805,9 +873,9 @@ export function UniversalCommunicationManager({
 
       {/* 🎯 ΕΙΔΙΚΟ GROUPED LAYOUT ΓΙΑ ΤΗΛΕΦΩΝΑ ΣΤΟ DESKTOP */}
       {config.type === 'phone' && isDesktop && items.length > 0 ? (
-        <div className={`w-full max-w-none min-w-full ${COMMUNICATION_STYLES.groupedTable.container}`}>
+        <div className="w-full max-w-none min-w-full border rounded-lg">
           {/* Header Row με τίτλους στηλών για τηλέφωνα */}
-          <div className={`grid grid-cols-5 gap-3 p-4 ${COMMUNICATION_STYLES.groupedTable.header}`}>
+          <div className="grid grid-cols-5 gap-3 p-4 bg-muted border-b font-medium text-sm text-muted-foreground">
             <div>Τύπος</div>
             <div>Κωδικός</div>
             <div>Αριθμός</div>
@@ -821,9 +889,9 @@ export function UniversalCommunicationManager({
           </div>
         </div>
       ) : config.type === 'email' && isDesktop && items.length > 0 ? (
-        <div className={`w-full max-w-none min-w-full ${COMMUNICATION_STYLES.groupedTable.container}`}>
+        <div className="w-full max-w-none min-w-full border rounded-lg">
           {/* Header Row με τίτλους στηλών για emails */}
-          <div className={`grid grid-cols-4 gap-3 p-4 ${COMMUNICATION_STYLES.groupedTable.header}`}>
+          <div className="grid grid-cols-4 gap-3 p-4 bg-muted border-b font-medium text-sm text-muted-foreground">
             <div>Τύπος</div>
             <div>Διεύθυνση E-mail</div>
             <div>Ετικέτα</div>
@@ -836,9 +904,9 @@ export function UniversalCommunicationManager({
           </div>
         </div>
       ) : config.type === 'website' && isDesktop ? (
-        <div className={`w-full max-w-none min-w-full ${COMMUNICATION_STYLES.groupedTable.container}`}>
+        <div className="w-full max-w-none min-w-full border rounded-lg">
           {/* Header Row με τίτλους στηλών για websites */}
-          <div className={`grid grid-cols-4 gap-3 p-4 ${COMMUNICATION_STYLES.groupedTable.header}`}>
+          <div className="grid grid-cols-4 gap-3 p-4 bg-muted border-b font-medium text-sm text-muted-foreground">
             <div>Τύπος</div>
             <div>URL</div>
             <div>Ετικέτα</div>
@@ -851,9 +919,9 @@ export function UniversalCommunicationManager({
           </div>
         </div>
       ) : config.type === 'social' && isDesktop ? (
-        <div className={`w-full max-w-none min-w-full ${COMMUNICATION_STYLES.groupedTable.container}`}>
+        <div className="w-full max-w-none min-w-full border rounded-lg">
           {/* Header Row με τίτλους στηλών για social media */}
-          <div className={`grid grid-cols-6 gap-3 p-4 ${COMMUNICATION_STYLES.groupedTable.header}`}>
+          <div className="grid grid-cols-6 gap-3 p-4 bg-muted border-b font-medium text-sm text-muted-foreground">
             <div>Τύπος</div>
             <div>Πλατφόρμα</div>
             <div>Username</div>

@@ -163,8 +163,11 @@ export function IndividualFormRenderer({
         <div key={section.id} className="space-y-6 md:space-y-4">
           {/* Section Header αφαιρέθηκε - δεν θέλουμε το Camera εικονίδιο και το κείμενο "Φωτογραφία" */}
 
-          {/* Section Fields - Enhanced Mobile Layout */}
-          <div className="w-full space-y-4">
+          {/* Section Fields - Special layout for communication section */}
+          <div className={section.id === 'communication'
+            ? "w-full space-y-4"
+            : "w-full grid grid-cols-1 md:grid-cols-2 gap-4"
+          }>
             {section.fields.map((field) => (
               <FormField
                 key={field.id}
@@ -172,7 +175,7 @@ export function IndividualFormRenderer({
                 htmlFor={field.id}
                 required={field.required}
                 helpText={field.helpText}
-                className="w-full"
+                className={section.id === 'communication' ? "w-full max-w-none block" : "w-full"}
               >
                 <FormInput>
                   {renderField(field, formData, onChange, onSelectChange, disabled, customRenderers)}

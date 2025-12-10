@@ -135,17 +135,7 @@ export function DynamicContactArrays({
   const normalizedEmails = Array.isArray(emails) ? emails : [];
 
   return (
-    <div
-      className="w-full max-w-none min-w-full grid grid-cols-1 gap-8"
-      style={{
-        width: '100%',
-        maxWidth: 'none',
-        minWidth: '100%',
-        display: 'grid',
-        gridTemplateColumns: '1fr', // Πάντα 1 στήλη
-        gap: '2rem'
-      }}
-    >
+    <div className="w-full space-y-8">
       {/* 📱 PHONES - UniversalCommunicationManager */}
       <UniversalCommunicationManager
         config={COMMUNICATION_CONFIGS.phone}
