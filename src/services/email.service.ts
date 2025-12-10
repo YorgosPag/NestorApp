@@ -33,6 +33,7 @@ export interface EmailRequest {
   propertyArea?: number;
   propertyLocation?: string;
   propertyUrl: string;
+  photoUrl?: string;
   senderName?: string;
   personalMessage?: string;
   templateType?: EmailTemplateType;
@@ -72,6 +73,7 @@ export class EmailService {
       propertyArea,
       propertyLocation,
       propertyUrl,
+      photoUrl,
       senderName = FROM_NAME,
       personalMessage,
       templateType = 'residential'
@@ -116,6 +118,7 @@ export class EmailService {
         propertyArea,
         propertyLocation,
         propertyUrl,
+        photoUrl,
         recipientEmail: recipients[0], // Primary recipient
         personalMessage,
         senderName: senderName || FROM_NAME

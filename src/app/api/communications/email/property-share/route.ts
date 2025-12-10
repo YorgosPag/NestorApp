@@ -20,6 +20,7 @@ interface PropertyShareEmailRequest {
   propertyArea?: number;
   propertyLocation?: string;
   propertyUrl: string;
+  photoUrl?: string;
   senderName?: string;
   senderEmail?: string;
   personalMessage?: string;
@@ -149,6 +150,13 @@ function validateEmailRequest(data: any): { isValid: boolean; errors: string[]; 
     }
   }
 
+  // Photo URL validation (optional)
+  if (data.photoUrl && typeof data.photoUrl === 'string') {
+    if (!isValidUrl(data.photoUrl)) {
+      errors.push('Photo URL must be a valid HTTP/HTTPS URL');
+    }
+  }
+
   if (data.templateType && !VALIDATION_RULES.ALLOWED_TEMPLATE_TYPES.includes(data.templateType)) {
     errors.push(`Template type must be one of: ${VALIDATION_RULES.ALLOWED_TEMPLATE_TYPES.join(', ')}`);
   }
@@ -162,6 +170,7 @@ function validateEmailRequest(data: any): { isValid: boolean; errors: string[]; 
     recipients: recipients.map(email => email.trim().toLowerCase()),
     propertyTitle: sanitizeString(data.propertyTitle),
     propertyUrl: data.propertyUrl,
+    photoUrl: data.photoUrl || undefined,
     propertyDescription: data.propertyDescription ? sanitizeString(data.propertyDescription) : undefined,
     personalMessage: data.personalMessage ? sanitizeString(data.personalMessage) : undefined,
     propertyPrice: data.propertyPrice,
@@ -274,6 +283,7 @@ export async function POST(request: NextRequest) {
       propertyArea: data.propertyArea,
       propertyLocation: data.propertyLocation,
       propertyUrl: data.propertyUrl,
+      photoUrl: data.photoUrl,
       senderName: data.senderName,
       personalMessage: data.personalMessage,
       templateType: data.templateType
