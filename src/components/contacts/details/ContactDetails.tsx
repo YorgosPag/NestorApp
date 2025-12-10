@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { Users } from 'lucide-react';
+import { Users, Edit, Check, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import type { Contact } from '@/types/contacts';
 import { ContactDetailsHeader } from './ContactDetailsHeader';
 import { AddUnitToContactDialog } from './AddUnitToContactDialog';
@@ -9,6 +10,7 @@ import { UnifiedContactTabbedSection } from '@/components/ContactFormSections/Un
 import { openGalleryPhotoModal } from '@/core/modals';
 import { useGlobalPhotoPreview } from '@/providers/PhotoPreviewProvider';
 import { DetailsContainer } from '@/core/containers';
+import { ContactsService } from '@/services/contacts.service';
 
 interface ContactDetailsProps {
   contact: Contact | null;
@@ -18,6 +20,8 @@ interface ContactDetailsProps {
 
 export function ContactDetails({ contact, onEditContact, onDeleteContact }: ContactDetailsProps) {
   const [isAddUnitDialogOpen, setIsAddUnitDialogOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedData, setEditedData] = useState<any>({});
   const photoModal = useGlobalPhotoPreview();
 
   const handleUnitAdded = useCallback(() => {
@@ -51,6 +55,44 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact }: Cont
     };
   }, [contact]);
 
+  // 🎯 EDIT MODE HANDLERS
+  const handleStartEdit = useCallback(() => {
+    if (contact) {
+      setEditedData({ ...contact });
+      setIsEditing(true);
+    }
+  }, [contact]);
+
+  const handleCancelEdit = useCallback(() => {
+    setIsEditing(false);
+    setEditedData({});
+  }, []);
+
+  const handleSaveEdit = useCallback(async () => {
+    if (!contact?.id) return;
+
+    try {
+      await ContactsService.updateContact(contact.id, editedData);
+      setIsEditing(false);
+      setEditedData({});
+
+      // TODO: Trigger refresh/revalidation of contact data
+      console.log('✅ Contact updated successfully');
+    } catch (error) {
+      console.error('❌ Failed to update contact:', error);
+      // TODO: Show error toast
+    }
+  }, [contact?.id, editedData]);
+
+  const handleFieldChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setEditedData((prev: any) => ({ ...prev, [name]: value }));
+  }, []);
+
+  const handleSelectChange = useCallback((name: string, value: string) => {
+    setEditedData((prev: any) => ({ ...prev, [name]: value }));
+  }, []);
+
   // 🖼️ Photo click handler για gallery preview
   const handlePhotoClick = React.useCallback((index: number) => {
     console.log('🔍 DEBUG ContactDetails: Photo click triggered', {
@@ -74,7 +116,6 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact }: Cont
         header={
           <ContactDetailsHeader
             contact={contact!}
-            onEditContact={onEditContact}
             onDeleteContact={onDeleteContact}
           />
         }
@@ -84,12 +125,45 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact }: Cont
           description: "Επιλέξτε μια επαφή από τη λίστα για να δείτε τις λεπτομέρειές της."
         }}
       >
+        {/* 🎯 EDIT MODE TOOLBAR */}
+        {!isEditing ? (
+          <div className="flex justify-end mb-4">
+            <Button
+              onClick={handleStartEdit}
+              className="flex items-center gap-2"
+              variant="outline"
+            >
+              <Edit className="w-4 h-4" />
+              Επεξεργασία
+            </Button>
+          </div>
+        ) : (
+          <div className="flex justify-end gap-2 mb-4">
+            <Button
+              onClick={handleSaveEdit}
+              className="flex items-center gap-2"
+              variant="default"
+            >
+              <Check className="w-4 h-4" />
+              Αποθήκευση
+            </Button>
+            <Button
+              onClick={handleCancelEdit}
+              className="flex items-center gap-2"
+              variant="outline"
+            >
+              <X className="w-4 h-4" />
+              Ακύρωση
+            </Button>
+          </div>
+        )}
+
         <UnifiedContactTabbedSection
           contactType={contact?.type || 'individual'}
-          formData={enhancedFormData} // 📸 Use enhanced data with multiplePhotos
-          handleChange={() => {}} // Read-only για details view
-          handleSelectChange={() => {}} // Read-only για details view
-          disabled={true} // Read-only mode
+          formData={isEditing ? editedData : enhancedFormData} // 🎯 Use edited data when editing
+          handleChange={handleFieldChange} // 🎯 Enable changes when editing
+          handleSelectChange={handleSelectChange} // 🎯 Enable select changes when editing
+          disabled={!isEditing} // 🎯 Enable editing when in edit mode
           relationshipsMode="summary" // 🎯 KEY: Summary mode για main view
           onOpenRelationshipModal={handleOpenRelationshipModal} // 🎯 Handler για relationships management
           onPhotoClick={handlePhotoClick} // 🖼️ Photo click handler για gallery preview

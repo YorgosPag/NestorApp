@@ -5,11 +5,13 @@ import { Button } from '@/components/ui/button';
 import { ContactBadge, CommonBadge } from '@/core/badges';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { EntityDetailsHeader } from '@/core/entity-headers';
+import { EditableText } from '@/components/ui/EditableText';
 import { openContactAvatarModal, openGalleryPhotoModal } from '@/core/modals';
 import { useGlobalPhotoPreview } from '@/providers/PhotoPreviewProvider';
 import { Users, Building2, Landmark, Edit, Trash2 } from 'lucide-react';
 import type { Contact, ContactType, ContactStatus } from '@/types/contacts';
 import { getContactDisplayName, getContactInitials } from '@/types/contacts';
+import { ContactsService } from '@/services/contacts.service';
 import { cn } from '@/lib/utils';
 
 const TYPE_INFO: Record<ContactType, { icon: React.ElementType; name: string }> = {
@@ -24,9 +26,10 @@ interface ContactDetailsHeaderProps {
   contact: Contact;
   onEditContact?: () => void;
   onDeleteContact?: () => void;
+  onContactUpdate?: (updatedContact: Partial<Contact>) => void;
 }
 
-export function ContactDetailsHeader({ contact, onEditContact, onDeleteContact }: ContactDetailsHeaderProps) {
+export function ContactDetailsHeader({ contact, onEditContact, onDeleteContact, onContactUpdate }: ContactDetailsHeaderProps) {
   const photoModal = useGlobalPhotoPreview();
   const type = contact.type as ContactType;
 
@@ -143,6 +146,27 @@ export function ContactDetailsHeader({ contact, onEditContact, onDeleteContact }
     }
   };
 
+  // 🎯 INLINE EDITING: Handle name updates
+  const handleNameUpdate = async (newName: string) => {
+    if (!newName.trim()) return; // Don't save empty names
+
+    try {
+      // Determine which field to update based on contact type
+      const updateField = type === 'individual' ? 'firstName' : 'companyName';
+      const updates = { [updateField]: newName.trim() };
+
+      await ContactsService.updateContact(contact.id, updates);
+
+      // Optional: notify parent component
+      onContactUpdate?.(updates);
+
+      console.log(`✅ ${updateField} updated successfully:`, newName.trim());
+    } catch (error) {
+      console.error('❌ Failed to update contact name:', error);
+      // TODO: Show error toast/notification
+    }
+  };
+
   return (
     <>
       {/* 🖥️ DESKTOP: Show full header with actions */}
@@ -150,23 +174,26 @@ export function ContactDetailsHeader({ contact, onEditContact, onDeleteContact }
         <EntityDetailsHeader
           key={`contact-header-${contact.id}-${avatarKey}`}
           icon={Icon}
-          title={displayName}
+          title={
+            <EditableText
+              value={displayName}
+              onSave={handleNameUpdate}
+              placeholder="Κλικ για επεξεργασία ονόματος..."
+              className="text-2xl font-bold text-foreground"
+              required={true}
+              maxLength={100}
+            />
+          }
           avatarImageUrl={avatarImageUrl}
           onAvatarClick={avatarImageUrl ? handleAvatarClick : undefined}
-          actions={[
-            {
-              label: 'Επεξεργασία Επαφής',
-              onClick: () => onEditContact?.(),
-              icon: Edit,
-              className: 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700'
-            },
+          actions={onDeleteContact ? [
             {
               label: 'Διαγραφή Επαφής',
               onClick: () => onDeleteContact?.(),
               icon: Trash2,
-              className: 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700'
+              className: 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700'
             }
-          ]}
+          ] : []}
           variant="detailed"
         >
           {/* Centralized ContactBadge Components */}
