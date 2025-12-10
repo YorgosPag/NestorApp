@@ -53,6 +53,10 @@ export const UnifiedBadge: React.FC<UnifiedBadgeProps> = ({
         badgeConfig.className,
         onClick && 'cursor-pointer hover:opacity-80'
       )}
+      style={{
+        backgroundColor: badgeConfig.backgroundColor,
+        color: badgeConfig.color
+      }}
       onClick={onClick}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
@@ -129,6 +133,10 @@ export const CommonBadge: React.FC<CommonBadgeProps> = ({ status, ...props }) =>
         badgeConfig.className,
         props.onClick && 'cursor-pointer hover:opacity-80'
       )}
+      style={{
+        backgroundColor: badgeConfig.backgroundColor,
+        color: badgeConfig.color
+      }}
       onClick={props.onClick}
       onMouseEnter={props.onMouseEnter}
       onMouseLeave={props.onMouseLeave}

@@ -10,6 +10,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import type { PhoneInfo, EmailInfo, WebsiteInfo, SocialMediaInfo } from '@/types/contacts';
 
 // ============================================================================
+// 🎨 CENTRALIZED STYLING CONFIGURATION
+// ============================================================================
+
+const COMMUNICATION_STYLES = {
+  groupedTable: {
+    header: 'bg-card/50 border-b font-medium text-sm text-muted-foreground',
+    container: 'border rounded-lg bg-card p-4',
+    row: 'grid gap-3 p-4 border-b last:border-b-0 bg-card hover:bg-accent/50 transition-colors',
+    emptyState: 'text-center text-muted-foreground py-8 border rounded-lg bg-muted/30',
+    input: 'bg-background border-input focus:bg-background focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20'
+  }
+} as const;
+
+// ============================================================================
 // 🏢 ENTERPRISE UNIVERSAL COMMUNICATION MANAGER
 // ============================================================================
 
@@ -302,7 +316,7 @@ export function UniversalCommunicationManager({
               onValueChange={(value) => updateItem(index, 'type', value)}
               disabled={disabled}
             >
-              <SelectTrigger className="w-full">
+              <SelectTrigger className={`w-full ${COMMUNICATION_STYLES.groupedTable.input}`}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -322,7 +336,7 @@ export function UniversalCommunicationManager({
               onChange={(e) => updateItem(index, 'countryCode', e.target.value)}
               placeholder="+30"
               disabled={disabled}
-              className="w-full"
+              className={`w-full ${COMMUNICATION_STYLES.groupedTable.input}`}
             />
           </div>
 
@@ -334,7 +348,7 @@ export function UniversalCommunicationManager({
               onChange={(e) => updateItem(index, 'number', e.target.value)}
               placeholder="2310 123456"
               disabled={disabled}
-              className="w-full"
+              className={`w-full ${COMMUNICATION_STYLES.groupedTable.input}`}
             />
           </div>
 
@@ -345,7 +359,7 @@ export function UniversalCommunicationManager({
               onChange={(e) => updateItem(index, 'label', e.target.value)}
               placeholder={config.labelPlaceholder}
               disabled={disabled}
-              className="w-full"
+              className={`w-full ${COMMUNICATION_STYLES.groupedTable.input}`}
             />
           </div>
 
@@ -398,7 +412,7 @@ export function UniversalCommunicationManager({
               onValueChange={(value) => updateItem(index, 'type', value)}
               disabled={disabled}
             >
-              <SelectTrigger className="w-full">
+              <SelectTrigger className={`w-full ${COMMUNICATION_STYLES.groupedTable.input}`}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -419,7 +433,7 @@ export function UniversalCommunicationManager({
               onChange={(e) => updateItem(index, 'email', e.target.value)}
               placeholder="john@example.com"
               disabled={disabled}
-              className="w-full"
+              className={`w-full ${COMMUNICATION_STYLES.groupedTable.input}`}
             />
           </div>
 
@@ -430,7 +444,7 @@ export function UniversalCommunicationManager({
               onChange={(e) => updateItem(index, 'label', e.target.value)}
               placeholder={config.labelPlaceholder}
               disabled={disabled}
-              className="w-full"
+              className={`w-full ${COMMUNICATION_STYLES.groupedTable.input}`}
             />
           </div>
 
@@ -483,7 +497,7 @@ export function UniversalCommunicationManager({
               onValueChange={(value) => updateItem(index, 'type', value)}
               disabled={disabled}
             >
-              <SelectTrigger className="w-full">
+              <SelectTrigger className={`w-full ${COMMUNICATION_STYLES.groupedTable.input}`}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -504,7 +518,7 @@ export function UniversalCommunicationManager({
               onChange={(e) => updateItem(index, 'url', e.target.value)}
               placeholder="https://example.com"
               disabled={disabled}
-              className="w-full"
+              className={`w-full ${COMMUNICATION_STYLES.groupedTable.input}`}
             />
           </div>
 
@@ -515,7 +529,7 @@ export function UniversalCommunicationManager({
               onChange={(e) => updateItem(index, 'label', e.target.value)}
               placeholder={config.labelPlaceholder}
               disabled={disabled}
-              className="w-full"
+              className={`w-full ${COMMUNICATION_STYLES.groupedTable.input}`}
             />
           </div>
 
@@ -551,7 +565,7 @@ export function UniversalCommunicationManager({
               onValueChange={(value) => updateItem(index, 'type', value)}
               disabled={disabled}
             >
-              <SelectTrigger className="w-full">
+              <SelectTrigger className={`w-full ${COMMUNICATION_STYLES.groupedTable.input}`}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -571,7 +585,7 @@ export function UniversalCommunicationManager({
               onValueChange={(value) => updateItem(index, 'platform', value)}
               disabled={disabled}
             >
-              <SelectTrigger className="w-full">
+              <SelectTrigger className={`w-full ${COMMUNICATION_STYLES.groupedTable.input}`}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -591,7 +605,7 @@ export function UniversalCommunicationManager({
               onChange={(e) => updateItem(index, 'username', e.target.value)}
               placeholder="john-doe"
               disabled={disabled}
-              className="w-full"
+              className={`w-full ${COMMUNICATION_STYLES.groupedTable.input}`}
             />
           </div>
 
@@ -602,7 +616,7 @@ export function UniversalCommunicationManager({
               onChange={(e) => updateItem(index, 'url', e.target.value)}
               placeholder="https://..."
               disabled={disabled}
-              className="w-full text-sm"
+              className={`w-full text-sm ${COMMUNICATION_STYLES.groupedTable.input}`}
             />
           </div>
 
@@ -613,7 +627,7 @@ export function UniversalCommunicationManager({
               onChange={(e) => updateItem(index, 'label', e.target.value)}
               placeholder={config.labelPlaceholder}
               disabled={disabled}
-              className="w-full"
+              className={`w-full ${COMMUNICATION_STYLES.groupedTable.input}`}
             />
           </div>
 
@@ -659,7 +673,7 @@ export function UniversalCommunicationManager({
               onChange={(e) => updateItem(index, config.fields.primary, e.target.value)}
               placeholder={config.placeholder}
               disabled={disabled}
-              className="flex-1"
+              className={`flex-1 ${COMMUNICATION_STYLES.groupedTable.input}`}
             />
           </div>
         </div>
@@ -674,7 +688,7 @@ export function UniversalCommunicationManager({
                 onChange={(e) => updateItem(index, config.fields.secondary, e.target.value)}
                 placeholder="+30"
                 disabled={disabled}
-                className="w-full"
+                className={`w-full ${COMMUNICATION_STYLES.groupedTable.input}`}
               />
             ) : (
               <Select
@@ -682,7 +696,7 @@ export function UniversalCommunicationManager({
                 onValueChange={(value) => updateItem(index, config.fields.secondary, value)}
                 disabled={disabled}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger className={`w-full ${COMMUNICATION_STYLES.groupedTable.input}`}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -706,7 +720,7 @@ export function UniversalCommunicationManager({
             onValueChange={(value) => updateItem(index, 'type', value)}
             disabled={disabled}
           >
-            <SelectTrigger className="w-full">
+            <SelectTrigger className={`w-full ${COMMUNICATION_STYLES.groupedTable.input}`}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -728,7 +742,7 @@ export function UniversalCommunicationManager({
               onChange={(e) => updateItem(index, 'url', e.target.value)}
               placeholder="https://..."
               disabled={disabled}
-              className="w-full text-sm"
+              className={`w-full text-sm ${COMMUNICATION_STYLES.groupedTable.input}`}
             />
           </div>
         )}
@@ -741,7 +755,7 @@ export function UniversalCommunicationManager({
             onChange={(e) => updateItem(index, 'label', e.target.value)}
             placeholder={config.labelPlaceholder}
             disabled={disabled}
-            className="w-full"
+            className={`w-full ${COMMUNICATION_STYLES.groupedTable.input}`}
           />
         </div>
       </div>
@@ -791,9 +805,9 @@ export function UniversalCommunicationManager({
 
       {/* 🎯 ΕΙΔΙΚΟ GROUPED LAYOUT ΓΙΑ ΤΗΛΕΦΩΝΑ ΣΤΟ DESKTOP */}
       {config.type === 'phone' && isDesktop && items.length > 0 ? (
-        <div className="w-full max-w-none min-w-full border rounded-lg">
+        <div className={`w-full max-w-none min-w-full ${COMMUNICATION_STYLES.groupedTable.container}`}>
           {/* Header Row με τίτλους στηλών για τηλέφωνα */}
-          <div className="grid grid-cols-5 gap-3 p-4 bg-gray-50 border-b font-medium text-sm text-gray-700">
+          <div className={`grid grid-cols-5 gap-3 p-4 ${COMMUNICATION_STYLES.groupedTable.header}`}>
             <div>Τύπος</div>
             <div>Κωδικός</div>
             <div>Αριθμός</div>
@@ -807,9 +821,9 @@ export function UniversalCommunicationManager({
           </div>
         </div>
       ) : config.type === 'email' && isDesktop && items.length > 0 ? (
-        <div className="w-full max-w-none min-w-full border rounded-lg">
+        <div className={`w-full max-w-none min-w-full ${COMMUNICATION_STYLES.groupedTable.container}`}>
           {/* Header Row με τίτλους στηλών για emails */}
-          <div className="grid grid-cols-4 gap-3 p-4 bg-gray-50 border-b font-medium text-sm text-gray-700">
+          <div className={`grid grid-cols-4 gap-3 p-4 ${COMMUNICATION_STYLES.groupedTable.header}`}>
             <div>Τύπος</div>
             <div>Διεύθυνση E-mail</div>
             <div>Ετικέτα</div>
@@ -822,9 +836,9 @@ export function UniversalCommunicationManager({
           </div>
         </div>
       ) : config.type === 'website' && isDesktop ? (
-        <div className="w-full max-w-none min-w-full border rounded-lg">
+        <div className={`w-full max-w-none min-w-full ${COMMUNICATION_STYLES.groupedTable.container}`}>
           {/* Header Row με τίτλους στηλών για websites */}
-          <div className="grid grid-cols-4 gap-3 p-4 bg-gray-50 border-b font-medium text-sm text-gray-700">
+          <div className={`grid grid-cols-4 gap-3 p-4 ${COMMUNICATION_STYLES.groupedTable.header}`}>
             <div>Τύπος</div>
             <div>URL</div>
             <div>Ετικέτα</div>
@@ -837,9 +851,9 @@ export function UniversalCommunicationManager({
           </div>
         </div>
       ) : config.type === 'social' && isDesktop ? (
-        <div className="w-full max-w-none min-w-full border rounded-lg">
+        <div className={`w-full max-w-none min-w-full ${COMMUNICATION_STYLES.groupedTable.container}`}>
           {/* Header Row με τίτλους στηλών για social media */}
-          <div className="grid grid-cols-6 gap-3 p-4 bg-gray-50 border-b font-medium text-sm text-gray-700">
+          <div className={`grid grid-cols-6 gap-3 p-4 ${COMMUNICATION_STYLES.groupedTable.header}`}>
             <div>Τύπος</div>
             <div>Πλατφόρμα</div>
             <div>Username</div>
@@ -897,7 +911,7 @@ export function UniversalCommunicationManager({
 
       {/* Empty State */}
       {items.length === 0 && (
-        <div className="text-center text-gray-500 py-8 border rounded-lg bg-gray-50/30">
+        <div className={COMMUNICATION_STYLES.groupedTable.emptyState}>
           <IconComponent className="w-8 h-8 mb-2 mx-auto" />
           <p>{config.emptyStateText}</p>
           <p className="text-sm mt-1">Προσθέστε τις πληροφορίες επικοινωνίας σας</p>
@@ -909,7 +923,7 @@ export function UniversalCommunicationManager({
         variant="outline"
         onClick={addItem}
         disabled={disabled}
-        className="w-full"
+        className={`w-full ${COMMUNICATION_STYLES.groupedTable.input}`}
       >
         <Plus className="h-4 w-4 mr-2" />
         {config.addButtonText}

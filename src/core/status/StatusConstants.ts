@@ -166,6 +166,28 @@ export const CONTACT_STATUSES = {
     color: '#6B7280',
     backgroundColor: '#F9FAFB',
     icon: 'archive'
+  },
+  // Contact Types (added for centralization)
+  individual: {
+    label: 'Φυσικό Πρόσωπο',
+    variant: 'outline',
+    color: '#6B7280',
+    backgroundColor: '#F9FAFB',
+    icon: 'user'
+  },
+  company: {
+    label: 'Νομικό Πρόσωπο',
+    variant: 'outline',
+    color: '#6B7280',
+    backgroundColor: '#F9FAFB',
+    icon: 'building'
+  },
+  service: {
+    label: 'Δημόσια Υπηρεσία',
+    variant: 'outline',
+    color: '#6B7280',
+    backgroundColor: '#F9FAFB',
+    icon: 'landmark'
   }
 } as const;
 
@@ -330,8 +352,8 @@ export const COMMON_STATUSES = {
   primary: {
     label: 'Κύριο',
     variant: 'default',
-    color: '#FFFFFF',
-    backgroundColor: '#FF0000',
+    color: '#374151',
+    backgroundColor: '#F3F4F6',
     icon: 'star'
   },
   secondary: {
