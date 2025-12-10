@@ -65,6 +65,11 @@ export class EmailService {
    * Send property share emails (NEW ENTERPRISE METHOD)
    */
   static async sendPropertyShareEmail(emailRequest: EmailRequest): Promise<EmailResponse> {
+    console.log('🔍 DEBUG: EmailService.sendPropertyShareEmail called');
+    console.log('🔍 DEBUG: RESEND_API_KEY exists:', !!RESEND_API_KEY);
+    console.log('🔍 DEBUG: resend object:', !!resend);
+    console.log('🔍 DEBUG: NODE_ENV:', NODE_ENV);
+
     const {
       recipients,
       propertyTitle,
