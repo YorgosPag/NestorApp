@@ -60,10 +60,13 @@ export interface CommunicationConfig {
     secondary?: string; // optional secondary field
   };
   types: TypeOption[];
+  platformTypes?: TypeOption[]; // Optional: Ξεχωριστές πλατφόρμες για social media
   defaultType: string;
   placeholder: string;
+  labelPlaceholder: string; // Placeholder για το label field
   supportsPrimary: boolean; // phones & emails support isPrimary
   emptyStateText: string;
+  addButtonText: string; // Text για το add button
 }
 
 export interface UniversalCommunicationManagerProps {
@@ -92,8 +95,10 @@ export const COMMUNICATION_CONFIGS: Record<CommunicationType, CommunicationConfi
     ],
     defaultType: 'mobile',
     placeholder: 'π.χ. 2310 123456',
+    labelPlaceholder: 'π.χ. Προσωπικό τηλέφωνο',
     supportsPrimary: true,
-    emptyStateText: 'Δεν έχουν οριστεί τηλέφωνα'
+    emptyStateText: 'Δεν έχουν οριστεί τηλέφωνα',
+    addButtonText: 'Προσθήκη Τηλεφώνου'
   },
 
   email: {
@@ -108,8 +113,10 @@ export const COMMUNICATION_CONFIGS: Record<CommunicationType, CommunicationConfi
     ],
     defaultType: 'personal',
     placeholder: 'π.χ. john@example.com',
+    labelPlaceholder: 'π.χ. Προσωπικό e-mail',
     supportsPrimary: true,
-    emptyStateText: 'Δεν έχουν οριστεί e-mails'
+    emptyStateText: 'Δεν έχουν οριστεί e-mails',
+    addButtonText: 'Προσθήκη E-mail'
   },
 
   website: {
@@ -126,8 +133,10 @@ export const COMMUNICATION_CONFIGS: Record<CommunicationType, CommunicationConfi
     ],
     defaultType: 'personal',
     placeholder: 'π.χ. https://example.com',
+    labelPlaceholder: 'π.χ. Προσωπική ιστοσελίδα',
     supportsPrimary: false,
-    emptyStateText: 'Δεν έχουν οριστεί ιστοσελίδες'
+    emptyStateText: 'Δεν έχουν οριστεί ιστοσελίδες',
+    addButtonText: 'Προσθήκη Ιστοσελίδας'
   },
 
   social: {
@@ -135,7 +144,15 @@ export const COMMUNICATION_CONFIGS: Record<CommunicationType, CommunicationConfi
     title: 'Social Media',
     icon: Globe,
     fields: { primary: 'username', secondary: 'platform' },
+    // 🎯 ΤΥΠΟΙ ΧΡΗΣΗΣ για το "Τύπος" dropdown
     types: [
+      { value: 'personal', label: 'Προσωπικό' },
+      { value: 'professional', label: 'Επαγγελματικό' },
+      { value: 'business', label: 'Επιχειρησιακό' },
+      { value: 'other', label: 'Άλλο' }
+    ],
+    // 🎯 ΠΛΑΤΦΟΡΜΕΣ για το "Πλατφόρμα" dropdown
+    platformTypes: [
       { value: 'linkedin', label: 'LinkedIn' },
       { value: 'facebook', label: 'Facebook' },
       { value: 'instagram', label: 'Instagram' },
@@ -143,12 +160,16 @@ export const COMMUNICATION_CONFIGS: Record<CommunicationType, CommunicationConfi
       { value: 'youtube', label: 'YouTube' },
       { value: 'github', label: 'GitHub' },
       { value: 'tiktok', label: 'TikTok' },
-      { value: 'other', label: 'Άλλο' }
+      { value: 'whatsapp', label: 'WhatsApp' },
+      { value: 'telegram', label: 'Telegram' },
+      { value: 'other', label: 'Άλλη Πλατφόρμα' }
     ],
-    defaultType: 'linkedin',
+    defaultType: 'personal',
     placeholder: 'π.χ. john-doe',
+    labelPlaceholder: 'π.χ. Προσωπικό κοινωνικό δίκτυο',
     supportsPrimary: false,
-    emptyStateText: 'Δεν έχουν οριστεί social media'
+    emptyStateText: 'Δεν έχουν οριστεί social media',
+    addButtonText: 'Προσθήκη Social Media'
   }
 };
 
@@ -187,7 +208,7 @@ export function UniversalCommunicationManager({
       ...(config.type === 'social' && {
         username: '',
         url: '',
-        platform: config.defaultType
+        platform: config.platformTypes?.[0]?.value || 'linkedin' // Πρώτη διαθέσιμη πλατφόρμα
       })
     };
 
@@ -302,7 +323,8 @@ export function UniversalCommunicationManager({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {config.types.map(type => (
+                  {/* 🎯 Χρησιμοποιούμε platformTypes αν υπάρχει (για social media), αλλιώς types */}
+                  {(config.platformTypes || config.types).map(type => (
                     <SelectItem key={type.value} value={type.value}>
                       {type.label}
                     </SelectItem>
@@ -354,7 +376,7 @@ export function UniversalCommunicationManager({
           <Input
             value={item.label || ''}
             onChange={(e) => updateItem(index, 'label', e.target.value)}
-            placeholder="π.χ. Προσωπικό τηλέφωνο"
+            placeholder={config.labelPlaceholder}
             disabled={disabled}
             className="w-full"
           />
@@ -466,7 +488,7 @@ export function UniversalCommunicationManager({
         className="w-full"
       >
         <Plus className="h-4 w-4 mr-2" />
-        Προσθήκη {config.title.slice(0, -1)} {/* Remove 'ς' from end */}
+        {config.addButtonText}
       </Button>
     </div>
   );

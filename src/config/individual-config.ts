@@ -352,8 +352,8 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
       {
         id: 'communication',
         label: 'Επικοινωνία',
-        type: 'input',
-        helpText: 'Dummy field για custom renderer'
+        type: 'input'
+        // Δεν βάζουμε helpText για να μην εμφανίζεται στο UI
       }
     ],
   },

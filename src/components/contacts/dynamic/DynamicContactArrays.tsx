@@ -136,13 +136,13 @@ export function DynamicContactArrays({
 
   return (
     <div
-      className="w-full max-w-none min-w-full grid grid-cols-1 md:grid-cols-2 gap-8"
+      className="w-full max-w-none min-w-full grid grid-cols-1 gap-8"
       style={{
         width: '100%',
         maxWidth: 'none',
         minWidth: '100%',
         display: 'grid',
-        gridTemplateColumns: isDesktop ? '1fr 1fr' : '1fr',
+        gridTemplateColumns: '1fr', // Πάντα 1 στήλη
         gap: '2rem'
       }}
     >
