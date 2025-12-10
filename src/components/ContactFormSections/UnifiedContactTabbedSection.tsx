@@ -110,13 +110,13 @@ export function UnifiedContactTabbedSection({
       disabled,
       customRenderers: {
         // 🚀 DYNAMIC COMMUNICATION: Custom renderer for communication & social media
-        communication: () => (
+        communication: (field: any, fieldFormData: any, fieldOnChange: any, fieldOnSelectChange: any, fieldDisabled: boolean) => (
           <div className="space-y-6">
             <DynamicContactArrays
               phones={formData.phones || []}
               emails={formData.emails || []}
               websites={formData.websites || []}
-              disabled={disabled}
+              disabled={fieldDisabled}
               onPhonesChange={(phones) => {
                 console.log('🔧 PHONES CHANGE:', { phones, setFormDataExists: !!setFormData });
                 if (setFormData) {
@@ -144,7 +144,7 @@ export function UnifiedContactTabbedSection({
             />
             <SocialMediaManager
               socialMedia={formData.socialMediaArray || []}
-              disabled={disabled}
+              disabled={fieldDisabled}
               onChange={(socialMedia) => {
                 if (setFormData) {
                   setFormData({ ...formData, socialMediaArray: socialMedia });
@@ -156,7 +156,7 @@ export function UnifiedContactTabbedSection({
 
         // 🏢 ENTERPRISE: Custom renderer για companyPhotos (UnifiedPhotoManager) - only for companies
         ...(contactType === 'company' ? {
-          companyPhotos: () => (
+          companyPhotos: (field: any, fieldFormData: any, fieldOnChange: any, fieldOnSelectChange: any, fieldDisabled: boolean) => (
             <UnifiedPhotoManager
               contactType="company"
               formData={formData}
@@ -167,14 +167,14 @@ export function UnifiedContactTabbedSection({
                 handleUploadedPhotoURL
               }}
               uploadHandlers={getPhotoUploadHandlers(formData)}
-              disabled={disabled}
+              disabled={fieldDisabled}
               className="mt-4"
             />
           )
         } : {}),
 
         // 🏢 ENTERPRISE: Custom renderer for relationships tab - for ALL contact types
-        relationships: () => {
+        relationships: (field: any, fieldFormData: any, fieldOnChange: any, fieldOnSelectChange: any, fieldDisabled: boolean) => {
           // ✅ FIXED: Now formData.id is correctly included from the contact mappers
           const contactId = formData.id || 'new-contact';
 
@@ -191,7 +191,7 @@ export function UnifiedContactTabbedSection({
                 <RelationshipsSummary
                   contactId={contactId}
                   contactType={contactType}
-                  readonly={disabled}
+                  readonly={fieldDisabled}
                   className="mt-4"
                   onManageRelationships={() => {
                     console.log('🏢 User clicked manage relationships - opening modal');
@@ -202,7 +202,7 @@ export function UnifiedContactTabbedSection({
                 <ContactRelationshipManager
                   contactId={contactId}
                   contactType={contactType}
-                  readonly={disabled}
+                  readonly={fieldDisabled}
                   className="mt-4"
                   onRelationshipsChange={(relationships) => {
                     // Optionally update form data with relationship count for display

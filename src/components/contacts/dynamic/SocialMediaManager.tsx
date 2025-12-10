@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback } from 'react';
-import { Plus, Trash2, ExternalLink, Briefcase, Users, Camera, MessageCircle, Play, Monitor, Globe } from 'lucide-react';
+import { Plus, Trash2, ExternalLink, Briefcase, Users, Camera, MessageCircle, Play, Monitor, Globe, Music } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -69,7 +69,7 @@ const SOCIAL_PLATFORMS = [
   {
     value: 'tiktok',
     label: 'TikTok',
-    icon: '🎵',
+    icon: Music,
     urlTemplate: 'https://tiktok.com/@{username}',
     placeholder: 'π.χ. johndoe'
   },
@@ -174,14 +174,17 @@ export function SocialMediaManager({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {SOCIAL_PLATFORMS.map(platform => (
-                        <SelectItem key={platform.value} value={platform.value}>
-                          <span className="flex items-center gap-2">
-                            <platform.icon className="w-4 h-4" />
-                            {platform.label}
-                          </span>
-                        </SelectItem>
-                      ))}
+                      {SOCIAL_PLATFORMS.map(platform => {
+                        const IconComponent = platform.icon;
+                        return (
+                          <SelectItem key={platform.value} value={platform.value}>
+                            <span className="flex items-center gap-2">
+                              <IconComponent className="w-4 h-4" />
+                              {platform.label}
+                            </span>
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                 </div>
@@ -189,7 +192,7 @@ export function SocialMediaManager({
                 <div>
                   <Label>Username</Label>
                   <div className="flex items-center gap-1">
-                    <span className="text-sm text-gray-500">{platformInfo.icon}</span>
+                    {React.createElement(platformInfo.icon, { className: "w-4 h-4 text-gray-500" })}
                     <Input
                       value={item.username}
                       onChange={(e) => updateSocialMedia(index, 'username', e.target.value)}
@@ -288,7 +291,7 @@ export function SocialMediaManager({
                   disabled={disabled}
                   className="text-xs"
                 >
-                  <span className="mr-1">{platformInfo.icon}</span>
+                  {React.createElement(platformInfo.icon, { className: "w-4 h-4 mr-1" })}
                   {platformInfo.label}
                 </Button>
               );
