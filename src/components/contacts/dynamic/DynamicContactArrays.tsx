@@ -186,8 +186,7 @@ function PhoneManager({ phones, disabled = false, onChange }: PhoneManagerProps)
           <Plus className="h-4 w-4 mr-2" />
           Προσθήκη Τηλεφώνου
         </Button>
-      </CardContent>
-    </Card>
+    </div>
   );
 }
 
@@ -238,14 +237,11 @@ function EmailManager({ emails, disabled = false, onChange }: EmailManagerProps)
   }, [emails, onChange]);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Mail className="h-5 w-5" />
-          E-mails
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+        <Mail className="h-4 w-4" />
+        E-mails
+      </div>
         {emails.map((email, index) => (
           <div key={index} className="flex items-center gap-2 p-3 border rounded-lg">
             <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-2">
@@ -329,8 +325,7 @@ function EmailManager({ emails, disabled = false, onChange }: EmailManagerProps)
           <Plus className="h-4 w-4 mr-2" />
           Προσθήκη E-mail
         </Button>
-      </CardContent>
-    </Card>
+    </div>
   );
 }
 
@@ -367,14 +362,11 @@ function WebsiteManager({ websites, disabled = false, onChange }: WebsiteManager
   }, [websites, onChange]);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Globe className="h-5 w-5" />
-          Ιστοσελίδες
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+        <Globe className="h-4 w-4" />
+        Ιστοσελίδες
+      </div>
         {websites.map((website, index) => (
           <div key={index} className="flex items-center gap-2 p-3 border rounded-lg">
             <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-2">
