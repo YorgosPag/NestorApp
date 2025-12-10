@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { EmailTemplatesService } from '@/services/email-templates.service';
-import type { EmailTemplateType, EmailTemplateData } from '@/types/email-templates';
+import { EmailService } from '@/services/email.service';
+import type { EmailTemplateType, EmailRequest } from '@/services/email.service';
 
-// Environment validation with defaults
-const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
-const SENDGRID_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'info@nestorconstruct.gr';
-const SENDGRID_FROM_NAME = process.env.SENDGRID_FROM_NAME || 'Nestor Construct';
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
 // Rate limiting (simple in-memory for demo - use Redis in production)
@@ -13,7 +9,7 @@ const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 const RATE_LIMIT_WINDOW_MS = 60000; // 1 minute
 const RATE_LIMIT_MAX_REQUESTS = 10; // 10 emails per minute per IP
 
-// Input validation schemas
+// Local interface for backward compatibility
 interface PropertyShareEmailRequest {
   recipientEmail?: string;
   recipients?: string[];
@@ -172,7 +168,7 @@ function validateEmailRequest(data: any): { isValid: boolean; errors: string[]; 
     propertyArea: data.propertyArea,
     propertyLocation: data.propertyLocation ? sanitizeString(data.propertyLocation) : undefined,
     templateType: data.templateType || 'residential',
-    senderName: data.senderName ? sanitizeString(data.senderName) : SENDGRID_FROM_NAME,
+    senderName: data.senderName ? sanitizeString(data.senderName) : undefined,
     recipientName: data.recipientName ? sanitizeString(data.recipientName) : undefined
   };
 
@@ -230,16 +226,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Environment validation
-    if (!SENDGRID_API_KEY) {
-      logEmailAttempt(clientIP, false, {}, 'SendGrid API key not configured');
-      return NextResponse.json(
-        { error: 'Email service not configured' },
-        { status: 500 }
-      );
-    }
-
-    // Parse and validate request body
+    // Parse and validate request body FIRST
     let requestData;
     try {
       requestData = await request.json();
@@ -250,6 +237,10 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Check EmailService status
+    const emailServiceStatus = EmailService.getStatus();
+    console.log('📧 EmailService status:', emailServiceStatus);
 
     // Enhanced validation
     const { isValid, errors, sanitizedData } = validateEmailRequest(requestData);
@@ -273,90 +264,43 @@ export async function POST(request: NextRequest) {
       propertyTitle: data.propertyTitle
     });
 
-    // Prepare emails using templates
-    const emailPersonalizations = data.recipients!.map(email => {
-      const templateData: EmailTemplateData = {
-        propertyTitle: data.propertyTitle,
-        propertyDescription: data.propertyDescription,
-        propertyPrice: data.propertyPrice,
-        propertyArea: data.propertyArea,
-        propertyLocation: data.propertyLocation,
-        propertyUrl: data.propertyUrl,
-        recipientEmail: email,
-        personalMessage: data.personalMessage,
-        senderName: data.senderName || SENDGRID_FROM_NAME
-      };
-
-      const emailHtml = EmailTemplatesService.generateEmailHtml(data.templateType!, templateData);
-
-      return {
-        to: [{ email: email, name: data.recipientName || '' }],
-        subject: generateSubject(data.templateType!, data.propertyTitle),
-        html: emailHtml
-      };
-    });
-
-    // Send via SendGrid
-    const emailPayload = {
-      personalizations: emailPersonalizations.map(email => ({
-        to: email.to,
-        subject: email.subject
-      })),
-      from: {
-        email: SENDGRID_FROM_EMAIL,
-        name: data.senderName || SENDGRID_FROM_NAME
-      },
-      content: [{
-        type: 'text/html',
-        value: emailPersonalizations[0].html
-      }],
-      tracking_settings: {
-        click_tracking: { enable: true },
-        open_tracking: { enable: true }
-      },
-      custom_args: {
-        template_type: data.templateType!,
-        property_id: extractPropertyId(data.propertyUrl),
-        campaign_type: 'property_share',
-        recipient_count: data.recipients!.length.toString(),
-        client_ip: clientIP
-      }
+    // Convert local interface to EmailService interface
+    const emailRequest: EmailRequest = {
+      recipients: data.recipients!,
+      recipientName: data.recipientName,
+      propertyTitle: data.propertyTitle,
+      propertyDescription: data.propertyDescription,
+      propertyPrice: data.propertyPrice,
+      propertyArea: data.propertyArea,
+      propertyLocation: data.propertyLocation,
+      propertyUrl: data.propertyUrl,
+      senderName: data.senderName,
+      personalMessage: data.personalMessage,
+      templateType: data.templateType
     };
 
-    const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${SENDGRID_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(emailPayload)
-    });
+    // Send via Enterprise EmailService
+    try {
+      const result = await EmailService.sendPropertyShareEmail(emailRequest);
 
-    const duration = Date.now() - startTime;
+      const duration = Date.now() - startTime;
+      logEmailAttempt(clientIP, true, data, undefined, duration);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      logEmailAttempt(clientIP, false, data, `SendGrid error: ${response.status}`, duration);
-      
+      return NextResponse.json(result);
+
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      logEmailAttempt(clientIP, false, data, errorMessage, duration);
+
       return NextResponse.json(
-        { 
+        {
           error: 'Failed to send emails',
           message: 'Our email service is temporarily unavailable. Please try again later.'
         },
         { status: 500 }
       );
     }
-
-    logEmailAttempt(clientIP, true, data, undefined, duration);
-
-    const template = EmailTemplatesService.getTemplate(data.templateType!);
-    return NextResponse.json({ 
-      success: true,
-      message: `Emails sent to ${data.recipients!.length} recipients using ${template?.name || 'Residential'} template`,
-      recipients: data.recipients!.length,
-      templateUsed: template?.name || 'Residential',
-      templateType: data.templateType
-    });
 
   } catch (error) {
     const duration = Date.now() - startTime;
@@ -374,20 +318,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Helper functions
-function generateSubject(templateType: EmailTemplateType, propertyTitle: string): string {
-  switch (templateType) {
-    case 'residential':
-      return `🏠 Το Σπίτι των Ονείρων σας: ${propertyTitle} - Nestor Construct`;
-    case 'commercial':
-      return `🏢 Επαγγελματική Ευκαιρία: ${propertyTitle} - Nestor Construct`;
-    case 'premium':
-      return `⭐ Premium Collection: ${propertyTitle} - Nestor Construct`;
-    default:
-      return `🏠 Κοινοποίηση Ακινήτου: ${propertyTitle} - Nestor Construct`;
-  }
-}
-
+// Helper function for logging
 function extractPropertyId(url: string): string {
   const match = url.match(/\/properties\/([^/?]+)/);
   return match ? match[1] : 'unknown';

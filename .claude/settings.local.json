@@ -134,7 +134,9 @@
       "Bash(SKIP_ENV_VALIDATION=true TYPESCRIPT_CHECK=false PORT=3007 npm run dev)",
       "Bash(SKIP_ENV_VALIDATION=true TYPESCRIPT_CHECK=false PORT=3008 npm run dev)",
       "Bash(git remote get-url:*)",
-      "Bash(git remote add:*)"
+      "Bash(git remote add:*)",
+      "Bash(pnpm add:*)",
+      "Bash(del test-email.json)"
     ],
     "deny": [],
     "ask": []
