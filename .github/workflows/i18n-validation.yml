@@ -27,19 +27,24 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'npm'
-          
+          cache: 'pnpm'
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
       - name: 📦 Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
         
       - name: 🔍 Validate translation completeness
         run: node scripts/validate-translations.js
         
       - name: 📊 Generate i18n types
-        run: npm run generate:i18n-types
+        run: pnpm run generate:i18n-types
         
       - name: ✅ Type check with generated types
-        run: npm run typecheck
+        run: pnpm run typecheck
         
       - name: 🔍 Check for hardcoded strings
         run: |
@@ -100,10 +105,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'npm'
-          
+          cache: 'pnpm'
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
       - name: 📦 Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
         
       - name: 📊 Generate coverage report
         run: |
