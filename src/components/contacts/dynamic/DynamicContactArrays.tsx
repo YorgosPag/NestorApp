@@ -104,8 +104,8 @@ function PhoneManager({ phones, disabled = false, onChange }: PhoneManagerProps)
         Τηλέφωνα
       </div>
         {phones.map((phone, index) => (
-          <div key={index} className="flex items-center gap-2 p-3 border rounded-lg">
-            <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-2">
+          <div key={index} className="w-full p-4 border rounded-lg">
+            <div className="w-full grid grid-cols-1 gap-4">
               <div>
                 <Label>Αριθμός</Label>
                 <Input
@@ -145,32 +145,36 @@ function PhoneManager({ phones, disabled = false, onChange }: PhoneManagerProps)
               </div>
             </div>
 
-            <div className="flex flex-col items-center gap-2">
-              {phone.isPrimary && (
-                <Badge variant="default" className="text-xs">
-                  <Star className="h-3 w-3 mr-1" />
-                  Κύριο
-                </Badge>
-              )}
-              {!phone.isPrimary && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setPrimary(index)}
-                  disabled={disabled}
-                  className="text-xs"
-                >
-                  Ορισμός ως κύριο
-                </Button>
-              )}
+            {/* Action buttons row */}
+            <div className="flex items-center justify-between mt-4 pt-3 border-t">
+              <div className="flex items-center gap-2">
+                {phone.isPrimary && (
+                  <Badge variant="default" className="text-xs">
+                    <Star className="h-3 w-3 mr-1" />
+                    Κύριο
+                  </Badge>
+                )}
+                {!phone.isPrimary && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setPrimary(index)}
+                    disabled={disabled}
+                    className="text-xs"
+                  >
+                    Ορισμός ως κύριο
+                  </Button>
+                )}
+              </div>
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
                 onClick={() => removePhone(index)}
                 disabled={disabled || phones.length === 1}
-                className="text-red-600 hover:text-red-700"
+                className="text-red-600 hover:text-red-700 hover:bg-red-50"
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="h-4 w-4 mr-1" />
+                Διαγραφή
               </Button>
             </div>
           </div>
@@ -242,8 +246,8 @@ function EmailManager({ emails, disabled = false, onChange }: EmailManagerProps)
         E-mails
       </div>
         {emails.map((email, index) => (
-          <div key={index} className="flex items-center gap-2 p-3 border rounded-lg">
-            <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-2">
+          <div key={index} className="w-full p-4 border rounded-lg">
+            <div className="w-full grid grid-cols-1 gap-4">
               <div>
                 <Label>Διεύθυνση E-mail</Label>
                 <Input
@@ -284,32 +288,36 @@ function EmailManager({ emails, disabled = false, onChange }: EmailManagerProps)
               </div>
             </div>
 
-            <div className="flex flex-col items-center gap-2">
-              {email.isPrimary && (
-                <Badge variant="default" className="text-xs">
-                  <Star className="h-3 w-3 mr-1" />
-                  Κύριο
-                </Badge>
-              )}
-              {!email.isPrimary && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setPrimary(index)}
-                  disabled={disabled}
-                  className="text-xs"
-                >
-                  Ορισμός ως κύριο
-                </Button>
-              )}
+            {/* Action buttons row */}
+            <div className="flex items-center justify-between mt-4 pt-3 border-t">
+              <div className="flex items-center gap-2">
+                {email.isPrimary && (
+                  <Badge variant="default" className="text-xs">
+                    <Star className="h-3 w-3 mr-1" />
+                    Κύριο
+                  </Badge>
+                )}
+                {!email.isPrimary && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setPrimary(index)}
+                    disabled={disabled}
+                    className="text-xs"
+                  >
+                    Ορισμός ως κύριο
+                  </Button>
+                )}
+              </div>
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
                 onClick={() => removeEmail(index)}
                 disabled={disabled || emails.length === 1}
-                className="text-red-600 hover:text-red-700"
+                className="text-red-600 hover:text-red-700 hover:bg-red-50"
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="h-4 w-4 mr-1" />
+                Διαγραφή
               </Button>
             </div>
           </div>
@@ -367,8 +375,8 @@ function WebsiteManager({ websites, disabled = false, onChange }: WebsiteManager
         Ιστοσελίδες
       </div>
         {websites.map((website, index) => (
-          <div key={index} className="flex items-center gap-2 p-3 border rounded-lg">
-            <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-2">
+          <div key={index} className="w-full p-4 border rounded-lg">
+            <div className="w-full grid grid-cols-1 gap-4">
               <div>
                 <Label>URL</Label>
                 <Input
@@ -409,15 +417,19 @@ function WebsiteManager({ websites, disabled = false, onChange }: WebsiteManager
               </div>
             </div>
 
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => removeWebsite(index)}
-              disabled={disabled}
-              className="text-red-600 hover:text-red-700"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            {/* Action buttons row */}
+            <div className="flex justify-end mt-4 pt-3 border-t">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => removeWebsite(index)}
+                disabled={disabled}
+                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                Διαγραφή
+              </Button>
+            </div>
           </div>
         ))}
 
@@ -470,7 +482,7 @@ export function DynamicContactArrays({
   }] : emails;
 
   return (
-    <div className="space-y-6">
+    <div className="w-full space-y-8">
       <PhoneManager
         phones={normalizedPhones}
         disabled={disabled}

@@ -118,37 +118,48 @@ export function UnifiedContactTabbedSection({
               websites={formData.websites || []}
               disabled={fieldDisabled}
               onPhonesChange={(phones) => {
-                console.log('🔧 PHONES CHANGE:', { phones, setFormDataExists: !!setFormData });
-                if (setFormData) {
-                  setFormData({ ...formData, phones });
-                } else {
-                  console.error('❌ setFormData not available for phones update');
-                }
+                // Use synthetic events to trigger form updates through existing handlers
+                const syntheticEvent = {
+                  target: {
+                    name: 'phones',
+                    value: JSON.stringify(phones)
+                  }
+                } as React.ChangeEvent<HTMLInputElement>;
+                handleChange(syntheticEvent);
               }}
               onEmailsChange={(emails) => {
-                console.log('🔧 EMAILS CHANGE:', { emails, setFormDataExists: !!setFormData });
-                if (setFormData) {
-                  setFormData({ ...formData, emails });
-                } else {
-                  console.error('❌ setFormData not available for emails update');
-                }
+                // Use synthetic events to trigger form updates through existing handlers
+                const syntheticEvent = {
+                  target: {
+                    name: 'emails',
+                    value: JSON.stringify(emails)
+                  }
+                } as React.ChangeEvent<HTMLInputElement>;
+                handleChange(syntheticEvent);
               }}
               onWebsitesChange={(websites) => {
-                console.log('🔧 WEBSITES CHANGE:', { websites, setFormDataExists: !!setFormData });
-                if (setFormData) {
-                  setFormData({ ...formData, websites });
-                } else {
-                  console.error('❌ setFormData not available for websites update');
-                }
+                // Use synthetic events to trigger form updates through existing handlers
+                const syntheticEvent = {
+                  target: {
+                    name: 'websites',
+                    value: JSON.stringify(websites)
+                  }
+                } as React.ChangeEvent<HTMLInputElement>;
+                handleChange(syntheticEvent);
               }}
             />
             <SocialMediaManager
               socialMedia={formData.socialMediaArray || []}
               disabled={fieldDisabled}
               onChange={(socialMedia) => {
-                if (setFormData) {
-                  setFormData({ ...formData, socialMediaArray: socialMedia });
-                }
+                // Use synthetic events to trigger form updates through existing handlers
+                const syntheticEvent = {
+                  target: {
+                    name: 'socialMediaArray',
+                    value: JSON.stringify(socialMedia)
+                  }
+                } as React.ChangeEvent<HTMLInputElement>;
+                handleChange(syntheticEvent);
               }}
             />
           </div>
