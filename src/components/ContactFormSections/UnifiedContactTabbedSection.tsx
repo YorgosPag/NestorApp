@@ -118,44 +118,60 @@ export function UnifiedContactTabbedSection({
               socialMedia={formData.socialMediaArray || []}
               disabled={fieldDisabled}
               onPhonesChange={(phones) => {
-                // Use synthetic events to trigger form updates through existing handlers
-                const syntheticEvent = {
-                  target: {
-                    name: 'phones',
-                    value: JSON.stringify(phones)
-                  }
-                } as React.ChangeEvent<HTMLInputElement>;
-                handleChange(syntheticEvent);
+                console.log('🔄 UnifiedContactTabbedSection: onPhonesChange called with:', phones.length, 'phones');
+                if (setFormData) {
+                  const newFormData = { ...formData, phones };
+                  console.log('🔄 UnifiedContactTabbedSection: Updating formData with phones:', newFormData.phones?.length);
+                  setFormData(newFormData);
+                } else {
+                  console.warn('⚠️ UnifiedContactTabbedSection: setFormData not provided, falling back to handleChange');
+                  const syntheticEvent = {
+                    target: { name: 'phones', value: JSON.stringify(phones) }
+                  } as React.ChangeEvent<HTMLInputElement>;
+                  handleChange(syntheticEvent);
+                }
               }}
               onEmailsChange={(emails) => {
-                // Use synthetic events to trigger form updates through existing handlers
-                const syntheticEvent = {
-                  target: {
-                    name: 'emails',
-                    value: JSON.stringify(emails)
-                  }
-                } as React.ChangeEvent<HTMLInputElement>;
-                handleChange(syntheticEvent);
+                console.log('🔄 UnifiedContactTabbedSection: onEmailsChange called with:', emails.length, 'emails');
+                if (setFormData) {
+                  const newFormData = { ...formData, emails };
+                  console.log('🔄 UnifiedContactTabbedSection: Updating formData with emails:', newFormData.emails?.length);
+                  setFormData(newFormData);
+                } else {
+                  console.warn('⚠️ UnifiedContactTabbedSection: setFormData not provided, falling back to handleChange');
+                  const syntheticEvent = {
+                    target: { name: 'emails', value: JSON.stringify(emails) }
+                  } as React.ChangeEvent<HTMLInputElement>;
+                  handleChange(syntheticEvent);
+                }
               }}
               onWebsitesChange={(websites) => {
-                // Use synthetic events to trigger form updates through existing handlers
-                const syntheticEvent = {
-                  target: {
-                    name: 'websites',
-                    value: JSON.stringify(websites)
-                  }
-                } as React.ChangeEvent<HTMLInputElement>;
-                handleChange(syntheticEvent);
+                console.log('🔄 UnifiedContactTabbedSection: onWebsitesChange called with:', websites.length, 'websites');
+                if (setFormData) {
+                  const newFormData = { ...formData, websites };
+                  console.log('🔄 UnifiedContactTabbedSection: Updating formData with websites:', newFormData.websites?.length);
+                  setFormData(newFormData);
+                } else {
+                  console.warn('⚠️ UnifiedContactTabbedSection: setFormData not provided, falling back to handleChange');
+                  const syntheticEvent = {
+                    target: { name: 'websites', value: JSON.stringify(websites) }
+                  } as React.ChangeEvent<HTMLInputElement>;
+                  handleChange(syntheticEvent);
+                }
               }}
               onSocialMediaChange={(socialMedia) => {
-                // Use synthetic events to trigger form updates through existing handlers
-                const syntheticEvent = {
-                  target: {
-                    name: 'socialMediaArray',
-                    value: JSON.stringify(socialMedia)
-                  }
-                } as React.ChangeEvent<HTMLInputElement>;
-                handleChange(syntheticEvent);
+                console.log('🔄 UnifiedContactTabbedSection: onSocialMediaChange called with:', socialMedia.length, 'socialMedia');
+                if (setFormData) {
+                  const newFormData = { ...formData, socialMediaArray: socialMedia };
+                  console.log('🔄 UnifiedContactTabbedSection: Updating formData with socialMediaArray:', newFormData.socialMediaArray?.length);
+                  setFormData(newFormData);
+                } else {
+                  console.warn('⚠️ UnifiedContactTabbedSection: setFormData not provided, falling back to handleChange');
+                  const syntheticEvent = {
+                    target: { name: 'socialMediaArray', value: JSON.stringify(socialMedia) }
+                  } as React.ChangeEvent<HTMLInputElement>;
+                  handleChange(syntheticEvent);
+                }
               }}
             />
           </div>
