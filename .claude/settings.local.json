@@ -140,7 +140,9 @@
       "WebFetch(domain:github.com)",
       "Bash(gh run list:*)",
       "Bash(npm run test:*)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Bash(awk:*)",
+      "Bash(PORT=3004 npm run dev)"
     ],
     "deny": [],
     "ask": []
