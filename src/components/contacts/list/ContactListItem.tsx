@@ -258,7 +258,14 @@ export function ContactListItem({
                                     {phone && (
                                         <div className="flex items-center gap-1 shrink-0 text-xs text-muted-foreground">
                                             <Phone className="w-3 h-3" />
-                                            <span className="whitespace-nowrap">{phone}</span>
+                                            <a
+                                                href={`tel:${phone}`}
+                                                className="whitespace-nowrap text-blue-600 hover:text-blue-800 hover:underline"
+                                                title={`Κλήση στο ${phone}`}
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                {phone}
+                                            </a>
                                         </div>
                                     )}
 
@@ -266,7 +273,14 @@ export function ContactListItem({
                                     {email && (
                                         <div className="flex items-center gap-1 shrink-0 text-xs text-muted-foreground">
                                             <Mail className="w-3 h-3" />
-                                            <span className="whitespace-nowrap">{email}</span>
+                                            <a
+                                                href={`mailto:${email}`}
+                                                className="whitespace-nowrap text-blue-600 hover:text-blue-800 hover:underline"
+                                                title={`Αποστολή email στο ${email}`}
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                {email}
+                                            </a>
                                         </div>
                                     )}
 
@@ -315,13 +329,27 @@ export function ContactListItem({
                                     {email && (
                                         <div className={cn("flex items-center gap-2", getTypography('labelSmall'))}>
                                             <Mail className="w-3 h-3" />
-                                            <span className="truncate">{email}</span>
+                                            <a
+                                                href={`mailto:${email}`}
+                                                className="truncate text-blue-600 hover:text-blue-800 hover:underline"
+                                                title={`Αποστολή email στο ${email}`}
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                {email}
+                                            </a>
                                         </div>
                                     )}
                                     {phone && (
                                         <div className={cn("flex items-center gap-2", getTypography('labelSmall'))}>
                                             <Phone className="w-3 h-3" />
-                                            <span className="truncate">{phone}</span>
+                                            <a
+                                                href={`tel:${phone}`}
+                                                className="truncate text-blue-600 hover:text-blue-800 hover:underline"
+                                                title={`Κλήση στο ${phone}`}
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                {phone}
+                                            </a>
                                         </div>
                                     )}
                                 </div>

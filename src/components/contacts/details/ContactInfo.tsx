@@ -27,13 +27,25 @@ export function ContactInfo({ contact, onAddUnit, onRefresh }: ContactInfoProps)
             {email && (
                 <div className="flex items-center gap-2 text-sm">
                     <Mail className="w-4 h-4 text-muted-foreground" />
-                    <span>{email}</span>
+                    <a
+                        href={`mailto:${email}`}
+                        className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                        title={`Αποστολή email στο ${email}`}
+                    >
+                        {email}
+                    </a>
                 </div>
             )}
             {phone && (
                 <div className="flex items-center gap-2 text-sm">
                     <Phone className="w-4 h-4 text-muted-foreground" />
-                    <span>{phone}</span>
+                    <a
+                        href={`tel:${phone}`}
+                        className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                        title={`Κλήση στο ${phone}`}
+                    >
+                        {phone}
+                    </a>
                 </div>
             )}
             {!(email || phone) && <p className="text-sm text-muted-foreground">{t('details.contactInfo.noContactInfo')}</p>}
