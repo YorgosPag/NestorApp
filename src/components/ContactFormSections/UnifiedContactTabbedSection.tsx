@@ -260,14 +260,7 @@ export function UnifiedContactTabbedSection({
   ]);
 
   return (
-    <div className="unified-contact-section">
-      {/* 🔍 DEBUG INFO (remove in production) */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="text-xs text-gray-500 mb-2">
-          🏢 Unified Contact Section: {getContactTypeDisplayName(contactType)} ({sections.length} sections)
-        </div>
-      )}
-
+    <div className="unified-contact-section -mt-px">
       {/* 🎯 DYNAMIC RENDERER */}
       <RendererComponent {...rendererProps} />
     </div>

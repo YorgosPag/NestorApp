@@ -63,7 +63,7 @@ export function DetailsContainer({
       <div className="flex-1 flex flex-col min-h-0">
         {/* Tabs Section (if provided) */}
         {tabsRenderer && (
-          <div className="shrink-0 border-b px-4">
+          <div className="shrink-0 px-4">
             {tabsRenderer}
           </div>
         )}

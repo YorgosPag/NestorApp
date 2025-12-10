@@ -196,7 +196,7 @@ export function IndividualFormTabRenderer({
         theme="warning"
       >
         {tabs.map((tab) => (
-          <TabsContent key={tab.id} value={tab.id} className="mt-4">
+          <TabsContent key={tab.id} value={tab.id} className="">
             {tab.content}
           </TabsContent>
         ))}
