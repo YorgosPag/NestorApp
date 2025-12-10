@@ -139,7 +139,8 @@
       "Bash(del test-email.json)",
       "WebFetch(domain:github.com)",
       "Bash(gh run list:*)",
-      "Bash(npm run test:*)"
+      "Bash(npm run test:*)",
+      "Bash(sed:*)"
     ],
     "deny": [],
     "ask": []
