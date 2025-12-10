@@ -253,7 +253,7 @@ function main() {
 
   if (!hasI18nStructure) {
     logInfo('i18n structure not found or incomplete.');
-    logInfo('This is acceptable for projects that haven\\'t implemented internationalization yet.');
+    logInfo('This is acceptable for projects that haven\'t implemented internationalization yet.');
     logSuccess('Validation passed - no i18n requirements to validate.');
     process.exit(0);
   }
