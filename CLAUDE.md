@@ -255,7 +255,15 @@ git add [files]
 git commit -m "..."
 ```
 
-#### ✅ ΒΗΜΑ 3: BACKUP_SUMMARY.json
+#### ✅ ΒΗΜΑ 3: VERCEL DEPLOYMENT (ΥΠΟΧΡΕΩΤΙΚΟ)
+```bash
+# Στέλνω στο remote repository για Vercel auto-deployment
+git push origin main
+```
+
+**ΚΡΙΣΙΜΟ**: Κάθε commit **ΠΡΕΠΕΙ** να γίνει push στο Vercel για production deployment!
+
+#### ✅ ΒΗΜΑ 4: BACKUP_SUMMARY.json
 Δημιουργώ **πλήρες** BACKUP_SUMMARY.json με:
 - `category`: FIX / FEATURE / REFACTOR / STABLE / WIP / CLEANUP / etc.
 - `shortDescription`: Σύντομη περιγραφή (1 γραμμή)
@@ -269,7 +277,7 @@ git commit -m "..."
 - `relatedBackups`: Working references
 - `commits`: Array με commit hashes και messages
 
-#### ✅ ΒΗΜΑ 4: ΤΡΕΞΙΜΟ auto-backup.ps1
+#### ✅ ΒΗΜΑ 5: ΤΡΕΞΙΜΟ auto-backup.ps1
 ```bash
 # Τρέχω το PowerShell script που:
 # 1. Διαβάζει το BACKUP_SUMMARY.json
@@ -280,7 +288,7 @@ git commit -m "..."
 powershell.exe -ExecutionPolicy Bypass -File "F:\Pagonis_Nestor\auto-backup.ps1"
 ```
 
-#### ✅ ΒΗΜΑ 5: ΕΠΙΒΕΒΑΙΩΣΗ
+#### ✅ ΒΗΜΑ 6: ΕΠΙΒΕΒΑΙΩΣΗ
 ```
 ✅ BACKUP ΟΛΟΚΛΗΡΩΘΗΚΕ!
 
@@ -295,15 +303,55 @@ powershell.exe -ExecutionPolicy Bypass -File "F:\Pagonis_Nestor\auto-backup.ps1"
 - ❌ ΔΕΝ κάνω commit χωρίς έγκριση Γιώργου
 - ❌ ΔΕΝ κάνω backup αν η προσπάθεια **ΑΠΟΤΥΧΕ**
 - ❌ ΔΕΝ ξεχνώ να τρέξω το auto-backup.ps1 μετά το commit
-- ❌ ΔΕΝ κάνω push στο remote repository (μόνο local commits)
+- ❌ ΔΕΝ ξεχνώ να κάνω push στο Vercel για production deployment
 
 ### 📝 ΠΑΡΑΔΕΙΓΜΑ ΡΟΗΣ:
 
 1. **Επιτυχία!** → Ερώτηση στον Γιώργο
 2. **Γιώργος: "Ναι"** → Git commit
-3. **Commit done** → Δημιουργία BACKUP_SUMMARY.json
-4. **JSON ready** → Τρέξιμο auto-backup.ps1
-5. **ZIP created** → Επιβεβαίωση & συνέχεια!
+3. **Commit done** → Push στο Vercel (ΥΠΟΧΡΕΩΤΙΚΟ!)
+4. **Vercel deployment** → Δημιουργία BACKUP_SUMMARY.json
+5. **JSON ready** → Τρέξιμο auto-backup.ps1
+6. **ZIP created** → Επιβεβαίωση & συνέχεια!
+
+---
+
+## 🚀 VERCEL DEPLOYMENT PROTOCOL
+
+### 📋 ΥΠΟΧΡΕΩΤΙΚΟΣ ΚΑΝΟΝΑΣ:
+**Κάθε commit ΠΡΕΠΕΙ να γίνει push στο Vercel για production deployment!**
+
+### 🔄 AUTO-DEPLOYMENT FLOW:
+1. **git push origin main** → Στέλνει στο GitHub
+2. **GitHub Actions** → Τρέχει validation (i18n, tests, etc.)
+3. **Vercel Auto-Deploy** → Κάνει build και deploy το production site
+4. **Production Live** → Οι αλλαγές είναι άμεσα διαθέσιμες στους χρήστες
+
+### ⚠️ POTENTIAL ISSUES & SOLUTIONS:
+
+#### 🔧 GitHub Actions Failures:
+- **Missing scripts**: Δημιουργώ τα απαραίτητα scripts (π.χ. validate-translations.js)
+- **Test failures**: Διορθώνω τα tests πριν το push
+- **Type errors**: Τρέχω typecheck και διορθώνω errors
+
+#### 🐛 Build Failures:
+- **Dependency issues**: Ελέγχω package.json και dependencies
+- **Environment variables**: Επαληθεύω ότι τα .env variables είναι σωστά
+- **Import errors**: Διορθώνω broken imports και paths
+
+### 📊 VERCEL MONITORING:
+- **Production URL**: https://nestor-app.vercel.app
+- **Dashboard**: Vercel Dashboard για deployment logs
+- **Build Times**: Συνήθως 2-3 λεπτά για πλήρη deployment
+
+### 🚨 EMERGENCY ROLLBACK:
+Αν κάτι σπάσει στο production, μπορώ να κάνω:
+```bash
+# Revert το τελευταίο commit
+git revert HEAD
+git push origin main
+# Το Vercel θα κάνει auto-deploy το προηγούμενο working state
+```
 
 ---
 

@@ -8,6 +8,8 @@ import { UnifiedPhotoManager } from '@/components/ui/UnifiedPhotoManager';
 import { ContactRelationshipManager } from '@/components/contacts/relationships/ContactRelationshipManager';
 import { RelationshipsSummary } from '@/components/contacts/relationships/RelationshipsSummary';
 import { RelationshipProvider } from '@/components/contacts/relationships/context/RelationshipProvider';
+import { DynamicContactArrays } from '@/components/contacts/dynamic/DynamicContactArrays';
+import { SocialMediaManager } from '@/components/contacts/dynamic/SocialMediaManager';
 import { getContactFormConfig, getContactFormSections, getContactTypeDisplayName, getContactFormRenderer } from './utils/ContactFormConfigProvider';
 import { getPhotoUploadHandlers, createUnifiedPhotosChangeHandler, buildRendererPropsForContactType } from './utils/PhotoUploadConfiguration';
 
@@ -107,6 +109,42 @@ export function UnifiedContactTabbedSection({
       onSelectChange: handleSelectChange,
       disabled,
       customRenderers: {
+        // 🚀 DYNAMIC COMMUNICATION: Custom renderer for communication & social media
+        communication: () => (
+          <div className="space-y-6">
+            <DynamicContactArrays
+              phones={formData.phones || []}
+              emails={formData.emails || []}
+              websites={formData.websites || []}
+              disabled={disabled}
+              onPhonesChange={(phones) => {
+                if (setFormData) {
+                  setFormData({ ...formData, phones });
+                }
+              }}
+              onEmailsChange={(emails) => {
+                if (setFormData) {
+                  setFormData({ ...formData, emails });
+                }
+              }}
+              onWebsitesChange={(websites) => {
+                if (setFormData) {
+                  setFormData({ ...formData, websites });
+                }
+              }}
+            />
+            <SocialMediaManager
+              socialMedia={formData.socialMediaArray || []}
+              disabled={disabled}
+              onChange={(socialMedia) => {
+                if (setFormData) {
+                  setFormData({ ...formData, socialMediaArray: socialMedia });
+                }
+              }}
+            />
+          </div>
+        ),
+
         // 🏢 ENTERPRISE: Custom renderer για companyPhotos (UnifiedPhotoManager) - only for companies
         ...(contactType === 'company' ? {
           companyPhotos: () => (

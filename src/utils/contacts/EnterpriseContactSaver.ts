@@ -12,7 +12,7 @@
 // ============================================================================
 
 import type { ContactFormData } from '@/types/ContactFormTypes';
-import type { Contact, AddressInfo, WebsiteInfo } from '@/types/contacts';
+import type { Contact, AddressInfo, WebsiteInfo, PhoneInfo, EmailInfo, SocialMediaInfo } from '@/types/contacts';
 
 // ============================================================================
 // TYPES
@@ -25,6 +25,9 @@ export interface EnterpriseContactData {
   // Enterprise arrays
   addresses?: AddressInfo[];
   websites?: WebsiteInfo[];
+  phones?: PhoneInfo[];
+  emails?: EmailInfo[];
+  socialMedia?: SocialMediaInfo[];
 
   // Remove flat fields - they should not be saved to database
   street?: never;
@@ -75,10 +78,15 @@ export class EnterpriseContactSaver {
     }
 
     // ========================================================================
-    // WEBSITE CONVERSION: flat field → websites[]
+    // WEBSITE CONVERSION: flat field → websites[] OR use existing arrays
     // ========================================================================
 
-    if (formData.website && formData.website.trim() !== '') {
+    if (formData.websites && Array.isArray(formData.websites) && formData.websites.length > 0) {
+      // Use dynamic arrays if available
+      enterpriseData.websites = formData.websites;
+      console.log('🌐 ENTERPRISE SAVER: Using dynamic websites array:', formData.websites.length, 'items');
+    } else if (formData.website && formData.website.trim() !== '') {
+      // Fallback to flat field
       const primaryWebsite: WebsiteInfo = {
         url: formData.website.trim(),
         type: this.getWebsiteTypeForContactType(formData.type),
@@ -86,7 +94,34 @@ export class EnterpriseContactSaver {
       };
 
       enterpriseData.websites = [primaryWebsite];
-      console.log('🌐 ENTERPRISE SAVER: Created primary website:', primaryWebsite);
+      console.log('🌐 ENTERPRISE SAVER: Created primary website from flat field:', primaryWebsite);
+    }
+
+    // ========================================================================
+    // PHONES CONVERSION: use dynamic arrays
+    // ========================================================================
+
+    if (formData.phones && Array.isArray(formData.phones) && formData.phones.length > 0) {
+      enterpriseData.phones = formData.phones;
+      console.log('📱 ENTERPRISE SAVER: Using dynamic phones array:', formData.phones.length, 'items');
+    }
+
+    // ========================================================================
+    // EMAILS CONVERSION: use dynamic arrays
+    // ========================================================================
+
+    if (formData.emails && Array.isArray(formData.emails) && formData.emails.length > 0) {
+      enterpriseData.emails = formData.emails;
+      console.log('✉️ ENTERPRISE SAVER: Using dynamic emails array:', formData.emails.length, 'items');
+    }
+
+    // ========================================================================
+    // SOCIAL MEDIA CONVERSION: use dynamic arrays
+    // ========================================================================
+
+    if (formData.socialMediaArray && Array.isArray(formData.socialMediaArray) && formData.socialMediaArray.length > 0) {
+      enterpriseData.socialMedia = formData.socialMediaArray;
+      console.log('🌐 ENTERPRISE SAVER: Using dynamic social media array:', formData.socialMediaArray.length, 'items');
     }
 
     // ========================================================================

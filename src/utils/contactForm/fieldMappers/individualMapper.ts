@@ -100,6 +100,14 @@ export function mapIndividualContactToFormData(contact: Contact): ContactFormDat
     streetNumber: contact.addresses?.[0]?.number || '',
     city: contact.addresses?.[0]?.city || '',
     postalCode: contact.addresses?.[0]?.postalCode || '',
+
+    // 🚀 DYNAMIC ARRAYS: Pass full arrays for dynamic management
+    phones: contact.phones || [],
+    emails: contact.emails || [],
+    websites: contact.websites || [],
+    socialMediaArray: contact.socialMedia || [],
+
+    // Legacy fields for backward compatibility
     phone: contact.phones?.[0]?.number || '',
     email: contact.emails?.[0]?.email || '',
     website: contact.websites?.[0]?.url || '',

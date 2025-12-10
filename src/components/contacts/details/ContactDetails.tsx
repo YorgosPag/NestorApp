@@ -91,12 +91,13 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
     if (!contact?.id) return;
 
     try {
-      await ContactsService.updateContact(contact.id, editedData);
+      // 🏢 ENTERPRISE: Use new form-to-arrays conversion method
+      await ContactsService.updateContactFromForm(contact.id, editedData);
       setIsEditing(false);
       setEditedData({});
 
       // 🔄 TRIGGER REFRESH: Notify parent component to refresh data
-      console.log('✅ Contact updated successfully');
+      console.log('✅ Contact updated successfully with enterprise structure');
       if (onContactUpdated) {
         console.log('🔄 CONTACT DETAILS: Triggering parent refresh after save');
         onContactUpdated();

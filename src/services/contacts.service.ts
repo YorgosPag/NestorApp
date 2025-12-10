@@ -7,6 +7,8 @@ import { db } from '@/lib/firebase';
 import {
   Contact, ContactType, isIndividualContact, isCompanyContact, isServiceContact,
 } from '@/types/contacts';
+import { EnterpriseContactSaver } from '@/utils/contacts/EnterpriseContactSaver';
+import type { ContactFormData } from '@/types/ContactFormTypes';
 
 import { getCol, mapDocs, chunk, asDate, startAfterDocId } from '@/lib/firestore/utils';
 import { contactConverter } from '@/lib/firestore/converters/contact.converter';
@@ -179,6 +181,37 @@ export class ContactsService {
     } catch (error) {
       // Error logging removed //('Error getting contacts:', error);
       throw new Error('Failed to get contacts');
+    }
+  }
+
+  // 🏢 ENTERPRISE Update: For form data with automatic conversion to arrays
+  static async updateContactFromForm(id: string, formData: ContactFormData): Promise<void> {
+    console.log('🏢 ENTERPRISE UPDATE: Converting form data to enterprise arrays structure');
+
+    try {
+      // Get existing contact for merge
+      const existingContact = await this.getContact(id);
+      if (!existingContact) {
+        throw new Error('Contact not found');
+      }
+
+      // Convert form data to enterprise structure
+      const enterpriseData = EnterpriseContactSaver.updateExistingContact(existingContact, formData);
+
+      console.log('🏢 ENTERPRISE UPDATE: Converted data:', {
+        hasAddresses: !!enterpriseData.addresses?.length,
+        hasWebsites: !!enterpriseData.websites?.length,
+        addressExample: enterpriseData.addresses?.[0],
+        websiteExample: enterpriseData.websites?.[0]
+      });
+
+      // Save using standard method
+      await this.updateContact(id, enterpriseData);
+      console.log('✅ ENTERPRISE UPDATE: Successfully saved contact with arrays structure');
+
+    } catch (error) {
+      console.error('❌ ENTERPRISE UPDATE: Failed to update contact:', error);
+      throw new Error('Failed to update contact');
     }
   }
 
