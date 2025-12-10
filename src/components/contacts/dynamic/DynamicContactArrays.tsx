@@ -98,7 +98,7 @@ function PhoneManager({ phones, disabled = false, onChange }: PhoneManagerProps)
   }, [phones, onChange]);
 
   return (
-    <div className="space-y-4">
+    <div className="w-full space-y-4">
       <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
         <Phone className="h-4 w-4" />
         Τηλέφωνα
