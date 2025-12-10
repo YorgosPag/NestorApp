@@ -16,6 +16,7 @@ export interface EmailTemplateData {
   propertyArea?: number;
   propertyLocation?: string;
   propertyUrl: string;
+  photoUrl?: string;
   recipientEmail: string;
   personalMessage?: string;
   senderName?: string;

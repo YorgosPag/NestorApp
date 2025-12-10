@@ -46,7 +46,23 @@ export class EmailTemplatesService {
             
             <div class="property-card">
                 <h2 class="property-title">🏡 ${data.propertyTitle}</h2>
-                
+
+                ${data.photoUrl ? `
+                <div class="property-photo" style="margin: 20px 0;">
+                    <img src="${data.photoUrl}" alt="${data.propertyTitle}" style="
+                        width: 100%;
+                        max-width: 500px;
+                        height: 250px;
+                        object-fit: cover;
+                        border-radius: 12px;
+                        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+                        border: 1px solid #e9ecef;
+                        display: block;
+                        margin: 0 auto;
+                    ">
+                </div>
+                ` : ''}
+
                 ${data.propertyDescription ? `<p style="color: #555; margin: 15px 0; font-style: italic;">${data.propertyDescription}</p>` : ''}
                 
                 <div class="property-details">
@@ -137,7 +153,23 @@ export class EmailTemplatesService {
             
             <div class="property-card">
                 <h2 class="property-title">🏢 ${data.propertyTitle}</h2>
-                
+
+                ${data.photoUrl ? `
+                <div class="property-photo" style="margin: 20px 0;">
+                    <img src="${data.photoUrl}" alt="${data.propertyTitle}" style="
+                        width: 100%;
+                        max-width: 500px;
+                        height: 250px;
+                        object-fit: cover;
+                        border-radius: 12px;
+                        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+                        border: 1px solid #e9ecef;
+                        display: block;
+                        margin: 0 auto;
+                    ">
+                </div>
+                ` : ''}
+
                 <div class="business-grid">
                     ${data.propertyPrice ? `
                     <div class="business-item">
@@ -229,7 +261,23 @@ export class EmailTemplatesService {
                     ${data.propertyDescription}
                 </p>
                 ` : ''}
-                
+
+                ${data.photoUrl ? `
+                <div class="property-photo" style="margin: 25px 0;">
+                    <img src="${data.photoUrl}" alt="${data.propertyTitle}" style="
+                        width: 100%;
+                        max-width: 600px;
+                        height: 300px;
+                        object-fit: cover;
+                        border-radius: 20px;
+                        box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+                        border: 2px solid #f39c12;
+                        display: block;
+                        margin: 0 auto;
+                    ">
+                </div>
+                ` : ''}
+
                 <div class="luxury-details">
                     ${data.propertyPrice ? `
                     <div class="luxury-item">
