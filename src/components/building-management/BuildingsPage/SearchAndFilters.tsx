@@ -64,27 +64,27 @@ export function SearchAndFilters({
         <Filter className="w-4 h-4 text-muted-foreground" />
         <FilterSelect
           value={filterCompany}
-          onChange={(e) => setFilterCompany(e.target.value)}
+          onChange={setFilterCompany}
           options={companies}
           placeholder="Όλες οι εταιρείες"
         />
         <FilterSelect
           value={filterProject}
-          onChange={(e) => setFilterProject(e.target.value)}
+          onChange={setFilterProject}
           options={projects}
           placeholder="Όλα τα έργα"
         />
-        <select
+        <FilterSelect
           value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          className="h-9 px-3 rounded-md border border-input bg-background text-sm"
-        >
-          <option value="all">Όλες οι καταστάσεις</option>
-          <option value="active">Ενεργά</option>
-          <option value="construction">Υπό Κατασκευή</option>
-          <option value="planned">Σχεδιασμένα</option>
-          <option value="completed">Ολοκληρωμένα</option>
-        </select>
+          onChange={setFilterStatus}
+          options={[
+            { id: 'active', name: 'active' },
+            { id: 'construction', name: 'construction' },
+            { id: 'planned', name: 'planned' },
+            { id: 'completed', name: 'completed' }
+          ]}
+          placeholder="Όλες οι καταστάσεις"
+        />
         {hasActiveFilters && (
           <Button variant="ghost" size="sm" onClick={clearFilters} className="text-xs">
             <X className="w-3 h-3 mr-1" />

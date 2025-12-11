@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { PhoneInfo, EmailInfo, WebsiteInfo, SocialMediaInfo } from '@/types/contacts';
 
 // ============================================================================
 // 🏢 ENTERPRISE IMPORTS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ SYSTEMS
@@ -25,7 +24,11 @@ import {
   PhoneRenderer,
   EmailRenderer,
   WebsiteRenderer,
-  SocialRenderer
+  SocialRenderer,
+  generateSocialUrl,
+  getPrimaryFieldLabel,
+  getSecondaryFieldLabel,
+  getInputType
 } from './communication';
 
 // ============================================================================
@@ -47,31 +50,7 @@ import {
  */
 
 // ============================================================================
-// LEGACY RE-EXPORTS (για backward compatibility)
-// ============================================================================
-
-// Re-export centralized types για existing code που imports from this file
-export type {
-  CommunicationType,
-  CommunicationItem,
-  CommunicationConfig,
-  TypeOption,
-  UniversalCommunicationManagerProps
-} from './communication';
-
-// Re-export centralized configs για existing code
-export {
-  COMMUNICATION_CONFIGS,
-  COMMUNICATION_STYLES
-} from './communication';
-
-// ============================================================================
-// MAIN COMPONENT LOGIC - CLEANED UP VERSION
-// ============================================================================
-
-
-// ============================================================================
-// MAIN COMPONENT
+// 🏢 ENTERPRISE UNIVERSAL COMMUNICATION MANAGER
 // ============================================================================
 
 export function UniversalCommunicationManager({
@@ -163,25 +142,18 @@ export function UniversalCommunicationManager({
   }, [items, config.supportsPrimary, onChange]);
 
   // ============================================================================
-  // HELPER FUNCTIONS
+  // 🏢 ENTERPRISE CENTRALIZED UTILITIES
   // ============================================================================
 
-  const generateSocialUrl = (platform: string, username: string): string => {
-    if (!username.trim()) return '';
-
-    const templates: Record<string, string> = {
-      linkedin: 'https://linkedin.com/in/{username}',
-      facebook: 'https://facebook.com/{username}',
-      instagram: 'https://instagram.com/{username}',
-      twitter: 'https://x.com/{username}',
-      youtube: 'https://youtube.com/@{username}',
-      github: 'https://github.com/{username}',
-      tiktok: 'https://tiktok.com/@{username}'
-    };
-
-    const template = templates[platform];
-    return template ? template.replace('{username}', username.trim()) : '';
-  };
+  // 🎯 Όλες οι helper functions έχουν κεντρικοποιηθεί στο ./communication/utils/
+  // - generateSocialUrl στο socialUrlGenerator.ts
+  // - getPrimaryFieldLabel, getSecondaryFieldLabel, getInputType στο fieldLabelUtils.ts
+  //
+  // Αυτό επιτρέπει:
+  // ✅ Reusability across components
+  // ✅ Centralized business logic
+  // ✅ Easy testing και maintenance
+  // ✅ Single source of truth
 
   // ============================================================================
   // ΕΝΤΕΡΠΡΑΙΣ RENDERERS ΓΙΑ DESKTOP TABLE LAYOUTS
@@ -212,11 +184,11 @@ export function UniversalCommunicationManager({
       <div className="w-full max-w-none min-w-full space-y-4">
         {/* Primary Field */}
         <div className="w-full max-w-none min-w-full">
-          <Label>{getPrimaryFieldLabel()}</Label>
+          <Label>{getPrimaryFieldLabel(config.type)}</Label>
           <div className="flex items-center gap-1">
             <IconComponent className="w-4 h-4 text-gray-500" />
             <Input
-              type={getInputType()}
+              type={getInputType(config.type)}
               value={item[config.fields.primary] || ''}
               onChange={(e) => updateItem(index, config.fields.primary, e.target.value)}
               placeholder={config.placeholder}
@@ -229,7 +201,7 @@ export function UniversalCommunicationManager({
         {/* Secondary Field (για phones = countryCode, για social = platform) */}
         {config.fields.secondary && (
           <div className="w-full max-w-none min-w-full">
-            <Label>{getSecondaryFieldLabel()}</Label>
+            <Label>{getSecondaryFieldLabel(config.type)}</Label>
             {config.type === 'phone' ? (
               <Input
                 value={item[config.fields.secondary] || '+30'}
@@ -310,32 +282,6 @@ export function UniversalCommunicationManager({
     );
   };
 
-  const getPrimaryFieldLabel = (): string => {
-    switch (config.type) {
-      case 'phone': return 'Αριθμός Τηλεφώνου';
-      case 'email': return 'Διεύθυνση E-mail';
-      case 'website': return 'URL';
-      case 'social': return 'Username';
-      default: return 'Τιμή';
-    }
-  };
-
-  const getSecondaryFieldLabel = (): string => {
-    switch (config.type) {
-      case 'phone': return 'Κωδικός Χώρας';
-      case 'social': return 'Πλατφόρμα';
-      default: return '';
-    }
-  };
-
-  const getInputType = (): string => {
-    switch (config.type) {
-      case 'email': return 'email';
-      case 'website': return 'url';
-      case 'phone': return 'tel';
-      default: return 'text';
-    }
-  };
 
   // ============================================================================
   // MAIN RENDER

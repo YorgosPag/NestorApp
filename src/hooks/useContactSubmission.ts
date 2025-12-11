@@ -400,20 +400,64 @@ export function useContactSubmission({
     } catch (error) {
       console.error('❌ SUBMISSION: Form submission failed:', error);
 
-      // User-friendly error message
-      const errorMessage = editContact
-        ? "Δεν ήταν δυνατή η ενημέρωση της επαφής."
-        : "Δεν ήταν δυνατή η δημιουργία της επαφής.";
+      // 🏢 ENTERPRISE ERROR HANDLING με intelligent error categorization
+      const errorMessage = error instanceof Error ? error.message : String(error);
 
-      notifications.error(errorMessage);
+      if (errorMessage.startsWith('DUPLICATE_CONTACT_DETECTED')) {
+        // 🚨 ENTERPRISE DUPLICATE PREVENTION - Smart UX handling
+        console.log('🛡️ DUPLICATE PREVENTION: Intelligent duplicate detected, providing user guidance...');
 
-      // Log detailed error for debugging
-      console.error('💥 SUBMISSION: Detailed error:', {
-        contactType: formData.type,
-        isEdit: Boolean(editContact),
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      });
+        // Extract useful information from error message
+        const confidenceMatch = errorMessage.match(/Confidence: ([\d.]+)%/);
+        const contactIdMatch = errorMessage.match(/Contact ID: ([^\]]+)\]/);
+
+        const confidence = confidenceMatch ? parseFloat(confidenceMatch[1]) : 0;
+        const existingContactId = contactIdMatch ? contactIdMatch[1] : null;
+
+        // Smart user notification με actionable information
+        if (confidence >= 95) {
+          notifications.error(
+            "🚨 Η επαφή αυτή υπάρχει ήδη στο σύστημα. " +
+            "Παρακαλούμε ελέγξτε τη λίστα επαφών πριν δημιουργήσετε νέα.",
+            { duration: 8000 }
+          );
+        } else if (confidence >= 80) {
+          notifications.warning(
+            "⚠️ Εντοπίστηκε παρόμοια επαφή στο σύστημα. " +
+            "Παρακαλούμε επαληθεύστε ότι δεν δημιουργείτε διπλή καταχώρηση.",
+            { duration: 6000 }
+          );
+        } else {
+          notifications.info(
+            "ℹ️ Πιθανή διπλή προσπάθεια δημιουργίας επαφής. " +
+            "Παρακαλούμε περιμένετε λίγα δευτερόλεπτα και δοκιμάστε ξανά.",
+            { duration: 5000 }
+          );
+        }
+
+        // Log για debugging χωρίς sensitive information
+        console.log('🛡️ DUPLICATE PREVENTION: Smart handling applied', {
+          confidence: confidence,
+          hasExistingId: Boolean(existingContactId),
+          errorType: 'DUPLICATE_DETECTED'
+        });
+
+      } else {
+        // 🏢 STANDARD ERROR HANDLING για other errors
+        const userErrorMessage = editContact
+          ? "Δεν ήταν δυνατή η ενημέρωση της επαφής."
+          : "Δεν ήταν δυνατή η δημιουργία της επαφής.";
+
+        notifications.error(userErrorMessage);
+
+        // Log detailed error for debugging
+        console.error('💥 SUBMISSION: Detailed error:', {
+          contactType: formData.type,
+          isEdit: Boolean(editContact),
+          error: errorMessage,
+          stack: error instanceof Error ? error.stack : undefined
+        });
+      }
 
     } finally {
       setLoading(false);

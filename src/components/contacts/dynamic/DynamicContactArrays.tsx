@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { UniversalCommunicationManager, COMMUNICATION_CONFIGS, type CommunicationItem } from '@/components/contacts/dynamic/UniversalCommunicationManager';
+import { UniversalCommunicationManager, type CommunicationItem } from '@/components/contacts/dynamic/UniversalCommunicationManager';
+import { COMMUNICATION_CONFIGS } from '@/components/contacts/dynamic/communication';
 import type { PhoneInfo, EmailInfo, WebsiteInfo, SocialMediaInfo } from '@/types/contacts';
 
 // ============================================================================

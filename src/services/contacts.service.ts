@@ -9,6 +9,7 @@ import {
 } from '@/types/contacts';
 import { EnterpriseContactSaver } from '@/utils/contacts/EnterpriseContactSaver';
 import type { ContactFormData } from '@/types/ContactFormTypes';
+import { DuplicatePreventionService } from './contacts/DuplicatePreventionService';
 
 import { getCol, mapDocs, chunk, asDate, startAfterDocId } from '@/lib/firestore/utils';
 import { contactConverter } from '@/lib/firestore/converters/contact.converter';
@@ -55,19 +56,93 @@ async function buildContactsQuery(options?: {
 }
 
 export class ContactsService {
+  /**
+   * 📝 Helper function για display name generation
+   */
+  private static getContactDisplayName(contactData: Partial<Contact>): string {
+    switch (contactData.type) {
+      case 'individual':
+        return `${contactData.firstName || ''} ${contactData.lastName || ''}`.trim();
+      case 'company':
+        return contactData.companyName || 'Unknown Company';
+      case 'service':
+        return contactData.serviceName || 'Unknown Service';
+      default:
+        return 'Unknown Contact';
+    }
+  }
   // Create
+  /**
+   * 🏢 ENTERPRISE CONTACT CREATION με DUPLICATE PREVENTION
+   *
+   * Enterprise-grade contact creation με intelligent duplicate detection
+   * και professional error handling για data integrity
+   */
   static async createContact(contactData: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
     try {
+      // 🛡️ PHASE 1: ENTERPRISE DUPLICATE PREVENTION
+      console.log('🔍 ENTERPRISE DUPLICATE CHECK: Starting intelligent duplicate detection...');
+
+      const duplicateResult = await DuplicatePreventionService.detectDuplicates(contactData, {
+        strictMode: true,
+        timeWindow: 5000, // 5 second protection against rapid duplicate clicks
+      });
+
+      console.log('🔍 DUPLICATE DETECTION RESULT:', {
+        isDuplicate: duplicateResult.isDuplicate,
+        confidence: duplicateResult.confidence,
+        matchingContactsCount: duplicateResult.matchingContacts.length,
+        recommendations: duplicateResult.recommendations.map(r => r.action)
+      });
+
+      // 🚨 DUPLICATE FOUND - ENTERPRISE PREVENTION
+      if (duplicateResult.isDuplicate) {
+        const topRecommendation = duplicateResult.recommendations[0];
+        const matchingContact = duplicateResult.matchingContacts[0];
+
+        console.error('🚨 DUPLICATE CONTACT PREVENTION:', {
+          action: topRecommendation.action,
+          reason: topRecommendation.reason,
+          confidence: duplicateResult.confidence,
+          matchingContactId: matchingContact?.id,
+          matchedDetails: duplicateResult.matchDetails[0]
+        });
+
+        // Enterprise-grade error με detailed information
+        throw new Error(
+          `DUPLICATE_CONTACT_DETECTED: ${topRecommendation.reason} ` +
+          `(Confidence: ${(duplicateResult.confidence * 100).toFixed(1)}%) ` +
+          `[Contact ID: ${matchingContact?.id}]`
+        );
+      }
+
+      // 🎯 PHASE 2: SAFE CONTACT CREATION
+      console.log('✅ DUPLICATE CHECK PASSED: Proceeding με safe contact creation...');
+
       const colRef = getCol<Contact>(CONTACTS_COLLECTION, contactConverter);
       const docRef = await addDoc(colRef, {
         ...contactData,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       } as any);
+
+      console.log('✅ CONTACT CREATED SUCCESSFULLY:', {
+        contactId: docRef.id,
+        contactType: contactData.type,
+        contactName: this.getContactDisplayName(contactData)
+      });
+
       return docRef.id;
+
     } catch (error) {
-      // Error logging removed //('Error creating contact:', error);
-      throw new Error('Failed to create contact');
+      // 🏢 ENTERPRISE ERROR HANDLING
+      if (error instanceof Error && error.message.startsWith('DUPLICATE_CONTACT_DETECTED')) {
+        console.error('🚨 ENTERPRISE DUPLICATE PREVENTION:', error.message);
+        throw error; // Re-throw με original message για proper UI handling
+      }
+
+      console.error('🚨 CONTACT CREATION ERROR:', error);
+      throw new Error('Failed to create contact - enterprise validation failed');
     }
   }
 

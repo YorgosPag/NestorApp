@@ -16,6 +16,9 @@ export * from './config';
 // Export all renderers
 export * from './renderers';
 
+// Export all utilities
+export * from './utils';
+
 // ============================================================================
 // CONVENIENCE RE-EXPORTS (Most Commonly Used Items)
 // ============================================================================
@@ -44,3 +47,14 @@ export {
   WebsiteRenderer,
   SocialRenderer
 } from './renderers';
+
+// Utilities
+export {
+  generateSocialUrl,
+  validateSocialUrl,
+  getPrimaryFieldLabel,
+  getSecondaryFieldLabel,
+  getInputType,
+  getFieldPlaceholder,
+  hasSecondaryField
+} from './utils';
