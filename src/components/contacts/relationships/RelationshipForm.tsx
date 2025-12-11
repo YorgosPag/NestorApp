@@ -14,14 +14,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { CustomRelationshipSelect } from './CustomRelationshipSelect';
+import { EnterpriseDropdown } from '@/components/ui/enterprise-dropdown';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Plus, AlertTriangle } from 'lucide-react';
 
 // 🏢 ENTERPRISE: Import centralized types and utilities
 import type { RelationshipType } from '@/types/contacts/relationships';
-import { EmployeeSelector, type ContactSummary } from './EmployeeSelector';
+import { EnterpriseContactDropdown, type ContactSummary } from '@/components/ui/enterprise-contact-dropdown';
 import { RelationshipValidationService } from '@/services/contact-relationships/core/RelationshipValidationService';
 import {
   getRelationshipTypeConfig,
@@ -136,14 +136,22 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
             {/* Relationship Type Selection */}
             <div>
               <Label htmlFor="relationshipType">Τύπος Σχέσης*</Label>
-              <CustomRelationshipSelect
+              <EnterpriseDropdown
                 value={formData.relationshipType}
-                onValueChange={(value: RelationshipType) =>
-                  handleFieldChange('relationshipType', value)
+                onValueChange={(value: string) =>
+                  handleFieldChange('relationshipType', value as RelationshipType)
                 }
-                contactType={contactType}
+                options={availableRelationshipTypes.map(type => {
+                  const config = getRelationshipTypeConfig(type);
+                  return {
+                    value: type,
+                    label: config?.label || type,
+                    icon: config?.icon
+                  };
+                })}
                 disabled={loading}
                 placeholder="Επιλέξτε τύπο σχέσης"
+                error={!formData.relationshipType ? 'Η επιλογή τύπου σχέσης είναι υποχρεωτική' : undefined}
               />
             </div>
 
