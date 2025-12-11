@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Import dropdown z-index overrides */
+@import "../styles/dropdown-overrides.css";
+
 @layer base {
   :root {
     --background: 212 22% 95%; /* Adjusted for a very light grey */

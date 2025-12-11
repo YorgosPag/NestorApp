@@ -73,6 +73,30 @@ export const RELATIONSHIP_TYPES_CONFIG = {
     label: 'Σύμβουλος',
     color: 'bg-teal-100 text-teal-800',
     allowedFor: ['company', 'service'] as ContactType[]
+  },
+  colleague: {
+    icon: Users,
+    label: 'Συνάδελφος',
+    color: 'bg-yellow-100 text-yellow-800',
+    allowedFor: ['individual'] as ContactType[]
+  },
+  friend: {
+    icon: User,
+    label: 'Φίλος',
+    color: 'bg-pink-100 text-pink-800',
+    allowedFor: ['individual'] as ContactType[]
+  },
+  family: {
+    icon: Users,
+    label: 'Οικογένεια',
+    color: 'bg-violet-100 text-violet-800',
+    allowedFor: ['individual'] as ContactType[]
+  },
+  business_contact: {
+    icon: Briefcase,
+    label: 'Επαγγελματική Επαφή',
+    color: 'bg-slate-100 text-slate-800',
+    allowedFor: ['individual'] as ContactType[]
   }
 } as const;
 

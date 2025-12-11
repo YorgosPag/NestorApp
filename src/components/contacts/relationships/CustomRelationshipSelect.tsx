@@ -1,0 +1,228 @@
+'use client';
+
+import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { ChevronDown, Check } from 'lucide-react';
+
+// Import relationship types
+import type { RelationshipType } from '@/types/contacts/relationships';
+import { getRelationshipTypeConfig, getAvailableRelationshipTypes } from './utils/relationship-types';
+
+interface CustomRelationshipSelectProps {
+  value: RelationshipType | '';
+  onValueChange: (value: RelationshipType) => void;
+  contactType: string;
+  disabled?: boolean;
+  placeholder?: string;
+}
+
+export const CustomRelationshipSelect: React.FC<CustomRelationshipSelectProps> = ({
+  value,
+  onValueChange,
+  contactType,
+  disabled = false,
+  placeholder = "Επιλέξτε τύπο σχέσης"
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number; width: number } | null>(null);
+
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Get available relationship types
+  const availableTypes = getAvailableRelationshipTypes(contactType as any);
+
+  // Get selected option config
+  const selectedConfig = value ? getRelationshipTypeConfig(value) : null;
+
+  // Update dropdown position
+  const updateDropdownPosition = () => {
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.left + window.scrollX,
+        width: Math.max(rect.width, 320) // Minimum 320px width
+      });
+    }
+  };
+
+  // Handle button click
+  const handleToggle = () => {
+    if (disabled) return;
+
+    if (!isOpen) {
+      updateDropdownPosition();
+    }
+    setIsOpen(!isOpen);
+  };
+
+  // Handle option selection
+  const handleSelect = (selectedValue: RelationshipType) => {
+    onValueChange(selectedValue);
+    setIsOpen(false);
+  };
+
+  // Click outside to close
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Update position on scroll/resize with throttling
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+
+    const throttledUpdate = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        if (isOpen) {
+          updateDropdownPosition();
+        }
+      }, 10); // 10ms throttle
+    };
+
+    const handlePositionUpdate = () => {
+      if (isOpen) {
+        throttledUpdate();
+      }
+    };
+
+    if (isOpen) {
+      window.addEventListener('resize', handlePositionUpdate);
+      document.addEventListener('scroll', handlePositionUpdate, true);
+      window.addEventListener('scroll', handlePositionUpdate);
+    }
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      window.removeEventListener('resize', handlePositionUpdate);
+      document.removeEventListener('scroll', handlePositionUpdate, true);
+      window.removeEventListener('scroll', handlePositionUpdate);
+    };
+  }, [isOpen]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleKeyDown);
+    }
+
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
+
+  return (
+    <div className="relative">
+      {/* Trigger Button */}
+      <Button
+        ref={buttonRef}
+        variant="outline"
+        onClick={handleToggle}
+        disabled={disabled}
+        className="w-full justify-between h-10 px-3 py-2 text-sm border border-input bg-background"
+        type="button"
+      >
+        <div className="flex items-center space-x-2 flex-1 text-left">
+          {selectedConfig ? (
+            <>
+              <selectedConfig.icon className="h-4 w-4 text-gray-600" />
+              <span className="text-foreground">{selectedConfig.label}</span>
+            </>
+          ) : (
+            <span className="text-muted-foreground">{placeholder}</span>
+          )}
+        </div>
+        <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </Button>
+
+      {/* Dropdown Portal - Debug Version */}
+      {isOpen && dropdownPosition && typeof document !== 'undefined' && createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            zIndex: 2147483647,
+            pointerEvents: 'none'
+          }}
+        >
+          <Card
+            ref={dropdownRef}
+            className="shadow-xl border bg-background border-border rounded-lg"
+            data-custom-relationship-select="true"
+            data-custom-dropdown-portal="true"
+            style={{
+              position: 'absolute',
+              top: dropdownPosition.top,
+              left: dropdownPosition.left,
+              width: dropdownPosition.width,
+              height: 'auto',
+              minHeight: '150px',
+              zIndex: 2147483647,
+              maxHeight: '300px',
+              overflow: 'hidden',
+              pointerEvents: 'auto'
+            }}
+          >
+          <CardContent className="p-0">
+            <div className="max-h-60 overflow-y-auto">
+              {availableTypes.map((type) => {
+                const config = getRelationshipTypeConfig(type);
+                if (!config) return null;
+
+                const Icon = config.icon;
+                const isSelected = value === type;
+
+                return (
+                  <div
+                    key={type}
+                    onClick={() => handleSelect(type)}
+                    className={`
+                      flex items-center space-x-3 px-4 py-3 cursor-pointer transition-colors
+                      hover:bg-accent hover:text-accent-foreground border-b border-border last:border-b-0
+                      ${isSelected ? 'bg-accent text-accent-foreground' : 'text-foreground'}
+                    `}
+                  >
+                    <Icon className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                    <span className="flex-1 text-sm font-medium">
+                      {config.label}
+                    </span>
+                    {isSelected && (
+                      <Check className="h-4 w-4 text-primary ml-2" />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+};
+
+export default CustomRelationshipSelect;

@@ -1,0 +1,85 @@
+/* =============================================================
+   DROPDOWN Z-INDEX BASIC OVERRIDES
+
+   Simple z-index fixes for dropdown menus to work properly
+   ============================================================= */
+
+/* Force high z-index for Radix Select Content */
+[data-radix-select-content] {
+  z-index: 99999 !important;
+  min-width: 320px !important;
+  width: 320px !important;
+  max-width: 400px !important;
+}
+
+/* Force high z-index for Radix Popper wrapper */
+[data-radix-popper-content-wrapper] {
+  z-index: 99999 !important;
+}
+
+/* Force width for Radix Select Viewport */
+[data-radix-select-viewport] {
+  min-width: 320px !important;
+  width: 320px !important;
+}
+
+/* Better styling for Select Items */
+[data-radix-select-item] {
+  padding: 12px 16px !important;
+  min-height: 48px !important;
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
+  min-width: 300px !important;
+}
+
+/* Select item content wrapper */
+[data-radix-select-item] > div {
+  width: 100% !important;
+  min-width: 280px !important;
+}
+
+/* Select item text should not wrap */
+[data-radix-select-item] span {
+  white-space: nowrap !important;
+  flex: 1 !important;
+}
+
+/* Contact item styling within dropdown - keep original styling */
+[data-dropdown-contact-item="true"] {
+  background-color: #f3f4f6 !important;
+}
+
+[data-dropdown-contact-item="true"]:hover {
+  background-color: #e5e7eb !important;
+}
+
+[data-dropdown-contact-item="true"].bg-blue-100 {
+  background-color: #dbeafe !important;
+}
+
+/* Force extremely high z-index for CustomRelationshipSelect dropdown */
+[data-custom-relationship-select="true"] {
+  z-index: 999999 !important;
+  position: fixed !important;
+}
+
+/* Ensure no parent containers interfere with portal dropdowns */
+[data-custom-dropdown-portal="true"] {
+  z-index: 999999 !important;
+  position: fixed !important;
+  isolation: isolate !important;
+  transform: none !important;
+  will-change: auto !important;
+}
+
+/* Prevent any parent container stacking context from interfering */
+body {
+  isolation: auto !important;
+}
+
+/* Force portal dropdowns to always be on top */
+[data-custom-relationship-select="true"],
+[data-custom-dropdown-portal="true"] {
+  z-index: 2147483647 !important; /* Maximum possible z-index value */
+}

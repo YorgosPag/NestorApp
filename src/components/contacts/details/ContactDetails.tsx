@@ -30,11 +30,6 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
     // TODO: Refresh data when unit is added
   }, []);
 
-  // 🎯 Handler για άνοιγμα του relationship management modal
-  const handleOpenRelationshipModal = useCallback(() => {
-    console.log('🏢 Opening edit modal for relationship management');
-    onEditContact?.(); // Χρησιμοποιούμε το existing edit modal
-  }, [onEditContact]);
 
   // 🔧 FIX: Use proper mapper to convert Contact to ContactFormData
   const enhancedFormData = React.useMemo(() => {
@@ -195,8 +190,7 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
           handleSelectChange={handleSelectChange} // 🎯 Enable select changes when editing
           setFormData={isEditing ? setEditedData : undefined} // 🔧 FIX: Pass setFormData when in edit mode
           disabled={!isEditing} // 🎯 Enable editing when in edit mode
-          relationshipsMode="summary" // 🎯 KEY: Summary mode για main view
-          onOpenRelationshipModal={handleOpenRelationshipModal} // 🎯 Handler για relationships management
+          relationshipsMode={isEditing ? "full" : "summary"} // 🎯 KEY: Full mode when editing, summary when viewing
           onPhotoClick={handlePhotoClick} // 🖼️ Photo click handler για gallery preview
         />
       </DetailsContainer>

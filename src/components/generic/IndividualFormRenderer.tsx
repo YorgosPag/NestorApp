@@ -168,20 +168,27 @@ export function IndividualFormRenderer({
             ? "w-full space-y-4"
             : "w-full grid grid-cols-1 md:grid-cols-2 gap-4"
           }>
-            {section.fields.map((field) => (
-              <FormField
-                key={field.id}
-                label={field.label}
-                htmlFor={field.id}
-                required={field.required}
-                helpText={field.helpText}
-                className={section.id === 'communication' ? "w-full max-w-none block" : "w-full"}
-              >
-                <FormInput>
-                  {renderField(field, formData, onChange, onSelectChange, disabled, customRenderers)}
-                </FormInput>
-              </FormField>
-            ))}
+            {/* Check if this section has a custom renderer for the whole section */}
+            {customRenderers && customRenderers[section.id] ? (
+              <div className="w-full col-span-full">
+                {customRenderers[section.id]({} as any, formData, onChange, onSelectChange, disabled)}
+              </div>
+            ) : (
+              section.fields.map((field) => (
+                <FormField
+                  key={field.id}
+                  label={field.label}
+                  htmlFor={field.id}
+                  required={field.required}
+                  helpText={field.helpText}
+                  className={section.id === 'communication' ? "w-full max-w-none block" : "w-full"}
+                >
+                  <FormInput>
+                    {renderField(field, formData, onChange, onSelectChange, disabled, customRenderers)}
+                  </FormInput>
+                </FormField>
+              ))
+            )}
           </div>
         </div>
       ))}

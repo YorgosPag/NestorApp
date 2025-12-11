@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CustomRelationshipSelect } from './CustomRelationshipSelect';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Plus, AlertTriangle } from 'lucide-react';
@@ -136,33 +136,15 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
             {/* Relationship Type Selection */}
             <div>
               <Label htmlFor="relationshipType">Τύπος Σχέσης*</Label>
-              <Select
+              <CustomRelationshipSelect
                 value={formData.relationshipType}
                 onValueChange={(value: RelationshipType) =>
                   handleFieldChange('relationshipType', value)
                 }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Επιλέξτε τύπο σχέσης" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableRelationshipTypes.map((type) => {
-                    const config = getRelationshipTypeConfig(type);
-                    if (!config) return null;
-
-                    const Icon = config.icon;
-
-                    return (
-                      <SelectItem key={type} value={type}>
-                        <div className="flex items-center space-x-2">
-                          <Icon className="h-4 w-4" />
-                          <span>{config.label}</span>
-                        </div>
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
+                contactType={contactType}
+                disabled={loading}
+                placeholder="Επιλέξτε τύπο σχέσης"
+              />
             </div>
 
             {/* Temporarily disabled proactive validation warning to fix infinite loop */}

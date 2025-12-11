@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -186,6 +187,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
   const [isSearching, setIsSearching] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number; width: number } | null>(null);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -269,6 +271,24 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Update dropdown position on scroll/resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (showDropdown) {
+        updateDropdownPosition();
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('scroll', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('scroll', handleResize);
+    };
+  }, [showDropdown]);
+
+
   // ✅ CLEAN SOLUTION: Background colors handled directly in renderContactItem with inline styles
 
   // ============================================================================
@@ -328,8 +348,20 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
     onContactSelect(null);
   };
 
+  const updateDropdownPosition = () => {
+    if (searchInputRef.current) {
+      const rect = searchInputRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + window.scrollY,
+        left: rect.left + window.scrollX,
+        width: rect.width
+      });
+    }
+  };
+
   const handleInputFocus = () => {
     if (!readonly) {
+      updateDropdownPosition();
       setShowDropdown(true);
       if (searchResults.length === 0) {
         performSearch(''); // Load initial results
@@ -378,18 +410,18 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
       <div
         key={contact.id}
         data-dropdown-contact-item="true"
-        className={`p-3 border-b last:border-b-0 transition-colors cursor-pointer ${
-          isHighlighted ? 'bg-blue-100 border-blue-200' : 'bg-gray-100 hover:bg-gray-200'
+        className={`p-3 border-b border-border last:border-b-0 transition-colors cursor-pointer ${
+          isHighlighted ? 'bg-accent text-accent-foreground' : 'hover:bg-accent hover:text-accent-foreground'
         }`}
         onClick={() => selectContact(contact)}
         onMouseEnter={() => setHighlightedIndex(index)}
       >
         <div className="flex items-start space-x-3">
-          <Icon className="h-5 w-5 text-gray-500 mt-0.5 flex-shrink-0" />
+          <Icon className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between">
-              <h4 className="text-sm font-medium text-gray-900 truncate">
+              <h4 className="text-sm font-medium text-foreground truncate">
                 {contact.name}
               </h4>
               <Badge variant="outline" className="ml-2 text-xs">
@@ -398,7 +430,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
             </div>
 
             {(contact.company || contact.department) && (
-              <div className="flex items-center space-x-2 mt-1 text-xs text-gray-600">
+              <div className="flex items-center space-x-2 mt-1 text-xs text-muted-foreground">
                 {contact.company && (
                   <>
                     <Building2 className="h-3 w-3" />
@@ -415,7 +447,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
             )}
 
             <div className="flex items-center justify-between mt-2">
-              <div className="flex items-center space-x-3 text-xs text-gray-500">
+              <div className="flex items-center space-x-3 text-xs text-muted-foreground">
                 {contact.email && (
                   <div className="flex items-center space-x-1">
                     <Mail className="h-3 w-3" />
@@ -431,7 +463,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
               </div>
 
               {contact.lastActivity && (
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-muted-foreground">
                   {new Date(contact.lastActivity).toLocaleDateString('el-GR')}
                 </span>
               )}
@@ -559,34 +591,40 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
             )}
           </div>
 
-          {/* Dropdown Results */}
-          {showDropdown && (
+          {/* Dropdown Results - Using Portal for proper z-index */}
+          {showDropdown && dropdownPosition && typeof document !== 'undefined' && createPortal(
             <Card
               ref={dropdownRef}
-              className="absolute z-50 w-full mt-1 shadow-lg border border-gray-200 bg-gray-50"
+              className="shadow-xl border bg-background border-border"
+              style={{
+                position: 'fixed',
+                top: dropdownPosition.top,
+                left: dropdownPosition.left,
+                width: dropdownPosition.width,
+                zIndex: 9999
+              }}
             >
               <CardContent className="p-0" style={{ backgroundColor: 'transparent' }}>
                 {isSearching ? (
-                  <div className="p-4 text-center text-gray-500">
+                  <div className="p-4 text-center text-muted-foreground">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
                     <span className="text-sm">Αναζήτηση...</span>
                   </div>
                 ) : searchResults.length > 0 ? (
-                  <ScrollArea className="max-h-96 overflow-auto">
-                    <div className="max-h-96 overflow-y-auto">
-                      {searchResults.map((contact, index) => renderContactItem(contact, index))}
-                    </div>
-                  </ScrollArea>
+                  <div className="max-h-64 overflow-y-auto">
+                    {searchResults.map((contact, index) => renderContactItem(contact, index))}
+                  </div>
                 ) : (
-                  <div className="p-4 text-center text-gray-500">
-                    <Search className="h-6 w-6 mx-auto mb-2 text-gray-300" />
+                  <div className="p-4 text-center text-muted-foreground">
+                    <Search className="h-6 w-6 mx-auto mb-2" />
                     <span className="text-sm">
                       {searchQuery ? 'Δεν βρέθηκαν αποτελέσματα' : 'Ξεκινήστε να πληκτρολογείτε για αναζήτηση'}
                     </span>
                   </div>
                 )}
               </CardContent>
-            </Card>
+            </Card>,
+            document.body
           )}
         </>
       )}
@@ -627,3 +665,4 @@ if (typeof document !== 'undefined') {
   styleElement.textContent = customStyles;
   document.head.appendChild(styleElement);
 }
+

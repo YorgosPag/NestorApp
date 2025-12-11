@@ -53,8 +53,6 @@ interface UnifiedContactTabbedSectionProps {
   // 🔗 Relationships mode control
   relationshipsMode?: 'summary' | 'full'; // 'summary' for main tab, 'full' for modal
 
-  // 🎯 Relationship management callback
-  onOpenRelationshipModal?: () => void;
   // 🖼️ Photo click handler για gallery preview
   onPhotoClick?: (index: number) => void;
 }
@@ -77,7 +75,6 @@ export function UnifiedContactTabbedSection({
   setFormData,
   disabled = false,
   relationshipsMode = 'full',
-  onOpenRelationshipModal,
   onPhotoClick
 }: UnifiedContactTabbedSectionProps) {
 
@@ -216,10 +213,7 @@ export function UnifiedContactTabbedSection({
                   contactType={contactType}
                   readonly={fieldDisabled}
                   className="mt-4"
-                  onManageRelationships={() => {
-                    console.log('🏢 User clicked manage relationships - opening modal');
-                    onOpenRelationshipModal?.();
-                  }}
+                  onManageRelationships={undefined} // 🎯 No modal needed - inline editing
                 />
               ) : (
                 <ContactRelationshipManager
