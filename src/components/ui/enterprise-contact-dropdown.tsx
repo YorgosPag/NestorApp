@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronDown, Search, Mail, Phone, Building2, Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -50,6 +51,7 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [buttonRect, setButtonRect] = useState<DOMRect | null>(null);
 
 
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -117,6 +119,38 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
 
     setIsOpen(!isOpen);
   };
+
+  // Measure button position when dropdown opens and on scroll
+  useEffect(() => {
+    const updateButtonPosition = () => {
+      if (buttonRef.current) {
+        const rect = buttonRef.current.getBoundingClientRect();
+        setButtonRect(rect);
+      }
+    };
+
+    if (isOpen) {
+      updateButtonPosition();
+
+      // Listen to scroll events to update position
+      const handleScroll = () => {
+        updateButtonPosition();
+      };
+
+      // Listen to window resize to update position
+      const handleResize = () => {
+        updateButtonPosition();
+      };
+
+      window.addEventListener('scroll', handleScroll, true); // true για capture phase
+      window.addEventListener('resize', handleResize);
+
+      return () => {
+        window.removeEventListener('scroll', handleScroll, true);
+        window.removeEventListener('resize', handleResize);
+      };
+    }
+  }, [isOpen]);
 
   // Click outside to close
   useEffect(() => {
@@ -264,9 +298,17 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
         <p className="text-sm text-destructive">{error}</p>
       )}
 
-      {/* Professional Dropdown με Theme Colors */}
-      {isOpen && (
-        <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[500px] max-h-[400px] bg-popover text-popover-foreground border border-border rounded-lg shadow-lg z-[99999] overflow-y-auto">
+      {/* Portal Dropdown - Positioned κάτω από το button */}
+      {isOpen && buttonRect && typeof document !== 'undefined' && createPortal(
+        <div
+          className="fixed bg-popover text-popover-foreground border border-border rounded-lg shadow-lg z-[99999] max-h-[400px] overflow-y-auto"
+          style={{
+            top: buttonRect.bottom + 8,
+            left: buttonRect.left,
+            width: buttonRect.width,
+            minWidth: '200px'
+          }}
+        >
           <div
             ref={dropdownRef}
             className="bg-popover rounded-lg"
@@ -311,7 +353,8 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
                   )}
                 </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
