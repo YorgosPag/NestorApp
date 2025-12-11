@@ -114,6 +114,16 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
         const allContacts = allContactsResult.contacts || [];
 
 
+        console.log('🔍 DEBUG: All contacts before filtering:', allContacts.map(c => ({
+          id: c.id,
+          type: c.type,
+          name: c.name,
+          firstName: c.firstName,
+          lastName: c.lastName,
+          companyName: c.companyName,
+          serviceName: c.serviceName
+        })));
+
         const filteredContacts = allContacts
           .filter(contact => contact.id !== currentContactId)
           .map(contact => {
@@ -130,15 +140,36 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
                 displayName = contact.lastName;
               } else if (contact.name) {
                 displayName = contact.name;
+              } else if (contact.email) {
+                displayName = `Φυσικό Πρόσωπο (${contact.email})`;
+              } else if (contact.phone) {
+                displayName = `Φυσικό Πρόσωπο (${contact.phone})`;
+              } else {
+                displayName = `Φυσικό Πρόσωπο #${contact.id.substring(0, 8)}`;
               }
             } else if (contact.type === 'company') {
               // Companies: companyName with fallbacks
-              displayName = contact.companyName || contact.name || '';
+              displayName = contact.companyName || contact.name || `Εταιρεία #${contact.id.substring(0, 8)}`;
             } else if (contact.type === 'service') {
               // Services: serviceName with intelligent hierarchy
-              displayName = contact.serviceName || contact.name || contact.companyName || '';
+              displayName = contact.serviceName || contact.name || contact.companyName || `Υπηρεσία #${contact.id.substring(0, 8)}`;
             } else {
-              displayName = contact.name || '';
+              displayName = contact.name || `Επαφή #${contact.id.substring(0, 8)}`;
+            }
+
+            // Debug για Κατερίνα Αποστόλου
+            if (contact.firstName === 'Κατερίνα' || contact.lastName === 'Αποστόλου' || displayName.includes('Κατερίνα') || displayName.includes('Αποστόλου')) {
+              console.log('🔍 DEBUG: Found Κατερίνα Αποστόλου:', {
+                id: contact.id,
+                type: contact.type,
+                firstName: contact.firstName,
+                lastName: contact.lastName,
+                name: contact.name,
+                displayName: displayName,
+                emails: contact.emails,
+                phones: contact.phones,
+                rawContact: contact
+              });
             }
 
             // Return contact with display name, will be filtered later
@@ -155,9 +186,25 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
           })
           .filter(contact => {
             // 🏢 ENTERPRISE: Only show contacts with valid names (no empty names)
-            return contact.name && contact.name.trim().length > 0;
+            const isValid = contact.name && contact.name.trim().length > 0;
+
+            // Debug για επαφές που αποκλείονται
+            if (!isValid) {
+              console.log('🚫 DEBUG: Contact excluded due to invalid name:', {
+                id: contact.id,
+                name: contact.name,
+                type: contact.type
+              });
+            }
+
+            return isValid;
           });
 
+        console.log('🔍 DEBUG: Final filtered contacts:', filteredContacts.map(c => ({
+          id: c.id,
+          name: c.name,
+          type: c.type
+        })));
 
         setSearchResults(filteredContacts);
       } else {
@@ -182,13 +229,19 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
                 displayName = contact.lastName;
               } else if (contact.name) {
                 displayName = contact.name;
+              } else if (contact.email) {
+                displayName = `Φυσικό Πρόσωπο (${contact.email})`;
+              } else if (contact.phone) {
+                displayName = `Φυσικό Πρόσωπο (${contact.phone})`;
+              } else {
+                displayName = `Φυσικό Πρόσωπο #${contact.id.substring(0, 8)}`;
               }
             } else if (contact.type === 'company') {
-              displayName = contact.companyName || contact.name || '';
+              displayName = contact.companyName || contact.name || `Εταιρεία #${contact.id.substring(0, 8)}`;
             } else if (contact.type === 'service') {
-              displayName = contact.serviceName || contact.name || contact.companyName || '';
+              displayName = contact.serviceName || contact.name || contact.companyName || `Υπηρεσία #${contact.id.substring(0, 8)}`;
             } else {
-              displayName = contact.name || '';
+              displayName = contact.name || `Επαφή #${contact.id.substring(0, 8)}`;
             }
 
             return {

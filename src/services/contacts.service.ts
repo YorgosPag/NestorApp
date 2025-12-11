@@ -186,7 +186,9 @@ export class ContactsService {
 
   // 🏢 ENTERPRISE Update: For form data with automatic conversion to arrays
   static async updateContactFromForm(id: string, formData: ContactFormData): Promise<void> {
-    console.log('🏢 ENTERPRISE UPDATE: Converting form data to enterprise arrays structure');
+    // 🔍 DEBUG: Ποιος καλεί αυτή τη function;
+    console.log('🚨 UPDATECONTACTFROMFORM CALLED! ID:', id);
+    console.log('🚨 CALL LOCATION:', new Error('DEBUG').stack?.split('\n')?.[2] || 'UNKNOWN');
 
     try {
       // Get existing contact for merge
