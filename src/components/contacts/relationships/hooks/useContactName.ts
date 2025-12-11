@@ -36,9 +36,7 @@ export const useContactName = (contactId: string | undefined) => {
         const contact = await ContactsService.getContact(contactId);
 
         if (contact) {
-          console.log(`🔍 CONTACT NAME HOOK: Contact object structure:`, contact);
-
-          // Try different name fields με προτεραιότητα στο πλήρες όνομα (improved logic)
+          // Try different name fields με προτεραιότητα στο πλήρες όνομα
           let contactName = 'Άγνωστη Επαφή';
 
           if (contact.name) {
@@ -59,7 +57,6 @@ export const useContactName = (contactId: string | undefined) => {
           }
 
           setContactName(contactName);
-          console.log(`✅ CONTACT NAME HOOK: Contact name fetched:`, contactName);
         } else {
           console.warn(`⚠️ CONTACT NAME HOOK: Contact not found for ID:`, contactId);
           setContactName('Όνομα μη διαθέσιμο');

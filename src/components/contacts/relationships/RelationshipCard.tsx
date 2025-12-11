@@ -44,6 +44,7 @@ import { useContactName } from './hooks/useContactName';
  */
 export const RelationshipCard: React.FC<RelationshipCardProps> = ({
   relationship,
+  currentContactId,
   isExpanded,
   onToggleExpanded,
   readonly = false,
@@ -54,16 +55,12 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
   // 🏢 ENTERPRISE: Use centralized contact name hook
   // ============================================================================
 
-  // 🔧 CRITICAL FIX: For employment relationships, show employee name (source), not company name (target)
-  const isEmploymentRelation = ['employee', 'manager', 'director', 'executive'].includes(relationship.relationshipType);
-  const contactIdToShow = isEmploymentRelation ? relationship.sourceContactId : relationship.targetContactId;
+  // 🔧 ENTERPRISE FIX: Show the "other" contact in the relationship
+  // Determine which contact to show based on which one is NOT the current contact
+  const contactIdToShow = relationship.sourceContactId === currentContactId
+    ? relationship.targetContactId
+    : relationship.sourceContactId;
 
-  console.log('🃏 RELATIONSHIP CARD: Relationship type:', relationship.relationshipType,
-    'isEmployment:', isEmploymentRelation,
-    'showing contactId:', contactIdToShow,
-    'source:', relationship.sourceContactId,
-    'target:', relationship.targetContactId
-  );
 
   const { contactName } = useContactName(contactIdToShow);
 

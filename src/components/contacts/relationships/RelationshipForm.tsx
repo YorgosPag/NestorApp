@@ -28,6 +28,7 @@ import {
   getAvailableRelationshipTypes
 } from './utils/relationship-types';
 import type { RelationshipFormProps } from './types/relationship-manager.types';
+import { ContactsService } from '@/services/contacts.service';
 
 /**
  * 📝 RelationshipForm Component
@@ -56,6 +57,8 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
   // ============================================================================
 
   const [selectedContact, setSelectedContact] = useState<ContactSummary | null>(null);
+  const [searchResults, setSearchResults] = useState<ContactSummary[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   // Temporarily disabled proactive validation to fix infinite loop
   // const [validationWarning, setValidationWarning] = useState<string | null>(null);
 
@@ -75,6 +78,11 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
   // EFFECTS
   // ============================================================================
 
+  // Load all contacts initially
+  useEffect(() => {
+    handleContactSearch(''); // Load all contacts when component mounts
+  }, []);
+
   // Temporarily disabled useEffect for proactive validation to fix infinite loop
 
   /**
@@ -91,6 +99,132 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
     setFormData(prev => ({
       ...prev,
       contactInfo: { ...prev.contactInfo, [field]: value }
+    }));
+  };
+
+  /**
+   * 🔍 Handle contact search
+   */
+  const handleContactSearch = async (query: string) => {
+    setIsSearching(true);
+    try {
+      if (!query.trim()) {
+        // If no query, show all contacts
+        const allContactsResult = await ContactsService.getAllContacts();
+        const allContacts = allContactsResult.contacts || [];
+
+
+        const filteredContacts = allContacts
+          .filter(contact => contact.id !== currentContactId)
+          .map(contact => {
+            // 🏢 ENTERPRISE: Determine display name with strict validation
+            let displayName = '';
+
+            if (contact.type === 'individual') {
+              // Individuals: firstName + lastName with intelligent fallbacks
+              if (contact.firstName && contact.lastName) {
+                displayName = `${contact.firstName} ${contact.lastName}`;
+              } else if (contact.firstName) {
+                displayName = contact.firstName;
+              } else if (contact.lastName) {
+                displayName = contact.lastName;
+              } else if (contact.name) {
+                displayName = contact.name;
+              }
+            } else if (contact.type === 'company') {
+              // Companies: companyName with fallbacks
+              displayName = contact.companyName || contact.name || '';
+            } else if (contact.type === 'service') {
+              // Services: serviceName with intelligent hierarchy
+              displayName = contact.serviceName || contact.name || contact.companyName || '';
+            } else {
+              displayName = contact.name || '';
+            }
+
+            // Return contact with display name, will be filtered later
+            return {
+              id: contact.id,
+              name: displayName,
+              type: contact.type,
+              email: contact.emails?.[0]?.value || contact.email || '',
+              phone: contact.phones?.[0]?.value || contact.phone || '',
+              company: contact.type === 'individual' && contact.company ? contact.company : undefined,
+              department: contact.department || '',
+              lastActivity: contact.updatedAt?.toString() || contact.createdAt?.toString()
+            } as ContactSummary;
+          })
+          .filter(contact => {
+            // 🏢 ENTERPRISE: Only show contacts with valid names (no empty names)
+            return contact.name && contact.name.trim().length > 0;
+          });
+
+
+        setSearchResults(filteredContacts);
+      } else {
+        // Search contacts with the query
+        const searchResults = await ContactsService.searchContacts({
+          searchTerm: query
+        });
+
+
+        const filteredContacts = searchResults
+          .filter(contact => contact.id !== currentContactId) // Exclude current contact
+          .map(contact => {
+            // 🏢 ENTERPRISE: Use same name resolution logic as above
+            let displayName = '';
+
+            if (contact.type === 'individual') {
+              if (contact.firstName && contact.lastName) {
+                displayName = `${contact.firstName} ${contact.lastName}`;
+              } else if (contact.firstName) {
+                displayName = contact.firstName;
+              } else if (contact.lastName) {
+                displayName = contact.lastName;
+              } else if (contact.name) {
+                displayName = contact.name;
+              }
+            } else if (contact.type === 'company') {
+              displayName = contact.companyName || contact.name || '';
+            } else if (contact.type === 'service') {
+              displayName = contact.serviceName || contact.name || contact.companyName || '';
+            } else {
+              displayName = contact.name || '';
+            }
+
+            return {
+              id: contact.id,
+              name: displayName,
+              type: contact.type,
+              email: contact.emails?.[0]?.value || '',
+              phone: contact.phones?.[0]?.value || '',
+              company: contact.type === 'individual' && contact.company ? contact.company : undefined,
+              department: contact.department || '',
+              lastActivity: contact.updatedAt?.toString() || contact.createdAt?.toString()
+            } as ContactSummary;
+          })
+          .filter(contact => {
+            // 🏢 ENTERPRISE: Only show contacts with valid names
+            return contact.name && contact.name.trim().length > 0;
+          });
+
+        setSearchResults(filteredContacts);
+      }
+    } catch (error) {
+      console.error('Contact search error:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  /**
+   * 👤 Handle contact selection
+   */
+  const handleContactSelect = (contact: ContactSummary | null) => {
+    setSelectedContact(contact);
+    setFormData(prev => ({
+      ...prev,
+      targetContactId: contact?.id || ''
     }));
   };
 
@@ -112,18 +246,12 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
 
             {/* Target Contact Selection */}
             <div className="md:col-span-2">
-              <EmployeeSelector
+              <EnterpriseContactDropdown
                 value={formData.targetContactId}
-                onContactSelect={(contact: ContactSummary | null) => {
-                  // Update form data
-                  setFormData(prev => ({
-                    ...prev,
-                    targetContactId: contact?.id || ''
-                  }));
-
-                  // Store contact details for validation
-                  setSelectedContact(contact);
-                }}
+                onContactSelect={handleContactSelect}
+                searchResults={searchResults}
+                onSearch={handleContactSearch}
+                isSearching={isSearching}
                 label="Επαφή*"
                 placeholder="Αναζήτηση επαφής..."
                 allowedContactTypes={['individual', 'company', 'service']}

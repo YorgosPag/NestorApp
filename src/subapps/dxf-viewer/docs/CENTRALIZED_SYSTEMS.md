@@ -14,6 +14,43 @@
 
 ---
 
+## 🎨 UI SYSTEMS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ COMPONENTS
+
+### 🔽 **DROPDOWN SYSTEMS**:
+1. **[EnterpriseDropdown](../components/ui/enterprise-dropdown.tsx)** - Κεντρικό dropdown component
+   - Χρησιμοποιεί theme system (`bg-popover`, `text-popover-foreground`, `hover:bg-accent`)
+   - Portal-based για σωστό z-index handling
+   - Scroll tracking για responsive positioning
+   - Consistent εμφάνιση σε όλη την εφαρμογή
+
+2. **[EnterpriseContactDropdown](../components/ui/enterprise-contact-dropdown.tsx)** - Contact search dropdown
+   - Κεντρικοποιημένο contact search functionality
+   - Integrated search με loading states
+   - Consistent contact item rendering
+   - Theme-aware colors
+
+### 📐 **ΧΡΗΣΗ**:
+```typescript
+// Simple dropdown
+<EnterpriseDropdown
+  value={value}
+  onValueChange={setValue}
+  options={[
+    { value: 'option1', label: 'Option 1', icon: MyIcon },
+    { value: 'option2', label: 'Option 2' }
+  ]}
+/>
+
+// Contact search dropdown
+<EnterpriseContactDropdown
+  value={selectedContactId}
+  onContactSelect={handleContactSelect}
+  searchResults={searchResults}
+  onSearch={handleSearch}
+  isSearching={isSearching}
+/>
+```
+
 ## 📚 ENTERPRISE DOCUMENTATION
 
 ### 🗺️ **Ξεκίνα από εδώ:**

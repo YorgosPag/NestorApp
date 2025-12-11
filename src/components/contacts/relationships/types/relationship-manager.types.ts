@@ -124,6 +124,9 @@ export interface RelationshipCardProps {
   /** Relationship to display */
   relationship: ContactRelationship;
 
+  /** Current contact ID to determine which contact to show */
+  currentContactId: string;
+
   /** Whether card is expanded */
   isExpanded: boolean;
 

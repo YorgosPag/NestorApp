@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useState, useEffect } from 'react';
-import { Plus, Trash2, Phone, Mail, Globe, LucideIcon, IdCard, Briefcase, MapPin } from 'lucide-react';
+import { Plus, Trash2, Phone, Mail, Globe, LucideIcon, User, Briefcase, MapPin } from 'lucide-react';
 import { CommonBadge } from '@/core/badges';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -192,7 +192,7 @@ export const COMMUNICATION_CONFIGS: Record<CommunicationType, CommunicationConfi
   identity: {
     type: 'identity',
     title: 'Στοιχεία Ταυτότητας',
-    icon: IdCard,
+    icon: User,
     fields: { primary: 'number', secondary: 'type' },
     types: [
       { value: 'id_card', label: 'Δελτίο Ταυτότητας' },
