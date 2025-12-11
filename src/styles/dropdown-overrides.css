@@ -83,3 +83,277 @@ body {
 [data-custom-dropdown-portal="true"] {
   z-index: 2147483647 !important; /* Maximum possible z-index value */
 }
+
+/* =============================================================
+   HIDE CHEVRON ICONS FROM SELECT COMPONENTS
+
+   Hides all ChevronDown arrows from Radix UI Select components
+   ============================================================= */
+
+/* Hide ChevronDown icon in SelectTrigger */
+[data-radix-select-trigger] > [data-radix-select-icon] {
+  display: none !important;
+}
+
+/* Alternative selector for Radix UI Select icon */
+[data-radix-select-trigger] svg[class*="chevron"] {
+  display: none !important;
+}
+
+/* Hide any lucide-react ChevronDown icons in Select components */
+[data-radix-select-trigger] .lucide-chevron-down {
+  display: none !important;
+}
+
+/* Generic rule to hide all chevron icons in select triggers */
+[data-radix-select-trigger] [data-icon-chevron="true"] {
+  display: none !important;
+}
+
+/* Hide ChevronDown icons specifically from SelectTrigger elements */
+button[role="combobox"] svg.lucide-chevron-down {
+  display: none !important;
+}
+
+/* Alternative approach - hide the icon container */
+button[role="combobox"] > span:last-child {
+  display: none !important;
+}
+
+/* =============================================================
+   ADDITIONAL CHEVRON HIDING RULES - BROADER TARGETING
+   ============================================================= */
+
+/* Hide ALL ChevronDown icons globally */
+.lucide-chevron-down {
+  display: none !important;
+}
+
+/* Hide all chevron icons in any select-related elements */
+[class*="select"] svg[class*="chevron"],
+[class*="Select"] svg[class*="chevron"],
+[data-select] svg[class*="chevron"] {
+  display: none !important;
+}
+
+/* Hide chevrons in any button that might be a dropdown trigger */
+button svg.lucide-chevron-down,
+button .lucide-chevron-down {
+  display: none !important;
+}
+
+/* Target any element with chevron in classname */
+*[class*="chevron-down"] {
+  display: none !important;
+}
+
+/* Hide SVG icons with specific chevron paths */
+svg[data-testid*="chevron"],
+svg[aria-label*="chevron"],
+svg[title*="chevron"] {
+  display: none !important;
+}
+
+/* =============================================================
+   RADICAL APPROACH - HIDE ALL POSSIBLE ARROWS/CHEVRONS
+   ============================================================= */
+
+/* Hide all SVG icons that look like arrows or chevrons */
+svg[class*="arrow"],
+svg[class*="chevron"],
+*[class*="arrow-right"],
+*[class*="arrow-down"],
+*[class*="chevron-right"],
+*[class*="chevron-down"] {
+  display: none !important;
+}
+
+/* Hide CSS pseudo-element arrows in specific contexts */
+*[aria-expanded]::after,
+*[role="button"]::after,
+*[class*="select"]::after,
+*[class*="dropdown"]::after {
+  content: none !important;
+}
+
+/* Target any element inside Σχέσεις Επαφής containers */
+*:contains("Σχέσεις Επαφής") + * svg,
+*:contains("Σχέσεις Επαφής") svg {
+  display: none !important;
+}
+
+/* Hide all lucide icons that could be arrows */
+.lucide-arrow-right,
+.lucide-arrow-down,
+.lucide-arrow-up-right,
+.lucide-chevron-right,
+.lucide-chevron-left,
+.lucide-chevron-up,
+.lucide-triangle-right,
+.lucide-play,
+.lucide-caret-right {
+  display: none !important;
+}
+
+/* Keep all necessary icons visible */
+.lucide-users,
+.lucide-plus,
+.lucide-refresh-cw,
+.lucide-settings {
+  display: block !important;
+}
+
+/* =============================================================
+   FIX TEXT WRAPPING ISSUE - NO MORE "ARROWS" FROM BROKEN WORDS
+   ============================================================= */
+
+/* Prevent text wrapping in relationship headers */
+*:contains("Σχέσεις Επαφής"),
+[class*="card"] h1,
+[class*="card"] h2,
+[class*="card"] h3,
+[class*="CardTitle"],
+[class*="card-title"] {
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+  hyphens: none !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+
+/* Specific fix for relationship card titles */
+.card .card-title,
+[data-radix-collection-item] *,
+*[role="heading"] {
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+  hyphens: none !important;
+}
+
+/* Ensure container has enough space */
+.card-header,
+.card .header,
+*[class*="CardHeader"] {
+  min-width: max-content !important;
+  overflow: visible !important;
+}
+
+/* =============================================================
+   HIDE SCROLL ARROWS AND TRIANGLE INDICATORS
+   ============================================================= */
+
+/* Hide browser scrollbar arrows */
+::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Hide custom scroll arrows */
+*[class*="scroll-up"],
+*[class*="scroll-down"],
+*[class*="ScrollUp"],
+*[class*="ScrollDown"],
+.scroll-arrow,
+.scroll-button {
+  display: none !important;
+}
+
+/* Hide triangle/chevron indicators */
+.triangle-up,
+.triangle-down,
+*::before[content*="▲"],
+*::before[content*="▼"],
+*::after[content*="▲"],
+*::after[content*="▼"] {
+  display: none !important;
+}
+
+/* Hide any element that looks like scroll arrows */
+*[style*="border-top"],
+*[style*="border-bottom"] {
+  border: none !important;
+}
+
+/* Specific targeting for triangle arrows only */
+*[role="button"]::before[content*="▲"],
+*[role="button"]::after[content*="▼"],
+*[class*="arrow"]::before,
+*[class*="arrow"]::after {
+  content: none !important;
+}
+
+/* =============================================================
+   NUCLEAR OPTION - HIDE ALL SCROLL INDICATORS
+   ============================================================= */
+
+/* Hide ALL scrollbar components entirely */
+* {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* Internet Explorer 10+ */
+}
+
+/* Hide webkit scrollbar completely */
+*::-webkit-scrollbar {
+  display: none !important;
+  width: 0px !important;
+  height: 0px !important;
+  background: transparent !important;
+}
+
+*::-webkit-scrollbar-track {
+  display: none !important;
+}
+
+*::-webkit-scrollbar-thumb {
+  display: none !important;
+}
+
+*::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+*::-webkit-scrollbar-corner {
+  display: none !important;
+}
+
+/* Hide any triangle/arrow symbols that might appear as Unicode */
+*:contains("▲"),
+*:contains("▼"),
+*:contains("⬆"),
+*:contains("⬇"),
+*:contains("△"),
+*:contains("▽") {
+  font-size: 0 !important;
+  color: transparent !important;
+  visibility: hidden !important;
+}
+
+/* Hide CSS-generated arrows and triangles */
+*::before[content="▲"],
+*::before[content="▼"],
+*::after[content="▲"],
+*::after[content="▼"],
+*::before[content="⬆"],
+*::before[content="⬇"],
+*::after[content="⬆"],
+*::after[content="⬇"] {
+  display: none !important;
+  content: "" !important;
+}
+
+/* Target overflow containers that might show scroll indicators */
+*[style*="overflow:"],
+*[style*="overflow-y:"],
+*[style*="overflow-x:"] {
+  scrollbar-width: none !important;
+}
+
+/* Specific targeting for relationship sections */
+*[class*="relationship"] *::-webkit-scrollbar,
+*[class*="Relationship"] *::-webkit-scrollbar,
+*:contains("Σχέσεις") *::-webkit-scrollbar {
+  display: none !important;
+}

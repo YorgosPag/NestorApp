@@ -13,7 +13,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Users, Building2, TrendingUp, Settings, RefreshCw } from 'lucide-react';
+import { Users, Building2 } from 'lucide-react';
 
 // 🏢 ENTERPRISE: Import centralized components και hooks
 import type { ContactType } from '@/types/contacts';
@@ -175,33 +175,10 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
     <div className={className}>
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
+          <CardTitle className="flex items-center">
             <div className="flex items-center space-x-2">
               <Users className="h-5 w-5" />
               <span>Σχέσεις Επαφής</span>
-              <TrendingUp className="h-4 w-4 text-green-500" />
-            </div>
-            <div className="flex space-x-2">
-              <Button
-                onClick={handleRefresh}
-                size="sm"
-                variant="outline"
-                className="text-blue-600 border-blue-300 hover:bg-blue-50"
-                disabled={relationshipsLoading}
-                title="Ανανέωση σχέσεων"
-              >
-                <RefreshCw className={`h-4 w-4 ${relationshipsLoading ? 'animate-spin' : ''}`} />
-              </Button>
-              {!readonly && onManageRelationships && (
-                <Button
-                  onClick={onManageRelationships}
-                  size="sm"
-                  variant="outline"
-                >
-                  <Settings className="h-4 w-4 mr-2" />
-                  Διαχείριση
-                </Button>
-              )}
             </div>
           </CardTitle>
         </CardHeader>

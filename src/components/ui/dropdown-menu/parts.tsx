@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import { Check, ChevronRight, Circle } from "lucide-react";
+import { Check, Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenuPortal,
@@ -29,7 +29,6 @@ export const DropdownMenuSubTrigger = React.forwardRef<
     {...props}
   >
     {children}
-    <ChevronRight className="ml-auto h-4 w-4" />
   </PrimitiveSubTrigger>
 ));
 DropdownMenuSubTrigger.displayName = PrimitiveSubTrigger.displayName;

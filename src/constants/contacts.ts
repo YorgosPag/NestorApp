@@ -165,3 +165,110 @@ export const ALL_CONTACT_TYPES = [CONTACT_TYPES.INDIVIDUAL, CONTACT_TYPES.COMPAN
 
 // 🔄 BACKWARD COMPATIBILITY - Για existing code που χρησιμοποιεί παλιές σταθερές
 export const ContactTypeEnum = CONTACT_TYPES; // Alias
+
+// ============================================================================
+// 🎨 ENTERPRISE CONTACT STYLING CONSTANTS - SINGLE SOURCE OF TRUTH
+// ============================================================================
+
+/**
+ * 🏢 CONTACT COMPONENT STYLING - Enterprise-class centralized styling
+ *
+ * Αντικαθιστά όλα τα inline styles με κεντρικοποιημένα constants
+ * για consistent, maintainable, και type-safe styling across contact components.
+ *
+ * ARCHITECTURE: Single Source of Truth για όλα τα contact component styles
+ * BENEFITS: Maintainability, consistency, performance, type safety
+ * USAGE: Import και χρήση στα contact components αντί για inline styles
+ */
+export const CONTACT_STYLES = {
+
+  // 📋 LIST ITEM STYLING
+  listItem: {
+    container: 'flex items-center gap-3 w-max', // Replaces style={{ width: 'max-content' }}
+    nameSection: 'flex items-center gap-2 shrink-0',
+    mobileLayout: 'grid-cols-1 gap-4',
+    desktopLayout: 'grid-cols-[1fr_200px_120px_auto] items-center',
+    mobileScrollContainer: 'overflow-x-auto scrollbar-hide w-[calc(100vw-120px)] [scroll-behavior:smooth]', // Mobile viewport calculation
+  },
+
+  // 👥 EMPLOYEE SELECTOR STYLING
+  employeeSelector: {
+    cardContent: 'p-0 bg-transparent', // Replaces style={{ backgroundColor: 'transparent' }}
+    searchContainer: 'relative w-full',
+    resultsContainer: 'max-h-60 overflow-auto',
+    loadingState: 'flex items-center justify-center p-4',
+  },
+
+  // 🎯 BADGE & STATUS STYLING
+  badges: {
+    primary: 'bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full',
+    secondary: 'bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full',
+    success: 'bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full',
+    warning: 'bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full',
+    danger: 'bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full',
+  },
+
+  // 📱 RESPONSIVE LAYOUTS
+  responsive: {
+    mobile: 'block md:hidden',
+    desktop: 'hidden md:block',
+    tablet: 'hidden sm:block md:hidden',
+    all: 'block',
+  },
+
+  // 🔗 INTERACTION STATES
+  interactions: {
+    hover: 'hover:bg-accent/50 transition-colors duration-200',
+    focus: 'focus:outline-none focus:ring-2 focus:ring-primary/20',
+    active: 'active:bg-accent/70',
+    disabled: 'opacity-50 cursor-not-allowed',
+  }
+
+} as const;
+
+/**
+ * 🎨 Get Contact List Item Style
+ *
+ * Enterprise function για consistent contact list item styling
+ */
+export const getContactListItemStyle = () => {
+  return CONTACT_STYLES.listItem.container;
+};
+
+/**
+ * 📱 Get Contact List Mobile Scroll Container Style
+ *
+ * Enterprise function για consistent mobile scroll container styling
+ */
+export const getContactListMobileScrollStyle = () => {
+  return CONTACT_STYLES.listItem.mobileScrollContainer;
+};
+
+/**
+ * 🏢 Get Employee Selector Card Style
+ *
+ * Enterprise function για consistent employee selector styling
+ */
+export const getEmployeeSelectorCardStyle = () => {
+  return CONTACT_STYLES.employeeSelector.cardContent;
+};
+
+/**
+ * 🎯 Get Contact Badge Style
+ *
+ * Enterprise function για consistent badge styling
+ */
+export const getContactBadgeStyle = (variant: keyof typeof CONTACT_STYLES.badges = 'primary') => {
+  return CONTACT_STYLES.badges[variant];
+};
+
+/**
+ * 🔄 Combine Contact Styles
+ *
+ * Utility για clean combination of contact style classes
+ */
+export const combineContactStyles = (...styles: (string | undefined | null | false)[]): string => {
+  return styles
+    .filter(Boolean)
+    .join(' ');
+};

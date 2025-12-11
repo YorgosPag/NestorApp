@@ -19,4 +19,4 @@ export {
   DEFAULT_TEMPLATE_SECTIONS,
   COMPLETE_SECTIONS,
   MOCK_SECTIONS,
-} from '@/types/mock-obligations';
+} from '@/types/obligation-services';

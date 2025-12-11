@@ -18,8 +18,6 @@ import {
   Mail,
   MapPin,
   Check,
-  ChevronDown,
-  ChevronUp,
   Loader2
 } from 'lucide-react';
 import { PHOTO_COLORS } from '@/components/generic/config/photo-config';
@@ -34,6 +32,7 @@ import type {
   isCompanyContact,
   isServiceContact
 } from '@/types/contacts';
+import { getEmployeeSelectorCardStyle } from '@/constants/contacts';
 
 // ============================================================================
 // 🏢 ENTERPRISE: TYPES & INTERFACES
@@ -601,15 +600,6 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
                 <X className="w-4 h-4" />
               </Button>
             )}
-            {showDropdown && (
-              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                {showDropdown ? (
-                  <ChevronUp className="w-4 h-4 text-gray-400" />
-                ) : (
-                  <ChevronDown className="w-4 h-4 text-gray-400" />
-                )}
-              </div>
-            )}
           </div>
 
           {/* Dropdown Results - Using Portal for proper z-index */}
@@ -625,7 +615,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
                 zIndex: 9999
               }}
             >
-              <CardContent className="p-0" style={{ backgroundColor: 'transparent' }}>
+              <CardContent className={getEmployeeSelectorCardStyle()}>
                 {isSearching ? (
                   <div className="p-4 text-center text-muted-foreground">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />

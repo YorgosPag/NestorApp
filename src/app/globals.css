@@ -234,3 +234,72 @@
     }
   }
 }
+
+/* =============================================================
+   FINAL NUCLEAR SOLUTION - HIDE ALL ARROW INDICATORS
+   ============================================================= */
+
+/* Hide ALL possible scrollbar arrows and indicators */
+* {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE */
+}
+
+*::-webkit-scrollbar {
+  display: none !important;
+  width: 0px !important;
+  height: 0px !important;
+}
+
+*::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-corner {
+  display: none !important;
+}
+
+/* Hide any Unicode triangle characters */
+span:contains("▲"),
+span:contains("▼"),
+div:contains("▲"),
+div:contains("▼"),
+*[text*="▲"],
+*[text*="▼"] {
+  display: none !important;
+  font-size: 0 !important;
+  color: transparent !important;
+  visibility: hidden !important;
+}
+
+/* Hide CSS generated content with arrows */
+*::before[content*="▲"],
+*::after[content*="▲"],
+*::before[content*="▼"],
+*::after[content*="▼"] {
+  content: "" !important;
+  display: none !important;
+}
+
+/* Remove any border-based triangular arrows */
+*[style*="border-left"],
+*[style*="border-right"],
+*[style*="border-top"],
+*[style*="border-bottom"] {
+  border: none !important;
+}
+
+/* Hide all lucide chevron icons globally */
+.lucide-chevron-down,
+.lucide-chevron-up,
+.lucide-chevron-left,
+.lucide-chevron-right,
+.lucide-arrow-down,
+.lucide-arrow-up {
+  display: none !important;
+  visibility: hidden !important;
+}

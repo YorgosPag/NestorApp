@@ -38,7 +38,7 @@ import {
   generateTableOfContents,
   renumberSections
 } from "@/types/obligations";
-import { DEFAULT_TEMPLATE_SECTIONS } from '@/types/mock-obligations';
+import { DEFAULT_TEMPLATE_SECTIONS } from '@/types/obligation-services';
 import { obligationsService } from "@/services/obligations.service";
 import Link from "next/link";
 

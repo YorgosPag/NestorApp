@@ -7,7 +7,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { getContacts, getProjects } from '@/lib/mock-data';
+import { getContacts, getProjects } from '@/lib/data-services';
 import type { AIReportOutput } from '@/types';
 
 const reportComponentSchema = z.union([

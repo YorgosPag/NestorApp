@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
 import type { Contact, IndividualContact, CompanyContact, ServiceContact } from '@/types/contacts';
-import { CONTACT_TYPES } from '@/constants/contacts';
+import { CONTACT_TYPES, getContactListItemStyle, getContactListMobileScrollStyle } from '@/constants/contacts';
 import {
   getContactDisplayName,
   getContactInitials,
@@ -252,14 +252,8 @@ export function ContactListItem({
                             </div>
 
                             {/* Scrollable content with explicit width calculation */}
-                            <div
-                                className="overflow-x-auto scrollbar-hide"
-                                style={{
-                                    width: 'calc(100vw - 120px)', // Full viewport minus avatar, padding, margins
-                                    scrollBehavior: 'smooth'
-                                }}
-                            >
-                                <div className="flex items-center gap-3" style={{ width: 'max-content' }}>
+                            <div className={getContactListMobileScrollStyle()}>
+                                <div className={getContactListItemStyle()}>
                                     {/* Section 1: Name Only (no badges on mobile) */}
                                     <div className="flex items-center gap-2 shrink-0">
                                         <span className="font-medium text-sm whitespace-nowrap">{displayName}</span>

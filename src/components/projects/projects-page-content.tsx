@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useProjectsPageState } from '@/hooks/useProjectsPageState';
 import { useFirestoreProjects } from '@/hooks/useFirestoreProjects';
-import { getCompanies } from '@/components/building-management/mockData';
+import { getCompanies } from '@/components/building-management/building-services';
 import { AdvancedFiltersPanel, projectFiltersConfig } from '@/components/core/AdvancedFilters';
 import { ListContainer } from '@/core/containers';
 import { useProjectsStats } from '@/hooks/useProjectsStats';

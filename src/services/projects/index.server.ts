@@ -1,7 +1,7 @@
 'use server';
 
 import { FirestoreProjectsRepository } from './repositories/FirestoreProjectsRepository';
-import { FirestoreProjectsRepository as NewFirestoreRepo } from './repositories/MockProjectsRepository'; // Updated to use production repo
+import { FirestoreProjectsRepository as NewFirestoreRepo } from './repositories/projects-repository'; // Updated to use production repo
 import { ProjectsService } from './services/ProjectsService';
 
 // 🔥 PRODUCTION READY: Χρησιμοποιεί μόνο επαγγελματικά repositories

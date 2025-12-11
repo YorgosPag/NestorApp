@@ -11,7 +11,7 @@ import type { ObligationSection } from "@/types/obligations";
 import { createNewSection } from "@/types/obligations";
 import { sortSections } from "../utils/sections-sort";
 import SectionEditor from "@/components/obligations/section-editor";
-import { DEFAULT_TEMPLATE_SECTIONS } from '@/types/mock-obligations';
+import { DEFAULT_TEMPLATE_SECTIONS } from '@/types/obligation-services';
 
 interface SectionsCardProps {
   sections: ObligationSection[];

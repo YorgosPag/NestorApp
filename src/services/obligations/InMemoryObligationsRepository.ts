@@ -8,7 +8,7 @@
 import { collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { ObligationDocument, ObligationTemplate, ObligationStatus } from '@/types/obligations';
-import { DEFAULT_TEMPLATE_SECTIONS } from '@/types/mock-obligations';
+import { DEFAULT_TEMPLATE_SECTIONS } from '@/types/obligation-services';
 import type { IObligationsRepository, SearchFilters, ObligationStats } from './contracts';
 
 export class FirestoreObligationsRepository implements IObligationsRepository {
