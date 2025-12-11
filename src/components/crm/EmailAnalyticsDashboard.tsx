@@ -3,7 +3,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Mail, Eye, MousePointer, TrendingUp, Construction, ArrowLeft } from 'lucide-react';
+import { Mail, Eye, MousePointer, TrendingUp, Construction, ArrowLeft, Home, Building2, Star } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export function EmailAnalyticsDashboard() {
@@ -115,9 +115,9 @@ export function EmailAnalyticsDashboard() {
                 <li>• Email performance tracking</li>
               </div>
               <div className="text-left space-y-2 text-sm text-gray-600">
-                <li>• 🏠 Residential template analytics</li>
-                <li>• 🏢 Commercial template analytics</li>
-                <li>• ⭐ Premium template analytics</li>
+                <li className="flex items-center gap-2">• <Home className="h-4 w-4" /> Residential template analytics</li>
+                <li className="flex items-center gap-2">• <Building2 className="h-4 w-4" /> Commercial template analytics</li>
+                <li className="flex items-center gap-2">• <Star className="h-4 w-4" /> Premium template analytics</li>
                 <li>• Template performance comparison</li>
                 <li>• A/B testing results</li>
               </div>

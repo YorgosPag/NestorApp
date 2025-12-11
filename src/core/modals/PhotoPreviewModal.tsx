@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'; // TypeScript refresh
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { X, Download, ZoomIn, ZoomOut, RotateCw, User, Building2, ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react';
+import { X, Download, ZoomIn, ZoomOut, RotateCw, User, Building2, ChevronLeft, ChevronRight, Maximize2, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ShareButton } from '@/components/ui/ShareButton';
@@ -527,8 +527,8 @@ export function PhotoPreviewModal({
   };
 
   const shareData = {
-    title: `📸 ${title}`,
-    text: `📸 ${title}${contact ? `\n👤 ${getContactDisplayName(contact)}` : ''}\n\nΔείτε τη φωτογραφία στο Nestor Construct!`,
+    title: title,
+    text: `${title}${contact ? `\n${getContactDisplayName(contact)}` : ''}\n\nΔείτε τη φωτογραφία στο Nestor Construct!`,
     url: generatePhotoShareUrl(), // Use webpage URL with Open Graph tags for proper social media preview
     // Mark as photo for ShareModal to handle correctly
     isPhoto: true,

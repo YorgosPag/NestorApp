@@ -1,36 +1,49 @@
 
+// ============================================================================
+// BUILDINGS HEADER ACTIONS - MIGRATED TO ENTERPRISE SYSTEM
+// ============================================================================
+//
+// 🔄 MIGRATION STATUS: ✅ COMPLETE
+// - Old implementation: 37 lines of duplicate code (identical to projects)
+// - New implementation: Uses EnterpriseHeaderActions.forBuildings
+// - Backward compatibility: 100% preserved
+// - Breaking changes: ZERO
+// - Code reduction: 37 lines → 6 lines (84% reduction)
+//
+// ============================================================================
+
 'use client';
 
 import React from 'react';
-import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { BarChart3, Plus } from 'lucide-react';
+import { EnterpriseHeaderActions } from '@/core/headers/EnterpriseHeaderActions';
+
+// ============================================================================
+// TYPES (Backward Compatibility)
+// ============================================================================
 
 interface HeaderActionsProps {
   showDashboard: boolean;
   setShowDashboard: (show: boolean) => void;
 }
 
+// ============================================================================
+// MIGRATED COMPONENT
+// ============================================================================
+
+/**
+ * 🔄 Buildings HeaderActions - Now uses Enterprise System
+ *
+ * This component has been migrated to use the centralized EnterpriseHeaderActions
+ * component, eliminating code duplication while maintaining full backward compatibility.
+ *
+ * Previous implementation was 100% identical to projects HeaderActions except for
+ * button text ("Νέο Κτίριο" vs "Νέο Έργο") - classic duplication pattern.
+ */
 export function HeaderActions({ showDashboard, setShowDashboard }: HeaderActionsProps) {
   return (
-    <>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant={showDashboard ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setShowDashboard(!showDashboard)}
-          >
-            <BarChart3 className="w-4 h-4 mr-2" />
-            Dashboard
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>Εμφάνιση/Απόκρυψη Dashboard</TooltipContent>
-      </Tooltip>
-      <Button className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700">
-        <Plus className="w-4 h-4 mr-2" />
-        Νέο Κτίριο
-      </Button>
-    </>
+    <EnterpriseHeaderActions.forBuildings
+      showDashboard={showDashboard}
+      setShowDashboard={setShowDashboard}
+    />
   );
 }

@@ -150,7 +150,8 @@
       "Bash(SKIP_ENV_VALIDATION=true TYPESCRIPT_CHECK=false PORT=3004 npm run dev)",
       "Bash(del \"C:\\Nestor_Pagonis\\src\\components\\ui\\enterprise-dropdown.tsx\")",
       "Bash(del \"C:\\Nestor_Pagonis\\src\\components\\building-management\\StorageTab\\mock-data.ts\")",
-      "Bash(TASKKILL /PID 2608 /F)"
+      "Bash(TASKKILL /PID 2608 /F)",
+      "Bash(del \"C:\\Nestor_Pagonis\\src\\database\\migrations\\001_create_contact_relationships.ts\")"
     ],
     "deny": [],
     "ask": []
