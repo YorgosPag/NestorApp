@@ -21,6 +21,7 @@ import { useContactForm } from '@/hooks/useContactForm';
 import { getTypeIcon, getTypeLabel } from '@/utils/contactFormUtils';
 import { UnifiedContactTabbedSection } from '@/components/ContactFormSections/UnifiedContactTabbedSection';
 import { RelationshipProvider } from '@/components/contacts/relationships/context/RelationshipProvider';
+import { CONTACT_TYPES, getContactIcon, getContactLabel } from '@/constants/contacts';
 
 export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, editContact, onLiveChange }: AddNewContactDialogProps) {
   const {
@@ -42,9 +43,9 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
     handleProfilePhotoSelection
   } = useContactForm({ onContactAdded, onOpenChange, editContact, isModalOpen: open, onLiveChange });
 
-  const isCompany = formData.type === 'company';
-  const isIndividual = formData.type === 'individual';
-  const isService = formData.type === 'service';
+  const isCompany = formData.type === CONTACT_TYPES.COMPANY;
+  const isIndividual = formData.type === CONTACT_TYPES.INDIVIDUAL;
+  const isService = formData.type === CONTACT_TYPES.SERVICE;
 
   // 🏷️ GET CONTACT NAME: Helper function to get contact name based on type
   const getContactName = () => {
@@ -90,22 +91,22 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="individual">
+                      <SelectItem value={CONTACT_TYPES.INDIVIDUAL}>
                         <div className="flex items-center gap-2">
                           <User className="w-4 h-4" />
-                          <span>Φυσικό Πρόσωπο</span>
+                          <span>{getContactLabel(CONTACT_TYPES.INDIVIDUAL, 'singular')}</span>
                         </div>
                       </SelectItem>
-                      <SelectItem value="company">
+                      <SelectItem value={CONTACT_TYPES.COMPANY}>
                         <div className="flex items-center gap-2">
                           <Building2 className="w-4 h-4" />
-                          <span>Εταιρεία</span>
+                          <span>{getContactLabel(CONTACT_TYPES.COMPANY, 'singular')}</span>
                         </div>
                       </SelectItem>
-                      <SelectItem value="service">
+                      <SelectItem value={CONTACT_TYPES.SERVICE}>
                         <div className="flex items-center gap-2">
                           <Landmark className="w-4 h-4" />
-                          <span>Δημόσια Υπηρεσία</span>
+                          <span>{getContactLabel(CONTACT_TYPES.SERVICE, 'singular')}</span>
                         </div>
                       </SelectItem>
                     </SelectContent>

@@ -14,7 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   COMMUNICATION_STYLES,
   type CommunicationItem,
-  type CommunicationConfig
+  type CommunicationConfig,
+  type CommunicationFieldValue // 🏢 ENTERPRISE: Type-safe field values
 } from '../';
 
 // ============================================================================
@@ -27,7 +28,7 @@ interface PhoneRendererProps {
   isDesktop: boolean;
   config: CommunicationConfig;
   disabled?: boolean;
-  updateItem: (index: number, field: string, value: any) => void;
+  updateItem: (index: number, field: string, value: CommunicationFieldValue) => void;
   setPrimary: (index: number) => void;
   removeItem: (index: number) => void;
 }

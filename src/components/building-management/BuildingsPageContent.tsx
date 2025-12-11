@@ -22,7 +22,7 @@ import { BuildingsGroupedView } from './BuildingsPage/BuildingsGroupedView';
 import { useBuildingsPageState } from '@/hooks/useBuildingsPageState';
 import { useBuildingStats } from '@/hooks/useBuildingStats';
 import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
-import { companies, projects } from './mockData';
+import { getCompanies, getProjectsList } from './mockData';
 import { AdvancedFiltersPanel, buildingFiltersConfig } from '@/components/core/AdvancedFilters';
 import { ListContainer } from '@/core/containers';
 
@@ -274,3 +274,5 @@ export function BuildingsPageContent() {
     </TooltipProvider>
   );
 }
+
+export default BuildingsPageContent;

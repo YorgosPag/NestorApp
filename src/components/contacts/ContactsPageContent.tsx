@@ -6,6 +6,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import type { Contact } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts';
 import { ContactsService } from '@/services/contacts.service';
+import { CONTACT_TYPES } from '@/constants/contacts';
 import { ContactsHeader } from './page/ContactsHeader';
 import { UnifiedDashboard, type DashboardStat } from '@/core/dashboards/UnifiedDashboard';
 import {
@@ -386,7 +387,7 @@ export function ContactsPageContent() {
           if (!contact.isFavorite) return false;
           break;
         case 'Επαφές με Σχέσεις':
-          if (contact.type === 'service') return false;
+          if (contact.type === CONTACT_TYPES.SERVICE) return false;
           break;
       }
     }

@@ -29,6 +29,19 @@ export type CommunicationType =
   | 'address';
 
 /**
+ * 💼 ENTERPRISE: Communication Field Value Types
+ *
+ * Type-safe union για όλα τα possible values που μπορούν να
+ * περάσουν στα communication renderers
+ */
+export type CommunicationFieldValue =
+  | string          // Κύριες τιμές: email, phone, url, username, address
+  | boolean         // Flags: isPrimary, isActive, isValid
+  | number          // Numeric: countryCode, sortOrder
+  | null           // Explicit null values
+  | undefined;     // Optional/missing fields
+
+/**
  * 📝 Communication Item Interface
  *
  * Universal data structure που υποστηρίζει όλους τους τύπους επικοινωνίας

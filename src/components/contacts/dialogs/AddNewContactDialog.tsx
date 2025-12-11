@@ -20,6 +20,7 @@ import type { AddNewContactDialogProps, ContactFormData } from '@/types/ContactF
 import { useContactForm } from '@/hooks/useContactForm';
 import { getTypeIcon, getTypeLabel } from '@/utils/contactFormUtils';
 import { UnifiedContactTabbedSection } from '@/components/ContactFormSections/UnifiedContactTabbedSection';
+import { CONTACT_TYPES, getContactLabel } from '@/constants/contacts';
 
 
 export function AddNewContactDialog({ open, onOpenChange, onContactAdded, editContact }: AddNewContactDialogProps) {
@@ -64,9 +65,9 @@ export function AddNewContactDialog({ open, onOpenChange, onContactAdded, editCo
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="individual">👤 Φυσικό Πρόσωπο</SelectItem>
-                    <SelectItem value="company">🏢 Εταιρεία</SelectItem>
-                    <SelectItem value="service">🏛️ Δημόσια Υπηρεσία</SelectItem>
+                    <SelectItem value={CONTACT_TYPES.INDIVIDUAL}>👤 {getContactLabel(CONTACT_TYPES.INDIVIDUAL, 'singular')}</SelectItem>
+                    <SelectItem value={CONTACT_TYPES.COMPANY}>🏢 {getContactLabel(CONTACT_TYPES.COMPANY, 'singular')}</SelectItem>
+                    <SelectItem value={CONTACT_TYPES.SERVICE}>🏛️ {getContactLabel(CONTACT_TYPES.SERVICE, 'singular')}</SelectItem>
                   </SelectContent>
                 </Select>
               </FormInput>
@@ -89,7 +90,7 @@ export function AddNewContactDialog({ open, onOpenChange, onContactAdded, editCo
             />
 
             {/* Σημειώσεις για φυσικά πρόσωπα */}
-            {formData.type === 'individual' && (
+            {formData.type === CONTACT_TYPES.INDIVIDUAL && (
               <div className="col-span-2 border-t pt-4 mt-4">
                 <h4 className="font-semibold mb-3 text-sm">📝 Σημειώσεις</h4>
                 <FormField label="Σημειώσεις" htmlFor="notes">

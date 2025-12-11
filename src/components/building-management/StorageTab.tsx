@@ -1,9 +1,10 @@
 
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import type { StorageUnit, StorageType } from '@/types/storage';
-import { mockStorageUnits } from './StorageTab/mock-data';
 
 import { StorageList } from './StorageList';
 import { StorageForm } from './StorageForm/index';
@@ -30,7 +31,40 @@ interface StorageTabProps {
 }
 
 export function StorageTab({ building }: StorageTabProps) {
-  const [units, setUnits] = useState<StorageUnit[]>(mockStorageUnits);
+  const [units, setUnits] = useState<StorageUnit[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // 🔥 ΦΟΡΤΩΣΗ ΠΡΑΓΜΑΤΙΚΩΝ STORAGE UNITS ΑΠΟ FIREBASE
+  useEffect(() => {
+    const fetchStorageUnits = async () => {
+      try {
+        setLoading(true);
+
+        // Φόρτωση storage units για το συγκεκριμένο κτίριο
+        const storageQuery = query(
+          collection(db, 'storageUnits'),
+          where('building', '==', building.name)
+        );
+
+        const snapshot = await getDocs(storageQuery);
+        const storageUnits = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as StorageUnit[];
+
+        setUnits(storageUnits);
+        console.log(`✅ Loaded ${storageUnits.length} storage units for building: ${building.name}`);
+
+      } catch (error) {
+        console.error('❌ Error fetching storage units from Firebase:', error);
+        setUnits([]); // Κενό array αντί για mock data
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStorageUnits();
+  }, [building.name]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<StorageType | 'all'>('all');
   const [filterStatus, setFilterStatus] = useState<any>('all');

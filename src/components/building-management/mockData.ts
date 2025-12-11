@@ -1,83 +1,105 @@
 
 'use client';
 
+/**
+ * 🏢 ENTERPRISE BUILDINGS & COMPANIES DATA SERVICES - PRODUCTION READY
+ *
+ * Αντικατέστησε τα mock data με επαγγελματικά Firebase/Database services.
+ * Όλα τα δεδομένα προέρχονται από production βάση δεδομένων.
+ */
+
+import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import type { Building } from '@/types/building/contracts';
 
-export const buildings: Building[] = [
-  { 
-    id: 1, 
-    name: "ΚΤΙΡΙΟ Α (Μανδηλαρά - Πεζόδρομος & Πεζόδρομος)",
-    description: "Πολυώροφο κτίριο μικτής χρήσης με βρεφονηπιακό σταθμό και κέντρο νεότητας",
-    address: "Μανδηλαρά & Πεζόδρομος",
-    city: "Αθήνα",
-    totalArea: 2109.24,
-    builtArea: 1850.50,
-    floors: 7,
-    units: 12,
-    status: 'active',
-    startDate: '2006-05-02',
-    completionDate: '2009-02-28',
-    progress: 85,
-    totalValue: 1475000,
-    company: "Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.",
-    companyId: "5djayaxc0X33wsE8T2uY", // TODO: Update with real Firestore company ID
-    project: "Παλαιολόγου",
-    projectId: 1,
-    category: 'mixed',
-    features: ['Βρεφονηπιακός Σταθμός', 'Κέντρο Νεότητας', 'Γκαρσονιέρες', 'Διαμερίσματα 2Δ']
-  },
-  { 
-    id: 2, 
-    name: "ΚΤΙΡΙΟ Β (Μανδηλαρά & Πεζόδρομος)",
-    description: "Κατοικίες υψηλών προδιαγραφών με θέα στην πόλη",
-    address: "Μανδηλαρά & Πεζόδρομος",
-    city: "Αθήνα",
-    totalArea: 1850.75,
-    builtArea: 1650.25,
-    floors: 6,
-    units: 8,
-    status: 'construction',
-    startDate: '2023-03-15',
-    completionDate: '2025-01-20',
-    progress: 45,
-    totalValue: 1200000,
-    company: "Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.",
-    companyId: "5djayaxc0X33wsE8T2uY", // TODO: Update with real Firestore company ID
-    project: "Παλαιολόγου",
-    projectId: 1,
-    category: 'residential',
-    features: ['Πάρκινγκ', 'Αποθήκες', 'Μπαλκόνια']
-  },
-  { 
-    id: 3, 
-    name: "ΚΤΙΡΙΟ Γ (Μανδηλαρά - Παλαιολόγου & Πεζόδρομος)",
-    description: "Εμπορικό κέντρο με καταστήματα και γραφεία",
-    address: "Μανδηλαρά - Παλαιολόγου & Πεζόδρομος",
-    city: "Αθήνα", 
-    totalArea: 2500.00,
-    builtArea: 2200.00,
-    floors: 4,
-    units: 15,
-    status: 'planning',
-    startDate: '2025-06-01',
-    completionDate: '2027-12-15',
-    progress: 5,
-    totalValue: 2100000,
-    company: "Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.",
-    companyId: "5djayaxc0X33wsE8T2uY", // TODO: Update with real Firestore company ID
-    project: "Παλαιολόγου",
-    projectId: 1,
-    category: 'commercial',
-    features: ['Καταστήματα', 'Γραφεία', 'Εστιατόρια', 'Πάρκινγκ']
+/**
+ * 🏗️ Ανάκτηση κτιρίων από Firebase
+ * Αντικατέστησε τα mockBuildings με πραγματικά δεδομένα από τη βάση
+ */
+export async function getBuildings(limitCount: number = 100): Promise<Building[]> {
+  try {
+    const buildingsQuery = query(
+      collection(db, 'buildings'),
+      orderBy('updatedAt', 'desc'),
+      limit(limitCount)
+    );
+
+    const snapshot = await getDocs(buildingsQuery);
+
+    const buildings = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as Building[];
+
+    console.log(`✅ Loaded ${buildings.length} real buildings from Firebase`);
+    return buildings;
+
+  } catch (error) {
+    console.error('❌ Error fetching buildings from Firebase:', error);
+    return []; // Επιστροφή κενού array αντί για mock data
   }
-];
+}
 
-export const companies = [
-  { id: 'pagonis', name: 'Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.' },
-  { id: 'devconstruct', name: 'DevConstruct AE' },
-];
+/**
+ * 🏢 Ανάκτηση εταιρειών από Firebase
+ * Αντικατέστησε τα mockCompanies με πραγματικά δεδομένα από τη βάση
+ */
+export async function getCompanies(limitCount: number = 50): Promise<Array<{id: string, name: string}>> {
+  try {
+    const companiesQuery = query(
+      collection(db, 'companies'),
+      orderBy('updatedAt', 'desc'),
+      limit(limitCount)
+    );
 
-export const projects = [
-  { id: 'palaiologou', name: 'Παλαιολόγου' },
-  { id: 'kolonaki', name: 'Κολωνάκι' },
-];
+    const snapshot = await getDocs(companiesQuery);
+
+    const companies = snapshot.docs.map(doc => ({
+      id: doc.id,
+      name: doc.data().name || doc.data().personal?.firstName + ' ' + doc.data().personal?.lastName || 'Εταιρεία'
+    }));
+
+    console.log(`✅ Loaded ${companies.length} real companies from Firebase`);
+    return companies;
+
+  } catch (error) {
+    console.error('❌ Error fetching companies from Firebase:', error);
+    return []; // Επιστροφή κενού array αντί για mock data
+  }
+}
+
+/**
+ * 🎯 Ανάκτηση έργων από Firebase
+ * Αντικατέστησε τα mockProjects με πραγματικά δεδομένα από τη βάση
+ */
+export async function getProjectsList(limitCount: number = 50): Promise<Array<{id: string, name: string}>> {
+  try {
+    const projectsQuery = query(
+      collection(db, 'projects'),
+      orderBy('updatedAt', 'desc'),
+      limit(limitCount)
+    );
+
+    const snapshot = await getDocs(projectsQuery);
+
+    const projects = snapshot.docs.map(doc => ({
+      id: doc.id,
+      name: doc.data().title || doc.data().name || 'Έργο'
+    }));
+
+    console.log(`✅ Loaded ${projects.length} real projects from Firebase`);
+    return projects;
+
+  } catch (error) {
+    console.error('❌ Error fetching projects from Firebase:', error);
+    return []; // Επιστροφή κενού array αντί για mock data
+  }
+}
+
+// 🚨 DEPRECATED: Αυτά τα exports διατηρούνται για backward compatibility
+// αλλά θα πρέπει να αντικατασταθούν με async Firebase calls
+export const buildings: Building[] = [];
+export const companies: Array<{id: string, name: string}> = [];
+export const projects: Array<{id: string, name: string}> = [];
+
+// 📝 TODO: Αφαίρεση των deprecated exports όταν όλα τα αρχεία μετακινηθούν στο async API

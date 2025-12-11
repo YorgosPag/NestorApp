@@ -17,6 +17,7 @@ import { ChevronUp, ChevronDown } from 'lucide-react';
 import type { ContactRelationship } from '@/types/contacts/relationships';
 import { getRelationshipDisplayProps } from '../utils/relationship-types';
 import type { ContactNamesMap } from '../utils/summary/contact-navigation';
+import type { FlexibleDateInput } from '@/types/common/date-types'; // 🏢 ENTERPRISE: Type-safe dates
 
 // ============================================================================
 // TYPES
@@ -79,9 +80,9 @@ export const RecentRelationshipsSection: React.FC<RecentRelationshipsSectionProp
   // ============================================================================
 
   /**
-   * 📅 Format relationship creation date
+   * 📅 Format relationship creation date - ENTERPRISE TYPE SAFE
    */
-  const formatCreatedDate = (createdAt: any): string => {
+  const formatCreatedDate = (createdAt: FlexibleDateInput): string => {
     if (!createdAt) return 'Πρόσφατα';
 
     try {

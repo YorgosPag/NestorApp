@@ -22,8 +22,17 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
-import type { Contact } from '@/types/contacts';
-import { getContactDisplayName, getContactInitials, getPrimaryEmail, getPrimaryPhone } from '@/types/contacts';
+import type { Contact, IndividualContact, CompanyContact, ServiceContact } from '@/types/contacts';
+import { CONTACT_TYPES } from '@/constants/contacts';
+import {
+  getContactDisplayName,
+  getContactInitials,
+  getPrimaryEmail,
+  getPrimaryPhone,
+  isIndividualContact,
+  isCompanyContact,
+  isServiceContact
+} from '@/types/contacts';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getContactCardBackgrounds, getTypography } from '@/components/ui/theme/ThemeComponents';
 
@@ -76,17 +85,20 @@ export function ContactListItem({
     const initials = getContactInitials(contact);
     const email = getPrimaryEmail(contact);
     const phone = getPrimaryPhone(contact);
-    const isArchived = (contact as any)?.status === 'archived';
+
+    // Type-safe archive status check
+    const extendedContact = contact as any; // Legacy field
+    const isArchived = extendedContact?.status === 'archived';
 
     // 🎯 SMART AVATAR LOGIC: Different URL based on contact type (same as ContactDetailsHeader)
     const getAvatarImageUrl = () => {
         switch (contact.type) {
-            case 'individual':
-                return (contact as any).photoURL; // Personal photo
-            case 'company':
-                return (contact as any).logoURL; // Company logo
-            case 'service':
-                return (contact as any).logoURL; // Service logo (NOT photoURL which is for representative)
+            case CONTACT_TYPES.INDIVIDUAL:
+                return isIndividualContact(contact) ? (contact as any).photoURL : undefined;
+            case CONTACT_TYPES.COMPANY:
+                return isCompanyContact(contact) ? (contact as any).logoURL : undefined;
+            case CONTACT_TYPES.SERVICE:
+                return isServiceContact(contact) ? (contact as any).logoURL : undefined;
             default:
                 return (contact as any).photoURL;
         }
@@ -99,9 +111,9 @@ export function ContactListItem({
     // ΛΥΣΗ: Προσθήκη timestamp στην URL ώστε ο browser να φορτώσει fresh εικόνα
     // TESTED: 2025-12-04 - Τελική λύση μετά από 12+ ώρες debugging με browser cache
     // ΣΗΜΕΙΩΣΗ: Cache buster μόνο όταν ΠΡΑΓΜΑΤΙΚΑ χρειάζεται
-    const needsCacheBuster = contact.type === 'individual' &&
-                             Array.isArray((contact as any).multiplePhotoURLs) &&
-                             (contact as any).multiplePhotoURLs.length === 0;
+    const needsCacheBuster = isIndividualContact(contact) &&
+                             Array.isArray(extendedContact.multiplePhotoURLs) &&
+                             extendedContact.multiplePhotoURLs.length === 0;
 
     const avatarImageUrl = rawAvatarImageUrl
         ? (needsCacheBuster
@@ -114,18 +126,18 @@ export function ContactListItem({
         if (!avatarImageUrl) return;
 
         // 🎯 SMART LOGIC: Gallery navigation για Individual με multiplePhotoURLs
-        if (contact.type === 'individual' && (contact as any).multiplePhotoURLs?.length > 0) {
-            const multiplePhotos = (contact as any).multiplePhotoURLs;
+        if (isIndividualContact(contact) && extendedContact.multiplePhotoURLs?.length > 0) {
+            const multiplePhotos = extendedContact.multiplePhotoURLs;
             const currentPhotoIndex = multiplePhotos.findIndex((url: string) => url === avatarImageUrl);
             const photoIndex = currentPhotoIndex >= 0 ? currentPhotoIndex : 0;
 
             // Άνοιγμα με gallery navigation (βελάκια working!)
             openGalleryPhotoModal(photoModal, contact, photoIndex);
 
-        } else if (contact.type === 'company') {
+        } else if (isCompanyContact(contact)) {
             // 🎯 NEW: Gallery navigation για Company [logoURL, photoURL]
-            const logoURL = (contact as any).logoURL;
-            const photoURL = (contact as any).photoURL; // Representative photo
+            const logoURL = extendedContact.logoURL;
+            const photoURL = extendedContact.photoURL; // Representative photo
             const galleryPhotos = [logoURL, photoURL].filter(Boolean); // Remove null/undefined
 
             if (galleryPhotos.length > 1) {
@@ -142,10 +154,10 @@ export function ContactListItem({
                 openContactAvatarModal(photoModal, contact, photoType);
             }
 
-        } else if (contact.type === 'service') {
+        } else if (isServiceContact(contact)) {
             // 🎯 NEW: Gallery navigation για Service [logoURL, photoURL]
-            const logoURL = (contact as any).logoURL;
-            const photoURL = (contact as any).photoURL; // Representative photo
+            const logoURL = extendedContact.logoURL;
+            const photoURL = extendedContact.photoURL; // Representative photo
             const galleryPhotos = [logoURL, photoURL].filter(Boolean); // Remove null/undefined
 
             if (galleryPhotos.length > 1) {
@@ -287,14 +299,14 @@ export function ContactListItem({
                                     )}
 
                                     {/* Section 4: Additional Info */}
-                                    {contact.type === 'individual' && (contact as any).profession && (
+                                    {isIndividualContact(contact) && extendedContact.profession && (
                                         <div className="shrink-0 text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full whitespace-nowrap">
-                                            {(contact as any).profession}
+                                            {extendedContact.profession}
                                         </div>
                                     )}
-                                    {(contact.type === 'company' || contact.type === 'service') && (contact as any).vatNumber && (
+                                    {(isCompanyContact(contact) || isServiceContact(contact)) && extendedContact.vatNumber && (
                                         <div className="shrink-0 text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full whitespace-nowrap">
-                                            ΑΦΜ: {(contact as any).vatNumber}
+                                            ΑΦΜ: {extendedContact.vatNumber}
                                         </div>
                                     )}
                                 </div>
@@ -308,7 +320,7 @@ export function ContactListItem({
                             key={`contact-list-item-${contact.id}-${avatarKey}`}
                             icon={Icon}
                             title={displayName}
-                            subtitle={contact.type === 'individual' ? (contact as any).profession : (contact as any).vatNumber || ''}
+                            subtitle={isIndividualContact(contact) ? extendedContact.profession : extendedContact.vatNumber || ''}
                             avatarImageUrl={avatarImageUrl}
                             onAvatarClick={avatarImageUrl ? handleAvatarClick : undefined}
                             variant="compact"
@@ -316,7 +328,7 @@ export function ContactListItem({
                         >
                             {/* Centralized ContactBadge */}
                             <div className="flex gap-2 mt-2 mb-2">
-                                <ContactBadge status={contact.type as any} variant="outline" size="sm" />
+                                <ContactBadge status={contact.type} variant="outline" size="sm" />
                                 {isArchived && (
                                     <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-muted text-muted-foreground rounded-full">
                                         <Archive className="w-3 h-3 mr-1" />

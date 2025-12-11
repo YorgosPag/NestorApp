@@ -13,7 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   COMMUNICATION_STYLES,
   type CommunicationItem,
-  type CommunicationConfig
+  type CommunicationConfig,
+  type CommunicationFieldValue // 🏢 ENTERPRISE: Type-safe field values
 } from '../';
 
 // ============================================================================
@@ -26,7 +27,7 @@ interface WebsiteRendererProps {
   isDesktop: boolean;
   config: CommunicationConfig;
   disabled?: boolean;
-  updateItem: (index: number, field: string, value: any) => void;
+  updateItem: (index: number, field: string, value: CommunicationFieldValue) => void;
   removeItem: (index: number) => void;
 }
 

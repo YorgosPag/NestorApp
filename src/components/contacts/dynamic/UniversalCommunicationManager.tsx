@@ -19,6 +19,7 @@ import {
   type CommunicationType,
   type CommunicationItem,
   type CommunicationConfig,
+  type CommunicationFieldValue, // 🏢 ENTERPRISE: Type-safe field values
   type TypeOption,
   type UniversalCommunicationManagerProps,
   PhoneRenderer,
@@ -101,7 +102,7 @@ export function UniversalCommunicationManager({
     onChange([...items, newItem]);
   }, [items, config, onChange]);
 
-  const updateItem = useCallback((index: number, field: string, value: any) => {
+  const updateItem = useCallback((index: number, field: string, value: CommunicationFieldValue) => {
     const updated = items.map((item, i) => {
       if (i !== index) return item;
 

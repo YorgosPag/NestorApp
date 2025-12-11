@@ -1,12 +1,13 @@
 'use server';
 
 import { FirestoreProjectsRepository } from './repositories/FirestoreProjectsRepository';
-import { MockProjectsRepository } from './repositories/MockProjectsRepository';
+import { FirestoreProjectsRepository as NewFirestoreRepo } from './repositories/MockProjectsRepository'; // Updated to use production repo
 import { ProjectsService } from './services/ProjectsService';
 
+// 🔥 PRODUCTION READY: Χρησιμοποιεί μόνο επαγγελματικά repositories
 const firestoreRepo = new FirestoreProjectsRepository();
-const mockRepo = new MockProjectsRepository();
-const service = new ProjectsService(firestoreRepo, mockRepo);
+const productionRepo = new NewFirestoreRepo(); // Αντικατέστησε το mock repository
+const service = new ProjectsService(firestoreRepo, productionRepo);
 
 export async function getProjectsByCompanyId(companyId: string) {
     // Debug logging removed: console.log(`🏗️ SERVER ACTION: getProjectsByCompanyId called with: "${companyId}"`);

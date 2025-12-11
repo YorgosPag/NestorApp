@@ -17,6 +17,7 @@ import { Users, Building2, TrendingUp, Settings, RefreshCw } from 'lucide-react'
 
 // 🏢 ENTERPRISE: Import centralized components και hooks
 import type { ContactType } from '@/types/contacts';
+import type { ContactRelationship } from '@/types/contacts/relationships'; // 🏢 ENTERPRISE: Type-safe relationships
 import type { DashboardStat } from '@/core/dashboards/UnifiedDashboard';
 import { useContactNames } from './hooks/useContactNames';
 import { useRelationshipContext } from './context/RelationshipProvider';
@@ -120,9 +121,9 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
   };
 
   /**
-   * 🔗 Handle individual relationship click
+   * 🔗 Handle individual relationship click - ENTERPRISE TYPE SAFE
    */
-  const handleRelationshipClick = (relationship: any) => {
+  const handleRelationshipClick = (relationship: ContactRelationship) => {
     navigateToRelationshipContact(
       relationship,
       contactNames,

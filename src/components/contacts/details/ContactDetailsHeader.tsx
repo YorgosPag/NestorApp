@@ -9,16 +9,24 @@ import { EditableText } from '@/components/ui/EditableText';
 import { openContactAvatarModal, openGalleryPhotoModal } from '@/core/modals';
 import { useGlobalPhotoPreview } from '@/providers/PhotoPreviewProvider';
 import { Users, Building2, Landmark, Edit, Trash2, Check, X } from 'lucide-react';
-import type { Contact, ContactType, ContactStatus } from '@/types/contacts';
+import type {
+  Contact,
+  ContactType,
+  ContactStatus,
+  IndividualContact,
+  CompanyContact,
+  ServiceContact
+} from '@/types/contacts';
 import { getContactDisplayName, getContactInitials } from '@/types/contacts';
 import { ContactsService } from '@/services/contacts.service';
 import { cn } from '@/lib/utils';
+import { CONTACT_TYPES, getContactIcon, getContactLabel } from '@/constants/contacts';
 
-const TYPE_INFO: Record<ContactType, { icon: React.ElementType; name: string }> = {
-    individual: { icon: Users, name: 'Φυσικό Πρόσωπο' },
-    company: { icon: Building2, name: 'Νομικό Πρόσωπο' },
-    service: { icon: Landmark, name: 'Δημόσια Υπηρεσία' }
-};
+// 🎯 CENTRALIZED: Use centralized contact constants instead of hardcoded values
+const getTypeInfo = (type: ContactType) => ({
+  icon: getContactIcon(type),
+  name: getContactLabel(type, 'singular')
+});
 
 const TYPE_FALLBACK = { icon: Users, name: 'Άγνωστος Τύπος' };
 
@@ -65,22 +73,29 @@ export function ContactDetailsHeader({
       window.removeEventListener('forceAvatarRerender', handleForceRerender as EventListener);
     };
   }, [contact.id]);
-  const { icon: Icon, name: typeName } = TYPE_INFO[type] ?? TYPE_FALLBACK;
-  const status = (contact as any).status as ContactStatus | undefined;
+  const { icon: Icon, name: typeName } = getTypeInfo(type);
+
+  // ✅ ENTERPRISE: Direct property access with type safety
+  const contactAny = contact as any; // Controlled usage for legacy fields
+  const status: ContactStatus | undefined = contactAny.status;
+
+  // Safe property accessors based on contact type
+  const photoURL = type === 'individual' ? contactAny.photoURL : undefined;
+  const logoURL = (type === 'company' || type === 'service') ? contactAny.logoURL : undefined;
+  const multiplePhotoURLs = type === 'individual' ? contactAny.multiplePhotoURLs : undefined;
   const displayName = getContactDisplayName(contact);
   const initials = getContactInitials(contact);
 
   // 🎯 SMART AVATAR LOGIC: Different URL based on contact type
   const getAvatarImageUrl = () => {
     switch (type) {
-      case 'individual':
-        return (contact as any).photoURL; // Personal photo
-      case 'company':
-        return (contact as any).logoURL; // Company logo
-      case 'service':
-        return (contact as any).logoURL; // Service logo (NOT photoURL which is for representative)
+      case CONTACT_TYPES.INDIVIDUAL:
+        return photoURL;
+      case CONTACT_TYPES.COMPANY:
+      case CONTACT_TYPES.SERVICE:
+        return logoURL;
       default:
-        return (contact as any).photoURL;
+        return photoURL;
     }
   };
 
@@ -92,8 +107,8 @@ export function ContactDetailsHeader({
   // TESTED: 2025-12-04 - Τελική λύση μετά από 12+ ώρες debugging με browser cache
   // ΣΗΜΕΙΩΣΗ: Cache buster μόνο όταν ΠΡΑΓΜΑΤΙΚΑ χρειάζεται
   const needsCacheBuster = type === 'individual' &&
-                          Array.isArray((contact as any).multiplePhotoURLs) &&
-                          (contact as any).multiplePhotoURLs.length === 0;
+                          Array.isArray(multiplePhotoURLs) &&
+                          multiplePhotoURLs?.length === 0;
 
   const avatarImageUrl = rawAvatarImageUrl
     ? (needsCacheBuster
@@ -106,8 +121,8 @@ export function ContactDetailsHeader({
     if (!avatarImageUrl) return;
 
     // 🎯 SMART LOGIC: Gallery navigation για Individual με multiplePhotoURLs
-    if (type === 'individual' && (contact as any).multiplePhotoURLs?.length > 0) {
-      const multiplePhotos = (contact as any).multiplePhotoURLs;
+    if (type === 'individual' && multiplePhotoURLs?.length > 0) {
+      const multiplePhotos = multiplePhotoURLs;
       const currentPhotoIndex = multiplePhotos.findIndex((url: string) => url === avatarImageUrl);
       const photoIndex = currentPhotoIndex >= 0 ? currentPhotoIndex : 0;
 
@@ -116,8 +131,8 @@ export function ContactDetailsHeader({
 
     } else if (type === 'company') {
       // 🎯 NEW: Gallery navigation για Company [logoURL, photoURL]
-      const logoURL = (contact as any).logoURL;
-      const photoURL = (contact as any).photoURL; // Representative photo
+      const companyLogoURL = logoURL;
+      const companyPhotoURL = photoURL; // Representative photo
       const galleryPhotos = [logoURL, photoURL].filter(Boolean); // Remove null/undefined
 
       if (galleryPhotos.length > 1) {
@@ -136,8 +151,8 @@ export function ContactDetailsHeader({
 
     } else if (type === 'service') {
       // 🎯 NEW: Gallery navigation για Service [logoURL, photoURL]
-      const logoURL = (contact as any).logoURL;
-      const photoURL = (contact as any).photoURL; // Representative photo
+      const serviceLogoURL = logoURL;
+      const servicePhotoURL = photoURL; // Representative photo
       const galleryPhotos = [logoURL, photoURL].filter(Boolean); // Remove null/undefined
 
       if (galleryPhotos.length > 1) {
@@ -166,7 +181,7 @@ export function ContactDetailsHeader({
 
     try {
       // Determine which field to update based on contact type
-      const updateField = type === 'individual' ? 'firstName' : 'companyName';
+      const updateField = type === CONTACT_TYPES.INDIVIDUAL ? 'firstName' : 'companyName';
       const updates = { [updateField]: newName.trim() };
 
       await ContactsService.updateContact(contact.id, updates);
@@ -226,7 +241,7 @@ export function ContactDetailsHeader({
         >
           {/* Centralized ContactBadge Components */}
           <div className="flex gap-2 mt-2">
-            <ContactBadge status={type as any} variant="outline" size="sm" />
+            <ContactBadge status={type} variant="outline" size="sm" />
             {status && <ContactBadge status={status} size="sm" />}
           </div>
         </EntityDetailsHeader>

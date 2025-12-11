@@ -6,6 +6,7 @@ import { Mail, Phone, Briefcase } from 'lucide-react';
 import type { Contact } from '@/types/contacts';
 import { getPrimaryEmail, getPrimaryPhone } from '@/types/contacts';
 import { CompanyProjectsTable } from './CompanyProjectsTable';
+import { CONTACT_TYPES } from '@/constants/contacts';
 import { CustomerStats } from './CustomerStats';
 import { CustomerPropertiesTable } from './CustomerPropertiesTable';
 
@@ -54,7 +55,7 @@ export function ContactInfo({ contact, onAddUnit, onRefresh }: ContactInfoProps)
             )}
             {!(email || phone) && <p className="text-sm text-muted-foreground">{t('details.contactInfo.noContactInfo')}</p>}
         </div>
-         {(contact.type === 'company' || contact.type === 'individual') && (
+         {(contact.type === CONTACT_TYPES.COMPANY || contact.type === CONTACT_TYPES.INDIVIDUAL) && (
             <div className="p-4 border rounded-lg">
                 <h4 className="font-semibold mb-2 text-sm">{t('details.taxInfo.title')}</h4>
                 <div className="text-sm">
@@ -62,10 +63,10 @@ export function ContactInfo({ contact, onAddUnit, onRefresh }: ContactInfoProps)
                 </div>
             </div>
          )}
-         {contact.type === 'company' && contact.id && (
+         {contact.type === CONTACT_TYPES.COMPANY && contact.id && (
             <CompanyProjectsTable companyId={contact.id} />
          )}
-         {(contact.type === 'individual' || contact.type === 'company') && contact.id && (
+         {(contact.type === CONTACT_TYPES.INDIVIDUAL || contact.type === CONTACT_TYPES.COMPANY) && contact.id && (
             <>
                 <CustomerStats contactId={contact.id} key={contact.id} />
                 <CustomerPropertiesTable 

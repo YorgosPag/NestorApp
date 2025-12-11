@@ -4,6 +4,7 @@ import React, { useState, useCallback } from 'react';
 import { Users, Edit, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Contact } from '@/types/contacts';
+import type { ContactFormData } from '@/types/ContactFormTypes'; // 🏢 ENTERPRISE: Type-safe form data
 import { ContactDetailsHeader } from './ContactDetailsHeader';
 import { AddUnitToContactDialog } from './AddUnitToContactDialog';
 import { UnifiedContactTabbedSection } from '@/components/ContactFormSections/UnifiedContactTabbedSection';
@@ -23,7 +24,7 @@ interface ContactDetailsProps {
 export function ContactDetails({ contact, onEditContact, onDeleteContact, onContactUpdated }: ContactDetailsProps) {
   const [isAddUnitDialogOpen, setIsAddUnitDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [editedData, setEditedData] = useState<any>({});
+  const [editedData, setEditedData] = useState<Partial<ContactFormData>>({});
   const photoModal = useGlobalPhotoPreview();
 
   const handleUnitAdded = useCallback(() => {
@@ -105,11 +106,11 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
 
   const handleFieldChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setEditedData((prev: any) => ({ ...prev, [name]: value }));
+    setEditedData((prev) => ({ ...prev, [name]: value }));
   }, []);
 
   const handleSelectChange = useCallback((name: string, value: string) => {
-    setEditedData((prev: any) => ({ ...prev, [name]: value }));
+    setEditedData((prev) => ({ ...prev, [name]: value }));
   }, []);
 
   // 🖼️ Photo click handler για gallery preview

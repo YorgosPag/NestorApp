@@ -1,4 +1,12 @@
-import type { Contact } from '@/types/contacts';
+import type {
+  Contact,
+  IndividualContact,
+  CompanyContact,
+  ServiceContact,
+  isIndividualContact,
+  isCompanyContact,
+  isServiceContact
+} from '@/types/contacts';
 
 // ============================================================================
 // ENTERPRISE CENTRALIZED CONTACT FIELD ACCESSOR
@@ -34,8 +42,6 @@ export class ContactFieldAccessor {
   static getEmail(contact: Contact): string {
     if (!contact) return '';
 
-    const contactAny = contact as any;
-
     // 🎯 PRIORITY 1: Arrays format (Individual/Company standard)
     if (contact.emails && Array.isArray(contact.emails) && contact.emails.length > 0) {
       const email = contact.emails[0]?.email;
@@ -43,18 +49,19 @@ export class ContactFieldAccessor {
     }
 
     // 🎯 PRIORITY 2: Direct field (Service standard)
-    if (contactAny.email && typeof contactAny.email === 'string') {
-      return contactAny.email.trim();
+    if (isServiceContact(contact) && contact.email && typeof contact.email === 'string') {
+      return contact.email.trim();
     }
 
-    // 🎯 PRIORITY 3: Nested formats
-    if (contactAny.contactInfo?.email && typeof contactAny.contactInfo.email === 'string') {
-      return contactAny.contactInfo.email.trim();
+    // 🎯 PRIORITY 3: Nested formats (legacy/extended contact types)
+    const extendedContact = contact as any;
+    if (extendedContact.contactInfo?.email && typeof extendedContact.contactInfo.email === 'string') {
+      return extendedContact.contactInfo.email.trim();
     }
 
     // 🎯 PRIORITY 4: Legacy formats
-    if (contactAny.emailAddress && typeof contactAny.emailAddress === 'string') {
-      return contactAny.emailAddress.trim();
+    if (extendedContact.emailAddress && typeof extendedContact.emailAddress === 'string') {
+      return extendedContact.emailAddress.trim();
     }
 
     return '';
@@ -72,8 +79,6 @@ export class ContactFieldAccessor {
   static getPhone(contact: Contact): string {
     if (!contact) return '';
 
-    const contactAny = contact as any;
-
     // 🎯 PRIORITY 1: Arrays format (Individual/Company standard)
     if (contact.phones && Array.isArray(contact.phones) && contact.phones.length > 0) {
       const phone = contact.phones[0]?.number;
@@ -81,22 +86,23 @@ export class ContactFieldAccessor {
     }
 
     // 🎯 PRIORITY 2: Direct field (Service standard)
-    if (contactAny.phone && typeof contactAny.phone === 'string') {
-      return contactAny.phone.trim();
+    if (isServiceContact(contact) && contact.phone && typeof contact.phone === 'string') {
+      return contact.phone.trim();
     }
 
-    // 🎯 PRIORITY 3: Nested formats
-    if (contactAny.contactInfo?.phone && typeof contactAny.contactInfo.phone === 'string') {
-      return contactAny.contactInfo.phone.trim();
+    // 🎯 PRIORITY 3: Nested formats (legacy/extended contact types)
+    const extendedContact = contact as any;
+    if (extendedContact.contactInfo?.phone && typeof extendedContact.contactInfo.phone === 'string') {
+      return extendedContact.contactInfo.phone.trim();
     }
 
     // 🎯 PRIORITY 4: Legacy formats
-    if (contactAny.phoneNumber && typeof contactAny.phoneNumber === 'string') {
-      return contactAny.phoneNumber.trim();
+    if (extendedContact.phoneNumber && typeof extendedContact.phoneNumber === 'string') {
+      return extendedContact.phoneNumber.trim();
     }
 
-    if (contactAny.telephone && typeof contactAny.telephone === 'string') {
-      return contactAny.telephone.trim();
+    if (extendedContact.telephone && typeof extendedContact.telephone === 'string') {
+      return extendedContact.telephone.trim();
     }
 
     return '';
@@ -114,27 +120,31 @@ export class ContactFieldAccessor {
   static getWebsite(contact: Contact): string {
     if (!contact) return '';
 
-    const contactAny = contact as any;
-
-    // 🎯 PRIORITY 1: Direct website field
-    if (contactAny.website && typeof contactAny.website === 'string') {
-      return contactAny.website.trim();
+    // 🎯 PRIORITY 1: Direct website field (Company/Service)
+    if (isCompanyContact(contact) && contact.website && typeof contact.website === 'string') {
+      return contact.website.trim();
     }
 
     // 🎯 PRIORITY 2: Official website (Service specific)
-    if (contactAny.officialWebsite && typeof contactAny.officialWebsite === 'string') {
-      return contactAny.officialWebsite.trim();
+    if (isServiceContact(contact) && contact.officialWebsite && typeof contact.officialWebsite === 'string') {
+      return contact.officialWebsite.trim();
     }
 
-    // 🎯 PRIORITY 3: Websites array (future-proof)
-    if (contactAny.websites && Array.isArray(contactAny.websites) && contactAny.websites.length > 0) {
-      const website = contactAny.websites[0];
+    // 🎯 PRIORITY 3: Extended/legacy website fields
+    const extendedContact = contact as any;
+    if (extendedContact.website && typeof extendedContact.website === 'string') {
+      return extendedContact.website.trim();
+    }
+
+    // 🎯 PRIORITY 4: Websites array (future-proof)
+    if (extendedContact.websites && Array.isArray(extendedContact.websites) && extendedContact.websites.length > 0) {
+      const website = extendedContact.websites[0];
       if (website && typeof website === 'string') return website.trim();
     }
 
-    // 🎯 PRIORITY 4: Nested formats
-    if (contactAny.contactInfo?.website && typeof contactAny.contactInfo.website === 'string') {
-      return contactAny.contactInfo.website.trim();
+    // 🎯 PRIORITY 5: Nested formats
+    if (extendedContact.contactInfo?.website && typeof extendedContact.contactInfo.website === 'string') {
+      return extendedContact.contactInfo.website.trim();
     }
 
     return '';
@@ -148,28 +158,28 @@ export class ContactFieldAccessor {
   static getFullAddress(contact: Contact): string {
     if (!contact) return '';
 
-    const contactAny = contact as any;
     const parts: string[] = [];
 
-    // Try direct address
-    if (contactAny.address && typeof contactAny.address === 'string') {
-      parts.push(contactAny.address.trim());
+    // Try direct address field (common across all contact types)
+    const extendedContact = contact as any;
+    if (extendedContact.address && typeof extendedContact.address === 'string') {
+      parts.push(extendedContact.address.trim());
     }
 
-    // Try structured address
-    if (contactAny.serviceAddress) {
-      const addr = contactAny.serviceAddress;
+    // Try structured address (Service contact specific)
+    if (isServiceContact(contact) && contact.serviceAddress) {
+      const addr = contact.serviceAddress;
       if (addr.street) parts.push(addr.street.trim());
       if (addr.number) parts.push(addr.number.trim());
     }
 
-    // Add postal code and city
-    if (contactAny.postalCode && typeof contactAny.postalCode === 'string') {
-      parts.push(contactAny.postalCode.trim());
+    // Add postal code and city (extended fields)
+    if (extendedContact.postalCode && typeof extendedContact.postalCode === 'string') {
+      parts.push(extendedContact.postalCode.trim());
     }
 
-    if (contactAny.city && typeof contactAny.city === 'string') {
-      parts.push(contactAny.city.trim());
+    if (extendedContact.city && typeof extendedContact.city === 'string') {
+      parts.push(extendedContact.city.trim());
     }
 
     return parts.filter(Boolean).join(', ');
@@ -181,18 +191,20 @@ export class ContactFieldAccessor {
    * Helps identify how fields are stored in different contact types
    */
   static debugFieldAccess(contact: Contact): void {
+    const extendedContact = contact as any; // Legacy fields debug only
+
     console.log('🔍 CONTACT FIELD DEBUG:', {
       contactId: contact.id,
       contactType: contact.type,
       email: ContactFieldAccessor.getEmail(contact),
       phone: ContactFieldAccessor.getPhone(contact),
       website: ContactFieldAccessor.getWebsite(contact),
-      rawEmailsArray: (contact as any).emails,
-      rawPhonesArray: (contact as any).phones,
-      rawEmailDirect: (contact as any).email,
-      rawPhoneDirect: (contact as any).phone,
-      rawWebsite: (contact as any).website,
-      rawOfficialWebsite: (contact as any).officialWebsite
+      rawEmailsArray: contact.emails,
+      rawPhonesArray: contact.phones,
+      rawEmailDirect: isServiceContact(contact) ? contact.email : extendedContact.email,
+      rawPhoneDirect: isServiceContact(contact) ? contact.phone : extendedContact.phone,
+      rawWebsite: isCompanyContact(contact) ? contact.website : extendedContact.website,
+      rawOfficialWebsite: isServiceContact(contact) ? contact.officialWebsite : extendedContact.officialWebsite
     });
   }
 }

@@ -25,7 +25,15 @@ import {
 import { PHOTO_COLORS } from '@/components/generic/config/photo-config';
 
 // 🏢 ENTERPRISE: Import centralized contact types
-import type { ContactType } from '@/types/contacts';
+import type {
+  ContactType,
+  IndividualContact,
+  CompanyContact,
+  ServiceContact,
+  isIndividualContact,
+  isCompanyContact,
+  isServiceContact
+} from '@/types/contacts';
 
 // ============================================================================
 // 🏢 ENTERPRISE: TYPES & INTERFACES
@@ -93,20 +101,33 @@ const realContactSearch = async (query: string, filters: {
       return [];
     }
 
-    // Convert to ContactSummary format
+    // Convert to ContactSummary format with proper type checking
     let filtered = allContacts.map(contact => {
+      let name = '';
+      let company: string | undefined;
+      let department: string | undefined;
+
+      // Type-safe name extraction
+      if (isIndividualContact(contact)) {
+        const extendedContact = contact as any; // Legacy fields
+        name = `${extendedContact.firstName || ''} ${extendedContact.lastName || ''}`.trim();
+        company = extendedContact.employer || '';
+        department = extendedContact.position || '';
+      } else if (isCompanyContact(contact)) {
+        const extendedContact = contact as any; // Legacy fields
+        name = extendedContact.companyName || '';
+      } else if (isServiceContact(contact)) {
+        name = contact.serviceName || '';
+      }
+
       const summary: ContactSummary = {
         id: contact.id,
-        name: contact.type === 'individual'
-          ? `${(contact as any).firstName || ''} ${(contact as any).lastName || ''}`.trim()
-          : contact.type === 'company'
-          ? (contact as any).companyName || ''
-          : (contact as any).serviceName || '',
+        name,
         type: contact.type,
         email: contact.emails?.[0]?.email || '',
         phone: contact.phones?.[0]?.number || '',
-        company: contact.type === 'individual' ? (contact as any).employer || '' : undefined,
-        department: contact.type === 'individual' ? (contact as any).position || '' : undefined,
+        company,
+        department,
         lastActivity: contact.updatedAt ? new Date(contact.updatedAt).toISOString().split('T')[0] : undefined
       };
       return summary;

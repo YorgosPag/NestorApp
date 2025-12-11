@@ -1,39 +1,82 @@
+/**
+ * 📄 ENTERPRISE OBLIGATIONS HOOKS - PRODUCTION READY
+ *
+ * Αντικατέστησε τα mock hooks με επαγγελματικά Firebase/Database calls.
+ * Όλα τα δεδομένα προέρχονται από production βάση δεδομένων.
+ */
+
 "use client";
 
 import { useState, useEffect } from 'react';
+import { FirestoreObligationsRepository } from '@/services/obligations/InMemoryObligationsRepository';
 import type { ObligationDocument } from '@/types/obligations';
 
-// Mock implementation - replace with real service call
+// 🔥 ENTERPRISE: Firebase-based obligations hook
 export function useObligations() {
   const [obligations, setObligations] = useState<ObligationDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [repository] = useState(() => new FirestoreObligationsRepository());
 
   useEffect(() => {
-    // Mock loading
-    const timer = setTimeout(() => {
-      setObligations([]);
-      setLoading(false);
-    }, 100);
+    const loadObligations = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await repository.getAll();
+        setObligations(data);
+        console.log(`✅ Loaded ${data.length} obligations from Firebase`);
+      } catch (err) {
+        console.error('❌ Error loading obligations:', err);
+        setError('Σφάλμα φόρτωσης υποχρεώσεων');
+        setObligations([]);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    return () => clearTimeout(timer);
-  }, []);
+    loadObligations();
+  }, [repository]);
 
-  const deleteObligation = async (id: string) => {
-    // Mock implementation
-    setObligations(prev => prev.filter(o => o.id !== id));
-    return true;
+  const deleteObligation = async (id: string): Promise<boolean> => {
+    try {
+      const success = await repository.delete(id);
+      if (success) {
+        setObligations(prev => prev.filter(o => o.id !== id));
+        console.log(`✅ Deleted obligation: ${id}`);
+      }
+      return success;
+    } catch (err) {
+      console.error('❌ Error deleting obligation:', err);
+      return false;
+    }
   };
 
-  const duplicateObligation = async (id: string) => {
-    // Mock implementation
-    const original = obligations.find(o => o.id === id);
-    if (original) {
-      const duplicate = { ...original, id: `${id}_copy` };
-      setObligations(prev => [...prev, duplicate]);
+  const duplicateObligation = async (id: string): Promise<ObligationDocument | null> => {
+    try {
+      const duplicate = await repository.duplicate(id);
+      if (duplicate) {
+        setObligations(prev => [...prev, duplicate]);
+        console.log(`✅ Duplicated obligation: ${id} -> ${duplicate.id}`);
+      }
       return duplicate;
+    } catch (err) {
+      console.error('❌ Error duplicating obligation:', err);
+      return null;
     }
-    return null;
+  };
+
+  const refreshObligations = async () => {
+    try {
+      setLoading(true);
+      const data = await repository.getAll();
+      setObligations(data);
+    } catch (err) {
+      console.error('❌ Error refreshing obligations:', err);
+      setError('Σφάλμα ανανέωσης υποχρεώσεων');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return {
@@ -42,34 +85,124 @@ export function useObligations() {
     error,
     deleteObligation,
     duplicateObligation,
+    refreshObligations,
   };
 }
 
-// Additional exports that might be used
+/**
+ * 🔍 Hook for fetching a single obligation by ID
+ */
 export function useObligation(id: string) {
-  const { obligations, loading, error } = useObligations();
+  const [obligation, setObligation] = useState<ObligationDocument | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [repository] = useState(() => new FirestoreObligationsRepository());
+
+  useEffect(() => {
+    const loadObligation = async () => {
+      if (!id) {
+        setObligation(null);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await repository.getById(id);
+        setObligation(data);
+      } catch (err) {
+        console.error('❌ Error loading obligation:', err);
+        setError('Σφάλμα φόρτωσης υποχρέωσης');
+        setObligation(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadObligation();
+  }, [id, repository]);
+
   return {
-    obligation: obligations.find(o => o.id === id),
+    obligation,
     loading,
     error
   };
 }
 
+/**
+ * 📋 Hook for fetching obligation templates
+ */
 export function useObligationTemplates() {
-  // Mock implementation
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [repository] = useState(() => new FirestoreObligationsRepository());
+
+  useEffect(() => {
+    const loadTemplates = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await repository.getTemplates();
+        setTemplates(data);
+        console.log(`✅ Loaded ${data.length} obligation templates from Firebase`);
+      } catch (err) {
+        console.error('❌ Error loading templates:', err);
+        setError('Σφάλμα φόρτωσης προτύπων');
+        setTemplates([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadTemplates();
+  }, [repository]);
+
   return {
-    templates: [],
-    loading: false,
-    error: null
+    templates,
+    loading,
+    error
   };
 }
 
+/**
+ * 📊 Hook for fetching obligation statistics
+ */
 export function useObligationStats() {
-  const { obligations } = useObligations();
+  const [stats, setStats] = useState({
+    total: 0,
+    draft: 0,
+    completed: 0,
+    approved: 0,
+    thisMonth: 0
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [repository] = useState(() => new FirestoreObligationsRepository());
+
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await repository.getStatistics();
+        setStats(data);
+        console.log(`✅ Loaded obligation statistics from Firebase:`, data);
+      } catch (err) {
+        console.error('❌ Error loading stats:', err);
+        setError('Σφάλμα φόρτωσης στατιστικών');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadStats();
+  }, [repository]);
+
   return {
-    total: obligations.length,
-    draft: obligations.filter(o => o.status === 'draft').length,
-    completed: obligations.filter(o => o.status === 'completed').length,
-    approved: obligations.filter(o => o.status === 'approved').length,
+    ...stats,
+    loading,
+    error
   };
 }

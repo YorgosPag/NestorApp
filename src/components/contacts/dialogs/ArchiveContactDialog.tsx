@@ -17,6 +17,7 @@ import toast from 'react-hot-toast';
 import type { Contact } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts';
 import { Loader2, Archive, Users, Building, Shield } from 'lucide-react';
+import { CONTACT_TYPES, getContactIcon, getContactLabel, getContactColor } from '@/constants/contacts';
 
 interface ArchiveContactDialogProps {
   open: boolean;
@@ -40,13 +41,10 @@ export function ArchiveContactDialog({
   const isSingleSelectedArchive = selectedContactIds.length === 1;
   const isCurrentContactArchive = contact && !isSingleSelectedArchive;
 
-  const getContactIcon = (contact: Contact) => {
-    switch (contact.type) {
-      case 'individual': return <Users className="h-4 w-4 text-blue-500" />;
-      case 'company': return <Building className="h-4 w-4 text-purple-500" />;
-      case 'service': return <Shield className="h-4 w-4 text-green-500" />;
-      default: return <Users className="h-4 w-4 text-gray-500" />;
-    }
+  const getContactIconComponent = (contact: Contact) => {
+    const IconComponent = getContactIcon(contact.type);
+    const colorClass = getContactColor(contact.type, 'primary');
+    return <IconComponent className={`h-4 w-4 ${colorClass}`} />;
   };
 
   const getDialogTitle = () => {
@@ -129,13 +127,11 @@ export function ArchiveContactDialog({
             </div>
           ) : contact ? (
             <div className="bg-muted p-3 rounded-lg flex items-center gap-3">
-              {getContactIcon(contact)}
+              {getContactIconComponent(contact)}
               <div>
                 <p className="font-medium">{getContactDisplayName(contact)}</p>
                 <p className="text-sm text-muted-foreground">
-                  {contact.type === 'individual' && 'Φυσικό Πρόσωπο'}
-                  {contact.type === 'company' && 'Εταιρεία'}
-                  {contact.type === 'service' && 'Δημόσια Υπηρεσία'}
+                  {getContactLabel(contact.type, 'singular')}
                 </p>
               </div>
             </div>

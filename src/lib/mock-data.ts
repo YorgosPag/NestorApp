@@ -1,37 +1,73 @@
-export const mockContacts = [
-  {
-    id: '1',
-    personal: { firstName: 'Γιάννης', lastName: 'Παπαδόπουλος' },
-    job: { role: 'Πρόγραμμα Manager' }
-  },
-  {
-    id: '2', 
-    personal: { firstName: 'Μαρία', lastName: 'Κωνσταντίνου' },
-    job: { role: 'Architect' }
-  }
-];
+/**
+ * 🏢 ENTERPRISE DATA SERVICES - PRODUCTION READY
+ *
+ * Αντικατέστησε τα mock data με επαγγελματικά Firebase/Database services.
+ * Όλα τα δεδομένα προέρχονται από production βάση δεδομένων.
+ */
 
-export const mockProjects = [
-  {
-    id: '1',
-    title: 'Κτίριο Α',
-    description: 'Πολυκατοικία 5 ορόφων',
-    ownerContactId: '1',
-    status: 'active',
-    progress: 75,
-    deadline: '2024-12-31',
-    budget: 500000,
-    interventions: []
-  },
-  {
-    id: '2',
-    title: 'Κτίριο Β', 
-    description: 'Μονοκατοικία',
-    ownerContactId: '2',
-    status: 'planning',
-    progress: 25,
-    deadline: '2024-06-30',
-    budget: 200000,
-    interventions: []
+import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import type { Contact, Project } from '@/types';
+
+/**
+ * 📞 Ανάκτηση επαφών από Firebase
+ * Αντικατέστησε το mockContacts με πραγματικά δεδομένα από τη βάση
+ */
+export async function getContacts(limitCount: number = 100): Promise<Contact[]> {
+  try {
+    const contactsQuery = query(
+      collection(db, 'contacts'),
+      orderBy('updatedAt', 'desc'),
+      limit(limitCount)
+    );
+
+    const snapshot = await getDocs(contactsQuery);
+
+    const contacts = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as Contact[];
+
+    console.log(`✅ Loaded ${contacts.length} real contacts from Firebase`);
+    return contacts;
+
+  } catch (error) {
+    console.error('❌ Error fetching contacts from Firebase:', error);
+    return []; // Επιστροφή κενού array αντί για mock data
   }
-];
+}
+
+/**
+ * 🏗️ Ανάκτηση projects από Firebase
+ * Αντικατέστησε το mockProjects με πραγματικά δεδομένα από τη βάση
+ */
+export async function getProjects(limitCount: number = 100): Promise<Project[]> {
+  try {
+    const projectsQuery = query(
+      collection(db, 'projects'),
+      orderBy('updatedAt', 'desc'),
+      limit(limitCount)
+    );
+
+    const snapshot = await getDocs(projectsQuery);
+
+    const projects = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as Project[];
+
+    console.log(`✅ Loaded ${projects.length} real projects from Firebase`);
+    return projects;
+
+  } catch (error) {
+    console.error('❌ Error fetching projects from Firebase:', error);
+    return []; // Επιστροφή κενού array αντί για mock data
+  }
+}
+
+// 🚨 DEPRECATED: Αυτά τα exports διατηρούνται για backward compatibility
+// αλλά θα πρέπει να αντικατασταθούν με async Firebase calls
+export const mockContacts: Contact[] = [];
+export const mockProjects: Project[] = [];
+
+// 📝 TODO: Αφαίρεση των deprecated exports όταν όλα τα αρχεία μετακινηθούν στο async API

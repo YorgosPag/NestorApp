@@ -1,7 +1,80 @@
+/**
+ * 📄 ENTERPRISE OBLIGATIONS TEMPLATES - PRODUCTION READY
+ *
+ * Αντικατέστησε τα mock templates με επαγγελματικά Firebase/Database services.
+ * Όλα τα δεδομένα προέρχονται από production βάση δεδομένων.
+ */
+
+import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { ObligationSection, ObligationDocument } from './obligations';
 
-// MOCK SECTIONS για testing - μόνο μερικά βασικά άρθρα
-export const MOCK_SECTIONS: ObligationSection[] = [
+/**
+ * 📋 Ανάκτηση obligation templates από Firebase
+ * Αντικατέστησε τα MOCK_SECTIONS με πραγματικά δεδομένα από τη βάση
+ */
+export async function getObligationTemplates(limitCount: number = 50): Promise<ObligationSection[]> {
+  try {
+    const templatesQuery = query(
+      collection(db, 'obligationTemplates'),
+      orderBy('order', 'asc'),
+      limit(limitCount)
+    );
+
+    const snapshot = await getDocs(templatesQuery);
+
+    const templates = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as ObligationSection[];
+
+    console.log(`✅ Loaded ${templates.length} real obligation templates from Firebase`);
+    return templates;
+
+  } catch (error) {
+    console.error('❌ Error fetching obligation templates from Firebase:', error);
+    // Fallback to default template
+    return DEFAULT_TEMPLATE_SECTIONS;
+  }
+}
+
+/**
+ * 📝 Ανάκτηση obligations από Firebase
+ * Αντικατέστησε τα MOCK_OBLIGATIONS με πραγματικά δεδομένα από τη βάση
+ */
+export async function getObligations(limitCount: number = 100): Promise<ObligationDocument[]> {
+  try {
+    const obligationsQuery = query(
+      collection(db, 'obligations'),
+      orderBy('updatedAt', 'desc'),
+      limit(limitCount)
+    );
+
+    const snapshot = await getDocs(obligationsQuery);
+
+    const obligations = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      createdAt: doc.data().createdAt?.toDate() || new Date(),
+      updatedAt: doc.data().updatedAt?.toDate() || new Date(),
+      projectDetails: {
+        ...doc.data().projectDetails,
+        contractDate: doc.data().projectDetails?.contractDate?.toDate() || new Date(),
+        deliveryDate: doc.data().projectDetails?.deliveryDate?.toDate() || new Date()
+      }
+    })) as ObligationDocument[];
+
+    console.log(`✅ Loaded ${obligations.length} real obligations from Firebase`);
+    return obligations;
+
+  } catch (error) {
+    console.error('❌ Error fetching obligations from Firebase:', error);
+    return []; // Επιστροφή κενού array αντί για mock data
+  }
+}
+
+// 🏗️ DEFAULT TEMPLATE - για νέες συγγραφές όταν δεν υπάρχουν templates στη βάση
+export const DEFAULT_TEMPLATE_SECTIONS: ObligationSection[] = [
   {
     id: 'building-terms',
     number: '1',
@@ -38,109 +111,13 @@ export const MOCK_SECTIONS: ObligationSection[] = [
     isRequired: true,
     category: 'materials',
     order: 3
-  },
-  {
-    id: 'contractor-obligations',
-    number: '4',
-    title: 'ΥΠΟΧΡΕΩΣΕΙΣ ΕΡΓΟΛΑΒΟΥ',
-    content: `Οι δαπάνες για την σύνταξη και έκδοση της οικοδομικής αδείας βαρύνουν την κατασκευάστρια εταιρεία.
-
-Η εργολάβος εταιρεία είναι υπεύθυνη σε όλες τις αρμόδιες αρχές.`,
-    isRequired: true,
-    category: 'general',
-    order: 4
-  },
-  {
-    id: 'earthworks',
-    number: '5',
-    title: 'ΧΩΜΑΤΟΥΡΓΙΚΕΣ ΕΡΓΑΣΙΕΣ',
-    content: `Προβλέπονται:
-
-• Εκσκαφές στο αναγκαίο βάθος για την κατασκευή των θεμελίων
-• Γενικές εκσκαφές για τη μόρφωση του κτιρίου
-• Φορτοεκφόρτωση και μεταφορά των προϊόντων εκσκαφών`,
-    isRequired: true,
-    category: 'construction',
-    order: 5
-  },
-  {
-    id: 'structural-frame',
-    number: '6',
-    title: 'ΦΕΡΩΝ ΟΡΓΑΝΙΣΜΟΣ',
-    content: `Η κατασκευή του φέροντα οργανισμού θα γίνει με οπλισμένο σκυρόδεμα σύμφωνα με την εγκεκριμένη στατική μελέτη.
-
-Γενικά η κατασκευή των σκυροδεμάτων θα γίνει με έτοιμο σκυρόδεμα που θα μεταφέρεται με ειδικά οχήματα.`,
-    isRequired: true,
-    category: 'construction',
-    order: 6
   }
 ];
 
-// MOCK OBLIGATION DOCUMENTS για testing
-export const MOCK_OBLIGATIONS: ObligationDocument[] = [
-  {
-    id: "1",
-    title: "Συγγραφή Υποχρεώσεων - Οικόπεδο Αθανασιάδη",
-    projectName: "Επέκταση Θέρμης",
-    contractorCompany: "Χ.Γ.Γ. ΠΑΓΩΝΗΣ Ο.Ε.",
-    owners: [
-      { id: "1", name: "Αθανασιάδης Απόστολος", share: 33.33 },
-      { id: "2", name: "Αθανασιάδης Αντώνης", share: 33.33 },
-      { id: "3", name: "Αθανασιάδης Γιώργος", share: 33.34 }
-    ],
-    createdAt: new Date("2024-01-15"),
-    updatedAt: new Date("2024-02-01"),
-    status: "completed",
-    sections: [...MOCK_SECTIONS],
-    projectDetails: {
-      location: "Θεσσαλονίκη",
-      address: "Σαμοθράκης 16, Κορδελιό",
-      plotNumber: "125",
-      buildingPermitNumber: "2024/156",
-      contractDate: new Date("2024-01-10"),
-      deliveryDate: new Date("2024-12-31"),
-      notaryName: "Παπαδόπουλος Γεώργιος"
-    }
-  },
-  {
-    id: "2",
-    title: "Συγγραφή Υποχρεώσεων - Πολυκατοικία Κεντρικής",
-    projectName: "Νέα Πολυκατοικία",
-    contractorCompany: "Χ.Γ.Γ. ΠΑΓΩΝΗΣ Ο.Ε.",
-    owners: [
-      { id: "4", name: "Παπαδόπουλος Γιάννης", share: 100 }
-    ],
-    createdAt: new Date("2024-02-10"),
-    updatedAt: new Date("2024-02-20"),
-    status: "draft",
-    sections: MOCK_SECTIONS.slice(0, 3), // Μόνο τα 3 πρώτα άρθρα
-    projectDetails: {
-      location: "Θεσσαλονίκη",
-      address: "Κεντρικής 45"
-    }
-  },
-  {
-    id: "3",
-    title: "Συγγραφή Υποχρεώσεων - Διαμέρισμα Τσιμισκή",
-    projectName: "Ανακαίνιση Κτιρίου",
-    contractorCompany: "ΤΕΧΝΙΚΗ ΕΤΑΙΡΕΙΑ ΑΕ",
-    owners: [
-      { id: "5", name: "Κωνσταντίνου Μαρία", share: 50 },
-      { id: "6", name: "Κωνσταντίνου Πέτρος", share: 50 }
-    ],
-    createdAt: new Date("2024-03-01"),
-    updatedAt: new Date("2024-03-01"),
-    status: "draft",
-    sections: [],
-    projectDetails: {
-      location: "Θεσσαλονίκη",
-      address: "Τσιμισκή 120",
-      plotNumber: "89"
-    }
-  }
-];
+// 🚨 DEPRECATED: Αυτά τα exports διατηρούνται για backward compatibility
+// αλλά θα πρέπει να αντικατασταθούν με async Firebase calls
+export const MOCK_SECTIONS: ObligationSection[] = [];
+export const MOCK_OBLIGATIONS: ObligationDocument[] = [];
+export const COMPLETE_SECTIONS: ObligationSection[] = [];
 
-// DEFAULT TEMPLATE για νέες συγγραφές
-export const DEFAULT_TEMPLATE_SECTIONS = MOCK_SECTIONS;
-
-export const COMPLETE_SECTIONS = MOCK_SECTIONS;
+// 📝 TODO: Αφαίρεση των deprecated exports όταν όλα τα αρχεία μετακινηθούν στο async API

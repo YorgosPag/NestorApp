@@ -15,6 +15,7 @@ export type {
   CommunicationType,
   CommunicationItem,
   CommunicationConfig,
+  CommunicationFieldValue, // 🆕 ENTERPRISE: Type-safe field values
   TypeOption,
   UniversalCommunicationManagerProps,
   CommunicationConfigRecord,

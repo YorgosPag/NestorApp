@@ -7,7 +7,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { mockContacts, mockProjects } from '@/lib/mock-data';
+import { getContacts, getProjects } from '@/lib/mock-data';
 import type { AIReportOutput } from '@/types';
 
 const reportComponentSchema = z.union([
@@ -52,6 +52,12 @@ const generateReportFlow = ai.defineFlow(
         outputSchema: reportOutputSchema,
     },
     async (query: string) => {
+        // 🔥 ΦΟΡΤΩΣΗ ΠΡΑΓΜΑΤΙΚΩΝ ΔΕΔΟΜΕΝΩΝ ΑΠΟ FIREBASE
+        const [projects, contacts] = await Promise.all([
+            getProjects(50), // Φόρτωση 50 τελευταίων projects
+            getContacts(50)  // Φόρτωση 50 τελευταίων επαφών
+        ]);
+
         const reportPrompt = ai.definePrompt({
             name: 'reportGeneratorPrompt',
             input: { schema: z.string() },
@@ -59,16 +65,16 @@ const generateReportFlow = ai.defineFlow(
             prompt: `You are an expert data analyst for a project management application. Your task is to answer user queries by generating a structured report from the provided data.
 
             DATA CONTEXT:
-            You have access to a list of projects and contacts.
+            You have access to a list of projects and contacts loaded from production database.
             - Project fields: id, title, description, ownerContactId, status, progress, deadline, budget, interventions (list of {id, title, subInterventions: list of {id, code, description, approvedPrice, costOfMaterials, costOfLabor}, stages: list of {id, title, status, assigneeContactId, supervisorContactId}}).
             - Contact fields: id, personal (firstName, lastName), job (role).
 
             USER QUERY:
             "{{{query}}}"
 
-            AVAILABLE DATA:
-            - Projects: ${JSON.stringify(mockProjects, null, 2)}
-            - Contacts: ${JSON.stringify(mockContacts, null, 2)}
+            AVAILABLE PRODUCTION DATA:
+            - Projects: ${JSON.stringify(projects, null, 2)}
+            - Contacts: ${JSON.stringify(contacts, null, 2)}
 
             INSTRUCTIONS:
             1.  Analyze the user's query to understand the required information.
