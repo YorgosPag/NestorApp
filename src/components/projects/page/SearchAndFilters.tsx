@@ -59,7 +59,7 @@ export function SearchAndFilters({
           <Filter className="w-4 h-4 text-muted-foreground" />
           <FilterSelect
             value={filterCompany}
-            onChange={(e) => setFilterCompany(e.target.value)}
+            onChange={setFilterCompany}
             options={companies}
             placeholder="Όλες οι εταιρείες"
           />

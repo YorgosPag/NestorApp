@@ -14,7 +14,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { EnterpriseDropdown } from '@/components/ui/enterprise-dropdown';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Plus, AlertTriangle } from 'lucide-react';
@@ -314,26 +320,48 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
               />
             </div>
 
-            {/* Relationship Type Selection */}
+            {/* Relationship Type Selection - Pure Radix UI */}
             <div>
               <Label htmlFor="relationshipType">Τύπος Σχέσης*</Label>
-              <EnterpriseDropdown
+              <Select
                 value={formData.relationshipType}
                 onValueChange={(value: string) =>
                   handleFieldChange('relationshipType', value as RelationshipType)
                 }
-                options={availableRelationshipTypes.map(type => {
-                  const config = getRelationshipTypeConfig(type);
-                  return {
-                    value: type,
-                    label: config?.label || type,
-                    icon: config?.icon
-                  };
-                })}
                 disabled={loading}
-                placeholder="Επιλέξτε τύπο σχέσης"
-                error={!formData.relationshipType ? 'Η επιλογή τύπου σχέσης είναι υποχρεωτική' : undefined}
-              />
+              >
+                <SelectTrigger
+                  className={
+                    !formData.relationshipType
+                      ? "border-destructive focus:ring-destructive"
+                      : ""
+                  }
+                >
+                  <SelectValue placeholder="Επιλέξτε τύπο σχέσης" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableRelationshipTypes.map(type => {
+                    const config = getRelationshipTypeConfig(type);
+                    const Icon = config?.icon;
+
+                    return (
+                      <SelectItem key={type} value={type}>
+                        <div className="flex items-center gap-2">
+                          {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+                          <span>{config?.label || type}</span>
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+
+              {/* Error message */}
+              {!formData.relationshipType && (
+                <p className="text-sm text-destructive mt-1">
+                  Η επιλογή τύπου σχέσης είναι υποχρεωτική
+                </p>
+              )}
             </div>
 
             {/* Temporarily disabled proactive validation warning to fix infinite loop */}

@@ -2,14 +2,21 @@
 'use client';
 
 import React from 'react';
-import { EnterpriseDropdown, type DropdownOption } from '@/components/ui/enterprise-dropdown';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
 
 // ============================================================================
-// BUILDING MANAGEMENT: ENTERPRISE FILTER SELECT
+// BUILDING MANAGEMENT: PURE RADIX UI FILTER SELECT
 // ============================================================================
 //
-// 🏢 Κεντρικοποιημένο filter component που χρησιμοποιεί το Enterprise Dropdown system
-// Διατηρεί την ίδια API για backward compatibility αλλά με modern implementation
+// 🏢 ΕΠΑΓΓΕΛΜΑΤΙΚΟ: Pure Radix UI implementation για enterprise-grade architecture
+// ♿ WAI-ARIA compliant, professional keyboard navigation, battle-tested
+// 📱 Mobile ready, touch-friendly, industry standard solution
 //
 // ============================================================================
 
@@ -22,10 +29,10 @@ interface FilterSelectProps {
 }
 
 /**
- * 🏢 Enterprise Filter Select Component
+ * 🏢 Pure Radix UI Filter Select Component
  *
- * Centralized dropdown για building management filters.
- * Χρησιμοποιεί το κεντρικοποιημένο EnterpriseDropdown system.
+ * Enterprise-grade dropdown για building management filters.
+ * Uses industry standard Radix UI Select with professional accessibility.
  */
 export function FilterSelect({
   value,
@@ -34,38 +41,34 @@ export function FilterSelect({
   placeholder,
   className
 }: FilterSelectProps) {
-  // 🏢 ENTERPRISE: Convert data format to EnterpriseDropdown format
-  const dropdownOptions: DropdownOption[] = [
-    // Always include "all" option first
-    { value: 'all', label: placeholder },
-    // Convert options to dropdown format με smart label mapping
-    ...options.map(opt => {
-      // 🏢 ENTERPRISE: Smart label mapping για status values
-      const getDisplayLabel = (name: string): string => {
-        const statusLabels: Record<string, string> = {
-          'active': 'Ενεργά',
-          'construction': 'Υπό Κατασκευή',
-          'planned': 'Σχεδιασμένα',
-          'completed': 'Ολοκληρωμένα'
-        };
+  // 🏢 ENTERPRISE: Smart label mapping για status values
+  const getDisplayLabel = (name: string): string => {
+    const statusLabels: Record<string, string> = {
+      'active': 'Ενεργά',
+      'construction': 'Υπό Κατασκευή',
+      'planned': 'Σχεδιασμένα',
+      'completed': 'Ολοκληρωμένα'
+    };
 
-        return statusLabels[name] || name; // Fallback to original name
-      };
-
-      return {
-        value: opt.name, // Use name as value για consistency
-        label: getDisplayLabel(opt.name)
-      };
-    })
-  ];
+    return statusLabels[name] || name; // Fallback to original name
+  };
 
   return (
-    <EnterpriseDropdown
-      value={value}
-      onValueChange={onChange}
-      options={dropdownOptions}
-      placeholder={placeholder}
-      className={className}
-    />
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className={className}>
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+      <SelectContent>
+        {/* Always include "all" option first */}
+        <SelectItem value="all">{placeholder}</SelectItem>
+
+        {/* Map options with smart label mapping */}
+        {options.map(opt => (
+          <SelectItem key={opt.id} value={opt.name}>
+            {getDisplayLabel(opt.name)}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }

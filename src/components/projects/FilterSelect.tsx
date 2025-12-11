@@ -1,14 +1,37 @@
 'use client';
 
 import React from 'react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
+
+// ============================================================================
+// PROJECTS: PURE RADIX UI FILTER SELECT
+// ============================================================================
+//
+// 🏢 ΕΠΑΓΓΕΛΜΑΤΙΚΟ: Pure Radix UI implementation για enterprise-grade architecture
+// ♿ WAI-ARIA compliant, professional keyboard navigation, battle-tested
+// 📱 Mobile ready, touch-friendly, industry standard solution
+//
+// ============================================================================
 
 interface FilterSelectProps {
   value: string;
-  onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+  onChange: (value: string) => void; // 🏢 ENTERPRISE: Updated to direct value callback
   options: { id: string; name: string }[];
   placeholder: string;
 }
 
+/**
+ * 🏢 Pure Radix UI Filter Select Component for Projects
+ *
+ * Enterprise-grade dropdown για projects filters.
+ * Uses industry standard Radix UI Select with professional accessibility.
+ */
 export function FilterSelect({
   value,
   onChange,
@@ -16,17 +39,21 @@ export function FilterSelect({
   placeholder,
 }: FilterSelectProps) {
   return (
-    <select
-      value={value}
-      onChange={onChange}
-      className="h-9 px-3 rounded-md border border-input bg-background text-sm"
-    >
-      <option value="all">{placeholder}</option>
-      {options.map((opt) => (
-        <option key={opt.id} value={opt.name}>
-          {opt.name}
-        </option>
-      ))}
-    </select>
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className="h-9 px-3 text-sm">
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+      <SelectContent>
+        {/* Always include "all" option first */}
+        <SelectItem value="all">{placeholder}</SelectItem>
+
+        {/* Map options */}
+        {options.map((opt) => (
+          <SelectItem key={opt.id} value={opt.name}>
+            {opt.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
