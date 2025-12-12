@@ -154,7 +154,9 @@
       "Bash(del \"C:\\Nestor_Pagonis\\src\\database\\migrations\\001_create_contact_relationships.ts\")",
       "Bash(del \"C:\\Nestor_Pagonis\\src\\core\\headers\\UnifiedHeaderSystem.tsx\")",
       "Bash(pkill:*)",
-      "Bash(SKIP_ENV_VALIDATION=true PORT=3010 npm run dev)"
+      "Bash(SKIP_ENV_VALIDATION=true PORT=3010 npm run dev)",
+      "Bash(xargs ls:*)",
+      "Bash(del:*)"
     ],
     "deny": [],
     "ask": []
