@@ -41,54 +41,7 @@ import { CompactToolbar, contactsConfig } from '@/components/core/CompactToolbar
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-// Initial seed data for database (μόνο για πρώτη φόρτωση)
-const SEED_CONTACTS = [
-  {
-    type: 'individual' as const,
-    firstName: 'Γιώργος',
-    lastName: 'Παπαδόπουλος',
-    emails: [{ email: 'g.papadopoulos@example.com', type: 'work' as const, isPrimary: true }],
-    phones: [{ number: '6971234567', type: 'mobile' as const, isPrimary: true }],
-    isFavorite: true,
-    status: 'active' as const,
-  },
-  {
-    type: 'company' as const,
-    companyName: 'Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.',
-    emails: [{ email: 'info@pagonis.gr', type: 'work' as const, isPrimary: true }],
-    phones: [{ number: '2109876543', type: 'work' as const, isPrimary: true }],
-    isFavorite: false,
-    status: 'active' as const,
-    vatNumber: '987654321'
-  },
-  {
-    type: 'company' as const,
-    companyName: 'TechCorp Α.Ε.',
-    emails: [{ email: 'info@techcorp.gr', type: 'work' as const, isPrimary: true }],
-    phones: [{ number: '2101234567', type: 'work' as const, isPrimary: true }],
-    isFavorite: false,
-    status: 'active' as const,
-    vatNumber: '123456789'
-  },
-  {
-    type: 'service' as const,
-    serviceName: "ΔΟΥ Α' Θεσσαλονίκης",
-    emails: [{ email: 'doy.a.thess@aade.gr', type: 'work' as const, isPrimary: true }],
-    phones: [{ number: '2310555111', type: 'work' as const, isPrimary: true }],
-    isFavorite: false,
-    status: 'active' as const,
-    serviceType: 'tax_office' as const
-  },
-  {
-    type: 'individual' as const,
-    firstName: 'Μαρία',
-    lastName: 'Ιωάννου',
-    emails: [{ email: 'm.ioannou@example.com', type: 'personal' as const, isPrimary: true }],
-    phones: [{ number: '6987654321', type: 'mobile' as const, isPrimary: true }],
-    isFavorite: false,
-    status: 'inactive' as const,
-  },
-];
+// 🚫 MOCK DATA ΕΝΤΕΛΩΣ ΑΦΑΙΡΕΜΕΝΑ - Καθαρή εφαρμογή χωρίς seed functionality
 
 export function ContactsPageContent() {
   // URL parameters
@@ -164,11 +117,8 @@ export function ContactsPageContent() {
       });
       setContacts(contactsResult.contacts);
 
-      // Αν είναι άδεια η βάση, προσθέτουμε seed data
-      if (contactsResult.contacts.length === 0) {
-        // Debug logging removed
-        await seedDatabase();
-      }
+      // 🚫 SEED DATA ΠΛΗΡΩΣ ΑΦΑΙΡΕΜΕΝΑ - Καθαρή έναρξη χωρίς mock data
+      // Η βάση δεδομένων θα παραμείνει άδεια μέχρι να προσθέσει ο χρήστης επαφές
     } catch (err) {
       // Error logging removed
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
@@ -178,20 +128,7 @@ export function ContactsPageContent() {
     }
   }, [filters.showArchived]);
 
-  const seedDatabase = async () => {
-    try {
-      // Debug logging removed
-      const promises = SEED_CONTACTS.map(contactData =>
-        ContactsService.createContact(contactData)
-      );
-      await Promise.all(promises);
-      // Debug logging removed
-      // Reload contacts after seeding
-      await refreshContacts();
-    } catch (err) {
-      // Error logging removed
-    }
-  };
+  // 🚫 SEED LOGIC ΑΦΑΙΡΕΘΗΚΕ - Δεν υπάρχει πλέον seeding functionality
 
   const refreshContacts = async () => {
     await loadContacts();

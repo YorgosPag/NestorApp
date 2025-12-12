@@ -84,7 +84,7 @@ export function ProjectsList({
                 isFavorite={favorites.includes(project.id)}
                 onSelect={() => onSelectProject?.(project)}
                 onToggleFavorite={() => toggleFavorite(project.id)}
-                companyName={companies.find(c => c.id === project.companyId)?.name || project.company}
+                companyName={companies?.find(c => c.id === project.companyId)?.name || project.company}
               />
             </div>
           ))}

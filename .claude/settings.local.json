@@ -152,7 +152,9 @@
       "Bash(del \"C:\\Nestor_Pagonis\\src\\components\\building-management\\StorageTab\\mock-data.ts\")",
       "Bash(TASKKILL /PID 2608 /F)",
       "Bash(del \"C:\\Nestor_Pagonis\\src\\database\\migrations\\001_create_contact_relationships.ts\")",
-      "Bash(del \"C:\\Nestor_Pagonis\\src\\core\\headers\\UnifiedHeaderSystem.tsx\")"
+      "Bash(del \"C:\\Nestor_Pagonis\\src\\core\\headers\\UnifiedHeaderSystem.tsx\")",
+      "Bash(pkill:*)",
+      "Bash(SKIP_ENV_VALIDATION=true PORT=3010 npm run dev)"
     ],
     "deny": [],
     "ask": []

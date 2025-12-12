@@ -159,7 +159,7 @@ export function LandingPage() {
                 Δείτε σε Κάτοψη
               </Link>
             </nav>
-          </div>
+          </section>
         </div>
       </section>
 

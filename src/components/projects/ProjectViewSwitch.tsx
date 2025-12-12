@@ -17,7 +17,7 @@ interface ProjectViewSwitchProps {
 export function ProjectViewSwitch({ projects, selectedProject, onSelectProject, companies }: ProjectViewSwitchProps) {
 
   const getProjectWithCompanyName = (project: Project) => {
-    const company = companies.find(c => c.id === project.companyId);
+    const company = companies?.find(c => c.id === project.companyId);
     return {
       ...project,
       companyName: company?.name || project.company,

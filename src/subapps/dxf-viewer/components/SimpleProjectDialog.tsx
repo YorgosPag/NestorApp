@@ -642,7 +642,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
               <div className="space-y-3 mb-4 text-sm">
                 <div className="flex items-center gap-2 text-gray-300">
                   <span className="font-medium">Εταιρεία:</span>
-                  <span className="text-blue-400">{companies.find(c => c.id === selectedCompanyId)?.companyName}</span>
+                  <span className="text-blue-400">{companies?.find(c => c.id === selectedCompanyId)?.companyName}</span>
                 </div>
                 <div className="flex items-center gap-2 text-gray-300">
                   <span className="font-medium">Έργο:</span>
