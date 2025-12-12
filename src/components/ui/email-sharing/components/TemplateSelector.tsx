@@ -14,6 +14,7 @@ import React from 'react';
 import { Label } from '@/components/ui/label';
 import { designSystem } from '@/lib/design-system';
 import { Palette } from 'lucide-react';
+import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 // Services & Types
 import { EmailTemplatesService } from '@/services/email-templates.service';
@@ -101,7 +102,8 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
         disabled={disabled}
         className={designSystem.cn(
           // Base styles
-          'p-3 rounded-lg border-2 transition-all text-center',
+          'p-3 rounded-lg border-2 text-center',
+          TRANSITION_PRESETS.STANDARD_ALL,
           'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
 
           // Selection states
@@ -113,7 +115,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
           disabled && 'opacity-50 cursor-not-allowed',
 
           // Interactive states
-          !disabled && !isSelected && 'hover:shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800'
+          !disabled && !isSelected && INTERACTIVE_PATTERNS.SUBTLE_HOVER
         )}
         aria-pressed={isSelected}
         aria-label={`Select ${template.name} template: ${template.description}`}
@@ -237,11 +239,15 @@ export const CompactTemplateSelector: React.FC<TemplateSelectorProps & {
               onClick={() => !disabled && onTemplateChange(template.id)}
               disabled={disabled}
               className={designSystem.cn(
-                'px-3 py-1.5 text-xs rounded-md border transition-colors',
+                'px-3 py-1.5 text-xs rounded-md border',
+                TRANSITION_PRESETS.STANDARD_COLORS,
                 'flex items-center gap-1.5',
                 isSelected
                   ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300'
-                  : 'border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800',
+                  : designSystem.cn(
+                      'border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-300',
+                      INTERACTIVE_PATTERNS.SUBTLE_HOVER
+                    ),
                 disabled && 'opacity-50 cursor-not-allowed'
               )}
             >

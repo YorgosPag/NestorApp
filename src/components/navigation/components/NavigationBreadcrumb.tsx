@@ -5,6 +5,7 @@
  * Shows current navigation path with clickable levels
  */
 import React from 'react';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { Building, Construction, Home } from 'lucide-react';
 import { useNavigation } from '../core/NavigationContext';
 import type { BreadcrumbItem } from '../core/types';
@@ -80,7 +81,7 @@ export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {
         <React.Fragment key={item.id}>
           <button
             onClick={item.onClick}
-            className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1"
+            className={`text-blue-400 flex items-center gap-1 ${INTERACTIVE_PATTERNS.LINK_BLUE_SUBTLE}`}
             title={`Μετάβαση σε ${item.label}`}
           >
             <span>

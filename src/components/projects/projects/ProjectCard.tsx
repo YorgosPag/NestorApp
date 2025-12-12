@@ -11,6 +11,7 @@ import { ProjectCardTimeline } from './ProjectCard/ProjectCardTimeline';
 import { getStatusColor, getStatusLabel } from '@/lib/project-utils';
 import { Briefcase } from 'lucide-react';
 import { PROJECT_STATUS_LABELS } from '@/types/project';
+import { COMPLEX_HOVER_EFFECTS } from '@/components/ui/effects';
 
 interface ProjectCardProps {
   project: Project;
@@ -38,11 +39,11 @@ export function ProjectCard({
         aria-label={`Επιλογή ${project.name}`}
         tabIndex={0}
         className={cn(
-          "relative overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl group border-2",
+          "relative overflow-hidden cursor-pointer group border-2",
+          COMPLEX_HOVER_EFFECTS.FEATURE_CARD,
           isSelected
             ? "border-blue-500 shadow-lg ring-2 ring-blue-200 dark:ring-blue-800"
-            : "border-border hover:border-blue-300 hover:shadow-lg",
-          "transform hover:scale-[1.02]"
+            : "border-border hover:border-blue-300 hover:shadow-lg"
         )}
         onClick={onClick}
         onMouseEnter={() => setIsHovered(true)}

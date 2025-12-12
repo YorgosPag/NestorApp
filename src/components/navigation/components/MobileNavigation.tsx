@@ -9,6 +9,7 @@ import React from 'react';
 import { NavigationButton } from './NavigationButton';
 import { ChevronLeft, Factory, Construction, Building, Layers, Home, Map, Car, Package } from 'lucide-react';
 import { useNavigation } from '../core/NavigationContext';
+import { HOVER_TEXT_EFFECTS } from '../../ui/effects';
 
 interface MobileNavigationProps {
   mobileLevel: 'companies' | 'projects' | 'buildings' | 'floors' | 'units' | 'actions' | 'extras';
@@ -52,7 +53,7 @@ export function MobileNavigation({
         {mobileLevel !== 'companies' && (
           <button
             onClick={onBack}
-            className="flex items-center gap-2 px-3 py-2 text-blue-600 hover:text-blue-700"
+            className={`flex items-center gap-2 px-3 py-2 text-blue-600 ${HOVER_TEXT_EFFECTS.BLUE}`}
           >
             <ChevronLeft className="h-4 w-4" />
             Πίσω

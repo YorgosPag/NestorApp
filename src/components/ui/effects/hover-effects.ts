@@ -90,6 +90,84 @@ export const HOVER_COLOR_EFFECTS = {
 } as const;
 
 /**
+ * 🎨 HOVER BORDER EFFECTS
+ * Dynamic border colors για interactive elements
+ */
+export const HOVER_BORDER_EFFECTS = {
+  /** Primary blue border hover */
+  BLUE: 'hover:border-blue-500 dark:hover:border-blue-400',
+
+  /** Purple accent border hover */
+  PURPLE: 'hover:border-purple-500 dark:hover:border-purple-400',
+
+  /** Success green border hover */
+  GREEN: 'hover:border-green-500 dark:hover:border-green-400',
+
+  /** Warning orange border hover */
+  ORANGE: 'hover:border-orange-500 dark:hover:border-orange-400',
+
+  /** Danger red border hover */
+  RED: 'hover:border-red-500 dark:hover:border-red-400'
+} as const;
+
+/**
+ * 🎨 HOVER TEXT EFFECTS
+ * Dynamic text colors για interactive icons και elements
+ */
+export const HOVER_TEXT_EFFECTS = {
+  /** Success/create actions */
+  GREEN: 'text-green-600 hover:text-green-700',
+
+  /** Primary/edit actions */
+  BLUE: 'text-blue-600 hover:text-blue-700',
+
+  /** Danger/delete actions */
+  RED: 'text-red-600 hover:text-red-700',
+
+  /** Filter actions */
+  PURPLE: 'text-purple-600 hover:text-purple-700',
+
+  /** Sort actions */
+  INDIGO: 'text-indigo-600 hover:text-indigo-700',
+
+  /** Favorites actions */
+  YELLOW: 'text-yellow-600 hover:text-yellow-700',
+
+  /** Neutral/archive actions */
+  GRAY: 'text-gray-600 hover:text-gray-700',
+
+  /** Export actions */
+  EMERALD: 'text-emerald-600 hover:text-emerald-700',
+
+  /** Import actions */
+  TEAL: 'text-teal-600 hover:text-teal-700',
+
+  /** System/refresh actions */
+  CYAN: 'text-cyan-600 hover:text-cyan-700',
+
+  /** Preview actions */
+  ORANGE: 'text-orange-600 hover:text-orange-700',
+
+  /** Copy actions */
+  SLATE: 'text-slate-600 hover:text-slate-700',
+
+  /** Share actions */
+  PINK: 'text-pink-600 hover:text-pink-700',
+
+  /** Reports actions */
+  AMBER: 'text-amber-600 hover:text-amber-700',
+
+  /** Settings actions */
+  VIOLET: 'text-violet-600 hover:text-violet-700',
+
+  /** Favorites management */
+  ROSE: 'text-rose-600 hover:text-rose-700',
+
+  /** Help actions */
+  SKY: 'text-sky-600 hover:text-sky-700'
+} as const;
+
+/**
  * 📱 INTERACTIVE ELEMENT PATTERNS
  * Common patterns για specific UI elements
  */

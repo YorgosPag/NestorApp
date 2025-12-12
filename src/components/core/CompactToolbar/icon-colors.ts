@@ -1,39 +1,40 @@
 // CompactToolbar Icon Colors - Κεντρικοποιημένα χρώματα εικονιδίων
+import { HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 
 export const iconColors = {
   // Primary Actions - Κύριες ενέργειες
-  newItem: 'text-green-600 hover:text-green-700',
-  editItem: 'text-blue-600 hover:text-blue-700',
-  deleteItems: 'text-red-600 hover:text-red-700',
+  newItem: HOVER_TEXT_EFFECTS.GREEN,
+  editItem: HOVER_TEXT_EFFECTS.BLUE,
+  deleteItems: HOVER_TEXT_EFFECTS.RED,
 
   // Filters & Search - Φίλτρα και αναζήτηση
-  filters: 'text-purple-600 hover:text-purple-700',
-  sorting: 'text-indigo-600 hover:text-indigo-700',
+  filters: HOVER_TEXT_EFFECTS.PURPLE,
+  sorting: HOVER_TEXT_EFFECTS.INDIGO,
 
   // Favorites & Archive - Αγαπημένα και αρχείο
-  favorites: 'text-yellow-600 hover:text-yellow-700',
-  archive: 'text-gray-600 hover:text-gray-700',
+  favorites: HOVER_TEXT_EFFECTS.YELLOW,
+  archive: HOVER_TEXT_EFFECTS.GRAY,
 
   // Import/Export - Εισαγωγή/Εξαγωγή
-  export: 'text-emerald-600 hover:text-emerald-700',
-  import: 'text-teal-600 hover:text-teal-700',
+  export: HOVER_TEXT_EFFECTS.EMERALD,
+  import: HOVER_TEXT_EFFECTS.TEAL,
 
   // System Actions - Συστημικές ενέργειες
-  refresh: 'text-cyan-600 hover:text-cyan-700',
-  preview: 'text-orange-600 hover:text-orange-700',
+  refresh: HOVER_TEXT_EFFECTS.CYAN,
+  preview: HOVER_TEXT_EFFECTS.ORANGE,
 
   // Communication - Επικοινωνία
-  copy: 'text-slate-600 hover:text-slate-700',
-  share: 'text-pink-600 hover:text-pink-700',
+  copy: HOVER_TEXT_EFFECTS.SLATE,
+  share: HOVER_TEXT_EFFECTS.PINK,
 
   // Management - Διαχείριση
-  reports: 'text-amber-600 hover:text-amber-700',
-  settings: 'text-violet-600 hover:text-violet-700',
-  favoritesManagement: 'text-rose-600 hover:text-rose-700',
-  help: 'text-sky-600 hover:text-sky-700'
+  reports: HOVER_TEXT_EFFECTS.AMBER,
+  settings: HOVER_TEXT_EFFECTS.VIOLET,
+  favoritesManagement: HOVER_TEXT_EFFECTS.ROSE,
+  help: HOVER_TEXT_EFFECTS.SKY
 } as const;
 
 // Icon color getter function
 export const getIconColor = (actionType: keyof typeof iconColors): string => {
-  return iconColors[actionType] || 'text-gray-600 hover:text-gray-700';
+  return iconColors[actionType] || HOVER_TEXT_EFFECTS.GRAY;
 };

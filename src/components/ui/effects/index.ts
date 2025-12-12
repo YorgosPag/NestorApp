@@ -12,10 +12,13 @@
  * 📦 INDIVIDUAL EFFECT SYSTEMS
  * Import από specialized modules
  */
-export { default as UI_HOVER_EFFECTS } from './hover-effects';
-export { default as TRANSITIONS } from './transitions';
-export { default as SOCIAL_EFFECTS } from './social-effects';
-export { default as FORM_EFFECTS } from './form-effects';
+import UI_HOVER_EFFECTS, { INTERACTIVE_PATTERNS, CORE_HOVER_TRANSFORMS, HOVER_SHADOWS, HOVER_BORDER_EFFECTS, HOVER_TEXT_EFFECTS, COMPLEX_HOVER_EFFECTS, createCustomHoverEffect } from './hover-effects';
+import TRANSITIONS, { TRANSITION_PRESETS, TRANSITION_DURATIONS, CONTEXT_TRANSITIONS, createCustomTransition } from './transitions';
+import SOCIAL_EFFECTS, { SOCIAL_HOVER_EFFECTS, SOCIAL_INTERACTION_PATTERNS, createSocialEffect } from './social-effects';
+import FORM_EFFECTS, { FORM_FOCUS_EFFECTS, FORM_BUTTON_EFFECTS, COMPLEX_FORM_EFFECTS, createFormFieldEffect, createFormButtonEffect } from './form-effects';
+
+// Re-export για external usage
+export { UI_HOVER_EFFECTS, TRANSITIONS, SOCIAL_EFFECTS, FORM_EFFECTS };
 
 /**
  * 🎨 RE-EXPORTS για convenience
@@ -24,6 +27,8 @@ export { default as FORM_EFFECTS } from './form-effects';
 export {
   CORE_HOVER_TRANSFORMS,
   HOVER_SHADOWS,
+  HOVER_BORDER_EFFECTS,
+  HOVER_TEXT_EFFECTS,
   INTERACTIVE_PATTERNS,
   COMPLEX_HOVER_EFFECTS,
   createCustomHoverEffect
@@ -67,24 +72,8 @@ export const ENTERPRISE_EFFECTS = {
   // Form Interaction Effects
   FORMS: FORM_EFFECTS,
 
-  // Quick Access Constants
-  QUICK: {
-    // Most common hover patterns
-    CARD_HOVER: INTERACTIVE_PATTERNS.CARD_STANDARD,
-    BUTTON_HOVER: INTERACTIVE_PATTERNS.BUTTON_PRIMARY,
-    LINK_HOVER: INTERACTIVE_PATTERNS.LINK_STANDARD,
-
-    // Most common transitions
-    FAST_TRANSITION: TRANSITION_PRESETS.FAST_COLORS,
-    SMOOTH_TRANSITION: TRANSITION_PRESETS.SMOOTH_ALL,
-
-    // Most common form effects
-    INPUT_FOCUS: FORM_FOCUS_EFFECTS.STANDARD,
-    BUTTON_PRIMARY: FORM_BUTTON_EFFECTS.PRIMARY,
-
-    // Most common social effects
-    SOCIAL_BUTTON: SOCIAL_INTERACTION_PATTERNS.SHARE_BUTTON
-  }
+  // Note: Quick access constants moved to avoid circular dependencies
+  // Use direct imports instead: import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 } as const;
 
 /**
@@ -135,17 +124,17 @@ export const createInteractiveEffect = (options: {
  * Combines platform colors με appropriate hover effects
  */
 export const createSocialPlatformEffect = (
-  platform: keyof typeof SOCIAL_HOVER_EFFECTS,
+  platform: keyof typeof SOCIAL_EFFECTS.HOVER,
   type: 'BUTTON' | 'ICON' | 'CARD' = 'BUTTON'
 ): string => {
-  return SOCIAL_HOVER_EFFECTS[platform][type];
+  return SOCIAL_EFFECTS.HOVER[platform][type];
 };
 
 /**
  * Create a form field with complete interaction states
  * Combines focus, hover, και state management
  */
-export const createFormFieldEffect = (
+export const createEnhancedFormField = (
   state: 'DEFAULT' | 'ERROR' | 'SUCCESS' | 'WARNING' = 'DEFAULT',
   enhanced: boolean = false
 ): string => {
@@ -223,7 +212,7 @@ export const USAGE_EXAMPLES = {
   SOCIAL_SHARE: createSocialPlatformEffect('FACEBOOK', 'BUTTON'),
 
   // Form input field
-  FORM_INPUT: createFormFieldEffect('DEFAULT', true)
+  FORM_INPUT: createEnhancedFormField('DEFAULT', true)
 } as const;
 
 // Default export για convenience

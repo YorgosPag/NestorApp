@@ -3,6 +3,7 @@
 import React, { forwardRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -294,7 +295,10 @@ export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>((
               type="button"
               variant="ghost"
               size="sm"
-              className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+              className={cn(
+                "absolute right-0 top-0 h-full px-3 py-2",
+                INTERACTIVE_PATTERNS.SUBTLE_TRANSPARENT
+              )}
               onClick={() => setShowPassword(!showPassword)}
               disabled={disabled}
             >

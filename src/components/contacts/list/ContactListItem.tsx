@@ -5,6 +5,7 @@ import { ContactBadge } from '@/core/badges';
 import { EntityDetailsHeader } from '@/core/entity-headers';
 import { openContactAvatarModal, openGalleryPhotoModal } from '@/core/modals';
 import { useGlobalPhotoPreview } from '@/providers/PhotoPreviewProvider';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import {
   Users,
   Building2,
@@ -189,7 +190,8 @@ export function ContactListItem({
             <article
                 className={cn(
                     // Base layout
-                    "relative rounded-lg border cursor-pointer transition-all duration-200 hover:shadow-md group",
+                    "relative rounded-lg border cursor-pointer group",
+                    INTERACTIVE_PATTERNS.CARD_STANDARD,
                     // 🎯 RESPONSIVE PADDING: Compact on mobile, normal on desktop
                     "p-2 sm:p-3",
                     // Color states

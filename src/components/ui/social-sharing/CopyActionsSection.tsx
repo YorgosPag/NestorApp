@@ -14,6 +14,7 @@ import React, { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Copy, ExternalLink, Check, AlertCircle } from 'lucide-react';
 import { designSystem } from '@/lib/design-system';
+import { TRANSITION_PRESETS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -187,7 +188,8 @@ export const CopyActionsSection: React.FC<CopyActionsProps> = ({
 
     return designSystem.cn(
       // Base button styles
-      'flex-1 h-12 transition-all duration-200',
+      'flex-1 h-12',
+      TRANSITION_PRESETS.STANDARD_ALL,
       designSystem.presets.button.outline,
 
       // State-specific styles using design system
@@ -208,8 +210,8 @@ export const CopyActionsSection: React.FC<CopyActionsProps> = ({
       !isCopied && !hasError && designSystem.cn(
         'border-2',
         type === 'url'
-          ? 'hover:border-blue-500 dark:hover:border-blue-400'
-          : 'hover:border-purple-500 dark:hover:border-purple-400'
+          ? HOVER_BORDER_EFFECTS.BLUE
+          : HOVER_BORDER_EFFECTS.PURPLE
       ),
 
       // Loading state

@@ -5,28 +5,29 @@ import { Button } from '@/components/ui/button';
 import { CommonBadge } from '@/core/badges';
 import { Loader2, Save, X, Trash2, Plus, Edit, Archive, RotateCcw, Phone, Mail, MessageSquare, Download, Upload, HelpCircle, Star, RefreshCw, ArrowUpAZ, ArrowDownZA } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { FORM_EFFECTS } from '../effects';
 
 // Enterprise Button Categorization - Global Design System Standards
 // Based on Google Material Design, Microsoft Fluent, Apple HIG, Bootstrap 5
 // Typography: Label Large (14px, medium) as per Material Design button specs
 export const BUTTON_CATEGORIES = {
   // 🔵 PRIMARY ACTIONS (Blue #0d6efd) - Main user actions
-  primary: "bg-blue-600 hover:bg-blue-700 text-white border border-blue-600 hover:border-blue-700 text-sm font-medium",
+  primary: `${FORM_EFFECTS.FORM_BUTTON_EFFECTS.PRIMARY} text-sm font-medium`,
 
   // 🟢 SUCCESS/POSITIVE (Green #198754) - Successful completion, save actions
-  success: "bg-green-600 hover:bg-green-700 text-white border border-green-600 hover:border-green-700 text-sm font-medium",
+  success: `${FORM_EFFECTS.FORM_BUTTON_EFFECTS.SUCCESS} text-sm font-medium`,
 
   // 🔴 DANGER/DESTRUCTIVE (Red #dc3545) - Permanent destructive actions
-  danger: "bg-red-600 hover:bg-red-700 text-white border border-red-600 hover:border-red-700 text-sm font-medium",
+  danger: `${FORM_EFFECTS.FORM_BUTTON_EFFECTS.DANGER} text-sm font-medium`,
 
   // 🟡 WARNING/CAUTION (Orange/Yellow #ffc107) - Reversible destructive actions
-  warning: "bg-orange-500 hover:bg-orange-600 text-white border border-orange-500 hover:border-orange-600 text-sm font-medium",
+  warning: `${FORM_EFFECTS.FORM_BUTTON_EFFECTS.WARNING} text-sm font-medium`,
 
   // ⚪ SECONDARY/NEUTRAL (Gray #6c757d) - Secondary, optional actions
-  secondary: "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 hover:border-gray-400 text-sm font-medium",
+  secondary: `${FORM_EFFECTS.FORM_BUTTON_EFFECTS.SECONDARY} text-sm font-medium`,
 
   // 🌑 UTILITY/PASSIVE (Dark Gray #374151) - Tools, communication, management
-  utility: "bg-gray-700 hover:bg-gray-600 text-white border border-gray-600 hover:border-gray-500 text-sm font-medium"
+  utility: `${FORM_EFFECTS.FORM_BUTTON_EFFECTS.UTILITY} text-sm font-medium`
 } as const;
 
 // Legacy button styles with enterprise categorization mapping

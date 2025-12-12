@@ -15,6 +15,7 @@ import { ContactsService } from '@/services/contacts.service';
 import type { Contact } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts';
 import { Building, Search, Loader2, Factory } from 'lucide-react';
+import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '../../ui/effects';
 
 interface SelectCompanyContactModalProps {
   open: boolean;
@@ -163,7 +164,7 @@ export function SelectCompanyContactModal({
                     <div
                       key={contact.id}
                       onClick={() => handleSelectCompany(contact)}
-                      className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors"
+                      className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
                     >
                       <Factory className="h-5 w-5 text-blue-600 flex-shrink-0" />
                       <div className="flex-1 min-w-0">

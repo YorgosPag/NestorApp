@@ -7,6 +7,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { Star } from 'lucide-react';
 import type { Building } from './BuildingsPageContent';
+import { COMPLEX_HOVER_EFFECTS } from '@/components/ui/effects';
 
 import { EntityDetailsHeader } from '@/core/entity-headers';
 import { BuildingCardContent } from './BuildingCard/BuildingCardContent';
@@ -32,11 +33,11 @@ export function BuildingCard({
   return (
     <Card
       className={cn(
-        "relative overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl group border-2",
+        "relative overflow-hidden cursor-pointer group border-2",
+        COMPLEX_HOVER_EFFECTS.FEATURE_CARD,
         isSelected
           ? "border-blue-500 shadow-lg ring-2 ring-blue-200 dark:ring-blue-800"
-          : "border-border hover:border-blue-300 hover:shadow-lg",
-        "transform hover:scale-[1.02]"
+          : "border-border hover:border-blue-300 hover:shadow-lg"
       )}
       onClick={onClick}
       onMouseEnter={() => setIsHovered(true)}

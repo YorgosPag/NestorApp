@@ -8,6 +8,7 @@ import React from 'react';
 import { LucideIcon } from 'lucide-react';
 import { UnifiedBadge } from '../../../core/badges/UnifiedBadgeSystem';
 import { NavigationStatus } from '../../../core/types/BadgeTypes';
+import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS, HOVER_BORDER_EFFECTS } from '../../ui/effects';
 
 interface NavigationButtonProps {
   onClick: () => void;
@@ -39,7 +40,7 @@ export function NavigationButton({
   hasWarning = false,
   warningText
 }: NavigationButtonProps) {
-  const baseClasses = "w-full text-left rounded-lg border transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50";
+  const baseClasses = `w-full text-left rounded-lg border ${TRANSITION_PRESETS.STANDARD_COLORS} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`;
 
   const variantClasses = {
     default: "p-4 border-gray-200 dark:border-gray-600",
@@ -54,8 +55,8 @@ export function NavigationButton({
   const selectedClasses = isSelected
     ? "border-blue-500 bg-blue-50 dark:bg-blue-900/30"
     : effectiveBadgeStatus
-      ? "border-orange-300 bg-orange-50 dark:bg-orange-900/20 hover:border-orange-400 dark:hover:border-orange-500"
-      : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500";
+      ? `border-orange-300 bg-orange-50 dark:bg-orange-900/20 ${HOVER_BORDER_EFFECTS.ORANGE}`
+      : `border-gray-200 dark:border-gray-600 ${HOVER_BORDER_EFFECTS.GRAY}`;
 
   const iconSize = variant === 'compact' ? 'h-4 w-4' : 'h-5 w-5';
   const spacing = variant === 'compact' ? 'space-x-2' : 'space-x-3';

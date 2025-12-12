@@ -6,6 +6,7 @@ import { Edit, Trash2 } from 'lucide-react';
 import { ProjectsList } from './projects-list';
 import { ProjectDetails } from './project-details';
 import { MobileDetailsSlideIn } from '@/core/layouts';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 interface ProjectViewSwitchProps {
   projects: Project[];
@@ -56,14 +57,14 @@ export function ProjectViewSwitch({ projects, selectedProject, onSelectProject, 
           <>
             <button
               onClick={() => {/* TODO: Edit project handler */}}
-              className="p-2 rounded-md border transition-colors bg-background border-border hover:bg-accent"
+              className={`p-2 rounded-md border bg-background border-border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
               aria-label="Επεξεργασία Έργου"
             >
               <Edit className="h-4 w-4" />
             </button>
             <button
               onClick={() => {/* TODO: Delete project handler */}}
-              className="p-2 rounded-md border transition-colors bg-background border-border hover:bg-accent text-destructive hover:text-destructive"
+              className={`p-2 rounded-md border bg-background border-border text-destructive ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
               aria-label="Διαγραφή Έργου"
             >
               <Trash2 className="h-4 w-4" />

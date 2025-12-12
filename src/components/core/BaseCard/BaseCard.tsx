@@ -2,6 +2,7 @@
 
 import React, { forwardRef } from 'react';
 import { cn } from '@/lib/utils';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CommonBadge } from '@/core/badges';
@@ -140,8 +141,7 @@ const BaseCard = forwardRef<HTMLDivElement, BaseCardProps>(({
           'cursor-pointer': selectable || onClick,
           
           // Hover effects
-          'transition-all duration-200 hover:shadow-md hover:scale-[1.02]': 
-            hoverEffects && (selectable || onClick),
+          [INTERACTIVE_PATTERNS.CARD_STANDARD]: hoverEffects && (selectable || onClick),
           
           // Loading state
           'opacity-60 pointer-events-none': loading,
@@ -173,7 +173,10 @@ const BaseCard = forwardRef<HTMLDivElement, BaseCardProps>(({
             <Button
               variant="ghost"
               size="sm"
-              className="absolute top-2 right-2 bg-white/80 hover:bg-white/90"
+              className={cn(
+                "absolute top-2 right-2 bg-white/80",
+                INTERACTIVE_PATTERNS.BUTTON_OVERLAY
+              )}
               onClick={handleFavoriteClick}
             >
               <Heart className={cn(

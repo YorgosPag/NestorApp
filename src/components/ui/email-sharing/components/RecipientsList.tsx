@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { designSystem } from '@/lib/design-system';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { Users, Plus, Trash2, AlertCircle, CheckCircle } from 'lucide-react';
 
 // Types
@@ -205,7 +206,8 @@ export const RecipientsList: React.FC<RecipientsListProps> = ({
             onClick={() => handleRemoveRecipient(index)}
             disabled={disabled}
             className={designSystem.cn(
-              'text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20',
+              'text-red-500',
+              INTERACTIVE_PATTERNS.BUTTON_DESTRUCTIVE_GHOST,
               'mt-0.5' // Align with input
             )}
             aria-label={`Remove email ${index + 1}`}
@@ -280,7 +282,8 @@ export const RecipientsList: React.FC<RecipientsListProps> = ({
             onClick={handleAddRecipient}
             disabled={disabled}
             className={designSystem.cn(
-              'text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20',
+              'text-blue-600',
+              INTERACTIVE_PATTERNS.BUTTON_PRIMARY_GHOST,
               disabled && 'opacity-50 cursor-not-allowed'
             )}
           >
@@ -375,7 +378,10 @@ export const CompactRecipientsList: React.FC<RecipientsListProps & {
                 size="sm"
                 onClick={() => onRecipientsChange(recipients.filter((_, i) => i !== index))}
                 disabled={disabled}
-                className="h-8 w-8 p-0 text-red-500 hover:text-red-600"
+                className={designSystem.cn(
+                  "h-8 w-8 p-0 text-red-500",
+                  INTERACTIVE_PATTERNS.BUTTON_DESTRUCTIVE_GHOST
+                )}
               >
                 <Trash2 className="w-3 h-3" />
               </Button>
@@ -390,7 +396,10 @@ export const CompactRecipientsList: React.FC<RecipientsListProps & {
             size="sm"
             onClick={() => onRecipientsChange([...recipients, ''])}
             disabled={disabled}
-            className="h-8 w-full text-xs text-blue-600 hover:bg-blue-50"
+            className={designSystem.cn(
+              "h-8 w-full text-xs text-blue-600",
+              INTERACTIVE_PATTERNS.BUTTON_PRIMARY_GHOST
+            )}
           >
             <Plus className="w-3 h-3 mr-1" />
             Προσθήκη Email

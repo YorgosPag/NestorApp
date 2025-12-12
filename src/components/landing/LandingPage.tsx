@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Search, MapPin, Home, Filter, TrendingUp, Building, ArrowRight, ChevronDown, Star, Users, Shield } from 'lucide-react';
 import { useTranslation } from '@/i18n';
+import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 
 export function LandingPage() {
   const { t } = useTranslation('landing');
@@ -136,7 +137,7 @@ export function LandingPage() {
 
               <button 
                 type="submit"
-                className="w-full mt-6 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 flex items-center justify-center gap-2"
+                className={`w-full mt-6 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-purple-700 flex items-center justify-center gap-2 ${TRANSITION_PRESETS.STANDARD_ALL}`}
               >
                 <Search className="h-5 w-5" />
                 Αναζήτηση Ακινήτων
@@ -145,16 +146,16 @@ export function LandingPage() {
 
             {/* Quick Search Links */}
             <nav className="flex flex-wrap justify-center gap-3 mt-6" role="navigation" aria-label="Γρήγορες Συνδέσεις Αναζήτησης">
-              <Link href="/properties?type=Στούντιο" className="px-4 py-2 bg-white/80 dark:bg-gray-800/50 dark:border dark:border-gray-700 dark:text-gray-200 backdrop-blur text-sm font-medium text-gray-700 rounded-full hover:bg-white dark:hover:bg-gray-700 hover:shadow-md transition-all">
+              <Link href="/properties?type=Στούντιο" className={`px-4 py-2 bg-white/80 dark:bg-gray-800/50 dark:border dark:border-gray-700 dark:text-gray-200 backdrop-blur text-sm font-medium text-gray-700 rounded-full ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`}>
                 Στούντιο
               </Link>
-              <Link href="/properties?type=Διαμέρισμα" className="px-4 py-2 bg-white/80 dark:bg-gray-800/50 dark:border dark:border-gray-700 dark:text-gray-200 backdrop-blur text-sm font-medium text-gray-700 rounded-full hover:bg-white dark:hover:bg-gray-700 hover:shadow-md transition-all">
+              <Link href="/properties?type=Διαμέρισμα" className={`px-4 py-2 bg-white/80 dark:bg-gray-800/50 dark:border dark:border-gray-700 dark:text-gray-200 backdrop-blur text-sm font-medium text-gray-700 rounded-full ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`}>
                 2 Υπνοδωμάτια
               </Link>
-              <Link href="/properties?type=Μεζονέτα" className="px-4 py-2 bg-white/80 dark:bg-gray-800/50 dark:border dark:border-gray-700 dark:text-gray-200 backdrop-blur text-sm font-medium text-gray-700 rounded-full hover:bg-white dark:hover:bg-gray-700 hover:shadow-md transition-all">
+              <Link href="/properties?type=Μεζονέτα" className={`px-4 py-2 bg-white/80 dark:bg-gray-800/50 dark:border dark:border-gray-700 dark:text-gray-200 backdrop-blur text-sm font-medium text-gray-700 rounded-full ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`}>
                 Μεζονέτες
               </Link>
-              <Link href="/properties?view=floorplan" className="px-4 py-2 bg-white/80 dark:bg-gray-800/50 dark:border dark:border-gray-700 backdrop-blur text-sm font-medium text-blue-600 dark:text-blue-400 rounded-full hover:bg-white dark:hover:bg-gray-700 hover:shadow-md transition-all flex items-center gap-1">
+              <Link href="/properties?view=floorplan" className={`px-4 py-2 bg-white/80 dark:bg-gray-800/50 dark:border dark:border-gray-700 backdrop-blur text-sm font-medium text-blue-600 dark:text-blue-400 rounded-full flex items-center gap-1 ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`}>
                 <MapPin className="h-4 w-4" />
                 Δείτε σε Κάτοψη
               </Link>
@@ -201,7 +202,7 @@ export function LandingPage() {
 
           <ul className="grid md:grid-cols-3 gap-8">
             <li>
-              <article className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm hover:shadow-lg transition-shadow">
+              <article className={`bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm ${INTERACTIVE_PATTERNS.CARD_STANDARD}`}>
                 <figure className="w-12 h-12 bg-blue-100 dark:bg-blue-900/50 rounded-lg flex items-center justify-center mb-4">
                   <MapPin className="h-6 w-6 text-blue-600" />
                 </figure>
@@ -215,7 +216,7 @@ export function LandingPage() {
             </li>
 
             <li>
-              <article className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm hover:shadow-lg transition-shadow">
+              <article className={`bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm ${INTERACTIVE_PATTERNS.CARD_STANDARD}`}>
                 <figure className="w-12 h-12 bg-purple-100 dark:bg-purple-900/50 rounded-lg flex items-center justify-center mb-4">
                   <Shield className="h-6 w-6 text-purple-600" />
                 </figure>
@@ -229,7 +230,7 @@ export function LandingPage() {
             </li>
 
             <li>
-              <article className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm hover:shadow-lg transition-shadow">
+              <article className={`bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm ${INTERACTIVE_PATTERNS.CARD_STANDARD}`}>
                 <figure className="w-12 h-12 bg-green-100 dark:bg-green-900/50 rounded-lg flex items-center justify-center mb-4">
                   <Users className="h-6 w-6 text-green-600" />
                 </figure>
@@ -260,7 +261,7 @@ export function LandingPage() {
           <ul className="grid md:grid-cols-3 gap-8 mb-12">
             {/* Property Card 1 */}
             <li>
-              <article className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow cursor-pointer" onClick={() => router.push('/properties')}>
+              <article className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden cursor-pointer ${INTERACTIVE_PATTERNS.CARD_ENHANCED}`} onClick={() => router.push('/properties')}>
               <figure className="h-48 bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
                 <Home className="h-16 w-16 text-white" aria-hidden="true" />
               </figure>
@@ -287,7 +288,7 @@ export function LandingPage() {
 
             {/* Property Card 2 */}
             <li>
-              <article className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow cursor-pointer" onClick={() => router.push('/properties')}>
+              <article className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden cursor-pointer ${INTERACTIVE_PATTERNS.CARD_ENHANCED}`} onClick={() => router.push('/properties')}>
                 <figure className="h-48 bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center">
                   <Building className="h-16 w-16 text-white" aria-hidden="true" />
                 </figure>
@@ -314,7 +315,7 @@ export function LandingPage() {
 
             {/* Property Card 3 */}
             <li>
-              <article className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow cursor-pointer" onClick={() => router.push('/properties')}>
+              <article className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden cursor-pointer ${INTERACTIVE_PATTERNS.CARD_ENHANCED}`} onClick={() => router.push('/properties')}>
                 <figure className="h-48 bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
                   <TrendingUp className="h-16 w-16 text-white" aria-hidden="true" />
                 </figure>
@@ -343,7 +344,7 @@ export function LandingPage() {
           <footer className="text-center">
             <Link
               href="/properties"
-              className="inline-flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all"
+              className={`inline-flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-purple-700 ${TRANSITION_PRESETS.STANDARD_ALL}`}
             >
               Δείτε Όλα τα Ακίνητα
               <ArrowRight className="h-5 w-5" />
@@ -364,13 +365,13 @@ export function LandingPage() {
           <nav className="flex flex-col sm:flex-row gap-4 justify-center" role="navigation" aria-label="Κύριες Ενέργειες">
             <Link 
               href="/properties"
-              className="px-8 py-3 bg-white text-blue-600 font-semibold rounded-lg hover:bg-gray-100 transition-all"
+              className={`px-8 py-3 bg-white text-blue-600 font-semibold rounded-lg ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY}`}
             >
               Αναζήτηση Ακινήτων
             </Link>
             <Link 
               href="/properties?view=floorplan"
-              className="px-8 py-3 bg-transparent border-2 border-white text-white font-semibold rounded-lg hover:bg-white/10 transition-all flex items-center justify-center gap-2"
+              className={`px-8 py-3 bg-transparent border-2 border-white text-white font-semibold rounded-lg flex items-center justify-center gap-2 ${INTERACTIVE_PATTERNS.BUTTON_OUTLINE}`}
             >
               <MapPin className="h-5 w-5" />
               Προβολή σε Κάτοψη

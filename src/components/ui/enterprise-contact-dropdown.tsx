@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 
 export interface ContactSummary {
   id: string;
@@ -278,8 +279,9 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
         key={contact.id}
         data-contact-index={index}
         className={cn(
-          "p-3 border-b border-border last:border-b-0 transition-colors cursor-pointer",
-          isHighlighted ? "bg-accent text-accent-foreground" : "hover:bg-accent hover:text-accent-foreground"
+          "p-3 border-b border-border last:border-b-0 cursor-pointer",
+          TRANSITION_PRESETS.STANDARD_COLORS,
+          isHighlighted ? "bg-accent text-accent-foreground" : INTERACTIVE_PATTERNS.ACCENT_HOVER
         )}
         onClick={() => selectContact(contact)}
         onMouseEnter={() => setHighlightedIndex(index)}
@@ -360,7 +362,8 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
         className={cn(
           "w-full justify-between h-10 px-3 py-2 text-sm border bg-background",
           error ? "border-destructive" : "border-input",
-          "hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+          INTERACTIVE_PATTERNS.ACCENT_HOVER,
+          "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
         )}
         type="button"
       >
@@ -383,13 +386,21 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
             <button
               type="button"
               onClick={clearSelection}
-              className="h-4 w-4 rounded-sm hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+              className={cn(
+                "h-4 w-4 rounded-sm flex items-center justify-center text-muted-foreground hover:text-foreground",
+                INTERACTIVE_PATTERNS.SUBTLE_HOVER,
+                TRANSITION_PRESETS.STANDARD_COLORS
+              )}
               title="Καθαρισμός επιλογής"
             >
               <X className="h-3 w-3" />
             </button>
           )}
-          <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen ? "rotate-180" : "")} />
+          <ChevronDown className={cn(
+            "h-4 w-4",
+            TRANSITION_PRESETS.STANDARD_TRANSFORM,
+            isOpen ? "rotate-180" : ""
+          )} />
         </div>
       </Button>
 

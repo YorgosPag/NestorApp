@@ -1,6 +1,7 @@
 // Standardized component variants χρησιμοποιώντας class-variance-authority
 import { cva, type VariantProps } from 'class-variance-authority';
 import { designTokens } from '@/styles/design-tokens';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 // Button variants (enhanced από shadcn/ui)
 export const buttonVariants = cva(
@@ -47,7 +48,7 @@ export const cardVariants = cva(
         bordered: 'bg-card border-2 border-border',
         elevated: 'bg-card border-0 shadow-lg',
         minimal: 'bg-transparent border-0 shadow-none',
-        interactive: 'bg-card border-border hover:shadow-md hover:scale-[1.02] cursor-pointer',
+        interactive: `bg-card border-border cursor-pointer ${INTERACTIVE_PATTERNS.CARD_STANDARD}`,
       },
       padding: {
         none: 'p-0',

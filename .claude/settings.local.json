@@ -156,7 +156,12 @@
       "Bash(pkill:*)",
       "Bash(SKIP_ENV_VALIDATION=true PORT=3010 npm run dev)",
       "Bash(xargs ls:*)",
-      "Bash(del:*)"
+      "Bash(del:*)",
+      "Bash(SKIP_ENV_VALIDATION=true PORT=3004 npm run dev)",
+      "Bash(SKIP_ENV_VALIDATION=true PORT=3008 npm run dev)",
+      "Bash(SKIP_ENV_VALIDATION=true PORT=3007 npm run dev)",
+      "Bash(SKIP_ENV_VALIDATION=true PORT=3009 npm run dev)",
+      "Bash(SKIP_ENV_VALIDATION=true PORT=3000 npm run dev)"
     ],
     "deny": [],
     "ask": []

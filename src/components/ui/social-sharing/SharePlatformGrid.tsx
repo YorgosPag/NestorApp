@@ -13,6 +13,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { designSystem } from '@/lib/design-system';
+import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 
 // 🏢 ENTERPRISE: Import centralized social platforms configuration
 import {
@@ -179,8 +180,7 @@ export const SharePlatformGrid: React.FC<SharePlatformGridProps> = ({
           generatePlatformButtonStyles(platform, finalGridConfig.buttonVariant),
           // Additional responsive classes
           'group relative overflow-hidden',
-          'transition-all duration-300 transform',
-          'hover:scale-105 active:scale-95',
+          INTERACTIVE_PATTERNS.BUTTON_ENHANCED,
           // Loading state
           loading && 'opacity-50 cursor-not-allowed',
           // Focus states using design system
@@ -214,7 +214,8 @@ export const SharePlatformGrid: React.FC<SharePlatformGridProps> = ({
 
         {/* Gradient Overlay για extra depth */}
         <aside className={designSystem.cn(
-          "absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity duration-200",
+          "absolute inset-0 opacity-0 group-hover:opacity-20",
+          TRANSITION_PRESETS.STANDARD_OPACITY,
           "bg-gradient-to-br from-white via-transparent to-transparent"
         )} role="presentation" aria-hidden="true" />
       </Button>
