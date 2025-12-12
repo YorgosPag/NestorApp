@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Search, X } from 'lucide-react';
+import { HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 
 interface SearchInputProps {
   searchTerm: string;
@@ -24,7 +25,7 @@ export const SearchInput = ({ searchTerm, onSearchChange }: SearchInputProps) =>
       {searchTerm && (
         <button
           onClick={() => onSearchChange('')}
-          className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-200"
+          className={`absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 ${HOVER_TEXT_EFFECTS.BLUE_LIGHT}`}
         >
           <X className="h-4 w-4" />
         </button>

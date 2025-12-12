@@ -8,6 +8,7 @@ import React from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import { TestButton } from './TestButton';
 import type { TestDefinition, TestState } from '../types/tests.types';
+import { HOVER_BACKGROUND_EFFECTS, GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
 
 interface AutomatedTestsTabProps {
   runAllTestsGroup: TestDefinition[];
@@ -39,8 +40,8 @@ export const AutomatedTestsTab: React.FC<AutomatedTestsTabProps> = ({
             testState.runningTests.has('run-all-tests')
               ? 'bg-yellow-500 text-white cursor-wait animate-pulse'
               : testState.completedTests.has('run-all-tests')
-              ? 'bg-green-600 text-white hover:bg-green-500'
-              : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-500 hover:to-pink-500'
+              ? `bg-green-600 text-white ${HOVER_BACKGROUND_EFFECTS.SUCCESS_BUTTON}`
+              : `bg-gradient-to-r from-purple-600 to-pink-600 text-white ${GRADIENT_HOVER_EFFECTS.PURPLE_PINK_BUTTON}`
           }`}
         >
           {testState.runningTests.has('run-all-tests') ? (

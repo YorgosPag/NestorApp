@@ -9,6 +9,7 @@
 
 import React, { useState } from 'react';
 import { TestsModal } from '../TestsModal';
+import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 export function BasicUsageExample() {
   // 1. State to control modal visibility
@@ -27,7 +28,7 @@ export function BasicUsageExample() {
       {/* Button to open tests modal */}
       <button
         onClick={() => setIsTestsOpen(true)}
-        className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+        className={`px-4 py-2 bg-purple-600 text-white rounded-lg transition-colors ${HOVER_BACKGROUND_EFFECTS.PURPLE_BUTTON}`}
       >
         🧪 Run Tests
       </button>

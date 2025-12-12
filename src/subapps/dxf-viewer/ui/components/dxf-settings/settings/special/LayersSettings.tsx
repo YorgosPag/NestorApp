@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS, CORE_HOVER_TRANSFORMS, HOVER_TEXT_EFFECTS } from '../../../../../ui/effects';
 
 interface LayersSettingsProps {
   // Για μελλοντική επέκταση μπορούμε να προσθέσουμε props
@@ -40,7 +41,7 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
             {presetColors.map((preset, index) => (
               <div
                 key={preset.name}
-                className="w-8 h-8 border-2 rounded cursor-pointer hover:scale-105 transition-transform"
+                className={`w-8 h-8 border-2 rounded cursor-pointer ${CORE_HOVER_TRANSFORMS.SCALE_UP} transition-transform`}
                 title={preset.name}
                 style={{
                   borderColor: preset.color,
@@ -60,7 +61,7 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
             className={`flex-1 px-3 py-2 text-xs font-medium rounded-md transition-colors duration-150 ${
               activeTab === 'outlines'
                 ? 'bg-blue-600 text-white'
-                : 'text-gray-300 hover:text-white hover:bg-gray-600'
+                : `text-gray-300 ${HOVER_TEXT_EFFECTS.WHITE} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
             }`}
           >
             ✏️ Περιγράμματα
@@ -70,7 +71,7 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
             className={`flex-1 px-3 py-2 text-xs font-medium rounded-md transition-colors duration-150 ${
               activeTab === 'fills'
                 ? 'bg-blue-600 text-white'
-                : 'text-gray-300 hover:text-white hover:bg-gray-600'
+                : `text-gray-300 ${HOVER_TEXT_EFFECTS.WHITE} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
             }`}
           >
             🎨 Γεμίσματα
@@ -93,7 +94,7 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
                     className={`p-2 rounded border transition-colors ${
                       selectedPreset === index
                         ? 'bg-blue-600 border-blue-500'
-                        : 'bg-gray-600 hover:bg-blue-600 border-gray-500'
+                        : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500`
                     }`}
                   >
                     <div
@@ -134,7 +135,7 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
                     className={`p-2 rounded border transition-colors ${
                       selectedPreset === index
                         ? 'bg-blue-600 border-blue-500'
-                        : 'bg-gray-600 hover:bg-blue-600 border-gray-500'
+                        : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500`
                     }`}
                   >
                     <div
@@ -189,7 +190,7 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
             <div className="font-medium">Επαναφορά</div>
             <div className="font-normal text-gray-400">Επαναφορά στις προεπιλεγμένες ρυθμίσεις</div>
           </div>
-          <button className="w-full px-3 py-2 text-xs bg-red-600 hover:bg-red-700 text-white rounded transition-colors">
+          <button className={`w-full px-3 py-2 text-xs bg-red-600 ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} text-white rounded transition-colors`}>
             🔄 Επαναφορά Ρυθμίσεων Layers
           </button>
         </div>

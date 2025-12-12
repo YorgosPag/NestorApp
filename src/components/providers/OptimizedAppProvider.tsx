@@ -8,6 +8,7 @@ import { performanceMonitor, enablePerformanceLogging } from '@/utils/performanc
 import { memoryLeakDetector, enableMemoryMonitoring } from '@/utils/memoryLeakDetector';
 import { Skeleton } from '@/components/ui/skeletons';
 import { ProgressiveLoader, LoadingPresets, useProgressiveLoader } from '@/components/ui/progress/ProgressiveLoader';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects/hover-effects';
 
 interface OptimizedAppProviderProps {
   children: React.ReactNode;
@@ -136,13 +137,13 @@ function AppErrorBoundary({ children }: { children: React.ReactNode }) {
               <div className="space-y-3">
                 <button
                   onClick={retry}
-                  className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+                  className={`w-full px-4 py-2 bg-primary text-primary-foreground rounded-md ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} transition-colors`}
                 >
                   Restart Application
                 </button>
                 <button
                   onClick={() => window.location.reload()}
-                  className="w-full px-4 py-2 border border-border rounded-md hover:bg-muted transition-colors"
+                  className={`w-full px-4 py-2 border border-border rounded-md ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} transition-colors`}
                 >
                   Reload Page
                 </button>
@@ -262,7 +263,7 @@ export function OptimizationDebugPanel() {
     <div className="fixed bottom-4 right-4 z-50">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="bg-primary text-primary-foreground rounded-full w-12 h-12 flex items-center justify-center shadow-lg hover:bg-primary/90 transition-colors"
+        className={`bg-primary text-primary-foreground rounded-full w-12 h-12 flex items-center justify-center shadow-lg ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} transition-colors`}
         title="Performance Debug Panel"
       >
         🚀

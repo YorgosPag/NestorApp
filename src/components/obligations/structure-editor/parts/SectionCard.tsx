@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CommonBadge } from '@/core/badges';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { INTERACTIVE_PATTERNS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 import { GripVertical, ChevronRight, ChevronDown, FileText, Plus, Edit3, Save, X, Copy, Trash2 } from 'lucide-react';
 import { RichTextEditor } from '@/components/obligations/rich-text-editor';
 import { cn } from '@/lib/utils';
@@ -57,7 +57,7 @@ export function SectionCard({
     >
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
-          {!readOnly && <GripVertical className="h-4 w-4 text-gray-400 cursor-move opacity-0 group-hover:opacity-100" />}
+          {!readOnly && <GripVertical className={`h-4 w-4 text-gray-400 cursor-move opacity-0 ${GROUP_HOVER_PATTERNS.SHOW_ON_GROUP}`} />}
           {(hasArticles || section.content) && (
             <Button variant="ghost" size="sm" onClick={() => handlers.toggleExpanded(section.id)} className="h-6 w-6 p-0">
               {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
@@ -120,7 +120,7 @@ export function SectionCard({
             )}
           </div>
           {!readOnly && (
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
+            <div className={`flex items-center gap-1 opacity-0 ${GROUP_HOVER_PATTERNS.SHOW_ON_GROUP}`}>
               {isEditing ? (
                 <>
                   <Button size="sm" onClick={handlers.stopEditing}><Save className="h-4 w-4" /></Button>

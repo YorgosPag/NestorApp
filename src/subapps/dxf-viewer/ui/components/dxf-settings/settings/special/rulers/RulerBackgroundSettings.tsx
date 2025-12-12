@@ -1,6 +1,10 @@
+'use client';
+
 // RulerBackgroundSettings.tsx - Ruler background settings (extracted from DxfSettingsPanel)
 // STATUS: ACTIVE - Phase 3 Step 3.3b1
 // PURPOSE: Ruler background settings UI (color, opacity, width, visibility)
+
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 /**
  * ╔════════════════════════════════════════════════════════════════════════════╗
@@ -9,8 +13,6 @@
  * ║  Uses: useRulersGridContext hook (RulersGridSystem)                        ║
  * ╚════════════════════════════════════════════════════════════════════════════╝
  */
-
-'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useRulersGridContext } from '../../../../../../systems/rulers-grid/RulersGridSystem';
@@ -158,7 +160,7 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
             className={`flex-1 p-2 rounded text-xs border transition-colors ${
               backgroundVisible
                 ? 'bg-blue-600 border-blue-500'
-                : 'bg-gray-600 hover:bg-blue-600 border-gray-500'
+                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500`
             }`}
           >
             Ενεργό
@@ -168,7 +170,7 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
             className={`flex-1 p-2 rounded text-xs border transition-colors ${
               !backgroundVisible
                 ? 'bg-blue-600 border-blue-500'
-                : 'bg-gray-600 hover:bg-blue-600 border-gray-500'
+                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500`
             }`}
           >
             Ανενεργό
@@ -273,7 +275,7 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
             className={`flex-1 p-2 rounded text-xs border transition-colors ${
               rulerSettings.horizontal.showMinorTicks
                 ? 'bg-blue-600 border-blue-500'
-                : 'bg-gray-600 hover:bg-blue-600 border-gray-500'
+                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500`
             }`}
           >
             Ενεργό
@@ -283,7 +285,7 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
             className={`flex-1 p-2 rounded text-xs border transition-colors ${
               !rulerSettings.horizontal.showMinorTicks
                 ? 'bg-blue-600 border-blue-500'
-                : 'bg-gray-600 hover:bg-blue-600 border-gray-500'
+                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500`
             }`}
           >
             Ανενεργό

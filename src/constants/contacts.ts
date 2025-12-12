@@ -7,7 +7,7 @@
 
 import { Users, Building2, Landmark } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
+import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 // 📋 CONTACT TYPES - Μοναδική πηγή αλήθειας για τύπους επαφών
 export const CONTACT_TYPES = {
@@ -219,7 +219,7 @@ export const CONTACT_STYLES = {
 
   // 🔗 INTERACTION STATES
   interactions: {
-    hover: 'hover:bg-accent/50 transition-colors duration-200',
+    hover: `${HOVER_BACKGROUND_EFFECTS.ACCENT} transition-colors duration-200`,
     focus: 'focus:outline-none focus:ring-2 focus:ring-primary/20',
     active: 'active:bg-accent/70',
     disabled: 'opacity-50 cursor-not-allowed',

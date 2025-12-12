@@ -20,6 +20,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
+import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { EnterpriseColorArea } from './EnterpriseColorArea';
 import { HueSlider, AlphaSlider } from './EnterpriseColorSlider';
 import { EnterpriseColorField } from './EnterpriseColorField';
@@ -140,7 +141,7 @@ export function EnterpriseColorPicker({
                   px-3 py-1 text-xs font-medium transition-colors
                   ${currentMode === mode
                     ? 'text-blue-400 border-b-2 border-blue-400'
-                    : 'text-gray-400 hover:text-gray-300'
+                    : `text-gray-400 ${HOVER_TEXT_EFFECTS.GRAY_LIGHT}`
                   }
                 `}
               >
@@ -241,7 +242,7 @@ function EyedropperButton({ onChange, onChangeEnd, disabled }: EyedropperButtonP
         transition-colors
         ${isActive
           ? 'bg-blue-600 text-white'
-          : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+          : `bg-gray-800 text-gray-300 ${HOVER_BACKGROUND_EFFECTS.GRAY_DARKER}`
         }
         disabled:opacity-50 disabled:cursor-not-allowed
       `}

@@ -2,7 +2,7 @@
 'use client';
 
 import React from 'react';
-import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { INTERACTIVE_PATTERNS, CORE_HOVER_TRANSFORMS } from '@/components/ui/effects';
 
 interface EdgeMidpointProps {
   start: { x: number; y: number };
@@ -30,7 +30,7 @@ export function EdgeMidpoint({
       fill="#10b981"
       stroke="#ffffff"
       strokeWidth={1}
-      className={`cursor-pointer opacity-70 ${INTERACTIVE_PATTERNS.OPACITY_REVEAL} hover:r-5 transition-all`}
+      className={`cursor-pointer opacity-70 ${INTERACTIVE_PATTERNS.OPACITY_REVEAL} ${CORE_HOVER_TRANSFORMS.SCALE_UP_SMALL} transition-all`}
       onMouseDown={(e) => onMouseDown(index, e)}
     />
   );

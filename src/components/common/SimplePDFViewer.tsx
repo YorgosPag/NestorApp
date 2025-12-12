@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { FileText, ExternalLink } from 'lucide-react';
+import { HOVER_TEXT_EFFECTS } from '@/components/ui/effects/hover-effects';
 
 interface SimplePDFViewerProps {
   file: string;
@@ -25,7 +26,7 @@ export function SimplePDFViewer({
             href={file}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-3 inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 underline"
+            className={`mt-3 inline-flex items-center gap-2 text-sm ${HOVER_TEXT_EFFECTS.BLUE} underline`}
           >
             <ExternalLink className="h-4 w-4" />
             Άνοιγμα PDF σε νέα καρτέλα

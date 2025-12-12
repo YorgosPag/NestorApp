@@ -1,5 +1,6 @@
 'use client';
 import React, { useEffect, useState, useRef } from 'react';
+import { HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 
 interface ElementMetrics {
   name: string;
@@ -154,7 +155,7 @@ export default function LayoutMapper() {
           <h3 className="text-white font-bold">🎯 LAYOUT MAPPER</h3>
           <button
             onClick={() => setIsVisible(false)}
-            className="text-red-400 hover:text-red-300"
+            className={`text-red-400 ${HOVER_TEXT_EFFECTS.RED_LIGHT}`}
           >
             ×
           </button>

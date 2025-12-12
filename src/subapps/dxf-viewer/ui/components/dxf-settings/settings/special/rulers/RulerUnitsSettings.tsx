@@ -1,6 +1,10 @@
+'use client';
+
 // RulerUnitsSettings.tsx - Ruler units settings (extracted from DxfSettingsPanel)
 // STATUS: ACTIVE - Phase 3 Step 3.3b4
 // PURPOSE: Ruler units settings UI (units type, visibility, font size, color)
+
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 /**
  * ╔════════════════════════════════════════════════════════════════════════════╗
@@ -9,8 +13,6 @@
  * ║  Uses: useRulersGridContext hook (RulersGridSystem)                        ║
  * ╚════════════════════════════════════════════════════════════════════════════╝
  */
-
-'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useRulersGridContext } from '../../../../../../systems/rulers-grid/RulersGridSystem';
@@ -131,7 +133,7 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
               className={`p-2 rounded text-xs border transition-colors ${
                 rulerSettings.units === unit
                   ? 'bg-blue-600 border-blue-500'
-                  : 'bg-gray-600 hover:bg-blue-600 border-gray-500'
+                  : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500`
               }`}
             >
               {unit}
@@ -152,7 +154,7 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
             className={`flex-1 p-2 rounded text-xs border transition-colors ${
               unitsVisible
                 ? 'bg-blue-600 border-blue-500'
-                : 'bg-gray-600 hover:bg-blue-600 border-gray-500'
+                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500`
             }`}
           >
             Ενεργό
@@ -162,7 +164,7 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
             className={`flex-1 p-2 rounded text-xs border transition-colors ${
               !unitsVisible
                 ? 'bg-blue-600 border-blue-500'
-                : 'bg-gray-600 hover:bg-blue-600 border-gray-500'
+                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500`
             }`}
           >
             Ανενεργό

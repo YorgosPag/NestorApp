@@ -8,6 +8,7 @@ import { Eye, EyeOff, Trash2, Edit2, ChevronRight, ChevronDown } from 'lucide-re
 import { LayerItem } from './LayerItem';
 import { createColorGroupKey, type ColorGroupCommonProps } from './utils';
 import { DEFAULT_LAYER_COLOR } from '../../../config/color-config';
+import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
 
 interface ColorGroupItemProps extends Pick<ColorGroupCommonProps, 
   'setExpandedColorGroups' | 'setColorPickerColorGroup' | 'setEditingColorGroup' | 
@@ -123,7 +124,7 @@ export function ColorGroupItem({
     <div className="space-y-1">
       {/* Color Group Header */}
       <div 
-        className={`flex items-center justify-between p-2 bg-purple-900 bg-opacity-20 border border-purple-500 rounded cursor-pointer hover:bg-purple-800 hover:bg-opacity-30 transition-colors ${
+        className={`flex items-center justify-between p-2 bg-purple-900 bg-opacity-20 border border-purple-500 rounded cursor-pointer ${INTERACTIVE_PATTERNS.PURPLE_HOVER} transition-colors ${
           selectedColorGroupsForMerge.has(colorName) ? 'ring-2 ring-blue-400 bg-blue-900 bg-opacity-30' : ''
         }`}
         onClick={handleGroupClick}
@@ -133,7 +134,7 @@ export function ColorGroupItem({
           {/* Expand/Collapse Arrow */}
           <button
             onClick={handleExpandToggle}
-            className="p-1 text-purple-300 hover:text-white"
+            className={`p-1 text-purple-300 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT}`}
             title={isExpanded ? "Σύμπτυξη" : "Ανάπτυξη"}
           >
             {isExpanded ? (
@@ -147,7 +148,7 @@ export function ColorGroupItem({
           <div className="relative">
             <button
               onClick={handleColorPickerToggle}
-              className="w-4 h-4 rounded border border-gray-500 hover:ring-1 hover:ring-blue-400"
+              className={`w-4 h-4 rounded border border-gray-500 ${HOVER_BORDER_EFFECTS.BLUE}`}
               style={{ backgroundColor: representativeColor }}
               title="Αλλαγή χρώματος Color Group"
             />
@@ -179,7 +180,7 @@ export function ColorGroupItem({
           {/* Visibility Toggle */}
           <button
             onClick={handleVisibilityToggle}
-            className="p-1 text-gray-400 hover:text-white"
+            className={`p-1 text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT}`}
             title={allVisible ? "Απόκρυψη Color Group" : "Εμφάνιση Color Group"}
           >
             {allVisible ? (
@@ -194,7 +195,7 @@ export function ColorGroupItem({
           {/* Edit Button */}
           <button
             onClick={handleEditClick}
-            className="p-1 text-gray-400 hover:text-white"
+            className={`p-1 text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT}`}
             title="Μετονομασία Color Group"
           >
             <Edit2 className="w-4 h-4" />
@@ -203,7 +204,7 @@ export function ColorGroupItem({
           {/* Delete Button */}
           <button
             onClick={handleDeleteClick}
-            className="p-1 text-red-600 hover:text-red-500"
+            className={`p-1 text-red-600 ${HOVER_TEXT_EFFECTS.RED}`}
             title="Διαγραφή Color Group"
           >
             <Trash2 className="w-4 h-4" />

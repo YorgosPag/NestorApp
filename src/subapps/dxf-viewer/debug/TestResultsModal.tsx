@@ -12,6 +12,7 @@
 
 import * as React from 'react';
 import type { UnifiedTestReport } from './unified-test-runner';
+import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 // ============================================================================
 // TYPES
@@ -147,7 +148,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white text-2xl leading-none w-10 h-10 flex items-center justify-center rounded hover:bg-gray-700 transition-colors"
+            className={`text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} text-2xl leading-none w-10 h-10 flex items-center justify-center rounded ${HOVER_BACKGROUND_EFFECTS.GRAY_BUTTON} transition-colors`}
           >
             ✕
           </button>
@@ -180,7 +181,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
               className={`px-4 py-2 text-sm font-medium rounded transition-all ${
                 copied
                   ? 'bg-green-500 text-white'
-                  : 'bg-blue-600 text-white hover:bg-blue-500'
+                  : `bg-blue-600 text-white ${HOVER_BACKGROUND_EFFECTS.BLUE_LIGHT}`
               }`}
               style={{ pointerEvents: 'auto' }}
             >
@@ -188,7 +189,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
             </button>
             <button
               onClick={handleDownload}
-              className="px-4 py-2 text-sm font-medium rounded bg-purple-600 text-white hover:bg-purple-500 transition-all"
+              className={`px-4 py-2 text-sm font-medium rounded bg-purple-600 text-white ${HOVER_BACKGROUND_EFFECTS.PURPLE_LIGHT} transition-all`}
               style={{ pointerEvents: 'auto' }}
             >
               💾 Λήψη JSON
@@ -206,7 +207,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
             className={`px-4 py-2 text-sm font-medium rounded-t transition-all ${
               activeTab === 'summary'
                 ? 'bg-gray-800 text-white border-t border-l border-r border-gray-600'
-                : 'bg-gray-700 text-gray-400 hover:text-white hover:bg-gray-750'
+                : `bg-gray-700 text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} ${HOVER_BACKGROUND_EFFECTS.GRAY_750}`
             }`}
             style={{ pointerEvents: 'auto' }}
           >
@@ -220,7 +221,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
             className={`px-4 py-2 text-sm font-medium rounded-t transition-all ${
               activeTab === 'details'
                 ? 'bg-gray-800 text-white border-t border-l border-r border-gray-600'
-                : 'bg-gray-700 text-gray-400 hover:text-white hover:bg-gray-750'
+                : `bg-gray-700 text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} ${HOVER_BACKGROUND_EFFECTS.GRAY_750}`
             }`}
             style={{ pointerEvents: 'auto' }}
           >
@@ -234,7 +235,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
             className={`px-4 py-2 text-sm font-medium rounded-t transition-all ${
               activeTab === 'raw'
                 ? 'bg-gray-800 text-white border-t border-l border-r border-gray-600'
-                : 'bg-gray-700 text-gray-400 hover:text-white hover:bg-gray-750'
+                : `bg-gray-700 text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} ${HOVER_BACKGROUND_EFFECTS.GRAY_750}`
             }`}
             style={{ pointerEvents: 'auto' }}
           >
@@ -256,7 +257,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium rounded bg-gray-700 text-white hover:bg-gray-600 transition-all"
+            className={`px-4 py-2 text-sm font-medium rounded bg-gray-700 text-white ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL} transition-all`}
           >
             Κλείσιμο
           </button>
@@ -362,7 +363,7 @@ const DetailsTab: React.FC<{ report: UnifiedTestReport }> = ({ report }) => {
                 console.log(`🔽 Toggling test ${index}: ${test.name}`);
                 toggleExpand(index);
               }}
-              className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-800 transition-colors"
+              className={`w-full px-4 py-3 flex items-center justify-between ${HOVER_BACKGROUND_EFFECTS.GRAY_DARK} transition-colors`}
               style={{ pointerEvents: 'auto' }}
             >
               <div className="flex items-center gap-3">

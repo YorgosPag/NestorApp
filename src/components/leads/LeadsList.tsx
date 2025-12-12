@@ -7,6 +7,7 @@ import { useLeadsList } from "./hooks/useLeadsList";
 import { LeadCard } from "./LeadCard";
 import { getStatusColor, formatDate } from "./utils/formatters";
 import type { Opportunity } from "@/types/crm";
+import { HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects/hover-effects';
 
 export default function LeadsList({ refreshTrigger }: { refreshTrigger?: any }) {
   const {
@@ -31,7 +32,7 @@ export default function LeadsList({ refreshTrigger }: { refreshTrigger?: any }) 
     return (
       <div className="bg-red-50 border border-red-200 rounded-lg p-4">
         <p className="text-red-600">{error}</p>
-        <button onClick={fetchLeads} className="mt-2 px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700">
+        <button onClick={fetchLeads} className={`mt-2 px-3 py-1 bg-red-600 text-white rounded text-sm transition-colors ${HOVER_BACKGROUND_EFFECTS.RED_BUTTON}`}>
           Δοκιμή ξανά
         </button>
       </div>
@@ -53,7 +54,7 @@ export default function LeadsList({ refreshTrigger }: { refreshTrigger?: any }) 
       <div className="space-y-4">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Leads ({leads.length})</h3>
-          <button onClick={fetchLeads} className="text-sm text-blue-600 hover:text-blue-800">Ανανέωση</button>
+          <button onClick={fetchLeads} className={`text-sm ${HOVER_TEXT_EFFECTS.BLUE}`}>Ανανέωση</button>
         </div>
 
         <div className="grid gap-4">

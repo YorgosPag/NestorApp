@@ -4,6 +4,7 @@ import { useProjectHierarchy } from '../contexts/ProjectHierarchyContext';
 import { useDxfPipeline } from '../pipeline/useDxfPipeline';
 import { HierarchicalDestinationSelector } from './HierarchicalDestinationSelector';
 import type { DxfDestination, DxfProcessingOptions } from '../pipeline/types';
+import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 interface DestinationWizardProps {
   isOpen: boolean;
@@ -116,13 +117,13 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
 
   const getDestinationColor = (type: string) => {
     switch (type) {
-      case 'project': return 'bg-blue-600 hover:bg-blue-700';
-      case 'building': return 'bg-green-600 hover:bg-green-700';
-      case 'floor': return 'bg-purple-600 hover:bg-purple-700';
-      case 'unit': return 'bg-orange-600 hover:bg-orange-700';
-      case 'storage': return 'bg-yellow-600 hover:bg-yellow-700';
-      case 'parking': return 'bg-indigo-600 hover:bg-indigo-700';
-      default: return 'bg-gray-600 hover:bg-gray-700';
+      case 'project': return `bg-blue-600 ${HOVER_BACKGROUND_EFFECTS.BLUE_BUTTON}`;
+      case 'building': return `bg-green-600 ${HOVER_BACKGROUND_EFFECTS.GREEN_BUTTON}`;
+      case 'floor': return `bg-purple-600 ${HOVER_BACKGROUND_EFFECTS.PURPLE_BUTTON}`;
+      case 'unit': return `bg-orange-600 ${HOVER_BACKGROUND_EFFECTS.ORANGE_BUTTON}`;
+      case 'storage': return `bg-yellow-600 ${HOVER_BACKGROUND_EFFECTS.YELLOW_BUTTON}`;
+      case 'parking': return `bg-indigo-600 ${HOVER_BACKGROUND_EFFECTS.INDIGO_BUTTON}`;
+      default: return `bg-gray-600 ${HOVER_BACKGROUND_EFFECTS.GRAY_BUTTON}`;
     }
   };
 
@@ -140,7 +141,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
           </div>
           <button 
             onClick={handleClose}
-            className="text-gray-400 hover:text-white text-2xl"
+            className={`text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} text-2xl`}
           >
             ×
           </button>
@@ -293,7 +294,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
           <button
             onClick={handlePrevStep}
             disabled={currentStep === 'destination' || currentStep === 'processing'}
-            className="px-4 py-2 text-gray-300 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`px-4 py-2 text-gray-300 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             ← Προηγούμενο
           </button>
@@ -302,7 +303,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
             {currentStep === 'complete' ? (
               <button
                 onClick={handleClose}
-                className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium"
+                className={`px-6 py-2 bg-green-600 ${HOVER_BACKGROUND_EFFECTS.GREEN_BUTTON} text-white rounded-lg font-medium`}
               >
                 Ολοκλήρωση
               </button>
@@ -314,7 +315,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
                   currentStep === 'processing' ||
                   busy
                 }
-                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg font-medium"
+                className={`px-6 py-2 bg-blue-600 ${HOVER_BACKGROUND_EFFECTS.BLUE_BUTTON} disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg font-medium`}
               >
                 {currentStep === 'options' ? 'Ξεκίνημα επεξεργασίας' : 'Επόμενο →'}
               </button>

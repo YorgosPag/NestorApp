@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
-import { INTERACTIVE_PATTERNS } from '@/components/ui/effects'
+import { INTERACTIVE_PATTERNS, HOVER_SHADOWS } from '@/components/ui/effects'
 import {
   Tooltip,
   TooltipContent,
@@ -543,7 +543,7 @@ const sidebarMenuButtonVariants = cva(
       variant: {
         default: INTERACTIVE_PATTERNS.SIDEBAR_ACCENT_HOVER,
         outline:
-          `bg-background shadow-[0_0_0_1px_hsl(var(--sidebar-border))] ${INTERACTIVE_PATTERNS.SIDEBAR_ACCENT_HOVER} hover:shadow-[0_0_0_1px_hsl(var(--sidebar-accent))]`,
+          `bg-background shadow-[0_0_0_1px_hsl(var(--sidebar-border))] ${INTERACTIVE_PATTERNS.SIDEBAR_ACCENT_HOVER} ${HOVER_SHADOWS.SIDEBAR_ACCENT}`,
       },
       size: {
         default: "h-8 text-sm",

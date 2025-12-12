@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import { HOVER_COLOR_EFFECTS } from '@/components/ui/effects';
 
 interface VertexHandleProps {
   vertex: { x: number; y: number };
@@ -46,7 +47,7 @@ export function VertexHandle({
       strokeWidth={2}
       className={cn(
         "transition-colors",
-        isShiftDown ? "cursor-crosshair" : "cursor-move hover:fill-violet-500"
+        isShiftDown ? "cursor-crosshair" : `cursor-move ${HOVER_COLOR_EFFECTS.FILL_VIOLET}`
       )}
       onMouseDown={(e) => onMouseDown(index, e)}
       onMouseEnter={() => setIsHovered(true)}

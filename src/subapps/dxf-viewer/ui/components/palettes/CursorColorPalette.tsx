@@ -1,4 +1,5 @@
 import React from 'react';
+import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 export interface CursorColors {
   crosshairColor: string;
@@ -134,7 +135,7 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
               className={`p-2 rounded text-xs border transition-colors ${
                 isSelected
                   ? 'bg-blue-600 border-blue-500' 
-                  : 'bg-gray-600 hover:bg-blue-600 border-gray-500'
+                  : `bg-gray-600 ${HOVER_BACKGROUND_EFFECTS.BLUE_LIGHT} border-gray-500`
               }`}
             >
               <div 

@@ -3,6 +3,7 @@
 import React from 'react';
 import { OverlayProperties } from '../OverlayProperties';
 import { usePrecisionPositioning } from '../../utils/precision-positioning';
+import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 interface DraggableOverlayPropertiesProps {
   overlay: any;
@@ -99,7 +100,7 @@ export const DraggableOverlayProperties: React.FC<DraggableOverlayPropertiesProp
         <span className="text-sm text-gray-300 font-medium">🏠 Overlay Properties</span>
         <button
           onClick={onClose}
-          className="text-gray-400 hover:text-white text-lg leading-none w-6 h-6 flex items-center justify-center rounded hover:bg-gray-600 transition-colors"
+          className={`text-gray-400 ${HOVER_TEXT_EFFECTS.WHITE} text-lg leading-none w-6 h-6 flex items-center justify-center rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} transition-colors`}
           style={{ pointerEvents: 'auto' }}
         >
           ✕

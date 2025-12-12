@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 interface DxfImportModalProps {
     isOpen: boolean;
@@ -57,7 +58,7 @@ const DxfImportModal: React.FC<DxfImportModalProps> = ({ isOpen, onClose, onImpo
                     <button 
                         type="button" 
                         onClick={handleClose} 
-                        className="text-gray-400 hover:text-white text-2xl"
+                        className={`text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} text-2xl`}
                         disabled={isLoading}
                     >
                         ×
@@ -75,7 +76,7 @@ const DxfImportModal: React.FC<DxfImportModalProps> = ({ isOpen, onClose, onImpo
                             accept=".dxf"
                             onChange={handleFileChange}
                             disabled={isLoading}
-                            className="w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-sky-600 file:text-white hover:file:bg-sky-500 disabled:opacity-50"
+                            className={`w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-sky-600 file:text-white ${HOVER_BACKGROUND_EFFECTS.FILE_INPUT} disabled:opacity-50`}
                         />
                     </div>
 
@@ -105,14 +106,14 @@ const DxfImportModal: React.FC<DxfImportModalProps> = ({ isOpen, onClose, onImpo
                             type="button" 
                             onClick={handleClose}
                             disabled={isLoading}
-                            className="px-4 py-2 text-sm font-medium rounded-md bg-gray-600 hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-gray-500 text-white disabled:opacity-50"
+                            className={`px-4 py-2 text-sm font-medium rounded-md bg-gray-600 ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-gray-500 text-white disabled:opacity-50`}
                         >
                             Ακύρωση
                         </button>
                         <button 
                             type="submit" 
                             disabled={!selectedFile || isLoading}
-                            className="px-4 py-2 text-sm font-medium rounded-md bg-sky-600 hover:bg-sky-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-sky-500 disabled:bg-gray-500 disabled:cursor-not-allowed text-white"
+                            className={`px-4 py-2 text-sm font-medium rounded-md bg-sky-600 ${HOVER_BACKGROUND_EFFECTS.BLUE_LIGHT} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-sky-500 disabled:bg-gray-500 disabled:cursor-not-allowed text-white`}
                         >
                             {isLoading ? 'Εισαγωγή...' : 'Εισαγωγή'}
                         </button>

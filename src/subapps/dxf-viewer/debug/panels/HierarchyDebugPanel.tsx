@@ -2,6 +2,7 @@
 import React from 'react';
 import { useProjectHierarchy } from '../../contexts/ProjectHierarchyContext';
 import { useTranslation } from '../../../../i18n';
+import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 export function HierarchyDebugPanel() {
   const { t } = useTranslation('dxf-viewer');
@@ -41,7 +42,7 @@ export function HierarchyDebugPanel() {
         <p className="text-red-400">{error}</p>
         <button 
           onClick={loadCompanies}
-          className="mt-2 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+          className={`mt-2 px-3 py-1 bg-blue-600 text-white rounded ${HOVER_BACKGROUND_EFFECTS.BLUE_BUTTON}`}
         >
           {t('panels.hierarchy.retry')}
         </button>
@@ -67,7 +68,7 @@ export function HierarchyDebugPanel() {
                 className={`w-full text-left px-2 py-1 rounded text-sm ${
                   selectedCompany?.id === company.id 
                     ? 'bg-orange-600 text-white' 
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    : `bg-gray-700 text-gray-300 ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
                 }`}
               >
                 🏢 {company.companyName}
@@ -105,7 +106,7 @@ export function HierarchyDebugPanel() {
                     className={`w-full text-left px-2 py-1 rounded text-sm ${
                       selectedProject?.id === project.id 
                         ? 'bg-blue-600 text-white' 
-                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        : `bg-gray-700 text-gray-300 ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
                     }`}
                   >
                     📁 {project.name}
@@ -139,7 +140,7 @@ export function HierarchyDebugPanel() {
                     className={`w-full text-left px-2 py-1 rounded text-sm ${
                       selectedBuilding?.id === building.id 
                         ? 'bg-green-600 text-white' 
-                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        : `bg-gray-700 text-gray-300 ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
                     }`}
                   >
                     🏢 {building.name}
@@ -180,7 +181,7 @@ export function HierarchyDebugPanel() {
                     className={`w-full text-left px-2 py-1 rounded text-sm ${
                       selectedFloor?.id === floor.id 
                         ? 'bg-purple-600 text-white' 
-                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        : `bg-gray-700 text-gray-300 ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
                     }`}
                   >
                     🏠 {floor.name}

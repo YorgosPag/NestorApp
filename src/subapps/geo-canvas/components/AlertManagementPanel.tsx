@@ -8,7 +8,7 @@
 import React, { useState, useCallback } from 'react';
 import { AlertTriangle, Settings, Bell, Plus, Map } from 'lucide-react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
-import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
 
 // Core Alert Engine Integration
 import {
@@ -227,7 +227,7 @@ export function AlertManagementPanel({
 
             <button
               onClick={handleNotificationPreferences}
-              className={`flex items-center p-4 border border-gray-200 rounded-lg hover:border-purple-300 ${HOVER_BACKGROUND_EFFECTS.LIGHT} transition-colors w-full`}
+              className={`flex items-center p-4 border border-gray-200 rounded-lg ${HOVER_BORDER_EFFECTS.PURPLE} ${HOVER_BACKGROUND_EFFECTS.LIGHT} transition-colors w-full`}
             >
               <Bell className="h-8 w-8 text-purple-600 mr-4" />
               <div className="text-left">

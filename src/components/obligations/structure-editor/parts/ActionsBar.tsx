@@ -3,6 +3,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Save, X, Trash2, Edit3, Plus, Copy } from 'lucide-react';
+import { INTERACTIVE_PATTERNS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects/hover-effects';
 
 interface ActionsBarProps {
   isEditing: boolean;
@@ -35,7 +36,7 @@ export function ActionsBar({
   }
 
   return (
-    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
+    <div className={`flex items-center gap-1 ${GROUP_HOVER_PATTERNS.SHOW_ON_GROUP}`}>
       <Button variant="ghost" size="sm" onClick={onEdit} className="h-7 px-2"><Edit3 className="h-3 w-3" /></Button>
       {itemType === 'article' && (
         <Button variant="ghost" size="sm" onClick={onAddParagraph} className="h-7 px-2"><Plus className="h-3 w-3" /></Button>
@@ -43,7 +44,7 @@ export function ActionsBar({
       {itemType === 'section' && (
         <Button variant="ghost" size="sm" onClick={onDuplicate} className="h-7 px-2"><Copy className="h-3 w-3" /></Button>
       )}
-      <Button variant="ghost" size="sm" onClick={onDelete} className="h-7 px-2 text-red-600 hover:text-red-700"><Trash2 className="h-3 w-3" /></Button>
+      <Button variant="ghost" size="sm" onClick={onDelete} className={`h-7 px-2 text-red-600 ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`}><Trash2 className="h-3 w-3" /></Button>
     </div>
   );
 }

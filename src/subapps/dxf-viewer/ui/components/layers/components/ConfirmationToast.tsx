@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { AlertTriangle, Trash2, GitMerge } from 'lucide-react';
 
 interface ConfirmationToastProps {
@@ -65,7 +66,7 @@ export function ConfirmationToast({
       <div className="flex gap-2 justify-end pt-2 border-t border-gray-100 dark:border-gray-700">
         <button
           onClick={onCancel}
-          className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500"
+          className={`px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.GRAY_LIGHT} dark:${HOVER_BACKGROUND_EFFECTS.GRAY} rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500`}
         >
           {cancelText}
         </button>
@@ -73,8 +74,8 @@ export function ConfirmationToast({
           onClick={onConfirm}
           className={`px-4 py-2 text-sm font-medium rounded-md transition-colors focus:outline-none focus:ring-2 ${
             destructive
-              ? 'bg-red-600 hover:bg-red-700 text-white focus:ring-red-500'
-              : 'bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500'
+              ? `bg-red-600 ${HOVER_BACKGROUND_EFFECTS.RED_DARKER} text-white focus:ring-red-500`
+              : `bg-blue-600 ${HOVER_BACKGROUND_EFFECTS.BLUE_DARKER} text-white focus:ring-blue-500`
           }`}
         >
           {confirmText}

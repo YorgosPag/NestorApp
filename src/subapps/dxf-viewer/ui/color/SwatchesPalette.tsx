@@ -18,6 +18,7 @@
 'use client';
 
 import React, { useCallback } from 'react';
+import { HOVER_EFFECTS_COMPLEX } from '@/components/ui/effects';
 import { getPalettesByIds } from './BrandPalettes';
 import { useRecentColors } from './RecentColorsStore';
 import type { ColorSwatch } from './types';
@@ -181,7 +182,7 @@ function ColorSwatchButton({
       onKeyDown={handleKeyDown}
       className={`
         rounded border-2 transition-all
-        hover:scale-110 hover:shadow-lg
+        ${HOVER_EFFECTS_COMPLEX.SCALE_AND_SHADOW}
         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900
         ${isSelected ? 'border-blue-500 ring-2 ring-blue-500' : 'border-gray-600'}
       `}

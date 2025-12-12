@@ -1,5 +1,6 @@
 import React from 'react';
 import { Layers, Eye, EyeOff, MoreVertical } from 'lucide-react';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import type { LayerListProps } from './types';
 
 export function LayerList({ layers, onToggleVisibility, onLayerAction }: LayerListProps) {
@@ -44,15 +45,15 @@ export function LayerList({ layers, onToggleVisibility, onLayerAction }: LayerLi
             <div className="flex items-center gap-1">
               <button
                 onClick={() => onToggleVisibility?.(layer.id)}
-                className="p-1 text-gray-400 hover:text-white transition-colors"
+                className={`p-1 text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} transition-colors`}
                 title={layer.visible ? 'Απόκρυψη' : 'Εμφάνιση'}
               >
                 {layer.visible ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
               </button>
               
-              <button 
+              <button
                 onClick={() => onLayerAction?.(layer.id, 'menu')}
-                className="p-1 text-gray-400 hover:text-white transition-colors"
+                className={`p-1 text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} transition-colors`}
                 title="Περισσότερες επιλογές"
               >
                 <MoreVertical className="w-3 h-3" />

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { LayoutGrid, List, Filter, ArrowLeft, Home, Search } from 'lucide-react';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import type { FilterState } from '@/types/property-viewer';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects/hover-effects';
 
 interface PublicPropertyViewerHeaderProps {
   viewMode: 'list' | 'grid';
@@ -35,7 +36,7 @@ export function PublicPropertyViewerHeader({
                 variant="outline"
                 size="sm"
                 onClick={() => router.push('/properties')}
-                className="h-9 px-3 flex items-center gap-2 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 transition-colors"
+                className={`h-9 px-3 flex items-center gap-2 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} transition-colors`}
               >
                 <ArrowLeft className="w-4 h-4" />
                 <span className="hidden sm:inline">Πίσω στην Αναζήτηση</span>
@@ -48,7 +49,7 @@ export function PublicPropertyViewerHeader({
                 variant="ghost"
                 size="sm"
                 onClick={() => router.push('/')}
-                className="h-9 px-3 flex items-center gap-2 hover:bg-gray-100"
+                className={`h-9 px-3 flex items-center gap-2 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
               >
                 <Home className="w-4 h-4" />
                 <span className="hidden sm:inline">Αρχική</span>

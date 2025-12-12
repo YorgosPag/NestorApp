@@ -1,5 +1,6 @@
 import React from 'react';
 import { Layers, Plus, Settings } from 'lucide-react';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import type { LayerHeaderProps } from './types';
 
 export function LayerHeader({ isConnected, onAddLayer, onSettings }: LayerHeaderProps) {
@@ -17,18 +18,18 @@ export function LayerHeader({ isConnected, onAddLayer, onSettings }: LayerHeader
       </h3>
       
       <div className="flex items-center gap-1">
-        <button 
+        <button
           onClick={onAddLayer}
-          className="p-1 text-gray-400 hover:text-white transition-colors"
+          className={`p-1 text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} transition-colors`}
           title="Προσθήκη νέου layer"
         >
           <Plus className="w-3 h-3" />
         </button>
         
         <div className="relative">
-          <button 
+          <button
             onClick={onSettings}
-            className="p-1 text-gray-400 hover:text-white transition-colors"
+            className={`p-1 text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} transition-colors`}
             title="Ρυθμίσεις"
           >
             <Settings className="w-3 h-3" />

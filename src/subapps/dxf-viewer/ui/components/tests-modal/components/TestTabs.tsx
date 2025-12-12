@@ -6,6 +6,7 @@
 
 import React from 'react';
 import type { TabType } from '../types/tests.types';
+import { HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 
 interface TestTabsProps {
   activeTab: TabType;
@@ -20,7 +21,7 @@ export const TestTabs: React.FC<TestTabsProps> = ({ activeTab, onTabChange }) =>
         className={`px-4 py-3 text-sm font-medium transition-colors relative ${
           activeTab === 'automated'
             ? 'text-purple-400 border-b-2 border-purple-400'
-            : 'text-gray-400 hover:text-gray-300'
+            : `text-gray-400 ${HOVER_TEXT_EFFECTS.BLUE_LIGHT}`
         }`}
       >
         📋 Automated Tests
@@ -30,7 +31,7 @@ export const TestTabs: React.FC<TestTabsProps> = ({ activeTab, onTabChange }) =>
         className={`px-4 py-3 text-sm font-medium transition-colors relative ${
           activeTab === 'unit'
             ? 'text-purple-400 border-b-2 border-purple-400'
-            : 'text-gray-400 hover:text-gray-300'
+            : `text-gray-400 ${HOVER_TEXT_EFFECTS.BLUE_LIGHT}`
         }`}
       >
         🧪 Unit & E2E Tests
@@ -40,7 +41,7 @@ export const TestTabs: React.FC<TestTabsProps> = ({ activeTab, onTabChange }) =>
         className={`px-4 py-3 text-sm font-medium transition-colors relative ${
           activeTab === 'standalone'
             ? 'text-purple-400 border-b-2 border-purple-400'
-            : 'text-gray-400 hover:text-gray-300'
+            : `text-gray-400 ${HOVER_TEXT_EFFECTS.BLUE_LIGHT}`
         }`}
       >
         📊 Standalone Tests

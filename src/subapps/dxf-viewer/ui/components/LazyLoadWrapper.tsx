@@ -6,6 +6,7 @@
 
 import React, { Suspense, lazy, ComponentType } from 'react';
 import { Loader2 } from 'lucide-react';
+import { HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 
 interface LazyLoadWrapperProps {
   fallback?: React.ReactNode;
@@ -56,7 +57,7 @@ class LazyErrorBoundary extends React.Component<
           </p>
           <button
             onClick={() => this.setState({ hasError: false })}
-            className="mt-2 text-xs text-red-400 underline hover:text-red-300"
+            className={`mt-2 text-xs text-red-400 underline ${HOVER_TEXT_EFFECTS.RED}`}
           >
             Retry
           </button>

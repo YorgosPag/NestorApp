@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useUnifiedTextPreview } from '../../../../hooks/useUnifiedSpecificSettings';
 import type { LineType } from '../../../../../settings-core/types';
+import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 interface LineSettings {
   lineType: LineType;
@@ -68,7 +69,7 @@ export function CurrentSettingsDisplay({
 
   return (
     <div className={`space-y-3 ${className}`}>
-      <label className="flex items-center gap-3 cursor-pointer p-2 hover:bg-gray-800 rounded-lg">
+      <label className={`flex items-center gap-3 cursor-pointer p-2 rounded-lg transition-colors ${HOVER_BACKGROUND_EFFECTS.GRAY_DARK}`}>
         <input
           type="checkbox"
           checked={showSettingsDetails}

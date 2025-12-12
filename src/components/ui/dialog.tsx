@@ -5,7 +5,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import { INTERACTIVE_PATTERNS } from '@/components/ui/effects'
+import { INTERACTIVE_PATTERNS, HOVER_COLOR_EFFECTS } from '@/components/ui/effects'
 
 const Dialog = DialogPrimitive.Root
 
@@ -20,7 +20,7 @@ const DialogClose = React.forwardRef<
   <DialogPrimitive.Close
     ref={ref}
     className={cn(
-      `absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity ${INTERACTIVE_PATTERNS.FADE_IN} focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground`,
+      `absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity ${HOVER_COLOR_EFFECTS.FADE_IN} focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground`,
       className
     )}
     {...props}

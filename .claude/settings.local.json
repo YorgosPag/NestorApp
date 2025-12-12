@@ -166,7 +166,8 @@
       "Bash(do echo \"=== Port $port ===\")",
       "Bash(sort:*)",
       "Bash(yarn install)",
-      "Bash(pnpm run:*)"
+      "Bash(pnpm run:*)",
+      "Bash(rg:*)"
     ],
     "deny": [],
     "ask": []

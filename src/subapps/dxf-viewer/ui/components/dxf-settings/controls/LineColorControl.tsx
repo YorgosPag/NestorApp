@@ -8,6 +8,7 @@ import { Button } from '../../../../../../components/ui/button';
 import { Input } from '../../../../../../components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '../../../../../../components/ui/popover';
 import { Palette } from 'lucide-react';
+import { HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
 
 interface LineColorControlProps {
   value: string;
@@ -63,7 +64,7 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
             <Button
               variant="outline"
               disabled={disabled}
-              className="w-full justify-start gap-2 bg-gray-900 border-gray-700 hover:bg-gray-800"
+              className={`w-full justify-start gap-2 bg-gray-900 border-gray-700 ${HOVER_BACKGROUND_EFFECTS.GRAY_DARK}`}
             >
               <div
                 className="w-5 h-5 rounded border border-gray-600"
@@ -90,7 +91,7 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
                         w-10 h-10 rounded border-2 transition-all
                         ${tempColor === color
                           ? 'border-blue-500 scale-110'
-                          : 'border-gray-700 hover:border-gray-500'
+                          : `border-gray-700 ${HOVER_BORDER_EFFECTS.GRAY}`
                         }
                       `}
                       style={{ backgroundColor: color }}

@@ -2,6 +2,7 @@
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import type { Notification } from "@/types/header"
+import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects/hover-effects'
 
 interface NotificationItemProps {
   notification: Notification
@@ -17,7 +18,7 @@ export function NotificationItem({ notification }: NotificationItemProps) {
   }
 
   return (
-    <div className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted cursor-pointer transition-colors">
+    <div className={`flex items-start gap-3 p-2 rounded-lg cursor-pointer transition-colors ${HOVER_BACKGROUND_EFFECTS.MUTED}`}>
       <div
         className={`h-8 w-8 rounded-full flex items-center justify-center mt-1 ${notification.color}`}
       >

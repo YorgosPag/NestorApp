@@ -5,6 +5,7 @@ import { SelectionButton } from './shared/SelectionButton';
 import type { DxfDestination } from '../pipeline/types';
 import type { CompanyContact } from '../../../types/contacts';
 import type { Project, Building, Floor } from '../contexts/ProjectHierarchyContext';
+import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS, HOVER_TEXT_EFFECTS } from '../ui/effects';
 
 interface HierarchicalDestinationSelectorProps {
   onDestinationSelect: (destId: string) => void;
@@ -169,7 +170,7 @@ export function HierarchicalDestinationSelector({
         <p className="text-red-400 mb-4">Σφάλμα: {error}</p>
         <button
           onClick={loadCompanies}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+          className={`px-4 py-2 bg-blue-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} text-white rounded-lg`}
         >
           Ξαναδοκιμή
         </button>
@@ -188,7 +189,7 @@ export function HierarchicalDestinationSelector({
           <>
             <button
               onClick={() => setCurrentStep('company')}
-              className="text-blue-400 hover:text-blue-300"
+              className={`text-blue-400 ${HOVER_TEXT_EFFECTS.LIGHTER}`}
             >
               🏢 {selectedCompany.companyName}
             </button>
@@ -199,7 +200,7 @@ export function HierarchicalDestinationSelector({
           <>
             <button
               onClick={() => setCurrentStep('project')}
-              className="text-blue-400 hover:text-blue-300"
+              className={`text-blue-400 ${HOVER_TEXT_EFFECTS.LIGHTER}`}
             >
               📁 {selectedProject.name}
             </button>
@@ -210,7 +211,7 @@ export function HierarchicalDestinationSelector({
           <>
             <button
               onClick={() => setCurrentStep('building')}
-              className="text-blue-400 hover:text-blue-300"
+              className={`text-blue-400 ${HOVER_TEXT_EFFECTS.LIGHTER}`}
             >
               🏢 {selectedBuilding.name}
             </button>
@@ -257,7 +258,7 @@ export function HierarchicalDestinationSelector({
                 <button
                   key={project.id}
                   onClick={() => handleProjectSelect(project.id)}
-                  className="w-full text-left p-4 rounded-lg border border-gray-600 hover:border-gray-500 hover:bg-gray-700/50 transition-colors"
+                  className={`w-full text-left p-4 rounded-lg border border-gray-600 ${HOVER_BORDER_EFFECTS.GRAY} ${HOVER_BACKGROUND_EFFECTS.MUTED} transition-colors`}
                 >
                   <div className="flex items-center space-x-3">
                     <span className="text-2xl">📁</span>
@@ -307,7 +308,7 @@ export function HierarchicalDestinationSelector({
                 <button
                   key={floor.id}
                   onClick={() => handleFloorSelect(floor.id)}
-                  className="w-full text-left p-4 rounded-lg border border-gray-600 hover:border-gray-500 hover:bg-gray-700/50 transition-colors"
+                  className={`w-full text-left p-4 rounded-lg border border-gray-600 ${HOVER_BORDER_EFFECTS.GRAY} ${HOVER_BACKGROUND_EFFECTS.MUTED} transition-colors`}
                 >
                   <div className="flex items-center space-x-3">
                     <span className="text-2xl">🏠</span>
@@ -334,7 +335,7 @@ export function HierarchicalDestinationSelector({
                 className={`w-full text-left p-4 rounded-lg border transition-colors ${
                   selectedDestination?.id === dest.id
                     ? 'border-blue-500 bg-blue-900/30'
-                    : 'border-gray-600 hover:border-gray-500 hover:bg-gray-700/50'
+                    : `border-gray-600 ${HOVER_BORDER_EFFECTS.GRAY} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
                 }`}
               >
                 <div className="flex items-center space-x-3">

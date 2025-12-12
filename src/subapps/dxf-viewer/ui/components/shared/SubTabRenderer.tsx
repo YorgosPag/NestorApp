@@ -5,6 +5,7 @@ import { GripSettings } from '../dxf-settings/settings/core/GripSettings';
 import { LinePreview } from '../dxf-settings/settings/shared/LinePreview';
 import { CurrentSettingsDisplay } from '../dxf-settings/settings/shared/CurrentSettingsDisplay';
 import { OverrideToggle } from './OverrideToggle';
+import { INTERACTIVE_PATTERNS } from '../../../ui/effects';
 
 export type SubTabType = 'draft' | 'completion' | 'hover' | 'selection';
 export type SubTabContent = 'line' | 'text' | 'grips';
@@ -147,8 +148,8 @@ export const SubTabRenderer = React.memo<SubTabRendererProps>(function SubTabRen
             onClick={() => handleSubTabChange(subTab.id)}
             className={`py-2 px-3 text-sm font-medium rounded-md transition-colors ${
               activeSubTab === subTab.id
-                ? 'bg-blue-600 text-white hover:bg-blue-700'
-                : 'bg-gray-600 text-white hover:bg-gray-500'
+                ? `bg-blue-600 text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
+                : `bg-gray-600 text-white ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
             }`}
           >
             {subTab.label}

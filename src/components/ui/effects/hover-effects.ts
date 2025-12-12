@@ -63,7 +63,10 @@ export const HOVER_SHADOWS = {
   },
 
   /** Combined shadow with lift */
-  LIFTED: 'hover:shadow-lg hover:-translate-y-1'
+  LIFTED: 'hover:shadow-lg hover:-translate-y-1',
+
+  /** Sidebar accent border shadow */
+  SIDEBAR_ACCENT: 'hover:shadow-[0_0_0_1px_hsl(var(--sidebar-accent))]'
 } as const;
 
 /**
@@ -86,7 +89,10 @@ export const HOVER_COLOR_EFFECTS = {
 
   /** Filter effects */
   BLUR_SUBTLE: 'hover:backdrop-blur-sm',
-  SATURATE: 'hover:saturate-150'
+  SATURATE: 'hover:saturate-150',
+
+  /** SVG fill color changes */
+  FILL_VIOLET: 'hover:fill-violet-500'
 } as const;
 
 /**
@@ -167,7 +173,10 @@ export const HOVER_TEXT_EFFECTS = {
   ROSE: 'text-rose-600 hover:text-rose-700',
 
   /** Help actions */
-  SKY: 'text-sky-600 hover:text-sky-700'
+  SKY: 'text-sky-600 hover:text-sky-700',
+
+  /** Blue light text για navigation links */
+  BLUE_LIGHT: 'text-blue-400 hover:text-blue-300'
 } as const;
 
 /**
@@ -284,7 +293,10 @@ export const INTERACTIVE_PATTERNS = {
   WARNING_HOVER: 'hover:bg-orange-100 hover:text-orange-700 dark:hover:bg-orange-900/20 dark:hover:text-orange-300',
 
   /** Purple themed hover για special actions */
-  PURPLE_HOVER: 'hover:bg-purple-100 dark:hover:bg-purple-900/40'
+  PURPLE_HOVER: 'hover:bg-purple-100 dark:hover:bg-purple-900/40',
+
+  /** Text highlight για close buttons και navigation */
+  TEXT_HIGHLIGHT: 'hover:text-white'
 } as const;
 
 /**
@@ -311,7 +323,61 @@ export const HOVER_BACKGROUND_EFFECTS = {
   BLUE_BUTTON: 'hover:bg-blue-700',
 
   /** Orange button background hover (darker shade) */
-  ORANGE_BUTTON: 'hover:bg-orange-700'
+  ORANGE_BUTTON: 'hover:bg-orange-700',
+
+  /** Green button background hover (darker shade) */
+  GREEN_BUTTON: 'hover:bg-green-700',
+
+  /** Purple button background hover (darker shade) */
+  PURPLE_BUTTON: 'hover:bg-purple-700',
+
+  /** Yellow button background hover (darker shade) */
+  YELLOW_BUTTON: 'hover:bg-yellow-700',
+
+  /** Indigo button background hover (darker shade) */
+  INDIGO_BUTTON: 'hover:bg-indigo-700',
+
+  /** Gray button background hover (darker shade) */
+  GRAY_BUTTON: 'hover:bg-gray-700',
+
+  /** Gray panel background hover (medium shade) */
+  GRAY_PANEL: 'hover:bg-gray-600',
+
+  /** Gray dark background hover (darker shade for modals) */
+  GRAY_DARK: 'hover:bg-gray-800',
+
+  /** Blue light background hover (lighter shade) */
+  BLUE_LIGHT: 'hover:bg-blue-500',
+
+  /** Purple light background hover (lighter shade) */
+  PURPLE_LIGHT: 'hover:bg-purple-500',
+
+  /** Gray 750 background hover (custom dark shade) */
+  GRAY_750: 'hover:bg-gray-750',
+
+  /** Gray background hover with opacity (semi-transparent) */
+  GRAY_SEMI: 'hover:bg-gray-700/50',
+
+  /** Success state hover (green with light opacity) */
+  SUCCESS_HOVER: 'hover:bg-green-500/20',
+
+  /** File input button hover (sky color) */
+  FILE_INPUT: 'hover:file:bg-sky-500',
+
+  /** DXF Toolbar button hover (dark background) */
+  TOOLBAR_DEFAULT: 'hover:bg-[#262626] hover:border-[#3a3a3a]',
+
+  /** DXF Toolbar primary button hover */
+  TOOLBAR_PRIMARY: 'hover:bg-[#364157] hover:border-[#4a5a7a]',
+
+  /** DXF Toolbar success button hover */
+  TOOLBAR_SUCCESS: 'hover:bg-[#255233] hover:border-[#36a555]',
+
+  /** DXF Toolbar danger button hover */
+  TOOLBAR_DANGER: 'hover:bg-[#352626] hover:border-[#6a3535]',
+
+  /** Success button hover (green) */
+  SUCCESS_BUTTON: 'hover:bg-green-500'
 } as const;
 
 /**
@@ -359,7 +425,10 @@ export const GRADIENT_HOVER_EFFECTS = {
   WARNING_BUTTON: 'bg-gradient-to-r from-orange-500 to-red-600 text-white font-semibold rounded-lg hover:from-orange-600 hover:to-red-700',
 
   /** Neutral gradient με hover */
-  NEUTRAL_BUTTON: 'bg-gradient-to-r from-gray-600 to-slate-700 text-white font-semibold rounded-lg hover:from-gray-700 hover:to-slate-800'
+  NEUTRAL_BUTTON: 'bg-gradient-to-r from-gray-600 to-slate-700 text-white font-semibold rounded-lg hover:from-gray-700 hover:to-slate-800',
+
+  /** Purple to Pink gradient με hover */
+  PURPLE_PINK_BUTTON: 'hover:from-purple-500 hover:to-pink-500'
 } as const;
 
 /**

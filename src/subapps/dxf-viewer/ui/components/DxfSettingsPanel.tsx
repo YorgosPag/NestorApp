@@ -1,5 +1,7 @@
 'use client';
 
+import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+
 /**
  * ╔════════════════════════════════════════════════════════════════════════════╗
  * ║  DxfSettingsPanel - Main settings panel with General/Specific tabs        ║
@@ -99,7 +101,7 @@ export function DxfSettingsPanel({ className = '' }: DxfSettingsPanelProps) {
             className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
               activeMainTab === 'general'
                 ? 'bg-blue-600 text-white'
-                : 'text-gray-400 hover:text-white hover:bg-gray-700'
+                : `text-gray-400 ${HOVER_TEXT_EFFECTS.WHITE} ${HOVER_BACKGROUND_EFFECTS.GRAY_DARKER}`
             }`}
           >
             Γενικές Ρυθμίσεις
@@ -109,7 +111,7 @@ export function DxfSettingsPanel({ className = '' }: DxfSettingsPanelProps) {
             className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
               activeMainTab === 'specific'
                 ? 'bg-blue-600 text-white'
-                : 'text-gray-400 hover:text-white hover:bg-gray-700'
+                : `text-gray-400 ${HOVER_TEXT_EFFECTS.WHITE} ${HOVER_BACKGROUND_EFFECTS.GRAY_DARKER}`
             }`}
           >
             Ειδικές Ρυθμίσεις

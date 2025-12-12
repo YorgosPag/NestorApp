@@ -1,5 +1,6 @@
 import React from 'react';
 import { useLevels } from '../../systems/levels/useLevels';
+import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 export function AutoSaveStatus() {
   const levelsSystem = useLevels();
@@ -87,7 +88,7 @@ export function AutoSaveStatus() {
 
             }
           }}
-          className="px-2 py-1 text-[10px] bg-gray-700 hover:bg-gray-600 rounded border border-gray-600"
+          className={`px-2 py-1 text-[10px] bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL} rounded border border-gray-600`}
           title="Trigger manual save"
         >
           💾 Save

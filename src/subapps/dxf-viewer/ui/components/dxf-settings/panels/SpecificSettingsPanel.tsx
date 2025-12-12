@@ -2,6 +2,8 @@
 // STATUS: ACTIVE - Phase 3 Step 3.8
 // PURPOSE: Router for all 7 Specific Settings categories with lazy loading
 
+import { INTERACTIVE_PATTERNS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
+
 /**
  * ╔════════════════════════════════════════════════════════════════════════════╗
  * ║  CROSS-REFERENCES: docs/dxf-settings/MIGRATION_CHECKLIST.md (STEP 3.8)    ║
@@ -198,10 +200,10 @@ export const SpecificSettingsPanel: React.FC<SpecificSettingsPanelProps> = ({
             title={category.title}
             className={`h-8 w-8 p-0 rounded-md border transition-colors duration-150 flex items-center justify-center relative ${
               activeCategory === category.id
-                ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-500'
+                ? `bg-blue-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} text-white border-blue-500`
                 : category.comingSoon
                 ? 'bg-gray-700 text-gray-500 border-gray-600 cursor-not-allowed opacity-50'
-                : 'bg-gray-700 hover:bg-gray-600 text-gray-300 border-gray-600 hover:border-gray-500'
+                : `bg-gray-700 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-gray-300 border-gray-600 ${HOVER_BORDER_EFFECTS.GRAY}`
             }`}
           >
             {category.icon}

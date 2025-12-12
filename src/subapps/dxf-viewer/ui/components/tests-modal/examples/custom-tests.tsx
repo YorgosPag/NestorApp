@@ -13,6 +13,7 @@
 import React, { useState } from 'react';
 import { TestsModal } from '../TestsModal'; // Adjust path to: './components/tests-modal/TestsModal'
 import type { TestDefinition, NotificationFn } from '../types/tests.types'; // Adjust path accordingly
+import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 /**
  * Example 1: Simple Custom Test
@@ -264,7 +265,7 @@ export function CustomTestsExample() {
 
       <button
         onClick={() => setIsTestsOpen(true)}
-        className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+        className={`px-4 py-2 bg-purple-600 text-white rounded-lg transition-colors ${HOVER_BACKGROUND_EFFECTS.PURPLE_BUTTON}`}
       >
         🧪 Run Tests
       </button>

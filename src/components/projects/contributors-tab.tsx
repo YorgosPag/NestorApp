@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 const contributors = [
   { id: 1, role: 'Αρχιτέκτων', name: 'Παπαδόπουλος Γεώργιος', company: 'P Architects', phone: '2310123456', email: 'g.papadopoulos@parch.gr' },
@@ -51,7 +52,7 @@ export function ContributorsTab() {
                     <TableCell>{contributor.company}</TableCell>
                     <TableCell>{contributor.phone}</TableCell>
                     <TableCell>
-                      <a href={`mailto:${contributor.email}`} className="text-primary hover:underline">{contributor.email}</a>
+                      <a href={`mailto:${contributor.email}`} className={`text-primary ${INTERACTIVE_PATTERNS.BUTTON_LINK_HOVER}`}>{contributor.email}</a>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">

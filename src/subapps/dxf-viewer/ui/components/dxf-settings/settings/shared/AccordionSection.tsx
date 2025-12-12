@@ -73,6 +73,7 @@
 'use client';
 
 import React, { useState, useCallback, useId, useRef, useEffect, useMemo, memo } from 'react';
+import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 // ===== TYPES =====
 
@@ -211,15 +212,15 @@ const sizeStyles: Record<AccordionSize, { header: string; content: string; icon:
 const variantStyles: Record<AccordionVariant, { container: string; header: string }> = {
   default: {
     container: 'border border-gray-600 rounded-lg',
-    header: 'bg-gray-800 hover:bg-gray-700'
+    header: `bg-gray-800 ${HOVER_BACKGROUND_EFFECTS.GRAY_DARKER}`
   },
   ghost: {
     container: 'border-0',
-    header: 'bg-transparent hover:bg-gray-800/50'
+    header: `bg-transparent ${HOVER_BACKGROUND_EFFECTS.GRAY_DARK_ALPHA}`
   },
   bordered: {
     container: 'border-2 border-gray-500 rounded-lg shadow-lg',
-    header: 'bg-gray-800 hover:bg-gray-700'
+    header: `bg-gray-800 ${HOVER_BACKGROUND_EFFECTS.GRAY_DARKER}`
   }
 };
 

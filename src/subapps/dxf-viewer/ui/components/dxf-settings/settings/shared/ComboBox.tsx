@@ -69,6 +69,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 // ===== TYPES =====
 
@@ -238,7 +239,7 @@ export function ComboBox<T>({
         className={`w-full px-3 py-2 text-left text-sm border-b border-gray-700 last:border-b-0 transition-colors flex items-start justify-between ${
           isHighlighted
             ? 'bg-blue-600 text-white'
-            : 'text-white hover:bg-gray-600'
+            : `text-white ${HOVER_BACKGROUND_EFFECTS.GRAY}`
         }`}
       >
         <div className="flex-1">
@@ -276,7 +277,7 @@ export function ComboBox<T>({
           }}
           onKeyDown={handleKeyDown}
           disabled={disabled}
-          className={`w-full px-3 py-2 pr-8 bg-gray-700 border border-gray-600 rounded-md text-white text-left hover:bg-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+          className={`w-full px-3 py-2 pr-8 bg-gray-700 border border-gray-600 rounded-md text-white text-left ${HOVER_BACKGROUND_EFFECTS.GRAY} focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
             disabled ? 'opacity-50 cursor-not-allowed' : ''
           } ${buttonClassName}`}
         >
