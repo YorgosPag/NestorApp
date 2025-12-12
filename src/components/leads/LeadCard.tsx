@@ -24,7 +24,7 @@ export function LeadCard({
     <article className="bg-white border rounded-lg p-4 hover:shadow-md transition-shadow" itemScope itemType="https://schema.org/Person">
       <header className="flex items-start justify-between">
         <section className="flex-1" aria-label="Lead Information">
-          <header className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-2">
             <User className="w-4 h-4 text-gray-500" />
             <button
               onClick={() => onView(lead.id!)}
@@ -36,7 +36,7 @@ export function LeadCard({
             <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(lead.stage)}`}>
               {lead.stage}
             </span>
-          </header>
+          </div>
 
           <address className="space-y-1 text-sm text-gray-600 not-italic">
             {lead.email && (
