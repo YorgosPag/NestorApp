@@ -118,13 +118,16 @@ function generateInterface(obj, interfaceName, indent = 0) {
 
       if (typeof value === 'object' && value !== null) {
         // Nested object - create sub-interface
-        const subInterfaceName = `${interfaceName}_${key.charAt(0).toUpperCase() + key.slice(1)}`;
-        result += `${indentStr2}${key}: ${subInterfaceName};\n`;
+        const sanitizedKey = key.replace(/[-]/g, ''); // Remove dashes for TypeScript compatibility
+        const subInterfaceName = `${interfaceName}_${sanitizedKey.charAt(0).toUpperCase() + sanitizedKey.slice(1)}`;
+        result += `${indentStr2}'${key}': ${subInterfaceName};\n`; // Quote keys with dashes
         // Collect nested interfaces to append after current interface
         nestedInterfaces += '\n' + generateInterface(value, subInterfaceName, indent);
       } else {
         // String value
-        result += `${indentStr2}${key}: string;\n`;
+        const isValidIdentifier = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(key);
+        const keyOutput = isValidIdentifier ? key : `'${key}'`;
+        result += `${indentStr2}${keyOutput}: string;\n`;
       }
     }
   }
@@ -164,7 +167,8 @@ export type TranslationNamespace = 'common';
     // Generate individual namespace interfaces
     namespaces.forEach(namespace => {
       const data = translationData[namespace];
-      const interfaceName = `I18n_${namespace.charAt(0).toUpperCase() + namespace.slice(1)}`;
+      const sanitizedNamespace = namespace.replace(/[-]/g, ''); // Remove dashes for TypeScript compatibility
+      const interfaceName = `I18n_${sanitizedNamespace.charAt(0).toUpperCase() + sanitizedNamespace.slice(1)}`;
       typeDefinitions += generateInterface(data, interfaceName);
       typeDefinitions += '\n';
     });
@@ -172,8 +176,9 @@ export type TranslationNamespace = 'common';
     // Generate main interface
     typeDefinitions += 'export interface I18nKeys {\n';
     namespaces.forEach(namespace => {
-      const interfaceName = `I18n_${namespace.charAt(0).toUpperCase() + namespace.slice(1)}`;
-      typeDefinitions += `  ${namespace}: ${interfaceName};\n`;
+      const sanitizedNamespace = namespace.replace(/[-]/g, ''); // Remove dashes for TypeScript compatibility
+      const interfaceName = `I18n_${sanitizedNamespace.charAt(0).toUpperCase() + sanitizedNamespace.slice(1)}`;
+      typeDefinitions += `  '${namespace}': ${interfaceName};\n`; // Quote keys with dashes
     });
     typeDefinitions += '}\n\n';
 
