@@ -612,9 +612,9 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
         {/* 🎯 CENTER AREA - Map/Canvas */}
         <div className="flex-1 flex flex-col">
           {/* 🔧 TOP TOOLBAR */}
-          <div className="bg-gray-800 border-b border-gray-700 p-3">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
+          <nav className="bg-gray-800 border-b border-gray-700 p-3" role="toolbar">
+            <ul className="flex items-center space-x-4 list-none">
+              <li className="flex items-center space-x-2">
                 <span className="text-gray-400">{t('toolbar.view')}</span>
                 <select
                   value={activeView}
@@ -632,18 +632,18 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                   <option disabled>{t('views.mapping')}</option>
                   <option disabled>Split View ({t('phases.ui')})</option>
                 </select>
-              </div>
+              </li>
 
-              <div className="flex items-center space-x-2">
+              <li className="flex items-center space-x-2">
                 <span className="text-gray-400">{t('toolbar.crs')}</span>
                 <select className="bg-gray-700 border border-gray-600 rounded px-3 py-1 text-sm">
                   <option>{t('coordinateSystems.epsg4326')}</option>
                   <option>{t('coordinateSystems.epsg2100')}</option>
                   <option>UTM 34N (EPSG:32634)</option>
                 </select>
-              </div>
-            </div>
-          </div>
+              </li>
+            </ul>
+          </nav>
 
           {/* 🖥️ MAIN CONTENT - Canvas/Map Area */}
           <div className="flex-1 bg-gray-900 relative">
@@ -932,32 +932,32 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
               <h3 className="text-lg font-semibold mb-4 text-green-400">
                 {t('sidebar.availableFeatures.title')}
               </h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center space-x-2">
-                  <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+              <ul className="space-y-2 text-sm list-none">
+                <li className="flex items-center space-x-2">
+                  <span className="w-2 h-2 bg-green-400 rounded-full" aria-hidden="true"></span>
                   <span>{t('sidebar.availableFeatures.controlPointManagement')}</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <span className="w-2 h-2 bg-green-400 rounded-full" aria-hidden="true"></span>
                   <span>{t('sidebar.availableFeatures.affineTransformation')}</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <span className="w-2 h-2 bg-green-400 rounded-full" aria-hidden="true"></span>
                   <span>{t('sidebar.availableFeatures.accuracyValidation')}</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <span className="w-2 h-2 bg-green-400 rounded-full" aria-hidden="true"></span>
                   <span>{t('sidebar.availableFeatures.spatialDistributionAnalysis')}</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <span className="w-2 h-2 bg-green-400 rounded-full" aria-hidden="true"></span>
                   <span>{t('sidebar.availableFeatures.rmsErrorCalculation')}</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <span className="w-2 h-2 bg-green-400 rounded-full" aria-hidden="true"></span>
                   <span>{t('sidebar.availableFeatures.coordinateTransformation')}</span>
-                </div>
-              </div>
+                </li>
+              </ul>
             </section>
 
             {/* Technical Specs */}
@@ -965,28 +965,28 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
               <h3 className="text-lg font-semibold mb-4 text-blue-400">
                 {t('sidebar.technicalSpecs.title')}
               </h3>
-              <div className="space-y-2 text-sm text-gray-300">
+              <dl className="space-y-2 text-sm text-gray-300">
                 <div className="flex justify-between">
-                  <span>{t('sidebar.technicalSpecs.transformation')}</span>
-                  <span className="text-blue-300">{t('sidebar.technicalSpecs.transformationValue')}</span>
+                  <dt>{t('sidebar.technicalSpecs.transformation')}</dt>
+                  <dd className="text-blue-300">{t('sidebar.technicalSpecs.transformationValue')}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <span>{t('sidebar.technicalSpecs.accuracy')}</span>
-                  <span className="text-green-300">{t('sidebar.technicalSpecs.accuracyValue')}</span>
+                  <dt>{t('sidebar.technicalSpecs.accuracy')}</dt>
+                  <dd className="text-green-300">{t('sidebar.technicalSpecs.accuracyValue')}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <span>{t('sidebar.technicalSpecs.crsSupport')}</span>
-                  <span className="text-purple-300">{t('sidebar.technicalSpecs.crsSupportValue')}</span>
+                  <dt>{t('sidebar.technicalSpecs.crsSupport')}</dt>
+                  <dd className="text-purple-300">{t('sidebar.technicalSpecs.crsSupportValue')}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <span>{t('sidebar.technicalSpecs.mathEngine')}</span>
-                  <span className="text-yellow-300">{t('sidebar.technicalSpecs.mathEngineValue')}</span>
+                  <dt>{t('sidebar.technicalSpecs.mathEngine')}</dt>
+                  <dd className="text-yellow-300">{t('sidebar.technicalSpecs.mathEngineValue')}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <span>{t('sidebar.technicalSpecs.standards')}</span>
-                  <span className="text-blue-300">{t('sidebar.technicalSpecs.standardsValue')}</span>
+                  <dt>{t('sidebar.technicalSpecs.standards')}</dt>
+                  <dd className="text-blue-300">{t('sidebar.technicalSpecs.standardsValue')}</dd>
                 </div>
-              </div>
+              </dl>
             </section>
 
             {/* Next Steps */}
@@ -1008,22 +1008,22 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
 
       {/* 📋 FOOTER STATUS */}
       <footer className="bg-gray-800 border-t border-gray-700 p-3">
-        <div className="flex items-center justify-between text-sm">
-          <div className="flex items-center space-x-4">
-            <span className="text-green-400">● {t('footer.status.active')}</span>
-            <span className="text-green-400">{t('footer.status.phase2DxfTransformation')}</span>
-            <span className="text-blue-400">{t('footer.status.georeferencingReady')}</span>
-          </div>
+        <nav className="flex items-center justify-between text-sm">
+          <ul className="flex items-center space-x-4 list-none">
+            <li className="text-green-400">● {t('footer.status.active')}</li>
+            <li className="text-green-400">{t('footer.status.phase2DxfTransformation')}</li>
+            <li className="text-blue-400">{t('footer.status.georeferencingReady')}</li>
+          </ul>
 
-          <div className="flex items-center space-x-4">
+          <section className="flex items-center space-x-4">
             <span className="text-gray-400">
               {t('sidebar.technicalSpecs.standardsValue')} | OGC Standards | {t('sidebar.technicalSpecs.mathEngineValue')}
             </span>
             <span className="text-blue-400">
               🏢 Pagonis-Nestor Geo-Canvas v2.0
             </span>
-          </div>
-        </div>
+          </section>
+        </nav>
       </footer>
 
       {/* 📁 FLOOR PLAN UPLOAD MODAL */}

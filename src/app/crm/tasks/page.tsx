@@ -67,8 +67,8 @@ export default function CrmTasksPage() {
     <>
       <Toaster position="top-right" />
       
-      <div className="min-h-screen bg-gray-50 dark:bg-background">
-        <div className="bg-white dark:bg-card shadow-sm border-b">
+      <main className="min-h-screen bg-gray-50 dark:bg-background">
+        <header className="bg-white dark:bg-card shadow-sm border-b">
           <div className="px-6 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -85,12 +85,12 @@ export default function CrmTasksPage() {
               </Button>
             </div>
           </div>
-        </div>
+        </header>
 
-        <div className="container mx-auto px-6 py-8">
+        <section className="container mx-auto px-6 py-8">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
             {statsCards.map((card, index) => (
-              <div key={index} className="bg-white dark:bg-card rounded-lg shadow p-6">
+              <article key={index} className="bg-white dark:bg-card rounded-lg shadow p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <p className="text-sm text-gray-600 dark:text-muted-foreground mb-1">{card.title}</p>
@@ -105,13 +105,13 @@ export default function CrmTasksPage() {
                     <card.icon className="w-5 h-5" />
                   </div>
                 </div>
-              </div>
+              </article>
             ))}
           </div>
 
           <TasksTab />
-        </div>
-      </div>
+        </section>
+      </main>
 
       <CreateTaskModal
         isOpen={showCreateModal}

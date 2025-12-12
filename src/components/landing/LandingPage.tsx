@@ -24,13 +24,13 @@ export function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-gray-900 dark:to-blue-950">
+    <main className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-gray-900 dark:to-blue-950">
       {/* Hero Section */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-purple-600/10 to-pink-600/10 backdrop-blur-3xl" />
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-purple-600/10 to-pink-600/10 backdrop-blur-3xl" aria-hidden="true" />
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32">
-          <div className="text-center mb-12">
+          <header className="text-center mb-12">
             <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 dark:text-gray-100 mb-6">
               {t('hero.findIdeal')}{' '}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
@@ -40,15 +40,18 @@ export function LandingPage() {
             <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
               {t('hero.subtitle')}
             </p>
-          </div>
+          </header>
 
           {/* Search Box */}
           <div className="max-w-4xl mx-auto">
             <form
               onSubmit={(e) => { e.preventDefault(); handleSearch(); }}
               className="bg-white dark:bg-gray-800/50 dark:backdrop-blur-sm rounded-2xl shadow-xl p-6 dark:border dark:border-gray-700"
+              role="search"
+              aria-label="Αναζήτηση Ακινήτων"
             >
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <fieldset className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <legend className="sr-only">Κριτήρια Αναζήτησης Ακινήτων</legend>
                 {/* Property Type */}
                 <div className="relative">
                   <label htmlFor="search-type" className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">
@@ -129,7 +132,7 @@ export function LandingPage() {
                   </select>
                   <ChevronDown aria-hidden="true" className="absolute right-3 bottom-3.5 h-5 w-5 text-gray-400 pointer-events-none" />
                 </div>
-              </div>
+              </fieldset>
 
               <button 
                 type="submit"
@@ -141,7 +144,7 @@ export function LandingPage() {
             </form>
 
             {/* Quick Search Links */}
-            <div className="flex flex-wrap justify-center gap-3 mt-6">
+            <nav className="flex flex-wrap justify-center gap-3 mt-6" role="navigation" aria-label="Γρήγορες Συνδέσεις Αναζήτησης">
               <Link href="/properties?type=Στούντιο" className="px-4 py-2 bg-white/80 dark:bg-gray-800/50 dark:border dark:border-gray-700 dark:text-gray-200 backdrop-blur text-sm font-medium text-gray-700 rounded-full hover:bg-white dark:hover:bg-gray-700 hover:shadow-md transition-all">
                 Στούντιο
               </Link>
@@ -155,49 +158,49 @@ export function LandingPage() {
                 <MapPin className="h-4 w-4" />
                 Δείτε σε Κάτοψη
               </Link>
-            </div>
+            </nav>
           </div>
         </div>
       </section>
 
       {/* Stats Section */}
-      <section className="py-16 bg-white dark:bg-gray-900">
+      <section className="py-16 bg-white dark:bg-gray-900" role="region" aria-label="Στατιστικά Εταιρείας">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            <div className="text-center">
-              <div className="text-3xl font-bold text-blue-600 mb-2">5+</div>
-              <div className="text-gray-600 dark:text-gray-300">Διαθέσιμα Ακίνητα</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-purple-600 mb-2">3</div>
-              <div className="text-gray-600 dark:text-gray-300">Premium Τοποθεσίες</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-green-600 mb-2">100%</div>
-              <div className="text-gray-600 dark:text-gray-300">Εγγύηση Ποιότητας</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-orange-600 mb-2">24/7</div>
-              <div className="text-gray-600 dark:text-gray-300">Υποστήριξη</div>
-            </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8" role="list">
+            <article className="text-center" role="listitem">
+              <data value="5" className="text-3xl font-bold text-blue-600 mb-2">5+</data>
+              <p className="text-gray-600 dark:text-gray-300">Διαθέσιμα Ακίνητα</p>
+            </article>
+            <article className="text-center" role="listitem">
+              <data value="3" className="text-3xl font-bold text-purple-600 mb-2">3</data>
+              <p className="text-gray-600 dark:text-gray-300">Premium Τοποθεσίες</p>
+            </article>
+            <article className="text-center" role="listitem">
+              <data value="100" className="text-3xl font-bold text-green-600 mb-2">100%</data>
+              <p className="text-gray-600 dark:text-gray-300">Εγγύηση Ποιότητας</p>
+            </article>
+            <article className="text-center" role="listitem">
+              <data value="24" className="text-3xl font-bold text-orange-600 mb-2">24/7</data>
+              <p className="text-gray-600 dark:text-gray-300">Υποστήριξη</p>
+            </article>
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className="py-20 bg-gray-50 dark:bg-gray-900/50">
+      <section className="py-20 bg-gray-50 dark:bg-gray-900/50" role="region" aria-label="Χαρακτηριστικά Υπηρεσιών">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
+          <header className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
               Γιατί να Επιλέξετε τα Ακίνητά μας;
             </h2>
             <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
               Προσφέρουμε την καλύτερη εμπειρία αναζήτησης ακινήτων με σύγχρονα εργαλεία
             </p>
-          </div>
+          </header>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm hover:shadow-lg transition-shadow">
+          <div className="grid md:grid-cols-3 gap-8" role="list">
+            <article className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm hover:shadow-lg transition-shadow" role="listitem">
               <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/50 rounded-lg flex items-center justify-center mb-4">
                 <MapPin className="h-6 w-6 text-blue-600" />
               </div>
@@ -207,9 +210,9 @@ export function LandingPage() {
               <p className="text-gray-600 dark:text-gray-300">
                 Εξερευνήστε τα ακίνητα σε διαδραστική κάτοψη ορόφου και δείτε τη θέση τους
               </p>
-            </div>
+            </article>
 
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm hover:shadow-lg transition-shadow">
+            <article className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm hover:shadow-lg transition-shadow" role="listitem">
               <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/50 rounded-lg flex items-center justify-center mb-4">
                 <Shield className="h-6 w-6 text-purple-600" />
               </div>
@@ -219,9 +222,9 @@ export function LandingPage() {
               <p className="text-gray-600 dark:text-gray-300">
                 Όλα τα ακίνητα είναι ελεγμένα και πληρούν τις υψηλότερες προδιαγραφές
               </p>
-            </div>
+            </article>
 
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm hover:shadow-lg transition-shadow">
+            <article className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm hover:shadow-lg transition-shadow" role="listitem">
               <div className="w-12 h-12 bg-green-100 dark:bg-green-900/50 rounded-lg flex items-center justify-center mb-4">
                 <Users className="h-6 w-6 text-green-600" />
               </div>
@@ -231,29 +234,29 @@ export function LandingPage() {
               <p className="text-gray-600 dark:text-gray-300">
                 Η ομάδα μας είναι εδώ για να σας βοηθήσει σε κάθε βήμα της διαδικασίας
               </p>
-            </div>
+            </article>
           </div>
         </div>
       </section>
 
       {/* Featured Properties Preview */}
-      <section className="py-20">
+      <section className="py-20" role="region" aria-label="Προτεινόμενα Ακίνητα">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
+          <header className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
               Προτεινόμενα Ακίνητα
             </h2>
             <p className="text-lg text-gray-600 dark:text-gray-300">
               Δείτε μερικά από τα πιο δημοφιλή ακίνητά μας
             </p>
-          </div>
+          </header>
 
-          <div className="grid md:grid-cols-3 gap-8 mb-12">
+          <div className="grid md:grid-cols-3 gap-8 mb-12" role="list">
             {/* Property Card 1 */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow cursor-pointer" onClick={() => router.push('/properties')}>
-              <div className="h-48 bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
-                <Home className="h-16 w-16 text-white" />
-              </div>
+            <article className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow cursor-pointer" onClick={() => router.push('/properties')} role="listitem">
+              <figure className="h-48 bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
+                <Home className="h-16 w-16 text-white" aria-hidden="true" />
+              </figure>
               <div className="p-6">
                 <div className="flex justify-between items-start mb-2">
                   <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Στούντιο B1</h3>
@@ -272,7 +275,7 @@ export function LandingPage() {
                   <span className="text-sm text-gray-600 dark:text-gray-400 ml-2">4.0</span>
                 </div>
               </div>
-            </div>
+            </article>
 
             {/* Property Card 2 */}
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow cursor-pointer" onClick={() => router.push('/properties')}>
@@ -338,7 +341,7 @@ export function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-blue-600 to-purple-600">
+      <section className="py-20 bg-gradient-to-r from-blue-600 to-purple-600" role="region" aria-label="Κλήση προς Δράση">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold text-white mb-4">
             Έτοιμοι να Βρείτε το Νέο σας Σπίτι;
@@ -346,7 +349,7 @@ export function LandingPage() {
           <p className="text-xl text-white/90 mb-8">
             Εξερευνήστε τη συλλογή μας με διαθέσιμα ακίνητα σε διαδραστική κάτοψη
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <nav className="flex flex-col sm:flex-row gap-4 justify-center" role="navigation" aria-label="Κύριες Ενέργειες">
             <Link 
               href="/properties"
               className="px-8 py-3 bg-white text-blue-600 font-semibold rounded-lg hover:bg-gray-100 transition-all"
@@ -360,7 +363,7 @@ export function LandingPage() {
               <MapPin className="h-5 w-5" />
               Προβολή σε Κάτοψη
             </Link>
-          </div>
+          </nav>
         </div>
       </section>
       <script

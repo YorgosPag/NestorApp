@@ -250,15 +250,16 @@ export function DesktopMultiColumn({
   };
 
   return (
-    <div className="hidden md:block">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 gap-4">
+    <nav className="hidden md:block" role="navigation" aria-label="Πλοήγηση Ιεραρχίας">
+      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 gap-4">
 
         {/* Column 1: Companies */}
-        <div className="bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-3">
-          <div className="flex items-center gap-2 mb-2">
+        <section className="bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+                 role="region" aria-label="Εταιρείες">
+          <header className="flex items-center gap-2 mb-2">
             <Building className="h-5 w-5 text-blue-600" />
             <h3 className="font-semibold text-gray-900 dark:text-foreground">Εταιρείες</h3>
-          </div>
+          </header>
 
           {/* Companies Toolbar */}
           <NavigationCardToolbar
@@ -280,7 +281,7 @@ export function DesktopMultiColumn({
             onHelp={() => {/* TODO: Companies help */}}
           />
 
-          <div className="space-y-2 max-h-64 overflow-y-auto">
+          <ul className="space-y-2 max-h-64 overflow-y-auto list-none" role="list" aria-label="Λίστα Εταιρειών">
             {filterData(companies, companiesSearch, companiesFilters).map(company => {
               // Ελέγχουμε αν η εταιρεία έχει έργα
               const companyProjects = projects.filter(p => p.companyId === company.id);
@@ -303,30 +304,32 @@ export function DesktopMultiColumn({
               }
 
               return (
-                <NavigationButton
-                  key={company.id}
-                  onClick={() => onCompanySelect(company.id)}
-                  icon={Factory}
-                  title={company.companyName}
-                  subtitle={subtitle}
-                  extraInfo={extraInfo}
-                  isSelected={selectedCompany?.id === company.id}
-                  variant="compact"
-                  badgeStatus={!projectsLoading && !hasProjects ? 'no_projects' : undefined}
-                  badgeText={!projectsLoading && !hasProjects ? 'Χωρίς έργα' : undefined}
-                />
+                <li key={company.id}>
+                  <NavigationButton
+                    onClick={() => onCompanySelect(company.id)}
+                    icon={Factory}
+                    title={company.companyName}
+                    subtitle={subtitle}
+                    extraInfo={extraInfo}
+                    isSelected={selectedCompany?.id === company.id}
+                    variant="compact"
+                    badgeStatus={!projectsLoading && !hasProjects ? 'no_projects' : undefined}
+                    badgeText={!projectsLoading && !hasProjects ? 'Χωρίς έργα' : undefined}
+                  />
+                </li>
               );
             })}
-          </div>
-        </div>
+          </ul>
+        </section>
 
         {/* Column 2: Projects */}
         {selectedCompany && (
-          <div className="bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-3">
-            <div className="flex items-center gap-2 mb-2">
+          <section className="bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+                   role="region" aria-label="Έργα">
+            <header className="flex items-center gap-2 mb-2">
               <Home className="h-5 w-5 text-green-600" />
               <h3 className="font-semibold text-gray-900 dark:text-foreground">Έργα</h3>
-            </div>
+            </header>
 
             {/* Projects Toolbar */}
             <NavigationCardToolbar
@@ -347,36 +350,38 @@ export function DesktopMultiColumn({
               onHelp={() => {/* TODO: Projects help */}}
             />
 
-            <div className="space-y-2 max-h-64 overflow-y-auto">
+            <ul className="space-y-2 max-h-64 overflow-y-auto list-none" role="list" aria-label="Λίστα Έργων">
               {filterData(projects.filter(project => project.companyId === selectedCompany?.id), projectsSearch, projectsFilters).map(project => {
                 // Ελέγχουμε αν το έργο έχει κτίρια
                 const hasBuildings = project.buildings.length > 0;
 
                 return (
-                  <NavigationButton
-                    key={project.id}
-                    onClick={() => onProjectSelect(project.id)}
-                    icon={Construction}
-                    title={project.name}
-                    subtitle={`${project.buildings.length} κτίρια`}
-                    isSelected={selectedProject?.id === project.id}
-                    variant="compact"
-                    badgeStatus={!hasBuildings ? 'no_projects' : undefined}
-                    badgeText={!hasBuildings ? 'Χωρίς κτίρια' : undefined}
-                  />
+                  <li key={project.id}>
+                    <NavigationButton
+                      onClick={() => onProjectSelect(project.id)}
+                      icon={Construction}
+                      title={project.name}
+                      subtitle={`${project.buildings.length} κτίρια`}
+                      isSelected={selectedProject?.id === project.id}
+                      variant="compact"
+                      badgeStatus={!hasBuildings ? 'no_projects' : undefined}
+                      badgeText={!hasBuildings ? 'Χωρίς κτίρια' : undefined}
+                    />
+                  </li>
                 );
               })}
-            </div>
-          </div>
+            </ul>
+          </section>
         )}
 
         {/* Column 3: Buildings */}
         {selectedProject && (
-          <div className="bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-3">
-            <div className="flex items-center gap-2 mb-2">
+          <section className="bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+                   role="region" aria-label="Κτίρια">
+            <header className="flex items-center gap-2 mb-2">
               <Building className="h-5 w-5 text-purple-600" />
               <h3 className="font-semibold text-gray-900 dark:text-foreground">Κτίρια</h3>
-            </div>
+            </header>
 
             {/* Buildings Toolbar */}
             <NavigationCardToolbar
@@ -396,36 +401,38 @@ export function DesktopMultiColumn({
               onHelp={() => {/* TODO: Buildings help */}}
             />
 
-            <div className="space-y-2 max-h-64 overflow-y-auto">
+            <ul className="space-y-2 max-h-64 overflow-y-auto list-none" role="list">
               {filterData(selectedProject.buildings, buildingsSearch, buildingsFilters).map(building => {
                 // Ελέγχουμε αν το κτίριο έχει ορόφους
                 const hasFloors = building.floors.length > 0;
 
                 return (
-                  <NavigationButton
-                    key={building.id}
-                    onClick={() => onBuildingSelect(building.id)}
-                    icon={Building}
-                    title={building.name}
-                    subtitle={`${building.floors.length} όροφοι`}
-                    isSelected={selectedBuilding?.id === building.id}
-                    variant="compact"
-                    badgeStatus={!hasFloors ? 'no_projects' : undefined}
-                    badgeText={!hasFloors ? 'Χωρίς ορόφους' : undefined}
-                  />
+                  <li key={building.id}>
+                    <NavigationButton
+                      onClick={() => onBuildingSelect(building.id)}
+                      icon={Building}
+                      title={building.name}
+                      subtitle={`${building.floors.length} όροφοι`}
+                      isSelected={selectedBuilding?.id === building.id}
+                      variant="compact"
+                      badgeStatus={!hasFloors ? 'no_projects' : undefined}
+                      badgeText={!hasFloors ? 'Χωρίς ορόφους' : undefined}
+                    />
+                  </li>
                 );
               })}
-            </div>
-          </div>
+            </ul>
+          </section>
         )}
 
         {/* Column 4: Floors */}
         {selectedBuilding && (
-          <div className="bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-3">
-            <div className="flex items-center gap-2 mb-2">
+          <section className="bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+                   role="region" aria-label="Όροφοι">
+            <header className="flex items-center gap-2 mb-2">
               <Users className="h-5 w-5 text-orange-600" />
               <h3 className="font-semibold text-gray-900 dark:text-foreground">Όροφοι</h3>
-            </div>
+            </header>
 
             {/* Floors Toolbar */}
             <NavigationCardToolbar
@@ -445,36 +452,38 @@ export function DesktopMultiColumn({
               onHelp={() => {/* TODO: Floors help */}}
             />
 
-            <div className="space-y-2 max-h-64 overflow-y-auto">
+            <ul className="space-y-2 max-h-64 overflow-y-auto list-none" role="list">
               {filterData(selectedBuilding.floors, floorsSearch, floorsFilters).map(floor => {
                 // Ελέγχουμε αν ο όροφος έχει μονάδες
                 const hasUnits = floor.units.length > 0;
 
                 return (
-                  <NavigationButton
-                    key={floor.id}
-                    onClick={() => onFloorSelect(floor.id)}
-                    icon={Layers}
-                    title={floor.name}
-                    subtitle={`${floor.units.length} μονάδες`}
-                    isSelected={selectedFloor?.id === floor.id}
-                    variant="compact"
-                    badgeStatus={!hasUnits ? 'no_projects' : undefined}
-                    badgeText={!hasUnits ? 'Χωρίς μονάδες' : undefined}
-                  />
+                  <li key={floor.id}>
+                    <NavigationButton
+                      onClick={() => onFloorSelect(floor.id)}
+                      icon={Layers}
+                      title={floor.name}
+                      subtitle={`${floor.units.length} μονάδες`}
+                      isSelected={selectedFloor?.id === floor.id}
+                      variant="compact"
+                      badgeStatus={!hasUnits ? 'no_projects' : undefined}
+                      badgeText={!hasUnits ? 'Χωρίς μονάδες' : undefined}
+                    />
+                  </li>
                 );
               })}
-            </div>
-          </div>
+            </ul>
+          </section>
         )}
 
         {/* Column 5: Units */}
         {selectedFloor && (
-          <div className="bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-3">
-            <div className="flex items-center gap-2 mb-2">
+          <section className="bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+                   role="region" aria-label="Μονάδες">
+            <header className="flex items-center gap-2 mb-2">
               <Home className="h-5 w-5 text-teal-600" />
               <h3 className="font-semibold text-gray-900 dark:text-foreground">Μονάδες</h3>
-            </div>
+            </header>
 
             {/* Units Toolbar */}
             <NavigationCardToolbar
@@ -494,94 +503,112 @@ export function DesktopMultiColumn({
               onHelp={() => {/* TODO: Units help */}}
             />
 
-            <div className="space-y-2 max-h-64 overflow-y-auto">
+            <ul className="space-y-2 max-h-64 overflow-y-auto list-none" role="list" aria-label="Λίστα Μονάδων">
               {filterData(selectedFloor.units, unitsSearch, unitsFilters).map(unit => (
-                <NavigationButton
-                  key={unit.id}
-                  onClick={() => {
-                    setSelectedUnit(unit);
-                  }}
-                  icon={Home}
-                  title={unit.name}
-                  subtitle={unit.type || 'Μονάδα'}
-                  isSelected={selectedUnit?.id === unit.id}
-                  variant="compact"
-                />
+                <li key={unit.id}>
+                  <NavigationButton
+                    onClick={() => {
+                      setSelectedUnit(unit);
+                    }}
+                    icon={Home}
+                    title={unit.name}
+                    subtitle={unit.type || 'Μονάδα'}
+                    isSelected={selectedUnit?.id === unit.id}
+                    variant="compact"
+                  />
+                </li>
               ))}
-            </div>
-          </div>
+            </ul>
+          </section>
         )}
 
         {/* Column 6: Actions & Extras */}
         {selectedFloor && (
-          <div className="bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-3">
-            <div className="flex items-center gap-2 mb-4">
+          <section className="bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+                   role="region" aria-label="Ενέργειες">
+            <header className="flex items-center gap-2 mb-4">
               <MapPin className="h-5 w-5 text-red-600" />
               <h3 className="font-semibold text-gray-900 dark:text-foreground">Ενέργειες</h3>
-            </div>
-            <div className="space-y-2">
-              <NavigationButton
-                onClick={() => onNavigateToPage('properties')}
-                icon={Home}
-                title="Προβολή Μονάδων"
-                subtitle={`${selectedFloor.units.length} μονάδες`}
-                variant="compact"
-              />
-
-              <NavigationButton
-                onClick={() => onNavigateToPage('floorplan')}
-                icon={Map}
-                title="Κάτοψη Ορόφου"
-                subtitle="Διαδραστική προβολή"
-                variant="compact"
-              />
-
-              {selectedProject && (
+            </header>
+            <ul className="space-y-2 list-none" role="list" aria-label="Λίστα Ενεργειών">
+              <li>
                 <NavigationButton
-                  onClick={() => onNavigateToPage('projects')}
-                  icon={Construction}
-                  title="Λεπτομέρειες Έργου"
-                  subtitle={selectedProject.name}
+                  onClick={() => onNavigateToPage('properties')}
+                  icon={Home}
+                  title="Προβολή Μονάδων"
+                  subtitle={`${selectedFloor.units.length} μονάδες`}
                   variant="compact"
                 />
+              </li>
+
+              <li>
+                <NavigationButton
+                  onClick={() => onNavigateToPage('floorplan')}
+                  icon={Map}
+                  title="Κάτοψη Ορόφου"
+                  subtitle="Διαδραστική προβολή"
+                  variant="compact"
+                />
+              </li>
+
+              {selectedProject && (
+                <li>
+                  <NavigationButton
+                    onClick={() => onNavigateToPage('projects')}
+                    icon={Construction}
+                    title="Λεπτομέρειες Έργου"
+                    subtitle={selectedProject.name}
+                    variant="compact"
+                  />
+                </li>
               )}
 
               {selectedBuilding && (
-                <NavigationButton
-                  onClick={() => onNavigateToPage('buildings')}
-                  icon={Building}
-                  title="Λεπτομέρειες Κτιρίου"
-                  subtitle={selectedBuilding.name}
-                  variant="compact"
-                />
+                <li>
+                  <NavigationButton
+                    onClick={() => onNavigateToPage('buildings')}
+                    icon={Building}
+                    title="Λεπτομέρειες Κτιρίου"
+                    subtitle={selectedBuilding.name}
+                    variant="compact"
+                  />
+                </li>
               )}
 
               {/* Parking & Storage */}
-              <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
-                <div className="text-xs font-medium text-gray-500 dark:text-muted-foreground mb-2 uppercase tracking-wide">
-                  Παρκινγκ & Αποθήκες
-                </div>
-                <NavigationButton
-                  onClick={() => {/* TODO: Parking spots */}}
-                  icon={Car}
-                  title="Θέσεις Στάθμευσης"
-                  subtitle="Διαθέσιμες θέσεις"
-                  variant="compact"
-                />
+              <li className="pt-3 border-t border-gray-200 dark:border-gray-700">
+                <section>
+                  <h4 className="text-xs font-medium text-gray-500 dark:text-muted-foreground mb-2 uppercase tracking-wide">
+                    Παρκινγκ & Αποθήκες
+                  </h4>
+                  <ul className="space-y-2 list-none" role="list" aria-label="Παρκινγκ & Αποθήκες">
+                    <li>
+                      <NavigationButton
+                        onClick={() => {/* TODO: Parking spots */}}
+                        icon={Car}
+                        title="Θέσεις Στάθμευσης"
+                        subtitle="Διαθέσιμες θέσεις"
+                        variant="compact"
+                      />
+                    </li>
 
-                <NavigationButton
-                  onClick={() => {/* TODO: Storage units */}}
-                  icon={Package}
-                  title="Αποθήκες"
-                  subtitle="Αποθηκευτικοί χώροι"
-                  variant="compact"
-                />
-              </div>
-            </div>
-          </div>
+                    <li>
+                      <NavigationButton
+                        onClick={() => {/* TODO: Storage units */}}
+                        icon={Package}
+                        title="Αποθήκες"
+                        subtitle="Αποθηκευτικοί χώροι"
+                        variant="compact"
+                      />
+                    </li>
+                  </ul>
+                </section>
+              </li>
+            </ul>
+          </section>
         )}
 
-      </div>
+      </section>
 
       {/* Connection Modals */}
       <SelectItemModal
@@ -628,7 +655,7 @@ export function DesktopMultiColumn({
         itemType="unit"
       />
 
-    </div>
+    </nav>
   );
 }
 

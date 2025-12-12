@@ -636,7 +636,7 @@ export const TestsModal: React.FC<TestsModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/30 z-50 p-4">
-      <div
+      <dialog
         ref={modalRef}
         className="absolute bg-gray-800 rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col"
         style={{
@@ -644,28 +644,33 @@ export const TestsModal: React.FC<TestsModalProps> = ({
           top: `${position.y}px`,
           cursor: isDragging ? 'grabbing' : 'auto'
         }}
+        open={isOpen}
       >
         {/* Header - Draggable */}
-        <div
+        <header
           className="flex items-center justify-between p-4 border-b border-gray-700 cursor-grab active:cursor-grabbing"
           onMouseDown={handleMouseDown}
         >
           <div className="flex items-center gap-2">
             <FlaskConical className="w-6 h-6 text-purple-400" />
-            <h2 className="text-xl font-bold text-white">DXF Viewer Tests</h2>
+            <h1 className="text-xl font-bold text-white">DXF Viewer Tests</h1>
             <span className="text-xs text-gray-500 ml-2">↔️ Drag to move</span>
           </div>
           <button
             onClick={onClose}
             className="p-1 hover:bg-gray-700 rounded transition-colors"
+            aria-label="Close modal"
           >
             <X className="w-6 h-6 text-gray-400" />
           </button>
-        </div>
+        </header>
 
         {/* Tabs */}
-        <div className="flex border-b border-gray-700 px-4">
+        <nav className="flex border-b border-gray-700 px-4" role="tablist">
           <button
+            role="tab"
+            aria-selected={activeTab === 'automated'}
+            aria-controls="automated-panel"
             onClick={() => setActiveTab('automated')}
             className={`px-4 py-3 text-sm font-medium transition-colors relative ${
               activeTab === 'automated'
@@ -676,6 +681,9 @@ export const TestsModal: React.FC<TestsModalProps> = ({
             📋 Automated Tests
           </button>
           <button
+            role="tab"
+            aria-selected={activeTab === 'unit'}
+            aria-controls="unit-panel"
             onClick={() => setActiveTab('unit')}
             className={`px-4 py-3 text-sm font-medium transition-colors relative ${
               activeTab === 'unit'
@@ -686,6 +694,9 @@ export const TestsModal: React.FC<TestsModalProps> = ({
             🧪 Unit & E2E Tests
           </button>
           <button
+            role="tab"
+            aria-selected={activeTab === 'standalone'}
+            aria-controls="standalone-panel"
             onClick={() => setActiveTab('standalone')}
             className={`px-4 py-3 text-sm font-medium transition-colors relative ${
               activeTab === 'standalone'
@@ -695,12 +706,13 @@ export const TestsModal: React.FC<TestsModalProps> = ({
           >
             📊 Standalone Tests
           </button>
-        </div>
+        </nav>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <main className="flex-1 overflow-y-auto p-4 space-y-4">
           {/* TAB 1: Automated Tests */}
           {activeTab === 'automated' && (
+          <section id="automated-panel" role="tabpanel" aria-labelledby="automated-tab">
           <>
           {/* Group 1: Automated Test Suite with Run All button - TWO COLUMNS */}
           <div>

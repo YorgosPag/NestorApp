@@ -153,17 +153,17 @@ export function PropertyViewerWithLayers({
   }
 
   return (
-    <div className={`flex flex-col h-full ${className}`}>
+    <main className={`flex flex-col h-full ${className}`}>
       {/* Toolbar - Read-only version */}
       {showToolbar && (
-        <div className="px-2 py-2 shrink-0">
+        <nav className="px-2 py-2 shrink-0" role="toolbar" aria-label="Property viewer controls">
           <Card className="border-none shadow-none">
             <CardContent className="p-1 flex items-center justify-between">
               {/* Left side - View tools */}
-              <div className="flex items-center gap-2">
+              <ul className="flex items-center gap-2 list-none">
                 {/* Layer Panel Toggle */}
                 {showLayerPanel && (
-                  <div className="flex items-center gap-1 bg-muted p-1 rounded-md">
+                  <li className="flex items-center gap-1 bg-muted p-1 rounded-md">
                     <Button 
                       variant={showLayers ? "default" : "ghost"}
                       size="sm" 
@@ -173,14 +173,14 @@ export function PropertyViewerWithLayers({
                     >
                       <Layers className="h-4 w-4" />
                     </Button>
-                  </div>
+                  </li>
                 )}
                 
                 <Separator orientation="vertical" className="h-6" />
                 
                 {/* Zoom Controls */}
                 {enableZoom && (
-                  <div className="flex items-center gap-1 bg-muted p-1 rounded-md">
+                  <li className="flex items-center gap-1 bg-muted p-1 rounded-md">
                     <Button variant="ghost" size="sm" onClick={handleZoomOut} className="h-8 w-8 p-0">
                       <ZoomOut className="h-4 w-4" />
                     </Button>
@@ -193,13 +193,13 @@ export function PropertyViewerWithLayers({
                     <Button variant="ghost" size="sm" onClick={handleResetZoom} className="h-8 w-8 p-0">
                       <RotateCcw className="h-4 w-4" />
                     </Button>
-                  </div>
+                  </li>
                 )}
                 
                 <Separator orientation="vertical" className="h-6" />
                 
                 {/* Info and Download */}
-                <div className="flex items-center gap-1 bg-muted p-1 rounded-md">
+                <li className="flex items-center gap-1 bg-muted p-1 rounded-md">
                   <Button 
                     variant="ghost" 
                     size="sm" 
@@ -218,11 +218,11 @@ export function PropertyViewerWithLayers({
                   >
                     <Download className="h-4 w-4" />
                   </Button>
-                </div>
-              </div>
+                </li>
+              </ul>
 
               {/* Right side - Status info */}
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <section className="flex items-center gap-2 text-xs text-muted-foreground" aria-label="Status information">
                 <CommonBadge
                   status="units"
                   customLabel={`${properties.length} Ακίνητα`}
@@ -235,17 +235,17 @@ export function PropertyViewerWithLayers({
                   variant="outline"
                   className="text-xs"
                 />
-              </div>
+              </section>
             </CardContent>
           </Card>
-        </div>
+        </nav>
       )}
 
       {/* Main content area */}
-      <div className="flex-1 flex gap-2 h-full overflow-hidden">
+      <section className="flex-1 flex gap-2 h-full overflow-hidden">
         {/* Layer Panel */}
         {showLayers && showLayerPanel && (
-          <div className="w-80 flex-shrink-0">
+          <aside className="w-80 flex-shrink-0" aria-label="Layer controls panel">
             <ReadOnlyLayerViewer
               floorId={floorId}
               buildingId={buildingId}
@@ -260,11 +260,11 @@ export function PropertyViewerWithLayers({
               showStatistics={true}
               maxHeight="600px"
             />
-          </div>
+          </aside>
         )}
 
         {/* FloorPlan Viewer */}
-        <div className="flex-1 flex flex-col h-full overflow-hidden">
+        <section className="flex-1 flex flex-col h-full overflow-hidden" aria-label="Floor plan viewer">
           <div 
             className="flex-1 overflow-auto"
             style={{
@@ -326,11 +326,11 @@ export function PropertyViewerWithLayers({
               />
             </div>
           </div>
-        </div>
-      </div>
+        </section>
+      </section>
 
       {/* Status bar */}
-      <div className="px-4 py-2 bg-muted/30 border-t">
+      <footer className="px-4 py-2 bg-muted/30 border-t">
         <div className="flex justify-between items-center text-xs text-muted-foreground">
           <div className="flex items-center gap-4">
             <span>Όροφος: {currentFloor.name}</span>
@@ -349,7 +349,7 @@ export function PropertyViewerWithLayers({
             </div>
           </div>
         </div>
-      </div>
-    </div>
+      </footer>
+    </main>
   );
 }

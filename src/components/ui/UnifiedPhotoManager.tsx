@@ -210,7 +210,7 @@ function CompanyPhotoManager({
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm">
               <User className="h-4 w-4" />
-              Φωτογραφία Εκπροσώπου ✅
+              Φωτογραφία Εκπροσώπου
             </CardTitle>
           </CardHeader>
           <CardContent>

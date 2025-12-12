@@ -79,10 +79,10 @@ export default function LeadProfilePage() {
   return (
     <>
       <Toaster position="top-right" />
-      <div className="min-h-screen bg-gray-50 dark:bg-background">
-        <div className="bg-white dark:bg-card shadow-sm border-b">
+      <main className="min-h-screen bg-gray-50 dark:bg-background">
+        <header className="bg-white dark:bg-card shadow-sm border-b">
           <div className="px-6 py-4">
-            <div className="flex items-center gap-4">
+            <nav className="flex items-center gap-4" aria-label="Πλοήγηση lead profile">
               <button
                 onClick={handleGoBack}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -97,33 +97,33 @@ export default function LeadProfilePage() {
                   <p className="text-gray-600 dark:text-muted-foreground">Lead Profile</p>
                 </div>
               </div>
-            </div>
+            </nav>
           </div>
-        </div>
+        </header>
 
-        <div className="container mx-auto px-6 py-8">
+        <section className="container mx-auto px-6 py-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-1 space-y-6">
+            <aside className="lg:col-span-1 space-y-6" aria-label="Στοιχεία επαφής και γρήγορες ενέργειες">
               <ContactCard lead={lead} />
               {lead.notes && (
-                <div className="bg-white dark:bg-card rounded-lg shadow p-6">
+                <article className="bg-white dark:bg-card rounded-lg shadow p-6">
                   <h4 className="font-medium mb-2">Σημειώσεις</h4>
                   <p className="text-sm text-gray-700 bg-gray-50 dark:bg-muted/50 rounded p-3">{lead.notes}</p>
-                </div>
+                </article>
               )}
               <QuickActions lead={lead} onEdit={() => setShowEditModal(true)} onNewTask={() => setShowTaskModal(true)} onSendEmail={() => setShowEmailModal(true)} />
               <TasksSummary tasks={tasks} loading={loadingTasks} />
-            </div>
+            </aside>
 
-            <div className="lg:col-span-2 space-y-6">
+            <section className="lg:col-span-2 space-y-6" aria-label="Εργασίες και ιστορικό επικοινωνίας">
               <UpcomingTasks tasks={tasks} router={router} />
-              <div className="bg-white dark:bg-card rounded-lg shadow p-6">
+              <article className="bg-white dark:bg-card rounded-lg shadow p-6">
                 <CommunicationsHistory contactId={lead.id} />
-              </div>
-            </div>
+              </article>
+            </section>
           </div>
-        </div>
-      </div>
+        </section>
+      </main>
 
       <SendEmailModal
         lead={lead}

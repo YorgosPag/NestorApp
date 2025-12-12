@@ -359,39 +359,40 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-gray-800 border border-gray-600 rounded-lg shadow-2xl max-w-md w-full mx-4">
-        
+      <dialog className="bg-gray-800 border border-gray-600 rounded-lg shadow-2xl max-w-md w-full mx-4" open={isOpen}>
+
         {/* Header */}
-        <div className="p-6 border-b border-gray-600">
+        <header className="p-6 border-b border-gray-600">
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-3">
               <span className="text-2xl">🔺</span>
               <div>
-                <h2 className="text-xl font-semibold text-white">Enhanced DXF Import</h2>
+                <h1 className="text-xl font-semibold text-white">Enhanced DXF Import</h1>
                 <p className="text-gray-400 text-sm">
-                  {currentStep === 'company' ? 'Βήμα 1: Επιλογή Εταιρείας' : 
+                  {currentStep === 'company' ? 'Βήμα 1: Επιλογή Εταιρείας' :
                    currentStep === 'project' ? 'Βήμα 2: Επιλογή Έργου' : 'Βήμα 3: Επιλογή Κτιρίου'}
                 </p>
               </div>
             </div>
-            <button 
+            <button
               onClick={handleClose}
               className="text-gray-400 hover:text-white text-2xl"
+              aria-label="Close dialog"
             >
               ×
             </button>
           </div>
-        </div>
+        </header>
 
         {/* Content */}
-        <div className="p-6">
-          
+        <main className="p-6">
+
           {/* Company Selection - Step 1 */}
           {currentStep === 'company' && (
-            <div className="mb-6">
-              <label className="block text-white font-medium mb-3">
+            <fieldset className="mb-6">
+              <legend className="block text-white font-medium mb-3">
                 Επιλογή Εταιρείας
-              </label>
+              </legend>
             
             {loading ? (
               <div className="flex items-center space-x-3 p-3 bg-gray-700 rounded-lg">

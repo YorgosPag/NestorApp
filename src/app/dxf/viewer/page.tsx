@@ -63,7 +63,7 @@ export default function DxfViewerPage() {
     <AdminGuard>
       {/* UnifiedProviders includes all required contexts: Levels, Overlay, Selection, Cursor, etc. */}
       <UnifiedProviders enableLegacyMode={true}>
-        <div className="w-full h-full">
+        <main className="w-full h-full" role="application" aria-label="DXF Viewer">
           <Suspense fallback={
             <div className="w-full h-full flex items-center justify-center">
               <div className="text-center">
@@ -74,7 +74,7 @@ export default function DxfViewerPage() {
           }>
             <DxfViewerApp className="w-full h-full" />
           </Suspense>
-        </div>
+        </main>
       </UnifiedProviders>
     </AdminGuard>
   );

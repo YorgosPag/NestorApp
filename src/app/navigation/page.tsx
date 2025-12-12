@@ -10,9 +10,9 @@ import { MapPin } from 'lucide-react';
 
 export default function NavigationPage() {
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-background">
+    <main className="min-h-screen bg-gray-50 dark:bg-background">
       {/* Header */}
-      <div className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-card">
+      <header className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-card">
         <div className="max-w-full mx-auto px-2 sm:px-3 lg:px-4">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
@@ -23,19 +23,19 @@ export default function NavigationPage() {
             </div>
           </div>
         </div>
-      </div>
+      </header>
 
       {/* Breadcrumb */}
-      <div className="bg-white dark:bg-card border-b border-gray-200 dark:border-gray-700">
+      <nav className="bg-white dark:bg-card border-b border-gray-200 dark:border-gray-700" aria-label="Μενού Πλοήγησης">
         <div className="max-w-full mx-auto px-2 sm:px-3 lg:px-4 py-3">
           <NavigationBreadcrumb />
         </div>
-      </div>
+      </nav>
 
       {/* Main Content */}
-      <div className="max-w-full mx-auto px-2 sm:px-3 lg:px-4 py-6">
+      <section className="max-w-full mx-auto px-2 sm:px-3 lg:px-4 py-6" role="main" aria-label="Κεντρική Περιοχή Πλοήγησης">
         <AdaptiveMultiColumnNavigation />
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }
