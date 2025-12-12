@@ -109,6 +109,7 @@ function parseTranslationFile(filePath) {
 function generateInterface(obj, interfaceName, indent = 0) {
   const indentStr = '  '.repeat(indent);
   let result = `${indentStr}interface ${interfaceName} {\n`;
+  let nestedInterfaces = '';
 
   for (const key in obj) {
     if (obj.hasOwnProperty(key)) {
@@ -119,9 +120,8 @@ function generateInterface(obj, interfaceName, indent = 0) {
         // Nested object - create sub-interface
         const subInterfaceName = `${interfaceName}_${key.charAt(0).toUpperCase() + key.slice(1)}`;
         result += `${indentStr2}${key}: ${subInterfaceName};\n`;
-        result += `}\n\n`;
-        result += generateInterface(value, subInterfaceName, indent);
-        return result;
+        // Collect nested interfaces to append after current interface
+        nestedInterfaces += '\n' + generateInterface(value, subInterfaceName, indent);
       } else {
         // String value
         result += `${indentStr2}${key}: string;\n`;
@@ -130,6 +130,7 @@ function generateInterface(obj, interfaceName, indent = 0) {
   }
 
   result += `${indentStr}}\n`;
+  result += nestedInterfaces;
   return result;
 }
 
