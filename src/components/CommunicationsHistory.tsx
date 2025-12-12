@@ -5,6 +5,7 @@ import {
   getDirectionLabel, formatDate, getRelativeTime
 } from './communications/utils/formatters';
 import { useCommunicationsHistory } from './communications/hooks/useCommunicationsHistory';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 export default function CommunicationsHistory({ contactId }) {
   const { communications, loading, error, fetchCommunications } = useCommunicationsHistory(contactId);
@@ -21,7 +22,7 @@ export default function CommunicationsHistory({ contactId }) {
   if (error) return (
     <section className="bg-red-50 border border-red-200 rounded-lg p-4" role="alert" aria-label="Error loading communications">
       <p className="text-red-600 text-sm">{error}</p>
-      <button onClick={fetchCommunications} className="mt-2 px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700">
+      <button onClick={fetchCommunications} className={`mt-2 px-3 py-1 bg-red-600 text-white rounded text-sm ${INTERACTIVE_PATTERNS.BUTTON_DESTRUCTIVE}`}>
         Δοκιμή ξανά
       </button>
     </section>

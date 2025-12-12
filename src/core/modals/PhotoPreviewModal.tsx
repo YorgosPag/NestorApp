@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { ShareButton } from '@/components/ui/ShareButton';
 import type { Contact } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts';
+import { TRANSITION_PRESETS } from '@/components/ui/effects';
 import { BadgeFactory } from '@/core/badges/BadgeFactory';
 import { FileNamingService } from '@/services/FileNamingService';
 import {
@@ -730,7 +731,7 @@ export function PhotoPreviewModal({
             <img
               src={currentPhoto}
               alt={`${title}${isGalleryMode ? ` - Φωτογραφία ${currentIndex + 1} από ${totalPhotos}` : ''}`}
-              className="max-w-full max-h-full object-contain transition-transform duration-200"
+              className={`max-w-full max-h-full object-contain ${TRANSITION_PRESETS.FAST_TRANSFORM}`}
               style={{
                 transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom}) rotate(${rotation}deg)`,
                 transformOrigin: 'center',

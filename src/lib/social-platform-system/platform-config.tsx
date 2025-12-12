@@ -18,6 +18,7 @@
 import React from 'react';
 import { Mail } from 'lucide-react';
 import { designSystem } from '@/lib/design-system';
+import { SOCIAL_HOVER_EFFECTS } from '@/components/ui/effects';
 
 // ============================================================================
 // UNIFIED TYPE DEFINITIONS
@@ -232,7 +233,7 @@ export const UNIFIED_SOCIAL_PLATFORMS: Record<SocialPlatformType, UnifiedSocialP
         gradient: 'from-green-400 via-green-500 to-green-600',
         hover: designSystem.cn(
           designSystem.getStatusColor('success', 'bg'),
-          'hover:shadow-lg hover:shadow-green-500/30'
+          SOCIAL_HOVER_EFFECTS.WHATSAPP
         ),
         text: 'text-white'
       },
@@ -261,7 +262,7 @@ export const UNIFIED_SOCIAL_PLATFORMS: Record<SocialPlatformType, UnifiedSocialP
         gradient: 'from-blue-500 via-blue-600 to-blue-700',
         hover: designSystem.cn(
           designSystem.getStatusColor('info', 'bg'),
-          'hover:shadow-lg hover:shadow-blue-500/30'
+          SOCIAL_HOVER_EFFECTS.FACEBOOK
         ),
         text: 'text-white'
       },

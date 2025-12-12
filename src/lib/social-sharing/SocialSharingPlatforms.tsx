@@ -11,6 +11,7 @@
 import React from 'react';
 import { Mail } from 'lucide-react';
 import { designSystem } from '@/lib/design-system';
+import { HOVER_SHADOWS } from '@/components/ui/effects';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -114,7 +115,7 @@ export const SOCIAL_SHARING_PLATFORMS: SharePlatform[] = [
       gradient: 'from-green-400 via-green-500 to-green-600',
       hover: designSystem.cn(
         designSystem.getStatusColor('success', 'bg'),
-        'hover:shadow-lg hover:shadow-green-500/30'
+        HOVER_SHADOWS.COLORED.GREEN
       ),
       text: 'text-white'
     },
@@ -132,7 +133,7 @@ export const SOCIAL_SHARING_PLATFORMS: SharePlatform[] = [
       gradient: 'from-blue-500 via-blue-600 to-blue-700',
       hover: designSystem.cn(
         designSystem.getStatusColor('info', 'bg'),
-        'hover:shadow-lg hover:shadow-blue-500/30'
+        HOVER_SHADOWS.COLORED.BLUE
       ),
       text: 'text-white'
     },
@@ -149,7 +150,7 @@ export const SOCIAL_SHARING_PLATFORMS: SharePlatform[] = [
       gradient: 'from-gray-700 via-gray-800 to-gray-900',
       hover: designSystem.cn(
         'bg-gray-900',
-        'hover:shadow-lg hover:shadow-gray-500/30'
+        HOVER_SHADOWS.COLORED.GRAY
       ),
       text: 'text-white'
     },
@@ -166,7 +167,7 @@ export const SOCIAL_SHARING_PLATFORMS: SharePlatform[] = [
       gradient: 'from-blue-600 via-blue-700 to-blue-800',
       hover: designSystem.cn(
         'bg-blue-700',
-        'hover:shadow-lg hover:shadow-blue-700/30'
+        HOVER_SHADOWS.COLORED.BLUE
       ),
       text: 'text-white'
     },
@@ -183,7 +184,7 @@ export const SOCIAL_SHARING_PLATFORMS: SharePlatform[] = [
       gradient: 'from-sky-400 via-sky-500 to-sky-600',
       hover: designSystem.cn(
         'bg-sky-500',
-        'hover:shadow-lg hover:shadow-sky-500/30'
+        HOVER_SHADOWS.COLORED.BLUE
       ),
       text: 'text-white'
     },
@@ -200,7 +201,7 @@ export const SOCIAL_SHARING_PLATFORMS: SharePlatform[] = [
       gradient: 'from-gray-500 via-gray-600 to-gray-700',
       hover: designSystem.cn(
         'bg-gray-600',
-        'hover:shadow-lg hover:shadow-gray-500/30'
+        HOVER_SHADOWS.COLORED.GRAY
       ),
       text: 'text-white'
     },

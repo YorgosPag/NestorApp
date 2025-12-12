@@ -12,6 +12,7 @@ import { useNavigationHandlers } from '../hooks/useNavigationHandlers';
 import { NavigationCompanyManager } from './NavigationCompanyManager';
 import { MobileNavigation } from './MobileNavigation';
 import { DesktopMultiColumn } from './DesktopMultiColumn';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 interface AdaptiveMultiColumnNavigationProps {
   className?: string;
@@ -48,7 +49,7 @@ export function AdaptiveMultiColumnNavigation({ className }: AdaptiveMultiColumn
         <p className="text-red-500 dark:text-red-400 mb-4">Σφάλμα: {error}</p>
         <button
           onClick={() => window.location.reload()}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+          className={`px-4 py-2 text-white rounded-lg ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
         >
           Ξαναδοκιμή
         </button>

@@ -14,6 +14,7 @@ import {
 import { SidebarBadge } from "@/components/sidebar/sidebar-badge"
 import { cn } from "@/lib/utils"
 import type { MenuItem } from "@/types/sidebar"
+import { TRANSITION_PRESETS } from '@/components/ui/effects'
 
 interface SidebarMenuItemProps {
   item: MenuItem
@@ -44,13 +45,14 @@ export function SidebarMenuItem({
             onClick={() => onToggleExpanded(item.title)}
             isActive={isActive}
             className={cn(
-              "group relative transition-all duration-200",
+              "group relative",
+              TRANSITION_PRESETS.STANDARD_ALL,
               isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
             )}
           >
             <item.icon
               className={cn(
-                "transition-all duration-200",
+                TRANSITION_PRESETS.STANDARD_ALL,
                 isActive && "text-blue-600 dark:text-blue-400"
               )}
             />
@@ -58,7 +60,8 @@ export function SidebarMenuItem({
             {item.badge && <SidebarBadge badge={item.badge} />}
             <ChevronRight
               className={cn(
-                "ml-auto h-4 w-4 transition-transform duration-200",
+                "ml-auto h-4 w-4",
+                TRANSITION_PRESETS.STANDARD_TRANSFORM,
                 isExpanded && "rotate-90"
               )}
             />
@@ -71,7 +74,7 @@ export function SidebarMenuItem({
                     asChild
                     isActive={isActive}
                     className={cn(
-                      "transition-all duration-200",
+                      TRANSITION_PRESETS.STANDARD_ALL,
                       isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
                     )}
                   >
@@ -90,14 +93,14 @@ export function SidebarMenuItem({
           asChild
           isActive={isActive}
           className={cn(
-            "group relative transition-all duration-200",
+            `group relative ${TRANSITION_PRESETS.FAST_ALL}`,
             isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
           )}
         >
           <Link href={item.href} onClick={handleNavigationClick}>
             <item.icon
               className={cn(
-                "transition-all duration-200",
+                TRANSITION_PRESETS.STANDARD_ALL,
                 isActive && "text-blue-600 dark:text-blue-400"
               )}
             />

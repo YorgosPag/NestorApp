@@ -3,6 +3,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { TRANSITION_PRESETS } from '@/components/ui/effects';
 import { Lightbulb } from 'lucide-react';
 import { costBreakdown, monthlyProgress } from './utils';
 
@@ -26,7 +27,7 @@ export default function AnalyticsOverview() {
                                 </div>
                                 <div className="w-full bg-muted rounded-full h-3">
                                     <div
-                                        className={cn("h-3 rounded-full transition-all duration-500", item.color)}
+                                        className={cn("h-3 rounded-full", TRANSITION_PRESETS.SLOW_ALL, item.color)}
                                         style={{ width: `${item.percentage}%` }}
                                     ></div>
                                 </div>

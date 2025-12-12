@@ -200,7 +200,56 @@ export const INTERACTIVE_PATTERNS = {
   DROPDOWN_ITEM: 'transition-colors duration-150 hover:bg-accent hover:text-accent-foreground',
 
   /** Navigation item hover */
-  NAV_ITEM: 'transition-all duration-200 hover:bg-accent hover:text-accent-foreground rounded-md'
+  NAV_ITEM: 'transition-all duration-200 hover:bg-accent hover:text-accent-foreground rounded-md',
+
+  // ========================================================================
+  // 🆕 MISSING PATTERNS - Added for Batch 3 Migration
+  // ========================================================================
+
+  /** Success action hover (green theme) */
+  SUCCESS_HOVER: 'transition-all duration-200 hover:bg-green-50 hover:text-green-700 hover:border-green-300 dark:hover:bg-green-900/20 dark:hover:text-green-300',
+
+  /** Primary action hover (blue theme) */
+  PRIMARY_HOVER: 'transition-all duration-200 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 dark:hover:bg-blue-900/20 dark:hover:text-blue-300',
+
+  /** Destructive action hover (red theme) */
+  DESTRUCTIVE_HOVER: 'transition-all duration-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300 dark:hover:bg-red-900/20 dark:hover:text-red-300',
+
+  /** Enhanced button με scale και shadow */
+  BUTTON_ENHANCED: `transition-all duration-200 ${CORE_HOVER_TRANSFORMS.SCALE_UP_TINY} hover:shadow-md hover:bg-primary/10`,
+
+  /** Accent color hover */
+  ACCENT_HOVER: 'transition-colors duration-200 hover:bg-accent hover:text-accent-foreground',
+
+  /** Subtle hover για minimal interactions */
+  SUBTLE_HOVER: 'transition-colors duration-150 hover:bg-muted/50 hover:text-foreground',
+
+  /** Link primary color hover */
+  LINK_PRIMARY: 'transition-colors duration-150 hover:text-primary hover:underline',
+
+  /** Border subtle hover για cards */
+  BORDER_SUBTLE: 'transition-all duration-200 hover:border-border/80'
+} as const;
+
+/**
+ * 🎨 HOVER BACKGROUND EFFECTS
+ * Background color changes για navigation και interactive elements
+ */
+export const HOVER_BACKGROUND_EFFECTS = {
+  /** Light background για navigation items */
+  LIGHT: 'hover:bg-gray-50 dark:hover:bg-gray-800/50',
+
+  /** Muted background για subtle interactions */
+  MUTED: 'hover:bg-muted/50',
+
+  /** Accent background για highlighting */
+  ACCENT: 'hover:bg-accent/50',
+
+  /** Primary background για important actions */
+  PRIMARY: 'hover:bg-primary/10',
+
+  /** Transparent background με transitions */
+  TRANSPARENT: 'hover:bg-black/5 dark:hover:bg-white/5'
 } as const;
 
 /**

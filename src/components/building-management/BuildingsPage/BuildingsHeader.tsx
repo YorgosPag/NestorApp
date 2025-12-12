@@ -6,6 +6,7 @@ import { Building2, Filter } from 'lucide-react';
 import { PageHeader } from '@/core/headers';
 import { CompactToolbar, buildingsConfig } from '@/components/core/CompactToolbar';
 import type { ViewMode } from '@/core/headers';
+import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 interface BuildingsHeaderProps {
   viewMode: 'list' | 'grid' | 'byType' | 'byStatus';
@@ -61,10 +62,10 @@ export function BuildingsHeader({
           <button
             key="mobile-filter"
             onClick={() => setShowFilters(!showFilters)}
-            className={`md:hidden p-2 rounded-md border transition-colors ${
+            className={`md:hidden p-2 rounded-md border ${TRANSITION_PRESETS.STANDARD_COLORS} ${
               showFilters
                 ? 'bg-primary text-primary-foreground border-primary'
-                : 'bg-background border-border hover:bg-accent'
+                : `bg-background border-border ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`
             }`}
             aria-label="Toggle filters"
           >

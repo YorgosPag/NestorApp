@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { Home, Filter } from 'lucide-react';
 import { PageHeader } from '@/core/headers';
 import type { ViewMode as CoreViewMode } from '@/core/headers';
@@ -61,10 +62,10 @@ export function UnitsHeader({
             <button
               key="mobile-filter"
               onClick={() => setShowFilters(!showFilters)}
-              className={`md:hidden p-2 rounded-md border transition-colors ${
+              className={`md:hidden p-2 rounded-md border ${TRANSITION_PRESETS.STANDARD_COLORS} ${
                 showFilters
                   ? 'bg-primary text-primary-foreground border-primary'
-                  : 'bg-background border-border hover:bg-accent'
+                  : `bg-background border-border ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`
               }`}
               aria-label="Toggle filters"
             >

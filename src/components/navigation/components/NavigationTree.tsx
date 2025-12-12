@@ -6,6 +6,8 @@
  */
 import React from 'react';
 import { Building, Construction, Home, MapPin, Map } from 'lucide-react';
+import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { cn } from '@/lib/utils';
 import { useNavigation } from '../core/NavigationContext';
 import { NavigationButton } from './NavigationButton';
 import { NavigationBreadcrumb } from './NavigationBreadcrumb';
@@ -77,7 +79,10 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
         <p className="text-red-500 dark:text-red-400 mb-4">Σφάλμα: {error}</p>
         <button
           onClick={loadCompanies}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+          className={cn(
+            "px-4 py-2 bg-blue-600 text-white rounded-lg",
+            HOVER_BACKGROUND_EFFECTS.BLUE
+          )}
         >
           Ξαναδοκιμή
         </button>

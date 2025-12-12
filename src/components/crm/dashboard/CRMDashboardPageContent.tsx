@@ -6,6 +6,7 @@ import { GenericCRMDashboardTabsRenderer, GenericPeriodSelector } from '@/compon
 import { getSortedCRMDashboardTabs } from '@/config/crm-dashboard-tabs-config';
 import { getSortedPeriods } from '@/config/period-selector-config';
 import { TelegramNotifications } from './TelegramNotifications';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 export function CRMDashboardPageContent() {
   const [selectedPeriod, setSelectedPeriod] = useState('week');
@@ -31,7 +32,7 @@ export function CRMDashboardPageContent() {
                 onChange={setSelectedPeriod}
                 theme="compact"
               />
-              <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
+              <button className={`px-4 py-2 bg-blue-600 text-white rounded-lg flex items-center gap-2 ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY}`}>
                 <Plus className="w-4 h-4" />
                 Νέα Επαφή
               </button>

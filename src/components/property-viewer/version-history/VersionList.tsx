@@ -2,6 +2,8 @@
 
 import React from 'react';
 import { CommonBadge } from '@/core/badges';
+import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
+import { cn } from '@/lib/utils';
 import { formatDate, formatSize } from './version-utils';
 
 export function VersionList({
@@ -19,11 +21,13 @@ export function VersionList({
         <div
           key={version.id}
           onClick={() => onSelect(version)}
-          className={`p-4 border rounded-lg cursor-pointer transition-all ${
+          className={cn(
+            "p-4 border rounded-lg cursor-pointer",
+            TRANSITION_PRESETS.STANDARD_ALL,
             selectedVersionId === version.id
               ? 'border-primary bg-primary/10'
-              : 'border-border hover:bg-muted/50'
-          }`}
+              : cn('border-border', INTERACTIVE_PATTERNS.SUBTLE_HOVER)
+          )}
         >
           <div className="flex items-start justify-between">
             <div className="flex-1">

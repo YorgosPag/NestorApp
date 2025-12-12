@@ -41,7 +41,7 @@ export function UnitListItem({
                     INTERACTIVE_PATTERNS.CARD_STANDARD,
                     isSelected
                     ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20 shadow-sm"
-                    : "border-border hover:border-blue-300 bg-card"
+                    : "border-border bg-card"
                 )}
                 onClick={() => onSelect(false)}
             >

@@ -8,6 +8,7 @@ import { EntityDetailsHeader } from '@/core/entity-headers';
 import { cn } from '@/lib/utils';
 import type { Building } from '../BuildingsPageContent';
 import { getStatusColor, getStatusLabel } from '../BuildingCard/BuildingCardUtils';
+import { GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
 
 
 interface BuildingDetailsHeaderProps {
@@ -27,7 +28,7 @@ export function BuildingDetailsHeader({ building }: BuildingDetailsHeaderProps) 
                             label: 'Προβολή Κτιρίου',
                             onClick: () => console.log('Show building details'),
                             icon: Eye,
-                            className: 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700'
+                            className: GRADIENT_HOVER_EFFECTS.PRIMARY_BUTTON
                         }
                     ]}
                     variant="detailed"

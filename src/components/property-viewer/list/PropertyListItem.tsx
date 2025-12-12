@@ -31,7 +31,7 @@ const PropertyListItemComponent = ({
         INTERACTIVE_PATTERNS.CARD_STANDARD,
         isSelected 
           ? "ring-2 ring-primary border-primary shadow-md" 
-          : "hover:border-primary/50"
+          : INTERACTIVE_PATTERNS.BORDER_PRIMARY
       )}
       onClick={(e) => onSelect(e.shiftKey || e.metaKey)}
     >

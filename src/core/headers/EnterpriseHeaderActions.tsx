@@ -26,6 +26,7 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { BarChart3, Plus, LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { GRADIENT_HOVER_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -192,7 +193,7 @@ export const EnterpriseHeaderActions: React.FC<EnterpriseHeaderActionsProps> = (
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
-              className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 transition-all duration-200"
+              className={`${GRADIENT_HOVER_EFFECTS.PRIMARY_BUTTON} ${TRANSITION_PRESETS.STANDARD_ALL}`}
               onClick={handleCreateNew}
               aria-label={finalCreateTooltip}
             >

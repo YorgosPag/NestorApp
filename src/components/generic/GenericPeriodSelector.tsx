@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { PeriodConfig } from '@/config/period-selector-config';
 
@@ -76,7 +77,7 @@ export function GenericPeriodSelector({
             key={period.id}
             value={period.value}
             disabled={disabled || period.enabled === false}
-            className="text-xs data-[state=active]:bg-orange-500 data-[state=active]:text-white hover:bg-orange-100 hover:text-orange-700"
+            className={`text-xs data-[state=active]:bg-orange-500 data-[state=active]:text-white ${INTERACTIVE_PATTERNS.BUTTON_ORANGE_GHOST}`}
             title={period.description}
           >
             {period.label}

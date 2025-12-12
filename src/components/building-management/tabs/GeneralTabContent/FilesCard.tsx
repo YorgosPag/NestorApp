@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { FileText, Upload, Camera, FileUp, FileImage, Eye, Download, Trash2 } from 'lucide-react';
+import { INTERACTIVE_PATTERNS, FORM_BUTTON_EFFECTS } from '@/components/ui/effects';
 
 export function FilesCard() {
   const handleFileUpload = (files: FileList | null) => {
@@ -38,7 +39,7 @@ export function FilesCard() {
       </CardHeader>
       <CardContent>
         <section
-          className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary transition-colors cursor-pointer bg-muted/20 hover:bg-muted/50"
+          className={`border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer bg-muted/20 ${INTERACTIVE_PATTERNS.DROPZONE_HOVER}`}
           role="region"
           aria-label="File drop zone"
           onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('border-primary', 'bg-accent/20'); }}
@@ -54,7 +55,7 @@ export function FilesCard() {
               <FileUp className="w-8 h-8" />
             </div>
             <div className="text-sm text-muted-foreground">
-              <span className="font-medium text-primary hover:underline cursor-pointer">
+              <span className={`font-medium cursor-pointer ${INTERACTIVE_PATTERNS.LINK_PRIMARY}`}>
                 Κάντε κλικ για επιλογή αρχείων
               </span>{' '}ή σύρετε και αφήστε εδώ
             </div>
@@ -67,7 +68,7 @@ export function FilesCard() {
         <section className="mt-6 space-y-3" role="region" aria-labelledby="existing-files-heading">
           <h4 id="existing-files-heading" className="text-sm font-medium text-foreground">Υπάρχοντα Αρχεία</h4>
 
-          <article className="flex items-center justify-between p-3 bg-card rounded-lg border hover:bg-muted/50" aria-label="File: Συγγραφή Υποχρεώσεων.pdf">
+          <article className={`flex items-center justify-between p-3 bg-card rounded-lg border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`} aria-label="File: Συγγραφή Υποχρεώσεων.pdf">
             <div className="flex items-center space-x-3">
               <div className="flex-shrink-0 h-10 w-10 bg-red-100 dark:bg-red-950/20 rounded-lg flex items-center justify-center">
                 <FileText className="w-5 h-5 text-red-600" />
@@ -80,11 +81,11 @@ export function FilesCard() {
             <div className="flex items-center space-x-1">
               <Button variant="ghost" size="sm"><Eye className="w-4 h-4 mr-1" /> Προβολή</Button>
               <Button variant="ghost" size="sm"><Download className="w-4 h-4 mr-1" /> Λήψη</Button>
-              <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50"><Trash2 className="w-4 h-4" /></Button>
+              <Button variant="ghost" size="icon" className={`text-red-500 ${FORM_BUTTON_EFFECTS.DESTRUCTIVE}`}><Trash2 className="w-4 h-4" /></Button>
             </div>
           </article>
 
-          <article className="flex items-center justify-between p-3 bg-card rounded-lg border hover:bg-muted/50" aria-label="File: Πρόοδος Κατασκευής Φεβ 2025.jpg">
+          <article className={`flex items-center justify-between p-3 bg-card rounded-lg border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`} aria-label="File: Πρόοδος Κατασκευής Φεβ 2025.jpg">
             <div className="flex items-center space-x-3">
               <div className="flex-shrink-0 h-10 w-10 bg-green-100 dark:bg-green-950/20 rounded-lg flex items-center justify-center">
                  <FileImage className="w-5 h-5 text-green-600" />
@@ -97,7 +98,7 @@ export function FilesCard() {
             <div className="flex items-center space-x-1">
                <Button variant="ghost" size="sm"><Eye className="w-4 h-4 mr-1" /> Προβολή</Button>
                <Button variant="ghost" size="sm"><Download className="w-4 h-4 mr-1" /> Λήψη</Button>
-               <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50"><Trash2 className="w-4 h-4" /></Button>
+               <Button variant="ghost" size="icon" className={`text-red-500 ${FORM_BUTTON_EFFECTS.DESTRUCTIVE}`}><Trash2 className="w-4 h-4" /></Button>
             </div>
           </article>
         </section>

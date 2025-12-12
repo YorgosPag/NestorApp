@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { Moon, Sun, Monitor } from "lucide-react"
+import { TRANSITION_PRESETS } from '@/components/ui/effects'
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme()
@@ -21,8 +22,8 @@ export function ThemeToggle() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="icon">
-          <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-          <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+          <Sun className={`h-4 w-4 rotate-0 scale-100 dark:-rotate-90 dark:scale-0 ${TRANSITION_PRESETS.STANDARD_ALL}`} />
+          <Moon className={`absolute h-4 w-4 rotate-90 scale-0 dark:rotate-0 dark:scale-100 ${TRANSITION_PRESETS.STANDARD_ALL}`} />
           <span className="sr-only">Αλλαγή θέματος</span>
         </Button>
       </DropdownMenuTrigger>

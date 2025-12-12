@@ -9,6 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
+import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import {
   Search,
   X,
@@ -430,9 +432,11 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
       <div
         key={contact.id}
         data-dropdown-contact-item="true"
-        className={`p-3 border-b border-border last:border-b-0 transition-colors cursor-pointer ${
-          isHighlighted ? 'bg-accent text-accent-foreground' : 'hover:bg-accent hover:text-accent-foreground'
-        }`}
+        className={cn(
+          "p-3 border-b border-border last:border-b-0 cursor-pointer",
+          TRANSITION_PRESETS.STANDARD_COLORS,
+          isHighlighted ? 'bg-accent text-accent-foreground' : INTERACTIVE_PATTERNS.ACCENT_HOVER
+        )}
         onClick={() => selectContact(contact)}
         onMouseEnter={() => setHighlightedIndex(index)}
       >
@@ -529,7 +533,11 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
             variant="ghost"
             size="sm"
             onClick={clearSelection}
-            className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-100 flex-shrink-0"
+            className={cn(
+              "h-8 w-8 p-0 flex-shrink-0",
+              HOVER_TEXT_EFFECTS.BLUE,
+              HOVER_BACKGROUND_EFFECTS.BLUE_LIGHT
+            )}
           >
             <X className="h-4 w-4" />
           </Button>

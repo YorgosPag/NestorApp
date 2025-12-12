@@ -3,6 +3,8 @@
 
 import React from 'react';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
+import { cn } from '@/lib/utils';
 import { BuildingsList } from './BuildingsList';
 import { BuildingDetails } from './BuildingDetails';
 import { BuildingsHeader } from './BuildingsPage/BuildingsHeader';
@@ -246,14 +248,22 @@ export function BuildingsPageContent() {
                   <>
                     <button
                       onClick={() => {/* TODO: Edit building handler */}}
-                      className="p-2 rounded-md border transition-colors bg-background border-border hover:bg-accent"
+                      className={cn(
+                        "p-2 rounded-md border bg-background border-border",
+                        INTERACTIVE_PATTERNS.ACCENT_HOVER,
+                        TRANSITION_PRESETS.STANDARD_COLORS
+                      )}
                       aria-label="Επεξεργασία Κτιρίου"
                     >
                       <Edit className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => {/* TODO: Delete building handler */}}
-                      className="p-2 rounded-md border transition-colors bg-background border-border hover:bg-accent text-destructive hover:text-destructive"
+                      className={cn(
+                        "p-2 rounded-md border bg-background border-border text-destructive",
+                        INTERACTIVE_PATTERNS.ACCENT_HOVER,
+                        TRANSITION_PRESETS.STANDARD_COLORS
+                      )}
                       aria-label="Διαγραφή Κτιρίου"
                     >
                       <Trash2 className="h-4 w-4" />

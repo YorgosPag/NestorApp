@@ -13,6 +13,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { ChevronUp, ChevronDown } from 'lucide-react';
 import type { ContactRelationship } from '@/types/contacts/relationships';
 import { getRelationshipDisplayProps } from '../utils/relationship-types';
@@ -139,7 +140,7 @@ export const RecentRelationshipsSection: React.FC<RecentRelationshipsSectionProp
       <div
         key={relationship.id}
         onClick={() => onRelationshipClick?.(relationship)}
-        className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+        className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
       >
         <div className="flex items-center space-x-3">
           <Icon className="h-5 w-5 text-gray-600" />

@@ -21,6 +21,7 @@ import React, {
 import { useTheme } from '../theme/ThemeProvider';
 import { adminBoundariesAnalytics } from '../../../services/performance/AdminBoundariesPerformanceAnalytics';
 import type { AdminBoundariesMetrics, AdminBoundariesAlert } from '../../../services/performance/AdminBoundariesPerformanceAnalytics';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 // ============================================================================
 // VIRTUALIZED LIST COMPONENT
@@ -901,7 +902,7 @@ export const AdminBoundariesPerformancePanel = memo(({
         {onClose && (
           <button
             onClick={onClose}
-            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+            className={`p-1 rounded ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
             style={{ color: theme.colors.textSecondary }}
           >
             ✕

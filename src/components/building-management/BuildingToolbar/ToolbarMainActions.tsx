@@ -15,6 +15,7 @@ import {
 import { ToolbarButton } from '@/components/ui/ToolbarButton';
 import { Plus, Edit, Trash2 } from "lucide-react";
 import { useTranslation } from "@/i18n";
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 interface ToolbarMainActionsProps {
   selectedItemsCount: number;
@@ -40,7 +41,7 @@ export function ToolbarMainActions({ selectedItemsCount }: ToolbarMainActionsPro
       <ToolbarButton
         tooltip={t('toolbar.actions.new')}
         onClick={handleNewBuilding}
-        className="text-green-600 hover:text-green-700 dark:text-green-500 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-950/20"
+        className={INTERACTIVE_PATTERNS.SUCCESS_HOVER}
       >
         <Plus className="w-4 h-4" />
       </ToolbarButton>
@@ -48,7 +49,7 @@ export function ToolbarMainActions({ selectedItemsCount }: ToolbarMainActionsPro
       <ToolbarButton
         tooltip={t('toolbar.actions.edit')}
         onClick={handleEditBuilding}
-        className="text-blue-600 hover:text-blue-700 dark:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/20"
+        className={INTERACTIVE_PATTERNS.PRIMARY_HOVER}
         disabled={selectedItemsCount === 0}
       >
         <Edit className="w-4 h-4" />
@@ -59,7 +60,7 @@ export function ToolbarMainActions({ selectedItemsCount }: ToolbarMainActionsPro
           <div>
             <ToolbarButton
               tooltip={t('toolbar.actions.delete')}
-              className="text-red-600 hover:text-red-700 dark:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20"
+              className={INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}
               disabled={selectedItemsCount === 0}
             >
               <Trash2 className="w-4 h-4" />
@@ -78,7 +79,7 @@ export function ToolbarMainActions({ selectedItemsCount }: ToolbarMainActionsPro
             <AlertDialogCancel>{t('dialog.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteBuilding}
-              className="bg-red-600 hover:bg-red-700"
+              className={INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}
             >
               {t('dialog.delete')}
             </AlertDialogAction>

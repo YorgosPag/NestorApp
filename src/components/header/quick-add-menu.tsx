@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/tooltip"
 import { Button } from "@/components/ui/button"
 import { Plus, Sparkles, Upload, Mic } from "lucide-react"
+import { GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects'
 import { CommonBadge } from "@/core/badges"
 import { quickActions } from "@/constants/header"
 
@@ -30,7 +31,7 @@ export function QuickAddMenu() {
               <Button
                 variant="default"
                 size="icon"
-                className="relative bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg"
+                className={`relative text-white shadow-lg ${GRADIENT_HOVER_EFFECTS.PRIMARY_BUTTON}`}
               >
                 <Plus className="h-4 w-4" />
                 <Sparkles className="absolute -top-1 -right-1 h-3 w-3 text-yellow-300 animate-pulse" />

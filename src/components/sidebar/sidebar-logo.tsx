@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils"
 import LogoPagonis from "@/components/property-viewer/Logo_Pagonis"
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
+import { TRANSITION_PRESETS } from '@/components/ui/effects'
 
 export function SidebarLogo() {
   const { state } = useSidebar()
@@ -22,7 +23,8 @@ export function SidebarLogo() {
       </div>
       <div
         className={cn(
-          "flex flex-col transition-opacity duration-200",
+          "flex flex-col",
+          TRANSITION_PRESETS.STANDARD_OPACITY,
           state === "expanded" ? "opacity-100" : "opacity-0"
         )}
       >

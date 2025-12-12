@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 // ============================================================================
 // 🏢 ENTERPRISE IMPORTS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ SYSTEMS
@@ -427,7 +428,7 @@ export function UniversalCommunicationManager({
                         <CommonBadge
                           status="secondary"
                           size="sm"
-                          className="cursor-pointer hover:opacity-80"
+                          className={`cursor-pointer ${INTERACTIVE_PATTERNS.FADE_HOVER}`}
                           onClick={() => setPrimary(index)}
                         />
                       )}
@@ -440,7 +441,7 @@ export function UniversalCommunicationManager({
                   size="sm"
                   onClick={() => removeItem(index)}
                   disabled={disabled}
-                  className="text-red-600 hover:text-red-700"
+                  className={`text-red-600 ${INTERACTIVE_PATTERNS.TEXT_DESTRUCTIVE}`}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>

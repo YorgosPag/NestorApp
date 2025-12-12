@@ -141,7 +141,7 @@ export function ProjectsPageContent() {
           <p>Σφάλμα φόρτωσης έργων: {error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="mt-2 px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
+            className={`mt-2 px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 ${TRANSITION_PRESETS.STANDARD_COLORS}`}
           >
             Δοκιμή ξανά
           </button>

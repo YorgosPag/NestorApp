@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Eye, Edit, Trash2, Star, MoreVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { TRANSITION_PRESETS } from '@/components/ui/effects';
 
 interface Props {
   onEdit: () => void;
@@ -15,7 +16,7 @@ interface Props {
 
 export function StorageCardActions({ onEdit, onDelete, onToggleFavorite, isFavorite }: Props) {
   return (
-    <div className="absolute top-3 right-3 z-10 transition-opacity duration-200 opacity-0 group-hover:opacity-100">
+    <div className={`absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 ${TRANSITION_PRESETS.OPACITY}`}>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" className="h-7 w-7 bg-white/80 backdrop-blur-sm shadow-sm hover:bg-white">
