@@ -43,7 +43,7 @@ export function LandingPage() {
           </header>
 
           {/* Search Box */}
-          <div className="max-w-4xl mx-auto">
+          <section className="max-w-4xl mx-auto" aria-label="Φόρμα Αναζήτησης Ακινήτων">
             <form
               onSubmit={(e) => { e.preventDefault(); handleSearch(); }}
               className="bg-white dark:bg-gray-800/50 dark:backdrop-blur-sm rounded-2xl shadow-xl p-6 dark:border dark:border-gray-700"
@@ -53,7 +53,7 @@ export function LandingPage() {
               <fieldset className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <legend className="sr-only">Κριτήρια Αναζήτησης Ακινήτων</legend>
                 {/* Property Type */}
-                <div className="relative">
+                <fieldset className="relative">
                   <label htmlFor="search-type" className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">
                     {t('search.propertyType')}
                   </label>
@@ -71,10 +71,10 @@ export function LandingPage() {
                     <option value="Αποθήκη">{t('search.types.storage')}</option>
                   </select>
                   <ChevronDown aria-hidden="true" className="absolute right-3 bottom-3.5 h-5 w-5 text-gray-400 pointer-events-none" />
-                </div>
+                </fieldset>
 
                 {/* Location */}
-                <div className="relative">
+                <fieldset className="relative">
                   <label htmlFor="search-location" className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">
                     {t('search.location')}
                   </label>
@@ -91,10 +91,10 @@ export function LandingPage() {
                       className="w-full pl-10 pr-4 py-3 bg-gray-50 dark:bg-gray-700/50 dark:text-white border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
-                </div>
+                </fieldset>
 
                 {/* Price Range */}
-                <div className="relative">
+                <fieldset className="relative">
                   <label htmlFor="search-price" className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">
                     Εύρος Τιμής
                   </label>
@@ -111,10 +111,10 @@ export function LandingPage() {
                     <option value="200000+">€200.000+</option>
                   </select>
                   <ChevronDown aria-hidden="true" className="absolute right-3 bottom-3.5 h-5 w-5 text-gray-400 pointer-events-none" />
-                </div>
+                </fieldset>
 
                 {/* Area Range */}
-                <div className="relative">
+                <fieldset className="relative">
                   <label htmlFor="search-area" className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">
                     Εμβαδόν
                   </label>
@@ -131,7 +131,7 @@ export function LandingPage() {
                     <option value="150+">150+ m²</option>
                   </select>
                   <ChevronDown aria-hidden="true" className="absolute right-3 bottom-3.5 h-5 w-5 text-gray-400 pointer-events-none" />
-                </div>
+                </fieldset>
               </fieldset>
 
               <button 
@@ -199,43 +199,49 @@ export function LandingPage() {
             </p>
           </header>
 
-          <div className="grid md:grid-cols-3 gap-8" role="list">
-            <article className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm hover:shadow-lg transition-shadow" role="listitem">
-              <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/50 rounded-lg flex items-center justify-center mb-4">
-                <MapPin className="h-6 w-6 text-blue-600" />
-              </div>
+          <ul className="grid md:grid-cols-3 gap-8">
+            <li>
+              <article className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm hover:shadow-lg transition-shadow">
+                <figure className="w-12 h-12 bg-blue-100 dark:bg-blue-900/50 rounded-lg flex items-center justify-center mb-4">
+                  <MapPin className="h-6 w-6 text-blue-600" />
+                </figure>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
                 Διαδραστική Κάτοψη
               </h3>
               <p className="text-gray-600 dark:text-gray-300">
                 Εξερευνήστε τα ακίνητα σε διαδραστική κάτοψη ορόφου και δείτε τη θέση τους
               </p>
-            </article>
+              </article>
+            </li>
 
-            <article className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm hover:shadow-lg transition-shadow" role="listitem">
-              <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/50 rounded-lg flex items-center justify-center mb-4">
-                <Shield className="h-6 w-6 text-purple-600" />
-              </div>
+            <li>
+              <article className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm hover:shadow-lg transition-shadow">
+                <figure className="w-12 h-12 bg-purple-100 dark:bg-purple-900/50 rounded-lg flex items-center justify-center mb-4">
+                  <Shield className="h-6 w-6 text-purple-600" />
+                </figure>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
                 Εγγυημένη Ποιότητα
               </h3>
               <p className="text-gray-600 dark:text-gray-300">
                 Όλα τα ακίνητα είναι ελεγμένα και πληρούν τις υψηλότερες προδιαγραφές
               </p>
-            </article>
+              </article>
+            </li>
 
-            <article className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm hover:shadow-lg transition-shadow" role="listitem">
-              <div className="w-12 h-12 bg-green-100 dark:bg-green-900/50 rounded-lg flex items-center justify-center mb-4">
-                <Users className="h-6 w-6 text-green-600" />
-              </div>
+            <li>
+              <article className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm hover:shadow-lg transition-shadow">
+                <figure className="w-12 h-12 bg-green-100 dark:bg-green-900/50 rounded-lg flex items-center justify-center mb-4">
+                  <Users className="h-6 w-6 text-green-600" />
+                </figure>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
                 Προσωπική Εξυπηρέτηση
               </h3>
               <p className="text-gray-600 dark:text-gray-300">
                 Η ομάδα μας είναι εδώ για να σας βοηθήσει σε κάθε βήμα της διαδικασίας
               </p>
-            </article>
-          </div>
+              </article>
+            </li>
+          </ul>
         </div>
       </section>
 
@@ -251,9 +257,10 @@ export function LandingPage() {
             </p>
           </header>
 
-          <div className="grid md:grid-cols-3 gap-8 mb-12" role="list">
+          <ul className="grid md:grid-cols-3 gap-8 mb-12">
             {/* Property Card 1 */}
-            <article className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow cursor-pointer" onClick={() => router.push('/properties')} role="listitem">
+            <li>
+              <article className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow cursor-pointer" onClick={() => router.push('/properties')}>
               <figure className="h-48 bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
                 <Home className="h-16 w-16 text-white" aria-hidden="true" />
               </figure>
@@ -275,13 +282,15 @@ export function LandingPage() {
                   <span className="text-sm text-gray-600 dark:text-gray-400 ml-2">4.0</span>
                 </div>
               </div>
-            </article>
+              </article>
+            </li>
 
             {/* Property Card 2 */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow cursor-pointer" onClick={() => router.push('/properties')}>
-              <div className="h-48 bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center">
-                <Building className="h-16 w-16 text-white" />
-              </div>
+            <li>
+              <article className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow cursor-pointer" onClick={() => router.push('/properties')}>
+                <figure className="h-48 bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center">
+                  <Building className="h-16 w-16 text-white" aria-hidden="true" />
+                </figure>
               <div className="p-6">
                 <div className="flex justify-between items-start mb-2">
                   <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Διαμέρισμα 2Δ</h3>
@@ -300,13 +309,15 @@ export function LandingPage() {
                   <span className="text-sm text-gray-600 dark:text-gray-400 ml-2">5.0</span>
                 </div>
               </div>
-            </div>
+              </article>
+            </li>
 
             {/* Property Card 3 */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow cursor-pointer" onClick={() => router.push('/properties')}>
-              <div className="h-48 bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
-                <TrendingUp className="h-16 w-16 text-white" />
-              </div>
+            <li>
+              <article className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow cursor-pointer" onClick={() => router.push('/properties')}>
+                <figure className="h-48 bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
+                  <TrendingUp className="h-16 w-16 text-white" aria-hidden="true" />
+                </figure>
               <div className="p-6">
                 <div className="flex justify-between items-start mb-2">
                   <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Μεζονέτα E1</h3>
@@ -325,18 +336,19 @@ export function LandingPage() {
                   <span className="text-sm text-gray-600 dark:text-gray-400 ml-2">4.5</span>
                 </div>
               </div>
-            </div>
-          </div>
+              </article>
+            </li>
+          </ul>
 
-          <div className="text-center">
-            <Link 
+          <footer className="text-center">
+            <Link
               href="/properties"
               className="inline-flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all"
             >
               Δείτε Όλα τα Ακίνητα
               <ArrowRight className="h-5 w-5" />
             </Link>
-          </div>
+          </footer>
         </div>
       </section>
 
@@ -382,6 +394,6 @@ export function LandingPage() {
           })
         }}
       />
-    </div>
+    </main>
   );
 }

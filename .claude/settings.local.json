@@ -151,7 +151,8 @@
       "Bash(del \"C:\\Nestor_Pagonis\\src\\components\\ui\\enterprise-dropdown.tsx\")",
       "Bash(del \"C:\\Nestor_Pagonis\\src\\components\\building-management\\StorageTab\\mock-data.ts\")",
       "Bash(TASKKILL /PID 2608 /F)",
-      "Bash(del \"C:\\Nestor_Pagonis\\src\\database\\migrations\\001_create_contact_relationships.ts\")"
+      "Bash(del \"C:\\Nestor_Pagonis\\src\\database\\migrations\\001_create_contact_relationships.ts\")",
+      "Bash(del \"C:\\Nestor_Pagonis\\src\\core\\headers\\UnifiedHeaderSystem.tsx\")"
     ],
     "deny": [],
     "ask": []

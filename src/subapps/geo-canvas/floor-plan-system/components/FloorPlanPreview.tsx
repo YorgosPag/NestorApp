@@ -74,11 +74,11 @@ export function FloorPlanPreview({ result, file, className = '' }: FloorPlanPrev
           <div className="text-gray-600">{t('floorPlan.preview.fileSize')}:</div>
           <div className="font-medium text-gray-900">{formatFileSize(file.size)}</div>
         </div>
-      </div>
+      </section>
 
       {/* DXF-specific metadata */}
       {result.format === 'DXF' && result.geoJSON && result.bounds && (
-        <div className="bg-green-50 rounded-lg p-4 border-2 border-green-200">
+        <section className="bg-green-50 rounded-lg p-4 border-2 border-green-200">
           <h3 className="text-sm font-semibold text-green-700 mb-3">
             {t('floorPlan.preview.dxfDataTitle')}
           </h3>
@@ -121,13 +121,13 @@ export function FloorPlanPreview({ result, file, className = '' }: FloorPlanPrev
               </div>
             </div>
           )}
-        </div>
+        </section>
       )}
 
       {/* Image-specific metadata */}
       {(result.format === 'PNG' || result.format === 'JPG' || result.format === 'TIFF') &&
        'metadata' in result && result.metadata && (
-        <div className="bg-purple-50 rounded-lg p-4 border-2 border-purple-200">
+        <section className="bg-purple-50 rounded-lg p-4 border-2 border-purple-200">
           <h3 className="text-sm font-semibold text-purple-700 mb-3">
             {t('floorPlan.preview.imageDataTitle')}
           </h3>
@@ -149,11 +149,11 @@ export function FloorPlanPreview({ result, file, className = '' }: FloorPlanPrev
                 : t('floorPlan.preview.notSupported')}
             </div>
           </div>
-        </div>
+        </section>
       )}
 
       {/* Next steps hint */}
-      <div className="bg-yellow-50 rounded-lg p-4 border-2 border-yellow-200">
+      <section className="bg-yellow-50 rounded-lg p-4 border-2 border-yellow-200">
         <div className="flex items-start gap-2">
           <span className="text-xl">💡</span>
           <div className="flex-1">
@@ -165,7 +165,7 @@ export function FloorPlanPreview({ result, file, className = '' }: FloorPlanPrev
             </p>
           </div>
         </div>
-      </div>
-    </div>
+      </section>
+    </article>
   );
 }

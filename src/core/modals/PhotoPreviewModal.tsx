@@ -15,6 +15,7 @@ import {
   PHOTO_BORDERS,
   PHOTO_COMBINED_EFFECTS
 } from '@/components/generic/config/photo-config';
+import { useFocusTrap, announceToScreenReader } from '@/utils/accessibility';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -220,6 +221,14 @@ export function PhotoPreviewModal({
   // Image dimensions state για adaptive sizing (MOVED TO TOP LEVEL)
   const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0, aspectRatio: 1 });
 
+  // ♿ Focus trap για accessibility με keyboard navigation
+  const focusTrapRef = useFocusTrap(open, {
+    autoFocus: true,
+    restoreFocus: true,
+    escapeDeactivates: true,
+    onEscape: () => onOpenChange(false)
+  });
+
   // Gallery logic - πάντα χρησιμοποιούμε το current gallery photo αν είμαστε σε gallery mode
   const isGalleryMode = galleryPhotos && galleryPhotos.length > 0;
   const currentPhoto = isGalleryMode ? galleryPhotos[currentIndex] : photoUrl;
@@ -304,15 +313,31 @@ export function PhotoPreviewModal({
   const title = generatePhotoTitle(contact, photoType, displayIndex, photoTitle);
   const IconComponent = getPhotoTypeIcon(photoType);
 
-  // Navigation handlers για gallery
+  // Navigation handlers για gallery με accessibility announcements
   const handlePreviousPhoto = () => {
     if (!isGalleryMode || totalPhotos <= 1) return;
-    setCurrentIndex(prevIndex => prevIndex > 0 ? prevIndex - 1 : totalPhotos - 1);
+    setCurrentIndex(prevIndex => {
+      const newIndex = prevIndex > 0 ? prevIndex - 1 : totalPhotos - 1;
+      // ♿ Screen reader announcement
+      announceToScreenReader(
+        `Φωτογραφία ${newIndex + 1} από ${totalPhotos}`,
+        'assertive'
+      );
+      return newIndex;
+    });
   };
 
   const handleNextPhoto = () => {
     if (!isGalleryMode || totalPhotos <= 1) return;
-    setCurrentIndex(prevIndex => prevIndex < totalPhotos - 1 ? prevIndex + 1 : 0);
+    setCurrentIndex(prevIndex => {
+      const newIndex = prevIndex < totalPhotos - 1 ? prevIndex + 1 : 0;
+      // ♿ Screen reader announcement
+      announceToScreenReader(
+        `Φωτογραφία ${newIndex + 1} από ${totalPhotos}`,
+        'assertive'
+      );
+      return newIndex;
+    });
   };
 
   // Handlers
@@ -537,10 +562,15 @@ export function PhotoPreviewModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
+        ref={focusTrapRef}
         className={`${isMobile
           ? 'fixed inset-x-0 top-0 max-w-none w-screen rounded-none border-0'
           : 'fixed inset-0 max-w-none w-screen h-screen rounded-none border-0'
         } flex flex-col ${className} [&>button]:hidden`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="photo-preview-title"
+        aria-describedby="photo-preview-description"
         style={isMobile ? {
           margin: 0,
           transform: 'none',
@@ -562,8 +592,8 @@ export function PhotoPreviewModal({
         <DialogHeader className="flex flex-col space-y-3 pb-2">
           {/* Πρώτη σειρά: Τίτλος και Badge */}
           <header className="flex items-center justify-between" role="banner">
-            <DialogTitle className="flex items-center gap-2 text-lg">
-              <IconComponent className="w-5 h-5" />
+            <DialogTitle id="photo-preview-title" className="flex items-center gap-2 text-lg">
+              <IconComponent className="w-5 h-5" aria-hidden="true" />
               {title}
             </DialogTitle>
 
@@ -591,9 +621,11 @@ export function PhotoPreviewModal({
                   size="sm"
                   onClick={handlePreviousPhoto}
                   title="Προηγούμενη φωτογραφία"
+                  aria-label={`Προηγούμενη φωτογραφία (${currentIndex}/${totalPhotos})`}
                   className="h-8 w-8 p-0"
+                  disabled={currentIndex === 0}
                 >
-                  <ChevronLeft className="w-4 h-4" />
+                  <ChevronLeft className="w-4 h-4" aria-hidden="true" />
                 </Button>
 
                 <Button
@@ -601,9 +633,11 @@ export function PhotoPreviewModal({
                   size="sm"
                   onClick={handleNextPhoto}
                   title="Επόμενη φωτογραφία"
+                  aria-label={`Επόμενη φωτογραφία (${currentIndex + 2}/${totalPhotos})`}
                   className="h-8 w-8 p-0"
+                  disabled={currentIndex === totalPhotos - 1}
                 >
-                  <ChevronRight className="w-4 h-4" />
+                  <ChevronRight className="w-4 h-4" aria-hidden="true" />
                 </Button>
 
                 <div className="w-px h-4 bg-border mx-1" />
@@ -682,12 +716,20 @@ export function PhotoPreviewModal({
           </nav>
         </DialogHeader>
 
+        {/* ♿ Hidden description για screen readers */}
+        <div id="photo-preview-description" className="sr-only">
+          {isGalleryMode
+            ? `Προβολή φωτογραφίας ${currentIndex + 1} από ${totalPhotos}. ${contact ? `Φωτογραφία από ${getContactDisplayName(contact)}.` : ''} Χρησιμοποιήστε τα βέλη για πλοήγηση.`
+            : `Προβολή φωτογραφίας. ${contact ? `Φωτογραφία από ${getContactDisplayName(contact)}.` : ''}`
+          }
+        </div>
+
         {/* Photo Content */}
         <main className={`flex-1 flex items-center justify-center overflow-hidden ${PHOTO_COLORS.PHOTO_BACKGROUND} rounded-none`} role="main" aria-label="Εμφάνιση Φωτογραφίας">
           <figure className="relative w-full h-full flex items-center justify-center">
             <img
               src={currentPhoto}
-              alt={title}
+              alt={`${title}${isGalleryMode ? ` - Φωτογραφία ${currentIndex + 1} από ${totalPhotos}` : ''}`}
               className="max-w-full max-h-full object-contain transition-transform duration-200"
               style={{
                 transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom}) rotate(${rotation}deg)`,

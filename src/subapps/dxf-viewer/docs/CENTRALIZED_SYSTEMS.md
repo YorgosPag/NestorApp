@@ -16,6 +16,83 @@
 
 ## 🎨 UI SYSTEMS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ COMPONENTS
 
+### 🏗️ **ENTERPRISE HEADER SYSTEM** (2025-12-12):
+**Location**: `src/core/headers/enterprise-system/`
+
+**ΑΝΤΙΚΑΤΕΣΤΗΣΕ**: UnifiedHeaderSystem.tsx (743 γραμμές) → **Modular Enterprise Architecture**
+
+#### **📁 ΔΟΜΗ - MODULAR DESIGN:** ✅ **ΔΙΑΣΠΑΣΗ ΟΛΟΚΛΗΡΩΘΗΚΕ**
+```
+enterprise-system/
+├── types/index.ts           # Κεντρικοποιημένα Types (210 lines) ✅
+├── constants/index.ts       # HEADER_THEME, animations, responsive (220+ lines) ✅
+├── components/              # 8 Modular Components ✅ (αντί 743 lines μονολιθικό)
+│   ├── HeaderIcon.tsx      # Enterprise icon με gradient/simple variants ✅
+│   ├── HeaderTitle.tsx     # Responsive title με subtitle support ✅
+│   ├── HeaderSearch.tsx    # Debounced search με enterprise config ✅
+│   ├── HeaderFilters.tsx   # Multi-type filters (Select/Dropdown/Checkbox) ✅
+│   ├── HeaderViewToggle.tsx        # Desktop view mode toggle ✅
+│   ├── MobileHeaderViewToggle.tsx  # Mobile single-button cycling ✅
+│   ├── HeaderActions.tsx   # Actions με dashboard toggle + custom actions ✅
+│   ├── PageHeader.tsx      # Main composition (4 layouts: single-row/multi-row/compact/stacked) ✅
+│   └── index.ts           # Clean exports ✅
+├── layouts/                # Future: Layout-specific components
+├── mobile/                 # Future: Mobile-first components
+└── index.ts               # SINGLE IMPORT + Builder pattern ✅
+```
+
+#### **🏢 ENTERPRISE FEATURES:** ✅ **COMPLETE IMPLEMENTATION**
+- ✅ **Κεντρικοποιημένα Types**: Single source of truth (210 lines - 10+ interfaces)
+- ✅ **Theme Integration**: HEADER_THEME με mobile-first responsive classes
+- ✅ **Enterprise Search**: Debouncing (300ms), maxLength validation, accessibility
+- ✅ **Modular Architecture**: 60+ scattered headers → 8 specialized components
+- ✅ **Backward Compatibility**: Re-exports για legacy code (UnifiedHeader* exports)
+- ✅ **Builder Pattern**: EnterpriseHeaderBuilder για programmatic creation
+- ✅ **Advanced Components**: HeaderFilters (3 types), ViewToggle (desktop + mobile)
+- ✅ **Composition Component**: PageHeader με 4 layouts (single-row/multi-row/compact/stacked)
+- ✅ **Future Ready**: Plugin system, responsive breakpoints, animation constants
+
+#### **📐 ΧΡΗΣΗ:** ✅ **ΠΛΗΡΗ ΔΙΑΘΕΣΙΜΟΤΗΤΑ**
+```typescript
+// 🎯 Modular imports (preferred) - 8 components διαθέσιμα
+import {
+  HeaderIcon, HeaderTitle, HeaderSearch, HeaderFilters,
+  HeaderViewToggle, MobileHeaderViewToggle, HeaderActions, PageHeader
+} from '@/core/headers/enterprise-system';
+
+// 🔄 Legacy compatibility για gradual migration
+import {
+  UnifiedHeaderIcon, UnifiedHeaderTitle, UnifiedHeaderSearch,
+  UnifiedHeaderFilters, UnifiedHeaderActions, UnifiedPageHeader
+} from '@/core/headers/enterprise-system';
+
+// 🏗️ Builder pattern για complex headers
+import { createEnterpriseHeader } from '@/core/headers/enterprise-system';
+const headerConfig = createEnterpriseHeader()
+  .withTitle("Έργα", "Διαχείριση έργων")
+  .withSearch("Αναζήτηση έργων...")
+  .withIcon(Building)
+  .build();
+
+// 📦 Complete PageHeader με όλες τις δυνατότητες
+<PageHeader
+  variant="sticky"
+  layout="multi-row"
+  title={{ title: "Έργα", subtitle: "Διαχείριση", icon: Building }}
+  search={{ placeholder: "Αναζήτηση έργων...", onChange: handleSearch }}
+  filters={{ filters: filterConfig, hasActiveFilters: true }}
+  actions={{ viewMode: "list", onViewModeChange: handleViewChange }}
+/>
+```
+
+#### **🎯 ΕΠΙΛΥΣΗ ΠΡΟΒΛΗΜΑΤΟΣ:** ✅ **ΔΙΑΣΠΑΣΗ ΟΛΟΚΛΗΡΩΘΗΚΕ**
+- **ΠΡΙΝ**: UnifiedHeaderSystem.tsx (743 γραμμές μονολιθικό) + 60+ scattered headers
+- **ΜΕΤΑ**: 8 modular enterprise components (50-150 γραμμές έκαστο) ✅
+- **ΑΠΟΤΕΛΕΣΜΑ**: Maintainable, testable, scalable architecture ✅
+- **ΟΦΕΛΟΣ**: Μικρότερα αρχεία, καλύτερη συντήρηση, tree-shaking, consistent design
+
+---
+
 ### 🔽 **DROPDOWN SYSTEMS**:
 1. **[EnterpriseDropdown](../components/ui/enterprise-dropdown.tsx)** - Κεντρικό dropdown component
    - Χρησιμοποιεί theme system (`bg-popover`, `text-popover-foreground`, `hover:bg-accent`)

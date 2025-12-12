@@ -769,6 +769,7 @@ export const TestsModal: React.FC<TestsModalProps> = ({
             </div>
           </div>
           </>
+          </section>
           )}
 
           {/* TAB 2: Unit & E2E Tests */}
@@ -948,7 +949,7 @@ export const TestsModal: React.FC<TestsModalProps> = ({
           </div>
           </>
           )}
-        </div>
+        </main>
 
         {/* Footer */}
         <div className="p-4 border-t border-gray-700 bg-gray-800/50">
@@ -956,7 +957,7 @@ export const TestsModal: React.FC<TestsModalProps> = ({
             💡 Tip: Τα tests εκτελούνται ασύγχρονα. Έλεγξε το console για λεπτομέρειες.
           </div>
         </div>
-      </div>
+      </dialog>
     </div>
   );
 };

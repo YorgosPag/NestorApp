@@ -5,21 +5,25 @@
  * Single Source of Truth - Enterprise Implementation
  */
 
-// Main Components
+// Main Components - Enterprise System Migration
 export {
   PageHeader,
-  UnifiedHeader,
-  SectionHeader,
   HeaderIcon,
   HeaderTitle,
   HeaderSearch,
   HeaderFilters,
   HeaderActions,
   HeaderViewToggle,
-  MobileCompactHeader
-} from './UnifiedHeaderSystem';
+  MobileHeaderViewToggle as MobileCompactHeader
+} from './enterprise-system';
 
-// Types & Interfaces
+// Backward compatibility aliases
+export {
+  PageHeader as UnifiedHeader,
+  PageHeader as SectionHeader
+} from './enterprise-system';
+
+// Types & Interfaces - Enterprise System
 export type {
   ViewMode,
   HeaderIconProps,
@@ -31,7 +35,7 @@ export type {
   PageHeaderProps,
   SectionHeaderProps,
   MobileCompactHeaderProps
-} from './UnifiedHeaderSystem';
+} from './enterprise-system';
 
-// Default export
-export { default } from './UnifiedHeaderSystem';
+// Default export - Enterprise System
+export { default } from './enterprise-system';

@@ -440,7 +440,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                   <p className="text-gray-300 text-sm">Δεν βρέθηκαν εταιρείες στο σύστημα.</p>
                 </div>
               )}
-            </div>
+            </fieldset>
           )}
 
           {/* Project Selection - Step 2 */}
@@ -705,7 +705,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
               </p>
             </div>
           )}
-        </div>
+        </main>
 
         {/* Footer */}
         <div className="p-6 border-t border-gray-600 flex justify-between">
@@ -750,7 +750,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
             </button>
           )}
         </div>
-      </div>
+      </dialog>
 
       {/* DXF Import Modal */}
       <DxfImportModal

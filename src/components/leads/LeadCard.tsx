@@ -22,9 +22,9 @@ export function LeadCard({
 }) {
   return (
     <article className="bg-white border rounded-lg p-4 hover:shadow-md transition-shadow" itemScope itemType="https://schema.org/Person">
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-2">
+      <header className="flex items-start justify-between">
+        <section className="flex-1" aria-label="Lead Information">
+          <header className="flex items-center gap-2 mb-2">
             <User className="w-4 h-4 text-gray-500" />
             <button
               onClick={() => onView(lead.id!)}
@@ -36,36 +36,36 @@ export function LeadCard({
             <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(lead.stage)}`}>
               {lead.stage}
             </span>
-          </div>
+          </header>
 
           <address className="space-y-1 text-sm text-gray-600 not-italic">
             {lead.email && (
-              <div className="flex items-center gap-2">
+              <p className="flex items-center gap-2">
                 <Mail className="w-4 h-4" />
                 <span itemProp="email">{lead.email}</span>
-              </div>
+              </p>
             )}
             {lead.phone && (
-              <div className="flex items-center gap-2">
+              <p className="flex items-center gap-2">
                 <Phone className="w-4 h-4" />
                 <span itemProp="telephone">{lead.phone}</span>
-              </div>
+              </p>
             )}
-            <div className="flex items-center gap-2">
+            <p className="flex items-center gap-2">
               <Calendar className="w-4 h-4" />
               <span>Δημιουργήθηκε: {formatDate(lead.createdAt)}</span>
-            </div>
+            </p>
           </address>
 
           {lead.notes && (
-            <div className="mt-2 p-2 bg-gray-50 rounded text-sm text-gray-700">
+            <aside className="mt-2 p-2 bg-gray-50 rounded text-sm text-gray-700" role="note" aria-label="Σημειώσεις Lead">
               <strong>Σημειώσεις:</strong> {lead.notes}
-            </div>
+            </aside>
           )}
-        </div>
+        </section>
 
         <nav className="flex flex-col gap-2 ml-4" aria-label="Ενέργειες για lead">
-          <div className="flex gap-2">
+          <section className="flex gap-2" aria-label="Πρωτεύουσες Ενέργειες">
             <button
               onClick={() => onEmail(lead)}
               disabled={!lead.email}
@@ -85,9 +85,9 @@ export function LeadCard({
               <Edit3 className="w-4 h-4" />
               Επεξεργασία
             </button>
-          </div>
+          </section>
 
-          <div className="flex gap-2">
+          <section className="flex gap-2" aria-label="Δευτερεύουσες Ενέργειες">
             <button
               onClick={() => onView(lead.id!)}
               className="flex items-center gap-1 px-3 py-1.5 text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded text-sm transition-colors"
@@ -103,9 +103,9 @@ export function LeadCard({
               <Trash2 className="w-4 h-4" />
               Διαγραφή
             </button>
-          </div>
+          </section>
         </nav>
-      </div>
+      </header>
     </article>
   );
 }

@@ -1,0 +1,84 @@
+/**
+ * 🏢 MOBILE HEADER VIEW TOGGLE COMPONENT - ENTERPRISE
+ *
+ * Κεντρικοποιημένο mobile view toggle component
+ * Enterprise implementation με single-button cycling pattern
+ */
+
+'use client';
+
+import React from 'react';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  List,
+  LayoutGrid,
+  Filter,
+  BarChart3
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import type { HeaderViewToggleProps, ViewMode } from '../types';
+import { HEADER_THEME, VIEW_MODE_CONFIG } from '../constants';
+
+export const MobileHeaderViewToggle: React.FC<HeaderViewToggleProps> = ({
+  viewMode,
+  onViewModeChange,
+  viewModes = ['list', 'grid'],
+  className
+}) => {
+  const getViewIcon = (mode: ViewMode) => {
+    const iconMap = {
+      list: List,
+      grid: LayoutGrid,
+      byType: Filter,
+      byStatus: BarChart3
+    };
+    return iconMap[mode] || List;
+  };
+
+  const getViewLabel = (mode: ViewMode) => {
+    const labelMap = {
+      list: 'Προβολή λίστας',
+      grid: 'Προβολή πλέγματος',
+      byType: 'Ομαδοποίηση κατά τύπο',
+      byStatus: 'Ομαδοποίηση κατά κατάσταση'
+    };
+    return labelMap[mode] || 'Προβολή';
+  };
+
+  // Find the next view mode to toggle to
+  const getNextViewMode = () => {
+    const currentIndex = viewModes.indexOf(viewMode);
+    const nextIndex = (currentIndex + 1) % viewModes.length;
+    return viewModes[nextIndex];
+  };
+
+  const nextMode = getNextViewMode();
+  const NextIcon = getViewIcon(nextMode);
+
+  const buttonClasses = cn(
+    HEADER_THEME.components.viewToggle.mobile,
+    className
+  );
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onViewModeChange(nextMode)}
+          className={buttonClasses}
+          aria-label={getViewLabel(nextMode)}
+        >
+          <NextIcon className="h-4 w-4" />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom">
+        <p>{getViewLabel(nextMode)}</p>
+      </TooltipContent>
+    </Tooltip>
+  );
+};
+
+export default MobileHeaderViewToggle;

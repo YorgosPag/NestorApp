@@ -16,7 +16,7 @@
 // ============================================================================
 
 import React from 'react';
-import { Mail, ExternalLink } from 'lucide-react';
+import { Mail } from 'lucide-react';
 import { designSystem } from '@/lib/design-system';
 
 // ============================================================================
