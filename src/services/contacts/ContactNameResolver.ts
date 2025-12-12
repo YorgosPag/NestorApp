@@ -366,27 +366,54 @@ export class ContactNameResolver {
     currentContactId?: string,
     config: Partial<ContactNameConfig> = {}
   ): ContactSummary | null {
+    // Force debug logging for this investigation
+    const debugMode = false;
+
+    if (debugMode) {
+      console.log('🔧 ContactNameResolver.mapToContactSummary processing:', {
+        id: contact.id,
+        firstName: contact.firstName,
+        lastName: contact.lastName,
+        companyName: contact.companyName,
+        serviceName: contact.serviceName,
+        type: contact.type,
+        currentContactId
+      });
+    }
+
     // Exclude current contact if specified
     if (currentContactId && contact.id === currentContactId) {
+      if (debugMode) {
+        console.log('❌ ContactNameResolver: Excluding current contact:', contact.id);
+      }
       return null;
     }
 
     // Resolve display name
     const nameResult = this.resolveContactDisplayName(contact, config);
 
+    if (debugMode) {
+      console.log('🔍 Name resolution result for', contact.id, ':', nameResult);
+    }
+
     // Skip contacts with very low confidence (invalid names)
-    if (nameResult.confidence < 0.2) {
-      if (config.debug) {
-        console.log('🚫 Contact excluded due to low name confidence:', {
+    if (nameResult.confidence < 0.05) { // Lowered threshold to allow more contacts
+      if (debugMode || config.debug) {
+        console.log('❌ ContactNameResolver: Contact excluded due to low name confidence:', {
           id: contact.id,
-          nameResult
+          nameResult,
+          firstName: contact.firstName,
+          lastName: contact.lastName,
+          companyName: contact.companyName,
+          serviceName: contact.serviceName,
+          type: contact.type
         });
       }
       return null;
     }
 
     // Map to ContactSummary
-    return {
+    const summary = {
       id: contact.id,
       name: nameResult.displayName,
       type: contact.type,
@@ -396,6 +423,18 @@ export class ContactNameResolver {
       department: contact.department || '',
       lastActivity: contact.updatedAt?.toString() || contact.createdAt?.toString()
     };
+
+    if (debugMode) {
+      console.log('✅ ContactNameResolver: Successfully mapped contact:', {
+        id: summary.id,
+        name: summary.name,
+        type: summary.type,
+        confidence: nameResult.confidence,
+        source: nameResult.source
+      });
+    }
+
+    return summary;
   }
 
   /**

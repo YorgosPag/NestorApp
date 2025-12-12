@@ -357,3 +357,121 @@ svg[class*="chevron"],
 *:contains("Σχέσεις") *::-webkit-scrollbar {
   display: none !important;
 }
+
+/* =============================================================
+   ENTERPRISE CONTACT DROPDOWN SCROLLING - EXCEPTION RULES
+
+   Allow scrolling specifically for the enterprise contact dropdown
+   These rules OVERRIDE the nuclear scrollbar hiding above
+   ============================================================= */
+
+/* Show scrollbar for enterprise contact dropdown */
+[data-enterprise-contact-dropdown="true"] {
+  scrollbar-width: thin !important; /* Firefox */
+  scrollbar-color: #cbd5e1 transparent !important; /* Firefox */
+  -ms-overflow-style: auto !important; /* Internet Explorer 10+ */
+}
+
+/* Show webkit scrollbar for enterprise dropdown - FORCE OVERRIDE */
+[data-enterprise-contact-dropdown="true"]::-webkit-scrollbar,
+.overflow-y-scroll::-webkit-scrollbar,
+div[data-enterprise-contact-dropdown="true"]::-webkit-scrollbar {
+  display: block !important;
+  width: 8px !important;
+  height: 8px !important;
+  background: rgba(0,0,0,0.1) !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+[data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-track,
+.overflow-y-scroll::-webkit-scrollbar-track,
+div[data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-track {
+  display: block !important;
+  background: rgba(0,0,0,0.05) !important;
+  border-radius: 4px !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+[data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-thumb,
+.overflow-y-scroll::-webkit-scrollbar-thumb,
+div[data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-thumb {
+  display: block !important;
+  background: #94a3b8 !important;
+  border-radius: 4px !important;
+  transition: background-color 0.2s ease !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+[data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8 !important;
+}
+
+[data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+[data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-corner {
+  display: none !important;
+}
+
+/* Ensure the dropdown container allows overflow */
+[data-enterprise-contact-dropdown="true"] {
+  overflow-y: auto !important;
+  max-height: 300px !important;
+}
+
+/* =============================================================
+   RADICAL SCROLLBAR OVERRIDE - FORCE SCROLLBAR FOR DROPDOWN
+
+   This completely overrides the nuclear option above for our specific dropdown
+   ============================================================= */
+
+/* Force show scrollbar with MAXIMUM specificity */
+body [data-enterprise-contact-dropdown="true"],
+body div[data-enterprise-contact-dropdown="true"],
+div[data-enterprise-contact-dropdown="true"].overflow-y-scroll {
+  scrollbar-width: thin !important;
+  scrollbar-color: #94a3b8 rgba(0,0,0,0.1) !important;
+  -ms-overflow-style: auto !important;
+  overflow-y: scroll !important;
+}
+
+/* FORCE webkit scrollbar with maximum specificity */
+body [data-enterprise-contact-dropdown="true"]::-webkit-scrollbar,
+body div[data-enterprise-contact-dropdown="true"]::-webkit-scrollbar,
+html body [data-enterprise-contact-dropdown="true"]::-webkit-scrollbar {
+  display: block !important;
+  width: 10px !important;
+  height: 10px !important;
+  background: rgba(0,0,0,0.1) !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+body [data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-track,
+html body [data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-track {
+  display: block !important;
+  background: rgba(0,0,0,0.05) !important;
+  border-radius: 5px !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+body [data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-thumb,
+html body [data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-thumb {
+  display: block !important;
+  background: #64748b !important;
+  border-radius: 5px !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+body [data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-thumb:hover,
+html body [data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-thumb:hover {
+  background: #475569 !important;
+}

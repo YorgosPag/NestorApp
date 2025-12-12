@@ -57,6 +57,7 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const searchTimeoutRef = useRef<NodeJS.Timeout>();
 
   // Get selected contact
   const selectedContact = searchResults.find(contact => contact.id === value);
@@ -81,13 +82,22 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
     }
   };
 
-  // Handle search input change
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle search input change with debounce to prevent excessive API calls
+  const handleSearchChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
     setSearchQuery(query);
-    onSearch(query);
     setHighlightedIndex(-1);
-  };
+
+    // Clear previous timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    // Debounce the search to prevent excessive calls
+    searchTimeoutRef.current = setTimeout(() => {
+      onSearch(query);
+    }, 150);
+  }, [onSearch]);
 
   // Handle contact selection
   const selectContact = (contact: ContactSummary) => {
@@ -104,52 +114,81 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
   };
 
   // Handle button click
-  const handleToggle = () => {
+  const handleToggle = React.useCallback(() => {
     if (readonly) {
       return;
     }
 
-    if (!isOpen) {
-      setTimeout(() => {
+    const newIsOpen = !isOpen;
+    setIsOpen(newIsOpen);
+
+    if (newIsOpen) {
+      // Use requestAnimationFrame to ensure DOM is updated before focusing
+      requestAnimationFrame(() => {
         if (inputRef.current) {
           inputRef.current.focus();
         }
-      }, 100);
+      });
     }
+  }, [isOpen, readonly]);
 
-    setIsOpen(!isOpen);
-  };
-
-  // Measure button position when dropdown opens and on scroll
+  // Measure button position when dropdown opens
   useEffect(() => {
+    if (isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setButtonRect(rect);
+    }
+  }, [isOpen]);
+
+  // Handle scroll/resize events with throttling to prevent infinite loops
+  useEffect(() => {
+    if (!isOpen || !buttonRef.current) return;
+
+    let rafId: number;
+    let isThrottling = false;
+
     const updateButtonPosition = () => {
-      if (buttonRef.current) {
-        const rect = buttonRef.current.getBoundingClientRect();
-        setButtonRect(rect);
-      }
+      if (isThrottling) return;
+
+      isThrottling = true;
+      rafId = requestAnimationFrame(() => {
+        if (buttonRef.current) {
+          const rect = buttonRef.current.getBoundingClientRect();
+          setButtonRect(prevRect => {
+            // Only update if position actually changed significantly
+            if (!prevRect ||
+                Math.abs(prevRect.top - rect.top) > 5 ||
+                Math.abs(prevRect.left - rect.left) > 5) {
+              return rect;
+            }
+            return prevRect;
+          });
+        }
+        isThrottling = false;
+      });
     };
 
-    if (isOpen) {
+    // Throttled scroll handler
+    const handleScroll = () => {
       updateButtonPosition();
+    };
 
-      // Listen to scroll events to update position
-      const handleScroll = () => {
-        updateButtonPosition();
-      };
+    // Throttled resize handler
+    const handleResize = () => {
+      updateButtonPosition();
+    };
 
-      // Listen to window resize to update position
-      const handleResize = () => {
-        updateButtonPosition();
-      };
+    // Add event listeners with passive flag to improve performance
+    window.addEventListener('scroll', handleScroll, { passive: true, capture: true });
+    window.addEventListener('resize', handleResize, { passive: true });
 
-      window.addEventListener('scroll', handleScroll, true); // true για capture phase
-      window.addEventListener('resize', handleResize);
-
-      return () => {
-        window.removeEventListener('scroll', handleScroll, true);
-        window.removeEventListener('resize', handleResize);
-      };
-    }
+    return () => {
+      window.removeEventListener('scroll', handleScroll, { capture: true });
+      window.removeEventListener('resize', handleResize);
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
+    };
   }, [isOpen]);
 
   // Click outside to close
@@ -169,6 +208,66 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Keyboard navigation with scroll support
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsOpen(false);
+        return;
+      }
+
+      if (searchResults.length === 0) return;
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setHighlightedIndex(prev => {
+          const newIndex = prev < searchResults.length - 1 ? prev + 1 : 0;
+          // Scroll highlighted item into view
+          setTimeout(() => {
+            const highlightedElement = document.querySelector(`[data-contact-index="${newIndex}"]`);
+            if (highlightedElement && dropdownRef.current) {
+              highlightedElement.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            }
+          }, 0);
+          return newIndex;
+        });
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setHighlightedIndex(prev => {
+          const newIndex = prev > 0 ? prev - 1 : searchResults.length - 1;
+          // Scroll highlighted item into view
+          setTimeout(() => {
+            const highlightedElement = document.querySelector(`[data-contact-index="${newIndex}"]`);
+            if (highlightedElement && dropdownRef.current) {
+              highlightedElement.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            }
+          }, 0);
+          return newIndex;
+        });
+      } else if (e.key === 'Enter' && highlightedIndex >= 0) {
+        e.preventDefault();
+        const contact = searchResults[highlightedIndex];
+        if (contact) {
+          selectContact(contact);
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, searchResults, highlightedIndex]);
+
+  // Cleanup search timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
+
   // Render contact item
   const renderContactItem = (contact: ContactSummary, index: number) => {
     const Icon = getContactIcon(contact.type);
@@ -177,6 +276,7 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
     return (
       <div
         key={contact.id}
+        data-contact-index={index}
         className={cn(
           "p-3 border-b border-border last:border-b-0 transition-colors cursor-pointer",
           isHighlighted ? "bg-accent text-accent-foreground" : "hover:bg-accent hover:text-accent-foreground"
@@ -301,34 +401,43 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
       {/* Portal Dropdown - Positioned κάτω από το button */}
       {isOpen && buttonRect && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed bg-popover text-popover-foreground border border-border rounded-lg shadow-lg z-[99999] max-h-[400px] overflow-y-auto"
+          ref={dropdownRef}
+          className="fixed bg-popover text-popover-foreground border border-border rounded-lg shadow-lg z-[99999]"
           style={{
             top: buttonRect.bottom + 8,
             left: buttonRect.left,
             width: buttonRect.width,
-            minWidth: '200px'
+            minWidth: '200px',
+            maxHeight: '400px',
+            overflow: 'hidden'
           }}
         >
-          <div
-            ref={dropdownRef}
-            className="bg-popover rounded-lg"
-          >
-                {/* Search Input */}
-                <div className="p-3 border-b border-border">
-                  <div className="relative">
-                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      ref={inputRef}
-                      value={searchQuery}
-                      onChange={handleSearchChange}
-                      placeholder="Αναζήτηση επαφών..."
-                      className="pl-8"
-                    />
-                  </div>
-                </div>
+          {/* Search Input */}
+          <div className="p-3 border-b border-border">
+            <div className="relative">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                ref={inputRef}
+                value={searchQuery}
+                onChange={handleSearchChange}
+                placeholder="Αναζήτηση επαφών..."
+                className="pl-8"
+              />
+            </div>
+          </div>
 
-                {/* Results */}
-                <div className="max-h-[300px] overflow-y-auto">
+          {/* Results - Scrollable Area */}
+          <div
+            data-enterprise-contact-dropdown="true"
+            className="overflow-y-scroll"
+            style={{
+              maxHeight: '300px',
+              minHeight: '200px',
+              scrollbarWidth: 'thin',
+              scrollbarColor: '#cbd5e1 transparent',
+              WebkitScrollbarWidth: '6px'
+            }}
+          >
                   {isSearching ? (
                     <div className="p-4 text-center text-muted-foreground">
                       <Loader2 className="h-6 w-6 mx-auto mb-2 animate-spin" />
@@ -336,10 +445,10 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
                     </div>
                   ) : searchResults.length > 0 ? (
                     <>
-                      {searchResults.slice(0, 8).map((contact, index) => renderContactItem(contact, index))}
-                      {searchResults.length > 8 && (
-                        <div className="p-3 text-center text-xs text-muted-foreground bg-muted border-t border-border">
-                          +{searchResults.length - 8} επιπλέον επαφές. Πληκτρολογήστε για περισσότερο συγκεκριμένη αναζήτηση.
+                      {searchResults.map((contact, index) => renderContactItem(contact, index))}
+                      {searchResults.length > 15 && (
+                        <div className="p-3 text-center text-xs text-muted-foreground bg-muted/50 border-t border-border sticky bottom-0">
+                          {searchResults.length} συνολικές επαφές - χρησιμοποιήστε scroll ή αναζήτηση για πλοήγηση
                         </div>
                       )}
                     </>
@@ -351,7 +460,6 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
                       </span>
                     </div>
                   )}
-                </div>
           </div>
         </div>,
         document.body

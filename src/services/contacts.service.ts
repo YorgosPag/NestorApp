@@ -16,7 +16,7 @@ import { contactConverter } from '@/lib/firestore/converters/contact.converter';
 
 const CONTACTS_COLLECTION = 'contacts';
 const UNITS_COLLECTION = 'units';
-const BATCH_SIZE = 20;
+const BATCH_SIZE = 100; // Increased to show more contacts in dropdowns
 const MAX_BATCH = 500;
 
 // ---------- Query builder ----------
@@ -200,9 +200,21 @@ export class ContactsService {
     cursorId?: string | null; // ΝΕΟ, optional
   }): Promise<{ contacts: Contact[]; lastDoc: DocumentSnapshot | null; nextCursor: string | null }> {
     try {
+      console.log('📥 CONTACTSSERVICE: getAllContacts called with options:', options);
       const q = await buildContactsQuery(options);
       const qs = await getDocs(q);
       const contacts = mapDocs<Contact>(qs); // thanks to converter, dates normalized
+
+      console.log('📊 RAW FIRESTORE RESULTS:', contacts.length, 'contacts');
+      console.log('📊 RAW CONTACTS FROM FIRESTORE:', contacts.map(c => ({
+        id: c.id,
+        firstName: c.firstName,
+        lastName: c.lastName,
+        companyName: c.companyName,
+        serviceName: c.serviceName,
+        type: c.type,
+        status: (c as any).status || 'no-status'
+      })));
 
       // Client-side filtering (status & search)
       let filtered = contacts;
@@ -210,14 +222,31 @@ export class ContactsService {
       // Filter by archived status (client-side για να αποφύγουμε Firestore index)
       if (options?.includeArchived === true) {
         // Δείχνει ΜΟΝΟ archived επαφές
+        console.log('🔍 FILTERING FOR ARCHIVED CONTACTS ONLY');
         filtered = filtered.filter((contact: any) =>
           contact.status === 'archived'
         );
       } else {
         // Exclude archived contacts (default behavior)
-        filtered = filtered.filter((contact: any) =>
-          !contact.status || contact.status !== 'archived'
-        );
+        console.log('🔍 FILTERING OUT ARCHIVED CONTACTS (default)');
+        console.log('🔍 BEFORE ARCHIVED FILTER:', filtered.length, 'contacts');
+
+        const beforeFilter = filtered.length;
+        filtered = filtered.filter((contact: any) => {
+          const isArchived = contact.status === 'archived';
+          const hasNoStatus = !contact.status;
+          const shouldInclude = hasNoStatus || contact.status !== 'archived';
+
+          if (isArchived) {
+            console.log('❌ FILTERING OUT ARCHIVED CONTACT:', contact.id,
+              contact.firstName || contact.companyName || contact.serviceName, 'status:', contact.status);
+          }
+
+          return shouldInclude;
+        });
+
+        console.log('🔍 AFTER ARCHIVED FILTER:', filtered.length, 'contacts');
+        console.log('🔍 FILTERED OUT:', beforeFilter - filtered.length, 'archived contacts');
       }
 
       // Search filter

@@ -113,7 +113,10 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
   // ============================================================================
 
   return (
-    <Card className={designSystem.cn("mb-6", designSystem.presets.card.default)}>
+    <Card className={designSystem.cn(
+      "mb-6",
+      "rounded-lg border bg-card text-card-foreground shadow-sm"
+    )}>
       <CardHeader>
         <CardTitle className={designSystem.cn(
           "flex items-center space-x-2",

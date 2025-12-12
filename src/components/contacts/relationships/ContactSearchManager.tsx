@@ -10,7 +10,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { EnterpriseContactDropdown, type ContactSummary } from '@/components/ui/enterprise-contact-dropdown';
 import { ContactsService } from '@/services/contacts.service';
 import { ContactNameResolver } from '@/services/contacts/ContactNameResolver';
@@ -82,7 +82,7 @@ export const ContactSearchManager: React.FC<ContactSearchManagerProps> = ({
 
   // Merge search configuration with defaults
   const finalSearchConfig = {
-    debug: false,
+    debug: false, // Disable debug logs
     maxResults: 50,
     autoLoadContacts: true,
     ...searchConfig
@@ -96,6 +96,7 @@ export const ContactSearchManager: React.FC<ContactSearchManagerProps> = ({
    * 🔍 Handle Contact Search - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΗ ΛΟΓΙΚΗ
    */
   const handleContactSearch = useCallback(async (query: string) => {
+    console.log('🔍 STARTING CONTACT SEARCH - Query:', query);
     setIsSearching(true);
     setSearchError(null);
 
@@ -104,11 +105,21 @@ export const ContactSearchManager: React.FC<ContactSearchManagerProps> = ({
 
       if (!query.trim()) {
         // Load all contacts when no query
-        const allContactsResult = await ContactsService.getAllContacts();
+        const allContactsResult = await ContactsService.getAllContacts({
+          limitCount: 100 // Ensure we get enough contacts for the dropdown
+        });
         contacts = allContactsResult.contacts || [];
 
         if (finalSearchConfig.debug) {
           console.log('🔍 DEBUG: All contacts loaded:', contacts.length);
+          console.log('🔍 DEBUG: All contacts data:', contacts.map(c => ({
+            id: c.id,
+            firstName: c.firstName,
+            lastName: c.lastName,
+            name: (c as any).name || `${c.firstName || ''} ${c.lastName || ''}`.trim(),
+            type: c.type,
+            status: (c as any).status
+          })));
         }
       } else {
         // Search with query
@@ -119,35 +130,84 @@ export const ContactSearchManager: React.FC<ContactSearchManagerProps> = ({
 
         if (finalSearchConfig.debug) {
           console.log('🔍 DEBUG: Search results for query "' + query + '":', contacts.length);
+          console.log('🔍 DEBUG: Search results data:', contacts.map(c => ({
+            id: c.id,
+            firstName: c.firstName,
+            lastName: c.lastName,
+            name: (c as any).name || `${c.firstName || ''} ${c.lastName || ''}`.trim(),
+            type: c.type,
+            status: (c as any).status
+          })));
         }
       }
 
       // 🏢 ENTERPRISE: Use centralized ContactNameResolver για mapping
+      console.log('🔧 PROCESSING CONTACTS THROUGH ContactNameResolver...');
       const contactSummaries = ContactNameResolver.mapContactsToSummaries(
         contacts,
         undefined, // Don't exclude based on current contact here
         {
-          debug: finalSearchConfig.debug,
+          debug: true, // Force debug to see resolver details
           maxLength: 100
         }
       );
 
+      console.log('📊 AFTER CONTACTNAMERESOLVER MAPPING:', contactSummaries.length);
+      console.log('📊 CONTACT SUMMARIES DETAILS:', contactSummaries.map(c => ({
+        id: c.id,
+        name: c.name,
+        type: c.type,
+        email: c.email,
+        phone: c.phone,
+        company: c.company
+      })));
+
+      if (finalSearchConfig.debug) {
+        console.log('🔍 DEBUG: After ContactNameResolver mapping:', contactSummaries.length);
+        console.log('🔍 DEBUG: Contact summaries:', contactSummaries.map(c => ({
+          id: c.id,
+          name: c.name,
+          type: c.type
+        })));
+      }
+
       // Filter based on configuration
+      console.log('🔧 APPLYING FILTERS...');
+      console.log('📊 FILTER CONFIG - excludeContactIds:', excludeContactIds);
+      console.log('📊 FILTER CONFIG - allowedContactTypes:', allowedContactTypes);
+      console.log('📊 FILTER CONFIG - maxResults:', finalSearchConfig.maxResults);
+
       const filteredContacts = contactSummaries
         .filter(contact => {
           // Exclude specified contact IDs
           if (excludeContactIds.includes(contact.id)) {
+            console.log('❌ FILTERING OUT BY ID:', contact.id, contact.name);
+            if (finalSearchConfig.debug) {
+              console.log('🔍 DEBUG: Excluding contact by ID:', contact.id, contact.name);
+            }
             return false;
           }
 
           // Filter by allowed contact types
           if (allowedContactTypes.length > 0 && !allowedContactTypes.includes(contact.type)) {
+            console.log('❌ FILTERING OUT BY TYPE:', contact.type, contact.name, 'allowed:', allowedContactTypes);
+            if (finalSearchConfig.debug) {
+              console.log('🔍 DEBUG: Excluding contact by type:', contact.type, contact.name);
+            }
             return false;
           }
 
+          console.log('✅ CONTACT PASSED FILTERS:', contact.id, contact.name, contact.type);
           return true;
         })
         .slice(0, finalSearchConfig.maxResults);
+
+      console.log('📊 AFTER FILTERING:', filteredContacts.length);
+      console.log('📊 FINAL FILTERED CONTACTS:', filteredContacts.map(c => ({
+        id: c.id,
+        name: c.name,
+        type: c.type
+      })));
 
       if (finalSearchConfig.debug) {
         console.log('🔍 DEBUG: Final filtered contacts:', filteredContacts.length);
@@ -189,12 +249,27 @@ export const ContactSearchManager: React.FC<ContactSearchManagerProps> = ({
   // EFFECTS
   // ============================================================================
 
-  // Auto-load contacts on mount
+  // Auto-load contacts on mount - with ref to prevent loops
+  const hasAutoLoaded = React.useRef(false);
+
   useEffect(() => {
-    if (finalSearchConfig.autoLoadContacts) {
+    console.log('🔄 AUTO-LOAD EFFECT TRIGGERED:', {
+      autoLoadContacts: finalSearchConfig.autoLoadContacts,
+      hasAutoLoaded: hasAutoLoaded.current,
+      shouldLoad: finalSearchConfig.autoLoadContacts && !hasAutoLoaded.current
+    });
+
+    if (finalSearchConfig.autoLoadContacts && !hasAutoLoaded.current) {
+      console.log('🚀 TRIGGERING AUTO-LOAD: handleContactSearch(\'\')');
+      hasAutoLoaded.current = true;
       handleContactSearch('');
+    } else {
+      console.log('❌ AUTO-LOAD SKIPPED:', {
+        autoLoadContacts: finalSearchConfig.autoLoadContacts,
+        hasAutoLoaded: hasAutoLoaded.current
+      });
     }
-  }, [handleContactSearch, finalSearchConfig.autoLoadContacts]);
+  }, []); // Empty dependency array to run only once on mount
 
   // ============================================================================
   // RENDER
