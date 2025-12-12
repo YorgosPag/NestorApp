@@ -10,10 +10,8 @@ interface PageLayoutProps {
 
 export function PageLayout({ children, className }: PageLayoutProps) {
     return (
-        <div className={cn("h-full", className)}>
-            <div className="h-full">
-                {children}
-            </div>
-        </div>
+        <main className={cn("h-full", className)}>
+            {children}
+        </main>
     );
 }

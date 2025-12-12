@@ -182,7 +182,7 @@ export function UniversalCommunicationManager({
     const IconComponent = config.icon;
 
     return (
-      <div className="w-full max-w-none min-w-full space-y-4">
+      <fieldset className="w-full max-w-none min-w-full space-y-4" aria-label={`${config.title} details`}>
         {/* Primary Field */}
         <div className="w-full max-w-none min-w-full">
           <Label>{getPrimaryFieldLabel(config.type)}</Label>
@@ -279,7 +279,7 @@ export function UniversalCommunicationManager({
             className={`w-full ${COMMUNICATION_STYLES.groupedTable.input}`}
           />
         </div>
-      </div>
+      </fieldset>
     );
   };
 
@@ -291,27 +291,27 @@ export function UniversalCommunicationManager({
   const IconComponent = config.icon;
 
   return (
-    <div className="w-full max-w-none min-w-full space-y-4">
+    <section className="w-full max-w-none min-w-full space-y-4" aria-labelledby="comm-manager-title">
       {/* Header */}
-      <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+      <header className="flex items-center gap-2 text-sm font-medium text-gray-700">
         <IconComponent className="h-4 w-4" />
-        {config.title}
-      </div>
+        <h3 id="comm-manager-title">{config.title}</h3>
+      </header>
 
       {/* 🎯 ΕΙΔΙΚΟ GROUPED LAYOUT ΓΙΑ ΤΗΛΕΦΩΝΑ ΣΤΟ DESKTOP */}
       {config.type === 'phone' && isDesktop && items.length > 0 ? (
-        <div className="w-full max-w-none min-w-full border rounded-lg">
+        <section className="w-full max-w-none min-w-full border rounded-lg" aria-label="Phone communications table">
           {/* Header Row με τίτλους στηλών για τηλέφωνα */}
-          <div className="grid grid-cols-5 gap-3 p-4 bg-muted border-b font-medium text-sm text-muted-foreground">
+          <header className="grid grid-cols-5 gap-3 p-4 bg-muted border-b font-medium text-sm text-muted-foreground" role="columnheader">
             <div>Τύπος</div>
             <div>Κωδικός</div>
             <div>Αριθμός</div>
             <div>Ετικέτα</div>
             <div className="text-right">Ενέργειες</div>
-          </div>
+          </header>
 
           {/* Phone Rows - Όλα τα τηλέφωνα σε γραμμές */}
-          <div className="p-4 space-y-0">
+          <main className="p-4 space-y-0" role="grid">
             {items.map((item, index) =>
               <PhoneRenderer
                 key={index}
@@ -325,20 +325,20 @@ export function UniversalCommunicationManager({
                 removeItem={removeItem}
               />
             )}
-          </div>
-        </div>
+          </main>
+        </section>
       ) : config.type === 'email' && isDesktop && items.length > 0 ? (
-        <div className="w-full max-w-none min-w-full border rounded-lg">
+        <section className="w-full max-w-none min-w-full border rounded-lg" aria-label="Email communications table">
           {/* Header Row με τίτλους στηλών για emails */}
-          <div className="grid grid-cols-4 gap-3 p-4 bg-muted border-b font-medium text-sm text-muted-foreground">
+          <header className="grid grid-cols-4 gap-3 p-4 bg-muted border-b font-medium text-sm text-muted-foreground" role="columnheader">
             <div>Τύπος</div>
             <div>Διεύθυνση E-mail</div>
             <div>Ετικέτα</div>
             <div className="text-right">Ενέργειες</div>
-          </div>
+          </header>
 
           {/* Email Rows - Όλα τα emails σε γραμμές */}
-          <div className="p-4 space-y-0">
+          <main className="p-4 space-y-0" role="grid">
             {items.map((item, index) =>
               <EmailRenderer
                 key={index}
@@ -352,20 +352,20 @@ export function UniversalCommunicationManager({
                 removeItem={removeItem}
               />
             )}
-          </div>
-        </div>
+          </main>
+        </section>
       ) : config.type === 'website' && isDesktop ? (
-        <div className="w-full max-w-none min-w-full border rounded-lg">
+        <section className="w-full max-w-none min-w-full border rounded-lg" aria-label="Website communications table">
           {/* Header Row με τίτλους στηλών για websites */}
-          <div className="grid grid-cols-4 gap-3 p-4 bg-muted border-b font-medium text-sm text-muted-foreground">
+          <header className="grid grid-cols-4 gap-3 p-4 bg-muted border-b font-medium text-sm text-muted-foreground" role="columnheader">
             <div>Τύπος</div>
             <div>URL</div>
             <div>Ετικέτα</div>
             <div className="text-right">Ενέργειες</div>
-          </div>
+          </header>
 
           {/* Website Rows - Όλες οι ιστοσελίδες σε γραμμές */}
-          <div className="p-4 space-y-0">
+          <main className="p-4 space-y-0" role="grid">
             {items.map((item, index) =>
               <WebsiteRenderer
                 key={index}
@@ -378,22 +378,22 @@ export function UniversalCommunicationManager({
                 removeItem={removeItem}
               />
             )}
-          </div>
-        </div>
+          </main>
+        </section>
       ) : config.type === 'social' && isDesktop ? (
-        <div className="w-full max-w-none min-w-full border rounded-lg">
+        <section className="w-full max-w-none min-w-full border rounded-lg" aria-label="Social media communications table">
           {/* Header Row με τίτλους στηλών για social media */}
-          <div className="grid grid-cols-6 gap-3 p-4 bg-muted border-b font-medium text-sm text-muted-foreground">
+          <header className="grid grid-cols-6 gap-3 p-4 bg-muted border-b font-medium text-sm text-muted-foreground" role="columnheader">
             <div>Τύπος</div>
             <div>Πλατφόρμα</div>
             <div>Username</div>
             <div>URL</div>
             <div>Ετικέτα</div>
             <div className="text-right">Ενέργειες</div>
-          </div>
+          </header>
 
           {/* Social Media Rows - Όλα τα social media σε γραμμές */}
-          <div className="p-4 space-y-0">
+          <main className="p-4 space-y-0" role="grid">
             {items.map((item, index) =>
               <SocialRenderer
                 key={index}
@@ -406,21 +406,21 @@ export function UniversalCommunicationManager({
                 removeItem={removeItem}
               />
             )}
-          </div>
-        </div>
+          </main>
+        </section>
       ) : (
         /* ΚΑΝΟΝΙΚΟ LAYOUT για όλα τα άλλα (emails, websites, social) και phones σε mobile */
         items.map((item, index) => (
-          <div key={index} className="w-full max-w-none min-w-full p-4 border rounded-lg">
+          <article key={index} className="w-full max-w-none min-w-full p-4 border rounded-lg" aria-label={`${config.title} item ${index + 1}`}>
             {renderItemFields(item, index)}
 
             {/* Action buttons row - Μόνο για mobile layout (όταν ΔΕΝ είναι desktop) */}
             {!isDesktop && (
-              <div className="flex items-center justify-between mt-4 pt-3 border-t">
+              <footer className="flex items-center justify-between mt-4 pt-3 border-t" role="toolbar" aria-label="Item actions">
                 <div className="flex items-center gap-2">
                   {/* Primary Badge (μόνο για phones & emails) */}
                   {config.supportsPrimary && (
-                    <div className="flex items-center gap-2">
+                    <>
                       {item.isPrimary ? (
                         <CommonBadge status="primary" size="sm" />
                       ) : (
@@ -431,7 +431,7 @@ export function UniversalCommunicationManager({
                           onClick={() => setPrimary(index)}
                         />
                       )}
-                    </div>
+                    </>
                   )}
                 </div>
 
@@ -444,19 +444,19 @@ export function UniversalCommunicationManager({
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
-              </div>
+              </footer>
             )}
-          </div>
+          </article>
         ))
       )}
 
       {/* Empty State */}
       {items.length === 0 && (
-        <div className={COMMUNICATION_STYLES.groupedTable.emptyState}>
+        <section className={COMMUNICATION_STYLES.groupedTable.emptyState} aria-label="Empty state" role="status">
           <IconComponent className="w-8 h-8 mb-2 mx-auto" />
           <p>{config.emptyStateText}</p>
           <p className="text-sm mt-1">Προσθέστε τις πληροφορίες επικοινωνίας σας</p>
-        </div>
+        </section>
       )}
 
       {/* Add Button */}
@@ -470,7 +470,7 @@ export function UniversalCommunicationManager({
         <Plus className="h-4 w-4 mr-2" />
         {config.addButtonText}
       </Button>
-    </div>
+    </section>
   );
 }
 

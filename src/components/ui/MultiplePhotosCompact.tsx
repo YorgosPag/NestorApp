@@ -185,11 +185,11 @@ export function MultiplePhotosCompact({
   // ========================================================================
 
   return (
-    <div className={`space-y-3 ${className}`}>
+    <section className={`space-y-3 ${className}`} role="region" aria-label="Διαχείριση Φωτογραφιών">
       {/* Header αφαιρέθηκε - δεν θέλουμε το "Φωτογραφία" text και Image icon */}
 
       {/* Compact Grid - Dynamic Layout */}
-      <div className={maxPhotos === 1 ? "flex justify-center" : "flex flex-col space-y-4 sm:grid sm:grid-cols-3 sm:gap-8 sm:p-2 sm:space-y-0"}>
+      <main className={maxPhotos === 1 ? "flex justify-center" : "flex flex-col space-y-4 sm:grid sm:grid-cols-3 sm:gap-8 sm:p-2 sm:space-y-0"} role="main" aria-label="Γκαλερί Φωτογραφιών">
         {normalizedPhotos
           // ✅ CRITICAL FIX: Στο disabled mode εμφανίζουμε μόνο τα slots με φωτογραφίες
           .filter((photo, index) => {
@@ -220,10 +220,12 @@ export function MultiplePhotosCompact({
           };
 
           return (
-            <div
+            <article
               key={`compact-photo-slot-${index}-${photosKey}`}
               className={slotSize}
               style={mobileStyle}
+              role="img"
+              aria-label={`Φωτογραφία ${index + 1}`}
             >
               <EnterprisePhotoUpload
                 key={`compact-enterprise-slot-${index}-${photosKey}`}
@@ -271,18 +273,20 @@ export function MultiplePhotosCompact({
                 }}
 // Enterprise standard - let EnterprisePhotoUpload handle uploads naturally
               />
-            </div>
+            </article>
           );
         })}
-      </div>
+      </main>
 
       {/* Multiple Drop Zone - Hidden for logo mode (maxPhotos=1) */}
       {availableSlots > 0 && maxPhotos > 1 && (
-        <div
+        <aside
           className={`${PHOTO_COLORS.PHOTO_BACKGROUND} ${PHOTO_BORDERS.EMPTY_STATE} rounded-lg flex items-center justify-center text-center cursor-pointer transition-colors ${PHOTO_BORDERS.EMPTY_HOVER} p-3 mt-8`}
           style={{ backgroundColor: PHOTO_COLORS.EMPTY_STATE_BACKGROUND }}
           onDrop={handleMultipleDrop}
           onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          role="button"
+          aria-label={`Προσθήκη ${availableSlots} ακόμη φωτογραφίες`}
           onClick={() => {
             if (disabled) return;
             const input = document.createElement('input');
@@ -307,21 +311,21 @@ export function MultiplePhotosCompact({
           <p className={`text-xs ${PHOTO_TEXT_COLORS.LIGHT_MUTED}`}>
             Προσθήκη {availableSlots} ακόμη
           </p>
-        </div>
+        </aside>
       )}
 
       {/* 🆕 ENTERPRISE: Profile Photo Selector για compact mode */}
       {showProfileSelector && availableSlots < maxPhotos && (
-        <div className="border-t pt-4 mt-4">
+        <footer className="border-t pt-4 mt-4" role="contentinfo" aria-label="Επιλογή Φωτογραφίας Προφίλ">
           <h4 className="font-medium text-sm mb-3 flex items-center gap-2">
             <Star className="h-4 w-4 text-yellow-500" />
             Επιλογή Φωτογραφίας Προφίλ
           </h4>
-          <div className={PHOTO_LAYOUTS.INDIVIDUAL_GRID.container}>
+          <nav className={PHOTO_LAYOUTS.INDIVIDUAL_GRID.container} role="group" aria-label="Επιλογές Φωτογραφίες Προφίλ">
             {normalizedPhotos.map((photo, index) => (
-              <div key={`profile-${index}`} className="relative">
+              <article key={`profile-${index}`} className="relative" role="button" aria-label={`Επιλογή φωτογραφίας ${index + 1} ως προφίλ`}>
                 {photo.preview || photo.uploadUrl ? (
-                  <div className="relative">
+                  <figure className="relative" role="img" aria-label={`Φωτογραφία ${index + 1}`}>
                     <img
                       src={photo.preview || photo.uploadUrl}
                       alt={`Φωτογραφία ${index + 1}`}
@@ -340,18 +344,18 @@ export function MultiplePhotosCompact({
                     >
                       <Star className={`h-3 w-3 ${selectedProfilePhotoIndex === index ? 'fill-current' : ''}`} />
                     </Button>
-                  </div>
+                  </figure>
                 ) : (
-                  <div className="w-full h-20 bg-gray-100 rounded border flex items-center justify-center">
+                  <aside className="w-full h-20 bg-gray-100 rounded border flex items-center justify-center" role="status" aria-label="Κενό σλοτ">
                     <span className={`text-xs ${PHOTO_TEXT_COLORS.MUTED}`}>Κενό {index + 1}</span>
-                  </div>
+                  </aside>
                 )}
-              </div>
+              </article>
             ))}
-          </div>
-        </div>
+          </nav>
+        </footer>
       )}
-    </div>
+    </section>
   );
 }
 

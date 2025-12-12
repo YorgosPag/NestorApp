@@ -11,11 +11,11 @@ export function RecentActivities() {
         { icon: MessageSquare, text: "Σημείωση για Μ. Ιωάννου", time: "1 ώρα πριν" },
     ];
     return (
-        <div className="bg-white dark:bg-card rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold mb-4">Πρόσφατη Δραστηριότητα</h2>
-            <div className="space-y-4">
+        <section className="bg-white dark:bg-card rounded-lg shadow p-6" aria-labelledby="recent-activities-title">
+            <h2 id="recent-activities-title" className="text-lg font-semibold mb-4">Πρόσφατη Δραστηριότητα</h2>
+            <ul className="space-y-4" role="list">
                 {activities.map((activity, idx) => (
-                    <div key={idx} className="flex items-center gap-3">
+                    <li key={idx} className="flex items-center gap-3">
                         <div className="bg-gray-100 p-2 rounded-lg">
                             <activity.icon className="w-5 h-5 text-gray-600" />
                         </div>
@@ -23,9 +23,9 @@ export function RecentActivities() {
                             <p className="text-sm font-medium">{activity.text}</p>
                             <p className="text-xs text-gray-500">{activity.time}</p>
                         </div>
-                    </div>
+                    </li>
                 ))}
-            </div>
-        </div>
+            </ul>
+        </section>
     );
 }

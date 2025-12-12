@@ -186,7 +186,7 @@ export function ContactListItem({
     return (
         <TooltipProvider>
             {/* 📱 MOBILE COMPACT LAYOUT - Responsive Design */}
-            <div
+            <article
                 className={cn(
                     // Base layout
                     "relative rounded-lg border cursor-pointer transition-all duration-200 hover:shadow-md group",
@@ -199,6 +199,9 @@ export function ContactListItem({
                     : `border-border hover:border-blue-300 ${cardBackgrounds.default}`
                 )}
                 onClick={onSelect}
+                role="button"
+                tabIndex={0}
+                aria-label={`Επιλογή επαφής: ${displayName}`}
             >
                 <Tooltip>
                     <TooltipTrigger asChild>
@@ -372,7 +375,7 @@ export function ContactListItem({
                 {isSelected && (
                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
                 )}
-            </div>
+            </article>
 
             {/* ✅ PhotoPreviewModal τώρα global - δεν χρειάζεται εδώ */}
         </TooltipProvider>

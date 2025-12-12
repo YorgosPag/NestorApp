@@ -41,13 +41,13 @@ export const MessagePreview: React.FC<MessagePreviewProps> = ({
   if (!show || !message.trim()) return null;
 
   return (
-    <div className="space-y-2">
+    <section className="space-y-2" role="region" aria-label="Προεπισκόπηση Μηνύματος">
       {/* Preview Header */}
-      <div className={designSystem.cn(
+      <header className={designSystem.cn(
         'flex items-center gap-2',
         designSystem.getTypographyClass('xs', 'medium'),
         'text-blue-800 dark:text-blue-300'
-      )}>
+      )} role="banner">
         <Eye className="w-4 h-4" />
         Προεπισκόπηση μηνύματος
         {templateName && (
@@ -55,18 +55,18 @@ export const MessagePreview: React.FC<MessagePreviewProps> = ({
             • {templateName} template
           </span>
         )}
-      </div>
+      </header>
 
       {/* Preview Content */}
-      <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-        <div className={designSystem.cn(
+      <main className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800" role="main">
+        <blockquote className={designSystem.cn(
           designSystem.getTypographyClass('sm'),
           'text-blue-700 dark:text-blue-200 italic leading-relaxed'
         )}>
           "{message}"
-        </div>
-      </div>
-    </div>
+        </blockquote>
+      </main>
+    </section>
   );
 };
 
@@ -92,16 +92,16 @@ export const CompactMessagePreview: React.FC<MessagePreviewProps & {
     : message;
 
   return (
-    <div className="p-2 bg-gray-50 dark:bg-gray-800 rounded border text-xs">
-      <div className="flex items-center gap-1 text-muted-foreground mb-1">
+    <aside className="p-2 bg-gray-50 dark:bg-gray-800 rounded border text-xs" role="region" aria-label="Compact Message Preview">
+      <header className="flex items-center gap-1 text-muted-foreground mb-1" role="banner">
         <MessageCircle className="w-3 h-3" />
         <span>Preview</span>
         {templateName && <span>• {templateName}</span>}
-      </div>
-      <div className="text-gray-700 dark:text-gray-300 italic">
+      </header>
+      <blockquote className="text-gray-700 dark:text-gray-300 italic">
         "{truncatedMessage}"
-      </div>
-    </div>
+      </blockquote>
+    </aside>
   );
 };
 

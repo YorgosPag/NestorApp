@@ -16,7 +16,7 @@ export function FilesCard() {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <nav className="flex items-center justify-between" role="toolbar" aria-label="File management tools">
           <CardTitle className="flex items-center gap-2">
             <FileText className="w-5 h-5" />
             Αρχεία Έργου
@@ -34,11 +34,13 @@ export function FilesCard() {
               Νέα Φωτογραφία
             </Button>
           </div>
-        </div>
+        </nav>
       </CardHeader>
       <CardContent>
-        <div 
+        <section
           className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary transition-colors cursor-pointer bg-muted/20 hover:bg-muted/50"
+          role="region"
+          aria-label="File drop zone"
           onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('border-primary', 'bg-accent/20'); }}
           onDragLeave={(e) => { e.currentTarget.classList.remove('border-primary', 'bg-accent/20'); }}
           onDrop={(e) => {
@@ -60,12 +62,12 @@ export function FilesCard() {
               PNG, JPG, PDF, DOC, XLS μέχρι 10MB
             </p>
           </div>
-        </div>
+        </section>
 
-        <div className="mt-6 space-y-3">
-          <h4 className="text-sm font-medium text-foreground">Υπάρχοντα Αρχεία</h4>
-          
-          <div className="flex items-center justify-between p-3 bg-card rounded-lg border hover:bg-muted/50">
+        <section className="mt-6 space-y-3" role="region" aria-labelledby="existing-files-heading">
+          <h4 id="existing-files-heading" className="text-sm font-medium text-foreground">Υπάρχοντα Αρχεία</h4>
+
+          <article className="flex items-center justify-between p-3 bg-card rounded-lg border hover:bg-muted/50" aria-label="File: Συγγραφή Υποχρεώσεων.pdf">
             <div className="flex items-center space-x-3">
               <div className="flex-shrink-0 h-10 w-10 bg-red-100 dark:bg-red-950/20 rounded-lg flex items-center justify-center">
                 <FileText className="w-5 h-5 text-red-600" />
@@ -80,9 +82,9 @@ export function FilesCard() {
               <Button variant="ghost" size="sm"><Download className="w-4 h-4 mr-1" /> Λήψη</Button>
               <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50"><Trash2 className="w-4 h-4" /></Button>
             </div>
-          </div>
+          </article>
 
-          <div className="flex items-center justify-between p-3 bg-card rounded-lg border hover:bg-muted/50">
+          <article className="flex items-center justify-between p-3 bg-card rounded-lg border hover:bg-muted/50" aria-label="File: Πρόοδος Κατασκευής Φεβ 2025.jpg">
             <div className="flex items-center space-x-3">
               <div className="flex-shrink-0 h-10 w-10 bg-green-100 dark:bg-green-950/20 rounded-lg flex items-center justify-center">
                  <FileImage className="w-5 h-5 text-green-600" />
@@ -97,10 +99,10 @@ export function FilesCard() {
                <Button variant="ghost" size="sm"><Download className="w-4 h-4 mr-1" /> Λήψη</Button>
                <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50"><Trash2 className="w-4 h-4" /></Button>
             </div>
-          </div>
-        </div>
+          </article>
+        </section>
 
-        <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800" style={{display: 'none'}} id="upload-progress">
+        <aside className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800" style={{display: 'none'}} id="upload-progress" role="status" aria-label="Upload progress">
           <div className="flex items-center space-x-3">
             <div className="flex-shrink-0"><div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div></div>
             <div className="flex-1">
@@ -109,7 +111,7 @@ export function FilesCard() {
               <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">2 από 5 αρχεία ολοκληρώθηκαν</p>
             </div>
           </div>
-        </div>
+        </aside>
       </CardContent>
     </Card>
   );

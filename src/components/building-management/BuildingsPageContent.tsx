@@ -146,14 +146,14 @@ export function BuildingsPageContent() {
   if (buildingsLoading) {
     return (
       <TooltipProvider>
-        <div className="h-full flex flex-col bg-background">
-          <div className="flex-1 flex items-center justify-center">
+        <main className="h-full flex flex-col bg-background" role="main" aria-label="Φόρτωση Κτιρίων">
+          <section className="flex-1 flex items-center justify-center" role="status" aria-live="polite">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
               <p>Φόρτωση κτιρίων από Firestore...</p>
             </div>
-          </div>
-        </div>
+          </section>
+        </main>
       </TooltipProvider>
     );
   }
@@ -162,21 +162,21 @@ export function BuildingsPageContent() {
   if (buildingsError) {
     return (
       <TooltipProvider>
-        <div className="h-full flex flex-col bg-background">
-          <div className="flex-1 flex items-center justify-center">
+        <main className="h-full flex flex-col bg-background" role="main" aria-label="Σφάλμα Κτιρίων">
+          <section className="flex-1 flex items-center justify-center" role="alert" aria-label="Σφάλμα Φόρτωσης">
             <div className="text-center text-red-500">
               <p className="mb-4">❌ Σφάλμα φόρτωσης κτιρίων:</p>
               <p className="text-sm">{buildingsError}</p>
             </div>
-          </div>
-        </div>
+          </section>
+        </main>
       </TooltipProvider>
     );
   }
 
   return (
     <TooltipProvider>
-      <div className="h-full flex flex-col bg-background">
+      <main className="h-full flex flex-col bg-background" role="main" aria-label="Διαχείριση Κτιρίων">
         <BuildingsHeader
           viewMode={viewMode}
           setViewMode={setViewMode}
@@ -188,51 +188,54 @@ export function BuildingsPageContent() {
           setShowFilters={setShowFilters}
         />
 
-        {showDashboard && <UnifiedDashboard stats={dashboardStats} columns={6} onCardClick={handleCardClick} />}
+        {showDashboard && (
+          <section role="region" aria-label="Στατιστικά Κτιρίων">
+            <UnifiedDashboard stats={dashboardStats} columns={6} onCardClick={handleCardClick} />
+          </section>
+        )}
 
-        {/* Advanced Filters Panel */}
-        <div className="hidden md:block">
-          {/* Desktop: Always visible */}
+        {/* Advanced Filters Panel - Desktop */}
+        <aside className="hidden md:block" role="complementary" aria-label="Φίλτρα Κτιρίων">
           <AdvancedFiltersPanel
             config={buildingFiltersConfig}
             filters={filters}
             onFiltersChange={setFilters}
           />
-        </div>
+        </aside>
 
-        {/* Mobile: Show only when showFilters is true */}
+        {/* Advanced Filters Panel - Mobile (conditional) */}
         {showFilters && (
-          <div className="md:hidden">
+          <aside className="md:hidden" role="complementary" aria-label="Φίλτρα Κτιρίων Mobile">
             <AdvancedFiltersPanel
               config={buildingFiltersConfig}
               filters={filters}
               onFiltersChange={setFilters}
               defaultOpen={true}
             />
-          </div>
+          </aside>
         )}
 
         <ListContainer>
           {viewMode === 'list' ? (
             <>
               {/* 🖥️ DESKTOP: Standard split layout */}
-              <div className="hidden md:flex flex-1 gap-4 min-h-0">
+              <section className="hidden md:flex flex-1 gap-4 min-h-0" role="region" aria-label="Προβολή Κτιρίων Desktop">
                 <BuildingsList
                   buildings={finalFilteredBuildings}
                   selectedBuilding={selectedBuilding!}
                   onSelectBuilding={setSelectedBuilding}
                 />
                 <BuildingDetails building={selectedBuilding!} />
-              </div>
+              </section>
 
               {/* 📱 MOBILE: Show only BuildingsList when no building is selected */}
-              <div className={`md:hidden w-full ${selectedBuilding ? 'hidden' : 'block'}`}>
+              <section className={`md:hidden w-full ${selectedBuilding ? 'hidden' : 'block'}`} role="region" aria-label="Λίστα Κτιρίων Mobile">
                 <BuildingsList
                   buildings={finalFilteredBuildings}
                   selectedBuilding={selectedBuilding!}
                   onSelectBuilding={setSelectedBuilding}
                 />
-              </div>
+              </section>
 
               {/* 📱 MOBILE: Slide-in BuildingDetails when building is selected */}
               <MobileDetailsSlideIn
@@ -270,7 +273,7 @@ export function BuildingsPageContent() {
             />
           )}
         </ListContainer>
-      </div>
+      </main>
     </TooltipProvider>
   );
 }

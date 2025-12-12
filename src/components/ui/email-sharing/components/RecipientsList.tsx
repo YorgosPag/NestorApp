@@ -150,8 +150,8 @@ export const RecipientsList: React.FC<RecipientsListProps> = ({
     const canRemove = recipients.length > 1;
 
     return (
-      <div key={index} className="flex gap-2 items-start">
-        <div className="flex-1">
+      <article key={index} className="flex gap-2 items-start" role="group" aria-label={`Email Παραλήπτης ${index + 1}`}>
+        <section className="flex-1">
           <div className="relative">
             <Input
               type="email"
@@ -171,29 +171,30 @@ export const RecipientsList: React.FC<RecipientsListProps> = ({
 
             {/* Validation Icon */}
             {showValidation && email.trim() && (
-              <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+              <aside className="absolute right-2 top-1/2 transform -translate-y-1/2" role="status" aria-label="Κατάσταση Επικύρωσης">
                 {validation.isValid ? (
                   <CheckCircle className="w-4 h-4 text-green-500" />
                 ) : (
                   <AlertCircle className="w-4 h-4 text-red-500" />
                 )}
-              </div>
+              </aside>
             )}
           </div>
 
           {/* Validation Message */}
           {validation.showError && (
-            <div
+            <p
               id={`email-error-${index}`}
               className={designSystem.cn(
                 designSystem.getTypographyClass('xs'),
                 'text-red-600 dark:text-red-400 mt-1'
               )}
+              role="alert"
             >
               {validation.message}
-            </div>
+            </p>
           )}
-        </div>
+        </section>
 
         {/* Remove Button */}
         {canRemove && (
@@ -212,7 +213,7 @@ export const RecipientsList: React.FC<RecipientsListProps> = ({
             <Trash2 className="w-4 h-4" />
           </Button>
         )}
-      </div>
+      </article>
     );
   };
 
@@ -227,8 +228,8 @@ export const RecipientsList: React.FC<RecipientsListProps> = ({
     ).length;
 
     return (
-      <div className="flex items-center justify-between text-sm">
-        <div className={designSystem.cn(
+      <footer className="flex items-center justify-between text-sm" role="status">
+        <span className={designSystem.cn(
           designSystem.getTypographyClass('xs'),
           'text-muted-foreground'
         )}>
@@ -238,15 +239,15 @@ export const RecipientsList: React.FC<RecipientsListProps> = ({
               ({invalidCount} μη έγκυρα)
             </span>
           )}
-        </div>
+        </span>
 
-        <div className={designSystem.cn(
+        <span className={designSystem.cn(
           designSystem.getTypographyClass('xs'),
           'text-muted-foreground'
         )}>
           {maxRecipients - totalRecipients} διαθέσιμα
-        </div>
-      </div>
+        </span>
+      </footer>
     );
   };
 
@@ -255,9 +256,9 @@ export const RecipientsList: React.FC<RecipientsListProps> = ({
   // ============================================================================
 
   return (
-    <div className="space-y-3">
+    <section className="space-y-3" role="region" aria-label="Διαχείριση Παραληπτών Email">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <header className="flex items-center justify-between" role="banner">
         <Label className={designSystem.cn(
           "flex items-center gap-2",
           designSystem.getTypographyClass('sm', 'medium'),
@@ -287,38 +288,38 @@ export const RecipientsList: React.FC<RecipientsListProps> = ({
             Προσθήκη
           </Button>
         )}
-      </div>
+      </header>
 
       {/* Recipients Inputs */}
-      <div className="space-y-3">
+      <main className="space-y-3" role="main">
         {recipients.map(renderEmailInput)}
-      </div>
+      </main>
 
       {/* Summary */}
       {renderSummary()}
 
       {/* Custom Validation Error */}
       {customValidationError && showValidation && (
-        <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200">
-          <div className={designSystem.cn(
+        <aside className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200" role="alert">
+          <p className={designSystem.cn(
             designSystem.getTypographyClass('sm', 'medium'),
             'text-red-800 dark:text-red-300 flex items-center gap-2'
           )}>
             <AlertCircle className="w-4 h-4" />
             {customValidationError}
-          </div>
-        </div>
+          </p>
+        </aside>
       )}
 
       {/* Helper Text */}
-      <div className={designSystem.cn(
+      <aside className={designSystem.cn(
         designSystem.getTypographyClass('xs'),
         'text-muted-foreground',
         disabled && 'text-gray-400'
-      )}>
+      )} role="note">
         Πατήστε Enter για προσθήκη νέου email • Backspace σε άδειο πεδίο για διαγραφή
-      </div>
-    </div>
+      </aside>
+    </section>
   );
 };
 
@@ -343,7 +344,7 @@ export const CompactRecipientsList: React.FC<RecipientsListProps & {
   const validCount = recipients.filter(email => email.trim() && isValidEmail(email)).length;
 
   return (
-    <div className="space-y-2">
+    <section className="space-y-2" role="region" aria-label="Compact Recipients Management">
       <Label className={designSystem.cn(
         "flex items-center gap-1.5",
         designSystem.getTypographyClass('xs', 'medium')
@@ -352,9 +353,9 @@ export const CompactRecipientsList: React.FC<RecipientsListProps & {
         Παραλήπτες ({validCount})
       </Label>
 
-      <div className="space-y-1.5">
+      <nav className="space-y-1.5" role="group" aria-label="Compact Email Inputs">
         {recipients.map((email, index) => (
-          <div key={index} className="flex gap-1.5">
+          <article key={index} className="flex gap-1.5" role="group" aria-label={`Compact Email ${index + 1}`}>
             <Input
               type="email"
               placeholder={`Email ${index + 1}`}
@@ -379,7 +380,7 @@ export const CompactRecipientsList: React.FC<RecipientsListProps & {
                 <Trash2 className="w-3 h-3" />
               </Button>
             )}
-          </div>
+          </article>
         ))}
 
         {recipients.length < maxRecipients && (
@@ -395,17 +396,17 @@ export const CompactRecipientsList: React.FC<RecipientsListProps & {
             Προσθήκη Email
           </Button>
         )}
-      </div>
+      </nav>
 
       {showSummary && (
-        <div className={designSystem.cn(
+        <aside className={designSystem.cn(
           designSystem.getTypographyClass('xs'),
           'text-muted-foreground'
-        )}>
+        )} role="status">
           {validCount} έγκυρα
-        </div>
+        </aside>
       )}
-    </div>
+    </section>
   );
 };
 

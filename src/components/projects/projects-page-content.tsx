@@ -123,35 +123,35 @@ export function ProjectsPageContent() {
   // Εμφάνιση loading state
   if (loading) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-center">
+      <main className="h-full flex items-center justify-center" role="main" aria-label="Φόρτωση Έργων">
+        <section className="text-center" role="status" aria-live="polite">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
           <p>Φόρτωση έργων από βάση δεδομένων...</p>
-        </div>
-      </div>
+        </section>
+      </main>
     );
   }
 
   // Εμφάνιση error state
   if (error) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-center text-red-600">
+      <main className="h-full flex items-center justify-center" role="main" aria-label="Σφάλμα Έργων">
+        <section className="text-center text-red-600" role="alert" aria-label="Σφάλμα Φόρτωσης">
           <p>Σφάλμα φόρτωσης έργων: {error}</p>
-          <button 
-            onClick={() => window.location.reload()} 
+          <button
+            onClick={() => window.location.reload()}
             className="mt-2 px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
           >
             Δοκιμή ξανά
           </button>
-        </div>
-      </div>
+        </section>
+      </main>
     );
   }
   
   return (
     <TooltipProvider>
-      <div className="h-full flex flex-col bg-background">
+      <main className="h-full flex flex-col bg-background" role="main" aria-label="Διαχείριση Έργων">
         <ProjectsHeader
             viewMode={viewMode}
             setViewMode={setViewMode}
@@ -163,28 +163,32 @@ export function ProjectsPageContent() {
             showFilters={showFilters}
             setShowFilters={setShowFilters}
         />
-        
-        {showDashboard && <UnifiedDashboard stats={dashboardStats} columns={5} onCardClick={handleCardClick} />}
+
+        {showDashboard && (
+          <section role="region" aria-label="Στατιστικά Έργων">
+            <UnifiedDashboard stats={dashboardStats} columns={5} onCardClick={handleCardClick} />
+          </section>
+        )}
 
         {/* Advanced Filters Panel - Desktop */}
-        <div className="hidden md:block">
+        <aside className="hidden md:block" role="complementary" aria-label="Φίλτρα Έργων">
           <AdvancedFiltersPanel
             config={projectFiltersConfig}
             filters={filters}
             onFiltersChange={setFilters}
           />
-        </div>
+        </aside>
 
         {/* Advanced Filters Panel - Mobile (conditional) */}
         {showFilters && (
-          <div className="md:hidden">
+          <aside className="md:hidden" role="complementary" aria-label="Φίλτρα Έργων Mobile">
             <AdvancedFiltersPanel
               config={projectFiltersConfig}
               filters={filters}
               onFiltersChange={setFilters}
               defaultOpen={true}
             />
-          </div>
+          </aside>
         )}
 
 
@@ -196,7 +200,7 @@ export function ProjectsPageContent() {
             companies={companies}
           />
         </ListContainer>
-      </div>
+      </main>
     </TooltipProvider>
   );
 }

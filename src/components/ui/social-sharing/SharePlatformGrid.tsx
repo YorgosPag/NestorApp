@@ -189,32 +189,34 @@ export const SharePlatformGrid: React.FC<SharePlatformGridProps> = ({
           'focus:ring-offset-2'
         )}
       >
-        <div className="flex flex-col items-center space-y-2">
+        <article className="flex flex-col items-center space-y-2" role="button" aria-label={`Κοινοποίηση σε ${platform.name}`}>
           {/* Platform Icon */}
-          <IconComponent
-            className={designSystem.cn(
-              generatePlatformIconStyles(finalGridConfig.iconSize),
-              // Add white text color για contrast
-              'text-white'
-            )}
-          />
+          <figure role="img" aria-label={`Εικονίδιο ${platform.name}`}>
+            <IconComponent
+              className={designSystem.cn(
+                generatePlatformIconStyles(finalGridConfig.iconSize),
+                // Add white text color για contrast
+                'text-white'
+              )}
+            />
+          </figure>
 
           {/* Platform Label */}
           {finalGridConfig.showLabels && (
-            <span className={designSystem.cn(
+            <header className={designSystem.cn(
               generatePlatformLabelStyles('xs'),
               'text-white'
             )}>
               {platform.name}
-            </span>
+            </header>
           )}
-        </div>
+        </article>
 
         {/* Gradient Overlay για extra depth */}
-        <div className={designSystem.cn(
+        <aside className={designSystem.cn(
           "absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity duration-200",
           "bg-gradient-to-br from-white via-transparent to-transparent"
-        )} />
+        )} role="presentation" aria-hidden="true" />
       </Button>
     );
   };
@@ -239,54 +241,54 @@ export const SharePlatformGrid: React.FC<SharePlatformGridProps> = ({
   // Early return αν δεν υπάρχουν platforms
   if (filteredPlatforms.length === 0) {
     return (
-      <div className={designSystem.cn(
+      <section className={designSystem.cn(
         "p-6 text-center",
         designSystem.colorScheme.responsive.muted.split(' ')[0], // border-muted
         "rounded-lg"
-      )}>
+      )} role="status" aria-label="Δεν υπάρχουν Πλατφόρμες">
         <p className={designSystem.cn(
           designSystem.getTypographyClass('sm'),
           designSystem.colorScheme.responsive.muted.split(' ')[1] // text-muted-foreground
         )}>
           Δεν υπάρχουν διαθέσιμες πλατφόρμες κοινοποίησης
         </p>
-      </div>
+      </section>
     );
   }
 
   return (
-    <div
+    <section
       className={designSystem.cn("space-y-4", className)}
       {...getAccessibilityProps()}
     >
       {/* Platform Grid */}
-      <div className={getGridClasses()}>
+      <nav className={getGridClasses()} role="group" aria-label="Πλατφόρμες Κοινωνικής Κοινοποίησης">
         {filteredPlatforms.map(renderPlatformButton)}
-      </div>
+      </nav>
 
       {/* Debug Info (only in development) */}
       {process.env.NODE_ENV === 'development' && finalAnalyticsConfig.trackClicks && (
-        <div className={designSystem.cn(
+        <aside className={designSystem.cn(
           designSystem.getTypographyClass('xs'),
           designSystem.colorScheme.responsive.muted.split(' ')[1], // text-muted-foreground
           "text-center"
-        )}>
+        )} role="note" aria-label="Πληροφορίες Ανάπτυξης">
           🔍 Debug: {filteredPlatforms.length} platforms, {finalGridConfig.columns} columns
-        </div>
+        </aside>
       )}
 
       {/* Loading Overlay */}
       {loading && (
-        <div className="absolute inset-0 bg-white/50 dark:bg-gray-900/50 flex items-center justify-center rounded-lg">
-          <div className={designSystem.cn(
+        <aside className="absolute inset-0 bg-white/50 dark:bg-gray-900/50 flex items-center justify-center rounded-lg" role="status" aria-live="polite" aria-label="Φόρτωση Πλατφορμών">
+          <p className={designSystem.cn(
             designSystem.getTypographyClass('sm', 'medium'),
             designSystem.colorScheme.responsive.muted.split(' ')[1] // text-muted-foreground
           )}>
             Φόρτωση...
-          </div>
-        </div>
+          </p>
+        </aside>
       )}
-    </div>
+    </section>
   );
 };
 

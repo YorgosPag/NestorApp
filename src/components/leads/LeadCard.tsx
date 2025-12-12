@@ -21,7 +21,7 @@ export function LeadCard({
   getStatusColor: (status: string) => string;
 }) {
   return (
-    <div className="bg-white border rounded-lg p-4 hover:shadow-md transition-shadow">
+    <article className="bg-white border rounded-lg p-4 hover:shadow-md transition-shadow" itemScope itemType="https://schema.org/Person">
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-2">
@@ -30,7 +30,7 @@ export function LeadCard({
               onClick={() => onView(lead.id!)}
               className="font-medium text-gray-900 hover:text-blue-600 hover:underline flex items-center gap-1 group"
             >
-              {lead.fullName}
+              <span itemProp="name">{lead.fullName}</span>
               <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
             </button>
             <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(lead.stage)}`}>
@@ -38,24 +38,24 @@ export function LeadCard({
             </span>
           </div>
 
-          <div className="space-y-1 text-sm text-gray-600">
+          <address className="space-y-1 text-sm text-gray-600 not-italic">
             {lead.email && (
               <div className="flex items-center gap-2">
                 <Mail className="w-4 h-4" />
-                <span>{lead.email}</span>
+                <span itemProp="email">{lead.email}</span>
               </div>
             )}
             {lead.phone && (
               <div className="flex items-center gap-2">
                 <Phone className="w-4 h-4" />
-                <span>{lead.phone}</span>
+                <span itemProp="telephone">{lead.phone}</span>
               </div>
             )}
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4" />
-              <span>{formatDate(lead.createdAt)}</span>
+              <span>Δημιουργήθηκε: {formatDate(lead.createdAt)}</span>
             </div>
-          </div>
+          </address>
 
           {lead.notes && (
             <div className="mt-2 p-2 bg-gray-50 rounded text-sm text-gray-700">
@@ -64,7 +64,7 @@ export function LeadCard({
           )}
         </div>
 
-        <div className="flex flex-col gap-2 ml-4">
+        <nav className="flex flex-col gap-2 ml-4" aria-label="Ενέργειες για lead">
           <div className="flex gap-2">
             <button
               onClick={() => onEmail(lead)}
@@ -104,8 +104,8 @@ export function LeadCard({
               Διαγραφή
             </button>
           </div>
-        </div>
+        </nav>
       </div>
-    </div>
+    </article>
   );
 }

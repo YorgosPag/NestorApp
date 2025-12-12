@@ -39,27 +39,27 @@ export function FloorPlanPreview({ result, file, className = '' }: FloorPlanPrev
   };
 
   return (
-    <div className={`flex flex-col gap-4 ${className}`}>
+    <article className={`flex flex-col gap-4 ${className}`} aria-labelledby="floor-plan-preview-title">
       {/* Thumbnail Preview */}
       {result.thumbnail && (
-        <div className="bg-gray-50 rounded-lg p-4 border-2 border-gray-200">
-          <h3 className="text-sm font-semibold text-gray-700 mb-3">
+        <section className="bg-gray-50 rounded-lg p-4 border-2 border-gray-200" aria-labelledby="thumbnail-title">
+          <h3 id="thumbnail-title" className="text-sm font-semibold text-gray-700 mb-3">
             {t('floorPlan.preview.thumbnailTitle')}
           </h3>
-          <div className="flex justify-center items-center bg-white rounded border border-gray-300">
+          <figure className="flex justify-center items-center bg-white rounded border border-gray-300">
             <img
               src={result.thumbnail}
               alt="Floor plan preview"
               className="max-w-full h-auto rounded"
               style={{ maxHeight: '400px' }}
             />
-          </div>
-        </div>
+          </figure>
+        </section>
       )}
 
       {/* File Information */}
-      <div className="bg-blue-50 rounded-lg p-4 border-2 border-blue-200">
-        <h3 className="text-sm font-semibold text-blue-700 mb-3">
+      <section className="bg-blue-50 rounded-lg p-4 border-2 border-blue-200" aria-labelledby="file-info-title">
+        <h3 id="file-info-title" className="text-sm font-semibold text-blue-700 mb-3">
           {t('floorPlan.preview.fileInfoTitle')}
         </h3>
         <div className="grid grid-cols-2 gap-2 text-sm">

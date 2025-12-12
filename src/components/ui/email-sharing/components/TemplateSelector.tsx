@@ -119,16 +119,16 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
         aria-label={`Select ${template.name} template: ${template.description}`}
       >
         {/* Template Icon */}
-        <div className={designSystem.cn(
+        <figure className={designSystem.cn(
           designSystem.getTypographyClass('lg'),
           'mb-2',
           isSelected && 'text-blue-600 dark:text-blue-400'
-        )}>
+        )} role="img" aria-label={`Εικονίδιο ${template.name}`}>
           {template.icon}
-        </div>
+        </figure>
 
         {/* Template Name */}
-        <div className={designSystem.cn(
+        <header className={designSystem.cn(
           designSystem.getTypographyClass('xs', 'medium'),
           'mb-1',
           isSelected
@@ -136,22 +136,22 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
             : 'text-gray-900 dark:text-gray-100'
         )}>
           {template.name}
-        </div>
+        </header>
 
         {/* Template Description */}
-        <div className={designSystem.cn(
+        <p className={designSystem.cn(
           designSystem.getTypographyClass('xs'),
           'text-muted-foreground',
           isSelected && 'text-blue-700 dark:text-blue-300'
         )}>
           {template.description}
-        </div>
+        </p>
 
         {/* Selected Indicator */}
         {isSelected && (
-          <div className="absolute top-2 right-2 w-3 h-3 bg-blue-500 rounded-full flex items-center justify-center">
+          <aside className="absolute top-2 right-2 w-3 h-3 bg-blue-500 rounded-full flex items-center justify-center" role="status" aria-label="Επιλεγμένο">
             <div className="w-1.5 h-1.5 bg-white rounded-full" />
-          </div>
+          </aside>
         )}
       </button>
     );
@@ -162,7 +162,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
   // ============================================================================
 
   return (
-    <div className="space-y-3">
+    <section className="space-y-3" role="region" aria-label="Επιλογή Template Email">
       {/* Header */}
       <Label className={designSystem.cn(
         "flex items-center gap-2",
@@ -177,19 +177,19 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
       </Label>
 
       {/* Templates Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <nav className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" role="group" aria-label="Διαθέσιμα Templates">
         {availableTemplates.map(renderTemplateButton)}
-      </div>
+      </nav>
 
       {/* Helper Text */}
-      <div className={designSystem.cn(
+      <aside className={designSystem.cn(
         designSystem.getTypographyClass('xs'),
         'text-muted-foreground text-center',
         disabled && 'text-gray-400'
-      )}>
+      )} role="note">
         Επιλέξτε το κατάλληλο template για την αποστολή
-      </div>
-    </div>
+      </aside>
+    </section>
   );
 };
 
@@ -214,7 +214,7 @@ export const CompactTemplateSelector: React.FC<TemplateSelectorProps & {
   if (!show) return null;
 
   return (
-    <div className="space-y-2">
+    <section className="space-y-2" role="region" aria-label="Compact Template Selector">
       <Label className={designSystem.cn(
         "flex items-center gap-2",
         designSystem.getTypographyClass('xs', 'medium')
@@ -223,10 +223,10 @@ export const CompactTemplateSelector: React.FC<TemplateSelectorProps & {
         Template
       </Label>
 
-      <div className={designSystem.cn(
+      <nav className={designSystem.cn(
         'flex gap-2',
         orientation === 'vertical' ? 'flex-col' : 'flex-row flex-wrap'
-      )}>
+      )} role="group" aria-label="Compact Templates">
         {availableTemplates.map((template) => {
           const isSelected = selectedTemplate === template.id;
 
@@ -250,8 +250,8 @@ export const CompactTemplateSelector: React.FC<TemplateSelectorProps & {
             </button>
           );
         })}
-      </div>
-    </div>
+      </nav>
+    </section>
   );
 };
 

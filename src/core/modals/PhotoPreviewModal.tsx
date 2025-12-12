@@ -561,7 +561,7 @@ export function PhotoPreviewModal({
       >
         <DialogHeader className="flex flex-col space-y-3 pb-2">
           {/* Πρώτη σειρά: Τίτλος και Badge */}
-          <div className="flex items-center justify-between">
+          <header className="flex items-center justify-between" role="banner">
             <DialogTitle className="flex items-center gap-2 text-lg">
               <IconComponent className="w-5 h-5" />
               {title}
@@ -579,10 +579,10 @@ export function PhotoPreviewModal({
                 </Badge>
               );
             })()}
-          </div>
+          </header>
 
           {/* Δεύτερη σειρά: Κεντραρισμένα buttons με κοντά spacing */}
-          <div className="flex items-center justify-center gap-1">
+          <nav className="flex items-center justify-center gap-1" role="toolbar" aria-label="Εργαλεία Φωτογραφίας">
             {/* Gallery Navigation */}
             {isGalleryMode && totalPhotos > 1 && (
               <>
@@ -679,12 +679,12 @@ export function PhotoPreviewModal({
             >
               <X className="w-4 h-4" />
             </Button>
-          </div>
+          </nav>
         </DialogHeader>
 
         {/* Photo Content */}
-        <div className={`flex-1 flex items-center justify-center overflow-hidden ${PHOTO_COLORS.PHOTO_BACKGROUND} rounded-none`}>
-          <div className="relative w-full h-full flex items-center justify-center">
+        <main className={`flex-1 flex items-center justify-center overflow-hidden ${PHOTO_COLORS.PHOTO_BACKGROUND} rounded-none`} role="main" aria-label="Εμφάνιση Φωτογραφίας">
+          <figure className="relative w-full h-full flex items-center justify-center">
             <img
               src={currentPhoto}
               alt={title}
@@ -717,12 +717,12 @@ export function PhotoPreviewModal({
                 // TODO: Show error state
               }}
             />
-          </div>
-        </div>
+          </figure>
+        </main>
 
         {/* Footer Info - Contact Type και Zoom */}
-        <div className={`flex items-center justify-between text-sm text-muted-foreground pt-2 border-t ${isMobile ? 'pb-safe pb-8' : 'pb-2'}`}>
-          <div className="flex items-center">
+        <footer className={`flex items-center justify-between text-sm text-muted-foreground pt-2 border-t ${isMobile ? 'pb-safe pb-8' : 'pb-2'}`} role="contentinfo" aria-label="Πληροφορίες Φωτογραφίας">
+          <section className="flex items-center" role="region" aria-label="Τύπος Επαφής">
             {/* Μόνο η ετικέτα τύπου contact - όχι εικονίδιο και όνομα */}
             {contact?.type && (() => {
               const contactTypeBadge = createContactTypeBadge(contact.type);
@@ -735,11 +735,11 @@ export function PhotoPreviewModal({
                 </Badge>
               );
             })()}
-          </div>
-          <div className="text-xs">
+          </section>
+          <aside className="text-xs" role="status" aria-label="Πληροφορίες Εστίασης">
             Zoom: {Math.round(zoom * 100)}%
-          </div>
-        </div>
+          </aside>
+        </footer>
       </DialogContent>
     </Dialog>
   );

@@ -11,12 +11,12 @@ const DxfViewerApp = dynamic(
   () => import('@/subapps/dxf-viewer/DxfViewerApp').then(mod => ({ default: mod.DxfViewerApp })),
   {
     loading: () => (
-      <div className="w-full h-full flex items-center justify-center">
-        <div className="text-center">
+      <main className="w-full h-full flex items-center justify-center" role="main" aria-label="Φόρτωση DXF Viewer">
+        <section className="text-center" role="status" aria-live="polite">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Φόρτωση DXF Viewer...</p>
-        </div>
-      </div>
+        </section>
+      </main>
     ),
     ssr: false // Disable SSR to avoid localStorage issues
   }
@@ -27,20 +27,20 @@ function AdminGuard({ children }: { children: React.ReactNode }) {
 
   if (isLoading) {
     return (
-      <div className="w-full h-full flex items-center justify-center">
-        <div className="text-center">
+      <main className="w-full h-full flex items-center justify-center" role="main" aria-label="Έλεγχος Δικαιωμάτων">
+        <section className="text-center" role="status" aria-live="polite">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Έλεγχος δικαιωμάτων...</p>
-        </div>
-      </div>
+        </section>
+      </main>
     );
   }
 
   if (!isAdmin) {
     return (
-      <div className="w-full h-full flex items-center justify-center">
-        <div className="text-center max-w-md p-6">
-          <div className="text-red-500 text-6xl mb-4">🔒</div>
+      <main className="w-full h-full flex items-center justify-center" role="main" aria-label="Άρνηση Πρόσβασης">
+        <section className="text-center max-w-md p-6" role="alert" aria-label="Μη Εξουσιοδοτημένη Πρόσβαση">
+          <div className="text-red-500 text-6xl mb-4" role="img" aria-label="Κλειδωμένο">🔒</div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
             Πρόσβαση Μόνο για Διαχειριστές
           </h1>
@@ -50,8 +50,8 @@ function AdminGuard({ children }: { children: React.ReactNode }) {
           <p className="text-sm text-gray-500">
             Παρακαλώ συνδεθείτε με λογαριασμό διαχειριστή.
           </p>
-        </div>
-      </div>
+        </section>
+      </main>
     );
   }
 
@@ -65,12 +65,12 @@ export default function DxfViewerPage() {
       <UnifiedProviders enableLegacyMode={true}>
         <main className="w-full h-full" role="application" aria-label="DXF Viewer">
           <Suspense fallback={
-            <div className="w-full h-full flex items-center justify-center">
+            <section className="w-full h-full flex items-center justify-center" role="status" aria-live="polite">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
                 <p className="text-gray-600">Φόρτωση DXF Viewer...</p>
               </div>
-            </div>
+            </section>
           }>
             <DxfViewerApp className="w-full h-full" />
           </Suspense>

@@ -26,29 +26,29 @@ export function OverallProgressCard({ building, milestones }: OverallProgressCar
                     size="md"
                     showPercentage={false}
                 />
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <dl className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     <div className="text-center">
-                        <div className="text-2xl font-bold text-green-600">{milestones.filter(m => m.status === 'completed').length}</div>
-                        <div className="text-muted-foreground">Ολοκληρωμένα</div>
+                        <dd className="text-2xl font-bold text-green-600">{milestones.filter(m => m.status === 'completed').length}</dd>
+                        <dt className="text-muted-foreground">Ολοκληρωμένα</dt>
                     </div>
                     <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-600">{milestones.filter(m => m.status === 'in-progress').length}</div>
-                        <div className="text-muted-foreground">Σε εξέλιξη</div>
+                        <dd className="text-2xl font-bold text-blue-600">{milestones.filter(m => m.status === 'in-progress').length}</dd>
+                        <dt className="text-muted-foreground">Σε εξέλιξη</dt>
                     </div>
                     <div className="text-center">
-                        <div className="text-2xl font-bold text-gray-600">{milestones.filter(m => m.status === 'pending').length}</div>
-                        <div className="text-muted-foreground">Εκκρεμεί</div>
+                        <dd className="text-2xl font-bold text-gray-600">{milestones.filter(m => m.status === 'pending').length}</dd>
+                        <dt className="text-muted-foreground">Εκκρεμεί</dt>
                     </div>
                     <div className="text-center">
-                        <div className="text-2xl font-bold text-purple-600">
+                        <dd className="text-2xl font-bold text-purple-600">
                             {milestones.find(m => m.status === 'in-progress')?.date ?
                                 Math.ceil((new Date(milestones.find(m => m.status === 'in-progress')!.date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
                                 : 0
                             }
-                        </div>
-                        <div className="text-muted-foreground">Ημέρες απομένουν</div>
+                        </dd>
+                        <dt className="text-muted-foreground">Ημέρες απομένουν</dt>
                     </div>
-                </div>
+                </dl>
             </CardContent>
         </Card>
     );

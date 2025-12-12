@@ -17,13 +17,13 @@ export function CRMDashboardPageContent() {
   const periods = getSortedPeriods();
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-background">
+    <main className="min-h-screen bg-gray-50 dark:bg-background">
       {/* Header */}
-      <div className="bg-white dark:bg-card shadow-sm border-b">
+      <header className="bg-white dark:bg-card shadow-sm border-b">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-foreground">CRM Dashboard</h1>
-            <div className="flex items-center space-x-3">
+            <nav className="flex items-center space-x-3" aria-label="Dashboard controls">
               <TelegramNotifications />
               <GenericPeriodSelector
                 periods={periods}
@@ -35,21 +35,21 @@ export function CRMDashboardPageContent() {
                 <Plus className="w-4 h-4" />
                 Νέα Επαφή
               </button>
-            </div>
+            </nav>
           </div>
 
           {/* Tabs */}
-          <div className="mt-8">
+          <section className="mt-8" aria-label="Dashboard tabs">
             <GenericCRMDashboardTabsRenderer
               tabs={crmDashboardTabs}
               defaultTab="overview"
               selectedPeriod={selectedPeriod}
             />
-          </div>
+          </section>
         </div>
-      </div>
+      </header>
 
       {/* Content is now handled by GenericCRMDashboardTabsRenderer */}
-    </div>
+    </main>
   );
 }

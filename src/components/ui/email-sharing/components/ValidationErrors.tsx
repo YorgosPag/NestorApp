@@ -42,51 +42,51 @@ export const ValidationErrors: React.FC<ValidationErrorsProps> = ({
   if (!show || (!error && !backendError)) return null;
 
   return (
-    <div className="space-y-3">
+    <section className="space-y-3" role="alert" aria-live="polite" aria-label="Σφάλματα Επικύρωσης">
       {/* Validation Error */}
       {error && (
-        <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-          <div className={designSystem.cn(
+        <article className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800" role="alert" aria-label="Σφάλμα Επικύρωσης">
+          <header className={designSystem.cn(
             'flex items-start gap-3',
             designSystem.getTypographyClass('sm', 'medium'),
             'text-yellow-800 dark:text-yellow-300'
-          )}>
+          )} role="banner">
             <AlertTriangle className="w-5 h-5 mt-0.5 flex-shrink-0" />
-            <div>
-              <div className="font-medium mb-1">Σφάλμα Επικύρωσης</div>
-              <div className={designSystem.cn(
+            <main>
+              <h4 className="font-medium mb-1">Σφάλμα Επικύρωσης</h4>
+              <p className={designSystem.cn(
                 designSystem.getTypographyClass('sm'),
                 'text-yellow-700 dark:text-yellow-200'
               )}>
                 {error}
-              </div>
-            </div>
-          </div>
-        </div>
+              </p>
+            </main>
+          </header>
+        </article>
       )}
 
       {/* Backend Error */}
       {backendError && (
-        <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-          <div className={designSystem.cn(
+        <article className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800" role="alert" aria-label="Σφάλμα Συστήματος">
+          <header className={designSystem.cn(
             'flex items-start gap-3',
             designSystem.getTypographyClass('sm', 'medium'),
             'text-red-800 dark:text-red-300'
-          )}>
+          )} role="banner">
             <XCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
-            <div>
-              <div className="font-medium mb-1">Σφάλμα Συστήματος</div>
-              <div className={designSystem.cn(
+            <main>
+              <h4 className="font-medium mb-1">Σφάλμα Συστήματος</h4>
+              <p className={designSystem.cn(
                 designSystem.getTypographyClass('sm'),
                 'text-red-700 dark:text-red-200'
               )}>
                 {backendError}
-              </div>
-            </div>
-          </div>
-        </div>
+              </p>
+            </main>
+          </header>
+        </article>
       )}
-    </div>
+    </section>
   );
 };
 
@@ -111,20 +111,20 @@ export const CompactValidationErrors: React.FC<ValidationErrorsProps & {
 
   if (variant === 'inline') {
     return (
-      <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-xs">
+      <aside className="flex items-center gap-2 text-red-600 dark:text-red-400 text-xs" role="alert" aria-live="polite" aria-label="Ελλιπής Επικύρωση">
         <AlertCircle className="w-3 h-3 flex-shrink-0" />
         <span>{errorToShow}</span>
-      </div>
+      </aside>
     );
   }
 
   return (
-    <div className="p-2 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800">
-      <div className="flex items-center gap-2 text-red-700 dark:text-red-300 text-xs">
+    <aside className="p-2 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800" role="alert" aria-label="Συμπαγής Επικύρωση">
+      <p className="flex items-center gap-2 text-red-700 dark:text-red-300 text-xs">
         <AlertCircle className="w-3 h-3 flex-shrink-0" />
         <span>{errorToShow}</span>
-      </div>
-    </div>
+      </p>
+    </aside>
   );
 };
 
@@ -147,7 +147,7 @@ export const FieldValidationError: React.FC<{
   if (!show || !error) return null;
 
   return (
-    <div
+    <aside
       id={fieldId ? `${fieldId}-error` : undefined}
       className={designSystem.cn(
         'flex items-center gap-1.5 mt-1',
@@ -155,10 +155,11 @@ export const FieldValidationError: React.FC<{
         'text-red-600 dark:text-red-400'
       )}
       role="alert"
+      aria-label="Σφάλμα Πεδίου"
     >
       <AlertCircle className="w-3 h-3 flex-shrink-0" />
       <span>{error}</span>
-    </div>
+    </aside>
   );
 };
 
@@ -187,18 +188,18 @@ export const SuccessMessage: React.FC<{
   if (!isVisible || !message) return null;
 
   return (
-    <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-      <div className={designSystem.cn(
+    <aside className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800" role="status" aria-live="polite" aria-label="Μήνυμα Επιτυχίας">
+      <p className={designSystem.cn(
         'flex items-center gap-2',
         designSystem.getTypographyClass('sm', 'medium'),
         'text-green-800 dark:text-green-300'
       )}>
-        <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+        <figure className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0" role="img" aria-label="Εικονίδιο Επιτυχίας">
           <div className="w-2 h-2 bg-white rounded-full" />
-        </div>
+        </figure>
         {message}
-      </div>
-    </div>
+      </p>
+    </aside>
   );
 };
 

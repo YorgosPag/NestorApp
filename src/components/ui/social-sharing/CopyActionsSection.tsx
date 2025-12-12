@@ -297,15 +297,17 @@ export const CopyActionsSection: React.FC<CopyActionsProps> = ({
   // ============================================================================
 
   return (
-    <div
+    <section
       className={designSystem.cn("space-y-3", className)}
       aria-live={getAriaLive()}
+      role="region"
+      aria-label="Γρήγορες Ενέργειες Αντιγραφής"
     >
       {/* Section Header με Design System */}
-      <div className={designSystem.cn(
+      <header className={designSystem.cn(
         "pt-4 border-t",
         designSystem.colorScheme.responsive.muted.split(' ')[0] // border-muted
-      )}>
+      )} role="banner">
         <h3 className={designSystem.cn(
           designSystem.getTypographyClass('sm', 'medium'),
           designSystem.colorScheme.responsive.muted.split(' ')[1], // text-muted-foreground
@@ -313,42 +315,42 @@ export const CopyActionsSection: React.FC<CopyActionsProps> = ({
         )}>
           Γρήγορες Ενέργειες
         </h3>
-      </div>
+      </header>
 
       {/* Copy Buttons Grid */}
-      <div className={getLayoutClasses()}>
+      <main className={getLayoutClasses()} role="main">
         {finalConfig.showUrlCopy && renderCopyButton('url')}
         {finalConfig.showTextCopy && renderCopyButton('text')}
-      </div>
+      </main>
 
       {/* Error Messages (if any) */}
       {(errors.url || errors.text) && (
-        <div className={designSystem.cn(
+        <aside className={designSystem.cn(
           "p-3 rounded-lg",
           designSystem.getStatusColor('error', 'bg'),
           "dark:bg-red-900/20"
-        )}>
-          <div className={designSystem.cn(
+        )} role="alert" aria-label="Σφάλματα Αντιγραφής">
+          <p className={designSystem.cn(
             designSystem.getTypographyClass('sm'),
             designSystem.getStatusColor('error', 'text'),
             "dark:text-red-400"
           )}>
             {errors.url || errors.text}
-          </div>
-        </div>
+          </p>
+        </aside>
       )}
 
       {/* Debug Info για Development */}
       {process.env.NODE_ENV === 'development' && (
-        <div className={designSystem.cn(
+        <footer className={designSystem.cn(
           designSystem.getTypographyClass('xs'),
           designSystem.colorScheme.responsive.muted.split(' ')[1], // text-muted-foreground
           "text-center pt-2"
-        )}>
+        )} role="contentinfo" aria-label="Πληροφορίες Ανάπτυξης">
           🔍 Debug: {finalConfig.layout} layout, {Object.values(copiedStates).filter(Boolean).length} copied
-        </div>
+        </footer>
       )}
-    </div>
+    </section>
   );
 };
 

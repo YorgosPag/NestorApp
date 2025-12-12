@@ -142,15 +142,15 @@ export const EmailShareForm: React.FC<EmailShareFormProps> = ({
   // ============================================================================
 
   return (
-    <div className="space-y-6">
+    <form className="space-y-6" role="form" aria-label="Φόρμα Αποστολής Email">
       {/* HEADER */}
-      <div className="text-center">
-        <div className={designSystem.cn(
+      <header className="text-center" role="banner">
+        <figure className={designSystem.cn(
           "mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-3",
           designSystem.getStatusColor('info', 'bg')
-        )}>
+        )} role="img" aria-label="Εικονίδιο Email">
           <Mail className="w-6 h-6 text-white" />
-        </div>
+        </figure>
         <h3 className={designSystem.cn(
           designSystem.presets.text.title,
           "mb-2"
@@ -160,9 +160,9 @@ export const EmailShareForm: React.FC<EmailShareFormProps> = ({
         <p className={designSystem.presets.text.muted}>
           Επιλέξτε template και στείλτε το ακίνητο
         </p>
-      </div>
+      </header>
 
-      <div className="space-y-5">
+      <main className="space-y-5" role="main">
         {/* TEMPLATE SELECTOR */}
         <TemplateSelector
           selectedTemplate={state.selectedTemplate}
@@ -193,7 +193,7 @@ export const EmailShareForm: React.FC<EmailShareFormProps> = ({
         />
 
         {/* PERSONAL MESSAGE */}
-        <div>
+        <section role="region" aria-label="Προσωπικό Μήνυμα">
           <Label className={designSystem.cn(
             "flex items-center gap-2 mb-2",
             designSystem.getTypographyClass('sm', 'medium')
@@ -208,21 +208,21 @@ export const EmailShareForm: React.FC<EmailShareFormProps> = ({
             disabled={loading}
             className="min-h-[80px] resize-none"
           />
-          <div className="flex justify-between items-center mt-1">
-            <div className={designSystem.cn(
+          <aside className="flex justify-between items-center mt-1" role="status" aria-label="Στατιστικά Μηνύματος">
+            <span className={designSystem.cn(
               designSystem.getTypographyClass('xs'),
               "text-muted-foreground"
             )}>
               Θα εμφανιστεί στο {currentTemplate?.name} template
-            </div>
+            </span>
             <CommonBadge
               status="company"
               customLabel={`${computed.remainingChars} χαρακτήρες`}
               variant={computed.remainingChars < 50 ? "destructive" : "secondary"}
               className={designSystem.getTypographyClass('xs')}
             />
-          </div>
-        </div>
+          </aside>
+        </section>
 
         {/* MESSAGE PREVIEW */}
         <MessagePreview
@@ -239,7 +239,7 @@ export const EmailShareForm: React.FC<EmailShareFormProps> = ({
         />
 
         {/* ACTION BUTTONS */}
-        <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <footer className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700" role="contentinfo">
           <Button
             type="button"
             onClick={onBack}
@@ -260,9 +260,9 @@ export const EmailShareForm: React.FC<EmailShareFormProps> = ({
               `Αποστολή (${computed.validEmailCount})`
             }
           </Button>
-        </div>
-      </div>
-    </div>
+        </footer>
+      </main>
+    </form>
   );
 };
 

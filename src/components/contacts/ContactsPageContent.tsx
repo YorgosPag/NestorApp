@@ -551,7 +551,7 @@ export function ContactsPageContent() {
 
   return (
     <TooltipProvider>
-      <div className="h-full flex flex-col bg-background w-full overflow-hidden">
+      <main className="h-full flex flex-col bg-background w-full overflow-hidden" role="main" aria-label="Διαχείριση Επαφών">
         {/* Main Header - Works for both desktop and mobile */}
         <ContactsHeader
           viewMode={viewMode}
@@ -570,41 +570,41 @@ export function ContactsPageContent() {
         {renderFilterIndicator()}
 
         {showDashboard && (
-          <div className="w-full overflow-hidden">
+          <section className="w-full overflow-hidden" role="region" aria-label="Στατιστικά Επαφών">
             <UnifiedDashboard
               stats={dashboardStats}
               columns={4}
               onCardClick={handleCardClick}
               className="px-1 py-4 sm:px-4 sm:py-4 border-b bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 overflow-hidden"
             />
-          </div>
+          </section>
         )}
 
         {/* Advanced Filters Panel */}
-        <div className="hidden md:block">
+        <aside className="hidden md:block" role="complementary" aria-label="Φίλτρα Αναζήτησης">
           {/* Desktop: Always visible */}
           <AdvancedFiltersPanel
             config={contactFiltersConfig}
             filters={filters}
             onFiltersChange={setFilters}
           />
-        </div>
+        </aside>
 
         {/* Mobile: Show only when showFilters is true */}
         {showFilters && (
-          <div className="md:hidden">
+          <aside className="md:hidden" role="complementary" aria-label="Φίλτρα Αναζήτησης Mobile">
             <AdvancedFiltersPanel
               config={contactFiltersConfig}
               filters={filters}
               onFiltersChange={setFilters}
               defaultOpen={true}
             />
-          </div>
+          </aside>
         )}
 
         <ListContainer>
           {error ? (
-            <div className="w-full text-center p-8 bg-card rounded-lg border border-destructive/20">
+            <section className="w-full text-center p-8 bg-card rounded-lg border border-destructive/20" role="alert" aria-label="Σφάλμα Φόρτωσης">
               <p className="text-destructive font-medium">⚠️ {error}</p>
               <button
                 onClick={refreshContacts}
@@ -612,11 +612,11 @@ export function ContactsPageContent() {
               >
                 Επανάληψη
               </button>
-            </div>
+            </section>
           ) : viewMode === 'list' ? (
             <>
               {/* 🖥️ DESKTOP: Standard split layout - Same as Units/Projects/Buildings */}
-              <div className="hidden md:flex flex-1 gap-4 min-h-0">
+              <section className="hidden md:flex flex-1 gap-4 min-h-0" role="region" aria-label="Λίστα και Λεπτομέρειες Desktop">
                 <ContactsList
                   contacts={filteredContacts}
                   selectedContact={selectedContact}
@@ -634,10 +634,10 @@ export function ContactsPageContent() {
                   onDeleteContact={() => handleDeleteContacts()}
                   onContactUpdated={refreshContacts}
                 />
-              </div>
+              </section>
 
               {/* 📱 MOBILE: Show only ContactsList when no contact is selected */}
-              <div className={`md:hidden w-full ${selectedContact ? 'hidden' : 'block'}`}>
+              <section className={`md:hidden w-full ${selectedContact ? 'hidden' : 'block'}`} role="region" aria-label="Λίστα Επαφών Mobile">
                 <ContactsList
                   contacts={filteredContacts}
                   selectedContact={selectedContact}
@@ -649,7 +649,7 @@ export function ContactsPageContent() {
                   onArchiveContact={handleArchiveContacts}
                   onContactUpdated={refreshContacts}
                 />
-              </div>
+              </section>
 
               {/* 📱 MOBILE: Slide-in ContactDetails when contact is selected */}
               <MobileDetailsSlideIn
@@ -686,9 +686,9 @@ export function ContactsPageContent() {
               </MobileDetailsSlideIn>
             </>
           ) : (
-            <div className="w-full text-center p-8 bg-card rounded-lg border">
+            <section className="w-full text-center p-8 bg-card rounded-lg border" role="region" aria-label="Προβολή Πλέγματος">
                 Προβολή πλέγματος (Grid View) θα υλοποιηθεί σύντομα.
-            </div>
+            </section>
           )}
         </ListContainer>
 
@@ -725,7 +725,7 @@ export function ContactsPageContent() {
           selectedContactIds={selectedContactIds}
           onContactsArchived={handleContactsArchived}
         />
-      </div>
+      </main>
     </TooltipProvider>
   );
 }

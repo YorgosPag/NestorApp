@@ -218,13 +218,13 @@ export function ShareModal({
       )}>
 
         {/* HEADER με Design System */}
-        <DialogHeader className="text-center space-y-3">
-          <div className={designSystem.cn(
+        <DialogHeader className="text-center space-y-3" role="banner">
+          <figure className={designSystem.cn(
             "mx-auto w-12 h-12 rounded-full flex items-center justify-center",
             designSystem.getStatusColor('info', 'bg')
-          )}>
+          )} role="img" aria-label="Εικονίδιο Κοινοποίησης">
             <Share2 className="w-6 h-6 text-white" />
-          </div>
+          </figure>
 
           <DialogTitle className={designSystem.cn(
             designSystem.presets.text.title,
@@ -243,7 +243,7 @@ export function ShareModal({
         </DialogHeader>
 
         {/* CONTENT με Centralized Components */}
-        <div className="space-y-6 py-4">
+        <main className="space-y-6 py-4" role="main">
           {!showEmailForm ? (
             <>
               {/* 🏢 ENTERPRISE: Centralized Platform Grid */}
@@ -276,7 +276,7 @@ export function ShareModal({
               loading={loading}
             />
           )}
-        </div>
+        </main>
       </DialogContent>
     </Dialog>
   );
