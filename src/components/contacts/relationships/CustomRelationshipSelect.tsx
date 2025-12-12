@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { ChevronDown, Check } from 'lucide-react';
+import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 
 // Import relationship types
 import type { RelationshipType } from '@/types/contacts/relationships';
@@ -152,7 +153,7 @@ export const CustomRelationshipSelect: React.FC<CustomRelationshipSelectProps> =
             <span className="text-muted-foreground">{placeholder}</span>
           )}
         </div>
-        <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`h-4 w-4 ${TRANSITION_PRESETS.STANDARD_TRANSFORM} ${isOpen ? 'rotate-180' : ''}`} />
       </Button>
 
       {/* Dropdown Portal - Debug Version */}
@@ -200,8 +201,8 @@ export const CustomRelationshipSelect: React.FC<CustomRelationshipSelectProps> =
                     key={type}
                     onClick={() => handleSelect(type)}
                     className={`
-                      flex items-center space-x-3 px-4 py-3 cursor-pointer transition-colors
-                      hover:bg-accent hover:text-accent-foreground border-b border-border last:border-b-0
+                      flex items-center space-x-3 px-4 py-3 cursor-pointer border-b border-border last:border-b-0
+                      ${TRANSITION_PRESETS.STANDARD_COLORS} ${INTERACTIVE_PATTERNS.ACCENT_HOVER}
                       ${isSelected ? 'bg-accent text-accent-foreground' : 'text-foreground'}
                     `}
                   >

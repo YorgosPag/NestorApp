@@ -6,6 +6,7 @@ import { ContactBadge, CommonBadge } from '@/core/badges';
 import { formatDate } from '@/lib/intl-utils';
 import { User, Mail, Phone, Tag, Calendar, MessageSquare, Building } from 'lucide-react';
 import type { Opportunity } from '@/types/crm';
+import { INTERACTIVE_PATTERNS, HOVER_SHADOWS, TRANSITION_PRESETS } from '@/components/ui/effects';
 
 interface ContactCardProps {
   lead: Opportunity;
@@ -96,7 +97,7 @@ export function ContactCard({
                       href={`https://mail.google.com/mail/?view=cm&to=${lead.email}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                      className={`text-sm font-medium cursor-pointer ${INTERACTIVE_PATTERNS.LINK_PRIMARY}`}
                       onClick={(e) => e.stopPropagation()}
                       title={`Αποστολή email στο ${lead.email} μέσω Gmail`}
                     >
@@ -112,7 +113,7 @@ export function ContactCard({
                   <div className="flex-1">
                     <a
                       href={`tel:${lead.phone}`}
-                      className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                      className={`text-sm font-medium cursor-pointer ${INTERACTIVE_PATTERNS.LINK_PRIMARY}`}
                       onClick={(e) => e.stopPropagation()}
                       title={`Κλήση στο ${lead.phone}`}
                     >
@@ -218,7 +219,7 @@ export function ContactCard({
       ].filter(Boolean)}
       
       // Style overrides
-      className="transition-all duration-300 hover:shadow-md"
+      className={`${TRANSITION_PRESETS.SMOOTH_ALL} ${HOVER_SHADOWS.SUBTLE}`}
     />
   );
 }

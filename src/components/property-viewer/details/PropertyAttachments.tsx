@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Package, Car } from 'lucide-react';
 import type { StorageUnitStub, ParkingSpotStub } from '@/types/property-viewer';
+import { HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 
 interface PropertyAttachmentsProps {
   storage: StorageUnitStub[];
@@ -22,7 +23,7 @@ export function PropertyAttachments({ storage, parking }: PropertyAttachmentsPro
           <div className="pl-4">
             {storage.map(item => (
               <Link key={item.id} href={`/storage/${item.id}`} className="block">
-                <p className="text-xs text-muted-foreground hover:text-primary hover:underline cursor-pointer">
+                <p className={`text-xs text-muted-foreground cursor-pointer ${HOVER_TEXT_EFFECTS.PRIMARY_WITH_UNDERLINE}`}>
                   {item.code} - {item.floor} ({item.area} τ.μ.)
                 </p>
               </Link>
@@ -39,7 +40,7 @@ export function PropertyAttachments({ storage, parking }: PropertyAttachmentsPro
           <div className="pl-4">
             {parking.map(item => (
               <Link key={item.id} href={`/storage/${item.id}`} className="block">
-                <p className="text-xs text-muted-foreground hover:text-primary hover:underline cursor-pointer">
+                <p className={`text-xs text-muted-foreground cursor-pointer ${HOVER_TEXT_EFFECTS.PRIMARY_WITH_UNDERLINE}`}>
                   {item.code} - {item.level} ({item.type})
                 </p>
               </Link>

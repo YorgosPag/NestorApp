@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Check, X, Edit } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 interface EditableTextProps {
   /** Current text value */
@@ -130,7 +131,7 @@ export function EditableText({
     <div
       className={cn(
         "group relative inline-flex items-center gap-2",
-        !disabled && "cursor-pointer hover:bg-muted/50 rounded px-2 py-1 -mx-2 -my-1",
+        !disabled && `cursor-pointer ${HOVER_BACKGROUND_EFFECTS.MUTED} rounded px-2 py-1 -mx-2 -my-1`,
         className
       )}
       onClick={handleStartEdit}

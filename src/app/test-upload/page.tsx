@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
+import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 
 export default function TestUploadPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -88,7 +89,7 @@ export default function TestUploadPage() {
             type="file"
             onChange={handleFileSelect}
             accept="image/*"
-            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            className={`block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold ${INTERACTIVE_PATTERNS.FILE_INPUT}`}
           />
         </div>
 
@@ -111,7 +112,7 @@ export default function TestUploadPage() {
         {uploading && (
           <div className="w-full bg-gray-200 rounded-full h-2.5">
             <div
-              className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+              className={`bg-blue-600 h-2.5 rounded-full ${TRANSITION_PRESETS.SMOOTH_ALL}`}
               style={{ width: `${progress}%` }}
             ></div>
           </div>

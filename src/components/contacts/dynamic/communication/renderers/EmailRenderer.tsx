@@ -17,6 +17,7 @@ import {
   type CommunicationConfig,
   type CommunicationFieldValue // 🏢 ENTERPRISE: Type-safe field values
 } from '../';
+import { HOVER_COLOR_EFFECTS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 
 // ============================================================================
 // 🏢 EMAIL RENDERER - ENTERPRISE RENDERER COMPONENT
@@ -107,7 +108,7 @@ export const EmailRenderer: React.FC<EmailRendererProps> = ({
                 <CommonBadge
                   status="secondary"
                   size="sm"
-                  className="cursor-pointer hover:opacity-80"
+                  className={`cursor-pointer ${HOVER_COLOR_EFFECTS.FADE_OUT}`}
                   onClick={() => setPrimary(index)}
                 />
               )}
@@ -121,7 +122,7 @@ export const EmailRenderer: React.FC<EmailRendererProps> = ({
             size="sm"
             onClick={() => removeItem(index)}
             disabled={disabled}
-            className="text-red-600 hover:text-red-700"
+            className={HOVER_TEXT_EFFECTS.RED}
           >
             <Trash2 className="h-4 w-4" />
           </Button>

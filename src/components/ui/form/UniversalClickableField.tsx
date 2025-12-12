@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Input } from '@/components/ui/input';
+import { HOVER_TEXT_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
 
 // ============================================================================
 // 🏢 ENTERPRISE UNIVERSAL CLICKABLE FIELD RENDERER
@@ -113,7 +114,7 @@ function renderClickableLink(type: string, value: string, fieldId: string): Reac
           href={`https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(value)}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer transition-colors"
+          className={`cursor-pointer ${HOVER_TEXT_EFFECTS.BLUE_WITH_UNDERLINE} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
           onClick={(e) => e.stopPropagation()}
           title={`Αποστολή email στο ${value} μέσω Gmail`}
           data-field-id={fieldId}
@@ -131,7 +132,7 @@ function renderClickableLink(type: string, value: string, fieldId: string): Reac
       <div className="min-h-10 flex items-center px-3 py-2 border border-input bg-background rounded-md text-sm">
         <a
           href={`tel:${value}`}
-          className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer transition-colors"
+          className={`cursor-pointer ${HOVER_TEXT_EFFECTS.BLUE_WITH_UNDERLINE} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
           onClick={(e) => e.stopPropagation()}
           title={`Κλήση στο ${value}`}
           data-field-id={fieldId}
@@ -152,7 +153,7 @@ function renderClickableLink(type: string, value: string, fieldId: string): Reac
           href={websiteUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer transition-colors"
+          className={`cursor-pointer ${HOVER_TEXT_EFFECTS.BLUE_WITH_UNDERLINE} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
           onClick={(e) => e.stopPropagation()}
           title={`Άνοιγμα ιστοσελίδας ${value}`}
           data-field-id={fieldId}

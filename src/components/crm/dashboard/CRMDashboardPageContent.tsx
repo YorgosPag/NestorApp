@@ -32,7 +32,7 @@ export function CRMDashboardPageContent() {
                 onChange={setSelectedPeriod}
                 theme="compact"
               />
-              <button className={`px-4 py-2 bg-blue-600 text-white rounded-lg flex items-center gap-2 ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY}`}>
+              <button className={`px-4 py-2 text-white rounded-lg flex items-center gap-2 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}>
                 <Plus className="w-4 h-4" />
                 Νέα Επαφή
               </button>

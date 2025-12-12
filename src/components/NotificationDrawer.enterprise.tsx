@@ -10,6 +10,7 @@ import { useNotificationCenter } from '@/stores/notificationCenter';
 import { useTranslation } from '@/i18n';
 import type { Notification, Severity, UserPreferences } from '@/types/notification';
 import { NotificationClient } from '@/api/notificationClient';
+import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 
 type DrawerState = { isOpen: boolean; open: () => void; close: () => void; };
 
@@ -224,7 +225,7 @@ export function NotificationDrawer() {
               onClick={() => {
                 markRead();
               }}
-              className="text-sm px-3 py-1.5 hover:bg-accent rounded-md transition-colors"
+              className={`text-sm px-3 py-1.5 rounded-md ${HOVER_BACKGROUND_EFFECTS.ACCENT} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
             >
               {t('notifications.markAllRead', { defaultValue: 'Mark all read' })}
             </button>
@@ -232,7 +233,7 @@ export function NotificationDrawer() {
               ref={closeButtonRef}
               type="button"
               onClick={close}
-              className="p-1.5 hover:bg-accent rounded-md transition-colors"
+              className={`p-1.5 rounded-md ${HOVER_BACKGROUND_EFFECTS.ACCENT} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
               aria-label={t('buttons.close', { defaultValue: 'Close' })}
             >
               <X className="w-5 h-5" />
@@ -249,7 +250,7 @@ export function NotificationDrawer() {
               <button
                 type="button"
                 onClick={handleRetry}
-                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors text-sm"
+                className={`flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
               >
                 <RefreshCw className="w-4 h-4" />
                 {t('notifications.retry', { defaultValue: 'Retry' })}
@@ -271,7 +272,7 @@ export function NotificationDrawer() {
               return (
                 <article
                   key={n.id}
-                  className={`border-b p-4 hover:bg-accent/50 transition-colors ${n.delivery.state !== 'seen' ? 'bg-accent/20' : ''}`}
+                  className={`border-b p-4 ${HOVER_BACKGROUND_EFFECTS.ACCENT_SUBTLE} ${TRANSITION_PRESETS.STANDARD_COLORS} ${n.delivery.state !== 'seen' ? 'bg-accent/20' : ''}`}
                 >
                   <div className="flex items-start gap-3">
                     <Icon className={`w-5 h-5 mt-0.5 flex-shrink-0 ${colorClass}`} />
@@ -294,10 +295,10 @@ export function NotificationDrawer() {
                               key={action.id}
                               type="button"
                               onClick={() => handleAction(n.id, action.id, action.url)}
-                              className={`text-xs px-3 py-1.5 rounded-md transition-colors font-medium ${
+                              className={`text-xs px-3 py-1.5 rounded-md font-medium ${TRANSITION_PRESETS.STANDARD_COLORS} ${
                                 action.destructive
-                                  ? 'bg-red-600 text-white hover:bg-red-700'
-                                  : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                                  ? `bg-red-600 text-white ${HOVER_BACKGROUND_EFFECTS.RED_DARKER}`
+                                  : `bg-primary text-primary-foreground ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY.replace('hover:bg-primary/90', 'hover:bg-primary/90')}`
                               }`}
                             >
                               {action.label}
@@ -310,7 +311,7 @@ export function NotificationDrawer() {
                       <button
                         type="button"
                         onClick={() => markRead([n.id])}
-                        className="text-xs px-2 py-1 hover:bg-accent rounded-md transition-colors flex-shrink-0"
+                        className={`text-xs px-2 py-1 rounded-md flex-shrink-0 ${HOVER_BACKGROUND_EFFECTS.ACCENT} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
                       >
                         {t('notifications.markRead', { defaultValue: 'Mark read' })}
                       </button>
@@ -327,7 +328,7 @@ export function NotificationDrawer() {
               <button
                 type="button"
                 onClick={handleLoadMore}
-                className="w-full py-2 px-4 bg-accent hover:bg-accent/80 rounded-md transition-colors text-sm font-medium"
+                className={`w-full py-2 px-4 bg-accent rounded-md text-sm font-medium ${HOVER_BACKGROUND_EFFECTS.ACCENT_DARKER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
               >
                 {t('notifications.loadMore', { defaultValue: 'Load More' })}
               </button>

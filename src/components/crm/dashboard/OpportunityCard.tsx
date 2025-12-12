@@ -4,6 +4,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Users, Mail, Phone, Calendar, FileText, Edit, Trash2 } from 'lucide-react';
 import { CommonBadge } from '@/core/badges';
+import { COMPLEX_HOVER_EFFECTS, TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import type { Opportunity, FirestoreishTimestamp } from '@/types/crm';
 import { format } from 'date-fns';
 import { el } from 'date-fns/locale';
@@ -70,9 +71,9 @@ export function OpportunityCard({ opportunity, onEdit, onDelete }: { opportunity
     };
 
     return (
-        <div 
-            role="group" 
-            className="bg-card p-4 rounded-lg shadow-sm border border-transparent hover:border-blue-400 cursor-pointer relative group transition-all hover:shadow-md"
+        <div
+            role="group"
+            className={`bg-card p-4 rounded-lg shadow-sm border border-transparent cursor-pointer relative group ${COMPLEX_HOVER_EFFECTS.FEATURE_CARD}`}
             onClick={handleCardClick}
         >
             <div className="flex items-start justify-between mb-2">
@@ -122,7 +123,7 @@ export function OpportunityCard({ opportunity, onEdit, onDelete }: { opportunity
                 </p>
             )}
 
-            <div className="absolute bottom-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className={`absolute bottom-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 ${TRANSITION_PRESETS.OPACITY}`}>
                 <Tooltip>
                     <TooltipTrigger asChild>
                          <Button 
@@ -147,10 +148,10 @@ export function OpportunityCard({ opportunity, onEdit, onDelete }: { opportunity
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <AlertDialogTrigger asChild>
-                                <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50"
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className={`h-7 w-7 p-0 ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`}
                                     onClick={(e) => e.stopPropagation()}
                                     aria-label="Διαγραφή"
                                 >

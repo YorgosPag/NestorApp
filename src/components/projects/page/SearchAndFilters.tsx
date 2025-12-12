@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { FilterSelect } from '../FilterSelect';
 import { PROJECT_STATUS_LABELS } from '@/types/project';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 interface SearchAndFiltersProps {
   searchTerm: string;
@@ -78,7 +79,7 @@ export function SearchAndFilters({
           <TabsList className="w-auto">
             <TabsTrigger
               value="all"
-              className="text-xs data-[state=active]:bg-orange-500 data-[state=active]:text-white hover:bg-orange-100 hover:text-orange-700"
+              className={`text-xs data-[state=active]:bg-orange-500 data-[state=active]:text-white ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`}
             >
               Όλες οι καταστάσεις
             </TabsTrigger>
@@ -86,7 +87,7 @@ export function SearchAndFilters({
               <TabsTrigger
                 key={key}
                 value={key}
-                className="text-xs data-[state=active]:bg-orange-500 data-[state=active]:text-white hover:bg-orange-100 hover:text-orange-700"
+                className={`text-xs data-[state=active]:bg-orange-500 data-[state=active]:text-white ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`}
               >
                 {label}
               </TabsTrigger>

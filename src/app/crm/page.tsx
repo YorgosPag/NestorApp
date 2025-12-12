@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BarChart, Users, Phone, Target, ClipboardList, Filter, Users2, Bell, AppWindow, Mail, BarChart3 } from 'lucide-react';
 import Link from 'next/link';
+import { COMPLEX_HOVER_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
 
 const crmSections = [
     { title: 'Dashboard CRM', href: '/crm/dashboard', icon: BarChart, description: 'Συνολική εικόνα των πελατειακών σχέσεων.' },
@@ -36,9 +37,9 @@ export default function CrmPage() {
         {crmSections.map((section) => (
           <Link href={section.href} key={section.title} legacyBehavior>
             <a className="block h-full">
-              <Card className="h-full hover:shadow-xl hover:border-primary transition-all cursor-pointer group flex flex-col">
+              <Card className={`h-full cursor-pointer group flex flex-col ${COMPLEX_HOVER_EFFECTS.FEATURE_CARD}`}>
                 <CardHeader className="flex flex-row items-center gap-4 space-y-0">
-                    <div className="p-3 rounded-full bg-muted group-hover:bg-primary/10 transition-colors">
+                    <div className={`p-3 rounded-full bg-muted group-hover:bg-primary/10 ${TRANSITION_PRESETS.STANDARD_COLORS}`}>
                       <section.icon className="w-6 h-6 text-primary" />
                     </div>
                     <CardTitle className="text-lg">{section.title}</CardTitle>

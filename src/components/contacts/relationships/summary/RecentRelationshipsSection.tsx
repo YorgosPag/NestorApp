@@ -188,7 +188,7 @@ export const RecentRelationshipsSection: React.FC<RecentRelationshipsSectionProp
           variant="ghost"
           size="sm"
           onClick={() => setShowAllRelationships(!showAllRelationships)}
-          className="text-blue-600 hover:bg-blue-50"
+          className={`${INTERACTIVE_PATTERNS.TEXT_PRIMARY} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
         >
           {showAllRelationships ? (
             <>

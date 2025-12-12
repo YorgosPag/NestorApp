@@ -5,6 +5,7 @@ import { Users, Filter } from 'lucide-react';
 import { PageHeader } from '@/core/headers';
 import type { ViewMode as CoreViewMode } from '@/core/headers';
 import type { ViewMode } from '@/hooks/useContactsState';
+import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 
 
 interface ContactsHeaderProps {
@@ -60,10 +61,10 @@ export function ContactsHeader({
           React.createElement('button', {
             key: 'mobile-filter',
             onClick: () => setShowFilters(!showFilters),
-            className: `md:hidden p-2 rounded-md border transition-colors ${
+            className: `md:hidden p-2 rounded-md border ${TRANSITION_PRESETS.STANDARD_COLORS} ${
               showFilters
                 ? 'bg-primary text-primary-foreground border-primary'
-                : 'bg-background border-border hover:bg-accent'
+                : `bg-background border-border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
             }`,
             'aria-label': 'Toggle filters',
             children: React.createElement(Filter, { className: 'h-4 w-4' })

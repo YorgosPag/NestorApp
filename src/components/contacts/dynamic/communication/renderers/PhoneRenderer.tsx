@@ -17,6 +17,7 @@ import {
   type CommunicationConfig,
   type CommunicationFieldValue // 🏢 ENTERPRISE: Type-safe field values
 } from '../';
+import { HOVER_TEXT_EFFECTS, HOVER_COLOR_EFFECTS } from '@/components/ui/effects';
 
 // ============================================================================
 // 🏢 PHONE RENDERER - ENTERPRISE RENDERER COMPONENT
@@ -118,7 +119,7 @@ export const PhoneRenderer: React.FC<PhoneRendererProps> = ({
                 <CommonBadge
                   status="secondary"
                   size="sm"
-                  className="cursor-pointer hover:opacity-80"
+                  className={`cursor-pointer ${HOVER_COLOR_EFFECTS.FADE_OUT}`}
                   onClick={() => setPrimary(index)}
                 />
               )}
@@ -132,7 +133,7 @@ export const PhoneRenderer: React.FC<PhoneRendererProps> = ({
             size="sm"
             onClick={() => removeItem(index)}
             disabled={disabled}
-            className="text-red-600 hover:text-red-700"
+            className={HOVER_TEXT_EFFECTS.RED}
           >
             <Trash2 className="h-4 w-4" />
           </Button>

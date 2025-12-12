@@ -16,6 +16,7 @@ import { useSidebarState } from "@/hooks/useSidebarState"
 import { useTranslationLazy } from "@/i18n/hooks/useTranslationLazy"
 import { MapPin } from "lucide-react"
 import { useSidebar } from "@/components/ui/sidebar"
+import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS, TRANSITION_PRESETS } from "@/components/ui/effects"
 
 export function AppSidebar() {
     const { expandedItems, toggleExpanded, isItemActive } = useSidebarState()
@@ -49,7 +50,7 @@ export function AppSidebar() {
                     <a
                         href="/navigation"
                         onClick={handleNavigationClick}
-                        className="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors py-2 px-1 w-full text-left rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+                        className={`flex items-center gap-2 text-gray-700 dark:text-gray-300 py-2 px-1 w-full text-left rounded-md ${HOVER_TEXT_EFFECTS.GRAY_TO_BLACK} ${HOVER_BACKGROUND_EFFECTS.MUTED} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
                     >
                         <MapPin className="h-4 w-4" />
                         <span className="font-medium">Πλοήγηση</span>

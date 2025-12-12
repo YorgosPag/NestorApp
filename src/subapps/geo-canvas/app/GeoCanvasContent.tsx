@@ -25,6 +25,7 @@ import { useOptimizedUserRole } from '@/contexts/OptimizedUserRoleContext';
 import { PageErrorBoundary, ComponentErrorBoundary } from '@/components/ui/ErrorBoundary/ErrorBoundary';
 import ErrorReportingDashboard from '@/components/development/ErrorReportingDashboard';
 import { useAnalytics } from '@/services/AnalyticsBridge';
+import { TRANSITION_PRESETS } from '@/components/ui/effects';
 import type { GeoCanvasAppProps } from '../types';
 import type { GeoCoordinate, DxfCoordinate } from '../types';
 
@@ -676,7 +677,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                             // ✅ ENTERPRISE: Clear user type by setting to a valid empty state
                             window.location.reload(); // Reload to reset all user state
                           }}
-                          className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-md text-sm transition-colors"
+                          className={`px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-md text-sm ${TRANSITION_PRESETS.FAST_COLORS}`}
                         >
                           🔄 {t('userActions.changeUserType')}
                         </button>

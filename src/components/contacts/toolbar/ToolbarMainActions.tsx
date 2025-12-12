@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ToolbarButton } from '@/components/ui/ToolbarButton';
 import { Plus, Edit, Trash2 } from "lucide-react";
+import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
 
 interface ToolbarMainActionsProps {
   selectedItemsCount: number;
@@ -35,7 +36,7 @@ export function ToolbarMainActions({ selectedItemsCount }: ToolbarMainActionsPro
       <ToolbarButton
         tooltip="Νέα Επαφή (Ctrl+N)"
         onClick={handleNew}
-        className="text-green-600 hover:text-green-700 dark:text-green-500 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-950/20"
+        className={`text-green-600 dark:text-green-500 ${HOVER_TEXT_EFFECTS.GREEN_SUBTLE} ${HOVER_BACKGROUND_EFFECTS.GREEN_SUBTLE} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
       >
         <Plus className="w-4 h-4" />
       </ToolbarButton>
@@ -43,7 +44,7 @@ export function ToolbarMainActions({ selectedItemsCount }: ToolbarMainActionsPro
       <ToolbarButton
         tooltip="Επεξεργασία Επιλεγμένης (Ctrl+E)"
         onClick={handleEdit}
-        className="text-blue-600 hover:text-blue-700 dark:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/20"
+        className={`text-blue-600 dark:text-blue-500 ${HOVER_TEXT_EFFECTS.BLUE_SUBTLE} ${HOVER_BACKGROUND_EFFECTS.BLUE_SUBTLE} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
         disabled={selectedItemsCount === 0}
       >
         <Edit className="w-4 h-4" />
@@ -54,7 +55,7 @@ export function ToolbarMainActions({ selectedItemsCount }: ToolbarMainActionsPro
           <div>
             <ToolbarButton
               tooltip="Διαγραφή Επιλεγμένης (Delete)"
-              className="text-red-600 hover:text-red-700 dark:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20"
+              className={`text-red-600 dark:text-red-500 ${HOVER_TEXT_EFFECTS.RED_SUBTLE} ${HOVER_BACKGROUND_EFFECTS.RED_SUBTLE} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
               disabled={selectedItemsCount === 0}
             >
               <Trash2 className="w-4 h-4" />
@@ -73,7 +74,7 @@ export function ToolbarMainActions({ selectedItemsCount }: ToolbarMainActionsPro
             <AlertDialogCancel>Ακύρωση</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              className="bg-red-600 hover:bg-red-700"
+              className={`bg-red-600 ${HOVER_BACKGROUND_EFFECTS.RED_DARKER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
             >
               Διαγραφή
             </AlertDialogAction>

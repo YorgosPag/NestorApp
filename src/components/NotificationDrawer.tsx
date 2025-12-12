@@ -7,6 +7,7 @@ import { X, CheckCircle, AlertCircle, AlertTriangle, Info } from 'lucide-react';
 import { useNotificationStore } from '@/stores/notificationStore';
 import { fetchNotifications, connectMockWS } from '@/api/notificationApi';
 import { useTranslation } from '@/i18n';
+import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 
 type DrawerState = { isOpen: boolean; open: () => void; close: () => void; };
 
@@ -139,7 +140,7 @@ export function NotificationDrawer() {
               onClick={() => {
                 markRead();
               }}
-              className="text-sm px-3 py-1.5 hover:bg-accent rounded-md transition-colors"
+              className={`text-sm px-3 py-1.5 rounded-md ${HOVER_BACKGROUND_EFFECTS.ACCENT} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
             >
               {t('notifications.markAllRead', { defaultValue: 'Mark all read' })}
             </button>
@@ -147,7 +148,7 @@ export function NotificationDrawer() {
               ref={closeButtonRef}
               type="button"
               onClick={close}
-              className="p-1.5 hover:bg-accent rounded-md transition-colors"
+              className={`p-1.5 rounded-md ${HOVER_BACKGROUND_EFFECTS.ACCENT} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
               aria-label={t('buttons.close', { defaultValue: 'Close' })}
             >
               <X className="w-5 h-5" />
@@ -164,7 +165,7 @@ export function NotificationDrawer() {
               <button
                 type="button"
                 onClick={handleRetry}
-                className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors text-sm"
+                className={`px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
               >
                 {t('notifications.retry', { defaultValue: 'Retry' })}
               </button>
@@ -185,7 +186,7 @@ export function NotificationDrawer() {
               return (
                 <article
                   key={n.id}
-                  className={`border-b p-4 hover:bg-accent/50 transition-colors ${!n.read ? 'bg-accent/20' : ''}`}
+                  className={`border-b p-4 ${HOVER_BACKGROUND_EFFECTS.ACCENT_SUBTLE} ${TRANSITION_PRESETS.STANDARD_COLORS} ${!n.read ? 'bg-accent/20' : ''}`}
                 >
                   <div className="flex items-start gap-3">
                     <Icon className={`w-5 h-5 mt-0.5 flex-shrink-0 ${colorClass}`} />
@@ -204,7 +205,7 @@ export function NotificationDrawer() {
                       <button
                         type="button"
                         onClick={() => markRead([n.id])}
-                        className="text-xs px-2 py-1 hover:bg-accent rounded-md transition-colors flex-shrink-0"
+                        className={`text-xs px-2 py-1 rounded-md flex-shrink-0 ${HOVER_BACKGROUND_EFFECTS.ACCENT} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
                       >
                         {t('notifications.markRead', { defaultValue: 'Mark read' })}
                       </button>

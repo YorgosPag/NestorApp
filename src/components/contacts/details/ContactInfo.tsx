@@ -9,6 +9,7 @@ import { CompanyProjectsTable } from './CompanyProjectsTable';
 import { CONTACT_TYPES } from '@/constants/contacts';
 import { CustomerStats } from './CustomerStats';
 import { CustomerPropertiesTable } from './CustomerPropertiesTable';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 interface ContactInfoProps {
   contact: Contact;
@@ -32,7 +33,7 @@ export function ContactInfo({ contact, onAddUnit, onRefresh }: ContactInfoProps)
                         href={`https://mail.google.com/mail/?view=cm&to=${email}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                        className={INTERACTIVE_PATTERNS.LINK_PRIMARY}
                         title={`Αποστολή email στο ${email} μέσω Gmail`}
                         onClick={(e) => e.stopPropagation()}
                     >
@@ -45,7 +46,7 @@ export function ContactInfo({ contact, onAddUnit, onRefresh }: ContactInfoProps)
                     <Phone className="w-4 h-4 text-muted-foreground" />
                     <a
                         href={`tel:${phone}`}
-                        className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                        className={INTERACTIVE_PATTERNS.LINK_PRIMARY}
                         title={`Κλήση στο ${phone}`}
                         onClick={(e) => e.stopPropagation()}
                     >

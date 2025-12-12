@@ -17,6 +17,7 @@
 import React, { useState, useEffect } from 'react';
 import { errorTracker } from '@/services/ErrorTracker';
 import type { ErrorReport } from '@/services/ErrorTracker';
+import { HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
 
 interface ErrorReportingDashboardProps {
   position?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
@@ -85,7 +86,7 @@ export function ErrorReportingDashboard({
       {/* Minimized View */}
       {isMinimized && (
         <div
-          className="bg-gray-900 text-white rounded-lg p-3 cursor-pointer shadow-lg border border-gray-700 hover:bg-gray-800 transition-colors"
+          className={`bg-gray-900 text-white rounded-lg p-3 cursor-pointer shadow-lg border border-gray-700 ${HOVER_BACKGROUND_EFFECTS.GRAY_800} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
           onClick={() => setIsMinimized(false)}
         >
           <div className="flex items-center space-x-2">
@@ -120,14 +121,14 @@ export function ErrorReportingDashboard({
             <div className="flex items-center space-x-2">
               <button
                 onClick={clearAllErrors}
-                className="text-xs bg-red-600 hover:bg-red-700 px-2 py-1 rounded transition-colors"
+                className={`text-xs bg-red-600 px-2 py-1 rounded ${HOVER_BACKGROUND_EFFECTS.RED_DARKER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
                 title="Clear All Errors"
               >
                 Clear
               </button>
               <button
                 onClick={() => setIsMinimized(true)}
-                className="text-gray-400 hover:text-white transition-colors"
+                className={`text-gray-400 ${HOVER_TEXT_EFFECTS.WHITE} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
               >
                 ✕
               </button>
@@ -189,7 +190,7 @@ export function ErrorReportingDashboard({
                 {filteredErrors.slice(0, 10).map((error) => (
                   <div
                     key={error.id}
-                    className="p-3 hover:bg-gray-800 cursor-pointer transition-colors"
+                    className={`p-3 cursor-pointer ${HOVER_BACKGROUND_EFFECTS.GRAY_800} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
                     onClick={() => setSelectedError(error)}
                   >
                     <div className="flex items-start justify-between">
@@ -231,7 +232,7 @@ export function ErrorReportingDashboard({
               <h3 className="font-semibold">Error Details</h3>
               <button
                 onClick={() => setSelectedError(null)}
-                className="text-gray-400 hover:text-white transition-colors"
+                className={`text-gray-400 ${HOVER_TEXT_EFFECTS.WHITE} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
               >
                 ✕
               </button>

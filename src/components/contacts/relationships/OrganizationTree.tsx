@@ -16,6 +16,7 @@ import { Building2, Users } from 'lucide-react';
 
 // 🏢 ENTERPRISE: Import centralized types
 import type { OrganizationTree as OrganizationTreeType } from '@/types/contacts/relationships';
+import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 // 🪝 Import contact name hook
 import { useContactName } from './hooks/useContactName';
@@ -203,7 +204,7 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
           {Object.entries(tree.departments).map(([department, employees]) => (
             <div
               key={department}
-              className="p-3 border rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+              className={`p-3 border rounded-lg bg-gray-50 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
             >
               <div className="flex items-center justify-between mb-2">
                 <p className="font-medium text-gray-800">

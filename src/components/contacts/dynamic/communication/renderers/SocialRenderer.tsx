@@ -16,6 +16,7 @@ import {
   type CommunicationConfig,
   type CommunicationFieldValue // 🏢 ENTERPRISE: Type-safe field values
 } from '../';
+import { HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 
 // ============================================================================
 // 🏢 SOCIAL RENDERER - ENTERPRISE RENDERER COMPONENT
@@ -132,7 +133,7 @@ export const SocialRenderer: React.FC<SocialRendererProps> = ({
             size="sm"
             onClick={() => removeItem(index)}
             disabled={disabled}
-            className="text-red-600 hover:text-red-700"
+            className={HOVER_TEXT_EFFECTS.RED}
           >
             <Trash2 className="h-4 w-4" />
           </Button>

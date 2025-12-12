@@ -228,7 +228,10 @@ export const INTERACTIVE_PATTERNS = {
   LINK_PRIMARY: 'transition-colors duration-150 hover:text-primary hover:underline',
 
   /** Border subtle hover για cards */
-  BORDER_SUBTLE: 'transition-all duration-200 hover:border-border/80'
+  BORDER_SUBTLE: 'transition-all duration-200 hover:border-border/80',
+
+  /** Fade in/out effect για icons */
+  FADE_IN_OUT: 'transition-opacity duration-200'
 } as const;
 
 /**

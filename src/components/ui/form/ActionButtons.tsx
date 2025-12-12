@@ -5,29 +5,29 @@ import { Button } from '@/components/ui/button';
 import { CommonBadge } from '@/core/badges';
 import { Loader2, Save, X, Trash2, Plus, Edit, Archive, RotateCcw, Phone, Mail, MessageSquare, Download, Upload, HelpCircle, Star, RefreshCw, ArrowUpAZ, ArrowDownZA } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { FORM_BUTTON_EFFECTS } from '../effects/form-effects';
+import { INTERACTIVE_PATTERNS } from '../effects';
 
 // Enterprise Button Categorization - Global Design System Standards
 // Based on Google Material Design, Microsoft Fluent, Apple HIG, Bootstrap 5
 // Typography: Label Large (14px, medium) as per Material Design button specs
 export const BUTTON_CATEGORIES = {
   // 🔵 PRIMARY ACTIONS (Blue #0d6efd) - Main user actions
-  primary: `${FORM_BUTTON_EFFECTS.PRIMARY} text-sm font-medium`,
+  primary: `${INTERACTIVE_PATTERNS.PRIMARY_HOVER} text-sm font-medium`,
 
   // 🟢 SUCCESS/POSITIVE (Green #198754) - Successful completion, save actions
-  success: `${FORM_BUTTON_EFFECTS.SUCCESS} text-sm font-medium`,
+  success: `${INTERACTIVE_PATTERNS.SUCCESS_HOVER} text-sm font-medium`,
 
   // 🔴 DANGER/DESTRUCTIVE (Red #dc3545) - Permanent destructive actions
-  danger: `${FORM_BUTTON_EFFECTS.DESTRUCTIVE} text-sm font-medium`,
+  danger: `${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} text-sm font-medium`,
 
   // 🟡 WARNING/CAUTION (Orange/Yellow #ffc107) - Reversible destructive actions
-  warning: `${FORM_BUTTON_EFFECTS.SECONDARY} text-sm font-medium`,
+  warning: `${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-sm font-medium`,
 
   // ⚪ SECONDARY/NEUTRAL (Gray #6c757d) - Secondary, optional actions
-  secondary: `${FORM_BUTTON_EFFECTS.SECONDARY} text-sm font-medium`,
+  secondary: `${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-sm font-medium`,
 
   // 🌑 UTILITY/PASSIVE (Dark Gray #374151) - Tools, communication, management
-  utility: `${FORM_BUTTON_EFFECTS.GHOST} text-sm font-medium`
+  utility: `${INTERACTIVE_PATTERNS.ACCENT_HOVER} text-sm font-medium`
 } as const;
 
 // Legacy button styles with enterprise categorization mapping

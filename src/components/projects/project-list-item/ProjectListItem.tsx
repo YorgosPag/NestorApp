@@ -10,6 +10,7 @@ import { EntityDetailsHeader } from '@/core/entity-headers';
 import { ProjectBadge } from '@/core/badges';
 import { Briefcase } from 'lucide-react';
 import { PROJECT_STATUS_LABELS } from '@/types/project';
+import { HOVER_SHADOWS, TRANSITION_PRESETS, HOVER_BORDER_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 // Removed duplicate imports - now using EntityDetailsHeader
 import { LocationRow } from './parts/LocationRow';
@@ -32,10 +33,10 @@ export function ProjectListItem({
         <TooltipProvider>
             <Card
                 className={cn(
-                    "relative p-4 rounded-lg border cursor-pointer transition-all duration-200 hover:shadow-md group",
+                    `relative p-4 rounded-lg border cursor-pointer ${TRANSITION_PRESETS.STANDARD_ALL} group ${HOVER_SHADOWS.ENHANCED}`,
                     isSelected
                     ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20 shadow-sm"
-                    : "border-border hover:border-blue-300 bg-card hover:bg-accent/50"
+                    : `border-border ${HOVER_BORDER_EFFECTS.BLUE} bg-card ${HOVER_BACKGROUND_EFFECTS.ACCENT}`
                 )}
                 onClick={onSelect}
                 role="button"

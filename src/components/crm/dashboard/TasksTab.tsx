@@ -27,6 +27,7 @@ import { Button } from '@/components/ui/button';
 import CreateTaskModal from './dialogs/CreateTaskModal';
 import type { CrmTask, Opportunity, FirestoreishTimestamp } from '@/types/crm';
 import type { CrmTaskType, CrmTaskPriority, CrmTaskStatus } from '@/types/crm-extra';
+import { HOVER_BACKGROUND_EFFECTS, HOVER_SHADOWS } from '@/components/ui/effects';
 
 type TimeframeFilter = 'all' | 'overdue' | 'today' | 'tomorrow' | 'week';
 
@@ -263,7 +264,7 @@ export function TasksTab() {
             <option value="tomorrow">{t('tasks.timeframe.tomorrow')}</option>
             <option value="week">{t('tasks.timeframe.week')}</option>
           </select>
-          <button onClick={() => setFilters({ status: 'all', priority: 'all', type: 'all', timeframe: 'all', searchTerm: '' })} className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm">
+          <button onClick={() => setFilters({ status: 'all', priority: 'all', type: 'all', timeframe: 'all', searchTerm: '' })} className={`px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm ${HOVER_BACKGROUND_EFFECTS.LIGHT}`}>
             {t('tasks.clearFilters')}
           </button>
         </div>
@@ -278,7 +279,7 @@ export function TasksTab() {
               const leadName = getLeadName(task.leadId);
               const meta = (task.metadata || {}) as TaskMetadata;
               return (
-                <div key={task.id} className="bg-background p-4 rounded-lg border hover:shadow-sm">
+                <div key={task.id} className={`bg-background p-4 rounded-lg border ${HOVER_SHADOWS.SUBTLE}`}>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">

@@ -29,6 +29,7 @@ import {
 import { getRelationshipDisplayProps } from './utils/relationship-types';
 import type { RelationshipCardProps } from './types/relationship-manager.types';
 import { useContactName } from './hooks/useContactName';
+import { HOVER_TEXT_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 /**
  * 🃏 RelationshipCard Component
@@ -156,7 +157,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
                     e.stopPropagation();
                     if (onDelete) onDelete();
                   }}
-                  className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                  className={`h-8 w-8 p-0 ${HOVER_TEXT_EFFECTS.RED}`}
                   title="Διαγραφή σχέσης"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -209,7 +210,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
                 <Mail className="h-4 w-4 text-gray-500" />
                 <a
                   href={`mailto:${relationship.contactInfo.businessEmail}`}
-                  className="text-sm text-blue-600 hover:underline"
+                  className={`text-sm ${INTERACTIVE_PATTERNS.LINK_PRIMARY}`}
                   onClick={(e) => e.stopPropagation()}
                 >
                   {relationship.contactInfo.businessEmail}

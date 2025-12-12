@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { StorageCardHeader } from './StorageCard/StorageCardHeader';
 import { StorageCardContent } from './StorageCard/StorageCardContent';
 import { StorageCardOverlay } from './StorageCard/StorageCardOverlay';
+import { CORE_HOVER_TRANSFORMS, HOVER_SHADOWS, TRANSITION_PRESETS } from '@/components/ui/effects';
 
 interface StorageCardProps {
   unit: StorageUnit;
@@ -37,9 +38,10 @@ export function StorageCard({
   return (
     <Card 
       className={cn(
-        "relative overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-lg group border",
+        `relative overflow-hidden cursor-pointer ${TRANSITION_PRESETS.SMOOTH_ALL} group border`,
         isSelected ? "ring-2 ring-primary shadow-lg border-primary" : "hover:border-primary/50",
-        "transform hover:scale-[1.02]"
+        CORE_HOVER_TRANSFORMS.SCALE_UP_TINY,
+        HOVER_SHADOWS.ENHANCED
       )}
       onClick={onSelect}
       onMouseEnter={() => setIsHovered(true)}

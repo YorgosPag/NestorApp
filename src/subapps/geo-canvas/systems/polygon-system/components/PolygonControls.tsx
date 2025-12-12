@@ -12,6 +12,12 @@ import { MapPin, Hexagon, Hand, Trash2, Check, X, Home } from 'lucide-react';
 import type { PolygonType } from '@geo-alert/core';
 import { usePolygonSystemContext } from '../hooks/usePolygonSystemContext';
 import type { PolygonControlsProps } from '../types/polygon-system.types';
+import {
+  INTERACTIVE_PATTERNS,
+  HOVER_TEXT_EFFECTS,
+  HOVER_BACKGROUND_EFFECTS,
+  TRANSITION_PRESETS
+} from '@/components/ui/effects';
 
 /**
  * Unified polygon controls component
@@ -74,41 +80,41 @@ export function PolygonControls({
       case 'citizen':
         return {
           container: 'bg-white rounded-lg shadow-lg border border-gray-200',
-          button: 'flex items-center justify-center gap-2 py-3 px-4 rounded-lg transition-colors text-sm font-medium',
-          primary: 'bg-blue-500 text-white hover:bg-blue-600',
-          secondary: 'bg-gray-100 text-gray-700 hover:bg-gray-200',
-          success: 'bg-green-500 text-white hover:bg-green-600',
-          danger: 'bg-red-500 text-white hover:bg-red-600'
+          button: `flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-medium ${TRANSITION_PRESETS.STANDARD_COLORS}`,
+          primary: `bg-blue-500 text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`,
+          secondary: `bg-gray-100 text-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`,
+          success: `bg-green-500 text-white ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`,
+          danger: `bg-red-500 text-white ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`
         };
 
       case 'professional':
         return {
           container: 'bg-white rounded-xl shadow-xl border border-amber-200',
-          button: 'flex items-center justify-center gap-2 py-2 px-3 rounded-md transition-colors text-sm font-semibold',
-          primary: 'bg-amber-500 text-white hover:bg-amber-600',
-          secondary: 'bg-amber-50 text-amber-700 hover:bg-amber-100',
-          success: 'bg-emerald-500 text-white hover:bg-emerald-600',
-          danger: 'bg-red-500 text-white hover:bg-red-600'
+          button: `flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-semibold ${TRANSITION_PRESETS.STANDARD_COLORS}`,
+          primary: `bg-amber-500 text-white ${HOVER_TEXT_EFFECTS.ORANGE} hover:bg-amber-600`,
+          secondary: `bg-amber-50 text-amber-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`,
+          success: `bg-emerald-500 text-white ${HOVER_TEXT_EFFECTS.EMERALD} hover:bg-emerald-600`,
+          danger: `bg-red-500 text-white ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`
         };
 
       case 'technical':
         return {
           container: 'bg-slate-900 rounded-md shadow-2xl border border-violet-500',
-          button: 'flex items-center justify-center gap-1 py-1 px-2 rounded transition-colors text-xs font-mono',
-          primary: 'bg-violet-600 text-white hover:bg-violet-700',
-          secondary: 'bg-slate-700 text-slate-300 hover:bg-slate-600',
-          success: 'bg-cyan-600 text-white hover:bg-cyan-700',
-          danger: 'bg-red-600 text-white hover:bg-red-700'
+          button: `flex items-center justify-center gap-1 py-1 px-2 rounded text-xs font-mono ${TRANSITION_PRESETS.STANDARD_COLORS}`,
+          primary: `bg-violet-600 text-white ${HOVER_TEXT_EFFECTS.VIOLET} hover:bg-violet-700`,
+          secondary: `bg-slate-700 text-slate-300 ${HOVER_BACKGROUND_EFFECTS.MUTED}`,
+          success: `bg-cyan-600 text-white ${HOVER_TEXT_EFFECTS.CYAN} hover:bg-cyan-700`,
+          danger: `bg-red-600 text-white ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`
         };
 
       default:
         return {
           container: 'bg-white rounded-lg shadow-lg border border-gray-200',
-          button: 'flex items-center justify-center gap-2 py-3 px-4 rounded-lg transition-colors text-sm font-medium',
-          primary: 'bg-blue-500 text-white hover:bg-blue-600',
-          secondary: 'bg-gray-100 text-gray-700 hover:bg-gray-200',
-          success: 'bg-green-500 text-white hover:bg-green-600',
-          danger: 'bg-red-500 text-white hover:bg-red-600'
+          button: `flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-medium ${TRANSITION_PRESETS.STANDARD_COLORS}`,
+          primary: `bg-blue-500 text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`,
+          secondary: `bg-gray-100 text-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`,
+          success: `bg-green-500 text-white ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`,
+          danger: `bg-red-500 text-white ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`
         };
     }
   };

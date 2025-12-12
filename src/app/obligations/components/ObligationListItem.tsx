@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MoreVertical, Eye, Edit, Copy, Trash2, Download } from "lucide-react";
 import { ObligationDocument } from "@/types/obligations";
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { getStatusColor, getStatusLabel, formatDate } from "@/lib/obligations-utils";
 
 interface ObligationListItemProps {
@@ -29,7 +30,7 @@ export function ObligationListItem({ obligation, onDelete, onDuplicate }: Obliga
   const updatedDate = formatDate(new Date(obligation.updatedAt));
 
   return (
-    <Card className="hover:shadow-md transition-shadow">
+    <Card className={INTERACTIVE_PATTERNS.CARD_STANDARD}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="space-y-2 flex-1">

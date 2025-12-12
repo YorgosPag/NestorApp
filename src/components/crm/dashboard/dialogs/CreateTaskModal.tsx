@@ -25,6 +25,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toLocalDateInputValue, combineLocalDateTime } from '@/lib/date-local';
+import { HOVER_BORDER_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
 
 interface CreateTaskModalProps {
   isOpen: boolean;
@@ -193,8 +194,8 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated, presel
                   key={type.id}
                   type="button"
                   onClick={() => handleTypeChange(type.id)}
-                  className={`p-2 border rounded-lg text-left text-xs transition-colors ${
-                    formData.type === type.id ? 'border-primary bg-primary/10' : 'hover:border-primary/50'
+                  className={`p-2 border rounded-lg text-left text-xs ${TRANSITION_PRESETS.STANDARD_COLORS} ${
+                    formData.type === type.id ? 'border-primary bg-primary/10' : HOVER_BORDER_EFFECTS.PRIMARY_SUBTLE
                   }`}
                   disabled={loading}
                 >

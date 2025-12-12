@@ -42,7 +42,7 @@ export default function CommunicationsHistory({ contactId }) {
         <h4 id="communications-heading" className="text-lg font-semibold">Ιστορικό Επικοινωνιών</h4>
         <nav className="flex items-center gap-2" aria-label="Communications controls">
           <span className="text-sm text-gray-600">{communications.length} επικοινωνίες</span>
-          <button onClick={fetchCommunications} className="text-sm text-blue-600 hover:text-blue-800">Ανανέωση</button>
+          <button onClick={fetchCommunications} className={`text-sm text-blue-600 ${INTERACTIVE_PATTERNS.LINK_PRIMARY}`}>Ανανέωση</button>
         </nav>
       </header>
 
@@ -107,7 +107,7 @@ export default function CommunicationsHistory({ contactId }) {
                   {comm.metadata && Object.keys(comm.metadata).length > 0 && (
                     <footer className="mt-2 pt-2 border-t">
                       <details className="text-xs">
-                        <summary className="text-gray-600 cursor-pointer hover:text-gray-800">Λεπτομέρειες</summary>
+                        <summary className={`text-gray-600 cursor-pointer ${INTERACTIVE_PATTERNS.TEXT_SUBTLE}`}>Λεπτομέρειες</summary>
                         <dl className="mt-1 space-y-1 text-gray-500">
                           {Object.entries(comm.metadata).map(([key, value]) => (
                             <div key={key}>
