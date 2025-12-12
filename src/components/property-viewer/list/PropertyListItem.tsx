@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { PropertyBadge } from '@/core/badges';
 import { Home, Building, MapPin, Euro, Ruler } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { formatFloorLabel } from "@/components/building-management/BuildingCard/BuildingCardUtils";
 import type { Property } from '@/types/property-viewer';
 import { PROPERTY_STATUS_CONFIG, PROPERTY_TYPE_ICONS } from '@/lib/property-utils';
@@ -26,7 +27,8 @@ const PropertyListItemComponent = ({
   return (
     <Card 
       className={cn(
-        "cursor-pointer transition-all duration-200 hover:shadow-md border",
+        "cursor-pointer border",
+        INTERACTIVE_PATTERNS.CARD_STANDARD,
         isSelected 
           ? "ring-2 ring-primary border-primary shadow-md" 
           : "hover:border-primary/50"

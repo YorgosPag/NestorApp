@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Search, MapPin, Home, Filter, TrendingUp, Building, ArrowRight, ChevronDown, Star, Users, Shield } from 'lucide-react';
 import { useTranslation } from '@/i18n';
-import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
+import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS, GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
 
 export function LandingPage() {
   const { t } = useTranslation('landing');
@@ -137,7 +137,7 @@ export function LandingPage() {
 
               <button 
                 type="submit"
-                className={`w-full mt-6 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-purple-700 flex items-center justify-center gap-2 ${TRANSITION_PRESETS.STANDARD_ALL}`}
+                className={`w-full mt-6 px-6 py-3 ${GRADIENT_HOVER_EFFECTS.PRIMARY_BUTTON} flex items-center justify-center gap-2 ${TRANSITION_PRESETS.STANDARD_ALL}`}
               >
                 <Search className="h-5 w-5" />
                 Αναζήτηση Ακινήτων
@@ -344,7 +344,7 @@ export function LandingPage() {
           <footer className="text-center">
             <Link
               href="/properties"
-              className={`inline-flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-purple-700 ${TRANSITION_PRESETS.STANDARD_ALL}`}
+              className={`inline-flex items-center gap-2 px-8 py-3 ${GRADIENT_HOVER_EFFECTS.PRIMARY_BUTTON} ${TRANSITION_PRESETS.STANDARD_ALL}`}
             >
               Δείτε Όλα τα Ακίνητα
               <ArrowRight className="h-5 w-5" />

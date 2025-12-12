@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PropertyBadge } from '@/core/badges';
 import { Home, Building, MapPin, Euro, Ruler } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { COMPLEX_HOVER_EFFECTS } from '@/components/ui/effects';
 import type { Property } from '@/types/property-viewer';
 import { formatFloorLabel } from '../building-management/BuildingCard/BuildingCardUtils';
 
@@ -54,7 +55,8 @@ function PropertyCard({ property, onSelect, isSelected }: { property: Property, 
   return (
     <Card 
         className={cn(
-            "cursor-pointer transition-all duration-300 hover:shadow-lg group border",
+            "cursor-pointer group border",
+            COMPLEX_HOVER_EFFECTS.FEATURE_CARD,
             isSelected ? "ring-2 ring-primary shadow-lg border-primary" : "hover:border-primary/50"
         )}
         onClick={onSelect}

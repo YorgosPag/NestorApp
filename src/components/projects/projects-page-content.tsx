@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useProjectsPageState } from '@/hooks/useProjectsPageState';
 import { useFirestoreProjects } from '@/hooks/useFirestoreProjects';
 import { getCompanies } from '@/components/building-management/building-services';

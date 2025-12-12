@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import type { Contact } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts';
 import { ContactsService } from '@/services/contacts.service';
@@ -475,7 +476,7 @@ export function ContactsPageContent() {
           </div>
           <button
             onClick={handleClearURLFilter}
-            className="flex items-center space-x-1 px-2 py-1 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded transition-colors"
+            className={`flex items-center space-x-1 px-2 py-1 text-sm text-blue-600 rounded ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_GHOST}`}
             title="Εμφάνιση όλων των επαφών"
           >
             <X className="h-4 w-4" />
@@ -545,7 +546,7 @@ export function ContactsPageContent() {
               <p className="text-destructive font-medium">⚠️ {error}</p>
               <button
                 onClick={refreshContacts}
-                className="mt-2 px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
+                className={`mt-2 px-4 py-2 bg-primary text-primary-foreground rounded ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY}`}
               >
                 Επανάληψη
               </button>
@@ -597,14 +598,14 @@ export function ContactsPageContent() {
                   <>
                     <button
                       onClick={() => handleEditContact()}
-                      className="p-2 rounded-md border transition-colors bg-background border-border hover:bg-accent"
+                      className={`p-2 rounded-md border bg-background border-border ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
                       aria-label="Επεξεργασία Επαφής"
                     >
                       <Edit className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => handleDeleteContacts()}
-                      className="p-2 rounded-md border transition-colors bg-background border-border hover:bg-accent text-destructive hover:text-destructive"
+                      className={`p-2 rounded-md border bg-background border-border text-destructive ${INTERACTIVE_PATTERNS.BUTTON_DESTRUCTIVE_GHOST} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
                       aria-label="Διαγραφή Επαφής"
                     >
                       <Trash2 className="h-4 w-4" />

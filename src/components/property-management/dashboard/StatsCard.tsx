@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 interface StatsCardProps {
     title: string;
@@ -55,7 +56,7 @@ export function StatsCard({ title, value, icon: Icon, color, onClick }: StatsCar
     
     return (
         <Card
-            className={`${colorClasses[colorKey]} ${onClick ? 'cursor-pointer hover:scale-105 transition-transform duration-200 hover:shadow-md' : ''} min-w-0 max-w-full overflow-hidden`}
+            className={`${colorClasses[colorKey]} ${onClick ? `cursor-pointer ${INTERACTIVE_PATTERNS.CARD_ENHANCED}` : ''} min-w-0 max-w-full overflow-hidden`}
             onClick={onClick}
         >
             <CardContent className="p-2 sm:p-4 min-w-0">

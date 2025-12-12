@@ -109,7 +109,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
           // Selection states
           isSelected
             ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-md'
-            : 'border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600',
+            : `border-gray-200 dark:border-gray-700 ${INTERACTIVE_PATTERNS.BORDER_SUBTLE}`,
 
           // Disabled state
           disabled && 'opacity-50 cursor-not-allowed',

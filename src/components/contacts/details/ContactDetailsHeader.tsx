@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
 import { Button } from '@/components/ui/button';
 import { ContactBadge, CommonBadge } from '@/core/badges';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -213,20 +214,20 @@ export function ContactDetailsHeader({
                 label: 'Επεξεργασία',
                 onClick: () => onStartEdit?.(),
                 icon: Edit,
-                className: 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700'
+                className: GRADIENT_HOVER_EFFECTS.BLUE
               }
             ] : [
               {
                 label: 'Αποθήκευση',
                 onClick: () => onSaveEdit?.(),
                 icon: Check,
-                className: 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'
+                className: GRADIENT_HOVER_EFFECTS.GREEN
               },
               {
                 label: 'Ακύρωση',
                 onClick: () => onCancelEdit?.(),
                 icon: X,
-                className: 'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700'
+                className: GRADIENT_HOVER_EFFECTS.GRAY
               }
             ]),
             // Delete Action - Μόνο αν υπάρχει το callback
@@ -234,7 +235,7 @@ export function ContactDetailsHeader({
               label: 'Διαγραφή Επαφής',
               onClick: () => onDeleteContact?.(),
               icon: Trash2,
-              className: 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700'
+              className: GRADIENT_HOVER_EFFECTS.RED
             }] : [])
           ]}
           variant="detailed"

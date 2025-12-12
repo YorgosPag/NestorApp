@@ -222,6 +222,24 @@ export const GROUP_HOVER_PATTERNS = {
 } as const;
 
 /**
+ * 🌈 GRADIENT HOVER EFFECTS
+ * Beautiful gradient patterns με hover states
+ */
+export const GRADIENT_HOVER_EFFECTS = {
+  /** Primary gradient button με hover transition */
+  PRIMARY_BUTTON: 'bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-purple-700',
+
+  /** Success gradient με hover */
+  SUCCESS_BUTTON: 'bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold rounded-lg hover:from-green-600 hover:to-emerald-700',
+
+  /** Warning gradient με hover */
+  WARNING_BUTTON: 'bg-gradient-to-r from-orange-500 to-red-600 text-white font-semibold rounded-lg hover:from-orange-600 hover:to-red-700',
+
+  /** Neutral gradient με hover */
+  NEUTRAL_BUTTON: 'bg-gradient-to-r from-gray-600 to-slate-700 text-white font-semibold rounded-lg hover:from-gray-700 hover:to-slate-800'
+} as const;
+
+/**
  * 🚀 COMPLEX COMBINED EFFECTS
  * Ready-to-use combinations για specific use cases
  */

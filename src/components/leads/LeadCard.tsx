@@ -29,7 +29,7 @@ export function LeadCard({
             <User className="w-4 h-4 text-gray-500" />
             <button
               onClick={() => onView(lead.id!)}
-              className="font-medium text-gray-900 hover:text-blue-600 hover:underline flex items-center gap-1 group"
+              className={`font-medium text-gray-900 flex items-center gap-1 group ${INTERACTIVE_PATTERNS.LINK_PRIMARY}`}
             >
               <span itemProp="name">{lead.fullName}</span>
               <ExternalLink className={`w-3 h-3 opacity-0 group-hover:opacity-100 ${INTERACTIVE_PATTERNS.FADE_IN_OUT}`} />

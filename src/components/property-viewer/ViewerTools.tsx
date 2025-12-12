@@ -17,6 +17,7 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 
 type ViewMode = 'view' | 'create' | 'measure' | 'edit';
 type ToolId = 'select' | 'create' | 'measure' | 'move' | 'connect' | 'rectangle' | 'circle' | 'polygon' | 'delete';
@@ -142,7 +143,7 @@ export function ViewerTools({
       size="sm"
       className={cn(
         "h-8 w-8 p-0",
-        activeTool === tool.id && "bg-blue-600 text-white hover:bg-blue-700"
+        activeTool === tool.id && cn("bg-blue-600 text-white", HOVER_BACKGROUND_EFFECTS.BLUE)
       )}
       onClick={() => handleToolChange(tool.id)}
       disabled={isReadOnly && tool.id !== 'select'}
@@ -193,7 +194,7 @@ export function ViewerTools({
         <Button
           variant="outline"
           size="sm"
-          className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+          className={cn("h-8 w-8 p-0", HOVER_TEXT_EFFECTS.RED)}
           onClick={handleDeleteSelected}
           disabled={!selectedPropertyId || isReadOnly}
           title="Διαγραφή επιλεγμένου"

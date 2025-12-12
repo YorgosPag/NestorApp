@@ -161,7 +161,8 @@
       "Bash(SKIP_ENV_VALIDATION=true PORT=3008 npm run dev)",
       "Bash(SKIP_ENV_VALIDATION=true PORT=3007 npm run dev)",
       "Bash(SKIP_ENV_VALIDATION=true PORT=3009 npm run dev)",
-      "Bash(SKIP_ENV_VALIDATION=true PORT=3000 npm run dev)"
+      "Bash(SKIP_ENV_VALIDATION=true PORT=3000 npm run dev)",
+      "Bash(select:*)"
     ],
     "deny": [],
     "ask": []

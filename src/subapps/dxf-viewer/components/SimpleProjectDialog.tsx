@@ -9,6 +9,7 @@ import { UnitFloorplanService } from '../../../services/floorplans/UnitFloorplan
 import { useNotifications } from '../../../providers/NotificationProvider';
 import DxfImportModal from './DxfImportModal';
 import type { SceneModel } from '../types/scene';
+import { HOVER_TEXT_EFFECTS, INTERACTIVE_PATTERNS, FORM_BUTTON_EFFECTS } from '@/components/ui/effects';
 
 interface SimpleProjectDialogProps {
   isOpen: boolean;
@@ -376,7 +377,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
             </div>
             <button
               onClick={handleClose}
-              className="text-gray-400 hover:text-white text-2xl"
+              className={`text-gray-400 text-2xl ${HOVER_TEXT_EFFECTS.WHITE}`}
               aria-label="Close dialog"
             >
               ×
@@ -404,7 +405,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                 <p className="text-red-300 text-sm mb-2">Σφάλμα φόρτωσης: {error}</p>
                 <button
                   onClick={loadCompanies}
-                  className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded"
+                  className={`px-3 py-1 bg-red-600 text-white text-sm rounded ${FORM_BUTTON_EFFECTS.DESTRUCTIVE}`}
                 >
                   Ξαναδοκιμή
                 </button>
@@ -592,13 +593,13 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
               <div className="flex gap-3 justify-center">
                 <button
                   onClick={() => handleLoadFloorplan('project')}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-medium flex-1 max-w-[160px]"
+                  className={`px-4 py-2 bg-blue-600 text-white rounded font-medium flex-1 max-w-[160px] ${FORM_BUTTON_EFFECTS.PRIMARY}`}
                 >
                   Κάτοψη Έργου
                 </button>
                 <button
                   onClick={() => handleLoadFloorplan('parking')}
-                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded font-medium flex-1 max-w-[160px]"
+                  className={`px-4 py-2 bg-green-600 text-white rounded font-medium flex-1 max-w-[160px] ${FORM_BUTTON_EFFECTS.SUCCESS}`}
                 >
                   Κάτοψη Θ.Σ.
                 </button>
@@ -616,13 +617,13 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
               <div className="flex gap-3 justify-center">
                 <button
                   onClick={() => handleLoadFloorplan('building')}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-medium flex-1 max-w-[160px]"
+                  className={`px-4 py-2 bg-blue-600 text-white rounded font-medium flex-1 max-w-[160px] ${FORM_BUTTON_EFFECTS.PRIMARY}`}
                 >
                   Κάτοψη Κτιρίου
                 </button>
                 <button
                   onClick={() => handleLoadFloorplan('storage')}
-                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded font-medium flex-1 max-w-[160px]"
+                  className={`px-4 py-2 bg-green-600 text-white rounded font-medium flex-1 max-w-[160px] ${FORM_BUTTON_EFFECTS.SUCCESS}`}
                 >
                   Κάτοψη Αποθηκών
                 </button>
@@ -695,7 +696,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
               <div className="flex gap-3 justify-center">
                 <button
                   onClick={() => handleLoadFloorplan('unit')}
-                  className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded font-medium flex-1 max-w-[160px]"
+                  className={`px-4 py-2 bg-orange-600 text-white rounded font-medium flex-1 max-w-[160px] ${FORM_BUTTON_EFFECTS.WARNING}`}
                 >
                   Κάτοψη Μονάδας
                 </button>
@@ -711,7 +712,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
         <div className="p-6 border-t border-gray-600 flex justify-between">
           <button
             onClick={currentStep === 'company' ? handleClose : handleBack}
-            className="px-4 py-2 text-gray-200 hover:text-white bg-gray-700 hover:bg-gray-600 rounded"
+            className={`px-4 py-2 text-gray-200 bg-gray-700 rounded ${FORM_BUTTON_EFFECTS.SECONDARY}`}
           >
             {currentStep === 'company' ? 'Ακύρωση' : '← Προηγούμενο'}
           </button>
@@ -720,7 +721,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
             <button
               onClick={handleNext}
               disabled={!selectedCompanyId}
-              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded font-medium"
+              className={`px-6 py-2 bg-blue-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded font-medium ${FORM_BUTTON_EFFECTS.PRIMARY}`}
             >
               Επόμενο →
             </button>
@@ -728,7 +729,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
             <button
               onClick={handleNext}
               disabled={!selectedProjectId}
-              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded font-medium"
+              className={`px-6 py-2 bg-blue-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded font-medium ${FORM_BUTTON_EFFECTS.PRIMARY}`}
             >
               Επόμενο →
             </button>
@@ -736,7 +737,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
             <button
               onClick={handleNext}
               disabled={!selectedBuildingId}
-              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded font-medium"
+              className={`px-6 py-2 bg-blue-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded font-medium ${FORM_BUTTON_EFFECTS.PRIMARY}`}
             >
               Επόμενο →
             </button>
@@ -744,7 +745,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
             <button
               onClick={() => console.log('Ready for unit floorplan selection:', selectedUnitId)}
               disabled={!selectedUnitId}
-              className="px-6 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded font-medium"
+              className={`px-6 py-2 bg-green-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded font-medium ${FORM_BUTTON_EFFECTS.SUCCESS}`}
             >
               Έτοιμο
             </button>
