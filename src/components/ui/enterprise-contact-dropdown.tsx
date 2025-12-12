@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
+import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 
 export interface ContactSummary {
   id: string;
@@ -387,7 +387,7 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
               type="button"
               onClick={clearSelection}
               className={cn(
-                "h-4 w-4 rounded-sm flex items-center justify-center text-muted-foreground hover:text-foreground",
+                "h-4 w-4 rounded-sm flex items-center justify-center text-muted-foreground",
                 INTERACTIVE_PATTERNS.SUBTLE_HOVER,
                 TRANSITION_PRESETS.STANDARD_COLORS
               )}

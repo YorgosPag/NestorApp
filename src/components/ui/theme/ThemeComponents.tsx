@@ -3,6 +3,8 @@
 // Enterprise Theming System - Centralized Design Tokens
 // Separates concerns: Container backgrounds vs Component states vs Content themes
 
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+
 export const THEME_SYSTEM = {
   // 🎨 CONTAINER BACKGROUNDS - Independent from component states
   containers: {
@@ -17,7 +19,7 @@ export const THEME_SYSTEM = {
     cardLight: "border rounded-lg bg-white p-4 border-slate-200",
 
     // Contact card backgrounds (list items)
-    contactCard: "bg-card hover:bg-accent/50",
+    contactCard: `bg-card ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`,
     contactCardSelected: "bg-blue-50 dark:bg-blue-950/20",
     contactCardArchived: "bg-muted/30",
 
@@ -39,10 +41,10 @@ export const THEME_SYSTEM = {
     activeDanger: "data-[state=active]:bg-red-500 data-[state=active]:text-white",
 
     // Hover states
-    hoverDefault: "hover:bg-blue-100 hover:text-blue-700",
-    hoverSuccess: "hover:bg-green-100 hover:text-green-700",
-    hoverWarning: "hover:bg-orange-100 hover:text-orange-700",
-    hoverDanger: "hover:bg-red-100 hover:text-red-700"
+    hoverDefault: `${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`,
+    hoverSuccess: `${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`,
+    hoverWarning: `${INTERACTIVE_PATTERNS.WARNING_HOVER}`,
+    hoverDanger: `${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`
   },
 
   // 📝 CONTENT AREAS - Content background themes

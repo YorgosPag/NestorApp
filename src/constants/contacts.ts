@@ -7,6 +7,7 @@
 
 import { Users, Building2, Landmark } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 
 // 📋 CONTACT TYPES - Μοναδική πηγή αλήθειας για τύπους επαφών
 export const CONTACT_TYPES = {
@@ -21,21 +22,21 @@ export type ContactType = typeof CONTACT_TYPES[keyof typeof CONTACT_TYPES];
 export const CONTACT_COLORS = {
   [CONTACT_TYPES.INDIVIDUAL]: {
     primary: 'text-blue-500',
-    hover: 'hover:text-blue-600',
+    hover: HOVER_TEXT_EFFECTS.BLUE,
     bg: 'bg-blue-50',
     border: 'border-blue-200',
     ring: 'ring-blue-100',
   },
   [CONTACT_TYPES.COMPANY]: {
     primary: 'text-purple-500',
-    hover: 'hover:text-purple-600',
+    hover: HOVER_TEXT_EFFECTS.PURPLE,
     bg: 'bg-purple-50',
     border: 'border-purple-200',
     ring: 'ring-purple-100',
   },
   [CONTACT_TYPES.SERVICE]: {
     primary: 'text-green-500',
-    hover: 'hover:text-green-600',
+    hover: HOVER_TEXT_EFFECTS.GREEN,
     bg: 'bg-green-50',
     border: 'border-green-200',
     ring: 'ring-green-100',

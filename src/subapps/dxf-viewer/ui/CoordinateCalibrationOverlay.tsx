@@ -9,6 +9,7 @@ import React, { useState, useRef } from 'react';
 import { CoordinateTransforms } from '../rendering/core/CoordinateTransforms';
 import type { Point2D, Viewport } from '../rendering/types/Types';
 import type { SceneModel } from '../types/scene';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 interface CoordinateCalibrationOverlayProps {
   mousePos: Point2D | null;
@@ -91,7 +92,7 @@ export default function CoordinateCalibrationOverlay({
       <div className="absolute top-4 left-4 bg-gray-900 text-white p-4 rounded-lg shadow-lg pointer-events-auto" style={{ minWidth: 380, maxWidth: 450, maxHeight: '90vh', overflowY: 'auto' }}>
         <div className="flex justify-between items-center mb-3">
           <h3 className="text-lg font-bold text-cyan-400">🔧 Καλιμπράρισμα Συντεταγμένων</h3>
-          <button onClick={() => onToggle?.(false)} className="text-gray-400 hover:text-white text-xl" title="Κλείσιμο">×</button>
+          <button onClick={() => onToggle?.(false)} className={`text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HOVER} text-xl`} title="Κλείσιμο">×</button>
         </div>
         <div className="space-y-3">
           {/* ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση CoordinateTransforms */}
@@ -140,7 +141,7 @@ export default function CoordinateCalibrationOverlay({
           <div className="bg-gray-800 p-3 rounded text-sm">
             <div className="flex justify-between items-center mb-2">
               <span className="text-cyan-300 font-semibold">🎯 Τεστ Κλικ:</span>
-              <button onClick={() => setClickTests([])} className="text-xs bg-red-600 hover:bg-red-700 px-2 py-1 rounded">Καθαρισμός</button>
+              <button onClick={() => setClickTests([])} className={`text-xs bg-red-600 ${INTERACTIVE_PATTERNS.BUTTON_DESTRUCTIVE_HOVER} px-2 py-1 rounded`}>Καθαρισμός</button>
             </div>
             <div className="border-2 border-dashed border-cyan-600 p-2 rounded cursor-crosshair pointer-events-auto" onClick={handleCalibrationClick}>
               <div className="text-center text-xs text-cyan-300 mb-2">Κλικ εδώ για τεστ ακρίβειας</div>

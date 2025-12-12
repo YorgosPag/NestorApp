@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useGeoTransform } from '../hooks/useGeoTransform';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import type { DxfCoordinate, GeoCoordinate } from '../types';
+import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 
 /**
  * GEOREFERENCING PANEL COMPONENT
@@ -185,7 +186,7 @@ export function GeoreferencingPanel() {
         </h3>
         <button
           onClick={() => setShowAddPoint(!showAddPoint)}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm transition-colors"
+          className="bg-blue-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} text-white px-3 py-1 rounded text-sm transition-colors"
         >
           {showAddPoint ? t('buttons.cancel') : t('actions.addPoint')}
         </button>
@@ -263,14 +264,14 @@ export function GeoreferencingPanel() {
           <div className="flex justify-end space-x-2 mt-4">
             <button
               onClick={() => setShowAddPoint(false)}
-              className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded text-sm transition-colors"
+              className="bg-gray-600 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-white px-3 py-1 rounded text-sm transition-colors"
             >
               {t('controlPoints.cancel')}
             </button>
             <button
               onClick={handleAddPoint}
               disabled={!newPointData.dxfX || !newPointData.dxfY || !newPointData.geoLng || !newPointData.geoLat}
-              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-3 py-1 rounded text-sm transition-colors"
+              className="bg-blue-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-3 py-1 rounded text-sm transition-colors"
             >
               {t('controlPoints.addPoint')}
             </button>
@@ -286,7 +287,7 @@ export function GeoreferencingPanel() {
             className={`p-3 rounded border transition-colors ${
               transformState.selectedPointId === point.id
                 ? 'bg-blue-900 border-blue-600'
-                : 'bg-gray-700 border-gray-600 hover:bg-gray-650'
+                : 'bg-gray-700 border-gray-600 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}'
             }`}
             onClick={() => transformActions.selectControlPoint(
               transformState.selectedPointId === point.id ? null : point.id
@@ -299,7 +300,7 @@ export function GeoreferencingPanel() {
                   e.stopPropagation();
                   transformActions.removeControlPoint(point.id);
                 }}
-                className="text-red-400 hover:text-red-300 text-sm"
+                className="text-red-400 ${HOVER_TEXT_EFFECTS.RED} text-sm"
               >
                 ✕
               </button>
@@ -374,7 +375,7 @@ export function GeoreferencingPanel() {
             transformState.isCalibrating ||
             transformState.validation?.errors.length !== 0
           }
-          className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-2 px-4 rounded transition-colors"
+          className="w-full bg-green-600 ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-2 px-4 rounded transition-colors"
         >
           {transformState.isCalibrating ? t('transformation.calibratingButton') : t('transformation.calibrateTransformation')}
         </button>
@@ -383,14 +384,14 @@ export function GeoreferencingPanel() {
           <button
             onClick={transformActions.saveControlPoints}
             disabled={transformState.controlPoints.length === 0}
-            className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-2 px-4 rounded text-sm transition-colors"
+            className="bg-blue-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-2 px-4 rounded text-sm transition-colors"
           >
             {t('controlPoints.savePoints')}
           </button>
 
           <button
             onClick={transformActions.loadControlPoints}
-            className="bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded text-sm transition-colors"
+            className="bg-purple-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} text-white py-2 px-4 rounded text-sm transition-colors"
           >
             {t('controlPoints.loadPoints')}
           </button>
@@ -399,7 +400,7 @@ export function GeoreferencingPanel() {
         <button
           onClick={transformActions.clearControlPoints}
           disabled={transformState.controlPoints.length === 0}
-          className="w-full bg-red-600 hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-2 px-4 rounded text-sm transition-colors"
+          className="w-full bg-red-600 ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-2 px-4 rounded text-sm transition-colors"
         >
           {t('controlPoints.clearAllPoints')}
         </button>
@@ -420,7 +421,7 @@ export function GeoreferencingPanel() {
           <span className="text-red-300">❌ Error: {transformState.error}</span>
           <button
             onClick={transformActions.clearError}
-            className="text-red-400 hover:text-red-300"
+            className="text-red-400 ${HOVER_TEXT_EFFECTS.RED}"
           >
             ✕
           </button>

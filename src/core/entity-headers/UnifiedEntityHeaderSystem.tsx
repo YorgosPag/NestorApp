@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 
 // ===== TYPES & INTERFACES =====
 
@@ -97,7 +98,7 @@ export const EntityDetailsHeader: React.FC<EntityHeaderProps> = ({
             <Avatar
               key={avatarImageUrl || 'empty-avatar'}
               className={cn(
-                "flex-shrink-0 shadow-sm cursor-pointer hover:opacity-80 transition-opacity",
+                `flex-shrink-0 shadow-sm cursor-pointer ${INTERACTIVE_PATTERNS.OPACITY_HOVER} ${TRANSITION_PRESETS.OPACITY}`,
                 iconSizes[variant]
               )}
               onClick={onAvatarClick}

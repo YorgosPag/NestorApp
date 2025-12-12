@@ -15,6 +15,7 @@
 'use client';
 
 import React from 'react';
+import { HOVER_BACKGROUND_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
 
 /**
  * Component props
@@ -80,8 +81,8 @@ export function FloorPlanControls({
           onClick={() => onVisibilityChange(!visible)}
           className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
             visible
-              ? 'bg-green-100 text-green-700 hover:bg-green-200'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              ? `bg-green-100 text-green-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
+              : `bg-gray-100 text-gray-600 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
           }`}
           title={visible ? 'Hide layer' : 'Show layer'}
         >
@@ -134,7 +135,7 @@ export function FloorPlanControls({
         <button
           onClick={() => onOpacityChange(0.3)}
           disabled={!visible}
-          className="flex-1 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
+          className={`flex-1 px-2 py-1 text-xs bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors ${HOVER_BACKGROUND_EFFECTS.LIGHT}`}
           title="Set opacity to 30%"
         >
           30%
@@ -142,7 +143,7 @@ export function FloorPlanControls({
         <button
           onClick={() => onOpacityChange(0.5)}
           disabled={!visible}
-          className="flex-1 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
+          className={`flex-1 px-2 py-1 text-xs bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors ${HOVER_BACKGROUND_EFFECTS.LIGHT}`}
           title="Set opacity to 50%"
         >
           50%
@@ -150,7 +151,7 @@ export function FloorPlanControls({
         <button
           onClick={() => onOpacityChange(0.8)}
           disabled={!visible}
-          className="flex-1 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
+          className={`flex-1 px-2 py-1 text-xs bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors ${HOVER_BACKGROUND_EFFECTS.LIGHT}`}
           title="Set opacity to 80%"
         >
           80%
@@ -158,7 +159,7 @@ export function FloorPlanControls({
         <button
           onClick={() => onOpacityChange(1.0)}
           disabled={!visible}
-          className="flex-1 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
+          className={`flex-1 px-2 py-1 text-xs bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors ${HOVER_BACKGROUND_EFFECTS.LIGHT}`}
           title="Set opacity to 100%"
         >
           100%

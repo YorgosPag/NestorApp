@@ -107,7 +107,10 @@ export const HOVER_BORDER_EFFECTS = {
   ORANGE: 'hover:border-orange-500 dark:hover:border-orange-400',
 
   /** Danger red border hover */
-  RED: 'hover:border-red-500 dark:hover:border-red-400'
+  RED: 'hover:border-red-500 dark:hover:border-red-400',
+
+  /** Neutral gray border hover */
+  GRAY: 'hover:border-gray-300 dark:hover:border-gray-600'
 } as const;
 
 /**
@@ -231,7 +234,57 @@ export const INTERACTIVE_PATTERNS = {
   BORDER_SUBTLE: 'transition-all duration-200 hover:border-border/80',
 
   /** Fade in/out effect για icons */
-  FADE_IN_OUT: 'transition-opacity duration-200'
+  FADE_IN_OUT: 'transition-opacity duration-200',
+
+  /** Enhanced card hover με shadow upgrade */
+  CARD_ENHANCED: 'hover:shadow-xl',
+
+  /** Opacity hover για interactive elements */
+  OPACITY_HOVER: 'hover:opacity-80',
+
+  // ========================================================================
+  // 🔘 BUTTON-SPECIFIC HOVER PATTERNS
+  // ========================================================================
+
+  /** Button primary hover (90% opacity) */
+  BUTTON_PRIMARY_HOVER: 'hover:bg-primary/90',
+
+  /** Button destructive hover (90% opacity) */
+  BUTTON_DESTRUCTIVE_HOVER: 'hover:bg-destructive/90',
+
+  /** Button secondary hover (80% opacity) */
+  BUTTON_SECONDARY_HOVER: 'hover:bg-secondary/80',
+
+  /** Button accent hover για ghost/outline */
+  BUTTON_ACCENT_HOVER: 'hover:bg-accent hover:text-accent-foreground',
+
+  /** Button underline hover για links */
+  BUTTON_LINK_HOVER: 'hover:underline',
+
+  /** Button primary selected state hover */
+  BUTTON_PRIMARY_SELECTED_HOVER: 'hover:bg-primary hover:text-primary-foreground',
+
+  // ========================================================================
+  // 🏢 SIDEBAR-SPECIFIC HOVER PATTERNS (New for Batch 10 Migration)
+  // ========================================================================
+
+  /** Sidebar accent background hover */
+  SIDEBAR_ACCENT_HOVER: 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+
+  /** Sidebar background hover for rail */
+  SIDEBAR_BACKGROUND_HOVER: 'hover:bg-sidebar',
+
+  /** Border hover for pseudo-elements (after/before) */
+  BORDER_HOVER_AFTER: 'hover:after:bg-sidebar-border',
+
+  /** Text hover για standard text elements */
+  TEXT_HOVER: 'hover:text-foreground',
+
+  /** Warning themed hover (orange colors) */
+  WARNING_HOVER: 'hover:bg-orange-100 hover:text-orange-700 dark:hover:bg-orange-900/20 dark:hover:text-orange-300',
+
+  /** Purple themed hover για special actions */
+  PURPLE_HOVER: 'hover:bg-purple-100 dark:hover:bg-purple-900/40'
 } as const;
 
 /**
@@ -252,7 +305,13 @@ export const HOVER_BACKGROUND_EFFECTS = {
   PRIMARY: 'hover:bg-primary/10',
 
   /** Transparent background με transitions */
-  TRANSPARENT: 'hover:bg-black/5 dark:hover:bg-white/5'
+  TRANSPARENT: 'hover:bg-black/5 dark:hover:bg-white/5',
+
+  /** Blue button background hover (darker shade) */
+  BLUE_BUTTON: 'hover:bg-blue-700',
+
+  /** Orange button background hover (darker shade) */
+  ORANGE_BUTTON: 'hover:bg-orange-700'
 } as const;
 
 /**
@@ -270,7 +329,19 @@ export const GROUP_HOVER_PATTERNS = {
   LIFT_ON_GROUP: 'group-hover:-translate-y-1',
 
   /** Color change on group hover */
-  ACCENT_ON_GROUP: 'group-hover:text-accent-foreground'
+  ACCENT_ON_GROUP: 'group-hover:text-accent-foreground',
+
+  /** Subtle opacity reveal on group hover */
+  REVEAL_ON_GROUP: 'opacity-0 group-hover:opacity-20',
+
+  /** Full opacity reveal on group hover */
+  SHOW_ON_GROUP: 'opacity-0 group-hover:opacity-100',
+
+  /** Blue text color on group hover */
+  BLUE_TEXT_ON_GROUP: 'group-hover:text-blue-600',
+
+  /** Blue icon color on group hover (lighter shade) */
+  BLUE_ICON_ON_GROUP: 'group-hover:text-blue-500'
 } as const;
 
 /**

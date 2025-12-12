@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import { withIconProps } from '../../icons/iconRegistry';
+import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 interface ToolbarButtonProps {
   label: string;

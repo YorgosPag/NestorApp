@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { CommonBadge } from '@/core/badges';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { GROUP_HOVER_PATTERNS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 import { GripVertical, ChevronRight, ChevronDown, Hash, Plus, Edit3, Save, X, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ObligationArticle } from '@/types/obligations';
@@ -53,7 +54,7 @@ export function ArticleItem({
       )}
     >
       <div className="flex items-center gap-2 p-3">
-        {!readOnly && <GripVertical className="h-4 w-4 text-gray-400 cursor-move opacity-0 group-hover:opacity-100" />}
+        {!readOnly && <GripVertical className={`h-4 w-4 text-gray-400 cursor-move opacity-0 ${GROUP_HOVER_PATTERNS.SHOW_ON_GROUP}`} />}
         {hasParagraphs && (
           <Button variant="ghost" size="sm" onClick={() => handlers.toggleExpanded(article.id)} className="h-6 w-6 p-0">
             {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
@@ -92,7 +93,7 @@ export function ArticleItem({
           )}
         </div>
         {!readOnly && (
-          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
+          <div className={`flex items-center gap-1 opacity-0 ${GROUP_HOVER_PATTERNS.SHOW_ON_GROUP}`}>
             {isEditing ? (
               <>
                 <Button size="sm" onClick={handlers.stopEditing}><Save className="h-3 w-3" /></Button>
@@ -101,7 +102,7 @@ export function ArticleItem({
             ) : (
               <>
                 <Button variant="ghost" size="sm" onClick={() => handlers.addParagraph(sectionId, article.id)} className="h-7 px-2" title="Προσθήκη παραγράφου"><Plus className="h-3 w-3" /></Button>
-                <Button variant="ghost" size="sm" onClick={() => handlers.deleteArticle(sectionId, article.id)} className="h-7 px-2 text-red-600 hover:text-red-700"><Trash2 className="h-3 w-3" /></Button>
+                <Button variant="ghost" size="sm" onClick={() => handlers.deleteArticle(sectionId, article.id)} className={`h-7 px-2 text-red-600 ${HOVER_TEXT_EFFECTS.DESTRUCTIVE}`}><Trash2 className="h-3 w-3" /></Button>
               </>
             )}
           </div>
@@ -116,7 +117,7 @@ export function ArticleItem({
               index={pIndex}
               sectionId={sectionId}
               articleId={article.id}
-              isEditing={editingItem === paragraph.id}
+              isEditing={activeItemId === paragraph.id}
               isActive={activeItemId === paragraph.id}
               readOnly={readOnly}
               dragState={dragState}

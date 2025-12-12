@@ -3,6 +3,7 @@
 import React from 'react';
 import { BarChart, Construction, Map, Settings } from 'lucide-react';
 import { useTranslation } from '../../../../i18n';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 type PanelType = 'overlay' | 'levels' | 'hierarchy' | 'colors';
 
@@ -38,7 +39,7 @@ export function PanelTabs({ activePanel, onTabClick, disabledPanels, isCollapsed
       return `${baseClass} text-white bg-blue-600 border border-blue-400`;
     }
     
-    return `${baseClass} text-gray-300 hover:text-white hover:bg-gray-700 border border-gray-500`;
+    return `${baseClass} text-gray-300 border border-gray-500 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`;
   };
 
   const renderTabRow = (tabs: Array<{ id: PanelType; label: string; icon: React.ComponentType<any> }>) => (

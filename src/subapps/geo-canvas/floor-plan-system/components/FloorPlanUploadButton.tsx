@@ -15,6 +15,7 @@
 
 import React from 'react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+import { INTERACTIVE_PATTERNS, HOVER_SHADOWS } from '@/components/ui/effects';
 
 export interface FloorPlanUploadButtonProps {
   /**
@@ -66,14 +67,14 @@ export function FloorPlanUploadButton({
       disabled={disabled || loading}
       className={`
         px-4 py-2
-        bg-blue-600 hover:bg-blue-700
-        text-white font-medium text-sm
+        bg-blue-600 text-white font-medium text-sm
         rounded-lg
         transition-all duration-200
         transform active:scale-95
         disabled:opacity-50 disabled:cursor-not-allowed
         flex items-center gap-2
-        shadow-lg hover:shadow-blue-500/30
+        shadow-lg
+        ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${HOVER_SHADOWS.COLORED.BLUE}
         ${className}
       `}
       title={t('floorPlan.uploadButton.tooltip')}

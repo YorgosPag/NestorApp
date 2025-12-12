@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { UnitBadge } from '@/core/badges';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -47,7 +48,7 @@ export function ParkingSpotTableRow({
     <div
       className={cn(
         'flex items-center border-b px-2 py-1.5 transition-colors cursor-pointer',
-        isSelected ? 'bg-blue-100 dark:bg-blue-900/20' : 'hover:bg-muted/50'
+        isSelected ? 'bg-blue-100 dark:bg-blue-900/20' : INTERACTIVE_PATTERNS.SUBTLE_HOVER
       )}
       style={{ minWidth: `${totalMinWidth}px` }}
       onClick={handleSelect}

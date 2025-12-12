@@ -13,6 +13,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useRulersGridContext } from '../../../../../../systems/rulers-grid/RulersGridSystem';
 import { UnifiedColorPicker } from '../../../../../color';
 
@@ -151,7 +152,7 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
             className={`flex-1 p-2 rounded text-xs border transition-colors ${
               textVisible
                 ? 'bg-blue-600 border-blue-500'
-                : 'bg-gray-600 hover:bg-blue-600 border-gray-500'
+                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500`
             }`}
           >
             Ενεργό
@@ -161,7 +162,7 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
             className={`flex-1 p-2 rounded text-xs border transition-colors ${
               !textVisible
                 ? 'bg-blue-600 border-blue-500'
-                : 'bg-gray-600 hover:bg-blue-600 border-gray-500'
+                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500`
             }`}
           >
             Ανενεργό

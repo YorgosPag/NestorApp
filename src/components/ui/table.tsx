@@ -1,6 +1,7 @@
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
+import { INTERACTIVE_PATTERNS } from "@/components/ui/effects"
 
 const Table = React.forwardRef<
   HTMLTableElement,
@@ -58,7 +59,7 @@ const TableRow = React.forwardRef<
   <tr
     ref={ref}
     className={cn(
-      "border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted",
+      `border-b transition-colors ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} data-[state=selected]:bg-muted`,
       className
     )}
     {...props}

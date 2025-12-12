@@ -6,6 +6,7 @@ import { Button } from "../../../../components/ui/button";
 import { CommonBadge } from '../../../../core/badges';
 import { RotateCcw, Minimize } from "lucide-react";
 import type { DXFViewerLayoutProps } from '../../integration/types';
+import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { ToolbarSection } from './ToolbarSection';
 import { CanvasSection } from './CanvasSection';
 
@@ -20,7 +21,7 @@ export const FullscreenView: React.FC<DXFViewerLayoutProps> = (props) => (
         <Button
           variant="outline"
           size="sm"
-          className="bg-gray-700 hover:bg-gray-600 text-white border-gray-600"
+          className={`bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-white border-gray-600`}
           onClick={() => props.handleAction('setViewMode', 'normal')}
         >
           <Minimize className="w-4 h-4 mr-2" />
@@ -29,7 +30,7 @@ export const FullscreenView: React.FC<DXFViewerLayoutProps> = (props) => (
         <Button 
           variant="outline" 
           size="sm" 
-          className="bg-gray-700 hover:bg-gray-600 text-white border-gray-600"
+          className={`bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-white border-gray-600`}
           onClick={() => props.handleAction('clear')}
         >
           <RotateCcw className="w-4 h-4 mr-2" />

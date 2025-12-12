@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useCursorSettings } from '../../../../../systems/cursor';
 import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
+import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 // Type definitions for cursor and crosshair settings
 type LineStyle = 'solid' | 'dashed' | 'dotted' | 'dash-dot';
@@ -78,7 +79,7 @@ export function CursorSettings() {
                 className={`p-2 rounded text-xs border transition-colors ${
                   settings.cursor.shape === 'circle'
                     ? 'bg-blue-600 border-blue-500'
-                    : 'bg-gray-600 hover:bg-blue-600 border-gray-500'
+                    : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
                 }`}
               >
                 <div
@@ -92,7 +93,7 @@ export function CursorSettings() {
                 className={`p-2 rounded text-xs border transition-colors ${
                   settings.cursor.shape === 'square'
                     ? 'bg-blue-600 border-blue-500'
-                    : 'bg-gray-600 hover:bg-blue-600 border-gray-500'
+                    : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
                 }`}
               >
                 <div
@@ -133,7 +134,7 @@ export function CursorSettings() {
                 className={`p-2 rounded text-xs border transition-colors ${
                   settings.cursor.line_style === 'solid'
                     ? 'bg-blue-600 border-blue-500'
-                    : 'bg-gray-600 hover:bg-blue-600 border-gray-500'
+                    : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
                 }`}
               >
                 <div
@@ -150,7 +151,7 @@ export function CursorSettings() {
                 className={`p-2 rounded text-xs border transition-colors ${
                   settings.cursor.line_style === 'dashed'
                     ? 'bg-blue-600 border-blue-500'
-                    : 'bg-gray-600 hover:bg-blue-600 border-gray-500'
+                    : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
                 }`}
               >
                 <div
@@ -169,7 +170,7 @@ export function CursorSettings() {
                 className={`p-2 rounded text-xs border transition-colors ${
                   settings.cursor.line_style === 'dotted'
                     ? 'bg-blue-600 border-blue-500'
-                    : 'bg-gray-600 hover:bg-blue-600 border-gray-500'
+                    : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
                 }`}
               >
                 <div
@@ -186,7 +187,7 @@ export function CursorSettings() {
                 className={`p-2 rounded text-xs border transition-colors ${
                   settings.cursor.line_style === 'dash-dot'
                     ? 'bg-blue-600 border-blue-500'
-                    : 'bg-gray-600 hover:bg-blue-600 border-gray-500'
+                    : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
                 }`}
               >
                 <div
@@ -227,7 +228,7 @@ export function CursorSettings() {
                   className={`flex-1 p-1 rounded text-xs transition-colors ${
                     (settings.cursor.line_width || 1) === width
                       ? 'bg-blue-600 border border-blue-500'
-                      : 'bg-gray-600 hover:bg-blue-600 border border-gray-500'
+                      : `bg-gray-600 border border-gray-500 ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`
                   }`}
                 >
                   <div
@@ -271,7 +272,7 @@ export function CursorSettings() {
                   className={`flex-1 p-2 rounded text-xs transition-colors border ${
                     settings.cursor.size === size
                       ? 'border-blue-500 bg-blue-600'
-                      : 'border-gray-500 bg-gray-600 hover:bg-blue-600'
+                      : `border-gray-500 bg-gray-600 ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`
                   }`}
                 >
                   <div
@@ -320,7 +321,7 @@ export function CursorSettings() {
                 className={`flex-1 p-2 rounded text-xs border transition-colors ${
                   settings.cursor.enabled
                     ? 'bg-blue-600 border-blue-500'
-                    : 'bg-gray-600 hover:bg-blue-600 border-gray-500'
+                    : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
                 }`}
               >
                 Ενεργό
@@ -330,7 +331,7 @@ export function CursorSettings() {
                 className={`flex-1 p-2 rounded text-xs border transition-colors ${
                   !settings.cursor.enabled
                     ? 'bg-blue-600 border-blue-500'
-                    : 'bg-gray-600 hover:bg-blue-600 border-gray-500'
+                    : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
                 }`}
               >
                 Απενεργοποιημένο

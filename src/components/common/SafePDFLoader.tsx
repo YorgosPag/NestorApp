@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { BarChart3, Link, Paperclip, FileText, X, CheckCircle, Circle, Chrome, Check } from 'lucide-react';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 interface SafePDFLoaderProps {
   file: string | File | null;
@@ -221,7 +222,7 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
                     href={pdfUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className={`inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg transition-colors ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
                   >
                     <FileText className="h-4 w-4 mr-2" />
                     Open PDF in New Tab

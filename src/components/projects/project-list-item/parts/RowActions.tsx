@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Eye, Edit, MoreVertical, Star } from 'lucide-react';
+import { GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 
 interface RowActionsProps {
     isFavorite: boolean;
@@ -19,7 +20,7 @@ interface RowActionsProps {
 
 export function RowActions({ isFavorite, onToggleFavorite }: RowActionsProps) {
     return (
-        <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className={`absolute bottom-2 right-2 opacity-0 ${GROUP_HOVER_PATTERNS.SHOW_ON_GROUP} transition-opacity`}>
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                     <Button 

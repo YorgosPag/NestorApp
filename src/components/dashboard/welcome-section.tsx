@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Plus, Search } from "lucide-react";
 import { useTranslation } from "@/i18n";
+import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 interface WelcomeSectionProps {
   activeToday: number;
@@ -22,7 +23,7 @@ export function WelcomeSection({ activeToday }: WelcomeSectionProps) {
           <Button
             size="lg"
             variant="secondary"
-            className="bg-white text-blue-600 hover:bg-gray-100"
+            className={`bg-white text-blue-600 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`}
           >
             <Plus className="mr-2 h-5 w-5" />
             {t('welcome.actions.newContact')}
@@ -30,7 +31,7 @@ export function WelcomeSection({ activeToday }: WelcomeSectionProps) {
           <Button
             size="lg"
             variant="outline"
-            className="border-white text-white hover:bg-white/20"
+            className={`border-white text-white ${HOVER_BACKGROUND_EFFECTS.TRANSPARENT}`}
           >
             <Search className="mr-2 h-5 w-5" />
             {t('welcome.actions.search')}

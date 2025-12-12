@@ -5,6 +5,7 @@ import { MapPin, Hexagon, Hand, Trash2, Check, X, Bell, Home, Search } from 'luc
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import type { RealEstatePolygon } from '@geo-alert/core';
 import { useRealEstateMatching } from '@/services/real-estate-monitor/useRealEstateMatching';
+import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS, HOVER_SHADOWS, TRANSITION_PRESETS } from '@/components/ui/effects';
 
 // ✅ NEW: Enterprise Centralized Polygon System
 import { useCentralizedPolygonSystem } from '../systems/polygon-system';
@@ -266,7 +267,7 @@ export function CitizenDrawingInterface({
               flex items-center gap-2 px-3 py-2 rounded-lg border transition-all
               ${showAddressSearch
                 ? 'border-blue-500 bg-blue-50 text-blue-700'
-                : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                : 'border-gray-300 bg-white text-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT}'
               }
             `}
             title="Αναζήτηση διεύθυνσης ή GPS"
@@ -299,9 +300,9 @@ export function CitizenDrawingInterface({
             transition-all duration-200 min-h-[100px]
             ${selectedTool === 'point'
               ? 'border-blue-500 bg-blue-50'
-              : 'border-gray-300 hover:border-gray-400 bg-white'
+              : 'border-gray-300 ${HOVER_BACKGROUND_EFFECTS.LIGHT} bg-white'
             }
-            ${isDrawing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:shadow-md'}
+            ${isDrawing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.MEDIUM}'}
           `}
         >
           <MapPin className="w-8 h-8 mb-2 text-blue-600" />
@@ -318,9 +319,9 @@ export function CitizenDrawingInterface({
             transition-all duration-200 min-h-[100px]
             ${selectedTool === 'polygon'
               ? 'border-blue-500 bg-blue-50'
-              : 'border-gray-300 hover:border-gray-400 bg-white'
+              : 'border-gray-300 ${HOVER_BACKGROUND_EFFECTS.LIGHT} bg-white'
             }
-            ${isDrawing && selectedTool !== 'polygon' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:shadow-md'}
+            ${isDrawing && selectedTool !== 'polygon' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.MEDIUM}'}
           `}
         >
           <Hexagon className="w-8 h-8 mb-2 text-green-600" />
@@ -340,9 +341,9 @@ export function CitizenDrawingInterface({
             transition-all duration-200 min-h-[100px]
             ${selectedTool === 'freehand'
               ? 'border-blue-500 bg-blue-50'
-              : 'border-gray-300 hover:border-gray-400 bg-white'
+              : 'border-gray-300 ${HOVER_BACKGROUND_EFFECTS.LIGHT} bg-white'
             }
-            ${isDrawing && selectedTool !== 'freehand' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:shadow-md'}
+            ${isDrawing && selectedTool !== 'freehand' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.MEDIUM}'}
           `}
         >
           <Hand className="w-8 h-8 mb-2 text-purple-600" />
@@ -359,9 +360,9 @@ export function CitizenDrawingInterface({
             transition-all duration-200 min-h-[100px]
             ${selectedTool === 'real-estate'
               ? 'border-orange-500 bg-orange-50'
-              : 'border-gray-300 hover:border-gray-400 bg-white'
+              : 'border-gray-300 ${HOVER_BACKGROUND_EFFECTS.LIGHT} bg-white'
             }
-            ${isDrawing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:shadow-md'}
+            ${isDrawing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.MEDIUM}'}
           `}
         >
           <Home className="w-8 h-8 mb-2 text-orange-600" />
@@ -380,9 +381,9 @@ export function CitizenDrawingInterface({
             transition-all duration-200 min-h-[100px]
             ${showAddressSearch
               ? 'border-indigo-500 bg-indigo-50'
-              : 'border-gray-300 hover:border-gray-400 bg-white'
+              : 'border-gray-300 ${HOVER_BACKGROUND_EFFECTS.LIGHT} bg-white'
             }
-            cursor-pointer hover:shadow-md
+            cursor-pointer ${HOVER_SHADOWS.MEDIUM}
           `}
         >
           <Search className="w-8 h-8 mb-2 text-indigo-600" />
@@ -398,9 +399,9 @@ export function CitizenDrawingInterface({
             transition-all duration-200 min-h-[100px]
             ${showAdminDemo
               ? 'border-violet-500 bg-violet-50'
-              : 'border-gray-300 hover:border-gray-400 bg-white'
+              : 'border-gray-300 ${HOVER_BACKGROUND_EFFECTS.LIGHT} bg-white'
             }
-            cursor-pointer hover:shadow-md
+            cursor-pointer ${HOVER_SHADOWS.MEDIUM}
           `}
         >
           <div className="w-8 h-8 mb-2 text-violet-600 font-bold text-lg">🏛️</div>
@@ -416,9 +417,9 @@ export function CitizenDrawingInterface({
             transition-all duration-200 min-h-[100px]
             ${showBoundaryControl
               ? 'border-emerald-500 bg-emerald-50'
-              : 'border-gray-300 hover:border-gray-400 bg-white'
+              : 'border-gray-300 ${HOVER_BACKGROUND_EFFECTS.LIGHT} bg-white'
             }
-            cursor-pointer hover:shadow-md
+            cursor-pointer ${HOVER_SHADOWS.MEDIUM}
           `}
         >
           <div className="w-8 h-8 mb-2 text-emerald-600 font-bold text-lg">🎛️</div>
@@ -442,7 +443,7 @@ export function CitizenDrawingInterface({
                   py-2 px-3 text-sm font-medium rounded-md transition-all
                   ${pointRadius === radius
                     ? 'bg-blue-500 text-white shadow-md'
-                    : 'bg-white text-blue-700 border border-blue-300 hover:bg-blue-100'
+                    : `bg-white text-blue-700 border border-blue-300 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
                   }
                 `}
               >
@@ -459,7 +460,7 @@ export function CitizenDrawingInterface({
                   py-2 px-3 text-sm font-medium rounded-md transition-all
                   ${pointRadius === radius
                     ? 'bg-blue-500 text-white shadow-md'
-                    : 'bg-white text-blue-700 border border-blue-300 hover:bg-blue-100'
+                    : `bg-white text-blue-700 border border-blue-300 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
                   }
                 `}
               >
@@ -478,7 +479,7 @@ export function CitizenDrawingInterface({
         <div className="flex gap-2 mb-4">
           <button
             onClick={handleComplete}
-            className="flex-1 flex items-center justify-center gap-2 bg-green-500 text-white py-3 px-4 rounded-lg hover:bg-green-600 transition-colors"
+            className={`flex-1 flex items-center justify-center gap-2 bg-green-500 text-white py-3 px-4 rounded-lg ${HOVER_BACKGROUND_EFFECTS.SUCCESS} ${TRANSITION_PRESETS.COLORS}`}
           >
             <Check className="w-5 h-5" />
             <span className="font-medium">{t('drawingInterfaces.citizen.actions.complete')}</span>
@@ -486,7 +487,7 @@ export function CitizenDrawingInterface({
 
           <button
             onClick={handleCancel}
-            className="flex-1 flex items-center justify-center gap-2 bg-red-500 text-white py-3 px-4 rounded-lg hover:bg-red-600 transition-colors"
+            className={`flex-1 flex items-center justify-center gap-2 bg-red-500 text-white py-3 px-4 rounded-lg ${HOVER_BACKGROUND_EFFECTS.DESTRUCTIVE} ${TRANSITION_PRESETS.COLORS}`}
           >
             <X className="w-5 h-5" />
             <span className="font-medium">{t('drawingInterfaces.citizen.actions.cancel')}</span>
@@ -504,7 +505,7 @@ export function CitizenDrawingInterface({
             </h4>
             <button
               onClick={() => setShowRealEstateSetup(false)}
-              className="text-orange-600 hover:text-orange-800"
+              className={`text-orange-600 ${HOVER_BACKGROUND_EFFECTS.WARNING}`}
             >
               <X className="w-5 h-5" />
             </button>
@@ -573,7 +574,7 @@ export function CitizenDrawingInterface({
                 setShowRealEstateSetup(false);
                 console.log('🏠 Citizen: Real estate polygon drawing started');
               }}
-              className="flex-1 flex items-center justify-center gap-2 bg-orange-500 text-white py-2 px-4 rounded-lg hover:bg-orange-600 transition-colors"
+              className={`flex-1 flex items-center justify-center gap-2 bg-orange-500 text-white py-2 px-4 rounded-lg ${HOVER_BACKGROUND_EFFECTS.WARNING} ${TRANSITION_PRESETS.COLORS}`}
             >
               <MapPin className="w-4 h-4" />
               <span className="text-sm font-medium">{t('drawingInterfaces.citizen.actions.drawArea')}</span>
@@ -581,7 +582,7 @@ export function CitizenDrawingInterface({
 
             <button
               onClick={() => setShowRealEstateSetup(false)}
-              className="flex-1 flex items-center justify-center gap-2 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors"
+              className={`flex-1 flex items-center justify-center gap-2 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg ${HOVER_BACKGROUND_EFFECTS.MUTED} ${TRANSITION_PRESETS.COLORS}`}
             >
               <X className="w-4 h-4" />
               <span className="text-sm font-medium">{t('drawingInterfaces.citizen.actions.cancel')}</span>
@@ -594,7 +595,7 @@ export function CitizenDrawingInterface({
       {polygons.length > 0 && !isDrawing && (
         <button
           onClick={handleClearAll}
-          className="w-full flex items-center justify-center gap-2 bg-gray-100 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors"
+          className={`w-full flex items-center justify-center gap-2 bg-gray-100 text-gray-700 py-2 px-4 rounded-lg ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${TRANSITION_PRESETS.COLORS}`}
         >
           <Trash2 className="w-4 h-4" />
           <span className="text-sm">{t('drawingInterfaces.citizen.actions.clearAll')} ({polygons.length})</span>

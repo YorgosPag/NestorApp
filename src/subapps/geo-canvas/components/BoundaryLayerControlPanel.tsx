@@ -3,6 +3,7 @@
 import React, { useState, useCallback } from 'react';
 import { Eye, EyeOff, Settings, Layers, Palette, Sliders } from 'lucide-react';
 import type { AdminSearchResult } from '../types/administrative-types';
+import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 // ============================================================================
 // TYPES
@@ -125,8 +126,8 @@ export function BoundaryLayerControlPanel({
           onClick={() => handleVisibilityToggle(layer.id, !layer.visible)}
           className={`p-1 rounded transition-colors ${
             layer.visible
-              ? 'text-blue-600 hover:bg-blue-50'
-              : 'text-gray-400 hover:bg-gray-50'
+              ? 'text-blue-600 ${HOVER_BACKGROUND_EFFECTS.LIGHT}'
+              : 'text-gray-400 ${HOVER_BACKGROUND_EFFECTS.LIGHT}'
           }`}
           title={layer.visible ? 'Απόκρυψη' : 'Εμφάνιση'}
         >
@@ -136,7 +137,7 @@ export function BoundaryLayerControlPanel({
         {/* Remove Button */}
         <button
           onClick={() => onLayerRemove(layer.id)}
-          className="p-1 rounded text-red-500 hover:bg-red-50 ml-1"
+          className="p-1 rounded text-red-500 ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ml-1"
           title="Αφαίρεση layer"
         >
           ×
@@ -167,7 +168,7 @@ export function BoundaryLayerControlPanel({
         <div className="space-y-2">
           <button
             onClick={() => setActiveStyleLayer(activeStyleLayer === layer.id ? null : layer.id)}
-            className="flex items-center gap-2 text-xs text-gray-600 hover:text-gray-800 transition-colors"
+            className="flex items-center gap-2 text-xs text-gray-600 ${HOVER_TEXT_EFFECTS.DARKER} transition-colors"
           >
             <Palette className="w-3 h-3" />
             <span>Προσαρμογή στυλ</span>
@@ -259,7 +260,7 @@ export function BoundaryLayerControlPanel({
 
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-gray-400 ${HOVER_TEXT_EFFECTS.DARKER} transition-colors"
             title={isExpanded ? 'Σύμπτυξη' : 'Επέκταση'}
           >
             {isExpanded ? '−' : '+'}
@@ -273,7 +274,7 @@ export function BoundaryLayerControlPanel({
           {/* Add New Boundary Button */}
           <button
             onClick={onAddNewBoundary}
-            className="w-full mb-4 flex items-center justify-center gap-2 p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-gray-400 hover:text-gray-800 transition-colors"
+            className={`w-full mb-4 flex items-center justify-center gap-2 p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} transition-colors`}
           >
             <span className="text-lg">+</span>
             <span className="text-sm font-medium">Προσθήκη Boundary</span>
@@ -298,13 +299,13 @@ export function BoundaryLayerControlPanel({
               <div className="flex gap-2">
                 <button
                   onClick={() => layers.forEach(layer => handleVisibilityToggle(layer.id, true))}
-                  className="flex-1 px-3 py-2 text-xs bg-green-50 text-green-700 rounded hover:bg-green-100 transition-colors"
+                  className={`flex-1 px-3 py-2 text-xs bg-green-50 text-green-700 rounded ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} transition-colors`}
                 >
                   Εμφάνιση Όλων
                 </button>
                 <button
                   onClick={() => layers.forEach(layer => handleVisibilityToggle(layer.id, false))}
-                  className="flex-1 px-3 py-2 text-xs bg-gray-50 text-gray-700 rounded hover:bg-gray-100 transition-colors"
+                  className={`flex-1 px-3 py-2 text-xs bg-gray-50 text-gray-700 rounded ${HOVER_BACKGROUND_EFFECTS.LIGHT} transition-colors`}
                 >
                   Απόκρυψη Όλων
                 </button>

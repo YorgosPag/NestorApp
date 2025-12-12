@@ -8,6 +8,7 @@
 import React, { useState, useCallback } from 'react';
 import { AlertTriangle, Settings, Bell, Plus, Map } from 'lucide-react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 // Core Alert Engine Integration
 import {
@@ -123,7 +124,7 @@ export function AlertManagementPanel({
           {onClose && (
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className={`text-gray-400 ${HOVER_TEXT_EFFECTS.DARKER} transition-colors`}
             >
               <span className="sr-only">Close</span>
               ×
@@ -142,7 +143,7 @@ export function AlertManagementPanel({
               className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
                 activeTab === tab
                   ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  : `border-transparent text-gray-500 ${HOVER_TEXT_EFFECTS.DARKER} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
               }`}
             >
               {tab === 'create' && t('create-alerts', 'Create Alerts')}
@@ -164,7 +165,7 @@ export function AlertManagementPanel({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <button
                 onClick={handleCreateAlert}
-                className="flex items-center p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors"
+                className={`flex items-center p-4 border border-gray-200 rounded-lg ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} transition-colors`}
               >
                 <Plus className="h-8 w-8 text-blue-600 mr-4" />
                 <div className="text-left">
@@ -179,7 +180,7 @@ export function AlertManagementPanel({
 
               <button
                 onClick={handleTestAlert}
-                className="flex items-center p-4 border border-gray-200 rounded-lg hover:border-green-300 hover:bg-green-50 transition-colors"
+                className={`flex items-center p-4 border border-gray-200 rounded-lg ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} transition-colors`}
               >
                 <Bell className="h-8 w-8 text-green-600 mr-4" />
                 <div className="text-left">
@@ -203,7 +204,7 @@ export function AlertManagementPanel({
 
             <button
               onClick={handleManageSubscriptions}
-              className="flex items-center p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors w-full"
+              className={`flex items-center p-4 border border-gray-200 rounded-lg ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} transition-colors w-full`}
             >
               <Settings className="h-8 w-8 text-blue-600 mr-4" />
               <div className="text-left">
@@ -226,7 +227,7 @@ export function AlertManagementPanel({
 
             <button
               onClick={handleNotificationPreferences}
-              className="flex items-center p-4 border border-gray-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 transition-colors w-full"
+              className={`flex items-center p-4 border border-gray-200 rounded-lg hover:border-purple-300 ${HOVER_BACKGROUND_EFFECTS.LIGHT} transition-colors w-full`}
             >
               <Bell className="h-8 w-8 text-purple-600 mr-4" />
               <div className="text-left">

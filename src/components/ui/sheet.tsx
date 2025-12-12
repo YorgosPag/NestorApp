@@ -6,6 +6,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects'
 
 // ╭─────────────────────────────────────────────╮
 // │          SECTION: Sheet Root Primitives     │
@@ -23,7 +24,7 @@ const SheetClose = React.forwardRef<
   <SheetPrimitive.Close
     ref={ref}
     className={cn(
-      "absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary",
+      `absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity ${INTERACTIVE_PATTERNS.FADE_IN} focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary`,
       className
     )}
     {...props}

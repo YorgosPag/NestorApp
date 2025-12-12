@@ -63,6 +63,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useId, useMemo, useCallback } from 'react';
+import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { createPortal } from 'react-dom';
 import { useFloating, autoUpdate, offset, flip, shift, size } from '@floating-ui/react';
 // 🏢 ENTERPRISE: Import FixedSizeList from react-window
@@ -542,7 +543,7 @@ export function EnterpriseComboBox<T>({
             ? 'opacity-50 cursor-not-allowed'
             : isHighlighted
             ? 'bg-blue-600 text-white'
-            : 'text-white hover:bg-gray-600'
+            : `text-white ${HOVER_BACKGROUND_EFFECTS.DARKER}`
         }`}
       >
         <div className="flex-1">
@@ -690,7 +691,7 @@ export function EnterpriseComboBox<T>({
             }
           }}
           onKeyDown={handleKeyDown}
-          className={`w-full px-3 py-2 pr-8 bg-gray-700 border border-gray-600 rounded-md text-white text-left hover:bg-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+          className={`w-full px-3 py-2 pr-8 bg-gray-700 border border-gray-600 rounded-md text-white text-left ${HOVER_BACKGROUND_EFFECTS.DARKER} focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
             disabled ? 'opacity-50 cursor-not-allowed' : ''
           } ${buttonClassName}`}
         >

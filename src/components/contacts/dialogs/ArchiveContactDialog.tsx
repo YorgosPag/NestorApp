@@ -18,7 +18,7 @@ import type { Contact } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts';
 import { Loader2, Archive, Users, Building, Shield } from 'lucide-react';
 import { CONTACT_TYPES, getContactIcon, getContactLabel, getContactColor } from '@/constants/contacts';
-import { TRANSITION_PRESETS } from '@/components/ui/effects';
+import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 interface ArchiveContactDialogProps {
   open: boolean;
@@ -175,7 +175,7 @@ export function ArchiveContactDialog({
             variant="default"
             onClick={handleArchive}
             disabled={loading || (!contact && selectedContactIds.length === 0)}
-            className={`bg-orange-600 hover:bg-orange-700 ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+            className={`bg-orange-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
           >
             {loading ? (
               <>

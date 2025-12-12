@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { BaseCard } from '@/components/core/BaseCard/BaseCard';
 import { UnitBadge, CommonBadge } from '@/core/badges';
+import { HOVER_SHADOWS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { Package, MapPin, Ruler, Thermometer, Shield, Edit, Trash2 } from 'lucide-react';
 import type { StorageUnit, StorageType, StorageStatus } from '@/types/storage';
 
@@ -236,7 +237,7 @@ export function StorageCard({
       
       // Click handlers
       onClick={onSelect}
-      className="transition-all duration-300 hover:shadow-lg group"
+      className={`group ${TRANSITION_PRESETS.SMOOTH_ALL} ${HOVER_SHADOWS.ENHANCED}`}
     />
   );
 }

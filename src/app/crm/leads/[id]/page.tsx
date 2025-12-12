@@ -4,7 +4,7 @@
 import React, { useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, User, Mail, Phone, Tag, Calendar, Edit3, Send, PhoneCall, Plus, Clock, CheckCircle } from 'lucide-react';
-import { TRANSITION_PRESETS } from '@/components/ui/effects';
+import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { Toaster } from 'react-hot-toast';
 
 import CommunicationsHistory from '@/components/CommunicationsHistory';
@@ -67,7 +67,7 @@ export default function LeadProfilePage() {
             <p className="text-red-600 mb-4">{leadError || 'Το lead δεν βρέθηκε'}</p>
             <button
               onClick={() => router.push('/crm/leads')}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className={`px-4 py-2 bg-blue-600 text-white rounded-lg ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
             >
               Επιστροφή στα Leads
             </button>
@@ -86,7 +86,7 @@ export default function LeadProfilePage() {
             <nav className="flex items-center gap-4" aria-label="Πλοήγηση lead profile">
               <button
                 onClick={handleGoBack}
-                className={`p-2 hover:bg-gray-100 rounded-lg ${TRANSITION_PRESETS.FAST_COLORS}`}
+                className={`p-2 rounded-lg ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.FAST_COLORS}`}
                 aria-label="Επιστροφή"
               >
                 <ArrowLeft className="w-5 h-5" />

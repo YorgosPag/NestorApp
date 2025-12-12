@@ -3,6 +3,7 @@
  * Eliminates duplicate button styling and structure
  */
 import React from 'react';
+import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 interface SelectionButtonProps {
   onClick: () => void;
@@ -22,7 +23,7 @@ export function SelectionButton({
   return (
     <button
       onClick={onClick}
-      className="w-full text-left p-4 rounded-lg border border-gray-600 hover:border-gray-500 hover:bg-gray-700/50 transition-colors"
+      className={`w-full text-left p-4 rounded-lg border border-gray-600 transition-colors ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${HOVER_BACKGROUND_EFFECTS.MUTED}`}
     >
       <div className="flex items-center space-x-3">
         <span className="text-2xl">{icon}</span>

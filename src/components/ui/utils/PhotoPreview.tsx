@@ -9,6 +9,7 @@ import {
   PHOTO_COLORS,
   PHOTO_HOVER_EFFECTS
 } from '@/components/generic/config/photo-config';
+import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -150,7 +151,7 @@ export function PhotoPreview({
         {showRemoveButton && (
           <button
             type="button"
-            className="absolute top-1 right-1 bg-red-100 text-red-600 rounded-full p-1 hover:bg-red-200 transition-colors z-10"
+            className={`absolute top-1 right-1 bg-red-100 text-red-600 rounded-full p-1 transition-colors z-10 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`}
             onClick={handleRemoveClick}
             title={`Αφαίρεση ${displayName}`}
           >

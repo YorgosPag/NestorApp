@@ -20,6 +20,7 @@ import { TestsModal } from '../TestsModal'; // Adjust path to: './components/tes
 // Example: Using react-hot-toast for notifications
 // npm install react-hot-toast
 import toast, { Toaster } from 'react-hot-toast';
+import { INTERACTIVE_PATTERNS, GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
 
 interface TestResult {
   testId: string;
@@ -142,7 +143,7 @@ export function AdvancedUsageExample() {
           {/* Run Tests Button */}
           <button
             onClick={() => setIsTestsOpen(true)}
-            className="p-4 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all"
+            className={`p-4 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg ${GRADIENT_HOVER_EFFECTS.PRIMARY_BUTTON} transition-all`}
           >
             <div className="text-xl mb-1">🧪 Run Tests</div>
             <div className="text-sm text-purple-200">Open testing interface</div>
@@ -151,7 +152,7 @@ export function AdvancedUsageExample() {
           {/* Test History Stats */}
           <button
             onClick={() => setIsTestsOpen(true)}
-            className="p-4 bg-gray-800 rounded-lg hover:bg-gray-700 transition-all"
+            className={`p-4 bg-gray-800 rounded-lg ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} transition-all`}
           >
             <div className="text-xl mb-1">
               📊 {testHistory.length} Tests Run
@@ -166,7 +167,7 @@ export function AdvancedUsageExample() {
           <button
             onClick={clearHistory}
             disabled={testHistory.length === 0}
-            className="p-4 bg-gray-800 rounded-lg hover:bg-gray-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`p-4 bg-gray-800 rounded-lg ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             <div className="text-xl mb-1">🗑️ Clear History</div>
             <div className="text-sm text-gray-400">Reset test results</div>
@@ -180,7 +181,7 @@ export function AdvancedUsageExample() {
               <h2 className="text-xl font-bold">📝 Test History</h2>
               <button
                 onClick={exportHistory}
-                className="px-3 py-1 bg-purple-600 rounded hover:bg-purple-700 text-sm"
+                className={`px-3 py-1 bg-purple-600 rounded ${INTERACTIVE_PATTERNS.PURPLE_HOVER} text-sm`}
               >
                 📥 Export JSON
               </button>

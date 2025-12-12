@@ -2,6 +2,7 @@
 
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 interface Props {
   children: ReactNode;
@@ -179,14 +180,14 @@ class GeoCanvasErrorBoundaryInner extends Component<Props, State> {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <button
                   onClick={this.handleRetry}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                  className={`bg-blue-600 ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} text-white px-6 py-3 rounded-lg font-medium transition-colors`}
                 >
                   {t.tryAgain}
                 </button>
 
                 <button
                   onClick={this.handleReload}
-                  className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                  className={`bg-gray-600 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-white px-6 py-3 rounded-lg font-medium transition-colors`}
                 >
                   {t.reloadPage}
                 </button>

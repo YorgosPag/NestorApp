@@ -14,6 +14,7 @@ import {
 } from "../systems/cursor/config";
 import { useRulersGridContext } from "../systems/rulers-grid/RulersGridSystem";
 import { SimpleColorPicker } from "./color";
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 // Force cursor styles for the panel to override canvas cursor settings
 const panelStyles = `
@@ -358,7 +359,7 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
             <h3 className="text-lg font-bold text-cyan-400">🔧 Ρυθμίσεις Κέρσορα AutoCAD</h3>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-white text-xl hover:bg-gray-700 rounded px-2 py-1"
+              className={`text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HOVER} text-xl ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} rounded px-2 py-1`}
               onMouseDown={(e) => e.stopPropagation()} // Prevent drag when clicking X
             >
               ×
@@ -457,13 +458,13 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
           {/* Action Buttons */}
           <div className="flex gap-2">
             <button
-              className="flex-1 px-3 py-2 rounded bg-orange-600 hover:bg-orange-700 text-xs"
+              className={`flex-1 px-3 py-2 rounded bg-orange-600 ${INTERACTIVE_PATTERNS.WARNING_HOVER} text-xs`}
               onClick={resetSettings}
             >
               Επαναφορά Προκαθορισμένων
             </button>
             <button
-              className="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600 text-xs"
+              className={`px-3 py-1 rounded bg-slate-700 ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} text-xs`}
               onClick={clearAndReload}
             >
               Καθαρισμός & Επαναφόρτωση

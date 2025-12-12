@@ -5,6 +5,7 @@ import { Square, Eye, EyeOff, Palette, MousePointer2 } from 'lucide-react';
 import { useOverlayManager } from '../state/overlay-manager';
 import type { RegionStatus } from '../types/overlay';
 import { STATUS_COLORS_MAPPING, getStatusColors } from '../config/color-mapping';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 interface OverlayPanelProps {
   isDrawingMode: boolean;
@@ -83,7 +84,7 @@ export function OverlayPanel({ isDrawingMode, drawingStatus, onStartDrawing, onS
               </label>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-400">{regions.length}</span>
-                <button className="text-gray-400 hover:text-white">
+                <button className={`text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HOVER}`}>
                   <Eye className="w-3 h-3" />
                 </button>
               </div>

@@ -7,6 +7,7 @@
 import React from 'react';
 import { Play, CheckCircle2 } from 'lucide-react';
 import type { TestState, ApiTestHandlers } from '../types/tests.types';
+import { HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
 
 interface UnitTestsTabProps {
   testState: TestState;
@@ -30,8 +31,8 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
               testState.runningTests.has('run-vitest')
                 ? 'bg-yellow-500/10 border-yellow-500/30 cursor-wait'
                 : testState.completedTests.has('run-vitest')
-                ? 'bg-green-500/10 border-green-500/30 hover:bg-green-500/20'
-                : 'bg-gray-700/50 border-gray-600/50 hover:bg-gray-700 hover:border-gray-500'
+                ? `bg-green-500/10 border-green-500/30 ${HOVER_BACKGROUND_EFFECTS.SUCCESS_SUBTLE}`
+                : `bg-gray-700/50 border-gray-600/50 ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} ${HOVER_BORDER_EFFECTS.MUTED}`
             }`}
           >
             <div className="flex-shrink-0 mt-0.5">
@@ -57,8 +58,8 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
               testState.runningTests.has('run-jest')
                 ? 'bg-yellow-500/10 border-yellow-500/30 cursor-wait'
                 : testState.completedTests.has('run-jest')
-                ? 'bg-green-500/10 border-green-500/30 hover:bg-green-500/20'
-                : 'bg-gray-700/50 border-gray-600/50 hover:bg-gray-700 hover:border-gray-500'
+                ? `bg-green-500/10 border-green-500/30 ${HOVER_BACKGROUND_EFFECTS.SUCCESS_SUBTLE}`
+                : `bg-gray-700/50 border-gray-600/50 ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} ${HOVER_BORDER_EFFECTS.MUTED}`
             }`}
           >
             <div className="flex-shrink-0 mt-0.5">
@@ -90,8 +91,8 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
             testState.runningTests.has('run-playwright')
               ? 'bg-yellow-500/10 border-yellow-500/30 cursor-wait'
               : testState.completedTests.has('run-playwright')
-              ? 'bg-green-500/10 border-green-500/30 hover:bg-green-500/20'
-              : 'bg-gray-700/50 border-gray-600/50 hover:bg-gray-700 hover:border-gray-500'
+              ? `bg-green-500/10 border-green-500/30 ${HOVER_BACKGROUND_EFFECTS.SUCCESS_SUBTLE}`
+              : `bg-gray-700/50 border-gray-600/50 ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} ${HOVER_BORDER_EFFECTS.MUTED}`
           }`}
         >
           <div className="flex-shrink-0 mt-0.5">

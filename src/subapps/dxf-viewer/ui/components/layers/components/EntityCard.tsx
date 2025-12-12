@@ -3,6 +3,7 @@
 import React from 'react';
 import { Eye, EyeOff, Trash2, Edit2 } from 'lucide-react';
 import type { AnySceneEntity, SceneLayer } from '../../../../types/scene';
+import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 
 interface EntityCardProps {
   entity: AnySceneEntity;
@@ -55,7 +56,7 @@ export const EntityCard = ({
       tabIndex={0}
       data-entity-id={entity.id}
       data-entity-selected={isSelected || undefined}
-      className={`ml-12 flex items-center justify-between rounded cursor-pointer transition-all hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-green-400 ${
+      className={`ml-12 flex items-center justify-between rounded cursor-pointer transition-all ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} focus:outline-none focus:ring-2 focus:ring-green-400 ${
         isSelected ? 'p-2.5 bg-blue-600/20 border-l-2 border-blue-400 rounded' : 'p-1.5'
       } ${selectedEntitiesForMerge.has(entity.id) ? 'ring-2 ring-blue-400 bg-blue-900 bg-opacity-30' : ''} ${
         isFocused ? 'ring-2 ring-green-400' : ''
@@ -86,7 +87,7 @@ export const EntityCard = ({
               e.stopPropagation();
               onSetColorPickerEntity(showEntityColorPicker ? null : entity.id);
             }}
-            className={`rounded-full border border-gray-500 hover:ring-1 hover:ring-blue-400 ${
+            className={`rounded-full border border-gray-500 ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} ${
               isSelected ? 'w-3 h-3' : 'w-2 h-2'
             }`}
             style={{ backgroundColor: entity.color || layer.color }}
@@ -145,11 +146,11 @@ export const EntityCard = ({
       <div className="flex items-center gap-1">
         {/* Visibility Toggle */}
         <button
-          onClick={(e) => { 
-            e.stopPropagation(); 
-            onEntityToggle?.(entity.id, entity.visible === false ? true : false); 
+          onClick={(e) => {
+            e.stopPropagation();
+            onEntityToggle?.(entity.id, entity.visible === false ? true : false);
           }}
-          className={`text-gray-400 hover:text-white ${
+          className={`text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HOVER} ${
             isSelected ? 'p-1' : 'p-0.5'
           }`}
           title={entity.visible === false ? "Εμφάνιση" : "Απόκρυψη"}
@@ -168,7 +169,7 @@ export const EntityCard = ({
             onSetEditingEntity(entity.id);
             onSetEditingEntityName(entity.name || `${entity.type}_${entity.id.substring(0, 8)}`);
           }}
-          className={`text-gray-400 hover:text-white ${
+          className={`text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HOVER} ${
             isSelected ? 'p-1' : 'p-0.5'
           }`}
           title="Μετονομασία entity"
@@ -182,7 +183,7 @@ export const EntityCard = ({
             e.stopPropagation(); 
             onEntityDelete?.(entity.id); 
           }}
-          className={`text-red-600 hover:text-red-500 ${
+          className={`text-red-600 ${HOVER_TEXT_EFFECTS.RED} ${
             isSelected ? 'p-1' : 'p-0.5'
           }`}
           title="Διαγραφή"

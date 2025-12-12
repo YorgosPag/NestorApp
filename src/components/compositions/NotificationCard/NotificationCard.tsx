@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { BaseCard } from '@/components/core/BaseCard/BaseCard';
 import { CommonBadge } from '@/core/badges';
+import { HOVER_SHADOWS, HOVER_BACKGROUND_EFFECTS, GROUP_HOVER_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { Bell, AlertCircle, Info, CheckCircle, XCircle, Calendar, User, Eye, X } from 'lucide-react';
 
 interface NotificationData {
@@ -96,7 +97,7 @@ export function NotificationCard({
     return (
       <div className={`
         p-3 rounded-lg flex items-start gap-3 transition-all duration-200 cursor-pointer
-        ${isRead ? 'bg-muted/30 opacity-75' : 'bg-card border shadow-sm hover:shadow-md'}
+        ${isRead ? 'bg-muted/30 opacity-75' : `bg-card border shadow-sm ${HOVER_SHADOWS.ENHANCED}`}
       `}>
         <div className={`
           w-2 h-2 rounded-full mt-2 shrink-0
@@ -123,7 +124,7 @@ export function NotificationCard({
               e.stopPropagation();
               onDismiss(notification.id);
             }}
-            className="p-1 hover:bg-muted rounded opacity-0 group-hover:opacity-100 transition-opacity"
+            className={`p-1 rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} opacity-0 ${GROUP_HOVER_PATTERNS.SHOW_ON_GROUP} ${TRANSITION_PRESETS.OPACITY}`}
           >
             <X className="w-3 h-3" />
           </button>
@@ -233,7 +234,7 @@ export function NotificationCard({
       // Style overrides
       className={`
         transition-all duration-300 group
-        ${isRead ? 'opacity-75 hover:opacity-90' : 'hover:shadow-md'}
+        ${isRead ? `opacity-75 ${TRANSITION_PRESETS.OPACITY}` : HOVER_SHADOWS.ENHANCED}
       `}
     />
   );

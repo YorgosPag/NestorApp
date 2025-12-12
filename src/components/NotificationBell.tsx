@@ -2,6 +2,7 @@
 'use client';
 
 import { Bell } from 'lucide-react';
+import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useNotificationDrawer } from './NotificationDrawer';
 import { useNotificationStore } from '@/stores/notificationStore';
 
@@ -16,7 +17,7 @@ export function NotificationBell() {
       aria-label="Notifications"
       aria-expanded={useNotificationDrawer(s => s.isOpen)}
       aria-controls="notification-drawer"
-      className="relative p-2 hover:bg-accent rounded-md transition-colors"
+      className={`relative p-2 rounded-md ${INTERACTIVE_PATTERNS.ACCENT_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
     >
       <Bell className="w-6 h-6" />
       {unread > 0 && (

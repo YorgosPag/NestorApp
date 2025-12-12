@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Filter, Plus, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 // Removed: useToast import (migrated to useNotifications)
 import type { Opportunity } from '@/types/crm';
 
@@ -68,7 +69,7 @@ export function PipelineTab() {
                   <p className="text-red-600">{error}</p>
                   <button 
                   onClick={fetchOpportunities}
-                  className="mt-2 px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+                  className={`mt-2 px-3 py-1 bg-red-600 text-white rounded text-sm ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`}
                   >
                   Δοκιμή ξανά
                   </button>

@@ -7,6 +7,7 @@ import { CalibrationStep } from './wizard/CalibrationStep';
 import { PreviewStep } from './wizard/PreviewStep';
 import { X } from 'lucide-react';
 import { useWizardNavigation } from '../hooks/useWizardNavigation';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 interface ImportWizardProps {
   isOpen: boolean;
@@ -36,7 +37,7 @@ export function ImportWizard({ isOpen, onClose, onComplete }: ImportWizardProps)
             <p className="text-gray-300 mb-6">Άγνωστο βήμα εισαγωγής</p>
             <button
               onClick={onClose}
-              className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded"
+              className={`px-4 py-2 bg-gray-600 ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} text-white rounded`}
             >
               Κλείσιμο
             </button>
@@ -60,7 +61,7 @@ export function ImportWizard({ isOpen, onClose, onComplete }: ImportWizardProps)
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded"
+            className={`p-2 text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HOVER} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} rounded`}
           >
             <X className="w-5 h-5" />
           </button>
@@ -81,14 +82,14 @@ export function ImportWizard({ isOpen, onClose, onComplete }: ImportWizardProps)
           <button
             onClick={navigation.handleBack}
             disabled={stepInfo.number === 1}
-            className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded disabled:opacity-50"
+            className={`px-4 py-2 bg-gray-600 ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} text-white rounded disabled:opacity-50`}
           >
             Πίσω
           </button>
           <button
             onClick={navigation.handleNext}
             disabled={!navigation.canProceed()}
-            className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded disabled:opacity-50"
+            className={`px-6 py-2 bg-blue-600 ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} text-white rounded disabled:opacity-50`}
           >
             {stepInfo.number === stepInfo.totalSteps ? 'Εισαγωγή' : 'Επόμενο'}
           </button>

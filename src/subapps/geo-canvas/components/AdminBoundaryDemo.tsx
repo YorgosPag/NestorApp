@@ -12,6 +12,7 @@
 import React, { useState } from 'react';
 import { useAdministrativeBoundaries } from '../hooks/useAdministrativeBoundaries';
 import type { AdminSearchResult } from '../types/administrative-types';
+import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 export function AdminBoundaryDemo() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -78,13 +79,13 @@ export function AdminBoundaryDemo() {
           <button
             onClick={handleSearch}
             disabled={isLoading || !searchQuery.trim()}
-            className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-6 py-2 bg-blue-500 text-white rounded-lg ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? '🔍 Αναζήτηση...' : 'Αναζήτηση'}
           </button>
           <button
             onClick={clearResults}
-            className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
+            className="px-4 py-2 bg-gray-500 text-white rounded-lg ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}"
           >
             Καθαρισμός
           </button>
@@ -104,7 +105,7 @@ export function AdminBoundaryDemo() {
             <button
               key={query}
               onClick={() => handleQuickSearch(query)}
-              className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
+              className={`px-3 py-1 text-sm bg-gray-100 ${HOVER_BACKGROUND_EFFECTS.LIGHT} rounded-full transition-colors`}
               disabled={isLoading}
             >
               {query}
@@ -160,7 +161,7 @@ export function AdminBoundaryDemo() {
                   <button
                     key={index}
                     onClick={() => handleQuickSearch(suggestion)}
-                    className="px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 rounded text-blue-700 transition-colors"
+                    className={`px-2 py-1 text-xs bg-blue-100 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} rounded text-blue-700 transition-colors`}
                   >
                     {suggestion}
                   </button>
@@ -182,7 +183,7 @@ export function AdminBoundaryDemo() {
                   className={`p-3 border rounded-lg cursor-pointer transition-all ${
                     selectedResult?.id === result.id
                       ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      : `border-gray-200 ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
                   }`}
                 >
                   <div className="flex items-center justify-between">

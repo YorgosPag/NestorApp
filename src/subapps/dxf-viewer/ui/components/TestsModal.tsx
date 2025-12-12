@@ -12,6 +12,7 @@
 
 import React from 'react';
 import { X, FlaskConical } from 'lucide-react';
+import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 // Custom hooks (extracted)
 import { useTestState } from './tests-modal/hooks/useTestState';
@@ -82,7 +83,7 @@ export const TestsModal: React.FC<TestsModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-gray-700 rounded transition-colors"
+            className={`p-1 rounded transition-colors ${HOVER_BACKGROUND_EFFECTS.LIGHT}`}
           >
             <X className="w-6 h-6 text-gray-400" />
           </button>

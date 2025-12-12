@@ -9,6 +9,7 @@ import {
   PHOTO_COMBINED_EFFECTS,
   PHOTO_TEXT_COLORS
 } from '../config/photo-config';
+import { GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -62,7 +63,7 @@ export function PhotoItem({ photo }: PhotoItemProps) {
           className="w-full h-full object-cover"
         />
       </div>
-      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-300 ease-in-out flex items-center justify-center opacity-0 group-hover:opacity-100">
+      <div className={`absolute inset-0 bg-black bg-opacity-0 transition-all duration-300 ease-in-out flex items-center justify-center opacity-0 ${GROUP_HOVER_PATTERNS.OVERLAY_ON_GROUP}`}>
         <div className="flex gap-2">
           <Button size="sm" variant="secondary">
             <Eye className="w-4 h-4" />

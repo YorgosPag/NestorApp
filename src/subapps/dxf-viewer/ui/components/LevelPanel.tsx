@@ -6,6 +6,7 @@ const DEBUG_LEVEL_PANEL = false;
 import React, { useState, useMemo, useCallback } from 'react';
 import { Trash2, Plus, Building2, Edit, MousePointer, Pen, Move, Info, Shapes } from 'lucide-react';
 import { useOverlayStore } from '../../overlays/overlay-store';
+import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { OverlayList } from '../OverlayList';
 import { useGripContext } from '../../providers/GripProvider';
 import { SceneInfoSection } from './SceneInfoSection'; // 🔺 ADDED: Import SceneInfoSection
@@ -277,7 +278,7 @@ export function LevelPanel({
                 className={`p-3 rounded-lg border transition-all ${
                   currentLevelId === level.id
                     ? 'bg-blue-600 border-blue-500 text-white'
-                    : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600'
+                    : `bg-gray-700 border-gray-600 text-gray-300 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
                 }`}
               >
                 <div className="flex items-center justify-between min-w-0">
@@ -315,7 +316,7 @@ export function LevelPanel({
                           e.stopPropagation();
                           startEditing(level);
                         }}
-                        className="p-1 text-gray-400 hover:text-white hover:bg-gray-500/20 rounded transition-colors"
+                        className={`p-1 text-gray-400 rounded ${HOVER_TEXT_EFFECTS.WHITE} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
                         title="Μετονομασία επιπέδου"
                       >
                         <Edit className="w-4 h-4" />
@@ -326,7 +327,7 @@ export function LevelPanel({
                           e.stopPropagation();
                           handleDeleteLevel(level.id);
                         }}
-                        className="p-1 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded transition-colors"
+                        className={`p-1 text-red-400 rounded ${HOVER_TEXT_EFFECTS.RED} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
                         title="Διαγραφή επιπέδου"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -360,7 +361,7 @@ export function LevelPanel({
             type="button"
             onClick={handleAddLevel}
             disabled={isAdding}
-            className="px-3 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded flex items-center gap-1 transition-colors"
+            className={`px-3 py-2 bg-green-600 disabled:opacity-50 text-white rounded flex items-center gap-1 ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
           >
             {isAdding ? (
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>

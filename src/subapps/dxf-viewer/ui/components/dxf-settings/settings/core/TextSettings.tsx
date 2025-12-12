@@ -50,6 +50,7 @@ import { BaseModal } from '../../../../../components/shared/BaseModal';
 import { useNotifications } from '../../../../../../../providers/NotificationProvider';
 import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
 import { EnterpriseComboBox, type ComboBoxOption } from '../shared/EnterpriseComboBox';
+import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 // Simple SVG icons for text
 const DocumentTextIcon = ({ className }: { className?: string }) => (
@@ -148,7 +149,7 @@ function TextStyleButtons({ settings, onToggle }: TextStyleButtonsProps) {
           className={`w-8 h-8 text-sm font-bold rounded border transition-colors ${
             settings[style.key]
               ? 'bg-green-600 border-green-500 text-white'
-              : 'bg-gray-700 hover:bg-gray-600 border-gray-600 text-gray-300'
+              : 'bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} border-gray-600 text-gray-300'
           }`}
           style={{
             fontWeight: style.key === 'isBold' ? 'bold' : 'normal',
@@ -179,7 +180,7 @@ function ScriptStyleButtons({ settings, onSuperscriptChange, onSubscriptChange }
         className={`px-3 py-1 text-sm rounded border transition-colors ${
           settings.isSuperscript
             ? 'bg-green-600 border-green-500 text-white'
-            : 'bg-gray-700 hover:bg-gray-600 border-gray-600 text-gray-300'
+            : 'bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} border-gray-600 text-gray-300'
         }`}
       >
         X<sup>2</sup>
@@ -189,7 +190,7 @@ function ScriptStyleButtons({ settings, onSuperscriptChange, onSubscriptChange }
         className={`px-3 py-1 text-sm rounded border transition-colors ${
           settings.isSubscript
             ? 'bg-green-600 border-green-500 text-white'
-            : 'bg-gray-700 hover:bg-gray-600 border-gray-600 text-gray-300'
+            : 'bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} border-gray-600 text-gray-300'
         }`}
       >
         X<sub>2</sub>
@@ -312,7 +313,7 @@ export function TextSettings() {
         <div className="flex gap-2">
           <button
             onClick={resetToDefaults}
-            className="px-3 py-1 text-xs bg-gray-600 hover:bg-gray-500 text-white rounded transition-colors"
+            className="px-3 py-1 text-xs bg-gray-600 ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-white rounded transition-colors"
             title="Επαναφορά στις προεπιλεγμένες ρυθμίσεις"
           >
             Επαναφορά
@@ -320,7 +321,7 @@ export function TextSettings() {
           {resetToFactory && (
             <button
               onClick={handleFactoryResetClick}
-              className="px-3 py-1 text-xs bg-red-700 hover:bg-red-600 text-white rounded transition-colors font-semibold"
+              className="px-3 py-1 text-xs bg-red-700 ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} text-white rounded transition-colors font-semibold"
               title="Επαναφορά στις εργοστασιακές ρυθμίσεις (ISO 3098)"
             >
               🏭 Εργοστασιακές
@@ -399,7 +400,7 @@ export function TextSettings() {
                   {/* Increase Font Size - Big A with up arrow */}
                   <button
                     onClick={increaseFontSize}
-                    className="w-10 h-9 bg-gray-700 border border-gray-500 rounded text-white hover:bg-gray-600 transition-colors flex items-center justify-center"
+                    className={`w-10 h-9 bg-gray-700 border border-gray-500 rounded text-white ${HOVER_BACKGROUND_EFFECTS.DARKER} transition-colors flex items-center justify-center`}
                     title="Αύξηση μεγέθους γραμματοσειράς"
                   >
                     <div className="flex items-center">
@@ -413,7 +414,7 @@ export function TextSettings() {
                   {/* Decrease Font Size - Small A with down arrow */}
                   <button
                     onClick={decreaseFontSize}
-                    className="w-10 h-9 bg-gray-700 border border-gray-500 rounded text-white hover:bg-gray-600 transition-colors flex items-center justify-center"
+                    className={`w-10 h-9 bg-gray-700 border border-gray-500 rounded text-white ${HOVER_BACKGROUND_EFFECTS.DARKER} transition-colors flex items-center justify-center`}
                     title="Μείωση μεγέθους γραμματοσειράς"
                   >
                     <div className="flex items-center">
@@ -573,13 +574,13 @@ export function TextSettings() {
           <div className="flex gap-3 justify-end pt-4 border-t border-gray-700">
             <button
               onClick={handleFactoryResetCancel}
-              className="px-4 py-2 text-sm bg-gray-600 hover:bg-gray-500 text-white rounded transition-colors"
+              className="px-4 py-2 text-sm bg-gray-600 ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-white rounded transition-colors"
             >
               Ακύρωση
             </button>
             <button
               onClick={handleFactoryResetConfirm}
-              className="px-4 py-2 text-sm bg-red-700 hover:bg-red-600 text-white rounded transition-colors font-semibold"
+              className="px-4 py-2 text-sm bg-red-700 ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} text-white rounded transition-colors font-semibold"
             >
               🏭 Επαναφορά Εργοστασιακών
             </button>

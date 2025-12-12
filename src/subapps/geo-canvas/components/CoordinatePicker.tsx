@@ -3,6 +3,7 @@
 import React, { useState, useCallback } from 'react';
 import { useGeoTransform } from '../hooks/useGeoTransform';
 import type { DxfCoordinate, GeoCoordinate } from '../types';
+import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 
 // ============================================================================
 // COORDINATE PICKER COMPONENT TYPES
@@ -248,7 +249,7 @@ export function CoordinatePicker({
         <div className="mt-3">
           <button
             onClick={fillFromSelectedPoint}
-            className="text-sm bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded transition-colors"
+            className={`text-sm bg-purple-600 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-white px-3 py-1 rounded transition-colors`}
           >
             📋 Fill από Selected Point
           </button>
@@ -392,21 +393,21 @@ export function CoordinatePicker({
         <button
           onClick={handleSubmitCoordinates}
           disabled={!isFormValid()}
-          className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-3 px-4 rounded-lg font-medium transition-colors"
+          className={`flex-1 bg-green-600 ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-3 px-4 rounded-lg font-medium transition-colors`}
         >
           ✅ Add Control Point
         </button>
 
         <button
           onClick={resetForm}
-          className="bg-yellow-600 hover:bg-yellow-700 text-white py-3 px-4 rounded-lg transition-colors"
+          className={`bg-yellow-600 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-white py-3 px-4 rounded-lg transition-colors`}
         >
           🔄 Reset
         </button>
 
         <button
           onClick={handleCancel}
-          className="bg-red-600 hover:bg-red-700 text-white py-3 px-4 rounded-lg transition-colors"
+          className={`bg-red-600 ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} text-white py-3 px-4 rounded-lg transition-colors`}
         >
           ✕ Cancel
         </button>
@@ -437,7 +438,7 @@ export function CoordinatePicker({
             <span className="text-red-300">❌ {transformState.error}</span>
             <button
               onClick={transformActions.clearError}
-              className="text-red-400 hover:text-red-300"
+              className={`text-red-400 ${HOVER_TEXT_EFFECTS.LIGHTER}`}
             >
               ✕
             </button>

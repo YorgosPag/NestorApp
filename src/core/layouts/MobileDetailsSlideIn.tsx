@@ -48,7 +48,7 @@ export function MobileDetailsSlideIn({
         {/* Close Button (existing pattern) */}
         <button
           onClick={onClose}
-          className="p-1 rounded-md hover:bg-accent"
+          className="p-1 rounded-md"
           style={{ width: '32px', height: '32px' }}
         >
           <X className="h-4 w-4" />

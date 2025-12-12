@@ -7,6 +7,7 @@
 
 import React, { forwardRef } from 'react';
 import { LucideIcon } from 'lucide-react';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 // Button variants for consistent styling
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'outline' | 'tool' | 'tab' | 'action';
@@ -26,13 +27,13 @@ interface BaseButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> 
 
 // Variant style mappings
 const variantStyles: Record<ButtonVariant, string> = {
-  primary: 'bg-blue-600 hover:bg-blue-700 text-white border-blue-500',
-  secondary: 'bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-500',
-  ghost: 'bg-transparent hover:bg-gray-700 text-gray-200 border-transparent',
-  outline: 'bg-transparent hover:bg-gray-700 text-gray-300 border-gray-500',
-  tool: 'bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-500',
-  tab: 'bg-gray-800 hover:bg-gray-700 text-gray-300 border-gray-500',
-  action: 'bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-500'
+  primary: `bg-blue-600 ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} text-white border-blue-500`,
+  secondary: `bg-gray-700 ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} text-gray-200 border-gray-500`,
+  ghost: `bg-transparent ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-gray-200 border-transparent`,
+  outline: `bg-transparent ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-gray-300 border-gray-500`,
+  tool: `bg-gray-700 ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} text-gray-200 border-gray-500`,
+  tab: `bg-gray-800 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-gray-300 border-gray-500`,
+  action: `bg-gray-700 ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} text-gray-200 border-gray-500`
 };
 
 const activeVariantStyles: Record<ButtonVariant, string> = {
@@ -40,9 +41,9 @@ const activeVariantStyles: Record<ButtonVariant, string> = {
   secondary: 'bg-gray-600 text-white border-gray-400',
   ghost: 'bg-gray-700 text-white border-gray-600',
   outline: 'bg-gray-700 text-white border-gray-400',
-  tool: 'bg-blue-600 hover:bg-blue-700 text-white border-blue-500',
+  tool: `bg-blue-600 ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} text-white border-blue-500`,
   tab: 'bg-blue-600 text-white border-blue-400',
-  action: 'bg-blue-600 hover:bg-blue-700 text-white border-blue-500'
+  action: `bg-blue-600 ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} text-white border-blue-500`
 };
 
 const sizeStyles: Record<ButtonSize, string> = {

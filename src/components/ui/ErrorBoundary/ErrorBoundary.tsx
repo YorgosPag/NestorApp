@@ -3,6 +3,7 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home, ArrowLeft, Bug, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { errorTracker } from '@/services/ErrorTracker';
 
 interface ErrorInfo {
@@ -336,7 +337,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
               {/* Error Details (Development) */}
               {showErrorDetails && (
                 <details className="mt-6">
-                  <summary className="cursor-pointer text-muted-foreground hover:text-foreground mb-3">
+                  <summary className={`cursor-pointer text-muted-foreground ${INTERACTIVE_PATTERNS.TEXT_HOVER} mb-3`}>
                     Technical Details
                   </summary>
                   <div className="space-y-4">

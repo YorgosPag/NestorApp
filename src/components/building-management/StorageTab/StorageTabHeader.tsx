@@ -4,6 +4,7 @@ import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Archive, Plus, MapPin, Package } from 'lucide-react';
 import type { StorageType } from '@/types/storage';
+import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 interface StorageTabHeaderProps {
     buildingName: string;
@@ -44,11 +45,11 @@ export function StorageTabHeader({
                 >
                     <MapPin className="w-4 h-4 mr-2" /> Χάρτης
                 </Button>
-                <Button onClick={() => onAddNew('storage')} className="bg-blue-600 hover:bg-blue-700">
+                <Button onClick={() => onAddNew('storage')} className={`bg-blue-600 ${HOVER_BACKGROUND_EFFECTS.BLUE_BUTTON}`}>
                     <Plus className="w-4 h-4 mr-2" />
                     Νέα Αποθήκη
                 </Button>
-                <Button onClick={() => onAddNew('parking')} className="bg-orange-600 hover:bg-orange-700">
+                <Button onClick={() => onAddNew('parking')} className={`bg-orange-600 ${HOVER_BACKGROUND_EFFECTS.ORANGE_BUTTON}`}>
                     <Plus className="w-4 h-4 mr-2" />
                     Νέα Θέση Στάθμευσης
                 </Button>

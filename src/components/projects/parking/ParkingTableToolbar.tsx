@@ -3,11 +3,12 @@
 import React from 'react';
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CommonBadge } from '@/core/badges';
-import { 
-  Plus, 
-  Minus, 
-  Save, 
-  RefreshCw, 
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import {
+  Plus,
+  Minus,
+  Save,
+  RefreshCw,
   HelpCircle,
   Download,
   Upload
@@ -52,17 +53,17 @@ export function ParkingTableToolbar({
         <div className="flex items-center justify-between p-3 bg-muted/30 border rounded-lg">
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1">
-              <ToolbarButton 
-                tooltip="Νέα Θέση Στάθμευσης" 
-                className="text-green-600 hover:text-green-700 dark:text-green-500 dark:hover:text-green-400"
+              <ToolbarButton
+                tooltip="Νέα Θέση Στάθμευσης"
+                className={`text-green-600 dark:text-green-500 ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`}
                 onClick={onAdd}
               >
                 <Plus className="w-4 h-4" />
               </ToolbarButton>
               
-              <ToolbarButton 
-                tooltip="Διαγραφή Επιλεγμένων" 
-                className="text-red-600 hover:text-red-700 dark:text-red-500 dark:hover:text-red-400"
+              <ToolbarButton
+                tooltip="Διαγραφή Επιλεγμένων"
+                className={`text-red-600 dark:text-red-500 ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`}
                 onClick={onDelete}
                 disabled={selectedCount === 0}
               >

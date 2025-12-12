@@ -4,6 +4,7 @@
 import React, { useState } from 'react';
 import { Search, Plus } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { ContactsList } from './ContactsList';
 
 export function ContactsTab() {
@@ -21,7 +22,7 @@ export function ContactsTab() {
                   <TabsTrigger
                     key={type}
                     value={type}
-                    className="text-xs data-[state=active]:bg-orange-500 data-[state=active]:text-white hover:bg-orange-100 hover:text-orange-700"
+                    className={`text-xs data-[state=active]:bg-orange-500 data-[state=active]:text-white ${INTERACTIVE_PATTERNS.WARNING_HOVER}`}
                   >
                     {type === 'all' ? 'Όλες' :
                      type === 'customers' ? 'Πελάτες' :
@@ -41,7 +42,7 @@ export function ContactsTab() {
                 className="pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
+            <button className={`px-4 py-2 bg-blue-600 text-white rounded-lg ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} flex items-center gap-2`}>
               <Plus className="w-4 h-4" />
               Νέα Επαφή
             </button>

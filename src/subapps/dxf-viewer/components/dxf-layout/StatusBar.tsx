@@ -5,6 +5,7 @@ import { Button } from "../../../../components/ui/button";
 import { CommonBadge } from '../../../../core/badges';
 import { Eye, Maximize, RotateCcw } from "lucide-react";
 import type { DXFViewerLayoutProps } from '../../integration/types';
+import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 type StatusBarProps = Pick<
   DXFViewerLayoutProps,
@@ -30,7 +31,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
     <Button
       variant="outline"
       size="sm"
-      className="bg-gray-700 hover:bg-gray-600 text-white border-gray-600"
+      className={`bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-white border-gray-600`}
       onClick={() => onViewModeChange('normal')}
     >
       <Eye className="w-4 h-4 mr-2" />
@@ -39,7 +40,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
     <Button
       variant="outline"
       size="sm"
-      className="bg-gray-700 hover:bg-gray-600 text-white border-gray-600"
+      className={`bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-white border-gray-600`}
       onClick={() => onViewModeChange('fullscreen')}
     >
       <Maximize className="w-4 h-4 mr-2" />
@@ -48,7 +49,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
     <Button 
       variant="outline" 
       size="sm" 
-      className="bg-gray-700 hover:bg-gray-600 text-white border-gray-600"
+      className={`bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-white border-gray-600`}
       onClick={onClear}
     >
       <RotateCcw className="w-4 h-4 mr-2" />

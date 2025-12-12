@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Home, MapPin, SlidersHorizontal } from 'lucide-react';
 import { usePublicPropertyViewer } from '@/hooks/usePublicPropertyViewer';
 import { PageHeader } from '@/core/headers';
+import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 import { usePropertyGridFilters } from './hooks/usePropertyGridFilters';
 import { PropertyCard } from './components/PropertyCard';
@@ -75,7 +76,7 @@ export function PropertyGridView() {
                 key="advfilters"
                 onClick={() => setShowFilters(!showFilters)}
                 className={`px-4 py-2.5 border rounded-lg flex items-center gap-2 transition-colors h-9 ${
-                  showFilters ? 'bg-blue-50 dark:bg-blue-900/50 border-blue-300 text-blue-600' : 'border-gray-200 dark:border-border hover:bg-gray-50 dark:hover:bg-muted/50'
+                  showFilters ? 'bg-blue-50 dark:bg-blue-900/50 border-blue-300 text-blue-600' : `border-gray-200 dark:border-border ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
                 }`}
               >
                 <SlidersHorizontal className="h-4 w-4" />
@@ -89,7 +90,7 @@ export function PropertyGridView() {
               <button
                 key="floorplan"
                 onClick={handleViewAllFloorPlan}
-                className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all flex items-center gap-2 font-medium h-8"
+                className={`px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg transition-all flex items-center gap-2 font-medium h-8 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
               >
                 <MapPin className="h-4 w-4" />
                 Προβολή σε Κάτοψη
@@ -146,7 +147,7 @@ export function PropertyGridView() {
           </p>
           <button
             onClick={handleViewAllFloorPlan}
-            className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all font-medium inline-flex items-center gap-2"
+            className={`px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg transition-all font-medium inline-flex items-center gap-2 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
           >
             <MapPin className="h-5 w-5" />
             Προβολή Κάτοψης Ορόφου

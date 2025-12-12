@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Activity } from "@/types/dashboard";
+import { INTERACTIVE_PATTERNS } from "@/components/ui/effects";
 
 interface RecentActivitiesProps {
   activities: Activity[];
@@ -39,7 +40,7 @@ export function RecentActivities({ activities }: RecentActivitiesProps) {
           {activities.map((activity) => (
             <div
               key={activity.id}
-              className="flex items-start gap-4 p-3 rounded-lg hover:bg-muted/50 transition-colors"
+              className={`flex items-start gap-4 p-3 rounded-lg ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} transition-colors`}
             >
               <div
                 className={cn(

@@ -12,6 +12,7 @@ import { useUnifiedOverlayCreation } from '../hooks/overlay/useUnifiedOverlayCre
 import { toolStyleStore } from '../stores/ToolStyleStore';
 import { STATUS_COLORS_MAPPING, BUTTON_STATUS_COLORS, getKindFromLabel } from '../config/color-mapping';
 import { useOverlayStore } from '../overlays/overlay-store';
+import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 interface OverlayToolbarProps {
   mode: OverlayEditorMode;
@@ -128,8 +129,8 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
               h-8 px-2 rounded-md border transition-colors duration-150
               flex items-center justify-center gap-1
               ${mode === btnMode
-                ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-500'
-                : 'bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-500'
+                ? `bg-blue-600 text-white border-blue-500 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
+                : `bg-gray-700 text-gray-200 border-gray-500 ${HOVER_BACKGROUND_EFFECTS.MUTED}`
               }
             `}
           >
@@ -151,7 +152,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
               onClick={() => onStatusChange(status)}
               title={STATUS_LABELS[status]}
               className={`w-6 h-6 rounded-md border-2 transition-all duration-150 ${
-                currentStatus === status ? 'border-white ring-2 ring-offset-2 ring-offset-gray-800 ring-blue-500' : 'border-transparent hover:border-gray-400'
+                currentStatus === status ? 'border-white ring-2 ring-offset-2 ring-offset-gray-800 ring-blue-500' : `border-transparent ${INTERACTIVE_PATTERNS.BORDER_SUBTLE}`
               }`}
               style={{ backgroundColor: BUTTON_STATUS_COLORS[status as PropertyStatus] }}
             />
@@ -176,8 +177,8 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
                   h-8 w-8 p-0 rounded-md border transition-colors duration-150
                   flex items-center justify-center
                   ${currentKind === kind 
-                    ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-500' 
-                    : 'bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-500'
+                    ? `bg-blue-600 text-white border-blue-500 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}` 
+                    : `bg-gray-700 text-gray-200 border-gray-500 ${HOVER_BACKGROUND_EFFECTS.MUTED}`
                   }
                 `}
               >
@@ -199,7 +200,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
           className="
             h-8 w-8 p-0 rounded-md border transition-colors duration-150
             flex items-center justify-center
-            bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-500
+            bg-gray-700 text-gray-200 border-gray-500
             disabled:opacity-50 disabled:cursor-not-allowed
           "
         >
@@ -213,7 +214,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
           className="
             h-8 w-8 p-0 rounded-md border transition-colors duration-150
             flex items-center justify-center
-            bg-gray-700 hover:bg-red-900/50 text-red-400 hover:text-red-300 border-gray-500
+            bg-gray-700 text-red-400 border-gray-500
             disabled:opacity-50 disabled:cursor-not-allowed
           "
         >
@@ -232,7 +233,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
           className="
             h-8 w-8 p-0 rounded-md border transition-colors duration-150
             flex items-center justify-center
-            bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-500
+            bg-gray-700 text-gray-200 border-gray-500
             disabled:opacity-50 disabled:cursor-not-allowed
           "
         >
@@ -245,7 +246,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
           className="
             h-8 w-8 p-0 rounded-md border transition-colors duration-150
             flex items-center justify-center
-            bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-500
+            bg-gray-700 text-gray-200 border-gray-500
             disabled:opacity-50 disabled:cursor-not-allowed
           "
         >

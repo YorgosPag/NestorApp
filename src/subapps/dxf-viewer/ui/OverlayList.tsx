@@ -6,6 +6,7 @@ import { CommonBadge } from '../../../core/badges';
 import { ScrollArea } from '../../../components/ui/scroll-area';
 import { Input } from '../../../components/ui/input';
 import { Eye, EyeOff, Edit3, Trash2, Search } from 'lucide-react';
+import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 import { STATUS_COLORS, STATUS_LABELS, KIND_LABELS, type Overlay } from '../overlays/types';
 
 interface OverlayListProps {
@@ -115,7 +116,7 @@ export const OverlayList: React.FC<OverlayListProps> = ({
                     key={overlay.id}
                     ref={isSelected ? selectedCardRef : null}
                     className={`flex items-center gap-1 px-2 py-2 rounded border transition-colors cursor-pointer w-full overflow-hidden ${
-                      isSelected ? 'bg-blue-900/50 border-blue-500' : 'bg-gray-900/50 border-gray-600 hover:bg-gray-700'
+                      isSelected ? 'bg-blue-900/50 border-blue-500' : `bg-gray-900/50 border-gray-600 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
                     }`}
                     onClick={() => onSelect(overlay.id === selectedOverlayId ? null : overlay.id)}
                   >
@@ -123,7 +124,7 @@ export const OverlayList: React.FC<OverlayListProps> = ({
                       variant="ghost"
                       size="sm"
                       onClick={(e) => handleToggleVisibility(overlay.id, e)}
-                      className="p-0.5 h-5 w-5 text-gray-400 hover:text-white"
+                      className={`p-0.5 h-5 w-5 text-gray-400 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
                     >
                       {isVisible ? <Eye className="w-2.5 h-2.5" /> : <EyeOff className="w-2.5 h-2.5 opacity-50" />}
                     </Button>
@@ -145,7 +146,7 @@ export const OverlayList: React.FC<OverlayListProps> = ({
                         variant="ghost"
                         size="sm"
                         onClick={(e) => handleEdit(overlay.id, e)}
-                        className="p-0.5 h-5 w-5 text-gray-400 hover:text-white"
+                        className={`p-0.5 h-5 w-5 text-gray-400 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
                         title="Επεξεργασία"
                       >
                         <Edit3 className="w-2.5 h-2.5" />
@@ -154,7 +155,7 @@ export const OverlayList: React.FC<OverlayListProps> = ({
                         variant="ghost"
                         size="sm"
                         onClick={(e) => handleDelete(overlay.id, e)}
-                        className="p-0.5 h-5 w-5 text-red-400 hover:text-red-300"
+                        className={`p-0.5 h-5 w-5 ${HOVER_TEXT_EFFECTS.RED}`}
                         title="Διαγραφή"
                       >
                         <Trash2 className="w-2.5 h-2.5" />

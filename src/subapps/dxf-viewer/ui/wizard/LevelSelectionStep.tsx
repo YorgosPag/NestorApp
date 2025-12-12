@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Building2 } from 'lucide-react';
 import { useLevels } from '../../systems/levels';
+import { HOVER_BORDER_EFFECTS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 
 interface LevelSelectionStepProps {
     onNext: () => void;
@@ -56,7 +57,7 @@ export function LevelSelectionStep({ onNext, onClose }: LevelSelectionStepProps)
             className={`flex items-center p-3 border rounded-lg cursor-pointer transition-colors ${
               importWizard.selectedLevelId === level.id
                 ? 'border-blue-500 bg-blue-500 bg-opacity-10'
-                : 'border-gray-600 hover:border-gray-500'
+                : `border-gray-600 ${HOVER_BORDER_EFFECTS.MUTED}`
             }`}
           >
             <input
@@ -89,7 +90,7 @@ export function LevelSelectionStep({ onNext, onClose }: LevelSelectionStepProps)
             className={`flex items-center p-3 border-2 border-dashed rounded-lg w-full text-left transition-colors ${
               !importWizard.selectedLevelId && importWizard.newLevelName
                 ? 'border-blue-500 bg-blue-500 bg-opacity-10'
-                : 'border-gray-600 hover:border-gray-500'
+                : `border-gray-600 ${HOVER_BORDER_EFFECTS.MUTED}`
             }`}
           >
             <Plus className="w-4 h-4 text-gray-400 mr-2" />
@@ -122,7 +123,7 @@ export function LevelSelectionStep({ onNext, onClose }: LevelSelectionStepProps)
                 setSelectedLevel(levels[0]?.id || undefined, undefined);
                 setNewLevelName('');
               }}
-              className="mt-2 text-sm text-gray-400 hover:text-white transition-colors"
+              className={`mt-2 text-sm text-gray-400 ${HOVER_TEXT_EFFECTS.WHITE} transition-colors`}
             >
               Ακύρωση
             </button>

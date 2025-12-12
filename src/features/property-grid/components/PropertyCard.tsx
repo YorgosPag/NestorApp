@@ -2,7 +2,7 @@
 import { Eye, ArrowRight, Heart, Square, Bed, Bath, Building } from 'lucide-react';
 import { PropertyBadge, CommonBadge } from '@/core/badges';
 import { getPropertyImage } from '../utils/images';
-import { COMPLEX_HOVER_EFFECTS, TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { COMPLEX_HOVER_EFFECTS, TRANSITION_PRESETS, INTERACTIVE_PATTERNS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 
 export function PropertyCard({ property, onViewFloorPlan }: { property: any; onViewFloorPlan: (id: string) => void; }) {
   return (
@@ -11,7 +11,7 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: any; onV
         <img
           src={getPropertyImage(property)}
           alt={property.name}
-          className={`w-full h-full object-cover group-hover:scale-110 ${TRANSITION_PRESETS.SLOW_TRANSFORM}`}
+          className={`w-full h-full object-cover ${GROUP_HOVER_PATTERNS.SCALE_ON_GROUP} ${TRANSITION_PRESETS.SLOW_TRANSFORM}`}
         />
         <aside className="absolute top-3 left-3" role="status" aria-label="Κατάσταση Ακινήτου">
           <PropertyBadge

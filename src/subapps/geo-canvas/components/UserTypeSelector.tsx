@@ -4,6 +4,7 @@ import React from 'react';
 import { UserType } from '@/contexts/OptimizedUserRoleContext';
 import { Users, Briefcase, HardHat } from 'lucide-react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+import { HOVER_BORDER_EFFECTS, HOVER_SHADOWS } from '@/components/ui/effects';
 
 interface UserTypeSelectorProps {
   currentType?: UserType;
@@ -86,9 +87,9 @@ export function UserTypeSelector({ currentType, onSelect, disabled }: UserTypeSe
               relative p-4 rounded-lg border-2 transition-all duration-200
               ${currentType === userType.type
                 ? `border-${userType.color.replace('bg-', '')} bg-${userType.color.replace('bg-', '')}/10`
-                : 'border-gray-300 hover:border-gray-400'
+                : `border-gray-300 ${HOVER_BORDER_EFFECTS.PURPLE}`
               }
-              ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:shadow-md'}
+              ${disabled ? 'opacity-50 cursor-not-allowed' : `cursor-pointer ${HOVER_SHADOWS.SUBTLE}`}
             `}
           >
             {/* Icon */}

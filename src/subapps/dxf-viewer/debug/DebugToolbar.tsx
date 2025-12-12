@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import type { SceneModel } from '../types/scene';
 import type { ToolType } from '../ui/toolbar/types';
 import { runAllTests, formatReportForCopy, type UnifiedTestReport } from './unified-test-runner';
@@ -176,7 +177,7 @@ Check console for detailed metrics`;
             showCopyableNotification('Failed to run all tests', 'error');
           }
         }}
-        className="px-3 py-1 text-xs font-bold rounded shadow-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-500 hover:to-pink-500 transition-all"
+        className={`px-3 py-1 text-xs font-bold rounded shadow-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white transition-all ${HOVER_BACKGROUND_EFFECTS.GRADIENT_PURPLE_PINK}`}
       >
         🧪 Run All Tests
       </button>
@@ -221,7 +222,7 @@ Check console for detailed metrics`;
             showCopyableNotification('Failed to load test module', 'error');
           });
         }}
-        className="px-3 py-1 text-xs font-bold rounded shadow-lg bg-yellow-500 text-black hover:bg-yellow-400 transition-all"
+        className={`px-3 py-1 text-xs font-bold rounded shadow-lg bg-yellow-500 text-black transition-all ${HOVER_BACKGROUND_EFFECTS.WARNING_BUTTON}`}
       >
         🎯 Canvas Test
       </button>
@@ -248,7 +249,7 @@ Check console for detailed metrics`;
             showCopyableNotification('Failed to load workflow test module', 'error');
           });
         }}
-        className="px-3 py-1 text-xs font-bold rounded shadow-lg bg-green-500 text-white hover:bg-green-400 transition-all"
+        className={`px-3 py-1 text-xs font-bold rounded shadow-lg bg-green-500 text-white transition-all ${HOVER_BACKGROUND_EFFECTS.SUCCESS_BUTTON}`}
       >
         🔄 Layering Test (Ctrl+F2)
       </button>
@@ -283,7 +284,7 @@ Check console for detailed metrics`;
             showCopyableNotification('Failed to load DOM inspector', 'error');
           });
         }}
-        className="px-3 py-1 text-xs font-bold rounded shadow-lg bg-blue-500 text-white hover:bg-blue-400 transition-all"
+        className={`px-3 py-1 text-xs font-bold rounded shadow-lg bg-blue-500 text-white transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY_BUTTON}`}
       >
         🔍 DOM Inspector
       </button>
@@ -315,7 +316,7 @@ Check console for detailed metrics`;
             showCopyableNotification('Failed to load enterprise cursor-crosshair test module', 'error');
           });
         }}
-        className="px-3 py-1 text-xs font-bold rounded shadow-lg bg-purple-500 text-white hover:bg-purple-400 transition-all"
+        className={`px-3 py-1 text-xs font-bold rounded shadow-lg bg-purple-500 text-white transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY_BUTTON}`}
       >
         🏢 Enterprise Test (F3)
       </button>
@@ -344,7 +345,7 @@ Check console for detailed metrics`;
             showCopyableNotification('Failed to load origin markers debug module', 'error');
           });
         }}
-        className="px-3 py-1 text-xs font-bold rounded shadow-lg bg-orange-500 text-white hover:bg-orange-400 transition-all"
+        className={`px-3 py-1 text-xs font-bold rounded shadow-lg bg-orange-500 text-white transition-all ${HOVER_BACKGROUND_EFFECTS.WARNING_BUTTON}`}
       >
         🎯 Origin (0,0)
       </button>
@@ -373,7 +374,7 @@ Check console for detailed metrics`;
             console.log(diagnostics);
           });
         }}
-        className="px-3 py-1 text-xs font-bold rounded shadow-lg bg-blue-500 text-white hover:bg-blue-400 transition-all"
+        className={`px-3 py-1 text-xs font-bold rounded shadow-lg bg-blue-500 text-white transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY_BUTTON}`}
       >
         📏 Rulers
       </button>
@@ -388,8 +389,8 @@ Check console for detailed metrics`;
         }}
         className={`px-3 py-1 text-xs font-bold rounded shadow-lg transition-all ${
           showCalibration
-            ? 'bg-cyan-500 text-white hover:bg-cyan-400'
-            : 'bg-gray-500 text-white hover:bg-gray-400'
+            ? `bg-cyan-500 text-white ${HOVER_BACKGROUND_EFFECTS.CYAN}`
+            : `bg-gray-500 text-white ${HOVER_BACKGROUND_EFFECTS.MUTED}`
         }`}
       >
         🎯 Calibration {showCalibration ? 'ON' : 'OFF'}
@@ -416,7 +417,7 @@ Check console for detailed metrics`;
             showCopyableNotification('Failed to load alignment debug module', 'error');
           });
         }}
-        className="px-3 py-1 text-xs font-bold rounded shadow-lg bg-indigo-500 text-white hover:bg-indigo-400 transition-all"
+        className={`px-3 py-1 text-xs font-bold rounded shadow-lg bg-indigo-500 text-white transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY_BUTTON}`}
       >
         🎯 Alignment
       </button>
@@ -455,8 +456,8 @@ Check console for detailed metrics`;
         }}
         className={`px-3 py-1 text-xs font-bold rounded shadow-lg transition-all ${
           showGrid
-            ? 'bg-green-500 text-white hover:bg-green-400'
-            : 'bg-gray-500 text-white hover:bg-gray-400'
+            ? `bg-green-500 text-white ${HOVER_BACKGROUND_EFFECTS.SUCCESS}`
+            : `bg-gray-500 text-white ${HOVER_BACKGROUND_EFFECTS.MUTED}`
         }`}
       >
         {showGrid ? '📐 Grid TEST' : '📐 Grid TEST'}
@@ -470,8 +471,8 @@ Check console for detailed metrics`;
         }}
         className={`px-3 py-1 text-xs font-bold rounded shadow-lg transition-all ${
           dxfCanvasVisible
-            ? 'bg-green-500 text-white hover:bg-green-400'
-            : 'bg-red-500 text-white hover:bg-red-400'
+            ? `bg-green-500 text-white ${HOVER_BACKGROUND_EFFECTS.SUCCESS}`
+            : `bg-red-500 text-white ${HOVER_BACKGROUND_EFFECTS.DESTRUCTIVE}`
         }`}
       >
         {dxfCanvasVisible ? '🟢 DXF ON' : '🔴 DXF OFF'}
@@ -484,8 +485,8 @@ Check console for detailed metrics`;
         }}
         className={`px-3 py-1 text-xs font-bold rounded shadow-lg transition-all ${
           layerCanvasVisible
-            ? 'bg-blue-500 text-white hover:bg-blue-400'
-            : 'bg-red-500 text-white hover:bg-red-400'
+            ? `bg-blue-500 text-white ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`
+            : `bg-red-500 text-white ${HOVER_BACKGROUND_EFFECTS.DESTRUCTIVE}`
         }`}
       >
         {layerCanvasVisible ? '🔵 LAYER ON' : '🔴 LAYER OFF'}
@@ -494,7 +495,7 @@ Check console for detailed metrics`;
       {/* Pan to Origin (0,0) Button */}
       <button
         onClick={panToWorldOrigin}
-        className="px-3 py-1 text-xs font-bold rounded shadow-lg bg-purple-500 text-white hover:bg-purple-400 transition-all"
+        className={`px-3 py-1 text-xs font-bold rounded shadow-lg bg-purple-500 text-white transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY_BUTTON}`}
       >
         🏠 Pan to (0,0)
       </button>

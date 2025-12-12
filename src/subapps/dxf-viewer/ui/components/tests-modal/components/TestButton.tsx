@@ -6,6 +6,7 @@
 
 import React from 'react';
 import { Play, CheckCircle2 } from 'lucide-react';
+import { INTERACTIVE_PATTERNS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
 
 interface TestButtonProps {
   test: {
@@ -33,8 +34,8 @@ export const TestButton: React.FC<TestButtonProps> = ({
         isRunning
           ? 'bg-yellow-500/10 border-yellow-500/30 cursor-wait'
           : isCompleted
-          ? 'bg-green-500/10 border-green-500/30 hover:bg-green-500/20'
-          : 'bg-gray-700/50 border-gray-600/50 hover:bg-gray-700 hover:border-gray-500'
+          ? `bg-green-500/10 border-green-500/30 ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`
+          : `bg-gray-700/50 border-gray-600/50 ${HOVER_BORDER_EFFECTS.GRAY} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
       }`}
     >
       <div className="flex-shrink-0 mt-0.5">

@@ -11,7 +11,7 @@
 import React from 'react';
 import { Mail } from 'lucide-react';
 import { designSystem } from '@/lib/design-system';
-import { HOVER_SHADOWS } from '@/components/ui/effects';
+import { HOVER_SHADOWS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -250,8 +250,7 @@ export const getEmailRequiredPlatforms = (): SharePlatform[] => {
 export const generatePlatformButtonStyles = (platform: SharePlatform, variant: 'default' | 'compact' | 'minimal' = 'default') => {
   const baseStyles = designSystem.cn(
     'group relative overflow-hidden transition-all duration-300 transform',
-    'border border-white/20 hover:border-white/30',
-    'hover:shadow-xl hover:-translate-y-1',
+    'border border-white/20',
     platform.colors.hover
   );
 
@@ -270,7 +269,7 @@ export const generatePlatformButtonStyles = (platform: SharePlatform, variant: '
       'rounded-lg p-2',
       'bg-transparent border-2',
       designSystem.getStatusColor('info', 'border'),
-      'hover:bg-gray-50 dark:hover:bg-gray-800'
+      HOVER_BACKGROUND_EFFECTS.LIGHT
     )
   };
 
@@ -290,7 +289,7 @@ export const generatePlatformIconStyles = (size: 'sm' | 'md' | 'lg' = 'md') => {
   return designSystem.cn(
     sizeMap[size],
     'transition-transform duration-200',
-    'group-hover:scale-110'
+    GROUP_HOVER_PATTERNS.SCALE_ON_GROUP
   );
 };
 
@@ -301,7 +300,7 @@ export const generatePlatformLabelStyles = (size: 'xs' | 'sm' | 'md' = 'xs') => 
   return designSystem.cn(
     designSystem.getTypographyClass(size, 'medium'),
     'transition-opacity duration-200',
-    'group-hover:opacity-90'
+    GROUP_HOVER_PATTERNS.FADE_ON_GROUP
   );
 };
 

@@ -7,6 +7,7 @@ import React from 'react';
 import { Eye, EyeOff, Trash2, Edit2, ChevronRight, ChevronDown } from 'lucide-react';
 import { EntityCard } from './components/EntityCard';
 import type { SceneModel } from '../../../types/scene';
+import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 interface LayerItemProps {
   layerName: string;
@@ -195,7 +196,7 @@ export function LayerItem({
     <>
       <div 
         className={`flex items-center justify-between p-2 rounded cursor-pointer transition-all border-l-2 border-gray-600 ${
-          layer.visible ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-900 opacity-60'
+          layer.visible ? `bg-gray-800 ${HOVER_BACKGROUND_EFFECTS.LIGHT}` : 'bg-gray-900 opacity-60'
         } ${selectedLayersForMerge.has(layerName) ? 'ring-2 ring-blue-400 bg-blue-900 bg-opacity-30' : ''}`}
         onClick={handleLayerClick}
       >
@@ -204,7 +205,7 @@ export function LayerItem({
           {entityCount > 0 && (
             <button
               onClick={handleExpandToggle}
-              className="p-1 text-gray-400 hover:text-white"
+              className={`p-1 text-gray-400 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
               title={isLayerExpanded ? "Σύμπτυξη στοιχείων" : "Ανάπτυξη στοιχείων"}
             >
               {isLayerExpanded ? (
@@ -219,7 +220,7 @@ export function LayerItem({
           <div className="relative">
             <button
               onClick={handleColorPickerToggle}
-              className="w-3 h-3 rounded border border-gray-500 hover:ring-1 hover:ring-blue-400"
+              className={`w-3 h-3 rounded border border-gray-500 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
               style={{ backgroundColor: layer.color }}
               title="Αλλαγή χρώματος"
             />
@@ -254,7 +255,7 @@ export function LayerItem({
           {/* Visibility Toggle */}
           <button
             onClick={handleVisibilityToggle}
-            className="p-1 text-gray-400 hover:text-white"
+            className={`p-1 text-gray-400 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
             title={layer.visible ? "Απόκρυψη" : "Εμφάνιση"}
           >
             {layer.visible ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
@@ -263,7 +264,7 @@ export function LayerItem({
           {/* Edit Button */}
           <button
             onClick={handleEditClick}
-            className="p-1 text-gray-400 hover:text-white"
+            className={`p-1 text-gray-400 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
             title="Μετονομασία layer"
           >
             <Edit2 className="w-3 h-3" />
@@ -272,7 +273,7 @@ export function LayerItem({
           {/* Delete Button */}
           <button
             onClick={handleDeleteClick}
-            className="p-1 text-red-600 hover:text-red-500"
+            className={`p-1 ${HOVER_TEXT_EFFECTS.RED}`}
             title="Διαγραφή"
           >
             <Trash2 className="w-3 h-3" />

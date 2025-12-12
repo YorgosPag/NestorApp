@@ -10,6 +10,7 @@ import { useRealEstateMatching } from '@/services/real-estate-monitor/useRealEst
 import type { RealEstatePolygon } from '@geo-alert/core';
 import type { ParserResult } from '../floor-plan-system/types';
 import type { PropertyStatus } from '@/constants/statuses';
+import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS, HOVER_SHADOWS, TRANSITION_PRESETS } from '@/components/ui/effects';
 
 interface ProfessionalDrawingInterfaceProps {
   mapRef: React.RefObject<any>;
@@ -301,9 +302,9 @@ export function ProfessionalDrawingInterface({
               transition-all duration-200 min-h-[100px]
               ${selectedTool === 'upload'
                 ? 'border-green-500 bg-green-50'
-                : 'border-gray-300 hover:border-gray-400 bg-white'
+                : 'border-gray-300 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} bg-white'
               }
-              ${isDrawing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:shadow-md'}
+              ${isDrawing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.ENHANCED}'}
             `}
           >
             <Upload className="w-8 h-8 mb-2 text-green-600" />
@@ -320,9 +321,9 @@ export function ProfessionalDrawingInterface({
               transition-all duration-200 min-h-[100px]
               ${selectedTool === 'polygon'
                 ? 'border-green-500 bg-green-50'
-                : 'border-gray-300 hover:border-gray-400 bg-white'
+                : 'border-gray-300 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} bg-white'
               }
-              ${actualIsDrawing && selectedTool !== 'polygon' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:shadow-md'}
+              ${actualIsDrawing && selectedTool !== 'polygon' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.ENHANCED}'}
             `}
           >
             <Building className="w-8 h-8 mb-2 text-blue-600" />
@@ -339,9 +340,9 @@ export function ProfessionalDrawingInterface({
               transition-all duration-200 min-h-[100px]
               ${selectedTool === 'auto-detect'
                 ? 'border-green-500 bg-green-50'
-                : 'border-gray-300 hover:border-gray-400 bg-white'
+                : 'border-gray-300 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} bg-white'
               }
-              ${(actualIsDrawing || !parserResult) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:shadow-md'}
+              ${(actualIsDrawing || !parserResult) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.ENHANCED}'}
             `}
           >
             <Layers className="w-8 h-8 mb-2 text-purple-600" />
@@ -358,9 +359,9 @@ export function ProfessionalDrawingInterface({
               transition-all duration-200 min-h-[100px]
               ${selectedTool === 'property-manager'
                 ? 'border-orange-500 bg-orange-50'
-                : 'border-gray-300 hover:border-gray-400 bg-white'
+                : 'border-gray-300 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} bg-white'
               }
-              ${isDrawing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:shadow-md'}
+              ${isDrawing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.ENHANCED}'}
             `}
           >
             <Building className="w-8 h-8 mb-2 text-orange-600" />
@@ -377,9 +378,9 @@ export function ProfessionalDrawingInterface({
               transition-all duration-200 min-h-[100px]
               ${selectedTool === 'monitoring-dashboard'
                 ? 'border-blue-500 bg-blue-50'
-                : 'border-gray-300 hover:border-gray-400 bg-white'
+                : 'border-gray-300 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} bg-white'
               }
-              ${isDrawing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:shadow-md'}
+              ${isDrawing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.ENHANCED}'}
             `}
           >
             <BarChart className="w-8 h-8 mb-2 text-blue-600" />
@@ -393,7 +394,7 @@ export function ProfessionalDrawingInterface({
           <div className="flex gap-2 mb-4">
             <button
               onClick={handleComplete}
-              className="flex-1 flex items-center justify-center gap-2 bg-green-500 text-white py-3 px-4 rounded-lg hover:bg-green-600 transition-colors"
+              className="flex-1 flex items-center justify-center gap-2 bg-green-500 text-white py-3 px-4 rounded-lg ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} transition-colors"
             >
               <Check className="w-5 h-5" />
               <span className="font-medium">Ολοκλήρωση</span>
@@ -401,7 +402,7 @@ export function ProfessionalDrawingInterface({
 
             <button
               onClick={handleCancel}
-              className="flex-1 flex items-center justify-center gap-2 bg-red-500 text-white py-3 px-4 rounded-lg hover:bg-red-600 transition-colors"
+              className="flex-1 flex items-center justify-center gap-2 bg-red-500 text-white py-3 px-4 rounded-lg ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} transition-colors"
             >
               <X className="w-5 h-5" />
               <span className="font-medium">Ακύρωση</span>
@@ -414,7 +415,7 @@ export function ProfessionalDrawingInterface({
           <div className="mb-4">
             <button
               onClick={handleAutoDetect}
-              className="w-full flex items-center justify-center gap-2 bg-purple-500 text-white py-3 px-4 rounded-lg hover:bg-purple-600 transition-colors"
+              className="w-full flex items-center justify-center gap-2 bg-purple-500 text-white py-3 px-4 rounded-lg ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} transition-colors"
             >
               <Layers className="w-5 h-5" />
               <span className="font-medium">Ανίχνευση Δωματίων</span>
@@ -520,7 +521,7 @@ export function ProfessionalDrawingInterface({
                 setShowMonitoringDashboard(false);
                 setSelectedTool(null);
               }}
-              className="text-gray-500 hover:text-gray-700"
+              className="text-gray-500 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}"
             >
               <X className="w-5 h-5" />
             </button>
@@ -557,7 +558,7 @@ export function ProfessionalDrawingInterface({
               className={`flex items-center justify-center gap-2 py-2 px-4 rounded-lg border transition-colors ${
                 batchMonitoringMode
                   ? 'bg-blue-100 border-blue-300 text-blue-700'
-                  : 'bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100'
+                  : 'bg-gray-50 border-gray-300 text-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT}'
               }`}
             >
               <Settings className="w-4 h-4" />
@@ -571,7 +572,7 @@ export function ProfessionalDrawingInterface({
                 }
               }}
               disabled={polygons.length === 0}
-              className="flex items-center justify-center gap-2 bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50"
+              className="flex items-center justify-center gap-2 bg-green-500 text-white py-2 px-4 rounded-lg ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} transition-colors disabled:opacity-50"
             >
               <Bell className="w-4 h-4" />
               <span className="text-sm font-medium">{t('realEstateMonitoring.actions.monitorAll', { count: polygons.length })}</span>
@@ -583,7 +584,7 @@ export function ProfessionalDrawingInterface({
                 console.log('📊 Professional: Exporting data to CSV');
               }}
               disabled={realEstateStats.totalMatches === 0}
-              className="flex items-center justify-center gap-2 bg-gray-500 text-white py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-50"
+              className="flex items-center justify-center gap-2 bg-gray-500 text-white py-2 px-4 rounded-lg ${HOVER_BACKGROUND_EFFECTS.MUTED} transition-colors disabled:opacity-50"
             >
               <FileText className="w-4 h-4" />
               <span className="text-sm font-medium">{t('realEstateMonitoring.actions.exportCsv')}</span>

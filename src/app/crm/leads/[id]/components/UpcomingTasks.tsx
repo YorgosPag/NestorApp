@@ -4,6 +4,7 @@
 import React, { useMemo } from 'react';
 import { Clock } from 'lucide-react';
 import type { CrmTask } from '@/types/crm';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { getTaskDateColor, formatTaskDate } from '../utils/dates';
 
 interface UpcomingTasksProps {
@@ -44,7 +45,7 @@ export function UpcomingTasks({ tasks, router }: UpcomingTasksProps) {
         ))}
         {pendingTasks.length > 5 && (
           <div className="text-center">
-            <button onClick={() => router.push('/crm/tasks')} className="text-blue-600 hover:text-blue-800 text-sm">
+            <button onClick={() => router.push('/crm/tasks')} className={`text-blue-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} text-sm`}>
               Δείτε όλες τις εργασίες ({pendingTasks.length})
             </button>
           </div>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useCursorSettings } from '../../../../../systems/cursor';
 import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
+import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 export function SelectionSettings() {
   const [activeSelectionTab, setActiveSelectionTab] = useState<'window' | 'crossing'>('window');
@@ -59,7 +60,7 @@ export function SelectionSettings() {
           className={`px-3 py-2 text-xs rounded-t transition-colors ${
             activeSelectionTab === 'window'
               ? 'bg-blue-600 text-white border-b-2 border-blue-400'
-              : 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+              : 'bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-gray-200'
           }`}
         >
           🔵 Window Selection
@@ -69,7 +70,7 @@ export function SelectionSettings() {
           className={`px-3 py-2 text-xs rounded-t transition-colors ${
             activeSelectionTab === 'crossing'
               ? 'bg-blue-600 text-white border-b-2 border-blue-400'
-              : 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+              : 'bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-gray-200'
           }`}
         >
           🟢 Crossing Selection
@@ -80,7 +81,7 @@ export function SelectionSettings() {
       <div className="mb-4 p-2 bg-red-900 rounded">
         <button
           onClick={handleResetSelectionSettings}
-          className="w-full px-3 py-2 text-xs bg-red-600 hover:bg-red-700 text-white rounded"
+          className="w-full px-3 py-2 text-xs bg-red-600 ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} text-white rounded"
         >
           🔄 Reset Selection Settings (DEBUG)
         </button>
@@ -232,7 +233,7 @@ export function SelectionSettings() {
                     className={`p-2 rounded text-xs border transition-colors ${
                       isSelected
                         ? 'bg-blue-600 border-blue-500'
-                        : 'bg-gray-600 hover:bg-blue-600 border-gray-500'
+                        : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
                     }`}
                   >
                     <div
@@ -391,7 +392,7 @@ export function SelectionSettings() {
                     className={`p-2 rounded text-xs border transition-colors ${
                       isSelected
                         ? 'bg-blue-600 border-blue-500'
-                        : 'bg-gray-600 hover:bg-blue-600 border-gray-500'
+                        : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
                     }`}
                   >
                     <div

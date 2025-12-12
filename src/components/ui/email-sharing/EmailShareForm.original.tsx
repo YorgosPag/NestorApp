@@ -17,6 +17,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { CommonBadge } from '@/core/badges';
 import { designSystem } from '@/lib/design-system';
+import { INTERACTIVE_PATTERNS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
 
 // Icons
 import { Mail, Users, MessageCircle, Plus, Trash2, ArrowLeft, Palette } from 'lucide-react';
@@ -289,7 +290,7 @@ export const EmailShareForm: React.FC<EmailShareFormProps> = ({
                     'p-3 rounded-lg border-2 transition-all text-center',
                     selectedTemplate === template.id
                       ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                      : 'border-gray-200 hover:border-gray-300'
+                      : `border-gray-200 ${HOVER_BORDER_EFFECTS.GRAY}`
                   )}
                 >
                   <div className={designSystem.getTypographyClass('lg')}>
@@ -331,7 +332,7 @@ export const EmailShareForm: React.FC<EmailShareFormProps> = ({
                 onClick={addEmailRecipient}
                 className={designSystem.cn(
                   designSystem.getStatusColor('info', 'text'),
-                  'hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                  INTERACTIVE_PATTERNS.PRIMARY_HOVER
                 )}
               >
                 <Plus className="w-4 h-4 mr-1" />
@@ -363,7 +364,7 @@ export const EmailShareForm: React.FC<EmailShareFormProps> = ({
                     size="sm"
                     onClick={() => removeEmailRecipient(index)}
                     disabled={loading}
-                    className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                    className={`text-red-500 ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`}
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>

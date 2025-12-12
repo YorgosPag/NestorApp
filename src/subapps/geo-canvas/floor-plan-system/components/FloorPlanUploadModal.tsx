@@ -24,6 +24,7 @@ import {
   DialogDescription,
   DialogFooter
 } from '@/components/ui/dialog';
+import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS, HOVER_SHADOWS } from '@/components/ui/effects';
 import { FloorPlanPreview } from './FloorPlanPreview';
 import type { ParserResult } from '../types';
 
@@ -230,7 +231,7 @@ export function FloorPlanUploadModal({
             transition-all duration-200
             ${isDragging
               ? 'border-blue-500 bg-blue-500/10 scale-105'
-              : 'border-gray-600 hover:border-gray-500 hover:bg-gray-800/50'
+              : `border-gray-600 ${HOVER_BACKGROUND_EFFECTS.MUTED}`
             }
           `}
           onDragEnter={handleDragEnter}
@@ -263,12 +264,12 @@ export function FloorPlanUploadModal({
             onClick={handleBrowseClick}
             className="
               px-6 py-3
-              bg-blue-600 hover:bg-blue-700
-              text-white font-medium
+              bg-blue-600 text-white font-medium
               rounded-lg
               transition-all duration-200
               transform active:scale-95
-              shadow-lg hover:shadow-blue-500/30
+              shadow-lg
+              ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${HOVER_SHADOWS.COLORED.BLUE}
             "
           >
             {t('floorPlan.uploadModal.browseButton')}
@@ -320,7 +321,8 @@ export function FloorPlanUploadModal({
             onClick={onClose}
             className="
               px-4 py-2
-              bg-gray-700 hover:bg-gray-600
+              bg-gray-700
+              ${HOVER_BACKGROUND_EFFECTS.MUTED}
               text-white
               rounded-lg
               transition-all duration-200

@@ -5,6 +5,7 @@ import React from 'react';
 import type { Building } from '@/types/building/contracts';
 import { Video, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { HOVER_BORDER_EFFECTS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 
 interface VideosTabContentProps {
   building?: Building;
@@ -24,10 +25,10 @@ const VideosTabContent = ({ building }: VideosTabContentProps) => (
       {[1, 2, 3].map((index) => (
         <div
           key={index}
-          className="aspect-video bg-muted rounded-lg flex items-center justify-center border-2 border-dashed border-border hover:border-blue-400 transition-colors cursor-pointer group"
+          className={`aspect-video bg-muted rounded-lg flex items-center justify-center border-2 border-dashed border-border ${HOVER_BORDER_EFFECTS.BLUE} transition-colors cursor-pointer group`}
         >
           <div className="text-center">
-            <Video className="w-8 h-8 text-muted-foreground group-hover:text-blue-500 mx-auto mb-2" />
+            <Video className={`w-8 h-8 text-muted-foreground ${GROUP_HOVER_PATTERNS.BLUE_ICON_ON_GROUP} mx-auto mb-2`} />
             <p className="text-sm text-muted-foreground">Προσθήκη Video</p>
           </div>
         </div>

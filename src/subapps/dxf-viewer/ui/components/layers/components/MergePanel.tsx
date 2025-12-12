@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { GitMerge } from 'lucide-react';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 interface MergePanelProps {
   selectedEntitiesForMerge: Set<string>;
@@ -38,7 +39,7 @@ export const MergePanel = ({
           </span>
           <button
             onClick={onMergeEntities}
-            className="flex items-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs"
+            className={`flex items-center gap-1 px-2 py-1 bg-blue-600 ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} text-white rounded text-xs`}
             title="Συγχώνευση επιλεγμένων entities"
           >
             <GitMerge className="w-3 h-3" />
@@ -54,7 +55,7 @@ export const MergePanel = ({
           </span>
           <button
             onClick={onMergeLayers}
-            className="flex items-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs"
+            className={`flex items-center gap-1 px-2 py-1 bg-blue-600 ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} text-white rounded text-xs`}
             title="Συγχώνευση επιλεγμένων layers"
           >
             <GitMerge className="w-3 h-3" />
@@ -70,7 +71,7 @@ export const MergePanel = ({
           </span>
           <button
             onClick={onMergeColorGroups}
-            className="flex items-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs"
+            className={`flex items-center gap-1 px-2 py-1 bg-blue-600 ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} text-white rounded text-xs`}
             title="Συγχώνευση επιλεγμένων color groups"
           >
             <GitMerge className="w-3 h-3" />

@@ -9,18 +9,18 @@ export const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-primary text-primary-foreground hover:bg-primary/90',
-        destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
-        outline: 'border border-input bg-background hover:bg-accent hover:text-accent-foreground',
-        secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-        ghost: 'hover:bg-accent hover:text-accent-foreground',
-        link: 'text-primary underline-offset-4 hover:underline',
+        default: `bg-primary text-primary-foreground ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER}`,
+        destructive: `bg-destructive text-destructive-foreground ${INTERACTIVE_PATTERNS.BUTTON_DESTRUCTIVE_HOVER}`,
+        outline: `border border-input bg-background ${INTERACTIVE_PATTERNS.BUTTON_ACCENT_HOVER}`,
+        secondary: `bg-secondary text-secondary-foreground ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER}`,
+        ghost: `${INTERACTIVE_PATTERNS.BUTTON_ACCENT_HOVER}`,
+        link: `text-primary underline-offset-4 ${INTERACTIVE_PATTERNS.BUTTON_LINK_HOVER}`,
         
         // Semantic variants
-        success: 'bg-[hsl(var(--status-success))] text-white hover:bg-[hsl(var(--status-success))]/90',
-        warning: 'bg-[hsl(var(--status-warning))] text-white hover:bg-[hsl(var(--status-warning))]/90',
-        error: 'bg-[hsl(var(--status-error))] text-white hover:bg-[hsl(var(--status-error))]/90',
-        info: 'bg-[hsl(var(--status-info))] text-white hover:bg-[hsl(var(--status-info))]/90',
+        success: `bg-[hsl(var(--status-success))] text-white ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`,
+        warning: `bg-[hsl(var(--status-warning))] text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`,
+        error: `bg-[hsl(var(--status-error))] text-white ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`,
+        info: `bg-[hsl(var(--status-info))] text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`,
       },
       size: {
         default: 'h-10 px-4 py-2',
@@ -70,9 +70,9 @@ export const badgeVariants = cva(
   {
     variants: {
       variant: {
-        default: 'border-transparent bg-primary text-primary-foreground hover:bg-primary/80',
-        secondary: 'border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80',
-        destructive: 'border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80',
+        default: `border-transparent bg-primary text-primary-foreground ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER}`,
+        secondary: `border-transparent bg-secondary text-secondary-foreground ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER}`,
+        destructive: `border-transparent bg-destructive text-destructive-foreground ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER}`,
         outline: 'text-foreground border border-input',
         
         // Semantic status variants

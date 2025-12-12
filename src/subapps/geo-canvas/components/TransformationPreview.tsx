@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useGeoTransform } from '../hooks/useGeoTransform';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { dxfGeoTransformService } from '../services/geo-transform/DxfGeoTransform';
 import type { DxfCoordinate, GeoCoordinate, SpatialEntity } from '../types';
 
@@ -425,7 +426,7 @@ export function TransformationPreview({
         <button
           onClick={processTransformation}
           disabled={!transformState.isCalibrated || !dxfScene}
-          className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-2 px-4 rounded transition-colors"
+          className={`w-full bg-blue-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-2 px-4 rounded transition-colors`}
         >
           🔄 Refresh Preview
         </button>
@@ -443,7 +444,7 @@ export function TransformationPreview({
               link.click();
               URL.revokeObjectURL(url);
             }}
-            className="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded transition-colors"
+            className={`w-full bg-green-600 ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} text-white py-2 px-4 rounded transition-colors`}
           >
             💾 Export GeoJSON
           </button>

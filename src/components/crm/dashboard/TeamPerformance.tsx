@@ -2,6 +2,7 @@
 'use client';
 
 import React from 'react';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 export function TeamPerformance() {
     const team = [
@@ -22,7 +23,7 @@ export function TeamPerformance() {
                 </thead>
                 <tbody>
                     {team.map(member => (
-                        <tr key={member.name} className="border-b hover:bg-gray-50">
+                        <tr key={member.name} className={`border-b ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}>
                             <td className="p-2 font-medium">{member.name}</td>
                             <td className="p-2 text-gray-600">{member.leads}</td>
                             <td className="p-2 text-green-600">{member.value}</td>

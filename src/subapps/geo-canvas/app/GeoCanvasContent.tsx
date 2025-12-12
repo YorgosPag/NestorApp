@@ -25,7 +25,7 @@ import { useOptimizedUserRole } from '@/contexts/OptimizedUserRoleContext';
 import { PageErrorBoundary, ComponentErrorBoundary } from '@/components/ui/ErrorBoundary/ErrorBoundary';
 import ErrorReportingDashboard from '@/components/development/ErrorReportingDashboard';
 import { useAnalytics } from '@/services/AnalyticsBridge';
-import { TRANSITION_PRESETS } from '@/components/ui/effects';
+import { TRANSITION_PRESETS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import type { GeoCanvasAppProps } from '../types';
 import type { GeoCoordinate, DxfCoordinate } from '../types';
 
@@ -585,7 +585,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
               className={`flex items-center space-x-2 px-3 py-2 rounded-md transition-colors ${
                 showAlertDashboard
                   ? 'bg-orange-600 text-white'
-                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  : `bg-gray-700 text-gray-300 ${HOVER_BACKGROUND_EFFECTS.MUTED}`
               }`}
             >
               <span className="text-sm">🚨</span>
@@ -677,7 +677,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                             // ✅ ENTERPRISE: Clear user type by setting to a valid empty state
                             window.location.reload(); // Reload to reset all user state
                           }}
-                          className={`px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-md text-sm ${TRANSITION_PRESETS.FAST_COLORS}`}
+                          className={`px-4 py-2 bg-gray-500 text-white rounded-md text-sm ${HOVER_BACKGROUND_EFFECTS.MUTED} ${TRANSITION_PRESETS.FAST_COLORS}`}
                         >
                           🔄 {t('userActions.changeUserType')}
                         </button>

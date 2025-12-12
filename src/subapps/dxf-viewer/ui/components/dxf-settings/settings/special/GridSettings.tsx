@@ -18,6 +18,7 @@ import { useRulersGridContext } from '../../../../../systems/rulers-grid/RulersG
 import { useTabNavigation } from '../../hooks/useTabNavigation';
 import { TabNavigation } from '../../shared/TabNavigation';
 import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 export interface GridSettingsProps {
   className?: string;
@@ -126,7 +127,7 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
             className={`flex-1 p-2 rounded text-xs border transition-colors ${
               gridSettings.visual.enabled
                 ? 'bg-blue-600 border-blue-500'
-                : 'bg-gray-600 hover:bg-blue-600 border-gray-500'
+                : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
             }`}
           >
             Ενεργό
@@ -136,7 +137,7 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
             className={`flex-1 p-2 rounded text-xs border transition-colors ${
               !gridSettings.visual.enabled
                 ? 'bg-blue-600 border-blue-500'
-                : 'bg-gray-600 hover:bg-blue-600 border-gray-500'
+                : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
             }`}
           >
             Ανενεργό
@@ -178,7 +179,7 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
             className={`flex-1 p-2 rounded text-xs border transition-colors ${
               gridSettings.visual.style === 'lines'
                 ? 'bg-blue-600 border-blue-500'
-                : 'bg-gray-600 hover:bg-blue-600 border-gray-500'
+                : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
             }`}
           >
             ─ Γραμμές
@@ -188,7 +189,7 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
             className={`flex-1 p-2 rounded text-xs border transition-colors ${
               gridSettings.visual.style === 'dots'
                 ? 'bg-blue-600 border-blue-500'
-                : 'bg-gray-600 hover:bg-blue-600 border-gray-500'
+                : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
             }`}
           >
             • Τελείες
@@ -198,7 +199,7 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
             className={`flex-1 p-2 rounded text-xs border transition-colors ${
               gridSettings.visual.style === 'crosses'
                 ? 'bg-blue-600 border-blue-500'
-                : 'bg-gray-600 hover:bg-blue-600 border-gray-500'
+                : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
             }`}
           >
             + Σταυροί

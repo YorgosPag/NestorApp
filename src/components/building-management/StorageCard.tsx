@@ -39,7 +39,7 @@ export function StorageCard({
     <Card 
       className={cn(
         `relative overflow-hidden cursor-pointer ${TRANSITION_PRESETS.SMOOTH_ALL} group border`,
-        isSelected ? "ring-2 ring-primary shadow-lg border-primary" : "hover:border-primary/50",
+        isSelected ? "ring-2 ring-primary shadow-lg border-primary" : "border-border",
         CORE_HOVER_TRANSFORMS.SCALE_UP_TINY,
         HOVER_SHADOWS.ENHANCED
       )}

@@ -4,6 +4,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { CommonBadge } from '@/core/badges';
 import { Textarea } from '@/components/ui/textarea';
+import { GROUP_HOVER_PATTERNS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 import { GripVertical, Edit3, Save, X, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ObligationParagraph } from '@/types/obligations';
@@ -46,7 +47,7 @@ export function ParagraphItem({
         dragState?.dragId === paragraph.id && "opacity-50"
       )}
     >
-      {!readOnly && <GripVertical className="h-4 w-4 text-gray-400 cursor-move opacity-0 group-hover:opacity-100 mt-1" />}
+      {!readOnly && <GripVertical className={`h-4 w-4 text-gray-400 cursor-move opacity-0 mt-1 ${GROUP_HOVER_PATTERNS.SHOW_ON_GROUP}`} />}
       <CommonBadge
         status="company"
         customLabel={paragraph.number}
@@ -70,15 +71,15 @@ export function ParagraphItem({
             </div>
           </div>
         ) : (
-          <div className="cursor-pointer text-sm text-gray-700 hover:text-gray-900" onClick={() => handlers.startEditing('paragraph', paragraph.id)}>
+          <div className={`cursor-pointer text-sm text-gray-700 ${HOVER_TEXT_EFFECTS.MUTED_TO_FOREGROUND}`} onClick={() => handlers.startEditing('paragraph', paragraph.id)}>
             {paragraph.content || <span className="text-gray-400 italic">Κλικ για προσθήκη περιεχομένου...</span>}
           </div>
         )}
       </div>
       {!readOnly && !isEditing && (
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
+        <div className={`flex items-center gap-1 opacity-0 ${GROUP_HOVER_PATTERNS.SHOW_ON_GROUP}`}>
           <Button variant="ghost" size="sm" onClick={() => handlers.startEditing('paragraph', paragraph.id)} className="h-7 px-2"><Edit3 className="h-3 w-3" /></Button>
-          <Button variant="ghost" size="sm" onClick={() => handlers.deleteParagraph(sectionId, articleId, paragraph.id)} className="h-7 px-2 text-red-600 hover:text-red-700"><Trash2 className="h-3 w-3" /></Button>
+          <Button variant="ghost" size="sm" onClick={() => handlers.deleteParagraph(sectionId, articleId, paragraph.id)} className={`h-7 px-2 text-red-600 ${HOVER_TEXT_EFFECTS.DESTRUCTIVE}`}><Trash2 className="h-3 w-3" /></Button>
         </div>
       )}
     </div>

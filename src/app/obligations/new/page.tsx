@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CommonBadge } from "@/core/badges";
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   ArrowLeft,
@@ -278,7 +279,7 @@ export default function NewObligationPage() {
     const renderTocItem = (item: TableOfContentsItem) => (
       <div key={item.id} className="ml-4">
         <div 
-          className={`flex items-center gap-2 py-1 text-sm cursor-pointer hover:bg-gray-100 rounded px-2 ${
+          className={`flex items-center gap-2 py-1 text-sm cursor-pointer rounded px-2 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${
             activeItem?.id === item.id ? 'bg-blue-50 text-blue-700' : 'text-gray-600'
           }`}
           onClick={() => setActiveItem({ type: item.type, id: item.id })}

@@ -37,7 +37,7 @@ export function BuildingCard({
         COMPLEX_HOVER_EFFECTS.FEATURE_CARD,
         isSelected
           ? "border-blue-500 shadow-lg ring-2 ring-blue-200 dark:ring-blue-800"
-          : "border-border hover:border-blue-300 hover:shadow-lg"
+          : "border-border"
       )}
       onClick={onClick}
       onMouseEnter={() => setIsHovered(true)}

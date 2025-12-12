@@ -9,6 +9,7 @@ import { Copy, Trash2, Palette } from "lucide-react";
 import type { Property } from '@/types/property-viewer';
 import type { LayerState } from '../useLayerStates';
 import { PROPERTY_STATUS_CONFIG } from "@/lib/property-utils";
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 interface PropertyLayerDetailsProps {
   property: Property;
@@ -66,7 +67,7 @@ export function PropertyLayerDetails({
         <Button variant="outline" size="sm" className="h-7 px-2 text-xs flex-1" onClick={onDuplicate}>
           <Copy className="h-3 w-3 mr-1" /> Διπλ.
         </Button>
-        <Button variant="outline" size="sm" className="h-7 w-7 p-0 text-destructive hover:bg-destructive hover:text-destructive-foreground" onClick={onDelete}>
+        <Button variant="outline" size="sm" className={`h-7 w-7 p-0 text-destructive ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`} onClick={onDelete}>
           <Trash2 className="h-3 w-3" />
         </Button>
       </div>

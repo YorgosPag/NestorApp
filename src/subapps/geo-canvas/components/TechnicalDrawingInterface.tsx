@@ -5,6 +5,7 @@ import { HardHat, Ruler, FileText, ExternalLink, Settings, Database, AlertTriang
 import { useCentralizedPolygonSystem } from '../systems/polygon-system';
 import { useRealEstateMatching } from '@/services/real-estate-monitor/useRealEstateMatching';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS, HOVER_SHADOWS } from '@/components/ui/effects';
 import type { RealEstatePolygon } from '@geo-alert/core';
 
 interface TechnicalDrawingInterfaceProps {
@@ -193,9 +194,9 @@ export function TechnicalDrawingInterface({
             transition-all duration-200 min-h-[100px]
             ${selectedTool === 'dxf-viewer'
               ? 'border-purple-500 bg-purple-50'
-              : 'border-gray-300 hover:border-gray-400 bg-white'
+              : `border-gray-300 bg-white ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
             }
-            ${isDrawing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:shadow-md'}
+            ${isDrawing ? 'opacity-50 cursor-not-allowed' : `cursor-pointer ${HOVER_SHADOWS.MEDIUM}`}
           `}
         >
           <ExternalLink className="w-8 h-8 mb-2 text-purple-600" />
@@ -212,9 +213,9 @@ export function TechnicalDrawingInterface({
             transition-all duration-200 min-h-[100px]
             ${selectedTool === 'precision'
               ? 'border-purple-500 bg-purple-50'
-              : 'border-gray-300 hover:border-gray-400 bg-white'
+              : `border-gray-300 bg-white ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
             }
-            ${actualIsDrawing && selectedTool !== 'precision' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:shadow-md'}
+            ${actualIsDrawing && selectedTool !== 'precision' ? 'opacity-50 cursor-not-allowed' : `cursor-pointer ${HOVER_SHADOWS.MEDIUM}`}
           `}
         >
           <Ruler className="w-8 h-8 mb-2 text-blue-600" />
@@ -231,9 +232,9 @@ export function TechnicalDrawingInterface({
             transition-all duration-200 min-h-[100px]
             ${selectedTool === 'settings'
               ? 'border-purple-500 bg-purple-50'
-              : 'border-gray-300 hover:border-gray-400 bg-white'
+              : `border-gray-300 bg-white ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
             }
-            ${isDrawing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:shadow-md'}
+            ${isDrawing ? 'opacity-50 cursor-not-allowed' : `cursor-pointer ${HOVER_SHADOWS.MEDIUM}`}
           `}
         >
           <Settings className="w-8 h-8 mb-2 text-gray-600" />
@@ -250,9 +251,9 @@ export function TechnicalDrawingInterface({
             transition-all duration-200 min-h-[100px]
             ${selectedTool === 'automated-alerts'
               ? 'border-red-500 bg-red-50'
-              : 'border-gray-300 hover:border-gray-400 bg-white'
+              : `border-gray-300 bg-white ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
             }
-            ${isDrawing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:shadow-md'}
+            ${isDrawing ? 'opacity-50 cursor-not-allowed' : `cursor-pointer ${HOVER_SHADOWS.MEDIUM}`}
           `}
         >
           <AlertTriangle className="w-8 h-8 mb-2 text-red-600" />
@@ -266,7 +267,7 @@ export function TechnicalDrawingInterface({
         <div className="flex gap-2 mb-4">
           <button
             onClick={handleComplete}
-            className="flex-1 flex items-center justify-center gap-2 bg-purple-500 text-white py-3 px-4 rounded-lg hover:bg-purple-600 transition-colors"
+            className={`flex-1 flex items-center justify-center gap-2 bg-purple-500 text-white py-3 px-4 rounded-lg transition-colors ${HOVER_BACKGROUND_EFFECTS.PURPLE_DARKER}`}
           >
             <Ruler className="w-5 h-5" />
             <span className="font-medium">{t('drawingInterfaces.technical.actions.complete')}</span>
@@ -274,7 +275,7 @@ export function TechnicalDrawingInterface({
 
           <button
             onClick={handleCancel}
-            className="flex-1 flex items-center justify-center gap-2 bg-red-500 text-white py-3 px-4 rounded-lg hover:bg-red-600 transition-colors"
+            className={`flex-1 flex items-center justify-center gap-2 bg-red-500 text-white py-3 px-4 rounded-lg transition-colors ${HOVER_BACKGROUND_EFFECTS.RED_DARKER}`}
           >
             <span className="font-medium">{t('drawingInterfaces.technical.actions.cancel')}</span>
           </button>
@@ -325,7 +326,7 @@ export function TechnicalDrawingInterface({
             href="/dxf/viewer"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+            className={`text-xs text-blue-600 flex items-center gap-1 ${INTERACTIVE_PATTERNS.LINK_PRIMARY}`}
           >
             {t('drawingInterfaces.technical.openViewer')} <ExternalLink className="w-3 h-3" />
           </a>
@@ -377,7 +378,7 @@ export function TechnicalDrawingInterface({
                 setShowAutomatedAlerts(false);
                 setSelectedTool(null);
               }}
-              className="text-gray-500 hover:text-gray-700"
+              className={`text-gray-500 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
             >
               <X className="w-5 h-5" />
             </button>
@@ -475,7 +476,7 @@ export function TechnicalDrawingInterface({
                 }
               }}
               disabled={polygons.length === 0}
-              className="flex items-center justify-center gap-2 bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
+              className={`flex items-center justify-center gap-2 bg-red-500 text-white py-2 px-4 rounded-lg transition-colors disabled:opacity-50 ${HOVER_BACKGROUND_EFFECTS.RED_DARKER}`}
             >
               <Zap className="w-4 h-4" />
               <span className="text-sm font-medium">{t('hardcodedTexts.actions.automateAll')} ({polygons.length})</span>
@@ -486,7 +487,7 @@ export function TechnicalDrawingInterface({
                 startPeriodicCheck(alertConfiguration.monitoringInterval);
                 console.log('🚨 Technical: Automated monitoring started');
               }}
-              className="flex items-center justify-center gap-2 bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-600 transition-colors"
+              className={`flex items-center justify-center gap-2 bg-green-500 text-white py-2 px-4 rounded-lg transition-colors ${HOVER_BACKGROUND_EFFECTS.GREEN_DARKER}`}
             >
               <Monitor className="w-4 h-4" />
               <span className="text-sm font-medium">{t('hardcodedTexts.actions.startMonitoring')}</span>
@@ -497,7 +498,7 @@ export function TechnicalDrawingInterface({
                 stopPeriodicCheck();
                 console.log('🚨 Technical: Automated monitoring stopped');
               }}
-              className="flex items-center justify-center gap-2 bg-gray-500 text-white py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors"
+              className={`flex items-center justify-center gap-2 bg-gray-500 text-white py-2 px-4 rounded-lg transition-colors ${HOVER_BACKGROUND_EFFECTS.GRAY_DARKER}`}
             >
               <Settings className="w-4 h-4" />
               <span className="text-sm font-medium">{t('hardcodedTexts.actions.stopAll')}</span>

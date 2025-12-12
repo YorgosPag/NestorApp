@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CommonBadge } from '@/core/badges';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { Plus, Trash2, CheckCircle } from 'lucide-react';
 
 interface StorageFormFeaturesProps {
@@ -85,7 +86,7 @@ export function StorageFormFeatures({
                       <button
                         type="button"
                         onClick={() => removeFeature(feature)}
-                        className="ml-1 text-destructive hover:text-destructive/80"
+                        className={`ml-1 text-destructive ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`}
                       >
                         <Trash2 className="w-3 h-3" />
                       </button>

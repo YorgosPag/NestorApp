@@ -3,6 +3,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { CommonBadge } from '@/core/badges';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { ChevronRight, ChevronDown } from 'lucide-react';
 import type { TocItemProps } from '../types';
 import { getItemIcon } from '../utils/icons';
@@ -30,7 +31,7 @@ export function TocItem({
       <div
         className={cn(
           "group flex items-center gap-2 py-2 px-3 rounded-md cursor-pointer transition-colors",
-          "hover:bg-gray-50 dark:hover:bg-gray-800",
+          INTERACTIVE_PATTERNS.SUBTLE_HOVER,
           isActive && "bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-200 dark:border-blue-700",
           indentClass
         )}
@@ -45,7 +46,7 @@ export function TocItem({
               e.stopPropagation();
               onToggle(item.id);
             }}
-            className="h-6 w-6 p-0 opacity-70 hover:opacity-100"
+            className={`h-6 w-6 p-0 opacity-70 ${INTERACTIVE_PATTERNS.OPACITY_HOVER}`}
             aria-label={isExpanded ? `Σύμπτυξη ενότητας ${item.title}` : `Επέκταση ενότητας ${item.title}`}
           >
             {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}

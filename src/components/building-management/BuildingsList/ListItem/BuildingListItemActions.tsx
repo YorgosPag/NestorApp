@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Star, MoreVertical, Edit, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { TRANSITION_PRESETS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
+import { TRANSITION_PRESETS, HOVER_TEXT_EFFECTS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 
 interface BuildingListItemActionsProps {
   isFavorite: boolean;
@@ -27,7 +27,7 @@ interface BuildingListItemActionsProps {
 
 export function BuildingListItemActions({ isFavorite, onToggleFavorite, onEdit }: BuildingListItemActionsProps) {
   return (
-    <div className={`absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 z-10 ${TRANSITION_PRESETS.OPACITY}`}>
+    <div className={`absolute top-2 right-2 flex items-center gap-1 opacity-0 z-10 ${GROUP_HOVER_PATTERNS.SHOW_ON_GROUP} ${TRANSITION_PRESETS.OPACITY}`}>
       <Tooltip>
         <TooltipTrigger asChild>
           <Button

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { BaseCard } from '@/components/core/BaseCard/BaseCard';
 import { CommonBadge } from '@/core/badges';
+import { HOVER_SHADOWS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { formatDate } from '@/lib/intl-utils';
 import { 
   Clock, 
@@ -288,7 +289,7 @@ export function TaskCard({
       ].filter(Boolean)}
       
       // Style overrides
-      className={`transition-all duration-300 hover:shadow-md ${
+      className={`${TRANSITION_PRESETS.SMOOTH_ALL} ${HOVER_SHADOWS.ENHANCED} ${
         overdue && task.status !== 'completed' ? 'ring-1 ring-red-200 dark:ring-red-800' : ''
       } ${compact ? 'p-4' : ''}`}
     />

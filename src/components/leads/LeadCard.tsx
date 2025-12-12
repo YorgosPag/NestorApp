@@ -1,7 +1,7 @@
 "use client";
 import { User, Mail, Phone, Calendar, ExternalLink, Send, Edit3, Trash2 } from "lucide-react";
 import type { Opportunity } from '@/types/crm';
-import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { INTERACTIVE_PATTERNS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 
 
 export function LeadCard({
@@ -32,7 +32,7 @@ export function LeadCard({
               className={`font-medium text-gray-900 flex items-center gap-1 group ${INTERACTIVE_PATTERNS.LINK_PRIMARY}`}
             >
               <span itemProp="name">{lead.fullName}</span>
-              <ExternalLink className={`w-3 h-3 opacity-0 group-hover:opacity-100 ${INTERACTIVE_PATTERNS.FADE_IN_OUT}`} />
+              <ExternalLink className={`w-3 h-3 ${GROUP_HOVER_PATTERNS.SHOW_ON_GROUP} ${INTERACTIVE_PATTERNS.FADE_IN_OUT}`} />
             </button>
             <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(lead.stage)}`}>
               {lead.stage}

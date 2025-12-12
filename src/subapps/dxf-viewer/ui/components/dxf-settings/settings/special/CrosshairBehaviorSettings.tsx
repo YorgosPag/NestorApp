@@ -46,6 +46,7 @@ import { useCursorSettings } from '../../../../../systems/cursor';
 import { DEFAULT_CURSOR_SETTINGS } from '../../../../../systems/cursor/config';
 import type { CursorColors } from '../../../palettes/CursorColorPalette';
 import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 export interface CrosshairBehaviorSettingsProps {
   className?: string;
@@ -149,7 +150,7 @@ export const CrosshairBehaviorSettings: React.FC<CrosshairBehaviorSettingsProps>
             className={`flex-1 p-2 rounded text-xs border transition-colors ${
               !settings.crosshair.use_cursor_gap
                 ? 'bg-blue-600 border-blue-500'
-                : 'bg-gray-600 hover:bg-blue-600 border-gray-500'
+                : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
             }`}
           >
             Ανενεργό
@@ -159,7 +160,7 @@ export const CrosshairBehaviorSettings: React.FC<CrosshairBehaviorSettingsProps>
             className={`flex-1 p-2 rounded text-xs border transition-colors ${
               settings.crosshair.use_cursor_gap
                 ? 'bg-blue-600 border-blue-500'
-                : 'bg-gray-600 hover:bg-blue-600 border-gray-500'
+                : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
             }`}
           >
             Ενεργό

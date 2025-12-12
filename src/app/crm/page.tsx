@@ -39,7 +39,7 @@ export default function CrmPage() {
             <a className="block h-full">
               <Card className={`h-full cursor-pointer group flex flex-col ${COMPLEX_HOVER_EFFECTS.FEATURE_CARD}`}>
                 <CardHeader className="flex flex-row items-center gap-4 space-y-0">
-                    <div className={`p-3 rounded-full bg-muted group-hover:bg-primary/10 ${TRANSITION_PRESETS.STANDARD_COLORS}`}>
+                    <div className={`p-3 rounded-full bg-muted ${TRANSITION_PRESETS.STANDARD_COLORS}`}>
                       <section.icon className="w-6 h-6 text-primary" />
                     </div>
                     <CardTitle className="text-lg">{section.title}</CardTitle>

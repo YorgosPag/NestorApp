@@ -298,7 +298,7 @@ export function NotificationDrawer() {
                               className={`text-xs px-3 py-1.5 rounded-md font-medium ${TRANSITION_PRESETS.STANDARD_COLORS} ${
                                 action.destructive
                                   ? `bg-red-600 text-white ${HOVER_BACKGROUND_EFFECTS.RED_DARKER}`
-                                  : `bg-primary text-primary-foreground ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY.replace('hover:bg-primary/90', 'hover:bg-primary/90')}`
+                                  : `bg-primary text-primary-foreground ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
                               }`}
                             >
                               {action.label}

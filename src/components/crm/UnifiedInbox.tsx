@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { CommonBadge } from '@/core/badges';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
+import { HOVER_BACKGROUND_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { 
   MessageSquare, 
   Mail, 
@@ -243,7 +244,7 @@ const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) =
             filteredMessages.map((message) => {
               const { relative: relativeTime, full: fullTime } = formatDate(message.createdAt);
               return (
-              <Card key={message.id} className="hover:bg-gray-50 transition-colors">
+              <Card key={message.id} className={`${HOVER_BACKGROUND_EFFECTS.LIGHT} ${TRANSITION_PRESETS.STANDARD_COLORS}`}>
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
                     <div className={`p-2 rounded-full ${CHANNEL_COLORS[message.channel] || CHANNEL_COLORS.default}`}>

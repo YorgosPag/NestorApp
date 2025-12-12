@@ -3,6 +3,7 @@
 import React from 'react';
 import { CommonBadge } from '@/core/badges';
 import { Button } from '@/components/ui/button';
+import { HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 import { X } from 'lucide-react';
 
 interface ToolbarFiltersDisplayProps {
@@ -36,7 +37,7 @@ export function ToolbarFiltersDisplay({
                   {filter}
                   <button
                     onClick={() => handleRemoveFilter(filter)}
-                    className="ml-1 hover:text-red-500"
+                    className={`ml-1 ${HOVER_TEXT_EFFECTS.DESTRUCTIVE}`}
                   >
                     <X className="w-3 h-3" />
                   </button>

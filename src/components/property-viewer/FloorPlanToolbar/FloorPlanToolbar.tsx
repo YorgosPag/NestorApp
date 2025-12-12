@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
-import { 
-  Upload, 
-  Layers, 
-  Eye, 
-  EyeOff, 
-  ZoomIn, 
-  ZoomOut, 
-  RotateCcw, 
+import {
+  Upload,
+  Layers,
+  Eye,
+  EyeOff,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
   Grid,
   Ruler,
   MousePointer,
@@ -20,19 +20,20 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { 
-  Tooltip, 
-  TooltipContent, 
-  TooltipProvider, 
-  TooltipTrigger 
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
 } from '@/components/ui/tooltip';
-import { 
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 type ViewMode = 'view' | 'create' | 'measure' | 'edit';
 
@@ -114,7 +115,7 @@ export function FloorPlanToolbar({
           disabled={disabled}
           className={cn(
             "h-8 w-8 p-0",
-            active && "bg-blue-600 text-white hover:bg-blue-700"
+            active && `bg-blue-600 text-white ${HOVER_BACKGROUND_EFFECTS.BLUE_BUTTON}`
           )}
         >
           <Icon className="h-4 w-4" />

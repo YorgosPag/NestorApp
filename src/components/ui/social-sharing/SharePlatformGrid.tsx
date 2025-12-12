@@ -13,7 +13,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { designSystem } from '@/lib/design-system';
-import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
+import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 
 // 🏢 ENTERPRISE: Import centralized social platforms configuration
 import {
@@ -214,7 +214,8 @@ export const SharePlatformGrid: React.FC<SharePlatformGridProps> = ({
 
         {/* Gradient Overlay για extra depth */}
         <aside className={designSystem.cn(
-          "absolute inset-0 opacity-0 group-hover:opacity-20",
+          "absolute inset-0",
+          GROUP_HOVER_PATTERNS.REVEAL_ON_GROUP,
           TRANSITION_PRESETS.STANDARD_OPACITY,
           "bg-gradient-to-br from-white via-transparent to-transparent"
         )} role="presentation" aria-hidden="true" />

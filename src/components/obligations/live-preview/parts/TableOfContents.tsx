@@ -1,6 +1,7 @@
 "use client";
 
 import { CommonBadge } from "@/core/badges";
+import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import type { TableOfContentsItem } from '@/types/obligations';
 import { cn } from "@/lib/utils";
 
@@ -18,7 +19,7 @@ export function TableOfContentsPart({ toc, activeItemId, onClick, show }: TableO
     <div key={item.id} className="space-y-1">
       <div
         className={cn(
-          "flex justify-between items-center py-2 px-3 rounded cursor-pointer hover:bg-gray-50",
+          `flex justify-between items-center py-2 px-3 rounded cursor-pointer ${HOVER_BACKGROUND_EFFECTS.LIGHT}`,
           level > 0 && `ml-${level * 6}`,
           activeItemId === item.id && (level === 0 ? "bg-blue-50 text-blue-700" : "bg-green-50 text-green-700")
         )}

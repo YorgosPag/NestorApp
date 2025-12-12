@@ -5,6 +5,7 @@ import { useUnifiedGripPreview } from '../../../../hooks/useUnifiedSpecificSetti
 import { AccordionSection, useAccordion } from '../shared/AccordionSection';
 import type { GripSettings } from '../../../../types/gripSettings';
 import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
+import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 // SVG Icons για τα accordion sections
 const CogIcon = ({ className }: { className?: string }) => (
@@ -55,7 +56,7 @@ export function GripSettings() {
         <h3 className="text-lg font-medium text-white">Ρυθμίσεις Grips</h3>
         <button
           onClick={resetToDefaults}
-          className="px-3 py-1 text-xs bg-gray-600 hover:bg-gray-500 text-white rounded transition-colors"
+          className="px-3 py-1 text-xs bg-gray-600 ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-white rounded transition-colors"
         >
           Επαναφορά
         </button>
@@ -405,19 +406,19 @@ export function GripSettings() {
               <div className="flex space-x-2">
             <button
               onClick={() => updateSettings({ gripSize: 5, pickBoxSize: 2, apertureSize: 10 })}
-              className="px-3 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors"
+              className="px-3 py-1 text-xs bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-white rounded transition-colors"
             >
               Μικρό
             </button>
             <button
               onClick={() => updateSettings({ gripSize: 8, pickBoxSize: 3, apertureSize: 16 })}
-              className="px-3 py-1 text-xs bg-blue-700 hover:bg-blue-600 text-white rounded transition-colors"
+              className="px-3 py-1 text-xs bg-blue-700 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} text-white rounded transition-colors"
             >
               Κανονικό
             </button>
             <button
               onClick={() => updateSettings({ gripSize: 12, pickBoxSize: 5, apertureSize: 24 })}
-              className="px-3 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors"
+              className="px-3 py-1 text-xs bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-white rounded transition-colors"
             >
               Μεγάλο
               </button>

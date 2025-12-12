@@ -55,6 +55,7 @@ import { ChevronDown } from "lucide-react"
 import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
+import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects'
 
 // ===== TYPES =====
 
@@ -95,10 +96,10 @@ const accordionTriggerVariants = cva(
   {
     variants: {
       variant: {
-        default: "hover:underline",
-        bordered: "hover:bg-accent hover:text-accent-foreground px-4",
-        ghost: "hover:bg-accent/50 px-2",
-        card: "hover:bg-accent hover:text-accent-foreground px-4"
+        default: INTERACTIVE_PATTERNS.BUTTON_LINK_HOVER,
+        bordered: `${INTERACTIVE_PATTERNS.BUTTON_ACCENT_HOVER} px-4`,
+        ghost: `${HOVER_BACKGROUND_EFFECTS.ACCENT} px-2`,
+        card: `${INTERACTIVE_PATTERNS.BUTTON_ACCENT_HOVER} px-4`
       },
       size: {
         sm: "py-2 text-sm",

@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Star, MoreVertical, Edit, Eye, Copy, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { GROUP_HOVER_PATTERNS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 
 interface UnitListItemActionsProps {
   isFavorite: boolean;
@@ -25,7 +26,7 @@ interface UnitListItemActionsProps {
 
 export function UnitListItemActions({ isFavorite, onToggleFavorite, onEdit }: UnitListItemActionsProps) {
   return (
-    <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+    <div className={`absolute top-2 right-2 flex items-center gap-1 opacity-0 ${GROUP_HOVER_PATTERNS.SHOW_ON_GROUP} transition-opacity z-10`}>
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
@@ -40,7 +41,7 @@ export function UnitListItemActions({ isFavorite, onToggleFavorite, onEdit }: Un
                 "w-4 h-4 transition-colors",
                 isFavorite
                   ? "text-yellow-500 fill-yellow-500"
-                  : "text-gray-400 hover:text-yellow-500"
+                  : `text-gray-400 ${HOVER_TEXT_EFFECTS.YELLOW}`
               )}
             />
           </Button>

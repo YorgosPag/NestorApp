@@ -3,6 +3,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Building2 } from 'lucide-react';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { cn } from '@/lib/utils';
 
 const nearbyProjects = [
@@ -44,7 +45,7 @@ export function NearbyProjectsList() {
             <CardContent>
                 <div className="space-y-3">
                     {nearbyProjects.map((project) => (
-                        <div key={project.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                        <div key={project.id} className={`flex items-center justify-between p-4 border rounded-lg ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} transition-colors`}>
                             <div className="flex items-center gap-3">
                                 <div className={cn(
                                     "w-3 h-3 rounded-full",

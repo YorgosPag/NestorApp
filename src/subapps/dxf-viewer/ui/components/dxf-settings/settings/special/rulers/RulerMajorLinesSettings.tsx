@@ -43,6 +43,7 @@
 import React from 'react';
 import { useRulersGridContext } from '../../../../../../systems/rulers-grid/RulersGridSystem';
 import { ColorDialogTrigger } from '../../../../../color/EnterpriseColorDialog';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 export interface RulerMajorLinesSettingsProps {
   className?: string;
@@ -166,7 +167,7 @@ export const RulerMajorLinesSettings: React.FC<RulerMajorLinesSettingsProps> = (
             className={`flex-1 p-2 rounded text-xs border transition-colors ${
               rulerSettings.horizontal.showMajorTicks
                 ? 'bg-blue-600 border-blue-500'
-                : 'bg-gray-600 hover:bg-blue-600 border-gray-500'
+                : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
             }`}
           >
             Ενεργό
@@ -176,7 +177,7 @@ export const RulerMajorLinesSettings: React.FC<RulerMajorLinesSettingsProps> = (
             className={`flex-1 p-2 rounded text-xs border transition-colors ${
               !rulerSettings.horizontal.showMajorTicks
                 ? 'bg-blue-600 border-blue-500'
-                : 'bg-gray-600 hover:bg-blue-600 border-gray-500'
+                : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
             }`}
           >
             Ανενεργό

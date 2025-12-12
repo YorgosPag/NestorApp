@@ -3,6 +3,7 @@
 import React, { useState, useCallback } from 'react';
 import { Building, Tag, Palette, Eye, EyeOff, Settings, Info } from 'lucide-react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import {
   PropertyStatus,
   PROPERTY_STATUS_LABELS,
@@ -98,7 +99,7 @@ export function PropertyStatusManager({
           </h3>
           <button
             onClick={() => setShowLegend(!showLegend)}
-            className="p-2 text-gray-500 hover:text-gray-700 transition-colors"
+            className={`p-2 text-gray-500 ${HOVER_TEXT_EFFECTS.DARKER} transition-colors`}
             title="Toggle Legend"
           >
             {showLegend ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
@@ -121,7 +122,7 @@ export function PropertyStatusManager({
             className={`px-3 py-2 text-sm rounded-md font-medium transition-colors ${
               colorScheme === 'status'
                 ? 'bg-blue-100 text-blue-700 border border-blue-300'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                : `bg-gray-100 text-gray-600 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
             }`}
           >
             {t('propertyStatusManager.colorScheme.status')}
@@ -131,7 +132,7 @@ export function PropertyStatusManager({
             className={`px-3 py-2 text-sm rounded-md font-medium transition-colors ${
               colorScheme === 'price'
                 ? 'bg-blue-100 text-blue-700 border border-blue-300'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                : `bg-gray-100 text-gray-600 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
             }`}
           >
             {t('propertyStatusManager.colorScheme.price')}
@@ -141,7 +142,7 @@ export function PropertyStatusManager({
             className={`px-3 py-2 text-sm rounded-md font-medium transition-colors ${
               colorScheme === 'type'
                 ? 'bg-blue-100 text-blue-700 border border-blue-300'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                : `bg-gray-100 text-gray-600 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
             }`}
           >
             {t('propertyStatusManager.colorScheme.type')}
@@ -159,7 +160,7 @@ export function PropertyStatusManager({
             </label>
             <button
               onClick={handleSelectAll}
-              className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+              className={`text-xs text-blue-600 ${HOVER_TEXT_EFFECTS.DARKER} font-medium`}
             >
               {selectedStatuses.length === getAllStatuses().length
                 ? t('propertyStatusManager.selectNone')
@@ -198,8 +199,8 @@ export function PropertyStatusManager({
                     onClick={() => handleStatusToggle(status)}
                     className={`p-1 rounded transition-colors ${
                       isVisible
-                        ? 'text-blue-600 hover:text-blue-800'
-                        : 'text-gray-400 hover:text-gray-600'
+                        ? `text-blue-600 ${HOVER_TEXT_EFFECTS.DARKER}`
+                        : `text-gray-400 ${HOVER_TEXT_EFFECTS.DARKER}`
                     }`}
                     title={isVisible ? t('propertyStatusManager.hide') : t('propertyStatusManager.show')}
                   >

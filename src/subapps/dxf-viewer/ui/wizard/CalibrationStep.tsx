@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Ruler, AlertCircle, CheckCircle } from 'lucide-react';
 import { useLevels } from '../../systems/levels';
 import { createDefaultCalibration } from './utils/calibration-utils';
+import { HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
 
 export function CalibrationStep() {
   const { setCalibration } = useLevels();
@@ -60,7 +61,7 @@ export function CalibrationStep() {
               className={`p-2 text-sm rounded border transition-colors ${
                 units === unit.value
                   ? 'border-blue-500 bg-blue-500 bg-opacity-20 text-blue-300'
-                  : 'border-gray-600 text-gray-300 hover:border-gray-500'
+                  : `border-gray-600 text-gray-300 ${HOVER_BORDER_EFFECTS.MUTED}`
               }`}
             >
               {unit.label}
@@ -74,7 +75,7 @@ export function CalibrationStep() {
         <h4 className="text-sm font-medium text-gray-300">Βαθμονόμηση</h4>
         
         {/* Skip Calibration Option */}
-        <label className="flex items-start p-3 border rounded-lg cursor-pointer border-gray-600 hover:border-gray-500 transition-colors">
+        <label className={`flex items-start p-3 border rounded-lg cursor-pointer border-gray-600 ${HOVER_BORDER_EFFECTS.MUTED} transition-colors`}>
           <input
             type="radio"
             name="calibration"
@@ -95,7 +96,7 @@ export function CalibrationStep() {
         </label>
 
         {/* Manual Calibration Option */}
-        <label className="flex items-start p-3 border rounded-lg cursor-pointer border-gray-600 hover:border-gray-500 transition-colors">
+        <label className={`flex items-start p-3 border rounded-lg cursor-pointer border-gray-600 ${HOVER_BORDER_EFFECTS.MUTED} transition-colors`}>
           <input
             type="radio"
             name="calibration"

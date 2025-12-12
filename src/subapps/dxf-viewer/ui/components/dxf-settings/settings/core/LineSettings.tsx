@@ -57,6 +57,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useLineSettingsFromProvider } from '../../../../../settings-provider';
 // ✅ ΑΝΤΙΚΑΤΑΣΤΑΣΗ ΜΕ UNIFIED HOOKS
 import { useUnifiedLinePreview, useUnifiedLineCompletion } from '../../../../hooks/useUnifiedSpecificSettings';
@@ -349,7 +350,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
         <div className="flex gap-2">
           <button
             onClick={resetToDefaults}
-            className="px-3 py-1 text-xs bg-gray-600 hover:bg-gray-500 text-white rounded transition-colors"
+            className={`px-3 py-1 text-xs bg-gray-600 ${HOVER_BACKGROUND_EFFECTS.LIGHTER} text-white rounded transition-colors`}
             title="Επαναφορά στις προεπιλεγμένες ρυθμίσεις"
           >
             Επαναφορά
@@ -357,7 +358,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           {resetToFactory && !contextType && (
             <button
               onClick={handleFactoryResetClick}
-              className="px-3 py-1 text-xs bg-red-700 hover:bg-red-600 text-white rounded transition-colors font-semibold"
+              className={`px-3 py-1 text-xs bg-red-700 ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} text-white rounded transition-colors font-semibold`}
               title="Επαναφορά στις εργοστασιακές ρυθμίσεις (ISO 128 & AutoCAD 2024)"
             >
               🏭 Εργοστασιακές
@@ -817,13 +818,13 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           <div className="flex gap-3 justify-end pt-4 border-t border-gray-700">
             <button
               onClick={handleFactoryResetCancel}
-              className="px-4 py-2 text-sm bg-gray-600 hover:bg-gray-500 text-white rounded transition-colors"
+              className={`px-4 py-2 text-sm bg-gray-600 ${HOVER_BACKGROUND_EFFECTS.LIGHTER} text-white rounded transition-colors`}
             >
               Ακύρωση
             </button>
             <button
               onClick={handleFactoryResetConfirm}
-              className="px-4 py-2 text-sm bg-red-700 hover:bg-red-600 text-white rounded transition-colors font-semibold"
+              className={`px-4 py-2 text-sm bg-red-700 ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} text-white rounded transition-colors font-semibold`}
             >
               🏭 Επαναφορά Εργοστασιακών
             </button>

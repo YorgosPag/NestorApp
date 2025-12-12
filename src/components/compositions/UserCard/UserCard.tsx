@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { BaseCard } from '@/components/core/BaseCard/BaseCard';
 import { CommonBadge } from '@/core/badges';
+import { HOVER_SHADOWS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { formatDate as formatIntlDate } from '@/lib/intl-utils';
 import { 
   User, 
@@ -344,7 +345,7 @@ export function UserCard({
       ].filter(Boolean) : []}
       
       // Style overrides
-      className={`transition-all duration-300 hover:shadow-md ${
+      className={`${TRANSITION_PRESETS.SMOOTH_ALL} ${HOVER_SHADOWS.ENHANCED} ${
         user.status === 'suspended' ? 'opacity-75' : ''
       } ${compact ? 'p-4' : ''}`}
     />

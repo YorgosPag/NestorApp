@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CommonBadge } from '@/core/badges';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { GripVertical, ChevronRight, ChevronDown, FileText, Plus, Edit3, Save, X, Copy, Trash2 } from 'lucide-react';
 import { RichTextEditor } from '@/components/obligations/rich-text-editor';
 import { cn } from '@/lib/utils';
@@ -129,7 +130,7 @@ export function SectionCard({
                 <>
                   <Button variant="ghost" size="sm" onClick={() => handlers.addArticle(section.id)} className="h-8 px-2" title="Προσθήκη άρθρου"><Plus className="h-4 w-4" /></Button>
                   <Button variant="ghost" size="sm" onClick={() => handlers.duplicateSection(section.id)} className="h-8 px-2" title="Αντιγραφή ενότητας"><Copy className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="sm" onClick={() => handlers.deleteSection(section.id)} className="h-8 px-2 text-red-600 hover:text-red-700"><Trash2 className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="sm" onClick={() => handlers.deleteSection(section.id)} className={`h-8 px-2 text-red-600 ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`}><Trash2 className="h-4 w-4" /></Button>
                 </>
               )}
             </div>

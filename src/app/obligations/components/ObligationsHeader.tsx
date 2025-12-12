@@ -4,6 +4,7 @@
 import React from 'react';
 import { FileText, Filter, PlusCircle } from "lucide-react";
 import { PageHeader } from '@/core/headers';
+import { HOVER_BACKGROUND_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import Link from "next/link";
 import type { StatusFilter } from '../hooks/useObligationsList';
 
@@ -48,7 +49,7 @@ export function ObligationsHeader({ filters, onFilterChange, onSearch }: Obligat
       actions={{
         customActions: [
           <Link key="add" href="/obligations/new">
-            <button className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2 text-sm font-medium">
+            <button className={`px-4 py-2 bg-primary text-primary-foreground rounded-lg flex items-center gap-2 text-sm font-medium ${HOVER_BACKGROUND_EFFECTS.PRIMARY} ${TRANSITION_PRESETS.COLORS}`}>
               <PlusCircle className="h-4 w-4" />
               Νέα Συγγραφή Υποχρεώσεων
             </button>

@@ -46,6 +46,7 @@ import { useCursorSettings } from '../../../../../systems/cursor';
 import { DEFAULT_CURSOR_SETTINGS } from '../../../../../systems/cursor/config';
 import type { CursorColors } from '../../../palettes/CursorColorPalette';
 import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 export interface CrosshairAppearanceSettingsProps {
   className?: string;
@@ -129,7 +130,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             className={`p-2 rounded text-xs border transition-colors ${
               (settings.crosshair.line_style || 'solid') === 'solid'
                 ? 'bg-blue-600 border-blue-500'
-                : 'bg-gray-600 hover:bg-blue-600 border-gray-500'
+                : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
             }`}
           >
             <div
@@ -146,7 +147,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             className={`p-2 rounded text-xs border transition-colors ${
               (settings.crosshair.line_style || 'solid') === 'dashed'
                 ? 'bg-blue-600 border-blue-500'
-                : 'bg-gray-600 hover:bg-blue-600 border-gray-500'
+                : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
             }`}
           >
             <div
@@ -163,7 +164,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             className={`p-2 rounded text-xs border transition-colors ${
               (settings.crosshair.line_style || 'solid') === 'dotted'
                 ? 'bg-blue-600 border-blue-500'
-                : 'bg-gray-600 hover:bg-blue-600 border-gray-500'
+                : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
             }`}
           >
             <div
@@ -180,7 +181,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             className={`p-2 rounded text-xs border transition-colors ${
               (settings.crosshair.line_style || 'solid') === 'dash-dot'
                 ? 'bg-blue-600 border-blue-500'
-                : 'bg-gray-600 hover:bg-blue-600 border-gray-500'
+                : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
             }`}
           >
             <div
@@ -221,7 +222,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
               className={`flex-1 p-1 rounded text-xs transition-colors ${
                 settings.crosshair.line_width === width
                   ? 'bg-blue-600 border border-blue-500'
-                  : 'bg-gray-600 hover:bg-blue-600 border border-gray-500'
+                  : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border border-gray-500'
               }`}
             >
               <div
@@ -251,7 +252,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             className={`p-2 rounded text-xs border transition-colors relative flex flex-col items-center ${
               (settings.crosshair.size_percent ?? 8) === 0
                 ? 'bg-blue-600 border-blue-500'
-                : 'bg-gray-600 hover:bg-blue-600 border-gray-500'
+                : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
             }`}
           >
             <div className="w-6 h-6 flex items-center justify-center">
@@ -267,7 +268,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             className={`p-2 rounded text-xs border transition-colors relative flex flex-col items-center ${
               (settings.crosshair.size_percent ?? 8) === 5
                 ? 'bg-blue-600 border-blue-500'
-                : 'bg-gray-600 hover:bg-blue-600 border-gray-500'
+                : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
             }`}
           >
             <div className="w-6 h-6 flex items-center justify-center relative">
@@ -295,7 +296,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             className={`p-2 rounded text-xs border transition-colors relative flex flex-col items-center ${
               (settings.crosshair.size_percent ?? 8) === 8
                 ? 'bg-blue-600 border-blue-500'
-                : 'bg-gray-600 hover:bg-blue-600 border-gray-500'
+                : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
             }`}
           >
             <div className="w-6 h-6 flex items-center justify-center relative">
@@ -323,7 +324,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             className={`p-2 rounded text-xs border transition-colors relative flex flex-col items-center ${
               (settings.crosshair.size_percent ?? 8) === 15
                 ? 'bg-blue-600 border-blue-500'
-                : 'bg-gray-600 hover:bg-blue-600 border-gray-500'
+                : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
             }`}
           >
             <div className="w-6 h-6 flex items-center justify-center relative">
@@ -351,7 +352,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             className={`p-2 rounded text-xs border transition-colors relative flex flex-col items-center ${
               (settings.crosshair.size_percent ?? 8) === 100
                 ? 'bg-blue-600 border-blue-500'
-                : 'bg-gray-600 hover:bg-blue-600 border-gray-500'
+                : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
             }`}
           >
             <div className="w-6 h-6 flex items-center justify-center relative">

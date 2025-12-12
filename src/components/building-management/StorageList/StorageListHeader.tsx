@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { 
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import {
   Layers,
   Table as TableIcon,
   Trash2
@@ -38,7 +39,7 @@ export function StorageListHeader({
               variant="outline" 
               size="sm"
               onClick={onBulkDelete}
-              className="text-destructive hover:text-destructive"
+              className={`text-destructive ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`}
             >
               <Trash2 className="w-4 h-4 mr-1" />
               Διαγραφή επιλεγμένων

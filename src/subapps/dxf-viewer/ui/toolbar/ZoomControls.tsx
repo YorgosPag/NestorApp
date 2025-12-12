@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Plus, Minus } from "lucide-react";
 import { normalizeNumericInput, validateNumericInput } from './shared/input-validation';
 import { ZOOM_FACTORS } from '../../config/transform-config';
+import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 interface ZoomControlsProps {
   currentZoom: number;
@@ -131,7 +132,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
     <div className="flex items-center gap-1 bg-gray-900 rounded px-2 py-1">
       <button
         onClick={handleZoomOutClick}
-        className="h-6 w-6 p-0 text-gray-300 hover:text-white flex items-center justify-center rounded hover:bg-gray-700 transition-colors"
+        className={`h-6 w-6 p-0 text-gray-300 ${HOVER_TEXT_EFFECTS.WHITE} flex items-center justify-center rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} transition-colors`}
         title={`Zoom Out (-${ZOOM_STEP_PERCENTAGE}%) - Πληκτρολόγιο: -`}
       >
         <Minus className="w-3 h-3" />
@@ -154,7 +155,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
       
       <button
         onClick={handleZoomInClick}
-        className="h-6 w-6 p-0 text-gray-300 hover:text-white flex items-center justify-center rounded hover:bg-gray-700 transition-colors"
+        className={`h-6 w-6 p-0 text-gray-300 ${HOVER_TEXT_EFFECTS.WHITE} flex items-center justify-center rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} transition-colors`}
         title={`Zoom In (+${ZOOM_STEP_PERCENTAGE}%) - Πληκτρολόγιο: +`}
       >
         <Plus className="w-3 h-3" />

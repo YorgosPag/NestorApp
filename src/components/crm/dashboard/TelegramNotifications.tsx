@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, query, where, orderBy, onSnapshot, limit } from 'firebase/firestore';
 import { Bell, MessageCircle, User, Clock } from 'lucide-react';
+import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 interface TelegramMessage {
   id: string;
@@ -86,7 +87,7 @@ export function TelegramNotifications() {
       {/* Notification Bell */}
       <button 
         onClick={() => setShowNotifications(!showNotifications)}
-        className="relative p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+        className={`relative p-2 text-gray-600 ${HOVER_TEXT_EFFECTS.BLUE} ${HOVER_BACKGROUND_EFFECTS.BLUE_LIGHT} rounded-lg transition-colors`}
         title="Telegram Messages"
       >
         <MessageCircle className="w-6 h-6" />
@@ -108,7 +109,7 @@ export function TelegramNotifications() {
               </h3>
               <button
                 onClick={requestNotificationPermission}
-                className="text-xs text-blue-600 hover:text-blue-800"
+                className={`text-xs text-blue-600 ${HOVER_TEXT_EFFECTS.BLUE_DARK}`}
                 title="Enable Browser Notifications"
               >
                 <Bell className="w-4 h-4" />
@@ -126,7 +127,7 @@ export function TelegramNotifications() {
               newMessages.map((message) => (
                 <div 
                   key={message.id}
-                  className={`p-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors ${
+                  className={`p-3 border-b border-gray-100 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} cursor-pointer transition-colors ${
                     message.status === 'received' ? 'bg-blue-50' : ''
                   }`}
                 >
@@ -162,7 +163,7 @@ export function TelegramNotifications() {
           <div className="p-3 border-t border-gray-200">
             <a 
               href="/crm/communications"
-              className="block w-full text-center text-sm text-blue-600 hover:text-blue-800 font-medium"
+              className={`block w-full text-center text-sm text-blue-600 ${HOVER_TEXT_EFFECTS.BLUE_DARK} font-medium`}
             >
               Δείτε όλα τα μηνύματα →
             </a>

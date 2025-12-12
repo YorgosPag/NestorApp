@@ -3,6 +3,7 @@
 import React from 'react';
 import { Building2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 import { nearbyProjects } from './nearbyProjects';
 import { NearbyProjectMarker } from './NearbyProjectMarker';
 
@@ -41,7 +42,7 @@ export function MapCanvas({ buildingName, mapView, showNearbyProjects, selectedL
                                     <Building2 className="w-6 h-6 text-white" />
                                 </div>
                             </div>
-                            <div className="absolute top-14 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-75 text-white px-3 py-1 rounded text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className={`absolute top-14 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-75 text-white px-3 py-1 rounded text-sm whitespace-nowrap opacity-0 ${GROUP_HOVER_PATTERNS.SHOW_ON_GROUP} transition-opacity`}>
                                 {buildingName}
                             </div>
                         </div>

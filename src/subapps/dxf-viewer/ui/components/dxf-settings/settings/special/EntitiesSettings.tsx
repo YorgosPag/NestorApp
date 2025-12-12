@@ -27,6 +27,7 @@ import { useEntitiesSettingsReducer } from '../../../../reducers/entitiesSetting
 import { updateDraftSettingsStore } from '../../../../../hooks/useLinePreviewStyle';
 import { updateDraftTextSettingsStore } from '../../../../../hooks/useTextPreviewStyle';
 import { updateDraftGripSettingsStore } from '../../../../../hooks/useGripPreviewStyle';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 // Default grip settings for LinePreview
 const DEFAULT_GRIP_SETTINGS = {
@@ -315,8 +316,8 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
                     h-8 w-8 p-0 rounded-md border transition-colors duration-150
                     flex items-center justify-center
                     ${isSelected
-                      ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-500'
-                      : 'bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-500'
+                      ? 'bg-blue-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} text-white border-blue-500'
+                      : 'bg-gray-700 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-gray-200 border-gray-500'
                     }
                   `}
                 >
@@ -334,8 +335,8 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
                     h-8 w-7 p-0 rounded-l-md border-r-0 border transition-colors duration-150
                     flex items-center justify-center
                     ${isSelected
-                      ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-500'
-                      : 'bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-500'
+                      ? 'bg-blue-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} text-white border-blue-500'
+                      : 'bg-gray-700 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-gray-200 border-gray-500'
                     }
                   `}
                 >
@@ -346,8 +347,8 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
                     h-8 w-4 p-0 rounded-r-md border transition-colors duration-150
                     flex items-center justify-center
                     ${isSelected
-                      ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-500'
-                      : 'bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-500'
+                      ? 'bg-blue-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} text-white border-blue-500'
+                      : 'bg-gray-700 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-gray-200 border-gray-500'
                     }
                   `}
                   title="Περισσότερες επιλογές"
@@ -384,8 +385,8 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
                 onClick={() => setActiveLineTab(activeLineTab === tab.id ? null : tab.id)}
                 className={`py-2 px-3 text-sm font-medium rounded-md transition-colors ${
                   activeLineTab === tab.id
-                    ? 'bg-blue-600 text-white hover:bg-blue-700'
-                    : 'bg-gray-600 text-white hover:bg-gray-500'
+                    ? 'bg-blue-600 text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}'
+                    : 'bg-gray-600 text-white ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}'
                 }`}
               >
                 {tab.label}
@@ -575,8 +576,8 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
                 }}
                 className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
                   activeSpecificTab === subTab.id
-                    ? 'bg-blue-600 text-white hover:bg-blue-700'
-                    : 'bg-gray-600 text-white hover:bg-gray-500'
+                    ? 'bg-blue-600 text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}'
+                    : 'bg-gray-600 text-white ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}'
                 }`}
               >
                 {subTab.label}

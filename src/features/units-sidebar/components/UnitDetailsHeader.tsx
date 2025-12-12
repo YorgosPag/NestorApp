@@ -6,6 +6,7 @@ import { UnitBadge } from '@/core/badges';
 import { Home, Eye } from 'lucide-react';
 import { EntityDetailsHeader } from '@/core/entity-headers';
 import { cn } from '@/lib/utils';
+import { GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
 import type { Property } from '@/types/property-viewer';
 
 // Removed hardcoded getStatusColor and getStatusLabel functions - using centralized UnitBadge instead
@@ -39,7 +40,7 @@ export function UnitDetailsHeader({ unit }: { unit: Property | null }) {
               label: 'Επίδειξη Μονάδας',
               onClick: () => console.log('Show unit details'),
               icon: Eye,
-              className: 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700'
+              className: `bg-gradient-to-r from-blue-500 to-purple-600 ${GRADIENT_HOVER_EFFECTS.BLUE_PURPLE_DEEPER}`
             }
           ]}
           variant="detailed"

@@ -3,6 +3,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { Target, ChevronDown, ChevronUp, Settings } from 'lucide-react';
 import { ExtendedSnapType } from '../../snapping/extended-types';
+import { HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 
 // Ελληνικά labels και configurations για όλα τα snap modes
 const SNAP_LABELS: Record<ExtendedSnapType, string> = {
@@ -65,8 +66,8 @@ const SnapButton: React.FC<SnapButtonProps> = ({ mode, enabled, onClick, compact
         rounded border transition-all duration-150 font-medium
         flex items-center justify-center
         ${enabled 
-          ? 'bg-blue-600 border-blue-500 text-white shadow-md hover:bg-blue-700' 
-          : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:border-gray-500'
+          ? `bg-blue-600 border-blue-500 text-white shadow-md ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`
+          : `bg-gray-700 border-gray-600 text-gray-300 ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} ${HOVER_BORDER_EFFECTS.MUTED}`
         }
       `}
     >
@@ -145,7 +146,7 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
       <button
         onClick={handleMasterToggle}
         className={`px-3 py-1 rounded text-sm font-bold transition-colors border flex items-center gap-1 ${
-          snapEnabled ? 'bg-blue-600 text-white border-blue-500 shadow-md' : 'bg-gray-700 text-gray-300 border-gray-600 hover:bg-gray-600'
+          snapEnabled ? 'bg-blue-600 text-white border-blue-500 shadow-md' : `bg-gray-700 text-gray-300 border-gray-600 ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK}`
         }`}
         title="Ενεργοποίηση/Απενεργοποίηση Object Snap (F3)"
       >
@@ -172,7 +173,7 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
           <button
             onClick={handleToggleAdvanced}
             className={`h-8 w-8 rounded border transition-all duration-150 flex items-center justify-center ${
-              showAdvanced || advancedEnabledCount > 0 ? 'bg-gray-600 border-gray-500 text-white' : 'bg-gray-700 border-gray-600 text-gray-400 hover:bg-gray-600'
+              showAdvanced || advancedEnabledCount > 0 ? 'bg-gray-600 border-gray-500 text-white' : `bg-gray-700 border-gray-600 text-gray-400 ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK}`
             }`}
             title={`${showAdvanced ? 'Απόκρυψη' : 'Εμφάνιση'} προχωρημένων λειτουργιών`}
           >
@@ -184,7 +185,7 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
       <div className="w-px h-6 bg-gray-600" />
       <button
         onClick={handleQuickEnable}
-        className="h-8 w-8 rounded border transition-all duration-150 flex items-center justify-center text-gray-400 hover:text-white bg-gray-700 border-gray-600 hover:bg-gray-600"
+        className={`h-8 w-8 rounded border transition-all duration-150 flex items-center justify-center text-gray-400 ${HOVER_TEXT_EFFECTS.WHITE} bg-gray-700 border-gray-600 ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK}`}
         title="Ενεργοποίηση βασικών λειτουργιών"
       >
         <Settings size={14} />

@@ -18,7 +18,7 @@
 import React from 'react';
 import { Mail } from 'lucide-react';
 import { designSystem } from '@/lib/design-system';
-import { SOCIAL_HOVER_EFFECTS } from '@/components/ui/effects';
+import { SOCIAL_HOVER_EFFECTS, HOVER_SHADOWS } from '@/components/ui/effects';
 
 // ============================================================================
 // UNIFIED TYPE DEFINITIONS
@@ -293,7 +293,7 @@ export const UNIFIED_SOCIAL_PLATFORMS: Record<SocialPlatformType, UnifiedSocialP
         gradient: 'from-gray-700 via-gray-800 to-gray-900',
         hover: designSystem.cn(
           'bg-gray-900',
-          'hover:shadow-lg hover:shadow-gray-500/30'
+          HOVER_SHADOWS.COLORED.GRAY
         ),
         text: 'text-white'
       },
@@ -324,7 +324,7 @@ export const UNIFIED_SOCIAL_PLATFORMS: Record<SocialPlatformType, UnifiedSocialP
         gradient: 'from-blue-600 via-blue-700 to-blue-800',
         hover: designSystem.cn(
           'bg-blue-700',
-          'hover:shadow-lg hover:shadow-blue-700/30'
+          HOVER_SHADOWS.COLORED.BLUE
         ),
         text: 'text-white'
       },
@@ -355,7 +355,7 @@ export const UNIFIED_SOCIAL_PLATFORMS: Record<SocialPlatformType, UnifiedSocialP
         gradient: 'from-sky-400 via-sky-500 to-sky-600',
         hover: designSystem.cn(
           'bg-sky-500',
-          'hover:shadow-lg hover:shadow-sky-500/30'
+          HOVER_SHADOWS.COLORED.BLUE
         ),
         text: 'text-white'
       },
@@ -384,7 +384,7 @@ export const UNIFIED_SOCIAL_PLATFORMS: Record<SocialPlatformType, UnifiedSocialP
         gradient: 'from-pink-400 via-red-500 to-yellow-500', // Instagram gradient
         hover: designSystem.cn(
           'bg-pink-500',
-          'hover:shadow-lg hover:shadow-pink-500/30'
+          HOVER_SHADOWS.COLORED.PINK
         ),
         text: 'text-white'
       },
@@ -414,7 +414,7 @@ export const UNIFIED_SOCIAL_PLATFORMS: Record<SocialPlatformType, UnifiedSocialP
         gradient: 'from-red-500 via-red-600 to-red-700',
         hover: designSystem.cn(
           'bg-red-600',
-          'hover:shadow-lg hover:shadow-red-500/30'
+          HOVER_SHADOWS.COLORED.RED
         ),
         text: 'text-white'
       },
@@ -444,7 +444,7 @@ export const UNIFIED_SOCIAL_PLATFORMS: Record<SocialPlatformType, UnifiedSocialP
         gradient: 'from-gray-700 via-gray-800 to-gray-900',
         hover: designSystem.cn(
           'bg-gray-800',
-          'hover:shadow-lg hover:shadow-gray-500/30'
+          HOVER_SHADOWS.COLORED.GRAY
         ),
         text: 'text-white'
       },
@@ -474,7 +474,7 @@ export const UNIFIED_SOCIAL_PLATFORMS: Record<SocialPlatformType, UnifiedSocialP
         gradient: 'from-gray-900 via-black to-gray-900',
         hover: designSystem.cn(
           'bg-black',
-          'hover:shadow-lg hover:shadow-gray-500/30'
+          HOVER_SHADOWS.COLORED.GRAY
         ),
         text: 'text-white'
       },
@@ -504,7 +504,7 @@ export const UNIFIED_SOCIAL_PLATFORMS: Record<SocialPlatformType, UnifiedSocialP
         gradient: 'from-gray-500 via-gray-600 to-gray-700',
         hover: designSystem.cn(
           'bg-gray-600',
-          'hover:shadow-lg hover:shadow-gray-500/30'
+          HOVER_SHADOWS.COLORED.GRAY
         ),
         text: 'text-white'
       },

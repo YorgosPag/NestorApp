@@ -3,6 +3,7 @@
 import React from 'react';
 import { ContactBadge } from '@/core/badges';
 import { Button } from '@/components/ui/button';
+import { HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 
 export function ContactsList() {
     const contacts = [
@@ -24,7 +25,7 @@ export function ContactsList() {
                 </thead>
                 <tbody>
                     {contacts.map(contact => (
-                        <tr key={contact.name} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <tr key={contact.name} className={`border-b ${HOVER_BACKGROUND_EFFECTS.LIGHT}`}>
                             <td className="p-3 font-medium">{contact.name}</td>
                             <td className="p-3 text-gray-600 dark:text-gray-400">{contact.company}</td>
                             <td className="p-3">
@@ -34,7 +35,7 @@ export function ContactsList() {
                                 />
                             </td>
                             <td className="p-3">
-                                <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">Προβολή</Button>
+                                <Button variant="ghost" size="sm" className={`text-blue-600 ${HOVER_TEXT_EFFECTS.BLUE}`}>Προβολή</Button>
                             </td>
                         </tr>
                     ))}

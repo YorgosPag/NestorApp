@@ -91,9 +91,9 @@ export function PolygonControls({
         return {
           container: 'bg-white rounded-xl shadow-xl border border-amber-200',
           button: `flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-semibold ${TRANSITION_PRESETS.STANDARD_COLORS}`,
-          primary: `bg-amber-500 text-white ${HOVER_TEXT_EFFECTS.ORANGE} hover:bg-amber-600`,
+          primary: `bg-amber-500 text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`,
           secondary: `bg-amber-50 text-amber-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`,
-          success: `bg-emerald-500 text-white ${HOVER_TEXT_EFFECTS.EMERALD} hover:bg-emerald-600`,
+          success: `bg-emerald-500 text-white ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`,
           danger: `bg-red-500 text-white ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`
         };
 
@@ -101,9 +101,9 @@ export function PolygonControls({
         return {
           container: 'bg-slate-900 rounded-md shadow-2xl border border-violet-500',
           button: `flex items-center justify-center gap-1 py-1 px-2 rounded text-xs font-mono ${TRANSITION_PRESETS.STANDARD_COLORS}`,
-          primary: `bg-violet-600 text-white ${HOVER_TEXT_EFFECTS.VIOLET} hover:bg-violet-700`,
+          primary: `bg-violet-600 text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`,
           secondary: `bg-slate-700 text-slate-300 ${HOVER_BACKGROUND_EFFECTS.MUTED}`,
-          success: `bg-cyan-600 text-white ${HOVER_TEXT_EFFECTS.CYAN} hover:bg-cyan-700`,
+          success: `bg-cyan-600 text-white ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`,
           danger: `bg-red-600 text-white ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`
         };
 

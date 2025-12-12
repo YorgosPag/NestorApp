@@ -2,17 +2,18 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { 
-  Eye, 
-  EyeOff, 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Move, 
+import {
+  Eye,
+  EyeOff,
+  Plus,
+  Edit,
+  Trash2,
+  Move,
   Copy,
   Settings
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 interface Layer {
   id: string;
@@ -63,7 +64,7 @@ export function LayersPanel({
   const LayerItem = ({ layer }: { layer: Layer }) => (
     <div 
       className={cn(
-        "flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-gray-50",
+        `flex items-center gap-2 p-2 rounded cursor-pointer ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`,
         selectedLayerId === layer.id && "bg-blue-50 border border-blue-200"
       )}
       onClick={() => setSelectedLayerId(layer.id)}

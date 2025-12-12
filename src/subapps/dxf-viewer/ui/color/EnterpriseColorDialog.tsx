@@ -24,6 +24,7 @@ import { useOverlay, usePreventScroll } from '@react-aria/overlays';
 import { FocusScope } from '@react-aria/focus';
 import { EnterpriseColorPicker } from './EnterpriseColorPicker';
 import type { EnterpriseColorDialogProps } from './types';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 /**
  * Enterprise Color Dialog Component
@@ -123,7 +124,7 @@ export function EnterpriseColorDialog({
                 </h2>
                 <button
                   onClick={handleCancel}
-                  className="text-gray-400 hover:text-white transition-colors"
+                  className={`text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HOVER} transition-colors`}
                   aria-label="Close"
                 >
                   <svg
@@ -159,13 +160,13 @@ export function EnterpriseColorDialog({
                 <div className="flex gap-2 p-4 border-t border-gray-700">
                   <button
                     onClick={handleCancel}
-                    className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded transition-colors"
+                    className={`flex-1 px-4 py-2 bg-gray-800 ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} text-white rounded transition-colors`}
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleApply}
-                    className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+                    className={`flex-1 px-4 py-2 bg-blue-600 ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} text-white rounded transition-colors`}
                   >
                     Apply
                   </button>
@@ -200,7 +201,7 @@ export function ColorDialogTrigger({
         onClick={() => setIsOpen(true)}
         disabled={disabled}
         className={`
-          flex items-center gap-3 px-4 py-2 bg-gray-800 hover:bg-gray-700
+          flex items-center gap-3 px-4 py-2 bg-gray-800 ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER}
           border border-gray-600 rounded transition-colors
           disabled:opacity-50 disabled:cursor-not-allowed
         `}

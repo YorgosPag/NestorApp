@@ -26,6 +26,7 @@ import { useGeoTransformation } from '../hooks/useGeoTransformation';
 import type { FloorPlanControlPoint, FloorPlanCoordinate, GeoCoordinate } from '../types/control-points';
 import type { UseFloorPlanControlPointsReturn } from '../hooks/useFloorPlanControlPoints';
 import { toast } from 'react-hot-toast';
+import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 /**
  * Component props
@@ -505,14 +506,14 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
           {pickingState === 'idle' ? (
             <button
               onClick={handleStartPicking}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+              className={`px-4 py-2 bg-blue-600 text-white rounded ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} transition-colors`}
             >
               ➕ {t('floorPlanControlPoints.buttons.addControlPoint')}
             </button>
           ) : (
             <button
               onClick={handleCancelPicking}
-              className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+              className={`px-4 py-2 bg-red-600 text-white rounded ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} transition-colors`}
             >
               ❌ {t('floorPlanControlPoints.buttons.cancel')}
             </button>
@@ -521,7 +522,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
           {points.length > 0 && pickingState === 'idle' && (
             <button
               onClick={handleClearAll}
-              className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition-colors"
+              className={`px-4 py-2 bg-gray-300 text-gray-700 rounded ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} transition-colors`}
             >
               🗑️ {t('floorPlanControlPoints.buttons.clearAll')}
             </button>
@@ -624,7 +625,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
               {/* Manual Add Button */}
               <button
                 onClick={handleAddManualPoint}
-                className="w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm font-medium"
+                className={`w-full px-4 py-2 bg-green-600 text-white rounded ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} transition-colors text-sm font-medium`}
                 disabled={!manualInput.dxfX || !manualInput.dxfY || !manualInput.geoLng || !manualInput.geoLat}
               >
                 ✅ {t('floorPlanControlPoints.manualInput.addPoint')}
@@ -642,7 +643,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
               disabled={!transformation.isValid}
               className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
                 transformation.isValid
-                  ? 'bg-green-600 text-white hover:bg-green-700'
+                  ? `bg-green-600 text-white ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
             >
@@ -655,7 +656,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
               disabled={points.length === 0}
               className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
                 points.length > 0
-                  ? 'bg-blue-600 text-white hover:bg-blue-700'
+                  ? `bg-blue-600 text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
             >
@@ -663,7 +664,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
             </button>
 
             {/* Load Points */}
-            <label className="px-3 py-2 bg-purple-600 text-white rounded text-sm font-medium hover:bg-purple-700 transition-colors cursor-pointer">
+            <label className={`px-3 py-2 bg-purple-600 text-white rounded text-sm font-medium ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} transition-colors cursor-pointer`}>
               📁 {t('floorPlanControlPoints.actions.load')}
               <input
                 type="file"
@@ -677,7 +678,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
             {points.length > 0 && (
               <button
                 onClick={handleClearAll}
-                className="px-3 py-2 bg-red-600 text-white rounded text-sm font-medium hover:bg-red-700 transition-colors"
+                className={`px-3 py-2 bg-red-600 text-white rounded text-sm font-medium ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} transition-colors`}
               >
                 🗑️ {t('floorPlanControlPoints.buttons.clearAll')}
               </button>
@@ -773,7 +774,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
             {points.map((point, index) => (
               <div
                 key={point.id}
-                className="px-3 py-2 border-b border-gray-200 last:border-b-0 hover:bg-gray-50"
+                className={`px-3 py-2 border-b border-gray-200 last:border-b-0 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`}
               >
                 {/* Point Header */}
                 <div className="flex items-center justify-between mb-2">
@@ -801,13 +802,13 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
                       <>
                         <button
                           onClick={() => handleSaveEdit(point.id)}
-                          className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700"
+                          className={`px-2 py-1 text-xs bg-green-600 text-white rounded ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`}
                         >
                           ✓
                         </button>
                         <button
                           onClick={handleCancelEdit}
-                          className="px-2 py-1 text-xs bg-gray-400 text-white rounded hover:bg-gray-500"
+                          className={`px-2 py-1 text-xs bg-gray-400 text-white rounded ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
                         >
                           ✗
                         </button>
@@ -816,13 +817,13 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
                       <>
                         <button
                           onClick={() => handleStartEdit(point)}
-                          className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                          className={`px-2 py-1 text-xs bg-blue-600 text-white rounded ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
                         >
                           ✏️
                         </button>
                         <button
                           onClick={() => handleDelete(point.id)}
-                          className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700"
+                          className={`px-2 py-1 text-xs bg-red-600 text-white rounded ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`}
                         >
                           🗑️
                         </button>

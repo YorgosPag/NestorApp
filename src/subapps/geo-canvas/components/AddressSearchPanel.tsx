@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { Search, MapPin, Navigation, X, Clock, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
 
 // ✅ Enterprise Address Resolver Integration
 import { useAddressResolver, type GreekAddress, type GeocodingResult } from '@/services/real-estate-monitor/AddressResolver';
@@ -274,7 +275,7 @@ export function AddressSearchPanel({
     <div
       key={`search-${index}`}
       onClick={() => handleLocationSelect(result)}
-      className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+      className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer ${HOVER_BACKGROUND_EFFECTS.LIGHT}"
     >
       <MapPin className="w-5 h-5 text-blue-600 flex-shrink-0" />
       <div className="flex-1 min-w-0">
@@ -307,7 +308,7 @@ export function AddressSearchPanel({
     <div
       key={`recent-${index}`}
       onClick={() => handleLocationSelect(result)}
-      className="flex items-center gap-3 p-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+      className="flex items-center gap-3 p-2 rounded-lg cursor-pointer ${HOVER_BACKGROUND_EFFECTS.LIGHT}"
     >
       <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
       <div className="flex-1 min-w-0">
@@ -327,7 +328,7 @@ export function AddressSearchPanel({
     <div
       key={`boundary-${result.id}-${index}`}
       onClick={() => handleBoundarySelect(result)}
-      className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-all"
+      className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${HOVER_BORDER_EFFECTS.BLUE} transition-all"
     >
       <div className={`w-5 h-5 rounded flex-shrink-0 flex items-center justify-center text-xs font-medium ${
         result.adminLevel === 4 ? 'bg-purple-100 text-purple-600' :
@@ -383,7 +384,7 @@ export function AddressSearchPanel({
         {onClose && (
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-gray-400 ${HOVER_TEXT_EFFECTS.DARKER} transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -397,7 +398,7 @@ export function AddressSearchPanel({
           className={`flex-1 py-2 px-1 text-sm font-medium border-b-2 transition-colors ${
             activeTab === 'address'
               ? 'border-blue-500 text-blue-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
+              : 'border-transparent text-gray-500 ${HOVER_TEXT_EFFECTS.DARKER}'
           }`}
         >
           📍 Διευθύνσεις
@@ -407,7 +408,7 @@ export function AddressSearchPanel({
           className={`flex-1 py-2 px-1 text-sm font-medium border-b-2 transition-colors ${
             activeTab === 'boundaries'
               ? 'border-blue-500 text-blue-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
+              : 'border-transparent text-gray-500 ${HOVER_TEXT_EFFECTS.DARKER}'
           }`}
         >
           🏛️ Διοικητικά Όρια
@@ -438,7 +439,7 @@ export function AddressSearchPanel({
           <button
             onClick={handleSearch}
             disabled={isSearching || isLoadingBoundaries || !searchQuery.trim()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+            className={`px-4 py-2 bg-blue-600 text-white rounded-lg ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors`}
           >
             <Search className="w-4 h-4" />
           </button>
@@ -458,7 +459,7 @@ export function AddressSearchPanel({
         <button
           onClick={handleGetGpsLocation}
           disabled={isGettingLocation}
-          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+          className={`w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors`}
         >
           {isGettingLocation ? (
             <Loader2 className="w-5 h-5 animate-spin" />
@@ -531,7 +532,7 @@ export function AddressSearchPanel({
                       setSearchQuery(suggestion);
                       handleSearch();
                     }}
-                    className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded text-gray-700 transition-colors"
+                    className={`px-2 py-1 text-xs bg-gray-100 ${HOVER_BACKGROUND_EFFECTS.LIGHT} rounded text-gray-700 transition-colors`}
                   >
                     {suggestion}
                   </button>

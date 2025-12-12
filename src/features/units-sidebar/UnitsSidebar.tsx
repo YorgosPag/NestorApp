@@ -7,7 +7,7 @@ import { UnitsList } from '@/components/units/UnitsList';
 import { GenericUnitsTabsRenderer } from '@/components/generic';
 import { getSortedUnitsTabs } from '@/config/units-tabs-config';
 import { MobileDetailsSlideIn } from '@/core/layouts';
-import { TRANSITION_PRESETS } from '@/components/ui/effects';
+import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 import { useUnitsSidebar } from './hooks/useUnitsSidebar';
 import { UnitDetailsHeader } from './components/UnitDetailsHeader';
@@ -93,14 +93,14 @@ export function UnitsSidebar({
           <>
             <button
               onClick={() => {/* TODO: Edit unit handler */}}
-              className={`p-2 rounded-md border bg-background border-border hover:bg-accent ${TRANSITION_PRESETS.FAST_COLORS}`}
+              className={`p-2 rounded-md border bg-background border-border ${INTERACTIVE_PATTERNS.ACCENT_HOVER} ${TRANSITION_PRESETS.FAST_COLORS}`}
               aria-label="Επεξεργασία Μονάδας"
             >
               <Edit className="h-4 w-4" />
             </button>
             <button
               onClick={() => {/* TODO: Delete unit handler */}}
-              className={`p-2 rounded-md border bg-background border-border hover:bg-accent text-destructive hover:text-destructive ${TRANSITION_PRESETS.FAST_COLORS}`}
+              className={`p-2 rounded-md border bg-background border-border text-destructive ${INTERACTIVE_PATTERNS.ACCENT_HOVER} ${TRANSITION_PRESETS.FAST_COLORS}`}
               aria-label="Διαγραφή Μονάδας"
             >
               <Trash2 className="h-4 w-4" />

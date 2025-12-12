@@ -3,7 +3,8 @@
 import React from 'react';
 import { CardContent } from '@/components/ui/card';
 import { CommonBadge } from '@/core/badges';
-import { 
+import { GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
+import {
   Link,
   Building,
   Ruler
@@ -21,7 +22,7 @@ export function StorageCardContent({ unit, getTypeIcon }: StorageCardContentProp
     return (
         <CardContent className="p-4 space-y-4">
             <div>
-                <h4 className="font-semibold text-foreground truncate group-hover:text-primary flex items-center gap-2">
+                <h4 className={`font-semibold text-foreground truncate flex items-center gap-2 ${GROUP_HOVER_PATTERNS.TEXT_PRIMARY_ON_GROUP}`}>
                     <TypeIcon className="w-4 h-4" />
                     <span>{unit.code}</span>
                 </h4>

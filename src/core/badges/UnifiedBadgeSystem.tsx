@@ -10,6 +10,7 @@
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { BadgeFactory } from './BadgeFactory';
 import type {
   DomainType,
@@ -51,7 +52,7 @@ export const UnifiedBadge: React.FC<UnifiedBadgeProps> = ({
       className={cn(
         'transition-all duration-200 cursor-default',
         badgeConfig.className,
-        onClick && 'cursor-pointer hover:opacity-80'
+        onClick && `cursor-pointer ${INTERACTIVE_PATTERNS.OPACITY_HOVER}`
       )}
       style={{
         backgroundColor: badgeConfig.backgroundColor,
@@ -131,7 +132,7 @@ export const CommonBadge: React.FC<CommonBadgeProps> = ({ status, ...props }) =>
       className={cn(
         'transition-all duration-200 cursor-default',
         badgeConfig.className,
-        props.onClick && 'cursor-pointer hover:opacity-80'
+        props.onClick && `cursor-pointer ${INTERACTIVE_PATTERNS.OPACITY_HOVER}`
       )}
       style={{
         backgroundColor: badgeConfig.backgroundColor,

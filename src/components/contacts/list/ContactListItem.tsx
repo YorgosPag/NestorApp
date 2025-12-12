@@ -5,7 +5,7 @@ import { ContactBadge } from '@/core/badges';
 import { EntityDetailsHeader } from '@/core/entity-headers';
 import { openContactAvatarModal, openGalleryPhotoModal } from '@/core/modals';
 import { useGlobalPhotoPreview } from '@/providers/PhotoPreviewProvider';
-import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS, HOVER_BORDER_EFFECTS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 import {
   Users,
   Building2,
@@ -198,7 +198,7 @@ export function ContactListItem({
                     isArchived && `opacity-60 ${cardBackgrounds.archived}`,
                     isSelected
                     ? `border-blue-500 ${cardBackgrounds.selected} shadow-sm`
-                    : `border-border hover:border-blue-300 ${cardBackgrounds.default}`
+                    : `border-border ${cardBackgrounds.default}`
                 )}
                 onClick={onSelect}
                 role="button"
@@ -217,7 +217,7 @@ export function ContactListItem({
                                 "absolute top-2 right-2 transition-opacity z-10 p-1",
                                 isSelected || isFavorite
                                     ? "opacity-100"
-                                    : "opacity-0 group-hover:opacity-100"
+                                    : `opacity-0 ${GROUP_HOVER_PATTERNS.SHOW_ON_GROUP}`
                             )}
                         >
                             {isTogglingFavorite ? (
@@ -228,7 +228,7 @@ export function ContactListItem({
                                         "w-4 h-4 transition-colors",
                                         isFavorite
                                         ? "text-yellow-500 fill-yellow-500"
-                                        : "text-gray-400 hover:text-yellow-500"
+                                        : `text-gray-400 ${HOVER_TEXT_EFFECTS.YELLOW}`
                                     )}
                                 />
                             )}
@@ -271,7 +271,7 @@ export function ContactListItem({
                                             <Phone className="w-3 h-3" />
                                             <a
                                                 href={`tel:${phone}`}
-                                                className="whitespace-nowrap text-blue-600 hover:text-blue-800 hover:underline"
+                                                className={`whitespace-nowrap text-blue-600 ${INTERACTIVE_PATTERNS.LINK_PRIMARY}`}
                                                 title={`Κλήση στο ${phone}`}
                                                 onClick={(e) => e.stopPropagation()}
                                             >
@@ -288,7 +288,7 @@ export function ContactListItem({
                                                 href={`https://mail.google.com/mail/?view=cm&to=${email}`}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="whitespace-nowrap text-blue-600 hover:text-blue-800 hover:underline"
+                                                className={`whitespace-nowrap text-blue-600 ${INTERACTIVE_PATTERNS.LINK_PRIMARY}`}
                                                 title={`Αποστολή email στο ${email} μέσω Gmail`}
                                                 onClick={(e) => e.stopPropagation()}
                                             >
@@ -346,7 +346,7 @@ export function ContactListItem({
                                                 href={`https://mail.google.com/mail/?view=cm&to=${email}`}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="truncate text-blue-600 hover:text-blue-800 hover:underline"
+                                                className={`truncate text-blue-600 ${INTERACTIVE_PATTERNS.LINK_PRIMARY}`}
                                                 title={`Αποστολή email στο ${email} μέσω Gmail`}
                                                 onClick={(e) => e.stopPropagation()}
                                             >
@@ -359,7 +359,7 @@ export function ContactListItem({
                                             <Phone className="w-3 h-3" />
                                             <a
                                                 href={`tel:${phone}`}
-                                                className="truncate text-blue-600 hover:text-blue-800 hover:underline"
+                                                className={`truncate text-blue-600 ${INTERACTIVE_PATTERNS.LINK_PRIMARY}`}
                                                 title={`Κλήση στο ${phone}`}
                                                 onClick={(e) => e.stopPropagation()}
                                             >

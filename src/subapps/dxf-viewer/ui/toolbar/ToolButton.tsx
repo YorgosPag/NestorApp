@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ToolDefinition, ActionDefinition } from './types';
 import { ChevronDown } from 'lucide-react';
+import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 
 interface ToolButtonProps {
   tool: ToolDefinition;
@@ -69,8 +70,8 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
           flex items-center justify-center
           ${
             isActive 
-              ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-500' 
-              : 'bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-500'
+              ? 'bg-blue-600 text-white border-blue-500 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}' 
+              : 'bg-gray-700 text-gray-200 border-gray-500 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}'
           }
           ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
         `}
@@ -92,8 +93,8 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
             flex items-center justify-center
             ${
               isActive 
-                ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-500' 
-                : 'bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-500'
+                ? 'bg-blue-600 text-white border-blue-500 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}' 
+                : 'bg-gray-700 text-gray-200 border-gray-500 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}'
             }
             ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
           `}
@@ -109,8 +110,8 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
             flex items-center justify-center
             ${
               isActive 
-                ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-500' 
-                : 'bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-500'
+                ? 'bg-blue-600 text-white border-blue-500 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}' 
+                : 'bg-gray-700 text-gray-200 border-gray-500 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}'
             }
             ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
           `}
@@ -127,7 +128,7 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
               <button
                 key={option.id}
                 onClick={() => handleDropdownItemClick(option.id)}
-                className="w-full px-3 py-2 text-left text-sm text-gray-200 hover:bg-gray-700 flex items-center gap-2 first:rounded-t-md last:rounded-b-md"
+                className={`w-full px-3 py-2 text-left text-sm text-gray-200 flex items-center gap-2 first:rounded-t-md last:rounded-b-md ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
               >
                 {OptionIcon && <OptionIcon className="w-4 h-4" />}
                 {option.label}
@@ -157,10 +158,10 @@ export const ActionButton: React.FC<ActionButtonProps> = ({ action }) => {
         flex items-center justify-center
         ${
           action.active 
-            ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-500'
+            ? 'bg-blue-600 text-white border-blue-500 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}'
             : action.disabled
             ? 'bg-gray-800 text-gray-500 border-gray-700 cursor-not-allowed'
-            : 'bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-500'
+            : 'bg-gray-700 text-gray-200 border-gray-500 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}'
         }
       `}
     >

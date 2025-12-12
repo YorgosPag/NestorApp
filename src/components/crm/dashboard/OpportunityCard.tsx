@@ -4,7 +4,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Users, Mail, Phone, Calendar, FileText, Edit, Trash2 } from 'lucide-react';
 import { CommonBadge } from '@/core/badges';
-import { COMPLEX_HOVER_EFFECTS, TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { COMPLEX_HOVER_EFFECTS, TRANSITION_PRESETS, INTERACTIVE_PATTERNS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 import type { Opportunity, FirestoreishTimestamp } from '@/types/crm';
 import { format } from 'date-fns';
 import { el } from 'date-fns/locale';
@@ -123,7 +123,7 @@ export function OpportunityCard({ opportunity, onEdit, onDelete }: { opportunity
                 </p>
             )}
 
-            <div className={`absolute bottom-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 ${TRANSITION_PRESETS.OPACITY}`}>
+            <div className={`absolute bottom-2 right-2 flex items-center gap-1 ${GROUP_HOVER_PATTERNS.SHOW_ON_GROUP} ${TRANSITION_PRESETS.OPACITY}`}>
                 <Tooltip>
                     <TooltipTrigger asChild>
                          <Button 
@@ -175,7 +175,7 @@ export function OpportunityCard({ opportunity, onEdit, onDelete }: { opportunity
                         <AlertDialogCancel>Ακύρωση</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={() => opportunity.id && onDelete(opportunity.id, opportunity.fullName || opportunity.title)}
-                            className="bg-destructive hover:bg-destructive/90"
+                            className={`bg-destructive ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`}
                         >
                             Διαγραφή
                         </AlertDialogAction>

@@ -3,6 +3,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import MapComponent, { MapRef, Marker, Source, Layer } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS, CORE_HOVER_TRANSFORMS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 
 // ✅ ENTERPRISE: Explicit reference για native Map to avoid naming conflicts
 const NativeMap = globalThis.Map;
@@ -806,7 +807,7 @@ export function InteractiveMap({
                 ? 'w-5 h-5 bg-blue-500 border-blue-300 scale-125 cursor-pointer'
                 : shouldHighlightFirst
                 ? 'w-8 h-8 bg-green-400 border-green-200 scale-125 animate-bounce shadow-lg shadow-green-500/50 cursor-pointer'
-                : 'w-4 h-4 bg-red-500 border-red-300 hover:scale-110 cursor-pointer'
+                : `w-4 h-4 bg-red-500 border-red-300 ${CORE_HOVER_TRANSFORMS.SCALE_UP_SMALL} cursor-pointer`
             }`}
             style={{
               zIndex: 99999,
@@ -1003,7 +1004,7 @@ export function InteractiveMap({
                 className={`w-6 h-6 rounded text-xs transition-colors ${
                   currentMapStyle === style
                     ? 'bg-blue-600 text-white'
-                    : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                    : 'bg-gray-700 text-gray-400 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}'
                 }`}
                 title={mapStyleNames[style]}
               >
@@ -1074,7 +1075,7 @@ export function InteractiveMap({
                 className={`px-2 py-1 text-xs rounded transition-colors ${
                   accuracyVisualizationMode === 'circles'
                     ? 'bg-blue-600 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    : 'bg-gray-700 text-gray-300 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}'
                 }`}
               >
                 {t('accuracy.types.circles')}
@@ -1084,7 +1085,7 @@ export function InteractiveMap({
                 className={`px-2 py-1 text-xs rounded transition-colors ${
                   accuracyVisualizationMode === 'zones'
                     ? 'bg-blue-600 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    : 'bg-gray-700 text-gray-300 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}'
                 }`}
               >
                 {t('accuracy.types.zones')}
@@ -1114,8 +1115,8 @@ export function InteractiveMap({
               onClick={() => setShowAccuracyCircles(!showAccuracyCircles)}
               className={`w-full px-2 py-1 text-xs rounded transition-colors ${
                 showAccuracyCircles
-                  ? 'bg-green-600 hover:bg-green-700 text-white'
-                  : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                  ? `bg-green-600 ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} text-white`
+                  : `bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-gray-300`
               }`}
             >
               {showAccuracyCircles ? t('accuracy.controls.hideIndicators') : t('accuracy.controls.showIndicators')}
@@ -1140,7 +1141,7 @@ export function InteractiveMap({
             className={`px-3 py-2 rounded text-sm transition-colors ${
               clickMode === 'add_geo'
                 ? 'bg-blue-600 text-white'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                : 'bg-gray-700 text-gray-300 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}'
             }`}
           >
             📍 {t('map.controls.pickGeographicPoint')}
@@ -1149,7 +1150,7 @@ export function InteractiveMap({
           <button
             onClick={stopCoordinatePicking}
             disabled={clickMode === 'off'}
-            className="px-3 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded text-sm transition-colors"
+            className={`px-3 py-2 bg-red-600 ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded text-sm transition-colors`}
           >
             ✕ {t('map.controls.cancelPicking')}
           </button>
@@ -1742,7 +1743,7 @@ export function InteractiveMap({
 
               {/* Address Tooltip */}
               {searchMarker.address && (
-                <div className="absolute -top-16 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-80 text-white px-3 py-2 rounded-lg text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-20">
+                <div className={`absolute -top-16 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-80 text-white px-3 py-2 rounded-lg text-sm whitespace-nowrap opacity-0 ${GROUP_HOVER_PATTERNS.SHOW_ON_GROUP} transition-opacity duration-300 pointer-events-none z-20`}>
                   <div className="max-w-48 truncate">
                     {typeof searchMarker.address === 'string' ? searchMarker.address : 'Αναζητημένη θέση'}
                   </div>

@@ -2,10 +2,11 @@
 import { Eye, Square, Bed, Building } from 'lucide-react';
 import { CommonBadge } from '@/core/badges';
 import { getPropertyImage } from '../utils/images';
+import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 
 export function PropertyListItem({ property, onViewFloorPlan }: { property: any; onViewFloorPlan: (id: string) => void; }) {
   return (
-    <div className="w-full bg-white dark:bg-card rounded-xl shadow-md ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden hover:shadow-xl transition-all duration-300 p-4 flex gap-4">
+    <div className={`w-full bg-white dark:bg-card rounded-xl shadow-md ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden p-4 flex gap-4 ${TRANSITION_PRESETS.SMOOTH_ALL} ${INTERACTIVE_PATTERNS.CARD_ENHANCED}`}>
       <img
         src={getPropertyImage(property)}
         alt={property.name}
@@ -47,7 +48,7 @@ export function PropertyListItem({ property, onViewFloorPlan }: { property: any;
         <div className="flex gap-2 mt-3">
           <button
             onClick={() => onViewFloorPlan(property.id)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm font-medium"
+            className={`px-4 py-2 bg-blue-600 text-white rounded-lg ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS} flex items-center gap-2 text-sm font-medium`}
           >
             <Eye className="h-4 w-4" />
             Δείτε στην κάτοψη

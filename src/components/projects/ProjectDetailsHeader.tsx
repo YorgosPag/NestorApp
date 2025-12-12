@@ -6,6 +6,7 @@ import { ProjectBadge } from '@/core/badges';
 import { Briefcase, Eye } from 'lucide-react';
 import { EntityDetailsHeader } from '@/core/entity-headers';
 import { cn } from '@/lib/utils';
+import { GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
 import type { Project, ProjectStatus } from '@/types/project';
 import { PROJECT_STATUS_LABELS } from '@/types/project';
 
@@ -29,7 +30,7 @@ export function ProjectDetailsHeader({ project }: ProjectDetailsHeaderProps) {
                             label: 'Επίδειξη Έργου',
                             onClick: () => console.log('Show project details'),
                             icon: Eye,
-                            className: 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700'
+                            className: `bg-gradient-to-r from-blue-500 to-purple-600 ${GRADIENT_HOVER_EFFECTS.BLUE_PURPLE_DEEPER}`
                         }
                     ]}
                     variant="detailed"

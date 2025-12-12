@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 const shortcutsList = {
     file: [
@@ -106,7 +107,7 @@ export default function ShortcutsPage() {
                                 <h3 className="text-xl font-semibold mb-4 border-b pb-2">{group.category}</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
                                     {group.shortcuts.map(shortcut => (
-                                        <div key={shortcut.key} className="flex items-center justify-between p-2 rounded-md hover:bg-muted">
+                                        <div key={shortcut.key} className={`flex items-center justify-between p-2 rounded-md ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}>
                                             <span className="text-sm text-foreground">{shortcut.description}</span>
                                             <kbd className="px-2 py-1 bg-muted border rounded text-xs font-mono text-muted-foreground">
                                                 {formatKey(shortcut.key)}
