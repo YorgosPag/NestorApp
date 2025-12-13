@@ -1,0 +1,43 @@
+# 🏢 ENTERPRISE WORKSPACE CONFIGURATION
+# Multi-package repository με strict dependency isolation
+
+packages:
+  # Core application
+  - '.'
+
+  # Subpackages - μονοlithic modules που θα γίνουν packages
+  - 'packages/*'
+
+  # Subapps - Domain-specific applications
+  - 'src/subapps/*'
+
+# 🔒 ENTERPRISE: Dependency isolation rules
+filter:
+  # Exclude dev builds and cache directories
+  - '!**/.next'
+  - '!**/node_modules'
+  - '!**/dist'
+  - '!**/build'
+  - '!**/coverage'
+
+# 🏢 ENTERPRISE: Strict versioning για production stability
+catalog:
+  # Core framework versions - locked για stability
+  next: "14.2.33"
+  react: "18.3.1"
+  react-dom: "18.3.1"
+  typescript: "5.9.3"
+
+  # Database layers - enterprise versions
+  firebase: "12.4.0"
+  firebase-admin: "12.7.0"
+
+  # UI consistency - design system versions
+  "@radix-ui/react-accordion": "1.2.12"
+  "@radix-ui/react-dialog": "1.1.15"
+  tailwindcss: "3.4.18"
+
+  # Utility consistency
+  clsx: "2.1.1"
+  tailwind-merge: "3.3.1"
+  zod: "3.25.76"

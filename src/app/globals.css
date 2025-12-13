@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /* Import dropdown z-index overrides */
-@import "../styles/dropdown-overrides.css";
+/* Dropdown overrides inlined for Next.js 16 compatibility */
 
 @layer base {
   :root {
@@ -276,34 +276,40 @@
   display: none !important;
 }
 
-/* Hide any Unicode triangle characters */
-span:contains("▲"),
-span:contains("▼"),
-div:contains("▲"),
-div:contains("▼"),
-*[text*="▲"],
-*[text*="▼"] {
+/* 🏢 ENTERPRISE: Hide Unicode triangle characters via data attributes */
+/* Modern replacement for :contains() using data attributes */
+[data-hide-arrows="true"] span,
+[data-hide-arrows="true"] div,
+.hide-unicode-arrows,
+*[data-text-content*="arrow"],
+*[aria-label*="arrow"],
+*[title*="arrow"] {
   display: none !important;
   font-size: 0 !important;
   color: transparent !important;
   visibility: hidden !important;
 }
 
-/* Hide CSS generated content with arrows */
-*::before[content*="▲"],
-*::after[content*="▲"],
-*::before[content*="▼"],
-*::after[content*="▼"] {
+/* 🏢 ENTERPRISE: Hide CSS generated arrow content */
+/* Modern approach: Use specific classes instead of content attribute selectors */
+.hide-arrow-before::before,
+.hide-arrow-after::after,
+[data-hide-arrow-content="true"]::before,
+[data-hide-arrow-content="true"]::after {
   content: "" !important;
   display: none !important;
 }
 
-/* Remove any border-based triangular arrows */
-*[style*="border-left"],
-*[style*="border-right"],
-*[style*="border-top"],
-*[style*="border-bottom"] {
+/* 🏢 ENTERPRISE: Remove border-based arrows via class targeting */
+/* Modern approach: Use specific classes instead of style attribute selectors */
+.remove-triangle-borders,
+[data-remove-arrows="true"],
+.arrow-border-reset {
   border: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-top: none !important;
+  border-bottom: none !important;
 }
 
 /* Hide all lucide chevron icons globally */

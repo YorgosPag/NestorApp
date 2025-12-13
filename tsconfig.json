@@ -44,7 +44,8 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "src/subapps/dxf-viewer/types/dxf-modules.d.ts"
+    "src/subapps/dxf-viewer/types/dxf-modules.d.ts",
+    ".next/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

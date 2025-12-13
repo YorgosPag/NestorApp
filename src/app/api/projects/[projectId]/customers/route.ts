@@ -4,11 +4,21 @@ import { getContactDisplayName, getPrimaryPhone } from '@/types/contacts';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { projectId: string } }
+  { params }: { params: Promise<{ projectId: string }> }
 ) {
   try {
-    const projectId = params.projectId;
+    const { projectId } = await params;
     console.log(`👥 API: Loading project customers for projectId: ${projectId}`);
+
+    // 🔧 Quick Firebase Check
+    if (!firebaseServer.getFirestore()) {
+      console.error('❌ Firebase not initialized properly');
+      return NextResponse.json({
+        success: false,
+        error: 'Database connection not available - Firebase not initialized',
+        projectId
+      }, { status: 503 });
+    }
 
     // Get buildings for this project (handle both string and number projectId)
     console.log(`🏢 Fetching buildings for projectId: ${projectId} (trying both string and number)`);
@@ -57,9 +67,18 @@ export async function GET(
     const soldUnits = allUnits.filter(u => u.status === 'sold' && u.soldTo);
     console.log(`💰 Sold units: ${soldUnits.length}`);
 
+    // Debug: Show soldTo values
+    const soldToValues = soldUnits.map(u => u.soldTo);
+    console.log(`🔍 SoldTo values:`, soldToValues);
+
     if (soldUnits.length === 0) {
       console.log(`⚠️ No sold units found for projectId: ${projectId}`);
-      return NextResponse.json([]);
+      return NextResponse.json({
+        success: true,
+        customers: [],
+        projectId,
+        summary: { customersCount: 0, soldUnitsCount: 0 }
+      });
     }
 
     // Count units per customer
@@ -71,7 +90,7 @@ export async function GET(
     });
 
     const customerIds = Object.keys(customerUnitCount);
-    console.log(`👥 Unique customers: ${customerIds.length}`);
+    console.log(`👥 Unique customers: ${customerIds.length}`, customerIds);
 
     if (customerIds.length === 0) {
       return NextResponse.json([]);
@@ -81,6 +100,14 @@ export async function GET(
     const contactsSnapshot = await firebaseServer.getDocs('contacts', [
       { field: '__name__', operator: 'in', value: customerIds.slice(0, 10) }
     ]);
+
+    console.log(`📇 Contacts found: ${contactsSnapshot.docs.length}`);
+
+    // Debug mismatch between customerIds and found contacts
+    const foundContactIds = contactsSnapshot.docs.map(doc => doc.id);
+    console.log(`🔍 Searching for customerIds:`, customerIds);
+    console.log(`✅ Found contact IDs:`, foundContactIds);
+    console.log(`❌ Missing contact IDs:`, customerIds.filter(id => !foundContactIds.includes(id)));
 
     const customers = contactsSnapshot.docs.map(contactDoc => {
       const contact = { id: contactDoc.id, ...contactDoc.data() };
@@ -111,7 +138,7 @@ export async function GET(
       {
         success: false,
         error: error instanceof Error ? error.message : 'Άγνωστο σφάλμα',
-        projectId: params.projectId
+        projectId
       },
       { status: 500 }
     );

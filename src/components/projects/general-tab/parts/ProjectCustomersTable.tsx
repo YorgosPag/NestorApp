@@ -22,7 +22,7 @@ export function ProjectCustomersTable({ projectId }: ProjectCustomersTableProps)
         const response = await fetch(`/api/projects/${projectId}/customers`);
         if (!response.ok) throw new Error('Failed to fetch customers');
         const data = await response.json();
-        if (mounted) setCustomers(data);
+        if (mounted) setCustomers(data.customers || []);
       } catch (e) {
         console.error("Failed to fetch project customers:", e);
       } finally {
