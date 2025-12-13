@@ -307,6 +307,9 @@ export const HOVER_BACKGROUND_EFFECTS = {
   /** Light background για navigation items */
   LIGHT: 'hover:bg-gray-50 dark:hover:bg-gray-800/50',
 
+  /** Gray light background για subtle interactions */
+  GRAY_LIGHT: 'hover:bg-gray-100 dark:hover:bg-gray-800/30',
+
   /** Muted background για subtle interactions */
   MUTED: 'hover:bg-muted/50',
 

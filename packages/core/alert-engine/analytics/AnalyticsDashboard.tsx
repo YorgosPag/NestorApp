@@ -22,10 +22,11 @@ import {
 import {
   useDynamicBackgroundClass,
   useDynamicTextClass,
+  useDynamicBorderClass,
   useDynamicElementClasses,
   DynamicStyleConfig
-} from '@/components/ui/utils/dynamic-styles';
-import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+} from '../../../src/components/ui/utils/dynamic-styles';
+import { HOVER_BACKGROUND_EFFECTS } from '../../../src/components/ui/effects';
 
 // ============================================================================
 // DASHBOARD TYPES

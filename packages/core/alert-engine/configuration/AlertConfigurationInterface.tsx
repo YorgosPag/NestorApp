@@ -31,20 +31,27 @@ import {
 // ============================================================================
 
 interface DetectionConfig {
-  enableRealTimeDetection: boolean;
-  detectionInterval: number;
-  maxDetectionThreads: number;
-  alertThreshold: number;
-  enablePatternRecognition: boolean;
+  pollingInterval: number;
+  batchSize: number;
+  enableRealTime: boolean;
+  accuracyThresholds: {
+    warning: number;
+    critical: number;
+  };
 }
 
 interface NotificationConfig {
-  enableEmail: boolean;
-  enableSMS: boolean;
-  enablePushNotifications: boolean;
-  defaultChannels: string[];
+  channels: {
+    email: { enabled: boolean; priority: number };
+    sms: { enabled: boolean; priority: number };
+    webhook: { enabled: boolean; priority: number };
+    push: { enabled: boolean; priority: number };
+    in_app: { enabled: boolean; priority: number };
+  };
   retryAttempts: number;
   retryDelay: number;
+  batchSize: number;
+  rateLimit: number;
 }
 
 interface AlertConfigurationData {
