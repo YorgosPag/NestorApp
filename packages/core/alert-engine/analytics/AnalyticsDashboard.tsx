@@ -19,6 +19,13 @@ import {
   AnalyticsInsight,
   AnalyticsRecommendation
 } from './EventAnalyticsEngine';
+import {
+  useDynamicBackgroundClass,
+  useDynamicTextClass,
+  useDynamicElementClasses,
+  DynamicStyleConfig
+} from '@/components/ui/utils/dynamic-styles';
+import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 // ============================================================================
 // DASHBOARD TYPES
@@ -70,6 +77,14 @@ const MetricCard: React.FC<{
     return trend > 0 ? '#10B981' : '#EF4444';
   };
 
+  // 🎨 ENTERPRISE DYNAMIC STYLING - NO INLINE STYLES
+  const cardBgClass = useDynamicBackgroundClass('white');
+  const titleTextClass = useDynamicTextClass('#6B7280');
+  const valueTextClass = useDynamicTextClass(getStatusColor());
+  const unitTextClass = useDynamicTextClass('#6B7280');
+  const trendTextClass = useDynamicTextClass(getTrendColor());
+  const descTextClass = useDynamicTextClass('#9CA3AF');
+
   const formatTrend = () => {
     if (!trend) return null;
     const direction = trend > 0 ? '↗' : '↘';
@@ -77,56 +92,34 @@ const MetricCard: React.FC<{
   };
 
   return (
-    <div style={{
-      background: 'white',
-      border: '1px solid #E5E7EB',
-      borderRadius: '8px',
-      padding: '20px',
-      minHeight: '140px',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'space-between'
-    }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h4 style={{ margin: 0, fontSize: '14px', color: '#6B7280', fontWeight: '500' }}>
+    <div className={`${cardBgClass} border border-gray-200 rounded-lg p-5 min-h-[140px] flex flex-col justify-between ${HOVER_BACKGROUND_EFFECTS.GRAY_LIGHT}`}>
+      <div className="flex justify-between items-center">
+        <h4 className={`m-0 text-sm font-medium ${titleTextClass}`}>
           {title}
         </h4>
-        {icon && <span style={{ fontSize: '24px' }}>{icon}</span>}
+        {icon && <span className="text-2xl">{icon}</span>}
       </div>
 
-      <div style={{ margin: '12px 0' }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-          <span style={{
-            fontSize: '32px',
-            fontWeight: 'bold',
-            color: getStatusColor()
-          }}>
+      <div className="my-3">
+        <div className="flex items-baseline gap-1">
+          <span className={`text-3xl font-bold ${valueTextClass}`}>
             {value}
           </span>
           {unit && (
-            <span style={{ fontSize: '16px', color: '#6B7280' }}>
+            <span className={`text-base ${unitTextClass}`}>
               {unit}
             </span>
           )}
         </div>
         {trend !== undefined && (
-          <div style={{
-            fontSize: '12px',
-            color: getTrendColor(),
-            marginTop: '4px'
-          }}>
+          <div className={`text-xs mt-1 ${trendTextClass}`}>
             {formatTrend()}
           </div>
         )}
       </div>
 
       {description && (
-        <p style={{
-          margin: 0,
-          fontSize: '12px',
-          color: '#9CA3AF',
-          lineHeight: '1.4'
-        }}>
+        <p className={`m-0 text-xs leading-relaxed ${descTextClass}`}>
           {description}
         </p>
       )}
@@ -140,6 +133,12 @@ const SimpleChart: React.FC<{
   type: 'line' | 'bar' | 'pie' | 'doughnut';
   height?: number;
 }> = ({ title, data, type, height = 300 }) => {
+  // 🎨 ENTERPRISE DYNAMIC STYLING - NO INLINE STYLES
+  const chartBgClass = useDynamicBackgroundClass('white');
+  const titleTextClass = useDynamicTextClass('#000');
+  const labelTextClass = useDynamicTextClass('#000');
+  const barBgClass = useDynamicBackgroundClass(data.datasets[0]?.backgroundColor || '#3B82F6');
+  const centerTextClass = useDynamicTextClass('#6B7280');
   // Simplified chart implementation (στην πραγματικότητα θα χρησιμοποιεί Chart.js ή Recharts)
   const renderSimpleBarChart = () => {
     if (!data.datasets[0]) return null;
@@ -147,29 +146,20 @@ const SimpleChart: React.FC<{
     const maxValue = Math.max(...data.datasets[0].data);
 
     return (
-      <div style={{ display: 'flex', alignItems: 'end', gap: '8px', height: height - 100, padding: '20px' }}>
+      <div className={`flex items-end gap-2 p-5`} style={{ height: height - 100 }}>
         {data.labels.map((label, index) => {
           const value = data.datasets[0].data[index];
           const barHeight = (value / maxValue) * (height - 150);
 
           return (
-            <div key={index} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-              <div style={{
-                background: data.datasets[0].backgroundColor || '#3B82F6',
-                width: '100%',
-                maxWidth: '40px',
-                height: `${barHeight}px`,
-                borderRadius: '4px 4px 0 0',
-                display: 'flex',
-                alignItems: 'end',
-                justifyContent: 'center',
-                color: 'white',
-                fontSize: '10px',
-                paddingBottom: '4px'
-              }}>
+            <div key={index} className="flex flex-col items-center flex-1">
+              <div
+                className={`${barBgClass} w-full max-w-[40px] rounded-t flex items-end justify-center text-white text-xs pb-1`}
+                style={{ height: `${barHeight}px` }}
+              >
                 {value}
               </div>
-              <span style={{ fontSize: '10px', marginTop: '8px', textAlign: 'center' }}>
+              <span className={`text-xs mt-2 text-center ${labelTextClass}`}>
                 {label}
               </span>
             </div>
@@ -186,26 +176,24 @@ const SimpleChart: React.FC<{
     const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'];
 
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px' }}>
-        <div style={{
-          width: '200px',
-          height: '200px',
-          borderRadius: '50%',
-          background: `conic-gradient(${data.datasets[0].data.map((value, index) => {
-            const percentage = (value / total) * 100;
-            return `${colors[index % colors.length]} ${percentage}%`;
-          }).join(', ')})`
-        }} />
-        <div style={{ marginTop: '20px', display: 'flex', flexWrap: 'wrap', gap: '12px', justifyContent: 'center' }}>
+      <div className="flex flex-col items-center p-5">
+        <div
+          className="w-[200px] h-[200px] rounded-full"
+          style={{
+            background: `conic-gradient(${data.datasets[0].data.map((value, index) => {
+              const percentage = (value / total) * 100;
+              return `${colors[index % colors.length]} ${percentage}%`;
+            }).join(', ')})`
+          }}
+        />
+        <div className="mt-5 flex flex-wrap gap-3 justify-center">
           {data.labels.map((label, index) => (
-            <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{
-                width: '12px',
-                height: '12px',
-                background: colors[index % colors.length],
-                borderRadius: '2px'
-              }} />
-              <span style={{ fontSize: '12px' }}>
+            <div key={index} className="flex items-center gap-1.5">
+              <div
+                className="w-3 h-3 rounded-sm"
+                style={{ background: colors[index % colors.length] }}
+              />
+              <span className={`text-xs ${labelTextClass}`}>
                 {label}: {data.datasets[0].data[index]}
               </span>
             </div>
@@ -216,26 +204,15 @@ const SimpleChart: React.FC<{
   };
 
   return (
-    <div style={{
-      background: 'white',
-      border: '1px solid #E5E7EB',
-      borderRadius: '8px',
-      padding: '16px'
-    }}>
-      <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '600' }}>
+    <div className={`${chartBgClass} border border-gray-200 rounded-lg p-4`}>
+      <h3 className={`m-0 mb-4 text-base font-semibold ${titleTextClass}`}>
         {title}
       </h3>
       <div style={{ height: `${height}px` }}>
         {type === 'bar' && renderSimpleBarChart()}
         {type === 'pie' && renderSimplePieChart()}
         {(type === 'line' || type === 'doughnut') && (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: '100%',
-            color: '#6B7280'
-          }}>
+          <div className={`flex items-center justify-center h-full ${centerTextClass}`}>
             {type} Chart (Implementation needed)
           </div>
         )}
@@ -266,40 +243,33 @@ const InsightCard: React.FC<{
     }
   };
 
+  // 🎨 ENTERPRISE DYNAMIC STYLING - NO INLINE STYLES
+  const cardBgClass = useDynamicBackgroundClass('white');
+  const borderLeftClass = useDynamicBorderClass(getSeverityColor(), '4px');
+  const titleTextClass = useDynamicTextClass('#000');
+  const descTextClass = useDynamicTextClass('#6B7280');
+  const metaTextClass = useDynamicTextClass('#9CA3AF');
+
   return (
-    <div style={{
-      background: 'white',
-      border: '1px solid #E5E7EB',
-      borderRadius: '8px',
-      padding: '16px',
-      borderLeft: `4px solid ${getSeverityColor()}`
-    }}>
-      <div style={{ display: 'flex', alignItems: 'start', gap: '12px' }}>
-        <span style={{ fontSize: '20px' }}>{getSeverityIcon()}</span>
-        <div style={{ flex: 1 }}>
-          <h4 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: '600' }}>
+    <div className={`${cardBgClass} border border-gray-200 rounded-lg p-4 ${borderLeftClass}`}>
+      <div className="flex items-start gap-3">
+        <span className="text-xl">{getSeverityIcon()}</span>
+        <div className="flex-1">
+          <h4 className={`m-0 mb-2 text-sm font-semibold ${titleTextClass}`}>
             {insight.title}
           </h4>
-          <p style={{ margin: '0 0 12px 0', fontSize: '13px', color: '#6B7280', lineHeight: '1.4' }}>
+          <p className={`m-0 mb-3 text-xs leading-relaxed ${descTextClass}`}>
             {insight.description}
           </p>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', gap: '12px', fontSize: '11px', color: '#9CA3AF' }}>
+          <div className="flex justify-between items-center">
+            <div className={`flex gap-3 text-xs ${metaTextClass}`}>
               <span>Confidence: {insight.confidence}%</span>
               <span>Type: {insight.type}</span>
             </div>
             {insight.actionRequired && onAction && (
               <button
                 onClick={() => onAction(insight.id)}
-                style={{
-                  padding: '4px 12px',
-                  border: '1px solid #D1D5DB',
-                  borderRadius: '4px',
-                  background: 'white',
-                  color: '#374151',
-                  fontSize: '11px',
-                  cursor: 'pointer'
-                }}
+                className={`px-3 py-1 border border-gray-300 rounded text-xs text-gray-700 cursor-pointer ${cardBgClass} ${HOVER_BACKGROUND_EFFECTS.GRAY_LIGHT}`}
               >
                 Take Action
               </button>
@@ -325,73 +295,63 @@ const RecommendationCard: React.FC<{
     }
   };
 
+  // 🎨 ENTERPRISE DYNAMIC STYLING - NO INLINE STYLES
+  const cardBgClass = useDynamicBackgroundClass('white');
+  const titleTextClass = useDynamicTextClass('#000');
+  const impactBadgeBgClass = useDynamicBackgroundClass(getImpactColor() + '20');
+  const impactBadgeTextClass = useDynamicTextClass(getImpactColor());
+  const priorityTextClass = useDynamicTextClass('#6B7280');
+  const descTextClass = useDynamicTextClass('#6B7280');
+  const metaTextClass = useDynamicTextClass('#374151');
+  const buttonBgClass = useDynamicBackgroundClass('#3B82F6');
+
   return (
-    <div style={{
-      background: 'white',
-      border: '1px solid #E5E7EB',
-      borderRadius: '8px',
-      padding: '16px'
-    }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
-        <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '600' }}>
+    <div className={`${cardBgClass} border border-gray-200 rounded-lg p-4`}>
+      <div className="flex justify-between items-start mb-3">
+        <h4 className={`m-0 text-sm font-semibold ${titleTextClass}`}>
           {recommendation.title}
         </h4>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{
-            padding: '2px 8px',
-            borderRadius: '12px',
-            fontSize: '10px',
-            fontWeight: '500',
-            background: getImpactColor() + '20',
-            color: getImpactColor()
-          }}>
+        <div className="flex items-center gap-2">
+          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${impactBadgeBgClass} ${impactBadgeTextClass}`}>
             {recommendation.impact.toUpperCase()}
           </span>
-          <span style={{ fontSize: '12px', color: '#6B7280' }}>
+          <span className={`text-xs ${priorityTextClass}`}>
             Priority: {recommendation.priority}/10
           </span>
         </div>
       </div>
 
-      <p style={{ margin: '0 0 12px 0', fontSize: '13px', color: '#6B7280', lineHeight: '1.4' }}>
+      <p className={`m-0 mb-3 text-xs leading-relaxed ${descTextClass}`}>
         {recommendation.description}
       </p>
 
-      <div style={{ marginBottom: '12px' }}>
-        <div style={{ fontSize: '12px', color: '#374151', marginBottom: '4px' }}>
+      <div className="mb-3">
+        <div className={`text-xs mb-1 ${metaTextClass}`}>
           <strong>Estimated Benefit:</strong> {recommendation.estimatedBenefit}
         </div>
-        <div style={{ fontSize: '12px', color: '#6B7280' }}>
+        <div className={`text-xs ${priorityTextClass}`}>
           Effort: {recommendation.effort} | Category: {recommendation.category}
         </div>
       </div>
 
       {recommendation.implementationSteps.length > 0 && (
-        <details style={{ marginBottom: '12px' }}>
-          <summary style={{ fontSize: '12px', color: '#374151', cursor: 'pointer' }}>
+        <details className="mb-3">
+          <summary className={`text-xs cursor-pointer ${metaTextClass}`}>
             Implementation Steps ({recommendation.implementationSteps.length})
           </summary>
-          <ul style={{ margin: '8px 0 0 16px', fontSize: '11px', color: '#6B7280' }}>
+          <ul className={`mt-2 ml-4 text-xs ${priorityTextClass}`}>
             {recommendation.implementationSteps.map((step, index) => (
-              <li key={index} style={{ marginBottom: '4px' }}>{step}</li>
+              <li key={index} className="mb-1">{step}</li>
             ))}
           </ul>
         </details>
       )}
 
       {onImplement && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <div className="flex justify-end">
           <button
             onClick={() => onImplement(recommendation.id)}
-            style={{
-              padding: '6px 16px',
-              border: 'none',
-              borderRadius: '4px',
-              background: '#3B82F6',
-              color: 'white',
-              fontSize: '12px',
-              cursor: 'pointer'
-            }}
+            className={`px-4 py-1.5 border-none rounded text-xs text-white cursor-pointer ${buttonBgClass} ${HOVER_BACKGROUND_EFFECTS.BLUE_LIGHT}`}
           >
             Start Implementation
           </button>
@@ -406,6 +366,14 @@ const RecommendationCard: React.FC<{
 // ============================================================================
 
 export const AnalyticsDashboard: React.FC = () => {
+  // 🎨 ENTERPRISE DYNAMIC STYLING - NO INLINE STYLES
+  const loadingBgClass = useDynamicBackgroundClass('#F9FAFB');
+  const errorTextClass = useDynamicTextClass('#EF4444');
+  const grayTextClass = useDynamicTextClass('#6B7280');
+  const mainBgClass = useDynamicBackgroundClass('#F9FAFB');
+  const titleTextClass = useDynamicTextClass('#000');
+  const refreshButtonBgClass = useDynamicBackgroundClass('white');
+
   // ========================================================================
   // STATE MANAGEMENT
   // ========================================================================
@@ -540,13 +508,13 @@ export const AnalyticsDashboard: React.FC = () => {
     const chartData = prepareChartData(report);
 
     return (
-      <div style={{ display: 'grid', gap: '24px' }}>
+      <div className="grid gap-6">
         {/* Executive Metrics */}
         <div>
-          <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: '600' }}>
+          <h3 className={`m-0 mb-4 text-lg font-semibold ${titleTextClass}`}>
             Executive Summary
           </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
+          <div className="grid grid-cols-auto-fit-250 gap-4">
             <MetricCard
               title="System Health Score"
               value={report.executiveMetrics.systemHealthScore}
@@ -584,10 +552,10 @@ export const AnalyticsDashboard: React.FC = () => {
 
         {/* Key Metrics */}
         <div>
-          <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: '600' }}>
+          <h3 className={`m-0 mb-4 text-lg font-semibold ${titleTextClass}`}>
             Key Metrics
           </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+          <div className="grid grid-cols-auto-fit-200 gap-4">
             <MetricCard
               title="Total Events"
               value={report.eventMetrics.totalEvents}
@@ -621,7 +589,7 @@ export const AnalyticsDashboard: React.FC = () => {
         </div>
 
         {/* Charts */}
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
+        <div className="grid grid-cols-[2fr_1fr] gap-6">
           <SimpleChart
             title="Events Over Time"
             data={chartData.eventsOverTimeChart}
@@ -641,12 +609,12 @@ export const AnalyticsDashboard: React.FC = () => {
 
   const renderInsightsTab = (report: AnalyticsReport) => {
     return (
-      <div style={{ display: 'grid', gap: '24px' }}>
+      <div className="grid gap-6">
         <div>
-          <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: '600' }}>
+          <h3 className={`m-0 mb-4 text-lg font-semibold ${titleTextClass}`}>
             Analytics Insights ({report.insights.length})
           </h3>
-          <div style={{ display: 'grid', gap: '16px' }}>
+          <div className="grid gap-4">
             {report.insights.map(insight => (
               <InsightCard
                 key={insight.id}
@@ -658,10 +626,10 @@ export const AnalyticsDashboard: React.FC = () => {
         </div>
 
         <div>
-          <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: '600' }}>
+          <h3 className={`m-0 mb-4 text-lg font-semibold ${titleTextClass}`}>
             Recommendations ({report.recommendations.length})
           </h3>
-          <div style={{ display: 'grid', gap: '16px' }}>
+          <div className="grid gap-4">
             {report.recommendations.map(recommendation => (
               <RecommendationCard
                 key={recommendation.id}
@@ -681,16 +649,10 @@ export const AnalyticsDashboard: React.FC = () => {
 
   if (dashboardState.isLoading) {
     return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '400px',
-        background: '#F9FAFB'
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '24px', marginBottom: '8px' }}>📊</div>
-          <div style={{ color: '#6B7280' }}>Loading analytics...</div>
+      <div className={`flex justify-center items-center h-[400px] ${loadingBgClass}`}>
+        <div className="text-center">
+          <div className="text-2xl mb-2">📊</div>
+          <div className={grayTextClass}>Loading analytics...</div>
         </div>
       </div>
     );
@@ -698,27 +660,14 @@ export const AnalyticsDashboard: React.FC = () => {
 
   if (dashboardState.error) {
     return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '400px',
-        background: '#F9FAFB'
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '24px', marginBottom: '8px', color: '#EF4444' }}>❌</div>
-          <div style={{ color: '#EF4444', marginBottom: '8px' }}>Error loading analytics</div>
-          <div style={{ color: '#6B7280', fontSize: '14px' }}>{dashboardState.error}</div>
+      <div className={`flex justify-center items-center h-[400px] ${loadingBgClass}`}>
+        <div className="text-center">
+          <div className={`text-2xl mb-2 ${errorTextClass}`}>❌</div>
+          <div className={`mb-2 ${errorTextClass}`}>Error loading analytics</div>
+          <div className={`text-sm ${grayTextClass}`}>{dashboardState.error}</div>
           <button
             onClick={handleRefresh}
-            style={{
-              marginTop: '16px',
-              padding: '8px 16px',
-              border: '1px solid #D1D5DB',
-              borderRadius: '6px',
-              background: 'white',
-              cursor: 'pointer'
-            }}
+            className={`mt-4 px-4 py-2 border border-gray-300 rounded-md cursor-pointer ${refreshButtonBgClass} ${HOVER_BACKGROUND_EFFECTS.GRAY_LIGHT}`}
           >
             Retry
           </button>
@@ -734,26 +683,17 @@ export const AnalyticsDashboard: React.FC = () => {
   const report = dashboardState.currentReport;
 
   return (
-    <div style={{
-      background: '#F9FAFB',
-      minHeight: '100vh',
-      padding: '24px'
-    }}>
+    <div className={`${mainBgClass} min-h-screen p-6`}>
       {/* Header */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '24px'
-      }}>
+      <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 style={{ margin: '0 0 8px 0', fontSize: '28px', fontWeight: 'bold' }}>
+          <h1 className={`m-0 mb-2 text-4xl font-bold ${titleTextClass}`}>
             📊 Event Analytics & Reporting
           </h1>
-          <p style={{ margin: 0, color: '#6B7280' }}>
+          <p className={`m-0 ${grayTextClass}`}>
             {dashboardState.selectedTimeRange.start.toLocaleDateString('el-GR')} - {dashboardState.selectedTimeRange.end.toLocaleDateString('el-GR')}
             {dashboardState.lastUpdated && (
-              <span style={{ marginLeft: '16px' }}>
+              <span className="ml-4">
                 Last updated: {dashboardState.lastUpdated.toLocaleTimeString('el-GR')}
               </span>
             )}
@@ -761,27 +701,14 @@ export const AnalyticsDashboard: React.FC = () => {
         </div>
         <button
           onClick={handleRefresh}
-          style={{
-            padding: '8px 16px',
-            border: '1px solid #D1D5DB',
-            borderRadius: '6px',
-            background: 'white',
-            color: '#374151',
-            cursor: 'pointer',
-            fontSize: '14px'
-          }}
+          className={`px-4 py-2 border border-gray-300 rounded-md text-sm text-gray-700 cursor-pointer ${refreshButtonBgClass} ${HOVER_BACKGROUND_EFFECTS.GRAY_LIGHT}`}
         >
           🔄 Refresh
         </button>
       </div>
 
       {/* Navigation Tabs */}
-      <div style={{
-        display: 'flex',
-        gap: '4px',
-        marginBottom: '24px',
-        borderBottom: '1px solid #E5E7EB'
-      }}>
+      <div className="flex gap-1 mb-6 border-b border-gray-200">
         {[
           { id: 'overview', label: 'Overview', icon: '📈' },
           { id: 'events', label: 'Events', icon: '📋' },
@@ -799,16 +726,11 @@ export const AnalyticsDashboard: React.FC = () => {
                 setActiveTab(tab.id as typeof activeTab);
               }
             }}
-            style={{
-              padding: '12px 16px',
-              border: 'none',
-              borderBottom: activeTab === tab.id ? '2px solid #3B82F6' : '2px solid transparent',
-              background: 'transparent',
-              color: activeTab === tab.id ? '#3B82F6' : '#6B7280',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: '500'
-            }}
+            className={`px-4 py-3 border-none border-b-2 bg-transparent cursor-pointer text-sm font-medium ${
+              activeTab === tab.id
+                ? 'border-blue-500 text-blue-500'
+                : 'border-transparent text-gray-500'
+            } ${HOVER_BACKGROUND_EFFECTS.GRAY_LIGHT}`}
           >
             {tab.icon} {tab.label}
           </button>
@@ -820,17 +742,11 @@ export const AnalyticsDashboard: React.FC = () => {
         {activeTab === 'overview' && renderOverviewTab(report)}
         {activeTab === 'insights' && renderInsightsTab(report)}
         {(activeTab === 'events' || activeTab === 'alerts' || activeTab === 'rules' || activeTab === 'notifications') && (
-          <div style={{
-            background: 'white',
-            border: '1px solid #E5E7EB',
-            borderRadius: '8px',
-            padding: '24px',
-            textAlign: 'center'
-          }}>
-            <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: '600' }}>
+          <div className={`${refreshButtonBgClass} border border-gray-200 rounded-lg p-6 text-center`}>
+            <h3 className={`m-0 mb-4 text-lg font-semibold ${titleTextClass}`}>
               {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Tab
             </h3>
-            <p style={{ margin: 0, color: '#6B7280' }}>
+            <p className={`m-0 ${grayTextClass}`}>
               Detailed {activeTab} analytics will be implemented in the next iteration.
               For now, check the Overview and Insights tabs.
             </p>

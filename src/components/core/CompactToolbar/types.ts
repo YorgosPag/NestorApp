@@ -110,8 +110,8 @@ export interface CompactToolbarProps {
 
   // Action handlers
   onNewItem?: () => void;
-  onEditItem?: (id: number) => void;
-  onDeleteItems?: (ids: number[]) => void;
+  onEditItem?: (id: string) => void;
+  onDeleteItems?: (ids: string[]) => void;
   onExport?: () => void;
   onImport?: () => void;
   onRefresh?: () => void;

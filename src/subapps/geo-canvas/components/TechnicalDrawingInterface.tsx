@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { HardHat, Ruler, FileText, ExternalLink, Settings, Database, AlertTriangle, Bell, Monitor, Zap, X, Home, Building, Crystal } from 'lucide-react';
+import { HardHat, Ruler, FileText, ExternalLink, Settings, Database, AlertTriangle, Bell, Monitor, Zap, X, Home, Building, Sparkles } from 'lucide-react';
 import { useCentralizedPolygonSystem } from '../systems/polygon-system';
 import { useRealEstateMatching } from '@/services/real-estate-monitor/useRealEstateMatching';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
@@ -436,7 +436,7 @@ export function TechnicalDrawingInterface({
                 {[
                   { id: 'spitogatos', name: t('hardcodedTexts.values.spitogatosGr'), icon: Home },
                   { id: 'xe', name: t('hardcodedTexts.values.xeGr'), icon: Building },
-                  { id: 'future-platform', name: t('drawingInterfaces.technical.automatedAlerts.morePlatforms'), icon: Crystal, disabled: true }
+                  { id: 'future-platform', name: t('drawingInterfaces.technical.automatedAlerts.morePlatforms'), icon: Sparkles, disabled: true }
                 ].map((platform) => (
                   <label key={platform.id} className="flex items-center space-x-2">
                     <input

@@ -9,6 +9,7 @@ import { Input } from '../../../../../../components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '../../../../../../components/ui/popover';
 import { Palette } from 'lucide-react';
 import { HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
+import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 
 interface LineColorControlProps {
   value: string;
@@ -41,6 +42,16 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [tempColor, setTempColor] = useState(value);
 
+  // 🎨 ENTERPRISE DYNAMIC STYLING - NO INLINE STYLES (CLAUDE.md compliant)
+  const valueBgClass = useDynamicBackgroundClass(value);
+  const tempColorBgClass = useDynamicBackgroundClass(tempColor);
+
+  // Precompute all preset color classes
+  const presetColorClasses = PRESET_COLORS.map(color => ({
+    color,
+    bgClass: useDynamicBackgroundClass(color)
+  }));
+
   const handleColorChange = (color: string) => {
     setTempColor(color);
     onChange(color);
@@ -67,8 +78,7 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
               className={`w-full justify-start gap-2 bg-gray-900 border-gray-700 ${HOVER_BACKGROUND_EFFECTS.GRAY_DARK}`}
             >
               <div
-                className="w-5 h-5 rounded border border-gray-600"
-                style={{ backgroundColor: value }}
+                className={`w-5 h-5 rounded border border-gray-600 ${valueBgClass}`}
               />
               <span className="text-gray-100 flex-1 text-left">
                 {showHex ? value.toUpperCase() : 'Select Color'}
@@ -83,7 +93,7 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
               <div>
                 <p className="text-xs text-gray-400 mb-2">AutoCAD Colors</p>
                 <div className="grid grid-cols-5 gap-1">
-                  {PRESET_COLORS.map((color) => (
+                  {presetColorClasses.map(({ color, bgClass }) => (
                     <button
                       key={color}
                       onClick={() => handlePresetClick(color)}
@@ -93,8 +103,8 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
                           ? 'border-blue-500 scale-110'
                           : `border-gray-700 ${HOVER_BORDER_EFFECTS.GRAY}`
                         }
+                        ${bgClass}
                       `}
-                      style={{ backgroundColor: color }}
                       title={color}
                     />
                   ))}
@@ -130,7 +140,7 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
               </div>
 
               {/* Live preview */}
-              <div className="h-2 rounded" style={{ backgroundColor: tempColor }} />
+              <div className={`h-2 rounded ${tempColorBgClass}`} />
             </div>
           </PopoverContent>
         </Popover>

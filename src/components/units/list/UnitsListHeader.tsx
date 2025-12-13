@@ -3,7 +3,7 @@
 import React from 'react';
 import { CommonBadge } from "@/core/badges";
 import { Home, Search, Settings } from 'lucide-react';
-import { formatCurrency } from '@/lib/project-utils';
+import { formatCurrency } from '@/lib/intl-utils';
 import { SectionHeader } from '@/core/headers';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';

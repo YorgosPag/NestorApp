@@ -17,10 +17,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 interface TabContentProps {
-  selectedItems?: number[];
+  selectedItems?: string[];
   onNewProject?: () => void;
-  onEditProject?: (id: number) => void;
-  onDeleteProject?: (ids: number[]) => void;
+  onEditProject?: (id: string) => void;
+  onDeleteProject?: (ids: string[]) => void;
   onExport?: () => void;
   onRefresh?: () => void;
   searchTerm?: string;

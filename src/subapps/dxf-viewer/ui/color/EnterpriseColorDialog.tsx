@@ -25,6 +25,7 @@ import { FocusScope } from '@react-aria/focus';
 import { EnterpriseColorPicker } from './EnterpriseColorPicker';
 import type { EnterpriseColorDialogProps } from './types';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 
 /**
  * Enterprise Color Dialog Component
@@ -109,10 +110,7 @@ export function EnterpriseColorDialog({
               {...overlayProps}
               {...dialogProps}
               ref={overlayRef}
-              className="relative z-[9999] bg-gray-900 border-2 border-gray-600 rounded-lg shadow-2xl max-h-[90vh] overflow-y-auto"
-              style={{
-                maxWidth: '400px',
-              }}
+              className="relative z-[9999] bg-gray-900 border-2 border-gray-600 rounded-lg shadow-2xl max-h-[90vh] overflow-y-auto max-w-[400px]"
             >
               {/* Header */}
               <div className="flex items-center justify-between p-4 border-b border-gray-700">
@@ -207,8 +205,7 @@ export function ColorDialogTrigger({
         `}
       >
         <div
-          className="w-6 h-6 rounded border-2 border-gray-600"
-          style={{ backgroundColor: value }}
+          className={`w-6 h-6 rounded border-2 border-gray-600 ${useDynamicBackgroundClass(value)}`}
         />
         <span className="text-sm text-gray-300">{label}</span>
       </button>

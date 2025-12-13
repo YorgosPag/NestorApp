@@ -271,3 +271,112 @@ export const getPricePerSqmUnit = (): string => {
   const locale = getCurrentLocale();
   return locale.startsWith('el') ? '€/τ.μ.' : '€/m²';
 };
+
+// ============================================================================
+// 🔄 CENTRALIZED DATE FORMATTING - BACKWARD COMPATIBILITY ALIASES
+// ============================================================================
+
+/**
+ * 🎯 ENTERPRISE DATE FORMATTING CENTRALIZATION (2025-12-13)
+ *
+ * Unified date formatting system - Single Source of Truth για όλες τις date operations.
+ * Αντικαθιστά τις διπλότυπες functions από project-utils.ts, obligations-utils.ts, validation.ts
+ *
+ * ✅ BENEFITS:
+ * - Zero code duplication
+ * - Consistent date formatting across app
+ * - Locale-aware formatting
+ * - Enterprise-grade type safety
+ *
+ * 📍 MIGRATION GUIDE:
+ * - project-utils.ts formatDate → Use formatDateShort
+ * - obligations-utils.ts formatDate → Use formatDateLong
+ * - validation.ts formatDateForDisplay → Use formatDateForDisplay
+ * - All other date formatting → Use main formatDate with options
+ */
+
+/**
+ * Format date in short format (dd/MM/yyyy) - Replaces project-utils.ts formatDate
+ *
+ * @param dateInput - Date, string, number, or undefined
+ * @returns Short formatted date or fallback
+ *
+ * @example formatDateShort('2025-12-13') // "13/12/2025"
+ * @example formatDateShort(undefined) // "-"
+ */
+export const formatDateShort = (dateInput?: Date | string | number): string => {
+  if (!dateInput) return '-';
+
+  try {
+    return formatDate(dateInput, {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  } catch {
+    return '-';
+  }
+};
+
+/**
+ * Format date in long format (e.g. "13 Δεκεμβρίου 2025") - Replaces obligations-utils.ts formatDate
+ *
+ * @param dateInput - Date object (required)
+ * @returns Long formatted date or fallback
+ *
+ * @example formatDateLong(new Date()) // "13 Δεκεμβρίου 2025"
+ * @example formatDateLong(invalidDate) // "-"
+ */
+export const formatDateLong = (dateInput: Date): string => {
+  if (!dateInput || isNaN(dateInput.getTime())) return '-';
+
+  return formatDate(dateInput, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+};
+
+/**
+ * Format date for display in forms/validation - Replaces validation.ts formatDateForDisplay
+ *
+ * @param dateStr - Date string (optional)
+ * @returns Display formatted date or empty string
+ *
+ * @example formatDateForDisplay('2025-12-13') // "13/12/2025"
+ * @example formatDateForDisplay(undefined) // ""
+ */
+export const formatDateForDisplay = (dateStr?: string): string => {
+  if (!dateStr) return '';
+
+  try {
+    const dateObj = new Date(dateStr);
+    if (isNaN(dateObj.getTime())) return '';
+
+    return formatDate(dateObj);
+  } catch {
+    return '';
+  }
+};
+
+/**
+ * Format date in Greek short format with validation - Enhanced version
+ *
+ * @param dateInput - Date, string, number, or undefined
+ * @returns Greek formatted date with fallback
+ *
+ * @example formatDateGreek('2025-12-13') // "13/12/2025"
+ */
+export const formatDateGreek = (dateInput?: Date | string | number): string => {
+  if (!dateInput) return '-';
+
+  try {
+    return formatDate(dateInput, {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  } catch {
+    return '-';
+  }
+};

@@ -3,7 +3,7 @@
 
 import React from 'react';
 import type { Project } from '../types';
-import { formatCurrency } from '@/lib/project-utils';
+import { formatCurrency } from '@/lib/intl-utils';
 
 interface StatsGridProps {
     project: Project;

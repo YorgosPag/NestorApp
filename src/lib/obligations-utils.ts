@@ -302,13 +302,13 @@ export const getContentSummary = (document: ObligationDocument) => {
 /* ============================================================================
  * Dates
  * ==========================================================================*/
+// ⚠️ DEPRECATED: Use formatDateLong from intl-utils.ts for enterprise date formatting
+// 🔄 BACKWARD COMPATIBILITY: This function is maintained for legacy support
+// 📍 MIGRATION: import { formatDateLong } from '@/lib/intl-utils'
 export const formatDate = (date: Date): string => {
-  if (!date || isNaN(date.getTime())) return "-";
-  return new Intl.DateTimeFormat("el-GR", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  }).format(date);
+  // Re-export centralized function for backward compatibility
+  const { formatDateLong } = require('./intl-utils');
+  return formatDateLong(date);
 };
 
 export const formatShortDate = (date: Date): string => {

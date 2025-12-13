@@ -1,6 +1,4 @@
-
-import { db } from '@/lib/firebase-admin';
-import { collection, query, where, getDocs, doc, getDoc, documentId } from 'firebase-admin/firestore';
+import { db, safeDbOperation } from '@/lib/firebase-admin';
 import type { IProjectsRepository } from '../contracts';
 import type { Project } from '@/types/project';
 import type { Building } from '@/components/building-management/mockData';
@@ -16,27 +14,20 @@ const chunkArray = <T>(arr: T[], size: number): T[][] => {
   return chunks;
 };
 
-
 export class FirestoreProjectsRepository implements IProjectsRepository {
 
   async getProjectsByCompanyId(companyId: string): Promise<Project[]> {
-    // Debug logging removed: console.log(`🏗️ FirestoreProjectsRepository: Loading projects for companyId: "${companyId}"`);
+    console.log(`🏗️ FirestoreProjectsRepository: Loading projects for companyId: "${companyId}"`);
 
-    const database = db();
-    if (!database) {
-      // Error logging removed //('🏗️ FirestoreProjectsRepository: Firebase admin not initialized');
-      // Error logging removed //('🏗️ FirestoreProjectsRepository: Check environment variables FIREBASE_PROJECT_ID and FIREBASE_SERVICE_ACCOUNT_KEY');
-      return [];
-    }
-    
-    // Debug logging removed: console.log('🏗️ FirestoreProjectsRepository: Firebase admin is initialized correctly');
-    
-    try {
+    return await safeDbOperation(async (database) => {
+      // Import firestore functions at runtime
+      const { collection, query, where, getDocs } = await import('firebase-admin/firestore');
+
       // First, let's see ALL projects to understand the data structure
-      // Debug logging removed: console.log(`🔍 DEBUG: Fetching ALL projects to see available companyIds...`);
+      console.log(`🔍 DEBUG: Fetching ALL projects to see available companyIds...`);
       const allProjectsQuery = query(collection(database, 'projects'));
       const allSnapshot = await getDocs(allProjectsQuery);
-      // Debug logging removed: console.log(`🔍 DEBUG: Total projects in Firestore: ${allSnapshot.docs.length}`);
+      console.log(`🔍 DEBUG: Total projects in Firestore: ${allSnapshot.docs.length}`);
 
       allSnapshot.docs.forEach(doc => {
         const data = doc.data();
@@ -49,70 +40,97 @@ export class FirestoreProjectsRepository implements IProjectsRepository {
         collection(database, 'projects'),
         where('companyId', '==', companyId)
       );
-      
+
       const snapshot = await getDocs(projectsQuery);
-      // Debug logging removed: console.log('🔍 Found', snapshot.docs.length, 'projects');
-      // Debug logging removed: console.log(`🏗️ FirestoreProjectsRepository: Found ${snapshot.docs.length} projects for companyId "${companyId}"`);
-      
+      console.log(`🏗️ FirestoreProjectsRepository: Found ${snapshot.docs.length} projects for companyId "${companyId}"`);
+
       const projects: Project[] = snapshot.docs.map(doc => ({
-        id: parseInt(doc.id),
+        id: doc.id,
         ...doc.data()
       } as Project));
-      
-      // Debug logging removed: console.log(`🏗️ FirestoreProjectsRepository: Projects:`, projects.map(p => ({
-      //   id: p.id,
-      //   name: p.name,
-      //   company: p.company
-      // })));
-      
+
+      console.log(`🏗️ FirestoreProjectsRepository: Projects:`, projects.map(p => ({
+        id: p.id,
+        name: p.name,
+        company: p.company
+      })));
+
       return projects;
-    } catch (error) {
-      // Error logging removed: console.error('🏗️ FirestoreProjectsRepository: Error loading projects:', error);
-      return [];
-    }
-  }
-  
-  async getProjectById(projectId: number): Promise<Project | null> {
-    const database = db();
-    if (!database) return null;
-    const docRef = doc(database, 'projects', String(projectId));
-    const docSnap = await getDoc(docRef);
-    if (!docSnap.exists()) {
-      return null;
-    }
-    return { id: parseInt(docSnap.id), ...docSnap.data() } as Project;
+    }, []);
   }
 
-  async getBuildingsByProjectId(projectId: number): Promise<Building[]> {
-    const database = db();
-    if (!database) return [];
-    const q = query(collection(database, 'buildings'), where('projectId', '==', projectId));
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: parseInt(doc.id), ...doc.data() } as Building));
+  async getProjectById(projectId: string): Promise<Project | null> {
+    return await safeDbOperation(async (database) => {
+      const { doc, getDoc } = await import('firebase-admin/firestore');
+
+      const docRef = doc(database, 'projects', projectId);
+      const docSnap = await getDoc(docRef);
+
+      if (!docSnap.exists()) {
+        return null;
+      }
+
+      return { id: docSnap.id, ...docSnap.data() } as Project;
+    }, null);
   }
-  
-  async getUnitsByBuildingId(buildingId: string): Promise<Property[]> {
-      const database = db();
-      if (!database) return [];
-      const q = query(collection(database, 'units'), where('buildingId', '==', buildingId));
+
+  async getBuildingsByProjectId(projectId: string): Promise<Building[]> {
+    return await safeDbOperation(async (database) => {
+      const { collection, query, where, getDocs } = await import('firebase-admin/firestore');
+
+      const q = query(
+        collection(database, 'buildings'),
+        where('projectId', '==', projectId)
+      );
       const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Property));
+
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as Building));
+    }, []);
+  }
+
+  async getUnitsByBuildingId(buildingId: string): Promise<Property[]> {
+    return await safeDbOperation(async (database) => {
+      const { collection, query, where, getDocs } = await import('firebase-admin/firestore');
+
+      const q = query(
+        collection(database, 'units'),
+        where('buildingId', '==', buildingId)
+      );
+      const snapshot = await getDocs(q);
+
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as Property));
+    }, []);
   }
 
   async getContactsByIds(ids: string[]): Promise<Contact[]> {
-    const database = db();
-    if (ids.length === 0 || !database) return [];
-    
-    const allContacts: Contact[] = [];
-    const idChunks = chunkArray(ids, 10);
-    
-    for (const chunk of idChunks) {
-      const q = query(collection(database, 'contacts'), where(documentId(), 'in', chunk));
-      const snapshot = await getDocs(q);
-      const contacts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Contact));
-      allContacts.push(...contacts);
-    }
+    if (ids.length === 0) return [];
 
-    return allContacts;
+    return await safeDbOperation(async (database) => {
+      const { collection, query, where, getDocs, documentId } = await import('firebase-admin/firestore');
+
+      const allContacts: Contact[] = [];
+      const idChunks = chunkArray(ids, 10);
+
+      for (const chunk of idChunks) {
+        const q = query(
+          collection(database, 'contacts'),
+          where(documentId(), 'in', chunk)
+        );
+        const snapshot = await getDocs(q);
+        const contacts = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        } as Contact));
+        allContacts.push(...contacts);
+      }
+
+      return allContacts;
+    }, []);
   }
 }

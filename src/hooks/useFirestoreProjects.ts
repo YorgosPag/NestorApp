@@ -3,7 +3,7 @@ import { collection, query, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 export interface FirestoreProject {
-  id: number;
+  id: string;
   name: string;
   title: string;
   status: 'planning' | 'in_progress' | 'completed' | 'on_hold' | 'cancelled';
@@ -87,7 +87,7 @@ export function useFirestoreProjects() {
             }
 
             return {
-              id: parseInt(doc.id),
+              id: doc.id,
               ...data,
               status: mappedStatus,
               startDate: data.startDate || '',
@@ -107,7 +107,7 @@ export function useFirestoreProjects() {
             }
 
             return {
-              id: parseInt(doc.id),
+              id: doc.id,
               ...data,
               status: mappedStatus,
               startDate: data.startDate || '',

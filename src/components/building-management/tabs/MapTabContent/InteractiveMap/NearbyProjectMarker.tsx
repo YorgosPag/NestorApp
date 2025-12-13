@@ -7,7 +7,7 @@ import { CORE_HOVER_TRANSFORMS, GROUP_HOVER_PATTERNS } from '@/components/ui/eff
 
 interface NearbyProjectMarkerProps {
   project: {
-    id: number;
+    id: string;
     name: string;
     distance: string;
     status: string;

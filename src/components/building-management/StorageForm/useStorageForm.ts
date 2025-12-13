@@ -10,7 +10,7 @@ import type { StorageUnit, StorageType } from '@/types/storage';
 interface UseStorageFormProps {
   unit: StorageUnit | null;
   building: {
-    id: number;
+    id: string;
     name: string;
     project: string;
     company: string;

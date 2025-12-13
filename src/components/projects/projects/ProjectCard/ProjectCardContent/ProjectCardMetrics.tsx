@@ -7,7 +7,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { Project } from '@/types/project';
-import { formatCurrency } from '@/lib/project-utils';
+import { formatCurrency } from '@/lib/intl-utils';
 
 interface ProjectCardMetricsProps {
   project: Project;

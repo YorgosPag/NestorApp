@@ -26,8 +26,8 @@ interface ProjectToolbarProps {
   activeFilters?: string[];
   onFiltersChange?: (filters: string[]) => void;
   onNewProject?: () => void;
-  onEditProject?: (id: number) => void;
-  onDeleteProject?: (ids: number[]) => void;
+  onEditProject?: (id: string) => void;
+  onDeleteProject?: (ids: string[]) => void;
   onExport?: () => void;
   onRefresh?: () => void;
 }

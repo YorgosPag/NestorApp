@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS, CORE_HOVER_TRANSFORMS, HOVER_TEXT_EFFECTS } from '../../../../../ui/effects';
+import { useDynamicBackgroundClass, useDynamicBorderClass } from '@/components/ui/utils/dynamic-styles';
+import { PROPERTY_STATUS_LABELS, PROPERTY_STATUS_COLORS } from '@/constants/statuses';
 
 interface LayersSettingsProps {
   // Για μελλοντική επέκταση μπορούμε να προσθέσουμε props
@@ -9,14 +11,23 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
   const [activeTab, setActiveTab] = useState<'outlines' | 'fills'>('outlines');
   const [selectedPreset, setSelectedPreset] = useState<number>(0);
 
-  // Mock preset colors για εμφάνιση
+  // 🎯 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΟ: Χρησιμοποιούμε τα centralized constants αντί για διάσπαρτα
   const presetColors = [
-    { name: 'Προς Πώληση', color: '#22c55e' },
-    { name: 'Προς Ενοικίαση', color: '#3b82f6' },
-    { name: 'Δεσμευμένο', color: '#f59e0b' },
-    { name: 'Πουλημένο', color: '#ef4444' },
-    { name: 'Οικοπεδούχου', color: '#8b5cf6' }
+    { name: PROPERTY_STATUS_LABELS['for-sale'], color: PROPERTY_STATUS_COLORS['for-sale'] },
+    { name: PROPERTY_STATUS_LABELS['for-rent'], color: PROPERTY_STATUS_COLORS['for-rent'] },
+    { name: PROPERTY_STATUS_LABELS['reserved'], color: PROPERTY_STATUS_COLORS['reserved'] },
+    { name: PROPERTY_STATUS_LABELS['sold'], color: PROPERTY_STATUS_COLORS['sold'] },
+    { name: PROPERTY_STATUS_LABELS['landowner'], color: PROPERTY_STATUS_COLORS['landowner'] }
   ];
+
+  // 🎨 ENTERPRISE DYNAMIC STYLING - NO INLINE STYLES (CLAUDE.md compliant)
+  // Precompute all dynamic classes for preset colors
+  const presetClasses = presetColors.map(preset => ({
+    ...preset,
+    borderClass: useDynamicBorderClass(preset.color, '2px'),
+    bgClass: useDynamicBackgroundClass(preset.color),
+    bgWithOpacityClass: useDynamicBackgroundClass(preset.color, 0.5)
+  }));
 
   return (
     <div className="p-4">
@@ -38,15 +49,16 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
         </div>
         <div className="p-2 bg-gray-800 rounded border border-gray-600 flex justify-center">
           <div className="flex gap-1">
-            {presetColors.map((preset, index) => (
+            {presetClasses.map((preset, index) => (
               <div
                 key={preset.name}
-                className={`w-8 h-8 border-2 rounded cursor-pointer ${CORE_HOVER_TRANSFORMS.SCALE_UP} transition-transform`}
+                className={`
+                  w-8 h-8 border-2 rounded cursor-pointer transition-transform
+                  ${CORE_HOVER_TRANSFORMS.SCALE_UP}
+                  ${preset.borderClass}
+                  ${activeTab === 'fills' ? preset.bgWithOpacityClass : ''}
+                `}
                 title={preset.name}
-                style={{
-                  borderColor: preset.color,
-                  backgroundColor: activeTab === 'fills' ? `${preset.color}80` : 'transparent'
-                }}
               />
             ))}
           </div>
@@ -87,7 +99,7 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
             <div className="p-2 bg-gray-700 rounded space-y-2">
               <div className="text-sm text-white font-medium">Χρώματα Περιγραμμάτων</div>
               <div className="grid grid-cols-5 gap-2">
-                {presetColors.map((preset, index) => (
+                {presetClasses.map((preset, index) => (
                   <button
                     key={preset.name}
                     onClick={() => setSelectedPreset(index)}
@@ -98,8 +110,7 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
                     }`}
                   >
                     <div
-                      className="w-full h-6 rounded border border-gray-400"
-                      style={{ backgroundColor: preset.color }}
+                      className={`w-full h-6 rounded border border-gray-400 ${preset.bgClass}`}
                     />
                     <div className="text-xs text-white mt-1 truncate">{preset.name}</div>
                   </button>
@@ -128,7 +139,7 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
             <div className="p-2 bg-gray-700 rounded space-y-2">
               <div className="text-sm text-white font-medium">Χρώματα Γεμισμάτων</div>
               <div className="grid grid-cols-5 gap-2">
-                {presetColors.map((preset, index) => (
+                {presetClasses.map((preset, index) => (
                   <button
                     key={preset.name}
                     onClick={() => setSelectedPreset(index)}
@@ -139,8 +150,7 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
                     }`}
                   >
                     <div
-                      className="w-full h-6 rounded border border-gray-400"
-                      style={{ backgroundColor: preset.color }}
+                      className={`w-full h-6 rounded border border-gray-400 ${preset.bgClass}`}
                     />
                     <div className="text-xs text-white mt-1 truncate">{preset.name}</div>
                   </button>

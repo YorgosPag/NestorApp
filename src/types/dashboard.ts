@@ -1,7 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 
 export interface Activity {
-  id: number;
+  id: string;
   type: string;
   title: string;
   description: string;
@@ -11,7 +11,7 @@ export interface Activity {
 }
 
 export interface Meeting {
-  id: number;
+  id: string;
   title: string;
   time: string;
   date: string;

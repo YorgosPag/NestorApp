@@ -5,6 +5,7 @@
 // PURPOSE: Ruler background settings UI (color, opacity, width, visibility)
 
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 
 /**
  * ╔════════════════════════════════════════════════════════════════════════════╗
@@ -59,6 +60,9 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
 
   // Ruler background color state (για εύκολο syncing με color picker)
   const [rulerBackgroundColor, setRulerBackgroundColor] = useState<string>('#ffffff');
+
+  // 🎨 ENTERPRISE DYNAMIC STYLING - NO INLINE STYLES (CLAUDE.md compliant)
+  const rulerBgClass = useDynamicBackgroundClass(rulerBackgroundColor);
 
   // Sync local state with ruler settings
   useEffect(() => {
@@ -186,8 +190,7 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
         </div>
         <div className="flex items-center gap-2">
           <div
-            className="w-6 h-6 rounded border border-gray-500"
-            style={{ backgroundColor: rulerBackgroundColor }}
+            className={`w-6 h-6 rounded border border-gray-500 ${rulerBgClass}`}
           />
           <input
             type="color"

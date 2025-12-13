@@ -14,7 +14,7 @@ import { StorageFormFooter } from './StorageFormFooter';
 interface StorageFormProps {
   unit: StorageUnit | null;
   building: {
-    id: number;
+    id: string;
     name: string;
     project: string;
     company: string;

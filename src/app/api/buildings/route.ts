@@ -11,9 +11,9 @@ export async function GET(request: NextRequest) {
       collection(db, 'buildings'),
       orderBy('createdAt', 'desc')
     );
-    
+
     const snapshot = await getDocs(buildingsQuery);
-    
+
     const buildings = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('❌ Error fetching buildings:', error);
-    
+
     return NextResponse.json({
       success: false,
       error: 'Failed to fetch buildings',

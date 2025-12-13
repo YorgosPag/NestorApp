@@ -13,7 +13,7 @@ export enum NotificationType {
 }
 
 export interface Notification {
-  id: number;
+  id: string;
   type: NotificationType;
   title: string;
   description: string;

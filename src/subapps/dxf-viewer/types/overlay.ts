@@ -1,5 +1,5 @@
 import type { Point2D } from '../rendering/types/Types';
-import { PropertyStatus, PROPERTY_STATUS_COLORS } from '../../../constants/statuses';
+import { PropertyStatus, PROPERTY_STATUS_COLORS, RegionStatus } from '../../../constants/statuses';
 
 export type { Point2D } from '../rendering/types/Types';
 
@@ -29,8 +29,8 @@ export interface Region {
   style?: RegionStyle; // ToolStyle colors and properties
 }
 
-export type RegionStatus = 'draft' | 'active' | 'locked' | 'hidden' |
-  'Οικοπεδούχου' | 'Δεσμευμένο' | 'Προς Πώληση' | 'Πουλημένο' | 'Προς Ενοικίαση' | PropertyStatus;
+// 🎯 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΟ: Χρησιμοποιεί RegionStatus από constants/statuses.ts
+export type { RegionStatus } from '../../../constants/statuses';
 export type UnitType = 'studio' | '1BR' | '2BR' | '3BR' | 'maisonette' | 'store' | 'office' | 'other';
 export type OverlayLayer = 'base' | 'annotation' | 'measurement' | 'temp';
 

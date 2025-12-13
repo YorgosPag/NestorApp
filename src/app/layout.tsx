@@ -11,6 +11,7 @@ import { NotificationDrawer } from "@/components/NotificationDrawer.enterprise";
 import { ToasterClient } from "@/components/ToasterClient";
 import { NotificationProvider } from "../providers/NotificationProvider";
 import { SharedPropertiesProvider } from "@/contexts/SharedPropertiesProvider";
+import { FirebaseAuthProvider } from "@/contexts/FirebaseAuthContext";
 import { UserRoleProvider } from "@/contexts/UserRoleContext";
 import { FloorplanProvider } from "@/contexts/FloorplanContext";
 import { cn } from "@/lib/utils";
@@ -66,8 +67,9 @@ export default function RootLayout({
           storageKey="theme-preference"
         >
           <I18nProvider>
-            <UserRoleProvider>
-              <FloorplanProvider>
+            <FirebaseAuthProvider>
+              <UserRoleProvider>
+                <FloorplanProvider>
                 {/* 🏢 ENTERPRISE: Κεντρικοποιημένο Notification System */}
                 <NotificationProvider>
                   <SharedPropertiesProvider>
@@ -96,8 +98,9 @@ export default function RootLayout({
 
                 {/* ✅ το κεντρικοποιημένο NotificationProvider (sonner-based) */}
                 </NotificationProvider>
-              </FloorplanProvider>
-            </UserRoleProvider>
+                </FloorplanProvider>
+              </UserRoleProvider>
+            </FirebaseAuthProvider>
           </I18nProvider>
         </ThemeProvider>
       </body>

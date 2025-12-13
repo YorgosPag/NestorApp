@@ -21,15 +21,15 @@ export function BuildingsList({
   selectedBuilding,
   onSelectBuilding,
 }: BuildingsListProps) {
-  const [favorites, setFavorites] = useState<number[]>([1]);
+  const [favorites, setFavorites] = useState<string[]>(['1']);
   const [sortBy, setSortBy] = useState<'name' | 'progress' | 'value' | 'area' | 'date'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedItems, setSelectedItems] = useState<number[]>([]);
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [showToolbar, setShowToolbar] = useState(false);
 
-  const toggleFavorite = (buildingId: number) => {
+  const toggleFavorite = (buildingId: string) => {
     setFavorites(prev => 
       prev.includes(buildingId) 
         ? prev.filter(id => id !== buildingId)
@@ -159,9 +159,9 @@ export function BuildingsList({
               key={building.id}
               building={building}
               isSelected={selectedBuilding?.id === building.id}
-              isFavorite={favorites.includes(Number(building.id))}
+              isFavorite={favorites.includes(building.id)}
               onSelect={() => onSelectBuilding?.(building)}
-              onToggleFavorite={() => toggleFavorite(Number(building.id))}
+              onToggleFavorite={() => toggleFavorite(building.id)}
             />
           ))}
         </div>

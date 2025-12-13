@@ -3,7 +3,7 @@
 export type ProjectStatus = 'planning' | 'in_progress' | 'completed' | 'on_hold' | 'cancelled';
 
 export interface Project {
-  id: number;
+  id: string;
   name: string;
   title: string;
   status: ProjectStatus;

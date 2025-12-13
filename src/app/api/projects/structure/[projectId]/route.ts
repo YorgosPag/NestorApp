@@ -1,55 +1,92 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { FirestoreProjectsRepository } from '@/services/projects/repositories/FirestoreProjectsRepository';
-
-const projectsRepo = new FirestoreProjectsRepository();
+import { firebaseServer } from '@/lib/firebase-server';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { projectId: string } }
 ) {
   try {
-    const projectId = parseInt(params.projectId);
+    const projectId = params.projectId;
     console.log(`🏗️ API: Loading project structure for projectId: ${projectId}`);
-    
+
     // Get project details
-    const project = await projectsRepo.getProjectById(projectId);
-    if (!project) {
+    console.log(`🔍 Fetching project with ID: ${projectId}`);
+    const projectSnapshot = await firebaseServer.getDoc('projects', projectId);
+
+    if (!projectSnapshot.exists) {
+      console.log(`❌ Project with ID ${projectId} not found`);
       return NextResponse.json(
-        { success: false, error: `Project with ID ${projectId} not found` },
+        { success: false, error: `Δεν βρέθηκε έργο με ID: ${projectId}` },
         { status: 404 }
       );
     }
-    
-    // Get buildings for this project
-    const buildings = await projectsRepo.getBuildingsByProjectId(projectId);
-    
+
+    const project = { id: projectSnapshot.id, ...projectSnapshot.data() };
+    console.log(`✅ Project found: ${project.name}`);
+
+    // Get buildings for this project (handle both string and number projectId)
+    console.log(`🏢 Fetching buildings for projectId: ${projectId} (trying both string and number)`);
+
+    // Try with string projectId first
+    let buildingsSnapshot = await firebaseServer.getDocs('buildings', [
+      { field: 'projectId', operator: '==', value: projectId }
+    ]);
+
+    // If no results, try with number projectId
+    if (buildingsSnapshot.docs.length === 0) {
+      console.log(`🔄 No buildings found with string projectId, trying number: ${parseInt(projectId)}`);
+      buildingsSnapshot = await firebaseServer.getDocs('buildings', [
+        { field: 'projectId', operator: '==', value: parseInt(projectId) }
+      ]);
+    }
+
+    console.log(`🏢 Found ${buildingsSnapshot.docs.length} buildings`);
+
+    const buildings = [];
+
     // Get units for each building
-    const buildingsWithUnits = await Promise.all(
-      buildings.map(async (building) => {
-        const units = await projectsRepo.getUnitsByBuildingId(`building-${building.id}`);
-        return { ...building, units };
-      })
-    );
-    
+    for (const buildingDoc of buildingsSnapshot.docs) {
+      const building = { id: buildingDoc.id, ...buildingDoc.data() };
+      const buildingKey = building.id;  // Use building ID directly
+
+      console.log(`🏠 Fetching units for buildingId: ${buildingKey}`);
+      const unitsSnapshot = await firebaseServer.getDocs('units', [
+        { field: 'buildingId', operator: '==', value: buildingKey }
+      ]);
+
+      const units = unitsSnapshot.docs.map(unitDoc => ({
+        id: unitDoc.id,
+        ...unitDoc.data()
+      }));
+
+      console.log(`🏠 Building ${building.id}: Found ${units.length} units`);
+      buildings.push({ ...building, units });
+    }
+
     const structure = {
       project,
-      buildings: buildingsWithUnits
+      buildings
     };
-    
-    console.log(`🏗️ API: Project structure loaded for projectId: ${projectId}`);
-    
-    return NextResponse.json({ 
-      success: true, 
+
+    console.log(`✅ Project structure loaded successfully for projectId: ${projectId}`);
+    console.log(`📊 Summary: ${buildings.length} buildings, ${buildings.reduce((sum, b) => sum + b.units.length, 0)} total units`);
+
+    return NextResponse.json({
+      success: true,
       structure,
-      projectId
+      projectId,
+      summary: {
+        buildingsCount: buildings.length,
+        totalUnits: buildings.reduce((sum, b) => sum + b.units.length, 0)
+      }
     });
-    
+
   } catch (error) {
-    console.error('🏗️ API: Error loading project structure:', error);
+    console.error('❌ API: Error loading project structure:', error);
     return NextResponse.json(
-      { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error',
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Άγνωστο σφάλμα',
         projectId: params.projectId
       },
       { status: 500 }

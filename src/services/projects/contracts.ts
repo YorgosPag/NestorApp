@@ -1,7 +1,7 @@
 'use server';
 import type { Project, ProjectCustomer, ProjectStats } from '@/types/project';
 import type { Contact } from '@/types/contacts';
-import type { Building } from '@/components/building-management/mockData';
+import type { Building } from '@/types/building/contracts';
 import type { Property } from '@/types/property-viewer';
 
 export interface ProjectStructure {
@@ -11,16 +11,16 @@ export interface ProjectStructure {
 
 export interface IProjectsRepository {
   getProjectsByCompanyId(companyId: string): Promise<Project[]>;
-  getProjectById(projectId: number): Promise<Project | null>;
-  getBuildingsByProjectId(projectId: number): Promise<Building[]>;
+  getProjectById(projectId: string): Promise<Project | null>;
+  getBuildingsByProjectId(projectId: string): Promise<Building[]>;
   getUnitsByBuildingId(buildingId: string): Promise<Property[]>;
   getContactsByIds(ids: string[]): Promise<Contact[]>;
 }
 
 export interface IProjectsService {
   getProjectsByCompanyId(companyId: string): Promise<Project[]>;
-  getProjectStructure(projectId: number): Promise<ProjectStructure | null>;
-  getProjectCustomers(projectId: number): Promise<ProjectCustomer[]>;
-  getProjectStats(projectId: number): Promise<ProjectStats>;
-  debugProjectData(projectId: number): Promise<void>;
+  getProjectStructure(projectId: string): Promise<ProjectStructure | null>;
+  getProjectCustomers(projectId: string): Promise<ProjectCustomer[]>;
+  getProjectStats(projectId: string): Promise<ProjectStats>;
+  debugProjectData(projectId: string): Promise<void>;
 }

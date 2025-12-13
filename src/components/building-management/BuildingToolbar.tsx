@@ -35,8 +35,8 @@ interface BuildingToolbarProps {
   activeFilters?: string[];
   onFiltersChange?: (filters: string[]) => void;
   onNewBuilding?: () => void;
-  onEditBuilding?: (id: number) => void;
-  onDeleteBuilding?: (ids: number[]) => void;
+  onEditBuilding?: (id: string) => void;
+  onDeleteBuilding?: (ids: string[]) => void;
   onExport?: () => void;
   onRefresh?: () => void;
 }

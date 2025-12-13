@@ -84,7 +84,69 @@ export function getStatusClasses(status: PropertyStatus): {
   };
 }
 
-// Utility function to get all statuses as array
+// ============================================================================
+// 🎯 OVERLAY & REGION SPECIFIC STATUSES (DXF-Viewer)
+// ============================================================================
+
+// Extended type for overlay regions (includes drawing states + property statuses)
+export type RegionStatus = PropertyStatus | 'draft' | 'active' | 'locked' | 'hidden';
+
+// Labels για τα ειδικά overlay statuses (σε ελληνικά για συνοχή με UI)
+export const REGION_STATUS_LABELS: Record<RegionStatus, string> = {
+  // Property statuses (κεντρικοποιημένα)
+  'for-sale': PROPERTY_STATUS_LABELS['for-sale'],
+  'for-rent': PROPERTY_STATUS_LABELS['for-rent'],
+  'reserved': PROPERTY_STATUS_LABELS['reserved'],
+  'sold': PROPERTY_STATUS_LABELS['sold'],
+  'landowner': PROPERTY_STATUS_LABELS['landowner'],
+  'rented': PROPERTY_STATUS_LABELS['rented'],
+  'under-negotiation': PROPERTY_STATUS_LABELS['under-negotiation'],
+  'coming-soon': PROPERTY_STATUS_LABELS['coming-soon'],
+  'off-market': PROPERTY_STATUS_LABELS['off-market'],
+  'unavailable': PROPERTY_STATUS_LABELS['unavailable'],
+
+  // Overlay-specific drawing/editing states
+  'draft': 'Προσχέδιο',
+  'active': 'Ενεργό',
+  'locked': 'Κλειδωμένο',
+  'hidden': 'Κρυφό',
+};
+
+// Colors για overlay statuses (χρησιμοποιεί τα property colors + ειδικά για drawing states)
+export const REGION_STATUS_COLORS: Record<RegionStatus, string> = {
+  // Property colors (κεντρικοποιημένα)
+  'for-sale': PROPERTY_STATUS_COLORS['for-sale'],
+  'for-rent': PROPERTY_STATUS_COLORS['for-rent'],
+  'reserved': PROPERTY_STATUS_COLORS['reserved'],
+  'sold': PROPERTY_STATUS_COLORS['sold'],
+  'landowner': PROPERTY_STATUS_COLORS['landowner'],
+  'rented': PROPERTY_STATUS_COLORS['rented'],
+  'under-negotiation': PROPERTY_STATUS_COLORS['under-negotiation'],
+  'coming-soon': PROPERTY_STATUS_COLORS['coming-soon'],
+  'off-market': PROPERTY_STATUS_COLORS['off-market'],
+  'unavailable': PROPERTY_STATUS_COLORS['unavailable'],
+
+  // Overlay-specific colors για drawing/editing states
+  'draft': 'hsl(var(--neutral-500))',     // ⚪ Γκρι - προσωρινό
+  'active': 'hsl(var(--accent))',         // 🟦 Accent - ενεργό για επεξεργασία
+  'locked': 'hsl(var(--destructive))',    // 🔴 Κόκκινο - κλειδωμένο
+  'hidden': 'hsl(var(--muted))',          // 🟤 Muted - κρυφό
+};
+
+// Utility functions για region statuses
+export function getRegionLabel(status: RegionStatus): string {
+  return REGION_STATUS_LABELS[status];
+}
+
+export function getRegionColor(status: RegionStatus): string {
+  return REGION_STATUS_COLORS[status];
+}
+
+export function getAllRegionStatuses(): RegionStatus[] {
+  return Object.keys(REGION_STATUS_LABELS) as RegionStatus[];
+}
+
+// Utility function to get all property statuses as array
 export function getAllStatuses(): PropertyStatus[] {
   return Object.keys(PROPERTY_STATUS_LABELS) as PropertyStatus[];
 }

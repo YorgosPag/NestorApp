@@ -24,6 +24,8 @@ import { format, isToday, isPast, isTomorrow } from 'date-fns';
 import { el } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import CreateTaskModal from './dialogs/CreateTaskModal';
 import type { CrmTask, Opportunity, FirestoreishTimestamp } from '@/types/crm';
 import type { CrmTaskType, CrmTaskPriority, CrmTaskStatus } from '@/types/crm-extra';
@@ -236,34 +238,62 @@ export function TasksTab() {
         {/* Filters */}
         <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
           <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <input type="text" placeholder={t('tasks.searchPlaceholder')} value={filters.searchTerm} onChange={(e) => handleFilterChange('searchTerm', e.target.value)} className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+            <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder={t('tasks.searchPlaceholder')}
+              value={filters.searchTerm}
+              onChange={(e) => handleFilterChange('searchTerm', e.target.value)}
+              className="pl-10"
+            />
           </div>
-          <select value={filters.status} onChange={(e) => handleFilterChange('status', e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-            <option value="all">{t('tasks.status.all')}</option>
-            <option value="pending">{t('tasks.status.pending')}</option>
-            <option value="in_progress">{t('tasks.status.in_progress')}</option>
-            <option value="completed">{t('tasks.status.completed')}</option>
-            <option value="cancelled">{t('tasks.status.cancelled')}</option>
-          </select>
-          <select value={filters.priority} onChange={(e) => handleFilterChange('priority', e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-            <option value="all">{t('tasks.priority.all')}</option>
-            <option value="urgent">{t('tasks.priority.urgent')}</option>
-            <option value="high">{t('tasks.priority.high')}</option>
-            <option value="medium">{t('tasks.priority.medium')}</option>
-            <option value="low">{t('tasks.priority.low')}</option>
-          </select>
-          <select value={filters.type} onChange={(e) => handleFilterChange('type', e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-            <option value="all">{t('tasks.type.all')}</option>
-            {Object.keys(TASK_TYPE_ICONS).map(type => <option key={type} value={type}>{t(`tasks.type.${type}`)}</option>)}
-          </select>
-          <select value={filters.timeframe} onChange={(e) => handleFilterChange('timeframe', e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-            <option value="all">{t('tasks.timeframe.all')}</option>
-            <option value="overdue">{t('tasks.timeframe.overdue')}</option>
-            <option value="today">{t('tasks.timeframe.today')}</option>
-            <option value="tomorrow">{t('tasks.timeframe.tomorrow')}</option>
-            <option value="week">{t('tasks.timeframe.week')}</option>
-          </select>
+          <Select value={filters.status} onValueChange={(value) => handleFilterChange('status', value)}>
+            <SelectTrigger>
+              <SelectValue placeholder={t('tasks.status.all')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('tasks.status.all')}</SelectItem>
+              <SelectItem value="pending">{t('tasks.status.pending')}</SelectItem>
+              <SelectItem value="in_progress">{t('tasks.status.in_progress')}</SelectItem>
+              <SelectItem value="completed">{t('tasks.status.completed')}</SelectItem>
+              <SelectItem value="cancelled">{t('tasks.status.cancelled')}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={filters.priority} onValueChange={(value) => handleFilterChange('priority', value)}>
+            <SelectTrigger>
+              <SelectValue placeholder={t('tasks.priority.all')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('tasks.priority.all')}</SelectItem>
+              <SelectItem value="urgent">{t('tasks.priority.urgent')}</SelectItem>
+              <SelectItem value="high">{t('tasks.priority.high')}</SelectItem>
+              <SelectItem value="medium">{t('tasks.priority.medium')}</SelectItem>
+              <SelectItem value="low">{t('tasks.priority.low')}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={filters.type} onValueChange={(value) => handleFilterChange('type', value)}>
+            <SelectTrigger>
+              <SelectValue placeholder={t('tasks.type.all')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('tasks.type.all')}</SelectItem>
+              {Object.keys(TASK_TYPE_ICONS).map(type => (
+                <SelectItem key={type} value={type}>{t(`tasks.type.${type}`)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={filters.timeframe} onValueChange={(value) => handleFilterChange('timeframe', value)}>
+            <SelectTrigger>
+              <SelectValue placeholder={t('tasks.timeframe.all')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('tasks.timeframe.all')}</SelectItem>
+              <SelectItem value="overdue">{t('tasks.timeframe.overdue')}</SelectItem>
+              <SelectItem value="today">{t('tasks.timeframe.today')}</SelectItem>
+              <SelectItem value="tomorrow">{t('tasks.timeframe.tomorrow')}</SelectItem>
+              <SelectItem value="week">{t('tasks.timeframe.week')}</SelectItem>
+            </SelectContent>
+          </Select>
           <button onClick={() => setFilters({ status: 'all', priority: 'all', type: 'all', timeframe: 'all', searchTerm: '' })} className={`px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm ${HOVER_BACKGROUND_EFFECTS.LIGHT}`}>
             {t('tasks.clearFilters')}
           </button>

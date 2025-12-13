@@ -9,6 +9,7 @@ import { LayerItem } from './LayerItem';
 import { createColorGroupKey, type ColorGroupCommonProps } from './utils';
 import { DEFAULT_LAYER_COLOR } from '../../../config/color-config';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
+import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 
 interface ColorGroupItemProps extends Pick<ColorGroupCommonProps, 
   'setExpandedColorGroups' | 'setColorPickerColorGroup' | 'setEditingColorGroup' | 
@@ -33,23 +34,26 @@ export function ColorGroupItem({
   showColorGroupColorPicker,
   editingColorGroupName,
   selectedColorGroupsForMerge,
-  
+
   setExpandedColorGroups,
   setColorPickerColorGroup,
   setEditingColorGroup,
   setEditingColorGroupName,
-  
+
   getColorGroupDisplayName,
   handleColorGroupMultiSelectForMerge,
   handleColorGroupClick,
-  
+
   onColorGroupToggle,
   onColorGroupDelete,
-  
+
   layerItemProps
 }: ColorGroupItemProps) {
-  
+
   const representativeColor = scene.layers[layerNames[0]]?.color || DEFAULT_LAYER_COLOR;
+
+  // 🎨 ENTERPRISE DYNAMIC STYLING - NO INLINE STYLES (CLAUDE.md compliant)
+  const colorBgClass = useDynamicBackgroundClass(representativeColor);
   
   // Color Group visibility check
   const allVisible = layerNames.every((layerName: string) => scene.layers[layerName]?.visible);
@@ -148,8 +152,7 @@ export function ColorGroupItem({
           <div className="relative">
             <button
               onClick={handleColorPickerToggle}
-              className={`w-4 h-4 rounded border border-gray-500 ${HOVER_BORDER_EFFECTS.BLUE}`}
-              style={{ backgroundColor: representativeColor }}
+              className={`w-4 h-4 rounded border border-gray-500 ${HOVER_BORDER_EFFECTS.BLUE} ${colorBgClass}`}
               title="Αλλαγή χρώματος Color Group"
             />
           </div>

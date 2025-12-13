@@ -21,7 +21,7 @@ export function MilestoneItem({ milestone, getStatusColor, getStatusText, getTyp
                 getStatusColor(milestone.status),
                 milestone.status === 'completed' ? 'text-white' : 'text-gray-600'
             )}>
-                <span className="text-lg">{getTypeIcon(milestone.type)}</span>
+                {React.createElement(getTypeIcon(milestone.type), { className: "text-lg" })}
             </div>
 
             <div className="flex-1 min-w-0 pb-6">

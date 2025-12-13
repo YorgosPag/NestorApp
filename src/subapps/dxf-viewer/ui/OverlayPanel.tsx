@@ -6,6 +6,8 @@ import { useOverlayManager } from '../state/overlay-manager';
 import type { RegionStatus } from '../types/overlay';
 import { STATUS_COLORS_MAPPING, getStatusColors } from '../config/color-mapping';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
+import { REGION_STATUS_LABELS } from '../../../constants/statuses';
 
 interface OverlayPanelProps {
   isDrawingMode: boolean;
@@ -14,16 +16,8 @@ interface OverlayPanelProps {
   onStopDrawing: () => void;
 }
 
-const STATUS_LABELS: Record<RegionStatus, string> = {
-  draft: 'προσχέδιο',
-  active: 'ενεργό',
-  locked: 'κλειδωμένο',
-  hidden: 'κρυφό',
-  'for-sale': 'προςΠώληση', 
-  'for-rent': 'προςΕνοικίαση',
-  reserved: 'δεσμευμένο',
-  sold: 'πωλήθηκε'
-};
+// 🎯 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΟ: Χρησιμοποιούμε τα centralized constants αντί για διάσπαρτα
+// Τα STATUS_LABELS τώρα έρχονται από REGION_STATUS_LABELS στο constants/statuses.ts
 
 export function OverlayPanel({ isDrawingMode, drawingStatus, onStartDrawing, onStopDrawing }: OverlayPanelProps) {
   const { 
@@ -73,14 +67,17 @@ export function OverlayPanel({ isDrawingMode, drawingStatus, onStartDrawing, onS
         <h4 className="text-xs font-medium text-gray-400 uppercase">Φίλτρο Κατάστασης</h4>
         {Object.entries(STATUS_COLORS_MAPPING).map(([status, colors]) => {
           const regions = regionsByStatus[status as RegionStatus] || [];
+
+          // 🎨 ENTERPRISE DYNAMIC STYLING - NO INLINE STYLES (CLAUDE.md compliant)
+          const colorBgClass = useDynamicBackgroundClass(colors.fill);
+
           return (
             <div key={status} className="flex items-center justify-between">
               <label className="flex items-center gap-2 text-sm">
-                <div 
-                  className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: colors.fill }}
+                <div
+                  className={`w-3 h-3 rounded-full ${colorBgClass}`}
                 />
-                <span className="text-gray-300">{STATUS_LABELS[status as RegionStatus]}</span>
+                <span className="text-gray-300">{REGION_STATUS_LABELS[status as RegionStatus]}</span>
               </label>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-400">{regions.length}</span>

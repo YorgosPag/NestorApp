@@ -16,7 +16,7 @@ import { GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 // ============================================================================
 
 export interface Photo {
-  id: number;
+  id: string;
   src: string;
   alt: string;
   name: string;

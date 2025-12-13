@@ -32,7 +32,7 @@ export async function GET(
     console.log(`🏗️ API (Client SDK): Found ${snapshot.docs.length} projects for companyId "${params.companyId}"`);
     
     const projects = snapshot.docs.map(doc => ({
-      id: parseInt(doc.id),
+      id: doc.id,
       ...doc.data()
     }));
     

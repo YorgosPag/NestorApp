@@ -20,9 +20,9 @@ export interface Contact {
   }
   
   export interface Building {
-    id: string | number;
+    id: string;
     name: string;
-    projectId: string | number; // References Project
+    projectId: string; // References Project
     description?: string;
     address?: string;
     city?: string;

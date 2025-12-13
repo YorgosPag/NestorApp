@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 
 interface Layer {
   id: string;
@@ -61,14 +62,18 @@ export function LayersPanel({
     }
   };
 
-  const LayerItem = ({ layer }: { layer: Layer }) => (
-    <div 
-      className={cn(
-        `flex items-center gap-2 p-2 rounded cursor-pointer ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`,
-        selectedLayerId === layer.id && "bg-blue-50 border border-blue-200"
-      )}
-      onClick={() => setSelectedLayerId(layer.id)}
-    >
+  const LayerItem = ({ layer }: { layer: Layer }) => {
+    // 🎨 ENTERPRISE DYNAMIC STYLING - NO INLINE STYLES (CLAUDE.md compliant)
+    const layerBgClass = useDynamicBackgroundClass(layer.color, layer.opacity / 100);
+
+    return (
+      <div
+        className={cn(
+          `flex items-center gap-2 p-2 rounded cursor-pointer ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`,
+          selectedLayerId === layer.id && "bg-blue-50 border border-blue-200"
+        )}
+        onClick={() => setSelectedLayerId(layer.id)}
+      >
       {/* Visibility Toggle */}
       <Button
         variant="ghost"
@@ -87,9 +92,8 @@ export function LayersPanel({
       </Button>
 
       {/* Color Indicator */}
-      <div 
-        className="w-4 h-4 rounded border border-gray-300"
-        style={{ backgroundColor: layer.color, opacity: layer.opacity / 100 }}
+      <div
+        className={`w-4 h-4 rounded border border-gray-300 ${layerBgClass}`}
       />
 
       {/* Layer Name */}
@@ -105,7 +109,8 @@ export function LayersPanel({
         {layer.type}
       </span>
     </div>
-  );
+    );
+  };
 
   return (
     <div className={cn("bg-white border border-gray-200 rounded-lg p-3", className)}>

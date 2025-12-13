@@ -242,10 +242,13 @@ export const isDatePastOrToday = (dateStr?: string): boolean => {
 /**
  * Format date for user display (ΗΗ/ΜΜ/ΕΕΕΕ)
  */
+// ⚠️ DEPRECATED: Use formatDateForDisplay from intl-utils.ts for enterprise date formatting
+// 🔄 BACKWARD COMPATIBILITY: This function is maintained for legacy support
+// 📍 MIGRATION: import { formatDateForDisplay } from '@/lib/intl-utils'
 export const formatDateForDisplay = (dateStr?: string): string => {
-  const date = parseDate(dateStr);
-  if (!date) return '';
-  return date.toLocaleDateString('el-GR');
+  // Re-export centralized function for backward compatibility
+  const { formatDateForDisplay: centralizedFormatter } = require('../lib/intl-utils');
+  return centralizedFormatter(dateStr);
 };
 
 // Common validation schemas

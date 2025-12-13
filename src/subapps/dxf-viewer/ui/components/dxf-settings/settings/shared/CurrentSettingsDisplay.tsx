@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useUnifiedTextPreview } from '../../../../hooks/useUnifiedSpecificSettings';
 import type { LineType } from '../../../../../settings-core/types';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 
 interface LineSettings {
   lineType: LineType;
@@ -61,6 +62,13 @@ export function CurrentSettingsDisplay({
   // 🔥 ΤΕΛΙΚΗ ΔΙΟΡΘΩΣΗ: Πάντα χρησιμοποιούμε τα live settings για 'text'
   const effectiveTextSettings = activeTab === 'text' ? liveTextSettings : textSettings;
 
+  // 🎨 ENTERPRISE DYNAMIC STYLING - NO INLINE STYLES (CLAUDE.md compliant)
+  const lineColorBgClass = useDynamicBackgroundClass(lineSettings.color);
+  const textColorBgClass = useDynamicBackgroundClass(effectiveTextSettings.color);
+  const gripColdColorBgClass = useDynamicBackgroundClass(gripSettings.colors.cold);
+  const gripWarmColorBgClass = useDynamicBackgroundClass(gripSettings.colors.warm);
+  const gripHotColorBgClass = useDynamicBackgroundClass(gripSettings.colors.hot);
+
   // 🔥 ΔΙΟΡΘΩΣΗ: Force re-render όταν αλλάζουν τα settings
   useEffect(() => {
 
@@ -99,8 +107,7 @@ export function CurrentSettingsDisplay({
                   <span className="text-white font-mono flex items-center gap-2">
                     {lineSettings.color}
                     <div
-                      className="w-3 h-3 rounded border border-gray-500"
-                      style={{ backgroundColor: lineSettings.color }}
+                      className={`w-3 h-3 rounded border border-gray-500 ${lineColorBgClass}`}
                     ></div>
                   </span>
                 </div>
@@ -143,8 +150,7 @@ export function CurrentSettingsDisplay({
                   <span className="text-white font-mono flex items-center gap-2">
                     {effectiveTextSettings.color}
                     <div
-                      className="w-3 h-3 rounded border border-gray-500"
-                      style={{ backgroundColor: effectiveTextSettings.color }}
+                      className={`w-3 h-3 rounded border border-gray-500 ${textColorBgClass}`}
                     ></div>
                   </span>
                 </div>
@@ -202,8 +208,7 @@ export function CurrentSettingsDisplay({
                   <span className="text-white font-mono flex items-center gap-2">
                     {gripSettings.colors.cold}
                     <div
-                      className="w-3 h-3 rounded border border-gray-500"
-                      style={{ backgroundColor: gripSettings.colors.cold }}
+                      className={`w-3 h-3 rounded border border-gray-500 ${gripColdColorBgClass}`}
                     ></div>
                   </span>
                 </div>
@@ -212,8 +217,7 @@ export function CurrentSettingsDisplay({
                   <span className="text-white font-mono flex items-center gap-2">
                     {gripSettings.colors.warm}
                     <div
-                      className="w-3 h-3 rounded border border-gray-500"
-                      style={{ backgroundColor: gripSettings.colors.warm }}
+                      className={`w-3 h-3 rounded border border-gray-500 ${gripWarmColorBgClass}`}
                     ></div>
                   </span>
                 </div>

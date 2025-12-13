@@ -19,13 +19,31 @@ export function useProjectCustomers(projectId: number): UseProjectCustomersState
       setLoading(true);
       setError(null);
       try {
+        console.log(`🔄 Fetching project customers via API for projectId: ${projectId}`);
+
         const response = await fetch(`/api/projects/${projectId}/customers`);
-        if (!response.ok) throw new Error('Failed to fetch customers');
-        const data = await response.json();
-        if (mounted) setCustomers(data);
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+
+        // Handle new API format with success flag
+        if (result.success === false) {
+          throw new Error(result.error || 'Άγνωστο σφάλμα από το API');
+        }
+
+        // Handle both old format (direct array) and new format (with customers property)
+        const customersData = result.customers || result;
+
+        console.log(`✅ Project customers loaded successfully:`, result.summary || `${customersData.length} customers`);
+        if (mounted) setCustomers(customersData);
+
       } catch (err) {
-        console.error("Failed to fetch project customers:", err);
-        if (mounted) setError("Αποτυχία φόρτωσης πελατών.");
+        console.error("❌ Failed to fetch project customers:", err);
+        const errorMessage = err instanceof Error ? err.message : "Αποτυχία φόρτωσης πελατών.";
+        if (mounted) setError(errorMessage);
       } finally {
         if (mounted) setLoading(false);
       }

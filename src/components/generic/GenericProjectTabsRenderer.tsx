@@ -5,41 +5,7 @@ import { TabsContent } from "@/components/ui/tabs";
 import { TabsOnlyTriggers, type TabDefinition } from "@/components/ui/navigation/TabsComponents";
 import type { ProjectTabConfig } from '@/config/project-tabs-config';
 import type { Project } from '@/types/project';
-import {
-  Briefcase, Ruler, Car, Building2, Calendar, Users,
-  BarChart3, ParkingCircle, FileText, Landmark,
-  Camera, Video, UserCheck
-} from 'lucide-react';
-
-// ============================================================================
-// ICON MAPPING
-// ============================================================================
-
-/**
- * Mapping από emoji icons σε Lucide React icons
- */
-const ICON_MAPPING = {
-  '🏗️': Briefcase,
-  '📐': Ruler,
-  '🚗': Car,
-  '🏢': Building2,
-  '📅': Calendar,
-  '👥': Users,
-  '📊': BarChart3,
-  '🅿️': ParkingCircle,
-  '🤝': UserCheck,
-  '📄': FileText,
-  '🏛️': Landmark,
-  '📸': Camera,
-  '🎬': Video,
-} as const;
-
-/**
- * Helper function για την μετατροπή emoji icon σε Lucide icon
- */
-function getIconComponent(emojiIcon: string) {
-  return ICON_MAPPING[emojiIcon as keyof typeof ICON_MAPPING] || Briefcase;
-}
+import { getIconComponent } from './utils/IconMapping';
 
 // ============================================================================
 // COMPONENT MAPPING

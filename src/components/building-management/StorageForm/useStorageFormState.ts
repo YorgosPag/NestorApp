@@ -9,7 +9,7 @@ interface UseStorageFormStateProps {
   unit: StorageUnit | null;
   formType: StorageType;
   building: {
-    id: number;
+    id: string;
     name: string;
     project: string;
     company: string;

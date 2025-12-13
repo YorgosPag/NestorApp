@@ -1,16 +1,18 @@
 
-'use server';
-
-import { db } from '@/lib/firebase-admin';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import type { BuildingStats } from '@/types/building';
 
 const UNITS_COLLECTION = 'units';
 
 export async function getBuildingStats(buildingId: string): Promise<BuildingStats> {
   try {
-    const unitsSnapshot = await db.collection(UNITS_COLLECTION)
-      .where('buildingId', '==', buildingId)
-      .get();
+    const unitsQuery = query(
+      collection(db, UNITS_COLLECTION),
+      where('buildingId', '==', buildingId)
+    );
+
+    const unitsSnapshot = await getDocs(unitsQuery);
 
     let totalUnits = 0;
     let soldUnits = 0;
@@ -27,7 +29,7 @@ export async function getBuildingStats(buildingId: string): Promise<BuildingStat
 
     return { totalUnits, soldUnits, totalSoldArea };
   } catch (error) {
-    // Error logging removed //(`Error fetching stats for building ${buildingId}:`, error);
-    throw new Error('Failed to calculate building statistics');
+    console.error(`❌ Error fetching stats for building ${buildingId}:`, error);
+    throw new Error(`Failed to calculate building statistics: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }

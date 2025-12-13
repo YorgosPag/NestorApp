@@ -10,6 +10,7 @@ import {
 import { EnterpriseContactSaver } from '@/utils/contacts/EnterpriseContactSaver';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { DuplicatePreventionService } from './contacts/DuplicatePreventionService';
+import { sanitizeContactData, validateContactData } from '@/utils/contactForm/utils/data-cleaning';
 
 import { getCol, mapDocs, chunk, asDate, startAfterDocId } from '@/lib/firestore/utils';
 import { contactConverter } from '@/lib/firestore/converters/contact.converter';
@@ -80,10 +81,35 @@ export class ContactsService {
    */
   static async createContact(contactData: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
     try {
-      // 🛡️ PHASE 1: ENTERPRISE DUPLICATE PREVENTION
+      // 🧹 PHASE 1: ENTERPRISE DATA SANITIZATION & VALIDATION
+      console.log('🧹 ENTERPRISE SANITIZER: Starting pre-processing...');
+
+      // Validate input data first
+      const validationResult = validateContactData(contactData);
+      if (!validationResult.isValid) {
+        console.error('❌ VALIDATION FAILED:', validationResult.errors);
+        throw new Error(`VALIDATION_ERROR: ${validationResult.errors.join(', ')}`);
+      }
+
+      // Log warnings για potential issues
+      if (validationResult.warnings.length > 0) {
+        console.warn('⚠️ VALIDATION WARNINGS:', validationResult.warnings);
+      }
+
+      // Sanitize data πριν την αποθήκευση
+      const sanitizedData = sanitizeContactData(contactData);
+
+      console.log('✅ SANITIZATION COMPLETED:', {
+        originalFields: Object.keys(contactData).length,
+        sanitizedFields: Object.keys(sanitizedData).length,
+        validationErrors: validationResult.errors.length,
+        validationWarnings: validationResult.warnings.length
+      });
+
+      // 🛡️ PHASE 2: ENTERPRISE DUPLICATE PREVENTION
       console.log('🔍 ENTERPRISE DUPLICATE CHECK: Starting intelligent duplicate detection...');
 
-      const duplicateResult = await DuplicatePreventionService.detectDuplicates(contactData, {
+      const duplicateResult = await DuplicatePreventionService.detectDuplicates(sanitizedData, {
         strictMode: true,
         timeWindow: 5000, // 5 second protection against rapid duplicate clicks
       });
@@ -116,33 +142,43 @@ export class ContactsService {
         );
       }
 
-      // 🎯 PHASE 2: SAFE CONTACT CREATION
+      // 🎯 PHASE 3: SAFE CONTACT CREATION με SANITIZED DATA
       console.log('✅ DUPLICATE CHECK PASSED: Proceeding με safe contact creation...');
 
       const colRef = getCol<Contact>(CONTACTS_COLLECTION, contactConverter);
       const docRef = await addDoc(colRef, {
-        ...contactData,
+        ...sanitizedData,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       } as any);
 
       console.log('✅ CONTACT CREATED SUCCESSFULLY:', {
         contactId: docRef.id,
-        contactType: contactData.type,
-        contactName: this.getContactDisplayName(contactData)
+        contactType: sanitizedData.type,
+        contactName: this.getContactDisplayName(sanitizedData),
+        sanitizationApplied: true
       });
 
       return docRef.id;
 
     } catch (error) {
-      // 🏢 ENTERPRISE ERROR HANDLING
-      if (error instanceof Error && error.message.startsWith('DUPLICATE_CONTACT_DETECTED')) {
-        console.error('🚨 ENTERPRISE DUPLICATE PREVENTION:', error.message);
-        throw error; // Re-throw με original message για proper UI handling
+      // 🏢 ENTERPRISE ERROR HANDLING με comprehensive error types
+      if (error instanceof Error) {
+        // Validation errors
+        if (error.message.startsWith('VALIDATION_ERROR')) {
+          console.error('🚨 ENTERPRISE VALIDATION ERROR:', error.message);
+          throw error; // Re-throw για UI handling
+        }
+
+        // Duplicate contact errors
+        if (error.message.startsWith('DUPLICATE_CONTACT_DETECTED')) {
+          console.error('🚨 ENTERPRISE DUPLICATE PREVENTION:', error.message);
+          throw error; // Re-throw με original message για proper UI handling
+        }
       }
 
       console.error('🚨 CONTACT CREATION ERROR:', error);
-      throw new Error('Failed to create contact - enterprise validation failed');
+      throw new Error('Failed to create contact - enterprise processing failed');
     }
   }
 

@@ -10,6 +10,7 @@ import type { Property } from '@/types/property-viewer';
 import type { LayerState } from '../useLayerStates';
 import { PROPERTY_STATUS_CONFIG } from "@/lib/property-utils";
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 
 interface PropertyLayerDetailsProps {
   property: Property;
@@ -28,11 +29,14 @@ export function PropertyLayerDetails({
 }: PropertyLayerDetailsProps) {
   const statusInfo = PROPERTY_STATUS_CONFIG[property.status] || PROPERTY_STATUS_CONFIG.default;
 
+  // 🎨 ENTERPRISE DYNAMIC STYLING - NO INLINE STYLES (CLAUDE.md compliant)
+  const statusColorBgClass = useDynamicBackgroundClass(statusInfo.color.split(' ')[0]);
+
   return (
     <div className="space-y-3 pt-2 border-t ml-7">
       <div className="flex items-center gap-2">
         <Label className="text-xs">Χρώμα:</Label>
-        <div className="w-6 h-4 rounded border" style={{ backgroundColor: statusInfo.color.split(' ')[0] }} />
+        <div className={`w-6 h-4 rounded border ${statusColorBgClass}`} />
         <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
           <Palette className="h-3 w-3 mr-1" /> Αλλαγή
         </Button>

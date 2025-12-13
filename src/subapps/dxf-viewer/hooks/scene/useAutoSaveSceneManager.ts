@@ -48,7 +48,8 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
 
         try {
           const fileId = DxfFirestoreService.generateFileId(currentFileName);
-          const success = await DxfFirestoreService.autoSave(fileId, currentFileName, scene);
+          // 🚀 PHASE 4: Use Storage-based auto-save for better performance
+          const success = await DxfFirestoreService.autoSaveV2(fileId, currentFileName, scene);
           
           if (success) {
             setSaveStatus('success');

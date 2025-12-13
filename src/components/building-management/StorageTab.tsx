@@ -23,7 +23,7 @@ import {
 
 interface StorageTabProps {
   building: {
-    id: number;
+    id: string;
     name: string;
     project: string;
     company: string;

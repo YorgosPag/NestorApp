@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Edit, Save, X, CheckCircle } from 'lucide-react';
 
 interface HeaderProps {
-    building: { id: number; category: string };
+    building: { id: string; category: string };
     isEditing: boolean;
     autoSaving: boolean;
     lastSaved: Date | null;
