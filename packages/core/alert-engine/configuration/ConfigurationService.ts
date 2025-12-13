@@ -7,8 +7,36 @@
  */
 
 import { Rule, RulesEngine, rulesEngine } from '../rules/RulesEngine';
-import { AlertTemplate, DetectionConfig } from '../detection/AlertDetectionSystem';
-import { NotificationTemplate, NotificationConfig } from '../notifications/NotificationDispatchEngine';
+import { AlertTemplate } from '../detection/AlertDetectionSystem';
+import { NotificationTemplate } from '../notifications/NotificationDispatchEngine';
+
+// ============================================================================
+// LOCAL CONFIGURATION INTERFACES
+// ============================================================================
+
+interface DetectionConfig {
+  pollingInterval: number;
+  batchSize: number;
+  enableRealTime: boolean;
+  accuracyThresholds: {
+    warning: number;
+    critical: number;
+  };
+}
+
+interface NotificationConfig {
+  channels: {
+    email: { enabled: boolean; priority: number };
+    sms: { enabled: boolean; priority: number };
+    webhook: { enabled: boolean; priority: number };
+    push: { enabled: boolean; priority: number };
+    in_app: { enabled: boolean; priority: number };
+  };
+  retryAttempts: number;
+  retryDelay: number;
+  batchSize: number;
+  rateLimit: number;
+}
 
 // ============================================================================
 // CONFIGURATION TYPES
@@ -305,7 +333,7 @@ export class ConfigurationService {
         });
       }
 
-      if (!rule.conditions || rule.conditions.length === 0) {
+      if (!rule.conditions) {
         warnings.push({
           code: 'RULE_NO_CONDITIONS',
           message: 'Rule has no conditions defined',
@@ -325,11 +353,12 @@ export class ConfigurationService {
         });
       }
 
-      // Priority validation
-      if (rule.priority < 1 || rule.priority > 10) {
+      // Priority validation - priority is string enum
+      const validPriorities = ['critical', 'high', 'medium', 'low', 'info'];
+      if (!validPriorities.includes(rule.priority)) {
         errors.push({
           code: 'RULE_INVALID_PRIORITY',
-          message: 'Rule priority must be between 1 and 10',
+          message: 'Rule priority must be one of: critical, high, medium, low, info',
           path: `${path}.priority`,
           severity: 'error'
         });
@@ -549,9 +578,18 @@ export class ConfigurationService {
 
   private initializeValidationRules(): void {
     // Initialize custom validation rules
-    this.validationRules.set('rules', (rules: Rule[]) => this.validateRules(rules));
-    this.validationRules.set('globalSettings', (settings: GlobalSettings) => this.validateGlobalSettings(settings));
-    this.validationRules.set('notificationConfig', (config: NotificationConfig) => this.validateNotificationConfig(config));
+    this.validationRules.set('rules', (rules: any) => {
+      const result = this.validateRules(rules as Rule[]);
+      return { isValid: result.errors.length === 0, errors: result.errors, warnings: result.warnings, recommendations: [] };
+    });
+    this.validationRules.set('globalSettings', (settings: any) => {
+      const result = this.validateGlobalSettings(settings as GlobalSettings);
+      return { isValid: result.errors.length === 0, errors: result.errors, warnings: result.warnings, recommendations: [] };
+    });
+    this.validationRules.set('notificationConfig', (config: any) => {
+      const result = this.validateNotificationConfig(config as NotificationConfig);
+      return { isValid: result.errors.length === 0, errors: result.errors, warnings: result.warnings, recommendations: [] };
+    });
   }
 
   private loadDefaultConfiguration(): void {

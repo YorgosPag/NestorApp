@@ -113,6 +113,21 @@ export interface AlertTemplate {
   }>;
 }
 
+export interface DetectionConfig {
+  enabled: boolean;
+  scanInterval: number;
+  maxConcurrentDetections: number;
+  alertThresholds: {
+    accuracy: number;
+    distance: number;
+    time: number;
+  };
+  retryPolicy: {
+    maxRetries: number;
+    retryDelay: number;
+  };
+}
+
 export interface DetectionStatistics {
   totalAlertsDetected: number;
   alertsBySeverity: Record<AlertSeverity, number>;

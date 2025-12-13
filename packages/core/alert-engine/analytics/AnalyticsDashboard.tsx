@@ -25,8 +25,8 @@ import {
   useDynamicBorderClass,
   useDynamicElementClasses,
   DynamicStyleConfig
-} from '../../../src/components/ui/utils/dynamic-styles';
-import { HOVER_BACKGROUND_EFFECTS } from '../../../src/components/ui/effects';
+} from '../../../../src/components/ui/utils/dynamic-styles';
+import { HOVER_BACKGROUND_EFFECTS } from '../../../../src/components/ui/effects/hover-effects';
 
 // ============================================================================
 // DASHBOARD TYPES

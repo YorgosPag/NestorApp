@@ -90,6 +90,19 @@ export interface RetryPolicy {
   maxRetryDelay: number;
 }
 
+export interface NotificationConfig {
+  channels: {
+    [key: string]: {
+      enabled: boolean;
+      priority: number;
+    };
+  };
+  retryAttempts: number;
+  retryDelay: number;
+  batchSize: number;
+  rateLimit: number;
+}
+
 export interface RateLimitConfig {
   maxRequestsPerMinute: number;
   maxRequestsPerHour: number;

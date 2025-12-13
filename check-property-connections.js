@@ -228,197 +228,462 @@ class PropertyRelationshipValidator {
     }
   }
 
-    // ========================================================================
-    // 3. ΕΠΑΛΉΘΕΥΣΗ ΚΤΙΡΊΩΝ
-    // ========================================================================
+  // ========================================================================
+  // VALIDATION PHASE 2: BUILDING REFERENCES
+  // ========================================================================
 
-    console.log('🏢 Στάδιο 3: Επαλήθευση κτιρίων...\n');
+  /**
+   * 🏢 Validate building references and project hierarchy
+   */
+  static async validateBuildingReferences(validationResult) {
+    console.log('🏢 Phase 2: Validating Building References\n');
 
-    // Get all unique building IDs from units
-    const buildingIds = [...new Set(units.map(u => u.buildingId).filter(Boolean))];
-    const validBuildings = [];
-    const invalidBuildingIds = [];
+    try {
+      // Get all units to extract building references
+      const unitsSnapshot = await firebaseServer.getDocs('units');
+      const units = unitsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-    for (const buildingId of buildingIds) {
-      try {
-        const buildingDoc = await db.collection('buildings').doc(buildingId).get();
+      // Extract unique building IDs
+      const buildingIds = [...new Set(units
+        .map(unit => unit.buildingId)
+        .filter(id => id && id.trim() !== '')
+      )];
 
-        if (buildingDoc.exists) {
-          const building = { id: buildingDoc.id, ...buildingDoc.data() };
-          const buildingUnits = units.filter(u => u.buildingId === buildingId);
+      console.log(`📋 Found ${buildingIds.length} unique building references\n`);
 
-          validBuildings.push({
-            id: buildingId,
-            name: building.name || 'Άγνωστο κτίριο',
-            projectId: building.projectId,
-            unitsCount: buildingUnits.length
-          });
+      // Validate each building reference
+      const validBuildings = [];
+      const buildingValidationPromises = buildingIds.map(buildingId =>
+        this.validateBuildingReference(buildingId, units, validationResult)
+      );
 
-          console.log(`✅ ${building.name || buildingId} - ${buildingUnits.length} μονάδες`);
-        } else {
-          const buildingUnits = units.filter(u => u.buildingId === buildingId);
-          invalidBuildingIds.push({
-            id: buildingId,
-            unitsCount: buildingUnits.length
-          });
+      const buildingResults = await Promise.allSettled(buildingValidationPromises);
 
-          console.log(`❌ ΜΗΔΕΝΙΚΟ ΚΤΙΡΙΟ: ${buildingId} - ${buildingUnits.length} μονάδες`);
+      buildingResults.forEach((result, index) => {
+        if (result.status === 'fulfilled' && result.value) {
+          validBuildings.push(result.value);
         }
-      } catch (error) {
-        console.log(`⚠️  ΣΦΑΛΜΑ ΕΛΕΓΧΟΥ ΚΤΙΡΙΟΥ: ${buildingId} - ${error.message}`);
-      }
-    }
-
-    console.log(`\n📊 ΑΠΟΤΕΛΕΣΜΑΤΑ ΚΤΙΡΙΩΝ:`);
-    console.log(`   • Έγκυρα κτίρια: ${validBuildings.length}`);
-    console.log(`   • Μη έγκυρα κτίρια: ${invalidBuildingIds.length}\n`);
-
-    // ========================================================================
-    // 4. ΕΠΑΛΉΘΕΥΣΗ ΈΡΓΩΝ
-    // ========================================================================
-
-    console.log('🏗️ Στάδιο 4: Επαλήθευση έργων...\n');
-
-    // Get all unique project IDs from buildings
-    const projectIds = [...new Set(validBuildings.map(b => b.projectId).filter(Boolean))];
-    const validProjects = [];
-    const invalidProjectIds = [];
-
-    for (const projectId of projectIds) {
-      try {
-        const projectDoc = await db.collection('projects').doc(projectId.toString()).get();
-
-        if (projectDoc.exists) {
-          const project = { id: projectDoc.id, ...projectDoc.data() };
-          const projectBuildings = validBuildings.filter(b => b.projectId.toString() === projectId.toString());
-
-          validProjects.push({
-            id: projectId,
-            name: project.name || 'Άγνωστο έργο',
-            buildingsCount: projectBuildings.length
-          });
-
-          console.log(`✅ ${project.name || projectId} - ${projectBuildings.length} κτίρια`);
-        } else {
-          const projectBuildings = validBuildings.filter(b => b.projectId.toString() === projectId.toString());
-          invalidProjectIds.push({
-            id: projectId,
-            buildingsCount: projectBuildings.length
-          });
-
-          console.log(`❌ ΜΗΔΕΝΙΚΟ ΕΡΓΟ: ${projectId} - ${projectBuildings.length} κτίρια`);
-        }
-      } catch (error) {
-        console.log(`⚠️  ΣΦΑΛΜΑ ΕΛΕΓΧΟΥ ΕΡΓΟΥ: ${projectId} - ${error.message}`);
-      }
-    }
-
-    console.log(`\n📊 ΑΠΟΤΕΛΕΣΜΑΤΑ ΈΡΓΩΝ:`);
-    console.log(`   • Έγκυρα έργα: ${validProjects.length}`);
-    console.log(`   • Μη έγκυρα έργα: ${invalidProjectIds.length}\n`);
-
-    // ========================================================================
-    // 5. ΤΕΛΙΚΉ ΑΝΑΦΟΡΆ
-    // ========================================================================
-
-    console.log('\n📋 ΤΕΛΙΚΉ ΑΝΑΦΟΡΆ');
-    console.log('===================\n');
-
-    console.log('🎯 ΣΎΝΟΨΗ ΑΠΟΤΕΛΕΣΜΆΤΩΝ:');
-    console.log(`   • Συνολικές μονάδες: ${units.length}`);
-    console.log(`   • Πωληθείσες μονάδες: ${soldUnits.length} (${((soldUnits.length/units.length)*100).toFixed(1)}%)`);
-    console.log(`   • Πελάτες με ακίνητα: ${validCustomers.length}`);
-    console.log(`   • Κτίρια με μονάδες: ${validBuildings.length}`);
-    console.log(`   • Έργα με κτίρια: ${validProjects.length}\n`);
-
-    if (invalidCustomers.length > 0) {
-      console.log('⚠️  ΠΡΟΒΛΗΜΑΤΙΚΟΙ ΠΕΛΑΤΕΣ:');
-      invalidCustomers.forEach(customer => {
-        console.log(`   • ${customer.id} - ${customer.unitsCount} μονάδες`);
       });
-      console.log();
-    }
 
-    if (invalidBuildingIds.length > 0) {
-      console.log('⚠️  ΠΡΟΒΛΗΜΑΤΙΚΑ ΚΤΙΡΙΑ:');
-      invalidBuildingIds.forEach(building => {
-        console.log(`   • ${building.id} - ${building.unitsCount} μονάδες`);
+      validationResult.metrics.validBuildings = validBuildings.length;
+
+      console.log(`📊 Building Validation Results:`);
+      console.log(`   • Valid buildings: ${validBuildings.length}`);
+      console.log(`   • Invalid references: ${buildingIds.length - validBuildings.length}\n`);
+
+    } catch (error) {
+      console.error('❌ Building validation failed:', error.message);
+      this.addValidationIssue(validationResult, {
+        type: 'validation_error',
+        severity: 'critical',
+        entityId: 'buildings',
+        description: `Building validation failed: ${error.message}`,
+        affectedEntities: []
       });
-      console.log();
     }
+  }
 
-    if (invalidProjectIds.length > 0) {
-      console.log('⚠️  ΠΡΟΒΛΗΜΑΤΙΚΑ ΕΡΓΑ:');
-      invalidProjectIds.forEach(project => {
-        console.log(`   • ${project.id} - ${project.buildingsCount} κτίρια`);
-      });
-      console.log();
-    }
+  // ========================================================================
+  // BUILDING REFERENCE VALIDATOR
+  // ========================================================================
 
-    // ========================================================================
-    // 6. DETAILED CUSTOMER ANALYSIS
-    // ========================================================================
+  /**
+   * 🏢 Validate individual building reference
+   */
+  static async validateBuildingReference(buildingId, units, validationResult) {
+    try {
+      const buildingSnapshot = await firebaseServer.getDocs('buildings', [
+        { field: '__name__', operator: '==', value: buildingId }
+      ]);
 
-    if (validCustomers.length > 0) {
-      console.log('\n👥 ΛΕΠΤΟΜΕΡΗΣ ΑΝΑΛΥΣΗ ΠΕΛΑΤΩΝ:');
-      console.log('================================\n');
-
-      validCustomers.forEach(customer => {
-        console.log(`📋 ${customer.name} (${customer.id}):`);
-        customer.units.forEach(unit => {
-          const building = validBuildings.find(b => b.id === unit.buildingId);
-          const project = building ? validProjects.find(p => p.id.toString() === building.projectId.toString()) : null;
-
-          console.log(`   • Μονάδα: ${unit.name || unit.id}`);
-          console.log(`     - Κτίριο: ${building ? building.name : `ΜΗΔΕΝΙΚΟ (${unit.buildingId})`}`);
-          console.log(`     - Έργο: ${project ? project.name : building ? `ΜΗΔΕΝΙΚΟ (${building.projectId})` : 'N/A'}`);
-          console.log(`     - Status: ${unit.status}`);
+      if (buildingSnapshot.docs.length === 0) {
+        const affectedUnits = units.filter(u => u.buildingId === buildingId);
+        this.addValidationIssue(validationResult, {
+          type: 'invalid_building',
+          severity: 'critical',
+          entityId: buildingId,
+          description: `Building ${buildingId} not found`,
+          affectedEntities: affectedUnits.map(u => u.id)
         });
-        console.log();
+        return null;
+      }
+
+      const building = { id: buildingSnapshot.docs[0].id, ...buildingSnapshot.docs[0].data() };
+      const buildingUnits = units.filter(u => u.buildingId === buildingId);
+      const buildingName = building.name || building.title || 'Unnamed Building';
+
+      console.log(`✅ ${buildingName} (${buildingId}) - ${buildingUnits.length} units`);
+
+      return {
+        id: buildingId,
+        name: buildingName,
+        projectId: building.projectId,
+        unitsCount: buildingUnits.length,
+        address: building.address || null
+      };
+
+    } catch (error) {
+      this.addValidationIssue(validationResult, {
+        type: 'validation_error',
+        severity: 'warning',
+        entityId: buildingId,
+        description: `Building validation error: ${error.message}`,
+        affectedEntities: []
+      });
+      return null;
+    }
+  }
+
+  // ========================================================================
+  // VALIDATION PHASE 3: PROJECT HIERARCHY
+  // ========================================================================
+
+  /**
+   * 🏗️ Validate project hierarchy and relationships
+   */
+  static async validateProjectHierarchy(validationResult) {
+    console.log('🏗️ Phase 3: Validating Project Hierarchy\n');
+
+    try {
+      // Get all buildings to extract project references
+      const buildingsSnapshot = await firebaseServer.getDocs('buildings');
+      const buildings = buildingsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      // Extract unique project IDs
+      const projectIds = [...new Set(buildings
+        .map(building => building.projectId)
+        .filter(id => id && String(id).trim() !== '')
+        .map(id => String(id))
+      )];
+
+      console.log(`📋 Found ${projectIds.length} unique project references\n`);
+
+      // Use enterprise ProjectsService for validation
+      const validProjects = [];
+      const projectValidationPromises = projectIds.map(projectId =>
+        this.validateProjectReference(projectId, buildings, validationResult)
+      );
+
+      const projectResults = await Promise.allSettled(projectValidationPromises);
+
+      projectResults.forEach((result, index) => {
+        if (result.status === 'fulfilled' && result.value) {
+          validProjects.push(result.value);
+        }
+      });
+
+      validationResult.metrics.validProjects = validProjects.length;
+
+      console.log(`📊 Project Validation Results:`);
+      console.log(`   • Valid projects: ${validProjects.length}`);
+      console.log(`   • Invalid references: ${projectIds.length - validProjects.length}\n`);
+
+    } catch (error) {
+      console.error('❌ Project validation failed:', error.message);
+      this.addValidationIssue(validationResult, {
+        type: 'validation_error',
+        severity: 'critical',
+        entityId: 'projects',
+        description: `Project validation failed: ${error.message}`,
+        affectedEntities: []
       });
     }
+  }
 
-    // ========================================================================
-    // 7. INTEGRITY SCORE
-    // ========================================================================
+  // ========================================================================
+  // PROJECT REFERENCE VALIDATOR
+  // ========================================================================
 
-    const totalIssues = invalidCustomers.length + invalidBuildingIds.length + invalidProjectIds.length;
-    const totalEntities = customerIds.length + buildingIds.length + projectIds.length;
-    const integrityScore = totalEntities > 0 ? ((totalEntities - totalIssues) / totalEntities * 100) : 100;
+  /**
+   * 🏗️ Validate individual project reference
+   */
+  static async validateProjectReference(projectId, buildings, validationResult) {
+    try {
+      // Use enterprise ProjectsService
+      const project = await ProjectsService.getProject(projectId);
 
-    console.log('\n🎯 INTEGRITY SCORE');
-    console.log('===================');
-    console.log(`📊 Data Integrity: ${integrityScore.toFixed(1)}%`);
-    console.log(`✅ Έγκυρες συνδέσεις: ${totalEntities - totalIssues}/${totalEntities}`);
-    console.log(`❌ Προβληματικές συνδέσεις: ${totalIssues}`);
+      if (!project) {
+        const affectedBuildings = buildings.filter(b => String(b.projectId) === projectId);
+        this.addValidationIssue(validationResult, {
+          type: 'invalid_project',
+          severity: 'critical',
+          entityId: projectId,
+          description: `Project ${projectId} not found`,
+          affectedEntities: affectedBuildings.map(b => b.id)
+        });
+        return null;
+      }
 
-    if (integrityScore >= 95) {
-      console.log('🟢 ΕΞΑΙΡΕΤΙΚΗ εγκυρότητα δεδομένων!');
-    } else if (integrityScore >= 80) {
-      console.log('🟡 ΚΑΛΗ εγκυρότητα δεδομένων - μικρά προβλήματα');
-    } else {
-      console.log('🔴 ΠΡΟΒΛΗΜΑΤΙΚΗ εγκυρότητα δεδομένων - χρειάζεται διόρθωση');
+      const projectBuildings = buildings.filter(b => String(b.projectId) === projectId);
+      const projectName = project.name || project.title || 'Unnamed Project';
+
+      console.log(`✅ ${projectName} (${projectId}) - ${projectBuildings.length} buildings`);
+
+      return {
+        id: projectId,
+        name: projectName,
+        buildingsCount: projectBuildings.length,
+        status: project.status || 'unknown',
+        location: project.location || null
+      };
+
+    } catch (error) {
+      this.addValidationIssue(validationResult, {
+        type: 'validation_error',
+        severity: 'warning',
+        entityId: projectId,
+        description: `Project validation error: ${error.message}`,
+        affectedEntities: []
+      });
+      return null;
+    }
+  }
+
+  // ========================================================================
+  // INTEGRITY SCORE CALCULATION
+  // ========================================================================
+
+  /**
+   * 📊 Calculate overall data integrity score
+   */
+  static async calculateIntegrityScore(validationResult) {
+    const { metrics, issues } = validationResult;
+
+    // Count critical issues that affect integrity
+    const criticalIssues = issues.filter(issue => issue.severity === 'critical').length;
+    const warningIssues = issues.filter(issue => issue.severity === 'warning').length;
+
+    // Calculate base score from valid entities
+    const totalEntities = metrics.totalUnits + metrics.validCustomers + metrics.validBuildings + metrics.validProjects;
+    const totalIssues = criticalIssues * 2 + warningIssues; // Weight critical issues more
+
+    // Enterprise-grade scoring algorithm
+    let integrityScore = 100;
+
+    // Deduct for missing or invalid references
+    if (totalEntities > 0) {
+      const issueRatio = totalIssues / totalEntities;
+      integrityScore = Math.max(0, 100 - (issueRatio * 50));
     }
 
-    console.log('\n✅ Έλεγχος ολοκληρώθηκε!\n');
+    // Additional deductions for specific integrity violations
+    if (criticalIssues > 0) {
+      integrityScore -= Math.min(30, criticalIssues * 5);
+    }
+
+    validationResult.integrityScore = Math.max(0, Math.round(integrityScore));
+    validationResult.isValid = validationResult.integrityScore >= 80 && criticalIssues === 0;
+
+    metrics.orphanedRecords = criticalIssues;
+  }
+
+  // ========================================================================
+  // ENTERPRISE VALIDATION REPORT GENERATOR
+  // ========================================================================
+
+  /**
+   * 📋 Generate comprehensive validation report
+   */
+  static generateValidationReport(validationResult) {
+    const { metrics, issues, integrityScore, isValid } = validationResult;
+
+    console.log('\n📋 ENTERPRISE VALIDATION REPORT');
+    console.log('==================================\n');
+
+    // Executive Summary
+    console.log('🎯 Executive Summary:');
+    console.log(`   • Overall Status: ${isValid ? '✅ VALID' : '❌ INVALID'}`);
+    console.log(`   • Data Integrity Score: ${integrityScore}%`);
+    console.log(`   • Total Issues Found: ${issues.length}`);
+    console.log(`   • Critical Issues: ${issues.filter(i => i.severity === 'critical').length}`);
+    console.log('');
+
+    // Metrics Overview
+    console.log('📊 Entity Metrics:');
+    console.log(`   • Total Property Units: ${metrics.totalUnits}`);
+    console.log(`   • Sold Units: ${metrics.soldUnits} (${metrics.totalUnits > 0 ? ((metrics.soldUnits/metrics.totalUnits)*100).toFixed(1) : 0}%)`);
+    console.log(`   • Valid Customers: ${metrics.validCustomers}`);
+    console.log(`   • Valid Buildings: ${metrics.validBuildings}`);
+    console.log(`   • Valid Projects: ${metrics.validProjects}`);
+    console.log(`   • Orphaned Records: ${metrics.orphanedRecords}`);
+    console.log('');
+
+    // Issues Breakdown
+    if (issues.length > 0) {
+      console.log('⚠️  Issues Breakdown:');
+      const issuesByType = this.groupIssuesByType(issues);
+
+      Object.entries(issuesByType).forEach(([type, typeIssues]) => {
+        console.log(`   • ${type.replace('_', ' ').toUpperCase()}: ${typeIssues.length} issues`);
+      });
+      console.log('');
+
+      // Critical Issues Detail
+      const criticalIssues = issues.filter(issue => issue.severity === 'critical');
+      if (criticalIssues.length > 0) {
+        console.log('🔴 Critical Issues Requiring Immediate Attention:');
+        criticalIssues.forEach((issue, index) => {
+          console.log(`   ${index + 1}. ${issue.description}`);
+          console.log(`      Entity: ${issue.entityId}`);
+          console.log(`      Affected: ${issue.affectedEntities.length} related entities`);
+        });
+        console.log('');
+      }
+    }
+
+    // Integrity Assessment
+    console.log('🎯 Data Integrity Assessment:');
+    if (integrityScore >= 95) {
+      console.log('   🟢 EXCELLENT - Enterprise-grade data integrity');
+    } else if (integrityScore >= 85) {
+      console.log('   🟡 GOOD - Minor issues detected');
+    } else if (integrityScore >= 70) {
+      console.log('   🟠 FAIR - Moderate integrity issues');
+    } else {
+      console.log('   🔴 POOR - Significant integrity problems requiring attention');
+    }
+    console.log('');
+
+    // Recommendations
+    this.generateRecommendations(validationResult);
+  }
+
+  // ========================================================================
+  // ENTERPRISE UTILITY METHODS
+  // ========================================================================
+
+  /**
+   * 📋 Initialize validation metrics structure
+   */
+  static initializeMetrics() {
+    return {
+      totalUnits: 0,
+      soldUnits: 0,
+      validCustomers: 0,
+      validBuildings: 0,
+      validProjects: 0,
+      orphanedRecords: 0
+    };
+  }
+
+  /**
+   * ⚠️ Add validation issue to results
+   */
+  static addValidationIssue(validationResult, issue) {
+    validationResult.issues.push({
+      timestamp: new Date().toISOString(),
+      ...issue
+    });
+  }
+
+  /**
+   * 👤 Get professional customer display name
+   */
+  static getCustomerDisplayName(customer) {
+    if (customer.type === 'company') {
+      return customer.companyName || customer.name || 'Unnamed Company';
+    }
+
+    const firstName = customer.firstName || '';
+    const lastName = customer.lastName || '';
+    return `${firstName} ${lastName}`.trim() || 'Unnamed Individual';
+  }
+
+  /**
+   * 💰 Calculate total property value for customer
+   */
+  static calculateTotalPropertyValue(units) {
+    return units.reduce((total, unit) => {
+      const value = parseFloat(unit.price || unit.value || 0);
+      return total + (isNaN(value) ? 0 : value);
+    }, 0);
+  }
+
+  /**
+   * 📊 Group issues by type for reporting
+   */
+  static groupIssuesByType(issues) {
+    return issues.reduce((groups, issue) => {
+      const type = issue.type;
+      if (!groups[type]) {
+        groups[type] = [];
+      }
+      groups[type].push(issue);
+      return groups;
+    }, {});
+  }
+
+  /**
+   * 💡 Generate actionable recommendations
+   */
+  static generateRecommendations(validationResult) {
+    const { issues, integrityScore } = validationResult;
+
+    console.log('💡 Recommendations:');
+
+    const criticalIssues = issues.filter(i => i.severity === 'critical');
+    if (criticalIssues.length > 0) {
+      console.log('   1. Address critical data integrity issues immediately');
+      console.log('   2. Review customer and building reference integrity');
+      console.log('   3. Implement data validation constraints');
+    }
+
+    if (integrityScore < 85) {
+      console.log('   4. Establish regular data quality monitoring');
+      console.log('   5. Implement automated validation workflows');
+    }
+
+    console.log('   6. Consider implementing foreign key constraints');
+    console.log('   7. Schedule regular data integrity audits');
+    console.log('');
+  }
+
+}
+
+// ============================================================================
+// ENTERPRISE EXECUTION HANDLER
+// ============================================================================
+
+/**
+ * 🚀 Enterprise validation execution with proper error handling
+ */
+async function executeValidation() {
+  try {
+    console.log('🚀 Starting Enterprise Property Validation...\n');
+
+    const validationResult = await PropertyRelationshipValidator.validatePropertyRelationships();
+
+    console.log('\n✅ Validation completed successfully');
+    console.log(`📊 Final Integrity Score: ${validationResult.integrityScore}%`);
+    console.log(`🎯 System Status: ${validationResult.isValid ? 'HEALTHY' : 'NEEDS ATTENTION'}\n`);
+
+    return validationResult;
 
   } catch (error) {
-    console.error('❌ Σφάλμα κατά τον έλεγχο:', error);
+    console.error('❌ Enterprise validation failed:', error.message);
+    console.error('📋 Stack trace:', error.stack);
+    throw error;
   }
 }
 
 // ============================================================================
-// EXECUTION
+// MODULE EXPORTS & EXECUTION
 // ============================================================================
 
 if (require.main === module) {
-  checkPropertyConnections().then(() => {
-    console.log('🎯 Script completed');
-    process.exit(0);
-  }).catch(error => {
-    console.error('💥 Script failed:', error);
-    process.exit(1);
-  });
+  executeValidation()
+    .then((result) => {
+      console.log('🎯 Enterprise validation completed successfully');
+      process.exit(result.isValid ? 0 : 1);
+    })
+    .catch((error) => {
+      console.error('💥 Enterprise validation failed:', error.message);
+      process.exit(1);
+    });
 }
 
-module.exports = { checkPropertyConnections };
+// Export enterprise validator for integration
+module.exports = {
+  PropertyRelationshipValidator,
+  executeValidation
+};

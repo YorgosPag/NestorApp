@@ -21,6 +21,9 @@ export {
   configurationService as defaultConfigurationService
 } from './ConfigurationService';
 
+// Import for internal use
+import { ConfigurationService } from './ConfigurationService';
+
 export type {
   SystemConfiguration,
   GlobalSettings,
