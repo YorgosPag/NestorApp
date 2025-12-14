@@ -31,7 +31,7 @@ export function ProjectCustomersTab({ projectId }: ProjectCustomersTabProps) {
       </CardHeader>
       <CardContent>
         {/* Table Headers */}
-        <div className="grid grid-cols-[2fr_1.2fr_1.5fr_auto_auto] gap-3 pb-2 mb-4 border-b border-border text-sm font-medium text-muted-foreground">
+        <div className="grid grid-cols-[2fr_1fr_1.8fr_auto_auto] gap-3 pb-2 mb-4 border-b border-border text-sm font-medium text-muted-foreground">
           <div>Ονοματεπώνυμο</div>
           <div>Τηλέφωνο</div>
           <div>Email</div>
@@ -53,6 +53,11 @@ export function ProjectCustomersTab({ projectId }: ProjectCustomersTabProps) {
               showUnitsCount={true}
               unitsCount={customer.unitsCount}
               className="hover:bg-accent/30 transition-colors rounded-md"
+              customerData={{
+                name: customer.name,
+                phone: customer.phone,
+                email: customer.email
+              }}
             />
           ))}
         </section>

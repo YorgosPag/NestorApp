@@ -39,7 +39,8 @@ export function CustomerInfoCompact({
   showUnitsCount = false,
   unitsCount,
   maxWidth,
-  onUpdate
+  onUpdate,
+  customerData
 }: CustomerInfoCompactProps) {
   // ========================================================================
   // HOOKS & STATE
@@ -51,7 +52,7 @@ export function CustomerInfoCompact({
     error
   } = useCustomerInfo(contactId, {
     fetchExtended: false, // Compact mode μόνο basic info
-    enabled: Boolean(contactId)
+    enabled: Boolean(contactId && !customerData) // Skip fetch αν έχουμε customerData
   });
 
   // ========================================================================
@@ -60,7 +61,16 @@ export function CustomerInfoCompact({
 
   const isLoading = externalLoading || loading;
   const hasError = externalError || error;
-  const displayInfo = customerInfo;
+
+  // Χρησιμοποίησε customerData αν υπάρχουν, αλλιώς fetched data
+  const displayInfo = customerData ? {
+    contactId,
+    displayName: customerData.displayName || customerData.name || 'Άγνωστος πελάτης',
+    primaryPhone: customerData.primaryPhone || customerData.phone || null,
+    primaryEmail: customerData.primaryEmail || customerData.email || null,
+    avatarUrl: customerData.avatarUrl,
+    status: undefined
+  } : customerInfo;
 
   // Size-based styling
   const sizeClasses = {
@@ -192,7 +202,7 @@ export function CustomerInfoCompact({
     if (variant === 'table') {
       return (
         <div
-          className={`grid grid-cols-[2fr_1.2fr_1.5fr_auto_auto] gap-3 items-center py-3 px-1 ${className}`}
+          className={`grid grid-cols-[2fr_1fr_1.8fr_auto_auto] gap-3 items-center py-3 px-1 ${className}`}
           style={containerStyle}
         >
           {/* Column 1: Avatar + Name */}
@@ -331,7 +341,7 @@ export function CustomerInfoCompact({
   if (variant === 'table') {
     return (
       <div
-        className={`grid grid-cols-[2fr_1.2fr_1.5fr_auto_auto] gap-3 items-center py-3 px-1 ${className}`}
+        className={`grid grid-cols-[2fr_1fr_1.8fr_auto_auto] gap-3 items-center py-3 px-1 ${className}`}
         style={containerStyle}
         role="article"
         aria-label={`Στοιχεία πελάτη: ${displayInfo.displayName}`}

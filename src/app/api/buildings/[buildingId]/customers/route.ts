@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { firebaseServer } from '@/lib/firebase-server';
-import { getContactDisplayName, getPrimaryPhone } from '@/types/contacts';
+import { getContactDisplayName, getPrimaryPhone, getPrimaryEmail } from '@/types/contacts';
 
 export async function GET(
   request: NextRequest,
@@ -93,6 +93,7 @@ export async function GET(
         contactId: contact.id,
         name: getContactDisplayName(contact),
         phone: getPrimaryPhone(contact) || null,
+        email: getPrimaryEmail(contact) || null,
         unitsCount: customerUnitCount[contact.id] || 0,
       };
     });

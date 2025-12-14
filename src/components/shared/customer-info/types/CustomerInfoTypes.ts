@@ -218,6 +218,17 @@ export interface CustomerInfoCompactProps extends CustomerInfoBaseProps {
 
   /** Units count value (αν διαθέσιμο από το API) */
   unitsCount?: number;
+
+  /** Pre-loaded customer data (skips fetch if provided) */
+  customerData?: {
+    name?: string;
+    displayName?: string;
+    phone?: string | null;
+    email?: string | null;
+    primaryPhone?: string | null;
+    primaryEmail?: string | null;
+    avatarUrl?: string;
+  };
 }
 
 /**
