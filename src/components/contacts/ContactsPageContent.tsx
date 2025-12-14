@@ -129,46 +129,83 @@ export function ContactsPageContent() {
     }
   }, [filters.showArchived]);
 
+  // 🚀 ENTERPRISE PERFORMANCE: Direct contact fetch για instant loading
+  const loadSpecificContact = useCallback(async (contactId: string) => {
+    try {
+      console.log('🚀 PERFORMANCE: Direct fetching specific contact:', contactId);
+
+      const contact = await ContactsService.getContact(contactId);
+
+      if (contact) {
+        console.log('⚡ INSTANT: Contact loaded directly:', getContactDisplayName(contact));
+
+        // Set the specific contact immediately
+        setSelectedContact(contact);
+
+        // Add to contacts list if not already there
+        setContacts(prev => {
+          const exists = prev.find(c => c.id === contactId);
+          if (exists) return prev;
+          return [contact, ...prev];
+        });
+
+        return contact;
+      } else {
+        console.warn('⚠️ CONTACT NOT FOUND:', contactId);
+        return null;
+      }
+    } catch (err) {
+      console.error('❌ Error loading specific contact:', err);
+      return null;
+    }
+  }, []);
+
   // 🚫 SEED LOGIC ΑΦΑΙΡΕΘΗΚΕ - Δεν υπάρχει πλέον seeding functionality
 
   const refreshContacts = async () => {
     await loadContacts();
   };
 
-  // Load contacts on component mount and when archived filter changes
+  // 🚀 ENTERPRISE LOADING STRATEGY: Smart loading based on URL parameters
   useEffect(() => {
-    loadContacts();
-  }, []); // 🔧 FIX: Removed loadContacts to prevent infinite loop - load once on mount
+    const contactIdParam = searchParams.get('contactId');
 
-  // 🎯 URL FILTERING: Read filter and contactId parameters from URL
+    if (contactIdParam) {
+      // 🚀 INSTANT STRATEGY: Direct contact fetch για immediate display
+      console.log('🚀 ENTERPRISE: Using direct contact fetch strategy for:', contactIdParam);
+
+      // First: Load specific contact INSTANTLY
+      loadSpecificContact(contactIdParam).then(contact => {
+        if (contact) {
+          // Clear search terms to focus on this contact
+          setSearchTerm('');
+          setActiveCardFilter(null);
+        }
+      });
+
+      // Second: Load full contacts list in BACKGROUND (for navigation)
+      setTimeout(() => {
+        console.log('📋 BACKGROUND: Loading full contacts list...');
+        loadContacts();
+      }, 100); // Small delay to prioritize specific contact
+    } else {
+      // Normal strategy: Load all contacts
+      loadContacts();
+    }
+  }, []); // Load once on mount
+
+  // 🎯 URL FILTERING: Handle filter parameter (not contactId)
   useEffect(() => {
     const filterParam = searchParams.get('filter');
     const contactIdParam = searchParams.get('contactId');
 
-    if (filterParam) {
+    // Only handle filter param if no contactId (contactId has priority)
+    if (filterParam && !contactIdParam) {
       console.log('🔍 FILTERING: Applying URL filter:', filterParam);
       setSearchTerm(decodeURIComponent(filterParam));
-      // Καθαρίσαμε και άλλα φίλτρα για να εστιάσουμε στο όνομα
       setActiveCardFilter(null);
     }
-
-    // 🎯 CONTACT SELECTION: Auto-select specific contact if contactId is provided
-    if (contactIdParam && contacts.length > 0) {
-      const targetContact = contacts.find(contact => contact.id === contactIdParam);
-      if (targetContact) {
-        console.log('🎯 CONTACT SELECTION: Auto-selecting contact:', {
-          contactId: contactIdParam,
-          contactName: getContactDisplayName(targetContact)
-        });
-        setSelectedContact(targetContact);
-        // Clear general search terms to focus on this specific contact
-        setSearchTerm('');
-        setActiveCardFilter(null);
-      } else {
-        console.warn('⚠️ CONTACT SELECTION: Contact not found with ID:', contactIdParam);
-      }
-    }
-  }, [searchParams, contacts]);
+  }, [searchParams]);
 
   // 🧹 CLEAR FILTER: Function για καθάρισμα του URL filter και contactId
   const handleClearURLFilter = () => {
