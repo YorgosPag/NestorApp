@@ -35,11 +35,12 @@ interface CustomerCache {
 /**
  * In-memory cache για customer info
  * Enterprise-class caching με TTL και LRU eviction
+ * OPTIMIZED για better performance
  */
 class CustomerInfoCache {
   private cache: CustomerCache = {};
-  private readonly maxSize = 100;
-  private readonly defaultTTL = 5 * 60 * 1000; // 5 minutes
+  private readonly maxSize = 200; // Increased cache size
+  private readonly defaultTTL = 15 * 60 * 1000; // 15 minutes (longer TTL)
 
   get(contactId: string, ttl: number = this.defaultTTL) {
     const entry = this.cache[contactId];

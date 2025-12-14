@@ -32,7 +32,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 import { UnifiedCustomerCard } from '@/components/shared/customer-info';
-import { useCustomerInfo } from '@/components/shared/customer-info';
+import { useOptimizedCustomerInfo } from './hooks/useOptimizedCustomerInfo';
 import type { Property } from '@/types/property-viewer';
 
 export interface UnitCustomerTabProps {
@@ -48,6 +48,221 @@ export interface UnitCustomerTabProps {
  * Enterprise customer tab για unit details
  * Δείχνει full customer profile και relationship management
  */
+// ============================================================================
+// OPTIMIZED CUSTOMER PROFILE SECTION COMPONENT
+// ============================================================================
+
+interface CustomerProfileSectionProps {
+  customerId: string;
+  unitPrice?: number;
+}
+
+function CustomerProfileSection({ customerId, unitPrice }: CustomerProfileSectionProps) {
+  const {
+    customerInfo,
+    loading,
+    error,
+    refetch
+  } = useOptimizedCustomerInfo(customerId, Boolean(customerId));
+
+  // ENTERPRISE: Optimized Loading State
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <User className="w-5 h-5 text-blue-600" />
+            Πληροφορίες Πελάτη
+            <div className="ml-auto">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                <span>Φόρτωση...</span>
+              </div>
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {/* ENTERPRISE: Professional Skeleton Loader */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <Skeleton className="h-16 w-16 rounded-full" />
+              <div className="space-y-2 flex-1">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-3 w-28" />
+              </div>
+            </div>
+            <Separator />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="h-4 w-36" />
+              </div>
+              <div className="space-y-2">
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-4 w-28" />
+              </div>
+            </div>
+            <div className="flex gap-2 pt-4">
+              <Skeleton className="h-9 w-32" />
+              <Skeleton className="h-9 w-28" />
+              <Skeleton className="h-9 w-24" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // ENTERPRISE: Error State
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-destructive" />
+            Σφάλμα Φόρτωσης Πελάτη
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Alert variant="destructive">
+            <AlertTriangle className="w-4 h-4" />
+            <AlertDescription>
+              Δεν ήταν δυνατή η φόρτωση των στοιχείων του πελάτη: {error}
+            </AlertDescription>
+          </Alert>
+          <div className="mt-4 flex gap-2">
+            <Button
+              variant="outline"
+              onClick={refetch}
+              className="flex-1"
+            >
+              Επανάληψη Φόρτωσης
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => window.location.reload()}
+              className="flex-1"
+            >
+              Reload Σελίδας
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // ENTERPRISE: Success State με Full Profile
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <User className="w-5 h-5 text-blue-600" />
+          Πληροφορίες Πελάτη
+          <Badge variant="outline" className="ml-auto">
+            Φορτώθηκε
+          </Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {/* ENTERPRISE: Fast Rendering με Cached Data */}
+        <div className="space-y-4">
+
+          {/* Customer Basic Info */}
+          <div className="flex items-start gap-4">
+            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
+              <User className="w-8 h-8 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-lg">
+                {customerInfo?.displayName || 'Άγνωστος πελάτης'}
+              </h3>
+              {customerInfo?.primaryPhone && (
+                <p className="text-muted-foreground flex items-center gap-2">
+                  <Phone className="w-4 h-4" />
+                  {customerInfo.primaryPhone}
+                </p>
+              )}
+              {customerInfo?.primaryEmail && (
+                <p className="text-muted-foreground flex items-center gap-2">
+                  <Mail className="w-4 h-4" />
+                  <span className="truncate">{customerInfo.primaryEmail}</span>
+                </p>
+              )}
+              <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+                <Calendar className="w-3 h-3" />
+                Φόρτωση: {customerInfo ? new Date(customerInfo.fetchedAt).toLocaleTimeString('el-GR') : '—'}
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Quick Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm text-muted-foreground">Customer ID</p>
+              <p className="font-mono text-xs bg-muted px-2 py-1 rounded">
+                {customerId}
+              </p>
+            </div>
+            {unitPrice && (
+              <div>
+                <p className="text-sm text-muted-foreground">Αξία Συναλλαγής</p>
+                <p className="font-semibold text-green-600">
+                  €{unitPrice.toLocaleString('el-GR')}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Quick Actions */}
+          <div className="flex flex-wrap gap-2 pt-4 border-t">
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => window.open(`/contacts?contactId=${customerId}`, '_blank')}
+            >
+              <User className="w-4 h-4 mr-2" />
+              Πλήρες Προφίλ
+            </Button>
+
+            {customerInfo?.primaryPhone && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const cleanPhone = customerInfo.primaryPhone!.replace(/\s+/g, '');
+                  window.open(`tel:${cleanPhone}`, '_self');
+                }}
+              >
+                <Phone className="w-4 h-4 mr-2" />
+                Κλήση
+              </Button>
+            )}
+
+            {customerInfo?.primaryEmail && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.open(`mailto:${customerInfo.primaryEmail}`, '_self')}
+              >
+                <Mail className="w-4 h-4 mr-2" />
+                Email
+              </Button>
+            )}
+          </div>
+
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
+
 export function UnitCustomerTab({
   selectedUnit,
   additionalData,
@@ -210,53 +425,11 @@ export function UnitCustomerTab({
 
       <Separator />
 
-      {/* ENTERPRISE: Full Customer Profile Display */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="w-5 h-5 text-blue-600" />
-            Πληροφορίες Πελάτη
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {/* Χρήση του existing UnifiedCustomerCard με full profile */}
-          <UnifiedCustomerCard
-            contactId={selectedUnit.soldTo!}
-            context="unit"
-            variant="card"
-            showUnitsCount={true}
-            showTotalValue={true}
-            customActions={[
-              {
-                type: 'view',
-                label: 'Προβολή Πλήρους Προφίλ',
-                icon: User,
-                onClick: () => window.open(`/contacts?contactId=${selectedUnit.soldTo}`, '_blank'),
-                variant: 'default'
-              },
-              {
-                type: 'email',
-                label: 'Αποστολή Email',
-                icon: Mail,
-                onClick: () => {
-                  // Το email action θα γίνει handle από το component
-                },
-                variant: 'outline'
-              },
-              {
-                type: 'call',
-                label: 'Κλήση',
-                icon: Phone,
-                onClick: () => {
-                  // Το call action θα γίνει handle από το component
-                },
-                variant: 'outline'
-              }
-            ]}
-            className="border-0 shadow-none p-0"
-          />
-        </CardContent>
-      </Card>
+      {/* ENTERPRISE: Full Customer Profile Display με OPTIMIZED LOADING */}
+      <CustomerProfileSection
+        customerId={selectedUnit.soldTo!}
+        unitPrice={selectedUnit.price}
+      />
 
       {/* ENTERPRISE: Property Relationship Management */}
       <Card>
