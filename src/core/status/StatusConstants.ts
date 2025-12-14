@@ -194,6 +194,7 @@ export const CONTACT_STATUSES = {
 // ===== PROPERTY STATUS DEFINITIONS =====
 
 export const PROPERTY_STATUSES = {
+  // Βασικές καταστάσεις (legacy - διατηρούμε για backward compatibility)
   available: {
     label: 'Διαθέσιμο',
     variant: 'success',
@@ -235,6 +236,193 @@ export const PROPERTY_STATUSES = {
     color: '#6B7280',
     backgroundColor: '#F9FAFB',
     icon: 'calendar'
+  },
+
+  // 🏨 Advanced Rental Statuses
+  'rental-only': {
+    label: 'Μόνο Ενοικίαση',
+    variant: 'info',
+    color: '#0369A1',
+    backgroundColor: '#E0F2FE',
+    icon: 'key'
+  },
+  'long-term-rental': {
+    label: 'Μακροχρόνια Μίσθωση',
+    variant: 'info',
+    color: '#0284C7',
+    backgroundColor: '#F0F9FF',
+    icon: 'calendar'
+  },
+  'short-term-rental': {
+    label: 'Βραχυχρόνια Μίσθωση',
+    variant: 'info',
+    color: '#0EA5E9',
+    backgroundColor: '#F0FAFF',
+    icon: 'clock'
+  },
+
+  // 🔒 Advanced Reservation Statuses
+  'reserved-pending': {
+    label: 'Δεσμευμένο Εκκρεμές',
+    variant: 'warning',
+    color: '#EA580C',
+    backgroundColor: '#FFF7ED',
+    icon: 'pause'
+  },
+  'contract-signed': {
+    label: 'Συμβόλαιο Υπογεγραμμένο',
+    variant: 'warning',
+    color: '#C2410C',
+    backgroundColor: '#FEF2F2',
+    icon: 'fileSignature'
+  },
+  'deposit-paid': {
+    label: 'Προκαταβολή Δεδομένη',
+    variant: 'warning',
+    color: '#D97706',
+    backgroundColor: '#FFFBEB',
+    icon: 'creditCard'
+  },
+
+  // 👑 Ownership Statuses
+  'company-owned': {
+    label: 'Εταιρικό',
+    variant: 'purple',
+    color: '#6B21A8',
+    backgroundColor: '#FAF5FF',
+    icon: 'building'
+  },
+  'not-for-sale': {
+    label: 'Δεν Πωλείται',
+    variant: 'purple',
+    color: '#7C3AED',
+    backgroundColor: '#F3E8FF',
+    icon: 'shield'
+  },
+  'family-reserved': {
+    label: 'Οικογενειακό',
+    variant: 'purple',
+    color: '#8B5CF6',
+    backgroundColor: '#F5F3FF',
+    icon: 'heart'
+  },
+
+  // ⚡ Market Dynamics
+  'pre-launch': {
+    label: 'Προ-εκκίνηση',
+    variant: 'success',
+    color: '#16A34A',
+    backgroundColor: '#F0FDF4',
+    icon: 'rocket'
+  },
+  'exclusive-listing': {
+    label: 'Αποκλειστική Διάθεση',
+    variant: 'success',
+    color: '#15803D',
+    backgroundColor: '#ECFDF5',
+    icon: 'crown'
+  },
+  'price-reduced': {
+    label: 'Μειωμένη Τιμή',
+    variant: 'error',
+    color: '#F59E0B',
+    backgroundColor: '#FEF3C7',
+    icon: 'trendingDown'
+  },
+  'urgent-sale': {
+    label: 'Επείγουσα Πώληση',
+    variant: 'destructive',
+    color: '#DC2626',
+    backgroundColor: '#FEF2F2',
+    icon: 'alertTriangle'
+  },
+
+  // 🔧 Operational Statuses
+  'under-renovation': {
+    label: 'Υπό Ανακαίνιση',
+    variant: 'secondary',
+    color: '#6B7280',
+    backgroundColor: '#F9FAFB',
+    icon: 'wrench'
+  },
+  'legal-issues': {
+    label: 'Νομικά Προβλήματα',
+    variant: 'destructive',
+    color: '#B91C1C',
+    backgroundColor: '#FEE2E2',
+    icon: 'gavel'
+  },
+  'inspection-required': {
+    label: 'Απαιτείται Επιθεώρηση',
+    variant: 'outline',
+    color: '#6B7280',
+    backgroundColor: '#F9FAFB',
+    icon: 'search'
+  },
+  'documentation-pending': {
+    label: 'Εκκρεμή Έγγραφα',
+    variant: 'outline',
+    color: '#9CA3AF',
+    backgroundColor: '#F9FAFB',
+    icon: 'fileText'
+  },
+
+  // Βασικά από το παλιό σύστημα για πλήρη συμβατότητα
+  'for-sale': {
+    label: 'Προς Πώληση',
+    variant: 'success',
+    color: '#059669',
+    backgroundColor: '#ECFDF5',
+    icon: 'tag'
+  },
+  'for-rent': {
+    label: 'Προς Ενοικίαση',
+    variant: 'info',
+    color: '#3B82F6',
+    backgroundColor: '#EFF6FF',
+    icon: 'key'
+  },
+  rented: {
+    label: 'Ενοικιασμένο',
+    variant: 'purple',
+    color: '#7C3AED',
+    backgroundColor: '#F3E8FF',
+    icon: 'handshake'
+  },
+  'under-negotiation': {
+    label: 'Υπό Διαπραγμάτευση',
+    variant: 'warning',
+    color: '#D97706',
+    backgroundColor: '#FFFBEB',
+    icon: 'messageCircle'
+  },
+  'coming-soon': {
+    label: 'Σύντομα Διαθέσιμο',
+    variant: 'outline',
+    color: '#6B7280',
+    backgroundColor: '#F9FAFB',
+    icon: 'calendar'
+  },
+  landowner: {
+    label: 'Ιδιοκτήτης Γης',
+    variant: 'secondary',
+    color: '#4B5563',
+    backgroundColor: '#F3F4F6',
+    icon: 'map'
+  },
+  'off-market': {
+    label: 'Εκτός Αγοράς',
+    variant: 'outline',
+    color: '#6B7280',
+    backgroundColor: '#F9FAFB',
+    icon: 'eyeOff'
+  },
+  unavailable: {
+    label: 'Μη Διαθέσιμο',
+    variant: 'secondary',
+    color: '#6B7280',
+    backgroundColor: '#F9FAFB',
+    icon: 'x'
   }
 } as const;
 
