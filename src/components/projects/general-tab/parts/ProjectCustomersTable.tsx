@@ -107,10 +107,11 @@ export function ProjectCustomersTable({ projectId }: ProjectCustomersTableProps)
       </CardHeader>
       <CardContent>
         {/* Table Headers */}
-        <div className="grid grid-cols-4 gap-4 pb-2 mb-4 border-b border-border text-sm font-medium text-muted-foreground">
+        <div className="grid grid-cols-[2fr_1.2fr_1.5fr_auto_auto] gap-3 pb-2 mb-4 border-b border-border text-sm font-medium text-muted-foreground">
           <div>Ονοματεπώνυμο</div>
           <div>Τηλέφωνο</div>
-          <div>Αριθμός Μονάδων</div>
+          <div>Email</div>
+          <div className="text-right pr-3">Μονάδες</div>
           <div className="text-right">Ενέργειες</div>
         </div>
 

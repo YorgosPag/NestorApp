@@ -192,7 +192,7 @@ export function CustomerInfoCompact({
     if (variant === 'table') {
       return (
         <div
-          className={`grid grid-cols-4 gap-4 items-center py-3 px-1 ${className}`}
+          className={`grid grid-cols-[2fr_1.2fr_1.5fr_auto_auto] gap-3 items-center py-3 px-1 ${className}`}
           style={containerStyle}
         >
           {/* Column 1: Avatar + Name */}
@@ -202,10 +202,14 @@ export function CustomerInfoCompact({
           </div>
           {/* Column 2: Phone */}
           <div className="h-3 bg-muted rounded w-16 animate-pulse" />
-          {/* Column 3: Units */}
-          <div className="h-3 bg-muted rounded w-8 animate-pulse" />
-          {/* Column 4: Actions */}
-          <div className="flex justify-end">
+          {/* Column 3: Email */}
+          <div className="h-3 bg-muted rounded w-20 animate-pulse" />
+          {/* Column 4: Units */}
+          <div className="flex justify-end pr-3">
+            <div className="h-3 bg-muted rounded w-8 animate-pulse" />
+          </div>
+          {/* Column 5: Actions */}
+          <div className="flex items-center gap-1">
             <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
           </div>
         </div>
@@ -237,7 +241,7 @@ export function CustomerInfoCompact({
     if (variant === 'table') {
       return (
         <div
-          className={`grid grid-cols-4 gap-4 items-center py-3 px-1 ${className} text-destructive`}
+          className={`grid grid-cols-[2fr_1.2fr_1.5fr_auto_auto] gap-3 items-center py-3 px-1 ${className} text-destructive`}
           style={containerStyle}
         >
           <div className="flex items-center gap-3">
@@ -246,8 +250,11 @@ export function CustomerInfoCompact({
             </div>
             <span className={`${styles.text} font-medium truncate`}>Σφάλμα φόρτωσης</span>
           </div>
-          <span className={`${styles.subtext} text-destructive/70 truncate`}>{hasError}</span>
-          <span>—</span>
+          <span className={`${styles.subtext} text-destructive/70 truncate`}>—</span>
+          <span className={`${styles.subtext} text-destructive/70 truncate`}>—</span>
+          <div className="flex justify-end pr-3">
+            <span>—</span>
+          </div>
           <span>—</span>
         </div>
       );
@@ -281,7 +288,7 @@ export function CustomerInfoCompact({
     if (variant === 'table') {
       return (
         <div
-          className={`grid grid-cols-4 gap-4 items-center py-3 px-1 ${className} text-muted-foreground`}
+          className={`grid grid-cols-[2fr_1.2fr_1.5fr_auto_auto] gap-3 items-center py-3 px-1 ${className} text-muted-foreground`}
           style={containerStyle}
         >
           <div className="flex items-center gap-3">
@@ -292,6 +299,9 @@ export function CustomerInfoCompact({
           </div>
           <span>—</span>
           <span>—</span>
+          <div className="flex justify-end pr-3">
+            <span>—</span>
+          </div>
           <span>—</span>
         </div>
       );
@@ -321,12 +331,12 @@ export function CustomerInfoCompact({
   if (variant === 'table') {
     return (
       <div
-        className={`grid grid-cols-4 gap-4 items-center py-3 px-1 ${className}`}
+        className={`grid grid-cols-[2fr_1.2fr_1.5fr_auto_auto] gap-3 items-center py-3 px-1 ${className}`}
         style={containerStyle}
         role="article"
         aria-label={`Στοιχεία πελάτη: ${displayInfo.displayName}`}
       >
-        {/* Column 1: Avatar + Name */}
+        {/* Column 1: Avatar + Name (2fr - wider for names) */}
         <div className="flex items-center gap-3 min-w-0">
           {renderAvatar()}
           <span className={`${styles.text} font-medium text-foreground truncate`}>
@@ -334,7 +344,7 @@ export function CustomerInfoCompact({
           </span>
         </div>
 
-        {/* Column 2: Phone */}
+        {/* Column 2: Phone (1.2fr - medium width) */}
         <div className="flex items-center gap-2 min-w-0">
           {displayInfo?.primaryPhone ? (
             <>
@@ -348,17 +358,31 @@ export function CustomerInfoCompact({
           )}
         </div>
 
-        {/* Column 3: Units Count */}
-        <div className="flex items-center gap-1">
+        {/* Column 3: Email (1.5fr - medium-wide for emails) */}
+        <div className="flex items-center gap-2 min-w-0">
+          {displayInfo?.primaryEmail ? (
+            <>
+              <Mail className="w-4 h-4 text-muted-foreground shrink-0" />
+              <span className={`${styles.text} text-foreground truncate`}>
+                {displayInfo.primaryEmail}
+              </span>
+            </>
+          ) : (
+            <span className={`${styles.text} text-muted-foreground`}>—</span>
+          )}
+        </div>
+
+        {/* Column 4: Units Count (auto - narrow for numbers) */}
+        <div className="flex items-center justify-end gap-1 pr-3">
           <span className={`${styles.text} text-foreground font-medium`}>
             #{unitsCount || 1}
           </span>
         </div>
 
-        {/* Column 4: Actions */}
-        <div className="flex justify-end">
+        {/* Column 5: Actions (auto - narrow for icons) */}
+        <div className="flex items-center gap-1">
           {showActions && displayInfo && (
-            <div className="flex items-center gap-1">
+            <>
               {/* View Action (Ματάκι) */}
               <Button
                 variant="ghost"
@@ -385,7 +409,22 @@ export function CustomerInfoCompact({
                   <Phone className="w-4 h-4" />
                 </Button>
               )}
-            </div>
+
+              {/* Email Action (Email) */}
+              {displayInfo.primaryEmail && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={() => {
+                    window.open(`mailto:${displayInfo.primaryEmail}`, '_self');
+                  }}
+                  title="Αποστολή Email"
+                >
+                  <Mail className="w-4 h-4" />
+                </Button>
+              )}
+            </>
           )}
         </div>
       </div>

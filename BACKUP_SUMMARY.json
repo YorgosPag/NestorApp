@@ -1,31 +1,32 @@
 {
-  "category": "FEATURE",
-  "shortDescription": "Enhanced CustomersTable UI Component with Professional Layout",
-  "problem": "Χρειαζόταν βελτίωση του CustomersTable component με καλύτερο UI design και interactive features",
-  "cause": "Το προηγούμενο component χρειαζόταν πιο professional εμφάνιση και καλύτερη user experience",
+  "category": "REFACTOR",
+  "shortDescription": "Customer Table Centralization Complete - Eliminated Duplicate Components",
+  "problem": "Υπήρχαν διπλότυπα customer table components που δημιουργούσαν inconsistency και maintenance issues",
+  "cause": "Διάσπαρτος κώδικας με custom table implementations σε διαφορετικά μέρη της εφαρμογής",
   "filesChanged": [
     "BACKUP_SUMMARY.json",
-    "src/components/projects/customers-tab/parts/CustomersTable.tsx"
+    "src/components/projects/customers-tab/ProjectCustomersTab.tsx",
+    "src/components/projects/customers-tab/parts/CustomersTable.tsx",
+    "src/subapps/dxf-viewer/docs/CENTRALIZED_SYSTEMS.md"
   ],
   "solution": {
-    "phase1": "Redesign του CustomersTable με professional grid layout και proper column alignment",
-    "phase2": "Προσθήκη Avatar component με initials για καλύτερη visual hierarchy",
-    "phase3": "Implementation interactive action buttons (Phone, View) με proper event handling",
-    "phase4": "Enhanced responsive design με improved accessibility και ARIA labels",
-    "phase5": "Clean semantic HTML structure για καλύτερη maintainability"
+    "phase1": "Διαγραφή του duplicate CustomersTable.tsx component",
+    "phase2": "Migration του ProjectCustomersTab στο centralized CustomerInfoCompact",
+    "phase3": "Ενημέρωση CENTRALIZED_SYSTEMS.md με customer table consolidation documentation",
+    "phase4": "Enforcement single source of truth για όλα τα customer table layouts",
+    "phase5": "Εξασφάλιση consistency across Projects, Buildings, και General tabs"
   },
-  "testing": "Deployment στο Vercel production environment για live UI testing",
+  "testing": "Deployment στο Vercel production environment για validation της centralization",
   "notes": [
-    "✅ Professional grid layout με 4 columns (Name, Phone, Units, Actions)",
-    "✅ Avatar component με automatic initials generation",
-    "✅ Interactive phone button με tel: protocol για direct calling",
-    "✅ Eye button για view action με proper accessibility",
-    "✅ Hover effects και transition animations",
-    "✅ Responsive design με truncation για long names",
-    "✅ Semantic HTML structure με proper ARIA labels",
-    "✅ 2 αρχεία άλλαξαν με 117 insertions και 104 deletions",
-    "📱 Mobile-friendly design με proper touch targets",
-    "🎨 Professional UI/UX με consistent design system"
+    "🗑️ **ΔΙΑΓΡΑΦΗΚΕ ΔΙΠΛΟΤΥΠΟ**: CustomersTable.tsx component",
+    "✅ **ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ**: Όλοι οι customer tables χρησιμοποιούν CustomerInfoCompact",
+    "✅ **SINGLE SOURCE**: components/shared/customer-info/components/CustomerInfoCompact.tsx",
+    "✅ **CONSISTENCY**: Unified layout σε Projects/Buildings/General tabs",
+    "✅ 4 αρχεία άλλαξαν με 78 insertions και 141 deletions",
+    "✅ Enterprise-class centralization με proper documentation",
+    "📋 Updated CENTRALIZED_SYSTEMS.md με Rule #11: Customer Table Layouts",
+    "🎯 Enforced variant='table' usage pattern για consistent styling",
+    "🔧 Eliminated maintenance overhead από duplicate components"
   ],
   "contributors": {
     "user": "Γιώργος",
@@ -33,16 +34,21 @@
     "sessionDate": "2025-12-14"
   },
   "relatedBackups": [
-    "Previous commit: 353e0c2 - Safety Checkpoint: Revert & Claude Settings Update",
-    "Previous stable: bc34240 - Safety Checkpoint: Customer Management & API Enhancements",
-    "Customer Management System Enhancements"
+    "Previous commit: 7d87c82 - Enhanced CustomersTable UI Component",
+    "Customer Management System Enhancements",
+    "Enterprise Centralization Initiative"
   ],
   "commits": [
     {
-      "hash": "7d87c82",
-      "message": "🔒 Safety Checkpoint: Enhanced CustomersTable UI Component",
-      "stats": "2 files changed, 117 insertions(+), 104 deletions(-)",
-      "timestamp": "2025-12-14"
+      "hash": "764e7c6",
+      "message": "🔒 Safety Checkpoint: Customer Table Centralization Complete",
+      "stats": "4 files changed, 78 insertions(+), 141 deletions(-)",
+      "timestamp": "2025-12-14",
+      "details": {
+        "deleted_files": ["src/components/projects/customers-tab/parts/CustomersTable.tsx"],
+        "centralized_to": "src/components/shared/customer-info/components/CustomerInfoCompact.tsx",
+        "documentation_updated": "src/subapps/dxf-viewer/docs/CENTRALIZED_SYSTEMS.md"
+      }
     }
   ]
 }
