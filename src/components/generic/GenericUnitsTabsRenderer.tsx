@@ -5,28 +5,37 @@ import { TabsContent } from "@/components/ui/tabs";
 import { TabsOnlyTriggers, type TabDefinition } from "@/components/ui/navigation/TabsComponents";
 import type { UnitsTabConfig } from '@/config/units-tabs-config';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Home, Map, FileText, Camera, Video } from 'lucide-react';
+import { Home, Map, FileText, Camera, Video, User } from 'lucide-react';
 
 // ============================================================================
 // ICON MAPPING
 // ============================================================================
 
 /**
- * Mapping από emoji icons σε Lucide React icons
+ * Mapping από string icons σε Lucide React icons
  */
 const ICON_MAPPING = {
+  // Emoji mapping (legacy)
   '🏠': Home,
   '🗺️': Map,
   '📄': FileText,
   '📸': Camera,
   '🎬': Video,
+
+  // String mapping (new)
+  'home': Home,
+  'user': User,
+  'map': Map,
+  'file-text': FileText,
+  'camera': Camera,
+  'video': Video,
 } as const;
 
 /**
- * Helper function για την μετατροπή emoji icon σε Lucide icon
+ * Helper function για την μετατροπή string/emoji icon σε Lucide icon
  */
-function getIconComponent(emojiIcon: string) {
-  return ICON_MAPPING[emojiIcon as keyof typeof ICON_MAPPING] || Home;
+function getIconComponent(icon: string) {
+  return ICON_MAPPING[icon as keyof typeof ICON_MAPPING] || Home;
 }
 
 // ============================================================================
@@ -37,12 +46,14 @@ import { PropertyDetailsContent } from '@/components/property-viewer/details/Pro
 import PhotosTabContent from '@/components/building-management/tabs/PhotosTabContent';
 import VideosTabContent from '@/components/building-management/tabs/VideosTabContent';
 import { FloorPlanTab } from '@/features/units-sidebar/components/FloorPlanTab';
+import { UnitCustomerTab } from '@/components/units/tabs/UnitCustomerTab';
 
 /**
  * Component mapping για την αντιστοίχιση component names σε actual components
  */
 const COMPONENT_MAPPING = {
   'PropertyDetailsContent': PropertyDetailsContent,
+  'UnitCustomerTab': UnitCustomerTab,
   'FloorPlanTab': FloorPlanTab,
   'PhotosTabContent': PhotosTabContent,
   'VideosTabContent': VideosTabContent,
