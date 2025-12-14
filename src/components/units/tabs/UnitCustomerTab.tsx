@@ -22,7 +22,7 @@
  */
 
 import React from 'react';
-import { User, Phone, Mail, Calendar, Home, FileText, AlertTriangle } from 'lucide-react';
+import { User, Phone, Mail, Calendar, Home, FileText, AlertTriangle, ExternalLink, ArrowRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -168,32 +168,56 @@ function CustomerProfileSection({ customerId, unitPrice }: CustomerProfileSectio
         {/* ENTERPRISE: Fast Rendering με Cached Data */}
         <div className="space-y-4">
 
-          {/* Customer Basic Info */}
-          <div className="flex items-start gap-4">
-            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
+          {/* ENTERPRISE: Clickable Customer Profile Header */}
+          <div
+            className="flex items-start gap-4 p-3 rounded-lg border border-transparent hover:border-primary/20 hover:bg-primary/5 cursor-pointer transition-all duration-200 group"
+            onClick={() => {
+              // ENTERPRISE: Deep-link navigation με URL parameters
+              const contactsUrl = `/contacts?filter=customer&contactId=${customerId}&source=unit`;
+              window.open(contactsUrl, '_blank');
+            }}
+            role="button"
+            tabIndex={0}
+            title="Κλικ για προβολή στη λίστα επαφών"
+          >
+            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
               <User className="w-8 h-8 text-primary" />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-lg">
-                {customerInfo?.displayName || 'Άγνωστος πελάτης'}
-              </h3>
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="font-semibold text-lg group-hover:text-primary transition-colors">
+                  {customerInfo?.displayName || 'Άγνωστος πελάτης'}
+                </h3>
+                <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors opacity-0 group-hover:opacity-100" />
+              </div>
               {customerInfo?.primaryPhone && (
-                <p className="text-muted-foreground flex items-center gap-2">
+                <p className="text-muted-foreground flex items-center gap-2 mb-1">
                   <Phone className="w-4 h-4" />
                   {customerInfo.primaryPhone}
                 </p>
               )}
               {customerInfo?.primaryEmail && (
-                <p className="text-muted-foreground flex items-center gap-2">
+                <p className="text-muted-foreground flex items-center gap-2 mb-1">
                   <Mail className="w-4 h-4" />
                   <span className="truncate">{customerInfo.primaryEmail}</span>
                 </p>
               )}
-              <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+              <div className="text-xs text-muted-foreground flex items-center gap-2">
                 <Calendar className="w-3 h-3" />
                 Φόρτωση: {customerInfo ? new Date(customerInfo.fetchedAt).toLocaleTimeString('el-GR') : '—'}
               </div>
             </div>
+            <div className="flex items-center text-muted-foreground group-hover:text-primary transition-colors">
+              <ArrowRight className="w-5 h-5" />
+            </div>
+          </div>
+
+          {/* ENTERPRISE: Navigation Hint */}
+          <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+            <p className="text-sm text-blue-700 dark:text-blue-300 flex items-center gap-2">
+              <ExternalLink className="w-4 h-4" />
+              <strong>Tip:</strong> Κάνε κλικ στα στοιχεία του πελάτη για να τον δεις στη λίστα επαφών
+            </p>
           </div>
 
           <Separator />
@@ -221,10 +245,13 @@ function CustomerProfileSection({ customerId, unitPrice }: CustomerProfileSectio
             <Button
               variant="default"
               size="sm"
-              onClick={() => window.open(`/contacts?contactId=${customerId}`, '_blank')}
+              onClick={() => {
+                const contactsUrl = `/contacts?filter=customer&contactId=${customerId}&source=unit`;
+                window.open(contactsUrl, '_blank');
+              }}
             >
-              <User className="w-4 h-4 mr-2" />
-              Πλήρες Προφίλ
+              <ExternalLink className="w-4 h-4 mr-2" />
+              Λίστα Επαφών
             </Button>
 
             {customerInfo?.primaryPhone && (

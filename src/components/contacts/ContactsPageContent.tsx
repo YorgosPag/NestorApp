@@ -140,22 +140,42 @@ export function ContactsPageContent() {
     loadContacts();
   }, []); // 🔧 FIX: Removed loadContacts to prevent infinite loop - load once on mount
 
-  // 🎯 URL FILTERING: Read filter parameter from URL and apply to search
+  // 🎯 URL FILTERING: Read filter and contactId parameters from URL
   useEffect(() => {
     const filterParam = searchParams.get('filter');
+    const contactIdParam = searchParams.get('contactId');
+
     if (filterParam) {
       console.log('🔍 FILTERING: Applying URL filter:', filterParam);
       setSearchTerm(decodeURIComponent(filterParam));
       // Καθαρίσαμε και άλλα φίλτρα για να εστιάσουμε στο όνομα
       setActiveCardFilter(null);
     }
-  }, [searchParams]);
 
-  // 🧹 CLEAR FILTER: Function για καθάρισμα του URL filter
+    // 🎯 CONTACT SELECTION: Auto-select specific contact if contactId is provided
+    if (contactIdParam && contacts.length > 0) {
+      const targetContact = contacts.find(contact => contact.id === contactIdParam);
+      if (targetContact) {
+        console.log('🎯 CONTACT SELECTION: Auto-selecting contact:', {
+          contactId: contactIdParam,
+          contactName: getContactDisplayName(targetContact)
+        });
+        setSelectedContact(targetContact);
+        // Clear general search terms to focus on this specific contact
+        setSearchTerm('');
+        setActiveCardFilter(null);
+      } else {
+        console.warn('⚠️ CONTACT SELECTION: Contact not found with ID:', contactIdParam);
+      }
+    }
+  }, [searchParams, contacts]);
+
+  // 🧹 CLEAR FILTER: Function για καθάρισμα του URL filter και contactId
   const handleClearURLFilter = () => {
-    console.log('🧹 FILTERING: Clearing URL filter');
+    console.log('🧹 FILTERING: Clearing URL filter and contactId');
     setSearchTerm('');
-    // Navigate back to contacts without filter parameter
+    setSelectedContact(null);
+    // Navigate back to contacts without any parameters
     router.push('/contacts');
   };
 
@@ -298,6 +318,12 @@ export function ContactsPageContent() {
 
   // Filter contacts based on unified filters
   const filteredContacts = contacts.filter(contact => {
+    // 🎯 PRIORITY: If contactId is provided, don't filter - show all contacts
+    const contactIdParam = searchParams.get('contactId');
+    if (contactIdParam) {
+      return true; // Show all contacts when viewing specific contact
+    }
+
     // 🔥 NEW: Dashboard card filtering (highest priority)
     if (activeCardFilter) {
       switch (activeCardFilter) {
@@ -457,34 +483,68 @@ export function ContactsPageContent() {
   // 🏷️ RENDER: Filter indicator component
   const renderFilterIndicator = () => {
     const filterParam = searchParams.get('filter');
+    const contactIdParam = searchParams.get('contactId');
 
-    if (!filterParam) return null;
+    // Show indicator if we have either filter or contactId
+    if (!filterParam && !contactIdParam) return null;
 
-    const filterValue = decodeURIComponent(filterParam);
-
-    return (
-      <div className="px-4 py-2 bg-blue-50 border-b border-blue-200">
-        <div className="flex items-center justify-between max-w-full">
-          <div className="flex items-center space-x-2">
-            <Filter className="h-4 w-4 text-blue-600" />
-            <span className="text-sm text-blue-800">
-              Φιλτράρισμα για: <strong>"{filterValue}"</strong>
-            </span>
-            <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">
-              {filteredContacts.length} επαφή{filteredContacts.length !== 1 ? 'ς' : ''}
-            </span>
+    // Priority: If we have contactId and selected contact, show contact name
+    if (contactIdParam && selectedContact) {
+      const contactName = getContactDisplayName(selectedContact);
+      return (
+        <div className="px-4 py-2 bg-green-50 border-b border-green-200">
+          <div className="flex items-center justify-between max-w-full">
+            <div className="flex items-center space-x-2">
+              <Filter className="h-4 w-4 text-green-600" />
+              <span className="text-sm text-green-800">
+                Προβολή πελάτη: <strong>{contactName}</strong>
+              </span>
+              <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
+                Επιλεγμένη επαφή
+              </span>
+            </div>
+            <button
+              onClick={handleClearURLFilter}
+              className={`flex items-center space-x-1 px-2 py-1 text-sm text-green-600 rounded ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_GHOST}`}
+              title="Επιστροφή στη λίστα επαφών"
+            >
+              <X className="h-4 w-4" />
+              <span>Επιστροφή</span>
+            </button>
           </div>
-          <button
-            onClick={handleClearURLFilter}
-            className={`flex items-center space-x-1 px-2 py-1 text-sm text-blue-600 rounded ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_GHOST}`}
-            title="Εμφάνιση όλων των επαφών"
-          >
-            <X className="h-4 w-4" />
-            <span>Καθάρισμα</span>
-          </button>
         </div>
-      </div>
-    );
+      );
+    }
+
+    // Fallback: Show general filter if no contactId
+    if (filterParam) {
+      const filterValue = decodeURIComponent(filterParam);
+      return (
+        <div className="px-4 py-2 bg-blue-50 border-b border-blue-200">
+          <div className="flex items-center justify-between max-w-full">
+            <div className="flex items-center space-x-2">
+              <Filter className="h-4 w-4 text-blue-600" />
+              <span className="text-sm text-blue-800">
+                Φιλτράρισμα για: <strong>"{filterValue}"</strong>
+              </span>
+              <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">
+                {filteredContacts.length} επαφή{filteredContacts.length !== 1 ? 'ς' : ''}
+              </span>
+            </div>
+            <button
+              onClick={handleClearURLFilter}
+              className={`flex items-center space-x-1 px-2 py-1 text-sm text-blue-600 rounded ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_GHOST}`}
+              title="Εμφάνιση όλων των επαφών"
+            >
+              <X className="h-4 w-4" />
+              <span>Καθάρισμα</span>
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return null;
   };
 
   return (
