@@ -179,7 +179,9 @@
       "Bash(TASKKILL /F /PID 18660)",
       "Bash(git log:*)",
       "Bash(git pull:*)",
-      "Bash(git revert:*)"
+      "Bash(git revert:*)",
+      "Bash(TASKKILL:*)",
+      "WebFetch(domain:localhost)"
     ],
     "deny": [],
     "ask": []

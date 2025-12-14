@@ -89,12 +89,18 @@ export class NavigationCompaniesService {
       const q = query(collection(db, NAVIGATION_COMPANIES_COLLECTION));
       const snapshot = await getDocs(q);
 
-      return snapshot.docs.map(doc => {
+      console.log(`🧭 DEBUG: navigation_companies collection has ${snapshot.docs.length} documents`);
+
+      const contactIds = snapshot.docs.map(doc => {
         const data = doc.data() as NavigationCompanyEntry;
+        console.log(`🧭 DEBUG: navigation entry - contactId: ${data.contactId}, addedBy: ${data.addedBy}`);
         return data.contactId;
       });
+
+      console.log(`🧭 DEBUG: Returning ${contactIds.length} navigation company IDs:`, contactIds);
+      return contactIds;
     } catch (error) {
-      // Error logging removed //('Error fetching navigation company IDs:', error);
+      console.error('❌ Error fetching navigation company IDs:', error);
       return [];
     }
   }

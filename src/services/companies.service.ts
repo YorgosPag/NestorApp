@@ -29,6 +29,24 @@ export class CompaniesService {
       );
 
       const snapshot = await getDocs(companiesQuery);
+
+      if (DEBUG_COMPANIES_SERVICE) {
+        console.log(`🔍 Total companies in Firestore (type=company, status=active): ${snapshot.docs.length}`);
+
+        // DEBUGGING: Ελέγχουμε αν υπάρχουν εταιρείες χωρίς φίλτρα status
+        const allCompaniesQuery = query(
+          collection(db, CONTACTS_COLLECTION).withConverter(contactConverter),
+          where('type', '==', 'company')
+        );
+        const allSnapshot = await getDocs(allCompaniesQuery);
+        console.log(`🔍 Total companies without status filter: ${allSnapshot.docs.length}`);
+
+        allSnapshot.docs.slice(0, 3).forEach(doc => {
+          const data = doc.data();
+          console.log(`🏢 Sample company: ${data.companyName} (status: ${data.status || 'UNDEFINED'})`);
+        });
+      }
+
       const companyIds: string[] = [];
 
       // Ελέγχουμε για κάθε εταιρεία αν έχει έργα
@@ -37,13 +55,13 @@ export class CompaniesService {
         const companyData = doc.data();
 
         if (DEBUG_COMPANIES_SERVICE) {
-          // Debug logging removed //(`🔍 Checking company: ${companyId} - ${companyData.companyName}`);
+          console.log(`🔍 Checking company: ${companyId} - ${companyData.companyName}`);
         }
 
         try {
           const projects = await getProjectsByCompanyId(companyId);
           if (DEBUG_COMPANIES_SERVICE) {
-            // Debug logging removed //(`🏗️ Company ${companyId} (${companyData.companyName}) has ${projects?.length || 0} projects:`, projects?.map(p => p.name) || []);
+            console.log(`🏗️ Company ${companyId} (${companyData.companyName}) has ${projects?.length || 0} projects:`, projects?.map(p => p.name) || []);
           }
 
           if (projects && projects.length > 0) {
@@ -78,13 +96,13 @@ export class CompaniesService {
       // Παίρνουμε τα IDs εταιρειών που είναι στην πλοήγηση (χειροκίνητα)
       const navigationCompanyIds = await getNavigationCompanyIds();
       if (DEBUG_COMPANIES_SERVICE) {
-        // Debug removed
+        console.log(`📍 Navigation Company IDs: ${navigationCompanyIds.length}`, navigationCompanyIds);
       }
 
       // Παίρνουμε τα IDs εταιρειών που έχουν έργα
       const companiesWithProjectIds = await this.getCompaniesWithProjects();
       if (DEBUG_COMPANIES_SERVICE) {
-        // Debug removed
+        console.log(`🏗️ Companies with Projects: ${companiesWithProjectIds.length}`, companiesWithProjectIds);
       }
 
       // Συνδυάζουμε και τα δύο (unique values)
@@ -95,14 +113,14 @@ export class CompaniesService {
       ]));
 
       if (DEBUG_COMPANIES_SERVICE) {
-        // Debug removed
+        console.log(`🎯 Total Relevant Company IDs: ${allRelevantCompanyIds.length}`, allRelevantCompanyIds);
       }
 
       // ΝΕΟ: Ακόμα κι αν δεν υπάρχουν companies με έργα,
       // θέλουμε να εμφανίσουμε τις navigation companies
       if (allRelevantCompanyIds.length === 0 && navigationCompanyIds.length === 0) {
         if (DEBUG_COMPANIES_SERVICE) {
-          // Debug logging removed - no relevant companies
+          console.log(`⚠️ No relevant companies found - returning empty array`);
         }
         return [];
       }
@@ -119,7 +137,7 @@ export class CompaniesService {
         .map(doc => {
           const data = doc.data();
           if (DEBUG_COMPANIES_SERVICE) {
-            // Debug removed
+            console.log(`🏢 Company found in Firestore: ${data.id} - ${data.companyName} (status: ${data.status})`);
           }
           return data;
         })
@@ -131,8 +149,8 @@ export class CompaniesService {
       );
 
       if (DEBUG_COMPANIES_SERVICE) {
-        // Debug logging removed //(`🏢 Total companies from Firestore: ${allCompanies.length}`);
-        // Debug logging removed //(`🎯 Relevant companies: ${relevantCompanies.length}`);
+        console.log(`🏢 Total companies from Firestore: ${allCompanies.length}`);
+        console.log(`🎯 Relevant companies: ${relevantCompanies.length}`);
       }
 
       return relevantCompanies;
