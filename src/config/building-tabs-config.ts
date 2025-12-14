@@ -174,12 +174,22 @@ export const BUILDING_TABS: BuildingTabConfig[] = [
     component: 'PhotosTabContent',
   },
   {
+    id: 'customers',
+    label: 'Πελάτες',
+    value: 'customers',
+    icon: 'users',
+    description: 'Πελάτες που έχουν αγοράσει μονάδες σε αυτό το κτίριο',
+    order: 10,
+    enabled: true,
+    component: 'BuildingCustomersTab',
+  },
+  {
     id: 'videos',
     label: 'Videos',
     value: 'videos',
     icon: 'play-circle',
     description: 'Videos κτιρίου και εργασιών',
-    order: 10,
+    order: 11,
     enabled: true,
     component: 'VideosTabContent',
   }

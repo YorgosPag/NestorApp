@@ -1,0 +1,415 @@
+'use client';
+
+/**
+ * 📝 CUSTOMER INFO COMPACT COMPONENT
+ *
+ * Συμπαγής εμφάνιση customer information για tables, lists και compact spaces
+ * Enterprise-class component για minimal footprint με maximum information
+ *
+ * @created 2025-12-14
+ * @author Claude AI Assistant
+ * @version 1.0.0
+ */
+
+import React from 'react';
+import { Phone, Mail, Eye, Loader2, User } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+
+import { useCustomerInfo } from '../hooks/useCustomerInfo';
+import { CustomerActionButtons } from './CustomerActionButtons';
+import type { CustomerInfoCompactProps } from '../types/CustomerInfoTypes';
+
+/**
+ * Compact customer info component για χρήση σε tables, lists και tight spaces
+ * Optimized για performance με minimal DOM footprint
+ */
+export function CustomerInfoCompact({
+  contactId,
+  context,
+  variant = 'compact',
+  size = 'sm',
+  className = '',
+  loading: externalLoading = false,
+  error: externalError = null,
+  nameOnly = false,
+  showPhone = true,
+  showActions = true,
+  showUnitsCount = false,
+  unitsCount,
+  maxWidth,
+  onUpdate
+}: CustomerInfoCompactProps) {
+  // ========================================================================
+  // HOOKS & STATE
+  // ========================================================================
+
+  const {
+    customerInfo,
+    loading,
+    error
+  } = useCustomerInfo(contactId, {
+    fetchExtended: false, // Compact mode μόνο basic info
+    enabled: Boolean(contactId)
+  });
+
+  // ========================================================================
+  // COMPUTED VALUES
+  // ========================================================================
+
+  const isLoading = externalLoading || loading;
+  const hasError = externalError || error;
+  const displayInfo = customerInfo;
+
+  // Size-based styling
+  const sizeClasses = {
+    sm: {
+      avatar: 'h-6 w-6',
+      text: 'text-xs',
+      subtext: 'text-xs',
+      spacing: 'gap-2'
+    },
+    md: {
+      avatar: 'h-8 w-8',
+      text: 'text-sm',
+      subtext: 'text-xs',
+      spacing: 'gap-3'
+    },
+    lg: {
+      avatar: 'h-10 w-10',
+      text: 'text-base',
+      subtext: 'text-sm',
+      spacing: 'gap-3'
+    }
+  };
+
+  const styles = sizeClasses[size];
+
+  // Container styling με maxWidth support
+  const containerStyle = maxWidth ? { maxWidth: `${maxWidth}px` } : {};
+
+  // ========================================================================
+  // RENDER HELPERS
+  // ========================================================================
+
+  const renderAvatar = () => {
+    const initials = displayInfo?.displayName
+      ?.split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2) || '??';
+
+    return (
+      <Avatar className={`${styles.avatar} shrink-0`}>
+        <AvatarImage
+          src={displayInfo?.avatarUrl || undefined}
+          alt={displayInfo?.displayName}
+        />
+        <AvatarFallback className="bg-primary/10 text-primary text-xs font-medium">
+          {initials}
+        </AvatarFallback>
+      </Avatar>
+    );
+  };
+
+  const renderContactDetails = () => {
+    if (!displayInfo || nameOnly) {
+      return (
+        <div className="min-w-0 flex-1">
+          <p className={`${styles.text} font-medium text-foreground truncate`}>
+            {displayInfo?.displayName || 'Άγνωστος πελάτης'}
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="min-w-0 flex-1">
+        <p className={`${styles.text} font-medium text-foreground truncate`}>
+          {displayInfo.displayName}
+        </p>
+
+        {showPhone && displayInfo.primaryPhone && (
+          <p className={`${styles.subtext} text-muted-foreground truncate flex items-center gap-1`}>
+            <Phone className="w-3 h-3 shrink-0" />
+            <span>{displayInfo.primaryPhone}</span>
+          </p>
+        )}
+
+        {!showPhone && displayInfo.primaryEmail && (
+          <p className={`${styles.subtext} text-muted-foreground truncate flex items-center gap-1`}>
+            <Mail className="w-3 h-3 shrink-0" />
+            <span>{displayInfo.primaryEmail}</span>
+          </p>
+        )}
+      </div>
+    );
+  };
+
+  const renderQuickActions = () => {
+    if (!showActions || !displayInfo || nameOnly) return null;
+
+    // Voor compact mode, toon alleen de meest belangrijke acties
+    const quickActions = context === 'unit'
+      ? ['view']
+      : ['view', 'call'];
+
+    return (
+      <div className="shrink-0">
+        <CustomerActionButtons
+          customerInfo={displayInfo}
+          context={context}
+          actions={quickActions.map(type => ({
+            type: type as Parameters<typeof CustomerActionButtons>[0]['actions'][0]['type'],
+            label: type === 'view' ? 'Προβολή' : 'Κλήση',
+            icon: type === 'view' ? Eye : Phone,
+            variant: 'ghost' as const,
+            onClick: () => {
+              if (type === 'view') {
+                window.open(`/contacts?contactId=${contactId}`, '_blank');
+              } else if (type === 'call' && displayInfo.primaryPhone) {
+                const cleanPhone = displayInfo.primaryPhone.replace(/\s+/g, '');
+                window.open(`tel:${cleanPhone}`, '_self');
+              }
+            },
+            disabled: type === 'call' && !displayInfo.primaryPhone
+          }))}
+          size="sm"
+          direction="horizontal"
+          iconsOnly={true}
+        />
+      </div>
+    );
+  };
+
+  // ========================================================================
+  // LOADING STATE
+  // ========================================================================
+
+  if (isLoading) {
+    if (variant === 'table') {
+      return (
+        <div
+          className={`grid grid-cols-4 gap-4 items-center py-3 px-1 ${className}`}
+          style={containerStyle}
+        >
+          {/* Column 1: Avatar + Name */}
+          <div className="flex items-center gap-3">
+            <div className={`${styles.avatar} bg-muted rounded-full shrink-0 animate-pulse`} />
+            <div className="h-3 bg-muted rounded w-24 animate-pulse" />
+          </div>
+          {/* Column 2: Phone */}
+          <div className="h-3 bg-muted rounded w-16 animate-pulse" />
+          {/* Column 3: Units */}
+          <div className="h-3 bg-muted rounded w-8 animate-pulse" />
+          {/* Column 4: Actions */}
+          <div className="flex justify-end">
+            <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div
+        className={`flex items-center ${styles.spacing} ${className}`}
+        style={containerStyle}
+      >
+        <div className={`${styles.avatar} bg-muted rounded-full shrink-0 animate-pulse`} />
+        <div className="flex-1 space-y-1">
+          <div className="h-3 bg-muted rounded w-24 animate-pulse" />
+          {!nameOnly && (
+            <div className="h-2 bg-muted rounded w-16 animate-pulse" />
+          )}
+        </div>
+        <Loader2 className="w-3 h-3 animate-spin text-muted-foreground shrink-0" />
+      </div>
+    );
+  }
+
+  // ========================================================================
+  // ERROR STATE
+  // ========================================================================
+
+  if (hasError) {
+    if (variant === 'table') {
+      return (
+        <div
+          className={`grid grid-cols-4 gap-4 items-center py-3 px-1 ${className} text-destructive`}
+          style={containerStyle}
+        >
+          <div className="flex items-center gap-3">
+            <div className={`${styles.avatar} bg-destructive/10 rounded-full shrink-0 flex items-center justify-center`}>
+              <User className="w-3 h-3" />
+            </div>
+            <span className={`${styles.text} font-medium truncate`}>Σφάλμα φόρτωσης</span>
+          </div>
+          <span className={`${styles.subtext} text-destructive/70 truncate`}>{hasError}</span>
+          <span>—</span>
+          <span>—</span>
+        </div>
+      );
+    }
+
+    return (
+      <div
+        className={`flex items-center ${styles.spacing} ${className} text-destructive`}
+        style={containerStyle}
+      >
+        <div className={`${styles.avatar} bg-destructive/10 rounded-full shrink-0 flex items-center justify-center`}>
+          <User className="w-3 h-3" />
+        </div>
+        <div className="flex-1">
+          <p className={`${styles.text} font-medium truncate`}>
+            Σφάλμα φόρτωσης
+          </p>
+          <p className={`${styles.subtext} text-destructive/70 truncate`}>
+            {hasError}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ========================================================================
+  // EMPTY STATE
+  // ========================================================================
+
+  if (!displayInfo) {
+    if (variant === 'table') {
+      return (
+        <div
+          className={`grid grid-cols-4 gap-4 items-center py-3 px-1 ${className} text-muted-foreground`}
+          style={containerStyle}
+        >
+          <div className="flex items-center gap-3">
+            <div className={`${styles.avatar} bg-muted rounded-full shrink-0 flex items-center justify-center`}>
+              <User className="w-3 h-3" />
+            </div>
+            <span className={`${styles.text} truncate`}>Δεν υπάρχει πελάτης</span>
+          </div>
+          <span>—</span>
+          <span>—</span>
+          <span>—</span>
+        </div>
+      );
+    }
+
+    return (
+      <div
+        className={`flex items-center ${styles.spacing} ${className} text-muted-foreground`}
+        style={containerStyle}
+      >
+        <div className={`${styles.avatar} bg-muted rounded-full shrink-0 flex items-center justify-center`}>
+          <User className="w-3 h-3" />
+        </div>
+        <div className="flex-1">
+          <p className={`${styles.text} truncate`}>
+            Δεν υπάρχει πελάτης
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ========================================================================
+  // TABLE LAYOUT RENDER (NEW)
+  // ========================================================================
+
+  if (variant === 'table') {
+    return (
+      <div
+        className={`grid grid-cols-4 gap-4 items-center py-3 px-1 ${className}`}
+        style={containerStyle}
+        role="article"
+        aria-label={`Στοιχεία πελάτη: ${displayInfo.displayName}`}
+      >
+        {/* Column 1: Avatar + Name */}
+        <div className="flex items-center gap-3 min-w-0">
+          {renderAvatar()}
+          <span className={`${styles.text} font-medium text-foreground truncate`}>
+            {displayInfo?.displayName || 'Άγνωστος πελάτης'}
+          </span>
+        </div>
+
+        {/* Column 2: Phone */}
+        <div className="flex items-center gap-2 min-w-0">
+          {displayInfo?.primaryPhone ? (
+            <>
+              <Phone className="w-4 h-4 text-muted-foreground shrink-0" />
+              <span className={`${styles.text} text-foreground truncate`}>
+                {displayInfo.primaryPhone}
+              </span>
+            </>
+          ) : (
+            <span className={`${styles.text} text-muted-foreground`}>—</span>
+          )}
+        </div>
+
+        {/* Column 3: Units Count */}
+        <div className="flex items-center gap-1">
+          <span className={`${styles.text} text-foreground font-medium`}>
+            #{unitsCount || 1}
+          </span>
+        </div>
+
+        {/* Column 4: Actions */}
+        <div className="flex justify-end">
+          {showActions && displayInfo && (
+            <div className="flex items-center gap-1">
+              {/* View Action (Ματάκι) */}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={() => window.open(`/contacts?contactId=${contactId}`, '_blank')}
+                title="Προβολή πελάτη"
+              >
+                <Eye className="w-4 h-4" />
+              </Button>
+
+              {/* Phone Action (Τηλέφωνο) */}
+              {displayInfo.primaryPhone && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={() => {
+                    const cleanPhone = displayInfo.primaryPhone!.replace(/\s+/g, '');
+                    window.open(`tel:${cleanPhone}`, '_self');
+                  }}
+                  title="Κλήση"
+                >
+                  <Phone className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ========================================================================
+  // MAIN RENDER (ORIGINAL COMPACT LAYOUT)
+  // ========================================================================
+
+  return (
+    <div
+      className={`
+        flex items-center ${styles.spacing}
+        ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}
+        ${className}
+      `}
+      style={containerStyle}
+      role="article"
+      aria-label={`Στοιχεία πελάτη: ${displayInfo.displayName}`}
+    >
+      {renderAvatar()}
+      {renderContactDetails()}
+      {renderQuickActions()}
+    </div>
+  );
+}

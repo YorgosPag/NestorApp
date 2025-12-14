@@ -128,6 +128,76 @@ const headerConfig = createEnterpriseHeader()
 />
 ```
 
+### 👥 **CUSTOMER INFO SYSTEM** (2025-12-14):
+**Location**: `src/components/shared/customer-info/`
+
+**ΑΝΤΙΚΑΤΕΣΤΗΣΕ**: CustomerLinkButton.tsx + διάσπαρτους customer display κώδικες → **Unified Customer Information System**
+
+#### **📁 ΔΟΜΗ - ENTERPRISE ARCHITECTURE:** ✅ **ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ ΟΛΟΚΛΗΡΩΘΗΚΕ**
+```
+customer-info/
+├── types/CustomerInfoTypes.ts    # Enterprise types & interfaces (300+ lines) ✅
+├── hooks/useCustomerInfo.ts      # Centralized data fetching με caching (400+ lines) ✅
+├── components/                   # 3 Specialized Components ✅
+│   ├── UnifiedCustomerCard.tsx   # Main customer card με context awareness ✅
+│   ├── CustomerInfoCompact.tsx   # Compact display για tables/lists ✅
+│   └── CustomerActionButtons.tsx # Context-aware action buttons ✅
+└── index.ts                     # Clean exports + Builder pattern ✅
+```
+
+#### **🏢 ENTERPRISE FEATURES:** ✅ **COMPLETE IMPLEMENTATION**
+- ✅ **Κεντρικοποιημένη Data Fetching**: useCustomerInfo hook με enterprise caching
+- ✅ **Context-Aware Display**: Διαφορετική εμφάνιση για unit/building/project/contact contexts
+- ✅ **Enterprise Caching**: LRU cache με TTL, retry logic, error handling
+- ✅ **Integration με Existing Systems**: Χρησιμοποιεί CommonBadge, INTERACTIVE_PATTERNS, hover effects
+- ✅ **Accessibility Compliant**: ARIA labels, keyboard navigation, semantic HTML
+- ✅ **Responsive Design**: Mobile-first, adaptive layouts, size variants
+- ✅ **Type Safety**: Comprehensive TypeScript types, discriminated unions
+- ✅ **Error Handling**: Loading states, error boundaries, fallback UI
+
+#### **🔄 ΑΝΤΙΚΑΤΑΣΤΑΣΗ ΔΙΑΣΠΑΡΤΩΝ ΚΩΔΙΚΩΝ:**
+- ✅ `CustomerLinkButton.tsx` → `UnifiedCustomerCard` (PropertyDetailsContent)
+- ✅ Custom tables στο `ProjectCustomersTable.tsx` → `CustomerInfoCompact`
+- ✅ Custom tables στο `BuildingCustomersTab.tsx` → `CustomerInfoCompact`
+- ✅ Διάσπαρτη fetch logic → Centralized `useCustomerInfo` hook
+- ✅ Inconsistent UI patterns → Unified components με existing badge/hover systems
+
+#### **📐 ΧΡΗΣΗ:** ✅ **ΠΛΗΡΗ ΔΙΑΘΕΣΙΜΟΤΗΤΑ**
+```typescript
+// 🎯 Main customer card (για unit details)
+import { UnifiedCustomerCard } from '@/components/shared/customer-info';
+<UnifiedCustomerCard
+  contactId={property.soldTo}
+  context="unit"
+  variant="compact"
+  showUnitsCount={false}
+/>
+
+// 📝 Compact display (για tables/lists)
+import { CustomerInfoCompact } from '@/components/shared/customer-info';
+<CustomerInfoCompact
+  contactId={customer.contactId}
+  context="building"
+  showPhone={true}
+  showActions={true}
+/>
+
+// 🎣 Data fetching hook
+import { useCustomerInfo } from '@/components/shared/customer-info';
+const { customerInfo, loading, error, refetch } = useCustomerInfo(contactId, {
+  fetchExtended: true,
+  cacheTimeout: 300000
+});
+```
+
+#### **🎯 ΕΠΙΛΥΣΗ ΠΡΟΒΛΗΜΑΤΟΣ:** ✅ **ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ ΟΛΟΚΛΗΡΩΘΗΚΕ**
+- **ΠΡΙΝ**: 3+ διάσπαρτα components, duplicate fetch logic, inconsistent UI
+- **ΜΕΤΑ**: 1 unified system, centralized caching, consistent UX παντού ✅
+- **ΑΠΟΤΕΛΕΣΜΑ**: Enterprise-class customer info management ✅
+- **ΟΦΕΛΟΣ**: Maintainable, reusable, performant, accessible, type-safe
+
+---
+
 ## 📚 ENTERPRISE DOCUMENTATION
 
 ### 🗺️ **Ξεκίνα από εδώ:**

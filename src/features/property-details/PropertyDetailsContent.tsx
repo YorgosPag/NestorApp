@@ -10,7 +10,7 @@ import { PropertyShareButton } from '@/components/ui/ShareButton';
 
 import { ReadOnlyBanner } from './components/ReadOnlyBanner';
 import { BuyerMismatchAlert } from './components/BuyerMismatchAlert';
-import { CustomerLinkButton } from './components/CustomerLinkButton';
+import { UnifiedCustomerCard } from '@/components/shared/customer-info';
 import { LimitedInfoNotice } from './components/LimitedInfoNotice';
 import { AttachmentsBlock } from './components/AttachmentsBlock';
 import { ContactsBlock } from './components/ContactsBlock';
@@ -82,8 +82,17 @@ export function PropertyDetailsContent({
         />
       </div>
 
-      {/* Hide customer navigation button in read-only mode */}
-      {property.soldTo && !isReadOnly && <CustomerLinkButton contactId={property.soldTo} />}
+      {/* Customer Information Card - Centralized System */}
+      {property.soldTo && !isReadOnly && (
+        <UnifiedCustomerCard
+          contactId={property.soldTo}
+          context="unit"
+          variant="compact"
+          size="md"
+          showUnitsCount={false}
+          className="border-primary/20"
+        />
+      )}
 
       <AttachmentsBlock storage={attachedStorage} parking={attachedParking} />
 

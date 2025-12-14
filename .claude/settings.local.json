@@ -175,7 +175,8 @@
       "Bash(TASKKILL /F /IM node.exe)",
       "Bash(TASKKILL /F /IM \"node.exe\")",
       "Bash(TASKKILL /F /PID 5304)",
-      "Bash(pnpm list:*)"
+      "Bash(pnpm list:*)",
+      "Bash(TASKKILL /F /PID 18660)"
     ],
     "deny": [],
     "ask": []

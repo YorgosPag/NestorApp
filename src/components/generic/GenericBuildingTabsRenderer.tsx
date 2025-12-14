@@ -19,6 +19,7 @@ import VideosTabContent from '../building-management/tabs/VideosTabContent';
 import PlaceholderTab from '../building-management/tabs/PlaceholderTab';
 import { FloorplanViewerTab } from '../projects/tabs/FloorplanViewerTab';
 import { StorageTab } from '../building-management/StorageTab';
+import { BuildingCustomersTab } from '../building-management/tabs/BuildingCustomersTab';
 import { FileText, Settings } from 'lucide-react';
 
 /**
@@ -33,6 +34,7 @@ const COMPONENT_MAPPING = {
   'PlaceholderTab': PlaceholderTab,
   'FloorplanViewerTab': FloorplanViewerTab,
   'StorageTab': StorageTab,
+  'BuildingCustomersTab': BuildingCustomersTab,
 } as const;
 
 // ============================================================================
@@ -130,6 +132,14 @@ export function GenericBuildingTabsRenderer({
     // Προσθήκη custom props από τη configuration
     if (tab.componentProps) {
       Object.assign(baseProps, tab.componentProps);
+    }
+
+    // Special handling για BuildingCustomersTab
+    if (tab.component === 'BuildingCustomersTab') {
+      return {
+        ...baseProps,
+        buildingId: building.id,
+      };
     }
 
     // Special handling για FloorplanViewerTab

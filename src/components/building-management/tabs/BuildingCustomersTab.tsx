@@ -4,11 +4,13 @@ import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { CustomerInfoCompact } from '@/components/shared/customer-info';
 import { Users } from "lucide-react";
-// import { getProjectCustomers } from "@/services/projects.service"; // Server action - can't use from client
-import type { ProjectCustomersTableProps } from "../types";
 import type { ProjectCustomer } from "@/types/project";
 
-export function ProjectCustomersTable({ projectId }: ProjectCustomersTableProps) {
+interface BuildingCustomersTabProps {
+  buildingId: string;
+}
+
+export function BuildingCustomersTab({ buildingId }: BuildingCustomersTabProps) {
   const [customers, setCustomers] = useState<ProjectCustomer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -19,7 +21,7 @@ export function ProjectCustomersTable({ projectId }: ProjectCustomersTableProps)
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`/api/projects/${projectId}/customers`);
+        const response = await fetch(`/api/buildings/${buildingId}/customers`);
         if (!response.ok) {
           throw new Error(`Failed to fetch customers: ${response.status}`);
         }
@@ -28,7 +30,7 @@ export function ProjectCustomersTable({ projectId }: ProjectCustomersTableProps)
           setCustomers(data.customers || []);
         }
       } catch (e) {
-        console.error("Failed to fetch project customers:", e);
+        console.error("Failed to fetch building customers:", e);
         if (mounted) {
           setError(e instanceof Error ? e.message : 'Άγνωστο σφάλμα');
         }
@@ -37,15 +39,15 @@ export function ProjectCustomersTable({ projectId }: ProjectCustomersTableProps)
       }
     })();
     return () => { mounted = false; };
-  }, [projectId]);
+  }, [buildingId]);
 
   if (loading) {
     return (
-      <Card className="mt-6">
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="w-5 h-5" />
-            Πελάτες Έργου
+            Πελάτες Κτιρίου
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -57,11 +59,11 @@ export function ProjectCustomersTable({ projectId }: ProjectCustomersTableProps)
 
   if (error) {
     return (
-      <Card className="mt-6">
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="w-5 h-5" />
-            Πελάτες Έργου
+            Πελάτες Κτιρίου
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -75,18 +77,18 @@ export function ProjectCustomersTable({ projectId }: ProjectCustomersTableProps)
 
   if (customers.length === 0) {
     return (
-      <Card className="mt-6">
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="w-5 h-5" />
-            Πελάτες Έργου
+            Πελάτες Κτιρίου
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
             <Users className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
             <p className="text-sm text-muted-foreground">
-              Δεν υπάρχουν καταχωρημένοι πελάτες για αυτό το έργο.
+              Δεν υπάρχουν καταχωρημένοι πελάτες για αυτό το κτίριο.
             </p>
           </div>
         </CardContent>
@@ -95,14 +97,14 @@ export function ProjectCustomersTable({ projectId }: ProjectCustomersTableProps)
   }
 
   return (
-    <Card className="mt-6">
+    <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Users className="w-5 h-5" />
-          Πελάτες Έργου
+          Πελάτες Κτιρίου
         </CardTitle>
         <CardDescription>
-          Λίστα των πελατών που έχουν αγοράσει μονάδες σε αυτό το έργο ({customers.length} πελάτες).
+          Λίστα των πελατών που έχουν αγοράσει μονάδες σε αυτό το κτίριο ({customers.length} πελάτες).
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -115,7 +117,7 @@ export function ProjectCustomersTable({ projectId }: ProjectCustomersTableProps)
         </div>
 
         {/* Table Content */}
-        <section className="space-y-1" aria-label="Λίστα πελατών έργου">
+        <section className="space-y-1" aria-label="Λίστα πελατών κτιρίου">
           {customers.map((customer) => (
             <CustomerInfoCompact
               key={customer.contactId}

@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Eye, EyeOff, RefreshCw, Home } from 'lucide-react';
+import { ContactsService } from '@/services/contacts.service';
 
 interface Unit {
   id: string;
@@ -23,11 +24,16 @@ interface UnitsData {
   count: number;
 }
 
+interface ContactLookup {
+  [contactId: string]: string; // contactId -> contact name
+}
+
 export function SoldUnitsPreview() {
   const [units, setUnits] = useState<Unit[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const [contactLookup, setContactLookup] = useState<ContactLookup>({});
 
   const loadUnits = async () => {
     setLoading(true);
@@ -42,6 +48,9 @@ export function SoldUnitsPreview() {
       const data: UnitsData = await response.json();
       if (data.success) {
         setUnits(data.units);
+
+        // 🔍 Load contact names για sold units
+        await loadContactNames(data.units);
       } else {
         throw new Error('Failed to load units');
       }
@@ -49,6 +58,55 @@ export function SoldUnitsPreview() {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadContactNames = async (units: Unit[]) => {
+    try {
+      // Get unique contact IDs from sold units
+      const contactIds = units
+        .filter(unit => unit.status === 'sold' && unit.soldTo && unit.soldTo !== 'Not sold')
+        .map(unit => unit.soldTo!)
+        .filter((id, index, arr) => arr.indexOf(id) === index); // unique IDs
+
+      if (contactIds.length === 0) return;
+
+      console.log('🔍 Loading contact names for IDs:', contactIds);
+
+      // Create lookup map
+      const lookup: ContactLookup = {};
+
+      // Load contact details για κάθε ID
+      for (const contactId of contactIds) {
+        try {
+          const contact = await ContactsService.getContact(contactId);
+          if (contact) {
+            let displayName = '';
+            if (contact.type === 'individual') {
+              displayName = `${contact.firstName || ''} ${contact.lastName || ''}`.trim();
+            } else if (contact.type === 'company') {
+              displayName = contact.companyName || 'Unknown Company';
+            } else if (contact.type === 'service') {
+              displayName = contact.serviceName || 'Unknown Service';
+            }
+
+            lookup[contactId] = displayName || 'Unknown Contact';
+            console.log(`✅ Contact loaded: ${contactId} → ${displayName}`);
+          } else {
+            lookup[contactId] = 'Contact Not Found';
+            console.warn(`❌ Contact not found: ${contactId}`);
+          }
+        } catch (error) {
+          lookup[contactId] = 'Error Loading';
+          console.error(`❌ Error loading contact ${contactId}:`, error);
+        }
+      }
+
+      setContactLookup(lookup);
+      console.log('✅ Contact lookup completed:', lookup);
+
+    } catch (error) {
+      console.error('❌ Error loading contact names:', error);
     }
   };
 
@@ -216,9 +274,14 @@ export function SoldUnitsPreview() {
                         </TableCell>
                         <TableCell>
                           {unit.soldTo && unit.soldTo !== 'Not sold' ? (
-                            <Badge variant="default" className="text-xs">
-                              {unit.soldTo.substring(0, 8)}...
-                            </Badge>
+                            <div className="space-y-1">
+                              <Badge variant="default" className="text-xs">
+                                {contactLookup[unit.soldTo] || 'Loading...'}
+                              </Badge>
+                              <div className="text-xs text-muted-foreground font-mono">
+                                ID: {unit.soldTo.substring(0, 8)}...
+                              </div>
+                            </div>
                           ) : (
                             <Badge variant="outline" className="text-red-600">
                               Χωρίς Customer
