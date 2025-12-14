@@ -21,6 +21,7 @@ import { PhotosTab } from '../projects/PhotosTab';
 import { VideosTab } from '../projects/VideosTab';
 import { ProjectTimelineTab } from '../projects/ProjectTimelineTab';
 import { ProjectCustomersTab } from '../projects/customers-tab';
+import { ProjectCustomersTable } from '../projects/general-tab/parts/ProjectCustomersTable';
 import { ProjectStructureTab } from '../projects/tabs/ProjectStructureTab';
 import { FloorplanViewerTab } from '../projects/tabs/FloorplanViewerTab';
 
@@ -38,6 +39,7 @@ const COMPONENT_MAPPING = {
   'VideosTab': VideosTab,
   'ProjectTimelineTab': ProjectTimelineTab,
   'ProjectCustomersTab': ProjectCustomersTab,
+  'ProjectCustomersTable': ProjectCustomersTable,
   'ProjectStructureTab': ProjectStructureTab,
   'FloorplanViewerTab': FloorplanViewerTab,
 } as const;
@@ -137,6 +139,14 @@ export function GenericProjectTabsRenderer({
     // Προσθήκη custom props από τη configuration
     if (tab.componentProps) {
       Object.assign(baseProps, tab.componentProps);
+    }
+
+    // Special handling για ProjectCustomersTable
+    if (tab.component === 'ProjectCustomersTable') {
+      return {
+        ...baseProps,
+        projectId: parseInt(project.id, 10),
+      };
     }
 
     // Special handling για FloorplanViewerTab
