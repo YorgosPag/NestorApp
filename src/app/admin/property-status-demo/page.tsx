@@ -22,7 +22,6 @@ import { cn } from '@/lib/utils';
 // Enterprise Property Status System imports
 import {
   ENHANCED_STATUS_LABELS,
-  PUBLIC_STATUS_LABELS,
   getAllEnhancedStatuses,
   getEnhancedStatusLabel,
   getEnhancedStatusColor,
@@ -31,14 +30,10 @@ import {
   isPropertyCommitted,
   isPropertyOffMarket,
   hasPropertyIssues,
-  STATUS_CATEGORIES,
-  getRoleBasedStatusLabel,
-  isSensitiveOwnershipStatus,
-  isCompanyOwned,
-  isOwnerCompensation
+  STATUS_CATEGORIES
 } from '@/constants/property-statuses-enterprise';
 
-import type { EnhancedPropertyStatus, UserRole } from '@/constants/property-statuses-enterprise';
+import type { EnhancedPropertyStatus } from '@/constants/property-statuses-enterprise';
 import type { PropertyStatus } from '@/core/types/BadgeTypes';
 
 // Centralized Badge System imports
@@ -75,7 +70,7 @@ const DEMO_PROPERTIES: DemoProperty[] = [
     id: '2',
     name: 'Στούντιο B5',
     type: 'Στούντιο',
-    status: 'long-term-rental',
+    status: 'rental-only',
     price: 450,
     area: 35,
     location: 'Αθήνα'
@@ -84,7 +79,7 @@ const DEMO_PROPERTIES: DemoProperty[] = [
     id: '3',
     name: 'Μεζονέτα C2',
     type: 'Μεζονέτα',
-    status: 'reserved',
+    status: 'reserved-pending',
     price: 320000,
     area: 120,
     location: 'Πάτρα'
@@ -93,7 +88,7 @@ const DEMO_PROPERTIES: DemoProperty[] = [
     id: '4',
     name: 'Κατάστημα D1',
     type: 'Κατάστημα',
-    status: 'short-term-rented',
+    status: 'under-renovation',
     price: 150000,
     area: 50,
     location: 'Λάρισα'
@@ -111,7 +106,7 @@ const DEMO_PROPERTIES: DemoProperty[] = [
     id: '6',
     name: 'Αποθήκη F1',
     type: 'Αποθήκη',
-    status: 'owner-compensation',
+    status: 'urgent-sale',
     price: 75000,
     area: 200,
     location: 'Βόλος'
@@ -125,7 +120,6 @@ const DEMO_PROPERTIES: DemoProperty[] = [
 export default function PropertyStatusDemoPage() {
   const [selectedStatus, setSelectedStatus] = useState<EnhancedPropertyStatus | null>(null);
   const [selectedProperty, setSelectedProperty] = useState<DemoProperty | null>(null);
-  const [userRole, setUserRole] = useState<UserRole>('internal');
 
   // ========================================================================
   // STATUS STATISTICS
@@ -167,7 +161,7 @@ export default function PropertyStatusDemoPage() {
   // ========================================================================
 
   const PropertyCard = ({ property }: { property: DemoProperty }) => {
-    const statusLabel = getRoleBasedStatusLabel(property.status, userRole);
+    const statusLabel = getEnhancedStatusLabel(property.status);
     const statusColor = getEnhancedStatusColor(property.status);
     const category = getStatusCategory(property.status);
 
@@ -234,27 +228,6 @@ export default function PropertyStatusDemoPage() {
         <div className="flex items-center justify-center gap-2 text-sm text-green-600">
           <CheckCircle className="h-4 w-4" />
           <span>Enterprise-class • Production Ready • Fully Typed</span>
-        </div>
-
-        {/* Role Toggle */}
-        <div className="flex items-center justify-center gap-4 mt-4">
-          <span className="text-sm font-medium">User Role:</span>
-          <div className="flex gap-2">
-            <Button
-              variant={userRole === 'internal' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setUserRole('internal')}
-            >
-              🏢 Internal User
-            </Button>
-            <Button
-              variant={userRole === 'public' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setUserRole('public')}
-            >
-              🌐 Public Visitor
-            </Button>
-          </div>
         </div>
       </div>
 

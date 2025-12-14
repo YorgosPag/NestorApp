@@ -28,11 +28,32 @@ import {
  * που απαιτούνται για ολοκληρωμένη διαχείριση real estate portfolio
  */
 export type EnhancedPropertyStatus = PropertyStatus
-  // 🏨 ESSENTIAL RENTAL STATUSES
+  // 🏨 ADVANCED RENTAL STATUSES
+  | 'rental-only'              // ΜΟΝΟ για ενοικίαση (δεν πωλείται ποτέ)
   | 'long-term-rental'         // Μακροχρόνια μίσθωση (1+ χρόνια)
   | 'short-term-rental'        // Βραχυχρόνια μίσθωση (AirBnb style)
-  | 'long-term-rented'         // Μισθώθηκε μακροχρόνια
-  | 'short-term-rented';       // Μισθώθηκε βραχυχρόνια
+
+  // 🔒 ADVANCED RESERVATION STATUSES
+  | 'reserved-pending'         // Δεσμευμένο εκκρεμή (δεν ολοκληρώθηκε)
+  | 'contract-signed'          // Συμβόλαιο υπογεγραμμένο (εκκρεμή μεταβίβαση)
+  | 'deposit-paid'             // Προκαταβολή δεδομένη
+
+  // 👑 OWNERSHIP STATUSES
+  | 'company-owned'            // Εταιρικό (δεν είναι προς πώληση)
+  | 'not-for-sale'             // Δεν είναι για πώληση (προσωπική χρήση)
+  | 'family-reserved'          // Κρατημένο για οικογένεια
+
+  // ⚡ MARKET DYNAMICS
+  | 'pre-launch'               // Προ-εκκίνηση (marketing phase)
+  | 'exclusive-listing'        // Αποκλειστική διάθεση
+  | 'price-reduced'            // Μειωμένη τιμή
+  | 'urgent-sale'              // Επείγουσα πώληση
+
+  // 🔧 OPERATIONAL STATUSES
+  | 'under-renovation'         // Υπό ανακαίνιση
+  | 'legal-issues'             // Νομικά προβλήματα
+  | 'inspection-required'      // Απαιτείται επιθεώρηση
+  | 'documentation-pending';   // Εκκρεμή έγγραφα
 
 // ============================================================================
 // BUSINESS INTENT CATEGORIZATION
@@ -83,40 +104,42 @@ export type PropertyPriority =
 // ENHANCED LABELS & COLORS
 // ============================================================================
 
-// ============================================================================
-// ROLE-BASED STATUS LABELS SYSTEM
-// ============================================================================
-
 /**
- * 🏷️ ENHANCED STATUS LABELS - INTERNAL VIEW
+ * 🏷️ ENHANCED STATUS LABELS
  *
- * Ελληνικές ετικέτες για εσωτερικούς χρήστες (πλήρη πληροφορία)
+ * Ελληνικές ετικέτες για όλες τις enhanced καταστάσεις
  * Επεκτείνει τα υπάρχοντα PROPERTY_STATUS_LABELS με πλήρη συμβατότητα
  */
 export const ENHANCED_STATUS_LABELS: Record<EnhancedPropertyStatus, string> = {
   // Βασικές καταστάσεις (από υπάρχον σύστημα)
   ...PROPERTY_STATUS_LABELS,
 
-  // 🏨 Essential Rental Statuses
+  // 🏨 Advanced Rental Statuses
+  'rental-only': 'Μόνο Ενοικίαση',
   'long-term-rental': 'Μακροχρόνια Μίσθωση',
   'short-term-rental': 'Βραχυχρόνια Μίσθωση',
-  'long-term-rented': 'Μισθώθηκε Μακροχρόνια',
-  'short-term-rented': 'Μισθώθηκε Βραχυχρόνια',
-};
 
-/**
- * 🌐 PUBLIC STATUS LABELS - EXTERNAL VIEW
- *
- * Ετικέτες για δημόσια εμφάνιση (επισκέπτες ιστοσελίδας)
- * Κρύπτει ευαίσθητες πληροφορίες ιδιοκτησίας
- */
-export const PUBLIC_STATUS_LABELS: Record<EnhancedPropertyStatus, string> = {
-  // Βασικές καταστάσεις (ίδιες για όλους)
-  ...ENHANCED_STATUS_LABELS,
+  // 🔒 Advanced Reservation Statuses
+  'reserved-pending': 'Δεσμευμένο Εκκρεμές',
+  'contract-signed': 'Συμβόλαιο Υπογεγραμμένο',
+  'deposit-paid': 'Προκαταβολή Δεδομένη',
 
-  // 👑 Role-Based Ownership Statuses (masked για επισκέπτες)
-  'company-owned': 'Μη Διαθέσιμο',        // Κρύβει ότι είναι εταιρικό
-  'owner-compensation': 'Μη Διαθέσιμο',   // Κρύβει ότι είναι αντιπαροχή
+  // 👑 Ownership Statuses
+  'company-owned': 'Εταιρικό',
+  'not-for-sale': 'Δεν Πωλείται',
+  'family-reserved': 'Οικογενειακό',
+
+  // ⚡ Market Dynamics
+  'pre-launch': 'Προ-εκκίνηση',
+  'exclusive-listing': 'Αποκλειστική Διάθεση',
+  'price-reduced': 'Μειωμένη Τιμή',
+  'urgent-sale': 'Επείγουσα Πώληση',
+
+  // 🔧 Operational Statuses
+  'under-renovation': 'Υπό Ανακαίνιση',
+  'legal-issues': 'Νομικά Προβλήματα',
+  'inspection-required': 'Απαιτείται Επιθεώρηση',
+  'documentation-pending': 'Εκκρεμή Έγγραφα',
 };
 
 /**
@@ -129,11 +152,32 @@ export const ENHANCED_STATUS_COLORS: Record<EnhancedPropertyStatus, string> = {
   // Βασικά χρώματα (από υπάρχον σύστημα)
   ...PROPERTY_STATUS_COLORS,
 
-  // 🏨 Essential Rental Colors (Blue variants)
+  // 🏨 Advanced Rental Colors (Blue variants)
+  'rental-only': 'hsl(var(--status-info-dark))',
   'long-term-rental': 'hsl(var(--status-info))',
   'short-term-rental': 'hsl(var(--status-info-light))',
-  'long-term-rented': 'hsl(var(--status-purple))',
-  'short-term-rented': 'hsl(var(--status-purple-light))',
+
+  // 🔒 Advanced Reservation Colors (Orange variants)
+  'reserved-pending': 'hsl(var(--status-warning-light))',
+  'contract-signed': 'hsl(var(--status-warning-dark))',
+  'deposit-paid': 'hsl(var(--status-warning))',
+
+  // 👑 Ownership Colors (Purple variants)
+  'company-owned': 'hsl(var(--status-purple-dark))',
+  'not-for-sale': 'hsl(var(--status-purple))',
+  'family-reserved': 'hsl(var(--status-purple-light))',
+
+  // ⚡ Market Dynamics Colors (Green/Cyan variants)
+  'pre-launch': 'hsl(var(--status-success-light))',
+  'exclusive-listing': 'hsl(var(--status-success-dark))',
+  'price-reduced': 'hsl(var(--destructive-light))',
+  'urgent-sale': 'hsl(var(--destructive))',
+
+  // 🔧 Operational Colors (Neutral/Gray variants)
+  'under-renovation': 'hsl(var(--neutral-600))',
+  'legal-issues': 'hsl(var(--destructive-dark))',
+  'inspection-required': 'hsl(var(--neutral-500))',
+  'documentation-pending': 'hsl(var(--neutral-400))',
 };
 
 // ============================================================================
@@ -180,17 +224,26 @@ export const PROPERTY_PRIORITY_LABELS: Record<PropertyPriority, string> = {
 export const STATUS_CATEGORIES = {
   // Διαθέσιμα για αγορά/ενοικίαση
   AVAILABLE: [
-    'for-sale', 'long-term-rental', 'short-term-rental', 'coming-soon'
+    'for-sale', 'for-rent', 'rental-only', 'long-term-rental', 'short-term-rental',
+    'pre-launch', 'exclusive-listing', 'price-reduced', 'urgent-sale', 'coming-soon'
   ] as EnhancedPropertyStatus[],
 
   // Δεσμευμένα/Πωλημένα
   COMMITTED: [
-    'sold', 'long-term-rented', 'short-term-rented', 'reserved'
+    'sold', 'rented', 'reserved', 'reserved-pending', 'contract-signed',
+    'deposit-paid', 'under-negotiation'
   ] as EnhancedPropertyStatus[],
 
-  // Εκτός αγοράς (Role-based ownership)
+  // Εκτός αγοράς
   OFF_MARKET: [
-    'company-owned', 'owner-compensation'
+    'landowner', 'company-owned', 'not-for-sale', 'family-reserved',
+    'off-market', 'unavailable'
+  ] as EnhancedPropertyStatus[],
+
+  // Υπό επεξεργασία/προβλήματα
+  IN_PROCESS: [
+    'under-renovation', 'legal-issues', 'inspection-required',
+    'documentation-pending'
   ] as EnhancedPropertyStatus[],
 } as const;
 
@@ -247,12 +300,9 @@ export function isPropertyOffMarket(status: EnhancedPropertyStatus): boolean {
 
 /**
  * ⚙️ Check if property has operational issues
- *
- * @deprecated Since we removed the IN_PROCESS category entirely,
- * this function now always returns false. Keeping for backward compatibility.
  */
 export function hasPropertyIssues(status: EnhancedPropertyStatus): boolean {
-  return false; // IN_PROCESS category was removed completely
+  return STATUS_CATEGORIES.IN_PROCESS.includes(status);
 }
 
 /**
@@ -267,51 +317,6 @@ export function getAllEnhancedStatuses(): EnhancedPropertyStatus[] {
  */
 export function getStatusesByCategory(category: keyof typeof STATUS_CATEGORIES): EnhancedPropertyStatus[] {
   return [...STATUS_CATEGORIES[category]];
-}
-
-// ============================================================================
-// ROLE-BASED DISPLAY SYSTEM
-// ============================================================================
-
-/**
- * 🧑‍💼 User Role για role-based display
- */
-export type UserRole = 'internal' | 'public';
-
-/**
- * 🎭 Get role-based status label
- *
- * Επιστρέφει το κατάλληλο label ανάλογα με το role του χρήστη:
- * - internal: Πλήρης πληροφορία (Εταιρικό, Αντιπαροχή)
- * - public: Κρυμμένη πληροφορία (Μη Διαθέσιμο)
- */
-export function getRoleBasedStatusLabel(status: EnhancedPropertyStatus, userRole: UserRole = 'public'): string {
-  if (userRole === 'internal') {
-    return ENHANCED_STATUS_LABELS[status];
-  } else {
-    return PUBLIC_STATUS_LABELS[status];
-  }
-}
-
-/**
- * 🔐 Check if status contains sensitive ownership info
- */
-export function isSensitiveOwnershipStatus(status: EnhancedPropertyStatus): boolean {
-  return status === 'company-owned' || status === 'owner-compensation';
-}
-
-/**
- * 🏢 Check if status is company owned
- */
-export function isCompanyOwned(status: EnhancedPropertyStatus): boolean {
-  return status === 'company-owned';
-}
-
-/**
- * 🤝 Check if status is owner compensation
- */
-export function isOwnerCompensation(status: EnhancedPropertyStatus): boolean {
-  return status === 'owner-compensation';
 }
 
 // ============================================================================
@@ -342,7 +347,6 @@ export const getStatusColor = getEnhancedStatusColor;
 export default {
   // Labels & Colors
   ENHANCED_STATUS_LABELS,
-  PUBLIC_STATUS_LABELS,
   ENHANCED_STATUS_COLORS,
   PROPERTY_INTENT_LABELS,
   MARKET_AVAILABILITY_LABELS,
@@ -361,10 +365,4 @@ export default {
   hasPropertyIssues,
   getAllEnhancedStatuses,
   getStatusesByCategory,
-
-  // Role-Based Functions
-  getRoleBasedStatusLabel,
-  isSensitiveOwnershipStatus,
-  isCompanyOwned,
-  isOwnerCompensation,
 };
