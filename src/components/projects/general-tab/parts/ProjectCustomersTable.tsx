@@ -41,7 +41,7 @@ export function ProjectCustomersTable({ projectId }: ProjectCustomersTableProps)
 
   if (loading) {
     return (
-      <Card >
+      <Card className="mt-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="w-5 h-5" />
@@ -57,7 +57,7 @@ export function ProjectCustomersTable({ projectId }: ProjectCustomersTableProps)
 
   if (error) {
     return (
-      <Card >
+      <Card className="mt-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="w-5 h-5" />
@@ -75,7 +75,7 @@ export function ProjectCustomersTable({ projectId }: ProjectCustomersTableProps)
 
   if (customers.length === 0) {
     return (
-      <Card >
+      <Card className="mt-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="w-5 h-5" />
@@ -95,7 +95,7 @@ export function ProjectCustomersTable({ projectId }: ProjectCustomersTableProps)
   }
 
   return (
-    <Card >
+    <Card className="mt-6">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Users className="w-5 h-5" />

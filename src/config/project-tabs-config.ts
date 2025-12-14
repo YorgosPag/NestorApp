@@ -122,7 +122,7 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
   },
 
   // -------------------------------------------------------------------------
-  // 6. ΠΕΛΑΤΕΣ (ENTERPRISE CENTRALIZED)
+  // 6. ΠΕΛΑΤΕΣ
   // -------------------------------------------------------------------------
   {
     id: 'customers',
@@ -132,7 +132,7 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
     description: 'Πελάτες και αγοραστές του έργου',
     order: 6,
     enabled: true,
-    component: 'ProjectCustomersTable',
+    component: 'ProjectCustomersTab',
   },
 
   // -------------------------------------------------------------------------

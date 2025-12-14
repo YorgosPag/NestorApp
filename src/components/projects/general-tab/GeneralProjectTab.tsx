@@ -149,9 +149,7 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
             setData={setProjectData}
             isEditing={isEditing}
           />
-          <div className="mt-6">
-            <ProjectCustomersTable projectId={project.id} />
-          </div>
+          <ProjectCustomersTable projectId={project.id} />
         </TabsContent>
         
         <TabsContent value="structure" className="pt-4">
