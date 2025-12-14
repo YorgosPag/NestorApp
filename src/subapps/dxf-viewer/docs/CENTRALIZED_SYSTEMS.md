@@ -159,6 +159,7 @@ customer-info/
 - ✅ `CustomerLinkButton.tsx` → `UnifiedCustomerCard` (PropertyDetailsContent)
 - ✅ Custom tables στο `ProjectCustomersTable.tsx` → `CustomerInfoCompact`
 - ✅ Custom tables στο `BuildingCustomersTab.tsx` → `CustomerInfoCompact`
+- ✅ **ΔΙΠΛΟΤΥΠΟ ΔΙΑΓΡΑΦΗΚΕ** (2025-12-14): `CustomersTable.tsx` → `CustomerInfoCompact`
 - ✅ Διάσπαρτη fetch logic → Centralized `useCustomerInfo` hook
 - ✅ Inconsistent UI patterns → Unified components με existing badge/hover systems
 
@@ -515,7 +516,30 @@ const { customerInfo, loading, error, refetch } = useCustomerInfo(contactId, {
 - 📍 Δες: `docs/settings-system/00-INDEX.md` - Complete settings documentation (10 chapters)
 - 📍 **Enterprise Refactoring**: `docs/ENTERPRISE_REFACTORING_PLAN.md` + `ENTERPRISE_REFACTORING_COMPLETE.md` - 10-phase plan (100% complete! 🎉)
 
-### 1️⃣1️⃣ **DXF SETTINGS UI ARCHITECTURE (2025-10-07 - MODULAR REFACTORING)** 🆕
+### 1️⃣1️⃣ **CUSTOMER TABLE LAYOUTS (2025-12-14 - ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ)** 🆕
+- ❌ ΟΧΙ custom table components για customers
+- ❌ ΟΧΙ διπλότυπες grid layouts
+- ✅ ΜΟΝΟ `CustomerInfoCompact` με `variant="table"`
+- ✅ ΜΟΝΟ centralized headers: `grid grid-cols-4 gap-4 pb-2 mb-4 border-b`
+- 🗑️ **ΔΙΑΓΡΑΦΗΚΕ ΔΙΠΛΟΤΥΠΟ** (2025-12-14): `components/projects/customers-tab/parts/CustomersTable.tsx`
+  - **Custom grid layout** → **Centralized `CustomerInfoCompact`**
+  - **Duplicate headers/styling** → **Single source από `CustomerInfoCompact`**
+  - **ΑΠΟΤΕΛΕΣΜΑ**: Όλοι οι customer tables (Projects/Buildings/General) χρησιμοποιούν την ίδια κεντρικοποιημένη διάταξη
+- 📍 **Single Source**: `src/components/shared/customer-info/components/CustomerInfoCompact.tsx`
+- 📍 **Usage Pattern**:
+  ```tsx
+  <CustomerInfoCompact
+    contactId={customer.contactId}
+    context="project|building"
+    variant="table"
+    size="md"
+    showPhone={true}
+    showActions={true}
+    showUnitsCount={true}
+  />
+  ```
+
+### 1️⃣2️⃣ **DXF SETTINGS UI ARCHITECTURE (2025-10-07 - MODULAR REFACTORING)** 🆕
 - ❌ ΟΧΙ monolithic `DxfSettingsPanel.tsx` (2200+ lines)
 - ❌ ΟΧΙ duplicate navigation logic
 - ❌ ΟΧΙ inline component definitions
