@@ -131,6 +131,11 @@ export function BuildingCustomersTab({ buildingId }: BuildingCustomersTabProps) 
               showUnitsCount={true}
               unitsCount={customer.unitsCount}
               className="hover:bg-accent/30 transition-colors rounded-md"
+              customerData={{
+                name: customer.name,
+                phone: customer.phone,
+                email: customer.email
+              }}
             />
           ))}
         </section>
