@@ -16,6 +16,7 @@
 export { UnifiedCustomerCard } from './components/UnifiedCustomerCard';
 export { CustomerInfoCompact } from './components/CustomerInfoCompact';
 export { CustomerActionButtons } from './components/CustomerActionButtons';
+export { UnitCustomerDisplay } from './components/UnitCustomerDisplay';
 
 // ============================================================================
 // HOOKS

@@ -1,0 +1,316 @@
+'use client';
+
+/**
+ * 🏢 UNIT CUSTOMER DISPLAY COMPONENT
+ *
+ * Enterprise-class component για εμφάνιση customer information σε unit contexts
+ * Βασισμένο στη real Firebase database - zero mock data
+ *
+ * ENTERPRISE FEATURES:
+ * - Real database-driven (Firebase soldTo relationships)
+ * - Progressive disclosure pattern (Google/Microsoft standard)
+ * - Performance optimized (conditional fetching)
+ * - Accessible (ARIA compliant)
+ *
+ * @created 2025-12-14
+ * @author Claude AI Assistant
+ * @version 1.0.0
+ * @enterprise AutoCAD/Microsoft/Google standards
+ */
+
+import React from 'react';
+import { User, Phone, Mail, Eye } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+
+import { useCustomerInfo } from '../hooks/useCustomerInfo';
+import type { Property } from '@/types/property-viewer';
+
+export interface UnitCustomerDisplayProps {
+  /** The unit/property object from real Firebase database */
+  unit: Property;
+  /** Display variant for different contexts */
+  variant?: 'compact' | 'inline' | 'card';
+  /** Size variant */
+  size?: 'sm' | 'md' | 'lg';
+  /** Show quick action buttons */
+  showActions?: boolean;
+  /** Additional CSS classes */
+  className?: string;
+}
+
+/**
+ * Enterprise component για εμφάνιση customer info σε unit contexts
+ *
+ * DATABASE DESIGN:
+ * - unit.soldTo → contacts.id (Firebase foreign key)
+ * - unit.status → 'sold' | 'reserved' | 'rented' (real statuses)
+ * - Real-time data fetching μόνο όταν χρειάζεται
+ */
+export function UnitCustomerDisplay({
+  unit,
+  variant = 'inline',
+  size = 'md',
+  showActions = true,
+  className = ''
+}: UnitCustomerDisplayProps) {
+
+  // ========================================================================
+  // ENTERPRISE LOGIC: Real Database Checks
+  // ========================================================================
+
+  const hasSoldStatus = unit.status === 'sold' || unit.status === 'reserved' || unit.status === 'rented';
+  const hasCustomerLink = Boolean(unit.soldTo);
+
+  // Early return for units without customer info (performance optimization)
+  if (!hasSoldStatus || !hasCustomerLink) {
+    return null;
+  }
+
+  // ========================================================================
+  // HOOKS: Real Database Fetching
+  // ========================================================================
+
+  const {
+    customerInfo,
+    loading,
+    error
+  } = useCustomerInfo(unit.soldTo!, {
+    fetchExtended: false,
+    enabled: Boolean(unit.soldTo) // Only fetch if soldTo exists
+  });
+
+  // ========================================================================
+  // SIZE VARIANTS (Enterprise Design System)
+  // ========================================================================
+
+  const sizeClasses = {
+    sm: {
+      text: 'text-xs',
+      gap: 'gap-2',
+      padding: 'p-2',
+      iconSize: 'w-3 h-3',
+      buttonSize: 'h-6 w-6' as const
+    },
+    md: {
+      text: 'text-sm',
+      gap: 'gap-3',
+      padding: 'p-3',
+      iconSize: 'w-4 h-4',
+      buttonSize: 'h-7 w-7' as const
+    },
+    lg: {
+      text: 'text-base',
+      gap: 'gap-4',
+      padding: 'p-4',
+      iconSize: 'w-5 h-5',
+      buttonSize: 'h-8 w-8' as const
+    }
+  };
+
+  const styles = sizeClasses[size];
+
+  // ========================================================================
+  // LOADING STATE (Enterprise UX)
+  // ========================================================================
+
+  if (loading) {
+    return (
+      <div className={`flex items-center ${styles.gap} ${className}`}>
+        <User className={`${styles.iconSize} text-muted-foreground`} />
+        <div className="space-y-1">
+          <Skeleton className="h-3 w-20" />
+          <Skeleton className="h-2 w-16" />
+        </div>
+      </div>
+    );
+  }
+
+  // ========================================================================
+  // ERROR STATE (Enterprise Error Handling)
+  // ========================================================================
+
+  if (error) {
+    return (
+      <div className={`flex items-center ${styles.gap} text-destructive ${className}`}>
+        <User className={`${styles.iconSize}`} />
+        <span className={styles.text}>
+          Σφάλμα φόρτωσης πελάτη
+        </span>
+      </div>
+    );
+  }
+
+  // ========================================================================
+  // NO CUSTOMER DATA (Database Integrity Check)
+  // ========================================================================
+
+  if (!customerInfo) {
+    return (
+      <div className={`flex items-center ${styles.gap} text-muted-foreground ${className}`}>
+        <User className={`${styles.iconSize}`} />
+        <span className={styles.text}>
+          Πελάτης ID: {unit.soldTo} (δεν βρέθηκε)
+        </span>
+      </div>
+    );
+  }
+
+  // ========================================================================
+  // RENDER VARIANTS
+  // ========================================================================
+
+  const customerName = customerInfo.displayName || 'Άγνωστος πελάτης';
+  const statusText = unit.status === 'sold' ? 'Πωλήθηκε' :
+                    unit.status === 'reserved' ? 'Κρατήθηκε' : 'Ενοικιάστηκε';
+
+  // COMPACT VARIANT (για inline display)
+  if (variant === 'compact') {
+    return (
+      <div className={`flex items-center ${styles.gap} ${className}`}>
+        <User className={`${styles.iconSize} text-green-600`} />
+        <span className={`${styles.text} font-medium text-foreground truncate`}>
+          {customerName}
+        </span>
+        <Badge variant="secondary" className="text-xs">
+          {statusText}
+        </Badge>
+      </div>
+    );
+  }
+
+  // INLINE VARIANT (για UnitListItem footer)
+  if (variant === 'inline') {
+    return (
+      <div className={`flex items-center justify-between ${styles.gap} ${className}`}>
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <User className={`${styles.iconSize} text-green-600 shrink-0`} />
+          <div className="min-w-0 flex-1">
+            <div className={`${styles.text} font-medium text-foreground truncate`}>
+              {customerName}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {statusText} • {unit.saleDate ? new Date(unit.saleDate).toLocaleDateString('el-GR') : 'Άγνωστη ημερομηνία'}
+            </div>
+          </div>
+        </div>
+
+        {showActions && (
+          <div className="flex items-center gap-1 shrink-0">
+            {/* View Customer Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`${styles.buttonSize} p-0`}
+              onClick={() => window.open(`/contacts?contactId=${unit.soldTo}`, '_blank')}
+              title="Προβολή στοιχείων πελάτη"
+            >
+              <Eye className={styles.iconSize} />
+            </Button>
+
+            {/* Call Customer Button */}
+            {customerInfo.primaryPhone && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className={`${styles.buttonSize} p-0`}
+                onClick={() => {
+                  const cleanPhone = customerInfo.primaryPhone!.replace(/\s+/g, '');
+                  window.open(`tel:${cleanPhone}`, '_self');
+                }}
+                title={`Κλήση: ${customerInfo.primaryPhone}`}
+              >
+                <Phone className={styles.iconSize} />
+              </Button>
+            )}
+
+            {/* Email Customer Button */}
+            {customerInfo.primaryEmail && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className={`${styles.buttonSize} p-0`}
+                onClick={() => window.open(`mailto:${customerInfo.primaryEmail}`, '_self')}
+                title={`Email: ${customerInfo.primaryEmail}`}
+              >
+                <Mail className={styles.iconSize} />
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // CARD VARIANT (για expanded display)
+  if (variant === 'card') {
+    return (
+      <Card className={`${styles.padding} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${className}`}>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <User className={`${styles.iconSize} text-green-600`} />
+              <span className={`${styles.text} font-semibold`}>Πελάτης</span>
+              <Badge variant="outline">{statusText}</Badge>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className={`font-medium ${styles.text}`}>
+              {customerName}
+            </div>
+
+            {(customerInfo.primaryPhone || customerInfo.primaryEmail) && (
+              <div className="space-y-1">
+                {customerInfo.primaryPhone && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Phone className="w-3 h-3" />
+                    <span>{customerInfo.primaryPhone}</span>
+                  </div>
+                )}
+                {customerInfo.primaryEmail && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Mail className="w-3 h-3" />
+                    <span className="truncate">{customerInfo.primaryEmail}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {showActions && (
+              <div className="flex gap-2 pt-2 border-t">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.open(`/contacts?contactId=${unit.soldTo}`, '_blank')}
+                >
+                  <Eye className="w-3 h-3 mr-1" />
+                  Προβολή
+                </Button>
+
+                {customerInfo.primaryPhone && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const cleanPhone = customerInfo.primaryPhone!.replace(/\s+/g, '');
+                      window.open(`tel:${cleanPhone}`, '_self');
+                    }}
+                  >
+                    <Phone className="w-3 h-3 mr-1" />
+                    Κλήση
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </Card>
+    );
+  }
+
+  return null;
+}
