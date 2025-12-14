@@ -12,13 +12,18 @@ import type { OverlayEditorMode, OverlayKind, Status, Overlay, CreateOverlayData
 import type { Point2D } from '../rendering/types/Types';
 import type { SceneModel } from '../types/scene';
 
-// Status labels in English for Firestore
+// Status labels in English for Firestore - using only existing statuses from statuses.ts
 const STATUS_ENGLISH_LABELS: Record<Status, string> = {
   'for-sale': 'For Sale',
   'for-rent': 'For Rent',
-  'reserved': 'Reserved',
-  'sold': 'Sold',
-  'landowner': 'Landowner'
+  reserved: 'Reserved',
+  sold: 'Sold',
+  landowner: 'Landowner',
+  rented: 'Rented',
+  'under-negotiation': 'Under Negotiation',
+  'coming-soon': 'Coming Soon',
+  'off-market': 'Off Market',
+  unavailable: 'Unavailable'
 };
 
 interface UseOverlayDrawingConfig {

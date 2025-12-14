@@ -483,7 +483,6 @@ function getCategoryLabel(category: string): string {
     'AVAILABLE': '🟢 Διαθέσιμα',
     'COMMITTED': '🔒 Δεσμευμένα',
     'OFF_MARKET': '⚪ Εκτός Αγοράς',
-    'IN_PROCESS': '🔧 Υπό Επεξεργασία',
     'OTHER': '📋 Άλλα'
   };
   return labels[category] || category;

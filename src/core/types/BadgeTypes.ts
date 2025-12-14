@@ -55,43 +55,23 @@ export type ContactStatus =
 
 export type PropertyStatus =
   // Βασικές καταστάσεις (legacy)
-  | 'available'
-  | 'reserved'
   | 'sold'
   | 'pending'
   | 'withdrawn'
   | 'expired'
-  // 🏨 Advanced Rental Statuses
-  | 'rental-only'              // ΜΟΝΟ για ενοικίαση (δεν πωλείται ποτέ)
+  // 🏨 Essential Rental Statuses
   | 'long-term-rental'         // Μακροχρόνια μίσθωση (1+ χρόνια)
   | 'short-term-rental'        // Βραχυχρόνια μίσθωση (AirBnb style)
-  // 🔒 Advanced Reservation Statuses
-  | 'reserved-pending'         // Δεσμευμένο εκκρεμή (δεν ολοκληρώθηκε)
-  | 'contract-signed'          // Συμβόλαιο υπογεγραμμένο (εκκρεμή μεταβίβαση)
-  | 'deposit-paid'             // Προκαταβολή δεδομένη
-  // 👑 Ownership Statuses
-  | 'company-owned'            // Εταιρικό (δεν είναι προς πώληση)
-  | 'not-for-sale'             // Δεν είναι για πώληση (προσωπική χρήση)
-  | 'family-reserved'          // Κρατημένο για οικογένεια
-  // ⚡ Market Dynamics
-  | 'pre-launch'               // Προ-εκκίνηση (marketing phase)
-  | 'exclusive-listing'        // Αποκλειστική διάθεση
-  | 'price-reduced'            // Μειωμένη τιμή
-  | 'urgent-sale'              // Επείγουσα πώληση
-  // 🔧 Operational Statuses
-  | 'under-renovation'         // Υπό ανακαίνιση
-  | 'legal-issues'             // Νομικά προβλήματα
-  | 'inspection-required'      // Απαιτείται επιθεώρηση
-  | 'documentation-pending'    // Εκκρεμή έγγραφα
-  // Βασικά από το παλιό σύστημα για συμβατότητα
+  | 'long-term-rented'         // Μισθώθηκε μακροχρόνια
+  | 'short-term-rented'        // Μισθώθηκε βραχυχρόνια
+  // 🔒 Essential Reservation Statuses
+  | 'reserved'                 // Δεσμευμένο (από reserved-pending)
+  // 👑 Role-Based Ownership Statuses
+  | 'company-owned'            // Εταιρικό (δεν το πουλάει η εργολάβος)
+  | 'owner-compensation'       // Αντιπαροχή (του οικοπεδούχου)
+  // Essential από το παλιό σύστημα για συμβατότητα
   | 'for-sale'                 // Προς πώληση
-  | 'for-rent'                 // Προς ενοικίαση
-  | 'rented'                   // Ενοικιασμένο
-  | 'under-negotiation'        // Υπό διαπραγμάτευση
-  | 'coming-soon'              // Σύντομα διαθέσιμο
-  | 'landowner'                // Ιδιοκτήτης γης
-  | 'off-market'               // Εκτός αγοράς
-  | 'unavailable';             // Μη διαθέσιμο
+  | 'coming-soon';             // Σύντομα διαθέσιμο
 
 export type UnitStatus =
   | 'available'
