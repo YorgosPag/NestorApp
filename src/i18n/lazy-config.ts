@@ -40,37 +40,121 @@ export type Namespace = typeof SUPPORTED_NAMESPACES[number];
 const translationCache = new Map<string, any>();
 
 /**
- * Dynamic translation loader
+ * Dynamic translation loader με webpack-compatible imports
  */
 async function loadTranslations(language: Language, namespace: Namespace) {
   const cacheKey = `${language}:${namespace}`;
-  
+
   if (translationCache.has(cacheKey)) {
     return translationCache.get(cacheKey);
   }
 
   try {
-    // Dynamic import based on language and namespace
-    const translations = await import(`./locales/${language}/${namespace}.json`);
+    // Webpack-compatible dynamic import με explicit paths
+    let translations: any;
+
+    if (language === 'el') {
+      switch (namespace) {
+        case 'common':
+          translations = await import('./locales/el/common.json');
+          break;
+        case 'dxf-viewer':
+          translations = await import('./locales/el/dxf-viewer.json');
+          break;
+        case 'geo-canvas':
+          translations = await import('./locales/el/geo-canvas.json');
+          break;
+        case 'forms':
+          translations = await import('./locales/el/forms.json');
+          break;
+        case 'toasts':
+          translations = await import('./locales/el/toasts.json');
+          break;
+        case 'errors':
+          translations = await import('./locales/el/errors.json');
+          break;
+        case 'properties':
+          translations = await import('./locales/el/properties.json');
+          break;
+        case 'crm':
+          translations = await import('./locales/el/crm.json');
+          break;
+        case 'navigation':
+          translations = await import('./locales/el/navigation.json');
+          break;
+        case 'auth':
+          translations = await import('./locales/el/auth.json');
+          break;
+        case 'dashboard':
+          translations = await import('./locales/el/dashboard.json');
+          break;
+        case 'projects':
+          translations = await import('./locales/el/projects.json');
+          break;
+        case 'toolbars':
+          translations = await import('./locales/el/toolbars.json');
+          break;
+        case 'compositions':
+          translations = await import('./locales/el/compositions.json');
+          break;
+        case 'tasks':
+          translations = await import('./locales/el/tasks.json');
+          break;
+        case 'users':
+          translations = await import('./locales/el/users.json');
+          break;
+        case 'building':
+          translations = await import('./locales/el/building.json');
+          break;
+        case 'contacts':
+          translations = await import('./locales/el/contacts.json');
+          break;
+        case 'units':
+          translations = await import('./locales/el/units.json');
+          break;
+        case 'landing':
+          translations = await import('./locales/el/landing.json');
+          break;
+        default:
+          console.warn(`Namespace ${namespace} not found for language ${language}`);
+          return {};
+      }
+    } else if (language === 'en') {
+      // English translations (if available)
+      switch (namespace) {
+        case 'common':
+          translations = await import('./locales/en/common.json');
+          break;
+        case 'dxf-viewer':
+          translations = await import('./locales/en/dxf-viewer.json');
+          break;
+        case 'geo-canvas':
+          translations = await import('./locales/en/geo-canvas.json');
+          break;
+        default:
+          // Fallback to Greek for missing English translations
+          return loadTranslations('el', namespace);
+      }
+    } else {
+      // Other languages fallback to Greek
+      return loadTranslations('el', namespace);
+    }
+
     const data = translations.default || translations;
-    
     translationCache.set(cacheKey, data);
     return data;
   } catch (error) {
     console.warn(`Failed to load translations for ${language}:${namespace}`, error);
-    
-    // Fallback to Greek if available
+
+    // Fallback to Greek if available and not already trying Greek
     if (language !== 'el') {
       try {
-        const fallback = await import(`./locales/el/${namespace}.json`);
-        const data = fallback.default || fallback;
-        translationCache.set(cacheKey, data);
-        return data;
+        return await loadTranslations('el', namespace);
       } catch (fallbackError) {
         console.error(`Fallback failed for ${namespace}`, fallbackError);
       }
     }
-    
+
     return {};
   }
 }

@@ -6,23 +6,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { withErrorHandling, apiSuccess } from '@/lib/api/ApiErrorHandler';
 
-export async function GET(request: NextRequest) {
-  try {
+export const GET = withErrorHandling(async (request: NextRequest) => {
     const { searchParams } = new URL(request.url);
     const buildingId = searchParams.get('buildingId');
     const projectId = searchParams.get('projectId');
 
     // Validate required parameters
     if (!buildingId && !projectId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Either buildingId or projectId parameter is required',
-          usage: 'GET /api/floors?buildingId=<id> or GET /api/floors?projectId=<id>'
-        },
-        { status: 400 }
-      );
+      throw new Error('Either buildingId or projectId parameter is required');
     }
 
     console.log(`📋 Loading floors for: ${buildingId ? `building ${buildingId}` : `project ${projectId}`}`);
@@ -56,7 +49,6 @@ export async function GET(request: NextRequest) {
     console.log(`   Found ${floors.length} floors`);
 
     // Group floors by building if querying by projectId
-    let response;
     if (projectId) {
       const floorsByBuilding = floors.reduce((groups: any, floor: any) => {
         const buildingId = floor.buildingId;
@@ -67,39 +59,24 @@ export async function GET(request: NextRequest) {
         return groups;
       }, {});
 
-      response = {
-        success: true,
+      return apiSuccess({
         floors,
         floorsByBuilding,
         stats: {
           totalFloors: floors.length,
           buildingsWithFloors: Object.keys(floorsByBuilding).length
         }
-      };
+      }, `Found ${floors.length} floors in ${Object.keys(floorsByBuilding).length} buildings`);
     } else {
-      response = {
-        success: true,
+      return apiSuccess({
         floors,
         stats: {
           totalFloors: floors.length,
           buildingId
         }
-      };
+      }, `Found ${floors.length} floors for building ${buildingId}`);
     }
-
-    return NextResponse.json(response);
-
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error(`❌ Floors API Error: ${errorMessage}`);
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: errorMessage,
-        timestamp: new Date().toISOString()
-      },
-      { status: 500 }
-    );
-  }
-}
+}, {
+  operation: 'loadFloors',
+  entityType: 'floors'
+});

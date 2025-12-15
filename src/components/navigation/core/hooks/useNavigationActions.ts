@@ -6,10 +6,11 @@
 import { useRouter } from 'next/navigation';
 import { buildNavigationUrl, resetNavigationState, updateNavigationLevel } from '../utils/navigationHelpers';
 import type { NavigationState, NavigationLevel } from '../types';
+import { NavigationApiService } from '../services/navigationApi';
 
 interface UseNavigationActionsReturn {
   selectCompany: (companyId: string, state: NavigationState, setState: (updates: Partial<NavigationState>) => void) => void;
-  selectProject: (projectId: string, state: NavigationState, setState: (updates: Partial<NavigationState>) => void) => void;
+  selectProject: (projectId: string, state: NavigationState, setState: (updates: Partial<NavigationState>) => void) => Promise<void>;
   selectBuilding: (buildingId: string, state: NavigationState, setState: (updates: Partial<NavigationState>) => void) => void;
   selectFloor: (floorId: string, state: NavigationState, setState: (updates: Partial<NavigationState>) => void) => void;
   navigateToLevel: (level: NavigationLevel, setState: (updates: Partial<NavigationState>) => void) => void;
@@ -41,20 +42,51 @@ export function useNavigationActions(): UseNavigationActionsReturn {
 
   };
 
-  const selectProject = (
+  const selectProject = async (
     projectId: string,
     state: NavigationState,
     setState: (updates: Partial<NavigationState>) => void
   ) => {
-    const project = state.projects.find(p => p.id === projectId);
+    // First, find the basic project in state
+    const basicProject = state.projects.find(p => p.id === projectId);
+    if (!basicProject) return;
 
+    // Set loading state and basic selection immediately
     setState({
-      selectedProject: project || null,
+      selectedProject: basicProject,
       selectedBuilding: null,
       selectedFloor: null,
-      currentLevel: 'buildings'
+      currentLevel: 'buildings',
+      projectsLoading: true
     });
 
+    try {
+      // Reload the specific project with full hierarchy (buildings, floors, units)
+      console.log(`🔄 Reloading project ${projectId} with full hierarchy...`);
+      const fullProjects = await NavigationApiService.loadProjectsForCompany(basicProject.companyId);
+      const fullProject = fullProjects.find(p => p.id === projectId);
+
+      if (fullProject) {
+        console.log(`✅ Project ${projectId} loaded with ${fullProject.buildings.length} buildings`);
+
+        // Update both the selectedProject with full data AND the project in the main projects array
+        const updatedProjects = state.projects.map(p =>
+          p.id === projectId ? fullProject : p
+        );
+
+        setState({
+          projects: updatedProjects,
+          selectedProject: fullProject,
+          projectsLoading: false
+        });
+      } else {
+        console.warn(`⚠️ Could not find project ${projectId} after reload`);
+        setState({ projectsLoading: false });
+      }
+    } catch (error) {
+      console.error(`🚨 Failed to reload project ${projectId}:`, error);
+      setState({ projectsLoading: false });
+    }
   };
 
   const selectBuilding = (

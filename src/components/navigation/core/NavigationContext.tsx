@@ -127,7 +127,13 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   };
 
   const selectProject = (projectId: string) => {
-    actions.selectProject(projectId, state, updateState);
+    actions.selectProject(projectId, state, updateState).catch(error => {
+      console.error('Failed to select project:', error);
+      updateState({
+        error: `Failed to load project details: ${error.message}`,
+        projectsLoading: false
+      });
+    });
   };
 
   const selectBuilding = (buildingId: string) => {

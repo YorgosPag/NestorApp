@@ -2,12 +2,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { withErrorHandling, apiSuccess } from '@/lib/api/ApiErrorHandler';
 
-export async function GET(
+export const GET = withErrorHandling(async (
   request: NextRequest,
   { params }: { params: { companyId: string } }
-) {
-  try {
+) => {
     console.log(`🏗️ API (Client SDK): Loading projects for companyId: "${params.companyId}"`);
     
     // Use Client SDK (same as seed scripts)
@@ -42,24 +42,13 @@ export async function GET(
       company: p.company
     })));
     
-    return NextResponse.json({ 
-      success: true, 
+    return apiSuccess({
       projects,
       companyId: params.companyId,
       source: 'client-sdk'
-    });
-    
-  } catch (error) {
-    console.error('🏗️ API (Client SDK): Error loading projects:', error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error',
-        projects: [],
-        companyId: params.companyId,
-        source: 'client-sdk'
-      },
-      { status: 500 }
-    );
-  }
-}
+    }, `Found ${projects.length} projects for company ${params.companyId}`);
+}, {
+  operation: 'loadProjectsByCompany',
+  entityType: 'projects',
+  entityId: 'params.companyId'
+});
