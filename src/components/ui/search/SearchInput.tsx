@@ -94,7 +94,7 @@ export function SearchInput({
 
   // 🎨 Input classes - διατηρεί existing styling με optimized padding
   const inputClasses = cn(
-    '!pl-12', // !important για override του shadcn/ui px-4/px-3
+    '!pl-12 w-full', // !important για override του shadcn/ui px-4/px-3 + ensure full width
     SEARCH_UI.INPUT.FOCUS, // 🏢 Enterprise centralized focus ring
     SEARCH_UI.INPUT.RESPONSIVE,
     disabled && SEARCH_UI.INPUT.DISABLED,

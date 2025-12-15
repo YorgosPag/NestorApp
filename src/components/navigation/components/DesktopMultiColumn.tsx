@@ -344,6 +344,7 @@ export function DesktopMultiColumn({
             activeFilters={companiesFilters}
             onFiltersChange={setCompaniesFilters}
             hasSelectedItems={!!selectedCompany}
+            itemCount={filterData(companies, companiesSearch, companiesFilters).length} // 🏢 Count after filtering
             onNewItem={onAddCompanyClick}
             onEditItem={() => {/* TODO: Edit company */}}
             onDeleteItem={handleDeleteCompany}
@@ -414,6 +415,7 @@ export function DesktopMultiColumn({
               activeFilters={projectsFilters}
               onFiltersChange={setProjectsFilters}
               hasSelectedItems={!!selectedProject}
+              itemCount={filterData(projects.filter(project => project.companyId === selectedCompany?.id), projectsSearch, projectsFilters).length} // 🏢 Count after filtering
               onNewItem={() => setIsProjectModalOpen(true)}
               onEditItem={() => {/* TODO: Edit project */}}
               onDeleteItem={handleDeleteProject}
@@ -466,6 +468,7 @@ export function DesktopMultiColumn({
               activeFilters={buildingsFilters}
               onFiltersChange={setBuildingsFilters}
               hasSelectedItems={!!selectedBuilding}
+              itemCount={filterData(selectedProject.buildings, buildingsSearch, buildingsFilters).length} // 🏢 Count after filtering
               onNewItem={() => setIsBuildingModalOpen(true)}
               onEditItem={() => {/* TODO: Edit building */}}
               onDeleteItem={handleDeleteBuilding}
@@ -517,6 +520,7 @@ export function DesktopMultiColumn({
               activeFilters={floorsFilters}
               onFiltersChange={setFloorsFilters}
               hasSelectedItems={!!selectedFloor}
+              itemCount={filterData(selectedBuilding.floors, floorsSearch, floorsFilters).length} // 🏢 Count after filtering
               onNewItem={() => setIsFloorModalOpen(true)}
               onEditItem={() => {/* TODO: Edit floor */}}
               onDeleteItem={handleDeleteFloor}
@@ -568,6 +572,7 @@ export function DesktopMultiColumn({
               activeFilters={unitsFilters}
               onFiltersChange={setUnitsFilters}
               hasSelectedItems={!!selectedUnit}
+              itemCount={filterData(selectedFloor.units, unitsSearch, unitsFilters).length} // 🏢 Count after filtering
               onNewItem={() => setIsUnitModalOpen(true)}
               onEditItem={() => {/* TODO: Edit unit */}}
               onDeleteItem={handleDeleteUnit}

@@ -130,14 +130,26 @@ export function SelectCompanyContactModal({
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* 🏢 ENTERPRISE UNIFIED Search Input - Zero visual changes */}
-          <SearchInput
-            value={searchTerm}
-            onChange={setSearchTerm}
-            placeholder="Αναζήτηση εταιρείας..."
-            debounceMs={300}
-            showClearButton={true}
-          />
+          {/* 🏢 ENTERPRISE LIST-STYLE HEADER - Same pattern as GenericListHeader */}
+          <div className="flex items-center gap-2">
+            {/* Left: Icon + Title + Count - Same as lists */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <Building className="h-4 w-4 text-blue-600" />
+              <span className="font-medium text-sm whitespace-nowrap">
+                Εταιρείες ({filteredContacts.length})
+              </span>
+            </div>
+
+            {/* Right: Search Input - Same as lists */}
+            <SearchInput
+              value={searchTerm}
+              onChange={setSearchTerm}
+              placeholder="Αναζήτηση εταιρείας..."
+              debounceMs={300}
+              showClearButton={true}
+              className="h-8 text-sm flex-1"
+            />
+          </div>
 
           {/* Loading State */}
           {isLoading && (

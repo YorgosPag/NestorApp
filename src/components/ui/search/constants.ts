@@ -62,14 +62,14 @@ export const SEARCH_UI = {
   },
 
   CONTAINER: {
-    BASE: 'relative',
+    BASE: 'relative w-full', // 🔧 Ensure full width container
     SPACING: 'space-y-2',
   },
 
   INPUT: {
     FOCUS: 'focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:ring-offset-0', // 🎨 Enterprise focus ring - όμορφο μπλε περίγραμμα χωρίς offset
     DISABLED: 'disabled:cursor-not-allowed disabled:opacity-50',
-    RESPONSIVE: 'w-full',
+    RESPONSIVE: 'w-full flex-1', // 🔧 Ensure full width + flex behavior
   },
 
   LABEL: {

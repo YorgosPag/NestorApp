@@ -3,6 +3,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { SearchInput } from '@/components/ui/search'; // 🏢 ENTERPRISE centralized search
 import {
   Plus,
   Edit,
@@ -48,6 +49,9 @@ export function CompactToolbar({
   sortBy = 'name',
   onSortChange,
   hasSelectedContact = false,
+  headerTitle,
+  headerCount,
+  headerIcon: HeaderIcon,
   onNewItem,
   onEditItem,
   onDeleteItems,
@@ -380,6 +384,34 @@ export function CompactToolbar({
         )}
 
       </div>
+
+      {/* 🏢 ENTERPRISE Search Row - Same pattern as GenericListHeader */}
+      <div className="flex items-center gap-2 mt-2">
+        {/* Left: Icon + Title + Count - Same as lists */}
+        {(headerTitle || headerCount !== undefined || HeaderIcon) && (
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {HeaderIcon && (
+              <HeaderIcon className="h-4 w-4 text-blue-600" />
+            )}
+            {headerTitle && (
+              <span className="font-medium text-sm whitespace-nowrap">
+                {headerTitle}{headerCount !== undefined ? ` (${headerCount})` : ''}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Right: Search Input - Same as lists */}
+        <SearchInput
+          value={searchTerm}
+          onChange={onSearchChange}
+          placeholder={config.searchPlaceholder || 'Αναζήτηση...'}
+          debounceMs={0} // Instant για navigation filters
+          showClearButton={true}
+          className="h-8 text-sm flex-1" // Same height as toolbar buttons
+        />
+      </div>
+
     </div>
   );
 }

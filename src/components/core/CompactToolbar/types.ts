@@ -108,6 +108,11 @@ export interface CompactToolbarProps {
   onSortChange?: (sortBy: SortField, sortOrder: 'asc' | 'desc') => void;
   hasSelectedContact?: boolean;
 
+  // 🏢 ENTERPRISE Header Display - Same as GenericListHeader
+  headerTitle?: string; // e.g., "Εταιρείες"
+  headerCount?: number; // e.g., 5
+  headerIcon?: React.ComponentType<{ className?: string }>; // Icon component
+
   // Action handlers
   onNewItem?: () => void;
   onEditItem?: (id: string) => void;

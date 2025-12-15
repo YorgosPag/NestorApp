@@ -9,8 +9,32 @@
 import React from 'react';
 import { CompactToolbar } from '@/components/core/CompactToolbar/CompactToolbar';
 import type { CompactToolbarConfig } from '@/components/core/CompactToolbar/types';
+import { Building, Home, Construction, Users, Factory } from 'lucide-react';
 
 type NavigationLevel = 'companies' | 'projects' | 'buildings' | 'floors' | 'units';
+
+// Helper functions για header display
+const getLevelTitle = (level: NavigationLevel): string => {
+  switch (level) {
+    case 'companies': return 'Εταιρείες';
+    case 'projects': return 'Έργα';
+    case 'buildings': return 'Κτίρια';
+    case 'floors': return 'Όροφοι';
+    case 'units': return 'Μονάδες';
+    default: return '';
+  }
+};
+
+const getLevelIcon = (level: NavigationLevel): React.ComponentType<{ className?: string }> => {
+  switch (level) {
+    case 'companies': return Factory;
+    case 'projects': return Construction;
+    case 'buildings': return Building;
+    case 'floors': return Users;
+    case 'units': return Home;
+    default: return Building;
+  }
+};
 
 interface NavigationCardToolbarProps {
   level: NavigationLevel;
@@ -20,6 +44,8 @@ interface NavigationCardToolbarProps {
   onFiltersChange?: (filters: string[]) => void;
   selectedItems?: string[];
   hasSelectedItems?: boolean;
+  // 🏢 ENTERPRISE Header Display - Same as GenericListHeader
+  itemCount?: number; // Count of items in this navigation level
   onNewItem?: () => void;
   onEditItem?: () => void;
   onDeleteItem?: () => void;
@@ -346,6 +372,7 @@ export function NavigationCardToolbar({
   onFiltersChange,
   selectedItems = [],
   hasSelectedItems = false,
+  itemCount, // 🏢 NEW: Count of items for header display
   onNewItem,
   onEditItem,
   onDeleteItem,
@@ -368,6 +395,10 @@ export function NavigationCardToolbar({
       onFiltersChange={onFiltersChange}
       selectedItems={selectedItems}
       hasSelectedContact={hasSelectedItems}
+      // 🏢 ENTERPRISE Header Display - Same pattern as GenericListHeader
+      headerTitle={getLevelTitle(level)}
+      headerCount={itemCount}
+      headerIcon={getLevelIcon(level)}
       onNewItem={onNewItem}
       onEditItem={() => onEditItem?.()}
       onDeleteItems={() => onDeleteItem?.()}
