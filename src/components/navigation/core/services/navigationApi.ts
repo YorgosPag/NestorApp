@@ -7,13 +7,34 @@ import { getAllActiveCompanies } from '@/services/companies.service';
 import type { NavigationCompany, NavigationProject } from '../types';
 
 export class NavigationApiService {
+  // 🏢 ENTERPRISE CACHING: Companies cache με memory optimization
+  private static companiesCache: {
+    data: NavigationCompany[] | null;
+    timestamp: number;
+    ttl: number;
+  } = {
+    data: null,
+    timestamp: 0,
+    ttl: 3 * 60 * 1000, // 3 λεπτά cache για navigation
+  };
+
   /**
-   * Load all active companies
+   * 🚀 PERFORMANCE OPTIMIZED: Load all active companies με caching
    */
   static async loadCompanies(): Promise<NavigationCompany[]> {
+    // 🚀 PERFORMANCE: Check cache first
+    const now = Date.now();
+    const cache = NavigationApiService.companiesCache;
+
+    if (cache.data && (now - cache.timestamp) < cache.ttl) {
+      // console.log(`🏢 CACHE HIT: Returning ${cache.data.length} cached companies`);
+      return cache.data;
+    }
+
+    // 🔄 Cache miss - fetch from service
     const companies = await getAllActiveCompanies();
 
-    // Remove duplicates by id AND by companyName
+    // 🚀 PERFORMANCE: Remove duplicates by id AND by companyName
     const uniqueCompanies = companies.reduce((unique, company) => {
       const duplicateById = unique.find(c => c.id === company.id);
       const duplicateByName = unique.find(c => c.companyName === company.companyName);
@@ -24,6 +45,11 @@ export class NavigationApiService {
       return unique;
     }, [] as typeof companies);
 
+    // 💾 Update cache με fresh data
+    cache.data = uniqueCompanies;
+    cache.timestamp = now;
+
+    // console.log(`🏢 CACHED: Returning ${uniqueCompanies.length} unique companies`);
     return uniqueCompanies;
   }
 

@@ -52,7 +52,7 @@ jobs:
 
       - name: 🔁 Retry Jest tests (if failed)
         if: steps.jest-test.outcome == 'failure'
-        run: pnpm test -- --runInBand --reporters=default --coverage --maxWorkers=1
+        run: pnpm test -- --runInBand --reporters=default --coverage
 
       - name: 📊 Upload coverage reports
         if: always()

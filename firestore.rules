@@ -22,12 +22,12 @@ service cloud.firestore {
     }
 
     // =========================================================================
-    // 📁 PROJECTS COLLECTION - PUBLIC READ ACCESS
+    // 📁 PROJECTS COLLECTION - DEV-FRIENDLY ACCESS
     // =========================================================================
     match /projects/{projectId} {
 
-      // 📖 READ: Public read access for projects listing (like buildings/units)
-      allow read: if true;
+      // 📖 READ: Dev-friendly access - public για development, preparatory για ownership
+      allow read: if isDevMode() || isAuthenticated();
 
       // ✍️ CREATE: Μόνο authenticated users με validated data
       allow create: if request.auth != null
@@ -118,12 +118,12 @@ service cloud.firestore {
     // 🏠 BUILDINGS & UNITS - PUBLIC READ ACCESS
     // =========================================================================
     match /buildings/{buildingId} {
-      allow read: if true; // Public read access for buildings listing
+      allow read: if isDevMode() || isAuthenticated(); // Dev-friendly access
       allow write: if false; // Admin/server only
     }
 
     match /units/{unitId} {
-      allow read: if true; // Public read access for units listing
+      allow read: if isDevMode() || isAuthenticated(); // Dev-friendly access
       allow write: if false; // Admin/server only
     }
 
@@ -140,8 +140,8 @@ service cloud.firestore {
     // =========================================================================
     match /contacts/{contactId} {
 
-      // 📖 READ: Public read access for contacts listing (like buildings/units/projects)
-      allow read: if true;
+      // 📖 READ: Dev-friendly access, preparatory για ownership
+      allow read: if isDevMode() || (request.auth != null && request.auth.uid == contactId);
 
       // ✍️ CREATE: Μόνο για τον εαυτό του
       allow create: if request.auth != null
@@ -217,6 +217,26 @@ service cloud.firestore {
       // This would need to be implemented based on your relationship logic
       // For now, allowing basic access - you can refine this later
       return true;
+    }
+
+    // =========================================================================
+    // 🏗️ DEVELOPMENT MODE HELPERS
+    // =========================================================================
+
+    // Dev mode helper - επιτρέπει public access για development
+    function isDevMode() {
+      // 🚨 DEV FLAG: Θα αλλάξει όταν πάμε σε production
+      return true; // Currently in development mode
+    }
+
+    // Authentication helper
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // User ownership helper
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
     }
   }
 }

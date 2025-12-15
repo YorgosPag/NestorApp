@@ -47,10 +47,10 @@ export class CompaniesService {
         });
       }
 
-      const companyIds: string[] = [];
+      // 🗑️ REMOVED: Unused variable after optimization
 
-      // Ελέγχουμε για κάθε εταιρεία αν έχει έργα
-      for (const doc of snapshot.docs) {
+      // 🚀 PERFORMANCE OPTIMIZATION: Batch company-project check
+      const companyProjectChecks = snapshot.docs.map(async doc => {
         const companyId = doc.id;
         const companyData = doc.data();
 
@@ -64,15 +64,18 @@ export class CompaniesService {
             console.log(`🏗️ Company ${companyId} (${companyData.companyName}) has ${projects?.length || 0} projects:`, projects?.map(p => p.name) || []);
           }
 
-          if (projects && projects.length > 0) {
-            companyIds.push(companyId);
-          }
+          return projects && projects.length > 0 ? companyId : null;
         } catch (error) {
           if (DEBUG_COMPANIES_SERVICE) {
             // Debug logging removed //(`⚠️ Failed to check projects for company ${companyId} (${companyData.companyName}):`, error);
           }
+          return null;
         }
-      }
+      });
+
+      // 🏃‍♂️ CONCURRENT EXECUTION: Run all checks in parallel
+      const results = await Promise.all(companyProjectChecks);
+      const companyIds = results.filter((id): id is string => id !== null);
 
       return companyIds;
     } catch (error) {

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { collection, query, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { readProjects, logQueryContext, AuthorizationError, QueryExecutionError } from '@/lib/auth/query-middleware';
 
 export interface FirestoreProject {
   id: string;
@@ -30,11 +31,11 @@ export function useFirestoreProjects() {
         setLoading(true);
         setError(null);
 
-        // First, try to connect to Firestore
-        const projectsQuery = query(collection(db, 'projects'));
-        const snapshot = await getDocs(projectsQuery);
+        // 🔒 Enterprise authorization με comprehensive error handling
+        const result = await readProjects(db);
+        logQueryContext(result, 'useFirestoreProjects');
 
-        if (snapshot.empty) {
+        if (result.isEmpty) {
 
           // If no projects exist, create the sample projects we need for testing
           const { addDoc } = await import('firebase/firestore');
@@ -76,10 +77,10 @@ export function useFirestoreProjects() {
             await addDoc(collection(db, 'projects'), project);
           }
 
-          // Fetch again after creating data
-          const newSnapshot = await getDocs(projectsQuery);
-          const projectsData: FirestoreProject[] = newSnapshot.docs.map(doc => {
-            const data = doc.data();
+          // Fetch again after creating data με enterprise query service
+          const newResult = await readProjects(db);
+          const projectsData: FirestoreProject[] = newResult.documents.map((doc: any) => {
+            const data = doc;
 
             let mappedStatus = data.status;
             if (data.status === 'construction' || data.status === 'active') {
@@ -97,9 +98,9 @@ export function useFirestoreProjects() {
 
           setProjects(projectsData);
         } else {
-          // Projects already exist, use them
-          const projectsData: FirestoreProject[] = snapshot.docs.map(doc => {
-            const data = doc.data();
+          // Projects already exist, use them από scoped query result
+          const projectsData: FirestoreProject[] = result.documents.map((doc: any) => {
+            const data = doc;
 
             let mappedStatus = data.status;
             if (data.status === 'construction' || data.status === 'active') {
@@ -122,17 +123,24 @@ export function useFirestoreProjects() {
         console.error('❌ Full error details:', JSON.stringify(err, null, 2));
         console.error('❌ Error stack:', err instanceof Error ? err.stack : 'No stack');
 
-        // Check if the error is related to Firebase configuration
+        // 🏢 Enterprise error handling με proper type guards
         if (err instanceof Error) {
-          if (err.message.includes('API key not valid') || err.message.includes('projectId')) {
+          const errorName = err.constructor.name;
+
+          // Handle enterprise authorization errors από AuthorizedQueryService
+          if (err instanceof AuthorizationError) {
+            setError(`🔒 Authorization failed: ${err.message}`);
+          } else if (err instanceof QueryExecutionError) {
+            setError(`⚠️ Query execution failed: ${err.message}`);
+          } else if (err.message.includes('API key not valid') || err.message.includes('projectId')) {
             setError('Firebase configuration error. Check .env.local file.');
           } else if (err.message.includes('network') || err.message.includes('permission')) {
             setError('Network or permission error. Check Firebase rules.');
           } else {
-            setError(err.message);
+            setError(`Enterprise query error: ${err.message}`);
           }
         } else {
-          setError('Unknown Firestore error');
+          setError('Unknown enterprise authorization error');
         }
       } finally {
         setLoading(false);

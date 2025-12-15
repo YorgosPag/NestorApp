@@ -329,12 +329,15 @@ export function getStatusesByCategory(category: keyof typeof STATUS_CATEGORIES):
  * Εξαγωγή όλων των υπαρχόντων functions με enhanced functionality
  * Το υπάρχον κώδικα θα δουλεύει χωρίς καμία αλλαγή
  */
+// 🔧 EXPORT FIX: Explicit exports για hot-reload compatibility
 export {
-  PropertyStatus,
   PROPERTY_STATUS_LABELS,
   PROPERTY_STATUS_COLORS,
   DEFAULT_PROPERTY_STATUS
 } from './statuses';
+
+// ✅ FIXED: Single export for PropertyStatus as type only
+export type { PropertyStatus } from './statuses';
 
 // Enhanced versions που δεδουλεύουν με και BasicPropertyStatus και Enhanced
 export const getStatusLabel = getEnhancedStatusLabel;

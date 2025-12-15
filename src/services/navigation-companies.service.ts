@@ -17,7 +17,7 @@ const NAVIGATION_COMPANIES_COLLECTION = 'navigation_companies';
 
 export class NavigationCompaniesService {
   /**
-   * Προσθήκη εταιρείας στην πλοήγηση
+   * 🏢 Προσθήκη εταιρείας στην πλοήγηση με cache invalidation
    */
   async addCompanyToNavigation(contactId: string, userId?: string): Promise<void> {
     try {
@@ -35,6 +35,10 @@ export class NavigationCompaniesService {
       };
 
       await addDoc(collection(db, NAVIGATION_COMPANIES_COLLECTION), entry);
+
+      // 🗑️ PERFORMANCE: Clear cache after modification
+      this.clearCache();
+
       // Debug logging removed //(`✅ Company ${contactId} added to navigation`);
     } catch (error) {
       // Error logging removed //('Error adding company to navigation:', error);
@@ -43,7 +47,7 @@ export class NavigationCompaniesService {
   }
 
   /**
-   * Αφαίρεση εταιρείας από την πλοήγηση
+   * 🗑️ Αφαίρεση εταιρείας από την πλοήγηση με cache invalidation
    */
   async removeCompanyFromNavigation(contactId: string): Promise<void> {
     try {
@@ -55,6 +59,9 @@ export class NavigationCompaniesService {
       const snapshot = await getDocs(q);
       const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
       await Promise.all(deletePromises);
+
+      // 🗑️ PERFORMANCE: Clear cache after modification
+      this.clearCache();
 
       // Debug logging removed //(`✅ Company ${contactId} removed from navigation`);
     } catch (error) {
@@ -82,14 +89,37 @@ export class NavigationCompaniesService {
   }
 
   /**
-   * Επιστρέφει όλα τα IDs εταιρειών που είναι στην πλοήγηση
+   * 🏢 ENTERPRISE CACHING: Επιστρέφει όλα τα IDs εταιρειών που είναι στην πλοήγηση
+   *
+   * @performance Implements memory caching για αποφυγή duplicate queries
+   * @cache 5 λεπτών TTL για real-time consistency
    */
+  private static navigationCache: {
+    data: string[] | null;
+    timestamp: number;
+    ttl: number;
+  } = {
+    data: null,
+    timestamp: 0,
+    ttl: 5 * 60 * 1000, // 5 λεπτά cache
+  };
+
   async getNavigationCompanyIds(): Promise<string[]> {
     try {
+      // 🚀 PERFORMANCE: Check cache first
+      const now = Date.now();
+      const cache = NavigationCompaniesService.navigationCache;
+
+      if (cache.data && (now - cache.timestamp) < cache.ttl) {
+        // console.log(`🧭 CACHE HIT: Returning ${cache.data.length} cached navigation company IDs`);
+        return cache.data;
+      }
+
+      // 🔄 Cache miss - fetch from Firestore
       const q = query(collection(db, NAVIGATION_COMPANIES_COLLECTION));
       const snapshot = await getDocs(q);
 
-      console.log(`🧭 DEBUG: navigation_companies collection has ${snapshot.docs.length} documents`);
+      console.log(`🧭 CACHE MISS: navigation_companies collection has ${snapshot.docs.length} documents`);
 
       const contactIds = snapshot.docs.map(doc => {
         const data = doc.data() as NavigationCompanyEntry;
@@ -97,12 +127,26 @@ export class NavigationCompaniesService {
         return data.contactId;
       });
 
-      console.log(`🧭 DEBUG: Returning ${contactIds.length} navigation company IDs:`, contactIds);
+      // 💾 Update cache
+      cache.data = contactIds;
+      cache.timestamp = now;
+
+      console.log(`🧭 CACHED: Returning ${contactIds.length} navigation company IDs:`, contactIds);
       return contactIds;
     } catch (error) {
       console.error('❌ Error fetching navigation company IDs:', error);
       return [];
     }
+  }
+
+  /**
+   * 🗑️ CACHE MANAGEMENT: Clear cache when navigation changes
+   * Καλείται όταν προστίθενται/αφαιρούνται εταιρείες
+   */
+  private clearCache(): void {
+    NavigationCompaniesService.navigationCache.data = null;
+    NavigationCompaniesService.navigationCache.timestamp = 0;
+    // console.log('🧭 Cache cleared');
   }
 
   /**
