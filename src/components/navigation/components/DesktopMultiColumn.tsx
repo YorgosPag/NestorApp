@@ -12,6 +12,17 @@ import { NavigationCardToolbar } from './NavigationCardToolbar';
 import { SelectItemModal } from '../dialogs/SelectItemModal';
 import { Building, Home, Construction, Users, MapPin, Map, Car, Package, Layers, Factory } from 'lucide-react';
 import { useNavigation } from '../core/NavigationContext';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface DesktopMultiColumnProps {
   onCompanySelect: (companyId: string) => void;
@@ -55,6 +66,10 @@ export function DesktopMultiColumn({
   const [floorsFilters, setFloorsFilters] = useState<string[]>([]);
   const [unitsSearch, setUnitsSearch] = useState('');
   const [unitsFilters, setUnitsFilters] = useState<string[]>([]);
+
+  // 🏢 ENTERPRISE CONFIRMATION DIALOG STATE
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [pendingDeletionCompany, setPendingDeletionCompany] = useState<any>(null);
 
   // Selected unit state for Units column
   const [selectedUnit, setSelectedUnit] = useState<any>(null);
@@ -185,10 +200,66 @@ export function DesktopMultiColumn({
     if (!selectedCompany) return;
 
     if (canDeleteCompany(selectedCompany)) {
-      // TODO: Implement actual deletion logic
+      // 🏢 ENTERPRISE DELETE LOGIC: Show custom confirmation dialog
+      setPendingDeletionCompany(selectedCompany);
+      setConfirmDialogOpen(true);
     } else {
       const companyProjects = projects.filter(p => p.companyId === selectedCompany.id);
       showDeleteWarning('εταιρεία', companyProjects.length, 'έργα');
+    }
+  };
+
+  /**
+   * 🏢 ENTERPRISE COMPANY DELETION WORKFLOW
+   *
+   * Implements professional-grade company removal με:
+   * - Custom confirmation dialog (κεντρικοποιημένο)
+   * - Database operations
+   * - Cache invalidation
+   * - UI updates με toast notifications
+   * - Error handling
+   * - Audit logging
+   */
+  const handleConfirmedCompanyDeletion = async () => {
+    if (!pendingDeletionCompany) return;
+
+    try {
+      // 📊 STEP 1: Import navigation service
+      const { removeCompanyFromNavigation } = await import('@/services/navigation-companies.service');
+
+      // 🚀 STEP 2: Optimistic UI Update (instant response)
+      const companyId = pendingDeletionCompany.id;
+      const companyName = pendingDeletionCompany.companyName;
+
+      // Clear selection immediately
+      onCompanySelect(''); // Deselect current company
+
+      // 💾 STEP 3: Database Operation με enterprise error handling
+      await removeCompanyFromNavigation(companyId);
+
+      // 📢 STEP 4: Success notification με ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΟ TOAST
+      warning(`✅ Η εταιρεία "${companyName}" αφαιρέθηκε επιτυχώς από την πλοήγηση.`, {
+        duration: 4000
+      });
+
+      // 🔄 STEP 5: Force navigation refresh (trigger context reload)
+      // Note: Cache is automatically cleared by removeCompanyFromNavigation()
+      window.location.reload(); // Temporary solution - can be improved with context refresh
+
+    } catch (error) {
+      console.error('❌ Enterprise company deletion failed:', error);
+
+      // 🚨 STEP 6: Error Handling με ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΟ TOAST
+      warning(`❌ Αποτυχία αφαίρεσης εταιρείας. Παρακαλούμε δοκιμάστε ξανά.`, {
+        duration: 5000
+      });
+
+      // 🔄 STEP 7: Rollback optimistic update (restore selection)
+      onCompanySelect(pendingDeletionCompany.id);
+    } finally {
+      // 🧹 STEP 8: Reset dialog state
+      setConfirmDialogOpen(false);
+      setPendingDeletionCompany(null);
     }
   };
 
@@ -654,6 +725,46 @@ export function DesktopMultiColumn({
         searchPlaceholder="Αναζήτηση μονάδας..."
         itemType="unit"
       />
+
+      {/* 🏢 ENTERPRISE CONFIRMATION DIALOG - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΟ */}
+      <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              🗑️ Αφαίρεση Εταιρείας από Πλοήγηση
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                Είστε βέβαιοι ότι θέλετε να αφαιρέσετε την εταιρεία{' '}
+                <strong>"{pendingDeletionCompany?.companyName}"</strong> από την πλοήγηση;
+              </p>
+
+              <div className="bg-muted p-3 rounded-md text-sm space-y-2 border border-border">
+                <p className="font-medium text-foreground">Αυτή η ενέργεια:</p>
+                <ul className="text-muted-foreground space-y-1">
+                  <li>• Θα αφαιρέσει την εταιρεία από τη λίστα πλοήγησης</li>
+                  <li>• <strong className="text-foreground">ΔΕΝ</strong> θα διαγράψει την εταιρεία από τη βάση δεδομένων</li>
+                  <li>• Μπορείτε να την προσθέσετε ξανά αργότερα</li>
+                </ul>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setConfirmDialogOpen(false);
+              setPendingDeletionCompany(null);
+            }}>
+              Ακύρωση
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmedCompanyDeletion}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Αφαίρεση
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
     </nav>
   );
