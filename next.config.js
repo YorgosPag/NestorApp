@@ -5,10 +5,6 @@ const nextConfig = {
     // Skip type checking για ταχύτητα
     ignoreBuildErrors: true,
   },
-  eslint: {
-    // Skip ESLint για ταχύτητα
-    ignoreDuringBuilds: true,
-  },
   // Disable strict mode για λιγότερα re-renders
   reactStrictMode: false,
 };

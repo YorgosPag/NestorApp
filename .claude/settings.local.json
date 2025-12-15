@@ -181,7 +181,11 @@
       "Bash(git pull:*)",
       "Bash(git revert:*)",
       "Bash(TASKKILL:*)",
-      "WebFetch(domain:localhost)"
+      "WebFetch(domain:localhost)",
+      "Bash(pnpm dlx next dev:*)",
+      "Bash(pnpm dlx next:*)",
+      "Bash(PORT=3001 pnpm run dev)",
+      "Bash(PORT=3001 pnpm exec next dev)"
     ],
     "deny": [],
     "ask": []

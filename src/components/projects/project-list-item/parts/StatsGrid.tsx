@@ -14,11 +14,11 @@ export function StatsGrid({ project }: StatsGridProps) {
         <div className="grid grid-cols-2 gap-3 text-xs">
             <div>
                 <p className="text-muted-foreground">Επιφάνεια</p>
-                <p className="font-medium">{project.totalArea.toLocaleString('el-GR')} m²</p>
+                <p className="font-medium">{project.totalArea?.toLocaleString('el-GR') || 'N/A'} m²</p>
             </div>
             <div>
                 <p className="text-muted-foreground">Αξία</p>
-                <p className="font-medium text-green-600">{formatCurrency(project.totalValue)}</p>
+                <p className="font-medium text-green-600">{formatCurrency(project.totalValue || 0)}</p>
             </div>
         </div>
     );

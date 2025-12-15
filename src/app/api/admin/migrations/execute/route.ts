@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { MigrationEngine } from '@/database/migrations/MigrationEngine';
 import { createProjectCompanyRelationshipsMigration } from '@/database/migrations/001_fix_project_company_relationships';
+import { createFloorsNormalizationMigration } from '@/database/migrations/002_normalize_floors_collection';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -35,13 +36,17 @@ export async function POST(request: NextRequest) {
       case '001_fix_project_company_relationships':
         migration = createProjectCompanyRelationshipsMigration();
         break;
+      case '002_normalize_floors_collection':
+        migration = createFloorsNormalizationMigration();
+        break;
       default:
         return NextResponse.json(
           {
             success: false,
             error: `Unknown migration ID: ${migrationId}`,
             availableMigrations: [
-              '001_fix_project_company_relationships'
+              '001_fix_project_company_relationships',
+              '002_normalize_floors_collection'
             ]
           },
           { status: 400 }
@@ -137,6 +142,14 @@ export async function GET(request: NextRequest) {
         name: 'Fix Project-Company Relationships',
         version: '1.0.0',
         description: 'Corrects incorrect companyId values in projects to establish proper relationships with companies',
+        author: 'Claude Enterprise Migration System',
+        status: 'available'
+      },
+      {
+        id: '002_normalize_floors_collection',
+        name: 'Normalize Floors Collection (Enterprise 3NF)',
+        version: '1.0.0',
+        description: 'Extracts embedded buildingFloors arrays to normalized floors collection with proper foreign key relationships following 3NF principles',
         author: 'Claude Enterprise Migration System',
         status: 'available'
       }

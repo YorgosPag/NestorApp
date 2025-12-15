@@ -41,103 +41,102 @@ export class NavigationApiService {
         return [];
       }
 
-      // Temporary fallback for the company that should have 3 projects
+      // Enterprise pattern: Load real data from normalized collections
       if (companyId === KNOWN_VALID_COMPANY_ID) {
-        return [
-          {
-            id: '1001',
-            name: 'Παλαιολόγου Πολυκατοικία',
-            company: 'Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.',
-            buildings: [
-              {
-                id: 'building_1_palaiologou',
-                name: 'ΚΤΙΡΙΟ Α - Παλαιολόγου',
-                floors: [
-                  {
-                    id: 'floor_0',
-                    name: 'Ισόγειο',
-                    units: [
-                      { id: 'unit_0_1', name: 'Μονάδα Ισογείου', type: 'Διαμέρισμα' }
-                    ]
-                  },
-                  {
-                    id: 'floor_1',
-                    name: '1ος Όροφος',
-                    units: [
-                      { id: 'unit_1_1', name: 'Διαμέρισμα 1.1', type: 'Διαμέρισμα' },
-                      { id: 'unit_1_2', name: 'Διαμέρισμα 1.2', type: 'Διαμέρισμα' }
-                    ]
-                  },
-                  {
-                    id: 'floor_2',
-                    name: '2ος Όροφος',
-                    units: [
-                      { id: 'unit_2_1', name: 'Διαμέρισμα 2.1', type: 'Διαμέρισμα' },
-                      { id: 'unit_2_2', name: 'Διαμέρισμα 2.2', type: 'Διαμέρισμα' }
-                    ]
-                  },
-                  {
-                    id: 'floor_3',
-                    name: '3ος Όροφος',
-                    units: [
-                      { id: 'unit_3_1', name: 'Διαμέρισμα 3.1', type: 'Διαμέρισμα' },
-                      { id: 'unit_3_2', name: 'Διαμέρισμα 3.2', type: 'Διαμέρισμα' }
-                    ]
-                  },
-                  {
-                    id: 'floor_4',
-                    name: '4ος Όροφος',
-                    units: [
-                      { id: 'unit_4_1', name: 'Πεντάρι Οροφής', type: 'Διαμέρισμα' }
-                    ]
-                  }
-                ]
-              },
-              {
-                id: 'building_2_palaiologou',
-                name: 'ΚΤΙΡΙΟ Β - Βοηθητικές Εγκαταστάσεις',
-                floors: [
-                  {
-                    id: 'floor_-1',
-                    name: 'Υπόγειο',
-                    units: [
-                      { id: 'unit_b1_1', name: 'Αποθήκη Β1.1', type: 'Αποθήκη' },
-                      { id: 'unit_b1_2', name: 'Αποθήκη Β1.2', type: 'Αποθήκη' },
-                      { id: 'unit_b1_3', name: 'Αποθήκη Β1.3', type: 'Αποθήκη' }
-                    ]
-                  },
-                  {
-                    id: 'floor_0_b',
-                    name: 'Ισόγειο',
-                    units: [
-                      { id: 'unit_b0_1', name: 'Κοινόχρηστος Χώρος', type: 'Κοινόχρηστο' },
-                      { id: 'unit_b0_2', name: 'Χώρος Διανομής', type: 'Κοινόχρηστο' },
-                      { id: 'unit_b0_3', name: 'Λοιποί Χώροι', type: 'Κοινόχρηστο' }
-                    ]
-                  }
-                ]
+        // Load projects from projects API (already normalized in previous migration)
+        const projectsResponse = await fetch(`/api/projects/by-company/${companyId}`);
+        if (!projectsResponse.ok) {
+          console.warn(`Failed to load projects for company ${companyId}`);
+          return [];
+        }
+
+        const projectsResult = await projectsResponse.json();
+        if (!projectsResult.success || !projectsResult.projects) {
+          return [];
+        }
+
+        // For each project, load buildings and floors using enterprise normalized structure
+        const projectsWithBuildings = await Promise.all(
+          projectsResult.projects.map(async (project: any) => {
+            try {
+              // Load buildings for this project
+              const buildingsResponse = await fetch(`/api/buildings?projectId=${project.id}`);
+              const buildingsResult = await buildingsResponse.json();
+
+              if (!buildingsResult.success) {
+                return { ...project, buildings: [], companyId };
               }
-            ],
-            parkingSpots: [],
-            companyId: companyId
-          },
-          {
-            id: '1002',
-            name: 'Μεγάλου Αλεξάνδρου Συγκρότημα',
-            company: 'Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.',
-            buildings: [],
-            parkingSpots: [],
-            companyId: companyId
-          },
-          {
-            id: '1003',
-            name: 'Τσιμισκή Εμπορικό Κέντρο',
-            company: 'Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.',
-            buildings: [],
-            parkingSpots: [],
-            companyId: companyId
-          }
-        ];
+
+              // For each building, load floors from normalized floors collection
+              const buildingsWithFloors = await Promise.all(
+                buildingsResult.buildings.map(async (building: any) => {
+                  try {
+                    // Enterprise query: Load floors by buildingId foreign key
+                    const floorsResponse = await fetch(`/api/floors?buildingId=${building.id}`);
+                    const floorsResult = await floorsResponse.json();
+
+                    if (!floorsResult.success) {
+                      return { ...building, floors: [] };
+                    }
+
+                    // For each floor, load units
+                    const floorsWithUnits = await Promise.all(
+                      floorsResult.floors.map(async (floor: any) => {
+                        try {
+                          // Load units for this floor
+                          const unitsResponse = await fetch(`/api/units?floorId=${floor.id}&buildingId=${building.id}`);
+                          const unitsResult = await unitsResponse.json();
+
+                          const units = unitsResult.success ? unitsResult.units : [];
+
+                          return {
+                            id: floor.id,
+                            name: floor.name,
+                            number: floor.number,
+                            units: units.map((unit: any) => ({
+                              id: unit.id,
+                              name: unit.name,
+                              type: unit.type
+                            }))
+                          };
+                        } catch (error) {
+                          console.warn(`Failed to load units for floor ${floor.id}:`, error);
+                          return {
+                            id: floor.id,
+                            name: floor.name,
+                            number: floor.number,
+                            units: []
+                          };
+                        }
+                      })
+                    );
+
+                    return {
+                      ...building,
+                      floors: floorsWithUnits
+                    };
+
+                  } catch (error) {
+                    console.warn(`Failed to load floors for building ${building.id}:`, error);
+                    return { ...building, floors: [] };
+                  }
+                })
+              );
+
+              return {
+                ...project,
+                buildings: buildingsWithFloors,
+                companyId
+              };
+
+            } catch (error) {
+              console.warn(`Failed to load buildings for project ${project.id}:`, error);
+              return { ...project, buildings: [], companyId };
+            }
+          })
+        );
+
+        return projectsWithBuildings;
       }
 
       const response = await fetch(`/api/projects/by-company/${companyId}`);
