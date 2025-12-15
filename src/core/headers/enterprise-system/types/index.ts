@@ -42,6 +42,7 @@ export interface HeaderTitleProps {
   subtitle?: string;
   variant?: 'large' | 'medium' | 'small';
   className?: string;
+  hideSubtitle?: boolean; // 🏢 Enterprise support για conditional subtitle
 }
 
 export interface HeaderSearchProps {
@@ -129,6 +130,7 @@ export interface SectionHeaderProps {
   title: string;
   icon?: LucideIcon;
   subtitle?: string;
+  count?: number; // 🏢 Enterprise count display (e.g., "Κτίρια (5)")
   actions?: React.ReactNode;
   className?: string;
   variant?: 'default' | 'compact' | 'minimal';

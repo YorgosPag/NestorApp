@@ -17,6 +17,8 @@ interface ProjectsHeaderProps {
   // Mobile-only filter toggle
   showFilters?: boolean;
   setShowFilters?: (show: boolean) => void;
+  // 🏢 ENTERPRISE COUNT DISPLAY
+  projectCount?: number;
 }
 
 export function ProjectsHeader({
@@ -29,6 +31,7 @@ export function ProjectsHeader({
   onNewProject,
   showFilters,
   setShowFilters,
+  projectCount,
 }: ProjectsHeaderProps) {
   return (
     <PageHeader
@@ -37,7 +40,7 @@ export function ProjectsHeader({
       spacing="compact"
       title={{
         icon: Building2,
-        title: "Διαχείριση Έργων",
+        title: `Διαχείριση Έργων${projectCount !== undefined ? ` (${projectCount})` : ''}`,
         subtitle: "Παρακολούθηση και διαχείριση έργων"
       }}
       search={searchTerm !== undefined && setSearchTerm ? {

@@ -18,7 +18,8 @@ export const HeaderTitle: React.FC<HeaderTitleProps> = ({
   title,
   subtitle,
   variant = 'large',
-  className
+  className,
+  hideSubtitle = false
 }) => {
   const titleClasses = HEADER_THEME.components.title[variant] || HEADER_THEME.components.title.large;
   const subtitleClasses = HEADER_THEME.components.title.subtitle;
@@ -30,7 +31,7 @@ export const HeaderTitle: React.FC<HeaderTitleProps> = ({
         <div className="flex items-center gap-2">
           <h1 className={cn(titleClasses, "sm:whitespace-nowrap")}>{title}</h1>
         </div>
-        {subtitle && (
+        {subtitle && !hideSubtitle && (
           <p className={subtitleClasses}>{subtitle}</p>
         )}
       </div>

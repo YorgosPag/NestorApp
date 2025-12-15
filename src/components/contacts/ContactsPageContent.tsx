@@ -598,6 +598,7 @@ export function ContactsPageContent() {
           onNewContact={handleNewContact}
           showFilters={showFilters}
           setShowFilters={setShowFilters}
+          contactCount={contacts.length} // 🏢 Enterprise count display
         />
 
 

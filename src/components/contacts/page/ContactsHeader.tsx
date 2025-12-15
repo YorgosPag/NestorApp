@@ -19,6 +19,8 @@ interface ContactsHeaderProps {
   // Mobile-only filter toggle
   showFilters?: boolean;
   setShowFilters?: (show: boolean) => void;
+  // 🏢 ENTERPRISE COUNT DISPLAY
+  contactCount?: number;
 }
 
 export function ContactsHeader({
@@ -31,6 +33,7 @@ export function ContactsHeader({
   onNewContact,
   showFilters,
   setShowFilters,
+  contactCount,
 }: ContactsHeaderProps) {
   return (
     <PageHeader
@@ -39,7 +42,7 @@ export function ContactsHeader({
       spacing="compact"
       title={{
         icon: Users,
-        title: "Διαχείριση Επαφών",
+        title: `Διαχείριση Επαφών${contactCount !== undefined ? ` (${contactCount})` : ''}`,
         subtitle: "Κεντρικό ευρετήριο όλων των επαφών σας"
       }}
       search={{

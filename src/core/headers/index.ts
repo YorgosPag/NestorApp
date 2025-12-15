@@ -8,6 +8,7 @@
 // Main Components - Enterprise System Migration
 export {
   PageHeader,
+  SectionHeader, // 🏢 Enterprise section header με count support
   HeaderIcon,
   HeaderTitle,
   HeaderSearch,
@@ -19,8 +20,8 @@ export {
 
 // Backward compatibility aliases
 export {
-  PageHeader as UnifiedHeader,
-  PageHeader as SectionHeader
+  PageHeader as UnifiedHeader
+  // SectionHeader is now its own component με count support
 } from './enterprise-system';
 
 // Types & Interfaces - Enterprise System

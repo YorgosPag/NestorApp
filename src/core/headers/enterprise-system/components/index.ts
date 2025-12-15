@@ -18,6 +18,7 @@ export { HeaderActions, default as HeaderActionsComponent } from './HeaderAction
 
 // Main composition components
 export { PageHeader, default as PageHeaderComponent } from './PageHeader';
+export { SectionHeader, default as SectionHeaderComponent } from './SectionHeader'; // 🏢 Enterprise section header με count support
 
 // Re-export types για convenience
 export type {

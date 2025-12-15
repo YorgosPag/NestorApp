@@ -79,7 +79,7 @@ export function GenericListHeader({
             <SearchInput
                 value={searchTerm}
                 onChange={onSearchChange}
-                placeholder="Αναζήτηση επαφών..."
+                placeholder={searchPlaceholder} // 🏢 Dynamic placeholder based on entity
                 debounceMs={0} // Instant για table headers
                 showClearButton={true}
                 className="h-8 text-sm flex-1" // Minimal overrides - let SearchInput handle focus ring

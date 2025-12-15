@@ -163,6 +163,7 @@ export function ProjectsPageContent() {
             onNewProject={() => console.log('Add new project')}
             showFilters={showFilters}
             setShowFilters={setShowFilters}
+            projectCount={projectsStats.totalProjects} // 🏢 Enterprise count display
         />
 
         {showDashboard && (
