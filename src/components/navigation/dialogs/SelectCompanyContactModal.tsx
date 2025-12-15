@@ -14,19 +14,23 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { ContactsService } from '@/services/contacts.service';
 import type { Contact } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts';
-import { Building, Search, Loader2, Factory } from 'lucide-react';
+import { Building, Loader2, Factory, CheckCircle2 } from 'lucide-react';
+import { SearchInput } from '@/components/ui/search';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '../../ui/effects';
 
 interface SelectCompanyContactModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCompanySelected: (contact: Contact) => void;
+  // 🏢 ENTERPRISE: Existing companies για intelligent filtering
+  existingCompanyIds?: string[];
 }
 
 export function SelectCompanyContactModal({
   open,
   onOpenChange,
   onCompanySelected,
+  existingCompanyIds = [],
 }: SelectCompanyContactModalProps) {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [filteredContacts, setFilteredContacts] = useState<Contact[]>([]);
@@ -74,9 +78,18 @@ export function SelectCompanyContactModal({
       });
 
       // Φιλτράρισμα για νομικά πρόσωπα μόνο
+      // 🏢 ENTERPRISE FILTERING: Φιλτράρουμε εταιρείες που είναι active + δεν υπάρχουν ήδη
       const companyContacts = result.contacts.filter(
-        contact => contact.type === 'company' && contact.status === 'active'
+        contact => contact.type === 'company' &&
+                   contact.status === 'active' &&
+                   !existingCompanyIds.includes(contact.id)  // 🚫 EXCLUDE existing companies
       );
+
+      if (companyContacts.length === 0 && existingCompanyIds.length > 0) {
+        console.log(`🔍 ENTERPRISE FILTER: All ${result.contacts.filter(c => c.type === 'company' && c.status === 'active').length} companies already in navigation. Available companies: 0`);
+      } else {
+        console.log(`🔍 ENTERPRISE FILTER: ${companyContacts.length} available companies (${existingCompanyIds.length} already in navigation)`);
+      }
 
       setContacts(companyContacts);
       setFilteredContacts(companyContacts);
@@ -108,20 +121,23 @@ export function SelectCompanyContactModal({
           </DialogTitle>
           <DialogDescription>
             Επιλέξτε μια εταιρεία από τις επαφές σας για προσθήκη στην πλοήγηση.
+            {existingCompanyIds.length > 0 && (
+              <span className="text-muted-foreground block mt-1 text-sm">
+                Εμφανίζονται μόνο εταιρείες που δεν υπάρχουν ήδη στη λίστα ({existingCompanyIds.length} εταιρείες ήδη προστεθεί).
+              </span>
+            )}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Search Input */}
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Αναζήτηση εταιρείας..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
+          {/* 🏢 ENTERPRISE UNIFIED Search Input - Zero visual changes */}
+          <SearchInput
+            value={searchTerm}
+            onChange={setSearchTerm}
+            placeholder="Αναζήτηση εταιρείας..."
+            debounceMs={300}
+            showClearButton={true}
+          />
 
           {/* Loading State */}
           {isLoading && (
@@ -149,7 +165,19 @@ export function SelectCompanyContactModal({
                   {contacts.length === 0 ? (
                     <div>
                       <Factory className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                      <p>Δεν βρέθηκαν εταιρείες στις επαφές σας.</p>
+                      {existingCompanyIds.length > 0 ? (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 className="h-6 w-6 text-green-500" />
+                            <p className="font-medium">Όλες οι εταιρείες έχουν προστεθεί!</p>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            Όλες οι {existingCompanyIds.length} διαθέσιμες εταιρείες βρίσκονται ήδη στη λίστα πλοήγησης.
+                          </p>
+                        </div>
+                      ) : (
+                        <p>Δεν βρέθηκαν εταιρείες στις επαφές σας.</p>
+                      )}
                     </div>
                   ) : (
                     <div>

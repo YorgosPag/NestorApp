@@ -3,9 +3,8 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { SearchInput } from '@/components/ui/search';
 import {
-  Search,
   Filter,
   X,
 } from 'lucide-react';
@@ -51,13 +50,12 @@ export function SearchAndFilters({
 
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <div className="relative flex-1 min-w-[300px]">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-        <Input
-          placeholder="Αναζήτηση κτιρίων, διευθύνσεων, περιγραφών..."
+      <div className="flex-1 min-w-[300px]">
+        <SearchInput
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
+          onChange={setSearchTerm}
+          placeholder="Αναζήτηση κτιρίων, διευθύνσεων, περιγραφών..."
+          debounceMs={300}
         />
       </div>
       <div className="flex items-center gap-2">

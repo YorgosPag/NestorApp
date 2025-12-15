@@ -195,6 +195,16 @@ export class NavigationApiService {
   }
 
   /**
+   * 🗑️ ENTERPRISE CACHE MANAGEMENT: Clear companies cache
+   * Καλείται όταν αλλάζουν οι navigation companies (προσθήκη/αφαίρεση)
+   */
+  static clearCompaniesCache(): void {
+    NavigationApiService.companiesCache.data = null;
+    NavigationApiService.companiesCache.timestamp = 0;
+    console.log('🏢 NavigationApiService: Companies cache cleared');
+  }
+
+  /**
    * Load all projects for multiple companies in parallel
    */
   static async loadAllProjects(companies: NavigationCompany[]): Promise<NavigationProject[]> {

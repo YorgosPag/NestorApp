@@ -9,6 +9,8 @@ import React, { useState, useEffect } from 'react';
 import { SelectCompanyContactModal } from '../dialogs/SelectCompanyContactModal';
 import type { Contact } from '@/types/contacts';
 import { addCompanyToNavigation, getNavigationCompanyIds } from '@/services/navigation-companies.service';
+import { NavigationApiService } from '../core/services/navigationApi';
+import { useNavigation } from '../core/NavigationContext';
 
 interface NavigationCompanyManagerProps {
   companies: any[];
@@ -23,6 +25,9 @@ interface NavigationCompanyManagerRenderProps {
 }
 
 export function NavigationCompanyManager({ companies, children }: NavigationCompanyManagerProps) {
+  // Navigation context για cache refresh
+  const { loadCompanies } = useNavigation();
+
   // Modal state για επαφές
   const [isContactsModalOpen, setIsContactsModalOpen] = useState(false);
 
@@ -56,11 +61,16 @@ export function NavigationCompanyManager({ companies, children }: NavigationComp
       // Προσθήκη εταιρείας στην πλοήγηση
       await addCompanyToNavigation(contact.id);
 
-      // Ενημέρωση local state αντί για full refresh
+      // 🚀 ENTERPRISE CACHE INVALIDATION: Καθαρισμός cache για άμεση εμφάνιση
+      NavigationApiService.clearCompaniesCache();
+
+      // 🔄 ΕΠΑΓΓΕΛΜΑΤΙΚΟ REFRESH: Ανανέωση companies από context
+      await loadCompanies();
+
+      // Ενημέρωση local state για το modal filtering
       setNavigationCompanyIds(prev => [...prev, contact.id!]);
 
-      // Απλά κλείνουμε το modal - το context θα ανανεωθεί αυτόματα
-      // όταν χρησιμοποιηθεί το getNavigationCompanyIds στο companies.service
+      // Κλείσιμο modal
       setIsContactsModalOpen(false);
 
       // Company added to navigation successfully
@@ -79,11 +89,12 @@ export function NavigationCompanyManager({ companies, children }: NavigationComp
         navigationCompanyIds
       })}
 
-      {/* Modal για επιλογή εταιρείας από επαφές */}
+      {/* 🏢 ENTERPRISE Modal με intelligent duplicate filtering */}
       <SelectCompanyContactModal
         open={isContactsModalOpen}
         onOpenChange={setIsContactsModalOpen}
         onCompanySelected={handleCompanySelected}
+        existingCompanyIds={navigationCompanyIds}  // 🚫 ENTERPRISE: Exclude existing companies
       />
     </>
   );

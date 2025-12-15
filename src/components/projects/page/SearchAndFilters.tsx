@@ -2,10 +2,9 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { SearchInput } from '@/components/ui/search';
 import {
-  Search,
   Filter,
   X,
 } from 'lucide-react';
@@ -47,13 +46,12 @@ export function SearchAndFilters({
     <div className="space-y-3">
       {/* Search and basic filters row */}
       <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[250px] max-w-[400px]">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-          <Input
-            placeholder="Αναζήτηση έργων, τίτλων..."
+        <div className="flex-1 min-w-[250px] max-w-[400px]">
+          <SearchInput
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+            onChange={setSearchTerm}
+            placeholder="Αναζήτηση έργων, τίτλων..."
+            debounceMs={300}
           />
         </div>
         <div className="flex items-center gap-2 flex-wrap">

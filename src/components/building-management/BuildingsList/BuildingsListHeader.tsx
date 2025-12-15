@@ -2,10 +2,10 @@
 'use client';
 
 import React from 'react';
-import { Building2, TrendingUp, DollarSign, Search, Settings } from 'lucide-react';
+import { Building2, TrendingUp, DollarSign, Settings } from 'lucide-react';
 import { SectionHeader } from '@/core/headers';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { SearchInput } from '@/components/ui/search'; // 🏢 Enterprise centralized search - Same as navigation modal
 
 interface BuildingsListHeaderProps {
     buildingCount: number;
@@ -38,16 +38,15 @@ export function BuildingsListHeader({
                     </span>
                 </div>
 
-                {/* Center: Search Field */}
-                <div className="relative flex-1">
-                    <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                    <Input
-                        placeholder="Αναζήτηση κτιρίων..."
-                        value={searchTerm}
-                        onChange={(e) => onSearchChange(e.target.value)}
-                        className="pl-7 h-8 text-sm"
-                    />
-                </div>
+                {/* Center: 🏢 ENTERPRISE - EXACT SAME AS NAVIGATION MODAL */}
+                <SearchInput
+                    value={searchTerm}
+                    onChange={onSearchChange}
+                    placeholder="Αναζήτηση κτιρίων..."
+                    debounceMs={0} // Instant για table headers
+                    showClearButton={true}
+                    className="h-8 text-sm flex-1" // Compact για table
+                />
 
                 {/* Right: Toolbar Toggle Button - Mobile Only */}
                 {onToolbarToggle && (

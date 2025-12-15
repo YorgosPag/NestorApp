@@ -50,7 +50,8 @@ export function DesktopMultiColumn({
     selectedProject,
     selectedBuilding,
     selectedFloor,
-    projectsLoading
+    projectsLoading,
+    loadCompanies
   } = useNavigation();
 
   const { warning } = useNotifications();
@@ -224,8 +225,9 @@ export function DesktopMultiColumn({
     if (!pendingDeletionCompany) return;
 
     try {
-      // 📊 STEP 1: Import navigation service
+      // 📊 STEP 1: Import navigation services
       const { removeCompanyFromNavigation } = await import('@/services/navigation-companies.service');
+      const { NavigationApiService } = await import('../core/services/navigationApi');
 
       // 🚀 STEP 2: Optimistic UI Update (instant response)
       const companyId = pendingDeletionCompany.id;
@@ -237,14 +239,16 @@ export function DesktopMultiColumn({
       // 💾 STEP 3: Database Operation με enterprise error handling
       await removeCompanyFromNavigation(companyId);
 
+      // 🚀 ENTERPRISE CACHE INVALIDATION: Καθαρισμός cache για άμεση εμφάνιση
+      NavigationApiService.clearCompaniesCache();
+
+      // 🔄 ΕΠΑΓΓΕΛΜΑΤΙΚΟ REFRESH: Ανανέωση companies από context
+      await loadCompanies();
+
       // 📢 STEP 4: Success notification με ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΟ TOAST
       warning(`✅ Η εταιρεία "${companyName}" αφαιρέθηκε επιτυχώς από την πλοήγηση.`, {
         duration: 4000
       });
-
-      // 🔄 STEP 5: Force navigation refresh (trigger context reload)
-      // Note: Cache is automatically cleared by removeCompanyFromNavigation()
-      window.location.reload(); // Temporary solution - can be improved with context refresh
 
     } catch (error) {
       console.error('❌ Enterprise company deletion failed:', error);

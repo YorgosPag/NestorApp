@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { HeaderSearchProps } from '../types';
 import { SEARCH_CONFIG, HEADER_THEME } from '../constants';
+import { SEARCH_UI } from '@/components/ui/search/constants'; // 🏢 Enterprise centralized search constants
 
 export const HeaderSearch: React.FC<HeaderSearchProps> = ({
   value = '',
@@ -47,13 +48,13 @@ export const HeaderSearch: React.FC<HeaderSearchProps> = ({
 
   return (
     <div className={searchClasses}>
-      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+      <Search className={cn(SEARCH_UI.ICON.POSITION, SEARCH_UI.ICON.SIZE, SEARCH_UI.ICON.COLOR)} />
       <Input
         placeholder={effectivePlaceholder}
         value={localValue}
         onChange={(e) => setLocalValue(e.target.value)}
         disabled={disabled}
-        className="pl-10 h-9"
+        className={cn("!pl-12 h-9", SEARCH_UI.INPUT.FOCUS)} // 🏢 Enterprise centralized positioning & focus
         maxLength={SEARCH_CONFIG.maxLength}
       />
     </div>
