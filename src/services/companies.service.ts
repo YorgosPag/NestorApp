@@ -47,35 +47,83 @@ export class CompaniesService {
         });
       }
 
-      // 🗑️ REMOVED: Unused variable after optimization
+      // 🚀 ENTERPRISE BATCH OPTIMIZATION: Single query για όλες τις εταιρείες
+      const companyIds: string[] = [];
+      const companyMap = new Map<string, any>();
 
-      // 🚀 PERFORMANCE OPTIMIZATION: Batch company-project check
-      const companyProjectChecks = snapshot.docs.map(async doc => {
-        const companyId = doc.id;
-        const companyData = doc.data();
-
-        if (DEBUG_COMPANIES_SERVICE) {
-          console.log(`🔍 Checking company: ${companyId} - ${companyData.companyName}`);
-        }
-
-        try {
-          const projects = await getProjectsByCompanyId(companyId);
-          if (DEBUG_COMPANIES_SERVICE) {
-            console.log(`🏗️ Company ${companyId} (${companyData.companyName}) has ${projects?.length || 0} projects:`, projects?.map(p => p.name) || []);
-          }
-
-          return projects && projects.length > 0 ? companyId : null;
-        } catch (error) {
-          if (DEBUG_COMPANIES_SERVICE) {
-            // Debug logging removed //(`⚠️ Failed to check projects for company ${companyId} (${companyData.companyName}):`, error);
-          }
-          return null;
-        }
+      // Build company map
+      snapshot.docs.forEach(doc => {
+        companyMap.set(doc.id, doc.data());
       });
 
-      // 🏃‍♂️ CONCURRENT EXECUTION: Run all checks in parallel
-      const results = await Promise.all(companyProjectChecks);
-      const companyIds = results.filter((id): id is string => id !== null);
+      if (DEBUG_COMPANIES_SERVICE) {
+        console.log(`🔍 BATCH MODE: Checking ${snapshot.docs.length} companies for projects using single query...`);
+      }
+
+      try {
+        // 💾 ENTERPRISE STRATEGY: Batch query ALL projects, then filter by company
+        const projectsQuery = query(
+          collection(db, 'projects')
+          // Note: Firestore doesn't support "IN" with more than 10 items, so we fetch all and filter
+        );
+
+        const projectsSnapshot = await getDocs(projectsQuery);
+
+        if (DEBUG_COMPANIES_SERVICE) {
+          console.log(`🏗️ BATCH RESULT: Found ${projectsSnapshot.docs.length} total projects in database`);
+        }
+
+        // Group projects by companyId
+        const projectsByCompany = new Map<string, any[]>();
+        projectsSnapshot.docs.forEach(projectDoc => {
+          const projectData = projectDoc.data();
+          const companyId = projectData.companyId;
+
+          if (companyId && companyMap.has(companyId)) {
+            if (!projectsByCompany.has(companyId)) {
+              projectsByCompany.set(companyId, []);
+            }
+            projectsByCompany.get(companyId)!.push(projectData);
+          }
+        });
+
+        // Process results for each company
+        snapshot.docs.forEach(doc => {
+          const companyId = doc.id;
+          const companyData = doc.data();
+          const companyProjects = projectsByCompany.get(companyId) || [];
+
+          if (DEBUG_COMPANIES_SERVICE) {
+            console.log(`🏗️ Company ${companyId} (${companyData.companyName}) has ${companyProjects.length} projects:`, companyProjects.map(p => p.name || 'Unnamed') || []);
+          }
+
+          if (companyProjects.length > 0) {
+            companyIds.push(companyId);
+          }
+        });
+
+        if (DEBUG_COMPANIES_SERVICE) {
+          console.log(`🎯 BATCH COMPLETE: ${companyIds.length} companies with projects found`);
+        }
+
+      } catch (error) {
+        console.error('❌ Batch project query failed, falling back to individual queries:', error);
+
+        // Fallback to individual queries if batch fails
+        for (const doc of snapshot.docs) {
+          const companyId = doc.id;
+          const companyData = doc.data();
+
+          try {
+            const projects = await getProjectsByCompanyId(companyId);
+            if (projects && projects.length > 0) {
+              companyIds.push(companyId);
+            }
+          } catch (error) {
+            // Skip failed company checks
+          }
+        }
+      }
 
       return companyIds;
     } catch (error) {
