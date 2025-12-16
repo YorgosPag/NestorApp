@@ -7,6 +7,7 @@ import { db } from '@/lib/firebase';
 import { collection, query, where, orderBy, limit, getDocs, doc, getDoc, serverTimestamp, writeBatch, updateDoc } from 'firebase/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { BaseMessageInput, SendResult, Channel } from '@/types/communications';
+import { companySettingsService } from '@/services/company/EnterpriseCompanySettingsService';
 
 // 🏢 ENTERPRISE: Centralized Firestore collection configuration
 const COMMUNICATIONS_COLLECTION = COLLECTIONS.COMMUNICATIONS;
@@ -248,27 +249,43 @@ class CommunicationsService {
   }
 
   /**
-   * Προετοιμασία μηνύματος πριν την αποστολή
+   * 🏢 ENTERPRISE: Προετοιμασία μηνύματος με database-driven template variables
    */
   async prepareMessage(messageData: BaseMessageInput) {
-    const metadata = { ...messageData.metadata, sentVia: 'CommunicationsService', timestamp: new Date().toISOString() };
-    // 🏢 ENTERPRISE: Get company name από database, όχι hardcoded fallback
-    const companyName = process.env.NEXT_PUBLIC_COMPANY_NAME || await this.getCompanyNameFromDatabase();
-    const companyEmail = process.env.NEXT_PUBLIC_COMPANY_EMAIL ||
-                        process.env.NEXT_PUBLIC_DEFAULT_CONTACT_EMAIL ||
-                        `info@${process.env.NEXT_PUBLIC_TENANT_DOMAIN || 'company.local'}`;
-    const companyPhone = process.env.NEXT_PUBLIC_COMPANY_PHONE ||
-                        process.env.NEXT_PUBLIC_DEFAULT_CONTACT_PHONE ||
-                        `${process.env.NEXT_PUBLIC_PHONE_COUNTRY_CODE || '+30'} ${process.env.NEXT_PUBLIC_DEFAULT_PHONE_PATTERN || '210'} 000 0000`;
+    const metadata = {
+      ...messageData.metadata,
+      sentVia: 'CommunicationsService',
+      timestamp: new Date().toISOString()
+    };
 
-    const safeContent = typeof messageData.content === 'string'
-      ? messageData.content.replace('{{companyName}}', companyName).replace('{{companyEmail}}', companyEmail).replace('{{companyPhone}}', companyPhone)
-      : messageData.content;
-    const safeSubject = typeof messageData.subject === 'string'
-      ? messageData.subject.replace('{{companyName}}', companyName)
-      : messageData.subject;
+    try {
+      // Load template variables από Enterprise Company Settings Service
+      const templateVariables = await companySettingsService.getTemplateVariables();
 
-    return { ...messageData, content: safeContent, subject: safeSubject, metadata };
+      // Replace template variables σε content και subject
+      const safeContent = typeof messageData.content === 'string'
+        ? this.replaceTemplateVariables(messageData.content, templateVariables)
+        : messageData.content;
+
+      const safeSubject = typeof messageData.subject === 'string'
+        ? this.replaceTemplateVariables(messageData.subject, templateVariables)
+        : messageData.subject;
+
+      return {
+        ...messageData,
+        content: safeContent,
+        subject: safeSubject,
+        metadata: {
+          ...metadata,
+          templateVariablesUsed: Object.keys(templateVariables)
+        }
+      };
+    } catch (error) {
+      console.error('Error loading company settings for message preparation:', error);
+
+      // Fallback to original content/subject without template processing
+      return { ...messageData, metadata };
+    }
   }
 
   /**
@@ -280,14 +297,17 @@ class CommunicationsService {
   }
 
   /**
-   * Αντικατάσταση μεταβλητών σε template
+   * 🏢 ENTERPRISE: Αντικατάσταση μεταβλητών σε template με enhanced processing
    */
   replaceTemplateVariables(template: any, variables: any = {}) {
     let content = typeof template === 'string' ? template : template.text || '';
+
+    // Process template variables με case-insensitive matching
     Object.keys(variables).forEach(key => {
-      const regex = new RegExp(`{{${key}}}`, 'g');
+      const regex = new RegExp(`{{${key}}}`, 'gi'); // Case-insensitive flag added
       content = content.replace(regex, variables[key] || '');
     });
+
     return content;
   }
 
@@ -312,34 +332,22 @@ class CommunicationsService {
   }
 
   /**
-   * 🏢 ENTERPRISE: Λήψη company name από database
+   * 🏢 ENTERPRISE: Get quick contact information από centralized company settings
+   *
+   * @deprecated This method is replaced by EnterpriseCompanySettingsService.getQuickContact()
+   * Kept for backward compatibility. Use companySettingsService.getQuickContact() for new code.
    */
-  private async getCompanyNameFromDatabase(): Promise<string> {
+  async getQuickCompanyInfo() {
     try {
-      // Try to get company config from database
-      const companyDoc = await getDoc(doc(db, SYSTEM_COLLECTION, process.env.NEXT_PUBLIC_COMPANY_CONFIG_DOC || 'company'));
-      if (companyDoc.exists()) {
-        const companyData = companyDoc.data();
-        return companyData.name || 'Company';
-      }
-
-      // Fallback: Try to get from any existing contact with type 'company'
-      const companiesQuery = query(
-        collection(db, CONTACTS_COLLECTION),
-        where('type', '==', 'company'),
-        limit(1)
-      );
-      const companiesSnapshot = await getDocs(companiesQuery);
-
-      if (!companiesSnapshot.empty) {
-        const firstCompany = companiesSnapshot.docs[0].data();
-        return firstCompany.companyName || firstCompany.name || 'Company';
-      }
-
-      return 'Company';
+      return await companySettingsService.getQuickContact();
     } catch (error) {
-      console.error('Error fetching company name from database:', error);
-      return 'Company';
+      console.error('Error fetching quick company info:', error);
+      // Fallback για backward compatibility
+      return {
+        companyName: 'Company',
+        email: 'info@company.local',
+        phone: '+30 210 000 0000'
+      };
     }
   }
 

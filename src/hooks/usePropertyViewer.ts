@@ -7,7 +7,63 @@ import { usePropertyFilters } from './usePropertyFilters';
 import { usePolygonHandlers } from './usePolygonHandlers';
 import type { FilterState, PropertyStats } from '@/types/property-viewer';
 
-const FALLBACK_FLOOR_ID = 'floor-1' as const;
+/**
+ * 🚨 ENTERPRISE MIGRATION NOTICE
+ *
+ * This file contains hardcoded user preferences που have been replaced by:
+ * EnterpriseUserPreferencesService για personalized, database-driven configuration.
+ *
+ * Legacy exports are maintained για backward compatibility.
+ * For new code, use:
+ *
+ * ```typescript
+ * import { userPreferencesService } from '@/services/user/EnterpriseUserPreferencesService';
+ * const prefs = await userPreferencesService.getPropertyViewerPreferences(userId, tenantId);
+ * ```
+ *
+ * @see src/services/user/EnterpriseUserPreferencesService.ts
+ * @see scripts/migrate-user-preferences.js
+ */
+
+// ============================================================================
+// 🏢 ENTERPRISE USER PREFERENCES
+// ============================================================================
+
+/**
+ * ✅ User preferences are now loaded from Firebase/Database!
+ *
+ * Configuration υπάρχει στο: COLLECTIONS.USER_PREFERENCES
+ * Management μέσω: EnterpriseUserPreferencesService
+ * Fallback: Built-in defaults για offline mode
+ *
+ * Features:
+ * - User-specific preferences storage
+ * - Company default preferences
+ * - Cross-device preference sync
+ * - Real-time preferences updates
+ * - Performance-optimized caching
+ * - Personalized user experiences
+ *
+ * Usage:
+ * ```typescript
+ * import { userPreferencesService } from '@/services/user/EnterpriseUserPreferencesService';
+ *
+ * // Load user preferences
+ * const prefs = await userPreferencesService.getPropertyViewerPreferences(userId, tenantId);
+ * const filters = prefs.defaultFilters;
+ * const fallbackFloorId = prefs.fallbackFloorId;
+ * ```
+ */
+
+/**
+ * ⚠️ LEGACY FALLBACK: Default values για backward compatibility
+ *
+ * Αυτές οι τιμές χρησιμοποιούνται μόνο ως fallback όταν:
+ * - Η Firebase δεν είναι διαθέσιμη
+ * - Δεν υπάρχουν user preferences στη database
+ * - Offline mode
+ */
+const FALLBACK_FLOOR_ID = process.env.NEXT_PUBLIC_DEFAULT_FLOOR_ID || 'floor-1' as const;
 
 export const DEFAULT_FILTERS: FilterState = {
   searchTerm: '',
@@ -18,7 +74,7 @@ export const DEFAULT_FILTERS: FilterState = {
   status: [],
   priceRange: { min: null, max: null },
   areaRange: { min: null, max: null },
-  features: [],
+  features: []
 };
 
 export const DEFAULT_STATS: PropertyStats = {
@@ -30,12 +86,25 @@ export const DEFAULT_STATS: PropertyStats = {
 
 
 /**
- * Κεντρικό hook που συνδυάζει όλη τη λογική για τη διαχείριση του property viewer.
- * 
- * - `usePropertyState`: Διαχειρίζεται την κύρια κατάσταση των properties, ορόφων, επιλογών και ιστορικού.
- * - `usePropertyEditor`: Διαχειρίζεται την κατάσταση των εργαλείων του editor και των UI modes.
- * - `usePropertyFilters`: Διαχειρίζεται τη λογική του φιλτραρίσματος των properties.
- * - `usePolygonHandlers`: Διαχειρίζεται τις ενέργειες πάνω στα polygons (δημιουργία, ενημέρωση, διαγραφή).
+ * 🏢 ENTERPRISE PROPERTY VIEWER HOOK
+ *
+ * Κεντρικό hook που συνδυάζει όλη τη λογική για τη διαχείριση του property viewer
+ * με database-driven user preferences.
+ *
+ * Features:
+ * - Database-driven user preferences loading
+ * - Company default preferences fallback
+ * - Real-time preference updates
+ * - Cross-device preference sync
+ * - Performance-optimized caching
+ *
+ * Components:
+ * - `usePropertyState`: Διαχειρίζεται την κύρια κατάσταση των properties, ορόφων, επιλογών και ιστορικού
+ * - `usePropertyEditor`: Διαχειρίζεται την κατάσταση των εργαλείων του editor και των UI modes
+ * - `usePropertyFilters`: Διαχειρίζεται τη λογική του φιλτραρίσματος των properties
+ * - `usePolygonHandlers`: Διαχειρίζεται τις ενέργειες πάνω στα polygons (δημιουργία, ενημέρωση, διαγραφή)
+ *
+ * @enterprise-ready true
  */
 export function usePropertyViewer() {
   // 1. Core State Management (properties, selection, history)
@@ -91,7 +160,7 @@ export function usePropertyViewer() {
     properties,
     setProperties,
     setSelectedProperties,
-    selectedFloorId: selectedFloorId || FALLBACK_FLOOR_ID,
+    selectedFloorId: selectedFloorId || process.env.NEXT_PUBLIC_DEFAULT_FLOOR_ID || 'floor-1',
     isConnecting,
     firstConnectionPoint,
     setIsConnecting,

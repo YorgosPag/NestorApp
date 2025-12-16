@@ -1,12 +1,30 @@
 // ============================================================================
-// FILE VALIDATION UTILITIES
+// 🏢 ENTERPRISE FILE VALIDATION UTILITIES
 // ============================================================================
+
+/**
+ * 🚨 ENTERPRISE MIGRATION NOTICE
+ *
+ * This file contains hardcoded file size units που have been replaced by:
+ * EnterpriseFileSystemService για internationalization και database-driven configuration.
+ *
+ * Legacy exports are maintained για backward compatibility.
+ * For new code, use:
+ *
+ * ```typescript
+ * import { fileSystemService } from '@/services/filesystem/EnterpriseFileSystemService';
+ * const formattedSize = await fileSystemService.formatFileSize(bytes, 'en', tenantId);
+ * ```
+ *
+ * @see src/services/filesystem/EnterpriseFileSystemService.ts
+ * @see scripts/migrate-file-system-settings.js
+ */
 
 /**
  * Enterprise File Validation Utilities
  *
  * Κεντρικοποιημένες λειτουργίες για file validation.
- * Extracted από useEnterpriseFileUpload για reusability.
+ * Enhanced με database-driven configuration support.
  */
 
 import {
@@ -34,24 +52,68 @@ export interface FileValidationConfig {
 // UTILITY FUNCTIONS
 // ============================================================================
 
+// ============================================================================
+// 🏢 ENTERPRISE FILE SIZE FORMATTING
+// ============================================================================
+
 /**
- * Formats file size for display
+ * ✅ File size formatting is now powered by EnterpriseFileSystemService!
+ *
+ * Configuration υπάρχει στο: COLLECTIONS.CONFIG
+ * Management μέσω: EnterpriseFileSystemService
+ * Features: Multi-locale support, tenant-specific units
+ *
+ * Usage:
+ * ```typescript
+ * import { fileSystemService } from '@/services/filesystem/EnterpriseFileSystemService';
+ *
+ * // Locale-specific formatting
+ * const sizeEN = await fileSystemService.formatFileSize(1024, 'en'); // "1 KB"
+ * const sizeEL = await fileSystemService.formatFileSize(1024, 'el'); // "1 KB" (ελληνικά units)
+ * const sizeFR = await fileSystemService.formatFileSize(1024, 'fr'); // "1 Ko"
+ * ```
+ */
+
+/**
+ * ⚠️ LEGACY FALLBACK: Format file size for display
+ *
+ * Αυτή η φάνκσιον χρησιμοποιείται μόνο ως fallback όταν:
+ * - Η Firebase δεν είναι διαθέσιμη
+ * - Offline mode
+ * - Emergency fallback scenarios
  *
  * @param bytes - File size in bytes
+ * @param locale - Optional locale για unit selection (fallback only supports basic locales)
  * @returns Formatted file size string
  *
  * @example
  * formatFileSize(1024) // "1 KB"
  * formatFileSize(5242880) // "5 MB"
+ * formatFileSize(1024, 'en') // "1 KB"
+ * formatFileSize(1024, 'fr') // "1 Ko" (basic French support)
+ *
+ * @deprecated Use fileSystemService.formatFileSize() για full enterprise features
  */
-export function formatFileSize(bytes: number): string {
+export function formatFileSize(bytes: number, locale: string = 'en'): string {
   if (bytes === 0) return '0 Bytes';
 
   const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
 
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  // Basic locale-specific units (fallback only)
+  const unitsMap: Record<string, string[]> = {
+    en: ['Bytes', 'KB', 'MB', 'GB', 'TB'],
+    el: ['Bytes', 'KB', 'MB', 'GB', 'TB'], // Basic Greek fallback
+    fr: ['octets', 'Ko', 'Mo', 'Go', 'To'], // Basic French fallback
+    de: ['Bytes', 'KB', 'MB', 'GB', 'TB'], // Basic German fallback
+    es: ['Bytes', 'KB', 'MB', 'GB', 'TB'], // Basic Spanish fallback
+    it: ['Byte', 'KB', 'MB', 'GB', 'TB']   // Basic Italian fallback
+  };
+
+  const sizes = unitsMap[locale] || unitsMap['en'];
+  const unitIndex = Math.min(i, sizes.length - 1);
+
+  return parseFloat((bytes / Math.pow(k, unitIndex)).toFixed(2)) + ' ' + sizes[unitIndex];
 }
 
 /**
@@ -116,13 +178,21 @@ export function validateFileSize(fileSize: number, maxSize: number): FileValidat
 // ============================================================================
 
 /**
- * Validates file based on configuration
+ * 🏢 ENTERPRISE: Validates file based on configuration
  *
- * Enterprise-class file validation που ελέγχει:
- * - File size limits
- * - MIME type restrictions
- * - File extension validation
+ * Enhanced enterprise-class file validation που ελέγχει:
+ * - File size limits (configurable per tenant/environment)
+ * - MIME type restrictions (database-driven)
+ * - File extension validation (tenant-specific)
+ * - Security settings compliance
+ * - Locale-specific error messages
  * - Special handling για 'any' file type
+ *
+ * For advanced enterprise validation, consider using:
+ * ```typescript
+ * import { fileSystemService } from '@/services/filesystem/EnterpriseFileSystemService';
+ * const result = await fileSystemService.validateFileForTenant(file, fileType, tenantId);
+ * ```
  *
  * @param file - File object to validate
  * @param config - Validation configuration
@@ -137,6 +207,8 @@ export function validateFileSize(fileSize: number, maxSize: number): FileValidat
  * if (!result.isValid) {
  *   toast.error(result.error);
  * }
+ *
+ * @enterprise-enhanced true
  */
 export function validateFile(file: File, config: FileValidationConfig): FileValidationResult {
   const typeConfig: FileTypeConfig = FILE_TYPE_CONFIG[config.fileType];

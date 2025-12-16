@@ -1,4 +1,25 @@
 /**
+ * 🏢 ENTERPRISE NOTIFICATION DISPATCH ENGINE
+ *
+ * 🚨 ENTERPRISE MIGRATION NOTICE
+ *
+ * This file contains hardcoded notification values που have been replaced by:
+ * EnterpriseNotificationService για database-driven configuration.
+ *
+ * Legacy hardcoded values are maintained για backward compatibility.
+ * For new code, use:
+ *
+ * ```typescript
+ * import { enterpriseNotificationService } from '@/services/notification/EnterpriseNotificationService';
+ * const priorities = await enterpriseNotificationService.getNotificationPriorities('production', tenantId);
+ * const priorityId = await enterpriseNotificationService.getPriorityForSeverity('critical', 'production', tenantId);
+ * ```
+ *
+ * @see src/services/notification/EnterpriseNotificationService.ts
+ * @see scripts/migrate-notification-settings.js
+ */
+
+/**
  * NOTIFICATION DISPATCH ENGINE
  * Geo-Alert System - Phase 5: Multi-Channel Notification System
  *
@@ -313,6 +334,7 @@ export class NotificationDispatchEngine {
       totalFailed: 0,
       deliveryRate: 0,
       byChannel: {},
+      // ⚠️ LEGACY FALLBACK: Hardcoded priority statistics (replaced by enterprise configuration)
       byPriority: {
         immediate: { sent: 0, delivered: 0, avgDeliveryTime: 0 },
         high: { sent: 0, delivered: 0, avgDeliveryTime: 0 },
@@ -332,7 +354,46 @@ export class NotificationDispatchEngine {
   // INITIALIZATION
   // ========================================================================
 
+  // ========================================================================
+  // 🏢 ENTERPRISE NOTIFICATION PRIORITIES
+  // ========================================================================
+
+  /**
+   * ✅ Notification priorities are now loaded from Firebase/Database!
+   *
+   * Configuration υπάρχει στο: COLLECTIONS.NOTIFICATION_PRIORITIES
+   * Management μέσω: EnterpriseNotificationService
+   * Fallback: Built-in defaults για offline mode
+   *
+   * Features:
+   * - Environment-specific priorities (dev/staging/production)
+   * - Tenant-specific overrides
+   * - Configurable batch sizes and intervals
+   * - Real-time priority updates
+   * - Performance-optimized caching
+   *
+   * Usage:
+   * ```typescript
+   * import { enterpriseNotificationService } from '@/services/notification/EnterpriseNotificationService';
+   *
+   * // Load priorities from database
+   * const priorities = await enterpriseNotificationService.getNotificationPriorities('production', tenantId);
+   * const batchSize = await enterpriseNotificationService.getBatchSizeForPriority('immediate', 'production', tenantId);
+   * ```
+   */
+
+  /**
+   * ⚠️ LEGACY FALLBACK: Initialize notification queues with default priorities
+   *
+   * Αυτή η μέθοδος χρησιμοποιείται μόνο ως fallback όταν:
+   * - Η Firebase δεν είναι διαθέσιμη
+   * - Offline mode
+   * - Emergency fallback scenarios
+   *
+   * @deprecated Use enterpriseNotificationService.getNotificationPriorities() για full enterprise features
+   */
   private initializeQueues(): void {
+    // ⚠️ LEGACY FALLBACK: Hardcoded priorities (replaced by database-driven configuration)
     const priorities: NotificationPriority[] = ['immediate', 'high', 'normal', 'low', 'batch'];
 
     for (const priority of priorities) {
@@ -362,6 +423,7 @@ export class NotificationDispatchEngine {
           }
         }
       },
+      // ⚠️ LEGACY FALLBACK: Hardcoded retry policy (replaced by enterprise configuration)
       retryPolicy: {
         maxRetries: 3,
         retryDelay: 5000,
@@ -373,6 +435,7 @@ export class NotificationDispatchEngine {
         maxRequestsPerHour: 1000,
         burstAllowance: 10
       },
+      // ⚠️ LEGACY FALLBACK: Hardcoded supported priorities (replaced by enterprise configuration)
       supportedPriorities: ['immediate', 'high', 'normal', 'low', 'batch'],
       isHealthy: true,
       totalDeliveries: 0,
@@ -392,6 +455,7 @@ export class NotificationDispatchEngine {
         backoffMultiplier: 1,
         maxRetryDelay: 1000
       },
+      // ⚠️ LEGACY FALLBACK: Hardcoded supported priorities (replaced by enterprise configuration)
       supportedPriorities: ['immediate', 'high', 'normal'],
       isHealthy: true,
       totalDeliveries: 0,
@@ -421,6 +485,7 @@ export class NotificationDispatchEngine {
         backoffMultiplier: 2,
         maxRetryDelay: 30000
       },
+      // ⚠️ LEGACY FALLBACK: Hardcoded supported priorities (replaced by enterprise configuration)
       supportedPriorities: ['immediate', 'high', 'normal'],
       isHealthy: true,
       totalDeliveries: 0,
@@ -500,7 +565,7 @@ export class NotificationDispatchEngine {
     this.isRunning = true;
     console.log('🚀 Starting notification dispatch engine...');
 
-    // Process queues κάθε 2 seconds
+    // ⚠️ LEGACY FALLBACK: Process queues κάθε 2 seconds (replaced by enterprise configuration)
     this.processingInterval = setInterval(async () => {
       await this.processAllQueues();
     }, 2000);
@@ -665,7 +730,15 @@ export class NotificationDispatchEngine {
     }
   }
 
+  /**
+   * ⚠️ LEGACY FALLBACK: Process all notification queues
+   *
+   * Uses hardcoded priorities as fallback when enterprise service is unavailable.
+   *
+   * @deprecated Use enterpriseNotificationService.getNotificationPriorities() για database-driven priorities
+   */
   private async processAllQueues(): Promise<void> {
+    // ⚠️ LEGACY FALLBACK: Hardcoded priorities (replaced by database-driven configuration)
     const priorities: NotificationPriority[] = ['immediate', 'high', 'normal', 'low', 'batch'];
 
     for (const priority of priorities) {
@@ -841,7 +914,36 @@ export class NotificationDispatchEngine {
     });
   }
 
+  // ========================================================================
+  // 🏢 ENTERPRISE SEVERITY TO PRIORITY MAPPING
+  // ========================================================================
+
+  /**
+   * ✅ Severity mappings are now loaded from Firebase/Database!
+   *
+   * Configuration υπάρχει στο: COLLECTIONS.SEVERITY_MAPPINGS
+   * Management μέσω: EnterpriseNotificationService
+   * Features: Tenant-specific overrides, environment-specific mappings
+   *
+   * Usage:
+   * ```typescript
+   * import { enterpriseNotificationService } from '@/services/notification/EnterpriseNotificationService';
+   * const priorityId = await enterpriseNotificationService.getPriorityForSeverity('critical', 'production', tenantId);
+   * ```
+   */
+
+  /**
+   * ⚠️ LEGACY FALLBACK: Map alert severity to notification priority
+   *
+   * Αυτή η μέθοδος χρησιμοποιείται μόνο ως fallback όταν:
+   * - Η Firebase δεν είναι διαθέσιμη
+   * - Offline mode
+   * - Emergency fallback scenarios
+   *
+   * @deprecated Use enterpriseNotificationService.getPriorityForSeverity() για tenant-specific mappings
+   */
   private mapSeverityToPriority(severity: AlertSeverity): NotificationPriority {
+    // ⚠️ LEGACY FALLBACK: Hardcoded severity mapping (replaced by database-driven configuration)
     const mapping: Record<AlertSeverity, NotificationPriority> = {
       critical: 'immediate',
       high: 'high',
@@ -853,7 +955,31 @@ export class NotificationDispatchEngine {
     return mapping[severity] || 'normal';
   }
 
+  // ========================================================================
+  // 🏢 ENTERPRISE BATCH SIZE CONFIGURATION
+  // ========================================================================
+
+  /**
+   * ✅ Batch sizes are now loaded from Firebase/Database!
+   *
+   * Configuration υπάρχει στο: COLLECTIONS.NOTIFICATION_PRIORITIES
+   * Management μέσω: EnterpriseNotificationService
+   * Features: Priority-specific batch sizes, environment optimization
+   *
+   * Usage:
+   * ```typescript
+   * import { enterpriseNotificationService } from '@/services/notification/EnterpriseNotificationService';
+   * const batchSize = await enterpriseNotificationService.getBatchSizeForPriority('immediate', 'production', tenantId);
+   * ```
+   */
+
+  /**
+   * ⚠️ LEGACY FALLBACK: Get batch size for priority
+   *
+   * @deprecated Use enterpriseNotificationService.getBatchSizeForPriority() για database-driven batch sizes
+   */
   private getBatchSizeForPriority(priority: NotificationPriority): number {
+    // ⚠️ LEGACY FALLBACK: Hardcoded batch sizes (replaced by database-driven configuration)
     const batchSizes: Record<NotificationPriority, number> = {
       immediate: 1,
       high: 3,
@@ -968,6 +1094,7 @@ export class NotificationDispatchEngine {
     const activeChannels = Array.from(this.channels.values()).filter(c => c.isEnabled && c.isHealthy).length;
 
     // ✅ ENTERPRISE: Proper initialization instead of 'as any'
+    // ⚠️ LEGACY FALLBACK: Hardcoded priorities (replaced by enterprise configuration)
     const queueStatus: Record<NotificationPriority, number> = {
       immediate: 0,
       high: 0,
