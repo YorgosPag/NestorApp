@@ -2,8 +2,8 @@
 
 import type { CrmTask } from '@/types/crm';
 
-// Mock implementation for server-side - replace with actual server repo later
-class MockTasksRepository {
+// Sample implementation for server-side - replace with actual server repo later
+class SampleTasksRepository {
   async getAllTasks(): Promise<CrmTask[]> {
     // Return empty array for now - this should connect to actual database
     return [];
@@ -11,7 +11,7 @@ class MockTasksRepository {
 
   async addTask(taskData: Omit<CrmTask, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
     // Debug logging removed
-    return 'mock-id';
+    return 'sample-id';
   }
 
   async updateTask(id: string, updates: Partial<CrmTask>): Promise<void> {
@@ -51,7 +51,7 @@ class MockTasksRepository {
   }
 }
 
-const repo = new MockTasksRepository();
+const repo = new SampleTasksRepository();
 
 export const addTask = (taskData: Omit<CrmTask, 'id' | 'createdAt' | 'updatedAt' | 'completedAt' | 'reminderSent'>) => repo.addTask(taskData);
 export const getAllTasks = () => repo.getAllTasks();

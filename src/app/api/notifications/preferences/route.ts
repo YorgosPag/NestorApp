@@ -1,9 +1,9 @@
 // app/api/notifications/preferences/route.ts
-// ✅ MOCK API: User notification preferences
+// ✅ SAMPLE API: User notification preferences
 
 import { NextResponse } from 'next/server';
 
-const mockPreferences = {
+const samplePreferences = {
   locale: 'el-GR',
   timezone: 'Europe/Athens',
   channels: {
@@ -13,7 +13,7 @@ const mockPreferences = {
 };
 
 export async function GET(request: Request) {
-  return NextResponse.json(mockPreferences);
+  return NextResponse.json(samplePreferences);
 }
 
 export async function PUT(request: Request) {

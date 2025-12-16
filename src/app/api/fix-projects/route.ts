@@ -30,8 +30,37 @@ export async function POST() {
       throw new Error('Firebase Admin SDK not initialized');
     }
 
-    // Σωστό companyId για όλα τα projects
-    const correctCompanyId = 'pzNUy8ksddGCtcQMqumR';
+    // 🏢 ENTERPRISE: Database-driven company lookup (NO MORE HARDCODED IDs)
+    const getCompanyIdByName = async (companyName: string): Promise<string | null> => {
+      try {
+        const companiesQuery = await adminDb.collection('contacts')
+          .where('type', '==', 'company')
+          .where('companyName', '==', companyName)
+          .limit(1)
+          .get();
+
+        if (companiesQuery.empty) {
+          console.error(`🚨 Company not found: ${companyName}`);
+          return null;
+        }
+
+        return companiesQuery.docs[0].id;
+      } catch (error) {
+        console.error(`🚨 Error loading company ID for ${companyName}:`, error);
+        return null;
+      }
+    };
+
+    const correctCompanyId = await getCompanyIdByName('Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.');
+
+    if (!correctCompanyId) {
+      return NextResponse.json({
+        error: 'Company "Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε." not found in database',
+        suggestion: 'Ensure company exists before running project fixes'
+      }, { status: 404 });
+    }
+
+    console.log(`✅ Using database-driven companyId: ${correctCompanyId}`);
 
     // Παίρνουμε όλα τα projects
     const projectsSnapshot = await adminDb.collection('projects').get();

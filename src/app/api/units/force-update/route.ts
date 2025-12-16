@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { UNIT_SALE_STATUS } from '@/core/status/StatusConstants';
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,7 +27,7 @@ export async function POST(request: NextRequest) {
         const soldTo = fields.soldTo?.stringValue;
         const name = fields.name?.stringValue;
 
-        if (status === 'sold' && (!soldTo || soldTo === 'Not sold')) {
+        if (status === 'sold' && (!soldTo || soldTo === UNIT_SALE_STATUS.NOT_SOLD)) {
           unitsToUpdate.push({
             documentPath: doc.name,
             id: doc.name.split('/').pop(),
@@ -48,17 +49,24 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // STEP 2: Δημιουργούμε απλούς contact IDs και τους εφαρμόζουμε
-    const contactIds = [
-      'customer_001',
-      'customer_002',
-      'customer_003',
-      'customer_004',
-      'customer_005',
-      'customer_006',
-      'customer_007',
-      'customer_008'
-    ];
+    // 🏢 ENTERPRISE: Database-driven contact loading (NO MORE HARDCODED IDs)
+    console.log('🔍 Loading available contact IDs from database...');
+
+    const contactsSnapshot = await adminDb
+      .collection('contacts')
+      .where('type', '==', 'individual')
+      .limit(8)
+      .get();
+
+    if (contactsSnapshot.empty) {
+      return NextResponse.json({
+        error: 'No individual contacts found in database',
+        suggestion: 'Create contacts before linking units'
+      }, { status: 404 });
+    }
+
+    const contactIds = contactsSnapshot.docs.map(doc => doc.id);
+    console.log(`✅ Loaded ${contactIds.length} contact IDs from database:`, contactIds);
 
     const successfulUpdates = [];
     const failedUpdates = [];

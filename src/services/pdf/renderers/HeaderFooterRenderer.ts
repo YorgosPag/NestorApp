@@ -21,7 +21,9 @@ export class HeaderFooterRenderer implements IHeaderFooterRenderer {
     doc.setTextColor(...COLORS.BLACK);
     
     doc.text(`Σελίδα ${pageNum} από ${totalPages}`, pageWidth / 2, footerY, { align: 'center' });
-    doc.text('Χ.Γ.Γ. ΠΑΓΩΝΗΣ Ο.Ε.', margins.left, footerY);
+    // 🏢 ENTERPRISE: Use environment configuration, not hardcoded company name
+    const companyName = process.env.NEXT_PUBLIC_COMPANY_NAME || 'Contractor Company';
+    doc.text(companyName, margins.left, footerY);
     doc.text('Συγγραφή Υποχρεώσεων', pageWidth - margins.right, footerY, { align: 'right' });
   }
 }

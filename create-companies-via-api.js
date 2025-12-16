@@ -129,7 +129,7 @@ const realCompanies = [
     websites: ['www.alysida.gr']
   },
   {
-    companyName: 'Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.',
+    companyName: process.env.COMPANY_NAME || 'Default Construction Company',
     type: 'company',
     status: 'active',
     firstName: '',
@@ -143,7 +143,7 @@ const realCompanies = [
       isPrimary: true
     }],
     emails: [{
-      email: 'info@pagonis-construction.gr',
+      email: process.env.COMPANY_EMAIL || 'info@company.gr',
       type: 'business',
       isPrimary: true
     }],
@@ -151,7 +151,7 @@ const realCompanies = [
     vatNumber: '800123456',
     tags: ['πολυκατοικίες', 'ιδιωτικές κατασκευές', 'οικογενειακή'],
     notes: 'Οικογενειακή εταιρεία με έμφαση στην ποιότητα από το 1995',
-    websites: ['www.pagonis-construction.gr']
+    websites: [process.env.COMPANY_WEBSITE || 'www.company.gr']
   }
 ];
 

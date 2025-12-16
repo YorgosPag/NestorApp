@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { UNIT_SALE_STATUS } from '@/core/status/StatusConstants';
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,7 +24,7 @@ export async function POST(request: NextRequest) {
         const soldTo = doc.fields?.soldTo?.stringValue;
         const name = doc.fields?.name?.stringValue;
 
-        if (status === 'sold' && (!soldTo || soldTo === 'Not sold')) {
+        if (status === 'sold' && (!soldTo || soldTo === UNIT_SALE_STATUS.NOT_SOLD)) {
           const docId = doc.name.split('/').pop();
           soldUnitsToUpdate.push({
             id: docId,

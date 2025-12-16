@@ -36,67 +36,10 @@ export function useFirestoreProjects() {
         logQueryContext(result, 'useFirestoreProjects');
 
         if (result.isEmpty) {
-
-          // If no projects exist, create the sample projects we need for testing
-          const { addDoc } = await import('firebase/firestore');
-
-          const sampleProjects = [
-            {
-              name: 'Παλαιολόγου 15',
-              title: 'Οικοδομικό Συγκρότημα',
-              status: 'in_progress',
-              company: 'ΑΚΜΗ ΑΤΕ',
-              companyId: 'akmi-ate',
-              address: 'Παλαιολόγου 15',
-              city: 'Εύοσμος, Θεσσαλονίκη',
-              progress: 75,
-              totalValue: 850000,
-              startDate: '2024-03-15',
-              completionDate: '2024-12-30',
-              lastUpdate: '2024-11-29',
-              totalArea: 450
-            },
-            {
-              name: 'Αγίας Τριάδας 22',
-              title: 'Διαμερίσματα Luxury',
-              status: 'completed',
-              company: 'ΒΕΤΑ ΚΑΤΑΣΚΕΥΕΣ',
-              companyId: 'beta-constructions',
-              address: 'Αγίας Τριάδας 22',
-              city: 'Θεσσαλονίκη',
-              progress: 100,
-              totalValue: 1200000,
-              startDate: '2024-01-10',
-              completionDate: '2024-10-15',
-              lastUpdate: '2024-11-29',
-              totalArea: 600
-            }
-          ];
-
-          for (const project of sampleProjects) {
-            await addDoc(collection(db, 'projects'), project);
-          }
-
-          // Fetch again after creating data με enterprise query service
-          const newResult = await readProjects(db);
-          const projectsData: FirestoreProject[] = newResult.documents.map((doc: any) => {
-            const data = doc;
-
-            let mappedStatus = data.status;
-            if (data.status === 'construction' || data.status === 'active') {
-              mappedStatus = 'in_progress';
-            }
-
-            return {
-              id: doc.id,
-              ...data,
-              status: mappedStatus,
-              startDate: data.startDate || '',
-              completionDate: data.completionDate || ''
-            } as FirestoreProject;
-          });
-
-          setProjects(projectsData);
+          // 🏢 ENTERPRISE: No hardcoded sample data - empty projects state
+          // Projects should be created via proper seed data system or admin interface
+          console.log('📋 No projects found in database - returning empty state');
+          setProjects([]);
         } else {
           // Projects already exist, use them από scoped query result
           const projectsData: FirestoreProject[] = result.documents.map((doc: any) => {

@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { TRANSITION_PRESETS, HOVER_BACKGROUND_EFFECTS } from "@/components/ui/effects";
 import { useKeyboardShortcut } from "@/hooks/useKeyboardShortcuts";
+import { SEARCH_UI } from "./constants"; // 🏢 ENTERPRISE search constants
 
 interface HeaderSearchProps {
   placeholder?: string;

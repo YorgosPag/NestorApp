@@ -169,8 +169,8 @@ export const PropertyStatusDev = {
     availability: 'immediately-available',
     priority: 'medium',
     type: 'Διαμέρισμα 2Δ',
-    price: 150000,
-    area: 75,
+    price: parseInt(process.env.NEXT_PUBLIC_DEMO_PROPERTY_PRICE || '150000'),
+    area: parseInt(process.env.NEXT_PUBLIC_DEMO_PROPERTY_AREA || '75'),
     lastStatusChange: new Date(),
     ...overrides
   }),

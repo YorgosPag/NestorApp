@@ -1,62 +1,107 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { doc, updateDoc, setDoc } from 'firebase/firestore';
+import { doc, updateDoc, setDoc, collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { EnterpriseConfigurationManager } from '@/core/configuration';
+
+/**
+ * 🏢 ENTERPRISE: Database-driven company lookup (NO MORE HARDCODED IDs)
+ * Loads company IDs από database αντί για hardcoded values
+ */
+async function getCompanyIdByName(companyName: string): Promise<string | null> {
+  try {
+    const companiesQuery = query(
+      collection(db, 'contacts'),
+      where('type', '==', 'company'),
+      where('companyName', '==', companyName)
+    );
+    const snapshot = await getDocs(companiesQuery);
+
+    if (snapshot.empty) {
+      console.warn(`⚠️  Company not found in database: ${companyName}`);
+      return null;
+    }
+
+    return snapshot.docs[0].id;
+  } catch (error) {
+    console.error(`🚨 Error loading company ID for ${companyName}:`, error);
+    return null;
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🔧 Quick fixing project company IDs...');
+    console.log('🔧 Enterprise project company ID fixing (database-driven)...');
+
+    // 🏢 ENTERPRISE: Load company IDs από database
+    const configManager = EnterpriseConfigurationManager.getInstance();
+
+    const pagonisCompanyId = await getCompanyIdByName('Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.');
+    const alysidaCompanyId = await getCompanyIdByName('ΑΛΥΣΙΔΑ ΑΕ');
+    const jpAvaxCompanyId = await getCompanyIdByName('J&P ΑΒΑΞ ΑΕ');
+    const mytilineosCompanyId = await getCompanyIdByName('ΜΥΤΙΛΗΝΑΙΟΣ ΑΕ');
+    const ternaCompanyId = await getCompanyIdByName('ΤΕΡΝΑ ΑΕ');
+    const aktorCompanyId = await getCompanyIdByName('ΑΚΤΩΡ ΑΤΕ');
+
+    if (!pagonisCompanyId) {
+      return NextResponse.json({
+        error: 'Primary company "Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε." not found in database',
+        suggestion: 'Please ensure company data exists in database before running fixes'
+      }, { status: 404 });
+    }
 
     const fixes = [
-      // Fix existing project 1001
+      // Fix existing project 1001 - Database-driven
       {
         projectId: '1001',
-        companyId: 'pzNUy8ksddGCtcQMqumR', // Correct ID for Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.
+        companyId: pagonisCompanyId,
         action: 'update'
       },
-      // Fix project 1002
+      // Fix project 1002 - Database-driven
       {
         projectId: '1002',
-        companyId: 'pzNUy8ksddGCtcQMqumR',
+        companyId: pagonisCompanyId,
         action: 'update'
       },
-      // Fix project 1003
+      // Fix project 1003 - Database-driven
       {
         projectId: '1003',
-        companyId: 'pzNUy8ksddGCtcQMqumR',
+        companyId: pagonisCompanyId,
         action: 'update'
       },
-      // Create new projects for other companies
-      {
+      // Create new projects for other companies (if they exist) - Database-driven
+      ...(alysidaCompanyId ? [{
         projectId: '1004',
-        companyId: 'HZ1anF4UaYEzqhpU2ilM', // ΑΛΥΣΙΔΑ ΑΕ
+        companyId: alysidaCompanyId,
         companyName: 'ΑΛΥΣΙΔΑ ΑΕ',
         action: 'create'
-      },
-      {
+      }] : []),
+      ...(jpAvaxCompanyId ? [{
         projectId: '1005',
-        companyId: 'JQ2eU1MwmtqHXxsuujrK', // J&P ΑΒΑΞ ΑΕ
+        companyId: jpAvaxCompanyId,
         companyName: 'J&P ΑΒΑΞ ΑΕ',
         action: 'create'
-      },
-      {
+      }] : []),
+      ...(mytilineosCompanyId ? [{
         projectId: '1006',
-        companyId: 'SLw9O6yys0Lf6Ql3yw5g', // ΜΥΤΙΛΗΝΑΙΟΣ ΑΕ
+        companyId: mytilineosCompanyId,
         companyName: 'ΜΥΤΙΛΗΝΑΙΟΣ ΑΕ',
         action: 'create'
-      },
-      {
+      }] : []),
+      ...(ternaCompanyId ? [{
         projectId: '1007',
-        companyId: 'VdqPobCgzGqaEJULEyoJ', // ΤΕΡΝΑ ΑΕ
+        companyId: ternaCompanyId,
         companyName: 'ΤΕΡΝΑ ΑΕ',
         action: 'create'
-      },
-      {
+      }] : []),
+      ...(aktorCompanyId ? [{
         projectId: '1008',
-        companyId: 'XRh6PJG1lbkpVFQD0TXo', // ΑΚΤΩΡ ΑΤΕ
+        companyId: aktorCompanyId,
         companyName: 'ΑΚΤΩΡ ΑΤΕ',
         action: 'create'
-      }
+      }] : [])
     ];
+
+    console.log(`🏗️ Enterprise fixes prepared: ${fixes.length} database-driven operations`);
 
     const results = [];
 

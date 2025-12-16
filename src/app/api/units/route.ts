@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { db as adminDb } from '@/lib/firebase-admin';
+import { UNIT_SALE_STATUS } from '@/core/status/StatusConstants';
 
 export async function GET(request: NextRequest) {
   try {
@@ -73,7 +74,7 @@ export async function POST(request: NextRequest) {
 
     unitsSnapshot.forEach(doc => {
       const data = doc.data();
-      if (data.status === 'sold' && (!data.soldTo || data.soldTo === 'Not sold')) {
+      if (data.status === 'sold' && (!data.soldTo || data.soldTo === UNIT_SALE_STATUS.NOT_SOLD)) {
         soldUnitsToLink.push({
           id: doc.id,
           buildingId: data.buildingId

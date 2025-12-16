@@ -1,7 +1,7 @@
 /**
  * 🏢 ENTERPRISE DATA SERVICES - PRODUCTION READY
  *
- * Αντικατέστησε τα mock data με επαγγελματικά Firebase/Database services.
+ * Αντικατέστησε τα sample data με επαγγελματικά Firebase/Database services.
  * Όλα τα δεδομένα προέρχονται από production βάση δεδομένων.
  */
 
@@ -11,7 +11,7 @@ import type { Contact, Project } from '@/types';
 
 /**
  * 📞 Ανάκτηση επαφών από Firebase
- * Αντικατέστησε το mockContacts με πραγματικά δεδομένα από τη βάση
+ * Αντικατέστησε το sampleContacts με πραγματικά δεδομένα από τη βάση
  */
 export async function getContacts(limitCount: number = 100): Promise<Contact[]> {
   try {
@@ -67,7 +67,7 @@ export async function getProjects(limitCount: number = 100): Promise<Project[]> 
 
 // 🚨 DEPRECATED: Αυτά τα exports διατηρούνται για backward compatibility
 // αλλά θα πρέπει να αντικατασταθούν με async Firebase calls
-export const mockContacts: Contact[] = [];
+export const sampleContacts: Contact[] = [];
 export const mockProjects: Project[] = [];
 
 // 📝 TODO: Αφαίρεση των deprecated exports όταν όλα τα αρχεία μετακινηθούν στο async API

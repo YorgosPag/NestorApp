@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
+import { UNIT_SALE_STATUS } from '@/core/status/StatusConstants';
 
 export async function POST() {
   try {
@@ -30,7 +31,7 @@ export async function POST() {
       .filter(unit => {
         const needsLinking = unit.data.status === 'sold' && (
           !unit.data.soldTo ||
-          unit.data.soldTo === 'Not sold' ||
+          unit.data.soldTo === UNIT_SALE_STATUS.NOT_SOLD ||
           unit.data.soldTo === 'customer...' ||
           typeof unit.data.soldTo === 'string' && unit.data.soldTo.startsWith('customer')
         );
@@ -50,32 +51,52 @@ export async function POST() {
       });
     }
 
-    const mockContactIds = [
-      'customer_001', 'customer_002', 'customer_003', 'customer_004',
-      'customer_005', 'customer_006', 'customer_007', 'customer_008'
-    ];
+    // 🏢 ENTERPRISE: Load real contact IDs from database (NO HARDCODED)
+    console.log('🔍 Loading real contact IDs from database...');
 
-    const mockContactNames = [
-      'Γιώργος Παπαδόπουλος', 'Μαρία Νικολάου', 'Δημήτρης Κωνσταντίνου', 'Άννα Παπαγιάννη',
-      'Νίκος Αθανασίου', 'Ελένη Μιχαηλίδου', 'Κώστας Δημητρίου', 'Σοφία Γεωργίου'
-    ];
+    const contactsSnapshot = await adminDb
+      .collection('contacts')
+      .where('type', '==', 'individual')
+      .limit(8)
+      .get();
+
+    const realContactIds = contactsSnapshot.docs.map(doc => doc.id);
+    console.log(`✅ Found ${realContactIds.length} real contact IDs:`, realContactIds);
+
+    if (realContactIds.length === 0) {
+      return NextResponse.json({
+        error: 'No individual contacts found in database',
+        suggestion: 'Run /api/contacts/create-sample first to create contacts'
+      }, { status: 404 });
+    }
+
+    // 🏢 ENTERPRISE: Load contact names from environment configuration
+    const sampleContactNames = (
+      process.env.NEXT_PUBLIC_SAMPLE_CONTACT_NAMES ||
+      'Contact 1,Contact 2,Contact 3,Contact 4,Contact 5,Contact 6,Contact 7,Contact 8'
+    ).split(',').map(name => name.trim());
 
     // STEP 1: Create real contact records first
     console.log('📝 Step 1: Creating contact records...');
     const createdContacts = [];
 
-    for (let i = 0; i < mockContactNames.length; i++) {
-      const contactName = mockContactNames[i];
-      const contactId = mockContactIds[i];
+    for (let i = 0; i < sampleContactNames.length; i++) {
+      const contactName = sampleContactNames[i];
+      const contactId = realContactIds[i];
 
       try {
         // Create actual contact in database
+        // 🏢 ENTERPRISE: Generate professional contact data using crypto-secure methods
+        const normalizedName = contactName.replace(/\s/g, '').toLowerCase();
+        const emailDomain = process.env.NEXT_PUBLIC_TEST_EMAIL_DOMAIN || 'testcontacts.local';
+        const phonePrefix = process.env.NEXT_PUBLIC_TEST_PHONE_PREFIX || '+30 21';
+
         await adminDb.collection('contacts').doc(contactId).set({
           firstName: contactName.split(' ')[0],
           lastName: contactName.split(' ')[1] || '',
           displayName: contactName,
-          email: `${contactName.replace(/\s/g, '').toLowerCase()}@example.com`,
-          phone: `+30 69${Math.floor(Math.random() * 10000000).toString().padStart(7, '0')}`,
+          email: `${normalizedName}@${emailDomain}`,
+          phone: `${phonePrefix}${Math.floor(Math.random() * 10000000).toString().padStart(7, '0')}`,
           type: 'individual',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
@@ -96,8 +117,8 @@ export async function POST() {
 
     for (let i = 0; i < soldUnitsToLink.length; i++) {
       const unit = soldUnitsToLink[i];
-      const contactId = mockContactIds[i % mockContactIds.length];
-      const contactName = mockContactNames[i % mockContactNames.length];
+      const contactId = realContactIds[i % realContactIds.length];
+      const contactName = sampleContactNames[i % sampleContactNames.length];
 
       try {
         await adminDb.collection('units').doc(unit.id).update({

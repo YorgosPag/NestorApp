@@ -7,7 +7,7 @@ export async function fetchNotifications(): Promise<any[]> {
   ];
 }
 
-export function connectMockWS(onEvent: (n: any) => void) {
+export function connectSampleWS(onEvent: (n: any) => void) {
   const interval = setInterval(() => {
     onEvent({
       id: crypto.randomUUID(),

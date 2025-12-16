@@ -11,14 +11,14 @@ const getFirebaseAdmin = async () => {
 
 export class ProjectsService implements IProjectsService {
   private firestoreRepo: IProjectsRepository;
-  private mockRepo: Pick<IProjectsRepository, 'getProjectsByCompanyId'>;
+  private sampleRepo: Pick<IProjectsRepository, 'getProjectsByCompanyId'>;
 
   constructor(
     firestoreRepo: IProjectsRepository,
-    mockRepo: Pick<IProjectsRepository, 'getProjectsByCompanyId'>
+    sampleRepo: Pick<IProjectsRepository, 'getProjectsByCompanyId'>
   ) {
     this.firestoreRepo = firestoreRepo;
-    this.mockRepo = mockRepo;
+    this.sampleRepo = sampleRepo;
   }
 
   async getProjectsByCompanyId(companyId: string): Promise<Project[]> {

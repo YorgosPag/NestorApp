@@ -29,10 +29,10 @@ export async function POST(req: NextRequest) {
         action: 'none'
       });
 
-      // Keep only the main company with the original ID and rename it
-      if (doc.id === '5djayaxc0X33wsE8T2uY') {
+      // 🏢 ENTERPRISE: Dynamic company detection (NO HARDCODED IDs)
+      // Detect main company by checking if it's 'TechCorp Α.Ε.' which needs to be renamed
+      if (data.companyName === 'TechCorp Α.Ε.') {
         // This is the main company - rename it to Pagonis
-        if (data.companyName === 'TechCorp Α.Ε.') {
           console.log(`✅ Updating main company ID ${doc.id} to "Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε."`);
           batch.update(doc.ref, {
             companyName: 'Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.',

@@ -19,7 +19,8 @@ import {
 } from 'firebase/firestore';
 import type { Communication } from '@/types/crm';
 
-const COMMUNICATIONS_COLLECTION = 'communications';
+// 🏢 ENTERPRISE: Use environment configuration for collection names
+const COMMUNICATIONS_COLLECTION = process.env.NEXT_PUBLIC_COMMUNICATIONS_COLLECTION || 'communications';
 
 const transformCommunication = (doc: any): Communication => {
     const data = doc.data();

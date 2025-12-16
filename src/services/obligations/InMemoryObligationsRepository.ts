@@ -73,7 +73,8 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
       const newObligation: Omit<ObligationDocument, 'id'> = {
         title: data.title || "",
         projectName: data.projectName || "",
-        contractorCompany: data.contractorCompany || "Χ.Γ.Γ. ΠΑΓΩΝΗΣ Ο.Ε.",
+        // 🏢 ENTERPRISE: Use environment configuration, not hardcoded company name
+        contractorCompany: data.contractorCompany || process.env.NEXT_PUBLIC_COMPANY_NAME || "Contractor Company",
         owners: data.owners || [],
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -193,7 +194,7 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
       // If no templates in Firebase, return default ones
       if (templates.length === 0) {
         return [
-          { id: "default", name: "Βασικό Πρότυπο ΠΑΓΩΝΗΣ", description: "Βασικές ενότητες συγγραφής υποχρεώσεων.", sections: DEFAULT_TEMPLATE_SECTIONS, isDefault: true },
+          { id: "default", name: `Βασικό Πρότυπο ${process.env.NEXT_PUBLIC_COMPANY_NAME || 'Company'}`, description: "Βασικές ενότητες συγγραφής υποχρεώσεων.", sections: DEFAULT_TEMPLATE_SECTIONS, isDefault: true },
           { id: "minimal", name: "Ελάχιστο Πρότυπο", description: "Μόνο τα απαραίτητα άρθρα για απλά έργα.", sections: DEFAULT_TEMPLATE_SECTIONS.slice(0, 3), isDefault: false }
         ];
       }
@@ -202,7 +203,7 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
     } catch (error) {
       console.error('❌ Error fetching templates from Firebase:', error);
       return [
-        { id: "default", name: "Βασικό Πρότυπο ΠΑΓΩΝΗΣ", description: "Βασικές ενότητες συγγραφής υποχρεώσεων.", sections: DEFAULT_TEMPLATE_SECTIONS, isDefault: true }
+        { id: "default", name: `Βασικό Πρότυπο ${process.env.NEXT_PUBLIC_COMPANY_NAME || 'Company'}`, description: "Βασικές ενότητες συγγραφής υποχρεώσεων.", sections: DEFAULT_TEMPLATE_SECTIONS, isDefault: true }
       ];
     }
   }

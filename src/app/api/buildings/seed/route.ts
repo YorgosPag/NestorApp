@@ -1,6 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { collection, doc, setDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+
+/**
+ * 🏢 ENTERPRISE: Database-driven company lookup (NO MORE HARDCODED IDs)
+ */
+async function getCompanyIdByName(companyName: string): Promise<string | null> {
+  try {
+    const companiesQuery = query(
+      collection(db, 'contacts'),
+      where('type', '==', 'company'),
+      where('companyName', '==', companyName)
+    );
+    const snapshot = await getDocs(companiesQuery);
+    return snapshot.empty ? null : snapshot.docs[0].id;
+  } catch (error) {
+    console.error(`🚨 Error loading company ID for ${companyName}:`, error);
+    return null;
+  }
+}
 
 // Real buildings for "Παλαιολόγου Πολυκατοικία" project
 const realBuildings = [
@@ -20,7 +38,6 @@ const realBuildings = [
     progress: 95,
     totalValue: 1800000,
     company: "Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.",
-    companyId: "5djayaxc0X33wsE8T2uY",
     project: "Παλαιολόγου Πολυκατοικία",
     projectId: "project_1_palaiologou", // From seedRealProjects.ts
     category: 'residential',
@@ -49,7 +66,6 @@ const realBuildings = [
     progress: 65,
     totalValue: 450000,
     company: "Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.",
-    companyId: "5djayaxc0X33wsE8T2uY",
     project: "Παλαιολόγου Πολυκατοικία",
     projectId: "project_1_palaiologou", // From seedRealProjects.ts
     category: 'storage',
@@ -63,24 +79,44 @@ const realBuildings = [
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🏗️ Starting to seed real buildings to Firestore...');
+    console.log('🏗️ Starting enterprise building seeding (database-driven)...');
+
+    // 🏢 ENTERPRISE: Load company ID από database αντί για hardcoded value
+    const pagonisCompanyId = await getCompanyIdByName('Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.');
+
+    if (!pagonisCompanyId) {
+      return NextResponse.json({
+        error: 'Company "Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε." not found in database',
+        suggestion: 'Please ensure company data exists before seeding buildings'
+      }, { status: 404 });
+    }
+
+    console.log(`✅ Found company in database: ${pagonisCompanyId}`);
 
     const results = [];
 
-    for (const building of realBuildings) {
-      console.log(`📝 Creating building: ${building.name}`);
-      
-      // Save to 'buildings' collection 
-      await setDoc(doc(db, 'buildings', building.id), {
-        ...building,
+    for (const buildingTemplate of realBuildings) {
+      console.log(`📝 Creating building: ${buildingTemplate.name}`);
+
+      // 🏢 ENTERPRISE: Use database-driven companyId
+      const building = {
+        ...buildingTemplate,
+        companyId: pagonisCompanyId, // Database-driven value
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
-      });
+      };
 
-      console.log(`✅ Successfully created building: ${building.name}`);
+      // Remove the old hardcoded companyId if it exists in template
+      delete building.companyId;
+      building.companyId = pagonisCompanyId;
+
+      await setDoc(doc(db, 'buildings', building.id), building);
+
+      console.log(`✅ Successfully created building with database-driven companyId: ${building.name}`);
       results.push({
         id: building.id,
         name: building.name,
+        companyId: pagonisCompanyId,
         status: 'created'
       });
     }

@@ -48,6 +48,8 @@ export function SearchInput({
 
   // 📝 Debounced onChange handler
   useEffect(() => {
+    if (!onChange) return; // 🛡️ Guard check - prevent crash when onChange is undefined
+
     if (debounceMs === 0) {
       // Instant mode - no debouncing
       onChange(localValue);

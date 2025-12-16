@@ -246,7 +246,8 @@ class CommunicationsService {
    */
   async prepareMessage(messageData: BaseMessageInput) {
     const metadata = { ...messageData.metadata, sentVia: 'CommunicationsService', timestamp: new Date().toISOString() };
-    const companyName = process.env.NEXT_PUBLIC_COMPANY_NAME || 'Εταιρεία Ακινήτων';
+    // 🏢 ENTERPRISE: Get company name από database, όχι hardcoded fallback
+    const companyName = process.env.NEXT_PUBLIC_COMPANY_NAME || await this.getCompanyNameFromDatabase();
     const companyEmail = process.env.NEXT_PUBLIC_COMPANY_EMAIL || 'info@company.gr';
     const companyPhone = process.env.NEXT_PUBLIC_COMPANY_PHONE || '+30 210 123 4567';
 
@@ -298,6 +299,38 @@ class CommunicationsService {
       }
     }
     return results;
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Λήψη company name από database
+   */
+  private async getCompanyNameFromDatabase(): Promise<string> {
+    try {
+      // Try to get company config from database
+      const companyDoc = await getDoc(doc(db, 'system', 'company'));
+      if (companyDoc.exists()) {
+        const companyData = companyDoc.data();
+        return companyData.name || 'Company';
+      }
+
+      // Fallback: Try to get from any existing contact with type 'company'
+      const companiesQuery = query(
+        collection(db, 'contacts'),
+        where('type', '==', 'company'),
+        limit(1)
+      );
+      const companiesSnapshot = await getDocs(companiesQuery);
+
+      if (!companiesSnapshot.empty) {
+        const firstCompany = companiesSnapshot.docs[0].data();
+        return firstCompany.companyName || firstCompany.name || 'Company';
+      }
+
+      return 'Company';
+    } catch (error) {
+      console.error('Error fetching company name from database:', error);
+      return 'Company';
+    }
   }
 
   /**

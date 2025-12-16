@@ -5,7 +5,7 @@ import { create } from 'zustand';
 import { useEffect, useRef, useState } from 'react';
 import { X, CheckCircle, AlertCircle, AlertTriangle, Info } from 'lucide-react';
 import { useNotificationStore } from '@/stores/notificationStore';
-import { fetchNotifications, connectMockWS } from '@/api/notificationApi';
+import { fetchNotifications, connectSampleWS } from '@/api/notificationApi';
 import { useTranslation } from '@/i18n';
 import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 
@@ -92,7 +92,7 @@ export function NotificationDrawer() {
         setIsLoading(false);
       }
     })();
-    const disconnect = connectMockWS(n => useNotificationStore.getState().add(n));
+    const disconnect = connectSampleWS(n => useNotificationStore.getState().add(n));
     return disconnect;
   }, []);
 

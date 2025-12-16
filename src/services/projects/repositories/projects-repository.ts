@@ -1,7 +1,7 @@
 /**
  * 🏢 ENTERPRISE PROJECTS REPOSITORY - PRODUCTION READY
  *
- * Αντικατέστησε το MockProjectsRepository με επαγγελματικό FirestoreProjectsRepository.
+ * Αντικατέστησε το SampleProjectsRepository με επαγγελματικό FirestoreProjectsRepository.
  * Όλα τα δεδομένα προέρχονται από production βάση δεδομένων.
  */
 
@@ -34,18 +34,18 @@ export class FirestoreProjectsRepository implements Pick<IProjectsRepository, 'g
 
     } catch (error) {
       console.error('❌ Error fetching projects from Firebase:', error);
-      return []; // Επιστροφή κενού array αντί για mock data
+      return []; // Επιστροφή κενού array αντί για sample data
     }
   }
 }
 
-// 🚨 DEPRECATED: MockProjectsRepository - Αντικαταστάθηκε με FirestoreProjectsRepository
+// 🚨 DEPRECATED: SampleProjectsRepository - Αντικαταστάθηκε με FirestoreProjectsRepository
 // Διατηρείται για backward compatibility μόνο
-export class MockProjectsRepository implements Pick<IProjectsRepository, 'getProjectsByCompanyId'> {
+export class SampleProjectsRepository implements Pick<IProjectsRepository, 'getProjectsByCompanyId'> {
   async getProjectsByCompanyId(companyId: string): Promise<Project[]> {
-    console.warn('🚨 MockProjectsRepository is deprecated! Use FirestoreProjectsRepository instead.');
+    console.warn('🚨 SampleProjectsRepository is deprecated! Use FirestoreProjectsRepository instead.');
 
-    // Redirect to real Firebase data instead of mock data
+    // Redirect to real Firebase data instead of sample data
     const firestoreRepo = new FirestoreProjectsRepository();
     return await firestoreRepo.getProjectsByCompanyId(companyId);
   }

@@ -27,15 +27,19 @@ const mockTask: CrmTask = {
   updatedAt: new Date()
 };
 
+/**
+ * 🏢 ENTERPRISE: Mock User Data (Environment-Aware)
+ * Demo data για showcases - Uses environment configuration όπου δυνατόν
+ */
 const mockUser = {
   id: '1',
-  name: 'Γιάννης Παπαδόπουλος',
-  email: 'giannis@example.com',
-  phone: '+30 210 1234567',
+  name: process.env.NEXT_PUBLIC_DEMO_USER_NAME || 'Γιάννης Παπαδόπουλος',
+  email: process.env.NEXT_PUBLIC_DEMO_USER_EMAIL || 'demo@company.local',
+  phone: process.env.NEXT_PUBLIC_DEMO_PHONE || '+30 210 000 0000',
   role: 'agent' as const,
   department: 'Πωλήσεις',
-  company: 'Pagonis Real Estate',
-  location: 'Αθήνα, Ελλάδα',
+  company: process.env.NEXT_PUBLIC_COMPANY_NAME || 'Demo Company',
+  location: process.env.NEXT_PUBLIC_COMPANY_LOCATION || 'Αθήνα, Ελλάδα',
   status: 'active' as const,
   lastActive: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
   joinedDate: new Date(2023, 0, 15),
@@ -142,7 +146,7 @@ export function ComponentShowcase() {
               name: 'Δημήτρης Admin',
               role: 'admin',
               status: 'active',
-              email: 'admin@example.com',
+              email: process.env.NEXT_PUBLIC_DEMO_ADMIN_EMAIL || 'admin@company.local',
               specialties: ['Διαχείριση', 'Analytics', 'Ασφάλεια']
             }}
             showActions={false}

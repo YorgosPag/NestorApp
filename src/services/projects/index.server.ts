@@ -6,7 +6,7 @@ import { ProjectsService } from './services/ProjectsService';
 
 // 🔥 PRODUCTION READY: Χρησιμοποιεί μόνο επαγγελματικά repositories
 const firestoreRepo = new FirestoreProjectsRepository();
-const productionRepo = new NewFirestoreRepo(); // Αντικατέστησε το mock repository
+const productionRepo = new NewFirestoreRepo(); // Αντικατέστησε το sample repository
 const service = new ProjectsService(firestoreRepo, productionRepo);
 
 export async function getProjectsByCompanyId(companyId: string) {

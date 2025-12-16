@@ -52,15 +52,14 @@ export async function GET(req: NextRequest) {
     // Check project connections based on known mappings
     console.log('🏗️ Checking project connections...');
 
-    // We know from the system that projects use companyId="pagonis"
-    // And that our main company (5djayaxc0X33wsE8T2uY) maps to "pagonis"
+    // 🏢 ENTERPRISE: Dynamic company analysis without hardcoded IDs
     const companiesWithProjects = companies.filter(company => {
-      // Check if company maps to 'pagonis' (our main mapping)
-      const mapsToPagenis = company.id === '5djayaxc0X33wsE8T2uY' ||
-                           company.name.includes('ΠΑΓΩΝΗΣ') ||
-                           company.name.includes('Παγώνης');
+      // Check if company is primary company by name pattern
+      const isPrimaryCompany = company.name.includes('ΠΑΓΩΝΗΣ') ||
+                               company.name.includes('Παγώνης') ||
+                               company.isPrimary === true;
 
-      return mapsToPagenis;
+      return isPrimaryCompany;
     });
 
     console.log('🏢 Building connections: Skipping external API calls (simplified analysis)');

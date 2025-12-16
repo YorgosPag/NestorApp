@@ -9,7 +9,7 @@
 
 export interface BaseSearchProps {
   value: string;
-  onChange: (value: string) => void;
+  onChange?: (value: string) => void; // 🛡️ Optional to prevent crashes when undefined
   placeholder?: string;
   disabled?: boolean;
   className?: string;

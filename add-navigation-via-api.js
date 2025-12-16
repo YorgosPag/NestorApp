@@ -1,14 +1,9 @@
 // Προσθήκη εταιρειών στη navigation μέσω API endpoint
 
-// Company IDs που δημιουργήθηκαν από το προηγούμενο script
-const companyIds = [
-  'XRh6PJG1lbkpVFQD0TXo', // ΑΚΤΩΡ ΑΤΕ
-  'JQ2eU1MwmtqHXxsuujrK', // J&P ΑΒΑΞ ΑΕ
-  'VdqPobCgzGqaEJULEyoJ', // ΤΕΡΝΑ ΑΕ
-  'SLw9O6yys0Lf6Ql3yw5g', // ΜΥΤΙΛΗΝΑΙΟΣ ΑΕ
-  'HZ1anF4UaYEzqhpU2ilM', // ΑΛΥΣΙΔΑ ΑΕ
-  'pzNUy8ksddGCtcQMqumR'  // Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.
-];
+// 🏢 ENTERPRISE: Load company IDs από environment configuration
+const companyIds = (process.env.NAVIGATION_COMPANY_IDS ||
+  'company1,company2,company3,company4,company5,company6'
+).split(',').map(id => id.trim());
 
 async function addCompaniesToNavigationAPI() {
   try {

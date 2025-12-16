@@ -300,7 +300,7 @@ export function CustomTestsExample() {
  *   return [
  *     // ... existing tests
  *     createBrowserCompatibilityTest(notify),
- *     createApiHealthCheck(notify, 'http://localhost:3001'),
+ *     createApiHealthCheck(notify, process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'),
  *     createPerformanceTest(notify)
  *   ];
  * }
@@ -313,7 +313,7 @@ export function CustomTestsExample() {
  * export function getCustomTests(notify: NotificationFn, getDxfData: () => any): TestDefinition[] {
  *   return [
  *     createBrowserCompatibilityTest(notify),
- *     createApiHealthCheck(notify, 'http://localhost:3001'),
+ *     createApiHealthCheck(notify, process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'),
  *     createPerformanceTest(notify),
  *     createDxfValidationTest(notify, getDxfData)
  *   ];
@@ -341,7 +341,7 @@ export function CustomTestsExample() {
  *   showCopyableNotification={notify}
  *   customTests={[
  *     createBrowserCompatibilityTest(notify),
- *     createApiHealthCheck(notify, 'http://localhost:3001')
+ *     createApiHealthCheck(notify, process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001')
  *   ]}
  * />
  */

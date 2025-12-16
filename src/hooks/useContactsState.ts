@@ -85,8 +85,15 @@ export function useContactsState() {
       return;
     }
     if (!selectedContact) {
-      const pagonis = allContacts.find(c => c.id === 'pagonis');
-      setSelectedContact(pagonis || allContacts[0]);
+      // 🏢 ENTERPRISE: Find primary company from database, not hardcoded ID
+      const primaryCompany = allContacts.find(c =>
+        c.type === 'company' && (
+          c.companyName?.toLowerCase().includes('παγωνη') ||
+          c.displayName?.toLowerCase().includes('παγωνη') ||
+          c.isPrimary === true
+        )
+      );
+      setSelectedContact(primaryCompany || allContacts[0]);
     }
   }, [allContacts, contactIdFromUrl]);
 

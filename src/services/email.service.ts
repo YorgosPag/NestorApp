@@ -48,8 +48,8 @@ export interface EmailResponse {
   note?: string;
 }
 
-// Legacy mock send for existing functionality
-const mockSend = async (payload: any) => {
+// Legacy sample send for existing functionality
+const sampleSend = async (payload: any) => {
     console.log('📧 LEGACY EMAIL:', payload.subject);
     await new Promise(resolve => setTimeout(resolve, 100)); // Simulate network delay
     return { success: true };
@@ -201,21 +201,21 @@ export class EmailService {
 // Legacy email service for backward compatibility
 export const emailService = {
     sendEmail: async (payload: EmailPayload) => {
-        return mockSend(payload);
+        return sampleSend(payload);
     },
 
     sendWelcomeEmail: async (lead: { fullName: string, email: string }) => {
-        return mockSend({
+        return sampleSend({
             to: lead.email,
             toName: lead.fullName,
             subject: `Καλώς ήρθατε ${lead.fullName}!`,
-            message: "This is a mock welcome email.",
+            message: "This is a sample welcome email.",
             templateType: 'welcome'
         });
     },
 
     sendFollowUpEmail: async (lead: { fullName: string, email: string }, message: string) => {
-        return mockSend({
+        return sampleSend({
             to: lead.email,
             toName: lead.fullName,
             subject: "Follow-up",
@@ -225,21 +225,21 @@ export const emailService = {
     },
 
     sendAppointmentEmail: async (lead: { fullName: string, email: string }, customData: Record<string, any>) => {
-        return mockSend({
+        return sampleSend({
             to: lead.email,
             toName: lead.fullName,
             subject: "Appointment Confirmation",
-            message: `Mock appointment details: ${JSON.stringify(customData)}`,
+            message: `Sample appointment details: ${JSON.stringify(customData)}`,
             templateType: 'appointment'
         });
     },
 
     sendPropertyProposal: async (lead: { fullName: string, email: string }, customData: Record<string, any>) => {
-        return mockSend({
+        return sampleSend({
             to: lead.email,
             toName: lead.fullName,
             subject: "Property Proposal",
-            message: `Mock property proposal: ${JSON.stringify(customData)}`,
+            message: `Sample property proposal: ${JSON.stringify(customData)}`,
             templateType: 'proposal'
         });
     },

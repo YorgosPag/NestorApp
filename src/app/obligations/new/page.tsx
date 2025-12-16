@@ -57,7 +57,8 @@ export default function NewObligationPage() {
   const [formData, setFormData] = useState<FormData>({
     title: "",
     projectName: "",
-    contractorCompany: "Χ.Γ.Γ. ΠΑΓΩΝΗΣ Ο.Ε.",
+    // 🏢 ENTERPRISE: Use environment configuration for contractor company
+    contractorCompany: process.env.NEXT_PUBLIC_COMPANY_NAME || "Contractor Company",
     owners: [{ id: "1", name: "", share: 100 }],
     projectDetails: {
       location: "",

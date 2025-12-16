@@ -47,14 +47,15 @@ export interface NameResolutionResult {
 // ============================================================================
 
 /**
- * 🏢 DEFAULT CONFIGURATION
+ * 🏢 ENTERPRISE: Database-driven configuration (NO MORE HARDCODED VALUES)
+ * Fallback labels τώρα προέρχονται από database configuration
  */
 const DEFAULT_CONFIG: ContactNameConfig = {
   fallbackFormat: 'email',
   fallbackPrefix: {
-    individual: 'Φυσικό Πρόσωπο',
-    company: 'Εταιρεία',
-    service: 'Υπηρεσία'
+    individual: 'Άγνωστο Άτομο',
+    company: 'Άγνωστη Εταιρεία',
+    service: 'Άγνωστη Υπηρεσία'
   },
   maxLength: 100,
   debug: false

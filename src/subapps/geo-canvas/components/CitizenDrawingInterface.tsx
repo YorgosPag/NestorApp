@@ -87,7 +87,10 @@ export function CitizenDrawingInterface({
   // 🏠 Phase 2.5.3: Real Estate Integration
   const [showRealEstateSetup, setShowRealEstateSetup] = useState(false);
   const [realEstateSettings, setRealEstateSettings] = useState({
-    priceRange: { min: 50000, max: 500000 },
+    priceRange: {
+      min: parseInt(process.env.NEXT_PUBLIC_CITIZEN_PRICE_MIN || '50000'),
+      max: parseInt(process.env.NEXT_PUBLIC_CITIZEN_PRICE_MAX || '500000')
+    },
     propertyTypes: ['apartment'] as string[],
     includeExclude: 'include' as 'include' | 'exclude'
   });

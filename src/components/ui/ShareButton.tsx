@@ -176,7 +176,7 @@ function generatePropertyShareText(property: {
     text += `\n\n${property.description}`;
   }
 
-  text += '\n\nΔείτε περισσότερα στο Nestor Construct!';
+  text += `\n\nΔείτε περισσότερα στο ${process.env.NEXT_PUBLIC_COMPANY_NAME || 'την εταιρεία μας'}!`;
 
   return text;
 }

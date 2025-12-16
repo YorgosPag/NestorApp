@@ -443,6 +443,13 @@ export const UNIT_STATUSES = {
     backgroundColor: '#EFF6FF',
     icon: 'users'
   },
+  sold: {
+    label: 'Πωλήθηκε',
+    variant: 'destructive',
+    color: '#DC2626',
+    backgroundColor: '#FEF2F2',
+    icon: 'dollarSign'
+  },
   maintenance: {
     label: 'Συντήρηση',
     variant: 'warning',
@@ -457,6 +464,22 @@ export const UNIT_STATUSES = {
     backgroundColor: '#F3E8FF',
     icon: 'bookmark'
   }
+} as const;
+
+// ===== UNIT SALE STATUS CONSTANTS =====
+
+export const UNIT_SALE_STATUS = {
+  NOT_SOLD: 'NOT_SOLD',
+  SOLD: 'SOLD',
+  RESERVED: 'RESERVED',
+  PENDING: 'PENDING'
+} as const;
+
+export const UNIT_SALE_STATUS_LABELS = {
+  [UNIT_SALE_STATUS.NOT_SOLD]: 'Δεν έχει πωληθεί',
+  [UNIT_SALE_STATUS.SOLD]: 'Πωλήθηκε',
+  [UNIT_SALE_STATUS.RESERVED]: 'Κρατημένη',
+  [UNIT_SALE_STATUS.PENDING]: 'Εκκρεμεί'
 } as const;
 
 // ===== NAVIGATION STATUS DEFINITIONS =====

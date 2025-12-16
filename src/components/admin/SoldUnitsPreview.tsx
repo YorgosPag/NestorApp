@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Eye, EyeOff, RefreshCw, Home } from 'lucide-react';
 import { ContactsService } from '@/services/contacts.service';
+import { UNIT_SALE_STATUS_LABELS, UNIT_SALE_STATUS } from '@/core/status/StatusConstants';
 
 interface Unit {
   id: string;
@@ -65,7 +66,7 @@ export function SoldUnitsPreview() {
     try {
       // Get unique contact IDs from sold units
       const contactIds = units
-        .filter(unit => unit.status === 'sold' && unit.soldTo && unit.soldTo !== 'Not sold')
+        .filter(unit => unit.status === 'sold' && unit.soldTo && unit.soldTo !== UNIT_SALE_STATUS.NOT_SOLD)
         .map(unit => unit.soldTo!)
         .filter((id, index, arr) => arr.indexOf(id) === index); // unique IDs
 
@@ -116,12 +117,12 @@ export function SoldUnitsPreview() {
 
   // Filter sold units without soldTo
   const soldUnitsWithoutCustomer = units.filter(unit =>
-    unit.status === 'sold' && (!unit.soldTo || unit.soldTo === 'Not sold')
+    unit.status === 'sold' && (!unit.soldTo || unit.soldTo === UNIT_SALE_STATUS.NOT_SOLD)
   );
 
   // Filter sold units with soldTo
   const soldUnitsWithCustomer = units.filter(unit =>
-    unit.status === 'sold' && unit.soldTo && unit.soldTo !== 'Not sold'
+    unit.status === 'sold' && unit.soldTo && unit.soldTo !== UNIT_SALE_STATUS.NOT_SOLD
   );
 
   // All units for project 1001 (Παλαιολόγου)
@@ -273,7 +274,7 @@ export function SoldUnitsPreview() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {unit.soldTo && unit.soldTo !== 'Not sold' ? (
+                          {unit.soldTo && unit.soldTo !== UNIT_SALE_STATUS.NOT_SOLD ? (
                             <div className="space-y-1">
                               <Badge variant="default" className="text-xs">
                                 {contactLookup[unit.soldTo] || 'Loading...'}

@@ -208,10 +208,11 @@ const REQUIRED_ENV_VARS = {
   /**
    * Default values για development
    */
+  // 🏢 ENTERPRISE: Use environment variables, not hardcoded company values
   export const DEFAULT_VALUES = {
-    COMPANY_NAME: 'Pagonis Real Estate',
-    COMPANY_EMAIL: 'info@pagonis.gr', 
-    COMPANY_PHONE: '+30 231 012 3456',
-    RATE_LIMIT_MAX: 15,
-    RATE_LIMIT_WINDOW: 60000, // 1 minute
+    COMPANY_NAME: process.env.NEXT_PUBLIC_COMPANY_NAME || 'Company Name',
+    COMPANY_EMAIL: process.env.NEXT_PUBLIC_COMPANY_EMAIL || 'info@company.com',
+    COMPANY_PHONE: process.env.NEXT_PUBLIC_COMPANY_PHONE || '+30 210 000 0000',
+    RATE_LIMIT_MAX: parseInt(process.env.RATE_LIMIT_MAX || '15'),
+    RATE_LIMIT_WINDOW: parseInt(process.env.RATE_LIMIT_WINDOW || '60000'), // 1 minute
   } as const;

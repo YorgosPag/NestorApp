@@ -593,12 +593,10 @@ export const projectFiltersConfig: FilterPanelConfig = {
           placeholder: 'Επιλέξτε πελάτη',
           ariaLabel: 'Φίλτρο πελάτη',
           width: 1,
+          // 🏢 ENTERPRISE: Dynamic client options from database
           options: [
-            { value: 'all', label: 'Όλοι' },
-            { value: 'client1', label: 'Δήμος Αθηναίων' },
-            { value: 'client2', label: 'ΕΤΑΔ Α.Ε.' },
-            { value: 'client3', label: 'Ιδιωτική Εταιρεία' },
-            { value: 'client4', label: 'Κοινότητα' }
+            { value: 'all', label: 'Όλοι' }
+            // Dynamic client options loaded from database via useClients() hook
           ]
         }
       ]

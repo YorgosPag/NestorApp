@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { UNIT_SALE_STATUS } from '@/core/status/StatusConstants';
 
 export async function POST(request: NextRequest) {
   try {
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
     const soldUnitsWithoutCustomers = [];
     unitsSnapshot.docs.forEach(docRef => {
       const unitData = docRef.data();
-      if (unitData.status === 'sold' && (!unitData.soldTo || unitData.soldTo === 'Not sold')) {
+      if (unitData.status === 'sold' && (!unitData.soldTo || unitData.soldTo === UNIT_SALE_STATUS.NOT_SOLD)) {
         soldUnitsWithoutCustomers.push({
           id: docRef.id,
           ref: docRef.ref,
@@ -75,19 +76,49 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Αν δεν υπάρχουν contacts, δημιουργούμε mock ones
+    // Αν δεν υπάρχουν contacts, δημιουργούμε sample ones
     if (availableContacts.length === 0) {
-      console.log('📝 No existing contacts found, creating customer references...');
-      availableContacts = [
-        { id: 'customer_001', name: 'Γιώργος Παπαδόπουλος' },
-        { id: 'customer_002', name: 'Μαρία Νικολάου' },
-        { id: 'customer_003', name: 'Δημήτρης Κωνσταντίνου' },
-        { id: 'customer_004', name: 'Άννα Παπαγιάννη' },
-        { id: 'customer_005', name: 'Νίκος Αθανασίου' },
-        { id: 'customer_006', name: 'Ελένη Μιχαηλίδου' },
-        { id: 'customer_007', name: 'Κώστας Δημητρίου' },
-        { id: 'customer_008', name: 'Σοφία Γεωργίου' }
-      ];
+      // 🏢 ENTERPRISE: Create contacts via create-sample API instead of hardcoded data
+      console.log('📝 No existing contacts found, triggering contact creation...');
+
+      try {
+        // Trigger the create-sample API to create proper contacts with secure IDs
+        const createResponse = await fetch('/api/contacts/create-sample', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (createResponse.ok) {
+          const createResult = await createResponse.json();
+          console.log(`✅ Created ${createResult.contactsCount} contacts via API`);
+
+          // Reload contacts from database
+          const newContactsSnapshot = await adminDb.collection('contacts')
+            .where('type', '==', 'individual')
+            .limit(8)
+            .get();
+
+          availableContacts = newContactsSnapshot.docs.map(doc => ({
+            id: doc.id,
+            name: `${doc.data().firstName} ${doc.data().lastName}`
+          }));
+        } else {
+          throw new Error('Failed to create contacts via API');
+        }
+      } catch (error) {
+        console.error('⚠️ Could not create contacts via API, using fallback:', error);
+
+        // 🏢 ENTERPRISE: Generate contacts από environment configuration
+        const fallbackNames = (
+          process.env.NEXT_PUBLIC_SAMPLE_CONTACT_NAMES ||
+          'Customer 1,Customer 2,Customer 3,Customer 4,Customer 5,Customer 6,Customer 7,Customer 8'
+        ).split(',').map(name => name.trim());
+
+        availableContacts = Array.from({ length: 8 }, (_, index) => ({
+          id: `temp_contact_${Date.now()}_${index}`,
+          name: fallbackNames[index] || `Customer ${index + 1}`
+        }));
+      }
     }
 
     console.log(`👥 Available contacts: ${availableContacts.length}`);

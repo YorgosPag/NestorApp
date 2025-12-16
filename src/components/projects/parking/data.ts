@@ -13,8 +13,8 @@ export const parkingSpots: ParkingSpot[] = [
     valueWithSyndicate: 0,
     status: 'sold',
     owner: 'ΧΑΤΖΗΙΩΑΝΝΟΥ ΠΑΡΘΕΝΑ',
-    floorPlan: '\\\\Server\\shared\\6. erga\\Palaiologou\\ΠΑΓΩΝΗΣ ΓΕΩΡΓΙΟΣ',
-    constructedBy: 'ΠΑΓΩΝΗΣ ΓΕΩΡΓΙΟΣ',
+    floorPlan: `\\\\Server\\shared\\6. erga\\Palaiologou\\${process.env.NEXT_PUBLIC_CONTRACTOR_NAME || 'Contractor'}`,
+    constructedBy: process.env.NEXT_PUBLIC_CONTRACTOR_NAME || 'Contractor',
     projectId: 1,
     createdAt: '2024-01-01',
     updatedAt: '2024-01-15'
@@ -31,8 +31,8 @@ export const parkingSpots: ParkingSpot[] = [
     valueWithSyndicate: 0,
     status: 'sold',
     owner: 'ΧΑΤΖΗΓΕΩΡΓΙΟΥ (Μ) ΚΑΘΑΡΙΝΑ ΔΗΜΗΤΡΑ',
-    floorPlan: '\\\\Server\\shared\\6. erga\\Palaiologou\\ΠΑΓΩΝΗΣ ΓΕΩΡΓΙΟΣ',
-    constructedBy: 'ΠΑΓΩΝΗΣ ΓΕΩΡΓΙΟΣ',
+    floorPlan: `\\\\Server\\shared\\6. erga\\Palaiologou\\${process.env.NEXT_PUBLIC_CONTRACTOR_NAME || 'Contractor'}`,
+    constructedBy: process.env.NEXT_PUBLIC_CONTRACTOR_NAME || 'Contractor',
     projectId: 1,
     createdAt: '2024-01-01',
     updatedAt: '2024-01-15'
@@ -50,7 +50,7 @@ export const parkingSpots: ParkingSpot[] = [
     status: 'available',
     owner: '',
     floorPlan: '',
-    constructedBy: 'ΠΑΓΩΝΗΣ ΓΕΩΡΓΙΟΣ',
+    constructedBy: process.env.NEXT_PUBLIC_CONTRACTOR_NAME || 'Contractor',
     projectId: 1,
     createdAt: '2024-01-01',
     updatedAt: '2024-02-01'
@@ -68,7 +68,7 @@ export const parkingSpots: ParkingSpot[] = [
     status: 'reserved',
     owner: 'Υποψήφιος Αγοραστής',
     floorPlan: '',
-    constructedBy: 'ΠΑΓΩΝΗΣ ΓΕΩΡΓΙΟΣ',
+    constructedBy: process.env.NEXT_PUBLIC_CONTRACTOR_NAME || 'Contractor',
     projectId: 1,
     createdAt: '2024-01-01',
     updatedAt: '2024-02-10'
@@ -86,7 +86,7 @@ export const parkingSpots: ParkingSpot[] = [
     status: 'available',
     owner: '',
     floorPlan: '',
-    constructedBy: 'ΠΑΓΩΝΗΣ ΓΕΩΡΓΙΟΣ',
+    constructedBy: process.env.NEXT_PUBLIC_CONTRACTOR_NAME || 'Contractor',
     projectId: 1,
     createdAt: '2024-03-01',
     updatedAt: '2024-03-01'
@@ -104,7 +104,7 @@ export const parkingSpots: ParkingSpot[] = [
     status: 'available',
     owner: '',
     floorPlan: '',
-    constructedBy: 'ΠΑΓΩΝΗΣ ΓΕΩΡΓΙΟΣ',
+    constructedBy: process.env.NEXT_PUBLIC_CONTRACTOR_NAME || 'Contractor',
     projectId: 1,
     createdAt: '2024-03-01',
     updatedAt: '2024-03-01'

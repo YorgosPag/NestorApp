@@ -511,7 +511,8 @@ export class PhotoUploadService {
     companyId?: string,
     onProgress?: (progress: FileUploadProgress) => void
   ): Promise<PhotoUploadResult> {
-    const prefix = companyId ? `company_${companyId}` : 'company';
+    // 🏢 ENTERPRISE: Dynamic prefix generation based on company data
+    const prefix = companyId ? `company_${companyId}` : process.env.NEXT_PUBLIC_DEFAULT_COMPANY_PREFIX || 'company';
 
     return this.uploadPhoto(file, {
       folderPath: 'companies/logos',

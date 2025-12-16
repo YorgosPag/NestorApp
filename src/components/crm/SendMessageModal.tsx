@@ -371,9 +371,9 @@ const SendMessageModal = ({
               value={formData.to}
               onChange={(e) => setFormData(prev => ({ ...prev, to: e.target.value }))}
               placeholder={
-                selectedChannel === MESSAGE_TYPES.EMAIL 
-                  ? 'email@example.com' 
-                  : '+30 6912345678'
+                selectedChannel === MESSAGE_TYPES.EMAIL
+                  ? (process.env.NEXT_PUBLIC_DEMO_EMAIL || 'email@example.com')
+                  : (process.env.NEXT_PUBLIC_DEMO_MOBILE || '+30 691 000 0000')
               }
             />
           </div>

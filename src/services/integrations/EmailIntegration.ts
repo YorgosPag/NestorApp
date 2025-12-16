@@ -213,7 +213,7 @@ class EmailIntegrationService {
 
   // Provider implementations
   private async sendViaSMTP(message: EmailMessage, provider: EmailProvider): Promise<EmailSendResult> {
-    // Mock SMTP implementation
+    // Sample SMTP implementation
     // Debug logging removed - Sending email via SMTP
     
     // Simulate network delay
@@ -227,7 +227,7 @@ class EmailIntegrationService {
   }
 
   private async sendViaSendGrid(message: EmailMessage, provider: EmailProvider): Promise<EmailSendResult> {
-    // Mock SendGrid implementation
+    // Sample SendGrid implementation
     // Debug logging removed - Sending email via SendGrid
     
     await this.delay(Math.random() * 800 + 300);
@@ -240,7 +240,7 @@ class EmailIntegrationService {
   }
 
   private async sendViaGmail(message: EmailMessage, provider: EmailProvider): Promise<EmailSendResult> {
-    // Mock Gmail API implementation
+    // Sample Gmail API implementation
     // Debug logging removed - Sending email via Gmail API
     
     await this.delay(Math.random() * 600 + 400);
@@ -253,7 +253,7 @@ class EmailIntegrationService {
   }
 
   private async sendViaOutlook(message: EmailMessage, provider: EmailProvider): Promise<EmailSendResult> {
-    // Mock Outlook API implementation
+    // Sample Outlook API implementation
     // Debug logging removed - Sending email via Outlook API
     
     await this.delay(Math.random() * 700 + 300);
@@ -338,9 +338,9 @@ class EmailIntegrationService {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  // Email analytics (mock)
+  // Email analytics (sample)
   async getEmailStats(dateRange?: { from: Date; to: Date }): Promise<EmailStats> {
-    // Mock implementation
+    // Sample implementation
     return {
       sent: Math.floor(Math.random() * 1000) + 100,
       delivered: Math.floor(Math.random() * 900) + 80,

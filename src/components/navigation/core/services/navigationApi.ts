@@ -58,11 +58,9 @@ export class NavigationApiService {
    */
   static async loadProjectsForCompany(companyId: string): Promise<NavigationProject[]> {
     try {
-      // VALIDATION: Skip known invalid company IDs to prevent infinite loops
-      const KNOWN_INVALID_IDS = ['ZRCoT0yCeZQxUieIjTQb', 'kGKmSIbhoRlDdrtDnUgD'];
-
-      if (KNOWN_INVALID_IDS.includes(companyId)) {
-        console.warn(`⚠️ Skipping API call for known invalid companyId: ${companyId}`);
+      // 🏢 ENTERPRISE: Dynamic validation instead of hardcoded IDs
+      if (!companyId || companyId.length < 10) {
+        console.warn(`⚠️ Invalid companyId format: ${companyId}`);
         return [];
       }
 

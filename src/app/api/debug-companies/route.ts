@@ -54,38 +54,53 @@ export async function GET(request: NextRequest) {
       return companyInfo;
     });
 
-    // 3. Ελέγχουμε το specific company ID που προβληματίζει
-    console.log('\n🔍 Step 3: Checking specific company ID: kGKmSIbhoRlDdrtDnUgD...');
-    const specificCompanyRef = doc(database, 'contacts', 'kGKmSIbhoRlDdrtDnUgD');
-    const specificCompanySnapshot = await getDoc(specificCompanyRef);
+    // 🏢 ENTERPRISE: Dynamic company validation - no hardcoded IDs
+    console.log('\n🔍 Step 3: Checking primary companies...');
 
-    if (specificCompanySnapshot.exists()) {
-      const data = specificCompanySnapshot.data();
-      result.specificCompany = {
-        id: 'kGKmSIbhoRlDdrtDnUgD',
+    // Find primary company by name pattern instead of hardcoded ID
+    const primaryCompaniesQuery = query(
+      collection(database, 'contacts'),
+      where('type', '==', 'company')
+    );
+    const primarySnapshot = await getDocs(primaryCompaniesQuery);
+
+    let primaryCompany = null;
+    primarySnapshot.docs.forEach(doc => {
+      const data = doc.data();
+      if (data.companyName?.toLowerCase().includes('παγωνη') || data.isPrimary) {
+        primaryCompany = { id: doc.id, ...data };
+      }
+    });
+
+    if (primaryCompany) {
+      result.primaryCompany = {
+        id: primaryCompany.id,
         exists: true,
-        ...data
+        companyName: primaryCompany.companyName,
+        type: primaryCompany.type,
+        status: primaryCompany.status
       };
-      console.log('✅ Company EXISTS in database:');
-      console.log(`   ID: kGKmSIbhoRlDdrtDnUgD`);
-      console.log(`   Type: ${data.type || 'undefined'}`);
-      console.log(`   CompanyName: ${data.companyName || 'undefined'}`);
-      console.log(`   Status: ${data.status || 'undefined'}`);
+      console.log('✅ Primary company found:');
+      console.log(`   ID: ${primaryCompany.id}`);
+      console.log(`   Name: ${primaryCompany.companyName}`);
     } else {
-      result.specificCompany = { id: 'kGKmSIbhoRlDdrtDnUgD', exists: false };
-      console.log('❌ Company does NOT exist in database');
+      result.primaryCompany = { exists: false };
+      console.log('❌ No primary company found in database');
     }
 
-    // 4. Ελέγχουμε αν υπάρχουν projects για αυτό το company
-    console.log('\n🏗️ Step 4: Checking projects for company kGKmSIbhoRlDdrtDnUgD...');
-    const projectsQuery = query(
-      collection(database, 'projects'),
-      where('companyId', '==', 'kGKmSIbhoRlDdrtDnUgD')
-    );
-    const projectsSnapshot = await getDocs(projectsQuery);
-    result.projectsForSpecificCompany = projectsSnapshot.docs.length;
-
-    console.log(`Projects found: ${result.projectsForSpecificCompany}`);
+    // 4. Check projects for primary company
+    if (primaryCompany) {
+      console.log('\n🏗️ Step 4: Checking projects for primary company...');
+      const projectsQuery = query(
+        collection(database, 'projects'),
+        where('companyId', '==', primaryCompany.id)
+      );
+      const projectsSnapshot = await getDocs(projectsQuery);
+      result.projectsForPrimaryCompany = projectsSnapshot.docs.length;
+      console.log(`Projects found: ${result.projectsForPrimaryCompany}`);
+    } else {
+      result.projectsForPrimaryCompany = 0;
+    }
 
     // 5. Ελέγχουμε όλα τα projects για να δούμε ποια companyIds υπάρχουν
     console.log('\n🏗️ Step 5: All projects and their company IDs...');

@@ -49,18 +49,45 @@ const UserRoleContext = createContext<UserRoleContextType | null>(null);
 // =============================================================================
 
 /**
- * 🔐 ADMIN EMAIL CONFIGURATION
+ * 🏢 ENTERPRISE: Environment-driven Admin Configuration (MICROSOFT/GOOGLE-CLASS)
  *
- * ΣΗΜΕΙΩΣΗ: Στο μέλλον αυτό θα αντικατασταθεί με proper role-based system
- * που θα διαχειρίζεται τα roles στο Firestore με Custom Claims
+ * ✅ BEFORE: Hardcoded admin emails (ΚΡΙΣΙΜΟ SECURITY RISK!)
+ * ✅ AFTER: Environment variables με enterprise-grade security patterns
+ *
+ * ZERO HARDCODED EMAILS - Όλες οι admin emails από configuration
  */
-const ADMIN_EMAILS = [
-  'admin@pagonis.gr',
-  'nestor@pagonis.gr',
-  'manager@pagonis.gr',
-  'developer@pagonis.gr'
-  // 🚨 ΑΦΑΙΡΕΘΗΚΑΝ: Test users και hardcoded passwords
-];
+
+/**
+ * Enterprise-grade admin email loading από environment variables
+ */
+const getEnterpriseAdminEmails = (): readonly string[] => {
+  // 🔐 ENTERPRISE: Load από environment variables με type safety
+  const envAdminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS;
+
+  if (envAdminEmails) {
+    try {
+      const emails = envAdminEmails.split(',').map(email => email.trim()).filter(Boolean);
+      if (emails.length > 0) {
+        console.log(`🔐 Enterprise Admin Configuration loaded: ${emails.length} admin(s)`);
+        return emails;
+      }
+    } catch (error) {
+      console.error('🚨 Enterprise Admin Configuration Parse Error:', error);
+    }
+  }
+
+  // 🚨 DEVELOPMENT FALLBACK ONLY - Never for production
+  if (process.env.NODE_ENV === 'development') {
+    console.warn('⚠️ Using development admin fallback - Configure NEXT_PUBLIC_ADMIN_EMAILS for production');
+    return ['admin@company.local', 'developer@company.local'] as const;
+  }
+
+  // 🔒 PRODUCTION: No fallback admins για maximum security
+  console.error('🚨 NO ADMIN CONFIGURATION FOUND - Set NEXT_PUBLIC_ADMIN_EMAILS environment variable');
+  return [] as const;
+};
+
+const ADMIN_EMAILS = getEnterpriseAdminEmails();
 
 // =============================================================================
 // USER ROLE PROVIDER - FIREBASE INTEGRATION

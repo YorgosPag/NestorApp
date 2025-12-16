@@ -45,6 +45,8 @@ export function SearchField({
 }: SearchFieldProps) {
   // 📝 Handle value changes - support both string and ChangeEvent
   const handleChange = (newValue: string | React.ChangeEvent<HTMLInputElement>) => {
+    if (!onChange) return; // 🛡️ Guard check - prevent crash when onChange is undefined
+
     if (typeof newValue === 'string') {
       onChange(newValue);
     } else {

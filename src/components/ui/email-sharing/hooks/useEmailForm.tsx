@@ -292,7 +292,7 @@ export function useEmailForm(
       propertyTitle: shareData.title,
       propertyDescription: shareData.text,
       propertyUrl: shareData.url,
-      senderName: 'Nestor Construct'
+      senderName: process.env.NEXT_PUBLIC_COMPANY_NAME || 'Nestor Construct'
     };
   }, [validateForm, actions, state.personalMessage, state.selectedTemplate]);
 

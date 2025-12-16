@@ -141,11 +141,11 @@ interface MigrationProgress {
  * Προέρχεται από την έρευνα των αρχείων
  */
 const DETECTED_COMPANY_DATA: HardcodedCompanyData = {
-  name: 'Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.',
-  legalName: 'ΝΕΣΤΟΡΑΜΟΣ ΧΡΗΣΤΟΣ ΓΕΩΡΓΙΟΣ ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.',
-  email: 'info@pagonis.gr',
+  name: process.env.NEXT_PUBLIC_COMPANY_NAME || 'Default Construction Company',
+  legalName: process.env.NEXT_PUBLIC_COMPANY_LEGAL_NAME || 'Default Legal Company Name',
+  email: process.env.NEXT_PUBLIC_COMPANY_EMAIL || 'info@company.gr',
   phone: '+30 231 123 4567',
-  website: 'https://pagonis.gr',
+  website: process.env.NEXT_PUBLIC_COMPANY_WEBSITE || 'https://company.gr',
   address: {
     street: 'Παλαιολόγου',
     number: '45',
@@ -192,42 +192,9 @@ const DETECTED_SYSTEM_DATA: HardcodedSystemData = {
 /**
  * Project Data που βρέθηκε σε seed αρχεία
  */
+// 🏢 ENTERPRISE: All hardcoded project data removed - use database-driven configuration
 const DETECTED_PROJECT_DATA: readonly HardcodedProjectData[] = [
-  {
-    companyId: '5djayaxc0X33wsE8T2uY',
-    projectId: 'project_1_palaiologou',
-    name: 'Παλαιολόγου Πολυκατοικία',
-    category: 'residential',
-    defaultValues: {
-      status: 'active',
-      progress: 95,
-      totalValue: 1800000,
-      startDate: '2020-03-15',
-      completionDate: '2023-06-30'
-    }
-  },
-  {
-    companyId: 'akmi-ate',
-    projectId: 'akmi-project-01',
-    name: 'AKMI Commercial Center',
-    category: 'commercial',
-    defaultValues: {
-      status: 'planning',
-      progress: 0,
-      totalValue: 5000000
-    }
-  },
-  {
-    companyId: 'beta-constructions',
-    projectId: 'beta-residential-complex',
-    name: 'Beta Residential Complex',
-    category: 'residential',
-    defaultValues: {
-      status: 'construction',
-      progress: 45,
-      totalValue: 3200000
-    }
-  }
+  // No hardcoded project data - all project templates loaded from database
 ] as const;
 
 // ============================================================================
