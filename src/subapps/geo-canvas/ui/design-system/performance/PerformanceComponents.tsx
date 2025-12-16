@@ -22,6 +22,7 @@ import { useTheme } from '../theme/ThemeProvider';
 import { adminBoundariesAnalytics } from '../../../services/performance/AdminBoundariesPerformanceAnalytics';
 import type { AdminBoundariesMetrics, AdminBoundariesAlert } from '../../../services/performance/AdminBoundariesPerformanceAnalytics';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import styles from './PerformanceComponents.module.css';
 
 // ============================================================================
 // VIRTUALIZED LIST COMPONENT
@@ -82,25 +83,22 @@ export const VirtualizedList = memo(<T,>({
   return (
     <div
       ref={containerRef}
-      className={`virtualized-list ${className}`}
-      style={{
-        height: containerHeight,
-        overflow: 'auto',
-        position: 'relative'
-      }}
+      className={`${styles.virtualizedList} ${className}`}
+      style={{ height: containerHeight }}
       onScroll={handleScroll}
     >
       {/* Total height spacer */}
-      <div style={{ height: totalHeight, position: 'relative' }}>
+      <div
+        className={styles.virtualizedListSpacer}
+        style={{ height: totalHeight }}
+      >
         {/* Visible items */}
         {visibleItems.map(({ item, originalIndex }) => (
           <div
             key={keyExtractor(item, originalIndex)}
+            className={styles.virtualizedListItem}
             style={{
-              position: 'absolute',
               top: originalIndex * itemHeight,
-              left: 0,
-              right: 0,
               height: itemHeight
             }}
           >
@@ -170,25 +168,18 @@ export const VirtualizedTable = memo(<T,>({
   // Render table row
   const renderRow = useCallback((item: T, index: number) => (
     <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        borderBottom: '1px solid var(--color-border-primary)',
-        cursor: onRowClick ? 'pointer' : 'default',
-        backgroundColor: index % 2 === 0 ? 'var(--color-bg-primary)' : 'var(--color-bg-secondary)'
-      }}
+      className={`${styles.tableRow} ${onRowClick ? styles.tableRowHover : ''}`}
+      style={{ cursor: onRowClick ? 'pointer' : 'default' }}
       onClick={() => onRowClick?.(item, index)}
     >
       {columns.map((column) => (
         <div
           key={column.key}
-          style={{
-            width: column.width || 150,
-            padding: 'var(--spacing-2) var(--spacing-3)',
-            textAlign: column.align || 'left',
-            fontSize: '14px',
-            color: 'var(--color-text-primary)'
-          }}
+          className={`${styles.tableCell} ${
+            column.align === 'center' ? styles.tableCellCenter :
+            column.align === 'right' ? styles.tableCellRight : ''
+          }`}
+          style={{ width: column.width || 150 }}
         >
           {column.render(item, index)}
         </div>
@@ -197,39 +188,28 @@ export const VirtualizedTable = memo(<T,>({
   ), [columns, onRowClick]);
 
   return (
-    <div className={`virtualized-table ${className}`} style={{ height: containerHeight }}>
+    <div className={`${styles.virtualizedTable} ${className}`} style={{ height: containerHeight }}>
       {/* Header */}
       <div
-        style={{
-          display: 'flex',
-          height: headerHeight,
-          backgroundColor: 'var(--color-bg-secondary)',
-          borderBottom: '2px solid var(--color-border-primary)',
-          alignItems: 'center'
-        }}
+        className={styles.tableHeader}
+        style={{ height: headerHeight }}
       >
         {columns.map((column) => (
           <div
             key={column.key}
+            className={`${styles.tableHeaderCell} ${
+              column.align === 'center' ? styles.tableHeaderCellCenter :
+              column.align === 'right' ? styles.tableHeaderCellRight : ''
+            }`}
             style={{
               width: column.width || 150,
-              padding: 'var(--spacing-2) var(--spacing-3)',
-              textAlign: column.align || 'left',
-              fontSize: '12px',
-              fontWeight: '600',
-              color: 'var(--color-text-secondary)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px',
-              cursor: column.sortable ? 'pointer' : 'default',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 'var(--spacing-1)'
+              cursor: column.sortable ? 'pointer' : 'default'
             }}
             onClick={() => column.sortable && handleSort(column.key)}
           >
             {column.title}
             {column.sortable && sortBy === column.key && (
-              <span style={{ fontSize: '10px' }}>
+              <span className={styles.sortIndicator}>
                 {sortDirection === 'asc' ? '↑' : '↓'}
               </span>
             )}
@@ -308,25 +288,14 @@ export const LazyImage: React.FC<LazyImageProps> = memo(({
     onError?.();
   }, [onError]);
 
-  const containerStyle: React.CSSProperties = {
-    width,
-    height,
-    backgroundColor: 'var(--color-bg-secondary)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 'var(--radius-md)',
-    overflow: 'hidden',
-    position: 'relative'
-  };
-
   return (
-    <div ref={imgRef} className={`lazy-image ${className}`} style={containerStyle}>
+    <div
+      ref={imgRef}
+      className={`${styles.lazyImageContainer} ${className}`}
+      style={{ width, height }}
+    >
       {!inView && (
-        <div style={{
-          color: 'var(--color-text-tertiary)',
-          fontSize: '24px'
-        }}>
+        <div className={styles.lazyImagePlaceholderText}>
           📷
         </div>
       )}
@@ -334,18 +303,15 @@ export const LazyImage: React.FC<LazyImageProps> = memo(({
       {inView && !error && (
         <>
           {!loaded && (
-            <div style={{
-              position: 'absolute',
-              inset: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: 'var(--color-bg-secondary)'
-            }}>
+            <div className={styles.lazyImagePlaceholder}>
               {placeholder ? (
-                <img src={placeholder} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(5px)' }} />
+                <img
+                  src={placeholder}
+                  alt=""
+                  className={styles.lazyImagePlaceholderImg}
+                />
               ) : (
-                <div style={{ color: 'var(--color-text-tertiary)' }}>Loading...</div>
+                <div className={styles.lazyImagePlaceholderText}>Loading...</div>
               )}
             </div>
           )}
@@ -354,24 +320,15 @@ export const LazyImage: React.FC<LazyImageProps> = memo(({
             alt={alt}
             onLoad={handleLoad}
             onError={handleError}
-            style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              opacity: loaded ? 1 : 0,
-              transition: 'opacity var(--duration-base) var(--easing-ease-in-out)'
-            }}
+            className={`${styles.lazyImage} ${loaded ? styles.lazyImageFadeIn : ''}`}
+            style={{ opacity: loaded ? 1 : 0 }}
           />
         </>
       )}
 
       {error && (
-        <div style={{
-          color: 'var(--color-text-tertiary)',
-          fontSize: '12px',
-          textAlign: 'center'
-        }}>
-          <div style={{ fontSize: '24px', marginBottom: 'var(--spacing-1)' }}>❌</div>
+        <div className={styles.lazyImageError}>
+          <div className={styles.lazyImageErrorIcon}>❌</div>
           Failed to load
         </div>
       )}
@@ -884,7 +841,7 @@ export const AdminBoundariesPerformancePanel = memo(({
 
   return (
     <div
-      className={`fixed top-4 right-4 w-96 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50 max-h-96 overflow-hidden ${className}`}
+      className={`${styles.performanceMonitor} fixed top-4 right-4 w-96 rounded-lg shadow-xl border z-50 max-h-96 overflow-hidden ${className}`}
       style={{
         backgroundColor: theme.colors.surface,
         color: theme.colors.text,

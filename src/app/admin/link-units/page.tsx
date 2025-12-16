@@ -6,9 +6,16 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import LinkSoldUnitsToCustomers from '@/components/admin/LinkSoldUnitsToCustomers';
 import SoldUnitsPreview from '@/components/admin/SoldUnitsPreview';
-import { COMPANY_CONFIG } from '@/config/company-config';
+// Enterprise Configuration Management - CLAUDE.md Protocol compliance
+import { useEnterpriseConfig } from '@/core/configuration/useEnterpriseConfig';
 
 export default function LinkUnitsPage() {
+  // Enterprise Configuration Hook - replaces hardcoded values
+  const { companyConfig, isLoading } = useEnterpriseConfig();
+
+  // Get current project name from centralized configuration
+  const currentProjectName = companyConfig?.currentProject?.name || 'έργου';
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-6xl mx-auto space-y-6">
@@ -24,7 +31,11 @@ export default function LinkUnitsPage() {
           <div>
             <h1 className="text-3xl font-bold">Σύνδεση Sold Units με Customers</h1>
             <p className="text-muted-foreground">
-              Διόρθωση του προβλήματος με τους πελάτες του έργου {COMPANY_CONFIG.SAMPLE_PROJECT_NAME}
+              {isLoading ? (
+                'Φόρτωση στοιχείων έργου...'
+              ) : (
+                `Διόρθωση του προβλήματος με τους πελάτες του ${currentProjectName}`
+              )}
             </p>
           </div>
         </div>

@@ -376,6 +376,436 @@ export const animations = {
 } as const;
 
 // ============================================================================
+// DASHBOARD COMPONENTS
+// ============================================================================
+
+export const dashboardComponents = {
+  metricsCard: {
+    base: {
+      backgroundColor: colors.background.primary,
+      border: `1px solid ${colors.border.primary}`,
+      borderRadius: borderRadius.lg,
+      padding: spacing[4],
+      minHeight: '120px',
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'space-between',
+      boxShadow: shadows.card
+    },
+    title: {
+      margin: 0,
+      fontSize: typography.fontSize.sm,
+      color: colors.text.secondary,
+      fontWeight: typography.fontWeight.medium
+    },
+    value: {
+      fontSize: '1.75rem', // 28px
+      fontWeight: typography.fontWeight.bold,
+      lineHeight: typography.lineHeight.none
+    },
+    subtitle: {
+      margin: 0,
+      fontSize: typography.fontSize.xs,
+      color: colors.text.tertiary
+    },
+    icon: {
+      fontSize: '1.25rem' // 20px
+    },
+    trend: {
+      fontSize: typography.fontSize.sm,
+      color: colors.text.secondary
+    }
+  },
+
+  alertsList: {
+    container: {
+      backgroundColor: colors.background.primary,
+      border: `1px solid ${colors.border.primary}`,
+      borderRadius: borderRadius.lg,
+      padding: spacing[4],
+      boxShadow: shadows.card
+    },
+    header: {
+      margin: `0 0 ${spacing[4]} 0`,
+      fontSize: typography.fontSize.lg,
+      fontWeight: typography.fontWeight.semibold,
+      color: colors.text.primary
+    },
+    scrollArea: {
+      maxHeight: '400px',
+      overflowY: 'auto' as const
+    },
+    item: {
+      padding: spacing[3],
+      borderBottom: `1px solid ${colors.gray[100]}`,
+      cursor: 'pointer',
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      gap: spacing[3],
+      transition: `background-color ${animations.duration.fast}`,
+      '&:hover': {
+        backgroundColor: colors.gray[50]
+      }
+    }
+  },
+
+  eventsList: {
+    container: {
+      backgroundColor: colors.background.primary,
+      border: `1px solid ${colors.border.primary}`,
+      borderRadius: borderRadius.lg,
+      padding: spacing[4],
+      boxShadow: shadows.card
+    },
+    header: {
+      margin: `0 0 ${spacing[4]} 0`,
+      fontSize: typography.fontSize.lg,
+      fontWeight: typography.fontWeight.semibold,
+      color: colors.text.primary
+    },
+    scrollArea: {
+      maxHeight: '300px',
+      overflowY: 'auto' as const
+    },
+    item: {
+      padding: spacing[2],
+      borderBottom: `1px solid ${colors.gray[100]}`,
+      display: 'flex',
+      alignItems: 'center',
+      gap: spacing[3],
+      fontSize: typography.fontSize.sm
+    },
+    eventIcon: {
+      fontSize: typography.fontSize.sm
+    },
+    eventText: {
+      flex: 1,
+      color: colors.text.primary
+    },
+    timestamp: {
+      fontSize: typography.fontSize.xs,
+      color: colors.text.tertiary
+    }
+  },
+
+  alertConfig: {
+    container: {
+      backgroundColor: colors.background.primary,
+      border: `1px solid ${colors.border.primary}`,
+      borderRadius: borderRadius.lg,
+      padding: spacing[4],
+      boxShadow: shadows.card
+    },
+    header: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: spacing[2],
+      marginBottom: spacing[3]
+    },
+    title: {
+      margin: 0,
+      fontSize: typography.fontSize.lg,
+      fontWeight: typography.fontWeight.semibold
+    },
+    configList: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: spacing[1]
+    },
+    configItem: {
+      fontSize: typography.fontSize.xs,
+      color: colors.text.secondary
+    }
+  },
+
+  loadingState: {
+    container: {
+      backgroundColor: colors.background.secondary,
+      borderRadius: borderRadius.lg,
+      padding: spacing[8],
+      textAlign: 'center' as const
+    },
+    spinner: {
+      fontSize: '1.5rem', // 24px
+      marginBottom: spacing[2]
+    },
+    text: {
+      color: colors.text.secondary
+    },
+    error: {
+      color: colors.semantic.error.main,
+      marginTop: spacing[2],
+      fontSize: typography.fontSize.xs
+    }
+  },
+
+  dashboardLayout: {
+    container: {
+      minHeight: '100vh',
+      backgroundColor: colors.background.secondary,
+      padding: spacing[6]
+    },
+    header: {
+      backgroundColor: colors.background.primary,
+      borderRadius: borderRadius.lg,
+      padding: spacing[6],
+      marginBottom: spacing[6],
+      boxShadow: shadows.card
+    },
+    title: {
+      margin: `0 0 ${spacing[2]} 0`,
+      fontSize: '1.75rem', // 28px
+      fontWeight: typography.fontWeight.bold,
+      color: colors.text.primary
+    },
+    subtitle: {
+      margin: 0,
+      color: colors.text.secondary,
+      fontSize: typography.fontSize.lg
+    },
+    controls: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: spacing[3]
+    },
+    metricsGrid: {
+      marginBottom: spacing[6]
+    },
+    contentGrid: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
+      gap: spacing[6]
+    },
+    twoColumnGrid: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: spacing[6]
+    }
+  },
+
+  statusBadge: {
+    base: {
+      padding: `${spacing[1]} ${spacing[2]}`,
+      borderRadius: borderRadius.full,
+      fontSize: typography.fontSize.xs,
+      fontWeight: typography.fontWeight.medium,
+      textTransform: 'uppercase' as const,
+      display: 'inline-flex',
+      alignItems: 'center'
+    },
+    variants: {
+      active: {
+        backgroundColor: colors.severity.critical.background,
+        color: colors.severity.critical.text
+      },
+      acknowledged: {
+        backgroundColor: colors.severity.high.background,
+        color: colors.severity.high.text
+      },
+      resolved: {
+        backgroundColor: colors.severity.low.background,
+        color: colors.severity.low.text
+      },
+      suppressed: {
+        backgroundColor: colors.gray[200],
+        color: colors.gray[600]
+      }
+    }
+  },
+
+  mapComponents: {
+    container: {
+      base: {
+        width: '100%',
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column' as const
+      }
+    },
+
+    header: {
+      base: {
+        padding: spacing[4],
+        backgroundColor: colors.gray[800],
+        color: colors.text.inverse,
+        display: 'flex',
+        gap: spacing[4],
+        alignItems: 'center',
+        flexWrap: 'wrap' as const
+      },
+      title: {
+        margin: 0,
+        color: colors.primary[400],
+        fontSize: typography.fontSize['2xl'],
+        fontWeight: typography.fontWeight.semibold
+      }
+    },
+
+    controlSection: {
+      base: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: spacing[2]
+      },
+      label: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: spacing[2],
+        fontSize: typography.fontSize.sm,
+        color: colors.text.inverse
+      },
+      select: {
+        padding: `${spacing[1]} ${spacing[2]}`,
+        backgroundColor: colors.gray[700],
+        color: colors.text.inverse,
+        border: `1px solid ${colors.gray[600]}`,
+        borderRadius: borderRadius.base,
+        fontSize: typography.fontSize.sm
+      },
+      button: {
+        base: {
+          padding: `${spacing[1]} ${spacing[3]}`,
+          borderRadius: borderRadius.base,
+          border: 'none',
+          cursor: 'pointer',
+          fontSize: typography.fontSize.sm,
+          fontWeight: typography.fontWeight.medium,
+          transition: `all ${animations.duration.fast}`
+        },
+        primary: {
+          backgroundColor: colors.primary[500],
+          color: colors.text.inverse,
+          '&:hover': {
+            backgroundColor: colors.primary[600]
+          }
+        },
+        secondary: {
+          backgroundColor: colors.gray[600],
+          color: colors.text.inverse,
+          '&:hover': {
+            backgroundColor: colors.gray[500]
+          }
+        },
+        danger: {
+          backgroundColor: colors.semantic.error.main,
+          color: colors.text.inverse,
+          '&:hover': {
+            backgroundColor: colors.semantic.error.dark
+          }
+        }
+      }
+    },
+
+    mapContainer: {
+      base: {
+        flex: 1,
+        position: 'relative' as const
+      }
+    },
+
+    sidebar: {
+      base: {
+        position: 'absolute' as const,
+        top: spacing[4],
+        right: spacing[4],
+        width: '320px',
+        maxHeight: 'calc(100% - 32px)',
+        backgroundColor: colors.background.primary,
+        border: `1px solid ${colors.border.primary}`,
+        borderRadius: borderRadius.lg,
+        boxShadow: shadows.lg,
+        zIndex: 10,
+        overflow: 'hidden'
+      },
+      header: {
+        backgroundColor: colors.gray[50],
+        padding: spacing[4],
+        borderBottom: `1px solid ${colors.border.primary}`
+      },
+      title: {
+        margin: 0,
+        fontSize: typography.fontSize.lg,
+        fontWeight: typography.fontWeight.semibold,
+        color: colors.text.primary
+      },
+      content: {
+        padding: spacing[4],
+        maxHeight: '400px',
+        overflowY: 'auto' as const
+      }
+    },
+
+    polygonList: {
+      item: {
+        padding: spacing[3],
+        marginBottom: spacing[2],
+        backgroundColor: colors.gray[50],
+        border: `1px solid ${colors.border.secondary}`,
+        borderRadius: borderRadius.base,
+        cursor: 'pointer',
+        transition: `all ${animations.duration.fast}`,
+        '&:hover': {
+          backgroundColor: colors.gray[100],
+          borderColor: colors.primary[300]
+        }
+      },
+      title: {
+        fontWeight: typography.fontWeight.medium,
+        fontSize: typography.fontSize.sm,
+        color: colors.text.primary,
+        marginBottom: spacing[1]
+      },
+      metadata: {
+        fontSize: typography.fontSize.xs,
+        color: colors.text.secondary,
+        marginBottom: spacing[1]
+      },
+      timestamp: {
+        fontSize: typography.fontSize.xs,
+        color: colors.text.tertiary
+      },
+      actions: {
+        display: 'flex',
+        gap: spacing[2],
+        marginTop: spacing[2]
+      }
+    },
+
+    debugSection: {
+      container: {
+        position: 'absolute' as const,
+        bottom: spacing[4],
+        left: spacing[4],
+        right: spacing[4],
+        backgroundColor: colors.background.primary,
+        border: `1px solid ${colors.border.primary}`,
+        borderRadius: borderRadius.lg,
+        boxShadow: shadows.md
+      },
+      summary: {
+        cursor: 'pointer',
+        fontWeight: typography.fontWeight.semibold,
+        padding: spacing[3],
+        backgroundColor: colors.gray[50],
+        borderRadius: `${borderRadius.lg} ${borderRadius.lg} 0 0`,
+        borderBottom: `1px solid ${colors.border.primary}`
+      },
+      content: {
+        padding: spacing[4],
+        backgroundColor: colors.gray[900],
+        color: colors.gray[100],
+        fontFamily: typography.fontFamily.mono,
+        fontSize: typography.fontSize.xs,
+        lineHeight: typography.lineHeight.relaxed,
+        overflowX: 'auto' as const,
+        borderRadius: `0 0 ${borderRadius.lg} ${borderRadius.lg}`
+      }
+    }
+  }
+} as const;
+
+// ============================================================================
 // COMPONENT VARIANTS
 // ============================================================================
 
@@ -554,3 +984,1042 @@ export type Shadow = keyof typeof shadows;
 export type BorderRadius = keyof typeof borderRadius;
 export type ZIndex = keyof typeof zIndex;
 export type Breakpoint = keyof typeof breakpoints;
+
+// ============================================================================
+// CONFIGURATION INTERFACE COMPONENTS
+// ============================================================================
+
+export const configurationComponents = {
+  layout: {
+    container: {
+      backgroundColor: colors.background.secondary,
+      minHeight: '100vh',
+      padding: spacing[6]
+    },
+    header: {
+      marginBottom: spacing[6]
+    },
+    title: {
+      margin: '0 0 8px 0',
+      fontSize: typography.fontSize['2xl'],
+      fontWeight: typography.fontWeight.bold,
+      color: colors.text.primary
+    },
+    subtitle: {
+      margin: 0,
+      color: colors.text.secondary,
+      fontSize: typography.fontSize.base
+    },
+    contentGrid: {
+      display: 'grid',
+      gridTemplateColumns: '300px 1fr',
+      gap: spacing[6]
+    },
+    sidebar: {
+      display: 'flex',
+      flexDirection: 'column' as const,
+      gap: spacing[4]
+    }
+  },
+
+  configurationCard: {
+    base: {
+      backgroundColor: colors.background.primary,
+      border: `2px solid ${colors.border.primary}`,
+      borderRadius: borderRadius.lg,
+      padding: spacing[4],
+      cursor: 'pointer',
+      transition: `all ${animations.duration.normal}`
+    },
+    selected: {
+      backgroundColor: colors.primary[50],
+      borderColor: colors.primary[500]
+    },
+    hover: {
+      backgroundColor: colors.gray[50],
+      borderColor: colors.gray[300]
+    },
+    header: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: spacing[3],
+      marginBottom: spacing[2]
+    },
+    icon: {
+      fontSize: '1.5rem' // 24px
+    },
+    titleContainer: {
+      flex: 1
+    },
+    title: {
+      margin: 0,
+      fontSize: typography.fontSize.base,
+      fontWeight: typography.fontWeight.semibold,
+      color: colors.text.primary
+    },
+    statusContainer: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: spacing[2],
+      marginTop: spacing[1]
+    },
+    statusDot: {
+      width: '8px',
+      height: '8px',
+      borderRadius: '50%'
+    },
+    statusText: {
+      fontSize: typography.fontSize.xs,
+      color: colors.text.tertiary,
+      textTransform: 'capitalize' as const
+    },
+    description: {
+      margin: 0,
+      fontSize: typography.fontSize.sm,
+      color: colors.text.secondary,
+      lineHeight: typography.lineHeight.relaxed
+    }
+  },
+
+  ruleEditor: {
+    container: {
+      backgroundColor: colors.background.primary,
+      border: `1px solid ${colors.border.primary}`,
+      borderRadius: borderRadius.lg,
+      padding: spacing[6],
+      boxShadow: shadows.card
+    },
+    header: {
+      margin: `0 0 ${spacing[6]} 0`,
+      fontSize: typography.fontSize.xl,
+      fontWeight: typography.fontWeight.semibold,
+      color: colors.text.primary
+    },
+    section: {
+      marginBottom: spacing[6]
+    },
+    label: {
+      display: 'block',
+      marginBottom: spacing[2],
+      fontSize: typography.fontSize.sm,
+      fontWeight: typography.fontWeight.medium,
+      color: colors.text.primary
+    },
+    input: {
+      width: '100%',
+      padding: `${spacing[2]} ${spacing[3]}`,
+      border: `1px solid ${colors.border.secondary}`,
+      borderRadius: borderRadius.md,
+      fontSize: typography.fontSize.sm,
+      color: colors.text.primary,
+      backgroundColor: colors.background.primary,
+      transition: `border-color ${animations.duration.fast}`,
+      '&:focus': {
+        outline: 'none',
+        borderColor: colors.border.focus,
+        boxShadow: shadows.focus
+      }
+    },
+    textarea: {
+      width: '100%',
+      padding: `${spacing[2]} ${spacing[3]}`,
+      border: `1px solid ${colors.border.secondary}`,
+      borderRadius: borderRadius.md,
+      fontSize: typography.fontSize.sm,
+      color: colors.text.primary,
+      backgroundColor: colors.background.primary,
+      minHeight: '80px',
+      resize: 'vertical' as const,
+      transition: `border-color ${animations.duration.fast}`,
+      '&:focus': {
+        outline: 'none',
+        borderColor: colors.border.focus,
+        boxShadow: shadows.focus
+      }
+    },
+    select: {
+      width: '100%',
+      padding: `${spacing[2]} ${spacing[3]}`,
+      border: `1px solid ${colors.border.secondary}`,
+      borderRadius: borderRadius.md,
+      fontSize: typography.fontSize.sm,
+      color: colors.text.primary,
+      backgroundColor: colors.background.primary,
+      cursor: 'pointer',
+      transition: `border-color ${animations.duration.fast}`,
+      '&:focus': {
+        outline: 'none',
+        borderColor: colors.border.focus,
+        boxShadow: shadows.focus
+      }
+    },
+    gridTwoColumns: {
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr',
+      gap: spacing[4],
+      marginBottom: spacing[6]
+    },
+    checkboxContainer: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: spacing[2]
+    },
+    checkboxLabel: {
+      fontSize: typography.fontSize.sm,
+      color: colors.text.primary,
+      cursor: 'pointer'
+    },
+    mockSection: {
+      backgroundColor: colors.background.secondary,
+      padding: spacing[4],
+      borderRadius: borderRadius.md
+    },
+    mockText: {
+      margin: 0,
+      fontSize: typography.fontSize.sm,
+      color: colors.text.secondary,
+      lineHeight: typography.lineHeight.relaxed
+    },
+    mockButtonContainer: {
+      marginTop: spacing[3]
+    },
+    actionButtons: {
+      display: 'flex',
+      gap: spacing[3],
+      justifyContent: 'flex-end'
+    }
+  },
+
+  notificationSettings: {
+    container: {
+      backgroundColor: colors.background.primary,
+      border: `1px solid ${colors.border.primary}`,
+      borderRadius: borderRadius.lg,
+      padding: spacing[6],
+      boxShadow: shadows.card
+    },
+    header: {
+      margin: `0 0 ${spacing[6]} 0`,
+      fontSize: typography.fontSize.xl,
+      fontWeight: typography.fontWeight.semibold,
+      color: colors.text.primary
+    },
+    sectionTitle: {
+      margin: `0 0 ${spacing[4]} 0`,
+      fontSize: typography.fontSize.base,
+      fontWeight: typography.fontWeight.semibold,
+      color: colors.text.primary
+    },
+    channelsGrid: {
+      display: 'grid',
+      gap: spacing[3]
+    },
+    channelItem: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: spacing[3],
+      border: `1px solid ${colors.border.primary}`,
+      borderRadius: borderRadius.md,
+      backgroundColor: colors.background.primary
+    },
+    channelLeft: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: spacing[3]
+    },
+    channelCheckbox: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: spacing[2]
+    },
+    channelName: {
+      fontSize: typography.fontSize.sm,
+      fontWeight: typography.fontWeight.medium,
+      textTransform: 'capitalize' as const,
+      color: colors.text.primary
+    },
+    channelRight: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: spacing[2]
+    },
+    priorityLabel: {
+      fontSize: typography.fontSize.xs,
+      color: colors.text.secondary
+    },
+    priorityInput: {
+      width: '60px',
+      padding: `${spacing[1]} ${spacing[2]}`,
+      border: `1px solid ${colors.border.secondary}`,
+      borderRadius: borderRadius.sm,
+      fontSize: typography.fontSize.xs,
+      textAlign: 'center' as const
+    },
+    advancedGrid: {
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr',
+      gap: spacing[4]
+    },
+    saveButtonContainer: {
+      display: 'flex',
+      justifyContent: 'flex-end'
+    }
+  },
+
+  rulesSection: {
+    headerContainer: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: spacing[6]
+    },
+    title: {
+      margin: 0,
+      fontSize: typography.fontSize.xl,
+      fontWeight: typography.fontWeight.semibold,
+      color: colors.text.primary
+    },
+    rulesGrid: {
+      display: 'grid',
+      gap: spacing[4]
+    },
+    ruleCard: {
+      backgroundColor: colors.background.primary,
+      border: `1px solid ${colors.border.primary}`,
+      borderRadius: borderRadius.lg,
+      padding: spacing[4],
+      boxShadow: shadows.card
+    },
+    ruleHeader: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      marginBottom: spacing[2]
+    },
+    ruleTitle: {
+      margin: '0 0 4px 0',
+      fontSize: typography.fontSize.base,
+      fontWeight: typography.fontWeight.semibold,
+      color: colors.text.primary
+    },
+    ruleMetadata: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: spacing[2]
+    },
+    statusBadge: {
+      padding: '2px 8px',
+      borderRadius: '12px',
+      fontSize: typography.fontSize.xs,
+      fontWeight: typography.fontWeight.medium
+    },
+    statusActive: {
+      backgroundColor: colors.semantic.success.light,
+      color: colors.semantic.success.text
+    },
+    statusInactive: {
+      backgroundColor: colors.background.disabled,
+      color: colors.text.disabled
+    },
+    priorityText: {
+      fontSize: typography.fontSize.xs,
+      color: colors.text.secondary
+    },
+    ruleDescription: {
+      margin: 0,
+      fontSize: typography.fontSize.sm,
+      color: colors.text.secondary,
+      lineHeight: typography.lineHeight.relaxed
+    }
+  },
+
+  loadingState: {
+    container: {
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      height: '400px',
+      backgroundColor: colors.background.secondary
+    },
+    content: {
+      textAlign: 'center' as const
+    },
+    spinner: {
+      fontSize: '1.5rem', // 24px
+      marginBottom: spacing[2],
+      animation: `spin ${animations.duration.normal} linear infinite`
+    },
+    text: {
+      color: colors.text.secondary,
+      fontSize: typography.fontSize.sm
+    }
+  },
+
+  placeholderSection: {
+    container: {
+      backgroundColor: colors.background.primary,
+      border: `1px solid ${colors.border.primary}`,
+      borderRadius: borderRadius.lg,
+      padding: spacing[6],
+      textAlign: 'center' as const
+    },
+    title: {
+      margin: `0 0 ${spacing[4]} 0`,
+      fontSize: typography.fontSize.xl,
+      fontWeight: typography.fontWeight.semibold,
+      color: colors.text.primary
+    },
+    text: {
+      margin: 0,
+      color: colors.text.secondary,
+      lineHeight: typography.lineHeight.relaxed
+    }
+  },
+
+  buttons: {
+    primary: {
+      padding: `${spacing[2]} ${spacing[4]}`,
+      border: 'none',
+      borderRadius: borderRadius.md,
+      backgroundColor: colors.primary[500],
+      color: colors.text.inverse,
+      cursor: 'pointer',
+      fontSize: typography.fontSize.sm,
+      fontWeight: typography.fontWeight.medium,
+      transition: `all ${animations.duration.fast}`,
+      '&:hover': {
+        backgroundColor: colors.primary[600]
+      },
+      '&:focus': {
+        outline: 'none',
+        boxShadow: shadows.focus
+      }
+    },
+    secondary: {
+      padding: `${spacing[2]} ${spacing[4]}`,
+      border: `1px solid ${colors.border.secondary}`,
+      borderRadius: borderRadius.md,
+      backgroundColor: colors.background.primary,
+      color: colors.text.primary,
+      cursor: 'pointer',
+      fontSize: typography.fontSize.sm,
+      fontWeight: typography.fontWeight.medium,
+      transition: `all ${animations.duration.fast}`,
+      '&:hover': {
+        backgroundColor: colors.gray[50],
+        borderColor: colors.border.primary
+      },
+      '&:focus': {
+        outline: 'none',
+        boxShadow: shadows.focus
+      }
+    },
+    small: {
+      padding: `${spacing[1]} ${spacing[3]}`,
+      border: `1px solid ${colors.border.secondary}`,
+      borderRadius: borderRadius.sm,
+      backgroundColor: colors.background.primary,
+      color: colors.text.primary,
+      cursor: 'pointer',
+      fontSize: typography.fontSize.xs,
+      fontWeight: typography.fontWeight.medium,
+      transition: `all ${animations.duration.fast}`,
+      '&:hover': {
+        backgroundColor: colors.gray[50]
+      }
+    }
+  }
+} as const;
+
+// ============================================================================
+// POLYGON DRAWING EXAMPLES COMPONENTS
+// ============================================================================
+
+export const polygonDrawingComponents = {
+  layout: {
+    container: {
+      padding: spacing[5],
+      maxWidth: '1200px',
+      margin: '0 auto',
+      fontFamily: typography.fontFamily.sans
+    },
+    title: {
+      margin: `0 0 ${spacing[6]} 0`,
+      fontSize: typography.fontSize.xl,
+      fontWeight: typography.fontWeight.semibold,
+      color: colors.text.primary
+    }
+  },
+
+  controls: {
+    section: {
+      marginBottom: spacing[5],
+      display: 'flex',
+      gap: spacing[3],
+      flexWrap: 'wrap' as const,
+      alignItems: 'flex-start'
+    },
+    group: {
+      display: 'flex',
+      flexDirection: 'column' as const,
+      gap: spacing[2]
+    },
+    label: {
+      fontSize: typography.fontSize.sm,
+      fontWeight: typography.fontWeight.medium,
+      color: colors.text.primary
+    },
+    select: {
+      padding: `${spacing[2]} ${spacing[3]}`,
+      border: `1px solid ${colors.border.secondary}`,
+      borderRadius: borderRadius.base,
+      fontSize: typography.fontSize.sm,
+      backgroundColor: colors.background.primary,
+      color: colors.text.primary,
+      cursor: 'pointer',
+      transition: `border-color ${animations.duration.fast}`,
+      '&:focus': {
+        outline: 'none',
+        borderColor: colors.border.focus,
+        boxShadow: shadows.focus
+      },
+      '&:disabled': {
+        backgroundColor: colors.background.disabled,
+        color: colors.text.disabled,
+        cursor: 'not-allowed'
+      }
+    }
+  },
+
+  buttons: {
+    base: {
+      padding: `${spacing[2]} ${spacing[4]}`,
+      border: 'none',
+      borderRadius: borderRadius.base,
+      fontSize: typography.fontSize.sm,
+      fontWeight: typography.fontWeight.medium,
+      cursor: 'pointer',
+      transition: `all ${animations.duration.fast}`,
+      outline: 'none',
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    },
+    primary: {
+      backgroundColor: colors.primary[600],
+      color: colors.text.inverse,
+      '&:hover': {
+        backgroundColor: colors.primary[700]
+      },
+      '&:focus': {
+        boxShadow: shadows.focus
+      }
+    },
+    success: {
+      backgroundColor: colors.semantic.success.main,
+      color: colors.text.inverse,
+      '&:hover': {
+        backgroundColor: colors.semantic.success.dark
+      },
+      '&:focus': {
+        boxShadow: shadows.focus
+      }
+    },
+    danger: {
+      backgroundColor: colors.semantic.error.main,
+      color: colors.text.inverse,
+      '&:hover': {
+        backgroundColor: colors.semantic.error.dark
+      },
+      '&:focus': {
+        boxShadow: shadows.focus
+      }
+    },
+    secondary: {
+      backgroundColor: colors.secondary[500],
+      color: colors.text.inverse,
+      '&:hover': {
+        backgroundColor: colors.secondary[600]
+      },
+      '&:focus': {
+        boxShadow: shadows.focus
+      }
+    },
+    disabled: {
+      backgroundColor: colors.background.disabled,
+      color: colors.text.disabled,
+      cursor: 'not-allowed',
+      opacity: 0.5
+    },
+    marginRight: {
+      marginRight: spacing[2]
+    }
+  },
+
+  instructions: {
+    container: {
+      marginBottom: spacing[5],
+      padding: spacing[3],
+      backgroundColor: colors.background.secondary,
+      borderRadius: borderRadius.base,
+      fontSize: typography.fontSize.sm,
+      lineHeight: typography.lineHeight.relaxed
+    },
+    title: {
+      fontWeight: typography.fontWeight.semibold,
+      color: colors.text.primary,
+      marginBottom: spacing[1]
+    },
+    list: {
+      margin: `${spacing[2]} 0`,
+      paddingLeft: spacing[5],
+      color: colors.text.secondary
+    },
+    listItem: {
+      marginBottom: spacing[1]
+    }
+  },
+
+  canvas: {
+    container: {
+      marginBottom: spacing[5]
+    },
+    element: {
+      border: `2px solid ${colors.border.secondary}`,
+      borderRadius: borderRadius.lg,
+      display: 'block',
+      transition: `border-color ${animations.duration.fast}`
+    },
+    drawing: {
+      cursor: 'crosshair'
+    },
+    default: {
+      cursor: 'default'
+    }
+  },
+
+  statistics: {
+    container: {
+      marginBottom: spacing[5]
+    },
+    title: {
+      margin: `0 0 ${spacing[4]} 0`,
+      fontSize: typography.fontSize.lg,
+      fontWeight: typography.fontWeight.semibold,
+      color: colors.text.primary
+    },
+    grid: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+      gap: spacing[3]
+    },
+    card: {
+      padding: spacing[3],
+      backgroundColor: colors.background.secondary,
+      borderRadius: borderRadius.base,
+      border: `1px solid ${colors.border.primary}`,
+      textAlign: 'center' as const
+    },
+    cardActive: {
+      backgroundColor: colors.semantic.warning.light,
+      borderColor: colors.semantic.warning.main
+    },
+    label: {
+      fontSize: typography.fontSize.sm,
+      fontWeight: typography.fontWeight.semibold,
+      color: colors.text.primary,
+      display: 'block',
+      marginBottom: spacing[1]
+    },
+    value: {
+      fontSize: typography.fontSize.base,
+      color: colors.text.secondary
+    }
+  },
+
+  polygonList: {
+    container: {
+      marginTop: spacing[5]
+    },
+    title: {
+      margin: `0 0 ${spacing[4]} 0`,
+      fontSize: typography.fontSize.lg,
+      fontWeight: typography.fontWeight.semibold,
+      color: colors.text.primary
+    },
+    scrollArea: {
+      maxHeight: '300px',
+      overflowY: 'auto' as const,
+      border: `1px solid ${colors.border.primary}`,
+      borderRadius: borderRadius.base,
+      padding: spacing[2]
+    },
+    item: {
+      padding: spacing[3],
+      border: `1px solid ${colors.border.secondary}`,
+      borderRadius: borderRadius.base,
+      marginBottom: spacing[2],
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      backgroundColor: colors.background.primary,
+      transition: `all ${animations.duration.fast}`,
+      '&:hover': {
+        backgroundColor: colors.background.secondary,
+        borderColor: colors.border.primary
+      },
+      '&:last-child': {
+        marginBottom: 0
+      }
+    },
+    info: {
+      flex: 1
+    },
+    primaryText: {
+      fontSize: typography.fontSize.sm,
+      fontWeight: typography.fontWeight.medium,
+      color: colors.text.primary,
+      marginBottom: spacing[1]
+    },
+    secondaryText: {
+      fontSize: typography.fontSize.xs,
+      color: colors.text.secondary
+    },
+    deleteButton: {
+      padding: `${spacing[1]} ${spacing[2]}`,
+      backgroundColor: colors.semantic.error.main,
+      color: colors.text.inverse,
+      border: 'none',
+      borderRadius: borderRadius.sm,
+      cursor: 'pointer',
+      fontSize: typography.fontSize.xs,
+      fontWeight: typography.fontWeight.medium,
+      transition: `background-color ${animations.duration.fast}`,
+      '&:hover': {
+        backgroundColor: colors.semantic.error.dark
+      }
+    }
+  },
+
+  debug: {
+    container: {
+      marginTop: spacing[5]
+    },
+    summary: {
+      cursor: 'pointer',
+      fontWeight: typography.fontWeight.semibold,
+      fontSize: typography.fontSize.base,
+      color: colors.text.primary,
+      padding: spacing[2],
+      backgroundColor: colors.background.secondary,
+      borderRadius: borderRadius.base,
+      border: `1px solid ${colors.border.primary}`,
+      outline: 'none',
+      transition: `background-color ${animations.duration.fast}`,
+      '&:hover': {
+        backgroundColor: colors.gray[100]
+      }
+    },
+    content: {
+      backgroundColor: colors.gray[900],
+      color: colors.gray[100],
+      padding: spacing[3],
+      borderRadius: borderRadius.base,
+      fontSize: typography.fontSize.xs,
+      fontFamily: typography.fontFamily.mono,
+      lineHeight: typography.lineHeight.relaxed,
+      overflow: 'auto',
+      marginTop: spacing[2],
+      border: `1px solid ${colors.border.primary}`
+    }
+  }
+} as const;
+
+// ============================================================================
+// DIALOG COMPONENTS
+// ============================================================================
+
+export const dialogComponents = {
+  modal: {
+    backdrop: {
+      position: 'fixed' as const,
+      inset: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 50,
+      padding: spacing[4]
+    },
+    container: {
+      backgroundColor: colors.gray[800],
+      borderRadius: borderRadius.xl,
+      boxShadow: shadows.xl,
+      maxHeight: '90vh',
+      width: '100%',
+      maxWidth: '600px',
+      overflow: 'auto',
+      border: `1px solid ${colors.gray[700]}`
+    },
+    header: {
+      padding: spacing[6],
+      borderBottom: `1px solid ${colors.gray[700]}`,
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center'
+    },
+    title: {
+      fontSize: typography.fontSize.xl,
+      fontWeight: typography.fontWeight.semibold,
+      color: colors.text.inverse,
+      margin: 0
+    },
+    closeButton: {
+      padding: spacing[2],
+      backgroundColor: 'transparent',
+      border: 'none',
+      color: colors.gray[400],
+      fontSize: typography.fontSize.xl,
+      cursor: 'pointer',
+      borderRadius: borderRadius.base,
+      transition: `all ${animations.duration.fast}`,
+      '&:hover': {
+        backgroundColor: colors.gray[700],
+        color: colors.text.inverse
+      }
+    },
+    content: {
+      padding: spacing[6]
+    },
+    footer: {
+      padding: spacing[6],
+      borderTop: `1px solid ${colors.gray[700]}`,
+      display: 'flex',
+      gap: spacing[3],
+      justifyContent: 'flex-end'
+    }
+  },
+
+  form: {
+    fieldset: {
+      border: 'none',
+      padding: 0,
+      margin: `0 0 ${spacing[6]} 0`
+    },
+    label: {
+      display: 'block',
+      color: colors.text.inverse,
+      fontWeight: typography.fontWeight.medium,
+      marginBottom: spacing[3],
+      fontSize: typography.fontSize.sm
+    },
+    select: {
+      width: '100%',
+      padding: spacing[3],
+      backgroundColor: colors.gray[700],
+      border: `1px solid ${colors.gray[600]}`,
+      borderRadius: borderRadius.lg,
+      color: colors.text.inverse,
+      fontSize: typography.fontSize.sm,
+      transition: `border-color ${animations.duration.fast}`,
+      '&:focus': {
+        outline: 'none',
+        borderColor: colors.primary[500],
+        boxShadow: shadows.focus
+      },
+      '&:disabled': {
+        backgroundColor: colors.gray[800],
+        color: colors.gray[500],
+        cursor: 'not-allowed'
+      }
+    },
+    option: {
+      backgroundColor: colors.gray[700],
+      color: colors.text.inverse,
+      padding: spacing[2]
+    },
+    errorState: {
+      padding: spacing[3],
+      backgroundColor: colors.semantic.error.light,
+      border: `1px solid ${colors.semantic.error.main}`,
+      borderRadius: borderRadius.base,
+      marginTop: spacing[3]
+    },
+    errorText: {
+      color: colors.semantic.error.text,
+      fontSize: typography.fontSize.sm,
+      margin: 0
+    },
+    loadingState: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: spacing[2],
+      color: colors.gray[300],
+      fontSize: typography.fontSize.sm
+    },
+    emptyState: {
+      marginTop: spacing[3],
+      padding: spacing[3],
+      backgroundColor: colors.gray[700],
+      borderRadius: borderRadius.lg
+    },
+    emptyText: {
+      color: colors.gray[300],
+      fontSize: typography.fontSize.sm,
+      margin: 0
+    }
+  },
+
+  infoCard: {
+    container: {
+      marginBottom: spacing[4],
+      padding: spacing[3],
+      backgroundColor: 'rgba(59, 130, 246, 0.1)', // blue-900/20
+      border: `1px solid ${colors.primary[600]}`,
+      borderRadius: borderRadius.lg
+    },
+    header: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: spacing[2]
+    },
+    icon: {
+      fontSize: '1.125rem' // 18px
+    },
+    content: {
+      flex: 1
+    },
+    title: {
+      fontWeight: typography.fontWeight.semibold,
+      color: colors.text.inverse,
+      margin: 0,
+      fontSize: typography.fontSize.sm
+    },
+    subtitle: {
+      color: colors.gray[300],
+      fontSize: typography.fontSize.xs,
+      margin: 0
+    }
+  },
+
+  buttons: {
+    base: {
+      padding: `${spacing[3]} ${spacing[4]}`,
+      borderRadius: borderRadius.lg,
+      fontSize: typography.fontSize.sm,
+      fontWeight: typography.fontWeight.medium,
+      cursor: 'pointer',
+      transition: `all ${animations.duration.fast}`,
+      border: 'none',
+      outline: 'none',
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: spacing[2]
+    },
+    primary: {
+      backgroundColor: colors.primary[600],
+      color: colors.text.inverse,
+      '&:hover': {
+        backgroundColor: colors.primary[700]
+      },
+      '&:focus': {
+        boxShadow: shadows.focus
+      },
+      '&:disabled': {
+        backgroundColor: colors.gray[600],
+        color: colors.gray[400],
+        cursor: 'not-allowed'
+      }
+    },
+    secondary: {
+      backgroundColor: colors.gray[600],
+      color: colors.text.inverse,
+      '&:hover': {
+        backgroundColor: colors.gray[700]
+      },
+      '&:focus': {
+        boxShadow: shadows.focus
+      },
+      '&:disabled': {
+        backgroundColor: colors.gray[700],
+        color: colors.gray[500],
+        cursor: 'not-allowed'
+      }
+    },
+    danger: {
+      backgroundColor: colors.semantic.error.main,
+      color: colors.text.inverse,
+      '&:hover': {
+        backgroundColor: colors.semantic.error.dark
+      },
+      '&:focus': {
+        boxShadow: shadows.focus
+      }
+    },
+    ghost: {
+      backgroundColor: 'transparent',
+      color: colors.gray[300],
+      border: `1px solid ${colors.gray[600]}`,
+      '&:hover': {
+        backgroundColor: colors.gray[700],
+        color: colors.text.inverse
+      }
+    }
+  },
+
+  steps: {
+    container: {
+      marginBottom: spacing[6]
+    },
+    list: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: spacing[4]
+    },
+    step: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: spacing[2],
+      flex: 1
+    },
+    stepNumber: {
+      width: '32px',
+      height: '32px',
+      borderRadius: '50%',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: typography.fontSize.sm,
+      fontWeight: typography.fontWeight.medium
+    },
+    stepNumberActive: {
+      backgroundColor: colors.primary[600],
+      color: colors.text.inverse
+    },
+    stepNumberCompleted: {
+      backgroundColor: colors.semantic.success.main,
+      color: colors.text.inverse
+    },
+    stepNumberInactive: {
+      backgroundColor: colors.gray[600],
+      color: colors.gray[400]
+    },
+    stepLabel: {
+      fontSize: typography.fontSize.sm,
+      fontWeight: typography.fontWeight.medium
+    },
+    stepLabelActive: {
+      color: colors.text.inverse
+    },
+    stepLabelInactive: {
+      color: colors.gray[400]
+    },
+    divider: {
+      flex: 1,
+      height: '1px',
+      backgroundColor: colors.gray[600]
+    }
+  }
+} as const;

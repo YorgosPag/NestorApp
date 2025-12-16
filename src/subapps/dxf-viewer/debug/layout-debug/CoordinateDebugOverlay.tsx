@@ -3,6 +3,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { useTransformValue } from '../../contexts/TransformContext';
+// Enterprise CSS Module - CLAUDE.md Protocol N.3 compliance
+import styles from './DebugOverlay.module.css';
+import { cn } from '@/lib/utils';
 
 // Global window extension
 declare global {
@@ -248,37 +251,22 @@ export default function CoordinateDebugOverlay({ className = '' }: CoordinateDeb
   }, []); // ✅ FIXED: Κενό dependency array - το event listener δημιουργείται μόνο μία φορά
 
   return (
-    <div className={`fixed inset-0 pointer-events-none ${className}`} style={{ zIndex: 2147483646 }}>
+    <div className={cn(styles.debugOverlay, className)}>
       {/* Real-time cursor info - κάτω αριστερή γωνία (bottom: 0, left: 6) */}
-      <div
-        style={{
-          position: 'fixed',
-          bottom: '0px',
-          left: '6px',
-          width: '250px',
-          backgroundColor: 'rgba(0, 0, 0, 0.95)',
-          color: 'rgb(74, 222, 128)',
-          padding: '12px',
-          fontSize: '14px',
-          fontFamily: 'monospace',
-          border: '1px solid #666',
-          pointerEvents: 'none',
-          zIndex: 2147483647
-        }}
-      >
-        <div style={{ color: 'rgb(34, 211, 238)', fontWeight: 'bold', marginBottom: '8px' }}>🎯 LIVE COORDINATES</div>
+      <div className={styles.overlayPositioned}>
+        <div className={styles.sectionTitle}>🎯 LIVE COORDINATES</div>
 
         {/* Screen Coordinates */}
-        <div style={{ marginBottom: '4px' }}>
-          <span style={{ color: 'rgb(251, 191, 36)' }}>Screen:</span>
-          <span style={{ color: 'white', marginLeft: '8px' }}>X: {Math.round(mouseScreen.x)}, Y: {Math.round(mouseScreen.y)}</span>
+        <div className={styles.coordinateGroup}>
+          <span className={styles.coordinateLabel}>Screen:</span>
+          <span className={styles.coordinateValue}>X: {Math.round(mouseScreen.x)}, Y: {Math.round(mouseScreen.y)}</span>
         </div>
 
         {/* Canvas Relative */}
         {canvasRect && (
-          <div style={{ marginBottom: '4px' }}>
-            <span style={{ color: 'rgb(251, 146, 60)' }}>Canvas:</span>
-            <span style={{ color: 'white', marginLeft: '8px' }}>
+          <div className={styles.coordinateGroup}>
+            <span className={styles.coordinateLabelCanvas}>Canvas:</span>
+            <span className={styles.coordinateValue}>
               X: {Math.round(mouseScreen.x - canvasRect.left)},
               Y: {Math.round(mouseScreen.y - canvasRect.top)}
             </span>
@@ -286,87 +274,50 @@ export default function CoordinateDebugOverlay({ className = '' }: CoordinateDeb
         )}
 
         {/* World Coordinates */}
-        <div style={{ marginBottom: '8px' }}>
-          <span style={{ color: 'rgb(74, 222, 128)' }}>World:</span>
-          <span style={{ color: 'white', marginLeft: '8px' }}>
+        <div className={styles.coordinateGroup}>
+          <span className={styles.coordinateLabelWorld}>World:</span>
+          <span className={styles.coordinateValue}>
             X: {mouseWorld.x.toFixed(2)}, Y: {mouseWorld.y.toFixed(2)}
           </span>
         </div>
 
         {/* Transform Info */}
-        <div style={{ borderTop: '1px solid #666', paddingTop: '8px', fontSize: '12px' }}>
-          <div style={{ color: 'rgb(34, 211, 238)', fontWeight: 'bold' }}>TRANSFORM</div>
+        <div className={styles.dividerSection}>
+          <div className={styles.subsectionTitle}>TRANSFORM</div>
           <div>Scale: {contextTransform.scale.toFixed(3)}</div>
           <div>Offset: ({contextTransform.offsetX.toFixed(1)}, {contextTransform.offsetY.toFixed(1)})</div>
         </div>
 
         {/* Canvas Info */}
         {canvasRect && (
-          <div style={{ borderTop: '1px solid #666', paddingTop: '8px', fontSize: '12px', marginTop: '8px' }}>
-            <div style={{ color: 'rgb(34, 211, 238)', fontWeight: 'bold' }}>CANVAS BOUNDS</div>
+          <div className={styles.dividerSection}>
+            <div className={styles.subsectionTitle}>CANVAS BOUNDS</div>
             <div>Size: {Math.round(canvasRect.width)} × {Math.round(canvasRect.height)}</div>
             <div>Position: ({Math.round(canvasRect.left)}, {Math.round(canvasRect.top)})</div>
           </div>
         )}
 
         {/* Copy Shortcuts */}
-        <div style={{ borderTop: '1px solid #666', paddingTop: '8px', fontSize: '12px', marginTop: '8px' }}>
-          <div style={{ color: 'rgb(34, 211, 238)', fontWeight: 'bold' }}>📋 COPY SHORTCUTS</div>
-          <div style={{ color: 'rgb(134, 239, 172)' }}>F1: All data</div>
-          <div style={{ color: 'rgb(134, 239, 172)' }}>F2: Screen coords</div>
-          <div style={{ color: 'rgb(134, 239, 172)' }}>F3: World coords</div>
-          <div style={{ color: 'rgb(134, 239, 172)' }}>F4: Transform</div>
+        <div className={styles.shortcutsSection}>
+          <div className={styles.subsectionTitle}>📋 COPY SHORTCUTS</div>
+          <div className={styles.shortcutItem}>F1: All data</div>
+          <div className={styles.shortcutItem}>F2: Screen coords</div>
+          <div className={styles.shortcutItem}>F3: World coords</div>
+          <div className={styles.shortcutItem}>F4: Transform</div>
         </div>
       </div>
 
       {/* Crosshair cursor indicator */}
       <div
-        style={{
-          position: 'absolute',
-          left: mouseScreen.x - 10,
-          top: mouseScreen.y - 10,
-          width: 20,
-          height: 20,
-          pointerEvents: 'none'
-        }}
+        className={styles.crosshairContainer}
+        style={{ left: mouseScreen.x - 10, top: mouseScreen.y - 10 }}
       >
         {/* Horizontal line */}
-        <div
-          style={{
-            position: 'absolute',
-            backgroundColor: 'rgb(239, 68, 68)',
-            left: 0,
-            top: 9,
-            width: 20,
-            height: 2,
-            opacity: 0.7
-          }}
-        />
+        <div className={styles.crosshairHorizontal} />
         {/* Vertical line */}
-        <div
-          style={{
-            position: 'absolute',
-            backgroundColor: 'rgb(239, 68, 68)',
-            left: 9,
-            top: 0,
-            width: 2,
-            height: 20,
-            opacity: 0.7
-          }}
-        />
-
+        <div className={styles.crosshairVertical} />
         {/* Center dot */}
-        <div
-          style={{
-            position: 'absolute',
-            backgroundColor: 'rgb(251, 191, 36)',
-            borderRadius: '50%',
-            left: 8,
-            top: 8,
-            width: 4,
-            height: 4
-          }}
-        />
+        <div className={styles.crosshairCenter} />
       </div>
     </div>
   );

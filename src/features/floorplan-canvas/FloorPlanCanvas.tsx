@@ -3,6 +3,13 @@
 import { useRef, useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { SafePDFLoader } from '@/components/common/SafePDFLoader';
+import {
+  floorPlanStyles,
+  createPdfLayerStyle,
+  createPdfLoaderDimensions,
+  getMemoizedButtonStyle,
+  floorPlanAccessibility
+} from './FloorPlanCanvas.styles';
 
 import type {
   FloorPlanCanvasProps,
@@ -68,20 +75,17 @@ export function FloorPlanCanvas({
   });
 
   return (
-    <div
+    <main
       className={cn('relative w-full h-full overflow-hidden', className)}
-      style={{
-        minWidth: '100vw',
-        minHeight: '100vh',
-        position: 'relative',
-        background: '#ff0000' // RED background για debugging
-      }}
+      style={floorPlanStyles.container}
+      {...floorPlanAccessibility.getContainerProps()}
     >
       
       {/* DEBUG INFO - TOP LEFT */}
-      <div 
+      <aside
         className="absolute top-4 left-4 bg-yellow-400 text-black p-3 rounded font-mono text-sm z-50"
-        style={{ zIndex: 9999 }}
+        style={floorPlanStyles.debugInfo}
+        {...floorPlanAccessibility.getDebugPanelProps()}
       >
         <div>🔍 PDF DEBUG INFO</div>
         <div>PDF URL: {pdfBackgroundUrl ? '✅ EXISTS' : '❌ NONE'}</div>
@@ -89,84 +93,60 @@ export function FloorPlanCanvas({
         <div>Pages: {numPages}</div>
         <div>Test Mode: {testMode}</div>
         <div>Error: {pdfLoadError || 'None'}</div>
-      </div>
+      </aside>
 
       {/* TEST MODE BUTTONS - TOP RIGHT */}
-      <div 
+      <nav
         className="absolute top-4 right-4 flex gap-2 z-50"
-        style={{ zIndex: 9999 }}
+        style={floorPlanStyles.testControls}
+        {...floorPlanAccessibility.getTestControlsProps()}
       >
         <button
           onClick={() => setTestMode('hidden')}
-          className={`px-3 py-1 rounded text-sm ${
-            testMode === 'hidden' ? 'bg-red-600 text-white' : 'bg-gray-200'
-          }`}
+          style={getMemoizedButtonStyle(testMode, 'hidden')}
+          aria-pressed={testMode === 'hidden'}
+          aria-label="Hide PDF display mode"
         >
           🙈 Hidden
         </button>
         <button
           onClick={() => setTestMode('normal')}
-          className={`px-3 py-1 rounded text-sm ${
-            testMode === 'normal' ? 'bg-blue-600 text-white' : 'bg-gray-200'
-          }`}
+          style={getMemoizedButtonStyle(testMode, 'normal')}
+          aria-pressed={testMode === 'normal'}
+          aria-label="Normal PDF display mode"
         >
           📄 Normal
         </button>
         <button
           onClick={() => setTestMode('fullscreen')}
-          className={`px-3 py-1 rounded text-sm ${
-            testMode === 'fullscreen' ? 'bg-green-600 text-white' : 'bg-gray-200'
-          }`}
+          style={getMemoizedButtonStyle(testMode, 'fullscreen')}
+          aria-pressed={testMode === 'fullscreen'}
+          aria-label="Fullscreen PDF display mode"
         >
           📺 FULLSCREEN
         </button>
-      </div>
+      </nav>
 
       {/* BACKGROUND CANVAS */}
       <canvas
         width={800}
         height={600}
         className="absolute inset-0"
-        style={{
-          width: '100%',
-          height: '100%',
-          zIndex: 1,
-          background: '#00ff00' // GREEN background
-        }}
+        style={floorPlanStyles.backgroundCanvas}
+        {...floorPlanAccessibility.getCanvasProps(testMode)}
       />
 
       {/* PDF LAYER - CONDITIONAL DISPLAY */}
       {pdfBackgroundUrl && testMode !== 'hidden' && (
-        <div
+        <section
           className="absolute"
-          style={{
-            // FULLSCREEN mode
-            ...(testMode === 'fullscreen' && {
-              top: 0,
-              left: 0,
-              width: '100vw',
-              height: '100vh',
-              zIndex: 8888,
-              background: 'rgba(255, 255, 0, 0.5)', // Yellow background
-              border: '10px solid #ff0000' // Thick red border
-            }),
-            // NORMAL mode
-            ...(testMode === 'normal' && {
-              top: '10%',
-              left: '10%',
-              width: '80%',
-              height: '80%',
-              zIndex: 100,
-              background: 'rgba(0, 255, 255, 0.5)', // Cyan background
-              border: '5px solid #0000ff' // Blue border
-            })
-          }}
+          style={createPdfLayerStyle(testMode)}
+          aria-label={`PDF display in ${testMode} mode`}
         >
           <div className="w-full h-full bg-white border-4 border-purple-500">
             <SafePDFLoader
               file={pdfBackgroundUrl}
-              width={testMode === 'fullscreen' ? window.innerWidth : 800}
-              height={testMode === 'fullscreen' ? window.innerHeight : 600}
+              {...createPdfLoaderDimensions(testMode)}
               pageNumber={1}
               onLoadSuccess={handlePDFLoadSuccess}
               onLoadError={handlePDFLoadError}
@@ -174,63 +154,70 @@ export function FloorPlanCanvas({
               fallbackMessage="FULLSCREEN PDF TEST"
             />
           </div>
-        </div>
+        </section>
       )}
 
       {/* BIG WARNING IF NO PDF */}
       {!pdfBackgroundUrl && (
-        <div 
+        <section
           className="absolute inset-0 flex items-center justify-center bg-orange-500 text-white text-4xl font-bold z-50"
-          style={{ zIndex: 9999 }}
+          style={floorPlanStyles.warningOverlay}
+          {...floorPlanAccessibility.getOverlayProps('warning')}
         >
           ⚠️ NO PDF URL PROVIDED ⚠️
-        </div>
+        </section>
       )}
 
       {/* PDF NOT READY WARNING */}
       {pdfBackgroundUrl && !isPdfReady && !pdfLoadError && (
-        <div 
+        <section
           className="absolute inset-0 flex items-center justify-center bg-blue-500 text-white text-2xl font-bold z-50"
-          style={{ zIndex: 9999 }}
+          style={floorPlanStyles.loadingOverlay}
+          {...floorPlanAccessibility.getOverlayProps('loading')}
         >
           ⏳ PDF LOADING... ⏳
-        </div>
+        </section>
       )}
 
       {/* PDF ERROR WARNING */}
       {pdfLoadError && (
-        <div 
+        <section
           className="absolute inset-0 flex items-center justify-center bg-red-500 text-white text-xl font-bold z-50 p-4"
-          style={{ zIndex: 9999 }}
+          style={floorPlanStyles.errorOverlay}
+          {...floorPlanAccessibility.getOverlayProps('error')}
         >
           <div className="text-center">
             ❌ PDF ERROR ❌<br/>
             {pdfLoadError}
           </div>
-        </div>
+        </section>
       )}
 
       {/* SUCCESS MESSAGE */}
       {isPdfReady && pdfBackgroundUrl && (
-        <div 
+        <section
           className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-lg font-bold text-lg z-50"
-          style={{ zIndex: 9999 }}
+          style={floorPlanStyles.successMessage}
+          {...floorPlanAccessibility.getOverlayProps('success')}
         >
           ✅ PDF LOADED & DISPLAYED! Pages: {numPages}
-        </div>
+        </section>
       )}
 
       {/* INSTRUCTIONS */}
-      <div 
+      <aside
+        id="floorplan-instructions"
         className="absolute bottom-4 right-4 bg-black text-white p-3 rounded max-w-sm text-xs z-50"
-        style={{ zIndex: 9999 }}
+        style={floorPlanStyles.instructions}
+        role="complementary"
+        aria-label="Test instructions"
       >
         <div className="font-bold mb-2">�� TEST INSTRUCTIONS:</div>
         <div>1. Click FULLSCREEN button</div>
         <div>2. PDF should cover ENTIRE screen</div>
         <div>3. Look for colored borders</div>
         <div>4. Check debug info top-left</div>
-      </div>
-    </div>
+      </aside>
+    </main>
   );
 }

@@ -1,0 +1,291 @@
+/**
+ * 🏢 ENTERPRISE TABLE SYSTEM CSS MODULE
+ * Microsoft/Google/Amazon Enterprise Standards
+ *
+ * ELIMINATES ALL inline styles per CLAUDE.md Protocol Ν.3
+ * Centralized table styling for ALL table components
+ */
+
+/* ============================================================================ */
+/* ENTERPRISE TABLE ROW BASE STYLES */
+/* ============================================================================ */
+
+.tableRow {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  padding: var(--spacing-1-5, 6px) var(--spacing-2, 8px);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  background-color: var(--bg-primary, white);
+}
+
+.tableRow:hover {
+  background-color: var(--bg-hover, #f9fafb);
+}
+
+.tableRowSelected {
+  background-color: var(--bg-selected-light, #dbeafe);
+  border-color: var(--border-selected, #3b82f6);
+}
+
+.tableRowSelected:hover {
+  background-color: var(--bg-selected-hover, #bfdbfe);
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  .tableRowSelected {
+    background-color: var(--bg-selected-dark, rgba(59, 130, 246, 0.2));
+  }
+
+  .tableRowSelected:hover {
+    background-color: var(--bg-selected-dark-hover, rgba(59, 130, 246, 0.3));
+  }
+}
+
+/* ============================================================================ */
+/* FLEXIBLE COLUMN SYSTEM */
+/* ============================================================================ */
+
+.tableColumn {
+  padding-left: var(--spacing-2, 8px);
+  padding-right: var(--spacing-2, 8px);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.columnCheckbox {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  min-width: 40px;
+}
+
+.columnText {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.columnNumber {
+  flex: 0 0 auto;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono, 'SF Mono', 'Monaco', 'Cascadia Code', monospace);
+}
+
+.columnActions {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  width: 60px;
+  min-width: 60px;
+}
+
+.columnBadge {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ============================================================================ */
+/* WIDTH UTILITIES FOR DYNAMIC COLUMNS */
+/* ============================================================================ */
+
+.columnWidth50 { flex: 0 0 50px; }
+.columnWidth60 { flex: 0 0 60px; }
+.columnWidth80 { flex: 0 0 80px; }
+.columnWidth100 { flex: 0 0 100px; }
+.columnWidth120 { flex: 0 0 120px; }
+.columnWidth150 { flex: 0 0 150px; }
+.columnWidth200 { flex: 0 0 200px; }
+
+/* CSS Custom Properties for dynamic widths */
+.columnDynamic {
+  flex: 0 0 var(--column-width, 100px);
+}
+
+/* ============================================================================ */
+/* TABLE HEADER STYLES */
+/* ============================================================================ */
+
+.tableHeader {
+  display: flex;
+  align-items: center;
+  background-color: var(--bg-secondary, #f9fafb);
+  border-bottom: 2px solid var(--border-primary, #e5e7eb);
+  padding: var(--spacing-3, 12px) var(--spacing-2, 8px);
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--text-secondary, #6b7280);
+  font-size: var(--font-size-sm, 14px);
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.headerColumn {
+  padding-left: var(--spacing-2, 8px);
+  padding-right: var(--spacing-2, 8px);
+  min-width: 0;
+}
+
+.headerSortable {
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.headerSortable:hover {
+  color: var(--text-primary, #111827);
+}
+
+/* ============================================================================ */
+/* RESPONSIVE TABLE CONTAINER */
+/* ============================================================================ */
+
+.tableContainer {
+  width: 100%;
+  overflow-x: auto;
+  background-color: var(--bg-primary, white);
+  border: 1px solid var(--border-primary, #e5e7eb);
+  border-radius: var(--border-radius-lg, 8px);
+}
+
+.tableScrollable {
+  min-width: 100%;
+  overflow-x: auto;
+}
+
+/* ============================================================================ */
+/* CHECKBOX STYLES */
+/* ============================================================================ */
+
+.tableCheckbox {
+  margin: 0;
+  cursor: pointer;
+}
+
+.tableCheckbox:focus-visible {
+  outline: 2px solid var(--focus-color, #3b82f6);
+  outline-offset: 2px;
+}
+
+/* ============================================================================ */
+/* DROPDOWN MENU STYLES */
+/* ============================================================================ */
+
+.actionButton {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: var(--border-radius-sm, 4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.actionButton:hover {
+  background-color: var(--bg-hover, #f3f4f6);
+}
+
+.actionButton:focus-visible {
+  outline: 2px solid var(--focus-color, #3b82f6);
+  outline-offset: 1px;
+}
+
+/* ============================================================================ */
+/* STATUS BADGES */
+/* ============================================================================ */
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--spacing-1, 4px) var(--spacing-2, 8px);
+  border-radius: var(--border-radius-full, 9999px);
+  font-size: var(--font-size-xs, 12px);
+  font-weight: var(--font-weight-medium, 500);
+  line-height: 1;
+}
+
+.statusAvailable {
+  background-color: var(--bg-success-light, #dcfce7);
+  color: var(--text-success, #166534);
+  border: 1px solid var(--border-success, #bbf7d0);
+}
+
+.statusSold {
+  background-color: var(--bg-danger-light, #fee2e2);
+  color: var(--text-danger, #991b1b);
+  border: 1px solid var(--border-danger, #fecaca);
+}
+
+.statusReserved {
+  background-color: var(--bg-warning-light, #fef3c7);
+  color: var(--text-warning, #92400e);
+  border: 1px solid var(--border-warning, #fde68a);
+}
+
+/* ============================================================================ */
+/* ACCESSIBILITY */
+/* ============================================================================ */
+
+.tableRow:focus-visible {
+  outline: 2px solid var(--focus-color, #3b82f6);
+  outline-offset: -1px;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ============================================================================ */
+/* RESPONSIVE DESIGN */
+/* ============================================================================ */
+
+@media (max-width: 768px) {
+  .tableRow {
+    padding: var(--spacing-1, 4px);
+  }
+
+  .tableColumn {
+    padding-left: var(--spacing-1, 4px);
+    padding-right: var(--spacing-1, 4px);
+    font-size: var(--font-size-sm, 14px);
+  }
+
+  .tableHeader {
+    padding: var(--spacing-2, 8px) var(--spacing-1, 4px);
+    font-size: var(--font-size-xs, 12px);
+  }
+}
+
+/* ============================================================================ */
+/* HIGH CONTRAST MODE */
+/* ============================================================================ */
+
+@media (prefers-contrast: high) {
+  .tableRow {
+    border-bottom: 2px solid var(--border-high-contrast, #000000);
+  }
+
+  .tableRowSelected {
+    background-color: var(--bg-selected-high-contrast, #0066cc);
+    color: var(--text-selected-high-contrast, #ffffff);
+  }
+}

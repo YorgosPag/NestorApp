@@ -1,0 +1,409 @@
+/**
+ * PERFORMANCE COMPONENTS CSS MODULE
+ * Enterprise-grade styling for performance-optimized components
+ * Replaces inline styles per CLAUDE.md rule N.3
+ */
+
+/* ============================================================================ */
+/* VIRTUALIZED LIST STYLES */
+/* ============================================================================ */
+
+.virtualizedList {
+  overflow: auto;
+  position: relative;
+}
+
+.virtualizedListSpacer {
+  position: relative;
+}
+
+.virtualizedListItem {
+  position: absolute;
+  left: 0;
+  right: 0;
+}
+
+/* ============================================================================ */
+/* VIRTUALIZED TABLE STYLES */
+/* ============================================================================ */
+
+.virtualizedTable {
+  display: flex;
+  flex-direction: column;
+}
+
+.tableHeader {
+  display: flex;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  background-color: var(--header-bg, #f9fafb);
+  font-weight: 600;
+}
+
+.tableHeaderCell {
+  padding: var(--spacing-2, 8px) var(--spacing-3, 12px);
+  text-align: left;
+  user-select: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1, 4px);
+}
+
+.tableHeaderCellCenter {
+  justify-content: center;
+}
+
+.tableHeaderCellRight {
+  justify-content: flex-end;
+}
+
+.tableBody {
+  overflow-y: auto;
+}
+
+.tableRow {
+  display: flex;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+}
+
+.tableRowHover:hover {
+  background-color: var(--row-hover-bg, #f9fafb);
+}
+
+.tableCell {
+  padding: var(--spacing-2, 8px) var(--spacing-3, 12px);
+  display: flex;
+  align-items: center;
+}
+
+.tableCellCenter {
+  justify-content: center;
+}
+
+.tableCellRight {
+  justify-content: flex-end;
+}
+
+.sortIndicator {
+  font-size: 10px;
+}
+
+/* ============================================================================ */
+/* LAZY IMAGE STYLES */
+/* ============================================================================ */
+
+.lazyImageContainer {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--placeholder-bg, #f3f4f6);
+  border-radius: var(--border-radius, 4px);
+}
+
+.lazyImagePlaceholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-2, 8px);
+  background-color: var(--placeholder-bg, #f3f4f6);
+}
+
+.lazyImagePlaceholderImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(5px);
+}
+
+.lazyImagePlaceholderText {
+  color: var(--color-text-tertiary, #9ca3af);
+}
+
+.lazyImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: opacity 0.3s ease;
+}
+
+.lazyImageFadeIn {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.lazyImageError {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--error-bg, #fef2f2);
+  color: var(--error-color, #dc2626);
+}
+
+.lazyImageErrorIcon {
+  font-size: 24px;
+  margin-bottom: var(--spacing-1, 4px);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ============================================================================ */
+/* SKELETON LOADER STYLES */
+/* ============================================================================ */
+
+.skeletonLoader {
+  background: linear-gradient(90deg,
+    var(--skeleton-base, #f0f0f0) 25%,
+    var(--skeleton-highlight, #e0e0e0) 50%,
+    var(--skeleton-base, #f0f0f0) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.5s infinite;
+  border-radius: var(--border-radius, 4px);
+}
+
+@keyframes skeletonShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeletonText {
+  height: 1em;
+  margin-bottom: var(--spacing-1, 4px);
+}
+
+.skeletonTextShort {
+  width: 60%;
+}
+
+.skeletonTextMedium {
+  width: 80%;
+}
+
+.skeletonTextLong {
+  width: 100%;
+}
+
+.skeletonAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+.skeletonButton {
+  height: 36px;
+  width: 80px;
+}
+
+/* ============================================================================ */
+/* ERROR BOUNDARY STYLES */
+/* ============================================================================ */
+
+.errorBoundary {
+  padding: var(--spacing-6, 24px);
+  text-align: center;
+  background-color: var(--error-bg, #fef2f2);
+  border: 1px solid var(--error-border, #fecaca);
+  border-radius: var(--border-radius, 8px);
+  margin: var(--spacing-4, 16px);
+}
+
+.errorBoundaryTitle {
+  color: var(--error-color, #dc2626);
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: var(--spacing-2, 8px);
+}
+
+.errorBoundaryMessage {
+  color: var(--error-color-light, #7f1d1d);
+  margin-bottom: var(--spacing-4, 16px);
+}
+
+.errorBoundaryActions {
+  display: flex;
+  gap: var(--spacing-3, 12px);
+  justify-content: center;
+}
+
+.errorBoundaryButton {
+  padding: var(--spacing-2, 8px) var(--spacing-4, 16px);
+  border: 1px solid var(--error-border, #fecaca);
+  border-radius: var(--border-radius, 4px);
+  background-color: var(--button-bg, white);
+  color: var(--error-color, #dc2626);
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.errorBoundaryButton:hover {
+  background-color: var(--error-bg, #fef2f2);
+}
+
+/* ============================================================================ */
+/* LOADING STATES */
+/* ============================================================================ */
+
+.loadingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-8, 32px);
+  text-align: center;
+}
+
+.loadingSpinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-2, 8px);
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--spinner-track, #f3f4f6);
+  border-top: 2px solid var(--spinner-color, #3b82f6);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loadingText {
+  color: var(--text-secondary, #6b7280);
+  font-size: 14px;
+  margin-top: var(--spacing-2, 8px);
+}
+
+/* ============================================================================ */
+/* PERFORMANCE MONITOR STYLES */
+/* ============================================================================ */
+
+.performanceMonitor {
+  background-color: var(--monitor-bg, white);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: var(--border-radius, 8px);
+  padding: var(--spacing-4, 16px);
+}
+
+.performanceMonitorHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2, 8px);
+  margin-bottom: var(--spacing-3, 12px);
+}
+
+.performanceMonitorTitle {
+  color: var(--primary-color, #3b82f6);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.performanceMonitorGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-4, 16px);
+}
+
+.performanceMetricCard {
+  background-color: var(--card-bg, #f9fafb);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: var(--border-radius, 6px);
+  padding: var(--spacing-3, 12px);
+}
+
+.performanceMetricTitle {
+  color: var(--primary-color, #3b82f6);
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: var(--spacing-2, 8px);
+}
+
+.performanceMetricStats {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1, 4px);
+}
+
+.performanceMetricStat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.performanceMetricLabel {
+  color: var(--text-secondary, #6b7280);
+  font-size: 12px;
+}
+
+.performanceMetricValue {
+  font-weight: 500;
+  font-size: 12px;
+}
+
+.performanceAlerts {
+  border-top: 1px solid var(--border-color, #e5e7eb);
+  padding-top: var(--spacing-4, 16px);
+  margin-top: var(--spacing-4, 16px);
+}
+
+.performanceAlertsTitle {
+  color: var(--primary-color, #3b82f6);
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: var(--spacing-3, 12px);
+}
+
+.performanceAlertsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2, 8px);
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.performanceAlert {
+  background-color: var(--alert-bg, #fefce8);
+  border: 1px solid var(--alert-border, #fde047);
+  border-radius: var(--border-radius, 4px);
+  padding: var(--spacing-2, 8px);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-2, 8px);
+}
+
+.performanceAlertTitle {
+  font-weight: 500;
+  margin-bottom: var(--spacing-1, 4px);
+}
+
+.performanceAlertDescription {
+  color: var(--text-secondary, #6b7280);
+  font-size: 12px;
+  margin-top: var(--spacing-1, 4px);
+}
+
+.performanceAlertTime {
+  color: var(--text-tertiary, #9ca3af);
+  font-size: 10px;
+  margin-top: var(--spacing-1, 4px);
+}
+
+.performanceNoAlerts {
+  color: var(--text-secondary, #6b7280);
+  font-size: 12px;
+  text-align: center;
+  margin-top: var(--spacing-2, 8px);
+}

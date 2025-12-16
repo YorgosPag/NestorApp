@@ -1,0 +1,397 @@
+/**
+ * 🏢 ENTERPRISE POLYGON DRAWING EXAMPLE CSS MODULE
+ * Microsoft/Google/Amazon Enterprise Standards Compliance
+ *
+ * Eliminates ALL inline styles per CLAUDE.md Protocol Ν.3
+ * Professional UI/UX Design System Implementation
+ */
+
+/* ============================================================================ */
+/* LAYOUT & CONTAINER STYLES */
+/* ============================================================================ */
+
+.container {
+  padding: var(--spacing-5, 20px);
+  max-width: 1200px;
+  margin: 0 auto;
+  font-family: var(--font-family-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+}
+
+.title {
+  color: var(--color-text-primary, #1f2937);
+  font-size: var(--font-size-xl, 24px);
+  font-weight: var(--font-weight-semibold, 600);
+  margin-bottom: var(--spacing-4, 16px);
+}
+
+/* ============================================================================ */
+/* CONTROLS SECTION */
+/* ============================================================================ */
+
+.controlsSection {
+  margin-bottom: var(--spacing-5, 20px);
+  display: flex;
+  gap: var(--spacing-3, 10px);
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.controlGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2, 8px);
+}
+
+.controlLabel {
+  color: var(--color-text-secondary, #6b7280);
+  font-weight: var(--font-weight-medium, 500);
+  font-size: var(--font-size-sm, 14px);
+}
+
+/* ============================================================================ */
+/* FORM ELEMENTS */
+/* ============================================================================ */
+
+.select {
+  padding: var(--spacing-2, 8px) var(--spacing-3, 12px);
+  border: 1px solid var(--color-border-primary, #d1d5db);
+  border-radius: var(--border-radius-md, 6px);
+  background-color: var(--color-bg-primary, white);
+  color: var(--color-text-primary, #1f2937);
+  font-size: var(--font-size-sm, 14px);
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.select:hover {
+  border-color: var(--color-border-hover, #9ca3af);
+}
+
+.select:focus {
+  outline: none;
+  border-color: var(--color-primary, #3b82f6);
+  box-shadow: 0 0 0 3px var(--color-primary-alpha, rgba(59, 130, 246, 0.1));
+}
+
+.select:disabled {
+  background-color: var(--color-bg-disabled, #f3f4f6);
+  color: var(--color-text-disabled, #9ca3af);
+  cursor: not-allowed;
+}
+
+/* ============================================================================ */
+/* BUTTON SYSTEM - ENTERPRISE GRADE */
+/* ============================================================================ */
+
+.buttonBase {
+  padding: var(--spacing-2, 8px) var(--spacing-4, 16px);
+  border: none;
+  border-radius: var(--border-radius-md, 6px);
+  cursor: pointer;
+  font-weight: var(--font-weight-medium, 500);
+  font-size: var(--font-size-sm, 14px);
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1, 4px);
+  text-decoration: none;
+  user-select: none;
+}
+
+.buttonBase:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.buttonPrimary {
+  background-color: var(--color-primary, #3b82f6);
+  color: white;
+}
+
+.buttonPrimary:hover:not(:disabled) {
+  background-color: var(--color-primary-hover, #2563eb);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--color-primary-alpha, rgba(59, 130, 246, 0.4));
+}
+
+.buttonSuccess {
+  background-color: var(--color-success, #10b981);
+  color: white;
+}
+
+.buttonSuccess:hover:not(:disabled) {
+  background-color: var(--color-success-hover, #059669);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--color-success-alpha, rgba(16, 185, 129, 0.4));
+}
+
+.buttonDanger {
+  background-color: var(--color-danger, #ef4444);
+  color: white;
+}
+
+.buttonDanger:hover:not(:disabled) {
+  background-color: var(--color-danger-hover, #dc2626);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--color-danger-alpha, rgba(239, 68, 68, 0.4));
+}
+
+.buttonSecondary {
+  background-color: var(--color-bg-secondary, #f3f4f6);
+  color: var(--color-text-primary, #1f2937);
+  border: 1px solid var(--color-border-primary, #d1d5db);
+}
+
+.buttonSecondary:hover:not(:disabled) {
+  background-color: var(--color-bg-tertiary, #e5e7eb);
+  border-color: var(--color-border-hover, #9ca3af);
+}
+
+/* ============================================================================ */
+/* STATUS & INFORMATION SECTIONS */
+/* ============================================================================ */
+
+.statusSection {
+  margin-bottom: var(--spacing-5, 20px);
+}
+
+.statusTitle {
+  color: var(--color-text-primary, #1f2937);
+  font-size: var(--font-size-lg, 18px);
+  font-weight: var(--font-weight-semibold, 600);
+  margin-bottom: var(--spacing-3, 12px);
+}
+
+.statusList {
+  margin: var(--spacing-2, 8px) 0;
+  padding-left: var(--spacing-5, 20px);
+  color: var(--color-text-secondary, #6b7280);
+}
+
+.statusList li {
+  margin-bottom: var(--spacing-1, 4px);
+}
+
+.instructionsSection {
+  background-color: var(--color-bg-info, #eff6ff);
+  border: 1px solid var(--color-border-info, #bfdbfe);
+  border-radius: var(--border-radius-lg, 8px);
+  padding: var(--spacing-4, 16px);
+  margin-bottom: var(--spacing-5, 20px);
+}
+
+/* ============================================================================ */
+/* STATISTICS GRID - ENTERPRISE DASHBOARD */
+/* ============================================================================ */
+
+.statisticsSection {
+  margin-bottom: var(--spacing-5, 20px);
+}
+
+.statisticsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--spacing-3, 10px);
+}
+
+.statisticsCard {
+  padding: var(--spacing-3, 12px);
+  background-color: var(--color-bg-card, #f9fafb);
+  border: 1px solid var(--color-border-subtle, #e5e7eb);
+  border-radius: var(--border-radius-md, 6px);
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.statisticsCard:hover {
+  background-color: var(--color-bg-card-hover, #f3f4f6);
+  border-color: var(--color-border-hover, #d1d5db);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px var(--color-shadow-subtle, rgba(0, 0, 0, 0.05));
+}
+
+.statisticsCardActive {
+  background-color: var(--color-warning-bg, #fef3c7);
+  border-color: var(--color-warning-border, #f59e0b);
+  color: var(--color-warning-text, #92400e);
+}
+
+.statisticsLabel {
+  font-size: var(--font-size-xs, 12px);
+  font-weight: var(--font-weight-medium, 500);
+  color: var(--color-text-secondary, #6b7280);
+  margin-bottom: var(--spacing-1, 4px);
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.statisticsValue {
+  font-size: var(--font-size-lg, 18px);
+  font-weight: var(--font-weight-bold, 700);
+  color: var(--color-text-primary, #1f2937);
+}
+
+/* ============================================================================ */
+/* POLYGON HISTORY SECTION */
+/* ============================================================================ */
+
+.historySection {
+  margin-bottom: var(--spacing-5, 20px);
+}
+
+.historyContainer {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid var(--color-border-primary, #d1d5db);
+  border-radius: var(--border-radius-md, 6px);
+  background-color: var(--color-bg-primary, white);
+}
+
+.historyItem {
+  padding: var(--spacing-3, 12px);
+  border-bottom: 1px solid var(--color-border-subtle, #f3f4f6);
+  transition: background-color 0.2s ease;
+  cursor: pointer;
+}
+
+.historyItem:hover {
+  background-color: var(--color-bg-hover, #f9fafb);
+}
+
+.historyItem:last-child {
+  border-bottom: none;
+}
+
+.historyItemHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--spacing-1, 4px);
+}
+
+.historyItemTitle {
+  font-weight: var(--font-weight-medium, 500);
+  color: var(--color-text-primary, #1f2937);
+  font-size: var(--font-size-sm, 14px);
+}
+
+.historyItemTimestamp {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-text-tertiary, #9ca3af);
+}
+
+.historyItemActions {
+  display: flex;
+  gap: var(--spacing-1, 4px);
+  margin-top: var(--spacing-2, 8px);
+}
+
+.historyItemAction {
+  padding: var(--spacing-1, 4px) var(--spacing-2, 8px);
+  font-size: var(--font-size-xs, 12px);
+  border-radius: var(--border-radius-sm, 4px);
+}
+
+/* ============================================================================ */
+/* COLLAPSIBLE SECTIONS */
+/* ============================================================================ */
+
+.detailsSection {
+  margin-top: var(--spacing-5, 20px);
+  border: 1px solid var(--color-border-primary, #d1d5db);
+  border-radius: var(--border-radius-md, 6px);
+  background-color: var(--color-bg-primary, white);
+}
+
+.detailsSummary {
+  cursor: pointer;
+  font-weight: var(--font-weight-semibold, 600);
+  padding: var(--spacing-4, 16px);
+  background-color: var(--color-bg-secondary, #f9fafb);
+  border-radius: var(--border-radius-md, 6px);
+  transition: background-color 0.2s ease;
+  user-select: none;
+}
+
+.detailsSummary:hover {
+  background-color: var(--color-bg-tertiary, #f3f4f6);
+}
+
+.detailsContent {
+  padding: var(--spacing-4, 16px);
+  border-top: 1px solid var(--color-border-subtle, #e5e7eb);
+}
+
+/* ============================================================================ */
+/* RESPONSIVE DESIGN */
+/* ============================================================================ */
+
+@media (max-width: 768px) {
+  .container {
+    padding: var(--spacing-4, 16px);
+  }
+
+  .controlsSection {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .statisticsGrid {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  }
+
+  .historyItemHeader {
+    flex-direction: column;
+    gap: var(--spacing-1, 4px);
+  }
+}
+
+@media (max-width: 480px) {
+  .statisticsGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .historyItemActions {
+    flex-wrap: wrap;
+  }
+}
+
+/* ============================================================================ */
+/* ACCESSIBILITY & FOCUS STATES */
+/* ============================================================================ */
+
+.buttonBase:focus-visible,
+.select:focus-visible {
+  outline: 2px solid var(--color-focus, #3b82f6);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================================================ */
+/* DARK MODE SUPPORT */
+/* ============================================================================ */
+
+@media (prefers-color-scheme: dark) {
+  .container {
+    background-color: var(--color-bg-dark, #111827);
+    color: var(--color-text-dark, #f9fafb);
+  }
+
+  .statisticsCard {
+    background-color: var(--color-bg-card-dark, #1f2937);
+    border-color: var(--color-border-dark, #374151);
+  }
+
+  .select {
+    background-color: var(--color-bg-dark, #1f2937);
+    border-color: var(--color-border-dark, #374151);
+    color: var(--color-text-dark, #f9fafb);
+  }
+}

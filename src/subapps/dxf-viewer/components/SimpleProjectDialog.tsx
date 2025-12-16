@@ -10,6 +10,21 @@ import { useNotifications } from '../../../providers/NotificationProvider';
 import DxfImportModal from './DxfImportModal';
 import type { SceneModel } from '../types/scene';
 import { HOVER_TEXT_EFFECTS, INTERACTIVE_PATTERNS, FORM_BUTTON_EFFECTS } from '@/components/ui/effects';
+import {
+  simpleProjectDialogStyles,
+  getSelectStyles,
+  getOptionStyles,
+  getSelectFocusHandlers,
+  getButtonHoverHandlers,
+  getButtonPropsForAction,
+  getInfoCardStyles,
+  getLoadingStyles,
+  getErrorStyles,
+  getEmptyStateStyles,
+  getStatusTextStyles,
+  getHierarchyDisplayStyles,
+  getFloorplanOptionsStyles
+} from './SimpleProjectDialog.styles';
 
 interface SimpleProjectDialogProps {
   isOpen: boolean;
@@ -415,19 +430,17 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                 value={selectedCompanyId}
                 onChange={(e) => handleCompanyChange(e.target.value)}
                 className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:outline-none"
-                style={{
-                  backgroundColor: '#374151',
-                  color: 'white'
-                }}
+                style={getSelectStyles()}
+                {...getSelectFocusHandlers()}
               >
-                <option value="" style={{ backgroundColor: '#374151', color: 'white' }}>
+                <option value="" style={getOptionStyles()}>
                   -- Επιλέξτε Εταιρεία --
                 </option>
                 {companies.map(company => (
-                  <option 
-                    key={company.id} 
+                  <option
+                    key={company.id}
                     value={company.id}
-                    style={{ backgroundColor: '#374151', color: 'white' }}
+                    style={getOptionStyles()}
                   >
                     {company.companyName}
                     {company.industry && ` (${company.industry})`}
@@ -478,19 +491,17 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                   value={selectedProjectId}
                   onChange={(e) => handleProjectChange(e.target.value)}
                   className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:outline-none"
-                  style={{
-                    backgroundColor: '#374151',
-                    color: 'white'
-                  }}
+                  style={getSelectStyles()}
+                  {...getSelectFocusHandlers()}
                 >
-                  <option value="" style={{ backgroundColor: '#374151', color: 'white' }}>
+                  <option value="" style={getOptionStyles()}>
                     -- Επιλέξτε Έργο --
                   </option>
                   {projects.map(project => (
-                    <option 
-                      key={project.id} 
+                    <option
+                      key={project.id}
                       value={project.id}
-                      style={{ backgroundColor: '#374151', color: 'white' }}
+                      style={getOptionStyles()}
                     >
                       {project.name}
                       {project.buildings.length > 0 && ` (${project.buildings.length} κτίρια)`}
@@ -543,19 +554,17 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                   value={selectedBuildingId}
                   onChange={(e) => handleBuildingChange(e.target.value)}
                   className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:outline-none"
-                  style={{
-                    backgroundColor: '#374151',
-                    color: 'white'
-                  }}
+                  style={getSelectStyles()}
+                  {...getSelectFocusHandlers()}
                 >
-                  <option value="" style={{ backgroundColor: '#374151', color: 'white' }}>
+                  <option value="" style={getOptionStyles()}>
                     -- Επιλέξτε Κτίριο --
                   </option>
                   {buildings.map(building => (
-                    <option 
-                      key={building.id} 
+                    <option
+                      key={building.id}
                       value={building.id}
-                      style={{ backgroundColor: '#374151', color: 'white' }}
+                      style={getOptionStyles()}
                     >
                       {building.name}
                       {building.floors && ` (${building.floors.length} όροφοι)`}
@@ -661,21 +670,19 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                   value={selectedUnitId}
                   onChange={(e) => handleUnitChange(e.target.value)}
                   className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:outline-none"
-                  style={{
-                    backgroundColor: '#374151',
-                    color: 'white'
-                  }}
+                  style={getSelectStyles()}
+                  {...getSelectFocusHandlers()}
                 >
-                  <option value="" style={{ backgroundColor: '#374151', color: 'white' }}>
+                  <option value="" style={getOptionStyles()}>
                     -- Επιλέξτε Μονάδα --
                   </option>
                   {units.map(unit => (
-                    <option 
-                      key={unit.id} 
+                    <option
+                      key={unit.id}
                       value={unit.id}
-                      style={{ backgroundColor: '#374151', color: 'white' }}
+                      style={getOptionStyles()}
                     >
-                      {unit.name || unit.unitName} 
+                      {unit.name || unit.unitName}
                       {unit.type && ` (${unit.type})`}
                       {unit.floor && ` - ${unit.floor}ος όροφος`}
                     </option>
