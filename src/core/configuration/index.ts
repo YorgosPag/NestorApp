@@ -101,7 +101,8 @@ export {
   useAppUrls,
   useWebhookUrls,
   useCompanyConfigSSR,
-  useSystemConfigSSR
+  useSystemConfigSSR,
+  useEnterpriseConfig
 } from './useEnterpriseConfig';
 
 /**
@@ -112,6 +113,7 @@ export type {
   UseSystemConfigResult,
   UseConfigQuickAccessResult,
   UseProjectTemplatesResult,
+  UseEnterpriseConfigResult,
   ConfigurationOptions
 } from './useEnterpriseConfig';
 

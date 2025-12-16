@@ -3,6 +3,7 @@
 import React, { useEffect, useRef } from 'react';
 import { CollaborationUser, Annotation } from './CollaborationManager';
 import { isFeatureEnabled } from '../config/experimental-features';
+import { dxfComponentStyles, dxfAccessibility } from '../styles/DxfZIndexSystem.styles';
 
 interface CollaborationOverlayProps {
   users: CollaborationUser[];
@@ -164,7 +165,8 @@ export function CollaborationOverlay({
       width={800}
       height={600}
       className="absolute inset-0 pointer-events-auto"
-      style={{ zIndex: 10 }}
+      style={dxfComponentStyles.collaborationOverlay}
+      {...dxfAccessibility.getOverlayProps('collaboration', true)}
       onClick={handleCanvasClick}
     />
   );

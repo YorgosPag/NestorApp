@@ -22,7 +22,7 @@ import {
   typography,
   spacing,
   animations
-} from '../../../../../src/styles/design-tokens';
+} from '../../../../src/subapps/geo-canvas/ui/design-system/tokens/design-tokens';
 import {
   dashboardStyles,
   metricsCardStyles,

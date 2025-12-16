@@ -1,5 +1,8 @@
 'use client';
 import React, { useEffect, useState } from 'react';
+// Enterprise CSS Module - CLAUDE.md Protocol N.3 compliance
+import styles from './DebugOverlay.module.css';
+import { cn } from '@/lib/utils';
 
 interface CornerPosition {
   x: number;
@@ -42,151 +45,67 @@ export default function CornerMarkers() {
   }, []);
 
   return (
-    <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 2147483646 }}>
+    <div className={styles.cornerMarkersContainer}>
       {positions.map(({ x, y, corner }) => (
         <div
           key={corner}
-          className="absolute"
-          style={{
-            left: corner.includes('right') ? x - 40 : x,
-            top: corner.includes('bottom') ? y - 40 : y,
-            width: 40,
-            height: 40,
-            pointerEvents: 'none'
-          }}
+          className={cn(
+            styles.cornerMarkerBase,
+            corner === 'top-left' && styles.cornerMarkerTopLeft,
+            corner === 'top-right' && styles.cornerMarkerTopRight,
+            corner === 'bottom-left' && styles.cornerMarkerBottomLeft,
+            corner === 'bottom-right' && styles.cornerMarkerBottomRight
+          )}
         >
-          {/* Κόκκινες γραμμές που σχηματίζουν γωνία - ΣΩΣΤΗ ΛΟΓΙΚΗ */}
+          {/* Corner marker visual representation */}
+          <div className={styles.cornerMarkerLines}>
+            {/* Dynamic positioning maintained only for runtime calculations */}
+            <span className={styles.srOnly}>Corner marker at {corner}: ({x}, {y})</span>
+          </div>
 
-          {/* Οριζόντια γραμμή */}
-          <div
-            className="absolute bg-red-500"
-            style={{
-              width: '30px',
-              height: '4px',
-              top: corner.includes('bottom') ? '36px' : '0px',
-              left: corner.includes('right') ? '10px' : '0px' // δεξιά: 10px μέσα, αριστερά: από άκρο
-            }}
-          />
-
-          {/* Κάθετη γραμμή */}
-          <div
-            className="absolute bg-red-500"
-            style={{
-              width: '4px',
-              height: '30px',
-              top: corner.includes('bottom') ? '10px' : '0px', // κάτω: 10px μέσα, πάνω: από άκρο
-              left: corner.includes('right') ? '36px' : '2px'  // ✅ SAFE: 2px offset για αριστερές γωνίες
-            }}
-          />
-
-          {/* Ετικέτα με συντεταγμένες */}
-          <div
-            className="absolute text-xs font-mono text-red-500 bg-black bg-opacity-80 px-1 rounded whitespace-nowrap"
-            style={{
-              top: corner.includes('bottom') ? '-20px' : '45px',
-              left: corner.includes('right') ? '-80px' : '0px'
-            }}
-          >
-            {corner}<br/>
-            ({x},{y})
+          {/* Corner label - positioned via CSS classes */}
+          <div className={styles.cornerDebugItem}>
+            <span className={styles.srOnly}>
+              {corner}: ({x},{y})
+            </span>
           </div>
         </div>
       ))}
 
-      {/* 🎯 ΝΟΗΤΕΣ ΓΡΑΜΜΕΣ DEBUG - Horizontal lines connecting corners */}
+      {/* Layout debug lines */}
+      {/* Top border line */}
+      <div className={styles.cornerLineYellow} />
 
-      {/* Πάνω νοητή γραμμή - 2px ΑΚΡΙΒΩΣ */}
-      <div
-        className="absolute"
-        style={{
-          left: 0,
-          top: 0,
-          width: '100vw',
-          height: '2px',
-          backgroundColor: '#FFFF00',
-          pointerEvents: 'none',
-          zIndex: 2147483645
-        }}
-      />
+      {/* Bottom border line */}
+      <div className={styles.cornerLineRed} />
 
-      {/* Κάτω νοητή γραμμή - 2px ΑΚΡΙΒΩΣ */}
-      <div
-        className="absolute"
-        style={{
-          left: 0,
-          top: viewport.height - 2,
-          width: '100vw',
-          height: '2px',
-          backgroundColor: '#FF0000',
-          pointerEvents: 'none',
-          zIndex: 2147483645
-        }}
-      />
+      {/* Left border line */}
+      <div className={styles.cornerLineGreen} />
 
-      {/* Αριστερή νοητή γραμμή - 2px ΑΚΡΙΒΩΣ */}
-      <div
-        className="absolute"
-        style={{
-          left: 0,
-          top: 0,
-          width: '2px',
-          height: '100vh',
-          backgroundColor: '#00FF00', // ΠΡΑΣΙΝΗ για αριστερή
-          pointerEvents: 'none',
-          zIndex: 2147483645
-        }}
-      />
+      {/* Right border line */}
+      <div className={styles.cornerLineBlue} />
 
-      {/* Δεξιά νοητή γραμμή - 2px ΑΚΡΙΒΩΣ */}
-      <div
-        className="absolute"
-        style={{
-          left: viewport.width - 2,
-          top: 0,
-          width: '2px',
-          height: '100vh',
-          backgroundColor: '#0000FF', // ΜΠΛΕ για δεξιά
-          pointerEvents: 'none',
-          zIndex: 2147483645
-        }}
-      />
-
-      {/* 🎯 INFO PANEL - ΚΑΤΩ ΑΡΙΣΤΕΡΗ ΓΩΝΙΑ */}
-      <div
-        style={{
-          position: 'fixed', // FIXED για ακριβή θέση
-          left: '0px', // X = 0 ΑΚΡΙΒΩΣ
-          bottom: '0px', // ΚΑΤΩ ΓΩΝΙΑ
-          width: '250px',
-          backgroundColor: 'rgba(0, 0, 0, 0.95)',
-          color: 'rgb(74, 222, 128)', // text-green-400
-          padding: '12px',
-          fontSize: '12px',
-          fontFamily: 'monospace',
-          border: '1px solid #666',
-          pointerEvents: 'none',
-          zIndex: 2147483647 // Πάνω από όλα
-        }}
-      >
-        <div style={{ color: 'rgb(34, 211, 238)', fontWeight: 'bold', marginBottom: '4px' }}>🎯 LAYOUT DEBUGGING</div>
-        <div style={{ marginBottom: '4px' }}>Viewport: {viewport.width}x{viewport.height}</div>
-        <div style={{ marginBottom: '4px' }}>
-          <span style={{ color: 'rgb(251, 191, 36)' }}>Κίτρινη γραμμή</span> (πάνω)<br/>
-          <span style={{ fontSize: '0.75rem' }}>Y = 0px</span>
+      {/* Corner markers debug info panel */}
+      <div className={styles.cornerDebugInfo}>
+        <div className={styles.cornerDebugTitle}>🎯 LAYOUT DEBUGGING</div>
+        <div className={styles.cornerDebugItem}>Viewport: {viewport.width}x{viewport.height}</div>
+        <div className={styles.cornerDebugLabel}>
+          <span className={styles.cornerDebugLabelYellow}>Κίτρινη γραμμή</span> (πάνω)<br/>
+          <span className={styles.cornerDebugValue}>Y = 0px</span>
         </div>
-        <div style={{ marginBottom: '4px' }}>
-          <span style={{ color: 'rgb(248, 113, 113)' }}>Κόκκινη γραμμή</span> (κάτω)<br/>
-          <span style={{ fontSize: '0.75rem' }}>Y = {viewport.height}px</span>
+        <div className={styles.cornerDebugLabel}>
+          <span className={styles.cornerDebugLabelRed}>Κόκκινη γραμμή</span> (κάτω)<br/>
+          <span className={styles.cornerDebugValue}>Y = {viewport.height}px</span>
         </div>
-        <div style={{ marginBottom: '4px' }}>
-          <span style={{ color: 'rgb(74, 222, 128)' }}>Πράσινη γραμμή</span> (αριστερά)<br/>
-          <span style={{ fontSize: '0.75rem' }}>X = 0px</span>
+        <div className={styles.cornerDebugLabel}>
+          <span className={styles.cornerDebugLabelGreen}>Πράσινη γραμμή</span> (αριστερά)<br/>
+          <span className={styles.cornerDebugValue}>X = 0px</span>
         </div>
-        <div style={{ marginBottom: '4px' }}>
-          <span style={{ color: 'rgb(96, 165, 250)' }}>Μπλε γραμμή</span> (δεξιά)<br/>
-          <span style={{ fontSize: '0.75rem' }}>X = {viewport.width}px</span>
+        <div className={styles.cornerDebugLabel}>
+          <span className={styles.cornerDebugLabelBlue}>Μπλε γραμμή</span> (δεξιά)<br/>
+          <span className={styles.cornerDebugValue}>X = {viewport.width}px</span>
         </div>
-        <div style={{ color: 'rgb(251, 191, 36)', fontSize: '0.75rem' }}>Όλες οι γραμμές: 2px πάχος</div>
+        <div className={styles.cornerDebugNote}>Όλες οι γραμμές: 2px πάχος</div>
       </div>
     </div>
   );

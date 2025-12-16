@@ -667,7 +667,73 @@ export {
   type ConfigurationOptions
 };
 
+// ============================================================================
+// 🎯 MAIN ENTERPRISE CONFIG HOOK - COMBINES ALL CONFIGS
+// ============================================================================
+
+/**
+ * 🏢 MAIN ENTERPRISE CONFIGURATION HOOK
+ *
+ * Combined hook που παρέχει access σε όλες τις configurations
+ * μέσα από ένα unified interface.
+ *
+ * Features:
+ * - Company configuration (companyConfig)
+ * - System configuration
+ * - Combined loading state
+ * - Combined error handling
+ * - Type-safe interface
+ */
+export interface UseEnterpriseConfigResult {
+  companyConfig: CompanyConfiguration | null;
+  systemConfig: SystemConfiguration | null;
+  isLoading: boolean;
+  error: string | null;
+  updateCompanyConfig: (updates: Partial<CompanyConfiguration>) => Promise<boolean>;
+  updateSystemConfig: (updates: Partial<SystemConfiguration>) => Promise<boolean>;
+  refetch: () => Promise<void>;
+}
+
+/**
+ * 🎯 ENTERPRISE CONFIGURATION HOOK
+ * Main hook που αντικαθιστά όλες τις hardcoded values με centralized config
+ */
+export function useEnterpriseConfig(
+  options: ConfigurationOptions = {}
+): UseEnterpriseConfigResult {
+  const companyResult = useCompanyConfig(options);
+  const systemResult = useSystemConfig(options);
+
+  const updateCompanyConfig = useCallback(async (updates: Partial<CompanyConfiguration>) => {
+    await companyResult.updateCompany(updates);
+    return true;
+  }, [companyResult.updateCompany]);
+
+  const updateSystemConfig = useCallback(async (updates: Partial<SystemConfiguration>) => {
+    await systemResult.updateSystem(updates);
+    return true;
+  }, [systemResult.updateSystem]);
+
+  const refetch = useCallback(async () => {
+    // Trigger re-loading of configurations
+    await Promise.all([
+      companyResult.loadCompanyConfig(),
+      systemResult.loadSystemConfig()
+    ]);
+  }, [companyResult, systemResult]);
+
+  return {
+    companyConfig: companyResult.company,
+    systemConfig: systemResult.system,
+    isLoading: companyResult.isLoading || systemResult.isLoading,
+    error: companyResult.error || systemResult.error,
+    updateCompanyConfig,
+    updateSystemConfig,
+    refetch
+  };
+}
+
 /**
  * Default export for main configuration hook
  */
-export default useCompanyConfig;
+export default useEnterpriseConfig;

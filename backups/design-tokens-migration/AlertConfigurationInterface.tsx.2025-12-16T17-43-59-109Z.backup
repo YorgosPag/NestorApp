@@ -41,7 +41,7 @@ import {
 import {
   colors,
   configurationComponents
-} from '../../../../../src/styles/design-tokens';
+} from '../../../../src/subapps/geo-canvas/ui/design-system/tokens/design-tokens';
 
 // ============================================================================
 // CONFIGURATION TYPES

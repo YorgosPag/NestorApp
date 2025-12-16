@@ -8,7 +8,7 @@
  * @module src/subapps/dxf-viewer/components/SimpleProjectDialog.styles
  */
 
-import { dialogComponents } from '../../../../../../src/styles/design-tokens';
+import { dialogComponents } from '../../geo-canvas/ui/design-system/tokens/design-tokens';
 
 // ============================================================================
 // DIALOG STYLING UTILITIES

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { dxfComponentStyles, dxfAccessibility } from '../styles/DxfZIndexSystem.styles';
 
 interface DxfImportModalProps {
     isOpen: boolean;
@@ -44,17 +45,20 @@ const DxfImportModal: React.FC<DxfImportModalProps> = ({ isOpen, onClose, onImpo
     if (!isOpen) return null;
 
     return (
-        <div 
+        <section
             className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center"
-            style={{ zIndex: 999999 }}
+            style={dxfComponentStyles.importModal}
+            {...dxfAccessibility.getModalProps('DXF Import')}
             onClick={handleClose}
         >
-            <div 
+            <article
                 className="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-md mx-4"
                 onClick={(e) => e.stopPropagation()}
+                role="document"
+                aria-labelledby="dxf-import-title"
             >
                 <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-medium text-white">Εισαγωγή Αρχείου DXF</h3>
+                    <h3 id="dxf-import-title" className="text-lg font-medium text-white">Εισαγωγή Αρχείου DXF</h3>
                     <button 
                         type="button" 
                         onClick={handleClose} 
@@ -119,8 +123,8 @@ const DxfImportModal: React.FC<DxfImportModalProps> = ({ isOpen, onClose, onImpo
                         </button>
                     </div>
                 </form>
-            </div>
-        </div>
+            </article>
+        </section>
     );
 };
 

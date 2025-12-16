@@ -14,6 +14,21 @@
 import React from 'react';
 // 🔄 MIGRATED (2025-10-09): Phase 3.2 - Direct Enterprise (no adapter)
 import { useDxfSettings } from '../../settings-provider';
+import {
+  centralizedAutoSaveStatusStyles,
+  getStatusColorStyles,
+  getGeneralSettingsDotStyle,
+  getSpecificSettingsDotStyle,
+  getSeparatorStyle,
+  getCompactStatusStyle,
+  getStatusContainerProps,
+  getSettingsIndicatorProps,
+  getSettingDotProps,
+  getCompactTooltipText,
+  formatLastSaveTime,
+  getGeneralSettingsConfig,
+  getSpecificSettingsConfig
+} from './CentralizedAutoSaveStatus.styles';
 
 /**
  * Κεντρικοποιημένο component για auto-save status
@@ -99,59 +114,62 @@ export function CentralizedAutoSaveStatus() {
   };
 
   return (
-    <div className={`
-      flex items-center gap-2 px-3 py-2
-      bg-gray-800/50 rounded-md border
-      transition-all duration-200 relative z-[9999]
-      ${getStatusColor()}
-    `}>
+    <section
+      className={`
+        flex items-center gap-2 px-3 py-2
+        bg-gray-800/50 rounded-md border
+        transition-all duration-200 relative z-[9999]
+        ${getStatusColor()}
+      `}
+      style={centralizedAutoSaveStatusStyles.container}
+      {...getStatusContainerProps()}
+    >
       {/* Status Icon */}
-      <div className="flex-shrink-0">
+      <div className="flex-shrink-0" style={centralizedAutoSaveStatusStyles.statusIcon.base}>
         {getStatusIcon()}
       </div>
 
       {/* Status Message */}
-      <div className="flex-1 min-w-0">
-        <div className={`text-sm font-medium ${getStatusColor().split(' ')[0]}`}>
+      <article className="flex-1 min-w-0">
+        <h3 className={`text-sm font-medium ${getStatusColor().split(' ')[0]}`} style={centralizedAutoSaveStatusStyles.statusMessage.primary}>
           {getStatusMessage()}
-        </div>
+        </h3>
 
         {settings.lastSaved && settings.saveStatus === 'saved' && (
-          <div className="text-xs text-gray-500 mt-1">
-            Τελευταία: {settings.lastSaved.toLocaleTimeString('el-GR', {
-              hour: '2-digit',
-              minute: '2-digit',
-              second: '2-digit'
-            })}
-          </div>
+          <time className="text-xs text-gray-500 mt-1" style={centralizedAutoSaveStatusStyles.statusMessage.secondary}>
+            Τελευταία: {formatLastSaveTime(settings.lastSaved)}
+          </time>
         )}
-      </div>
+      </article>
 
       {/* Settings Indicator - Γενικά (Blue) + Ειδικά (Green) */}
-      <div className="flex items-center gap-2">
+      <aside className="flex items-center gap-2">
         {/* 🔵 ΓΕΝΙΚΑ SETTINGS (Blue dots) */}
-        <div className="flex items-center gap-1" title="Γενικές Ρυθμίσεις">
-          <div style={{width: '8px', height: '8px', borderRadius: '50%', backgroundColor: settings.line ? '#60a5fa' : '#4b5563'}} title="Γραμμές (Γενικά)"></div>
-          <div style={{width: '8px', height: '8px', borderRadius: '50%', backgroundColor: settings.text ? '#60a5fa' : '#4b5563'}} title="Κείμενο (Γενικά)"></div>
-          <div style={{width: '8px', height: '8px', borderRadius: '50%', backgroundColor: settings.grip ? '#60a5fa' : '#4b5563'}} title="Grips (Γενικά)"></div>
-          <div style={{width: '8px', height: '8px', borderRadius: '50%', backgroundColor: settings.cursor ? '#60a5fa' : '#4b5563'}} title="Κέρσορας"></div>
-          <div style={{width: '8px', height: '8px', borderRadius: '50%', backgroundColor: settings.grid ? '#60a5fa' : '#4b5563'}} title="Grid"></div>
-          <div style={{width: '8px', height: '8px', borderRadius: '50%', backgroundColor: settings.ruler ? '#60a5fa' : '#4b5563'}} title="Χάρακες"></div>
+        <div className="flex items-center gap-1" style={centralizedAutoSaveStatusStyles.settingsDots.container} {...getSettingsIndicatorProps('general')}>
+          {getGeneralSettingsConfig(settings).map(({ key, isActive, label }) => (
+            <div
+              key={key}
+              style={getGeneralSettingsDotStyle(isActive)}
+              {...getSettingDotProps(isActive, label)}
+            />
+          ))}
         </div>
 
         {/* Separator */}
-        <div style={{width: '1px', height: '16px', backgroundColor: '#6b7280'}}></div>
+        <div style={getSeparatorStyle()} role="separator" aria-orientation="vertical" />
 
         {/* 🟢 ΕΙΔΙΚΑ SETTINGS (Green dots) */}
-        <div className="flex items-center gap-1" title="Ειδικές Ρυθμίσεις">
-          <div style={{width: '8px', height: '8px', borderRadius: '50%', backgroundColor: settings.specific?.line?.draft ? '#4ade80' : '#4b5563'}} title="Line Draft (Προσχεδίαση)"></div>
-          <div style={{width: '8px', height: '8px', borderRadius: '50%', backgroundColor: settings.specific?.line?.hover ? '#4ade80' : '#4b5563'}} title="Line Hover"></div>
-          <div style={{width: '8px', height: '8px', borderRadius: '50%', backgroundColor: settings.specific?.line?.selection ? '#4ade80' : '#4b5563'}} title="Line Selection (Επιλογή)"></div>
-          <div style={{width: '8px', height: '8px', borderRadius: '50%', backgroundColor: settings.specific?.line?.completion ? '#4ade80' : '#4b5563'}} title="Line Completion (Ολοκλήρωση)"></div>
-          <div style={{width: '8px', height: '8px', borderRadius: '50%', backgroundColor: settings.specific?.text?.draft ? '#4ade80' : '#4b5563'}} title="Text Preview"></div>
+        <div className="flex items-center gap-1" style={centralizedAutoSaveStatusStyles.settingsDots.container} {...getSettingsIndicatorProps('specific')}>
+          {getSpecificSettingsConfig(settings).map(({ key, isActive, label }) => (
+            <div
+              key={key}
+              style={getSpecificSettingsDotStyle(isActive)}
+              {...getSettingDotProps(isActive, label)}
+            />
+          ))}
         </div>
-      </div>
-    </div>
+      </aside>
+    </section>
   );
 }
 
@@ -193,9 +211,11 @@ export function CentralizedAutoSaveStatusCompact() {
   return (
     <div
       className="flex items-center justify-center w-4 h-4"
-      title={getTooltip()}
+      style={centralizedAutoSaveStatusStyles.compactContainer}
+      title={getCompactTooltipText(isAutoSaving, settings.saveStatus)}
+      {...getStatusContainerProps()}
     >
-      {getIcon()}
+      <div style={getCompactStatusStyle(isAutoSaving, settings.saveStatus)} />
     </div>
   );
 }

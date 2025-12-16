@@ -2023,3 +2023,197 @@ export const dialogComponents = {
     }
   }
 } as const;
+
+// ============================================================================
+// STATUS INDICATOR COMPONENTS - ENTERPRISE AUTOSAVE SYSTEM
+// ============================================================================
+
+/**
+ * Status Indicator Components για AutoSave & Settings Status
+ * Enterprise-class status visualization με semantic meaning
+ *
+ * @example
+ * ```tsx
+ * <div style={statusIndicatorComponents.dot.active} />
+ * <div style={statusIndicatorComponents.separator} />
+ * ```
+ */
+export const statusIndicatorComponents = {
+  // Status Container
+  container: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: spacing[2],
+    padding: `${spacing[3]} ${spacing[4]}`,
+    backgroundColor: `${colors.gray[800]}80`, // 50% opacity
+    border: `1px solid ${colors.gray[600]}`,
+    borderRadius: borderRadius.md,
+    transition: `all ${animations.duration.fast}`,
+    position: 'relative' as const,
+    zIndex: 9999,
+
+    '&:hover': {
+      backgroundColor: `${colors.gray[700]}80`,
+      borderColor: colors.gray[500]
+    }
+  },
+
+  // Compact Container
+  compactContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '1rem',
+    height: '1rem',
+    cursor: 'pointer'
+  },
+
+  // Status Message
+  statusMessage: {
+    primary: {
+      fontSize: typography.fontSize.sm,
+      fontWeight: typography.fontWeight.medium,
+      color: colors.text.primary
+    },
+    secondary: {
+      fontSize: typography.fontSize.xs,
+      color: colors.gray[500],
+      marginTop: '0.25rem'
+    }
+  },
+
+  // Status Icons
+  statusIcon: {
+    base: {
+      width: '0.75rem',
+      height: '0.75rem',
+      flexShrink: 0
+    },
+    saving: {
+      width: '0.75rem',
+      height: '0.75rem',
+      border: `2px solid ${colors.blue[500]}`,
+      borderTopColor: 'transparent',
+      borderRadius: '50%',
+      animation: 'spin 1s linear infinite'
+    },
+    success: {
+      color: colors.green[500]
+    },
+    error: {
+      color: colors.red[500]
+    },
+    idle: {
+      color: colors.gray[400]
+    }
+  },
+
+  // Status Color Variants
+  statusColors: {
+    saving: {
+      text: colors.blue[400],
+      border: `${colors.blue[500]}4D` // 30% opacity
+    },
+    success: {
+      text: colors.green[400],
+      border: `${colors.green[500]}4D` // 30% opacity
+    },
+    error: {
+      text: colors.red[400],
+      border: `${colors.red[500]}4D` // 30% opacity
+    },
+    idle: {
+      text: colors.gray[400],
+      border: `${colors.gray[500]}4D` // 30% opacity
+    }
+  },
+
+  // Settings Indicator Dots
+  settingsDots: {
+    container: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '0.25rem'
+    },
+
+    // General Settings (Blue)
+    general: {
+      container: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.25rem',
+        title: 'Γενικές Ρυθμίσεις'
+      },
+      dot: {
+        base: {
+          width: '8px',
+          height: '8px',
+          borderRadius: '50%',
+          transition: `background-color ${animations.duration.fast}`
+        },
+        active: {
+          backgroundColor: colors.blue[400] // #60a5fa
+        },
+        inactive: {
+          backgroundColor: colors.gray[600] // #4b5563
+        }
+      }
+    },
+
+    // Specific Settings (Green)
+    specific: {
+      container: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.25rem',
+        title: 'Ειδικές Ρυθμίσεις'
+      },
+      dot: {
+        base: {
+          width: '8px',
+          height: '8px',
+          borderRadius: '50%',
+          transition: `background-color ${animations.duration.fast}`
+        },
+        active: {
+          backgroundColor: colors.green[400] // #4ade80
+        },
+        inactive: {
+          backgroundColor: colors.gray[600] // #4b5563
+        }
+      }
+    }
+  },
+
+  // Separator
+  separator: {
+    width: '1px',
+    height: '16px',
+    backgroundColor: colors.gray[500], // #6b7280
+    opacity: 0.7
+  },
+
+  // Compact Status Indicators
+  compact: {
+    saving: {
+      width: '0.5rem',
+      height: '0.5rem',
+      border: `1px solid ${colors.blue[500]}`,
+      borderTopColor: 'transparent',
+      borderRadius: '50%',
+      animation: 'spin 1s linear infinite'
+    },
+    success: {
+      width: '0.5rem',
+      height: '0.5rem',
+      borderRadius: '50%',
+      backgroundColor: colors.green[500]
+    },
+    error: {
+      width: '0.5rem',
+      height: '0.5rem',
+      borderRadius: '50%',
+      backgroundColor: colors.red[500]
+    }
+  }
+} as const;

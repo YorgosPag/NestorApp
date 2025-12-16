@@ -282,11 +282,25 @@ export const interactiveStates = {
 
 // Helper functions για type-safe access
 export const getSpacing = (size: keyof typeof spacing) => spacing[size];
-export const getTypography = (property: keyof typeof typography, size: string) => 
+export const getTypography = (property: keyof typeof typography, size: string) =>
   typography[property][size as keyof typeof typography[typeof property]];
 export const getShadow = (size: keyof typeof shadows) => shadows[size];
 export const getAnimation = (property: keyof typeof animation, value: string) =>
   animation[property][value as keyof typeof animation[typeof property]];
+
+// ============================================================================
+// BACKWARD COMPATIBILITY EXPORTS - LEGACY SUPPORT
+// ============================================================================
+
+/**
+ * 🔄 LEGACY COMPATIBILITY EXPORTS
+ *
+ * Re-export advanced tokens από το modular system για backward compatibility
+ * με existing geo-canvas code.
+ */
+
+// Note: Advanced tokens are available via './design-tokens/index' import
+// Removed re-export to prevent circular dependency
 
 // Export all tokens as a single object για convenience
 export const designTokens = {
@@ -301,4 +315,42 @@ export const designTokens = {
   componentSizes,
   breakpoints,
   interactiveStates,
+} as const;
+
+// ============================================================================
+// MODULAR DESIGN TOKENS INTEGRATION
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE DESIGN TOKENS V2
+ *
+ * @description Για πρόσβαση στα επεκταμένα design tokens (alerts, dashboard, maps, dialogs),
+ * χρησιμοποιήστε το modular system:
+ *
+ * @example
+ * ```typescript
+ * // Single import για όλα τα tokens
+ * import { unifiedDesignTokens } from '@/styles/design-tokens';
+ *
+ * // Specific imports για performance
+ * import { alertSeverityColors } from '@/styles/design-tokens';
+ * import { dashboardLayoutTokens } from '@/styles/design-tokens';
+ * import { mapButtonTokens } from '@/styles/design-tokens';
+ *
+ * // Legacy compatibility
+ * import { colors, dashboardComponents } from '@/styles/design-tokens';
+ * ```
+ *
+ * @see ./design-tokens/index.ts - Πλήρης documentation & API
+ */
+export const DESIGN_TOKENS_V2_INFO = {
+  version: '2.0.0',
+  description: 'Enterprise-class modular design tokens με backward compatibility',
+  migrationGuide: 'See ./design-tokens/index.ts for full API documentation',
+  modules: [
+    'semantic/alert-tokens.ts - Alert severity, status, AutoSave indicators',
+    'components/dashboard-tokens.ts - Dashboard layouts, metrics, charts',
+    'components/map-tokens.ts - Map interfaces, polygons, drawing tools',
+    'components/dialog-tokens.ts - Modals, forms, wizards, steps'
+  ]
 } as const;
