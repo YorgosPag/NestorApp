@@ -132,7 +132,7 @@ export const CONTACT_TYPE_CONFIG = {
     label: CONTACT_LABELS[CONTACT_TYPES.INDIVIDUAL],
     colors: CONTACT_COLORS[CONTACT_TYPES.INDIVIDUAL],
     icon: CONTACT_ICONS[CONTACT_TYPES.INDIVIDUAL],
-    allowedRelationships: ['family', 'friend', 'employee', 'client'],
+    allowedRelationships: (process.env.NEXT_PUBLIC_INDIVIDUAL_RELATIONSHIPS || 'family,friend,employee,client').split(',').map(r => r.trim()),
     defaultFields: ['firstName', 'lastName', 'email', 'phone'],
   },
   [CONTACT_TYPES.COMPANY]: {
@@ -140,7 +140,7 @@ export const CONTACT_TYPE_CONFIG = {
     label: CONTACT_LABELS[CONTACT_TYPES.COMPANY],
     colors: CONTACT_COLORS[CONTACT_TYPES.COMPANY],
     icon: CONTACT_ICONS[CONTACT_TYPES.COMPANY],
-    allowedRelationships: ['employer', 'contractor', 'vendor', 'client', 'partner'],
+    allowedRelationships: (process.env.NEXT_PUBLIC_COMPANY_RELATIONSHIPS || 'employer,contractor,vendor,client,partner').split(',').map(r => r.trim()),
     defaultFields: ['companyName', 'email', 'phone', 'website'],
   },
   [CONTACT_TYPES.SERVICE]: {
@@ -148,7 +148,7 @@ export const CONTACT_TYPE_CONFIG = {
     label: CONTACT_LABELS[CONTACT_TYPES.SERVICE],
     colors: CONTACT_COLORS[CONTACT_TYPES.SERVICE],
     icon: CONTACT_ICONS[CONTACT_TYPES.SERVICE],
-    allowedRelationships: ['service_provider', 'government_agency', 'regulator'],
+    allowedRelationships: (process.env.NEXT_PUBLIC_SERVICE_RELATIONSHIPS || 'service_provider,government_agency,regulator').split(',').map(r => r.trim()),
     defaultFields: ['serviceName', 'email', 'phone', 'address'],
   },
 } as const;

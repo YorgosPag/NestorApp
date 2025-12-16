@@ -310,9 +310,9 @@ export const buildingFiltersConfig: FilterPanelConfig = {
           width: 1,
           options: [
             { value: 'all', label: 'Όλα' },
-            { value: 'project1', label: 'Έργο Α' },
-            { value: 'project2', label: 'Έργο Β' },
-            { value: 'project3', label: 'Έργο Γ' }
+            { value: 'project1', label: process.env.NEXT_PUBLIC_SAMPLE_PROJECT_1_NAME || 'Έργο Α' },
+            { value: 'project2', label: process.env.NEXT_PUBLIC_SAMPLE_PROJECT_2_NAME || 'Έργο Β' },
+            { value: 'project3', label: process.env.NEXT_PUBLIC_SAMPLE_PROJECT_3_NAME || 'Έργο Γ' }
           ]
         },
         {
@@ -324,7 +324,7 @@ export const buildingFiltersConfig: FilterPanelConfig = {
           width: 1,
           options: [
             { value: 'all', label: 'Όλες' },
-            { value: 'athens', label: 'Αθήνα' },
+            { value: 'main-city', label: process.env.NEXT_PUBLIC_DEFAULT_CITY || 'Αθήνα' },
             { value: 'thessaloniki', label: 'Θεσσαλονίκη' },
             { value: 'patras', label: 'Πάτρα' },
             { value: 'heraklion', label: 'Ηράκλειο' },
@@ -342,9 +342,9 @@ export const buildingFiltersConfig: FilterPanelConfig = {
           width: 1,
           options: [
             { value: 'all', label: 'Όλες' },
-            { value: 'company1', label: 'ΤΕΧΝΙΚΗ Α.Ε.' },
-            { value: 'company2', label: 'ΔΟΜΙΚΗ Ε.Π.Ε.' },
-            { value: 'company3', label: 'ΚΑΤΑΣΚΕΥΕΣ Ο.Ε.' }
+            { value: 'company1', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_1_NAME || 'ΤΕΧΝΙΚΗ Α.Ε.' },
+            { value: 'company2', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_2_NAME || 'ΔΟΜΙΚΗ Ε.Π.Ε.' },
+            { value: 'company3', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_3_NAME || 'ΚΑΤΑΣΚΕΥΕΣ Ο.Ε.' }
           ]
         }
       ]
@@ -358,8 +358,8 @@ export const buildingFiltersConfig: FilterPanelConfig = {
           label: 'Αξία (€)',
           ariaLabel: 'Φίλτρο εύρους αξίας',
           width: 1,
-          min: 0,
-          max: 10000000
+          min: parseInt(process.env.NEXT_PUBLIC_FILTER_VALUE_MIN || '0'),
+          max: parseInt(process.env.NEXT_PUBLIC_FILTER_VALUE_MAX || '10000000')
         },
         {
           id: 'areaRange',
@@ -367,8 +367,8 @@ export const buildingFiltersConfig: FilterPanelConfig = {
           label: 'Εμβαδόν (m²)',
           ariaLabel: 'Φίλτρο εύρους εμβαδού',
           width: 1,
-          min: 0,
-          max: 10000
+          min: parseInt(process.env.NEXT_PUBLIC_FILTER_AREA_MIN || '0'),
+          max: parseInt(process.env.NEXT_PUBLIC_FILTER_AREA_MAX || '10000')
         },
         {
           id: 'unitsRange',
@@ -376,8 +376,8 @@ export const buildingFiltersConfig: FilterPanelConfig = {
           label: 'Αρ. Μονάδων',
           ariaLabel: 'Φίλτρο εύρους αριθμού μονάδων',
           width: 1,
-          min: 1,
-          max: 500
+          min: parseInt(process.env.NEXT_PUBLIC_FILTER_UNITS_MIN || '1'),
+          max: parseInt(process.env.NEXT_PUBLIC_FILTER_UNITS_MAX || '500')
         },
         {
           id: 'yearRange',
@@ -385,8 +385,8 @@ export const buildingFiltersConfig: FilterPanelConfig = {
           label: 'Έτος Κατασκευής',
           ariaLabel: 'Φίλτρο εύρους έτους κατασκευής',
           width: 1,
-          min: 1950,
-          max: 2030
+          min: parseInt(process.env.NEXT_PUBLIC_FILTER_YEAR_MIN || '1950'),
+          max: parseInt(process.env.NEXT_PUBLIC_FILTER_YEAR_MAX || '2030')
         }
       ]
     },
@@ -561,10 +561,10 @@ export const projectFiltersConfig: FilterPanelConfig = {
           width: 1,
           options: [
             { value: 'all', label: 'Όλες' },
-            { value: 'company1', label: 'ΤΕΧΝΙΚΗ Α.Ε.' },
-            { value: 'company2', label: 'ΔΟΜΙΚΗ Ε.Π.Ε.' },
-            { value: 'company3', label: 'ΚΑΤΑΣΚΕΥΕΣ Ο.Ε.' },
-            { value: 'company4', label: 'ΑΡΧΙΤΕΚΤΟΝΙΚΗ ΛΤΔ' }
+            { value: 'company1', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_1_NAME || 'ΤΕΧΝΙΚΗ Α.Ε.' },
+            { value: 'company2', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_2_NAME || 'ΔΟΜΙΚΗ Ε.Π.Ε.' },
+            { value: 'company3', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_3_NAME || 'ΚΑΤΑΣΚΕΥΕΣ Ο.Ε.' },
+            { value: 'company4', label: process.env.NEXT_PUBLIC_SAMPLE_COMPANY_4_NAME || 'ΑΡΧΙΤΕΚΤΟΝΙΚΗ ΛΤΔ' }
           ]
         },
         {
@@ -576,7 +576,7 @@ export const projectFiltersConfig: FilterPanelConfig = {
           width: 1,
           options: [
             { value: 'all', label: 'Όλες' },
-            { value: 'athens', label: 'Αθήνα' },
+            { value: 'main-city', label: process.env.NEXT_PUBLIC_DEFAULT_CITY || 'Αθήνα' },
             { value: 'thessaloniki', label: 'Θεσσαλονίκη' },
             { value: 'patras', label: 'Πάτρα' },
             { value: 'heraklion', label: 'Ηράκλειο' },
@@ -610,8 +610,8 @@ export const projectFiltersConfig: FilterPanelConfig = {
           label: 'Προϋπολογισμός (€)',
           ariaLabel: 'Φίλτρο εύρους προϋπολογισμού',
           width: 1,
-          min: 0,
-          max: 50000000
+          min: parseInt(process.env.NEXT_PUBLIC_FILTER_BUDGET_MIN || '0'),
+          max: parseInt(process.env.NEXT_PUBLIC_FILTER_BUDGET_MAX || '50000000')
         },
         {
           id: 'durationRange',
@@ -619,8 +619,8 @@ export const projectFiltersConfig: FilterPanelConfig = {
           label: 'Διάρκεια (μήνες)',
           ariaLabel: 'Φίλτρο εύρους διάρκειας',
           width: 1,
-          min: 1,
-          max: 120
+          min: parseInt(process.env.NEXT_PUBLIC_FILTER_DURATION_MIN || '1'),
+          max: parseInt(process.env.NEXT_PUBLIC_FILTER_DURATION_MAX || '120')
         },
         {
           id: 'progressRange',
@@ -628,8 +628,8 @@ export const projectFiltersConfig: FilterPanelConfig = {
           label: 'Πρόοδος (%)',
           ariaLabel: 'Φίλτρο εύρους προόδου',
           width: 1,
-          min: 0,
-          max: 100
+          min: parseInt(process.env.NEXT_PUBLIC_FILTER_PROGRESS_MIN || '0'),
+          max: parseInt(process.env.NEXT_PUBLIC_FILTER_PROGRESS_MAX || '100')
         },
         {
           id: 'yearRange',
@@ -637,8 +637,8 @@ export const projectFiltersConfig: FilterPanelConfig = {
           label: 'Έτος Έναρξης',
           ariaLabel: 'Φίλτρο εύρους έτους έναρξης',
           width: 1,
-          min: 2020,
-          max: 2030
+          min: parseInt(process.env.NEXT_PUBLIC_FILTER_PROJECT_YEAR_MIN || '2020'),
+          max: parseInt(process.env.NEXT_PUBLIC_FILTER_PROJECT_YEAR_MAX || '2030')
         }
       ]
     },

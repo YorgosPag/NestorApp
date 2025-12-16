@@ -15,10 +15,10 @@ import type { MapViewState, GeoServiceConfig } from '../types';
  */
 export const DEFAULT_MAP_CONFIG: MapViewState = {
   center: {
-    lng: 23.7275, // Athens, Greece longitude
-    lat: 37.9755,  // Athens, Greece latitude
+    lng: parseFloat(process.env.NEXT_PUBLIC_DEFAULT_LONGITUDE || '23.7275'), // Default longitude (Athens, Greece)
+    lat: parseFloat(process.env.NEXT_PUBLIC_DEFAULT_LATITUDE || '37.9755'),  // Default latitude (Athens, Greece)
   },
-  zoom: 8,
+  zoom: parseInt(process.env.NEXT_PUBLIC_DEFAULT_ZOOM || '8'),
   bearing: 0,
   pitch: 0,
 };

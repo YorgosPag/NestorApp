@@ -9,7 +9,7 @@ async function addCompaniesToNavigationAPI() {
   try {
     console.log('🧭 Ξεκινάω την προσθήκη εταιρειών στη navigation μέσω API...');
 
-    const response = await fetch('http://localhost:3000/api/navigation/add-companies', {
+    const response = await fetch(`${process.env.APP_URL || 'http://localhost:3000'}/api/navigation/add-companies`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

@@ -36,16 +36,14 @@ interface UserRoleContextType {
 
 const UserRoleContext = createContext<UserRoleContextType | null>(null);
 
-const ADMIN_EMAILS = [
-  'admin@pagonis.gr',
-  'nestor@pagonis.gr', 
-  'manager@pagonis.gr',
-  'user@example.com'
-];
+const ADMIN_EMAILS = (
+  process.env.NEXT_PUBLIC_ADMIN_EMAILS ||
+  'admin@company.com,manager@company.com,nestor@company.com'
+).split(',').map(email => email.trim());
 
 const TEST_PUBLIC_USER = {
-  email: 'test@pagonis.gr',
-  password: '123456'
+  email: process.env.NEXT_PUBLIC_TEST_USER_EMAIL || 'test@company.com',
+  password: process.env.NEXT_PUBLIC_TEST_USER_PASSWORD || 'demo123'
 };
 
 const SESSION_DURATION = 8 * 60 * 60 * 1000; // 8 hours

@@ -18,7 +18,7 @@ const realCompanies = [
       isPrimary: true
     }],
     emails: [{
-      email: 'info@aktor.gr',
+      email: process.env.AKTOR_EMAIL || 'info@aktor.gr',
       type: 'business',
       isPrimary: true
     }],
@@ -43,7 +43,7 @@ const realCompanies = [
       isPrimary: true
     }],
     emails: [{
-      email: 'info@jpavax.gr',
+      email: process.env.JPAVAX_EMAIL || 'info@jpavax.gr',
       type: 'business',
       isPrimary: true
     }],
@@ -159,7 +159,7 @@ async function createCompaniesViaAPI() {
   try {
     console.log('🏗️ Ξεκινάω τη δημιουργία πραγματικών εταιρειών μέσω API...');
 
-    const response = await fetch('http://localhost:3000/api/contacts/add-real-contacts', {
+    const response = await fetch(`${process.env.APP_URL || 'http://localhost:3000'}/api/contacts/add-real-contacts`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

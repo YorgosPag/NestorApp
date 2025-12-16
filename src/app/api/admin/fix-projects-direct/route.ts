@@ -34,8 +34,8 @@ export async function POST(request: NextRequest) {
     console.log('🔧 ENTERPRISE DIRECT FIX: Project CompanyIDs');
     console.log('⏰ Started at:', new Date().toISOString());
 
-    // Target companyId for all projects (Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.)
-    const correctCompanyId = 'pzNUy8ksddGCtcQMqumR';
+    // 🏢 ENTERPRISE: Load target company ID from environment
+    const correctCompanyId = process.env.NEXT_PUBLIC_MAIN_COMPANY_ID || 'default-company-id';
 
     // Get all projects using Admin SDK
     console.log('📋 Loading all projects...');
@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
       },
       target: {
         correctCompanyId,
-        companyName: 'Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.'
+        companyName: process.env.NEXT_PUBLIC_COMPANY_NAME || 'Default Construction Company'
       },
       updates,
       errors,

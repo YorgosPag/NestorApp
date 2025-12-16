@@ -161,7 +161,7 @@ const contactSection: CompanySectionConfig = {
       id: 'city',
       type: 'input',
       label: 'Πόλη',
-      placeholder: 'π.χ. Αθήνα',
+      placeholder: `π.χ. ${process.env.NEXT_PUBLIC_DEFAULT_CITY || 'Αθήνα'}`,
       required: true,
       helpText: 'Πόλη όπου βρίσκεται η έδρα'
     },

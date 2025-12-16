@@ -15,8 +15,8 @@ export async function createStatsResponse(chatId: string | number): Promise<Tele
 ⚠️ Η βάση δεδομένων δεν είναι διαθέσιμη αυτή τη στιγμή.
 
 📞 Για ακριβή στοιχεία επικοινωνήστε μαζί μας!
-- Τηλέφωνο: +30 231 012 3456
-- Email: info@pagonis.gr`,
+- Τηλέφωνο: ${process.env.NEXT_PUBLIC_COMPANY_PHONE || '+30 210 000 0000'}
+- Email: ${process.env.NEXT_PUBLIC_COMPANY_EMAIL || 'info@company.gr'}`,
       parse_mode: 'HTML'
     };
   }
@@ -24,7 +24,7 @@ export async function createStatsResponse(chatId: string | number): Promise<Tele
   try {
     const stats = await getPropertySummary();
     
-    let statsText = `📊 <b>Στατιστικά Ακινήτων - Pagonis Real Estate</b>\n\n`;
+    let statsText = `📊 <b>Στατιστικά Ακινήτων - ${process.env.NEXT_PUBLIC_COMPANY_NAME || 'Real Estate Company'}</b>\n\n`;
     statsText += `🏠 <b>Συνολικά Ακίνητα:</b> ${stats.totalProperties}\n`;
     statsText += `✅ <b>Διαθέσιμα:</b> ${stats.availableCount}\n`;
     statsText += `📋 <b>Κρατημένα:</b> ${stats.reservedCount}\n`;
@@ -44,8 +44,8 @@ export async function createStatsResponse(chatId: string | number): Promise<Tele
       reply_markup: {
         inline_keyboard: [
           [
-            { text: '🔍 Αναζήτηση', callback_data: 'property_search' },
-            { text: '📞 Επικοινωνία', callback_data: 'contact_agent' }
+            { text: process.env.NEXT_PUBLIC_TELEGRAM_SEARCH_LABEL || '🔍 Αναζήτηση', callback_data: 'property_search' },
+            { text: process.env.NEXT_PUBLIC_TELEGRAM_CONTACT_LABEL || '📞 Επικοινωνία', callback_data: 'contact_agent' }
           ]
         ]
       }

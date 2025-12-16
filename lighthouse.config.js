@@ -14,10 +14,10 @@ module.exports = {
     collect: {
       // URLs to audit
       url: [
-        'http://localhost:3000',
-        'http://localhost:3000/contacts',
-        'http://localhost:3000/projects',
-        'http://localhost:3000/dxf/viewer'
+        process.env.LIGHTHOUSE_BASE_URL || 'http://localhost:3000',
+        `${process.env.LIGHTHOUSE_BASE_URL || 'http://localhost:3000'}/contacts`,
+        `${process.env.LIGHTHOUSE_BASE_URL || 'http://localhost:3000'}/projects`,
+        `${process.env.LIGHTHOUSE_BASE_URL || 'http://localhost:3000'}/dxf/viewer`
       ],
 
       // Collection settings

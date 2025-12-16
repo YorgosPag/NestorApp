@@ -207,7 +207,7 @@ export async function createSampleNotifications(userId: string): Promise<void> {
       delivery: { state: 'delivered', attempts: 1 },
       source: { service: 'deployment', env: 'prod' },
       actions: [
-        { id: 'open-dashboard', label: 'Open DXF Viewer', url: 'http://localhost:3000/dxf/viewer' }
+        { id: 'open-dashboard', label: 'Open DXF Viewer', url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dxf/viewer` }
       ]
     },
     {
@@ -220,7 +220,7 @@ export async function createSampleNotifications(userId: string): Promise<void> {
       delivery: { state: 'delivered', attempts: 1 },
       source: { service: 'monitoring', env: 'prod' },
       actions: [
-        { id: 'view-metrics', label: 'View Metrics', url: 'http://localhost:3000/dxf/viewer' },
+        { id: 'view-metrics', label: 'View Metrics', url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dxf/viewer` },
         { id: 'restart-service', label: 'Restart Service', destructive: true }
       ]
     }

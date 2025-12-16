@@ -2,8 +2,8 @@
 const http = require('http');
 
 const options = {
-  hostname: 'localhost',
-  port: 3000,
+  hostname: process.env.API_HOSTNAME || 'localhost',
+  port: parseInt(process.env.API_PORT || '3000'),
   path: '/api/projects/1001/customers',
   method: 'GET',
   headers: {

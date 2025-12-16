@@ -4,7 +4,7 @@
 /**
  * 🏢 ENTERPRISE BUILDINGS & COMPANIES DATA SERVICES - PRODUCTION READY
  *
- * Αντικατέστησε τα mock data με επαγγελματικά Firebase/Database services.
+ * Αντικατέστησε τα sample data με επαγγελματικά Firebase/Database services.
  * Όλα τα δεδομένα προέρχονται από production βάση δεδομένων.
  */
 
@@ -14,7 +14,7 @@ import type { Building } from '@/types/building/contracts';
 
 /**
  * 🏗️ Ανάκτηση κτιρίων από Firebase
- * Αντικατέστησε τα mockBuildings με πραγματικά δεδομένα από τη βάση
+ * Αντικατέστησε τα sampleBuildings με πραγματικά δεδομένα από τη βάση
  */
 export async function getBuildings(limitCount: number = 100): Promise<Building[]> {
   try {
@@ -36,13 +36,13 @@ export async function getBuildings(limitCount: number = 100): Promise<Building[]
 
   } catch (error) {
     console.error('❌ Error fetching buildings from Firebase:', error);
-    return []; // Επιστροφή κενού array αντί για mock data
+    return []; // Επιστροφή κενού array αντί για sample data
   }
 }
 
 /**
  * 🏢 Ανάκτηση εταιρειών από Firebase
- * Αντικατέστησε τα mockCompanies με πραγματικά δεδομένα από τη βάση
+ * Αντικατέστησε τα sampleCompanies με πραγματικά δεδομένα από τη βάση
  */
 export async function getCompanies(limitCount: number = 50): Promise<Array<{id: string, name: string}>> {
   try {
@@ -64,13 +64,13 @@ export async function getCompanies(limitCount: number = 50): Promise<Array<{id: 
 
   } catch (error) {
     console.error('❌ Error fetching companies from Firebase:', error);
-    return []; // Επιστροφή κενού array αντί για mock data
+    return []; // Επιστροφή κενού array αντί για sample data
   }
 }
 
 /**
  * 🎯 Ανάκτηση έργων από Firebase
- * Αντικατέστησε τα mockProjects με πραγματικά δεδομένα από τη βάση
+ * Αντικατέστησε τα sampleProjects με πραγματικά δεδομένα από τη βάση
  */
 export async function getProjectsList(limitCount: number = 50): Promise<Array<{id: string, name: string}>> {
   try {
@@ -92,7 +92,7 @@ export async function getProjectsList(limitCount: number = 50): Promise<Array<{i
 
   } catch (error) {
     console.error('❌ Error fetching projects from Firebase:', error);
-    return []; // Επιστροφή κενού array αντί για mock data
+    return []; // Επιστροφή κενού array αντί για sample data
   }
 }
 

@@ -130,7 +130,7 @@ export async function POST() {
     // 🏢 ENTERPRISE: Server-side configuration loading (NO CLIENT HOOKS IN API)
     // Χρησιμοποιούμε environment variables για server-side configuration
     const baseConfig = {
-      domain: process.env.COMPANY_EMAIL_DOMAIN || 'pagonis.gr',
+      domain: process.env.COMPANY_EMAIL_DOMAIN || 'company.com',
       region: 'Ελλάδα',
       environment: process.env.NODE_ENV || 'development'
     };
@@ -140,12 +140,11 @@ export async function POST() {
     // Generate dynamic sample contacts με enterprise-grade patterns
     const sampleContacts = generateDynamicSampleContacts(baseConfig);
 
-    // 1. First, delete old customer_xxx contacts
-    console.log('🗑️ Cleaning up old customer_xxx contacts...');
-    const oldContactIds = [
-      'customer_001', 'customer_002', 'customer_003', 'customer_004',
-      'customer_005', 'customer_006', 'customer_007', 'customer_008'
-    ];
+    // 🏢 ENTERPRISE: Clean up old contacts using configuration
+    console.log('🗑️ Cleaning up old test contacts...');
+    const oldContactIds = (process.env.NEXT_PUBLIC_OLD_CONTACT_IDS ||
+      'customer_001,customer_002,customer_003,customer_004,customer_005,customer_006,customer_007,customer_008'
+    ).split(',').map(id => id.trim());
 
     for (const oldId of oldContactIds) {
       try {

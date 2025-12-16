@@ -210,8 +210,8 @@ export const DEFAULT_SYSTEM_CONFIG: SystemConfiguration = {
     name: 'Nestor Enterprise',
     version: '1.0.0',
     environment: 'development',
-    baseUrl: 'http://localhost:3001',
-    apiUrl: 'http://localhost:3001/api'
+    baseUrl: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001',
+    apiUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'}/api`
   },
   security: {
     sessionTimeoutMinutes: 480, // 8 hours
@@ -571,7 +571,7 @@ export class EnterpriseConfigurationManager {
         userPreferences: {
           userId: 'default',
           language: 'el',
-          timezone: 'Europe/Athens',
+          timezone: process.env.NEXT_PUBLIC_DEFAULT_TIMEZONE || 'Europe/Athens',
           dateFormat: 'DD/MM/YYYY',
           numberFormat: 'el-GR',
           theme: 'light',

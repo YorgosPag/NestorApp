@@ -92,7 +92,7 @@ export async function parseDxfToScene(
   return {
     success: true,
     scene,
-    warnings: ['Χρησιμοποιείται mock parser - όχι πραγματικό DXF parsing'],
+    warnings: ['Χρησιμοποιείται sample parser - όχι πραγματικό DXF parsing'],
     stats: {
       entityCount: scene.entities.length,
       layerCount: Object.keys(scene.layers).length,

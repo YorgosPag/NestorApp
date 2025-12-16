@@ -21,7 +21,7 @@ const setupFirebaseCollections = async () => {
   try {
     console.log('📞 Calling Firebase setup API...');
 
-    const response = await fetch('http://localhost:3001/api/setup/firebase-collections', {
+    const response = await fetch(`${process.env.APP_URL || 'http://localhost:3001'}/api/setup/firebase-collections`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -54,7 +54,7 @@ ${result.collections.map(col =>
    ${result.details || ''}
 
 🔧 ΛΥΣΗ: Ελέγξε ότι:
-   1. Η εφαρμογή τρέχει στο localhost:3001
+   1. Η εφαρμογή τρέχει στο ${process.env.APP_URL || 'localhost:3001'}
    2. Το Firebase είναι configured σωστά
    3. Υπάρχουν τα απαραίτητα permissions
 `);
@@ -65,7 +65,7 @@ ${result.collections.map(col =>
 ❌ ΣΦΑΛΜΑ ΚΛΗΣΗΣ API:
    ${error.message}
 
-🔧 ΛΥΣΗ: Ελέγξε ότι η εφαρμογή τρέχει στο localhost:3001
+🔧 ΛΥΣΗ: Ελέγξε ότι η εφαρμογή τρέχει στο ${process.env.APP_URL || 'localhost:3001'}
    npm run dev
 `);
   }

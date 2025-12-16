@@ -64,8 +64,8 @@ export interface SectionConfig {
 // FIELD OPTIONS CONFIGURATIONS
 // ============================================================================
 
-/** Νομικές μορφές εταιρειών */
-export const LEGAL_FORM_OPTIONS: SelectOption[] = [
+/** 🏢 ENTERPRISE: Configurable legal forms for different countries */
+const getDefaultLegalForms = (): SelectOption[] => [
   { value: 'OE', label: 'Ο.Ε. (Ομόρρυθμη Εταιρεία)' },
   { value: 'EE', label: 'Ε.Ε. (Ετερόρρυθμη Εταιρεία)' },
   { value: 'EPE', label: 'Ε.Π.Ε. (Εταιρεία Περιορισμένης Ευθύνης)' },
@@ -73,6 +73,20 @@ export const LEGAL_FORM_OPTIONS: SelectOption[] = [
   { value: 'IKE', label: 'Ι.Κ.Ε. (Ιδιωτική Κεφαλαιουχική Εταιρεία)' },
   { value: 'MONO', label: 'Μονοπρόσωπη Ι.Κ.Ε.' },
 ];
+
+/** Νομικές μορφές εταιρειών με environment configuration */
+export const LEGAL_FORM_OPTIONS: SelectOption[] = (() => {
+  try {
+    // Try to load from environment variable
+    const envLegalForms = process.env.NEXT_PUBLIC_LEGAL_FORMS_JSON;
+    if (envLegalForms) {
+      return JSON.parse(envLegalForms);
+    }
+  } catch (error) {
+    console.warn('Failed to parse NEXT_PUBLIC_LEGAL_FORMS_JSON, using defaults');
+  }
+  return getDefaultLegalForms();
+})();
 
 /** Κατάσταση ΓΕΜΗ */
 export const GEMI_STATUS_OPTIONS: SelectOption[] = [
@@ -88,12 +102,36 @@ export const ACTIVITY_TYPE_OPTIONS: SelectOption[] = [
   { value: 'secondary', label: 'Δευτερεύουσα' },
 ];
 
-/** Νόμισμα */
-export const CURRENCY_OPTIONS: SelectOption[] = [
+/** 🌍 ENTERPRISE: Configurable currencies for different regions */
+const getDefaultCurrencies = (): SelectOption[] => [
   { value: 'EUR', label: 'EUR (Ευρώ)' },
   { value: 'USD', label: 'USD (Δολάρια ΗΠΑ)' },
   { value: 'GBP', label: 'GBP (Λίρες Στερλίνες)' },
 ];
+
+/** Νόμισμα με environment configuration */
+export const CURRENCY_OPTIONS: SelectOption[] = (() => {
+  try {
+    // Try to load from environment variable
+    const envCurrencies = process.env.NEXT_PUBLIC_CURRENCIES_JSON;
+    if (envCurrencies) {
+      return JSON.parse(envCurrencies);
+    }
+
+    // Or use primary currency from environment
+    const primaryCurrency = process.env.NEXT_PUBLIC_PRIMARY_CURRENCY;
+    if (primaryCurrency) {
+      const defaults = getDefaultCurrencies();
+      const primary = defaults.find(c => c.value === primaryCurrency);
+      if (primary) {
+        return [primary, ...defaults.filter(c => c.value !== primaryCurrency)];
+      }
+    }
+  } catch (error) {
+    console.warn('Failed to parse currency configuration, using defaults');
+  }
+  return getDefaultCurrencies();
+})();
 
 // ============================================================================
 // COMPANY GEMI SECTIONS CONFIGURATION

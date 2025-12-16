@@ -12,7 +12,7 @@
 
 // REALISTIC ENTERPRISE ORGANIZATION DATA
 const COMPANY_DATA = {
-  companyName: "TechCorp Solutions ΑΕ",
+  companyName: process.env.NEXT_PUBLIC_TEST_COMPANY_NAME || "TechCorp Solutions ΑΕ",
 
   // 🏢 ORGANIZATIONAL STRUCTURE
   departments: {
@@ -50,7 +50,7 @@ const COMPANY_DATA = {
       seniorityLevel: 1,
       salary: 120000,
       hireDate: "2020-01-15",
-      email: "g.papadopoulos@techcorp.gr",
+      email: "g.papadopoulos@${process.env.COMPANY_EMAIL_DOMAIN || 'techcorp.gr'}",
       responsibilities: ["Στρατηγικός σχεδιασμός", "Εταιρική διακυβέρνηση", "Επενδυτικές αποφάσεις"]
     },
 
@@ -64,7 +64,7 @@ const COMPANY_DATA = {
       seniorityLevel: 2,
       salary: 75000,
       hireDate: "2021-03-10",
-      email: "m.konstantinou@techcorp.gr",
+      email: "m.konstantinou@${process.env.COMPANY_EMAIL_DOMAIN || 'techcorp.gr'}",
       reportsTo: "Γιάννης Παπαδόπουλος",
       responsibilities: ["Στρατηγική πωλήσεων", "Διαχείριση πελατών", "Ανάπτυξη αγοράς"]
     },
@@ -77,7 +77,7 @@ const COMPANY_DATA = {
       seniorityLevel: 2,
       salary: 80000,
       hireDate: "2020-09-01",
-      email: "n.georgiou@techcorp.gr",
+      email: "n.georgiou@${process.env.COMPANY_EMAIL_DOMAIN || 'techcorp.gr'}",
       reportsTo: "Γιάννης Παπαδόπουλος",
       responsibilities: ["Τεχνολογική στρατηγική", "Διαχείριση συστημάτων", "Κυβερνοασφάλεια"]
     },
@@ -90,7 +90,7 @@ const COMPANY_DATA = {
       seniorityLevel: 2,
       salary: 70000,
       hireDate: "2021-01-20",
-      email: "e.dimitriou@techcorp.gr",
+      email: "e.dimitriou@${process.env.COMPANY_EMAIL_DOMAIN || 'techcorp.gr'}",
       reportsTo: "Γιάννης Παπαδόπουλος",
       responsibilities: ["Διαχείριση ταλέντων", "Εκπαίδευση προσωπικού", "Εργασιακές σχέσεις"]
     },
@@ -105,7 +105,7 @@ const COMPANY_DATA = {
       seniorityLevel: 3,
       salary: 45000,
       hireDate: "2022-06-15",
-      email: "k.petropoulos@techcorp.gr",
+      email: "k.petropoulos@${process.env.COMPANY_EMAIL_DOMAIN || 'techcorp.gr'}",
       reportsTo: "Μαρία Κωνσταντίνου",
       responsibilities: ["B2B πωλήσεις", "Διαχείριση λογαριασμών", "Προσφορές & συμβόλαια"]
     },
@@ -118,7 +118,7 @@ const COMPANY_DATA = {
       seniorityLevel: 3,
       salary: 55000,
       hireDate: "2021-11-01",
-      email: "s.antoniou@techcorp.gr",
+      email: "s.antoniou@${process.env.COMPANY_EMAIL_DOMAIN || 'techcorp.gr'}",
       reportsTo: "Νίκος Γεωργίου",
       responsibilities: ["Frontend ανάπτυξη", "UI/UX design", "Code reviews"]
     },
@@ -131,7 +131,7 @@ const COMPANY_DATA = {
       seniorityLevel: 3,
       salary: 40000,
       hireDate: "2022-02-01",
-      email: "d.vasileiou@techcorp.gr",
+      email: "d.vasileiou@${process.env.COMPANY_EMAIL_DOMAIN || 'techcorp.gr'}",
       reportsTo: "Ελένη Δημητρίου",
       responsibilities: ["Πρόσληψη προσωπικού", "Performance reviews", "Employee relations"]
     }

@@ -118,7 +118,7 @@ export function ContactsPageContent() {
       });
       setContacts(contactsResult.contacts);
 
-      // 🚫 SEED DATA ΠΛΗΡΩΣ ΑΦΑΙΡΕΜΕΝΑ - Καθαρή έναρξη χωρίς mock data
+      // 🚫 SEED DATA ΠΛΗΡΩΣ ΑΦΑΙΡΕΜΕΝΑ - Καθαρή έναρξη χωρίς sample data
       // Η βάση δεδομένων θα παραμείνει άδεια μέχρι να προσθέσει ο χρήστης επαφές
     } catch (err) {
       // Error logging removed

@@ -37,7 +37,9 @@ export class NotificationClient {
 
   async list(params?: { cursor?: string; limit?: number; tags?: string[]; unseenOnly?: boolean }): Promise<ListResponse> {
     // ✅ SSR-safe: Build URL without location.origin
-    const url = new URL(this.base, typeof window !== 'undefined' ? location.origin : 'http://localhost:3000');
+    // 🏢 ENTERPRISE: Use environment-configured development URL
+    const fallbackUrl = process.env.NEXT_PUBLIC_DEV_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const url = new URL(this.base, typeof window !== 'undefined' ? location.origin : fallbackUrl);
     if (params?.cursor) url.searchParams.set('cursor', params.cursor);
     if (params?.limit) url.searchParams.set('limit', String(params.limit));
     if (params?.unseenOnly) url.searchParams.set('unseen', '1');

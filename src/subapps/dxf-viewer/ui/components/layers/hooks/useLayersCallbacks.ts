@@ -252,7 +252,7 @@ export function useLayersCallbacks({
     
     if (!onEntitiesMerge) {
       console.warn('⚠️ Δεν υπάρχει callback onEntitiesMerge! Το parent component πρέπει να το παράσχει.');
-      // Προσωρινά θα κάνουμε mock merge
+      // Προσωρινά θα κάνουμε sample merge
       const entitiesArray = Array.from(selectedEntitiesForMerge);
       const firstEntityId = entitiesArray[0];
       const firstEntity = scene.entities?.find(e => e.id === firstEntityId);

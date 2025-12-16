@@ -35,16 +35,19 @@ export async function POST(request: NextRequest) {
     // 🏢 ENTERPRISE: Load company IDs από database
     const configManager = EnterpriseConfigurationManager.getInstance();
 
-    const pagonisCompanyId = await getCompanyIdByName('Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.');
-    const alysidaCompanyId = await getCompanyIdByName('ΑΛΥΣΙΔΑ ΑΕ');
-    const jpAvaxCompanyId = await getCompanyIdByName('J&P ΑΒΑΞ ΑΕ');
-    const mytilineosCompanyId = await getCompanyIdByName('ΜΥΤΙΛΗΝΑΙΟΣ ΑΕ');
-    const ternaCompanyId = await getCompanyIdByName('ΤΕΡΝΑ ΑΕ');
-    const aktorCompanyId = await getCompanyIdByName('ΑΚΤΩΡ ΑΤΕ');
+    // 🏢 ENTERPRISE: Load company names from environment configuration
+    const mainCompanyName = process.env.NEXT_PUBLIC_COMPANY_NAME || 'Main Company';
+    const companyNames = (process.env.NEXT_PUBLIC_PARTNER_COMPANIES ||
+      'Company A,Company B,Company C,Company D,Company E,Company F'
+    ).split(',').map(name => name.trim());
+
+    const pagonisCompanyId = await getCompanyIdByName(mainCompanyName);
+    const [alysidaCompanyId, jpAvaxCompanyId, mytilineosCompanyId, ternaCompanyId, aktorCompanyId] =
+      await Promise.all(companyNames.slice(0, 5).map(name => getCompanyIdByName(name)));
 
     if (!pagonisCompanyId) {
       return NextResponse.json({
-        error: 'Primary company "Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε." not found in database',
+        error: `Primary company "${mainCompanyName}" not found in database`,
         suggestion: 'Please ensure company data exists in database before running fixes'
       }, { status: 404 });
     }
@@ -126,8 +129,8 @@ export async function POST(request: NextRequest) {
           const newProject = {
             name: `Εμπορικό Κέντρο ${fix.companyName}`,
             title: `Ανάπτυξη εμπορικού κέντρου - ${fix.companyName}`,
-            address: `Κεντρική Λεωφόρος, Αθήνα`,
-            city: "Αθήνα",
+            address: `Κεντρική Λεωφόρος, ${process.env.NEXT_PUBLIC_DEFAULT_CITY || 'Αθήνα'}`,
+            city: process.env.NEXT_PUBLIC_DEFAULT_CITY || "Αθήνα",
             company: fix.companyName,
             companyId: fix.companyId,
             status: "planning",

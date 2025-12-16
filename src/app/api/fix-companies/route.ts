@@ -33,9 +33,10 @@ export async function POST(req: NextRequest) {
       // Detect main company by checking if it's 'TechCorp Α.Ε.' which needs to be renamed
       if (data.companyName === 'TechCorp Α.Ε.') {
         // This is the main company - rename it to Pagonis
-          console.log(`✅ Updating main company ID ${doc.id} to "Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε."`);
+          const newCompanyName = process.env.NEXT_PUBLIC_COMPANY_NAME || 'Default Construction Company';
+          console.log(`✅ Updating main company ID ${doc.id} to "${newCompanyName}"`);
           batch.update(doc.ref, {
-            companyName: 'Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.',
+            companyName: newCompanyName,
             industry: 'Κατασκευές & Ανάπτυξη Ακινήτων',
             updatedAt: new Date()
           });

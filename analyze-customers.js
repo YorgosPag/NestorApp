@@ -45,7 +45,7 @@ async function analyzeCustomerConnections() {
   try {
     // 1. Πάρε τη δομή του έργου
     console.log('📊 Φόρτωση δομής έργου...');
-    const structureResponse = await makeAPICall('http://localhost:3001/api/projects/structure/1001');
+    const structureResponse = await makeAPICall(`${process.env.APP_URL || 'http://localhost:3001'}/api/projects/structure/1001`);
 
     if (!structureResponse.success) {
       console.error('❌ Αποτυχία φόρτωσης δομής:', structureResponse.error);
@@ -131,7 +131,7 @@ async function analyzeCustomerConnections() {
       // 5. Προσπάθησε να πάρεις πληροφορίες πελατών από το customers API
       try {
         console.log('🔗 Έλεγχος συνδέσεων με contacts database...');
-        const customersResponse = await makeAPICall('http://localhost:3001/api/projects/1001/customers');
+        const customersResponse = await makeAPICall(`${process.env.APP_URL || 'http://localhost:3001'}/api/projects/1001/customers`);
 
         if (customersResponse.success && customersResponse.customers) {
           const validCustomers = customersResponse.customers;

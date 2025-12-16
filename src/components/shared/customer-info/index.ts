@@ -248,7 +248,7 @@ export const CustomerInfoSystemMeta = {
  * import { UnifiedCustomerCard } from '@/components/shared/customer-info';
  *
  * <UnifiedCustomerCard
- *   contactId="customer_123"
+ *   contactId="sample-contact-id"
  *   context="unit"
  *   variant="card"
  *   showUnitsCount={true}

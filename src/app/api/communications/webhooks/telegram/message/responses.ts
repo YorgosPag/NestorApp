@@ -6,7 +6,7 @@ export function createStartResponse(chatId: string | number): TelegramSendPayloa
   return {
     method: 'sendMessage',
     chat_id: chatId,
-    text: `Καλωσήρθατε στην Pagonis Real Estate! 🏠
+    text: `${process.env.NEXT_PUBLIC_TELEGRAM_WELCOME_MSG || `Καλωσήρθατε στην ${process.env.NEXT_PUBLIC_COMPANY_NAME || 'Real Estate Company'}! 🏠
 
 🤖 <b>Είμαι ο έξυπνος βοηθός σας για ακίνητα!</b>
 
@@ -15,13 +15,13 @@ export function createStartResponse(chatId: string | number): TelegramSendPayloa
 - "Δείξε μου μεζονέτες στο κέντρο"
 - "Υπάρχει κάτι με 65 τ.μ.;"
 
-🎯 <b>Ή χρησιμοποιήστε τα buttons:</b>`,
+🎯 <b>Ή χρησιμοποιήστε τα buttons:</b>`}`,
     parse_mode: 'HTML',
     reply_markup: {
       inline_keyboard: [
         [
-          { text: '🔍 Αναζήτηση Ακινήτων', callback_data: 'property_search' },
-          { text: '📞 Επικοινωνία', callback_data: 'contact_agent' }
+          { text: process.env.NEXT_PUBLIC_TELEGRAM_SEARCH_BTN || '🔍 Αναζήτηση Ακινήτων', callback_data: 'property_search' },
+          { text: process.env.NEXT_PUBLIC_TELEGRAM_CONTACT_BTN || '📞 Επικοινωνία', callback_data: 'contact_agent' }
         ]
       ]
     }
@@ -45,12 +45,12 @@ export function createSearchMenuResponse(chatId: string | number): TelegramSendP
     reply_markup: {
       inline_keyboard: [
         [
-          { text: '🏠 Διαμερίσματα', callback_data: 'search_apartments' },
-          { text: '🏘️ Μεζονέτες', callback_data: 'search_maisonettes' }
+          { text: process.env.NEXT_PUBLIC_TELEGRAM_APARTMENTS_BTN || '🏠 Διαμερίσματα', callback_data: 'search_apartments' },
+          { text: process.env.NEXT_PUBLIC_TELEGRAM_MAISONETTES_BTN || '🏘️ Μεζονέτες', callback_data: 'search_maisonettes' }
         ],
         [
-          { text: '🏪 Καταστήματα', callback_data: 'search_stores' },
-          { text: '📊 Στατιστικά', callback_data: 'property_stats' }
+          { text: process.env.NEXT_PUBLIC_TELEGRAM_STORES_BTN || '🏪 Καταστήματα', callback_data: 'search_stores' },
+          { text: process.env.NEXT_PUBLIC_TELEGRAM_STATS_BTN || '📊 Στατιστικά', callback_data: 'property_stats' }
         ]
       ]
     }
@@ -85,12 +85,12 @@ export function createContactResponse(chatId: string | number): TelegramSendPayl
     chat_id: chatId,
     text: `📞 <b>Στοιχεία Επικοινωνίας</b>
 
-🏢 <b>Εταιρεία:</b> Pagonis Real Estate
-📧 <b>Email:</b> info@pagonis.gr
-📱 <b>Τηλέφωνο:</b> +30 231 012 3456
+🏢 <b>Εταιρεία:</b> ${process.env.NEXT_PUBLIC_COMPANY_NAME || 'Real Estate Company'}
+📧 <b>Email:</b> ${process.env.NEXT_PUBLIC_COMPANY_EMAIL || 'info@company.gr'}
+📱 <b>Τηλέφωνο:</b> ${process.env.NEXT_PUBLIC_COMPANY_PHONE || '+30 210 000 0000'}
 
-⏰ <b>Ωράριο:</b> Δευτέρα - Παρασκευή: 09:00 - 18:00
-📍 <b>Διεύθυνση:</b> Θεσσαλονίκη, Ελλάδα
+⏰ <b>Ωράριο:</b> ${process.env.NEXT_PUBLIC_COMPANY_HOURS || 'Δευτέρα - Παρασκευή: 09:00 - 18:00'}
+📍 <b>Διεύθυνση:</b> ${process.env.NEXT_PUBLIC_DEFAULT_CITY || 'Αθήνα'}, Ελλάδα
 
 💬 Ένας εξειδικευμένος σύμβουλος θα επικοινωνήσει μαζί σας!`,
     parse_mode: 'HTML'
@@ -130,7 +130,7 @@ export function createErrorResponse(chatId: string | number): TelegramSendPayloa
 - Πιο απλή αναζήτηση
 - Λιγότερα κριτήρια
 
-📞 <b>Άμεση βοήθεια:</b> +30 231 012 3456`,
+📞 <b>Άμεση βοήθεια:</b> ${process.env.NEXT_PUBLIC_COMPANY_PHONE || '+30 210 000 0000'}`,
     parse_mode: 'HTML'
   };
 }
@@ -143,7 +143,7 @@ export function createRateLimitResponse(chatId: string | number): TelegramSendPa
 
 💡 Παρακαλώ περιμένετε λίγο και δοκιμάστε ξανά.
 
-📞 Για άμεση εξυπηρέτηση: +30 231 012 3456`
+📞 Για άμεση εξυπηρέτηση: ${process.env.NEXT_PUBLIC_COMPANY_PHONE || '+30 210 000 0000'}`
   };
 }
 
@@ -154,8 +154,8 @@ export function createDatabaseUnavailableResponse(chatId: string | number): Tele
     text: `⚠️ Η βάση δεδομένων δεν είναι διαθέσιμη αυτή τη στιγμή.
 
 📞 <b>Για άμεση εξυπηρέτηση επικοινωνήστε μαζί μας:</b>
-- Τηλέφωνο: +30 231 012 3456
-- Email: info@pagonis.gr
+- Τηλέφωνο: ${process.env.NEXT_PUBLIC_COMPANY_PHONE || '+30 210 000 0000'}
+- Email: ${process.env.NEXT_PUBLIC_COMPANY_EMAIL || 'info@company.gr'}
 
 🔄 Δοκιμάστε ξανά σε λίγα λεπτά.`,
     parse_mode: 'HTML'

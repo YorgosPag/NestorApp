@@ -13,7 +13,7 @@ let adminDb: FirebaseFirestore.Firestore;
 try {
   if (getApps().length === 0) {
     const app = initializeApp({
-      projectId: 'pagonis-87766'
+      projectId: process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
     });
     adminDb = getFirestore(app);
   } else {
@@ -34,8 +34,8 @@ export async function POST(request: NextRequest) {
     console.log('🏗️ CREATING CLEAN PROJECTS FOR DEVELOPMENT');
     console.log('⏰ Started at:', new Date().toISOString());
 
-    // Correct companyId for Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.
-    const correctCompanyId = 'pzNUy8ksddGCtcQMqumR';
+    // 🏢 ENTERPRISE: Load company ID from environment configuration
+    const correctCompanyId = process.env.NEXT_PUBLIC_MAIN_COMPANY_ID || 'default-company-id';
 
     // Define clean projects with proper structure
     const cleanProjects = [
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
         id: '2001',
         name: 'Παλαιολόγου Πολυκατοικία',
         title: 'Ανέγερση σύγχρονης πολυκατοικίας στην οδό Παλαιολόγου',
-        company: 'Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.',
+        company: process.env.NEXT_PUBLIC_COMPANY_NAME || 'Default Construction Company',
         companyId: correctCompanyId,
         address: 'Παλαιολόγου 15, Εύοσμος',
         city: 'Θεσσαλονίκη',
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
         id: '2002',
         name: 'Μεγάλου Αλεξάνδρου Συγκρότημα',
         title: 'Σύγχρονο εμπορικό και κατοικιακό συγκρότημα',
-        company: 'Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.',
+        company: process.env.NEXT_PUBLIC_COMPANY_NAME || 'Default Construction Company',
         companyId: correctCompanyId,
         address: 'Μεγάλου Αλεξάνδρου 45, Κέντρο',
         city: 'Θεσσαλονίκη',
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
         id: '2003',
         name: 'Τσιμισκή Εμπορικό Κέντρο',
         title: 'Πολυλειτουργικό εμπορικό κέντρο στην καρδιά της πόλης',
-        company: 'Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.',
+        company: process.env.NEXT_PUBLIC_COMPANY_NAME || 'Default Construction Company',
         companyId: correctCompanyId,
         address: 'Τσιμισκή 120, Κέντρο',
         city: 'Θεσσαλονίκη',
@@ -211,7 +211,7 @@ export async function POST(request: NextRequest) {
       },
       target: {
         correctCompanyId,
-        companyName: 'Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.'
+        companyName: process.env.NEXT_PUBLIC_COMPANY_NAME || 'Default Construction Company'
       },
       results,
       environment: {
@@ -266,7 +266,7 @@ export async function GET(request: NextRequest) {
     usage: {
       endpoint: 'POST /api/admin/create-clean-projects',
       method: 'Firebase Admin SDK creation',
-      target: 'Create clean normalized projects with companyId: pzNUy8ksddGCtcQMqumR',
+      target: `Create clean normalized projects with companyId: ${correctCompanyId}`,
       features: ['Normalized structure', 'Buildings & Floors', 'Clean IDs']
     }
   });

@@ -51,11 +51,12 @@ export async function POST() {
       }
     };
 
-    const correctCompanyId = await getCompanyIdByName('Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.');
+    const mainCompanyName = process.env.NEXT_PUBLIC_COMPANY_NAME || 'Default Construction Company';
+    const correctCompanyId = await getCompanyIdByName(mainCompanyName);
 
     if (!correctCompanyId) {
       return NextResponse.json({
-        error: 'Company "Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε." not found in database',
+        error: `Company "${mainCompanyName}" not found in database`,
         suggestion: 'Ensure company exists before running project fixes'
       }, { status: 404 });
     }

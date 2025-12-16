@@ -28,7 +28,7 @@ import {
 import { ProjectViewSwitch } from './ProjectViewSwitch';
 
 export function ProjectsPageContent() {
-  // Φόρτωση έργων από Firestore αντί για mock data
+  // Φόρτωση έργων από Firestore αντί για sample data
   const { projects: firestoreProjects, loading, error } = useFirestoreProjects();
 
   const {

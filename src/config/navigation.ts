@@ -28,37 +28,37 @@ import type { MenuItem } from "@/types/sidebar"
 
 export const mainMenuItems: MenuItem[] = [
   {
-    title: "Αρχική",
+    title: process.env.NEXT_PUBLIC_NAV_HOME_TITLE || "Αρχική",
     icon: Home,
     href: "/",
     badge: null,
   },
   {
-    title: "Ευρετήριο Ακινήτων",
+    title: process.env.NEXT_PUBLIC_NAV_PROPERTIES_TITLE || "Ευρετήριο Ακινήτων",
     icon: Library,
     href: "/properties",
     badge: "Νέο",
   },
   {
-    title: "Επαφές",
+    title: process.env.NEXT_PUBLIC_NAV_CONTACTS_TITLE || "Επαφές",
     icon: Users,
     href: "/contacts",
     badge: null,
   },
   {
-    title: "Έργα",
+    title: process.env.NEXT_PUBLIC_NAV_PROJECTS_TITLE || "Έργα",
     icon: Briefcase,
     href: "/audit",
     badge: null,
   },
   {
-    title: "Κτίρια",
+    title: process.env.NEXT_PUBLIC_NAV_BUILDINGS_TITLE || "Κτίρια",
     icon: Building,
     href: "/buildings",
     badge: null,
   },
   {
-    title: "Μονάδες (Units)",
+    title: process.env.NEXT_PUBLIC_NAV_UNITS_TITLE || "Μονάδες (Units)",
     icon: Archive,
     href: "/units",
     badge: null,

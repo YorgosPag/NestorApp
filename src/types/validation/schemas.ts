@@ -1,6 +1,21 @@
 import { z } from 'zod';
 import { validationRules } from '@/utils/validation';
 
+// 🏢 ENTERPRISE: Configurable business constants (NO MORE HARDCODED VALUES)
+export const BUILDING_CATEGORIES = (process.env.NEXT_PUBLIC_BUILDING_CATEGORIES || 'residential,commercial,mixed,industrial').split(',').map(c => c.trim());
+export const PROJECT_STATUSES = (process.env.NEXT_PUBLIC_PROJECT_STATUSES || 'planning,active,paused,completed,cancelled').split(',').map(s => s.trim());
+export const TASK_TYPES = (process.env.NEXT_PUBLIC_TASK_TYPES || 'call,meeting,viewing,follow_up,email,document,other').split(',').map(t => t.trim());
+export const PRIORITY_LEVELS = (process.env.NEXT_PUBLIC_PRIORITY_LEVELS || 'low,medium,high,urgent').split(',').map(p => p.trim());
+export const CRM_STAGES = (process.env.NEXT_PUBLIC_CRM_STAGES || 'initial_contact,qualification,viewing,proposal,negotiation,contract,closed_won,closed_lost').split(',').map(s => s.trim());
+export const TASK_STATUSES = (process.env.NEXT_PUBLIC_TASK_STATUSES || 'pending,in_progress,completed,cancelled').split(',').map(s => s.trim());
+export const BUILDING_STATUSES = (process.env.NEXT_PUBLIC_BUILDING_STATUSES || 'active,construction,planned,completed').split(',').map(s => s.trim());
+
+// 🔍 ENTERPRISE: Configurable filter options
+export const FILTER_TIMEFRAMES = (process.env.NEXT_PUBLIC_FILTER_TIMEFRAMES || 'all,overdue,today,tomorrow,week').split(',').map(t => t.trim());
+export const ALL_TASK_STATUSES = ['all', ...TASK_STATUSES];
+export const ALL_PRIORITY_LEVELS = ['all', ...PRIORITY_LEVELS];
+export const ALL_TASK_TYPES = ['all', ...TASK_TYPES];
+
 // Contact validation schemas
 export const contactBaseSchema = z.object({
   name: validationRules.required().pipe(validationRules.minLength(2)),
@@ -66,8 +81,8 @@ export const buildingBaseSchema = z.object({
   name: validationRules.required().pipe(validationRules.minLength(2)),
   address: validationRules.required(),
   description: z.string().optional(),
-  category: validationRules.selection(['residential', 'commercial', 'mixed', 'industrial']),
-  status: validationRules.selection(['active', 'construction', 'planned', 'completed']),
+  category: validationRules.selection(BUILDING_CATEGORIES),
+  status: validationRules.selection(BUILDING_STATUSES),
 });
 
 export const buildingCreateSchema = buildingBaseSchema.extend({
@@ -85,7 +100,7 @@ export const projectBaseSchema = z.object({
   location: validationRules.required(),
   startDate: validationRules.date().optional(),
   endDate: validationRules.date().optional(),
-  status: validationRules.selection(['planning', 'active', 'paused', 'completed', 'cancelled']),
+  status: validationRules.selection(PROJECT_STATUSES),
 });
 
 export const projectCreateSchema = projectBaseSchema.extend({
@@ -133,10 +148,7 @@ export const resetPasswordSchema = z.object({
 export const opportunityBaseSchema = z.object({
   title: validationRules.required().pipe(validationRules.minLength(2)),
   description: z.string().optional(),
-  stage: validationRules.selection([
-    'initial_contact', 'qualification', 'viewing', 'proposal', 
-    'negotiation', 'contract', 'closed_won', 'closed_lost'
-  ]),
+  stage: validationRules.selection(CRM_STAGES),
   value: validationRules.positiveNumber().optional(),
   probability: validationRules.number().pipe(validationRules.minValue(0)).pipe(validationRules.maxValue(100)).optional(),
   expectedCloseDate: validationRules.date().optional(),
@@ -154,9 +166,9 @@ export const opportunityEditSchema = opportunityBaseSchema.extend({
 export const taskBaseSchema = z.object({
   title: validationRules.required().pipe(validationRules.minLength(2)),
   description: z.string().optional(),
-  type: validationRules.selection(['call', 'meeting', 'viewing', 'follow_up', 'email', 'document', 'other']),
-  priority: validationRules.selection(['low', 'medium', 'high', 'urgent']),
-  status: validationRules.selection(['pending', 'in_progress', 'completed', 'cancelled']),
+  type: validationRules.selection(TASK_TYPES),
+  priority: validationRules.selection(PRIORITY_LEVELS),
+  status: validationRules.selection(TASK_STATUSES),
   dueDate: validationRules.date().optional(),
 });
 
@@ -187,10 +199,10 @@ export const propertyFiltersSchema = z.object({
 });
 
 export const taskFiltersSchema = z.object({
-  status: validationRules.selection(['all', 'pending', 'in_progress', 'completed', 'cancelled']).optional(),
-  priority: validationRules.selection(['all', 'low', 'medium', 'high', 'urgent']).optional(),
-  type: validationRules.selection(['all', 'call', 'meeting', 'viewing', 'follow_up', 'email', 'document', 'other']).optional(),
-  timeframe: validationRules.selection(['all', 'overdue', 'today', 'tomorrow', 'week']).optional(),
+  status: validationRules.selection(ALL_TASK_STATUSES).optional(),
+  priority: validationRules.selection(ALL_PRIORITY_LEVELS).optional(),
+  type: validationRules.selection(ALL_TASK_TYPES).optional(),
+  timeframe: validationRules.selection(FILTER_TIMEFRAMES).optional(),
   searchTerm: z.string().optional(),
 });
 

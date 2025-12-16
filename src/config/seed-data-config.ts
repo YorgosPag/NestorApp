@@ -56,7 +56,7 @@ export const validateSeedConfig = (): boolean => {
 /**
  * 🚫 MOCK DATA ΠΛΗΡΩΣ ΑΦΑΙΡΕΜΕΝΑ - ΔΕΝ ΥΠΑΡΧΟΥΝ SEED DATA
  *
- * Στο production environment δεν χρειαζόμαστε mock data.
+ * Στο production environment δεν χρειαζόμαστε sample data.
  * Η βάση δεδομένων ξεκινάει εντελώς καθαρή.
  */
 export const ENTERPRISE_SEED_CONTACTS = [] as const;

@@ -36,12 +36,12 @@ const NEW_CONTACTS = [
     status: 'active',
     isFavorite: false,
     emails: [{
-      email: 'eleni.papadopoulos@gmail.com',
+      email: process.env.SAMPLE_CONTACT_EMAIL || 'sample@example.com',
       type: 'personal',
       isPrimary: true
     }],
     phones: [{
-      phone: '+30 6973456789',
+      phone: process.env.SAMPLE_CONTACT_PHONE || '+30 6900000000',
       type: 'mobile',
       isPrimary: true
     }],

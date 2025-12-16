@@ -144,17 +144,17 @@ const DETECTED_COMPANY_DATA: HardcodedCompanyData = {
   name: process.env.NEXT_PUBLIC_COMPANY_NAME || 'Default Construction Company',
   legalName: process.env.NEXT_PUBLIC_COMPANY_LEGAL_NAME || 'Default Legal Company Name',
   email: process.env.NEXT_PUBLIC_COMPANY_EMAIL || 'info@company.gr',
-  phone: '+30 231 123 4567',
+  phone: process.env.NEXT_PUBLIC_COMPANY_PHONE || '+30 210 123 4567',
   website: process.env.NEXT_PUBLIC_COMPANY_WEBSITE || 'https://company.gr',
   address: {
-    street: 'Παλαιολόγου',
-    number: '45',
-    city: 'Θεσσαλονίκη',
-    postalCode: '54622'
+    street: process.env.NEXT_PUBLIC_COMPANY_STREET || 'Company Street',
+    number: process.env.NEXT_PUBLIC_COMPANY_NUMBER || '1',
+    city: process.env.NEXT_PUBLIC_COMPANY_CITY || 'Athens',
+    postalCode: process.env.NEXT_PUBLIC_COMPANY_POSTAL || '10000'
   },
   tax: {
-    vatNumber: '123456789',
-    gemiNumber: '987654321'
+    vatNumber: process.env.NEXT_PUBLIC_COMPANY_VAT || '123456789',
+    gemiNumber: process.env.NEXT_PUBLIC_COMPANY_GEMI || '987654321'
   }
 } as const;
 
@@ -162,29 +162,27 @@ const DETECTED_COMPANY_DATA: HardcodedCompanyData = {
  * System URLs και endpoints που βρέθηκαν
  */
 const DETECTED_SYSTEM_DATA: HardcodedSystemData = {
-  productionUrl: 'https://nestor-app.vercel.app',
-  developmentUrl: 'http://localhost:3001',
+  productionUrl: process.env.NEXT_PUBLIC_PRODUCTION_URL || 'https://app.company.com',
+  developmentUrl: process.env.NEXT_PUBLIC_DEV_URL || 'http://localhost:3000',
   apiEndpoints: {
-    notifications: 'https://api.example.com/notifications',
-    webhooks: 'https://hooks.example.com',
-    overpassApi: [
-      'https://overpass-api.de/api/interpreter',
-      'https://overpass.kumi.systems/api/interpreter',
-      'https://overpass.osm.ch/api/interpreter'
-    ]
+    notifications: process.env.NEXT_PUBLIC_NOTIFICATIONS_API || 'https://api.company.com/notifications',
+    webhooks: process.env.NEXT_PUBLIC_WEBHOOKS_URL || 'https://hooks.company.com',
+    overpassApi: (process.env.NEXT_PUBLIC_OVERPASS_APIS ||
+      'https://overpass-api.de/api/interpreter,https://overpass.kumi.systems/api/interpreter,https://overpass.osm.ch/api/interpreter'
+    ).split(',')
   },
   integrations: {
     telegram: {
-      webhookUrl: 'https://api.telegram.org/webhook',
-      adminUserId: '123456789'
+      webhookUrl: process.env.NEXT_PUBLIC_TELEGRAM_WEBHOOK || 'https://api.telegram.org/webhook',
+      adminUserId: process.env.NEXT_PUBLIC_TELEGRAM_ADMIN_ID || '123456789'
     },
     slack: {
-      webhookUrl: 'https://hooks.slack.com/services/...'
+      webhookUrl: process.env.NEXT_PUBLIC_SLACK_WEBHOOK || 'https://hooks.slack.com/services/...'
     },
     monitoring: {
-      elasticsearch: 'https://elasticsearch.geo-alert.com:9200',
-      prometheus: 'http://prometheus.geo-alert.com:9090',
-      jaeger: 'http://jaeger.geo-alert.com:14268/api/traces'
+      elasticsearch: process.env.NEXT_PUBLIC_ELASTICSEARCH_URL || 'https://elasticsearch.company.com:9200',
+      prometheus: process.env.NEXT_PUBLIC_PROMETHEUS_URL || 'http://prometheus.company.com:9090',
+      jaeger: process.env.NEXT_PUBLIC_JAEGER_URL || 'http://jaeger.company.com:14268/api/traces'
     }
   }
 } as const;
@@ -424,7 +422,7 @@ export class HardcodedValuesMigrationEngine {
         },
         tax: {
           ...DETECTED_COMPANY_DATA.tax,
-          taxOffice: 'ΔΟΥ Θεσσαλονίκης'
+          taxOffice: process.env.NEXT_PUBLIC_DEFAULT_TAX_OFFICE || 'ΔΟΥ Θεσσαλονίκης'
         }
       };
 
