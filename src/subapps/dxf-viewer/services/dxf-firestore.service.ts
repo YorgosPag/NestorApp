@@ -1,6 +1,7 @@
 import { db, storage } from '../../../lib/firebase';
 import { doc, setDoc, getDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, getBytes } from 'firebase/storage';
+import { COLLECTIONS } from '../../../config/firestore-collections';
 import type { SceneModel } from '../types/scene';
 
 export interface DxfFileMetadata {
@@ -24,7 +25,7 @@ export interface DxfFileRecord {
 }
 
 export class DxfFirestoreService {
-  private static readonly COLLECTION_NAME = 'dxf_files';
+  private static readonly COLLECTION_NAME = COLLECTIONS.CAD_FILES;
   private static readonly STORAGE_FOLDER = 'dxf-scenes';
   
   /**

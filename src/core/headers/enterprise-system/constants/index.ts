@@ -199,7 +199,7 @@ export const ICON_VARIANTS = {
 // ============================================================================
 
 // Re-export από υπάρχοντα constants για συμβατότητα
-export { quickActions, defaultNotifications } from '@/constants/header';
+export { quickActions, getNotifications } from '@/constants/header';
 
 // ============================================================================
 // 🚀 ENTERPRISE DEFAULTS - PRODUCTION READY

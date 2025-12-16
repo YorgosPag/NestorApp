@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { MigrationEngine } from '@/database/migrations/MigrationEngine';
 import { createProjectCompanyRelationshipsMigration } from '@/database/migrations/001_fix_project_company_relationships';
 import { createFloorsNormalizationMigration } from '@/database/migrations/002_normalize_floors_collection';
+import { createEnterpriseArchitectureConsolidationMigration } from '@/database/migrations/003_enterprise_database_architecture_consolidation';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -39,6 +40,9 @@ export async function POST(request: NextRequest) {
       case '002_normalize_floors_collection':
         migration = createFloorsNormalizationMigration();
         break;
+      case '003_enterprise_database_architecture_consolidation':
+        migration = createEnterpriseArchitectureConsolidationMigration();
+        break;
       default:
         return NextResponse.json(
           {
@@ -46,7 +50,8 @@ export async function POST(request: NextRequest) {
             error: `Unknown migration ID: ${migrationId}`,
             availableMigrations: [
               '001_fix_project_company_relationships',
-              '002_normalize_floors_collection'
+              '002_normalize_floors_collection',
+              '003_enterprise_database_architecture_consolidation'
             ]
           },
           { status: 400 }

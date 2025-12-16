@@ -67,6 +67,24 @@ export const COLLECTIONS = {
   DOCUMENTS: process.env.NEXT_PUBLIC_DOCUMENTS_COLLECTION || 'documents',
   FILES: process.env.NEXT_PUBLIC_FILES_COLLECTION || 'files',
   ATTACHMENTS: process.env.NEXT_PUBLIC_ATTACHMENTS_COLLECTION || 'attachments',
+
+  // 🎨 CAD & TECHNICAL DRAWINGS (Enterprise Unified)
+  CAD_FILES: process.env.NEXT_PUBLIC_CAD_FILES_COLLECTION || 'cadFiles',
+  CAD_LAYERS: process.env.NEXT_PUBLIC_CAD_LAYERS_COLLECTION || 'cadLayers',
+  CAD_SESSIONS: process.env.NEXT_PUBLIC_CAD_SESSIONS_COLLECTION || 'cadSessions',
+  DXF_OVERLAY_LEVELS: process.env.NEXT_PUBLIC_DXF_OVERLAY_LEVELS_COLLECTION || 'dxfOverlayLevels',
+  DXF_VIEWER_LEVELS: process.env.NEXT_PUBLIC_DXF_VIEWER_LEVELS_COLLECTION || 'dxfViewerLevels',
+
+  // 📐 FLOORPLANS (Enterprise Unified)
+  FLOORPLANS: process.env.NEXT_PUBLIC_FLOORPLANS_COLLECTION || 'floorplans',
+
+  // 🅿️ PARKING & SPACES
+  PARKING_SPACES: process.env.NEXT_PUBLIC_PARKING_SPACES_COLLECTION || 'parkingSpaces',
+
+  // 📋 OBLIGATIONS (Enterprise Sections)
+  OBLIGATION_SECTIONS: process.env.NEXT_PUBLIC_OBLIGATION_SECTIONS_COLLECTION || 'obligationSections',
+
+  // Legacy collections (maintained for backward compatibility)
   LAYERS: process.env.NEXT_PUBLIC_LAYERS_COLLECTION || 'layers',
   LAYER_GROUPS: process.env.NEXT_PUBLIC_LAYER_GROUPS_COLLECTION || 'layerGroups',
   PROPERTY_LAYERS: process.env.NEXT_PUBLIC_PROPERTY_LAYERS_COLLECTION || 'property-layers',

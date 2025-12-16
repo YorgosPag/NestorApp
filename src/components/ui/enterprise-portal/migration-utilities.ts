@@ -9,7 +9,8 @@
  * @module components/ui/enterprise-portal/migration-utilities
  */
 
-import { portalComponents, photoPreviewComponents } from '../../../styles/design-tokens';
+import { portalComponents } from '../../../styles/design-tokens';
+import { photoPreviewComponents } from '../../../styles/design-tokens/components/portal-tokens';
 import type {
   PortalVariant,
   PortalPlacement,
