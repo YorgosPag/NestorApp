@@ -13,6 +13,8 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useFirebaseAuth, type FirebaseAuthUser } from './FirebaseAuthContext';
+import { EnterpriseSecurityService } from '../services/security/EnterpriseSecurityService';
+import { db } from '../lib/firebase';
 
 // =============================================================================
 // LEGACY TYPES - MAINTAINED FOR COMPATIBILITY
@@ -45,49 +47,22 @@ interface UserRoleContextType {
 const UserRoleContext = createContext<UserRoleContextType | null>(null);
 
 // =============================================================================
-// ADMIN CONFIGURATION
+// ENTERPRISE SECURITY SERVICE INTEGRATION
 // =============================================================================
 
 /**
- * 🏢 ENTERPRISE: Environment-driven Admin Configuration (MICROSOFT/GOOGLE-CLASS)
+ * 🔒 ENTERPRISE SECURITY: Database-driven Security Management
  *
- * ✅ BEFORE: Hardcoded admin emails (ΚΡΙΣΙΜΟ SECURITY RISK!)
- * ✅ AFTER: Environment variables με enterprise-grade security patterns
+ * ✅ REPLACES: Hardcoded admin emails (CRITICAL SECURITY RISK ELIMINATED!)
+ * ✅ PROVIDES: Database-driven role management with audit trails
+ * ✅ SECURITY: Enterprise-grade security with multi-tenant support
+ * ✅ COMPLIANCE: GDPR-compliant with secure caching
  *
- * ZERO HARDCODED EMAILS - Όλες οι admin emails από configuration
+ * NO MORE HARDCODED SECURITY VALUES - All roles from EnterpriseSecurityService
  */
 
-/**
- * Enterprise-grade admin email loading από environment variables
- */
-const getEnterpriseAdminEmails = (): readonly string[] => {
-  // 🔐 ENTERPRISE: Load από environment variables με type safety
-  const envAdminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS;
-
-  if (envAdminEmails) {
-    try {
-      const emails = envAdminEmails.split(',').map(email => email.trim()).filter(Boolean);
-      if (emails.length > 0) {
-        console.log(`🔐 Enterprise Admin Configuration loaded: ${emails.length} admin(s)`);
-        return emails;
-      }
-    } catch (error) {
-      console.error('🚨 Enterprise Admin Configuration Parse Error:', error);
-    }
-  }
-
-  // 🚨 DEVELOPMENT FALLBACK ONLY - Never for production
-  if (process.env.NODE_ENV === 'development') {
-    console.warn('⚠️ Using development admin fallback - Configure NEXT_PUBLIC_ADMIN_EMAILS for production');
-    return ['admin@company.local', 'developer@company.local'] as const;
-  }
-
-  // 🔒 PRODUCTION: No fallback admins για maximum security
-  console.error('🚨 NO ADMIN CONFIGURATION FOUND - Set NEXT_PUBLIC_ADMIN_EMAILS environment variable');
-  return [] as const;
-};
-
-const ADMIN_EMAILS = getEnterpriseAdminEmails();
+// Initialize the security service singleton
+const securityService = EnterpriseSecurityService.getInstance();
 
 // =============================================================================
 // USER ROLE PROVIDER - FIREBASE INTEGRATION
@@ -106,6 +81,24 @@ export function UserRoleProvider({ children }: { children: React.ReactNode }) {
 
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [securityServiceInitialized, setSecurityServiceInitialized] = useState(false);
+
+  // Initialize the security service with Firebase
+  useEffect(() => {
+    const initSecurityService = async () => {
+      if (!securityServiceInitialized && db) {
+        try {
+          await securityService.initialize(db);
+          setSecurityServiceInitialized(true);
+          console.log('🔒 EnterpriseSecurityService initialized successfully');
+        } catch (error) {
+          console.error('❌ Failed to initialize EnterpriseSecurityService:', error);
+        }
+      }
+    };
+
+    initSecurityService();
+  }, [securityServiceInitialized]);
 
   // ==========================================================================
   // FIREBASE USER TO LEGACY USER MAPPING
@@ -114,37 +107,65 @@ export function UserRoleProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     console.log('🔄 UserRoleContext: Firebase user state changed', {
       firebaseUserId: firebaseUser?.uid,
-      email: firebaseUser?.email
+      email: firebaseUser?.email,
+      securityServiceReady: securityServiceInitialized
     });
 
-    if (firebaseUser) {
-      // Determine role based on email (temporary solution)
-      const role: UserRole = ADMIN_EMAILS.includes(firebaseUser.email.toLowerCase())
-        ? 'admin'
-        : 'authenticated';
+    const determineUserRole = async () => {
+      if (firebaseUser && securityServiceInitialized) {
+        try {
+          // 🔒 ENTERPRISE: Use EnterpriseSecurityService for role determination
+          const role = await securityService.checkUserRole(
+            firebaseUser.email,
+            'default', // tenantId - in production this would be dynamic
+            process.env.NODE_ENV || 'development' // environment
+          );
 
-      const legacyUser: User = {
-        email: firebaseUser.email,
-        role,
-        isAuthenticated: true,
-        uid: firebaseUser.uid,
-        displayName: firebaseUser.displayName
-      };
+          const legacyUser: User = {
+            email: firebaseUser.email,
+            role,
+            isAuthenticated: true,
+            uid: firebaseUser.uid,
+            displayName: firebaseUser.displayName
+          };
 
-      console.log('✅ UserRoleContext: Legacy user mapped', {
-        uid: legacyUser.uid,
-        email: legacyUser.email,
-        role: legacyUser.role
-      });
+          console.log('✅ UserRoleContext: Enterprise role determined', {
+            uid: legacyUser.uid,
+            email: legacyUser.email,
+            role: legacyUser.role,
+            method: 'EnterpriseSecurityService'
+          });
 
-      setUser(legacyUser);
-    } else {
-      console.log('🔄 UserRoleContext: No Firebase user, setting to null');
-      setUser(null);
-    }
+          setUser(legacyUser);
+        } catch (error) {
+          console.error('❌ Failed to determine user role via EnterpriseSecurityService:', error);
 
-    setIsLoading(firebaseLoading);
-  }, [firebaseUser, firebaseLoading]);
+          // Secure fallback - never grant admin on error
+          const fallbackUser: User = {
+            email: firebaseUser.email,
+            role: 'authenticated',
+            isAuthenticated: true,
+            uid: firebaseUser.uid,
+            displayName: firebaseUser.displayName
+          };
+
+          console.warn('⚠️ Using secure fallback role: authenticated');
+          setUser(fallbackUser);
+        }
+      } else if (!firebaseUser) {
+        console.log('🔄 UserRoleContext: No Firebase user, setting to null');
+        setUser(null);
+      } else if (!securityServiceInitialized) {
+        console.log('🔄 UserRoleContext: Waiting for security service initialization...');
+        // Keep loading state until security service is ready
+      }
+
+      // Update loading state
+      setIsLoading(firebaseLoading || !securityServiceInitialized);
+    };
+
+    determineUserRole();
+  }, [firebaseUser, firebaseLoading, securityServiceInitialized]);
 
   // ==========================================================================
   // LEGACY AUTH METHODS - FIREBASE INTEGRATION
