@@ -1,6 +1,7 @@
 import { storage, db } from '@/lib/firebase';
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject, listAll } from 'firebase/storage';
 import { doc, updateDoc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 /**
  * PDF Utils Library για τη διαχείριση PDF κατόψεων
@@ -169,7 +170,7 @@ export async function updateFloorPDFInFirestore(
   pdfResult: PDFUploadResult
 ): Promise<void> {
   try {
-    const floorDocRef = doc(db, 'floors', floorId);
+    const floorDocRef = doc(db, COLLECTIONS.FLOORS, floorId);
     
     await updateDoc(floorDocRef, {
       pdfUrl: pdfResult.url,
@@ -189,7 +190,7 @@ export async function updateFloorPDFInFirestore(
  */
 export async function getFloorPDFUrl(floorId: string): Promise<string | null> {
   try {
-    const floorDocRef = doc(db, 'floors', floorId);
+    const floorDocRef = doc(db, COLLECTIONS.FLOORS, floorId);
     const floorDoc = await getDoc(floorDocRef);
     
     if (floorDoc.exists()) {
@@ -209,7 +210,7 @@ export async function getFloorPDFUrl(floorId: string): Promise<string | null> {
  */
 export async function deleteOldPDFFromStorage(floorId: string): Promise<boolean> {
   try {
-    const floorDocRef = doc(db, 'floors', floorId);
+    const floorDocRef = doc(db, COLLECTIONS.FLOORS, floorId);
     const floorDoc = await getDoc(floorDocRef);
     
     if (!floorDoc.exists()) {
@@ -285,7 +286,7 @@ export async function deleteBuildingPDFs(buildingId: string): Promise<number> {
  */
 export async function getFloorPDFMetadata(floorId: string): Promise<PDFUploadResult['metadata'] | null> {
   try {
-    const floorDocRef = doc(db, 'floors', floorId);
+    const floorDocRef = doc(db, COLLECTIONS.FLOORS, floorId);
     const floorDoc = await getDoc(floorDocRef);
     
     if (floorDoc.exists()) {

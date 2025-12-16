@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { collection, doc, setDoc, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 /**
  * 🏢 ENTERPRISE: Database-driven company lookup (NO MORE HARDCODED IDs)
@@ -8,7 +9,7 @@ import { db } from '@/lib/firebase';
 async function getCompanyIdByName(companyName: string): Promise<string | null> {
   try {
     const companiesQuery = query(
-      collection(db, 'contacts'),
+      collection(db, COLLECTIONS.CONTACTS),
       where('type', '==', 'company'),
       where('companyName', '==', companyName)
     );
@@ -111,7 +112,7 @@ export async function POST(request: NextRequest) {
       delete building.companyId;
       building.companyId = pagonisCompanyId;
 
-      await setDoc(doc(db, 'buildings', building.id), building);
+      await setDoc(doc(db, COLLECTIONS.BUILDINGS, building.id), building);
 
       console.log(`✅ Successfully created building with database-driven companyId: ${building.name}`);
       results.push({

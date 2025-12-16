@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { firebaseServer } from '@/lib/firebase-server';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 /**
  * 🏠 ENTERPRISE CONTACT UNITS API ENDPOINT
@@ -60,7 +61,7 @@ export async function GET(
 
     console.log(`🔍 Verifying contact exists: ${contactId}`);
 
-    const contactDoc = await firebaseServer.getDoc('contacts', contactId);
+    const contactDoc = await firebaseServer.getDoc(COLLECTIONS.CONTACTS, contactId);
 
     if (!contactDoc.exists()) {
       console.log(`⚠️ Contact not found: ${contactId}`);
@@ -79,7 +80,7 @@ export async function GET(
 
     console.log(`🏠 Fetching units where soldTo equals: ${contactId}`);
 
-    const unitsSnapshot = await firebaseServer.getDocs('units', [
+    const unitsSnapshot = await firebaseServer.getDocs(COLLECTIONS.UNITS, [
       { field: 'soldTo', operator: '==', value: contactId }
     ]);
 

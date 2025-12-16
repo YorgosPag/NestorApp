@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirestore } from 'firebase-admin/firestore';
 import { initializeApp, getApps } from 'firebase-admin/app';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 // Initialize Admin SDK if not already initialized
 let adminDb: FirebaseFirestore.Firestore;
@@ -133,7 +134,7 @@ export async function POST(request: NextRequest) {
       // Remove buildings from main project document for normalization
       const { buildings, ...projectWithoutBuildings } = projectData;
 
-      await adminDb.collection('projects').doc(project.id).set(projectWithoutBuildings);
+      await adminDb.collection(COLLECTIONS.PROJECTS).doc(project.id).set(projectWithoutBuildings);
 
       // Create buildings if they exist
       for (const building of buildings || []) {
@@ -149,7 +150,7 @@ export async function POST(request: NextRequest) {
         // Remove floors from main building document for normalization
         const { floors, ...buildingWithoutFloors } = buildingData;
 
-        await adminDb.collection('buildings').doc(building.id).set(buildingWithoutFloors);
+        await adminDb.collection(COLLECTIONS.BUILDINGS).doc(building.id).set(buildingWithoutFloors);
 
         // Create floors if they exist
         for (const floor of floors || []) {
@@ -164,7 +165,7 @@ export async function POST(request: NextRequest) {
             updatedAt: new Date().toISOString()
           };
 
-          await adminDb.collection('floors').doc(`${building.id}_${floor.id}`).set(floorData);
+          await adminDb.collection(COLLECTIONS.FLOORS).doc(`${building.id}_${floor.id}`).set(floorData);
           console.log(`   ✅ Created floor: ${floor.name} (Building: ${building.name})`);
         }
 
@@ -186,9 +187,9 @@ export async function POST(request: NextRequest) {
     // Verification: Count all created documents
     console.log('🔍 Verifying created documents...');
     const [projectsSnapshot, buildingsSnapshot, floorsSnapshot] = await Promise.all([
-      adminDb.collection('projects').get(),
-      adminDb.collection('buildings').get(),
-      adminDb.collection('floors').get()
+      adminDb.collection(COLLECTIONS.PROJECTS).get(),
+      adminDb.collection(COLLECTIONS.BUILDINGS).get(),
+      adminDb.collection(COLLECTIONS.FLOORS).get()
     ]);
 
     const totalExecutionTime = Date.now() - startTime;

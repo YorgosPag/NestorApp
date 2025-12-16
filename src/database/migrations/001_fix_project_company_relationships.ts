@@ -189,7 +189,7 @@ class ProjectCompanyMigrationSteps {
 
         for (const mapping of this.migrationData.mappings) {
           try {
-            const projectRef = doc(db, 'projects', mapping.projectId);
+            const projectRef = doc(db, COLLECTIONS.PROJECTS, mapping.projectId);
 
             await updateDoc(projectRef, {
               companyId: mapping.newCompanyId,
@@ -229,7 +229,7 @@ class ProjectCompanyMigrationSteps {
 
         for (const mapping of this.migrationData.mappings) {
           try {
-            const projectRef = doc(db, 'projects', mapping.projectId);
+            const projectRef = doc(db, COLLECTIONS.PROJECTS, mapping.projectId);
 
             await updateDoc(projectRef, {
               companyId: mapping.oldCompanyId === '<empty>' ? '' : mapping.oldCompanyId,
@@ -245,7 +245,7 @@ class ProjectCompanyMigrationSteps {
       validate: async () => {
         // Verify all projects have been updated correctly
         for (const mapping of this.migrationData.mappings) {
-          const projectDoc = await getDoc(doc(db, 'projects', mapping.projectId));
+          const projectDoc = await getDoc(doc(db, COLLECTIONS.PROJECTS, mapping.projectId));
           if (projectDoc.exists()) {
             const projectData = projectDoc.data();
             if (projectData.companyId !== mapping.newCompanyId) {

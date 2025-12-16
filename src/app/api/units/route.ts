@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   try {
     console.log('🏠 Fetching units from Firestore...');
 
-    // Get all units from the 'units' collection
+    // Get all units from the COLLECTIONS.UNITS collection
     const unitsQuery = query(
       collection(db, COLLECTIONS.UNITS),
       orderBy('name', 'asc')
@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
 
     // Perform updates using Firebase Admin
     for (const update of updates) {
-      await admin.updateDoc(admin.doc(database, 'units', update.unitId), {
+      await admin.updateDoc(admin.doc(database, COLLECTIONS.UNITS, update.unitId), {
         soldTo: update.contactId
       });
 

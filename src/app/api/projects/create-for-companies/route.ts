@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
       };
 
       try {
-        await setDoc(doc(db, 'projects', projectId), project);
+        await setDoc(doc(db, COLLECTIONS.PROJECTS, projectId), project);
         console.log(`✅ Created project: ${project.name} (ID: ${projectId})`);
 
         createdProjects.push({

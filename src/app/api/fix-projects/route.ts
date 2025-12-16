@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirestore } from 'firebase-admin/firestore';
 import { initializeApp, getApps } from 'firebase-admin/app';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 let adminDb: FirebaseFirestore.Firestore;
 
@@ -33,7 +34,7 @@ export async function POST() {
     // 🏢 ENTERPRISE: Database-driven company lookup (NO MORE HARDCODED IDs)
     const getCompanyIdByName = async (companyName: string): Promise<string | null> => {
       try {
-        const companiesQuery = await adminDb.collection('contacts')
+        const companiesQuery = await adminDb.collection(COLLECTIONS.CONTACTS)
           .where('type', '==', 'company')
           .where('companyName', '==', companyName)
           .limit(1)
@@ -64,7 +65,7 @@ export async function POST() {
     console.log(`✅ Using database-driven companyId: ${correctCompanyId}`);
 
     // Παίρνουμε όλα τα projects
-    const projectsSnapshot = await adminDb.collection('projects').get();
+    const projectsSnapshot = await adminDb.collection(COLLECTIONS.PROJECTS).get();
     console.log(`📊 Found ${projectsSnapshot.size} projects`);
 
     const results = [];
@@ -78,7 +79,7 @@ export async function POST() {
       if (project.companyId !== correctCompanyId) {
         console.log(`🔄 Updating project ${projectId}`);
 
-        await adminDb.collection('projects').doc(projectId).update({
+        await adminDb.collection(COLLECTIONS.PROJECTS).doc(projectId).update({
           companyId: correctCompanyId
         });
 
@@ -103,7 +104,7 @@ export async function POST() {
     }
 
     // Επιβεβαίωση
-    const verificationSnapshot = await adminDb.collection('projects').get();
+    const verificationSnapshot = await adminDb.collection(COLLECTIONS.PROJECTS).get();
     const verification = [];
 
     for (const doc of verificationSnapshot.docs) {

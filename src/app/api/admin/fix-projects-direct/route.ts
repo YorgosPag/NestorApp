@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirestore } from 'firebase-admin/firestore';
 import { initializeApp, getApps } from 'firebase-admin/app';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 // Initialize Admin SDK if not already initialized
 let adminDb: FirebaseFirestore.Firestore;
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
 
     // Get all projects using Admin SDK
     console.log('📋 Loading all projects...');
-    const projectsSnapshot = await adminDb.collection('projects').get();
+    const projectsSnapshot = await adminDb.collection(COLLECTIONS.PROJECTS).get();
 
     if (projectsSnapshot.empty) {
       console.log('⚠️ No projects found in database');
@@ -73,7 +74,7 @@ export async function POST(request: NextRequest) {
 
         try {
           // Direct Admin SDK update - bypasses all permissions
-          await adminDb.collection('projects').doc(projectId).update({
+          await adminDb.collection(COLLECTIONS.PROJECTS).doc(projectId).update({
             companyId: correctCompanyId
           });
 
@@ -111,7 +112,7 @@ export async function POST(request: NextRequest) {
 
     // Verification: Re-read all projects to confirm updates
     console.log('🔍 Verifying updates...');
-    const verificationSnapshot = await adminDb.collection('projects').get();
+    const verificationSnapshot = await adminDb.collection(COLLECTIONS.PROJECTS).get();
     const verificationResults = [];
 
     for (const doc of verificationSnapshot.docs) {

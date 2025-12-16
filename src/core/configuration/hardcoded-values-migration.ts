@@ -36,6 +36,7 @@ import {
   FirestoreError
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import {
   CompanyConfiguration,
   SystemConfiguration,
@@ -427,7 +428,7 @@ export class HardcodedValuesMigrationEngine {
       };
 
       if (!dryRun) {
-        await setDoc(doc(db, 'system', 'company'), companyConfig);
+        await setDoc(doc(db, COLLECTIONS.SYSTEM, 'company'), companyConfig);
       }
 
       console.log('✅ Company data migrated successfully');
@@ -487,7 +488,7 @@ export class HardcodedValuesMigrationEngine {
       };
 
       if (!dryRun) {
-        await setDoc(doc(db, 'system', 'settings'), systemConfig);
+        await setDoc(doc(db, COLLECTIONS.SYSTEM, 'settings'), systemConfig);
       }
 
       console.log('✅ System data migrated successfully');
@@ -532,7 +533,7 @@ export class HardcodedValuesMigrationEngine {
           };
 
           if (!dryRun) {
-            const docRef = doc(collection(db, 'system', 'project-templates'), template.id);
+            const docRef = doc(collection(db, COLLECTIONS.SYSTEM, 'project-templates'), template.id);
             batch.set(docRef, template);
           }
 
@@ -572,11 +573,11 @@ export class HardcodedValuesMigrationEngine {
   private async validateEnvironment(): Promise<void> {
     try {
       // Check Firebase connection
-      const testDoc = await getDoc(doc(db, 'system', 'health-check'));
+      const testDoc = await getDoc(doc(db, COLLECTIONS.SYSTEM, 'health-check'));
       console.log('✅ Firebase connection validated');
 
       // Check permissions
-      const testWrite = doc(db, 'system', 'migration-test');
+      const testWrite = doc(db, COLLECTIONS.SYSTEM, 'migration-test');
       await setDoc(testWrite, { test: true, timestamp: Timestamp.now() });
       console.log('✅ Write permissions validated');
 
@@ -647,7 +648,7 @@ export class HardcodedValuesMigrationEngine {
         }
       };
 
-      await setDoc(doc(db, 'system', 'migration-backups', backupId), backupDoc);
+      await setDoc(doc(db, COLLECTIONS.SYSTEM, 'migration-backups', backupId), backupDoc);
 
       console.log(`✅ Backup created successfully: ${backupId}`);
       return backupId;
@@ -671,7 +672,7 @@ export class HardcodedValuesMigrationEngine {
         version: '1.0.0'
       };
 
-      await setDoc(doc(db, 'system', 'migration-logs', this.migrationId), logDoc);
+      await setDoc(doc(db, COLLECTIONS.SYSTEM, 'migration-logs', this.migrationId), logDoc);
       console.log(`✅ Migration result logged: ${this.migrationId}`);
 
     } catch (error) {
@@ -714,7 +715,7 @@ export class HardcodedValuesMigrationEngine {
     try {
       console.log(`🔄 Starting rollback with backup: ${backupId}`);
 
-      const backupDoc = await getDoc(doc(db, 'system', 'migration-backups', backupId));
+      const backupDoc = await getDoc(doc(db, COLLECTIONS.SYSTEM, 'migration-backups', backupId));
 
       if (!backupDoc.exists()) {
         throw new Error(`Backup not found: ${backupId}`);

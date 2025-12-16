@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 /**
  * 🏢 ENTERPRISE: Dynamic Sample Data Generator (MICROSOFT/GOOGLE CLASS)
@@ -157,7 +158,7 @@ export async function POST() {
 
     for (const oldId of oldContactIds) {
       try {
-        await adminDb.collection('contacts').doc(oldId).delete();
+        await adminDb.collection(COLLECTIONS.CONTACTS).doc(oldId).delete();
         console.log(`🗑️ Deleted old contact: ${oldId}`);
       } catch (error) {
         console.log(`⚠️ Contact ${oldId} not found (already deleted)`);
@@ -236,7 +237,7 @@ export async function POST() {
         };
 
         // Δημιουργώ το contact με το ID που χρησιμοποιούν τα units
-        await adminDb.collection('contacts').doc(contactId).set(contactData);
+        await adminDb.collection(COLLECTIONS.CONTACTS).doc(contactId).set(contactData);
 
         createdContacts.push({
           id: contactId,
@@ -258,7 +259,7 @@ export async function POST() {
     console.log('🔗 Updating units with new contact IDs...');
 
     // Get all sold units that currently use old customer_xxx IDs
-    const unitsSnapshot = await adminDb.collection('units')
+    const unitsSnapshot = await adminDb.collection(COLLECTIONS.UNITS)
       .where('status', '==', 'sold')
       .get();
 
@@ -279,7 +280,7 @@ export async function POST() {
         const newContactId = oldToNewMapping[currentSoldTo];
 
         try {
-          await adminDb.collection('units').doc(unitDoc.id).update({
+          await adminDb.collection(COLLECTIONS.UNITS).doc(unitDoc.id).update({
             soldTo: newContactId
           });
 

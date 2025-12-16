@@ -297,7 +297,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Save to Firestore with timeout
-        const savePromise = addDoc(collection(db, 'email_analytics'), analyticsRecord);
+        const savePromise = addDoc(collection(db, COLLECTIONS.ANALYTICS), analyticsRecord);
         const timeoutPromise = new Promise((_, reject) => 
           setTimeout(() => reject(new Error('Firestore timeout')), WEBHOOK_TIMEOUT_MS)
         );

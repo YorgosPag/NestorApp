@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { firebaseServer } from '@/lib/firebase-server';
 import { getContactDisplayName, getPrimaryPhone, getPrimaryEmail } from '@/types/contacts';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 export async function GET(
   request: NextRequest,
@@ -41,14 +42,14 @@ export async function GET(
     // 🏢 STEP 1: Get buildings for this project (handle both string and number projectId)
     console.log(`🏢 Fetching buildings for projectId: ${projectId}`);
 
-    let buildingsSnapshot = await firebaseServer.getDocs('buildings', [
+    let buildingsSnapshot = await firebaseServer.getDocs(COLLECTIONS.BUILDINGS, [
       { field: 'projectId', operator: '==', value: projectId }
     ]);
 
     // If no results, try with number projectId
     if (buildingsSnapshot.docs.length === 0) {
       console.log(`🔄 No buildings found with string projectId, trying number: ${parseInt(projectId)}`);
-      buildingsSnapshot = await firebaseServer.getDocs('buildings', [
+      buildingsSnapshot = await firebaseServer.getDocs(COLLECTIONS.BUILDINGS, [
         { field: 'projectId', operator: '==', value: parseInt(projectId) }
       ]);
     }
@@ -75,7 +76,7 @@ export async function GET(
 
     for (const buildingId of buildingIds) {
       console.log(`🏠 Fetching units for buildingId: ${buildingId}`);
-      const unitsSnapshot = await firebaseServer.getDocs('units', [
+      const unitsSnapshot = await firebaseServer.getDocs(COLLECTIONS.UNITS, [
         { field: 'buildingId', operator: '==', value: buildingId }
       ]);
 
@@ -138,7 +139,7 @@ export async function GET(
     // 📇 STEP 5: Get contact details for customers (max 10 due to Firestore limit)
     console.log(`📇 Fetching contact details for ${customerIds.length} customers`);
 
-    const contactsSnapshot = await firebaseServer.getDocs('contacts', [
+    const contactsSnapshot = await firebaseServer.getDocs(COLLECTIONS.CONTACTS, [
       { field: '__name__', operator: 'in', value: customerIds.slice(0, 10) }
     ]);
 

@@ -5,12 +5,13 @@ import TelegramProvider from './providers/telegram';
 import { MESSAGE_TYPES, MESSAGE_TEMPLATES, isChannelEnabled, COMMUNICATION_CHANNELS } from '../config/communications.config';
 import { db } from '@/lib/firebase';
 import { collection, query, where, orderBy, limit, getDocs, doc, getDoc, serverTimestamp, writeBatch, updateDoc } from 'firebase/firestore';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import type { BaseMessageInput, SendResult, Channel } from '@/types/communications';
 
-// 🏢 ENTERPRISE: Configurable Firestore collection names
-const COMMUNICATIONS_COLLECTION = process.env.NEXT_PUBLIC_COMMUNICATIONS_COLLECTION || 'communications';
-const SYSTEM_COLLECTION = process.env.NEXT_PUBLIC_SYSTEM_COLLECTION || 'system';
-const CONTACTS_COLLECTION = process.env.NEXT_PUBLIC_CONTACTS_COLLECTION || 'contacts';
+// 🏢 ENTERPRISE: Centralized Firestore collection configuration
+const COMMUNICATIONS_COLLECTION = COLLECTIONS.COMMUNICATIONS;
+const SYSTEM_COLLECTION = COLLECTIONS.SYSTEM;
+const CONTACTS_COLLECTION = COLLECTIONS.CONTACTS;
 
 /**
  * Κεντρική υπηρεσία επικοινωνιών

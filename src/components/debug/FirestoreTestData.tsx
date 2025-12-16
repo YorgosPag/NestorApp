@@ -95,7 +95,7 @@ export default function FirestoreTestData() {
           // Add test properties
           for (const property of TEST_PROPERTIES) {
             const { id, ...propertyData } = property;
-            await setDoc(doc(db, 'units', id), propertyData);
+            await setDoc(doc(db, COLLECTIONS.UNITS, id), propertyData);
             console.log('✅ Created:', property.name);
           }
 

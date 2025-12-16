@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
         console.log(`   Old companyId: ${currentCompanyId}`);
         console.log(`   New companyId: ${correctCompanyId}`);
 
-        const projectRef = doc(db, 'projects', projectDoc.id);
+        const projectRef = doc(db, COLLECTIONS.PROJECTS, projectDoc.id);
         batch.update(projectRef, {
           companyId: correctCompanyId,
           updatedAt: new Date().toISOString()

@@ -5,6 +5,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { StorageUnit, StorageType } from '@/types/storage';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 import { StorageList } from './StorageList';
 import { StorageForm } from './StorageForm/index';
@@ -42,7 +43,7 @@ export function StorageTab({ building }: StorageTabProps) {
 
         // Φόρτωση storage units για το συγκεκριμένο κτίριο
         const storageQuery = query(
-          collection(db, 'storageUnits'),
+          collection(db, COLLECTIONS.STORAGE),
           where('building', '==', building.name)
         );
 

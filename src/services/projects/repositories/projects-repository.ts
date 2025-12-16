@@ -9,9 +9,10 @@ import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { IProjectsRepository } from '../contracts';
 import type { Project } from '@/types/project';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
-// 🏢 ENTERPRISE: Configurable Firestore collection names
-const PROJECTS_COLLECTION = process.env.NEXT_PUBLIC_PROJECTS_COLLECTION || 'projects';
+// 🏢 ENTERPRISE: Centralized Firestore collection configuration
+const PROJECTS_COLLECTION = COLLECTIONS.PROJECTS;
 
 export class FirestoreProjectsRepository implements Pick<IProjectsRepository, 'getProjectsByCompanyId'> {
   async getProjectsByCompanyId(companyId: string): Promise<Project[]> {

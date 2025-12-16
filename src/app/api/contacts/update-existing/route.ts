@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 export async function POST(request: Request) {
   try {
@@ -26,7 +27,7 @@ export async function POST(request: Request) {
           updatedAt: new Date()
         };
 
-        await adminDb.collection('contacts').doc(contactId).update(updateData);
+        await adminDb.collection(COLLECTIONS.CONTACTS).doc(contactId).update(updateData);
         updatedContacts.push(contactId);
 
         console.log(`✅ Updated contact: ${contactId} → ${(assignment as any).role} (${(assignment as any).tags.join(', ')})`);

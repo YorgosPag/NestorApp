@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirestore } from 'firebase-admin/firestore';
 import { initializeApp, getApps } from 'firebase-admin/app';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 // Initialize Admin SDK if not already initialized
 let adminDb: FirebaseFirestore.Firestore;
@@ -33,7 +34,7 @@ export async function GET() {
 
     // Step 1: Fetch all buildings
     console.log('📋 Step 1: Fetching buildings...');
-    const buildingsSnapshot = await adminDb.collection('buildings').get();
+    const buildingsSnapshot = await adminDb.collection(COLLECTIONS.BUILDINGS).get();
     const buildings = buildingsSnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
@@ -43,7 +44,7 @@ export async function GET() {
 
     // Step 2: Fetch all floors
     console.log('📋 Step 2: Fetching floors...');
-    const floorsSnapshot = await adminDb.collection('floors').get();
+    const floorsSnapshot = await adminDb.collection(COLLECTIONS.FLOORS).get();
     const floors = floorsSnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
@@ -55,7 +56,7 @@ export async function GET() {
     console.log('📋 Step 3: Checking alternative collections...');
 
     // Check if floors are stored in a different collection
-    const unitsSnapshot = await adminDb.collection('units').get();
+    const unitsSnapshot = await adminDb.collection(COLLECTIONS.UNITS).get();
     const units = unitsSnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()

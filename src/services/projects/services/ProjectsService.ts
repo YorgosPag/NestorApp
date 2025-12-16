@@ -143,7 +143,7 @@ export class ProjectsService implements IProjectsService {
     try {
         const admin = await getFirebaseAdmin();
 
-        const projectDoc = await admin.getDoc(admin.doc(db, 'projects', projectId));
+        const projectDoc = await admin.getDoc(admin.doc(db, COLLECTIONS.PROJECTS, projectId));
         if (projectDoc.exists()) {
             // Document exists
         }

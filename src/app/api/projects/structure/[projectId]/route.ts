@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { firebaseServer } from '@/lib/firebase-server';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 export async function GET(
   request: NextRequest,
@@ -11,7 +12,7 @@ export async function GET(
 
     // Get project details
     console.log(`🔍 Fetching project with ID: ${projectId}`);
-    const projectSnapshot = await firebaseServer.getDoc('projects', projectId);
+    const projectSnapshot = await firebaseServer.getDoc(COLLECTIONS.PROJECTS, projectId);
 
     if (!projectSnapshot.exists) {
       console.log(`❌ Project with ID ${projectId} not found`);
@@ -28,14 +29,14 @@ export async function GET(
     console.log(`🏢 Fetching buildings for projectId: ${projectId} (trying both string and number)`);
 
     // Try with string projectId first
-    let buildingsSnapshot = await firebaseServer.getDocs('buildings', [
+    let buildingsSnapshot = await firebaseServer.getDocs(COLLECTIONS.BUILDINGS, [
       { field: 'projectId', operator: '==', value: projectId }
     ]);
 
     // If no results, try with number projectId
     if (buildingsSnapshot.docs.length === 0) {
       console.log(`🔄 No buildings found with string projectId, trying number: ${parseInt(projectId)}`);
-      buildingsSnapshot = await firebaseServer.getDocs('buildings', [
+      buildingsSnapshot = await firebaseServer.getDocs(COLLECTIONS.BUILDINGS, [
         { field: 'projectId', operator: '==', value: parseInt(projectId) }
       ]);
     }
@@ -50,7 +51,7 @@ export async function GET(
       const buildingKey = building.id;  // Use building ID directly
 
       console.log(`🏠 Fetching units for buildingId: ${buildingKey}`);
-      const unitsSnapshot = await firebaseServer.getDocs('units', [
+      const unitsSnapshot = await firebaseServer.getDocs(COLLECTIONS.UNITS, [
         { field: 'buildingId', operator: '==', value: buildingKey }
       ]);
 

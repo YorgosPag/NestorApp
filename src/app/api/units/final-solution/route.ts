@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
           console.log(`✅ Created ${createResult.contactsCount} contacts via API`);
 
           // Reload contacts from database
-          const newContactsSnapshot = await adminDb.collection('contacts')
+          const newContactsSnapshot = await adminDb.collection(COLLECTIONS.CONTACTS)
             .where('type', '==', 'individual')
             .limit(8)
             .get();
@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
 
       try {
         // Χρησιμοποιούμε το document reference για update
-        const unitDocRef = doc(db, 'units', unit.id);
+        const unitDocRef = doc(db, COLLECTIONS.UNITS, unit.id);
 
         await updateDoc(unitDocRef, {
           soldTo: contact.id

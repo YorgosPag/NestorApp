@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 export async function GET(request: NextRequest) {
   try {
@@ -8,7 +9,7 @@ export async function GET(request: NextRequest) {
 
     // Get all buildings from Firestore
     const buildingsQuery = query(
-      collection(db, 'buildings'),
+      collection(db, COLLECTIONS.BUILDINGS),
       orderBy('createdAt', 'desc')
     );
 

@@ -264,7 +264,7 @@ export function ReadOnlyLayerViewer({
     setLayerState(prev => ({ ...prev, isLoading: true }));
 
     const layersQuery = query(
-      collection(db, 'layers'),
+      collection(db, COLLECTIONS.LAYERS),
       where('floorId', '==', floorId),
       orderBy('zIndex', 'asc')
     );

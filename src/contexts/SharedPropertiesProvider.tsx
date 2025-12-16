@@ -66,14 +66,14 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
 
       // Διαγραφή
       for (const property of toDelete) {
-        await deleteDoc(doc(db, 'units', property.id));
+        await deleteDoc(doc(db, COLLECTIONS.UNITS, property.id));
         console.log(`❌ Deleted: ${property.id}`);
       }
 
       // Ενημέρωση/Δημιουργία
       for (const property of toUpdate) {
         const { id, ...propertyData } = property;
-        await setDoc(doc(db, 'units', id), propertyData);
+        await setDoc(doc(db, COLLECTIONS.UNITS, id), propertyData);
         if (DEBUG_SHARED_PROPERTIES_PROVIDER) console.log(`✅ Updated/Created: ${id}`);
       }
       

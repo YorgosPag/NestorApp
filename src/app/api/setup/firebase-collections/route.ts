@@ -15,7 +15,7 @@ export async function POST() {
     console.log('🔧 Setting up Firebase collections...');
 
     // 1. Δημιουργία collection 'contact_relationships'
-    const testRelationshipRef = doc(collection(db, 'contact_relationships'), 'setup-test-doc');
+    const testRelationshipRef = doc(collection(db, COLLECTIONS.RELATIONSHIPS), 'setup-test-doc');
 
     const testRelationship = {
       sourceContactId: 'setup-test-source',

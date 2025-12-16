@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 export async function GET() {
   try {
@@ -13,7 +14,7 @@ export async function GET() {
 
     // Step 1: Fetch all buildings
     console.log('📋 Step 1: Fetching buildings...');
-    const buildingsSnapshot = await getDocs(collection(db, 'buildings'));
+    const buildingsSnapshot = await getDocs(collection(db, COLLECTIONS.BUILDINGS));
     const buildings = buildingsSnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
@@ -23,7 +24,7 @@ export async function GET() {
 
     // Step 2: Fetch all floors
     console.log('📋 Step 2: Fetching floors...');
-    const floorsSnapshot = await getDocs(collection(db, 'floors'));
+    const floorsSnapshot = await getDocs(collection(db, COLLECTIONS.FLOORS));
     const floors = floorsSnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()

@@ -271,7 +271,7 @@ class FloorsNormalizationMigrationSteps {
         // Delete all created floors
         for (const floor of this.migrationData.floorsToCreate) {
           try {
-            const floorRef = doc(db, 'floors', floor.id);
+            const floorRef = doc(db, COLLECTIONS.FLOORS, floor.id);
             await updateDoc(floorRef, { deleted: true, deletedAt: new Date().toISOString() });
             console.log(`   ↩️ Marked floor as deleted: ${floor.name}`);
           } catch (error) {
@@ -282,7 +282,7 @@ class FloorsNormalizationMigrationSteps {
       validate: async () => {
         // Verify all floors were inserted correctly
         for (const floor of this.migrationData.floorsToCreate) {
-          const floorDoc = await getDoc(doc(db, 'floors', floor.id));
+          const floorDoc = await getDoc(doc(db, COLLECTIONS.FLOORS, floor.id));
           if (!floorDoc.exists()) {
             return false;
           }

@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirestore } from 'firebase-admin/firestore';
 import { initializeApp, getApps } from 'firebase-admin/app';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 // Initialize Admin SDK if not already initialized
 let adminDb: FirebaseFirestore.Firestore;
@@ -51,7 +52,7 @@ export async function GET(request: NextRequest) {
 
     if (buildingId) {
       // Query floors by buildingId (Enterprise foreign key relationship)
-      const floorsSnapshot = await adminDb.collection('floors')
+      const floorsSnapshot = await adminDb.collection(COLLECTIONS.FLOORS)
         .where('buildingId', '==', buildingId)
         .get();
 
@@ -65,7 +66,7 @@ export async function GET(request: NextRequest) {
 
     } else if (projectId) {
       // Query floors by projectId
-      const floorsSnapshot = await adminDb.collection('floors')
+      const floorsSnapshot = await adminDb.collection(COLLECTIONS.FLOORS)
         .where('projectId', '==', projectId)
         .get();
 

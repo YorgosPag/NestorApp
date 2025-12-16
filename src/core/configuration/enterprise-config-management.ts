@@ -38,6 +38,7 @@ import {
   Unsubscribe
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 // ============================================================================
 // 🎯 ENTERPRISE CONFIGURATION TYPES - FULL TYPE SAFETY
@@ -280,7 +281,7 @@ export class EnterpriseConfigurationManager {
    */
   public async loadConfiguration(): Promise<EnterpriseConfiguration> {
     try {
-      const configDoc = await getDoc(doc(db, 'system', 'configuration'));
+      const configDoc = await getDoc(doc(db, COLLECTIONS.SYSTEM, 'configuration'));
 
       if (!configDoc.exists()) {
         console.warn('🔧 Configuration not found in database, creating defaults...');
@@ -316,7 +317,7 @@ export class EnterpriseConfigurationManager {
     }
 
     try {
-      const doc = await getDoc(doc(db, 'system', 'company'));
+      const doc = await getDoc(doc(db, COLLECTIONS.SYSTEM, 'company'));
 
       if (!doc.exists()) {
         console.warn('🏢 Company config not found, using defaults');
@@ -349,7 +350,7 @@ export class EnterpriseConfigurationManager {
     }
 
     try {
-      const doc = await getDoc(doc(db, 'system', 'settings'));
+      const doc = await getDoc(doc(db, COLLECTIONS.SYSTEM, 'settings'));
 
       if (!doc.exists()) {
         console.warn('⚙️ System config not found, using defaults');
@@ -374,7 +375,7 @@ export class EnterpriseConfigurationManager {
    */
   public async getProjectTemplates(): Promise<readonly ProjectTemplateConfiguration[]> {
     try {
-      const snapshot = await getDocs(collection(db, 'system', 'project-templates'));
+      const snapshot = await getDocs(collection(db, COLLECTIONS.SYSTEM, 'project-templates'));
 
       if (snapshot.empty) {
         console.warn('📋 No project templates found');
@@ -413,7 +414,7 @@ export class EnterpriseConfigurationManager {
       // Validate before saving
       this.validateCompanyConfig(updated);
 
-      await setDoc(doc(db, 'system', 'company'), updated);
+      await setDoc(doc(db, COLLECTIONS.SYSTEM, 'company'), updated);
 
       // Clear cache
       this.configCache.delete('company_config');
@@ -437,7 +438,7 @@ export class EnterpriseConfigurationManager {
 
       this.validateSystemConfig(updated);
 
-      await setDoc(doc(db, 'system', 'settings'), updated);
+      await setDoc(doc(db, COLLECTIONS.SYSTEM, 'settings'), updated);
 
       this.configCache.delete('system_config');
 
@@ -460,7 +461,7 @@ export class EnterpriseConfigurationManager {
     onUpdate: (config: EnterpriseConfiguration) => void
   ): void {
     const unsubscribe = onSnapshot(
-      doc(db, 'system', 'configuration'),
+      doc(db, COLLECTIONS.SYSTEM, 'configuration'),
       (doc) => {
         if (doc.exists()) {
           try {
@@ -590,7 +591,7 @@ export class EnterpriseConfigurationManager {
         version: '1.0.0'
       };
 
-      await setDoc(doc(db, 'system', 'configuration'), defaultConfig);
+      await setDoc(doc(db, COLLECTIONS.SYSTEM, 'configuration'), defaultConfig);
       console.log('✅ Default configuration created successfully');
 
     } catch (error) {

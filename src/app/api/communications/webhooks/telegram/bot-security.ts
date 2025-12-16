@@ -1,9 +1,9 @@
 // bot-security.ts - Security & Access Control for Telegram Bot
 
 export const ALLOWED_COLLECTIONS = [
-    'units',
-    'buildings', 
-    'projects',
+    COLLECTIONS.UNITS,
+    COLLECTIONS.BUILDINGS, 
+    COLLECTIONS.PROJECTS,
     'parking_spots',
     'storage_units'
 ];

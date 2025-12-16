@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { UNIT_SALE_STATUS } from '@/core/status/StatusConstants';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 export async function POST(request: NextRequest) {
   try {
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest) {
     console.log('🔍 Loading available contact IDs from database...');
 
     const contactsSnapshot = await adminDb
-      .collection('contacts')
+      .collection(COLLECTIONS.CONTACTS)
       .where('type', '==', 'individual')
       .limit(8)
       .get();

@@ -7,8 +7,8 @@
 
 import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { ObligationSection, ObligationDocument } from './obligations';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { ObligationSection, ObligationDocument } from './obligations';
 
 /**
  * 📋 Ανάκτηση obligation templates από Firebase
@@ -17,7 +17,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 export async function getObligationTemplates(limitCount: number = 50): Promise<ObligationSection[]> {
   try {
     const templatesQuery = query(
-      collection(db, 'obligationTemplates'),
+      collection(db, COLLECTIONS.OBLIGATION_TEMPLATES),
       orderBy('order', 'asc'),
       limit(limitCount)
     );
@@ -46,7 +46,7 @@ export async function getObligationTemplates(limitCount: number = 50): Promise<O
 export async function getObligations(limitCount: number = 100): Promise<ObligationDocument[]> {
   try {
     const obligationsQuery = query(
-      collection(db, 'obligations'),
+      collection(db, COLLECTIONS.OBLIGATIONS),
       orderBy('updatedAt', 'desc'),
       limit(limitCount)
     );

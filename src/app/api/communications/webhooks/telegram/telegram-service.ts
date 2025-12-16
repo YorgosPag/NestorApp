@@ -2,6 +2,7 @@
 
 import { db, isFirebaseAvailable } from '@/lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 /**
  * Sends a message to the Telegram API.
@@ -42,7 +43,7 @@ export async function sendTelegramMessage(messageData: any) {
 }
 
 /**
- * Stores a message record in the Firestore 'communications' collection.
+ * Stores a message record in the Firestore COLLECTIONS.COMMUNICATIONS collection.
  */
 export async function storeMessageInCRM(message: any, direction: 'inbound' | 'outbound') {
   if (!isFirebaseAvailable()) {
@@ -71,7 +72,7 @@ export async function storeMessageInCRM(message: any, direction: 'inbound' | 'ou
       updatedAt: Timestamp.now()
     };
 
-    const docRef = await db.collection('communications').add(messageRecord);
+    const docRef = await db.collection(COLLECTIONS.COMMUNICATIONS).add(messageRecord);
     console.log(`✅ Message stored in CRM with ID: ${docRef.id}`);
     return docRef;
 

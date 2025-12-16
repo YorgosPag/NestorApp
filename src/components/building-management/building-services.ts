@@ -11,6 +11,7 @@
 import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Building } from '@/types/building/contracts';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 /**
  * 🏗️ Ανάκτηση κτιρίων από Firebase
@@ -19,7 +20,7 @@ import type { Building } from '@/types/building/contracts';
 export async function getBuildings(limitCount: number = 100): Promise<Building[]> {
   try {
     const buildingsQuery = query(
-      collection(db, 'buildings'),
+      collection(db, COLLECTIONS.BUILDINGS),
       orderBy('updatedAt', 'desc'),
       limit(limitCount)
     );
@@ -47,7 +48,7 @@ export async function getBuildings(limitCount: number = 100): Promise<Building[]
 export async function getCompanies(limitCount: number = 50): Promise<Array<{id: string, name: string}>> {
   try {
     const companiesQuery = query(
-      collection(db, 'companies'),
+      collection(db, COLLECTIONS.COMPANIES),
       orderBy('updatedAt', 'desc'),
       limit(limitCount)
     );
@@ -75,7 +76,7 @@ export async function getCompanies(limitCount: number = 50): Promise<Array<{id: 
 export async function getProjectsList(limitCount: number = 50): Promise<Array<{id: string, name: string}>> {
   try {
     const projectsQuery = query(
-      collection(db, 'projects'),
+      collection(db, COLLECTIONS.PROJECTS),
       orderBy('updatedAt', 'desc'),
       limit(limitCount)
     );

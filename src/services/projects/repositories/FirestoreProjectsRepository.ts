@@ -4,12 +4,13 @@ import type { Project } from '@/types/project';
 import type { Building } from '@/components/building-management/mockData';
 import type { Property } from '@/types/property-viewer';
 import type { Contact } from '@/types/contacts';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
-// 🏢 ENTERPRISE: Configurable Firestore collection names
-const PROJECTS_COLLECTION = process.env.NEXT_PUBLIC_PROJECTS_COLLECTION || 'projects';
-const BUILDINGS_COLLECTION = process.env.NEXT_PUBLIC_BUILDINGS_COLLECTION || 'buildings';
-const UNITS_COLLECTION = process.env.NEXT_PUBLIC_UNITS_COLLECTION || 'units';
-const CONTACTS_COLLECTION = process.env.NEXT_PUBLIC_CONTACTS_COLLECTION || 'contacts';
+// 🏢 ENTERPRISE: Centralized Firestore collection configuration
+const PROJECTS_COLLECTION = COLLECTIONS.PROJECTS;
+const BUILDINGS_COLLECTION = COLLECTIONS.BUILDINGS;
+const UNITS_COLLECTION = COLLECTIONS.UNITS;
+const CONTACTS_COLLECTION = COLLECTIONS.CONTACTS;
 
 // Helper function for chunking arrays
 const chunkArray = <T>(arr: T[], size: number): T[][] => {

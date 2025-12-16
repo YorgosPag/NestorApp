@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { collection, doc, updateDoc, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { BUILDING_IDS } from '@/config/building-ids-config';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,7 +10,7 @@ export async function POST(request: NextRequest) {
 
     // 🏢 ENTERPRISE: Get buildings for configured project ID
     const buildingsQuery = query(
-      collection(db, 'buildings'),
+      collection(db, COLLECTIONS.BUILDINGS),
       where('projectId', '==', BUILDING_IDS.PROJECT_ID)
     );
     
@@ -26,7 +27,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 🏢 ENTERPRISE: Update configured project to include its buildings
-    const projectDocRef = doc(db, 'projects', BUILDING_IDS.PROJECT_ID.toString());
+    const projectDocRef = doc(db, COLLECTIONS.PROJECTS, BUILDING_IDS.PROJECT_ID.toString());
     
     await updateDoc(projectDocRef, {
       buildings: buildings.map(building => ({

@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { db } from '@/lib/firebase';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import { 
   collection, 
   doc, 
@@ -15,13 +16,13 @@ import {
   onSnapshot,
   Timestamp 
 } from 'firebase/firestore';
-import { SYSTEM_LAYERS, DEFAULT_LAYER_STYLES } from '@/types/layers';
-import type { 
 import { COLLECTIONS } from '@/config/firestore-collections';
-  Layer, 
-  LayerGroup, 
-  LayerState, 
-  AnyLayerElement, 
+import { SYSTEM_LAYERS, DEFAULT_LAYER_STYLES } from '@/types/layers';
+import type {
+  Layer,
+  LayerGroup,
+  LayerState,
+  AnyLayerElement,
   LayerHistoryEntry,
   LayerFilter,
   LayerExportOptions,
@@ -187,13 +188,13 @@ export function useLayerManagement({
       setError(null);
       
       const layersQuery = query(
-        collection(db, 'layers'),
+        collection(db, COLLECTIONS.LAYERS),
         where('floorId', '==', floorId),
         orderBy('zIndex', 'asc')
       );
       
       const groupsQuery = query(
-        collection(db, 'layerGroups'),
+        collection(db, COLLECTIONS.LAYER_GROUPS),
         where('floorId', '==', floorId),
         orderBy('order', 'asc')
       );
@@ -233,7 +234,7 @@ export function useLayerManagement({
   // Setup real-time synchronization
   const setupRealtimeSync = () => {
     const layersQuery = query(
-      collection(db, 'layers'),
+      collection(db, COLLECTIONS.LAYERS),
       where('floorId', '==', floorId)
     );
     
@@ -467,7 +468,7 @@ export function useLayerManagement({
       const layersToSave = state.layers.filter(l => !l.isSystem);
       
       for (const layer of layersToSave) {
-        const layerDoc = doc(db, 'layers', layer.id);
+        const layerDoc = doc(db, COLLECTIONS.LAYERS, layer.id);
         await updateDoc(layerDoc, {
           ...layer,
           updatedAt: new Date().toISOString()
@@ -476,7 +477,7 @@ export function useLayerManagement({
       
       // Save groups
       for (const group of state.groups) {
-        const groupDoc = doc(db, 'layerGroups', group.id);
+        const groupDoc = doc(db, COLLECTIONS.LAYER_GROUPS, group.id);
         await updateDoc(groupDoc, group);
       }
       

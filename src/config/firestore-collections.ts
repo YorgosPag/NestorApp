@@ -17,6 +17,7 @@
 export const COLLECTIONS = {
   // 📞 CONTACTS & COMPANIES
   CONTACTS: process.env.NEXT_PUBLIC_CONTACTS_COLLECTION || 'contacts',
+  COMPANIES: process.env.NEXT_PUBLIC_COMPANIES_COLLECTION || 'companies', // Legacy collection
 
   // 🏢 PROJECTS & PROPERTIES
   PROJECTS: process.env.NEXT_PUBLIC_PROJECTS_COLLECTION || 'projects',
@@ -33,6 +34,8 @@ export const COLLECTIONS = {
   LEADS: process.env.NEXT_PUBLIC_LEADS_COLLECTION || 'leads',
   ACTIVITIES: process.env.NEXT_PUBLIC_ACTIVITIES_COLLECTION || 'activities',
   TASKS: process.env.NEXT_PUBLIC_TASKS_COLLECTION || 'tasks',
+  OBLIGATIONS: process.env.NEXT_PUBLIC_OBLIGATIONS_COLLECTION || 'obligations',
+  OBLIGATION_TEMPLATES: process.env.NEXT_PUBLIC_OBLIGATION_TEMPLATES_COLLECTION || 'obligationTemplates',
 
   // 📊 ANALYTICS & METRICS
   ANALYTICS: process.env.NEXT_PUBLIC_ANALYTICS_COLLECTION || 'analytics',
@@ -43,6 +46,7 @@ export const COLLECTIONS = {
   SYSTEM: process.env.NEXT_PUBLIC_SYSTEM_COLLECTION || 'system',
   CONFIG: process.env.NEXT_PUBLIC_CONFIG_COLLECTION || 'config',
   SETTINGS: process.env.NEXT_PUBLIC_SETTINGS_COLLECTION || 'settings',
+  NAVIGATION: process.env.NEXT_PUBLIC_NAVIGATION_COLLECTION || 'navigation_companies',
 
   // 👤 USER MANAGEMENT
   USERS: process.env.NEXT_PUBLIC_USERS_COLLECTION || 'users',
@@ -61,6 +65,10 @@ export const COLLECTIONS = {
   DOCUMENTS: process.env.NEXT_PUBLIC_DOCUMENTS_COLLECTION || 'documents',
   FILES: process.env.NEXT_PUBLIC_FILES_COLLECTION || 'files',
   ATTACHMENTS: process.env.NEXT_PUBLIC_ATTACHMENTS_COLLECTION || 'attachments',
+  LAYERS: process.env.NEXT_PUBLIC_LAYERS_COLLECTION || 'layers',
+  LAYER_GROUPS: process.env.NEXT_PUBLIC_LAYER_GROUPS_COLLECTION || 'layerGroups',
+  PROPERTY_LAYERS: process.env.NEXT_PUBLIC_PROPERTY_LAYERS_COLLECTION || 'property-layers',
+  LAYER_EVENTS: process.env.NEXT_PUBLIC_LAYER_EVENTS_COLLECTION || 'layer-events',
 
   // 🗓️ CALENDAR & SCHEDULING
   CALENDAR: process.env.NEXT_PUBLIC_CALENDAR_COLLECTION || 'calendar',
@@ -75,6 +83,7 @@ export const COLLECTIONS = {
   // 🏪 INVENTORY & ASSETS
   INVENTORY: process.env.NEXT_PUBLIC_INVENTORY_COLLECTION || 'inventory',
   ASSETS: process.env.NEXT_PUBLIC_ASSETS_COLLECTION || 'assets',
+  STORAGE: process.env.NEXT_PUBLIC_STORAGE_COLLECTION || 'storageUnits',
 
   // 💰 FINANCIAL
   INVOICES: process.env.NEXT_PUBLIC_INVOICES_COLLECTION || 'invoices',

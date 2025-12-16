@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirestore } from 'firebase-admin/firestore';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 // Initialize Admin SDK if not already initialized
 let adminDb: FirebaseFirestore.Firestore;
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest): Promise<Response> {
 
     // Step 1: Fetch all companies
     console.log('📋 Step 1: Fetching companies...');
-    const companiesSnapshot = await adminDb.collection('contacts')
+    const companiesSnapshot = await adminDb.collection(COLLECTIONS.CONTACTS)
       .where('type', '==', 'company')
       .where('status', '==', 'active')
       .get();
@@ -57,7 +58,7 @@ export async function POST(request: NextRequest): Promise<Response> {
 
     // Step 2: Fetch all projects
     console.log('📋 Step 2: Fetching projects...');
-    const projectsSnapshot = await adminDb.collection('projects').get();
+    const projectsSnapshot = await adminDb.collection(COLLECTIONS.PROJECTS).get();
     const projects = projectsSnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
@@ -93,7 +94,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     let updateCount = 0;
 
     for (const mapping of mappings) {
-      const projectRef = adminDb.collection('projects').doc(mapping.projectId);
+      const projectRef = adminDb.collection(COLLECTIONS.PROJECTS).doc(mapping.projectId);
 
       batch.update(projectRef, {
         companyId: mapping.newCompanyId,
@@ -121,7 +122,7 @@ export async function POST(request: NextRequest): Promise<Response> {
 
     // Step 5: Verification
     console.log('📋 Step 5: Verifying migration results...');
-    const verificationSnapshot = await adminDb.collection('projects').get();
+    const verificationSnapshot = await adminDb.collection(COLLECTIONS.PROJECTS).get();
     const updatedProjects = verificationSnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()

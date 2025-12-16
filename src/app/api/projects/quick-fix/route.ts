@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
       try {
         if (fix.action === 'update') {
           // Update existing project
-          const projectRef = doc(db, 'projects', fix.projectId);
+          const projectRef = doc(db, COLLECTIONS.PROJECTS, fix.projectId);
           await updateDoc(projectRef, {
             companyId: fix.companyId,
             updatedAt: new Date().toISOString()
@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
             ]
           };
 
-          const projectRef = doc(db, 'projects', fix.projectId);
+          const projectRef = doc(db, COLLECTIONS.PROJECTS, fix.projectId);
           await setDoc(projectRef, newProject);
           console.log(`✅ Created project ${fix.projectId} for ${fix.companyName}`);
           results.push({

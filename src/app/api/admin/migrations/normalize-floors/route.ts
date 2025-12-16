@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirestore } from 'firebase-admin/firestore';
 import { initializeApp, getApps } from 'firebase-admin/app';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 // Initialize Admin SDK if not already initialized
 let adminDb: FirebaseFirestore.Firestore;
@@ -69,7 +70,7 @@ export async function POST(request: NextRequest): Promise<Response> {
 
     // Step 1: Fetch all buildings with embedded floors
     console.log('📋 Step 1: Analyzing buildings with embedded floors...');
-    const buildingsSnapshot = await adminDb.collection('buildings').get();
+    const buildingsSnapshot = await adminDb.collection(COLLECTIONS.BUILDINGS).get();
     const buildings: BuildingRecord[] = buildingsSnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
@@ -145,7 +146,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       console.log(`   📦 Processing batch ${Math.floor(i / BATCH_SIZE) + 1} with ${batchFloors.length} floors`);
 
       for (const floor of batchFloors) {
-        const floorRef = adminDb.collection('floors').doc(floor.id);
+        const floorRef = adminDb.collection(COLLECTIONS.FLOORS).doc(floor.id);
         batch.set(floorRef, floor);
         console.log(`     ✅ Queued floor: ${floor.name} (${floor.buildingName})`);
       }
@@ -162,7 +163,7 @@ export async function POST(request: NextRequest): Promise<Response> {
 
     // Step 3: Verify normalization integrity
     console.log('📋 Step 3: Verifying normalization integrity...');
-    const floorsSnapshot = await adminDb.collection('floors').get();
+    const floorsSnapshot = await adminDb.collection(COLLECTIONS.FLOORS).get();
     const createdFloors = floorsSnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()

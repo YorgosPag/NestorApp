@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { UNIT_SALE_STATUS } from '@/core/status/StatusConstants';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 export async function POST() {
   try {
@@ -14,7 +15,7 @@ export async function POST() {
       }, { status: 500 });
     }
 
-    const unitsSnapshot = await adminDb.collection('units').get();
+    const unitsSnapshot = await adminDb.collection(COLLECTIONS.UNITS).get();
 
     // Debug: Show all sold units and their soldTo values
     const allSoldUnits = unitsSnapshot.docs
@@ -55,7 +56,7 @@ export async function POST() {
     console.log('🔍 Loading real contact IDs from database...');
 
     const contactsSnapshot = await adminDb
-      .collection('contacts')
+      .collection(COLLECTIONS.CONTACTS)
       .where('type', '==', 'individual')
       .limit(8)
       .get();
@@ -91,7 +92,7 @@ export async function POST() {
         const emailDomain = process.env.NEXT_PUBLIC_TEST_EMAIL_DOMAIN || 'testcontacts.local';
         const phonePrefix = process.env.NEXT_PUBLIC_TEST_PHONE_PREFIX || '+30 21';
 
-        await adminDb.collection('contacts').doc(contactId).set({
+        await adminDb.collection(COLLECTIONS.CONTACTS).doc(contactId).set({
           firstName: contactName.split(' ')[0],
           lastName: contactName.split(' ')[1] || '',
           displayName: contactName,
@@ -121,7 +122,7 @@ export async function POST() {
       const contactName = sampleContactNames[i % sampleContactNames.length];
 
       try {
-        await adminDb.collection('units').doc(unit.id).update({
+        await adminDb.collection(COLLECTIONS.UNITS).doc(unit.id).update({
           soldTo: contactId
         });
 

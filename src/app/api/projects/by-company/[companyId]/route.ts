@@ -29,7 +29,7 @@ export const GET = withErrorHandling(async (
     );
     
     const snapshot = await getDocs(projectsQuery);
-    console.log('🔍 Found', snapshot.docs.length, 'projects');
+    console.log('🔍 Found', snapshot.docs.length, COLLECTIONS.PROJECTS);
     console.log(`🏗️ API (Client SDK): Found ${snapshot.docs.length} projects for companyId "${params.companyId}"`);
     
     const projects = snapshot.docs.map(doc => ({
@@ -50,6 +50,6 @@ export const GET = withErrorHandling(async (
     }, `Found ${projects.length} projects for company ${params.companyId}`);
 }, {
   operation: 'loadProjectsByCompany',
-  entityType: 'projects',
+  entityType: COLLECTIONS.PROJECTS,
   entityId: 'params.companyId'
 });

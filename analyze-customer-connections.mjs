@@ -4,6 +4,14 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, getDocs, doc, getDoc, query, where } from 'firebase/firestore';
 
+// 🏢 ENTERPRISE: Collections configuration (ES6 module version)
+const COLLECTIONS = {
+  CONTACTS: process.env.NEXT_PUBLIC_CONTACTS_COLLECTION || 'contacts',
+  UNITS: process.env.NEXT_PUBLIC_UNITS_COLLECTION || 'units',
+  PROJECTS: process.env.NEXT_PUBLIC_PROJECTS_COLLECTION || 'projects',
+  BUILDINGS: process.env.NEXT_PUBLIC_BUILDINGS_COLLECTION || 'buildings'
+};
+
 // Firebase configuration
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -26,12 +34,12 @@ async function analyzeCustomerConnections() {
     console.log('\n🏢 Αναζήτηση κτιρίων για project 1001...');
 
     // Δοκίμασε με string ID πρώτα
-    let buildingsQuery = query(collection(db, 'buildings'), where('projectId', '==', '1001'));
+    let buildingsQuery = query(collection(db, COLLECTIONS.BUILDINGS), where('projectId', '==', '1001'));
     let buildingsSnapshot = await getDocs(buildingsQuery);
 
     if (buildingsSnapshot.docs.length === 0) {
       console.log('🔄 Δοκιμάζω με number projectId...');
-      buildingsQuery = query(collection(db, 'buildings'), where('projectId', '==', 1001));
+      buildingsQuery = query(collection(db, COLLECTIONS.BUILDINGS), where('projectId', '==', 1001));
       buildingsSnapshot = await getDocs(buildingsQuery);
     }
 
@@ -50,7 +58,7 @@ async function analyzeCustomerConnections() {
       const buildingId = buildingDoc.id;
       console.log(`🔍 Ψάχνω units για buildingId: ${buildingId}`);
 
-      const unitsQuery = query(collection(db, 'units'), where('buildingId', '==', buildingId));
+      const unitsQuery = query(collection(db, COLLECTIONS.UNITS), where('buildingId', '==', buildingId));
       const unitsSnapshot = await getDocs(unitsQuery);
 
       const units = unitsSnapshot.docs.map(unitDoc => ({
@@ -124,7 +132,7 @@ async function analyzeCustomerConnections() {
       // Ελέγχω κάθε customer ID
       for (const customerId of uniqueCustomerIds) {
         try {
-          const contactDoc = await getDoc(doc(db, 'contacts', customerId));
+          const contactDoc = await getDoc(doc(db, COLLECTIONS.CONTACTS, customerId));
           if (contactDoc.exists()) {
             const contactData = contactDoc.data();
             validCustomers.push({

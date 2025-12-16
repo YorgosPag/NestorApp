@@ -13,6 +13,14 @@
 const { ContactsService } = require('./src/services/contacts.service');
 const { ProjectsService } = require('./src/services/projects/services/ProjectsService');
 const { firebaseServer } = require('./src/lib/firebase-server');
+
+// 🏢 ENTERPRISE: Collections configuration (JavaScript version)
+const COLLECTIONS = {
+  CONTACTS: process.env.NEXT_PUBLIC_CONTACTS_COLLECTION || 'contacts',
+  UNITS: process.env.NEXT_PUBLIC_UNITS_COLLECTION || 'units',
+  PROJECTS: process.env.NEXT_PUBLIC_PROJECTS_COLLECTION || 'projects',
+  BUILDINGS: process.env.NEXT_PUBLIC_BUILDINGS_COLLECTION || 'buildings'
+};
 const { RelationshipCRUDService } = require('./src/services/contact-relationships/core/RelationshipCRUDService');
 
 // ============================================================================
@@ -112,7 +120,7 @@ class PropertyRelationshipValidator {
 
     try {
       // Fetch all property units using enterprise service
-      const unitsSnapshot = await firebaseServer.getDocs('units');
+      const unitsSnapshot = await firebaseServer.getDocs(COLLECTIONS.UNITS);
       const units = unitsSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -240,7 +248,7 @@ class PropertyRelationshipValidator {
 
     try {
       // Get all units to extract building references
-      const unitsSnapshot = await firebaseServer.getDocs('units');
+      const unitsSnapshot = await firebaseServer.getDocs(COLLECTIONS.UNITS);
       const units = unitsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
       // Extract unique building IDs

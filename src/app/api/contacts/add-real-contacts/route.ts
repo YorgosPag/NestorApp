@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 export async function POST(request: Request) {
   try {
@@ -91,7 +92,7 @@ export async function POST(request: Request) {
         };
 
         // Δημιουργία contact με auto-generated ID
-        const docRef = await adminDb.collection('contacts').add(contactData);
+        const docRef = await adminDb.collection(COLLECTIONS.CONTACTS).add(contactData);
         addedContactIds.push(docRef.id);
 
         console.log(`✅ Added contact: ${contact.firstName || contact.companyName} (ID: ${docRef.id})`);

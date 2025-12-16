@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { firebaseServer } from '@/lib/firebase-server';
 import { getContactDisplayName, getPrimaryPhone } from '@/types/contacts/helpers';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 /**
  * 📇 ENTERPRISE CONTACT API ENDPOINT
@@ -61,7 +62,7 @@ export async function GET(
 
     console.log(`🔍 Fetching contact document: ${contactId}`);
 
-    const contactDoc = await firebaseServer.getDoc('contacts', contactId);
+    const contactDoc = await firebaseServer.getDoc(COLLECTIONS.CONTACTS, contactId);
 
     if (!contactDoc.exists()) {
       console.log(`⚠️ Contact not found: ${contactId}`);

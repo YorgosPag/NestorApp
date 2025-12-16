@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { collection, doc, updateDoc, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { BUILDING_IDS } from '@/config/building-ids-config';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest) {
     for (const update of updates) {
       console.log(`🔧 Updating building ${update.buildingId} to project ${update.newProjectId}`);
       
-      await updateDoc(doc(db, 'buildings', update.buildingId), {
+      await updateDoc(doc(db, COLLECTIONS.BUILDINGS, update.buildingId), {
         projectId: update.newProjectId,
         updatedAt: new Date().toISOString()
       });

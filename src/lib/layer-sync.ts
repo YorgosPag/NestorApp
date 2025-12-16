@@ -1,5 +1,6 @@
 import React from 'react';
 import { db } from '@/lib/firebase';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import { 
   collection, 
   doc, 
@@ -89,7 +90,7 @@ export class LayerSyncManager {
     try {
       // Listen to layer changes in Units collection
       const layersQuery = query(
-        collection(db, 'layers'),
+        collection(db, COLLECTIONS.LAYERS),
         where('floorId', '==', this.floorId),
         orderBy('zIndex', 'asc')
       );
@@ -157,7 +158,7 @@ export class LayerSyncManager {
       this.updateState({ pendingOperations: this.state.pendingOperations + 1 });
       
       // Create mirror document in properties collection
-      const propertyLayerDoc = doc(db, 'property-layers', layer.id);
+      const propertyLayerDoc = doc(db, COLLECTIONS.PROPERTY_LAYERS, layer.id);
       
       // Create a read-only version of the layer
       const readOnlyLayer = {
@@ -199,7 +200,7 @@ export class LayerSyncManager {
         this.updateState({ pendingOperations: this.state.pendingOperations + chunk.length });
         
         for (const layer of chunk) {
-          const propertyLayerDoc = doc(db, 'property-layers', layer.id);
+          const propertyLayerDoc = doc(db, COLLECTIONS.PROPERTY_LAYERS, layer.id);
           const readOnlyLayer = {
             ...layer,
             createdBy: undefined,
@@ -231,7 +232,7 @@ export class LayerSyncManager {
    */
   public async deleteLayerFromProperties(layerId: string): Promise<void> {
     try {
-      const propertyLayerDoc = doc(db, 'property-layers', layerId);
+      const propertyLayerDoc = doc(db, COLLECTIONS.PROPERTY_LAYERS, layerId);
       await deleteDoc(propertyLayerDoc);
       
       this.log('Layer deleted from properties:', layerId);
@@ -255,7 +256,7 @@ export class LayerSyncManager {
     };
 
     // Αποθήκευση στο Firestore για debugging
-    const eventsCollection = collection(db, 'layer-events');
+    const eventsCollection = collection(db, COLLECTIONS.LAYER_EVENTS);
     try {
       // Fire and forget - δεν θέλουμε να μπλοκάρει η εφαρμογή
       doc(eventsCollection).set(fullEvent);
@@ -421,7 +422,7 @@ export async function forceSyncLayers(
   try {
     // Get all layers for this floor
     const layersQuery = query(
-      collection(db, 'layers'),
+      collection(db, COLLECTIONS.LAYERS),
       where('floorId', '==', floorId)
     );
     

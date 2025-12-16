@@ -10,6 +10,14 @@
 const admin = require('firebase-admin');
 const path = require('path');
 
+// 🏢 ENTERPRISE: Collections configuration (JavaScript version)
+const COLLECTIONS = {
+  CONTACTS: process.env.NEXT_PUBLIC_CONTACTS_COLLECTION || 'contacts',
+  UNITS: process.env.NEXT_PUBLIC_UNITS_COLLECTION || 'units',
+  PROJECTS: process.env.NEXT_PUBLIC_PROJECTS_COLLECTION || 'projects',
+  BUILDINGS: process.env.NEXT_PUBLIC_BUILDINGS_COLLECTION || 'buildings'
+};
+
 // Initialize Firebase Admin SDK
 const serviceAccountPath = path.join(__dirname, 'nestor-app-firebase-adminsdk-l11o0-6d1c89acdf.json');
 
@@ -239,7 +247,7 @@ async function addNewContacts() {
         lastModifiedBy: 'database-populate-script'
       };
 
-      const docRef = await db.collection('contacts').add(contactData);
+      const docRef = await db.collection(COLLECTIONS.CONTACTS).add(contactData);
       addedContacts.push({ id: docRef.id, ...contactData });
 
       console.log(`  ✅ Προστέθηκε: ${contact.firstName || contact.companyName} (${docRef.id})`);
@@ -259,7 +267,7 @@ async function updateExistingContacts() {
 
   try {
     // Παίρνουμε όλες τις υπάρχουσες επαφές
-    const contactsSnapshot = await db.collection('contacts').limit(10).get();
+    const contactsSnapshot = await db.collection(COLLECTIONS.CONTACTS).limit(10).get();
 
     for (const doc of contactsSnapshot.docs) {
       const contactData = doc.data();
@@ -276,7 +284,7 @@ async function updateExistingContacts() {
         newTags = ['εταιρεία', 'συνεργάτης'];
       }
 
-      await db.collection('contacts').doc(contactId).update({
+      await db.collection(COLLECTIONS.CONTACTS).doc(contactId).update({
         tags: admin.firestore.FieldValue.arrayUnion(...newTags),
         updatedAt: admin.firestore.Timestamp.now(),
         lastModifiedBy: 'database-populate-script'
@@ -297,7 +305,7 @@ async function updateUnitsWithNewStatuses() {
 
   try {
     // Παίρνουμε όλες τις μονάδες
-    const unitsSnapshot = await db.collection('units').limit(20).get();
+    const unitsSnapshot = await db.collection(COLLECTIONS.UNITS).limit(20).get();
 
     for (const doc of unitsSnapshot.docs) {
       const unitData = doc.data();
@@ -316,7 +324,7 @@ async function updateUnitsWithNewStatuses() {
         finalStatus = Math.random() > 0.5 ? 'long-term-rented' : 'short-term-rented';
       }
 
-      await db.collection('units').doc(unitId).update({
+      await db.collection(COLLECTIONS.UNITS).doc(unitId).update({
         status: finalStatus,
         updatedAt: admin.firestore.Timestamp.now()
       });
@@ -336,7 +344,7 @@ async function createContactUnitRelationships(addedContacts) {
 
   try {
     // Παίρνουμε κάποιες μονάδες
-    const unitsSnapshot = await db.collection('units').limit(10).get();
+    const unitsSnapshot = await db.collection(COLLECTIONS.UNITS).limit(10).get();
     const units = unitsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
     // Δημιουργούμε σχέσεις για τις νέες επαφές
@@ -366,7 +374,7 @@ async function createContactUnitRelationships(addedContacts) {
       if (Object.keys(updateData).length > 0) {
         updateData.updatedAt = admin.firestore.Timestamp.now();
 
-        await db.collection('units').doc(unit.id).update(updateData);
+        await db.collection(COLLECTIONS.UNITS).doc(unit.id).update(updateData);
 
         console.log(`  ✅ Σχέση: ${contact.firstName || contact.companyName} ↔ Μονάδα ${unit.name || unit.id}`);
       }

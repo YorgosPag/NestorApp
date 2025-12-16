@@ -18,9 +18,10 @@ import {
   deleteDoc
 } from 'firebase/firestore';
 import type { Communication } from '@/types/crm';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
-// 🏢 ENTERPRISE: Use environment configuration for collection names
-const COMMUNICATIONS_COLLECTION = process.env.NEXT_PUBLIC_COMMUNICATIONS_COLLECTION || 'communications';
+// 🏢 ENTERPRISE: Centralized collection configuration
+const COMMUNICATIONS_COLLECTION = COLLECTIONS.COMMUNICATIONS;
 
 const transformCommunication = (doc: any): Communication => {
     const data = doc.data();

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 export async function POST(request: Request) {
   try {
@@ -27,7 +28,7 @@ export async function POST(request: Request) {
           addedBy: 'system'
         };
 
-        const docRef = await adminDb.collection('navigation_companies').add(navigationEntry);
+        const docRef = await adminDb.collection(COLLECTIONS.NAVIGATION).add(navigationEntry);
         addedNavigationIds.push(docRef.id);
 
         console.log(`✅ Added to navigation: Company ${contactId} (Entry ID: ${docRef.id})`);

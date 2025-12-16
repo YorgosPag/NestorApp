@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
 
     // Get all unit floorplans from Firestore
     const floorplansQuery = query(
-      collection(db, 'unit_floorplans'),
+      collection(db, COLLECTIONS.DOCUMENTS),
       orderBy('updatedAt', 'desc')
     );
     

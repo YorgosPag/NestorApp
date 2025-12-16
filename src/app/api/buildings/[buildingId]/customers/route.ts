@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { firebaseServer } from '@/lib/firebase-server';
 import { getContactDisplayName, getPrimaryPhone, getPrimaryEmail } from '@/types/contacts';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 export async function GET(
   request: NextRequest,
@@ -25,7 +26,7 @@ export async function GET(
 
     // Get all units for this building
     console.log(`🏠 Fetching units for buildingId: ${buildingId}`);
-    const unitsSnapshot = await firebaseServer.getDocs('units', [
+    const unitsSnapshot = await firebaseServer.getDocs(COLLECTIONS.UNITS, [
       { field: 'buildingId', operator: '==', value: buildingId }
     ]);
 
@@ -75,7 +76,7 @@ export async function GET(
     }
 
     // Get contact details for customers (Firestore limit: max 10 in array)
-    const contactsSnapshot = await firebaseServer.getDocs('contacts', [
+    const contactsSnapshot = await firebaseServer.getDocs(COLLECTIONS.CONTACTS, [
       { field: '__name__', operator: 'in', value: customerIds.slice(0, 10) }
     ]);
 

@@ -1,5 +1,6 @@
 import { collection, query, where, getDocs, addDoc, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 /**
  * Service για διαχείριση των εταιρειών που εμφανίζονται στην πλοήγηση
@@ -13,7 +14,8 @@ export interface NavigationCompanyEntry {
   addedBy?: string; // User ID που την πρόσθεσε
 }
 
-const NAVIGATION_COMPANIES_COLLECTION = 'navigation_companies';
+// 🏢 ENTERPRISE: Centralized collection configuration
+const NAVIGATION_COMPANIES_COLLECTION = COLLECTIONS.NAVIGATION;
 
 export class NavigationCompaniesService {
   /**
@@ -119,7 +121,7 @@ export class NavigationCompaniesService {
       const q = query(collection(db, NAVIGATION_COMPANIES_COLLECTION));
       const snapshot = await getDocs(q);
 
-      console.log(`🧭 CACHE MISS: navigation_companies collection has ${snapshot.docs.length} documents`);
+      console.log(`🧭 CACHE MISS: ${NAVIGATION_COMPANIES_COLLECTION} collection has ${snapshot.docs.length} documents`);
 
       const contactIds = snapshot.docs.map(doc => {
         const data = doc.data() as NavigationCompanyEntry;
