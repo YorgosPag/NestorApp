@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
 
     // 1. Παίρνουμε όλα τα contacts
     console.log('📋 Step 1: All contacts in database...');
-    const allContactsQuery = query(collection(database, 'contacts'));
+    const allContactsQuery = query(collection(database, COLLECTIONS.CONTACTS));
     const allContactsSnapshot = await getDocs(allContactsQuery);
     result.totalContacts = allContactsSnapshot.docs.length;
 
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     // 2. Παίρνουμε μόνο τις εταιρείες
     console.log('📋 Step 2: Companies only...');
     const companiesQuery = query(
-      collection(database, 'contacts'),
+      collection(database, COLLECTIONS.CONTACTS),
       where('type', '==', 'company')
     );
     const companiesSnapshot = await getDocs(companiesQuery);
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
 
     // Find primary company by name pattern instead of hardcoded ID
     const primaryCompaniesQuery = query(
-      collection(database, 'contacts'),
+      collection(database, COLLECTIONS.CONTACTS),
       where('type', '==', 'company')
     );
     const primarySnapshot = await getDocs(primaryCompaniesQuery);
@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
     if (primaryCompany) {
       console.log('\n🏗️ Step 4: Checking projects for primary company...');
       const projectsQuery = query(
-        collection(database, 'projects'),
+        collection(database, COLLECTIONS.PROJECTS),
         where('companyId', '==', primaryCompany.id)
       );
       const projectsSnapshot = await getDocs(projectsQuery);
@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
 
     // 5. Ελέγχουμε όλα τα projects για να δούμε ποια companyIds υπάρχουν
     console.log('\n🏗️ Step 5: All projects and their company IDs...');
-    const allProjectsQuery = query(collection(database, 'projects'));
+    const allProjectsQuery = query(collection(database, COLLECTIONS.PROJECTS));
     const allProjectsSnapshot = await getDocs(allProjectsQuery);
 
     console.log(`Total projects: ${allProjectsSnapshot.docs.length}\n`);

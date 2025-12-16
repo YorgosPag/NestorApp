@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { collection, query, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 export async function GET(request: NextRequest) {
   try {
     console.log('🔍 DEBUG: Starting comprehensive projects analysis...');
 
     // 1. Πάρε ΟΛΑ τα projects
-    const projectsSnapshot = await getDocs(collection(db, 'projects'));
+    const projectsSnapshot = await getDocs(collection(db, COLLECTIONS.PROJECTS));
     console.log(`🏗️ Total projects in database: ${projectsSnapshot.docs.length}`);
 
     const allProjects = projectsSnapshot.docs.map(doc => {
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest) {
     });
 
     // 2. Πάρε ΟΛΑ τα contacts
-    const contactsSnapshot = await getDocs(collection(db, 'contacts'));
+    const contactsSnapshot = await getDocs(collection(db, COLLECTIONS.CONTACTS));
     console.log(`👥 Total contacts in database: ${contactsSnapshot.docs.length}`);
 
     const allContacts = contactsSnapshot.docs.map(doc => {

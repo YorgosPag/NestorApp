@@ -3,6 +3,7 @@ import type { Project, ProjectCustomer, ProjectStats } from '@/types/project';
 import type { Contact } from '@/types/contacts';
 import { getContactDisplayName, getPrimaryPhone } from '@/types/contacts';
 import { db } from '@/lib/firebase-admin';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 const getFirebaseAdmin = async () => {
   const admin = await import('firebase-admin/firestore');
@@ -38,7 +39,9 @@ export class ProjectsService implements IProjectsService {
     const allUnitOwnerIds = new Set<string>();
 
     for (const building of buildingsData) {
-        const units = await this.firestoreRepo.getUnitsByBuildingId(`building-${building.id}`);
+        // 🏢 ENTERPRISE: Use configurable building ID pattern
+        const buildingIdPattern = process.env.NEXT_PUBLIC_BUILDING_ID_PATTERN || 'building-';
+        const units = await this.firestoreRepo.getUnitsByBuildingId(`${buildingIdPattern}${building.id}`);
 
         units.forEach(u => {
             if (u.soldTo) allUnitOwnerIds.add(u.soldTo);
@@ -70,7 +73,9 @@ export class ProjectsService implements IProjectsService {
     const buildings = await this.firestoreRepo.getBuildingsByProjectId(projectId);
     if (buildings.length === 0) return [];
 
-    const buildingIds = buildings.map(b => `building-${b.id}`);
+    // 🏢 ENTERPRISE: Use configurable building ID pattern
+    const buildingIdPattern = process.env.NEXT_PUBLIC_BUILDING_ID_PATTERN || 'building-';
+    const buildingIds = buildings.map(b => `${buildingIdPattern}${b.id}`);
 
     const allUnits = (await Promise.all(
         buildingIds.map(id => this.firestoreRepo.getUnitsByBuildingId(id))
@@ -109,7 +114,9 @@ export class ProjectsService implements IProjectsService {
         let totalSoldArea = 0;
 
         for (const building of buildings) {
-            const units = await this.firestoreRepo.getUnitsByBuildingId(`building-${building.id}`);
+            // 🏢 ENTERPRISE: Use configurable building ID pattern
+            const buildingIdPattern = process.env.NEXT_PUBLIC_BUILDING_ID_PATTERN || 'building-';
+            const units = await this.firestoreRepo.getUnitsByBuildingId(`${buildingIdPattern}${building.id}`);
 
             units.forEach(unit => {
                 totalUnits++;
@@ -141,14 +148,16 @@ export class ProjectsService implements IProjectsService {
             // Document exists
         }
 
-        const buildingsQuery = admin.query(admin.collection(db, 'buildings'), admin.where('projectId', '==', projectId));
+        const buildingsQuery = admin.query(admin.collection(db, COLLECTIONS.BUILDINGS), admin.where('projectId', '==', projectId));
         const buildings = await admin.getDocs(buildingsQuery);
         buildings.docs.forEach(doc => {
             // Process building
         });
 
         for (const building of buildings.docs) {
-            const unitsQuery = admin.query(admin.collection(db, 'units'), admin.where('buildingId', '==', `building-${building.id}`));
+            // 🏢 ENTERPRISE: Use configurable building ID pattern
+            const buildingIdPattern = process.env.NEXT_PUBLIC_BUILDING_ID_PATTERN || 'building-';
+            const unitsQuery = admin.query(admin.collection(db, COLLECTIONS.UNITS), admin.where('buildingId', '==', `${buildingIdPattern}${building.id}`));
             const units = await admin.getDocs(unitsQuery);
             units.docs.forEach(doc => {
                 const data = doc.data();
@@ -157,7 +166,7 @@ export class ProjectsService implements IProjectsService {
         }
 
         try {
-            const directUnitsQuery = admin.query(admin.collection(db, 'units'), admin.where('projectId', '==', projectId));
+            const directUnitsQuery = admin.query(admin.collection(db, COLLECTIONS.UNITS), admin.where('projectId', '==', projectId));
             const directUnits = await admin.getDocs(directUnitsQuery);
             if (!directUnits.empty) {
                 // Has direct units

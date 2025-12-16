@@ -40,7 +40,7 @@ export async function storeMessageInCRM(message: any, direction: Direction): Pro
       updatedAt: Timestamp.now()
     };
 
-    const docRef = await addDoc(collection(database, 'communications'), messageRecord);
+    const docRef = await addDoc(collection(database, COLLECTIONS.COMMUNICATIONS), messageRecord);
     console.log(`✅ Message stored in CRM with ID: ${docRef.id}`);
     return docRef;
   }, null);

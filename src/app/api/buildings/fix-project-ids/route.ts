@@ -10,11 +10,11 @@ export async function POST(request: NextRequest) {
     // 🏢 ENTERPRISE: Update buildings to use configured project ID
     const updates = [
       {
-        buildingId: "building_1_palaiologou",
+        buildingId: process.env.NEXT_PUBLIC_SAMPLE_BUILDING_1_ID || "building_1_default",
         newProjectId: BUILDING_IDS.PROJECT_ID
       },
       {
-        buildingId: "building_2_palaiologou",
+        buildingId: process.env.NEXT_PUBLIC_SAMPLE_BUILDING_2_ID || "building_2_default",
         newProjectId: BUILDING_IDS.PROJECT_ID
       }
     ];

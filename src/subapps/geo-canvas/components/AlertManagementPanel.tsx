@@ -82,7 +82,7 @@ export function AlertManagementPanel({
       coordinates: { lat: 37.7749, lng: -122.4194 },
       polygon: null,
       tenantId: 'geo-alert',
-      userId: 'test-user',
+      userId: process.env.NEXT_PUBLIC_TEST_USER_ID || 'test-user',
       actions: [
         {
           id: 'view-map',

@@ -4,6 +4,7 @@ import { MESSAGE_DIRECTIONS, MESSAGE_STATUSES, isChannelEnabled } from '../../co
 import { db } from '@/lib/firebase';
 import { collection, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
 import type { Channel, BaseMessageInput, SendResult } from '@/types/communications';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 // --- Types ---
 
@@ -149,7 +150,7 @@ class MessageRouter {
         updatedAt: serverTimestamp()
       };
 
-      const docRef = await addDoc(collection(db, 'communications'), record);
+      const docRef = await addDoc(collection(db, COLLECTIONS.COMMUNICATIONS), record);
       return { id: docRef.id, ...record };
 
     } catch (error) {

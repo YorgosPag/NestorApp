@@ -7,6 +7,11 @@ import { db } from '@/lib/firebase';
 import { collection, query, where, orderBy, limit, getDocs, doc, getDoc, serverTimestamp, writeBatch, updateDoc } from 'firebase/firestore';
 import type { BaseMessageInput, SendResult, Channel } from '@/types/communications';
 
+// 🏢 ENTERPRISE: Configurable Firestore collection names
+const COMMUNICATIONS_COLLECTION = process.env.NEXT_PUBLIC_COMMUNICATIONS_COLLECTION || 'communications';
+const SYSTEM_COLLECTION = process.env.NEXT_PUBLIC_SYSTEM_COLLECTION || 'system';
+const CONTACTS_COLLECTION = process.env.NEXT_PUBLIC_CONTACTS_COLLECTION || 'contacts';
+
 /**
  * Κεντρική υπηρεσία επικοινωνιών
  * Παρέχει high-level interface για όλες τις communication λειτουργίες
@@ -170,7 +175,7 @@ class CommunicationsService {
       if (startDate) qConstraints.push(where('createdAt', '>=', startDate));
       if (endDate) qConstraints.push(where('createdAt', '<=', endDate));
       
-      const q = query(collection(db, 'communications'), ...qConstraints);
+      const q = query(collection(db, COMMUNICATIONS_COLLECTION), ...qConstraints);
       const querySnapshot = await getDocs(q);
       const communications: any[] = [];
       querySnapshot.forEach((doc) => communications.push({ id: doc.id, ...doc.data() }));
@@ -202,7 +207,7 @@ class CommunicationsService {
       if (status) qConstraints.push(where('status', '==', status));
       if (unreadOnly) qConstraints.push(where('metadata.read', '==', false));
 
-      const q = query(collection(db, 'communications'), ...qConstraints);
+      const q = query(collection(db, COMMUNICATIONS_COLLECTION), ...qConstraints);
       const querySnapshot = await getDocs(q);
       const messages: any[] = [];
       querySnapshot.forEach((doc) => messages.push({ id: doc.id, ...doc.data() }));
@@ -248,8 +253,12 @@ class CommunicationsService {
     const metadata = { ...messageData.metadata, sentVia: 'CommunicationsService', timestamp: new Date().toISOString() };
     // 🏢 ENTERPRISE: Get company name από database, όχι hardcoded fallback
     const companyName = process.env.NEXT_PUBLIC_COMPANY_NAME || await this.getCompanyNameFromDatabase();
-    const companyEmail = process.env.NEXT_PUBLIC_COMPANY_EMAIL || 'info@company.gr';
-    const companyPhone = process.env.NEXT_PUBLIC_COMPANY_PHONE || '+30 210 123 4567';
+    const companyEmail = process.env.NEXT_PUBLIC_COMPANY_EMAIL ||
+                        process.env.NEXT_PUBLIC_DEFAULT_CONTACT_EMAIL ||
+                        `info@${process.env.NEXT_PUBLIC_TENANT_DOMAIN || 'company.local'}`;
+    const companyPhone = process.env.NEXT_PUBLIC_COMPANY_PHONE ||
+                        process.env.NEXT_PUBLIC_DEFAULT_CONTACT_PHONE ||
+                        `${process.env.NEXT_PUBLIC_PHONE_COUNTRY_CODE || '+30'} ${process.env.NEXT_PUBLIC_DEFAULT_PHONE_PATTERN || '210'} 000 0000`;
 
     const safeContent = typeof messageData.content === 'string'
       ? messageData.content.replace('{{companyName}}', companyName).replace('{{companyEmail}}', companyEmail).replace('{{companyPhone}}', companyPhone)
@@ -307,7 +316,7 @@ class CommunicationsService {
   private async getCompanyNameFromDatabase(): Promise<string> {
     try {
       // Try to get company config from database
-      const companyDoc = await getDoc(doc(db, 'system', 'company'));
+      const companyDoc = await getDoc(doc(db, SYSTEM_COLLECTION, process.env.NEXT_PUBLIC_COMPANY_CONFIG_DOC || 'company'));
       if (companyDoc.exists()) {
         const companyData = companyDoc.data();
         return companyData.name || 'Company';
@@ -315,7 +324,7 @@ class CommunicationsService {
 
       // Fallback: Try to get from any existing contact with type 'company'
       const companiesQuery = query(
-        collection(db, 'contacts'),
+        collection(db, CONTACTS_COLLECTION),
         where('type', '==', 'company'),
         limit(1)
       );

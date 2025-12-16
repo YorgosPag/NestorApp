@@ -3,75 +3,76 @@
 import { useEffect, useState } from 'react';
 import { doc, setDoc, collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 const TEST_PROPERTIES = [
   {
-    id: 'test-1',
-    name: 'Υπέροχο Διαμέρισμα με Θέα',
-    type: 'Διαμέρισμα',
-    status: 'for-sale',
-    price: 185000,
-    area: 95,
-    floor: 2,
-    floorId: 'floor-2',
-    building: 'Κτίριο Α',
-    buildingId: 'building-a',
-    project: 'Residential Complex',
-    projectId: 'project-1',
-    bedrooms: 3,
-    bathrooms: 2,
-    description: 'Διαμέρισμα με υπέροχη θέα και σύγχρονες ανέσεις'
+    id: process.env.NEXT_PUBLIC_TEST_UNIT_1_ID || 'test-1',
+    name: process.env.NEXT_PUBLIC_TEST_UNIT_1_NAME || 'Υπέροχο Διαμέρισμα με Θέα',
+    type: process.env.NEXT_PUBLIC_TEST_UNIT_1_TYPE || 'Διαμέρισμα',
+    status: process.env.NEXT_PUBLIC_TEST_UNIT_1_STATUS || 'for-sale',
+    price: parseInt(process.env.NEXT_PUBLIC_TEST_UNIT_1_PRICE || '185000'),
+    area: parseInt(process.env.NEXT_PUBLIC_TEST_UNIT_1_AREA || '95'),
+    floor: parseInt(process.env.NEXT_PUBLIC_TEST_UNIT_1_FLOOR || '2'),
+    floorId: process.env.NEXT_PUBLIC_TEST_FLOOR_2_ID || 'floor-2',
+    building: process.env.NEXT_PUBLIC_TEST_BUILDING_A_NAME || 'Κτίριο Α',
+    buildingId: process.env.NEXT_PUBLIC_TEST_BUILDING_A_ID || 'building-a',
+    project: process.env.NEXT_PUBLIC_TEST_PROJECT_1_NAME || 'Residential Complex',
+    projectId: process.env.NEXT_PUBLIC_TEST_PROJECT_1_ID || 'project-1',
+    bedrooms: parseInt(process.env.NEXT_PUBLIC_TEST_UNIT_1_BEDROOMS || '3'),
+    bathrooms: parseInt(process.env.NEXT_PUBLIC_TEST_UNIT_1_BATHROOMS || '2'),
+    description: process.env.NEXT_PUBLIC_TEST_UNIT_1_DESC || 'Διαμέρισμα με υπέροχη θέα και σύγχρονες ανέσεις'
   },
   {
-    id: 'test-2',
-    name: 'Στούντιο στο Κέντρο',
-    type: 'Στούντιο',
-    status: 'for-rent',
-    price: 650,
-    area: 35,
-    floor: 1,
-    floorId: 'floor-1',
-    building: 'Κτίριο Β',
-    buildingId: 'building-b',
-    project: 'Urban Living',
-    projectId: 'project-2',
-    bedrooms: 0,
-    bathrooms: 1,
-    description: 'Σύγχρονο στούντιο σε κεντρική τοποθεσία'
+    id: process.env.NEXT_PUBLIC_TEST_UNIT_2_ID || 'test-2',
+    name: process.env.NEXT_PUBLIC_TEST_UNIT_2_NAME || 'Στούντιο στο Κέντρο',
+    type: process.env.NEXT_PUBLIC_TEST_UNIT_2_TYPE || 'Στούντιο',
+    status: process.env.NEXT_PUBLIC_TEST_UNIT_2_STATUS || 'for-rent',
+    price: parseInt(process.env.NEXT_PUBLIC_TEST_UNIT_2_PRICE || '650'),
+    area: parseInt(process.env.NEXT_PUBLIC_TEST_UNIT_2_AREA || '35'),
+    floor: parseInt(process.env.NEXT_PUBLIC_TEST_UNIT_2_FLOOR || '1'),
+    floorId: process.env.NEXT_PUBLIC_TEST_FLOOR_1_ID || 'floor-1',
+    building: process.env.NEXT_PUBLIC_TEST_BUILDING_B_NAME || 'Κτίριο Β',
+    buildingId: process.env.NEXT_PUBLIC_TEST_BUILDING_B_ID || 'building-b',
+    project: process.env.NEXT_PUBLIC_TEST_PROJECT_2_NAME || 'Urban Living',
+    projectId: process.env.NEXT_PUBLIC_TEST_PROJECT_2_ID || 'project-2',
+    bedrooms: parseInt(process.env.NEXT_PUBLIC_TEST_UNIT_2_BEDROOMS || '0'),
+    bathrooms: parseInt(process.env.NEXT_PUBLIC_TEST_UNIT_2_BATHROOMS || '1'),
+    description: process.env.NEXT_PUBLIC_TEST_UNIT_2_DESC || 'Σύγχρονο στούντιο σε κεντρική τοποθεσία'
   },
   {
-    id: 'test-3',
-    name: 'Μεγάλη Μεζονέτα με Κήπο και Πισίνα',
-    type: 'Μεζονέτα',
-    status: 'for-sale',
-    price: 450000,
-    area: 180,
-    floor: 3,
-    floorId: 'floor-3',
-    building: 'Κτίριο Γ',
-    buildingId: 'building-c',
-    project: 'Luxury Residences Premium Complex',
-    projectId: 'project-3',
-    bedrooms: 4,
-    bathrooms: 3,
-    description: 'Πολυτελής μεζονέτα με ιδιωτικό κήπο και πισίνα'
+    id: process.env.NEXT_PUBLIC_TEST_UNIT_3_ID || 'test-3',
+    name: process.env.NEXT_PUBLIC_TEST_UNIT_3_NAME || 'Μεγάλη Μεζονέτα με Κήπο και Πισίνα',
+    type: process.env.NEXT_PUBLIC_TEST_UNIT_3_TYPE || 'Μεζονέτα',
+    status: process.env.NEXT_PUBLIC_TEST_UNIT_3_STATUS || 'for-sale',
+    price: parseInt(process.env.NEXT_PUBLIC_TEST_UNIT_3_PRICE || '450000'),
+    area: parseInt(process.env.NEXT_PUBLIC_TEST_UNIT_3_AREA || '180'),
+    floor: parseInt(process.env.NEXT_PUBLIC_TEST_UNIT_3_FLOOR || '3'),
+    floorId: process.env.NEXT_PUBLIC_TEST_FLOOR_3_ID || 'floor-3',
+    building: process.env.NEXT_PUBLIC_TEST_BUILDING_C_NAME || 'Κτίριο Γ',
+    buildingId: process.env.NEXT_PUBLIC_TEST_BUILDING_C_ID || 'building-c',
+    project: process.env.NEXT_PUBLIC_TEST_PROJECT_3_NAME || 'Luxury Residences Premium Complex',
+    projectId: process.env.NEXT_PUBLIC_TEST_PROJECT_3_ID || 'project-3',
+    bedrooms: parseInt(process.env.NEXT_PUBLIC_TEST_UNIT_3_BEDROOMS || '4'),
+    bathrooms: parseInt(process.env.NEXT_PUBLIC_TEST_UNIT_3_BATHROOMS || '3'),
+    description: process.env.NEXT_PUBLIC_TEST_UNIT_3_DESC || 'Πολυτελής μεζονέτα με ιδιωτικό κήπο και πισίνα'
   },
   {
-    id: 'test-4',
-    name: 'Γκαρσονιέρα Φοιτητών',
-    type: 'Γκαρσονιέρα',
-    status: 'for-rent',
-    price: 450,
-    area: 28,
-    floor: 1,
-    floorId: 'floor-1',
-    building: 'Κτίριο Δ',
-    buildingId: 'building-d',
-    project: 'Student Housing',
-    projectId: 'project-4',
-    bedrooms: 1,
-    bathrooms: 1,
-    description: 'Ιδανική για φοιτητές'
+    id: process.env.NEXT_PUBLIC_TEST_UNIT_4_ID || 'test-4',
+    name: process.env.NEXT_PUBLIC_TEST_UNIT_4_NAME || 'Γκαρσονιέρα Φοιτητών',
+    type: process.env.NEXT_PUBLIC_TEST_UNIT_4_TYPE || 'Γκαρσονιέρα',
+    status: process.env.NEXT_PUBLIC_TEST_UNIT_4_STATUS || 'for-rent',
+    price: parseInt(process.env.NEXT_PUBLIC_TEST_UNIT_4_PRICE || '450'),
+    area: parseInt(process.env.NEXT_PUBLIC_TEST_UNIT_4_AREA || '28'),
+    floor: parseInt(process.env.NEXT_PUBLIC_TEST_UNIT_4_FLOOR || '1'),
+    floorId: process.env.NEXT_PUBLIC_TEST_FLOOR_1_ID || 'floor-1',
+    building: process.env.NEXT_PUBLIC_TEST_BUILDING_D_NAME || 'Κτίριο Δ',
+    buildingId: process.env.NEXT_PUBLIC_TEST_BUILDING_D_ID || 'building-d',
+    project: process.env.NEXT_PUBLIC_TEST_PROJECT_4_NAME || 'Student Housing',
+    projectId: process.env.NEXT_PUBLIC_TEST_PROJECT_4_ID || 'project-4',
+    bedrooms: parseInt(process.env.NEXT_PUBLIC_TEST_UNIT_4_BEDROOMS || '1'),
+    bathrooms: parseInt(process.env.NEXT_PUBLIC_TEST_UNIT_4_BATHROOMS || '1'),
+    description: process.env.NEXT_PUBLIC_TEST_UNIT_4_DESC || 'Ιδανική για φοιτητές'
   }
 ];
 
@@ -82,7 +83,7 @@ export default function FirestoreTestData() {
     const setupTestData = async () => {
       try {
         // Check if data exists
-        const unitsCollection = collection(db, 'units');
+        const unitsCollection = collection(db, COLLECTIONS.UNITS);
         const snapshot = await getDocs(unitsCollection);
 
         console.log('📋 Current Firestore units count:', snapshot.size);

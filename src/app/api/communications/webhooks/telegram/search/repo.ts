@@ -37,7 +37,7 @@ export async function searchProperties(searchText: string): Promise<SearchResult
     let properties: any[] = [];
 
     try {
-      let q: any = collection(database, 'units');
+      let q: any = collection(database, COLLECTIONS.UNITS);
       q = query(q, where('status', '==', 'available'));
       if (criteria.type) {
         q = query(q, where('type', '==', criteria.type));

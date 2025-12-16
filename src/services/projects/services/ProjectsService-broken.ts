@@ -4,6 +4,7 @@ import type { Project, ProjectCustomer, ProjectStats } from '@/types/project';
 import type { Contact } from '@/types/contacts';
 import { getContactDisplayName, getPrimaryPhone } from '@/types/contacts';
 import { db } from '@/lib/firebase-admin';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 const getFirebaseAdmin = async () => {
   const admin = await import('firebase-admin/firestore');
@@ -165,7 +166,7 @@ export class ProjectsService implements IProjectsService {
             // Debug logging removed
         }
         
-        const buildingsQuery = admin.query(admin.collection(db, 'buildings'), admin.where('projectId', '==', projectId));
+        const buildingsQuery = admin.query(admin.collection(db, COLLECTIONS.BUILDINGS), admin.where('projectId', '==', projectId));
         const buildings = await admin.getDocs(buildingsQuery);
         // Debug logging removed
         buildings.docs.forEach(doc => {
@@ -173,7 +174,7 @@ export class ProjectsService implements IProjectsService {
         });
         
         for (const building of buildings.docs) {
-            const unitsQuery = admin.query(admin.collection(db, 'units'), admin.where('buildingId', '==', `building-${building.id}`));
+            const unitsQuery = admin.query(admin.collection(db, COLLECTIONS.UNITS), admin.where('buildingId', '==', `building-${building.id}`));
             const units = await admin.getDocs(unitsQuery);
             // Debug logging removed
             units.docs.forEach(doc => {
@@ -183,7 +184,7 @@ export class ProjectsService implements IProjectsService {
         }
         
         try {
-            const directUnitsQuery = admin.query(admin.collection(db, 'units'), admin.where('projectId', '==', projectId));
+            const directUnitsQuery = admin.query(admin.collection(db, COLLECTIONS.UNITS), admin.where('projectId', '==', projectId));
             const directUnits = await admin.getDocs(directUnitsQuery);
             if (!directUnits.empty) {
                 // Debug logging removed

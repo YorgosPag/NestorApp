@@ -152,7 +152,9 @@ export function OptimizedUserRoleProvider({ children }: { children: React.ReactN
 
       // Auto-login for development
       const devUser: User = {
-        email: 'user@example.com',
+        email: process.env.NEXT_PUBLIC_DEV_ADMIN_EMAIL ||
+               process.env.NEXT_PUBLIC_FALLBACK_ADMIN_EMAIL ||
+               `admin@${process.env.NEXT_PUBLIC_TENANT_DOMAIN || 'company.local'}`,
         role: 'admin',
         isAuthenticated: true,
         lastLogin: Date.now(),

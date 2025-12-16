@@ -23,7 +23,7 @@ async function getCompanyIdByName(companyName: string): Promise<string | null> {
 // 🏢 ENTERPRISE: Real buildings for configurable primary project
 const realBuildings = [
   {
-    id: "building_1_palaiologou",
+    id: process.env.NEXT_PUBLIC_SAMPLE_BUILDING_1_ID || "building_1_palaiologou",
     name: process.env.NEXT_PUBLIC_SAMPLE_BUILDING_1_NAME || "ΚΤΙΡΙΟ Α - Main Building",
     description: process.env.NEXT_PUBLIC_SAMPLE_BUILDING_1_DESC || "Κύριο κτίριο με 8 μονάδες υψηλών προδιαγραφών",
     address: process.env.NEXT_PUBLIC_DEFAULT_ADDRESS_1 || "Main Street 45",
@@ -39,19 +39,19 @@ const realBuildings = [
     totalValue: parseFloat(process.env.NEXT_PUBLIC_SAMPLE_BUILDING_1_TOTAL_VALUE || '1800000'),
     company: process.env.NEXT_PUBLIC_COMPANY_NAME || 'Default Construction Company',
     project: process.env.NEXT_PUBLIC_SAMPLE_PROJECT_NAME || "Sample Development Project",
-    projectId: "project_1_palaiologou", // From seedRealProjects.ts
+    projectId: process.env.NEXT_PUBLIC_SAMPLE_PROJECT_1_ID || "project_1_default",
     category: process.env.NEXT_PUBLIC_SAMPLE_BUILDING_1_CATEGORY || 'residential',
     features: (process.env.NEXT_PUBLIC_SAMPLE_BUILDING_1_FEATURES || 'Θέρμανση Αυτονομίας,Ασανσέρ,Μπαλκόνια,Αποθήκες').split(',').map(f => f.trim()),
     buildingFloors: [
-      { id: "floor_0", name: "Ισόγειο", number: 0, units: 1 },
-      { id: "floor_1", name: "1ος Όροφος", number: 1, units: 2 },
-      { id: "floor_2", name: "2ος Όροφος", number: 2, units: 2 },
-      { id: "floor_3", name: "3ος Όροφος", number: 3, units: 2 },
-      { id: "floor_4", name: "4ος Όροφος", number: 4, units: 1 }
+      { id: process.env.NEXT_PUBLIC_FLOOR_0_ID || "floor_0", name: "Ισόγειο", number: 0, units: 1 },
+      { id: process.env.NEXT_PUBLIC_FLOOR_1_ID || "floor_1", name: "1ος Όροφος", number: 1, units: 2 },
+      { id: process.env.NEXT_PUBLIC_FLOOR_2_ID || "floor_2", name: "2ος Όροφος", number: 2, units: 2 },
+      { id: process.env.NEXT_PUBLIC_FLOOR_3_ID || "floor_3", name: "3ος Όροφος", number: 3, units: 2 },
+      { id: process.env.NEXT_PUBLIC_FLOOR_4_ID || "floor_4", name: "4ος Όροφος", number: 4, units: 1 }
     ]
   },
   {
-    id: "building_2_palaiologou", 
+    id: process.env.NEXT_PUBLIC_SAMPLE_BUILDING_2_ID || "building_2_palaiologou", 
     name: process.env.NEXT_PUBLIC_SAMPLE_BUILDING_2_NAME || "ΚΤΙΡΙΟ Β - Auxiliary Building",
     description: process.env.NEXT_PUBLIC_SAMPLE_BUILDING_2_DESC || "Βοηθητικό κτίριο με αποθήκες και κοινόχρηστους χώρους",
     address: process.env.NEXT_PUBLIC_DEFAULT_ADDRESS_2 || "Main Street 47",
@@ -67,12 +67,12 @@ const realBuildings = [
     totalValue: parseFloat(process.env.NEXT_PUBLIC_SAMPLE_BUILDING_2_TOTAL_VALUE || '450000'),
     company: process.env.NEXT_PUBLIC_COMPANY_NAME || 'Default Construction Company',
     project: process.env.NEXT_PUBLIC_SAMPLE_PROJECT_NAME || "Sample Development Project",
-    projectId: "project_1_palaiologou", // From seedRealProjects.ts
+    projectId: process.env.NEXT_PUBLIC_SAMPLE_PROJECT_1_ID || "project_1_default",
     category: process.env.NEXT_PUBLIC_SAMPLE_BUILDING_2_CATEGORY || 'storage',
     features: (process.env.NEXT_PUBLIC_SAMPLE_BUILDING_2_FEATURES || 'Αποθήκες,Χώρος Κοινής Ωφέλειας,Υπόγειο Πάρκινγκ').split(',').map(f => f.trim()),
     buildingFloors: [
-      { id: "floor_-1", name: "Υπόγειο", number: -1, units: 3 },
-      { id: "floor_0", name: "Ισόγειο", number: 0, units: 3 }
+      { id: process.env.NEXT_PUBLIC_FLOOR_BASEMENT_ID || "floor_-1", name: "Υπόγειο", number: -1, units: 3 },
+      { id: process.env.NEXT_PUBLIC_FLOOR_GROUND_ID || "floor_0", name: "Ισόγειο", number: 0, units: 3 }
     ]
   }
 ];

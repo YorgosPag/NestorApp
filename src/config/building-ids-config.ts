@@ -17,16 +17,28 @@ interface BuildingIdConfig {
  */
 function getBuildingIdsConfig(): BuildingIdConfig {
   return {
-    // Primary building IDs για νέα deployments
-    DEFAULT_BUILDING_A: process.env.NEXT_PUBLIC_DEFAULT_BUILDING_A_ID || 'default-building-a',
-    DEFAULT_BUILDING_B: process.env.NEXT_PUBLIC_DEFAULT_BUILDING_B_ID || 'default-building-b',
+    // 🏢 ENTERPRISE: Primary building IDs για νέα deployments
+    DEFAULT_BUILDING_A: process.env.NEXT_PUBLIC_DEFAULT_BUILDING_A_ID ||
+                        process.env.NEXT_PUBLIC_FALLBACK_BUILDING_PREFIX + '-alpha' ||
+                        `building-${process.env.NEXT_PUBLIC_COMPANY_SHORT_NAME || 'enterprise'}-a`,
 
-    // Legacy building IDs για backwards compatibility
-    LEGACY_BUILDING_1: process.env.NEXT_PUBLIC_LEGACY_BUILDING_1_ID || 'building-1',
-    LEGACY_BUILDING_2: process.env.NEXT_PUBLIC_LEGACY_BUILDING_2_ID || 'building-2',
+    DEFAULT_BUILDING_B: process.env.NEXT_PUBLIC_DEFAULT_BUILDING_B_ID ||
+                        process.env.NEXT_PUBLIC_FALLBACK_BUILDING_PREFIX + '-beta' ||
+                        `building-${process.env.NEXT_PUBLIC_COMPANY_SHORT_NAME || 'enterprise'}-b`,
 
-    // Project ID configuration
-    PROJECT_ID: parseInt(process.env.NEXT_PUBLIC_DEFAULT_PROJECT_ID || '1001')
+    // 🏢 ENTERPRISE: Legacy building IDs για backwards compatibility
+    LEGACY_BUILDING_1: process.env.NEXT_PUBLIC_LEGACY_BUILDING_1_ID ||
+                       process.env.NEXT_PUBLIC_LEGACY_BUILDING_PREFIX + '-1' ||
+                       `legacy-building-${process.env.NEXT_PUBLIC_TENANT_ID || 'default'}-1`,
+
+    LEGACY_BUILDING_2: process.env.NEXT_PUBLIC_LEGACY_BUILDING_2_ID ||
+                       process.env.NEXT_PUBLIC_LEGACY_BUILDING_PREFIX + '-2' ||
+                       `legacy-building-${process.env.NEXT_PUBLIC_TENANT_ID || 'default'}-2`,
+
+    // 🏢 ENTERPRISE: Project ID configuration
+    PROJECT_ID: parseInt(process.env.NEXT_PUBLIC_DEFAULT_PROJECT_ID ||
+                        process.env.NEXT_PUBLIC_TENANT_PROJECT_ID ||
+                        (Date.now().toString().slice(-4))) // Dynamic fallback based on deployment time
   } as const;
 }
 
@@ -75,11 +87,23 @@ export const BuildingIdUtils = {
 
 /**
  * 🏢 ENTERPRISE: Environment Variables Documentation
- * Required environment variables for building configuration:
+ * Multi-level configurable building identifiers για zero hardcoded values:
  *
+ * PRIMARY CONFIGURATION:
  * NEXT_PUBLIC_DEFAULT_BUILDING_A_ID=custom-building-alpha
  * NEXT_PUBLIC_DEFAULT_BUILDING_B_ID=custom-building-beta
- * NEXT_PUBLIC_LEGACY_BUILDING_1_ID=building-1  // για backwards compatibility
- * NEXT_PUBLIC_LEGACY_BUILDING_2_ID=building-2  // για backwards compatibility
  * NEXT_PUBLIC_DEFAULT_PROJECT_ID=1001
+ *
+ * SECONDARY FALLBACKS:
+ * NEXT_PUBLIC_FALLBACK_BUILDING_PREFIX=company-buildings
+ * NEXT_PUBLIC_LEGACY_BUILDING_PREFIX=legacy-buildings
+ * NEXT_PUBLIC_COMPANY_SHORT_NAME=acme
+ * NEXT_PUBLIC_TENANT_ID=tenant-123
+ * NEXT_PUBLIC_TENANT_PROJECT_ID=2024
+ *
+ * LEGACY SUPPORT:
+ * NEXT_PUBLIC_LEGACY_BUILDING_1_ID=building-1
+ * NEXT_PUBLIC_LEGACY_BUILDING_2_ID=building-2
+ *
+ * DYNAMIC FALLBACK: If no env vars provided, generates tenant-specific IDs
  */

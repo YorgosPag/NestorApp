@@ -8,6 +8,7 @@
 import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Contact, Project } from '@/types';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 /**
  * 📞 Ανάκτηση επαφών από Firebase
@@ -16,7 +17,7 @@ import type { Contact, Project } from '@/types';
 export async function getContacts(limitCount: number = 100): Promise<Contact[]> {
   try {
     const contactsQuery = query(
-      collection(db, 'contacts'),
+      collection(db, COLLECTIONS.CONTACTS),
       orderBy('updatedAt', 'desc'),
       limit(limitCount)
     );
@@ -44,7 +45,7 @@ export async function getContacts(limitCount: number = 100): Promise<Contact[]> 
 export async function getProjects(limitCount: number = 100): Promise<Project[]> {
   try {
     const projectsQuery = query(
-      collection(db, 'projects'),
+      collection(db, COLLECTIONS.PROJECTS),
       orderBy('updatedAt', 'desc'),
       limit(limitCount)
     );

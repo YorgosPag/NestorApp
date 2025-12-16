@@ -124,7 +124,7 @@ export class EmailWorker {
 
       // Query for pending email jobs, ordered by creation time
       const q = query(
-        collection(database, 'communications'),
+        collection(database, COLLECTIONS.COMMUNICATIONS),
         where('channel', '==', 'email'),
         where('status', '==', 'pending'),
         where('type', '==', 'email'),

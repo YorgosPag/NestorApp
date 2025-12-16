@@ -19,6 +19,7 @@
 import { Migration, MigrationStep } from './types';
 import { collection, query, getDocs, doc, updateDoc, getDoc, addDoc, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 interface BuildingRecord {
   id: string;
@@ -86,7 +87,7 @@ class FloorsNormalizationMigrationSteps {
         console.log('🏗️ Analyzing buildings with embedded floors...');
 
         // Fetch all buildings
-        const buildingsSnapshot = await getDocs(collection(db, 'buildings'));
+        const buildingsSnapshot = await getDocs(collection(db, COLLECTIONS.BUILDINGS));
         this.migrationData.buildings = buildingsSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
@@ -217,7 +218,7 @@ class FloorsNormalizationMigrationSteps {
           for (const floor of batchFloors) {
             try {
               // Create new document in floors collection
-              const floorRef = doc(collection(db, 'floors'), floor.id);
+              const floorRef = doc(collection(db, COLLECTIONS.FLOORS), floor.id);
               batch.set(floorRef, floor);
 
               console.log(`     ✅ Queued floor: ${floor.name} (${floor.buildingName})`);
@@ -302,7 +303,7 @@ class FloorsNormalizationMigrationSteps {
         console.log('✅ Verifying normalization integrity...');
 
         // Re-fetch floors to verify
-        const floorsSnapshot = await getDocs(collection(db, 'floors'));
+        const floorsSnapshot = await getDocs(collection(db, COLLECTIONS.FLOORS));
         const createdFloors = floorsSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
@@ -354,7 +355,7 @@ class FloorsNormalizationMigrationSteps {
       },
       validate: async () => {
         // Migration successful if at least 95% of floors have valid foreign keys
-        const floorsSnapshot = await getDocs(collection(db, 'floors'));
+        const floorsSnapshot = await getDocs(collection(db, COLLECTIONS.FLOORS));
         const floors = floorsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as FloorRecord[];
 
         const validFloors = floors.filter(floor =>

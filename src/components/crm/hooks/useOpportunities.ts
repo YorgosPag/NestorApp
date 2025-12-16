@@ -34,8 +34,8 @@ export function useOpportunities() {
         try {
           await apiAddOpportunity({
               ...data,
-              contactId: '', 
-              assignedTo: 'current-user-id',
+              contactId: '',
+              assignedTo: process.env.NEXT_PUBLIC_DEFAULT_USER_ID || 'current-user-id',
               status: 'active',
               lastActivity: new Date(),
           } as any);

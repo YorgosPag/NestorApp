@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { collection, doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 /**
  * 🔧 FIREBASE COLLECTIONS SETUP API

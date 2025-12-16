@@ -17,6 +17,7 @@ import {
 } from 'firebase/firestore';
 import { SYSTEM_LAYERS, DEFAULT_LAYER_STYLES } from '@/types/layers';
 import type { 
+import { COLLECTIONS } from '@/config/firestore-collections';
   Layer, 
   LayerGroup, 
   LayerState, 

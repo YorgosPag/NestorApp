@@ -5,6 +5,12 @@ import type { Building } from '@/components/building-management/mockData';
 import type { Property } from '@/types/property-viewer';
 import type { Contact } from '@/types/contacts';
 
+// 🏢 ENTERPRISE: Configurable Firestore collection names
+const PROJECTS_COLLECTION = process.env.NEXT_PUBLIC_PROJECTS_COLLECTION || 'projects';
+const BUILDINGS_COLLECTION = process.env.NEXT_PUBLIC_BUILDINGS_COLLECTION || 'buildings';
+const UNITS_COLLECTION = process.env.NEXT_PUBLIC_UNITS_COLLECTION || 'units';
+const CONTACTS_COLLECTION = process.env.NEXT_PUBLIC_CONTACTS_COLLECTION || 'contacts';
+
 // Helper function for chunking arrays
 const chunkArray = <T>(arr: T[], size: number): T[][] => {
   const chunks: T[][] = [];
@@ -25,7 +31,7 @@ export class FirestoreProjectsRepository implements IProjectsRepository {
 
       // First, let's see ALL projects to understand the data structure
       console.log(`🔍 DEBUG: Fetching ALL projects to see available companyIds...`);
-      const allProjectsQuery = query(collection(database, 'projects'));
+      const allProjectsQuery = query(collection(database, PROJECTS_COLLECTION));
       const allSnapshot = await getDocs(allProjectsQuery);
       console.log(`🔍 DEBUG: Total projects in Firestore: ${allSnapshot.docs.length}`);
 
@@ -37,7 +43,7 @@ export class FirestoreProjectsRepository implements IProjectsRepository {
 
       // Now do the specific query
       const projectsQuery = query(
-        collection(database, 'projects'),
+        collection(database, PROJECTS_COLLECTION),
         where('companyId', '==', companyId)
       );
 
@@ -79,7 +85,7 @@ export class FirestoreProjectsRepository implements IProjectsRepository {
       const { collection, query, where, getDocs } = await import('firebase-admin/firestore');
 
       const q = query(
-        collection(database, 'buildings'),
+        collection(database, COLLECTIONS.BUILDINGS),
         where('projectId', '==', projectId)
       );
       const snapshot = await getDocs(q);
@@ -96,7 +102,7 @@ export class FirestoreProjectsRepository implements IProjectsRepository {
       const { collection, query, where, getDocs } = await import('firebase-admin/firestore');
 
       const q = query(
-        collection(database, 'units'),
+        collection(database, COLLECTIONS.UNITS),
         where('buildingId', '==', buildingId)
       );
       const snapshot = await getDocs(q);
@@ -119,7 +125,7 @@ export class FirestoreProjectsRepository implements IProjectsRepository {
 
       for (const chunk of idChunks) {
         const q = query(
-          collection(database, 'contacts'),
+          collection(database, COLLECTIONS.CONTACTS),
           where(documentId(), 'in', chunk)
         );
         const snapshot = await getDocs(q);

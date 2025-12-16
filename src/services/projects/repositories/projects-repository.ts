@@ -10,6 +10,9 @@ import { db } from '@/lib/firebase';
 import type { IProjectsRepository } from '../contracts';
 import type { Project } from '@/types/project';
 
+// 🏢 ENTERPRISE: Configurable Firestore collection names
+const PROJECTS_COLLECTION = process.env.NEXT_PUBLIC_PROJECTS_COLLECTION || 'projects';
+
 export class FirestoreProjectsRepository implements Pick<IProjectsRepository, 'getProjectsByCompanyId'> {
   async getProjectsByCompanyId(companyId: string): Promise<Project[]> {
     try {
@@ -17,7 +20,7 @@ export class FirestoreProjectsRepository implements Pick<IProjectsRepository, 'g
 
       // Φόρτωση projects από Firebase για τη συγκεκριμένη εταιρεία
       const projectsQuery = query(
-        collection(db, 'projects'),
+        collection(db, PROJECTS_COLLECTION),
         where('companyId', '==', companyId),
         orderBy('updatedAt', 'desc')
       );

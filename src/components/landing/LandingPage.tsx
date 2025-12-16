@@ -147,10 +147,18 @@ export function LandingPage() {
                     className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700/50 dark:text-white border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer"
                   >
                     <option value="">Όλα τα μεγέθη</option>
-                    <option value="0-50">0-50 m²</option>
-                    <option value="50-100">50-100 m²</option>
-                    <option value="100-150">100-150 m²</option>
-                    <option value="150+">150+ m²</option>
+                    <option value={`0-${process.env.NEXT_PUBLIC_AREA_RANGE_1_MAX || '50'}`}>
+                      0-{process.env.NEXT_PUBLIC_AREA_RANGE_1_MAX || '50'} m²
+                    </option>
+                    <option value={`${process.env.NEXT_PUBLIC_AREA_RANGE_1_MAX || '50'}-${process.env.NEXT_PUBLIC_AREA_RANGE_2_MAX || '100'}`}>
+                      {process.env.NEXT_PUBLIC_AREA_RANGE_1_MAX || '50'}-{process.env.NEXT_PUBLIC_AREA_RANGE_2_MAX || '100'} m²
+                    </option>
+                    <option value={`${process.env.NEXT_PUBLIC_AREA_RANGE_2_MAX || '100'}-${process.env.NEXT_PUBLIC_AREA_RANGE_3_MAX || '150'}`}>
+                      {process.env.NEXT_PUBLIC_AREA_RANGE_2_MAX || '100'}-{process.env.NEXT_PUBLIC_AREA_RANGE_3_MAX || '150'} m²
+                    </option>
+                    <option value={`${process.env.NEXT_PUBLIC_AREA_RANGE_3_MAX || '150'}+`}>
+                      {process.env.NEXT_PUBLIC_AREA_RANGE_3_MAX || '150'}+ m²
+                    </option>
                   </select>
                   <ChevronDown aria-hidden="true" className="absolute right-3 bottom-3.5 h-5 w-5 text-gray-400 pointer-events-none" />
                 </fieldset>
@@ -406,11 +414,11 @@ export function LandingPage() {
           __html: JSON.stringify({
             "@context": "https://schema.org",
             "@type": "WebSite",
-            "name": "Pagonis Real Estate",
-            "url": "https://your-domain.tld",
+            "name": process.env.NEXT_PUBLIC_COMPANY_NAME || process.env.NEXT_PUBLIC_SITE_NAME || "Real Estate Platform",
+            "url": process.env.NEXT_PUBLIC_SITE_URL || `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` || "https://localhost:3000",
             "potentialAction": {
               "@type": "SearchAction",
-              "target": "https://your-domain.tld/properties?search={query}",
+              "target": `${process.env.NEXT_PUBLIC_SITE_URL || `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` || "https://localhost:3000"}/properties?search={query}`,
               "query-input": "required name=query"
             }
           })

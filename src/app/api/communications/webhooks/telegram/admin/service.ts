@@ -106,10 +106,10 @@ export async function sendDailySummary(stats: {
 export async function testAdminNotifications(): Promise<boolean> {
     console.log('Sending test admin notification...');
     const testMessage: UserMessage = {
-        userId: '123456789',
-        username: 'test_user',
-        firstName: 'Test',
-        lastName: 'User',
+        userId: process.env.NEXT_PUBLIC_TELEGRAM_TEST_USER_ID || '123456789',
+        username: process.env.NEXT_PUBLIC_TELEGRAM_TEST_USERNAME || 'test_user',
+        firstName: process.env.NEXT_PUBLIC_TELEGRAM_TEST_FIRST_NAME || 'Test',
+        lastName: process.env.NEXT_PUBLIC_TELEGRAM_TEST_LAST_NAME || 'User',
         messageText: 'Αυτό είναι ένα test message! <b>Hello</b>',
         timestamp: new Date().toISOString(),
         queryType: 'general',

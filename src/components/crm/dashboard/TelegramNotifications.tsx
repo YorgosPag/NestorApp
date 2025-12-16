@@ -5,6 +5,7 @@ import { db } from '@/lib/firebase';
 import { collection, query, where, orderBy, onSnapshot, limit } from 'firebase/firestore';
 import { Bell, MessageCircle, User, Clock } from 'lucide-react';
 import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 interface TelegramMessage {
   id: string;
@@ -23,7 +24,7 @@ export function TelegramNotifications() {
   useEffect(() => {
     // Real-time listener για νέα Telegram μηνύματα
     const q = query(
-      collection(db, 'communications'),
+      collection(db, COLLECTIONS.COMMUNICATIONS),
       where('type', '==', 'telegram'),
       where('direction', '==', 'inbound'),
       orderBy('createdAt', 'desc'),

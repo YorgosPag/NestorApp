@@ -15,6 +15,7 @@
 import { Migration, MigrationStep } from './types';
 import { collection, query, getDocs, doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 interface ProjectRecord {
   id: string;
@@ -61,7 +62,7 @@ class ProjectCompanyMigrationSteps {
 
         // Fetch all companies
         const companiesSnapshot = await getDocs(
-          query(collection(db, 'contacts'))
+          query(collection(db, COLLECTIONS.CONTACTS))
         );
 
         this.migrationData.companies = companiesSnapshot.docs
@@ -74,7 +75,7 @@ class ProjectCompanyMigrationSteps {
         console.log(`   Found ${this.migrationData.companies.length} active companies`);
 
         // Fetch all projects
-        const projectsSnapshot = await getDocs(collection(db, 'projects'));
+        const projectsSnapshot = await getDocs(collection(db, COLLECTIONS.PROJECTS));
         this.migrationData.projects = projectsSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
@@ -268,7 +269,7 @@ class ProjectCompanyMigrationSteps {
         console.log('✅ Verifying post-migration data integrity...');
 
         // Re-fetch projects to verify changes
-        const projectsSnapshot = await getDocs(collection(db, 'projects'));
+        const projectsSnapshot = await getDocs(collection(db, COLLECTIONS.PROJECTS));
         const updatedProjects = projectsSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
@@ -305,7 +306,7 @@ class ProjectCompanyMigrationSteps {
       },
       validate: async () => {
         // Consider migration successful if at least 80% of projects have valid company IDs
-        const projectsSnapshot = await getDocs(collection(db, 'projects'));
+        const projectsSnapshot = await getDocs(collection(db, COLLECTIONS.PROJECTS));
         const updatedProjects = projectsSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()

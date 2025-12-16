@@ -25,7 +25,7 @@ export async function getPropertySummary(): Promise<PropertySummary> {
   return safeDbOperation(async (database) => {
     const { collection, query, getDocs } = firestoreHelpers;
 
-    const q = query(collection(database, 'units'));
+    const q = query(collection(database, COLLECTIONS.UNITS));
     const querySnapshot = await getDocs(q);
     
     const properties: any[] = [];

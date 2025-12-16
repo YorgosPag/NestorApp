@@ -40,15 +40,18 @@ export async function POST(request: NextRequest) {
       BuildingIdUtils.isLegacyBuildingId(unit.buildingId) || // Legacy building IDs
       !unit.buildingId ||
       unit.buildingId === '' ||
-      (unit.name && unit.name.toLowerCase().includes('παλαιολόγου')) ||
-      (unit.unitName && unit.unitName.toLowerCase().includes('παλαιολόγου'))
+      (unit.name && unit.name.toLowerCase().includes(process.env.NEXT_PUBLIC_PROJECT_SEARCH_KEYWORD?.toLowerCase() || 'παλαιολόγου')) ||
+      (unit.unitName && unit.unitName.toLowerCase().includes(process.env.NEXT_PUBLIC_PROJECT_SEARCH_KEYWORD?.toLowerCase() || 'παλαιολόγου'))
     );
 
     console.log(`Found ${unitsToConnect.length} units to potentially connect`);
 
-    // Connect units to buildings based on their current buildingId
-    const buildingA = buildings.find(b => b.name.includes('ΚΤΙΡΙΟ Α'));
-    const buildingB = buildings.find(b => b.name.includes('ΚΤΙΡΙΟ Β'));
+    // 🏢 ENTERPRISE: Connect units to buildings based on configurable patterns
+    const buildingAPattern = process.env.NEXT_PUBLIC_BUILDING_A_SEARCH_PATTERN || 'ΚΤΙΡΙΟ Α';
+    const buildingBPattern = process.env.NEXT_PUBLIC_BUILDING_B_SEARCH_PATTERN || 'ΚΤΙΡΙΟ Β';
+
+    const buildingA = buildings.find(b => b.name.includes(buildingAPattern));
+    const buildingB = buildings.find(b => b.name.includes(buildingBPattern));
 
     const results = [];
     

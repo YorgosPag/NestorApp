@@ -11,6 +11,7 @@ import {
   DocumentSnapshot
 } from 'firebase/firestore';
 import type { Property } from '@/types/property';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 /**
  * Enhanced Property Search Service for Telegram Bot
@@ -161,7 +162,7 @@ export async function searchProperties(searchInput: string | PropertySearchCrite
   try {
     const criteria = typeof searchInput === 'string' ? extractSearchCriteria(searchInput) : searchInput;
     const constraints = buildPropertyQuery(criteria);
-    const q = query(collection(db, 'units'), ...constraints);
+    const q = query(collection(db, COLLECTIONS.UNITS), ...constraints);
     const snapshot = await getDocs(q);
     const properties = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Property));
 
@@ -186,7 +187,7 @@ export async function searchProperties(searchInput: string | PropertySearchCrite
 export async function getPropertySummary(criteria?: Partial<PropertySearchCriteria>): Promise<PropertySummary> {
   'use server';
   try {
-    const q = query(collection(db, 'units'));
+    const q = query(collection(db, COLLECTIONS.UNITS));
     const snapshot = await getDocs(q);
     const properties = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Property));
 

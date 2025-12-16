@@ -4,6 +4,7 @@ import { collection, query, where, getDocs, orderBy, limit, QueryConstraint } fr
 import type { Firestore } from 'firebase-admin/firestore';
 import type { Property } from '@/types/property';
 import { extractSearchCriteria as extractCriteriaFromText, buildPropertyQuery } from '@/services/property-search.service';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 /**
  * Search Criteria Interface
@@ -47,7 +48,7 @@ export async function executeSmartSearch(db: Firestore, text: string): Promise<Q
     
     // Primary query execution
     const firestoreQuery = buildPropertyQuery(criteria);
-    const q = query(collection(db, 'units'), ...firestoreQuery);
+    const q = query(collection(db, COLLECTIONS.UNITS), ...firestoreQuery);
     const querySnapshot = await getDocs(q);
     
     querySnapshot.forEach((doc) => {

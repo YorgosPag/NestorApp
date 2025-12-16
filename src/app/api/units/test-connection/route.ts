@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { BUILDING_IDS, BuildingIdUtils } from '@/config/building-ids-config';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 export async function GET(request: NextRequest) {
   try {
@@ -9,7 +10,7 @@ export async function GET(request: NextRequest) {
 
     // 🏢 ENTERPRISE: Get buildings for configured project ID
     const buildingsQuery = query(
-      collection(db, 'buildings'),
+      collection(db, COLLECTIONS.BUILDINGS),
       where('projectId', '==', BUILDING_IDS.PROJECT_ID)
     );
     
@@ -22,7 +23,7 @@ export async function GET(request: NextRequest) {
     console.log(`Found ${buildings.length} buildings for project ${BUILDING_IDS.PROJECT_ID}`);
 
     // Get first 10 units for testing
-    const unitsSnapshot = await getDocs(collection(db, 'units'));
+    const unitsSnapshot = await getDocs(collection(db, COLLECTIONS.UNITS));
     const allUnits = unitsSnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()

@@ -10,6 +10,7 @@ import { db } from '@/lib/firebase';
 import type { ObligationDocument, ObligationTemplate, ObligationStatus } from '@/types/obligations';
 import { DEFAULT_TEMPLATE_SECTIONS } from '@/types/obligation-services';
 import type { IObligationsRepository, SearchFilters, ObligationStats } from './contracts';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 export class FirestoreObligationsRepository implements IObligationsRepository {
   async getAll(): Promise<ObligationDocument[]> {

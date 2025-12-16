@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { collection, query, orderBy, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { InfiniteScrollPagination, PaginatedResult } from '@/lib/pagination';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 // =============================================================================
 // 🚀 PAGINATED PROJECTS HOOK - ENTERPRISE PERFORMANCE
@@ -66,7 +67,7 @@ export function useFirestoreProjectsPaginated(
 
   const buildQuery = useCallback((currentFilters: ProjectFilters) => {
     let projectsQuery = query(
-      collection(db, 'projects'),
+      collection(db, COLLECTIONS.PROJECTS),
       orderBy('lastUpdate', 'desc') // Most recent first
     );
 

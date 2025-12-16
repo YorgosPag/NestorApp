@@ -7,6 +7,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Property } from '@/types/property-viewer';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 interface Floor {
   id: string;
@@ -87,7 +88,7 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
     setIsLoading(true);
     setError(null);
 
-    const unitsCollection = collection(db, 'units');
+    const unitsCollection = collection(db, COLLECTIONS.UNITS);
     if (DEBUG_SHARED_PROPERTIES_PROVIDER) console.log('🔄 Setting up Firestore listener...');
 
     const unsubscribe = onSnapshot(

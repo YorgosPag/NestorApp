@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { withErrorHandling, apiSuccess } from '@/lib/api/ApiErrorHandler';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 export const GET = withErrorHandling(async (request: NextRequest) => {
     const { searchParams } = new URL(request.url);
@@ -25,14 +26,14 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
     if (buildingId) {
       // Query floors by buildingId (most common use case)
       floorsQuery = query(
-        collection(db, 'floors'),
+        collection(db, COLLECTIONS.FLOORS),
         where('buildingId', '==', buildingId),
         orderBy('number', 'asc') // Order by floor number
       );
     } else if (projectId) {
       // Query floors by projectId (for project-level floor listing)
       floorsQuery = query(
-        collection(db, 'floors'),
+        collection(db, COLLECTIONS.FLOORS),
         where('projectId', '==', projectId),
         orderBy('buildingId', 'asc'),
         orderBy('number', 'asc')

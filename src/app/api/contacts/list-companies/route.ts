@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 export async function GET(request: NextRequest) {
   try {
     console.log('📋 Listing all companies...');
 
     const contactsQuery = query(
-      collection(db, 'contacts'),
+      collection(db, COLLECTIONS.CONTACTS),
       where('type', '==', 'company'),
       where('status', '==', 'active')
     );

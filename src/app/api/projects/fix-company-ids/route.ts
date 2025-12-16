@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { collection, query, where, getDocs, doc, updateDoc, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 export async function POST(request: NextRequest) {
   try {
@@ -8,7 +9,7 @@ export async function POST(request: NextRequest) {
 
     // 1. Πάρε όλες τις εταιρείες από contacts
     const contactsQuery = query(
-      collection(db, 'contacts'),
+      collection(db, COLLECTIONS.CONTACTS),
       where('type', '==', 'company'),
       where('status', '==', 'active')
     );
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest) {
     });
 
     // 2. Πάρε όλα τα projects
-    const projectsSnapshot = await getDocs(collection(db, 'projects'));
+    const projectsSnapshot = await getDocs(collection(db, COLLECTIONS.PROJECTS));
     console.log(`🏗️ Found ${projectsSnapshot.docs.length} projects`);
 
     // 3. Διόρθωσε τα companyIds
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest) {
 
     // 4. Επαλήθευση - δείξε τα τελικά αποτελέσματα
     console.log('\n📊 Final verification:');
-    const finalProjectsSnapshot = await getDocs(collection(db, 'projects'));
+    const finalProjectsSnapshot = await getDocs(collection(db, COLLECTIONS.PROJECTS));
 
     const finalProjects = finalProjectsSnapshot.docs.map(doc => {
       const data = doc.data();

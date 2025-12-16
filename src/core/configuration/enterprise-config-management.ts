@@ -178,7 +178,7 @@ export const DEFAULT_COMPANY_CONFIG: CompanyConfiguration = {
   id: 'default',
   name: 'Your Company',
   legalName: 'Your Company Ltd.',
-  email: 'info@company.com',
+  email: process.env.NEXT_PUBLIC_COMPANY_DEFAULT_EMAIL || 'info@company.com',
   phone: '+30 210 1234567',
   website: 'https://company.com',
   address: {

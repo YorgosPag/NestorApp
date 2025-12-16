@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { doc, updateDoc, setDoc, collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { EnterpriseConfigurationManager } from '@/core/configuration';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 /**
  * 🏢 ENTERPRISE: Database-driven company lookup (NO MORE HARDCODED IDs)
@@ -10,7 +11,7 @@ import { EnterpriseConfigurationManager } from '@/core/configuration';
 async function getCompanyIdByName(companyName: string): Promise<string | null> {
   try {
     const companiesQuery = query(
-      collection(db, 'contacts'),
+      collection(db, COLLECTIONS.CONTACTS),
       where('type', '==', 'company'),
       where('companyName', '==', companyName)
     );

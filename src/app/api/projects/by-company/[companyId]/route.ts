@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { withErrorHandling, apiSuccess } from '@/lib/api/ApiErrorHandler';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 export const GET = withErrorHandling(async (
   request: NextRequest,
@@ -12,18 +13,18 @@ export const GET = withErrorHandling(async (
     
     // Use Client SDK (same as seed scripts)
     console.log('🔍 DEBUG: Fetching ALL projects to see available companyIds...');
-    const allProjectsQuery = query(collection(db, 'projects'));
+    const allProjectsQuery = query(collection(db, COLLECTIONS.PROJECTS));
     const allSnapshot = await getDocs(allProjectsQuery);
     console.log(`🔍 DEBUG: Total projects in Firestore: ${allSnapshot.docs.length}`);
-    
+
     allSnapshot.docs.forEach(doc => {
       const data = doc.data();
       console.log(`🔍 DEBUG: Project ID=${doc.id}, companyId="${data.companyId}", company="${data.company}", name="${data.name}"`);
     });
-    
+
     // Now do the specific query
     const projectsQuery = query(
-      collection(db, 'projects'),
+      collection(db, COLLECTIONS.PROJECTS),
       where('companyId', '==', params.companyId)
     );
     

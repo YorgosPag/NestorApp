@@ -5,11 +5,14 @@ import type { CompanyContact } from '@/types/contacts';
 import { contactConverter } from '@/lib/firestore/converters/contact.converter';
 import { getNavigationCompanyIds } from './navigation-companies.service';
 import { getProjectsByCompanyId } from './projects.service';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 // DEBUG FLAG - Set to false to disable performance-heavy logging
 const DEBUG_COMPANIES_SERVICE = true;
 
-const CONTACTS_COLLECTION = 'contacts';
+// 🏢 ENTERPRISE: Centralized Firestore collection configuration
+const CONTACTS_COLLECTION = COLLECTIONS.CONTACTS;
+const PROJECTS_COLLECTION = COLLECTIONS.PROJECTS;
 
 /**
  * Service για διαχείριση εταιριών
@@ -63,7 +66,7 @@ export class CompaniesService {
       try {
         // 💾 ENTERPRISE STRATEGY: Batch query ALL projects, then filter by company
         const projectsQuery = query(
-          collection(db, 'projects')
+          collection(db, PROJECTS_COLLECTION)
           // Note: Firestore doesn't support "IN" with more than 10 items, so we fetch all and filter
         );
 

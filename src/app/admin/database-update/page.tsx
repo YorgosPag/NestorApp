@@ -31,28 +31,45 @@ import {
   writeBatch
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 // ============================================================================
 // DATA DEFINITIONS
 // ============================================================================
 
-// Υπάρχοντα contact IDs από localhost-2.log
-const EXISTING_CONTACT_IDS = [
-  '6MkpFeW54dG03cbWUzRf',
-  '6vpnjcpN5ICjCyrsUs8x',
-  'DBbvKi3DYxBHbDipqfCv',
-  'IjTAcUZ3eJm5zT7EA4q7',
-  'JIwIiksQwG9469SByKIJ',
-  'QpWvu0Jrw4DGxDqFC2xW',
-  'SVgqNOX1vLM7gFZO9Vy4',
-  'VJpvrADTve31letX5ob7',
-  'ZxLWN7HXsZHcMfoozVL5',
-  'fdhyCgd9l4cxXX0XhtyG',
-  'j1xYkN18jqGMA18c600g',
-  'oGHblMcwDKM4SM67mlgN',
-  'sx9QlhtQelyE1LZHwBOg',
-  'zX0jNOzy0GAmAhUjSdeQ'
-];
+// 🏢 ENTERPRISE: Load contact IDs από environment configuration
+const getExistingContactIds = (): string[] => {
+  try {
+    // Load from environment variable (JSON format)
+    const envContactIds = process.env.NEXT_PUBLIC_EXISTING_CONTACT_IDS;
+    if (envContactIds) {
+      return JSON.parse(envContactIds);
+    }
+  } catch (error) {
+    console.warn('⚠️ Invalid EXISTING_CONTACT_IDS format, using fallback');
+  }
+
+  // 🏢 ENTERPRISE: Fallback για testing/development
+  return [
+    '6MkpFeW54dG03cbWUzRf',
+    '6vpnjcpN5ICjCyrsUs8x',
+    'DBbvKi3DYxBHbDipqfCv',
+    'IjTAcUZ3eJm5zT7EA4q7',
+    'JIwIiksQwG9469SByKIJ',
+    'QpWvu0Jrw4DGxDqFC2xW',
+    'SVgqNOX1vLM7gFZO9Vy4',
+    'VJpvrADTve31letX5ob7',
+    'ZxLWN7HXsZHcMfoozVL5',
+    'fdhyCgd9l4cxXX0XhtyG',
+    'j1xYkN18jqGMA18c600g',
+    'oGHblMcwDKM4SM67mlgN',
+    'sx9QlhtQelyE1LZHwBOg',
+    'zX0jNOzy0GAmAhUjSdeQ'
+  ];
+};
+
+// 🏢 ENTERPRISE: Use configurable contact IDs
+const EXISTING_CONTACT_IDS = getExistingContactIds();
 
 // Νέες επαφές να προστεθούν
 const NEW_CONTACTS = [
@@ -176,7 +193,7 @@ export default function DatabaseUpdatePage() {
           lastModifiedBy: 'database-update-script'
         };
 
-        const docRef = await addDoc(collection(db, 'contacts'), contactData);
+        const docRef = await addDoc(collection(db, COLLECTIONS.CONTACTS), contactData);
         addedContactIds.push(docRef.id);
 
         addLog(`  ✅ Προστέθηκε: ${contact.firstName || contact.companyName} (${docRef.id})`);
@@ -231,7 +248,7 @@ export default function DatabaseUpdatePage() {
 
     try {
       // Παίρνουμε μονάδες
-      const unitsQuery = query(collection(db, 'units'), limit(20));
+      const unitsQuery = query(collection(db, COLLECTIONS.UNITS), limit(20));
       const unitsSnapshot = await getDocs(unitsQuery);
 
       const batch = writeBatch(db);

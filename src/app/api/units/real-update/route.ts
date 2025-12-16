@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { UNIT_SALE_STATUS } from '@/core/status/StatusConstants';
 import { BUILDING_IDS } from '@/config/building-ids-config';
+import { CONTACT_INFO, ContactUtils } from '@/config/contact-info-config';
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,17 +39,12 @@ export async function POST(request: NextRequest) {
 
     console.log(`🎯 Found ${soldUnitsToUpdate.length} sold units to update`);
 
-    // Step 2: Create contacts if they don't exist and get contact IDs
-    const contacts = [
-      { id: 'real_contact_1', name: 'Γιώργος Παπαδόπουλος', email: 'g.papadopoulos@email.com' },
-      { id: 'real_contact_2', name: 'Μαρία Νικολάου', email: 'm.nikolaou@email.com' },
-      { id: 'real_contact_3', name: 'Δημήτρης Κωνσταντίνου', email: 'd.konstantinou@email.com' },
-      { id: 'real_contact_4', name: 'Άννα Παπαγιάννη', email: 'a.papagianni@email.com' },
-      { id: 'real_contact_5', name: 'Νίκος Αθανασίου', email: 'n.athanasiou@email.com' },
-      { id: 'real_contact_6', name: 'Ελένη Μιχαηλίδου', email: 'e.michailidou@email.com' },
-      { id: 'real_contact_7', name: 'Κώστας Δημητρίου', email: 'k.dimitriou@email.com' },
-      { id: 'real_contact_8', name: 'Σοφία Γεωργίου', email: 's.georgiou@email.com' }
-    ];
+    // Step 2: 🏢 ENTERPRISE: Generate contacts με configurable patterns
+    const contacts = ContactUtils.generateSampleContacts(8).map((contact, index) => ({
+      id: `real_contact_${index + 1}`,
+      name: contact.fullName,
+      email: contact.email
+    }));
 
     // Step 3: Create contacts in database
     console.log('👥 Creating real contacts in database...');

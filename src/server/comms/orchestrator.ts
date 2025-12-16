@@ -178,7 +178,7 @@ async function enqueueMessageForChannel(
     };
 
     // Store in communications collection (same as Telegram)
-    const docRef = await addDoc(collection(database, 'communications'), messageRecord);
+    const docRef = await addDoc(collection(database, COLLECTIONS.COMMUNICATIONS), messageRecord);
     
     // Log for debugging
     console.log(`📝 ${channel.toUpperCase()} message queued:`, {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { collection, query, where, getDocs, writeBatch, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 export async function POST(req: NextRequest) {
   console.log('🔧 Starting company fix process...');
@@ -8,7 +9,7 @@ export async function POST(req: NextRequest) {
   try {
     // Get all contacts with type 'company'
     const companiesQuery = query(
-      collection(db, 'contacts'),
+      collection(db, COLLECTIONS.CONTACTS),
       where('type', '==', 'company')
     );
 

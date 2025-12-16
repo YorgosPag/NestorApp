@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 export async function GET(request: NextRequest) {
   try {
     console.log('🔍 Debugging projects with buildings...');
 
     // Get all projects to see what's available
-    const projectsQuery = query(collection(db, 'projects'));
+    const projectsQuery = query(collection(db, COLLECTIONS.PROJECTS));
     
     const projectsSnapshot = await getDocs(projectsQuery);
     const projects = projectsSnapshot.docs.map(doc => ({

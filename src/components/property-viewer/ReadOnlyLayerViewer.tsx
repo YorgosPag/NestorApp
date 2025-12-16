@@ -35,6 +35,7 @@ import { LAYER_CATEGORIES } from '@/types/layers';
 import type { Layer, LayerCategory } from '@/types/layers';
 import { db } from '@/lib/firebase';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 // Helper function for safe LAYER_CATEGORIES access
 const getCategoryInfo = (category: string) => {

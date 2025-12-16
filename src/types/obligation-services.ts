@@ -8,6 +8,7 @@
 import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { ObligationSection, ObligationDocument } from './obligations';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 /**
  * 📋 Ανάκτηση obligation templates από Firebase

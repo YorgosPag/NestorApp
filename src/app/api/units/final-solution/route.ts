@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { UNIT_SALE_STATUS } from '@/core/status/StatusConstants';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
 
     // Step 1: Βρίσκουμε sold units χωρίς customers
     console.log('🔍 Finding sold units without customers...');
-    const unitsCollection = collection(db, 'units');
+    const unitsCollection = collection(db, COLLECTIONS.UNITS);
     const unitsSnapshot = await getDocs(unitsCollection);
 
     const soldUnitsWithoutCustomers = [];
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest) {
 
     // Step 2: Δημιουργούμε ή βρίσκουμε contacts
     console.log('👥 Creating/finding contacts...');
-    const contactsCollection = collection(db, 'contacts');
+    const contactsCollection = collection(db, COLLECTIONS.CONTACTS);
 
     // Προσπαθούμε να βρούμε existing contacts
     const existingContactsSnapshot = await getDocs(contactsCollection);

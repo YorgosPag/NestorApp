@@ -404,7 +404,7 @@ export class HardcodedValuesMigrationEngine {
   }> {
     try {
       const companyConfig: CompanyConfiguration = {
-        id: 'pagonis-company',
+        id: process.env.NEXT_PUBLIC_COMPANY_ID || 'pagonis-company',
         name: DETECTED_COMPANY_DATA.name,
         legalName: DETECTED_COMPANY_DATA.legalName,
         email: DETECTED_COMPANY_DATA.email,

@@ -3,6 +3,7 @@ import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { db as adminDb } from '@/lib/firebase-admin';
 import { UNIT_SALE_STATUS } from '@/core/status/StatusConstants';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,7 +11,7 @@ export async function GET(request: NextRequest) {
 
     // Get all units from the 'units' collection
     const unitsQuery = query(
-      collection(db, 'units'),
+      collection(db, COLLECTIONS.UNITS),
       orderBy('name', 'asc')
     );
     
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest) {
 
     // Get contacts with names
     console.log('👤 Getting contacts...');
-    const contactsSnapshot = await admin.getDocs(admin.collection(database, 'contacts'));
+    const contactsSnapshot = await admin.getDocs(admin.collection(database, COLLECTIONS.CONTACTS));
     const contacts = [];
     contactsSnapshot.forEach(doc => {
       const data = doc.data();
@@ -69,7 +70,7 @@ export async function POST(request: NextRequest) {
 
     // Get sold units that are not linked
     console.log('🏠 Getting sold units...');
-    const unitsSnapshot = await admin.getDocs(admin.collection(database, 'units'));
+    const unitsSnapshot = await admin.getDocs(admin.collection(database, COLLECTIONS.UNITS));
     const soldUnitsToLink = [];
 
     unitsSnapshot.forEach(doc => {

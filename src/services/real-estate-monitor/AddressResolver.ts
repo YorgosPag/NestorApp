@@ -297,12 +297,19 @@ export class AddressResolver {
    */
   private async geocodeWithNominatim(address: GreekAddress): Promise<GeocodingResult | null> {
     const query = this.buildQueryString(address);
-    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&countrycodes=gr&limit=1`;
+
+    // 🏢 ENTERPRISE: Configurable geocoding service
+    const nominatimBaseUrl = process.env.NEXT_PUBLIC_NOMINATIM_BASE_URL || 'https://nominatim.openstreetmap.org';
+    const countryCode = process.env.NEXT_PUBLIC_DEFAULT_COUNTRY_CODE || 'gr';
+    const searchLimit = process.env.NEXT_PUBLIC_GEOCODING_SEARCH_LIMIT || '1';
+
+    const url = `${nominatimBaseUrl}/search?q=${encodeURIComponent(query)}&format=json&countrycodes=${countryCode}&limit=${searchLimit}`;
 
     try {
+      const userAgent = process.env.NEXT_PUBLIC_GEOCODING_USER_AGENT || 'GEO-ALERT-System/1.0';
       const response = await fetch(url, {
         headers: {
-          'User-Agent': 'GEO-ALERT-System/1.0'
+          'User-Agent': userAgent
         },
         signal: AbortSignal.timeout(this.options.timeout || 5000)
       });

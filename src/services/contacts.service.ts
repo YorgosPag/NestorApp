@@ -14,11 +14,13 @@ import { sanitizeContactData, validateContactData } from '@/utils/contactForm/ut
 
 import { getCol, mapDocs, chunk, asDate, startAfterDocId } from '@/lib/firestore/utils';
 import { contactConverter } from '@/lib/firestore/converters/contact.converter';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
-const CONTACTS_COLLECTION = 'contacts';
-const UNITS_COLLECTION = 'units';
-const BATCH_SIZE = 100; // Increased to show more contacts in dropdowns
-const MAX_BATCH = 500;
+// 🏢 ENTERPRISE: Centralized Firestore collection configuration
+const CONTACTS_COLLECTION = COLLECTIONS.CONTACTS;
+const UNITS_COLLECTION = COLLECTIONS.UNITS;
+const BATCH_SIZE = parseInt(process.env.NEXT_PUBLIC_CONTACTS_BATCH_SIZE || '100'); // Increased to show more contacts in dropdowns
+const MAX_BATCH = parseInt(process.env.NEXT_PUBLIC_CONTACTS_MAX_BATCH || '500');
 
 // ---------- Query builder ----------
 async function buildContactsQuery(options?: {
@@ -421,7 +423,7 @@ export class ContactsService {
       const updateData: any = {
         status: 'archived',
         archivedAt: serverTimestamp(),
-        archivedBy: 'current-user' // TODO: Get actual user ID
+        archivedBy: process.env.NEXT_PUBLIC_DEFAULT_USER_ID || 'current-user' // TODO: Get actual user ID
       };
 
       // Only add archivedReason if it's provided
@@ -441,7 +443,7 @@ export class ContactsService {
       await this.updateContact(id, {
         status: 'active',
         restoredAt: serverTimestamp(),
-        restoredBy: 'current-user' // TODO: Get actual user ID
+        restoredBy: process.env.NEXT_PUBLIC_DEFAULT_USER_ID || 'current-user' // TODO: Get actual user ID
       } as any);
     } catch (error) {
       // Error logging removed //('Error restoring contact:', error);
@@ -459,7 +461,7 @@ export class ContactsService {
           const updateData: any = {
             status: 'archived',
             archivedAt: serverTimestamp(),
-            archivedBy: 'current-user', // TODO: Get actual user ID
+            archivedBy: process.env.NEXT_PUBLIC_DEFAULT_USER_ID || 'current-user', // TODO: Get actual user ID
             updatedAt: serverTimestamp()
           };
 

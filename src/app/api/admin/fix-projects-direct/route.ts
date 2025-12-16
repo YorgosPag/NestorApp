@@ -13,7 +13,7 @@ let adminDb: FirebaseFirestore.Firestore;
 try {
   if (getApps().length === 0) {
     const app = initializeApp({
-      projectId: 'nestor-pagonis'
+      projectId: process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
     });
     adminDb = getFirestore(app);
   } else {

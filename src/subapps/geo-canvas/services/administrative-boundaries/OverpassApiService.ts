@@ -23,28 +23,58 @@ import type {
 // ============================================================================
 
 /**
- * Overpass API Endpoints (με fallbacks)
+ * 🏢 ENTERPRISE: Configurable Overpass API Endpoints
+ * Multi-level fallback pattern for production deployments
  */
-const OVERPASS_ENDPOINTS = [
-  'https://overpass-api.de/api/interpreter',
-  'https://overpass.kumi.systems/api/interpreter',
-  'https://overpass.osm.ch/api/interpreter'
-] as const;
+const getOverpassEndpoints = (): readonly string[] => {
+  // Primary: JSON configuration από environment variable
+  try {
+    const envEndpoints = process.env.NEXT_PUBLIC_OVERPASS_ENDPOINTS_JSON;
+    if (envEndpoints) {
+      const parsed = JSON.parse(envEndpoints);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed as readonly string[];
+      }
+    }
+  } catch (error) {
+    console.warn('⚠️ Invalid OVERPASS_ENDPOINTS_JSON, using fallbacks');
+  }
+
+  // Secondary: Individual endpoint configuration
+  const endpoints: string[] = [];
+
+  const primaryEndpoint = process.env.NEXT_PUBLIC_OVERPASS_PRIMARY_ENDPOINT ||
+                         process.env.NEXT_PUBLIC_OVERPASS_BASE_URL ||
+                         'https://overpass-api.de/api/interpreter';
+  endpoints.push(primaryEndpoint);
+
+  const secondaryEndpoint = process.env.NEXT_PUBLIC_OVERPASS_SECONDARY_ENDPOINT ||
+                          'https://overpass.kumi.systems/api/interpreter';
+  endpoints.push(secondaryEndpoint);
+
+  const tertiaryEndpoint = process.env.NEXT_PUBLIC_OVERPASS_TERTIARY_ENDPOINT ||
+                         'https://overpass.osm.ch/api/interpreter';
+  endpoints.push(tertiaryEndpoint);
+
+  return endpoints as readonly string[];
+};
+
+const OVERPASS_ENDPOINTS = getOverpassEndpoints();
 
 /**
- * Default configuration για Overpass queries
+ * 🏢 ENTERPRISE: Configurable Default Configuration για Overpass queries
  */
 const DEFAULT_CONFIG: OverpassQueryConfig = {
-  timeout: 30,
-  format: 'json'
+  timeout: parseInt(process.env.NEXT_PUBLIC_OVERPASS_TIMEOUT || '30'),
+  format: (process.env.NEXT_PUBLIC_OVERPASS_FORMAT as 'json' | 'xml') || 'json'
 };
 
 /**
- * Rate limiting configuration
+ * 🏢 ENTERPRISE: Configurable Rate limiting configuration
  */
 const RATE_LIMIT = {
-  maxRequestsPerMinute: 10,
-  delayBetweenRequests: 1000 // 1 second
+  maxRequestsPerMinute: parseInt(process.env.NEXT_PUBLIC_OVERPASS_MAX_REQUESTS_PER_MINUTE || '10'),
+  delayBetweenRequests: parseInt(process.env.NEXT_PUBLIC_OVERPASS_DELAY_BETWEEN_REQUESTS || '1000') // milliseconds
 };
 
 // ============================================================================
@@ -242,7 +272,7 @@ export class OverpassApiService {
   private currentEndpointIndex = 0;
   private requestHistory: number[] = [];
   private cache = new Map<string, { data: OverpassAdminResponse; timestamp: number }>();
-  private readonly cacheExpiryMs = 24 * 60 * 60 * 1000; // 24 hours
+  private readonly cacheExpiryMs = parseInt(process.env.NEXT_PUBLIC_OVERPASS_CACHE_EXPIRY_HOURS || '24') * 60 * 60 * 1000;
 
   // ============================================================================
   // CORE API METHODS
@@ -352,7 +382,9 @@ export class OverpassApiService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          'User-Agent': 'GEO-ALERT-Administrative-Boundaries/1.0'
+          'User-Agent': process.env.NEXT_PUBLIC_OVERPASS_USER_AGENT ||
+                       process.env.NEXT_PUBLIC_APP_USER_AGENT ||
+                       `${process.env.NEXT_PUBLIC_APP_NAME || 'Enterprise-App'}-Administrative-Boundaries/1.0`
         },
         body: `data=${encodeURIComponent(query)}`,
         signal: controller.signal
@@ -892,21 +924,25 @@ export class OverpassApiService {
    * Calculate optimal TTL για API responses based on data characteristics
    */
   private calculateApiCacheTTL(response: OverpassAdminResponse): number {
-    // Base TTL: 2 hours for administrative data (quite stable)
-    let baseTTL = 2 * 60 * 60 * 1000;
+    // 🏢 ENTERPRISE: Configurable Base TTL για administrative data
+    const baseTTLHours = parseInt(process.env.NEXT_PUBLIC_OVERPASS_BASE_CACHE_TTL_HOURS || '2');
+    let baseTTL = baseTTLHours * 60 * 60 * 1000;
 
     // Check response characteristics
     const elementCount = response.elements ? response.elements.length : 0;
 
     if (elementCount === 0) {
       // Empty responses might be temporary - shorter cache
-      baseTTL = 30 * 60 * 1000; // 30 minutes
+      const emptyTTLMinutes = parseInt(process.env.NEXT_PUBLIC_OVERPASS_EMPTY_CACHE_TTL_MINUTES || '30');
+      baseTTL = emptyTTLMinutes * 60 * 1000;
     } else if (elementCount === 1) {
       // Single element responses (specific queries) - longer cache
-      baseTTL = 4 * 60 * 60 * 1000; // 4 hours
-    } else if (elementCount > 100) {
+      const singleTTLHours = parseInt(process.env.NEXT_PUBLIC_OVERPASS_SINGLE_CACHE_TTL_HOURS || '4');
+      baseTTL = singleTTLHours * 60 * 60 * 1000;
+    } else if (elementCount > (parseInt(process.env.NEXT_PUBLIC_OVERPASS_LARGE_DATASET_THRESHOLD || '100'))) {
       // Large datasets - longer cache (expensive to fetch)
-      baseTTL = 6 * 60 * 60 * 1000; // 6 hours
+      const largeTTLHours = parseInt(process.env.NEXT_PUBLIC_OVERPASS_LARGE_CACHE_TTL_HOURS || '6');
+      baseTTL = largeTTLHours * 60 * 60 * 1000;
     }
 
     return baseTTL;
