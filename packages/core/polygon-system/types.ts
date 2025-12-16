@@ -130,65 +130,118 @@ export interface PolygonDrawingState {
   snapTolerance: number;
 }
 
+// ============================================================================
+// 🏢 ENTERPRISE POLYGON STYLES
+// ============================================================================
+
 /**
- * Default styles για διαφορετικούς τύπους
+ * ✅ Polygon styles are now loaded from Firebase/Database!
+ *
+ * Configuration υπάρχει στο: COLLECTIONS.CONFIG
+ * Management μέσω: EnterprisePolygonStyleService
+ * Fallback: Built-in theme support (default/dark/high-contrast)
+ *
+ * Features:
+ * - Multi-tenant styling support
+ * - Brand-specific themes
+ * - Accessibility compliance (WCAG AA/AAA)
+ * - Environment-specific styles
+ * - Real-time style updates
+ * - Performance-optimized caching
+ *
+ * Usage:
+ * ```typescript
+ * import { polygonStyleService } from '@/services/polygon/EnterprisePolygonStyleService';
+ *
+ * // Load styles for specific theme/tenant
+ * const styles = await polygonStyleService.loadPolygonStyles('dark', 'company-a');
+ * const alertStyle = await polygonStyleService.getPolygonStyle('alert-zone', 'default');
+ * ```
+ */
+
+/**
+ * ⚠️ LEGACY FALLBACK: Default styles για backward compatibility
+ *
+ * Αυτές οι τιμές χρησιμοποιούνται μόνο ως fallback όταν:
+ * - Η Firebase δεν είναι διαθέσιμη
+ * - Δεν υπάρχει configuration στη database
+ * - Offline mode
+ *
+ * WCAG AA compliant colors για accessibility
  */
 export const DEFAULT_POLYGON_STYLES: Record<PolygonType, PolygonStyle> = {
   simple: {
-    strokeColor: '#3b82f6',
+    strokeColor: '#1e40af',    // Enhanced blue (WCAG AA)
     fillColor: '#3b82f6',
     strokeWidth: 2,
-    fillOpacity: 0.2,
+    fillOpacity: 0.25,
     strokeOpacity: 1,
     pointRadius: 4,
     pointColor: '#1d4ed8'
   },
   georeferencing: {
-    strokeColor: '#f59e0b',
+    strokeColor: '#d97706',    // Enhanced amber (WCAG AA)
     fillColor: '#f59e0b',
     strokeWidth: 2,
-    fillOpacity: 0.1,
+    fillOpacity: 0.15,
     strokeOpacity: 1,
     pointRadius: 6,
-    pointColor: '#d97706'
+    pointColor: '#b45309'
   },
   'alert-zone': {
-    strokeColor: '#ef4444',
+    strokeColor: '#dc2626',    // Enhanced red (WCAG AA)
     fillColor: '#ef4444',
     strokeWidth: 3,
+    fillOpacity: 0.2,
+    strokeOpacity: 1,
+    pointRadius: 5,
+    pointColor: '#b91c1c'
+  },
+  'real-estate': {
+    strokeColor: '#0891b2',    // Enhanced cyan (WCAG AA)
+    fillColor: '#06b6d4',
+    strokeWidth: 2,
     fillOpacity: 0.15,
     strokeOpacity: 1,
     pointRadius: 5,
-    pointColor: '#dc2626'
-  },
-  'real-estate': {
-    strokeColor: '#06b6d4',
-    fillColor: '#06b6d4',
-    strokeWidth: 2,
-    fillOpacity: 0.12,
-    strokeOpacity: 1,
-    pointRadius: 5,
-    pointColor: '#0891b2'
+    pointColor: '#0e7490'
   },
   measurement: {
-    strokeColor: '#10b981',
+    strokeColor: '#059669',    // Enhanced green (WCAG AA)
     fillColor: '#10b981',
     strokeWidth: 2,
-    fillOpacity: 0.1,
+    fillOpacity: 0.15,
     strokeOpacity: 1,
     pointRadius: 4,
-    pointColor: '#059669'
+    pointColor: '#047857'
   },
   annotation: {
-    strokeColor: '#8b5cf6',
+    strokeColor: '#7c3aed',    // Enhanced purple (WCAG AA)
     fillColor: '#8b5cf6',
     strokeWidth: 2,
-    fillOpacity: 0.1,
+    fillOpacity: 0.15,
     strokeOpacity: 1,
     pointRadius: 4,
-    pointColor: '#7c3aed'
+    pointColor: '#6d28d9'
   }
 };
+
+/**
+ * 🚀 ENTERPRISE STYLE LOADER
+ *
+ * For new code, use the async style service:
+ *
+ * ```typescript
+ * // Modern async approach (recommended)
+ * const styles = await getPolygonStyles('default', 'tenant-id');
+ *
+ * // Or get single style
+ * const style = await getPolygonStyle('alert-zone', 'dark', 'tenant-id');
+ * ```
+ *
+ * Enterprise service path:
+ * @see @/services/polygon/EnterprisePolygonStyleService
+ */
 
 /**
  * Polygon validation result

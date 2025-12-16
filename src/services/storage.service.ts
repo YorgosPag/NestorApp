@@ -2,9 +2,10 @@
 
 import { db } from '@/lib/firebase-admin';
 import { collection, doc, getDoc } from 'firebase/firestore';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import type { StorageUnit } from '@/types/storage';
 
-const STORAGE_UNITS_COLLECTION = 'storage_units';
+const STORAGE_UNITS_COLLECTION = COLLECTIONS.STORAGE;
 
 // Get a single storage unit by its ID
 export async function getStorageUnitById(id: string): Promise<StorageUnit | null> {

@@ -1,9 +1,10 @@
 
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import type { BuildingStats } from '@/types/building';
 
-const UNITS_COLLECTION = 'units';
+const UNITS_COLLECTION = COLLECTIONS.UNITS;
 
 export async function getBuildingStats(buildingId: string): Promise<BuildingStats> {
   try {

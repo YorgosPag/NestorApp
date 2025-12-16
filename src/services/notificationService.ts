@@ -19,8 +19,9 @@ import {
   DocumentSnapshot
 } from 'firebase/firestore';
 import type { Notification, Severity } from '@/types/notification';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
-const COLLECTION_NAME = 'notifications';
+const COLLECTION_NAME = COLLECTIONS.NOTIFICATIONS;
 
 export interface NotificationQuery {
   userId: string;

@@ -16,7 +16,7 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
   async getAll(): Promise<ObligationDocument[]> {
     try {
       const obligationsQuery = query(
-        collection(db, 'obligations'),
+        collection(db, COLLECTIONS.OBLIGATIONS),
         orderBy('updatedAt', 'desc')
       );
 
@@ -44,7 +44,7 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
 
   async getById(id: string): Promise<ObligationDocument | null> {
     try {
-      const docRef = doc(db, 'obligations', id);
+      const docRef = doc(db, COLLECTIONS.OBLIGATIONS, id);
       const snapshot = await getDoc(docRef);
 
       if (!snapshot.exists()) {
@@ -84,7 +84,7 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
         projectDetails: data.projectDetails || { location: "", address: "" }
       };
 
-      const docRef = await addDoc(collection(db, 'obligations'), newObligation);
+      const docRef = await addDoc(collection(db, COLLECTIONS.OBLIGATIONS), newObligation);
 
       return {
         id: docRef.id,
@@ -98,7 +98,7 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
 
   async update(id: string, data: Partial<ObligationDocument>): Promise<ObligationDocument | null> {
     try {
-      const docRef = doc(db, 'obligations', id);
+      const docRef = doc(db, COLLECTIONS.OBLIGATIONS, id);
       const updateData = {
         ...data,
         updatedAt: new Date()
@@ -116,7 +116,7 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
 
   async delete(id: string): Promise<boolean> {
     try {
-      const docRef = doc(db, 'obligations', id);
+      const docRef = doc(db, COLLECTIONS.OBLIGATIONS, id);
       await deleteDoc(docRef);
       return true;
     } catch (error) {
@@ -166,7 +166,7 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
 
   async updateStatus(id: string, status: ObligationStatus): Promise<boolean> {
     try {
-      const docRef = doc(db, 'obligations', id);
+      const docRef = doc(db, COLLECTIONS.OBLIGATIONS, id);
       await updateDoc(docRef, {
         status,
         updatedAt: new Date()
@@ -181,7 +181,7 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
   async getTemplates(): Promise<ObligationTemplate[]> {
     try {
       const templatesQuery = query(
-        collection(db, 'obligationTemplates'),
+        collection(db, COLLECTIONS.OBLIGATION_TEMPLATES),
         orderBy('isDefault', 'desc')
       );
 
@@ -212,7 +212,7 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
   async search(query: string, filters?: SearchFilters): Promise<ObligationDocument[]> {
     try {
       // Start with base query
-      let baseQuery = collection(db, 'obligations');
+      let baseQuery = collection(db, COLLECTIONS.OBLIGATIONS);
       let constraints: any[] = [];
 
       // Add status filter if provided

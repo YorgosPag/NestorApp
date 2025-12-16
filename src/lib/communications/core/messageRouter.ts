@@ -164,7 +164,7 @@ class MessageRouter {
    */
   async updateMessageStatus(messageId: string, updates: any) {
     try {
-      const messageRef = doc(db, 'communications', messageId);
+      const messageRef = doc(db, COLLECTIONS.COMMUNICATIONS, messageId);
       await updateDoc(messageRef, {
         ...updates,
         updatedAt: serverTimestamp()

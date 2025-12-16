@@ -2,12 +2,13 @@
 
 import { db } from '@/lib/firebase';
 import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, where, orderBy, Timestamp, serverTimestamp } from 'firebase/firestore';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import type { CrmTask } from '@/types/crm';
 import type { ITasksRepository } from '../contracts';
 import { transformTask } from '../mappers';
 import { isToday, isPast, isTomorrow } from 'date-fns';
 
-const TASKS_COLLECTION = 'tasks';
+const TASKS_COLLECTION = COLLECTIONS.TASKS;
 const BATCH_SIZE = 500;
 
 export class TasksRepository implements ITasksRepository {

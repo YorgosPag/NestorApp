@@ -28,6 +28,7 @@ import {
   WhereFilterOp
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 // ============================================================================
 // QUERY BUILDER TYPES
@@ -80,7 +81,7 @@ export class RelationshipQueryBuilder {
   private filters: QueryFilter[] = [];
   private sorts: QuerySort[] = [];
   private pagination: QueryPagination = {};
-  private collectionName = 'contact_relationships';
+  private collectionName = COLLECTIONS.CONTACT_RELATIONSHIPS;
 
   // ========================================================================
   // FACTORY METHODS

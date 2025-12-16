@@ -19,8 +19,9 @@ import {
   getDoc
 } from 'firebase/firestore';
 import type { Opportunity, FirestoreishTimestamp } from '@/types/crm';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
-const OPPORTUNITIES_COLLECTION = 'opportunities';
+const OPPORTUNITIES_COLLECTION = COLLECTIONS.OPPORTUNITIES;
 
 const transformOpportunity = (doc: any): Opportunity => {
     const data = doc.data();

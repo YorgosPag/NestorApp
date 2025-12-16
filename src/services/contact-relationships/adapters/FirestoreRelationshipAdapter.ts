@@ -28,12 +28,13 @@ import {
   serverTimestamp
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 // ============================================================================
 // CONFIGURATION
 // ============================================================================
 
-const RELATIONSHIPS_COLLECTION = 'contact_relationships';
+const RELATIONSHIPS_COLLECTION = COLLECTIONS.CONTACT_RELATIONSHIPS;
 
 // ============================================================================
 // FIRESTORE ADAPTER CLASS

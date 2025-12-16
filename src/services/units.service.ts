@@ -15,9 +15,10 @@ import {
   serverTimestamp,
   Timestamp
 } from 'firebase/firestore';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import type { Property } from '@/types/property-viewer';
 
-const UNITS_COLLECTION = 'units';
+const UNITS_COLLECTION = COLLECTIONS.UNITS;
 
 const transformUnit = (doc: any): Property => {
     const data = doc.data();

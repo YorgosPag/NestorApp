@@ -32,6 +32,7 @@ export const COLLECTIONS = {
 
   // 🎯 LEADS & CRM
   LEADS: process.env.NEXT_PUBLIC_LEADS_COLLECTION || 'leads',
+  OPPORTUNITIES: process.env.NEXT_PUBLIC_OPPORTUNITIES_COLLECTION || 'opportunities',
   ACTIVITIES: process.env.NEXT_PUBLIC_ACTIVITIES_COLLECTION || 'activities',
   TASKS: process.env.NEXT_PUBLIC_TASKS_COLLECTION || 'tasks',
   OBLIGATIONS: process.env.NEXT_PUBLIC_OBLIGATIONS_COLLECTION || 'obligations',
@@ -55,6 +56,7 @@ export const COLLECTIONS = {
 
   // 🔄 RELATIONSHIPS
   RELATIONSHIPS: process.env.NEXT_PUBLIC_RELATIONSHIPS_COLLECTION || 'relationships',
+  CONTACT_RELATIONSHIPS: process.env.NEXT_PUBLIC_CONTACT_RELATIONSHIPS_COLLECTION || 'contact_relationships',
 
   // 📋 FORMS & SURVEYS
   FORMS: process.env.NEXT_PUBLIC_FORMS_COLLECTION || 'forms',
@@ -83,7 +85,7 @@ export const COLLECTIONS = {
   // 🏪 INVENTORY & ASSETS
   INVENTORY: process.env.NEXT_PUBLIC_INVENTORY_COLLECTION || 'inventory',
   ASSETS: process.env.NEXT_PUBLIC_ASSETS_COLLECTION || 'assets',
-  STORAGE: process.env.NEXT_PUBLIC_STORAGE_COLLECTION || 'storageUnits',
+  STORAGE: process.env.NEXT_PUBLIC_STORAGE_COLLECTION || 'storage_units',
 
   // 💰 FINANCIAL
   INVOICES: process.env.NEXT_PUBLIC_INVOICES_COLLECTION || 'invoices',
