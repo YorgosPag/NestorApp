@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import type { Point2D } from '../../rendering/types/Types';
+import { portalComponents, layoutUtilities, canvasUtilities } from '@/styles/design-tokens';
 
 interface SnapResult {
   point: Point2D;
@@ -29,12 +30,8 @@ export default function SnapIndicatorOverlay({
   return (
     <div className={`absolute inset-0 pointer-events-none ${className}`}>
       <div
-        className="absolute w-2 h-2 bg-yellow-400 border border-yellow-600 rounded-full"
-        style={{
-          left: point.x - 4,
-          top: point.y - 4,
-          zIndex: 1001
-        }}
+        className="bg-yellow-400 border border-yellow-600 rounded-full"
+        style={canvasUtilities.overlays.snapIndicator.point(point.x, point.y)}
       />
     </div>
   );

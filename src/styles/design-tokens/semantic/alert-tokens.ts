@@ -247,6 +247,21 @@ export const autoSaveStatusTokens = {
 } as const;
 
 // ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+
+/**
+ * Get status badge variant style με enterprise patterns
+ * Replaces: style={{ ...dashboardComponents.statusBadge.base, ...variant }}
+ */
+export const getStatusBadgeVariant = (status: keyof typeof statusBadgeTokens.variants): React.CSSProperties => {
+  return {
+    ...statusBadgeTokens.base,
+    ...statusBadgeTokens.variants[status]
+  } as React.CSSProperties;
+};
+
+// ============================================================================
 // TYPE EXPORTS
 // ============================================================================
 

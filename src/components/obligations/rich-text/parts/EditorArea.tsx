@@ -1,6 +1,7 @@
 "use client";
 
 import { Textarea } from '@/components/ui/textarea';
+import { layoutUtilities } from '@/styles/design-tokens';
 
 interface EditorAreaProps {
   value: string;
@@ -31,10 +32,7 @@ export function EditorArea({
       onKeyDown={onKeyDown}
       placeholder={placeholder}
       className="font-mono text-sm resize-none"
-      style={{ 
-        minHeight: `${minHeight}px`, 
-        maxHeight: `${maxHeight}px` 
-      }}
+      style={layoutUtilities.cssVars.interactive.heightRange(minHeight, maxHeight)}
       disabled={disabled}
       aria-label="Rich text editor"
     />

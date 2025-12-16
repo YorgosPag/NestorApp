@@ -8,6 +8,7 @@ import { Input } from '../../../components/ui/input';
 import { Eye, EyeOff, Edit3, Trash2, Search } from 'lucide-react';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 import { STATUS_COLORS, STATUS_LABELS, KIND_LABELS, type Overlay } from '../overlays/types';
+import { layoutUtilities } from '@/styles/design-tokens';
 
 interface OverlayListProps {
   overlays: Overlay[];
@@ -131,7 +132,9 @@ export const OverlayList: React.FC<OverlayListProps> = ({
 
                     <div
                       className="w-3 h-3 rounded border flex-shrink-0"
-                      style={{ backgroundColor: STATUS_COLORS[overlay.status || 'for-sale'] }}
+                      style={layoutUtilities.dxf.colors.backgroundColor(
+                        STATUS_COLORS[overlay.status || 'for-sale']
+                      )}
                     />
                     <div className="flex-1 min-w-0 overflow-hidden">
                       <div className="text-sm font-medium truncate">

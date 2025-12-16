@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { X } from 'lucide-react';
+import { layoutUtilities, componentSizes } from '@/styles/design-tokens';
 
 interface MobileDetailsSlideInProps {
   isOpen: boolean;
@@ -43,13 +44,13 @@ export function MobileDetailsSlideIn({
       {/* 📱 MINIMAL Mobile header - FIXED HEIGHT (existing pattern) */}
       <div
         className="flex items-center gap-2 px-2 border-b bg-background"
-        style={{ height: '48px', minHeight: '48px', maxHeight: '48px' }}
+        style={{ height: layoutUtilities.pixels(48), minHeight: layoutUtilities.pixels(48), maxHeight: layoutUtilities.pixels(48) }}
       >
         {/* Close Button (existing pattern) */}
         <button
           onClick={onClose}
           className="p-1 rounded-md"
-          style={{ width: '32px', height: '32px' }}
+          className={componentSizes.icon.xl}
         >
           <X className="h-4 w-4" />
         </button>
@@ -71,7 +72,7 @@ export function MobileDetailsSlideIn({
       <div
         className="overflow-y-auto bg-background"
         style={{
-          height: 'calc(100vh - 48px)',
+          height: `calc(100vh - ${layoutUtilities.pixels(48)})`,
           flex: '1 1 auto'
         }}
       >

@@ -4,6 +4,7 @@ import React from 'react';
 import { Eye, EyeOff, Trash2, Edit2 } from 'lucide-react';
 import type { AnySceneEntity, SceneLayer } from '../../../../types/scene';
 import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
+import { getDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 
 interface EntityCardProps {
   entity: AnySceneEntity;
@@ -61,10 +62,6 @@ export const EntityCard = ({
       } ${selectedEntitiesForMerge.has(entity.id) ? 'ring-2 ring-blue-400 bg-blue-900 bg-opacity-30' : ''} ${
         isFocused ? 'ring-2 ring-green-400' : ''
       }`}
-      style={{
-        backgroundColor: isSelected ? 'rgba(251, 191, 36, 0.1)' : selectedEntitiesForMerge.has(entity.id) ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
-        borderLeft: isSelected ? '2px solid #fbbf24' : selectedEntitiesForMerge.has(entity.id) ? '2px solid #3b82f6' : isFocused ? '2px solid #10b981' : '2px solid transparent'
-      }}
       onKeyDown={(e) => onEntityKeyDown(e, layerEntities)}
       onFocus={() => onSetFocusedEntityId(entity.id)}
       onClick={(e) => {
@@ -90,7 +87,7 @@ export const EntityCard = ({
             className={`rounded-full border border-gray-500 ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} ${
               isSelected ? 'w-3 h-3' : 'w-2 h-2'
             }`}
-            style={{ backgroundColor: entity.color || layer.color }}
+            className={getDynamicBackgroundClass(entity.color || layer.color)}
             title="Αλλαγή χρώματος entity"
           />
         </div>

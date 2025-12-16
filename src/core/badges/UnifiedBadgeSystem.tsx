@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { BadgeFactory } from './BadgeFactory';
+import { getDynamicElementClasses } from '@/components/ui/utils/dynamic-styles';
 import type {
   DomainType,
   ProjectStatus,
@@ -52,12 +53,12 @@ export const UnifiedBadge: React.FC<UnifiedBadgeProps> = ({
       className={cn(
         'transition-all duration-200 cursor-default',
         badgeConfig.className,
-        onClick && `cursor-pointer ${INTERACTIVE_PATTERNS.OPACITY_HOVER}`
+        onClick && `cursor-pointer ${INTERACTIVE_PATTERNS.OPACITY_HOVER}`,
+        getDynamicElementClasses({
+          backgroundColor: badgeConfig.backgroundColor,
+          textColor: badgeConfig.color
+        })
       )}
-      style={{
-        backgroundColor: badgeConfig.backgroundColor,
-        color: badgeConfig.color
-      }}
       onClick={onClick}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
@@ -132,12 +133,12 @@ export const CommonBadge: React.FC<CommonBadgeProps> = ({ status, ...props }) =>
       className={cn(
         'transition-all duration-200 cursor-default',
         badgeConfig.className,
-        props.onClick && `cursor-pointer ${INTERACTIVE_PATTERNS.OPACITY_HOVER}`
+        props.onClick && `cursor-pointer ${INTERACTIVE_PATTERNS.OPACITY_HOVER}`,
+        getDynamicElementClasses({
+          backgroundColor: badgeConfig.backgroundColor,
+          textColor: badgeConfig.color
+        })
       )}
-      style={{
-        backgroundColor: badgeConfig.backgroundColor,
-        color: badgeConfig.color
-      }}
       onClick={props.onClick}
       onMouseEnter={props.onMouseEnter}
       onMouseLeave={props.onMouseLeave}

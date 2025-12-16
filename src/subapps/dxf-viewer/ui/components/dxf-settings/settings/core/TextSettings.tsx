@@ -51,6 +51,7 @@ import { useNotifications } from '../../../../../../../providers/NotificationPro
 import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
 import { EnterpriseComboBox, type ComboBoxOption } from '../shared/EnterpriseComboBox';
 import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { layoutUtilities } from '@/styles/design-tokens';
 
 // Simple SVG icons for text
 const DocumentTextIcon = ({ className }: { className?: string }) => (
@@ -151,13 +152,7 @@ function TextStyleButtons({ settings, onToggle }: TextStyleButtonsProps) {
               ? 'bg-green-600 border-green-500 text-white'
               : 'bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} border-gray-600 text-gray-300'
           }`}
-          style={{
-            fontWeight: style.key === 'isBold' ? 'bold' : 'normal',
-            fontStyle: style.key === 'isItalic' ? 'italic' : 'normal',
-            textDecoration:
-              style.key === 'isUnderline' ? 'underline' :
-              style.key === 'isStrikethrough' ? 'line-through' : 'none'
-          }}
+          style={layoutUtilities.cssVars.textStyle.forButton(style.key)}
         >
           {style.label}
         </button>

@@ -10,7 +10,7 @@ import { CoordinateTransforms } from '../rendering/core/CoordinateTransforms';
 import type { Point2D, Viewport } from '../rendering/types/Types';
 import type { SceneModel } from '../types/scene';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
-import { portalComponents } from '@/styles/design-tokens';
+import { portalComponents, layoutUtilities } from '@/styles/design-tokens';
 
 interface CoordinateCalibrationOverlayProps {
   mousePos: Point2D | null;
@@ -90,7 +90,7 @@ export default function CoordinateCalibrationOverlay({
 
   return (
     <div className="fixed inset-0 pointer-events-none" style={{ zIndex: portalComponents.overlay.calibration.zIndex() }}>
-      <div className="absolute top-4 left-4 bg-gray-900 text-white p-4 rounded-lg shadow-lg pointer-events-auto" style={{ minWidth: 380, maxWidth: 450, maxHeight: '90vh', overflowY: 'auto' }}>
+      <div className="absolute top-4 left-4 bg-gray-900 text-white p-4 rounded-lg shadow-lg pointer-events-auto" style={layoutUtilities.cssVars.debugPanel.base}>
         <div className="flex justify-between items-center mb-3">
           <h3 className="text-lg font-bold text-cyan-400">🔧 Καλιμπράρισμα Συντεταγμένων</h3>
           <button onClick={() => onToggle?.(false)} className={`text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HOVER} text-xl`} title="Κλείσιμο">×</button>
@@ -179,21 +179,13 @@ export default function CoordinateCalibrationOverlay({
       {clickTests.slice(-3).map(test => (
         <div
           key={test.id}
-          style={{
-            position: 'absolute',
-            left: test.cssPoint.x - 8,
-            top: test.cssPoint.y - 8,
-            width: 16,
-            height: 16,
-            borderRadius: '50%',
-            background: test.roundTripError < 0.5 ? 'rgba(0,255,0,0.8)' : 'rgba(255,165,0,0.8)',
-            border: '2px solid white',
-            boxShadow: `0 0 10px ${test.roundTripError < 0.5 ? 'rgba(0,255,0,0.8)' : 'rgba(255,165,0,0.8)'}`,
-            pointerEvents: 'none',
-            animation: 'pulse 2s infinite'
-          }}
+          style={layoutUtilities.dxf.debug.testMarker(
+            test.cssPoint.x,
+            test.cssPoint.y,
+            test.roundTripError < 0.5
+          )}
         >
-          <div style={{ position: 'absolute', top: 20, left: -10, fontSize: 10, color: 'white', background: 'rgba(0,0,0,0.8)', padding: '1px 4px', borderRadius: 2, whiteSpace: 'nowrap' }}>
+          <div style={layoutUtilities.cssVars.debugPanel.tooltip}>
             #{test.id}
           </div>
         </div>

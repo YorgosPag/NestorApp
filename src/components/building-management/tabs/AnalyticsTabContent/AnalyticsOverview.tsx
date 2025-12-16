@@ -7,6 +7,7 @@ import { TRANSITION_PRESETS } from '@/components/ui/effects';
 import { Lightbulb } from 'lucide-react';
 import { layoutUtilities } from '@/styles/design-tokens';
 import { costBreakdown, monthlyProgress } from './utils';
+import { analyticsOverviewStyles } from './AnalyticsOverview.styles';
 
 export default function AnalyticsOverview() {
     return (
@@ -29,7 +30,7 @@ export default function AnalyticsOverview() {
                                 <div className="w-full bg-muted rounded-full h-3">
                                     <div
                                         className={cn("h-3 rounded-full", TRANSITION_PRESETS.SLOW_ALL, item.color)}
-                                        style={{ width: layoutUtilities.percentage(item.percentage) }}
+                                        style={analyticsOverviewStyles.progressBars.item(item.percentage)}
                                     ></div>
                                 </div>
                             </div>
@@ -68,11 +69,11 @@ export default function AnalyticsOverview() {
                                     <div className="w-full bg-muted rounded-full h-4">
                                         <div
                                             className="h-4 bg-blue-200 dark:bg-blue-800 rounded-full"
-                                            style={{ width: layoutUtilities.percentage(month.planned) }}
+                                            style={analyticsOverviewStyles.progressBars.planned(month.planned)}
                                         ></div>
                                         <div
                                             className="absolute top-0 h-4 bg-primary rounded-full"
-                                            style={{ width: layoutUtilities.percentage(month.actual) }}
+                                            style={analyticsOverviewStyles.progressBars.actual(month.actual)}
                                         ></div>
                                         <div className="absolute right-2 top-0 text-xs font-medium text-primary-foreground">
                                             {month.actual}%

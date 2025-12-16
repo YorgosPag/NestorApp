@@ -9,6 +9,7 @@ import SnapModeIndicator from './SnapModeIndicator';
 import { DynamicInputSystem } from '../systems/dynamic-input';
 import CursorTooltipOverlay from './CursorTooltipOverlay';
 import { useCursor } from '../systems/cursor';
+import { canvasUtilities } from '@/styles/design-tokens';
 import type { SceneModel } from '../types/scene';
 import type { Point2D as Point } from '../types/scene';
 import type { ProSnapResult, ExtendedSnapType } from '../snapping/extended-types';
@@ -128,13 +129,7 @@ export default function CanvasOverlays({
   });
 
   return (
-    <div style={{
-      position: 'absolute',
-      inset: 0,
-      pointerEvents: 'none', // 🎯 SAFEGUARD: Κανένα mouse event
-      zIndex: 1000
-      // 🎯 REMOVED: border debug styling
-    }}>
+    <div style={canvasUtilities.layers.overlayBase}>
       <CrosshairOverlay
         isActive={crosshairActive}  // Active in layering mode OR when mouse position available
         cursorPosition={crosshairPosition}

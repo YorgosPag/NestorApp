@@ -1,6 +1,7 @@
 import React from 'react';
 import type { LineType } from '../../../../../settings-core/types';
 import { getDashArray } from '../../../../../settings-core/defaults';
+import { layoutUtilities } from '@/styles/design-tokens';
 
 // Helper για SVG stroke-dasharray (χρησιμοποιεί την κεντρική getDashArray)
 const getDashArrayForSvg = (type: LineType | string, scale: number = 1) => {
@@ -388,10 +389,10 @@ export function LinePreview({ lineSettings, textSettings, gripSettings, activeTa
           >
             125.50
             {textSettings.isSuperscript && (
-              <span style={{ fontSize: '60%', verticalAlign: 'super' }}>²</span>
+              <span style={layoutUtilities.cssVars.textStyle.superscript}>²</span>
             )}
             {textSettings.isSubscript && (
-              <span style={{ fontSize: '60%', verticalAlign: 'sub' }}>₂</span>
+              <span style={layoutUtilities.cssVars.textStyle.subscript}>₂</span>
             )}
           </div>
         )}

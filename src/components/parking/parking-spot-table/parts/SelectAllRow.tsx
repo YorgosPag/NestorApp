@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
+import { layoutUtilities } from '@/styles/design-tokens';
 
 interface SelectAllRowProps {
   width: number;
@@ -13,7 +14,7 @@ interface SelectAllRowProps {
 export function SelectAllRow({ width, allSelected, isIndeterminate, onToggle }: SelectAllRowProps) {
   return (
     <div className="flex items-center border-b px-2 py-1.5 h-10 bg-muted/30">
-      <div style={{ flex: `0 0 ${width}px` }} className="flex items-center justify-center px-2">
+      <div style={layoutUtilities.cssVars.flex.fixedWidth(width)} className="flex items-center justify-center px-2">
         <Checkbox
           checked={allSelected}
           onCheckedChange={onToggle}

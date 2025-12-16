@@ -1,5 +1,6 @@
 import React from 'react';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { layoutUtilities } from '@/styles/design-tokens';
 
 export interface CursorColors {
   crosshairColor: string;
@@ -51,10 +52,10 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
       <div className="flex items-center gap-2">
         <div 
           className="w-6 h-6 rounded border border-gray-500"
-          style={{ 
-            backgroundColor: colors[colorKey] as string,
-            opacity: opacityKey ? colors[opacityKey] as number : 1
-          }}
+          style={layoutUtilities.dxf.swatch.withOpacity(
+            colors[colorKey] as string,
+            opacityKey ? colors[opacityKey] as number : 1
+          )}
         />
         <input
           type="color"
@@ -140,10 +141,7 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
             >
               <div 
                 className="w-full mb-1" 
-                style={{ 
-                  height: '2px',
-                  background: getLinePreview(style)
-                }}
+                style={layoutUtilities.dxf.linePreview.thin(getLinePreview(style))}
               />
               <span className="block text-xs">{styleLabels[style]}</span>
             </button>

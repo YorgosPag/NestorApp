@@ -12,6 +12,7 @@ import {
   PHOTO_BORDERS,
   PHOTO_COMBINED_EFFECTS
 } from '@/components/generic/config/photo-config';
+import { layoutUtilities } from '@/styles/design-tokens';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -303,8 +304,10 @@ export function MultiplePhotosFull({
       {/* Multiple Upload Zone - Hidden for logo mode (maxPhotos=1) */}
       {availableSlots > 0 && maxPhotos > 1 && (
         <div
-          className={`${PHOTO_COLORS.PHOTO_BACKGROUND} ${PHOTO_BORDERS.EMPTY_STATE} rounded-lg flex items-center justify-center text-center cursor-pointer transition-colors ${PHOTO_BORDERS.EMPTY_HOVER} p-6 mt-8`}
-          style={{ backgroundColor: PHOTO_COLORS.EMPTY_STATE_BACKGROUND }}
+          className={`${PHOTO_BORDERS.EMPTY_STATE} rounded-lg flex items-center justify-center text-center cursor-pointer transition-colors ${PHOTO_BORDERS.EMPTY_HOVER} p-6 mt-8`}
+          style={layoutUtilities.dxf.colors.backgroundColor(
+            PHOTO_COLORS.EMPTY_STATE_BACKGROUND
+          )}
           onDrop={handleMultipleDrop}
           onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
           onClick={() => {

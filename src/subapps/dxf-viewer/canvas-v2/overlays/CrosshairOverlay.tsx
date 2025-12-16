@@ -4,6 +4,7 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { getCursorSettings, subscribeToCursorSettings, type CursorSettings } from '../../systems/cursor/config';
 import { useGripContext } from '../../providers/GripProvider';
 import type { Point2D } from '../../rendering/types/Types';
+import { portalComponents, interactionUtilities, layoutUtilities } from '@/styles/design-tokens';
 
 interface Viewport {
   width: number;
@@ -238,9 +239,9 @@ export default function CrosshairOverlay({
       ref={canvasRef}
       className={`absolute top-0 left-0 pointer-events-none ${className}`}
       style={{
-        zIndex: 1000,
-        display: 'block',
-        cursor: 'none'
+        ...interactionUtilities.overlay,
+        zIndex: portalComponents.zIndex.dropdown,
+        ...layoutUtilities.dxf.cursor.none
       }}
     />
   );

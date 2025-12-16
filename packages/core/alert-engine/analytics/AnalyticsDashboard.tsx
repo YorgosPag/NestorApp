@@ -28,6 +28,7 @@ import {
 } from '../../../../src/components/ui/utils/dynamic-styles';
 import { layoutUtilities } from '../../../../src/styles/design-tokens';
 import { HOVER_BACKGROUND_EFFECTS } from '../../../../src/components/ui/effects/hover-effects';
+import { analyticsDashboardStyles, calculateBarHeight } from './AnalyticsDashboard.styles';
 
 // ============================================================================
 // DASHBOARD TYPES
@@ -148,20 +149,20 @@ const SimpleChart: React.FC<{
     const maxValue = Math.max(...data.datasets[0].data);
 
     return (
-      <div className={`flex items-end gap-2 p-5`} style={{ height: layoutUtilities.pixels(height - 100) }}>
+      <div style={analyticsDashboardStyles.barChart.container(height)}>
         {data.labels.map((label, index) => {
           const value = data.datasets[0].data[index];
-          const barHeight = (value / maxValue) * (height - 150);
+          const barHeight = calculateBarHeight(value, maxValue, height, 150);
 
           return (
             <div key={index} className="flex flex-col items-center flex-1">
               <div
-                className={`${barBgClass} w-full max-w-[40px] rounded-t flex items-end justify-center text-white text-xs pb-1`}
-                style={{ height: layoutUtilities.pixels(barHeight) }}
+                className={`${barBgClass}`}
+                style={analyticsDashboardStyles.barChart.bar(barHeight)}
               >
                 {value}
               </div>
-              <span className={`text-xs mt-2 text-center ${labelTextClass}`}>
+              <span className={`${labelTextClass}`} style={analyticsDashboardStyles.barChart.label}>
                 {label}
               </span>
             </div>
@@ -210,7 +211,7 @@ const SimpleChart: React.FC<{
       <h3 className={`m-0 mb-4 text-base font-semibold ${titleTextClass}`}>
         {title}
       </h3>
-      <div style={{ height: layoutUtilities.pixels(height) }}>
+      <div style={analyticsDashboardStyles.charts.container(height)}>
         {type === 'bar' && renderSimpleBarChart()}
         {type === 'pie' && renderSimplePieChart()}
         {(type === 'line' || type === 'doughnut') && (

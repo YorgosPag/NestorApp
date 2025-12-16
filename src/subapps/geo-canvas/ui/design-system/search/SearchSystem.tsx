@@ -9,6 +9,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react';
 import { useTheme } from '../theme/ThemeProvider';
 import { layoutUtilities } from '@/styles/design-tokens';
+import { searchSystemStyles, getFilterStateStyle, getSearchResultHoverHandlers } from './SearchSystem.styles';
 
 // ============================================================================
 // SEARCH TYPES και INTERFACES
@@ -375,41 +376,10 @@ const SearchInput: React.FC<SearchInputProps> = ({
     }
   };
 
-  const inputStyle: React.CSSProperties = {
-    width: '100%',
-    padding: 'var(--spacing-3) var(--spacing-4)',
-    paddingRight: 'var(--spacing-12)',
-    border: '1px solid var(--color-border-primary)',
-    borderRadius: 'var(--radius-lg)',
-    backgroundColor: 'var(--color-bg-primary)',
-    color: 'var(--color-text-primary)',
-    fontSize: '14px',
-    outline: 'none',
-    transition: 'all var(--duration-fast) var(--easing-ease-in-out)'
-  };
-
-  const containerStyle: React.CSSProperties = {
-    position: 'relative',
-    width: '100%'
-  };
-
-  const suggestionStyle: React.CSSProperties = {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    right: 0,
-    backgroundColor: 'var(--color-bg-primary)',
-    border: '1px solid var(--color-border-primary)',
-    borderTop: 'none',
-    borderRadius: '0 0 var(--radius-lg) var(--radius-lg)',
-    boxShadow: 'var(--shadow-dropdown)',
-    zIndex: 1000,
-    maxHeight: '200px',
-    overflowY: 'auto'
-  };
+  // Using centralized styling από SearchSystem.styles.ts
 
   return (
-    <div style={containerStyle} className={`search-input ${className}`}>
+    <div style={searchSystemStyles.searchInput.container} className={`search-input ${className}`}>
       <input
         ref={inputRef}
         type="text"
@@ -420,7 +390,7 @@ const SearchInput: React.FC<SearchInputProps> = ({
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         style={{
-          ...inputStyle,
+          ...searchSystemStyles.searchInput.input,
           borderColor: layoutUtilities.cssVars.borderColor(focused),
           boxShadow: layoutUtilities.cssVars.boxShadow(focused)
         }}
@@ -438,7 +408,7 @@ const SearchInput: React.FC<SearchInputProps> = ({
 
       {/* Suggestions */}
       {focused && showSuggestions && suggestions.length > 0 && (
-        <div style={suggestionStyle}>
+        <div style={searchSystemStyles.searchInput.suggestionsContainer}>
           {suggestions.map((suggestion, index) => (
             <div
               key={index}
@@ -448,12 +418,8 @@ const SearchInput: React.FC<SearchInputProps> = ({
                 inputRef.current?.blur();
               }}
               style={{
-                padding: 'var(--spacing-2) var(--spacing-4)',
-                cursor: 'pointer',
-                backgroundColor: selectedSuggestion === index ? 'var(--color-bg-secondary)' : 'transparent',
-                color: 'var(--color-text-primary)',
-                fontSize: '14px',
-                borderBottom: index < suggestions.length - 1 ? '1px solid var(--color-border-primary)' : 'none'
+                ...searchSystemStyles.searchInput.suggestion,
+                backgroundColor: selectedSuggestion === index ? 'var(--color-bg-secondary)' : 'transparent'
               }}
               onMouseEnter={() => setSelectedSuggestion(index)}
             >
@@ -492,15 +458,7 @@ const Filter: React.FC<FilterProps> = ({
           <select
             value={value || ''}
             onChange={(e) => onChange(e.target.value || null)}
-            style={{
-              width: '100%',
-              padding: 'var(--spacing-2) var(--spacing-3)',
-              border: '1px solid var(--color-border-primary)',
-              borderRadius: 'var(--radius-md)',
-              backgroundColor: 'var(--color-bg-primary)',
-              color: 'var(--color-text-primary)',
-              fontSize: '12px'
-            }}
+            style={searchSystemStyles.filters.select}
           >
             <option value="">All {config.label}</option>
             {config.options?.map(option => (
@@ -513,7 +471,7 @@ const Filter: React.FC<FilterProps> = ({
 
       case 'multiselect':
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-1)' }}>
+          <div style={searchSystemStyles.filters.container}>
             {config.options?.map(option => (
               <label
                 key={option.value}
@@ -528,6 +486,7 @@ const Filter: React.FC<FilterProps> = ({
               >
                 <input
                   type="checkbox"
+                  style={searchSystemStyles.filters.checkbox}
                   checked={Array.isArray(value) ? value.includes(option.value) : false}
                   onChange={(e) => {
                     const currentValue = Array.isArray(value) ? value : [];
@@ -546,7 +505,7 @@ const Filter: React.FC<FilterProps> = ({
 
       case 'range':
         return (
-          <div style={{ display: 'flex', gap: 'var(--spacing-2)', alignItems: 'center' }}>
+          <div style={searchSystemStyles.filters.rangeContainer}>
             <input
               type="number"
               min={config.min}
@@ -557,17 +516,9 @@ const Filter: React.FC<FilterProps> = ({
                 ...value,
                 min: Number(e.target.value)
               })}
-              style={{
-                width: '80px',
-                padding: 'var(--spacing-1) var(--spacing-2)',
-                border: '1px solid var(--color-border-primary)',
-                borderRadius: 'var(--radius-sm)',
-                backgroundColor: 'var(--color-bg-primary)',
-                color: 'var(--color-text-primary)',
-                fontSize: '12px'
-              }}
+              style={searchSystemStyles.filters.rangeInput}
             />
-            <span style={{ color: layoutUtilities.cssVars.textColor('secondary'), fontSize: layoutUtilities.cssVars.fontSize('12px') }}>to</span>
+            <span style={searchSystemStyles.filters.rangeLabel}>to</span>
             <input
               type="number"
               min={config.min}
@@ -578,12 +529,7 @@ const Filter: React.FC<FilterProps> = ({
                 ...value,
                 max: Number(e.target.value)
               })}
-              style={{
-                width: '80px',
-                padding: layoutUtilities.cssVars.padding(1, 2),
-                ...layoutUtilities.cssVars.inputBase,
-                fontSize: layoutUtilities.cssVars.fontSize('12px')
-              }}
+              style={searchSystemStyles.filters.rangeInput}
             />
           </div>
         );
@@ -594,30 +540,16 @@ const Filter: React.FC<FilterProps> = ({
             type="date"
             value={value || ''}
             onChange={(e) => onChange(e.target.value || null)}
-            style={{
-              width: '100%',
-              padding: 'var(--spacing-2) var(--spacing-3)',
-              border: '1px solid var(--color-border-primary)',
-              borderRadius: 'var(--radius-md)',
-              backgroundColor: 'var(--color-bg-primary)',
-              color: 'var(--color-text-primary)',
-              fontSize: '12px'
-            }}
+            style={searchSystemStyles.filters.input}
           />
         );
 
       case 'boolean':
         return (
-          <label style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 'var(--spacing-2)',
-            fontSize: '12px',
-            color: 'var(--color-text-primary)',
-            cursor: 'pointer'
-          }}>
+          <label style={searchSystemStyles.filters.label}>
             <input
               type="checkbox"
+              style={searchSystemStyles.filters.checkbox}
               checked={Boolean(value)}
               onChange={(e) => onChange(e.target.checked)}
             />
@@ -632,15 +564,7 @@ const Filter: React.FC<FilterProps> = ({
             value={value || ''}
             onChange={(e) => onChange(e.target.value || null)}
             placeholder={config.placeholder}
-            style={{
-              width: '100%',
-              padding: 'var(--spacing-2) var(--spacing-3)',
-              border: '1px solid var(--color-border-primary)',
-              borderRadius: 'var(--radius-md)',
-              backgroundColor: 'var(--color-bg-primary)',
-              color: 'var(--color-text-primary)',
-              fontSize: '12px'
-            }}
+            style={searchSystemStyles.filters.input}
           />
         );
 
@@ -650,15 +574,9 @@ const Filter: React.FC<FilterProps> = ({
   };
 
   return (
-    <div className={`filter ${className}`} style={{ marginBottom: 'var(--spacing-3)' }}>
+    <div className={`filter ${className}`} style={searchSystemStyles.filters.container}>
       {config.type !== 'boolean' && (
-        <label style={{
-          display: 'block',
-          marginBottom: 'var(--spacing-1)',
-          fontSize: '12px',
-          fontWeight: '500',
-          color: 'var(--color-text-secondary)'
-        }}>
+        <label style={searchSystemStyles.filters.label}>
           {config.label}
         </label>
       )}
@@ -693,57 +611,32 @@ const SearchResultItem: React.FC<SearchResultItemProps> = ({
       onClick={handleClick}
       className={`search-result-item ${className}`}
       style={{
-        padding: 'var(--spacing-3) var(--spacing-4)',
-        border: '1px solid var(--color-border-primary)',
-        borderRadius: 'var(--radius-md)',
-        backgroundColor: 'var(--color-bg-primary)',
-        cursor: onClick ? 'pointer' : 'default',
-        transition: 'all var(--duration-fast) var(--easing-ease-in-out)',
-        marginBottom: 'var(--spacing-2)'
+        ...searchSystemStyles.results.item,
+        cursor: onClick ? 'pointer' : 'default'
       }}
-      onMouseEnter={(e) => {
-        if (onClick) {
-          e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
-        }
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.backgroundColor = 'var(--color-bg-primary)';
-      }}
+      {...(onClick ? getSearchResultHoverHandlers() : {})}
     >
-      <div style={{
-        fontSize: '14px',
-        fontWeight: '600',
-        color: 'var(--color-text-primary)',
-        marginBottom: 'var(--spacing-1)'
-      }}
+      <div
+        style={searchSystemStyles.results.itemTitle}
         dangerouslySetInnerHTML={{ __html: result.highlightedTitle }}
       />
 
       {result.item.subtitle && (
-        <div style={{
-          fontSize: '12px',
-          color: 'var(--color-text-secondary)',
-          marginBottom: 'var(--spacing-1)'
-        }}>
+        <div style={searchSystemStyles.results.itemDescription}>
           {result.item.subtitle}
         </div>
       )}
 
       {result.highlightedDescription && (
-        <div style={{
-          fontSize: '12px',
-          color: 'var(--color-text-tertiary)',
-          lineHeight: '1.4'
-        }}
+        <div
+          style={searchSystemStyles.results.itemDescription}
           dangerouslySetInnerHTML={{ __html: result.highlightedDescription }}
         />
       )}
 
       {result.item.category && (
         <div style={{
-          marginTop: 'var(--spacing-2)',
-          fontSize: '10px',
-          color: 'var(--color-text-tertiary)',
+          ...searchSystemStyles.results.itemMeta,
           textTransform: 'uppercase',
           letterSpacing: '0.5px'
         }}>
@@ -753,9 +646,7 @@ const SearchResultItem: React.FC<SearchResultItemProps> = ({
 
       {result.item.tags && result.item.tags.length > 0 && (
         <div style={{
-          marginTop: 'var(--spacing-2)',
-          display: 'flex',
-          gap: 'var(--spacing-1)',
+          ...searchSystemStyles.results.itemMeta,
           flexWrap: 'wrap'
         }}>
           {result.item.tags.map(tag => (
@@ -920,9 +811,9 @@ export const SearchSystem: React.FC<SearchSystemProps> = ({
   };
 
   return (
-    <div className={`search-system ${className}`} style={layoutUtilities.cssVars.fullWidth}>
+    <div className={`search-system ${className}`} style={searchSystemStyles.layout.main}>
       {/* Search Input */}
-      <div style={{ marginBottom: layoutUtilities.cssVars.spacing(4) }}>
+      <div style={layoutUtilities.cssVars.marginBottom(4)}>
         <SearchInput
           value={query}
           onChange={setQuery}
@@ -935,13 +826,7 @@ export const SearchSystem: React.FC<SearchSystemProps> = ({
 
       {/* Filters */}
       {searchConfig.showFilters && filters.length > 0 && (
-        <div style={{
-          marginBottom: 'var(--spacing-4)',
-          padding: 'var(--spacing-4)',
-          backgroundColor: 'var(--color-bg-secondary)',
-          borderRadius: 'var(--radius-lg)',
-          border: '1px solid var(--color-border-primary)'
-        }}>
+        <div style={searchSystemStyles.layout.filtersSection}>
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
@@ -1058,14 +943,10 @@ export const SearchSystem: React.FC<SearchSystemProps> = ({
         ))}
 
         {query && searchResults.length === 0 && (
-          <div style={{
-            padding: 'var(--spacing-8)',
-            textAlign: 'center',
-            color: 'var(--color-text-secondary)'
-          }}>
-            <div style={{ fontSize: '48px', marginBottom: 'var(--spacing-2)' }}>🔍</div>
-            <div style={{ fontSize: '16px', marginBottom: 'var(--spacing-1)' }}>No results found</div>
-            <div style={{ fontSize: '14px' }}>Try adjusting your search or filters</div>
+          <div style={searchSystemStyles.layout.emptyState}>
+            <div style={layoutUtilities.cssVars.emptyState.icon}>🔍</div>
+            <div style={layoutUtilities.cssVars.emptyState.title}>No results found</div>
+            <div style={layoutUtilities.cssVars.emptyState.subtitle}>Try adjusting your search or filters</div>
           </div>
         )}
       </div>

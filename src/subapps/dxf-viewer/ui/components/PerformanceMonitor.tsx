@@ -7,6 +7,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Activity, Cpu, Zap, Database } from 'lucide-react';
 import { getPerformanceMetrics } from '../../utils/performance';
+import { layoutUtilities } from '@/styles/design-tokens';
 
 interface PerformanceStats {
   fps: number;
@@ -150,7 +151,7 @@ const PerformanceMonitorComponent: React.FC<PerformanceMonitorProps> = ({
             <div className="ml-2 w-16 h-1 bg-gray-800 rounded-full overflow-hidden">
               <div
                 className={`h-full ${getFpsColor(stats.fps).replace('text-', 'bg-')}`}
-                style={{ width: `${Math.min((stats.fps / 60) * 100, 100)}%` }}
+                style={{ width: layoutUtilities.percentage(Math.min((stats.fps / 60) * 100, 100)) }}
               />
             </div>
           </div>
@@ -166,7 +167,7 @@ const PerformanceMonitorComponent: React.FC<PerformanceMonitorProps> = ({
             <div className="ml-2 w-16 h-1 bg-gray-800 rounded-full overflow-hidden">
               <div
                 className={`h-full ${getMemoryColor(stats.memory).replace('text-', 'bg-')}`}
-                style={{ width: `${Math.min((stats.memory / 200) * 100, 100)}%` }}
+                style={{ width: layoutUtilities.percentage(Math.min((stats.memory / 200) * 100, 100)) }}
               />
             </div>
           </div>

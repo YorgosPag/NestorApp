@@ -2,6 +2,8 @@
 
 import React from 'react';
 import { Input } from '@/components/ui/input';
+import { layoutUtilities } from '@/styles/design-tokens';
+import { parkingComponentsStyles } from './ParkingComponents.styles';
 
 interface ParkingColumnFilterProps {
   column: { key: string };
@@ -17,7 +19,7 @@ export function ParkingColumnFilter({
   onFilterChange
 }: ParkingColumnFilterProps) {
   return (
-    <div style={{ width: `${width}px`}}>
+    <div style={parkingComponentsStyles.columns.filter(width)}>
       <Input
         type="text"
         placeholder="..."

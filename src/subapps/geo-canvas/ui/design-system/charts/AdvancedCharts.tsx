@@ -8,6 +8,7 @@
 
 import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react';
 import { useTheme } from '../theme/ThemeProvider';
+import { chartComponents } from '@/styles/design-tokens';
 
 // ============================================================================
 // CHART TYPES και INTERFACES
@@ -334,14 +335,14 @@ export const LineChart: React.FC<LineChartProps> = ({
   }, [filled, pathData, padding, chartWidth, chartHeight]);
 
   return (
-    <div className={`line-chart ${className}`} style={{ position: 'relative', width, height }}>
+    <div className={`line-chart ${className}`} style={chartComponents.layout.container(width, height)}>
       {title && (
-        <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: colors.text }}>
+        <div style={chartComponents.title.container}>
+          <h3 style={chartComponents.title.main}>
             {title}
           </h3>
           {subtitle && (
-            <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: colors.textSecondary }}>
+            <p style={chartComponents.title.subtitle}>
               {subtitle}
             </p>
           )}
@@ -356,7 +357,7 @@ export const LineChart: React.FC<LineChartProps> = ({
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
         onClick={handleClick}
-        style={{ cursor: interactive ? 'pointer' : 'default' }}
+        style={chartComponents.layout.interactive(interactive)}
       >
         {/* Grid lines */}
         {gridLines.map((line, index) => (
@@ -470,7 +471,7 @@ export const LineChart: React.FC<LineChartProps> = ({
           y={hoveredPoint.y}
           content={
             <div>
-              <div style={{ fontWeight: '600' }}>
+              <div style={chartComponents.layout.tooltip}>
                 {hoveredPoint.point.label || hoveredPoint.point.timestamp.toLocaleDateString()}
               </div>
               <div>
@@ -608,14 +609,14 @@ export const BarChart: React.FC<BarChartProps> = ({
   }, [hoveredBar, onDataPointClick]);
 
   return (
-    <div className={`bar-chart ${className}`} style={{ position: 'relative', width, height }}>
+    <div className={`bar-chart ${className}`} style={chartComponents.layout.container(width, height)}>
       {title && (
-        <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: colors.text }}>
+        <div style={chartComponents.title.container}>
+          <h3 style={chartComponents.title.main}>
             {title}
           </h3>
           {subtitle && (
-            <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: colors.textSecondary }}>
+            <p style={chartComponents.title.subtitle}>
               {subtitle}
             </p>
           )}
@@ -630,7 +631,7 @@ export const BarChart: React.FC<BarChartProps> = ({
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
         onClick={handleClick}
-        style={{ cursor: interactive ? 'pointer' : 'default' }}
+        style={chartComponents.layout.interactive(interactive)}
       >
         {/* Bars */}
         {bars.map((bar, index) => (
@@ -686,7 +687,7 @@ export const BarChart: React.FC<BarChartProps> = ({
           y={hoveredBar.y}
           content={
             <div>
-              <div style={{ fontWeight: '600' }}>{hoveredBar.point.label}</div>
+              <div style={chartComponents.layout.tooltip}>{hoveredBar.point.label}</div>
               <div>Value: {formatValue(hoveredBar.point.value)}</div>
             </div>
           }
@@ -840,14 +841,14 @@ export const PieChart: React.FC<PieChartProps> = ({
   }, [hoveredSlice, onDataPointClick]);
 
   return (
-    <div className={`pie-chart ${className}`} style={{ position: 'relative', width, height }}>
+    <div className={`pie-chart ${className}`} style={chartComponents.layout.container(width, height)}>
       {title && (
-        <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: colors.text }}>
+        <div style={chartComponents.title.container}>
+          <h3 style={chartComponents.title.main}>
             {title}
           </h3>
           {subtitle && (
-            <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: colors.textSecondary }}>
+            <p style={chartComponents.title.subtitle}>
               {subtitle}
             </p>
           )}
@@ -862,7 +863,7 @@ export const PieChart: React.FC<PieChartProps> = ({
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
         onClick={handleClick}
-        style={{ cursor: interactive ? 'pointer' : 'default' }}
+        style={chartComponents.layout.interactive(interactive)}
       >
         {/* Slices */}
         {slices.map((slice, index) => (
@@ -929,7 +930,7 @@ export const PieChart: React.FC<PieChartProps> = ({
           y={hoveredSlice.y}
           content={
             <div>
-              <div style={{ fontWeight: '600' }}>{hoveredSlice.point.label}</div>
+              <div style={chartComponents.layout.tooltip}>{hoveredSlice.point.label}</div>
               <div>Value: {formatValue(hoveredSlice.point.value)}</div>
               <div>Percentage: {hoveredSlice.point.percentage?.toFixed(1)}%</div>
             </div>

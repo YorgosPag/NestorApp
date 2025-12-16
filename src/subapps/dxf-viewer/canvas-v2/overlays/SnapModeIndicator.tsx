@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import type { Point2D } from '../../rendering/types/Types';
+import { portalComponents } from '@/styles/design-tokens';
 
 interface SnapResult {
   point: Point2D;
@@ -29,7 +30,7 @@ export default function SnapModeIndicator({
         style={{
           left: mouseCss.x + 10,
           top: mouseCss.y - 25,
-          zIndex: 1004
+          zIndex: portalComponents.zIndex.tooltip + 1
         }}
       >
         {snapResult.type}

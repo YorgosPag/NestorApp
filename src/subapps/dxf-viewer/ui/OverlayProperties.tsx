@@ -8,6 +8,7 @@ import { Button } from '../../../components/ui/button';
 import { Separator } from '../../../components/ui/separator';
 import { CommonBadge } from '../../../core/badges';
 import { STATUS_COLORS, STATUS_LABELS, KIND_LABELS, type Overlay, type Status, type OverlayKind } from '../overlays/types';
+import { layoutUtilities } from '@/styles/design-tokens';
 
 interface OverlayPropertiesProps {
   overlay: Overlay | null;
@@ -86,7 +87,12 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
       <CardContent className="space-y-4">
         {/* Basic Info */}
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded border" style={{ backgroundColor: STATUS_COLORS[overlay.status || 'for-sale'] }} />
+          <div
+            className="w-4 h-4 rounded border"
+            style={layoutUtilities.dxf.colors.backgroundColor(
+              STATUS_COLORS[overlay.status || 'for-sale']
+            )}
+          />
           <CommonBadge
             status="company"
             customLabel={overlay.id.slice(0, 8)}
@@ -117,7 +123,10 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
               {(Object.keys(STATUS_LABELS) as Status[]).map(status => (
                 <SelectItem key={status} value={status}>
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded" style={{ backgroundColor: STATUS_COLORS[status] }} />
+                    <div
+                      className="w-3 h-3 rounded"
+                      style={layoutUtilities.dxf.colors.backgroundColor(STATUS_COLORS[status])}
+                    />
                     {STATUS_LABELS[status]}
                   </div>
                 </SelectItem>

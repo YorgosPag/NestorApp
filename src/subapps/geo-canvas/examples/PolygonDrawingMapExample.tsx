@@ -14,13 +14,7 @@ import React, { useState, useCallback } from 'react';
 import { InteractiveMap } from '../components/InteractiveMap';
 import type { UniversalPolygon, PolygonType } from '@geo-alert/core';
 import type { GeoCoordinate } from '../types';
-import {
-  colors,
-  spacing,
-  typography,
-  borderRadius,
-  animations
-} from '../ui/design-system/tokens/design-tokens';
+import { layoutUtilities } from '@/styles/design-tokens';
 
 // Import centralized design tokens για map components
 const { mapComponents } = await import('../ui/design-system/tokens/design-tokens');
@@ -70,7 +64,7 @@ const MapControlSection: React.FC<{
       {/* Mode Selection */}
       {enableDrawing && (
         <div style={mapComponents.controlSection.base}>
-          <label style={{ color: colors.text.inverse, fontSize: typography.fontSize.sm }}>
+          <label style={layoutUtilities.dxf.labels.inverse}>
             Mode:
           </label>
           <select
@@ -150,7 +144,7 @@ const PolygonListItem: React.FC<{
           style={{
             ...mapComponents.controlSection.button.base,
             ...mapComponents.controlSection.button.secondary,
-            fontSize: typography.fontSize.xs
+            ...layoutUtilities.dxf.labels.extraSmall
           }}
         >
           ✏️ Edit

@@ -28,6 +28,7 @@ import type { UseFloorPlanControlPointsReturn } from '../hooks/useFloorPlanContr
 import { toast } from 'react-hot-toast';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
+import { layoutUtilities } from '@/styles/design-tokens';
 
 /**
  * Component props
@@ -428,7 +429,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
         }}
       >
         <span>📍 {t('floorPlanControlPoints.title')}</span>
-        <span style={{ fontSize: '12px', opacity: 0.8 }}>✋ {t('floorPlanControlPoints.dragHandle')}</span>
+        <span style={layoutUtilities.cssVars.helpText.small}>✋ {t('floorPlanControlPoints.dragHandle')}</span>
       </div>
 
       {/* TAB NAVIGATION */}
@@ -472,7 +473,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
       </div>
 
       {/* CONTENT */}
-      <div style={{ padding: '16px', overflowY: 'auto', flex: 1 }}>
+      <div style={layoutUtilities.cssVars.contentContainer}>
         {/* VISUAL TAB CONTENT */}
         {activeTab === 'visual' && (
           <>

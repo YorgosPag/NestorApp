@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import type { Point2D } from '../../rendering/types/Types';
+import { portalComponents, canvasUtilities } from '@/styles/design-tokens';
 
 interface ZoomWindowState {
   isActive: boolean;
@@ -31,14 +32,7 @@ export default function ZoomWindowOverlay({
   return (
     <div className={`absolute inset-0 pointer-events-none ${className}`}>
       <div
-        className="absolute border-2 border-blue-500 border-dashed bg-blue-100 bg-opacity-20"
-        style={{
-          left,
-          top,
-          width,
-          height,
-          zIndex: 1002
-        }}
+        style={canvasUtilities.zoom.window.rectangle(left, top, width, height)}
       />
     </div>
   );

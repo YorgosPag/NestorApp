@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { usePreviewMode } from '../../hooks/usePreviewMode';
+import { layoutUtilities } from '@/styles/design-tokens';
 
 /**
  * TEMPORARY DEBUG COMPONENT
@@ -11,28 +12,19 @@ export function DebugModeTest() {
   const { mode, setMode, isPreview, isNormal } = usePreviewMode();
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 10,
-      right: 10,
-      background: 'rgba(0,0,0,0.8)',
-      color: 'white',
-      padding: 10,
-      zIndex: 10000,
-      fontSize: 12
-    }}>
+    <div style={layoutUtilities.cssVars.debugFloat.main}>
       <div>Mode: {mode}</div>
       <div>Preview: {isPreview ? 'Yes' : 'No'}</div>
       <div>Normal: {isNormal ? 'Yes' : 'No'}</div>
       <button
         onClick={() => setMode('preview')}
-        style={{ margin: 2, padding: 2 }}
+        style={layoutUtilities.cssVars.debugFloat.button}
       >
         Preview
       </button>
       <button
         onClick={() => setMode('normal')}
-        style={{ margin: 2, padding: 2 }}
+        style={layoutUtilities.cssVars.debugFloat.button}
       >
         Normal
       </button>

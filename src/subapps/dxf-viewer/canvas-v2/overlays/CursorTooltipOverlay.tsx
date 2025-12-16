@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import type { Point2D } from '../../rendering/types/Types';
+import { portalComponents, layoutUtilities, canvasUtilities } from '@/styles/design-tokens';
 
 interface CursorTooltipOverlayProps {
   isActive: boolean;
@@ -33,12 +34,8 @@ export default function CursorTooltipOverlay({
   return (
     <div className={`absolute inset-0 pointer-events-none ${className}`}>
       <div
-        className="absolute text-sm text-white bg-gray-800 bg-opacity-90 px-2 py-1 rounded shadow-lg"
-        style={{
-          left: cursorPosition.x + 15,
-          top: cursorPosition.y - 35,
-          zIndex: 1005
-        }}
+        className="text-sm text-white bg-gray-800 bg-opacity-90 px-2 py-1 rounded shadow-lg"
+        style={canvasUtilities.overlays.tooltip.positioned(cursorPosition.x, cursorPosition.y)}
       >
         {label}
       </div>

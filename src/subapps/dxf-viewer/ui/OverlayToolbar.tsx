@@ -13,6 +13,10 @@ import { toolStyleStore } from '../stores/ToolStyleStore';
 import { STATUS_COLORS_MAPPING, BUTTON_STATUS_COLORS, getKindFromLabel } from '../config/color-mapping';
 import { useOverlayStore } from '../overlays/overlay-store';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import {
+  getStatusColorButtonStyles,
+  type ToolbarButtonVariant
+} from './DxfViewerComponents.styles';
 
 interface OverlayToolbarProps {
   mode: OverlayEditorMode;
@@ -151,10 +155,11 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
               key={status}
               onClick={() => onStatusChange(status)}
               title={STATUS_LABELS[status]}
-              className={`w-6 h-6 rounded-md border-2 transition-all duration-150 ${
-                currentStatus === status ? 'border-white ring-2 ring-offset-2 ring-offset-gray-800 ring-blue-500' : `border-transparent ${INTERACTIVE_PATTERNS.BORDER_SUBTLE}`
-              }`}
-              style={{ backgroundColor: BUTTON_STATUS_COLORS[status as PropertyStatus] }}
+              className="w-6 h-6 rounded-md border-2 transition-all duration-150"
+              style={getStatusColorButtonStyles(
+                status as PropertyStatus,
+                currentStatus === status
+              )}
             />
           ))}
         </div>

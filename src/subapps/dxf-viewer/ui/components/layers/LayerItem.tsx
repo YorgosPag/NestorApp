@@ -8,6 +8,7 @@ import { Eye, EyeOff, Trash2, Edit2, ChevronRight, ChevronDown } from 'lucide-re
 import { EntityCard } from './components/EntityCard';
 import type { SceneModel } from '../../../types/scene';
 import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { layoutUtilities } from '@/styles/design-tokens';
 
 interface LayerItemProps {
   layerName: string;
@@ -221,7 +222,7 @@ export function LayerItem({
             <button
               onClick={handleColorPickerToggle}
               className={`w-3 h-3 rounded border border-gray-500 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
-              style={{ backgroundColor: layer.color }}
+              style={layoutUtilities.dxf.colors.backgroundColor(layer.color)}
               title="Αλλαγή χρώματος"
             />
           </div>

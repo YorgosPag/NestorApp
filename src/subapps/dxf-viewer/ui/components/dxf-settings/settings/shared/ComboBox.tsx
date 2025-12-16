@@ -70,6 +70,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { layoutUtilities } from '@/styles/design-tokens';
 
 // ===== TYPES =====
 
@@ -295,12 +296,7 @@ export function ComboBox<T>({
             data-dropdown-content
             className="absolute top-full left-0 right-0 mt-1 rounded-md shadow-2xl overflow-y-auto"
             style={{
-              zIndex: 9999,
-              position: 'absolute',
-              backgroundColor: '#374151',
-              border: '1px solid #4B5563',
-              backdropFilter: 'none',
-              WebkitBackdropFilter: 'none',
+              ...layoutUtilities.dxf.dropdown.content,
               maxHeight
             }}
           >

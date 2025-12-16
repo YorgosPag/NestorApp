@@ -18,6 +18,8 @@ import { EnterpriseColorPicker } from './EnterpriseColorPicker';
 import { EnterpriseColorDialog, ColorDialogTrigger } from './EnterpriseColorDialog';
 import { EnterpriseColorField } from './EnterpriseColorField';
 import type { ColorValue, PickerVariant } from './types';
+import { getDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
+import { layoutUtilities } from '@/styles/design-tokens';
 
 // ============================================================================
 // UNIFIED PROPS INTERFACE
@@ -140,7 +142,7 @@ function InlineColorPicker({
       {showPreview && (
         <div
           className={`${previewSizeClasses} rounded border border-gray-600`}
-          style={{ backgroundColor: value }}
+          className={getDynamicBackgroundClass(value)}
         />
       )}
 
@@ -213,7 +215,7 @@ function ModalColorPicker({
     >
       <div
         className="w-6 h-6 rounded border border-gray-600"
-        style={{ backgroundColor: value }}
+        style={layoutUtilities.dxf.colors.backgroundColor(value)}
       />
       {triggerText && (
         <span className="text-sm text-gray-200">{triggerText}</span>

@@ -5,6 +5,8 @@ import MapComponent, { MapRef, Marker, Source, Layer } from 'react-map-gl/maplib
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS, CORE_HOVER_TRANSFORMS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
+import { portalComponents, getDynamicBackgroundClass, layoutUtilities } from '@/styles/design-tokens';
+import { getDynamicTextClass } from '@/components/ui/utils/dynamic-styles';
 
 // ✅ ENTERPRISE: Explicit reference για native Map to avoid naming conflicts
 const NativeMap = globalThis.Map;
@@ -811,7 +813,7 @@ export function InteractiveMap({
                 : `w-4 h-4 bg-red-500 border-red-300 ${CORE_HOVER_TRANSFORMS.SCALE_UP_SMALL} cursor-pointer`
             }`}
             style={{
-              zIndex: 99999,
+              zIndex: portalComponents.zIndex.critical,
               pointerEvents: 'auto',
               cursor: shouldHighlightFirst ? 'pointer' : (isPolygonComplete ? 'default' : 'pointer')
             }}
@@ -930,7 +932,7 @@ export function InteractiveMap({
               {/* Accuracy value label */}
               <div
                 className="text-xs font-bold text-white bg-black bg-opacity-70 px-1 rounded"
-                style={{ color: accuracyInfo.color }}
+                className={getDynamicTextClass(accuracyInfo.color)}
               >
                 ±{cp.accuracy}m
               </div>
@@ -969,8 +971,8 @@ export function InteractiveMap({
             >
               <div
                 className="text-xs font-bold"
+                className={`text-xs font-bold ${getDynamicTextClass(accuracyInfo.color)}`}
                 style={{
-                  color: accuracyInfo.color,
                   transform: 'rotate(-45deg)'
                 }}
               >
@@ -1100,8 +1102,8 @@ export function InteractiveMap({
               <div key={level.level} className="flex items-center space-x-2">
                 <div
                   className="w-3 h-3 rounded-full border"
+                  className={getDynamicBackgroundClass(`${level.color}40`)}
                   style={{
-                    backgroundColor: `${level.color}40`,
                     borderColor: level.color
                   }}
                 />
@@ -1680,7 +1682,7 @@ export function InteractiveMap({
         onMouseUp={handleMapMouseUp}
         onLoad={handleMapLoad}
         onError={handleMapError}
-        style={{ width: '100%', height: '100%' }}
+        style={{ ...layoutUtilities.dimensions.full, height: layoutUtilities.dimensions.full }}
         mapStyle={mapStyleUrls[currentMapStyle] || mapStyleUrls.osm}
         cursor={isPickingCoordinates ? 'crosshair' : systemIsDrawing ? 'crosshair' : 'default'}
         // ✅ ENTERPRISE: Disable map interactions when drawing (prevents map dragging during polygon drawing)
@@ -1739,7 +1741,7 @@ export function InteractiveMap({
               <div className="absolute w-12 h-12 bg-red-400 rounded-full opacity-30 animate-ping"></div>
               <div
                 className="absolute w-16 h-16 bg-red-300 rounded-full opacity-20 animate-ping"
-                style={{ animationDelay: '0.2s' }}
+                style={layoutUtilities.dxf.animation.delay(0.2)}
               ></div>
 
               {/* Address Tooltip */}

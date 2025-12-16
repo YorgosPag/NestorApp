@@ -6,6 +6,7 @@ import { Button } from '../../../components/ui/button';
 import { Card, CardContent } from '../../../components/ui/card';
 import { HardDrive, Trash2, AlertTriangle } from 'lucide-react';
 import { useNotifications } from '../../../providers/NotificationProvider';
+import { layoutUtilities } from '@/styles/design-tokens';
 
 interface StorageStatusProps {
   showDetails?: boolean;
@@ -99,7 +100,7 @@ export function StorageStatus({ showDetails = false, className }: StorageStatusP
                   className={`h-2 rounded-full transition-all duration-300 ${
                     isCritical ? 'bg-red-500' : isWarning ? 'bg-amber-500' : 'bg-blue-500'
                   }`}
-                  style={{ width: `${Math.min(usagePercentage, 100)}%` }}
+                  style={{ width: layoutUtilities.percentage(Math.min(usagePercentage, 100)) }}
                 />
               </div>
               <div className="text-xs text-gray-500 mt-1">

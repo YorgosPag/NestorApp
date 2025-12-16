@@ -37,7 +37,8 @@ export {
   alertSeverityColors,
   statusSemanticColors,
   statusBadgeTokens,
-  autoSaveStatusTokens
+  autoSaveStatusTokens,
+  getStatusBadgeVariant
 } from './semantic/alert-tokens';
 
 export type {

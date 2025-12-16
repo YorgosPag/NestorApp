@@ -22,6 +22,7 @@ import { COMPLEX_HOVER_EFFECTS } from '@/components/ui/effects';
 import { getPalettesByIds } from './BrandPalettes';
 import { useRecentColors } from './RecentColorsStore';
 import type { ColorSwatch } from './types';
+import { layoutUtilities } from '@/styles/design-tokens';
 
 interface SwatchesPaletteProps {
   /** Palette IDs to display */
@@ -121,9 +122,7 @@ function SwatchGrid({
   return (
     <div
       className="grid gap-2"
-      style={{
-        gridTemplateColumns: `repeat(${columns}, ${swatchSize}px)`,
-      }}
+      style={layoutUtilities.dxf.grid.swatchGrid(columns, swatchSize)}
     >
       {swatches.map((swatch, index) => {
         const color = typeof swatch === 'string' ? swatch : swatch.color;
@@ -186,11 +185,7 @@ function ColorSwatchButton({
         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900
         ${isSelected ? 'border-blue-500 ring-2 ring-blue-500' : 'border-gray-600'}
       `}
-      style={{
-        width: size,
-        height: size,
-        backgroundColor: color,
-      }}
+      style={layoutUtilities.dxf.swatch.square(size, color)}
       title={name}
       aria-label={`Select color ${name}`}
     />

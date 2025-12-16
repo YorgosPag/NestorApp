@@ -13,6 +13,7 @@ import { useUnifiedGripPreview } from '../ui/hooks/useUnifiedSpecificSettings';
 import type { AnyMeasurement } from '../types/measurements';
 import { MeasurementRenderer } from '../utils/measurement-tools';
 import type { Entity } from '../types/entities';
+import { layoutUtilities } from '@/styles/design-tokens';
 import type { EntityRenderer as EntityRendererType } from '../utils/entity-renderer';
 
 // Import extracted modules
@@ -585,11 +586,8 @@ export const DxfCanvasCore = forwardRef<DxfCanvasImperativeAPI, Props>(({
       }}
       onWheel={onWheel}
       style={{
-        display: 'block',
-        width: '100%',
-        height: '100%',
-        touchAction: 'none',
-        backgroundColor: 'rgba(0, 255, 0, 0.8)'
+        ...layoutUtilities.dxf.canvas.interactive,
+        ...layoutUtilities.dxf.colors.backgroundColor('rgba(0, 255, 0, 0.8)')
       }}
     />
   );

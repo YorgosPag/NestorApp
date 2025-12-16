@@ -12,6 +12,7 @@ import { StyleManagerProvider } from '../providers/StyleManagerProvider';
 import { useEntityStyles } from './useEntityStyles';
 import { usePreviewMode } from './usePreviewMode';
 import { useOverrideSystem } from './useOverrideSystem';
+import { layoutUtilities } from '@/styles/design-tokens';
 
 // ===== TEST COMPONENT =====
 
@@ -25,7 +26,7 @@ function HooksTestComponent() {
   const { isEnabled, toggle } = useOverrideSystem();
 
   return (
-    <div style={{ padding: '20px', border: '1px solid #ccc', margin: '10px' }}>
+    <div style={layoutUtilities.cssVars.testContainer}>
       <h3>🧪 HOOKS TEST (TEMPORARY)</h3>
 
       <div>
