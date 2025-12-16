@@ -4,6 +4,14 @@ import React, { useState } from 'react';
 import { useCursorSettings } from '../../../../../systems/cursor';
 import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import {
+  getCursorPreviewBorderStyles,
+  getCursorShapeButtonStyles,
+  getCursorColorPreviewStyles,
+  getCursorLinePreviewStyles,
+  getCursorSizePreviewStyles,
+  getCursorDimensionPreviewStyles
+} from '../../../../DxfViewerComponents.styles';
 
 // Type definitions for cursor and crosshair settings
 type LineStyle = 'solid' | 'dashed' | 'dotted' | 'dash-dot';
@@ -84,7 +92,7 @@ export function CursorSettings() {
               >
                 <div
                   className="w-4 h-4 mx-auto rounded-full border-2"
-                  style={{ borderColor: settings.cursor.color }}
+                  style={getCursorPreviewBorderStyles(settings.cursor.color)}
                 ></div>
                 <span className="block mt-1">Κύκλος</span>
               </button>
@@ -98,7 +106,7 @@ export function CursorSettings() {
               >
                 <div
                   className="w-4 h-4 mx-auto border-2"
-                  style={{ borderColor: settings.cursor.color }}
+                  style={getCursorPreviewBorderStyles(settings.cursor.color)}
                 ></div>
                 <span className="block mt-1">Τετράγωνο</span>
               </button>
@@ -139,10 +147,7 @@ export function CursorSettings() {
               >
                 <div
                   className="w-full"
-                  style={{
-                    height: '2px',
-                    backgroundColor: settings.cursor.color
-                  }}
+                  style={getCursorLinePreviewStyles(settings.cursor.color, 'solid')}
                 ></div>
                 <span className="block mt-1">Συνεχόμενη</span>
               </button>
@@ -156,10 +161,7 @@ export function CursorSettings() {
               >
                 <div
                   className="w-full"
-                  style={{
-                    height: '2px',
-                    background: `repeating-linear-gradient(to right, ${settings.cursor.color} 0, ${settings.cursor.color} 4px, transparent 4px, transparent 8px)`
-                  }}
+                  style={getCursorLinePreviewStyles(settings.cursor.color, 'dashed')}
                 ></div>
                 <span className="block mt-1">Διακεκομμένη</span>
               </button>
@@ -175,10 +177,7 @@ export function CursorSettings() {
               >
                 <div
                   className="w-full"
-                  style={{
-                    height: '2px',
-                    background: `repeating-linear-gradient(to right, ${settings.cursor.color} 0, ${settings.cursor.color} 1px, transparent 1px, transparent 8px)`
-                  }}
+                  style={getCursorLinePreviewStyles(settings.cursor.color, 'dotted')}
                 ></div>
                 <span className="block mt-1">Τελείες</span>
               </button>
@@ -192,10 +191,7 @@ export function CursorSettings() {
               >
                 <div
                   className="w-full"
-                  style={{
-                    height: '2px',
-                    background: `repeating-linear-gradient(to right, ${settings.cursor.color} 0, ${settings.cursor.color} 8px, transparent 8px, transparent 12px, ${settings.cursor.color} 12px, ${settings.cursor.color} 14px, transparent 14px, transparent 22px)`
-                  }}
+                  style={getCursorLinePreviewStyles(settings.cursor.color, 'dash-dot')}
                 ></div>
                 <span className="block mt-1">Παύλα-Τελεία</span>
               </button>
@@ -232,13 +228,8 @@ export function CursorSettings() {
                   }`}
                 >
                   <div
-                    className={`w-full mx-auto border-2 ${settings.cursor.shape === 'circle' ? 'rounded-full' : 'rounded-none'}`}
-                    style={{
-                      borderColor: settings.cursor.color,
-                      borderWidth: `${width}px`,
-                      width: `${Math.min(width * 4, 16)}px`,
-                      height: `${Math.min(width * 4, 16)}px`
-                    }}
+                    className="w-full mx-auto border-2"
+                    style={getCursorSizePreviewStyles(settings.cursor.color, settings.cursor.shape, width)}
                   ></div>
                   <span className="block mt-1 text-xs">{width}px</span>
                 </button>
@@ -276,12 +267,8 @@ export function CursorSettings() {
                   }`}
                 >
                   <div
-                    className={`mx-auto border-2 ${settings.cursor.shape === 'circle' ? 'rounded-full' : 'rounded-none'}`}
-                    style={{
-                      borderColor: settings.cursor.color,
-                      width: `${Math.min(size, 16)}px`,
-                      height: `${Math.min(size, 16)}px`
-                    }}
+                    className="mx-auto border-2"
+                    style={getCursorDimensionPreviewStyles(settings.cursor.color, settings.cursor.shape, size)}
                   ></div>
                   <span className="block mt-1 text-xs">{size}px</span>
                 </button>

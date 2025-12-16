@@ -765,11 +765,11 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                     map={mapRef.current}
                     floorPlan={floorPlanUpload.result}
                     visible={floorPlanVisible}
-                    style={{
-                      opacity: floorPlanOpacity,
-                      strokeColor: '#000000', // Μαύρο χρώμα
-                      strokeWidth: 2
-                    }}
+                    style={canvasUtilities.geoInteractive.floorPlanOverlay(
+                      floorPlanOpacity,
+                      '#000000', // Μαύρο χρώμα
+                      2
+                    )}
                     zIndex={100}
                     onClick={handleFloorPlanClick}
                     disableInteractions={controlPoints.pickingState === 'picking-geo'}
@@ -781,12 +781,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                 {/* 🎛️ FLOOR PLAN CONTROLS */}
                 {floorPlanUpload.result && floorPlanUpload.result.success && (
                   <div
-                    style={{
-                      position: 'absolute',
-                      top: '16px',
-                      right: '16px',
-                      zIndex: 200
-                    }}
+                    style={canvasUtilities.overlays.controls.topRight}
                   >
                     <FloorPlanControls
                       visible={floorPlanVisible}
@@ -801,17 +796,11 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                 {/* 📍 CONTROL POINT PICKER (STEP 2.2) */}
                 {floorPlanUpload.result && floorPlanUpload.result.success && (isProfessional || isTechnical) && (
                   <div
-                    style={{
-                      position: 'absolute',
-                      top: '16px',
-                      left: '16px',
-                      zIndex: 200,
-                      maxWidth: '400px',
-                      backgroundColor: 'white',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-                      padding: '16px'
-                    }}
+                    style={canvasUtilities.geoInteractive.draggablePanelContainer(
+                      { x: 16, y: 16 },
+                      false,
+                      200
+                    )}
                   >
                     <FloorPlanControlPointPicker controlPoints={controlPoints} />
                   </div>
@@ -820,13 +809,11 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                 {/* 🏘️ CITIZEN DRAWING INTERFACE (Phase 2.2.2) */}
                 {isCitizen && (
                   <div
-                    style={{
-                      position: 'absolute',
-                      top: '16px',
-                      left: '16px',
-                      zIndex: 200,
-                      maxWidth: '360px'
-                    }}
+                    style={canvasUtilities.geoInteractive.draggablePanelContainer(
+                      { x: 16, y: 16 },
+                      false,
+                      200
+                    )}
                   >
                     <CitizenDrawingInterface
                       mapRef={mapRef}
@@ -849,13 +836,11 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                 {/* 🏢 PROFESSIONAL DRAWING INTERFACE (Phase 2.2.3) */}
                 {isProfessional && (
                   <div
-                    style={{
-                      position: 'absolute',
-                      top: '16px',
-                      left: '16px',
-                      zIndex: 200,
-                      maxWidth: '360px'
-                    }}
+                    style={canvasUtilities.geoInteractive.draggablePanelContainer(
+                      { x: 16, y: 16 },
+                      false,
+                      200
+                    )}
                   >
                     <ProfessionalDrawingInterface
                       mapRef={mapRef}
@@ -874,13 +859,11 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                 {/* 🛠️ TECHNICAL DRAWING INTERFACE (Phase 2.2.4) */}
                 {isTechnical && (
                   <div
-                    style={{
-                      position: 'absolute',
-                      top: '16px',
-                      left: '16px',
-                      zIndex: 200,
-                      maxWidth: '360px'
-                    }}
+                    style={canvasUtilities.geoInteractive.draggablePanelContainer(
+                      { x: 16, y: 16 },
+                      false,
+                      200
+                    )}
                   >
                     <TechnicalDrawingInterface
                       mapRef={mapRef}
@@ -1040,15 +1023,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
       {/* 🚨 ALERT MANAGEMENT DASHBOARD (Phase 2.3) */}
       {showAlertDashboard && (
         <div
-          style={{
-            position: 'fixed',
-            top: '80px',
-            right: '16px',
-            width: '480px',
-            maxHeight: 'calc(100vh - 100px)',
-            zIndex: 300,
-            overflow: 'auto'
-          }}
+          style={canvasUtilities.geoInteractive.fixedSidebarPanel('right', '480px')}
         >
           <ComponentErrorBoundary componentName="AlertManagementPanel">
             <AlertManagementPanel

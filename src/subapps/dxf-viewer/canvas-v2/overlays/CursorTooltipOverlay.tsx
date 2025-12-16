@@ -32,11 +32,8 @@ export default function CursorTooltipOverlay({
   const label = toolLabels[activeTool] || activeTool;
 
   return (
-    <div className={`absolute inset-0 pointer-events-none ${className}`}>
-      <div
-        className="text-sm text-white bg-gray-800 bg-opacity-90 px-2 py-1 rounded shadow-lg"
-        style={canvasUtilities.overlays.tooltip.positioned(cursorPosition.x, cursorPosition.y)}
-      >
+    <div className={className} style={portalComponents.overlay.fullscreen}>
+      <div style={canvasUtilities.overlays.tooltip.positioned(cursorPosition.x, cursorPosition.y)}>
         {label}
       </div>
     </div>

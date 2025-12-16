@@ -21,6 +21,7 @@ import { DXFViewerLayout } from '../integration/DXFViewerLayout';
 import { DebugToolbar } from '../debug/DebugToolbar';
 import type { UnifiedTestReport } from '../debug/unified-test-runner';
 import type { DxfViewerState } from '../integration/types';
+import { getMainContentSectionStyles } from '../ui/DxfViewerComponents.styles';
 
 // ✅ ENTERPRISE: Comprehensive type-safe props interface
 interface MainContentSectionProps {
@@ -112,11 +113,8 @@ export const MainContentSection = React.memo<MainContentSectionProps>(({
 }) => {
   return (
     <div
-      className="flex-1 flex flex-col gap-2 h-full"
-      style={{
-        // ✅ ENTERPRISE: Ensure pointer events work in main content
-        pointerEvents: 'auto',
-      }}
+      className=""
+      style={getMainContentSectionStyles()}
     >
       {/* DEBUG TOOLBAR - Development only */}
       {/* ✅ HIDDEN: Moved to Tests modal in toolbar (Ctrl+Shift+T) */}

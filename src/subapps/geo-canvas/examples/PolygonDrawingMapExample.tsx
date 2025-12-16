@@ -14,10 +14,7 @@ import React, { useState, useCallback } from 'react';
 import { InteractiveMap } from '../components/InteractiveMap';
 import type { UniversalPolygon, PolygonType } from '@geo-alert/core';
 import type { GeoCoordinate } from '../types';
-import { layoutUtilities } from '@/styles/design-tokens';
-
-// Import centralized design tokens για map components
-const { mapComponents } = await import('../ui/design-system/tokens/design-tokens');
+import { layoutUtilities, mapComponents, colors, typography, getMapButtonStyle } from '@/styles/design-tokens';
 
 // Mock transform state (για το παράδειγμα)
 const mockTransformState = {
@@ -96,11 +93,7 @@ const MapControlSection: React.FC<{
         <button
           onClick={onClearPolygons}
           disabled={polygonCount === 0}
-          style={{
-            ...mapComponents.controlSection.button.base,
-            ...mapComponents.controlSection.button.danger,
-            opacity: polygonCount === 0 ? 0.5 : 1
-          }}
+          style={polygonCount === 0 ? getMapButtonStyle('dangerDisabled') : getMapButtonStyle('danger')}
         >
           🗑️ Clear All ({polygonCount})
         </button>
@@ -120,14 +113,7 @@ const PolygonListItem: React.FC<{
   return (
     <article
       style={mapComponents.polygonList.item}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.backgroundColor = colors.gray[100];
-        e.currentTarget.style.borderColor = colors.primary[300];
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.backgroundColor = colors.gray[50];
-        e.currentTarget.style.borderColor = colors.border.secondary;
-      }}
+      className="polygon-list-item-hover"
     >
       <div style={mapComponents.polygonList.title}>
         📐 {polygon.type.charAt(0).toUpperCase() + polygon.type.slice(1).replace('_', ' ')}
@@ -141,21 +127,13 @@ const PolygonListItem: React.FC<{
       <div style={mapComponents.polygonList.actions}>
         <button
           onClick={() => onEdit(polygon)}
-          style={{
-            ...mapComponents.controlSection.button.base,
-            ...mapComponents.controlSection.button.secondary,
-            ...layoutUtilities.dxf.labels.extraSmall
-          }}
+          style={getMapButtonStyle('secondarySmall')}
         >
           ✏️ Edit
         </button>
         <button
           onClick={() => onDelete(polygon.id)}
-          style={{
-            ...mapComponents.controlSection.button.base,
-            ...mapComponents.controlSection.button.danger,
-            fontSize: typography.fontSize.xs
-          }}
+          style={getMapButtonStyle('dangerSmall')}
         >
           🗑️ Delete
         </button>
@@ -181,12 +159,7 @@ const MapSidebar: React.FC<{
       </header>
       <section style={mapComponents.sidebar.content}>
         {polygons.length === 0 ? (
-          <p style={{
-            color: colors.text.secondary,
-            fontSize: typography.fontSize.sm,
-            textAlign: 'center',
-            margin: 0
-          }}>
+          <p style={mapComponents.sidebar.emptyState}>
             No polygons created yet. Enable drawing to start.
           </p>
         ) : (
@@ -326,10 +299,7 @@ export function PolygonDrawingMapExample(): JSX.Element {
           existingPolygons={polygons}
 
           // Styling από centralized tokens
-          style={{
-            width: '100%',
-            height: '100%'
-          }}
+          style={mapComponents.mapContainer.interactiveMap}
         />
 
         {/* Polygon Sidebar */}

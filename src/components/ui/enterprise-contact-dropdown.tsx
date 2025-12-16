@@ -414,14 +414,7 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
         <div
           ref={dropdownRef}
           className="fixed bg-popover text-popover-foreground border border-border rounded-lg shadow-lg z-[99999]"
-          style={{
-            top: buttonRect.bottom + 8,
-            left: buttonRect.left,
-            width: buttonRect.width,
-            minWidth: '200px',
-            maxHeight: '400px',
-            overflow: 'hidden'
-          }}
+          style={canvasUtilities.geoInteractive.portalDropdownContainer(buttonRect)}
         >
           {/* Search Input */}
           <div className="p-3 border-b border-border">
@@ -441,13 +434,7 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
           <div
             data-enterprise-contact-dropdown="true"
             className="overflow-y-scroll"
-            style={{
-              maxHeight: '300px',
-              minHeight: '200px',
-              scrollbarWidth: 'thin',
-              scrollbarColor: '#cbd5e1 transparent',
-              WebkitScrollbarWidth: '6px'
-            }}
+            style={canvasUtilities.geoInteractive.dropdownScrollableResults()}
           >
                   {isSearching ? (
                     <div className="p-4 text-center text-muted-foreground">

@@ -16,6 +16,7 @@
 
 import React from 'react';
 import { HOVER_BACKGROUND_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
+import { canvasUtilities } from '@/styles/design-tokens';
 
 /**
  * Component props
@@ -61,11 +62,8 @@ export function FloorPlanControls({
 }: FloorPlanControlsProps) {
   return (
     <div
-      className={`floor-plan-controls bg-white rounded-lg shadow-lg p-4 ${className}`}
-      style={{
-        minWidth: '280px',
-        border: '1px solid #e5e7eb'
-      }}
+      className={`floor-plan-controls ${className}`}
+      style={canvasUtilities.geoCanvas.floorPlanControls.container}
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-3">

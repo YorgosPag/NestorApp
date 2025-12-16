@@ -33,6 +33,11 @@ export const mapContainerTokens = {
     right: 0,
     bottom: 0,
     zIndex: 9998
+  },
+
+  interactiveMap: {
+    width: '100%',
+    height: '100%'
   }
 } as const;
 
@@ -162,6 +167,43 @@ export const mapButtonTokens = {
       }
     },
 
+    dangerSmall: {
+      backgroundColor: '#EF4444',         // bg-red-500
+      color: '#F9FAFB',                   // text-gray-50
+      fontSize: '0.75rem',                // text-xs
+      padding: '0.125rem 0.5rem',         // py-0.5 px-2
+
+      hover: {
+        backgroundColor: '#DC2626'        // hover:bg-red-600
+      },
+
+      focus: {
+        boxShadow: '0 0 0 3px rgba(239, 68, 68, 0.3)' // focus:ring-red-500/30
+      }
+    },
+
+    dangerDisabled: {
+      backgroundColor: '#EF4444',         // bg-red-500
+      color: '#F9FAFB',                   // text-gray-50
+      opacity: 0.5,
+      cursor: 'not-allowed'
+    },
+
+    secondarySmall: {
+      backgroundColor: '#4B5563',         // bg-gray-600
+      color: '#F9FAFB',                   // text-gray-50
+      fontSize: '0.75rem',                // text-xs
+      padding: '0.125rem 0.5rem',         // py-0.5 px-2
+
+      hover: {
+        backgroundColor: '#6B7280'        // hover:bg-gray-500
+      },
+
+      focus: {
+        boxShadow: '0 0 0 3px rgba(107, 114, 128, 0.3)' // focus:ring-gray-500/30
+      }
+    },
+
     success: {
       backgroundColor: '#22C55E',         // bg-green-500
       color: '#F9FAFB',                   // text-gray-50
@@ -213,6 +255,15 @@ export const mapSidebarTokens = {
     padding: '1rem',                      // p-4
     maxHeight: '400px',
     overflowY: 'auto' as const
+  },
+
+  emptyState: {
+    color: '#6B7280',                     // text-gray-500
+    fontSize: '0.875rem',                 // text-sm
+    textAlign: 'center' as const,
+    margin: 0,
+    padding: '2rem 1rem',                 // py-8 px-4
+    fontStyle: 'italic' as const
   }
 } as const;
 
@@ -391,4 +442,133 @@ export const mapZoomControlsTokens = {
 // TYPE EXPORTS
 // ============================================================================
 
+// ============================================================================
+// CONTROL POINT TOKENS
+// ============================================================================
+
+export const mapControlPointTokens = {
+  // Base control point states
+  states: {
+    default: {
+      classes: 'w-4 h-4 bg-red-500 border-red-300 cursor-pointer',
+      zIndex: 1000,
+      pointerEvents: 'auto' as const,
+      cursor: 'pointer' as const
+    },
+
+    active: {
+      classes: 'w-5 h-5 bg-blue-500 border-blue-300 scale-125 cursor-pointer',
+      zIndex: 1100,
+      pointerEvents: 'auto' as const,
+      cursor: 'pointer' as const
+    },
+
+    highlight: {
+      classes: 'w-8 h-8 bg-green-400 border-green-200 scale-125 animate-bounce shadow-lg shadow-green-500/50 cursor-pointer',
+      zIndex: 1200,
+      pointerEvents: 'auto' as const,
+      cursor: 'pointer' as const
+    },
+
+    completed: {
+      classes: 'w-4 h-4 bg-gray-400 border-gray-300 cursor-default',
+      zIndex: 1000,
+      pointerEvents: 'none' as const,
+      cursor: 'default' as const
+    }
+  },
+
+  // Dynamic style function
+  getControlPointStyle: (
+    isActive: boolean,
+    shouldHighlight: boolean,
+    isCompleted: boolean
+  ) => {
+    if (isCompleted) return mapControlPointTokens.states.completed;
+    if (isActive) return mapControlPointTokens.states.active;
+    if (shouldHighlight) return mapControlPointTokens.states.highlight;
+    return mapControlPointTokens.states.default;
+  }
+} as const;
+
+// ============================================================================
+// MAP INTERACTION TOKENS
+// ============================================================================
+
+export const mapInteractionTokens = {
+  // Map cursor states
+  cursors: {
+    default: 'default',
+    picking: 'crosshair',
+    drawing: 'crosshair',
+    dragging: 'grabbing',
+    disabled: 'wait'
+  },
+
+  // Map container dimensions
+  containers: {
+    fullscreen: {
+      width: '100%',
+      height: '100%',
+      display: 'block' as const,
+      position: 'relative' as const
+    }
+  },
+
+  // Dynamic cursor function
+  getMapCursor: (
+    isPickingCoordinates: boolean,
+    systemIsDrawing: boolean
+  ): string => {
+    if (isPickingCoordinates || systemIsDrawing) return 'crosshair';
+    return 'default';
+  }
+} as const;
+
+// ============================================================================
+// OVERLAY TOKENS
+// ============================================================================
+
+export const mapOverlayTokens = {
+  polygonDrawing: {
+    position: 'absolute' as const,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 500,
+    pointerEvents: 'none' as const,
+    backgroundColor: 'transparent'
+  },
+
+  selectionOverlay: {
+    position: 'absolute' as const,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 600,
+    pointerEvents: 'auto' as const,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)'
+  }
+} as const;
+
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+
+/**
+ * Creates complete button style by combining base + variant
+ */
+export const getMapButtonStyle = (variant: keyof typeof mapButtonTokens.variants) => ({
+  ...mapButtonTokens.base,
+  ...mapButtonTokens.variants[variant]
+});
+
+// ============================================================================
+// TYPE DEFINITIONS
+// ============================================================================
+
 export type MapButtonVariant = keyof typeof mapButtonTokens.variants;
+export type ControlPointState = keyof typeof mapControlPointTokens.states;
+export type MapCursorState = keyof typeof mapInteractionTokens.cursors;

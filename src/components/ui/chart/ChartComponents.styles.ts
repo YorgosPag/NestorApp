@@ -59,7 +59,7 @@ export const getLegendIndicatorStyles = (color: string) => ({
 export type TooltipIndicatorType = 'dot' | 'line' | 'dashed';
 
 /**
- * Get tooltip indicator styles με type-specific patterns
+ * Get tooltip indicator styles με type-specific patterns (STYLE ONLY)
  */
 export const getTooltipIndicatorStyles = (
   indicator: TooltipIndicatorType,
@@ -79,16 +79,25 @@ export const getTooltipIndicatorStyles = (
     ...baseStyles,
     ...cssVariableStyles,
     ...colorStyles,
-    ...nestingStyles,
-    // CSS class names για advanced styling
-    className: [
-      'shrink-0 rounded-[2px]',
-      indicator === 'dot' ? 'h-2.5 w-2.5' : '',
-      indicator === 'line' ? 'w-1' : '',
-      indicator === 'dashed' ? 'w-0 border-[1.5px] border-dashed bg-transparent' : '',
-      nestLabel && indicator === 'dashed' ? 'my-0.5' : ''
-    ].filter(Boolean).join(' ')
+    ...nestingStyles
   };
+};
+
+/**
+ * Get tooltip indicator className (SEPARATED)
+ * Replaces: Mixed className + style object return
+ */
+export const getTooltipIndicatorClassName = (
+  indicator: TooltipIndicatorType,
+  nestLabel?: boolean
+) => {
+  return [
+    'shrink-0 rounded-[2px]',
+    indicator === 'dot' ? 'h-2.5 w-2.5' : '',
+    indicator === 'line' ? 'w-1' : '',
+    indicator === 'dashed' ? 'w-0 border-[1.5px] border-dashed bg-transparent' : '',
+    nestLabel && indicator === 'dashed' ? 'my-0.5' : ''
+  ].filter(Boolean).join(' ');
 };
 
 /**

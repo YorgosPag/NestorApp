@@ -8,7 +8,10 @@ import { UI_COLORS } from '@/subapps/dxf-viewer/config/color-config';
 import { PhotoPreview } from './utils/PhotoPreview';
 import { usePhotoUploadLogic } from './utils/usePhotoUploadLogic';
 import { getDynamicBackgroundClass } from './utils/dynamic-styles';
-import { layoutUtilities } from '@/styles/design-tokens';
+import { layoutUtilities, performanceComponents } from '@/styles/design-tokens';
+import {
+  getProgressBarWidthStyles
+} from '@/subapps/dxf-viewer/ui/DxfViewerComponents.styles';
 import {
   PHOTO_HEIGHTS,
   PHOTO_TEXT_COLORS,
@@ -295,7 +298,7 @@ export function EnterprisePhotoUpload({
                 <div className={`w-32 ${PHOTO_COLORS.PROGRESS_BACKGROUND} rounded-full h-2 mt-2 mx-auto`}>
                   <div
                     className={`bg-blue-600 h-2 rounded-full ${PHOTO_HOVER_EFFECTS.ALL_TRANSITION}`}
-                    style={{ width: layoutUtilities.percentage(upload.progress) }}
+                    style={getProgressBarWidthStyles(upload.progress)}
                   />
                 </div>
               )}

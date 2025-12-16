@@ -237,12 +237,8 @@ export default function CrosshairOverlay({
   return (
     <canvas
       ref={canvasRef}
-      className={`absolute top-0 left-0 pointer-events-none ${className}`}
-      style={{
-        ...interactionUtilities.overlay,
-        zIndex: portalComponents.zIndex.dropdown,
-        ...layoutUtilities.dxf.cursor.none
-      }}
+      className={`${className}`}
+      style={portalComponents.overlay.fullscreen}
     />
   );
 }

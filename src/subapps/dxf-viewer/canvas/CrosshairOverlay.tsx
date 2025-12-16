@@ -8,6 +8,7 @@ import { useCanvasSetup } from './hooks/useCanvasSetup';
 import type { ViewTransform, Point2D } from '../systems/rulers-grid/config';
 import type { Viewport } from '../types/scene';
 import { canvasUtilities, portalComponents } from '@/styles/design-tokens';
+import { getCrosshairOverlayCanvasStyles } from '../ui/DxfViewerComponents.styles';
 
 interface CrosshairOverlayProps {
   className?: string;
@@ -477,10 +478,7 @@ export default function CrosshairOverlay({
     <canvas
       ref={canvasRef}
       className={`absolute top-0 left-0 pointer-events-none ${className}`}
-      style={{
-        ...canvasUtilities.overlays.crosshair.container,
-        display: displayStatus
-      }}
+      style={getCrosshairOverlayCanvasStyles(displayStatus)}
       data-debug={`enabled:${settings.crosshair.enabled} active:${isActive} position:${cursorPosition ? `${cursorPosition.x},${cursorPosition.y}` : 'null'}`}
     />
   );

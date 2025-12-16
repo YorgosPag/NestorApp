@@ -6,6 +6,7 @@ import { useTransformValue } from '../../contexts/TransformContext';
 // Enterprise CSS Module - CLAUDE.md Protocol N.3 compliance
 import styles from './DebugOverlay.module.css';
 import { cn } from '@/lib/utils';
+import { canvasUtilities } from '@/styles/design-tokens';
 
 // Global window extension
 declare global {
@@ -310,7 +311,7 @@ export default function CoordinateDebugOverlay({ className = '' }: CoordinateDeb
       {/* Crosshair cursor indicator */}
       <div
         className={styles.crosshairContainer}
-        style={{ left: mouseScreen.x - 10, top: mouseScreen.y - 10 }}
+        style={canvasUtilities.geoInteractive.debugCrosshairPosition(mouseScreen.x, mouseScreen.y)}
       >
         {/* Horizontal line */}
         <div className={styles.crosshairHorizontal} />

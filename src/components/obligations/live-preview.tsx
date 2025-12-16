@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { ObligationDocument, TableOfContentsItem } from '@/types/obligations';
 import { cn } from "@/lib/utils";
+import { canvasUtilities } from '@/styles/design-tokens';
 
 import { PreviewHeader } from './live-preview/parts/PreviewHeader';
 import { DocumentHeader } from './live-preview/parts/DocumentHeader';
@@ -64,11 +65,7 @@ export default function LivePreview({
       <ScrollArea className="h-[600px]">
         <div className="flex justify-center py-4">
           <div
-            style={{
-              transform: `scale(${scale})`,
-              transformOrigin: "top center",
-              width: `${100 / scale}%`,
-            }}
+            style={canvasUtilities.geoInteractive.documentPreviewScale(scale)}
           >
             <div className="max-w-4xl mx-auto bg-white shadow-sm">
               <DocumentHeader doc={doc} />

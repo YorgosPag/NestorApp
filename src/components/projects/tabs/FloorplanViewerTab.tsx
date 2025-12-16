@@ -4,6 +4,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Map, Plus, Edit } from 'lucide-react';
+import { canvasUtilities } from '@/styles/design-tokens';
 
 interface FloorplanViewerTabProps {
   title: string;
@@ -221,11 +222,7 @@ export function FloorplanViewerTab({
             <canvas
               ref={canvasRef}
               className="w-full h-full"
-              style={{ 
-                width: '100%', 
-                height: '100%',
-                display: 'block'
-              }}
+              style={canvasUtilities.geoInteractive.canvasFullDisplay()}
             />
           </div>
         ) : (

@@ -28,6 +28,7 @@ import type { UseFloorPlanControlPointsReturn } from '../hooks/useFloorPlanContr
 import { toast } from 'react-hot-toast';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
+import { canvasUtilities } from '@/styles/design-tokens';
 import { layoutUtilities } from '@/styles/design-tokens';
 
 /**
@@ -394,79 +395,28 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
     <div
       ref={panelRef}
       className={`floor-plan-control-point-picker ${className}`}
-      style={{
-        position: 'fixed',
-        left: `${position.x}px`,
-        top: `${position.y}px`,
-        zIndex: 1000,
-        backgroundColor: 'white',
-        border: '2px solid #3b82f6',
-        borderRadius: '8px',
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-        minWidth: '380px',
-        maxWidth: '500px',
-        maxHeight: '85vh',
-        display: 'flex',
-        flexDirection: 'column',
-        userSelect: isDragging ? 'none' : 'auto'
-      }}
+      style={canvasUtilities.geoInteractive.draggablePanelContainer(position, isDragging)}
     >
       {/* 🖱️ DRAG HANDLE */}
       <div
         onMouseDown={handleMouseDown}
-        style={{
-          cursor: isDragging ? 'grabbing' : 'grab',
-          backgroundColor: '#3b82f6',
-          color: 'white',
-          padding: '12px 16px',
-          borderTopLeftRadius: '6px',
-          borderTopRightRadius: '6px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          fontWeight: 600,
-          fontSize: '16px'
-        }}
+        style={canvasUtilities.geoInteractive.draggablePanelHandle(isDragging)}
       >
         <span>📍 {t('floorPlanControlPoints.title')}</span>
         <span style={layoutUtilities.cssVars.helpText.small}>✋ {t('floorPlanControlPoints.dragHandle')}</span>
       </div>
 
       {/* TAB NAVIGATION */}
-      <div style={{
-        display: 'flex',
-        backgroundColor: '#f8fafc',
-        borderBottom: '1px solid #e2e8f0'
-      }}>
+      <div style={canvasUtilities.geoInteractive.draggablePanelTabNavigation()}>
         <button
           onClick={() => setActiveTab('visual')}
-          style={{
-            flex: 1,
-            padding: '12px 16px',
-            backgroundColor: activeTab === 'visual' ? '#3b82f6' : 'transparent',
-            color: activeTab === 'visual' ? 'white' : '#64748b',
-            border: 'none',
-            cursor: 'pointer',
-            fontSize: '14px',
-            fontWeight: '500',
-            transition: 'all 0.2s'
-          }}
+          style={canvasUtilities.geoInteractive.draggablePanelTabButton(activeTab === 'visual')}
         >
           🎯 {t('floorPlanControlPoints.tabs.visualPicking')}
         </button>
         <button
           onClick={() => setActiveTab('manual')}
-          style={{
-            flex: 1,
-            padding: '12px 16px',
-            backgroundColor: activeTab === 'manual' ? '#3b82f6' : 'transparent',
-            color: activeTab === 'manual' ? 'white' : '#64748b',
-            border: 'none',
-            cursor: 'pointer',
-            fontSize: '14px',
-            fontWeight: '500',
-            transition: 'all 0.2s'
-          }}
+          style={canvasUtilities.geoInteractive.draggablePanelTabButton(activeTab === 'manual')}
         >
           📝 {t('floorPlanControlPoints.tabs.manualInput')}
         </button>
@@ -714,7 +664,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
               className={`h-2 rounded-full transition-all ${
                 hasMinPoints ? 'bg-green-500' : 'bg-orange-500'
               }`}
-              style={{ width: `${Math.min((points.length / 3) * 100, 100)}%` }}
+              style={canvasUtilities.geoInteractive.draggablePanelProgressBar((points.length / 3) * 100)}
             />
           </div>
         </div>

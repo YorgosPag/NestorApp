@@ -1,5 +1,6 @@
 'use client';
 import React, { useEffect } from 'react';
+import { canvasUtilities } from '@/styles/design-tokens';
 
 type Toggle = { on: boolean; toggle: () => void };
 
@@ -72,18 +73,18 @@ export default function CadStatusBar({
     <button 
       onClick={toggle.toggle} 
       style={{
-        ...S.btn, 
-        ...(toggle.on ? S.on : {})
+        ...canvasUtilities.overlays.cadStatusBar.button,
+        ...(toggle.on ? canvasUtilities.overlays.cadStatusBar.buttonActive : {})
       }}
       title={`${description} (${fkey})`}
     >
-      <span style={S.label}>{label}</span>
-      <span style={S.fkey}>{fkey}</span>
+      <span style={canvasUtilities.overlays.cadStatusBar.label}>{label}</span>
+      <span style={canvasUtilities.overlays.cadStatusBar.functionKey}>{fkey}</span>
     </button>
   );
 
   return (
-    <div style={S.bar}>
+    <div style={canvasUtilities.overlays.cadStatusBar.container}>
       <StatusButton 
         label="OSNAP" 
         toggle={osnap} 
@@ -122,56 +123,10 @@ export default function CadStatusBar({
       />
 
       {/* Status info */}
-      <div style={S.statusInfo}>
+      <div style={canvasUtilities.overlays.cadStatusBar.statusInfo}>
         CAD Mode | Press F-keys for shortcuts
       </div>
     </div>
   );
 }
 
-const S = {
-  bar: { 
-    display: 'flex', 
-    gap: 6, 
-    padding: '6px 12px', 
-    background: '#1b1b1b', 
-    borderTop: '1px solid #2a2a2a', 
-    alignItems: 'center',
-    boxShadow: '0 -2px 4px rgba(0,0,0,0.2)'
-  },
-  btn: { 
-    display: 'flex',
-    flexDirection: 'column' as const,
-    alignItems: 'center',
-    padding: '4px 8px', 
-    borderRadius: 4, 
-    border: '1px solid #444', 
-    background: '#252525', 
-    color: '#ddd', 
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-    minWidth: '50px'
-  },
-  on: { 
-    background: '#3a7afe', 
-    borderColor: '#3a7afe', 
-    color: '#fff',
-    boxShadow: '0 0 8px rgba(58, 122, 254, 0.3)'
-  },
-  label: {
-    fontSize: '11px',
-    fontWeight: '600',
-    lineHeight: '1.2'
-  },
-  fkey: {
-    fontSize: '9px',
-    opacity: 0.7,
-    lineHeight: '1'
-  },
-  statusInfo: {
-    marginLeft: 'auto',
-    fontSize: '11px',
-    color: '#666',
-    fontStyle: 'italic'
-  }
-} as const;

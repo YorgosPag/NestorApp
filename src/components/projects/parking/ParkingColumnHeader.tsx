@@ -4,7 +4,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { layoutUtilities } from '@/styles/design-tokens';
+import { parkingComponentsStyles } from './ParkingComponents.styles';
 
 interface ParkingColumnHeaderProps {
   column: { key: string; label: string };
@@ -23,8 +23,8 @@ export function ParkingColumnHeader({
 }: ParkingColumnHeaderProps) {
   return (
     <div
-      className="flex items-center px-2 border-r last:border-r-0 font-medium text-muted-foreground whitespace-nowrap overflow-hidden relative"
-      style={{ width: layoutUtilities.pixels(width) }}
+      className="border-r last:border-r-0 whitespace-nowrap overflow-hidden relative"
+      style={parkingComponentsStyles.columns.header(width)}
     >
       <Button
         variant="ghost"

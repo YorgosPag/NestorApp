@@ -13,7 +13,10 @@
 import * as React from 'react';
 import type { UnifiedTestReport } from './unified-test-runner';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
-import { layoutUtilities } from '@/styles/design-tokens';
+import { canvasUtilities, layoutUtilities } from '@/styles/design-tokens';
+import {
+  getTestResultsInteractiveAutoStyles
+} from '../ui/DxfViewerComponents.styles';
 
 // ============================================================================
 // TYPES
@@ -118,22 +121,12 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
   return (
     <div
       className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-75"
-      style={{
-        pointerEvents: 'auto',
-        zIndex: 999999 // ΠΟΛΥ ψηλό z-index για να είναι πάνω από ΟΛΑ
-      }}
+      style={canvasUtilities.overlays.floatingPanel.testModal.backdrop}
       onClick={onClose}
     >
       <div
         className="relative bg-gray-900 rounded-lg shadow-2xl border border-gray-600 flex flex-col"
-        style={{
-          width: '90%',
-          maxWidth: '1200px',
-          height: '85vh',
-          maxHeight: '900px',
-          pointerEvents: 'auto',
-          zIndex: 1000000 // Ακόμα πιο ψηλό για το modal content
-        }}
+        style={canvasUtilities.overlays.floatingPanel.testModal.content}
         onClick={(e) => e.stopPropagation()}
       >
         {/* HEADER */}
@@ -176,7 +169,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
             </div>
           </div>
 
-          <div className="flex gap-2" style={layoutUtilities.cssVars.interactive.auto}>
+          <div className="flex gap-2" style={getTestResultsInteractiveAutoStyles()}>
             <button
               onClick={handleCopy}
               className={`px-4 py-2 text-sm font-medium rounded transition-all ${
@@ -184,14 +177,14 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
                   ? 'bg-green-500 text-white'
                   : `bg-blue-600 text-white ${HOVER_BACKGROUND_EFFECTS.BLUE_LIGHT}`
               }`}
-              style={layoutUtilities.cssVars.interactive.auto}
+              style={getTestResultsInteractiveAutoStyles()}
             >
               {copied ? '✅ Αντιγράφηκε!' : '📋 Αντιγραφή Όλων'}
             </button>
             <button
               onClick={handleDownload}
               className={`px-4 py-2 text-sm font-medium rounded bg-purple-600 text-white ${HOVER_BACKGROUND_EFFECTS.PURPLE_LIGHT} transition-all`}
-              style={layoutUtilities.cssVars.interactive.auto}
+              style={getTestResultsInteractiveAutoStyles()}
             >
               💾 Λήψη JSON
             </button>
@@ -199,7 +192,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
         </div>
 
         {/* TABS */}
-        <div className="flex gap-1 px-6 pt-4 bg-gray-900" style={layoutUtilities.cssVars.interactive.auto}>
+        <div className="flex gap-1 px-6 pt-4 bg-gray-900" style={getTestResultsInteractiveAutoStyles()}>
           <button
             onClick={() => {
               console.log('🔘 Summary tab clicked');
@@ -210,7 +203,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
                 ? 'bg-gray-800 text-white border-t border-l border-r border-gray-600'
                 : `bg-gray-700 text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} ${HOVER_BACKGROUND_EFFECTS.GRAY_750}`
             }`}
-            style={layoutUtilities.cssVars.interactive.auto}
+            style={getTestResultsInteractiveAutoStyles()}
           >
             📊 Περίληψη
           </button>
@@ -224,7 +217,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
                 ? 'bg-gray-800 text-white border-t border-l border-r border-gray-600'
                 : `bg-gray-700 text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} ${HOVER_BACKGROUND_EFFECTS.GRAY_750}`
             }`}
-            style={layoutUtilities.cssVars.interactive.auto}
+            style={getTestResultsInteractiveAutoStyles()}
           >
             🔍 Λεπτομέρειες
           </button>
@@ -238,7 +231,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
                 ? 'bg-gray-800 text-white border-t border-l border-r border-gray-600'
                 : `bg-gray-700 text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} ${HOVER_BACKGROUND_EFFECTS.GRAY_750}`
             }`}
-            style={layoutUtilities.cssVars.interactive.auto}
+            style={getTestResultsInteractiveAutoStyles()}
           >
             📝 Ακατέργαστη Έξοδος
           </button>
@@ -336,7 +329,7 @@ const DetailsTab: React.FC<{ report: UnifiedTestReport }> = ({ report }) => {
   };
 
   return (
-    <div className="space-y-2" style={layoutUtilities.cssVars.interactive.auto}>
+    <div className="space-y-2" style={getTestResultsInteractiveAutoStyles()}>
       {report.tests.map((test, index) => {
         const isExpanded = expandedTests.has(index);
         const statusColor =
@@ -358,14 +351,14 @@ const DetailsTab: React.FC<{ report: UnifiedTestReport }> = ({ report }) => {
             : 'ℹ️';
 
         return (
-          <div key={index} className="border border-gray-700 rounded bg-gray-850" style={layoutUtilities.cssVars.interactive.auto}>
+          <div key={index} className="border border-gray-700 rounded bg-gray-850" style={getTestResultsInteractiveAutoStyles()}>
             <button
               onClick={() => {
                 console.log(`🔽 Toggling test ${index}: ${test.name}`);
                 toggleExpand(index);
               }}
               className={`w-full px-4 py-3 flex items-center justify-between ${HOVER_BACKGROUND_EFFECTS.GRAY_DARK} transition-colors`}
-              style={layoutUtilities.cssVars.interactive.auto}
+              style={getTestResultsInteractiveAutoStyles()}
             >
               <div className="flex items-center gap-3">
                 <span className="text-lg">{icon}</span>

@@ -9,7 +9,14 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react';
 import { useTheme } from '../theme/ThemeProvider';
 import { layoutUtilities } from '@/styles/design-tokens';
-import { searchSystemStyles, getFilterStateStyle, getSearchResultHoverHandlers } from './SearchSystem.styles';
+import {
+  searchSystemStyles,
+  getFilterStateStyle,
+  getSearchResultHoverHandlers,
+  getDynamicSuggestionStyle,
+  getDynamicInputStyle,
+  getDynamicResultItemStyle
+} from './SearchSystem.styles';
 
 // ============================================================================
 // SEARCH TYPES και INTERFACES
@@ -389,20 +396,11 @@ const SearchInput: React.FC<SearchInputProps> = ({
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
-        style={{
-          ...searchSystemStyles.searchInput.input,
-          borderColor: layoutUtilities.cssVars.borderColor(focused),
-          boxShadow: layoutUtilities.cssVars.boxShadow(focused)
-        }}
+        style={getDynamicInputStyle(focused)}
       />
 
       {/* Search Icon */}
-      <div style={{
-        ...layoutUtilities.cssVars.absoluteCenterY,
-        right: layoutUtilities.cssVars.spacing(3),
-        color: layoutUtilities.cssVars.textColor('tertiary'),
-        pointerEvents: 'none'
-      }}>
+      <div style={searchSystemStyles.searchInput.icon}>
         {loading ? '⏳' : '🔍'}
       </div>
 
@@ -417,10 +415,7 @@ const SearchInput: React.FC<SearchInputProps> = ({
                 setSelectedSuggestion(-1);
                 inputRef.current?.blur();
               }}
-              style={{
-                ...searchSystemStyles.searchInput.suggestion,
-                backgroundColor: selectedSuggestion === index ? 'var(--color-bg-secondary)' : 'transparent'
-              }}
+              style={getDynamicSuggestionStyle(selectedSuggestion === index)}
               onMouseEnter={() => setSelectedSuggestion(index)}
             >
               {suggestion}
@@ -475,14 +470,7 @@ const Filter: React.FC<FilterProps> = ({
             {config.options?.map(option => (
               <label
                 key={option.value}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 'var(--spacing-2)',
-                  fontSize: '12px',
-                  color: 'var(--color-text-primary)',
-                  cursor: 'pointer'
-                }}
+                style={searchSystemStyles.filters.multiselectLabel}
               >
                 <input
                   type="checkbox"
@@ -610,10 +598,7 @@ const SearchResultItem: React.FC<SearchResultItemProps> = ({
     <div
       onClick={handleClick}
       className={`search-result-item ${className}`}
-      style={{
-        ...searchSystemStyles.results.item,
-        cursor: onClick ? 'pointer' : 'default'
-      }}
+      style={getDynamicResultItemStyle(!!onClick)}
       {...(onClick ? getSearchResultHoverHandlers() : {})}
     >
       <div
@@ -635,31 +620,17 @@ const SearchResultItem: React.FC<SearchResultItemProps> = ({
       )}
 
       {result.item.category && (
-        <div style={{
-          ...searchSystemStyles.results.itemMeta,
-          textTransform: 'uppercase',
-          letterSpacing: '0.5px'
-        }}>
+        <div style={searchSystemStyles.results.itemCategory}>
           {result.item.category}
         </div>
       )}
 
       {result.item.tags && result.item.tags.length > 0 && (
-        <div style={{
-          ...searchSystemStyles.results.itemMeta,
-          flexWrap: 'wrap'
-        }}>
+        <div style={searchSystemStyles.results.itemTags}>
           {result.item.tags.map(tag => (
             <span
               key={tag}
-              style={{
-                padding: '2px 6px',
-                backgroundColor: 'var(--color-bg-secondary)',
-                color: 'var(--color-text-secondary)',
-                fontSize: '10px',
-                borderRadius: 'var(--radius-sm)',
-                border: '1px solid var(--color-border-primary)'
-              }}
+              style={searchSystemStyles.results.tag}
             >
               {tag}
             </span>
@@ -813,7 +784,7 @@ export const SearchSystem: React.FC<SearchSystemProps> = ({
   return (
     <div className={`search-system ${className}`} style={searchSystemStyles.layout.main}>
       {/* Search Input */}
-      <div style={layoutUtilities.cssVars.marginBottom(4)}>
+      <div style={searchSystemStyles.layout.searchInputSection}>
         <SearchInput
           value={query}
           onChange={setQuery}
@@ -827,43 +798,21 @@ export const SearchSystem: React.FC<SearchSystemProps> = ({
       {/* Filters */}
       {searchConfig.showFilters && filters.length > 0 && (
         <div style={searchSystemStyles.layout.filtersSection}>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: 'var(--spacing-3)'
-          }}>
-            <h4 style={{
-              margin: 0,
-              fontSize: '14px',
-              fontWeight: '600',
-              color: 'var(--color-text-primary)'
-            }}>
+          <div style={searchSystemStyles.filters.header}>
+            <h4 style={searchSystemStyles.filters.headerTitle}>
               Filters
             </h4>
             {activeFilters.length > 0 && (
               <button
                 onClick={clearFilters}
-                style={{
-                  padding: 'var(--spacing-1) var(--spacing-2)',
-                  border: '1px solid var(--color-border-primary)',
-                  borderRadius: 'var(--radius-sm)',
-                  backgroundColor: 'var(--color-bg-primary)',
-                  color: 'var(--color-text-secondary)',
-                  fontSize: '12px',
-                  cursor: 'pointer'
-                }}
+                style={searchSystemStyles.filters.clearButton}
               >
                 Clear All
               </button>
             )}
           </div>
 
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: 'var(--spacing-4)'
-          }}>
+          <div style={searchSystemStyles.filters.filtersGrid}>
             {filters.map(filter => (
               <Filter
                 key={filter.id}
@@ -878,37 +827,16 @@ export const SearchSystem: React.FC<SearchSystemProps> = ({
 
       {/* Active Filters */}
       {activeFilters.length > 0 && (
-        <div style={{
-          marginBottom: 'var(--spacing-4)',
-          display: 'flex',
-          gap: 'var(--spacing-2)',
-          flexWrap: 'wrap'
-        }}>
+        <div style={searchSystemStyles.layout.activeFiltersContainer}>
           {activeFilters.map(filter => (
             <span
               key={filter.id}
-              style={{
-                padding: 'var(--spacing-1) var(--spacing-2)',
-                backgroundColor: 'var(--color-primary-100)',
-                color: 'var(--color-primary-700)',
-                fontSize: '12px',
-                borderRadius: 'var(--radius-sm)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 'var(--spacing-1)'
-              }}
+              style={searchSystemStyles.layout.activeFilterBadge}
             >
               {filter.label}
               <button
                 onClick={() => handleFilterChange(filter.id, null)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--color-primary-700)',
-                  cursor: 'pointer',
-                  padding: 0,
-                  fontSize: '12px'
-                }}
+                style={searchSystemStyles.layout.activeFilterCloseButton}
               >
                 ×
               </button>
@@ -919,11 +847,7 @@ export const SearchSystem: React.FC<SearchSystemProps> = ({
 
       {/* Result Count */}
       {searchConfig.showResultCount && (query || activeFilters.length > 0) && (
-        <div style={{
-          marginBottom: 'var(--spacing-3)',
-          fontSize: '12px',
-          color: 'var(--color-text-secondary)'
-        }}>
+        <div style={searchSystemStyles.layout.resultCount}>
           {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} found
         </div>
       )}

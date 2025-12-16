@@ -26,6 +26,7 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import type { Map as MaplibreMap } from 'maplibre-gl';
 import type { ParserResult } from '../types';
 import type { UseSnapEngineReturn } from '../snapping/hooks/useSnapEngine';
+import { canvasUtilities } from '@/styles/design-tokens';
 
 /**
  * Layer styling options
@@ -473,25 +474,14 @@ export function FloorPlanCanvasLayer({
     <div
       ref={containerRef}
       className={`floor-plan-canvas-layer ${className}`}
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        // ❗ CRITICAL FIX: Disable pointer events when disableInteractions is true
-        pointerEvents: disableInteractions ? 'none' : (onClick ? 'auto' : 'none'),
-        zIndex
-      }}
+      style={canvasUtilities.geoCanvas.floorPlanCanvasLayer.container(disableInteractions, !!onClick, zIndex)}
     >
       <canvas
         ref={canvasRef}
         onClick={onClick ? handleCanvasClick : undefined}
         onMouseMove={snapEngine ? handleMouseMove : undefined}
         style={{
-          width: '100%',
-          height: '100%',
-          display: 'block',
+          ...canvasUtilities.geoCanvas.floorPlanCanvasLayer.canvas,
           cursor: onClick && !disableInteractions ? 'crosshair' : 'default'
         }}
       />

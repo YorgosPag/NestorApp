@@ -1750,6 +1750,46 @@ export const canvasUtilities = {
       pointerEvents: 'auto' as const
     },
 
+    /**
+     * DXF Canvas με dynamic tool states
+     * Replaces: DxfCanvas.tsx complex inline style με cursor, zIndex
+     */
+    dxfCanvasWithTools: (
+      activeTool: string,
+      crosshairEnabled: boolean = false
+    ): React.CSSProperties => ({
+      position: 'absolute' as const,
+      left: 0,
+      top: 0,
+      width: '100%',
+      height: '100%',
+      zIndex: 0, // DXF canvas below layer canvas
+      touchAction: 'none', // Enterprise: Prevent browser touch gestures
+      cursor: activeTool === 'pan' ? 'grab' :
+             (crosshairEnabled ? 'none' : 'crosshair')
+    }),
+
+    /**
+     * Layer Canvas με dynamic tool states
+     * Replaces: LayerCanvas.tsx complex inline style με cursor, border, zIndex
+     */
+    layerCanvasWithTools: (
+      activeTool: string,
+      crosshairEnabled: boolean = false
+    ): React.CSSProperties => ({
+      position: 'absolute' as const,
+      left: 0,
+      top: 0,
+      width: '100%',
+      height: '100%',
+      zIndex: 10, // Layer canvas above DXF canvas
+      pointerEvents: 'auto' as const,
+      cursor: activeTool === 'pan' ? 'grab' :
+             (crosshairEnabled ? 'none' : 'crosshair'),
+      backgroundColor: 'transparent',
+      border: activeTool === 'layering' ? '2px solid lime' : 'none'
+    }),
+
     // Overlay layers
     overlayBase: {
       position: 'absolute' as const,
@@ -1983,6 +2023,280 @@ export const canvasUtilities = {
     },
 
     /**
+     * Floating Panel Container (DXF Viewer)
+     * Replaces: FloatingPanelContainer.tsx inline styles
+     */
+    floatingPanel: {
+      /**
+       * Main container for floating panel
+       * Replaces: style={{ width: '384px', height: '100%', overflow: 'hidden', backgroundColor: '#111827', borderRadius: '8px', position: 'relative' }}
+       */
+      container: {
+        width: '384px',
+        height: '100%',
+        overflow: 'hidden' as const,
+        backgroundColor: colors.gray[900], // #111827
+        borderRadius: borderRadius.lg,
+        position: 'relative' as const
+      },
+
+      /**
+       * Content area with scrollable content
+       * Replaces: style={{ width: '384px', maxHeight: 'calc(100vh - 240px)', overflow: 'hidden auto', backgroundColor: '#111827', color: '#f3f4f6', padding: '12px 8px' }}
+       */
+      contentArea: {
+        width: '384px',
+        maxHeight: 'calc(100vh - 240px)',
+        overflow: 'hidden auto' as const,
+        backgroundColor: colors.gray[900], // #111827
+        color: colors.gray[100], // #f3f4f6
+        padding: `${spacing[3]} ${spacing[2]}` // 12px 8px
+      },
+
+      /**
+       * Inner content wrapper
+       * Replaces: style={{ width: '368px', overflow: 'hidden' }}
+       */
+      innerContent: {
+        width: '368px',
+        overflow: 'hidden' as const
+      },
+
+      /**
+       * Canvas overlay integration
+       * Replaces: DxfCanvasOverlayIntegration.tsx inline style
+       */
+      canvasOverlay: {
+        position: 'absolute' as const,
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        pointerEvents: 'none' as const,
+        zIndex: 100
+      },
+
+      /**
+       * Test Results Modal (Debug)
+       * Replaces: TestResultsModal.tsx inline styles
+       */
+      testModal: {
+        /**
+         * Modal backdrop with maximum z-index
+         * Replaces: style={{ pointerEvents: 'auto', zIndex: 999999 }}
+         */
+        backdrop: {
+          pointerEvents: 'auto' as const,
+          zIndex: 999999 // Very high z-index to be above everything
+        },
+
+        /**
+         * Modal content container
+         * Replaces: style={{ width: '90%', maxWidth: '1200px', height: '85vh', maxHeight: '900px', pointerEvents: 'auto', zIndex: 1000000 }}
+         */
+        content: {
+          width: '90%',
+          maxWidth: '1200px',
+          height: '85vh',
+          maxHeight: '900px',
+          pointerEvents: 'auto' as const,
+          zIndex: 1000000 // Even higher for modal content
+        }
+      },
+
+      /**
+       * Draggable Overlay Properties Panel
+       * Replaces: DraggableOverlayProperties.tsx inline styles
+       */
+      overlayProperties: {
+        /**
+         * Main draggable container
+         * Replaces: style={{ position: 'fixed', left: `${position.x}px`, top: `${position.y}px`, zIndex: 1000, pointerEvents: 'auto', cursor: isDragging ? 'grabbing' : 'grab', width: '320px' }}
+         */
+        container: (position: { x: number; y: number }, isDragging: boolean): React.CSSProperties => ({
+          position: 'fixed' as const,
+          left: `${position.x}px`,
+          top: `${position.y}px`,
+          zIndex: 1000,
+          pointerEvents: 'auto' as const,
+          cursor: isDragging ? 'grabbing' : 'grab',
+          width: '320px'
+        }),
+
+        /**
+         * Drag handle header with minimum height
+         * Replaces: style={{ minHeight: '32px' }}
+         */
+        dragHandle: {
+          minHeight: '32px'
+        },
+
+        /**
+         * Button with pointer events
+         * Replaces: style={{ pointerEvents: 'auto' }}
+         */
+        button: {
+          pointerEvents: 'auto' as const
+        }
+      },
+
+      /**
+       * Draggable Overlay Toolbar Panel
+       * Replaces: DraggableOverlayToolbar.tsx inline styles
+       */
+      overlayToolbar: {
+        /**
+         * Main draggable toolbar container
+         * Replaces: style={{ position: 'fixed', left: `${position.x}px`, top: `${position.y}px`, zIndex: 1000, pointerEvents: 'auto', cursor: isDragging ? 'grabbing' : 'grab' }}
+         */
+        container: (position: { x: number; y: number }, isDragging: boolean): React.CSSProperties => ({
+          position: 'fixed' as const,
+          left: `${position.x}px`,
+          top: `${position.y}px`,
+          zIndex: 1000,
+          pointerEvents: 'auto' as const,
+          cursor: isDragging ? 'grabbing' : 'grab'
+        }),
+
+        /**
+         * Toolbar drag handle header
+         * Replaces: style={{ minHeight: '24px' }}
+         */
+        dragHandle: {
+          minHeight: '24px'
+        }
+      },
+
+      /**
+       * Enterprise Contact Dropdown
+       * Replaces: enterprise-contact-dropdown.tsx inline styles
+       */
+      contactDropdown: {
+        /**
+         * Dropdown positioning and sizing
+         * Replaces: style={{ top: buttonRect.bottom + 8, left: buttonRect.left, width: buttonRect.width, minWidth: '200px', maxHeight: '400px', overflow: 'hidden' }}
+         */
+        positioning: (buttonRect: DOMRect): React.CSSProperties => ({
+          top: buttonRect.bottom + 8,
+          left: buttonRect.left,
+          width: buttonRect.width,
+          minWidth: '200px',
+          maxHeight: '400px',
+          overflow: 'hidden' as const
+        }),
+
+        /**
+         * Scrollable results area with custom scrollbar
+         * Replaces: style={{ maxHeight: '300px', minHeight: '200px', scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 transparent', WebkitScrollbarWidth: '6px' }}
+         */
+        scrollableResults: {
+          maxHeight: '300px',
+          minHeight: '200px',
+          scrollbarWidth: 'thin' as const,
+          scrollbarColor: '#cbd5e1 transparent',
+          WebkitScrollbarWidth: '6px'
+        }
+      },
+
+      /**
+       * CAD Status Bar (DXF Viewer)
+       * Replaces: CadStatusBar.tsx S object inline styles
+       */
+      cadStatusBar: {
+        /**
+         * Main status bar container
+         * Replaces: S.bar
+         */
+        container: {
+          display: 'flex' as const,
+          gap: spacing[1.5], // 6px
+          padding: `${spacing[1.5]} ${spacing[3]}`, // 6px 12px
+          background: colors.gray[900], // #1b1b1b
+          borderTop: `1px solid ${colors.gray[700]}`, // #2a2a2a
+          alignItems: 'center' as const,
+          boxShadow: '0 -2px 4px rgba(0,0,0,0.2)'
+        },
+
+        /**
+         * Toggle button base styles
+         * Replaces: S.btn
+         */
+        button: {
+          display: 'flex' as const,
+          flexDirection: 'column' as const,
+          alignItems: 'center' as const,
+          padding: `${spacing[1]} ${spacing[2]}`, // 4px 8px
+          borderRadius: borderRadius.sm,
+          border: `1px solid ${colors.gray[600]}`, // #444
+          background: colors.gray[800], // #252525
+          color: colors.gray[300], // #ddd
+          cursor: 'pointer' as const,
+          transition: 'all 0.2s ease',
+          minWidth: '50px'
+        },
+
+        /**
+         * Active button state
+         * Replaces: S.on
+         */
+        buttonActive: {
+          background: colors.blue[500], // #3a7afe
+          borderColor: colors.blue[500],
+          color: colors.white,
+          boxShadow: '0 0 8px rgba(58, 122, 254, 0.3)'
+        },
+
+        /**
+         * Button label text
+         * Replaces: S.label
+         */
+        label: {
+          fontSize: typography.fontSize.xs, // 11px equivalent
+          fontWeight: typography.fontWeight.semibold,
+          lineHeight: typography.lineHeight.tight
+        },
+
+        /**
+         * Function key indicator
+         * Replaces: S.fkey
+         */
+        functionKey: {
+          fontSize: '9px',
+          opacity: 0.7,
+          lineHeight: typography.lineHeight.none
+        },
+
+        /**
+         * Status information text
+         * Replaces: S.statusInfo
+         */
+        statusInfo: {
+          marginLeft: 'auto' as const,
+          fontSize: typography.fontSize.xs,
+          color: colors.gray[500], // #666
+          fontStyle: 'italic' as const
+        }
+      },
+
+      /**
+       * Color Manager Modal
+       * Replaces: ColorManager.tsx inline style
+       */
+      colorManager: {
+        /**
+         * Fixed positioned color picker container
+         * Replaces: style={{ position: 'fixed', left: colorMenu.x, top: colorMenu.y, zIndex: 9999 }}
+         */
+        container: (x: number, y: number): React.CSSProperties => ({
+          position: 'fixed' as const,
+          left: x,
+          top: y,
+          zIndex: 9999
+        })
+      }
+    },
+
+    /**
      * Snap Indicator Overlays
      * Replaces: SnapIndicatorOverlay.tsx inline styles
      */
@@ -2046,6 +2360,59 @@ export const canvasUtilities = {
       width: '100%',
       height: '100vh',
       overflow: 'hidden'
+    },
+
+    /**
+     * Floor Plan Canvas Layer System
+     * Replaces: FloorPlanCanvasLayer.tsx complex inline styles
+     */
+    floorPlanCanvasLayer: {
+      /**
+       * Container με dynamic pointer events και z-index
+       * Replaces: Complex container με disableInteractions logic
+       */
+      container: (
+        disableInteractions: boolean,
+        hasOnClick: boolean,
+        zIndex: number = 1000
+      ): React.CSSProperties => ({
+        position: 'absolute' as const,
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        pointerEvents: disableInteractions ? 'none' : (hasOnClick ? 'auto' : 'none'),
+        zIndex
+      }),
+
+      /**
+       * Canvas element με full dimensions
+       * Replaces: Canvas element basic styling
+       */
+      canvas: {
+        width: '100%',
+        height: '100%',
+        display: 'block' as const
+      }
+    },
+
+    /**
+     * Floor Plan Controls System
+     * Replaces: FloorPlanControls.tsx inline styles
+     */
+    floorPlanControls: {
+      /**
+       * Main controls container
+       * Replaces: style={{ minWidth: '280px', border: '1px solid #e5e7eb' }}
+       */
+      container: {
+        minWidth: '280px',
+        border: '1px solid #e5e7eb',
+        backgroundColor: '#ffffff',
+        borderRadius: '0.5rem', // rounded-lg
+        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)', // shadow-lg
+        padding: '1rem' // p-4
+      }
     },
 
     /**
@@ -2151,5 +2518,1026 @@ export const canvasUtilities = {
         zIndex: portalComponentsExtended.overlay.zoom.zIndex()
       })
     }
+  },
+
+  // ============================================================================
+  // GEO-CANVAS INTERACTIVE ELEMENTS
+  // ============================================================================
+
+  /**
+   * GeoCanvas Specific Interactive Patterns
+   * Replaces: InteractiveMap.tsx complex inline styles
+   */
+  geoInteractive: {
+    /**
+     * Conditional cursor patterns για interactive states
+     * Replaces: cursor: shouldHighlight ? 'pointer' : (complete ? 'default' : 'pointer')
+     */
+    cursor: {
+      conditionalPointer: (condition1: boolean, condition2: boolean): React.CSSProperties => ({
+        cursor: condition1 ? 'pointer' : (condition2 ? 'default' : 'pointer')
+      }),
+      drawingState: (isDrawing: boolean, isPicking: boolean): React.CSSProperties => ({
+        cursor: isDrawing || isPicking ? 'crosshair' : 'default'
+      })
+    },
+
+    /**
+     * Interactive control point styling
+     * Replaces: complex zIndex + pointerEvents + cursor combinations
+     */
+    controlPoint: {
+      base: {
+        zIndex: portalComponents.zIndex.critical,
+        pointerEvents: 'auto' as const,
+      },
+      withCursor: (shouldHighlightFirst: boolean, isComplete: boolean): React.CSSProperties => ({
+        zIndex: portalComponents.zIndex.critical,
+        pointerEvents: 'auto' as const,
+        cursor: shouldHighlightFirst ? 'pointer' : (isComplete ? 'default' : 'pointer')
+      })
+    },
+
+    /**
+     * Accuracy circle geometry patterns
+     * Replaces: dynamic circle styling με radius, colors, transforms
+     */
+    accuracyCircle: (
+      radius: number,
+      color: string,
+      opacity: number = 0.2
+    ): React.CSSProperties => ({
+      width: radius * 2,
+      height: radius * 2,
+      borderRadius: '50%',
+      border: `2px solid ${color}`,
+      backgroundColor: `${color}${Math.round(opacity * 255).toString(16).padStart(2, '0')}`,
+      transform: 'translate(-50%, -50%)',
+      left: '50%',
+      top: '50%',
+      position: 'absolute' as const,
+      pointerEvents: 'none' as const
+    }),
+    accuracyZone: (
+      size: number,
+      color: string,
+      level: 'excellent' | 'good' | 'moderate' | 'poor',
+      opacity: number = 0.25
+    ): React.CSSProperties => ({
+      width: size,
+      height: size,
+      backgroundColor: `${color}${Math.round(opacity * 255).toString(16).padStart(2, '0')}`,
+      border: `2px solid ${color}`,
+      borderRadius: level === 'excellent' ? '50%' :
+                   level === 'good' ? '4px' : '0',
+      transform: 'translate(-50%, -50%) rotate(45deg)',
+      left: '50%',
+      top: '50%',
+      position: 'absolute' as const,
+      pointerEvents: 'none' as const,
+      zIndex: portalComponents.zIndex.modal
+    }),
+    legendItem: (color: string): React.CSSProperties => ({
+      borderColor: color
+    }),
+    pinMarker: (
+      pointRadius: number,
+      opacity: number = 0.7
+    ): React.CSSProperties => ({
+      width: 20,
+      height: 28,
+      background: 'linear-gradient(135deg, #3b82f6, #60a5fa)',
+      borderRadius: '50% 50% 50% 0%',
+      transform: 'translate(-50%, -100%) rotate(-45deg)',
+      border: '1px solid white',
+      boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+      cursor: 'crosshair',
+      position: 'relative' as const,
+      opacity
+    }),
+    pinCenterDot: (): React.CSSProperties => ({
+      position: 'absolute' as const,
+      top: '30%',
+      left: '30%',
+      width: 4,
+      height: 4,
+      backgroundColor: 'white',
+      borderRadius: '50%',
+      transform: 'rotate(45deg)'
+    }),
+    drawingPoint: (index: number): React.CSSProperties => ({
+      width: 12,
+      height: 12,
+      backgroundColor: '#3b82f6',
+      borderRadius: '50%',
+      border: '2px solid #1e40af',
+      transform: 'translate(-50%, -50%)',
+      cursor: 'pointer',
+      animation: 'pulse 1s ease-in-out infinite'
+    }),
+    radiusLabel: (): React.CSSProperties => ({
+      background: 'rgba(0,0,0,0.8)',
+      color: 'white',
+      padding: '4px 8px',
+      borderRadius: '4px',
+      fontSize: '12px',
+      fontWeight: 'bold',
+      transform: 'translate(-50%, -50%)',
+      whiteSpace: 'nowrap' as const,
+      pointerEvents: 'none' as const
+    }),
+    polygonVertex: (
+      pointRadius: number,
+      pointColor: string,
+      strokeColor: string
+    ): React.CSSProperties => ({
+      width: pointRadius * 2,
+      height: pointRadius * 2,
+      backgroundColor: pointColor,
+      borderRadius: '50%',
+      border: `1px solid ${strokeColor}`,
+      transform: 'translate(-50%, -50%)',
+      cursor: 'pointer'
+    }),
+
+    /**
+     * Control point styling με full interaction states
+     * Replaces: complex style objects with zIndex, pointerEvents, cursor
+     */
+    controlPointInteraction: (
+      isSelected: boolean,
+      shouldHighlight: boolean,
+      isCompleted: boolean
+    ): React.CSSProperties => ({
+      zIndex: shouldHighlight ? portalComponents.zIndex.modal + 200 :
+              isSelected ? portalComponents.zIndex.modal + 100 :
+              portalComponents.zIndex.modal,
+      pointerEvents: isCompleted ? 'none' : 'auto',
+      cursor: isCompleted ? 'default' : (shouldHighlight ? 'pointer' : 'pointer')
+    }),
+
+    /**
+     * Accuracy zone icon rotation
+     * Replaces: style={{ transform: 'rotate(-45deg)' }}
+     */
+    accuracyZoneIcon: (): React.CSSProperties => ({
+      transform: 'rotate(-45deg)'
+    }),
+
+    /**
+     * Preview radius label με blue background
+     * Replaces: complex preview styling με specific blue colors και opacity
+     */
+    previewRadiusLabel: (opacity: number = 0.8): React.CSSProperties => ({
+      background: 'rgba(59, 130, 246, 0.9)',
+      color: 'white',
+      padding: '2px 6px',
+      borderRadius: '3px',
+      fontSize: '11px',
+      fontWeight: 'bold',
+      transform: 'translate(-50%, -50%)',
+      whiteSpace: 'nowrap' as const,
+      pointerEvents: 'none' as const,
+      opacity
+    }),
+
+    /**
+     * Dynamic pin marker με gradient background και custom colors
+     * Replaces: complex pin styling με dynamic gradients
+     */
+    dynamicPinMarker: (
+      strokeColor: string,
+      fillColor: string
+    ): React.CSSProperties => ({
+      width: 24,
+      height: 32,
+      background: `linear-gradient(135deg, ${strokeColor}, ${fillColor})`,
+      borderRadius: '50% 50% 50% 0%',
+      transform: 'translate(-50%, -100%) rotate(-45deg)',
+      border: '2px solid white',
+      boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
+      cursor: 'pointer',
+      position: 'relative' as const
+    }),
+
+    /**
+     * Dynamic pin center dot με enhanced sizing
+     * Replaces: nested position styling για pin center
+     */
+    dynamicPinCenterDot: (): React.CSSProperties => ({
+      position: 'absolute' as const,
+      top: '30%',
+      left: '30%',
+      width: 6,
+      height: 6,
+      backgroundColor: 'white',
+      borderRadius: '50%',
+      transform: 'rotate(45deg)'
+    }),
+
+    /**
+     * Enhanced accuracy circle με custom zIndex support
+     * Replaces: spread operator με manual zIndex override
+     */
+    accuracyCircleWithZIndex: (
+      radius: number,
+      color: string,
+      opacity: number = 0.125,
+      customZIndex?: number
+    ): React.CSSProperties => ({
+      width: radius * 2,
+      height: radius * 2,
+      borderRadius: '50%',
+      border: `2px solid ${color}`,
+      backgroundColor: `${color}${Math.round(opacity * 255).toString(16).padStart(2, '0')}`,
+      transform: 'translate(-50%, -50%)',
+      left: '50%',
+      top: '50%',
+      position: 'absolute' as const,
+      pointerEvents: 'none' as const,
+      zIndex: customZIndex ?? portalComponents.zIndex.modal
+    }),
+
+    /**
+     * Floor plan overlay styling
+     * Replaces: inline floor plan style configurations
+     */
+    floorPlanOverlay: (
+      opacity: number,
+      strokeColor: string = '#000000',
+      strokeWidth: number = 2
+    ) => ({
+      opacity,
+      strokeColor,
+      strokeWidth
+    }),
+
+    /**
+     * 🏢 FLOOR PLAN DRAGGABLE PANEL SYSTEM
+     * Enterprise patterns για draggable panels, dialogs, και control interfaces
+     * Replaces: FloorPlanControlPointPicker.tsx inline styles
+     */
+
+    /**
+     * Draggable panel container με position control
+     * Replaces: complex fixed positioning με shadows και borders
+     */
+    draggablePanelContainer: (
+      position: { x: number; y: number },
+      isDragging: boolean,
+      customZIndex?: number
+    ): React.CSSProperties => ({
+      position: 'fixed' as const,
+      left: `${position.x}px`,
+      top: `${position.y}px`,
+      zIndex: customZIndex ?? 1000,
+      backgroundColor: 'white',
+      border: '2px solid #3b82f6',
+      borderRadius: '8px',
+      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+      minWidth: '380px',
+      maxWidth: '500px',
+      maxHeight: '85vh',
+      display: 'flex',
+      flexDirection: 'column' as const,
+      userSelect: isDragging ? 'none' : 'auto'
+    }),
+
+    /**
+     * Draggable panel handle με grab cursor states
+     * Replaces: drag handle styling με cursor states
+     */
+    draggablePanelHandle: (isDragging: boolean): React.CSSProperties => ({
+      cursor: isDragging ? 'grabbing' : 'grab',
+      backgroundColor: '#3b82f6',
+      color: 'white',
+      padding: '12px 16px',
+      borderTopLeftRadius: '6px',
+      borderTopRightRadius: '6px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      fontWeight: 600,
+      fontSize: '16px'
+    }),
+
+    /**
+     * Panel tab navigation container
+     * Replaces: tab container με background και borders
+     */
+    draggablePanelTabNavigation: (): React.CSSProperties => ({
+      display: 'flex',
+      backgroundColor: '#f8fafc',
+      borderBottom: '1px solid #e2e8f0'
+    }),
+
+    /**
+     * Panel tab button με active states
+     * Replaces: tab button styling με conditional states
+     */
+    draggablePanelTabButton: (
+      isActive: boolean,
+      isDisabled?: boolean
+    ): React.CSSProperties => ({
+      flex: 1,
+      padding: '12px 16px',
+      border: 'none',
+      backgroundColor: isActive ? 'white' : 'transparent',
+      color: isDisabled ? '#94a3b8' : (isActive ? '#3b82f6' : '#64748b'),
+      fontWeight: isActive ? 600 : 400,
+      cursor: isDisabled ? 'not-allowed' : 'pointer',
+      borderBottom: isActive ? '2px solid #3b82f6' : '2px solid transparent',
+      transition: 'all 0.2s ease'
+    }),
+
+    /**
+     * Panel form section container
+     * Replaces: form section styling με consistent spacing
+     */
+    draggablePanelFormSection: (hasError?: boolean): React.CSSProperties => ({
+      padding: '20px',
+      backgroundColor: 'white',
+      borderBottom: '1px solid #f1f5f9',
+      borderColor: hasError ? '#ef4444' : '#f1f5f9'
+    }),
+
+    /**
+     * Panel button styling με variant support
+     * Replaces: button inline styles με consistent theming
+     */
+    draggablePanelButton: (
+      variant: 'primary' | 'secondary' | 'success' | 'danger' = 'primary',
+      isDisabled?: boolean,
+      isFullWidth?: boolean
+    ): React.CSSProperties => {
+      const variants = {
+        primary: {
+          backgroundColor: isDisabled ? '#e2e8f0' : '#3b82f6',
+          color: isDisabled ? '#94a3b8' : 'white',
+          border: 'none'
+        },
+        secondary: {
+          backgroundColor: isDisabled ? '#f8fafc' : '#f1f5f9',
+          color: isDisabled ? '#94a3b8' : '#475569',
+          border: '1px solid #e2e8f0'
+        },
+        success: {
+          backgroundColor: isDisabled ? '#e2e8f0' : '#10b981',
+          color: isDisabled ? '#94a3b8' : 'white',
+          border: 'none'
+        },
+        danger: {
+          backgroundColor: isDisabled ? '#e2e8f0' : '#ef4444',
+          color: isDisabled ? '#94a3b8' : 'white',
+          border: 'none'
+        }
+      };
+
+      return {
+        ...variants[variant],
+        padding: '8px 16px',
+        borderRadius: '6px',
+        fontWeight: 500,
+        fontSize: '14px',
+        cursor: isDisabled ? 'not-allowed' : 'pointer',
+        transition: 'all 0.2s ease',
+        width: isFullWidth ? '100%' : 'auto',
+        minHeight: '36px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '8px'
+      };
+    },
+
+    /**
+     * Panel input field styling με error states
+     * Replaces: input field inline styles
+     */
+    draggablePanelInput: (
+      hasError?: boolean,
+      isDisabled?: boolean
+    ): React.CSSProperties => ({
+      width: '100%',
+      padding: '8px 12px',
+      border: `1px solid ${hasError ? '#ef4444' : '#e2e8f0'}`,
+      borderRadius: '6px',
+      fontSize: '14px',
+      backgroundColor: isDisabled ? '#f8fafc' : 'white',
+      color: isDisabled ? '#94a3b8' : '#1e293b',
+      cursor: isDisabled ? 'not-allowed' : 'text',
+      transition: 'all 0.2s ease',
+      outline: 'none'
+    }),
+
+    /**
+     * Panel help text styling
+     * Replaces: help text inline styles
+     */
+    draggablePanelHelpText: (hasError?: boolean): React.CSSProperties => ({
+      fontSize: '12px',
+      color: hasError ? '#ef4444' : '#64748b',
+      marginTop: '4px',
+      lineHeight: 1.4
+    }),
+
+    /**
+     * Panel spacing utilities
+     * Replaces: margin/padding inline styles
+     */
+    draggablePanelSpacing: {
+      section: { marginBottom: '16px' },
+      field: { marginBottom: '12px' },
+      group: { marginBottom: '20px' },
+      button: { marginTop: '16px' }
+    },
+
+    /**
+     * Progress bar με dynamic width percentage
+     * Replaces: style={{ width: `${percent}%` }}
+     */
+    draggablePanelProgressBar: (percentage: number): React.CSSProperties => ({
+      width: `${Math.min(Math.max(0, percentage), 100)}%`,
+      transition: 'width 0.3s ease'
+    }),
+
+    /**
+     * Fixed sidebar panel για dashboard και management interfaces
+     * Replaces: Alert dashboard fixed positioning
+     */
+    fixedSidebarPanel: (
+      side: 'left' | 'right' = 'right',
+      width: string = '480px'
+    ): React.CSSProperties => ({
+      position: 'fixed' as const,
+      top: '80px',
+      [side]: '16px',
+      width,
+      maxHeight: 'calc(100vh - 100px)',
+      zIndex: 300,
+      overflow: 'auto' as const
+    }),
+
+    /**
+     * 📄 PDF VIEWER CONTAINER SYSTEM
+     * Enterprise utilities for PDF display components
+     */
+
+    /**
+     * PDF container with dimensions
+     * Replaces: style={{ width: layoutUtilities.pixels(width), height: layoutUtilities.pixels(height) }}
+     */
+    pdfContainer: (width: number, height: number): React.CSSProperties => ({
+      width: layoutUtilities.pixels(width),
+      height: layoutUtilities.pixels(height)
+    }),
+
+    /**
+     * PDF fallback container (no file state)
+     * Replaces: inline styles for empty PDF state
+     */
+    pdfFallbackContainer: (width: number, height: number): React.CSSProperties => ({
+      width: layoutUtilities.pixels(width),
+      height: layoutUtilities.pixels(height),
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.background.secondary,
+      border: `2px dashed ${colors.border.default}`,
+      borderRadius: spacing.radius.md
+    }),
+
+    /**
+     * PDF display wrapper
+     * Replaces: style={{ width: layoutUtilities.pixels(width), height: layoutUtilities.pixels(height) }}
+     */
+    pdfDisplayWrapper: (width: number, height: number): React.CSSProperties => ({
+      width: layoutUtilities.pixels(width),
+      height: layoutUtilities.pixels(height),
+      border: `1px solid ${colors.border.default}`,
+      borderRadius: spacing.radius.md,
+      overflow: 'hidden' as const,
+      backgroundColor: colors.background.secondary
+    }),
+
+    /**
+     * 🎛️ ENTERPRISE DROPDOWN SYSTEM
+     * Portal-based dropdown με dynamic positioning
+     */
+
+    /**
+     * Portal dropdown container με dynamic positioning
+     * Replaces: style={{ top, left, width, minWidth, maxHeight, overflow }} για portal dropdowns
+     */
+    portalDropdownContainer: (
+      buttonRect: { bottom: number; left: number; width: number },
+      minWidth: string = '200px',
+      maxHeight: string = '400px'
+    ): React.CSSProperties => ({
+      position: 'fixed' as const,
+      top: buttonRect.bottom + 8,
+      left: buttonRect.left,
+      width: buttonRect.width,
+      minWidth,
+      maxHeight,
+      overflow: 'hidden' as const,
+      zIndex: 99999
+    }),
+
+    /**
+     * Scrollable results container για dropdown options
+     * Replaces: scrollable area με custom scrollbar styling
+     */
+    dropdownScrollableResults: (
+      maxHeight: string = '300px',
+      minHeight: string = '200px'
+    ): React.CSSProperties => ({
+      maxHeight,
+      minHeight,
+      overflowY: 'scroll' as const,
+      scrollbarWidth: 'thin' as any,
+      scrollbarColor: '#cbd5e1 transparent',
+      WebkitScrollbarWidth: '6px'
+    }),
+
+    /**
+     * 📄 DOCUMENT PREVIEW SYSTEM
+     * Enterprise utilities για document live preview scaling
+     */
+
+    /**
+     * Document preview scaling container με transform origin
+     * Replaces: style={{ transform: scale, transformOrigin, width }} για document preview
+     */
+    documentPreviewScale: (scale: number): React.CSSProperties => ({
+      transform: `scale(${scale})`,
+      transformOrigin: 'top center' as const,
+      width: `${100 / scale}%`
+    }),
+
+    /**
+     * 🖼️ CANVAS DISPLAY SYSTEM
+     * Enterprise utilities για full-size canvas elements
+     */
+
+    /**
+     * Full-size canvas display container
+     * Replaces: style={{ width: '100%', height: '100%', display: 'block' }}
+     */
+    canvasFullDisplay: (): React.CSSProperties => ({
+      width: '100%',
+      height: '100%',
+      display: 'block'
+    }),
+
+    /**
+     * 📱 MOBILE SLIDE-IN SYSTEM
+     * Enterprise utilities για mobile detail panels
+     */
+
+    /**
+     * Mobile slide header με fixed height
+     * Replaces: style={{ height: layoutUtilities.pixels(48), minHeight: pixels(48), maxHeight: pixels(48) }}
+     */
+    mobileSlideHeader: (headerHeight: number = 48): React.CSSProperties => ({
+      height: layoutUtilities.pixels(headerHeight),
+      minHeight: layoutUtilities.pixels(headerHeight),
+      maxHeight: layoutUtilities.pixels(headerHeight)
+    }),
+
+    /**
+     * Mobile slide content με dynamic height
+     * Replaces: style={{ height: calc(100vh - headerHeight), flex: '1 1 auto' }}
+     */
+    mobileSlideContent: (headerHeight: number = 48): React.CSSProperties => ({
+      height: `calc(100vh - ${layoutUtilities.pixels(headerHeight)})`,
+      flex: '1 1 auto'
+    }),
+
+    /**
+     * 🎯 DEBUG CROSSHAIR SYSTEM
+     * Enterprise utilities για debug overlay positioning
+     */
+
+    /**
+     * Debug crosshair positioning με mouse offset
+     * Replaces: style={{ left: mouseScreen.x - 10, top: mouseScreen.y - 10 }}
+     */
+    debugCrosshairPosition: (mouseX: number, mouseY: number, offset: number = 10): React.CSSProperties => ({
+      left: mouseX - offset,
+      top: mouseY - offset,
+      position: 'absolute' as const
+    }),
+
+    /**
+     * 🎨 COLOR PICKER SYSTEM
+     * Enterprise utilities για color picker components
+     */
+
+    /**
+     * Color picker area container με size και touch action
+     * Replaces: style={{ width: size, height: size, touchAction: 'none' }}
+     */
+    colorPickerArea: (size: string): React.CSSProperties => ({
+      width: size,
+      height: size,
+      touchAction: 'none'
+    }),
+
+    /**
+     * Color picker thumb positioning με background color
+     * Replaces: style={{ left: position.x, top: position.y, backgroundColor: color }}
+     */
+    colorPickerThumb: (position: { x: number; y: number }, backgroundColor: string): React.CSSProperties => ({
+      left: position.x,
+      top: position.y,
+      backgroundColor
+    }),
+
+    /**
+     * 📊 ADVANCED CHARTS ANIMATION SYSTEM
+     * Enterprise patterns για chart animations και interactions
+     * Replaces: AdvancedCharts.tsx inline animation styles
+     */
+
+    /**
+     * Chart element transition animation για SVG elements
+     * Replaces: style={{ transition: animated ? 'all 0.3s ease' : 'none' }}
+     */
+    chartElementTransition: (
+      animated: boolean,
+      duration: 'fast' | 'normal' | 'slow' = 'normal'
+    ): React.CSSProperties => {
+      const durations = {
+        fast: animation.duration.normal,    // 200ms
+        normal: animation.duration.slow,    // 300ms
+        slow: animation.duration.slower     // 500ms
+      };
+
+      return {
+        transition: animated ? `all ${durations[duration]} ${animation.easing.ease}` : 'none'
+      };
+    },
+
+    /**
+     * Chart interaction styling με cursor states
+     * Replaces: cursor inline styles για interactive charts
+     */
+    chartInteraction: (
+      interactive: boolean,
+      animated: boolean = true,
+      duration: 'fast' | 'normal' | 'slow' = 'fast'
+    ): React.CSSProperties => {
+      const durations = {
+        fast: animation.duration.fast,      // 150ms
+        normal: animation.duration.normal,  // 200ms
+        slow: animation.duration.slow       // 300ms
+      };
+
+      return {
+        cursor: interactive ? 'pointer' : 'default',
+        transition: animated ? `all ${durations[duration]} ${animation.easing.easeInOut}` : 'none'
+      };
+    },
+
+    /**
+     * Chart combined animation & interaction utilities
+     * Replaces: combined transition + cursor inline styles
+     */
+    chartElementStyle: (
+      animated: boolean,
+      interactive: boolean,
+      duration: 'fast' | 'normal' | 'slow' = 'normal'
+    ): React.CSSProperties => ({
+      ...canvasUtilities.geoInteractive.chartElementTransition(animated, duration),
+      cursor: interactive ? 'pointer' : 'default'
+    }),
+
+    /**
+     * 📐 DXF VIEWER SIDEBAR SYSTEM
+     * Enterprise patterns για DXF sidebar, status bars, και floating panel containers
+     * Replaces: SidebarSection.tsx inline styles
+     */
+
+    /**
+     * DXF Sidebar main container με fixed width και positioning
+     * Replaces: SidebarSection container με hardcoded 384px width
+     */
+    dxfSidebar: {
+      container: {
+        width: '384px',
+        minWidth: '384px',
+        maxWidth: '384px',
+        height: '100%',
+        flexShrink: 0,
+        position: 'relative' as const,
+        overflow: 'hidden',
+        pointerEvents: 'auto' as const
+      },
+
+      /**
+       * Sidebar panel με enterprise dark theme και shadows
+       * Replaces: Inner div με backgroundColor #111827 και borders
+       */
+      panel: {
+        position: 'absolute' as const,
+        top: 0,
+        left: 0,
+        width: '384px',
+        height: '100%',
+        overflow: 'hidden',
+        backgroundColor: '#111827', // DXF dark theme
+        borderRadius: borderRadius.lg,
+        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+        border: '1px solid #6B7280'
+      },
+
+      /**
+       * Floating panel content area με reserved space για status bar
+       * Replaces: FloatingPanelContainer positioning με bottom: 120px
+       */
+      contentArea: {
+        position: 'absolute' as const,
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: '120px', // Reserve space for status bar
+        overflow: 'hidden'
+      },
+
+      /**
+       * Status bar container στο bottom του sidebar
+       * Replaces: Status bar με absolute positioning και border styling
+       */
+      statusBar: {
+        position: 'absolute' as const,
+        bottom: 0,
+        left: 0,
+        right: 0,
+        borderBottomLeftRadius: borderRadius.lg,
+        borderBottomRightRadius: borderRadius.lg,
+        backgroundColor: '#1F2937', // gray-800 equivalent
+        borderTop: '1px solid #6B7280', // gray-500 equivalent
+        padding: spacing[3]
+      }
+    },
+
+    /**
+     * 📱 RESPONSIVE DASHBOARD LAYOUT SYSTEM
+     * Enterprise patterns για responsive layouts, grids, sidebar management
+     * Replaces: ResponsiveDashboard.tsx inline styles
+     */
+
+    /**
+     * Responsive grid system με dynamic columns
+     * Replaces: gridStyle objects με columns και gap calculation
+     */
+    responsiveGrid: (columns: number, gap: number): React.CSSProperties => ({
+      display: 'grid',
+      gridTemplateColumns: `repeat(${columns}, 1fr)`,
+      gap: `var(--spacing-${gap})`,
+      width: '100%'
+    }),
+
+    /**
+     * Grid item με responsive spanning
+     * Replaces: gridColumn calculations για span και offset
+     */
+    responsiveGridItem: (
+      span: number,
+      offset: number = 0,
+      order?: number
+    ): React.CSSProperties => ({
+      gridColumn: offset > 0 ? `${offset + 1} / span ${span}` : `span ${span}`,
+      order: order || 'initial'
+    }),
+
+    /**
+     * Card grid με auto-fill και minmax
+     * Replaces: auto-fill pattern με responsive cards
+     */
+    responsiveCardGrid: (
+      minCardWidth: number,
+      maxCardWidth: number,
+      gap: number
+    ): React.CSSProperties => ({
+      display: 'grid',
+      gridTemplateColumns: `repeat(auto-fill, minmax(${minCardWidth}px, ${maxCardWidth}px))`,
+      gap: `var(--spacing-${gap})`,
+      justifyContent: 'center',
+      width: '100%'
+    }),
+
+    /**
+     * Dashboard sidebar με collapsible behavior
+     * Replaces: sidebar positioning και transition logic
+     */
+    dashboardSidebar: (
+      isCollapsed: boolean,
+      width: number,
+      collapsedWidth: number
+    ): React.CSSProperties => ({
+      width: isCollapsed ? `${collapsedWidth}px` : `${width}px`,
+      height: '100vh',
+      backgroundColor: 'var(--color-bg-secondary)',
+      borderRight: '1px solid var(--color-border-primary)',
+      transition: 'width var(--duration-base) var(--easing-ease-in-out)',
+      position: 'fixed' as const,
+      left: 0,
+      top: 0,
+      zIndex: 1000,
+      overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column' as const
+    }),
+
+    /**
+     * Sidebar toggle button με positioning
+     * Replaces: toggle button styling και positioning
+     */
+    sidebarToggleButton: (isCollapsed: boolean): React.CSSProperties => ({
+      position: 'absolute' as const,
+      top: '16px',
+      right: isCollapsed ? '8px' : '16px',
+      padding: '8px',
+      backgroundColor: 'var(--color-bg-primary)',
+      border: '1px solid var(--color-border-primary)',
+      borderRadius: 'var(--radius-md)',
+      cursor: 'pointer',
+      transition: 'all var(--duration-fast) var(--easing-ease-in-out)',
+      zIndex: 1001,
+      width: '32px',
+      height: '32px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: '14px'
+    }),
+
+    /**
+     * Sidebar content area με padding
+     * Replaces: sidebar content styling με conditional padding
+     */
+    sidebarContent: (isCollapsed: boolean): React.CSSProperties => ({
+      flex: 1,
+      overflow: 'auto' as const,
+      padding: isCollapsed ? '48px 8px 16px' : '48px 16px 16px'
+    }),
+
+    /**
+     * Dashboard header με sidebar-aware positioning
+     * Replaces: header positioning που αλλάζει βάσει sidebar state
+     */
+    dashboardHeader: (
+      height: number,
+      sidebarWidth: number,
+      sidebarCollapsed: boolean
+    ): React.CSSProperties => ({
+      height: `${height}px`,
+      backgroundColor: 'var(--color-bg-primary)',
+      borderBottom: '1px solid var(--color-border-primary)',
+      position: 'fixed' as const,
+      top: 0,
+      left: sidebarCollapsed ? '64px' : `${sidebarWidth}px`,
+      right: 0,
+      zIndex: 999,
+      display: 'flex',
+      alignItems: 'center',
+      padding: '0 var(--spacing-6)',
+      transition: 'left var(--duration-base) var(--easing-ease-in-out)'
+    }),
+
+    /**
+     * Dashboard footer με responsive positioning
+     * Replaces: footer positioning logic
+     */
+    dashboardFooter: (
+      height: number,
+      sidebarWidth: number,
+      sidebarCollapsed: boolean
+    ): React.CSSProperties => ({
+      height: `${height}px`,
+      backgroundColor: 'var(--color-bg-secondary)',
+      borderTop: '1px solid var(--color-border-primary)',
+      position: 'fixed' as const,
+      bottom: 0,
+      left: sidebarCollapsed ? '64px' : `${sidebarWidth}px`,
+      right: 0,
+      zIndex: 999,
+      display: 'flex',
+      alignItems: 'center',
+      padding: '0 var(--spacing-6)',
+      transition: 'left var(--duration-base) var(--easing-ease-in-out)'
+    }),
+
+    /**
+     * Main content area με responsive margins
+     * Replaces: main content positioning logic
+     */
+    dashboardMainContent: (
+      sidebarWidth: number,
+      sidebarCollapsed: boolean,
+      headerHeight: number,
+      footerHeight: number
+    ): React.CSSProperties => ({
+      marginLeft: sidebarCollapsed ? '64px' : `${sidebarWidth}px`,
+      marginTop: `${headerHeight}px`,
+      marginBottom: footerHeight > 0 ? `${footerHeight}px` : 0,
+      minHeight: `calc(100vh - ${headerHeight}px - ${footerHeight}px)`,
+      backgroundColor: 'var(--color-bg-tertiary)',
+      transition: 'margin-left var(--duration-base) var(--easing-ease-in-out)',
+      overflow: 'auto' as const
+    }),
+
+    /**
+     * Content container με centering και max-width
+     * Replaces: container styling logic
+     */
+    dashboardContentContainer: (
+      fluid: boolean,
+      centered: boolean
+    ): React.CSSProperties => ({
+      maxWidth: fluid ? '100%' : 'var(--container-max-width, 1280px)',
+      margin: centered ? '0 auto' : '0',
+      padding: 'var(--spacing-6)',
+      width: '100%'
+    }),
+
+    /**
+     * Dashboard layout base styling
+     * Replaces: layout wrapper styling
+     */
+    dashboardLayout: (): React.CSSProperties => ({
+      minHeight: '100vh',
+      backgroundColor: 'var(--color-bg-tertiary)',
+      fontFamily: 'var(--font-family-sans)',
+      color: 'var(--color-text-primary)',
+      position: 'relative' as const,
+      overflow: 'hidden'
+    }),
+
+    /**
+     * Mobile overlay για sidebar
+     * Replaces: mobile overlay styling με visibility control
+     */
+    dashboardMobileOverlay: (
+      showMobileOverlay: boolean,
+      prefersReducedMotion: boolean
+    ): React.CSSProperties => ({
+      position: 'fixed' as const,
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'var(--color-bg-overlay)',
+      zIndex: 999,
+      opacity: showMobileOverlay ? 1 : 0,
+      visibility: showMobileOverlay ? 'visible' : 'hidden',
+      transition: prefersReducedMotion
+        ? 'none'
+        : 'opacity var(--duration-base) var(--easing-ease-in-out), visibility var(--duration-base) var(--easing-ease-in-out)'
+    }),
+
+    /**
+     * Container με responsive max-width
+     * Replaces: container size variants
+     */
+    responsiveContainer: (size: 'sm' | 'md' | 'lg' | 'xl' | 'full'): React.CSSProperties => {
+      const maxWidths = {
+        sm: '640px',
+        md: '768px',
+        lg: '1024px',
+        xl: '1280px',
+        full: '100%'
+      };
+
+      return {
+        maxWidth: maxWidths[size],
+        margin: '0 auto',
+        padding: '0 var(--spacing-4)',
+        width: '100%'
+      };
+    },
+
+    /**
+     * Responsive spacer component
+     * Replaces: spacer dimension calculations
+     */
+    responsiveSpacer: (
+      spacingValue: number,
+      direction: 'horizontal' | 'vertical'
+    ): React.CSSProperties => ({
+      [direction === 'horizontal' ? 'width' : 'height']: `var(--spacing-${spacingValue})`,
+      [direction === 'horizontal' ? 'height' : 'width']: direction === 'horizontal' ? '1px' : '100%',
+      flexShrink: 0
+    }),
+
+    /**
+     * Mobile layout spacing
+     * Replaces: mobile margin calculations
+     */
+    mobileLayoutSpacing: (gap: number): React.CSSProperties => ({
+      marginBottom: `var(--spacing-${gap})`
+    })
   }
 } as const;

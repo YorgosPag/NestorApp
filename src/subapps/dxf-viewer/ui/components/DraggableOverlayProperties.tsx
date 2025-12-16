@@ -4,6 +4,7 @@ import React from 'react';
 import { OverlayProperties } from '../OverlayProperties';
 import { usePrecisionPositioning } from '../../utils/precision-positioning';
 import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { canvasUtilities } from '@/styles/design-tokens';
 
 interface DraggableOverlayPropertiesProps {
   overlay: any;
@@ -80,28 +81,20 @@ export const DraggableOverlayProperties: React.FC<DraggableOverlayPropertiesProp
   return (
     <div
       ref={containerRef}
-      style={{
-        position: 'fixed',
-        left: `${position.x}px`,
-        top: `${position.y}px`,
-        zIndex: 1000,
-        pointerEvents: 'auto',
-        cursor: isDragging ? 'grabbing' : 'grab',
-        width: '320px'
-      }}
+      style={canvasUtilities.overlays.floatingPanel.overlayProperties.container(position, isDragging)}
       className="bg-gray-900 rounded-lg shadow-xl border border-gray-500 select-none"
     >
       {/* Drag Handle Header */}
       <div
         className="bg-gray-700 rounded-t-lg px-3 py-2 border-b border-gray-600 flex items-center justify-between cursor-grab active:cursor-grabbing"
-        style={{ minHeight: '32px' }}
+        style={canvasUtilities.overlays.floatingPanel.overlayProperties.dragHandle}
         onMouseDown={handleMouseDown}
       >
         <span className="text-sm text-gray-300 font-medium">🏠 Overlay Properties</span>
         <button
           onClick={onClose}
           className={`text-gray-400 ${HOVER_TEXT_EFFECTS.WHITE} text-lg leading-none w-6 h-6 flex items-center justify-center rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} transition-colors`}
-          style={{ pointerEvents: 'auto' }}
+          style={canvasUtilities.overlays.floatingPanel.overlayProperties.button}
         >
           ✕
         </button>

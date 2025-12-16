@@ -19,7 +19,9 @@ import {
   typography,
   spacing,
   animations,
-  dashboardComponents
+  dashboardComponents,
+  borderRadius,
+  componentSizes
 } from '../../../../../src/styles/design-tokens';
 
 // ============================================================================
@@ -111,7 +113,7 @@ const layoutStyles: LayoutStyleCollection = {
  */
 const buttonBaseStyle: CSSProperties = {
   border: 'none',
-  borderRadius: '6px',
+  borderRadius: borderRadius.md,
   padding: `${spacing[2]} ${spacing[4]}`,
   cursor: 'pointer',
   fontSize: typography.fontSize.sm,
@@ -172,7 +174,7 @@ const modalStyles: ModalStyleCollection = {
 
   content: {
     backgroundColor: colors.background.primary,
-    borderRadius: '8px',
+    borderRadius: borderRadius.lg,
     padding: spacing[6],
     maxWidth: '600px',
     width: '90%',
@@ -217,9 +219,9 @@ export const metricsCardStyles = {
    * Severity indicator dot styling
    */
   severityDot: {
-    width: '8px',
-    height: '8px',
-    borderRadius: '50%',
+    width: spacing.xs,
+    height: spacing.xs,
+    borderRadius: borderRadius.full,
     flexShrink: 0
   } as const,
 
@@ -408,7 +410,7 @@ export const getMetricsCardValueStyle = (status?: 'success' | 'warning' | 'error
  * Replaces: style={{ ...dashboardComponents.statusBadge.base, ...variant }}
  */
 export const getStatusBadgeStyle = (status: string): CSSProperties => {
-  const variants = dashboardComponents.statusBadge.variants as any;
+  const variants = dashboardComponents.statusBadge.variants as Record<string, CSSProperties>;
   const variant = variants[status] || variants.suppressed;
 
   return {

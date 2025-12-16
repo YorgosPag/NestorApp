@@ -261,14 +261,16 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
               {/* Οριζόντια γραμμή */}
               <div
                 className="absolute top-1/2 left-1/2 w-3 transform -translate-x-1/2 -translate-y-1/2"
-                style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
+                style={{
+                  ...layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor),
                   height: '1px'
                 }}
               ></div>
               {/* Κάθετη γραμμή */}
               <div
                 className="absolute top-1/2 left-1/2 h-3 transform -translate-x-1/2 -translate-y-1/2"
-                style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
+                style={{
+                  ...layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor),
                   width: '1px'
                 }}
               ></div>
@@ -287,14 +289,16 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
               {/* Οριζόντια γραμμή */}
               <div
                 className="absolute top-1/2 left-1/2 w-4 transform -translate-x-1/2 -translate-y-1/2"
-                style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
+                style={{
+                  ...layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor),
                   height: '1px'
                 }}
               ></div>
               {/* Κάθετη γραμμή */}
               <div
                 className="absolute top-1/2 left-1/2 h-4 transform -translate-x-1/2 -translate-y-1/2"
-                style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
+                style={{
+                  ...layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor),
                   width: '1px'
                 }}
               ></div>
@@ -313,14 +317,16 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
               {/* Οριζόντια γραμμή */}
               <div
                 className="absolute top-1/2 left-1/2 w-5 transform -translate-x-1/2 -translate-y-1/2"
-                style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
+                style={{
+                  ...layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor),
                   height: '1px'
                 }}
               ></div>
               {/* Κάθετη γραμμή */}
               <div
                 className="absolute top-1/2 left-1/2 h-5 transform -translate-x-1/2 -translate-y-1/2"
-                style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
+                style={{
+                  ...layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor),
                   width: '1px'
                 }}
               ></div>
@@ -344,14 +350,16 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
               {/* Οριζόντια γραμμή που φτάνει τα άκρα του πλαισίου */}
               <div
                 className="absolute top-1/2 left-0 w-full transform -translate-y-1/2"
-                style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
+                style={{
+                  ...layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor),
                   height: '1px'
                 }}
               ></div>
               {/* Κάθετη γραμμή που φτάνει τα άκρα του πλαισίου */}
               <div
                 className="absolute left-1/2 top-0 h-full transform -translate-x-1/2"
-                style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
+                style={{
+                  ...layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor),
                   width: '1px'
                 }}
               ></div>

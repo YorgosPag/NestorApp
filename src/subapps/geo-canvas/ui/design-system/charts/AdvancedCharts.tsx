@@ -414,9 +414,7 @@ export const LineChart: React.FC<LineChartProps> = ({
             strokeWidth={strokeWidth}
             strokeLinecap="round"
             strokeLinejoin="round"
-            style={{
-              transition: animated ? 'all 0.3s ease' : 'none'
-            }}
+            style={canvasUtilities.geoInteractive.chartElementTransition(animated, 'normal')}
           />
         )}
 
@@ -430,10 +428,7 @@ export const LineChart: React.FC<LineChartProps> = ({
             fill={point.color || colors.primary}
             stroke={colors.background}
             strokeWidth={2}
-            style={{
-              transition: animated ? 'all 0.2s ease' : 'none',
-              cursor: interactive ? 'pointer' : 'default'
-            }}
+            style={canvasUtilities.geoInteractive.chartInteraction(interactive, animated, 'fast')}
           />
         ))}
 
@@ -645,10 +640,7 @@ export const BarChart: React.FC<BarChartProps> = ({
               rx={cornerRadius}
               ry={cornerRadius}
               opacity={hoveredBar?.index === index ? 0.8 : 1}
-              style={{
-                transition: animated ? 'all 0.3s ease' : 'none',
-                cursor: interactive ? 'pointer' : 'default'
-              }}
+              style={canvasUtilities.geoInteractive.chartElementStyle(animated, interactive, 'normal')}
             />
 
             {/* Value labels */}
@@ -874,10 +866,7 @@ export const PieChart: React.FC<PieChartProps> = ({
               stroke={colors.background}
               strokeWidth={2}
               opacity={hoveredSlice?.index === index ? 0.8 : 1}
-              style={{
-                transition: animated ? 'all 0.3s ease' : 'none',
-                cursor: interactive ? 'pointer' : 'default'
-              }}
+              style={canvasUtilities.geoInteractive.chartElementStyle(animated, interactive, 'normal')}
             />
 
             {/* Labels */}

@@ -16,6 +16,7 @@ import type { SceneModel } from '../types/scene';
 import { FloatingPanelContainer, type FloatingPanelHandle } from '../ui/FloatingPanelContainer';
 import { AutoSaveStatus } from '../ui/components/AutoSaveStatus';
 import { CentralizedAutoSaveStatus } from '../ui/components/CentralizedAutoSaveStatus';
+import { canvasUtilities } from '@/styles/design-tokens';
 
 // ✅ ENTERPRISE: Type-safe props interface
 interface SidebarSectionProps {
@@ -42,44 +43,10 @@ export const SidebarSection = React.memo<SidebarSectionProps>(({
   activeTool,
 }) => {
   return (
-    <div
-      style={{
-        width: '384px',
-        minWidth: '384px',
-        maxWidth: '384px',
-        height: '100%',
-        flexShrink: 0,
-        position: 'relative',
-        overflow: 'hidden',
-        // ✅ ENTERPRISE: Ensure pointer events work even in layering mode
-        pointerEvents: 'auto',
-      }}
-    >
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '384px',
-          height: '100%',
-          overflow: 'hidden',
-          backgroundColor: '#111827',
-          borderRadius: '8px',
-          boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-          border: '1px solid #6B7280',
-        }}
-      >
+    <div style={canvasUtilities.overlays.dxfSidebar.container}>
+      <div style={canvasUtilities.overlays.dxfSidebar.panel}>
         {/* FLOATING PANEL CONTENT AREA */}
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: '120px', // Reserve space for status bar
-            overflow: 'hidden',
-          }}
-        >
+        <div style={canvasUtilities.overlays.dxfSidebar.contentArea}>
           <FloatingPanelContainer
             ref={floatingRef}
             sceneModel={currentScene}
@@ -92,15 +59,8 @@ export const SidebarSection = React.memo<SidebarSectionProps>(({
 
         {/* STATUS BAR AT BOTTOM */}
         <div
-          className="border-t border-gray-500 px-4 py-3 bg-gray-800 space-y-2"
-          style={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            borderBottomLeftRadius: '8px',
-            borderBottomRightRadius: '8px',
-          }}
+          className="space-y-2"
+          style={canvasUtilities.overlays.dxfSidebar.statusBar}
         >
           {/* Scene Auto-Save Status */}
           <AutoSaveStatus />

@@ -33,6 +33,7 @@ import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms'
 import { serviceRegistry } from '../../services';
 // 🎯 DEBUG: Import canvas alignment tester
 import { CanvasAlignmentTester } from '../../debug/canvas-alignment-test';
+import { canvasUtilities } from '@/styles/design-tokens';
 
 /**
  * Renders the main canvas area, including the renderer and floating panels.
@@ -839,13 +840,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
                 }
               }}
               className="absolute inset-0 w-full h-full"
-              style={{
-                touchAction: 'none', // 🔥 QUICK WIN #1: Prevent browser touch gestures
-                pointerEvents: (activeTool === 'line' || activeTool === 'polyline' ||
-                                activeTool === 'polygon' || activeTool === 'circle' ||
-                                activeTool === 'rectangle')
-                                ? 'none'  // 🎯 CRITICAL: Disable clicks for drawing tools (let DxfCanvas handle)
-                                : 'auto'  // Enable clicks for selection/other modes
+              style={canvasUtilities.layers.canvasOverlayWithPointerControl ? canvasUtilities.layers.canvasOverlayWithPointerControl(activeTool) : {
+                touchAction: 'none',
+                pointerEvents: ['line', 'polyline', 'polygon', 'circle', 'rectangle'].includes(activeTool) ? 'none' : 'auto'
               }}
             />
           )}

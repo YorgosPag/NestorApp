@@ -14,6 +14,7 @@ import type { AnyMeasurement } from '../types/measurements';
 import { MeasurementRenderer } from '../utils/measurement-tools';
 import type { Entity } from '../types/entities';
 import { layoutUtilities } from '@/styles/design-tokens';
+import { getDxfCanvasCoreStyles } from '../ui/DxfViewerComponents.styles';
 import type { EntityRenderer as EntityRendererType } from '../utils/entity-renderer';
 
 // Import extracted modules
@@ -585,10 +586,7 @@ export const DxfCanvasCore = forwardRef<DxfCanvasImperativeAPI, Props>(({
         onMouseUp?.(e);
       }}
       onWheel={onWheel}
-      style={{
-        ...layoutUtilities.dxf.canvas.interactive,
-        ...layoutUtilities.dxf.colors.backgroundColor('rgba(0, 255, 0, 0.8)')
-      }}
+      style={getDxfCanvasCoreStyles('rgba(0, 255, 0, 0.8)')}
     />
   );
 });

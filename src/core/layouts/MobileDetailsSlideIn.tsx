@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { X } from 'lucide-react';
-import { layoutUtilities, componentSizes } from '@/styles/design-tokens';
+import { layoutUtilities, componentSizes, canvasUtilities } from '@/styles/design-tokens';
 
 interface MobileDetailsSlideInProps {
   isOpen: boolean;
@@ -44,7 +44,7 @@ export function MobileDetailsSlideIn({
       {/* 📱 MINIMAL Mobile header - FIXED HEIGHT (existing pattern) */}
       <div
         className="flex items-center gap-2 px-2 border-b bg-background"
-        style={{ height: layoutUtilities.pixels(48), minHeight: layoutUtilities.pixels(48), maxHeight: layoutUtilities.pixels(48) }}
+        style={canvasUtilities.geoInteractive.mobileSlideHeader()}
       >
         {/* Close Button (existing pattern) */}
         <button
@@ -71,10 +71,7 @@ export function MobileDetailsSlideIn({
       {/* 📱 Content - FULL REMAINING HEIGHT (existing pattern) */}
       <div
         className="overflow-y-auto bg-background"
-        style={{
-          height: `calc(100vh - ${layoutUtilities.pixels(48)})`,
-          flex: '1 1 auto'
-        }}
+        style={canvasUtilities.geoInteractive.mobileSlideContent()}
       >
         {children}
       </div>

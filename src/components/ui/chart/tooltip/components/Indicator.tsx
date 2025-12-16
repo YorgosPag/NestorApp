@@ -3,6 +3,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import {
   getTooltipIndicatorStyles,
+  getTooltipIndicatorClassName,
   type TooltipIndicatorType,
   type ChartTooltipConfig
 } from "../../ChartComponents.styles";
@@ -23,15 +24,12 @@ export function Indicator({
   if (hasIcon && Icon) return <Icon />;
 
   const indicatorStyles = getTooltipIndicatorStyles(indicator, color, nestLabel);
+  const indicatorClassName = getTooltipIndicatorClassName(indicator, nestLabel);
 
   return (
     <div
-      className={cn(indicatorStyles.className)}
-      style={{
-        ...indicatorStyles,
-        // Remove className from style object
-        className: undefined
-      } as React.CSSProperties}
+      className={cn(indicatorClassName)}
+      style={indicatorStyles}
     />
   );
 }

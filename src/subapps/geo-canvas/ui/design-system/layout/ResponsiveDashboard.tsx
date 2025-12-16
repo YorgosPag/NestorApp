@@ -8,6 +8,7 @@
 
 import React, { useState, useEffect, useCallback, ReactNode } from 'react';
 import { useTheme, useBreakpoint } from '../theme/ThemeProvider';
+import { canvasUtilities } from '@/styles/design-tokens';
 
 // ============================================================================
 // LAYOUT TYPES
@@ -103,17 +104,10 @@ export const Grid: React.FC<GridProps> = ({
   const cols = getResponsiveValue(columns, breakpoint, 12);
   const gapValue = getResponsiveValue(gap, breakpoint, 4);
 
-  const gridStyle: React.CSSProperties = {
-    display: 'grid',
-    gridTemplateColumns: `repeat(${cols}, 1fr)`,
-    gap: `var(--spacing-${gapValue})`,
-    width: '100%'
-  };
-
   return (
     <div
       className={`responsive-grid ${className}`}
-      style={gridStyle}
+      style={canvasUtilities.geoInteractive.responsiveGrid(cols, gapValue)}
     >
       {children}
     </div>
@@ -133,17 +127,10 @@ export const GridItem: React.FC<GridItemProps> = ({
   const offsetValue = getResponsiveValue(offset, breakpoint, 0);
   const orderValue = order ? getResponsiveValue(order, breakpoint, 0) : undefined;
 
-  const itemStyle: React.CSSProperties = {
-    gridColumn: offsetValue > 0
-      ? `${offsetValue + 1} / span ${spanValue}`
-      : `span ${spanValue}`,
-    order: orderValue
-  };
-
   return (
     <div
       className={`grid-item ${className}`}
-      style={itemStyle}
+      style={canvasUtilities.geoInteractive.responsiveGridItem(spanValue, offsetValue, orderValue)}
     >
       {children}
     </div>
@@ -159,18 +146,10 @@ export const CardGrid: React.FC<CardGridProps> = ({
 }) => {
   const { theme } = useTheme();
 
-  const cardGridStyle: React.CSSProperties = {
-    display: 'grid',
-    gridTemplateColumns: `repeat(auto-fill, minmax(${minCardWidth}px, ${maxCardWidth}px))`,
-    gap: `var(--spacing-${gap})`,
-    justifyContent: 'center',
-    width: '100%'
-  };
-
   return (
     <div
       className={`card-grid ${className}`}
-      style={cardGridStyle}
+      style={canvasUtilities.geoInteractive.responsiveCardGrid(minCardWidth, maxCardWidth, gap)}
     >
       {children}
     </div>
@@ -211,59 +190,21 @@ const Sidebar: React.FC<SidebarProps> = ({
     }
   }, [isMobile, shouldAutoCollapse, onToggle]);
 
-  const sidebarStyle: React.CSSProperties = {
-    width: isCollapsed ? `${collapsedWidth}px` : `${width}px`,
-    height: '100vh',
-    backgroundColor: 'var(--color-bg-secondary)',
-    borderRight: '1px solid var(--color-border-primary)',
-    transition: 'width var(--duration-base) var(--easing-ease-in-out)',
-    position: 'fixed',
-    left: 0,
-    top: 0,
-    zIndex: 1000,
-    overflow: 'hidden',
-    display: 'flex',
-    flexDirection: 'column'
-  };
-
-  const toggleButtonStyle: React.CSSProperties = {
-    position: 'absolute',
-    top: '16px',
-    right: isCollapsed ? '8px' : '16px',
-    padding: '8px',
-    backgroundColor: 'var(--color-bg-primary)',
-    border: '1px solid var(--color-border-primary)',
-    borderRadius: 'var(--radius-md)',
-    cursor: 'pointer',
-    transition: 'all var(--duration-fast) var(--easing-ease-in-out)',
-    zIndex: 1001,
-    width: '32px',
-    height: '32px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '14px'
-  };
-
   return (
     <aside
       className={`dashboard-sidebar ${className}`}
-      style={sidebarStyle}
+      style={canvasUtilities.geoInteractive.dashboardSidebar(isCollapsed, width, collapsedWidth)}
     >
       <button
         onClick={onToggle}
-        style={toggleButtonStyle}
+        style={canvasUtilities.geoInteractive.sidebarToggleButton(isCollapsed)}
         title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
       >
         {isCollapsed ? '→' : '←'}
       </button>
 
-      <div style={{
-        flex: 1,
-        overflow: 'auto',
-        padding: isCollapsed ? '48px 8px 16px' : '48px 16px 16px'
-      }}>
+      <div style={canvasUtilities.geoInteractive.sidebarContent(isCollapsed)}>
         {children}
       </div>
     </aside>
@@ -291,25 +232,10 @@ const Header: React.FC<HeaderProps> = ({
 }) => {
   const { theme } = useTheme();
 
-  const headerStyle: React.CSSProperties = {
-    height: `${height}px`,
-    backgroundColor: 'var(--color-bg-primary)',
-    borderBottom: '1px solid var(--color-border-primary)',
-    position: 'fixed',
-    top: 0,
-    left: sidebarCollapsed ? '64px' : `${sidebarWidth}px`,
-    right: 0,
-    zIndex: 999,
-    display: 'flex',
-    alignItems: 'center',
-    padding: '0 var(--spacing-6)',
-    transition: 'left var(--duration-base) var(--easing-ease-in-out)'
-  };
-
   return (
     <header
       className={`dashboard-header ${className}`}
-      style={headerStyle}
+      style={canvasUtilities.geoInteractive.dashboardHeader(height, sidebarWidth, sidebarCollapsed)}
     >
       {children}
     </header>
@@ -337,25 +263,10 @@ const Footer: React.FC<FooterProps> = ({
 }) => {
   const { theme } = useTheme();
 
-  const footerStyle: React.CSSProperties = {
-    height: `${height}px`,
-    backgroundColor: 'var(--color-bg-secondary)',
-    borderTop: '1px solid var(--color-border-primary)',
-    position: 'fixed',
-    bottom: 0,
-    left: sidebarCollapsed ? '64px' : `${sidebarWidth}px`,
-    right: 0,
-    zIndex: 999,
-    display: 'flex',
-    alignItems: 'center',
-    padding: '0 var(--spacing-6)',
-    transition: 'left var(--duration-base) var(--easing-ease-in-out)'
-  };
-
   return (
     <footer
       className={`dashboard-footer ${className}`}
-      style={footerStyle}
+      style={canvasUtilities.geoInteractive.dashboardFooter(height, sidebarWidth, sidebarCollapsed)}
     >
       {children}
     </footer>
@@ -390,29 +301,12 @@ const MainContent: React.FC<MainContentProps> = ({
   const { theme } = useTheme();
   const breakpoint = useBreakpoint();
 
-  const mainStyle: React.CSSProperties = {
-    marginLeft: sidebarCollapsed ? '64px' : `${sidebarWidth}px`,
-    marginTop: `${headerHeight}px`,
-    marginBottom: footerHeight > 0 ? `${footerHeight}px` : 0,
-    minHeight: `calc(100vh - ${headerHeight}px - ${footerHeight}px)`,
-    backgroundColor: 'var(--color-bg-tertiary)',
-    transition: 'margin-left var(--duration-base) var(--easing-ease-in-out)',
-    overflow: 'auto'
-  };
-
-  const containerStyle: React.CSSProperties = {
-    maxWidth: fluid ? '100%' : 'var(--container-max-width, 1280px)',
-    margin: centered ? '0 auto' : '0',
-    padding: 'var(--spacing-6)',
-    width: '100%'
-  };
-
   return (
     <main
       className={`dashboard-main ${className}`}
-      style={mainStyle}
+      style={canvasUtilities.geoInteractive.dashboardMainContent(sidebarWidth, sidebarCollapsed, headerHeight, footerHeight)}
     >
-      <div style={containerStyle}>
+      <div style={canvasUtilities.geoInteractive.dashboardContentContainer(fluid, centered)}>
         {children}
       </div>
     </main>
@@ -485,38 +379,10 @@ export const ResponsiveDashboard: React.FC<DashboardLayoutProps> = ({
   }, [toggleSidebar]);
 
   // ========================================================================
-  // LAYOUT STYLES
-  // ========================================================================
-
-  const layoutStyle: React.CSSProperties = {
-    minHeight: '100vh',
-    backgroundColor: 'var(--color-bg-tertiary)',
-    fontFamily: 'var(--font-family-sans)',
-    color: 'var(--color-text-primary)',
-    position: 'relative',
-    overflow: 'hidden'
-  };
-
-  // ========================================================================
   // OVERLAY για MOBILE
   // ========================================================================
 
   const showMobileOverlay = ['xs', 'sm'].includes(breakpoint) && !sidebarCollapsed;
-
-  const overlayStyle: React.CSSProperties = {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'var(--color-bg-overlay)',
-    zIndex: 999,
-    opacity: showMobileOverlay ? 1 : 0,
-    visibility: showMobileOverlay ? 'visible' : 'hidden',
-    transition: prefersReducedMotion
-      ? 'none'
-      : 'opacity var(--duration-base) var(--easing-ease-in-out), visibility var(--duration-base) var(--easing-ease-in-out)'
-  };
 
   // ========================================================================
   // RENDER
@@ -525,14 +391,14 @@ export const ResponsiveDashboard: React.FC<DashboardLayoutProps> = ({
   return (
     <div
       className={`responsive-dashboard ${className}`}
-      style={layoutStyle}
+      style={canvasUtilities.geoInteractive.dashboardLayout()}
       data-sidebar-collapsed={sidebarCollapsed}
       data-breakpoint={breakpoint}
     >
       {/* Mobile Overlay */}
       {showMobileOverlay && (
         <div
-          style={overlayStyle}
+          style={canvasUtilities.geoInteractive.dashboardMobileOverlay(showMobileOverlay, prefersReducedMotion)}
           onClick={toggleSidebar}
           aria-hidden="true"
         />
@@ -613,7 +479,7 @@ export const TwoColumnLayout: React.FC<{
   if (isMobile) {
     return (
       <div className={`two-column-layout-mobile ${className}`}>
-        <div style={{ marginBottom: `var(--spacing-${gap})` }}>
+        <div style={canvasUtilities.geoInteractive.mobileLayoutSpacing(gap)}>
           {leftColumn}
         </div>
         <div>
@@ -675,10 +541,10 @@ export const ThreeColumnLayout: React.FC<{
   if (isMobile) {
     return (
       <div className={`three-column-layout-mobile ${className}`}>
-        <div style={{ marginBottom: `var(--spacing-${gap})` }}>
+        <div style={canvasUtilities.geoInteractive.mobileLayoutSpacing(gap)}>
           {leftColumn}
         </div>
-        <div style={{ marginBottom: `var(--spacing-${gap})` }}>
+        <div style={canvasUtilities.geoInteractive.mobileLayoutSpacing(gap)}>
           {centerColumn}
         </div>
         <div>
@@ -719,25 +585,10 @@ export const Container: React.FC<{
   size = 'xl',
   className = ''
 }) => {
-  const maxWidths = {
-    sm: '640px',
-    md: '768px',
-    lg: '1024px',
-    xl: '1280px',
-    full: '100%'
-  };
-
-  const containerStyle: React.CSSProperties = {
-    maxWidth: maxWidths[size],
-    margin: '0 auto',
-    padding: '0 var(--spacing-4)',
-    width: '100%'
-  };
-
   return (
     <div
       className={`container container-${size} ${className}`}
-      style={containerStyle}
+      style={canvasUtilities.geoInteractive.responsiveContainer(size)}
     >
       {children}
     </div>
@@ -757,13 +608,10 @@ export const Spacer: React.FC<{
   const breakpoint = useBreakpoint();
   const spacingValue = getResponsiveValue(size, breakpoint, 4);
 
-  const spacerStyle: React.CSSProperties = {
-    [direction === 'horizontal' ? 'width' : 'height']: `var(--spacing-${spacingValue})`,
-    [direction === 'horizontal' ? 'height' : 'width']: direction === 'horizontal' ? '1px' : '100%',
-    flexShrink: 0
-  };
-
-  return <div className={`spacer spacer-${direction}`} style={spacerStyle} />;
+  return <div
+    className={`spacer spacer-${direction}`}
+    style={canvasUtilities.geoInteractive.responsiveSpacer(spacingValue, direction)}
+  />;
 };
 
 export default ResponsiveDashboard;

@@ -28,11 +28,8 @@ export default function SnapIndicatorOverlay({
   const { point } = snapResult;
 
   return (
-    <div className={`absolute inset-0 pointer-events-none ${className}`}>
-      <div
-        className="bg-yellow-400 border border-yellow-600 rounded-full"
-        style={canvasUtilities.overlays.snapIndicator.point(point.x, point.y)}
-      />
+    <div className={className} style={portalComponents.overlay.fullscreen}>
+      <div style={canvasUtilities.overlays.snapIndicator.point(point.x, point.y)} />
     </div>
   );
 }

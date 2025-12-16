@@ -5,8 +5,9 @@ import MapComponent, { MapRef, Marker, Source, Layer } from 'react-map-gl/maplib
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS, CORE_HOVER_TRANSFORMS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
-import { portalComponents, getDynamicBackgroundClass, layoutUtilities } from '@/styles/design-tokens';
+import { portalComponentsExtended as portalComponents, getDynamicBackgroundClass, layoutUtilities, mapControlPointTokens, mapInteractionTokens } from '@/styles/design-tokens';
 import { getDynamicTextClass } from '@/components/ui/utils/dynamic-styles';
+import { interactiveMapStyles, getMapCursorStyle, getAccuracyLevelColor } from './InteractiveMap.styles';
 
 // ✅ ENTERPRISE: Explicit reference για native Map to avoid naming conflicts
 const NativeMap = globalThis.Map;
@@ -804,19 +805,17 @@ export function InteractiveMap({
         >
           <div
             className={`rounded-full border-2 transition-all relative z-50 ${
-              isPolygonComplete
-                ? 'w-4 h-4 bg-green-500 border-green-300 cursor-default' // Complete polygon - all points green
-                : transformState.selectedPointId === cp.id
-                ? 'w-5 h-5 bg-blue-500 border-blue-300 scale-125 cursor-pointer'
-                : shouldHighlightFirst
-                ? 'w-8 h-8 bg-green-400 border-green-200 scale-125 animate-bounce shadow-lg shadow-green-500/50 cursor-pointer'
-                : `w-4 h-4 bg-red-500 border-red-300 ${CORE_HOVER_TRANSFORMS.SCALE_UP_SMALL} cursor-pointer`
+              mapControlPointTokens.getControlPointStyle(
+                transformState.selectedPointId === cp.id, // isActive
+                shouldHighlightFirst,                      // shouldHighlight
+                isPolygonComplete                          // isCompleted
+              ).classes
             }`}
-            style={{
-              zIndex: portalComponents.zIndex.critical,
-              pointerEvents: 'auto',
-              cursor: shouldHighlightFirst ? 'pointer' : (isPolygonComplete ? 'default' : 'pointer')
-            }}
+            style={interactiveMapStyles.controlPoints.interaction(
+              transformState.selectedPointId === cp.id,
+              shouldHighlightFirst,
+              isPolygonComplete
+            )}
             title={
               isPolygonComplete
                 ? `${cp.id} - ✅ ΚΛΕΙΣΤΟ Πολύγωνο (±${cp.accuracy}m)`
@@ -916,18 +915,12 @@ export function InteractiveMap({
             latitude={cp.geo.lat}
           >
             <div
-              className="pointer-events-none flex items-center justify-center absolute"
-              style={{
-                width: radius * 2,
-                height: radius * 2,
-                borderRadius: '50%',
-                border: `2px solid ${accuracyInfo.color}`,
-                backgroundColor: `${accuracyInfo.color}20`,
-                transform: 'translate(-50%, -50%)',
-                left: '50%',
-                top: '50%',
-                zIndex: 10
-              }}
+              className="pointer-events-none flex items-center justify-center"
+              style={interactiveMapStyles.accuracy.circle(
+                radius,
+                accuracyInfo.color,
+                0.125
+              )}
             >
               {/* Accuracy value label */}
               <div
@@ -955,26 +948,17 @@ export function InteractiveMap({
             latitude={cp.geo.lat}
           >
             <div
-              className="pointer-events-none flex items-center justify-center absolute"
-              style={{
-                width: size,
-                height: size,
-                backgroundColor: `${accuracyInfo.color}40`,
-                border: `2px solid ${accuracyInfo.color}`,
-                borderRadius: accuracyInfo.level === 'excellent' ? '50%' :
-                             accuracyInfo.level === 'good' ? '4px' : '0',
-                transform: 'translate(-50%, -50%) rotate(45deg)',
-                left: '50%',
-                top: '50%',
-                zIndex: 10
-              }}
+              className="pointer-events-none flex items-center justify-center"
+              style={interactiveMapStyles.accuracy.zone(
+                size,
+                accuracyInfo.color,
+                accuracyInfo.level
+              )}
             >
               <div
                 className="text-xs font-bold"
                 className={`text-xs font-bold ${getDynamicTextClass(accuracyInfo.color)}`}
-                style={{
-                  transform: 'rotate(-45deg)'
-                }}
+                style={interactiveMapStyles.accuracy.zoneIcon()}
               >
                 {accuracyInfo.level === 'excellent' ? '✓' :
                  accuracyInfo.level === 'good' ? '○' :
@@ -1103,9 +1087,7 @@ export function InteractiveMap({
                 <div
                   className="w-3 h-3 rounded-full border"
                   className={getDynamicBackgroundClass(`${level.color}40`)}
-                  style={{
-                    borderColor: level.color
-                  }}
+                  style={interactiveMapStyles.labels.legendItem(level.color)}
                 />
                 <span className="text-xs text-gray-300">{level.label}</span>
               </div>
@@ -1269,32 +1251,12 @@ export function InteractiveMap({
             latitude={hoveredCoordinate.lat}
           >
             <div
-              style={{
-                width: 20,
-                height: 28,
-                background: 'linear-gradient(135deg, #3b82f6, #60a5fa)',
-                borderRadius: '50% 50% 50% 0%',
-                transform: 'translate(-50%, -100%) rotate(-45deg)',
-                border: '1px solid white',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                cursor: 'crosshair',
-                position: 'relative',
-                opacity: 0.7
-              }}
+              style={interactiveMapStyles.markers.pin(pointRadius, 0.7)}
               title={`Πινέζα Preview - Ακτίνα: ${pointRadius}m`}
             >
               {/* Pin center dot */}
               <div
-                style={{
-                  position: 'absolute',
-                  top: '30%',
-                  left: '30%',
-                  width: 4,
-                  height: 4,
-                  backgroundColor: 'white',
-                  borderRadius: '50%',
-                  transform: 'rotate(45deg)'
-                }}
+                style={interactiveMapStyles.markers.centerDot()}
               />
             </div>
           </Marker>
@@ -1305,18 +1267,7 @@ export function InteractiveMap({
             latitude={hoveredCoordinate.lat + radiusInDegrees * 0.7}
           >
             <div
-              style={{
-                background: 'rgba(59, 130, 246, 0.9)',
-                color: 'white',
-                padding: '2px 6px',
-                borderRadius: '3px',
-                fontSize: '11px',
-                fontWeight: 'bold',
-                transform: 'translate(-50%, -50%)',
-                whiteSpace: 'nowrap',
-                pointerEvents: 'none',
-                opacity: 0.8
-              }}
+              style={interactiveMapStyles.labels.previewLabel(0.8)}
             >
               {pointRadius}m
             </div>
@@ -1346,16 +1297,7 @@ export function InteractiveMap({
               latitude={point.y}
             >
               <div
-                style={{
-                  width: 12,
-                  height: 12,
-                  backgroundColor: '#3b82f6',
-                  borderRadius: '50%',
-                  border: '2px solid #1e40af',
-                  transform: 'translate(-50%, -50%)',
-                  cursor: 'pointer',
-                  animation: 'pulse 1s ease-in-out infinite'
-                }}
+                style={interactiveMapStyles.markers.drawingPoint(index)}
                 title={`Point ${index + 1} (Drawing)`}
               />
             </Marker>
@@ -1551,31 +1493,15 @@ export function InteractiveMap({
               latitude={point.y}
             >
               <div
-                style={{
-                  width: 24,
-                  height: 32,
-                  background: `linear-gradient(135deg, ${polygon.style.strokeColor}, ${polygon.style.fillColor})`,
-                  borderRadius: '50% 50% 50% 0%',
-                  transform: 'translate(-50%, -100%) rotate(-45deg)',
-                  border: '2px solid white',
-                  boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
-                  cursor: 'pointer',
-                  position: 'relative'
-                }}
+                style={interactiveMapStyles.markers.dynamicPin(
+                  polygon.style.strokeColor,
+                  polygon.style.fillColor
+                )}
                 title={`Πινέζα - Ακτίνα: ${pointRadius}m`}
               >
                 {/* Pin center dot */}
                 <div
-                  style={{
-                    position: 'absolute',
-                    top: '30%',
-                    left: '30%',
-                    width: 6,
-                    height: 6,
-                    backgroundColor: 'white',
-                    borderRadius: '50%',
-                    transform: 'rotate(45deg)'
-                  }}
+                  style={interactiveMapStyles.markers.dynamicCenterDot()}
                 />
               </div>
             </Marker>
@@ -1586,17 +1512,7 @@ export function InteractiveMap({
               latitude={point.y + radiusInDegrees * 0.7}
             >
               <div
-                style={{
-                  background: 'rgba(0,0,0,0.8)',
-                  color: 'white',
-                  padding: '4px 8px',
-                  borderRadius: '4px',
-                  fontSize: '12px',
-                  fontWeight: 'bold',
-                  transform: 'translate(-50%, -50%)',
-                  whiteSpace: 'nowrap',
-                  pointerEvents: 'none'
-                }}
+                style={interactiveMapStyles.labels.radiusLabel()}
               >
                 {pointRadius}m
               </div>
@@ -1647,15 +1563,11 @@ export function InteractiveMap({
                 latitude={point.y}
               >
               <div
-                style={{
-                  width: (polygon.style.pointRadius || 4) * 2,
-                  height: (polygon.style.pointRadius || 4) * 2,
-                  backgroundColor: polygon.style.pointColor || polygon.style.strokeColor,
-                  borderRadius: '50%',
-                  border: `1px solid ${polygon.style.strokeColor}`,
-                  transform: 'translate(-50%, -50%)',
-                  cursor: 'pointer'
-                }}
+                style={interactiveMapStyles.layout.polygonVertex(
+                  polygon.style.pointRadius || 4,
+                  polygon.style.pointColor || polygon.style.strokeColor,
+                  polygon.style.strokeColor
+                )}
                 title={point.label || `Point ${index + 1}`}
               />
             </Marker>
@@ -1682,9 +1594,9 @@ export function InteractiveMap({
         onMouseUp={handleMapMouseUp}
         onLoad={handleMapLoad}
         onError={handleMapError}
-        style={{ ...layoutUtilities.dimensions.full, height: layoutUtilities.dimensions.full }}
+        style={interactiveMapStyles.layout.mapContainer}
         mapStyle={mapStyleUrls[currentMapStyle] || mapStyleUrls.osm}
-        cursor={isPickingCoordinates ? 'crosshair' : systemIsDrawing ? 'crosshair' : 'default'}
+        cursor={mapInteractionTokens.getMapCursor(isPickingCoordinates, systemIsDrawing)}
         // ✅ ENTERPRISE: Disable map interactions when drawing (prevents map dragging during polygon drawing)
         dragPan={!systemIsDrawing}
         dragRotate={!systemIsDrawing}
@@ -1741,7 +1653,7 @@ export function InteractiveMap({
               <div className="absolute w-12 h-12 bg-red-400 rounded-full opacity-30 animate-ping"></div>
               <div
                 className="absolute w-16 h-16 bg-red-300 rounded-full opacity-20 animate-ping"
-                style={layoutUtilities.dxf.animation.delay(0.2)}
+                style={interactiveMapStyles.layout.animationDelay(0.2)}
               ></div>
 
               {/* Address Tooltip */}

@@ -76,11 +76,17 @@ export {
   polygonListTokens,
   mapDrawingToolsTokens,
   mapCoordinateTokens,
-  mapZoomControlsTokens
+  mapZoomControlsTokens,
+  mapControlPointTokens,
+  mapInteractionTokens,
+  mapOverlayTokens,
+  getMapButtonStyle
 } from './components/map-tokens';
 
 export type {
-  MapButtonVariant
+  MapButtonVariant,
+  ControlPointState,
+  MapCursorState
 } from './components/map-tokens';
 
 // Dialog Components
@@ -157,7 +163,10 @@ import {
   polygonListTokens,
   mapDrawingToolsTokens,
   mapCoordinateTokens,
-  mapZoomControlsTokens
+  mapZoomControlsTokens,
+  mapControlPointTokens,
+  mapInteractionTokens,
+  mapOverlayTokens
 } from './components/map-tokens';
 import {
   modalTokens,
@@ -221,7 +230,10 @@ export const unifiedDesignTokens = {
     polygonList: polygonListTokens,
     drawingTools: mapDrawingToolsTokens,
     coordinates: mapCoordinateTokens,
-    zoomControls: mapZoomControlsTokens
+    zoomControls: mapZoomControlsTokens,
+    controlPoints: mapControlPointTokens,
+    interaction: mapInteractionTokens,
+    overlays: mapOverlayTokens
   },
 
   dialog: {

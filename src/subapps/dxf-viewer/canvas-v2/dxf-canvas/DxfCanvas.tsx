@@ -26,6 +26,7 @@ import type { GridSettings, RulerSettings, ColorLayer } from '../layer-canvas/la
 import { GridRenderer } from '../../rendering/ui/grid/GridRenderer';
 import { RulerRenderer } from '../../rendering/ui/ruler/RulerRenderer';
 import { createUIRenderContext, DEFAULT_UI_TRANSFORM } from '../../rendering/ui/core/UIRenderContext';
+import { canvasUtilities } from '@/styles/design-tokens';
 
 // ✅ MOVED OUTSIDE COMPONENT - Prevents re-render loop
 const DEFAULT_RENDER_OPTIONS: DxfRenderOptions = {
@@ -391,16 +392,7 @@ export const DxfCanvas = React.forwardRef<DxfCanvasRef, DxfCanvasProps>(({
       ref={canvasRef}
       className={`dxf-canvas ${className}`}
       {...props} // 🎯 SPREAD: Περνάω τα extra props (data-canvas-type κ.λπ.)
-      style={{
-        position: 'absolute',
-        left: 0,
-        top: 0,
-        width: '100%',
-        height: '100%',
-        zIndex: 0, // 🎯 ΚΡΙΣΙΜΟ: Inline z-index για DxfCanvas κάτω
-        touchAction: 'none', // 🎯 ENTERPRISE: Prevent browser touch gestures (pinch-zoom, pan)
-        cursor: activeTool === 'pan' ? 'grab' : (crosshairSettings?.enabled ? 'none' : 'crosshair') // 🔥 Pan tool has priority over crosshair
-      }}
+      style={canvasUtilities.layers.dxfCanvasWithTools(activeTool, crosshairSettings?.enabled)}
       onMouseDown={(e) => mouseHandlers.handleMouseDown(e, canvasRef.current!)}
       onMouseMove={(e) => mouseHandlers.handleMouseMove(e, canvasRef.current!)}
       onMouseUp={mouseHandlers.handleMouseUp}
