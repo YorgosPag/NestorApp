@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
       ...doc.data()
     }));
 
-    console.log(`Found ${projects.length} projects with id 1001`);
+    console.log(`Found ${projects.length} projects in database`);
 
     return NextResponse.json({
       success: true,

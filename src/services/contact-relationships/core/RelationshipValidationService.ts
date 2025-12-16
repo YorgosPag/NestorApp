@@ -324,27 +324,12 @@ export class RelationshipValidationService {
   }
 
   /**
-   * 🏷️ Get Greek label for relationship type (for error messages)
+   * 🏢 ENTERPRISE: Get Greek label for relationship type (centralized configuration)
    */
   private static getRelationshipTypeLabel(relationshipType: RelationshipType): string {
-    const labels: Record<RelationshipType, string> = {
-      'employee': 'Εργαζόμενος',
-      'manager': 'Διευθυντής',
-      'director': 'Διευθυντής',
-      'executive': 'Στέλεχος',
-      'consultant': 'Σύμβουλος',
-      'partner': 'Εταίρος',
-      'client': 'Πελάτης',
-      'supplier': 'Προμηθευτής',
-      'contractor': 'Ανάδοχος',
-      'shareholder': 'Μέτοχος',
-      'board_member': 'Μέλος ΔΣ',
-      'advisor': 'Σύμβουλος',
-      'investor': 'Επενδυτής',
-      'ceo': 'Διευθύνων Σύμβουλος',
-      'chairman': 'Πρόεδρος'
-    };
-    return labels[relationshipType] || relationshipType;
+    // Import here to avoid circular dependencies
+    const { RoleMappingsUtils } = require('@/config/role-mappings-config');
+    return RoleMappingsUtils.getRelationshipTypeLabel(relationshipType);
   }
 
   // ========================================================================

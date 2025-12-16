@@ -20,13 +20,13 @@ async function getCompanyIdByName(companyName: string): Promise<string | null> {
   }
 }
 
-// Real buildings for "Παλαιολόγου Πολυκατοικία" project
+// 🏢 ENTERPRISE: Real buildings for configurable primary project
 const realBuildings = [
   {
     id: "building_1_palaiologou",
     name: process.env.NEXT_PUBLIC_SAMPLE_BUILDING_1_NAME || "ΚΤΙΡΙΟ Α - Main Building",
     description: process.env.NEXT_PUBLIC_SAMPLE_BUILDING_1_DESC || "Κύριο κτίριο με 8 μονάδες υψηλών προδιαγραφών",
-    address: process.env.NEXT_PUBLIC_DEFAULT_ADDRESS_1 || "Παλαιολόγου 45",
+    address: process.env.NEXT_PUBLIC_DEFAULT_ADDRESS_1 || "Main Street 45",
     city: process.env.NEXT_PUBLIC_DEFAULT_CITY || "Θεσσαλονίκη", 
     totalArea: parseFloat(process.env.NEXT_PUBLIC_SAMPLE_BUILDING_1_TOTAL_AREA || '1850.50'),
     builtArea: parseFloat(process.env.NEXT_PUBLIC_SAMPLE_BUILDING_1_BUILT_AREA || '1650.25'),
@@ -54,7 +54,7 @@ const realBuildings = [
     id: "building_2_palaiologou", 
     name: process.env.NEXT_PUBLIC_SAMPLE_BUILDING_2_NAME || "ΚΤΙΡΙΟ Β - Auxiliary Building",
     description: process.env.NEXT_PUBLIC_SAMPLE_BUILDING_2_DESC || "Βοηθητικό κτίριο με αποθήκες και κοινόχρηστους χώρους",
-    address: process.env.NEXT_PUBLIC_DEFAULT_ADDRESS_2 || "Παλαιολόγου 47",
+    address: process.env.NEXT_PUBLIC_DEFAULT_ADDRESS_2 || "Main Street 47",
     city: process.env.NEXT_PUBLIC_DEFAULT_CITY || "Θεσσαλονίκη",
     totalArea: parseFloat(process.env.NEXT_PUBLIC_SAMPLE_BUILDING_2_TOTAL_AREA || '450.75'),
     builtArea: parseFloat(process.env.NEXT_PUBLIC_SAMPLE_BUILDING_2_BUILT_AREA || '380.50'),

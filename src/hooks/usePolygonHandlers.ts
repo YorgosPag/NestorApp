@@ -3,6 +3,7 @@
 
 import type { Property } from '@/types/property-viewer';
 import type { Connection } from '@/types/connections';
+import { BUILDING_IDS } from '@/config/building-ids-config';
 
 interface UsePolygonHandlersProps {
   properties: Property[];
@@ -37,7 +38,7 @@ export function usePolygonHandlers({
       building: newPropertyData.building || 'Κτίριο Alpha',
       floor: newPropertyData.floor || 1,
       project: newPropertyData.project || 'Έργο Κέντρο',
-      buildingId: newPropertyData.buildingId || 'building-1',
+      buildingId: newPropertyData.buildingId || BUILDING_IDS.LEGACY_BUILDING_1,
     };
     const description = `Created property ${newProperty.name}`;
     setProperties([...properties, newProperty], description);

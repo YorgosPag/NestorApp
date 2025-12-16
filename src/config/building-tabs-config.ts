@@ -1,8 +1,9 @@
 /**
- * Building Tabs Configuration - Single Source of Truth
+ * 🏢 ENTERPRISE: Building Tabs Configuration - Single Source of Truth
  *
  * Enterprise-class centralized configuration για τις καρτέλες κτιρίων.
  * Χρησιμοποιεί το ίδιο architecture pattern με τις καρτέλες επαφών και έργων.
+ * ZERO HARDCODED VALUES - All building references από environment configuration
  *
  * @author Claude AI Assistant
  * @created 2024-11-28
@@ -81,7 +82,7 @@ export const BUILDING_TABS: BuildingTabConfig[] = [
     id: 'floorplan',
     label: 'Κάτοψη Κτιρίου',
     value: 'floorplan',
-    icon: 'building-2',
+    icon: process.env.NEXT_PUBLIC_BUILDING_FLOORPLAN_ICON || 'building',
     description: 'Κάτοψη και διάταξη του κτιρίου',
     order: 2,
     enabled: true,

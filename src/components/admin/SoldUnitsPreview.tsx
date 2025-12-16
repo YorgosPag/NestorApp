@@ -125,10 +125,10 @@ export function SoldUnitsPreview() {
     unit.status === 'sold' && unit.soldTo && unit.soldTo !== UNIT_SALE_STATUS.NOT_SOLD
   );
 
-  // All units for project 1001 (Παλαιολόγου)
+  // 🏢 ENTERPRISE: All units for configured main project
   const palaiologouUnits = units.filter(unit =>
     unit.buildingId?.includes('palaiologou') ||
-    unit.project?.includes('Παλαιολόγου') ||
+    unit.project?.includes(process.env.NEXT_PUBLIC_PRIMARY_PROJECT_NAME || 'Main Project') ||
     unit.project?.includes('Κέντρο') // Based on the API response
   );
 
@@ -155,7 +155,7 @@ export function SoldUnitsPreview() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Παλαιολόγου Units</p>
+                <p className="text-sm text-muted-foreground">{process.env.NEXT_PUBLIC_PRIMARY_PROJECT_NAME || 'Main Project'} Units</p>
                 <p className="text-2xl font-bold">{palaiologouUnits.length}</p>
               </div>
               <Badge variant="outline">Πρωτ.</Badge>
@@ -193,7 +193,7 @@ export function SoldUnitsPreview() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>
-              Units Overview {showAll ? '(Όλα)' : '(Έργο Παλαιολόγου)'}
+              Units Overview {showAll ? '(Όλα)' : `(Έργο ${process.env.NEXT_PUBLIC_PRIMARY_PROJECT_NAME || 'Main Project'})`}
             </CardTitle>
             <div className="flex gap-2">
               <Button
@@ -202,7 +202,7 @@ export function SoldUnitsPreview() {
                 onClick={() => setShowAll(!showAll)}
               >
                 {showAll ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
-                {showAll ? 'Μόνο Παλαιολόγου' : 'Όλα τα Units'}
+                {showAll ? `Μόνο ${process.env.NEXT_PUBLIC_PRIMARY_PROJECT_NAME || 'Main Project'}` : 'Όλα τα Units'}
               </Button>
               <Button
                 variant="outline"
@@ -309,7 +309,7 @@ export function SoldUnitsPreview() {
           {/* Statistics */}
           <div className="mt-4 text-sm text-muted-foreground">
             Εμφανίζονται {displayUnits.length} από {units.length} συνολικά units
-            {!showAll && ` (φιλτραρισμένα για έργο Παλαιολόγου)`}
+            {!showAll && ` (φιλτραρισμένα για έργο ${process.env.NEXT_PUBLIC_PRIMARY_PROJECT_NAME || 'Main Project'})`}
           </div>
         </CardContent>
       </Card>

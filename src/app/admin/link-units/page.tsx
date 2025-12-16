@@ -6,6 +6,7 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import LinkSoldUnitsToCustomers from '@/components/admin/LinkSoldUnitsToCustomers';
 import SoldUnitsPreview from '@/components/admin/SoldUnitsPreview';
+import { COMPANY_CONFIG } from '@/config/company-config';
 
 export default function LinkUnitsPage() {
   return (
@@ -23,7 +24,7 @@ export default function LinkUnitsPage() {
           <div>
             <h1 className="text-3xl font-bold">Σύνδεση Sold Units με Customers</h1>
             <p className="text-muted-foreground">
-              Διόρθωση του προβλήματος με τους πελάτες του έργου Παλαιολόγου Πολυκατοικία
+              Διόρθωση του προβλήματος με τους πελάτες του έργου {COMPANY_CONFIG.SAMPLE_PROJECT_NAME}
             </p>
           </div>
         </div>

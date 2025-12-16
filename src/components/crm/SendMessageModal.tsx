@@ -5,6 +5,7 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import { Button } from '../ui/button';
+import { CONTACT_INFO } from '@/config/contact-info-config';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import { Label } from '../ui/label';
@@ -372,8 +373,8 @@ const SendMessageModal = ({
               onChange={(e) => setFormData(prev => ({ ...prev, to: e.target.value }))}
               placeholder={
                 selectedChannel === MESSAGE_TYPES.EMAIL
-                  ? (process.env.NEXT_PUBLIC_DEMO_EMAIL || 'email@example.com')
-                  : (process.env.NEXT_PUBLIC_DEMO_MOBILE || '+30 691 000 0000')
+                  ? CONTACT_INFO.DEMO_EMAIL_PERSONAL
+                  : CONTACT_INFO.DEMO_PHONE_MOBILE
               }
             />
           </div>

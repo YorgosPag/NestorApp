@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { collection, query, where, getDocs, doc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { BUILDING_IDS } from '@/config/building-ids-config';
 
 const projectTemplates = [
   {
@@ -82,8 +83,8 @@ export async function POST(request: NextRequest) {
       ...doc.data()
     }));
 
-    // 2. Δημιούργησε projects για κάθε εταιρεία
-    let projectIndex = 1002; // Starting from 1002 since 1001 exists
+    // 🏢 ENTERPRISE: Δημιούργησε projects για κάθε εταιρεία - configurable starting index
+    let projectIndex = BUILDING_IDS.PROJECT_ID + 1; // Starting after configured base project
     const createdProjects: any[] = [];
 
     for (const company of companies) {

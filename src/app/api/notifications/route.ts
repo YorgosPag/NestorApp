@@ -3,6 +3,7 @@
 
 import { NextResponse } from 'next/server';
 import { fetchNotifications } from '@/services/notificationService';
+import { CONTACT_INFO } from '@/config/contact-info-config';
 
 export async function GET(request: Request) {
   try {
@@ -10,9 +11,9 @@ export async function GET(request: Request) {
     const limit = parseInt(searchParams.get('limit') || '50');
     const unseenOnly = searchParams.get('unseen') === '1';
 
-    // Get user ID from localStorage (saved by UserRoleContext)
-    // Default to 'user@example.com' (the auto-login dev user)
-    const userId = 'user@example.com';
+    // 🏢 ENTERPRISE: Get user ID from localStorage (saved by UserRoleContext)
+    // Default to configured demo user email
+    const userId = CONTACT_INFO.DEMO_EMAIL_PERSONAL;
 
     const { items, cursor } = await fetchNotifications({
       userId,

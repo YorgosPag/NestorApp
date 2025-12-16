@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { CONTACT_INFO, ContactInfoUtils } from '@/config/contact-info-config';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
@@ -62,8 +63,8 @@ const NEW_CONTACTS = [
     tags: ['οικοπεδούχος', 'αντιπαροχή'],
     status: 'active',
     isFavorite: false,
-    emails: [{ email: 'eleni.papadopoulos@gmail.com', type: 'personal', isPrimary: true }],
-    phones: [{ phone: '+30 6973456789', type: 'mobile', isPrimary: true }],
+    emails: [{ email: ContactInfoUtils.generateEmail('Eleni', 'Papadopoulos'), type: 'personal', isPrimary: true }],
+    phones: [{ phone: ContactInfoUtils.generatePhone('mobile'), type: 'mobile', isPrimary: true }],
     profession: 'Συνταξιούχος',
     notes: 'Οικοπεδούχος με αντιπαροχή 3 διαμερισμάτων'
   },
@@ -74,8 +75,8 @@ const NEW_CONTACTS = [
     tags: ['οικοπεδούχος', 'αντιπαροχή'],
     status: 'active',
     isFavorite: false,
-    emails: [{ email: 'giannis.kon@outlook.com', type: 'personal', isPrimary: true }],
-    phones: [{ phone: '+30 6945123456', type: 'mobile', isPrimary: true }],
+    emails: [{ email: ContactInfoUtils.generateEmail('Giannis', 'Konstantinou'), type: 'personal', isPrimary: true }],
+    phones: [{ phone: ContactInfoUtils.generatePhone('mobile'), type: 'mobile', isPrimary: true }],
     profession: 'Μηχανικός',
     notes: 'Οικοπεδούχος με αντιπαροχή 2 διαμερισμάτων'
   },
@@ -86,8 +87,8 @@ const NEW_CONTACTS = [
     tags: ['αγοραστής', 'πελάτης'],
     status: 'active',
     isFavorite: true,
-    emails: [{ email: 'maria.alexandrou@yahoo.gr', type: 'personal', isPrimary: true }],
-    phones: [{ phone: '+30 6987654321', type: 'mobile', isPrimary: true }],
+    emails: [{ email: ContactInfoUtils.generateEmail('Maria', 'Alexandrou'), type: 'personal', isPrimary: true }],
+    phones: [{ phone: ContactInfoUtils.generatePhone('mobile'), type: 'mobile', isPrimary: true }],
     profession: 'Ιατρός',
     notes: 'Αγόρασε διαμέρισμα 85τμ στον 4ο όροφο'
   },
@@ -97,8 +98,8 @@ const NEW_CONTACTS = [
     tags: ['εταιρεία', 'ενοικιαστής', 'γραφεία'],
     status: 'active',
     isFavorite: true,
-    emails: [{ email: 'info@techstart.gr', type: 'business', isPrimary: true }],
-    phones: [{ phone: '+30 2310123456', type: 'business', isPrimary: true }],
+    emails: [{ email: CONTACT_INFO.DEMO_EMAIL_BUSINESS, type: 'business', isPrimary: true }],
+    phones: [{ phone: ContactInfoUtils.generatePhone('business'), type: 'business', isPrimary: true }],
     industry: 'Τεχνολογία',
     vatNumber: '999888777',
     notes: 'Ενοικιάζει γραφειακό χώρο 150τμ'

@@ -5,11 +5,27 @@ import React from 'react';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 export function TeamPerformance() {
-    const team = [
-        { name: 'Γιώργος', leads: 12, value: '€85K' },
-        { name: 'Μαρία', leads: 9, value: '€120K' },
-        { name: 'Κώστας', leads: 7, value: '€60K' }
-    ];
+    // 🏢 ENTERPRISE: Configurable team performance data
+    const getTeamData = () => {
+        try {
+            const envTeamData = process.env.NEXT_PUBLIC_TEAM_PERFORMANCE_JSON;
+            if (envTeamData) {
+                return JSON.parse(envTeamData);
+            }
+        } catch (error) {
+            console.warn('Failed to parse team performance data, using defaults');
+        }
+
+        // Default team data with configurable currency
+        const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || '€';
+        return [
+            { name: process.env.NEXT_PUBLIC_SAMPLE_EMPLOYEE_1 || 'Γιώργος', leads: 12, value: `${currency}85K` },
+            { name: process.env.NEXT_PUBLIC_SAMPLE_EMPLOYEE_2 || 'Μαρία', leads: 9, value: `${currency}120K` },
+            { name: process.env.NEXT_PUBLIC_SAMPLE_EMPLOYEE_3 || 'Κώστας', leads: 7, value: `${currency}60K` }
+        ];
+    };
+
+    const team = getTeamData();
     return (
         <div className="bg-white dark:bg-card rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold mb-4">Απόδοση Ομάδας</h2>

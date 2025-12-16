@@ -27,6 +27,7 @@ import type { FloorPlanControlPoint, FloorPlanCoordinate, GeoCoordinate } from '
 import type { UseFloorPlanControlPointsReturn } from '../hooks/useFloorPlanControlPoints';
 import { toast } from 'react-hot-toast';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 
 /**
  * Component props
@@ -580,7 +581,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
                       value={manualInput.geoLng}
                       onChange={(e) => setManualInput(prev => ({ ...prev, geoLng: e.target.value }))}
                       className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:border-blue-500 focus:outline-none"
-                      placeholder="23.7275"
+                      placeholder={GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE.toString()}
                     />
                   </div>
                   <div>
@@ -591,7 +592,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
                       value={manualInput.geoLat}
                       onChange={(e) => setManualInput(prev => ({ ...prev, geoLat: e.target.value }))}
                       className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:border-blue-500 focus:outline-none"
-                      placeholder="37.9755"
+                      placeholder={GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE.toString()}
                     />
                   </div>
                 </div>

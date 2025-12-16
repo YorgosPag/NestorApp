@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { BUILDING_IDS, BuildingIdUtils } from '@/config/building-ids-config';
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🔗 Connecting units to Παλαιολόγου buildings...');
+    console.log('🔗 Connecting units to configured primary project buildings...');
 
-    // Get buildings for project 1001 (Παλαιολόγου Πολυκατοικία)
+    // 🏢 ENTERPRISE: Get buildings for configured project ID
     const buildingsQuery = query(
       collection(db, 'buildings'),
-      where('projectId', '==', 1001)
+      where('projectId', '==', BUILDING_IDS.PROJECT_ID)
     );
     
     const buildingsSnapshot = await getDocs(buildingsQuery);
@@ -18,10 +19,10 @@ export async function POST(request: NextRequest) {
       ...doc.data()
     }));
 
-    console.log(`Found ${buildings.length} buildings for project 1001`);
+    console.log(`Found ${buildings.length} buildings for project ${BUILDING_IDS.PROJECT_ID}`);
 
     if (buildings.length === 0) {
-      throw new Error('No buildings found for project 1001');
+      throw new Error(`No buildings found for project ${BUILDING_IDS.PROJECT_ID}`);
     }
 
     // Get all units that might belong to this project
@@ -34,12 +35,10 @@ export async function POST(request: NextRequest) {
 
     console.log(`Found ${units.length} total units in database`);
 
-    // Find units that should be connected to Παλαιολόγου buildings
-    // We'll look for units with old building IDs or that need to be reassigned
-    const unitsToConnect = units.filter(unit => 
-      unit.buildingId === 'building-1' || // Old building Alpha ID
-      unit.buildingId === 'building-2' || // Old building Beta ID
-      !unit.buildingId || 
+    // 🏢 ENTERPRISE: Find units that should be connected using configurable building IDs
+    const unitsToConnect = units.filter(unit =>
+      BuildingIdUtils.isLegacyBuildingId(unit.buildingId) || // Legacy building IDs
+      !unit.buildingId ||
       unit.buildingId === '' ||
       (unit.name && unit.name.toLowerCase().includes('παλαιολόγου')) ||
       (unit.unitName && unit.unitName.toLowerCase().includes('παλαιολόγου'))
@@ -54,12 +53,12 @@ export async function POST(request: NextRequest) {
     const results = [];
     
     for (const unit of unitsToConnect) {
-      // Map old building IDs to new Παλαιολόγου building IDs
+      // 🏢 ENTERPRISE: Map legacy building IDs to new building IDs
       let targetBuilding;
-      if (unit.buildingId === 'building-1') {
-        targetBuilding = buildingA; // building-1 -> ΚΤΙΡΙΟ Α
-      } else if (unit.buildingId === 'building-2') {
-        targetBuilding = buildingB; // building-2 -> ΚΤΙΡΙΟ Β  
+      if (unit.buildingId === BUILDING_IDS.LEGACY_BUILDING_1) {
+        targetBuilding = buildingA; // legacy building-1 -> ΚΤΙΡΙΟ Α
+      } else if (unit.buildingId === BUILDING_IDS.LEGACY_BUILDING_2) {
+        targetBuilding = buildingB; // legacy building-2 -> ΚΤΙΡΙΟ Β
       } else {
         // For units without buildingId, alternate between buildings
         targetBuilding = results.length % 2 === 0 ? buildingA : buildingB;
@@ -70,7 +69,7 @@ export async function POST(request: NextRequest) {
         
         await updateDoc(doc(db, 'units', unit.id), {
           buildingId: targetBuilding.id,
-          projectId: 1001,
+          projectId: BUILDING_IDS.PROJECT_ID,
           updatedAt: new Date().toISOString()
         });
 

@@ -8,12 +8,13 @@ import { ScrollArea } from '../ui/scroll-area';
 import { Skeleton } from '../ui/skeleton';
 import { VersionList } from './version-history/VersionList';
 import { VersionDetails } from './version-history/VersionDetails';
+import { BUILDING_IDS } from '@/config/building-ids-config';
 
-// Mock version data - In a real app, this would come from a service/API
+// 🏢 ENTERPRISE: Mock version data - NO HARDCODED building IDs
 const mockVersions = [
     {
         id: 'v_1722956400000',
-        buildingId: 'building-1',
+        buildingId: BUILDING_IDS.LEGACY_BUILDING_1,
         timestamp: { toDate: () => new Date(1722956400000) },
         author: { name: 'Γιώργος Παπαδόπουλος' },
         message: 'Αρχική διάταξη ορόφου',
@@ -24,7 +25,7 @@ const mockVersions = [
     },
     {
         id: 'v_1722960000000',
-        buildingId: 'building-1',
+        buildingId: BUILDING_IDS.LEGACY_BUILDING_1,
         timestamp: { toDate: () => new Date(1722960000000) },
         author: { name: 'Μαρία Ιωάννου' },
         message: 'Αυτόματη αποθήκευση',
@@ -36,7 +37,7 @@ const mockVersions = [
     },
     {
         id: 'v_1722963600000',
-        buildingId: 'building-1',
+        buildingId: BUILDING_IDS.LEGACY_BUILDING_1,
         timestamp: { toDate: () => new Date(1722963600000) },
         author: { name: 'Γιώργος Παπαδόπουλος' },
         message: 'Προσθήκη νέας αποθήκης',

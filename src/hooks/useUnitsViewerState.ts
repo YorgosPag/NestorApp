@@ -8,6 +8,7 @@ import type { Connection } from '@/types/connections';
 import type { FilterState } from '@/types/property-viewer';
 import { useSearchParams } from 'next/navigation';
 import { ContactsService } from '@/services/contacts.service';
+import { BUILDING_IDS } from '@/config/building-ids-config';
 
 const noop = () => {};
 
@@ -177,7 +178,7 @@ export function useUnitsViewerState() {
       building: 'Κτίριο Alpha',
       floor: 1,
       project: 'Έργο Κέντρο',
-      buildingId: 'building-1',
+      buildingId: BUILDING_IDS.LEGACY_BUILDING_1,
       floorId: selectedFloorId || 'floor-1',
       ...newPropertyData,
     };

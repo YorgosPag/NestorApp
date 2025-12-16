@@ -4,6 +4,7 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import MapComponent, { MapRef, Marker, Source, Layer } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS, CORE_HOVER_TRANSFORMS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
+import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 
 // ✅ ENTERPRISE: Explicit reference για native Map to avoid naming conflicts
 const NativeMap = globalThis.Map;
@@ -274,8 +275,8 @@ export function InteractiveMap({
 
   // Map configuration
   const [viewState, setViewState] = useState({
-    longitude: 23.7275, // Athens, Greece
-    latitude: 37.9755,
+    longitude: GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE,
+    latitude: GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE,
     zoom: 8,
     bearing: 0,
     pitch: 0
@@ -308,7 +309,7 @@ export function InteractiveMap({
       }
     ],
     // Greece-focused initial view
-    center: [23.7275, 37.9755], // Athens
+    center: [GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE, GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE],
     zoom: 6.5,
     bearing: 0,
     pitch: 0

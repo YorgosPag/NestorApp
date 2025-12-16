@@ -3,6 +3,7 @@
 import { useUserRole } from '@/contexts/UserRoleContext';
 import dynamic from 'next/dynamic';
 import { Suspense } from 'react';
+import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 
 // RESTORED: Real GeoCanvasApp (working interface)
 const GeoCanvasApp = dynamic(
@@ -87,7 +88,7 @@ export default function GeoCanvasPage() {
               enableSpatialQueries: false // Phase 4
             }}
             initialConfig={{
-              mapCenter: { lng: 23.7275, lat: 37.9755 }, // Athens, Greece
+              mapCenter: { lng: GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE, lat: GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE },
               mapZoom: 8,
               defaultCRS: 'EPSG:4326'
             }}

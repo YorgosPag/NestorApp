@@ -32,11 +32,35 @@ export class EmailAdapter {
   constructor() {
     // In production, this will be loaded from Firebase Functions Secrets
     this.apiKey = process.env.SENDGRID_API_KEY || '';
-    this.fromEmail = process.env.SENDGRID_FROM_EMAIL || 'noreply@nestorconstruct.gr';
-    
+
+    // 🏢 ENTERPRISE: Configurable email domain for multi-tenant deployment
+    this.fromEmail = this.getFromEmail();
+
     if (!this.apiKey) {
       console.warn('⚠️ SENDGRID_API_KEY not found in environment');
     }
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Dynamic from email generation with configurable domain
+   */
+  private getFromEmail(): string {
+    // Primary: Use explicit SENDGRID_FROM_EMAIL if set
+    if (process.env.SENDGRID_FROM_EMAIL) {
+      return process.env.SENDGRID_FROM_EMAIL;
+    }
+
+    // Secondary: Generate from company domain and name
+    const domain = process.env.COMPANY_EMAIL_DOMAIN || process.env.NEXT_PUBLIC_COMPANY_EMAIL_DOMAIN;
+    const emailPrefix = process.env.EMAIL_PREFIX || 'noreply';
+
+    if (domain) {
+      return `${emailPrefix}@${domain}`;
+    }
+
+    // Fallback: Generic configuration-driven default
+    const fallbackDomain = process.env.FALLBACK_EMAIL_DOMAIN || 'company.com';
+    return `${emailPrefix}@${fallbackDomain}`;
   }
 
   /**

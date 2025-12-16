@@ -15,6 +15,27 @@ export function LandingPage() {
   const [priceRange, setPriceRange] = useState('');
   const [areaRange, setAreaRange] = useState('');
 
+  // 🏢 ENTERPRISE: Configurable price ranges
+  const getPriceRanges = () => {
+    try {
+      const envPriceRanges = process.env.NEXT_PUBLIC_PRICE_RANGES_JSON;
+      if (envPriceRanges) {
+        return JSON.parse(envPriceRanges);
+      }
+    } catch (error) {
+      console.warn('Failed to parse price ranges, using defaults');
+    }
+
+    const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || '€';
+    return [
+      { value: "", label: "Όλες οι τιμές" },
+      { value: "0-50000", label: `${currency}0 - ${currency}50.000` },
+      { value: "50000-100000", label: `${currency}50.000 - ${currency}100.000` },
+      { value: "100000-200000", label: `${currency}100.000 - ${currency}200.000` },
+      { value: "200000+", label: `${currency}200.000+` }
+    ];
+  };
+
   const handleSearch = () => {
     const params = new URLSearchParams();
     if (searchType) params.set('type', searchType);
@@ -105,11 +126,11 @@ export function LandingPage() {
                     onChange={(e) => setPriceRange(e.target.value)}
                     className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700/50 dark:text-white border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer"
                   >
-                    <option value="">Όλες οι τιμές</option>
-                    <option value="0-50000">€0 - €50.000</option>
-                    <option value="50000-100000">€50.000 - €100.000</option>
-                    <option value="100000-200000">€100.000 - €200.000</option>
-                    <option value="200000+">€200.000+</option>
+                    {getPriceRanges().map((range) => (
+                      <option key={range.value} value={range.value}>
+                        {range.label}
+                      </option>
+                    ))}
                   </select>
                   <ChevronDown aria-hidden="true" className="absolute right-3 bottom-3.5 h-5 w-5 text-gray-400 pointer-events-none" />
                 </fieldset>

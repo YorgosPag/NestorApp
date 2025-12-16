@@ -4,6 +4,7 @@ import React, { useState, useCallback } from 'react';
 import { useGeoTransform } from '../hooks/useGeoTransform';
 import type { DxfCoordinate, GeoCoordinate } from '../types';
 import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
+import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 
 // ============================================================================
 // COORDINATE PICKER COMPONENT TYPES
@@ -282,7 +283,7 @@ export function CoordinatePicker({
             value={geoInput.lng}
             onChange={(e) => handleGeoInputChange('lng', e.target.value)}
             className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm"
-            placeholder="23.7275"
+            placeholder={GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE.toString()}
             step="0.000001"
           />
         </div>
@@ -293,7 +294,7 @@ export function CoordinatePicker({
             value={geoInput.lat}
             onChange={(e) => handleGeoInputChange('lat', e.target.value)}
             className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm"
-            placeholder="37.9755"
+            placeholder={GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE.toString()}
             step="0.000001"
           />
         </div>

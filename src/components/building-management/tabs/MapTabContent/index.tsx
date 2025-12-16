@@ -7,6 +7,7 @@ import { LocationInfoCard } from './LocationInfoCard';
 import { InteractiveMap } from './InteractiveMap';
 import { NearbyProjectsList } from './NearbyProjectsList';
 import { LocationAnalyticsGrid } from './LocationAnalyticsGrid';
+import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 
 interface MapTabContentProps {
   building: Pick<Building, 'name' | 'address' | 'city'>;
@@ -18,8 +19,8 @@ const MapTabContent = ({ building }: MapTabContentProps) => {
   const [selectedLayer, setSelectedLayer] = useState<'all' | 'active' | 'completed'>('all');
 
   const coordinates = {
-    lat: 37.9838,  // Approximate coordinates for Athens center
-    lng: 23.7275
+    lat: GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE,
+    lng: GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE
   };
 
   return (

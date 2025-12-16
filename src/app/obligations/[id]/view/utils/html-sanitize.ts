@@ -1,8 +1,45 @@
 
 "use client";
 
-const ALLOWED_TAGS = ['b', 'i', 'u', 'em', 'strong', 'p', 'br', 'ul', 'ol', 'li', 'span', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote'];
-const ALLOWED_ATTRS = ['class', 'style']; // Note: style can be risky if not controlled.
+// 🏢 ENTERPRISE: Configurable HTML sanitization rules for different security contexts
+const getHtmlSanitizationConfig = () => {
+  try {
+    // Try to load custom configuration from environment
+    const envConfig = process.env.NEXT_PUBLIC_HTML_SANITIZATION_CONFIG;
+    if (envConfig) {
+      const config = JSON.parse(envConfig);
+      return {
+        allowedTags: config.allowedTags || getDefaultAllowedTags(),
+        allowedAttrs: config.allowedAttrs || getDefaultAllowedAttrs()
+      };
+    }
+  } catch (error) {
+    console.warn('Failed to parse HTML sanitization config, using defaults');
+  }
+
+  return {
+    allowedTags: getDefaultAllowedTags(),
+    allowedAttrs: getDefaultAllowedAttrs()
+  };
+};
+
+const getDefaultAllowedTags = (): string[] => {
+  const tags = process.env.NEXT_PUBLIC_HTML_ALLOWED_TAGS;
+  if (tags) {
+    return tags.split(',').map(tag => tag.trim());
+  }
+  return ['b', 'i', 'u', 'em', 'strong', 'p', 'br', 'ul', 'ol', 'li', 'span', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote'];
+};
+
+const getDefaultAllowedAttrs = (): string[] => {
+  const attrs = process.env.NEXT_PUBLIC_HTML_ALLOWED_ATTRS;
+  if (attrs) {
+    return attrs.split(',').map(attr => attr.trim());
+  }
+  return ['class', 'style']; // Note: style can be risky if not controlled.
+};
+
+const { allowedTags: ALLOWED_TAGS, allowedAttrs: ALLOWED_ATTRS } = getHtmlSanitizationConfig();
 
 /**
  * A very basic HTML sanitizer.

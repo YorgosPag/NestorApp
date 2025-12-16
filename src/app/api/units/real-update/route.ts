@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { UNIT_SALE_STATUS } from '@/core/status/StatusConstants';
+import { BUILDING_IDS } from '@/config/building-ids-config';
 
 export async function POST(request: NextRequest) {
   try {
@@ -62,9 +63,9 @@ export async function POST(request: NextRequest) {
             firstName: { stringValue: contact.name.split(' ')[0] },
             lastName: { stringValue: contact.name.split(' ').slice(1).join(' ') },
             email: { stringValue: contact.email },
-            phone: { stringValue: `+30 69X XXX XXXX` },
+            phone: { stringValue: CONTACT_INFO.DEMO_PHONE_MOBILE },
             createdAt: { timestampValue: new Date().toISOString() },
-            projectId: { stringValue: '1001' },
+            projectId: { stringValue: BUILDING_IDS.PROJECT_ID.toString() },
             type: { stringValue: 'customer' }
           }
         };

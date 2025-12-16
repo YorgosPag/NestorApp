@@ -3,11 +3,12 @@
 
 import { NextResponse } from 'next/server';
 import { createSampleNotifications } from '@/services/notificationService';
+import { CONTACT_INFO } from '@/config/contact-info-config';
 
 export async function POST(request: Request) {
   try {
     // Get user ID (same as main API)
-    const userId = 'user@example.com';
+    const userId = CONTACT_INFO.DEMO_EMAIL_PERSONAL;
 
     console.log('🌱 Creating sample notifications for user:', userId);
 

@@ -1,20 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { collection, doc, updateDoc, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { BUILDING_IDS } from '@/config/building-ids-config';
 
 export async function POST(request: NextRequest) {
   try {
     console.log('🔧 Fixing building project IDs...');
 
-    // Update buildings to use the correct project ID (1001) for "Παλαιολόγου Πολυκατοικία"
+    // 🏢 ENTERPRISE: Update buildings to use configured project ID
     const updates = [
       {
         buildingId: "building_1_palaiologou",
-        newProjectId: 1001
+        newProjectId: BUILDING_IDS.PROJECT_ID
       },
       {
-        buildingId: "building_2_palaiologou", 
-        newProjectId: 1001
+        buildingId: "building_2_palaiologou",
+        newProjectId: BUILDING_IDS.PROJECT_ID
       }
     ];
 
@@ -44,8 +45,8 @@ export async function POST(request: NextRequest) {
       results,
       summary: {
         totalUpdates: updates.length,
-        projectId: 1001,
-        projectName: "Παλαιολόγου Πολυκατοικία"
+        projectId: BUILDING_IDS.PROJECT_ID,
+        projectName: process.env.NEXT_PUBLIC_PRIMARY_PROJECT_NAME || "Main Project"
       }
     });
 

@@ -7,6 +7,7 @@ import type {
   BuildingFilterState,
   ProjectFilterState
 } from './types';
+import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 
 // Unit Filters Configuration (μονάδες)
 export const unitFiltersConfig: FilterPanelConfig = {
@@ -324,13 +325,13 @@ export const buildingFiltersConfig: FilterPanelConfig = {
           width: 1,
           options: [
             { value: 'all', label: 'Όλες' },
-            { value: 'main-city', label: process.env.NEXT_PUBLIC_DEFAULT_CITY || 'Αθήνα' },
-            { value: 'thessaloniki', label: 'Θεσσαλονίκη' },
-            { value: 'patras', label: 'Πάτρα' },
-            { value: 'heraklion', label: 'Ηράκλειο' },
-            { value: 'volos', label: 'Βόλος' },
-            { value: 'kavala', label: 'Καβάλα' },
-            { value: 'lamia', label: 'Λαμία' }
+            { value: 'main-city', label: GEOGRAPHIC_CONFIG.DEFAULT_CITY },
+            { value: 'alternative-city', label: GEOGRAPHIC_CONFIG.ALTERNATIVE_CITY },
+            { value: 'city3', label: process.env.NEXT_PUBLIC_FILTER_CITY_3 || 'Πάτρα' },
+            { value: 'city4', label: process.env.NEXT_PUBLIC_FILTER_CITY_4 || 'Ηράκλειο' },
+            { value: 'city5', label: process.env.NEXT_PUBLIC_FILTER_CITY_5 || 'Βόλος' },
+            { value: 'city6', label: process.env.NEXT_PUBLIC_FILTER_CITY_6 || 'Καβάλα' },
+            { value: 'city7', label: process.env.NEXT_PUBLIC_FILTER_CITY_7 || 'Λαμία' }
           ]
         },
         {
@@ -576,14 +577,14 @@ export const projectFiltersConfig: FilterPanelConfig = {
           width: 1,
           options: [
             { value: 'all', label: 'Όλες' },
-            { value: 'main-city', label: process.env.NEXT_PUBLIC_DEFAULT_CITY || 'Αθήνα' },
-            { value: 'thessaloniki', label: 'Θεσσαλονίκη' },
-            { value: 'patras', label: 'Πάτρα' },
-            { value: 'heraklion', label: 'Ηράκλειο' },
-            { value: 'volos', label: 'Βόλος' },
-            { value: 'kavala', label: 'Καβάλα' },
-            { value: 'lamia', label: 'Λαμία' },
-            { value: 'rhodes', label: 'Ρόδος' }
+            { value: 'main-city', label: GEOGRAPHIC_CONFIG.DEFAULT_CITY },
+            { value: 'alternative-city', label: GEOGRAPHIC_CONFIG.ALTERNATIVE_CITY },
+            { value: 'city3', label: process.env.NEXT_PUBLIC_FILTER_CITY_3 || 'Πάτρα' },
+            { value: 'city4', label: process.env.NEXT_PUBLIC_FILTER_CITY_4 || 'Ηράκλειο' },
+            { value: 'city5', label: process.env.NEXT_PUBLIC_FILTER_CITY_5 || 'Βόλος' },
+            { value: 'city6', label: process.env.NEXT_PUBLIC_FILTER_CITY_6 || 'Καβάλα' },
+            { value: 'city7', label: process.env.NEXT_PUBLIC_FILTER_CITY_7 || 'Λαμία' },
+            { value: 'city8', label: process.env.NEXT_PUBLIC_FILTER_CITY_8 || 'Ρόδος' }
           ]
         },
         {

@@ -13,6 +13,8 @@
 
 'use client';
 
+import { GEOGRAPHIC_CONFIG, GeographicUtils } from '@/config/geographic-config';
+
 // ============================================================================
 // TYPES & INTERFACES
 // ============================================================================
@@ -213,20 +215,49 @@ export class AddressResolver {
   }
 
   /**
-   * Detect municipality from area
+   * 🏢 ENTERPRISE: Detect municipality from area με configurable mappings
    */
   private detectMunicipality(area?: string): string | undefined {
     if (!area) return undefined;
 
-    const municipalityMap: Record<string, string> = {
-      'Μαρούσι': 'Αμαρουσίου',
-      'Κηφισιά': 'Κηφισιάς',
-      'Χαλάνδρι': 'Χαλανδρίου',
-      'Γλυφάδα': 'Γλυφάδας',
-      'Πειραιάς': 'Πειραιώς'
-      // ... more mappings
+    // 🏢 ENTERPRISE: Load municipality mappings από environment configuration
+    const getMunicipalityMappings = (): Record<string, string> => {
+      try {
+        // Try to load from environment variable (JSON format)
+        const envMappings = process.env.NEXT_PUBLIC_MUNICIPALITY_MAPPINGS;
+        if (envMappings) {
+          return JSON.parse(envMappings);
+        }
+      } catch (error) {
+        console.warn('⚠️ Invalid MUNICIPALITY_MAPPINGS format, using fallback');
+      }
+
+      // 🏢 ENTERPRISE: Fallback mapping με configurable default region
+      const defaultRegion = GEOGRAPHIC_CONFIG.DEFAULT_REGION || 'Default Region';
+      const alternativeCity = GEOGRAPHIC_CONFIG.ALTERNATIVE_CITY || 'Alternative City';
+
+      // Generate municipality names από city names
+      const generateMunicipalityName = (cityName: string): string => {
+        // Basic Greek municipality name generation (many end in -ου, -ων, -ας etc.)
+        if (cityName.endsWith('ί')) return cityName.replace(/ί$/, 'ίου');
+        if (cityName.endsWith('α')) return cityName.replace(/α$/, 'ας');
+        if (cityName.endsWith('ός')) return cityName.replace(/ός$/, 'ού');
+        return `${cityName} Municipality`; // Generic fallback
+      };
+
+      return {
+        [GEOGRAPHIC_CONFIG.DEFAULT_CITY]: generateMunicipalityName(GEOGRAPHIC_CONFIG.DEFAULT_CITY),
+        [alternativeCity]: generateMunicipalityName(alternativeCity),
+        // Legacy mappings για backward compatibility
+        'Μαρούσι': 'Αμαρουσίου',
+        'Κηφισιά': 'Κηφισιάς',
+        'Χαλάνδρι': 'Χαλανδρίου',
+        'Γλυφάδα': 'Γλυφάδας',
+        'Πειραιάς': 'Πειραιώς'
+      };
     };
 
+    const municipalityMap = getMunicipalityMappings();
     return municipalityMap[area];
   }
 
@@ -326,16 +357,20 @@ export class AddressResolver {
    * Resolve area center coordinates
    */
   private async resolveAreaCenter(area: string): Promise<GeocodingResult | null> {
-    // Hardcoded popular Greek areas για quick lookup
+    // 🏢 ENTERPRISE: Configurable coordinates based on geographic config
     const areaCoordinates: Record<string, [number, number]> = {
-      'Μαρούσι': [38.0568, 23.8081],
-      'Κηφισιά': [38.0739, 23.8105],
-      'Χαλάνδρι': [38.0214, 23.7981],
-      'Γλυφάδα': [37.8656, 23.7550],
-      'Κολωνάκι': [37.9797, 23.7428],
-      'Παγκράτι': [37.9688, 23.7503],
-      'Πειραιάς': [37.9485, 23.6436],
-      // ... more areas
+      // Primary/Alternative city centers from config
+      [GEOGRAPHIC_CONFIG.DEFAULT_CITY]: [GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE, GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE],
+      [GEOGRAPHIC_CONFIG.ALTERNATIVE_CITY]: [GEOGRAPHIC_CONFIG.ALTERNATIVE_LATITUDE, GEOGRAPHIC_CONFIG.ALTERNATIVE_LONGITUDE],
+
+      // Generate nearby coordinates for demo areas (if different from config)
+      'Μαρούσι': this.generateNearbyCoordinates(GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE, GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE, 15), // ~15km north
+      'Κηφισιά': this.generateNearbyCoordinates(GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE, GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE, 12), // ~12km NE
+      'Χαλάνδρι': this.generateNearbyCoordinates(GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE, GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE, 8), // ~8km N
+      'Γλυφάδα': this.generateNearbyCoordinates(GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE, GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE, -10), // ~10km S
+      'Κολωνάκι': this.generateNearbyCoordinates(GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE, GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE, 1), // ~1km central
+      'Παγκράτι': this.generateNearbyCoordinates(GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE, GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE, 2), // ~2km SE
+      'Πειραιάς': this.generateNearbyCoordinates(GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE, GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE, -8), // ~8km SW
     };
 
     const coords = areaCoordinates[area];
@@ -360,6 +395,15 @@ export class AddressResolver {
   // ============================================================================
   // UTILITIES
   // ============================================================================
+
+  /**
+   * 🏢 ENTERPRISE: Generate nearby coordinates for demo areas
+   */
+  private generateNearbyCoordinates(baseLat: number, baseLng: number, offsetKm: number): [number, number] {
+    // Use the centralized utility from geographic config
+    const generated = GeographicUtils.generateNearbyCoordinates(offsetKm);
+    return [generated.lat, generated.lng];
+  }
 
   /**
    * Build query string από GreekAddress

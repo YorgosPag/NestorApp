@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
+import { BUILDING_IDS } from '@/config/building-ids-config';
 import {
   Dialog,
   DialogContent,
@@ -53,7 +54,7 @@ const initialFormData: UnitFormData = {
   building: 'Κτίριο Alpha',
   floor: '',
   project: 'Έργο Κέντρο',
-  buildingId: 'building-1',
+  buildingId: BUILDING_IDS.LEGACY_BUILDING_1,
   floorId: 'floor-3',
   vertices: [],
   description: '',

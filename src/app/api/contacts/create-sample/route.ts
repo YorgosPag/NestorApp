@@ -62,12 +62,21 @@ function generateDynamicSampleContacts(baseConfig: EnterpriseContactConfig): rea
   };
 
   /**
-   * Enterprise-grade phone generation με realistic patterns
+   * 🏢 ENTERPRISE: Configurable phone generation για different countries
    */
   const generateEnterprisePhone = (): string => {
-    // Greek mobile number pattern: 697XXXXXXX
-    const phoneBase = 6970000000 + Math.floor(Math.random() * 9999999);
-    return `+30 ${phoneBase.toString()}`;
+    // Get country-specific configuration
+    const countryCode = process.env.NEXT_PUBLIC_PHONE_COUNTRY_CODE || '+30';
+    const phonePrefix = process.env.NEXT_PUBLIC_PHONE_PREFIX || '697';
+    const phoneLength = parseInt(process.env.NEXT_PUBLIC_PHONE_LENGTH || '7'); // Additional digits after prefix
+
+    // Generate random number with configurable length
+    const maxNumber = Math.pow(10, phoneLength) - 1;
+    const randomSuffix = Math.floor(Math.random() * maxNumber)
+      .toString()
+      .padStart(phoneLength, '0');
+
+    return `${countryCode} ${phonePrefix}${randomSuffix}`;
   };
 
   // 🔄 ENTERPRISE: Generate contacts με type-safe iteration

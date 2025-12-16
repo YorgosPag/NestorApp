@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useSharedProperties } from '@/contexts/SharedPropertiesProvider';
 import type { Property } from '@/types/property-viewer';
+import { BUILDING_IDS } from '@/config/building-ids-config';
 
 interface Floor {
   id: string;
@@ -66,7 +67,7 @@ export function usePropertyState() {
   };
 }
 
-// Mock data για testing
+// 🏢 ENTERPRISE: Mock data για testing - NO HARDCODED IDs
 export const mockProperties = [
   {
     name: "Διαμέρισμα Α1",
@@ -75,7 +76,7 @@ export const mockProperties = [
     building: "Κτίριο Alpha",
     floor: 1,
     project: "Έργο Κέντρο",
-    buildingId: "building-1",
+    buildingId: BUILDING_IDS.LEGACY_BUILDING_1,
     floorId: "floor-1",
     price: 150000,
     area: 75,
@@ -93,7 +94,7 @@ export const mockProperties = [
     building: "Κτίριο Alpha",
     floor: 1,
     project: "Έργο Κέντρο",
-    buildingId: "building-1",
+    buildingId: BUILDING_IDS.LEGACY_BUILDING_1,
     floorId: "floor-1",
     price: 180000,
     area: 95,
@@ -111,7 +112,7 @@ export const mockProperties = [
     building: "Κτίριο Alpha",
     floor: 2,
     project: "Έργο Κέντρο",
-    buildingId: "building-1",
+    buildingId: BUILDING_IDS.LEGACY_BUILDING_1,
     floorId: "floor-2",
     price: 160000,
     area: 80,

@@ -5,6 +5,7 @@ import { useGeoTransform } from '../hooks/useGeoTransform';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import type { DxfCoordinate, GeoCoordinate } from '../types';
 import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
+import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 
 /**
  * GEOREFERENCING PANEL COMPONENT
@@ -224,7 +225,7 @@ export function GeoreferencingPanel() {
                 value={newPointData.geoLng}
                 onChange={(e) => setNewPointData(prev => ({ ...prev, geoLng: e.target.value }))}
                 className="w-full bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm"
-                placeholder="23.7275"
+                placeholder={GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE.toString()}
                 step="0.000001"
               />
             </div>
@@ -235,7 +236,7 @@ export function GeoreferencingPanel() {
                 value={newPointData.geoLat}
                 onChange={(e) => setNewPointData(prev => ({ ...prev, geoLat: e.target.value }))}
                 className="w-full bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm"
-                placeholder="37.9755"
+                placeholder={GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE.toString()}
                 step="0.000001"
               />
             </div>

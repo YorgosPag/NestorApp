@@ -52,12 +52,15 @@ export async function GET(req: NextRequest) {
     // Check project connections based on known mappings
     console.log('🏗️ Checking project connections...');
 
-    // 🏢 ENTERPRISE: Dynamic company analysis without hardcoded IDs
+    // 🏢 ENTERPRISE: Dynamic company analysis - NO HARDCODED NAMES
+    const primaryCompanyNames = (process.env.NEXT_PUBLIC_PRIMARY_COMPANY_NAMES ||
+      'Main Company,Primary Company').split(',').map(name => name.trim());
+
     const companiesWithProjects = companies.filter(company => {
-      // Check if company is primary company by name pattern
-      const isPrimaryCompany = company.name.includes('ΠΑΓΩΝΗΣ') ||
-                               company.name.includes('Παγώνης') ||
-                               company.isPrimary === true;
+      // Check if company is primary company by configurable name patterns
+      const isPrimaryCompany = primaryCompanyNames.some(primaryName =>
+        company.name.includes(primaryName)
+      ) || company.isPrimary === true;
 
       return isPrimaryCompany;
     });

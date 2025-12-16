@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { collection, doc, updateDoc, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { BUILDING_IDS } from '@/config/building-ids-config';
 
 export async function POST(request: NextRequest) {
   try {
     console.log('🏗️ Adding buildings to projects in Firestore...');
 
-    // Get buildings for project 1001 (Παλαιολόγου Πολυκατοικία)
+    // 🏢 ENTERPRISE: Get buildings for configured project ID
     const buildingsQuery = query(
       collection(db, 'buildings'),
-      where('projectId', '==', 1001)
+      where('projectId', '==', BUILDING_IDS.PROJECT_ID)
     );
     
     const buildingsSnapshot = await getDocs(buildingsQuery);
@@ -18,14 +19,14 @@ export async function POST(request: NextRequest) {
       ...doc.data()
     }));
 
-    console.log(`Found ${buildings.length} buildings for project 1001`);
+    console.log(`Found ${buildings.length} buildings for project ${BUILDING_IDS.PROJECT_ID}`);
 
     if (buildings.length === 0) {
-      throw new Error('No buildings found for project 1001');
+      throw new Error(`No buildings found for project ${BUILDING_IDS.PROJECT_ID}`);
     }
 
-    // Update project 1001 to include its buildings
-    const projectDocRef = doc(db, 'projects', '1001');
+    // 🏢 ENTERPRISE: Update configured project to include its buildings
+    const projectDocRef = doc(db, 'projects', BUILDING_IDS.PROJECT_ID.toString());
     
     await updateDoc(projectDocRef, {
       buildings: buildings.map(building => ({
@@ -40,15 +41,15 @@ export async function POST(request: NextRequest) {
       updatedAt: new Date().toISOString()
     });
 
-    console.log('✅ Successfully added buildings to project 1001');
+    console.log(`✅ Successfully added buildings to project ${BUILDING_IDS.PROJECT_ID}`);
 
     return NextResponse.json({
       success: true,
       message: 'Buildings added to project successfully',
-      projectId: 1001,
+      projectId: BUILDING_IDS.PROJECT_ID,
       buildings: buildings.map(b => ({ id: b.id, name: b.name })),
       summary: {
-        projectName: "Παλαιολόγου Πολυκατοικία",
+        projectName: process.env.NEXT_PUBLIC_PRIMARY_PROJECT_NAME || "Main Project",
         buildingsCount: buildings.length
       }
     });

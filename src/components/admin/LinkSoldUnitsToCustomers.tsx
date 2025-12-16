@@ -66,7 +66,7 @@ export function LinkSoldUnitsToCustomers() {
         </CardTitle>
         <p className="text-sm text-muted-foreground">
           Αυτόματη σύνδεση των units με status "sold" με υπάρχοντες πελάτες στη βάση δεδομένων.
-          Αυτό θα επιλύσει το πρόβλημα της μη εμφάνισης πελατών στο έργο Παλαιολόγου Πολυκατοικία.
+          Αυτό θα επιλύσει το πρόβλημα της μη εμφάνισης πελατών στο έργο {process.env.NEXT_PUBLIC_PRIMARY_PROJECT_NAME || 'Main Project'}.
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
