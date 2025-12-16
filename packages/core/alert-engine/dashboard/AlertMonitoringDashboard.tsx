@@ -30,7 +30,11 @@ import {
   eventDetailStyles,
   getSeverityDotStyle,
   getButtonHoverHandlers,
-  getAlertItemHoverHandlers
+  getAlertItemHoverHandlers,
+  getMetricsCardValueStyle,
+  getStatusBadgeStyle,
+  getAlertConfigTitleStyle,
+  getSeverityTextStyle
 } from './AlertMonitoringDashboard.styles';
 
 // ============================================================================
@@ -72,10 +76,7 @@ const MetricsCard: React.FC<{
         {icon && <span style={dashboardComponents.metricsCard.icon}>{icon}</span>}
       </header>
       <div style={dashboardStyles.layout.flexCenter}>
-        <span style={{
-          ...dashboardComponents.metricsCard.value,
-          color: getStatusColor()
-        }}>
+        <span style={getMetricsCardValueStyle(status)}>
           {value}
         </span>
         {trend && (
@@ -114,10 +115,7 @@ const AlertsList: React.FC<{
                    dashboardComponents.statusBadge.variants.suppressed;
 
     return (
-      <span style={{
-        ...dashboardComponents.statusBadge.base,
-        ...variant
-      }}>
+      <span style={getStatusBadgeStyle(status)}>
         {status}
       </span>
     );
@@ -141,11 +139,7 @@ const AlertsList: React.FC<{
             <div style={dashboardStyles.layout.flexOne}>
               <div style={dashboardStyles.layout.flexStart}>
                 <div style={getSeverityDotStyle(alert.severity)} />
-                <span style={{
-                  fontWeight: typography.fontWeight.medium,
-                  fontSize: typography.fontSize.sm,
-                  color: colors.text.primary
-                }}>
+                <span style={getSeverityTextStyle()}>
                   {alert.title}
                 </span>
                 {getStatusBadge(alert.status)}
@@ -238,10 +232,7 @@ const AlertConfiguration: React.FC<{
     <article style={dashboardComponents.alertConfig.container}>
       <header style={dashboardComponents.alertConfig.header}>
         <span style={dashboardComponents.metricsCard.icon}>{config.icon}</span>
-        <h3 style={{
-          ...dashboardComponents.alertConfig.title,
-          color: config.color
-        }}>
+        <h3 style={getAlertConfigTitleStyle(config.color)}>
           {config.title}
         </h3>
       </header>

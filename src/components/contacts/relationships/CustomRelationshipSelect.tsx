@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { ChevronDown, Check } from 'lucide-react';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
+import { useEnterprisePortal, createPortalConfig } from '@/components/ui/enterprise-portal';
 
 // Import relationship types
 import type { RelationshipType } from '@/types/contacts/relationships';

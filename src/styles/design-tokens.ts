@@ -302,6 +302,7 @@ export const getAnimation = (property: keyof typeof animation, value: string) =>
 // Note: Advanced tokens are available via './design-tokens/index' import
 // Removed re-export to prevent circular dependency
 
+
 // Export all tokens as a single object για convenience
 export const designTokens = {
   spacing,
@@ -315,6 +316,74 @@ export const designTokens = {
   componentSizes,
   breakpoints,
   interactiveStates,
+} as const;
+
+// Layout utilities για positioning, dimensions, και display states
+export const layoutUtilities = {
+  // Positioning patterns για dynamic placement
+  positioning: {
+    absolute: 'absolute' as const,
+    relative: 'relative' as const,
+    fixed: 'fixed' as const,
+    sticky: 'sticky' as const,
+  },
+
+  // Dimension utilities για responsive sizing
+  dimensions: {
+    auto: 'auto' as const,
+    full: '100%' as const,
+    screen: '100vw' as const,
+    screenHeight: '100vh' as const,
+    fitContent: 'fit-content' as const,
+    minContent: 'min-content' as const,
+    maxContent: 'max-content' as const,
+  },
+
+  // Display state utilities για visibility control
+  display: {
+    block: 'block' as const,
+    inline: 'inline' as const,
+    inlineBlock: 'inline-block' as const,
+    flex: 'flex' as const,
+    grid: 'grid' as const,
+    none: 'none' as const,
+  },
+
+  // Visibility utilities για show/hide patterns
+  visibility: {
+    visible: 'visible' as const,
+    hidden: 'hidden' as const,
+    collapse: 'collapse' as const,
+  },
+
+  // Overflow utilities για content handling
+  overflow: {
+    visible: 'visible' as const,
+    hidden: 'hidden' as const,
+    scroll: 'scroll' as const,
+    auto: 'auto' as const,
+  },
+
+  // Dynamic percentage generator για width/height
+  percentage: (value: number): string => `${Math.max(0, Math.min(100, value))}%`,
+
+  // Dynamic pixel value generator
+  pixels: (value: number): string => `${value}px`,
+
+  // Dynamic rem value generator
+  rem: (value: number): string => `${value}rem`,
+
+  // Dynamic positioning utilities για absolute/relative positioning
+  position: (top: string, left: string): { top: string; left: string } => ({ top, left }),
+
+  // Position preset patterns για common use cases
+  positionPresets: {
+    centerAbsolute: { top: '50%', left: '50%' },
+    topLeft: { top: '0', left: '0' },
+    topRight: { top: '0', right: '0' },
+    bottomLeft: { bottom: '0', left: '0' },
+    bottomRight: { bottom: '0', right: '0' },
+  },
 } as const;
 
 // ============================================================================

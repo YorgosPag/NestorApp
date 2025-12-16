@@ -4,6 +4,7 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import { Building2, Home, Users } from 'lucide-react';
 import { CORE_HOVER_TRANSFORMS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects/hover-effects';
+import { layoutUtilities } from '@/styles/design-tokens';
 
 interface NearbyProjectMarkerProps {
   project: {
@@ -29,7 +30,7 @@ export function NearbyProjectMarker({ project, position }: NearbyProjectMarkerPr
   return (
     <div
       className="absolute z-10 transform -translate-x-1/2 -translate-y-1/2"
-      style={{ top: position.top, left: position.left }}
+      style={layoutUtilities.position(position.top, position.left)}
     >
       <div className="group relative">
         <div className={cn(

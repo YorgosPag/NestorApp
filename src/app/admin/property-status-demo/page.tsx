@@ -173,12 +173,12 @@ export default function PropertyStatusDemoPage() {
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg">{property.name}</CardTitle>
-            <Badge
-              style={{ backgroundColor: statusColor, color: 'white' }}
+            <PropertyBadge
+              status={property.status as PropertyStatus}
+              variant="solid"
+              size="sm"
               className="text-xs"
-            >
-              {statusLabel}
-            </Badge>
+            />
           </div>
           <p className="text-sm text-muted-foreground">{property.type}</p>
         </CardHeader>
@@ -352,9 +352,11 @@ export default function PropertyStatusDemoPage() {
               </div>
               <div>
                 <span className="font-medium">Color:</span>
-                <div
+                <PropertyBadge
+                  status={selectedStatus as PropertyStatus}
+                  variant="solid"
+                  size="sm"
                   className="w-6 h-6 rounded border"
-                  style={{ backgroundColor: getEnhancedStatusColor(selectedStatus) }}
                 />
               </div>
             </div>

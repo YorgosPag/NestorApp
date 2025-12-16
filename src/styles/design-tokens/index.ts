@@ -99,6 +99,23 @@ export type {
   StepState
 } from './components/dialog-tokens';
 
+// Portal Components
+export {
+  portalComponents,
+  photoPreviewComponents,
+  getPortalZIndex,
+  getDropdownStyles,
+  getPhotoContainerStyles,
+  getPortalAnimations
+} from './components/portal-tokens';
+
+export type {
+  PortalZIndexLevel,
+  DropdownVariant,
+  PhotoContainerState,
+  PortalPlacement
+} from './components/portal-tokens';
+
 // ============================================================================
 // UNIFIED TOKEN OBJECT - SINGLE IMPORT CONVENIENCE
 // ============================================================================
@@ -151,6 +168,10 @@ import {
   dialogButtonTokens,
   stepWizardTokens
 } from './components/dialog-tokens';
+import {
+  portalComponents,
+  photoPreviewComponents
+} from './components/portal-tokens';
 
 /**
  * 🎯 UNIFIED DESIGN TOKENS OBJECT
@@ -211,6 +232,11 @@ export const unifiedDesignTokens = {
     infoCard: infoCardTokens,
     buttons: dialogButtonTokens,
     stepWizard: stepWizardTokens
+  },
+
+  portal: {
+    components: portalComponents,
+    photoPreview: photoPreviewComponents
   }
 } as const;
 

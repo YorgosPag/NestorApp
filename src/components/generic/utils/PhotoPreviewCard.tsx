@@ -11,6 +11,7 @@ import {
   PHOTO_BORDERS,
   PHOTO_COMBINED_EFFECTS
 } from '../config/photo-config';
+import { usePhotoPreviewStyles } from '@/components/ui/enterprise-portal';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -131,10 +132,7 @@ export function PhotoPreviewCard({
       <CardContent className={showHeader ? '' : 'p-0'}>
         <div
           className={`relative rounded-lg p-6 ${height} w-full flex flex-col items-center justify-center text-center cursor-pointer transition-colors overflow-hidden border-2 border-dashed`}
-          style={{
-            backgroundColor: hasPhoto ? undefined : PHOTO_COLORS.EMPTY_STATE_BACKGROUND,
-            borderColor: hasPhoto ? '#22c55e' : '#9ca3af'
-          }}
+          style={usePhotoPreviewStyles(hasPhoto).dynamicColors}
           onClick={handleClick}
         >
           {hasPhoto ? (

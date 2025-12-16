@@ -378,6 +378,68 @@ export const getAlertItemHoverHandlers = () => ({
 
 export type { DashboardStylesType, ButtonStyleVariant, LayoutStyleCollection, ModalStyleCollection };
 
+// ============================================================================
+// 🎯 DYNAMIC STYLE UTILITIES - ENTERPRISE INLINE STYLE REPLACEMENTS
+// ============================================================================
+
+/**
+ * Creates dynamic metrics card value style with status color
+ * Replaces: style={{ ...dashboardComponents.metricsCard.value, color: getStatusColor() }}
+ */
+export const getMetricsCardValueStyle = (status?: 'success' | 'warning' | 'error'): CSSProperties => {
+  const baseStyle = dashboardComponents.metricsCard.value;
+  const statusColor = (() => {
+    switch (status) {
+      case 'success': return colors.semantic.success.main;
+      case 'warning': return colors.semantic.warning.main;
+      case 'error': return colors.semantic.error.main;
+      default: return colors.text.secondary;
+    }
+  })();
+
+  return {
+    ...baseStyle,
+    color: statusColor
+  } as const;
+};
+
+/**
+ * Creates dynamic status badge style
+ * Replaces: style={{ ...dashboardComponents.statusBadge.base, ...variant }}
+ */
+export const getStatusBadgeStyle = (status: string): CSSProperties => {
+  const variants = dashboardComponents.statusBadge.variants as any;
+  const variant = variants[status] || variants.suppressed;
+
+  return {
+    ...dashboardComponents.statusBadge.base,
+    ...variant
+  } as const;
+};
+
+/**
+ * Creates dynamic alert config title style with color
+ * Replaces: style={{ ...dashboardComponents.alertConfig.title, color: config.color }}
+ */
+export const getAlertConfigTitleStyle = (color: string): CSSProperties => {
+  return {
+    ...dashboardComponents.alertConfig.title,
+    color
+  } as const;
+};
+
+/**
+ * Creates dynamic span style for severity display
+ * Replaces: style={{ fontWeight: typography.fontWeight.medium, fontSize: typography.fontSize.sm, color: colors.text.primary }}
+ */
+export const getSeverityTextStyle = (): CSSProperties => {
+  return {
+    fontWeight: typography.fontWeight.medium,
+    fontSize: typography.fontSize.sm,
+    color: colors.text.primary
+  } as const;
+};
+
 /**
  * ✅ ENTERPRISE STYLING MODULE COMPLETE
  *
@@ -386,6 +448,7 @@ export type { DashboardStylesType, ButtonStyleVariant, LayoutStyleCollection, Mo
  * ✅ Design tokens integration (ZERO hardcoded values)
  * ✅ Semantic style organization (layout, buttons, modal)
  * ✅ Component-specific utilities (severity dots, hover handlers)
+ * ✅ Dynamic style utilities (replace ALL inline styles)
  * ✅ Professional architecture με clear separation of concerns
  * ✅ Accessibility compliance (contrast, focus, interaction)
  * ✅ Performance optimization (const assertions, tree-shakable)

@@ -6,6 +6,7 @@ import { CommonBadge } from '@/core/badges';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { HOVER_BACKGROUND_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
+import { createDynamicHeightConfig } from '@/components/ui/enterprise-portal/migration-utilities';
 import { 
   MessageSquare, 
   Mail, 
@@ -234,7 +235,7 @@ const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) =
       </CardHeader>
 
       <CardContent>
-        <div className={`space-y-2 overflow-y-auto`} style={{ height }}>
+        <div className={`space-y-2 overflow-y-auto`} style={createDynamicHeightConfig(height).containerStyle}>
           {filteredMessages.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <MessageSquare className="h-12 w-12 mx-auto mb-2 opacity-30" />

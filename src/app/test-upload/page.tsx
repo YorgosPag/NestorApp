@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
-import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
+import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { ThemeProgressBar } from '@/core/progress/ThemeProgressBar';
 
 export default function TestUploadPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -110,12 +111,12 @@ export default function TestUploadPage() {
         </button>
 
         {uploading && (
-          <div className="w-full bg-gray-200 rounded-full h-2.5">
-            <div
-              className={`bg-blue-600 h-2.5 rounded-full ${TRANSITION_PRESETS.SMOOTH_ALL}`}
-              style={{ width: `${progress}%` }}
-            ></div>
-          </div>
+          <ThemeProgressBar
+            progress={progress}
+            label="Upload Progress"
+            size="md"
+            showPercentage={true}
+          />
         )}
 
         {error && (

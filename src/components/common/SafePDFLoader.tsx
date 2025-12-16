@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { BarChart3, Link, Paperclip, FileText, X, CheckCircle, Circle, Chrome, Check } from 'lucide-react';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { layoutUtilities } from '@/styles/design-tokens';
 
 interface SafePDFLoaderProps {
   file: string | File | null;
@@ -128,9 +129,9 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
   // No file
   if (!file) {
     return (
-      <div 
+      <div
         className={`flex items-center justify-center bg-gray-100 border-2 border-dashed border-gray-300 ${className}`}
-        style={{ width, height }}
+        style={{ width: layoutUtilities.pixels(width), height: layoutUtilities.pixels(height) }}
       >
         <div className="text-center text-gray-500">
           <FileText className="h-8 w-8 mx-auto mb-2" />
@@ -167,7 +168,7 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
       </div>
 
       {/* PDF Display */}
-      <div style={{ width, height }} className="border rounded overflow-hidden bg-gray-100">
+      <div style={{ width: layoutUtilities.pixels(width), height: layoutUtilities.pixels(height) }} className="border rounded overflow-hidden bg-gray-100">
         {status === 'loading' && (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
