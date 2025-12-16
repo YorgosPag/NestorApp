@@ -3,40 +3,144 @@
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Users2, Plus, Settings, Shield } from 'lucide-react';
+import { Users2, Plus, Settings, Shield, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { EnterpriseTeamsService } from '@/services/teams/EnterpriseTeamsService';
+import type { EnterpriseTeam, EnterpriseTeamMember } from '@/services/teams/EnterpriseTeamsService';
 
-const teams = [
-  {
-    name: 'Ομάδα Πωλήσεων',
-    description: 'Υπεύθυνοι για τις πωλήσεις και τη διαχείριση πελατών.',
-    members: [
-      { name: 'Γιώργος Παπαδόπουλος', role: 'Manager' },
-      { name: 'Μαρία Ιωάννου', role: 'Sales Rep' },
-      { name: 'Κώστας Βασιλείου', role: 'Sales Rep' },
-    ],
-  },
-  {
-    name: 'Τμήμα Marketing',
-    description: 'Υπεύθυνοι για τις προωθητικές ενέργειες.',
-    members: [
-      { name: 'Ελένη Δημητρίου', role: 'Marketing Head' },
-      { name: 'Νίκος Σταθόπουλος', role: 'Digital Marketer' },
-    ],
-  },
-    {
-    name: 'Τμήμα Υποστήριξης',
-    description: 'Υπεύθυνοι για την εξυπηρέτηση πελατών.',
-    members: [
-      { name: 'Άννα Κωστοπούλου', role: 'Support Lead' },
-    ],
-  },
-];
+interface DisplayTeam {
+  id: string;
+  name: string;
+  description: string;
+  members: EnterpriseTeamMember[];
+}
+
+// Initialize the enterprise teams service
+const teamsService = EnterpriseTeamsService.getInstance();
 
 const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('');
+  return name.split(' ').map(n => n[0]).join('').toUpperCase();
 }
 
 export default function CrmTeamsPage() {
+  const [teams, setTeams] = useState<DisplayTeam[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Load teams data from the database
+  useEffect(() => {
+    const loadTeamsData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Load teams configuration from database
+        const organizationId = 'default-org'; // This should come from user context
+        const teamsFromDb = await teamsService.getTeams(organizationId);
+
+        // Transform to display format and load members
+        const displayTeams: DisplayTeam[] = [];
+        for (const team of teamsFromDb) {
+          const members = await teamsService.getTeamMembers(team.id, organizationId);
+          displayTeams.push({
+            id: team.id,
+            name: team.name,
+            description: team.description,
+            members
+          });
+        }
+
+        setTeams(displayTeams);
+      } catch (err) {
+        console.error('Failed to load teams data:', err);
+        setError('Failed to load teams. Please try again.');
+
+        // Fallback to empty state instead of hardcoded data
+        setTeams([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadTeamsData();
+  }, []);
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="p-8">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center space-y-4">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
+            <p className="text-muted-foreground">Φόρτωση ομάδων...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="p-8">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center space-y-4">
+            <div className="w-8 h-8 bg-destructive/20 rounded-full flex items-center justify-center mx-auto">
+              <Shield className="w-4 h-4 text-destructive" />
+            </div>
+            <div className="space-y-2">
+              <p className="font-medium text-destructive">Σφάλμα φόρτωσης</p>
+              <p className="text-sm text-muted-foreground">{error}</p>
+              <Button
+                variant="outline"
+                onClick={() => window.location.reload()}
+                className="mt-4"
+              >
+                Επαναφόρτωση
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show empty state
+  if (teams.length === 0) {
+    return (
+      <div className="p-8">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <div className="flex items-center gap-2">
+              <Users2 className="w-8 h-8 text-primary" />
+              <h1 className="text-3xl font-bold">Ομάδες & Ρόλοι</h1>
+            </div>
+            <p className="text-muted-foreground">Διαχείριση των ομάδων εργασίας και των δικαιωμάτων τους.</p>
+          </div>
+          <Button>
+            <Plus className="w-4 h-4 mr-2" />
+            Νέα Ομάδα
+          </Button>
+        </div>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center space-y-4">
+            <Users2 className="w-12 h-12 text-muted-foreground/50 mx-auto" />
+            <div className="space-y-2">
+              <p className="font-medium">Δεν βρέθηκαν ομάδες</p>
+              <p className="text-sm text-muted-foreground">
+                Δημιουργήστε την πρώτη ομάδα για να ξεκινήσετε.
+              </p>
+              <Button className="mt-4">
+                <Plus className="w-4 h-4 mr-2" />
+                Δημιουργία Ομάδας
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-8">
@@ -55,7 +159,7 @@ export default function CrmTeamsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {teams.map((team) => (
-          <Card key={team.name} className="flex flex-col">
+          <Card key={team.id} className="flex flex-col">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>{team.name}</CardTitle>
@@ -69,14 +173,14 @@ export default function CrmTeamsPage() {
               <h4 className="text-sm font-medium text-muted-foreground">Μέλη ({team.members.length})</h4>
               <div className="space-y-3">
                 {team.members.map((member) => (
-                  <div key={member.name} className="flex items-center gap-3">
+                  <div key={member.id} className="flex items-center gap-3">
                     <Avatar>
-                      <AvatarImage data-ai-hint="avatar person" src={`https://placehold.co/40x40.png?text=${getInitials(member.name)}`} />
-                      <AvatarFallback>{getInitials(member.name)}</AvatarFallback>
+                      <AvatarImage data-ai-hint="avatar person" src={`https://placehold.co/40x40.png?text=${getInitials(member.displayName)}`} />
+                      <AvatarFallback>{getInitials(member.displayName)}</AvatarFallback>
                     </Avatar>
                     <div>
-                      <p className="text-sm font-medium">{member.name}</p>
-                      <p className="text-xs text-muted-foreground">{member.role}</p>
+                      <p className="text-sm font-medium">{member.displayName}</p>
+                      <p className="text-xs text-muted-foreground">{member.position?.title || member.role}</p>
                     </div>
                   </div>
                 ))}

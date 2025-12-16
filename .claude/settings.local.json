@@ -190,7 +190,8 @@
       "Bash(PORT=3333 npm run dev)",
       "Bash(PORT=3333 npm run dev:fast)",
       "Bash(SKIP_ENV_VALIDATION=true TYPESCRIPT_CHECK=false npm run dev:clean)",
-      "Bash(TYPESCRIPT_CHECK=false PORT=3005 npm run dev)"
+      "Bash(TYPESCRIPT_CHECK=false PORT=3005 npm run dev)",
+      "Bash(npm run validate:i18n:*)"
     ],
     "deny": [],
     "ask": []

@@ -17,7 +17,6 @@
  * ```
  *
  * @see src/services/filesystem/EnterpriseFileSystemService.ts
- * @see scripts/migrate-file-system-settings.js
  */
 
 /**

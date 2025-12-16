@@ -16,7 +16,6 @@
  * ```
  *
  * @see src/services/notification/EnterpriseNotificationService.ts
- * @see scripts/migrate-notification-settings.js
  */
 
 /**

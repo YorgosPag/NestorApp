@@ -15,7 +15,6 @@ import type { Property } from '@/types/property-viewer';
  * ```
  *
  * @see src/services/layer/EnterpriseLayerStyleService.ts
- * @see scripts/migrate-layer-styles.js
  */
 
 /**

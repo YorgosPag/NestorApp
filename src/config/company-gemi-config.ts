@@ -64,7 +64,19 @@ export interface SectionConfig {
 // FIELD OPTIONS CONFIGURATIONS
 // ============================================================================
 
-/** 🏢 ENTERPRISE: Configurable legal forms for different countries */
+/**
+ * 🏢 ENTERPRISE BUSINESS RULES INTEGRATION
+ *
+ * Database-driven legal forms and company statuses using EnterpriseBusinessRulesService.
+ * Replaces hardcoded values with dynamic configuration.
+ *
+ * @enterprise-migration true
+ * @version 2.0.0
+ */
+
+import { businessRulesService } from '@/services/business/EnterpriseBusinessRulesService';
+
+/** @deprecated Use EnterpriseBusinessRulesService.getLegalFormsForSelect() instead */
 const getDefaultLegalForms = (): SelectOption[] => [
   { value: 'OE', label: 'Ο.Ε. (Ομόρρυθμη Εταιρεία)' },
   { value: 'EE', label: 'Ε.Ε. (Ετερόρρυθμη Εταιρεία)' },
@@ -74,7 +86,15 @@ const getDefaultLegalForms = (): SelectOption[] => [
   { value: 'MONO', label: 'Μονοπρόσωπη Ι.Κ.Ε.' },
 ];
 
-/** Νομικές μορφές εταιρειών με environment configuration */
+/**
+ * @deprecated Hardcoded legal forms - Use EnterpriseBusinessRulesService instead
+ *
+ * MIGRATION PATH:
+ * Before: LEGAL_FORM_OPTIONS
+ * After: await businessRulesService.getLegalFormsForSelect(tenantId, jurisdiction, environment)
+ *
+ * This fallback will be removed in v3.0.0
+ */
 export const LEGAL_FORM_OPTIONS: SelectOption[] = (() => {
   try {
     // Try to load from environment variable
@@ -88,13 +108,193 @@ export const LEGAL_FORM_OPTIONS: SelectOption[] = (() => {
   return getDefaultLegalForms();
 })();
 
-/** Κατάσταση ΓΕΜΗ */
+/**
+ * @deprecated Hardcoded company statuses - Use EnterpriseBusinessRulesService instead
+ *
+ * MIGRATION PATH:
+ * Before: GEMI_STATUS_OPTIONS
+ * After: await businessRulesService.getCompanyStatusesForSelect(tenantId, jurisdiction, environment)
+ *
+ * This fallback will be removed in v3.0.0
+ */
 export const GEMI_STATUS_OPTIONS: SelectOption[] = [
   { value: 'active', label: 'Ενεργή' },
   { value: 'inactive', label: 'Ανενεργή' },
   { value: 'dissolved', label: 'Λυθείσα' },
   { value: 'bankruptcy', label: 'Σε Πτώχευση' },
 ];
+
+/**
+ * Enterprise legal forms loader function
+ *
+ * @example
+ * ```typescript
+ * const legalForms = await loadLegalForms('my-tenant', 'GR');
+ * ```
+ */
+export async function loadLegalForms(
+  tenantId: string = 'default',
+  jurisdiction: string = 'GR',
+  environment: string = 'production'
+): Promise<SelectOption[]> {
+  try {
+    // Try to load from enterprise service
+    return await businessRulesService.getLegalFormsForSelect(
+      tenantId,
+      jurisdiction,
+      environment
+    );
+  } catch (error) {
+    console.warn('🏢 Failed to load legal forms from service, using fallback:', error);
+
+    // Fallback to hardcoded values
+    return LEGAL_FORM_OPTIONS;
+  }
+}
+
+/**
+ * Enterprise company statuses loader function
+ *
+ * @example
+ * ```typescript
+ * const statuses = await loadCompanyStatuses('my-tenant', 'GR');
+ * ```
+ */
+export async function loadCompanyStatuses(
+  tenantId: string = 'default',
+  jurisdiction: string = 'GR',
+  environment: string = 'production'
+): Promise<SelectOption[]> {
+  try {
+    // Try to load from enterprise service
+    return await businessRulesService.getCompanyStatusesForSelect(
+      tenantId,
+      jurisdiction,
+      environment
+    );
+  } catch (error) {
+    console.warn('🏢 Failed to load company statuses from service, using fallback:', error);
+
+    // Fallback to hardcoded values
+    return GEMI_STATUS_OPTIONS;
+  }
+}
+
+/**
+ * Get enterprise legal forms with business rules validation
+ *
+ * @param options Configuration options
+ * @returns Promise resolving to legal forms array with validation support
+ */
+export async function getEnterpriseLegalForms(options: {
+  tenantId?: string;
+  jurisdiction?: string;
+  environment?: string;
+  includeRequirements?: boolean;
+} = {}): Promise<Array<SelectOption & {
+  description?: string;
+  minCapital?: { amount: number; currency: string };
+  requirements?: string[];
+}>> {
+  const {
+    tenantId = 'default',
+    jurisdiction = 'GR',
+    environment = 'production',
+    includeRequirements = false
+  } = options;
+
+  try {
+    if (includeRequirements) {
+      // Get full legal forms with requirements
+      const legalForms = await businessRulesService.getLegalForms(
+        tenantId,
+        jurisdiction,
+        environment
+      );
+
+      return legalForms.map(lf => ({
+        value: lf.value,
+        label: lf.label,
+        description: lf.description,
+        minCapital: lf.minCapital,
+        requirements: lf.requirements
+      }));
+    } else {
+      // Get simple select options
+      return await businessRulesService.getLegalFormsForSelect(
+        tenantId,
+        jurisdiction,
+        environment
+      );
+    }
+  } catch (error) {
+    console.warn('🏢 Failed to load enterprise legal forms, using fallback:', error);
+
+    // Enhanced fallback
+    return LEGAL_FORM_OPTIONS.map(option => ({
+      ...option,
+      description: `Legal form: ${option.label}`
+    }));
+  }
+}
+
+/**
+ * Get enterprise company statuses with workflow support
+ *
+ * @param options Configuration options
+ * @returns Promise resolving to company statuses array with transition rules
+ */
+export async function getEnterpriseCompanyStatuses(options: {
+  tenantId?: string;
+  jurisdiction?: string;
+  environment?: string;
+  includeTransitions?: boolean;
+} = {}): Promise<Array<SelectOption & {
+  category?: string;
+  businessImpact?: string;
+  allowedTransitions?: string[];
+}>> {
+  const {
+    tenantId = 'default',
+    jurisdiction = 'GR',
+    environment = 'production',
+    includeTransitions = false
+  } = options;
+
+  try {
+    if (includeTransitions) {
+      // Get full status configurations with transitions
+      const statuses = await businessRulesService.getCompanyStatuses(
+        tenantId,
+        jurisdiction,
+        environment
+      );
+
+      return statuses.map(cs => ({
+        value: cs.value,
+        label: cs.label,
+        category: cs.category,
+        businessImpact: cs.businessImpact,
+        allowedTransitions: cs.allowedTransitions
+      }));
+    } else {
+      // Get simple select options
+      return await businessRulesService.getCompanyStatusesForSelect(
+        tenantId,
+        jurisdiction,
+        environment
+      );
+    }
+  } catch (error) {
+    console.warn('🏢 Failed to load enterprise company statuses, using fallback:', error);
+
+    // Enhanced fallback
+    return GEMI_STATUS_OPTIONS.map(option => ({
+      ...option,
+      category: 'operational'
+    }));
+  }
+}
 
 /** Τύπος δραστηριότητας */
 export const ACTIVITY_TYPE_OPTIONS: SelectOption[] = [
