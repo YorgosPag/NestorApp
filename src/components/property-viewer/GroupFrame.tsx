@@ -4,6 +4,7 @@ import React from 'react';
 import type { Property } from '@/types/property-viewer';
 import type { PropertyGroup } from '@/types/connections';
 import { getCentroid } from '@/lib/geometry';
+import { svgUtilities } from '@/styles/design-tokens';
 
 interface Props {
   group: PropertyGroup;
@@ -51,12 +52,7 @@ export function GroupFrame({ group, properties }: Props) {
         fontSize="14"
         fontWeight="bold"
         fill={group.color}
-        style={{
-          paintOrder: 'stroke',
-          stroke: 'white',
-          strokeWidth: '4px',
-          strokeLinejoin: 'round',
-        }}
+        style={svgUtilities.text.withStroke()}
       >
         {group.name}
       </text>

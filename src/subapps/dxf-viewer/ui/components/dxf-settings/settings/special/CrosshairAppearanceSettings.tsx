@@ -47,6 +47,7 @@ import { DEFAULT_CURSOR_SETTINGS } from '../../../../../systems/cursor/config';
 import type { CursorColors } from '../../../palettes/CursorColorPalette';
 import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { layoutUtilities } from '@/styles/design-tokens';
 
 export interface CrosshairAppearanceSettingsProps {
   className?: string;
@@ -135,10 +136,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
           >
             <div
               className="w-full"
-              style={{
-                height: `${settings.crosshair.line_width}px`,
-                backgroundColor: cursorColors.crosshairColor
-              }}
+              style={layoutUtilities.dxf.crosshairLine.solid(settings.crosshair.line_width, cursorColors.crosshairColor)}
             ></div>
             <span className="block mt-1">Συνεχόμενη</span>
           </button>
@@ -152,10 +150,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
           >
             <div
               className="w-full"
-              style={{
-                height: `${settings.crosshair.line_width}px`,
-                background: `repeating-linear-gradient(to right, ${cursorColors.crosshairColor} 0, ${cursorColors.crosshairColor} ${settings.crosshair.line_width * 6}px, transparent ${settings.crosshair.line_width * 6}px, transparent ${settings.crosshair.line_width * 12}px)`
-              }}
+              style={layoutUtilities.dxf.crosshairLine.dashed(settings.crosshair.line_width, cursorColors.crosshairColor)}
             ></div>
             <span className="block mt-1">Διακεκομμένη</span>
           </button>
@@ -169,10 +164,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
           >
             <div
               className="w-full"
-              style={{
-                height: `${settings.crosshair.line_width}px`,
-                background: `repeating-linear-gradient(to right, ${cursorColors.crosshairColor} 0, ${cursorColors.crosshairColor} ${settings.crosshair.line_width}px, transparent ${settings.crosshair.line_width}px, transparent ${settings.crosshair.line_width * 8}px)`
-              }}
+              style={layoutUtilities.dxf.crosshairLine.dotted(settings.crosshair.line_width, cursorColors.crosshairColor)}
             ></div>
             <span className="block mt-1">Τελείες</span>
           </button>
@@ -186,10 +178,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
           >
             <div
               className="w-full"
-              style={{
-                height: `${settings.crosshair.line_width}px`,
-                background: `repeating-linear-gradient(to right, ${cursorColors.crosshairColor} 0, ${cursorColors.crosshairColor} ${settings.crosshair.line_width * 8}px, transparent ${settings.crosshair.line_width * 8}px, transparent ${settings.crosshair.line_width * 12}px, ${cursorColors.crosshairColor} ${settings.crosshair.line_width * 12}px, ${cursorColors.crosshairColor} ${settings.crosshair.line_width * 14}px, transparent ${settings.crosshair.line_width * 14}px, transparent ${settings.crosshair.line_width * 22}px)`
-              }}
+              style={layoutUtilities.dxf.crosshairLine.dashDot(settings.crosshair.line_width, cursorColors.crosshairColor)}
             ></div>
             <span className="block mt-1">Παύλα-Τελεία</span>
           </button>
@@ -227,10 +216,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             >
               <div
                 className="w-full mx-auto"
-                style={{
-                  height: `${width}px`,
-                  backgroundColor: cursorColors.crosshairColor
-                }}
+                style={layoutUtilities.dxf.composite.coloredBar(width, cursorColors.crosshairColor)}
               ></div>
               <span className="block mt-1 text-xs">{width}px</span>
             </button>
@@ -258,7 +244,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             <div className="w-6 h-6 flex items-center justify-center">
               <div
                 className="w-1 h-1 rounded-full"
-                style={{ backgroundColor: cursorColors.crosshairColor }}
+                style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
               ></div>
             </div>
             <span className="text-xs mt-1">0%</span>
@@ -275,16 +261,14 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
               {/* Οριζόντια γραμμή */}
               <div
                 className="absolute top-1/2 left-1/2 w-3 transform -translate-x-1/2 -translate-y-1/2"
-                style={{
-                  backgroundColor: cursorColors.crosshairColor,
+                style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
                   height: '1px'
                 }}
               ></div>
               {/* Κάθετη γραμμή */}
               <div
                 className="absolute top-1/2 left-1/2 h-3 transform -translate-x-1/2 -translate-y-1/2"
-                style={{
-                  backgroundColor: cursorColors.crosshairColor,
+                style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
                   width: '1px'
                 }}
               ></div>
@@ -303,16 +287,14 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
               {/* Οριζόντια γραμμή */}
               <div
                 className="absolute top-1/2 left-1/2 w-4 transform -translate-x-1/2 -translate-y-1/2"
-                style={{
-                  backgroundColor: cursorColors.crosshairColor,
+                style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
                   height: '1px'
                 }}
               ></div>
               {/* Κάθετη γραμμή */}
               <div
                 className="absolute top-1/2 left-1/2 h-4 transform -translate-x-1/2 -translate-y-1/2"
-                style={{
-                  backgroundColor: cursorColors.crosshairColor,
+                style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
                   width: '1px'
                 }}
               ></div>
@@ -331,16 +313,14 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
               {/* Οριζόντια γραμμή */}
               <div
                 className="absolute top-1/2 left-1/2 w-5 transform -translate-x-1/2 -translate-y-1/2"
-                style={{
-                  backgroundColor: cursorColors.crosshairColor,
+                style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
                   height: '1px'
                 }}
               ></div>
               {/* Κάθετη γραμμή */}
               <div
                 className="absolute top-1/2 left-1/2 h-5 transform -translate-x-1/2 -translate-y-1/2"
-                style={{
-                  backgroundColor: cursorColors.crosshairColor,
+                style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
                   width: '1px'
                 }}
               ></div>
@@ -359,21 +339,19 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
               {/* Εξωτερικό πλαίσιο */}
               <div
                 className="absolute inset-0 border"
-                style={{ borderColor: cursorColors.crosshairColor }}
+                style={layoutUtilities.dxf.colors.borderColor(cursorColors.crosshairColor)}
               ></div>
               {/* Οριζόντια γραμμή που φτάνει τα άκρα του πλαισίου */}
               <div
                 className="absolute top-1/2 left-0 w-full transform -translate-y-1/2"
-                style={{
-                  backgroundColor: cursorColors.crosshairColor,
+                style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
                   height: '1px'
                 }}
               ></div>
               {/* Κάθετη γραμμή που φτάνει τα άκρα του πλαισίου */}
               <div
                 className="absolute left-1/2 top-0 h-full transform -translate-x-1/2"
-                style={{
-                  backgroundColor: cursorColors.crosshairColor,
+                style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
                   width: '1px'
                 }}
               ></div>

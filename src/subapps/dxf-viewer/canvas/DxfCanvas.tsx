@@ -211,8 +211,7 @@ export const DxfCanvas = forwardRef<DxfCanvasRef, DxfCanvasProps>((props, ref) =
 
   return (
     <div
-      className={`relative h-full overflow-hidden ${className}`}
-      style={{ backgroundColor: 'transparent' }}
+      className={`relative h-full overflow-hidden bg-transparent ${className}`}
     >
       <DxfCanvasCore
         ref={coreCanvasRef}

@@ -2,6 +2,8 @@
 
 'use client';
 
+import { svgUtilities } from '@/styles/design-tokens';
+
 interface PropertyPolygonLabelsProps {
   name: string;
   type: string;
@@ -18,7 +20,7 @@ export function PropertyPolygonLabels({ name, type, centroid }: PropertyPolygonL
         fontSize="10"
         fill="black"
         className="select-none font-medium"
-        style={{ paintOrder: 'stroke', stroke: 'rgba(255,255,255,0.8)', strokeWidth: '3px', strokeLinejoin: 'round' }}
+        style={svgUtilities.text.withStroke('rgba(255,255,255,0.8)', 3)}
       >
         {name.replace(/ - .*/, '')}
       </text>
@@ -29,7 +31,7 @@ export function PropertyPolygonLabels({ name, type, centroid }: PropertyPolygonL
         fontSize="8"
         fill="black"
         className="select-none"
-        style={{ paintOrder: 'stroke', stroke: 'rgba(255,255,255,0.7)', strokeWidth: '2px', strokeLinejoin: 'round' }}
+        style={svgUtilities.text.outlined('rgba(255,255,255,0.7)', 2)}
       >
         {type}
       </text>

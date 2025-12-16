@@ -119,6 +119,65 @@ export const animation = {
   },
 } as const;
 
+// Transition system για animations
+export const transitions = {
+  duration: {
+    fast: '150ms',
+    base: '300ms',
+    slow: '500ms'
+  },
+
+  easing: {
+    easeIn: 'ease-in',
+    easeOut: 'ease-out',
+    easeInOut: 'ease-in-out'
+  }
+} as const;
+
+// Color system - Base colors για το design system
+export const colors = {
+  // Basic color palette
+  background: {
+    primary: '#ffffff',
+    secondary: '#f8fafc',
+    tertiary: '#f1f5f9',
+    hover: '#f1f5f9',
+    overlay: 'rgba(0, 0, 0, 0.5)'
+  },
+
+  text: {
+    primary: '#1e293b',
+    secondary: '#64748b',
+    tertiary: '#94a3b8',
+    inverse: '#ffffff'
+  },
+
+  border: {
+    primary: '#e2e8f0',
+    secondary: '#cbd5e1',
+    tertiary: '#f1f5f9'
+  },
+
+  surface: {
+    primary: '#ffffff',
+    secondary: '#f8fafc'
+  },
+
+  // Semantic colors
+  primary: {
+    500: '#3b82f6'
+  },
+
+  // Status colors
+  blue: { 300: '#93c5fd', 500: '#3b82f6', 600: '#2563eb' },
+  green: { 300: '#86efac', 500: '#22c55e', 600: '#16a34a' },
+  purple: { 300: '#c4b5fd', 500: '#8b5cf6', 600: '#7c3aed' },
+  orange: { 300: '#fdba74', 500: '#f97316', 600: '#ea580c' },
+  red: { 300: '#fca5a5', 500: '#ef4444', 600: '#dc2626' },
+  teal: { 300: '#5eead4', 500: '#14b8a6', 600: '#0d9488' },
+  gray: { 50: '#f9fafb', 100: '#f3f4f6', 500: '#6b7280' }
+} as const;
+
 // Semantic color mapping για application-specific χρώματα
 export const semanticColors = {
   // Status colors (χρησιμοποιώντας CSS variables)
@@ -310,6 +369,8 @@ export const designTokens = {
   borderRadius,
   shadows,
   animation,
+  transitions,
+  colors,
   semanticColors,
   zIndex,
   gridPatterns,
@@ -349,6 +410,14 @@ export const layoutUtilities = {
     none: 'none' as const,
   },
 
+  // Grid layout utilities για dynamic grid patterns
+  grid: {
+    templateColumns: (columns: number) => ({ gridTemplateColumns: `repeat(${columns}, 1fr)` }),
+    templateColumnsCustom: (pattern: string) => ({ gridTemplateColumns: pattern }),
+    autoColumns: (size: string) => ({ gridAutoColumns: size }),
+    gap: (size: number, unit: 'px' | 'rem' = 'rem') => ({ gap: `${size}${unit}` }),
+  },
+
   // Visibility utilities για show/hide patterns
   visibility: {
     visible: 'visible' as const,
@@ -373,6 +442,12 @@ export const layoutUtilities = {
   // Dynamic rem value generator
   rem: (value: number): string => `${value}rem`,
 
+  // Random height generator για chart skeletons & data visualization
+  randomHeight: (min: number = 20, max: number = 100): string => `${Math.random() * (max - min) + min}%`,
+
+  // Dynamic height utilities για scroll containers & responsive sizing
+  maxHeight: (value: string | number): string => typeof value === 'number' ? `${value}px` : value,
+
   // Dynamic positioning utilities για absolute/relative positioning
   position: (top: string, left: string): { top: string; left: string } => ({ top, left }),
 
@@ -383,6 +458,273 @@ export const layoutUtilities = {
     topRight: { top: '0', right: '0' },
     bottomLeft: { bottom: '0', left: '0' },
     bottomRight: { bottom: '0', right: '0' },
+  },
+
+  // Dynamic dropdown positioning για portals & overlays
+  dropdown: {
+    fixed: (top: number, left: number, width: number, zIndex: number = 9999) => ({
+      position: 'fixed' as const,
+      top: `${top}px`,
+      left: `${left}px`,
+      width: `${width}px`,
+      zIndex,
+    }),
+    portal: (position: { top: number; left: number; width: number }, zIndex: number = 9999) => ({
+      position: 'fixed' as const,
+      top: `${position.top}px`,
+      left: `${position.left}px`,
+      width: `${position.width}px`,
+      zIndex,
+    }),
+  },
+
+  // CSS Custom Properties utilities για geo-canvas design system compatibility
+  cssVars: {
+    // Color utilities
+    borderColor: (focused: boolean) => focused ? 'var(--color-border-focus)' : 'var(--color-border-primary)',
+    textColor: (variant: 'primary' | 'secondary' | 'tertiary') => `var(--color-text-${variant})`,
+    backgroundColor: (variant: 'primary' | 'secondary' | 'surface') => `var(--color-bg-${variant})`,
+
+    // Spacing utilities
+    spacing: (size: number | string) => `var(--spacing-${size})`,
+    marginBottom: (size: number | string) => `var(--spacing-${size})`,
+    padding: (vertical: number | string, horizontal?: number | string) =>
+      horizontal ? `var(--spacing-${vertical}) var(--spacing-${horizontal})` : `var(--spacing-${vertical})`,
+
+    // Shadow utilities
+    boxShadow: (focused: boolean) => focused ? 'var(--shadow-focus)' : 'none',
+
+    // Border utilities
+    border: (variant: 'primary' | 'secondary' = 'primary') => `1px solid var(--color-border-${variant})`,
+    borderRadius: (size: 'sm' | 'md' | 'lg' = 'sm') => `var(--radius-${size})`,
+
+    // Typography utilities
+    fontSize: (size: string | number) => typeof size === 'string' ? size : `${size}px`,
+
+    // Layout utilities για common patterns
+    fullWidth: { width: '100%' },
+    inputBase: {
+      border: '1px solid var(--color-border-primary)',
+      borderRadius: 'var(--radius-sm)',
+      backgroundColor: 'var(--color-bg-primary)',
+      color: 'var(--color-text-primary)',
+    },
+
+    // Transform utilities
+    transform: {
+      centerY: 'translateY(-50%)',
+      centerX: 'translateX(-50%)',
+      center: 'translate(-50%, -50%)',
+    },
+
+    // Common positioning patterns με CSS vars
+    absoluteCenter: {
+      position: 'absolute',
+      top: '50%',
+      left: '50%',
+      transform: 'translate(-50%, -50%)',
+    },
+
+    absoluteCenterY: {
+      position: 'absolute',
+      top: '50%',
+      transform: 'translateY(-50%)',
+    },
+  },
+
+  // DXF-specific utilities για cursor, crosshair, και settings components
+  dxf: {
+    // Crosshair line utilities
+    crosshairLine: {
+      solid: (width: number, color: string) => ({
+        height: `${width}px`,
+        backgroundColor: color,
+      }),
+
+      dashed: (width: number, color: string) => ({
+        height: `${width}px`,
+        background: `repeating-linear-gradient(to right, ${color} 0, ${color} ${width * 6}px, transparent ${width * 6}px, transparent ${width * 12}px)`,
+      }),
+
+      dotted: (width: number, color: string) => ({
+        height: `${width}px`,
+        background: `repeating-linear-gradient(to right, ${color} 0, ${color} ${width}px, transparent ${width}px, transparent ${width * 8}px)`,
+      }),
+
+      dashDot: (width: number, color: string) => ({
+        height: `${width}px`,
+        background: `repeating-linear-gradient(to right,
+          ${color} 0, ${color} ${width * 6}px,
+          transparent ${width * 6}px, transparent ${width * 8}px,
+          ${color} ${width * 8}px, ${color} ${width * 10}px,
+          transparent ${width * 10}px, transparent ${width * 18}px)`,
+      }),
+    },
+
+    // Dynamic dimension utilities για DXF settings
+    dimensions: {
+      lineWidth: (width: number) => ({ height: `${width}px` }),
+      dynamicHeight: (value: number, unit: 'px' | '%' = 'px') => ({ height: `${value}${unit}` }),
+      dynamicWidth: (value: number, unit: 'px' | '%' = 'px') => ({ width: `${value}${unit}` }),
+    },
+
+    // Color utilities για dynamic cursor colors
+    colors: {
+      backgroundColor: (color: string) => ({ backgroundColor: color }),
+      borderColor: (color: string) => ({ borderColor: color }),
+      color: (color: string) => ({ color }),
+    },
+
+    // Composite utilities για common DXF patterns
+    composite: {
+      coloredBar: (height: number, color: string) => ({
+        height: `${height}px`,
+        backgroundColor: color,
+      }),
+    },
+  },
+} as const;
+
+// ============================================================================
+// PORTAL COMPONENTS - ENTERPRISE OVERLAY SYSTEM
+// ============================================================================
+
+/**
+ * Portal Components για Overlay & Dropdown Systems
+ * Enterprise-class portal management με z-index hierarchy και positioning
+ */
+export const portalComponents = {
+  overlay: {
+    fullscreen: {
+      position: 'fixed' as const,
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      pointerEvents: 'none' as const,
+    },
+    backdrop: (zIndex: number = 1000) => ({
+      position: 'fixed' as const,
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      zIndex,
+      pointerEvents: 'auto' as const,
+    }),
+  },
+
+  dropdown: {
+    absolute: (top: number, left: number, width: number, height?: number | string) => ({
+      position: 'absolute' as const,
+      top: `${top}px`,
+      left: `${left}px`,
+      width: `${width}px`,
+      height: height ? (typeof height === 'number' ? `${height}px` : height) : 'auto',
+      pointerEvents: 'auto' as const,
+    }),
+    custom: (config: {
+      top: number;
+      left: number;
+      width: number;
+      height?: number | string;
+      minHeight?: string;
+      maxHeight?: string
+    }) => ({
+      position: 'absolute' as const,
+      top: `${config.top}px`,
+      left: `${config.left}px`,
+      width: `${config.width}px`,
+      height: config.height ? (typeof config.height === 'number' ? `${config.height}px` : config.height) : 'auto',
+      minHeight: config.minHeight || undefined,
+      maxHeight: config.maxHeight || undefined,
+      pointerEvents: 'auto' as const,
+    }),
+  },
+
+  zIndex: {
+    dropdown: 1000,
+    modal: 2000,
+    tooltip: 3000,
+    critical: 2147483647, // Maximum zIndex
+  },
+} as const;
+
+// ============================================================================
+// SVG UTILITIES - GRAPHICS RENDERING SYSTEM
+// ============================================================================
+
+/**
+ * SVG Utilities για Canvas & Graphics Rendering
+ * Enterprise-class SVG styling με text effects και shape patterns
+ */
+export const svgUtilities = {
+  text: {
+    withStroke: (strokeColor: string = 'white', strokeWidth: number = 4) => ({
+      paintOrder: 'stroke' as const,
+      stroke: strokeColor,
+      strokeWidth: `${strokeWidth}px`,
+      strokeLinejoin: 'round' as const,
+    }),
+    outlined: (strokeColor: string = 'white', strokeWidth: number = 2) => ({
+      paintOrder: 'stroke' as const,
+      stroke: strokeColor,
+      strokeWidth: `${strokeWidth}px`,
+      strokeLinecap: 'round' as const,
+      strokeLinejoin: 'round' as const,
+    }),
+  },
+
+  shapes: {
+    backgroundRect: (color: string, opacity: number = 1) => ({
+      fill: color,
+      opacity,
+      pointerEvents: 'none' as const,
+    }),
+  },
+} as const;
+
+// ============================================================================
+// INTERACTION UTILITIES - USER INTERFACE CONTROL
+// ============================================================================
+
+/**
+ * Interaction Utilities για User Input & Selection Control
+ * Enterprise-class interaction management με cross-browser compatibility
+ */
+export const interactionUtilities = {
+  pointerEvents: {
+    none: { pointerEvents: 'none' as const },
+    auto: { pointerEvents: 'auto' as const },
+    all: { pointerEvents: 'all' as const },
+  },
+
+  userSelect: {
+    none: {
+      userSelect: 'none' as const,
+      WebkitUserSelect: 'none' as const,
+      MozUserSelect: 'none' as const,
+      msUserSelect: 'none' as const,
+    },
+    text: { userSelect: 'text' as const },
+    all: { userSelect: 'all' as const },
+  },
+
+  // Combined interaction patterns για common use cases
+  nonInteractive: {
+    position: 'absolute' as const,
+    pointerEvents: 'none' as const,
+    userSelect: 'none' as const,
+    WebkitUserSelect: 'none' as const,
+    MozUserSelect: 'none' as const,
+    msUserSelect: 'none' as const,
+  },
+
+  overlay: {
+    position: 'absolute' as const,
+    pointerEvents: 'auto' as const,
+    userSelect: 'text' as const,
   },
 } as const;
 
@@ -413,13 +755,494 @@ export const layoutUtilities = {
  * @see ./design-tokens/index.ts - Πλήρης documentation & API
  */
 export const DESIGN_TOKENS_V2_INFO = {
-  version: '2.0.0',
-  description: 'Enterprise-class modular design tokens με backward compatibility',
+  version: '2.1.0',
+  description: 'Enterprise-class modular design tokens με performance optimization support',
   migrationGuide: 'See ./design-tokens/index.ts for full API documentation',
   modules: [
     'semantic/alert-tokens.ts - Alert severity, status, AutoSave indicators',
     'components/dashboard-tokens.ts - Dashboard layouts, metrics, charts',
     'components/map-tokens.ts - Map interfaces, polygons, drawing tools',
-    'components/dialog-tokens.ts - Modals, forms, wizards, steps'
+    'components/dialog-tokens.ts - Modals, forms, wizards, steps',
+    'performance/performance-tokens.ts - Virtualized tables, metrics, analytics'
   ]
+} as const;
+
+// ============================================================================
+// PERFORMANCE COMPONENTS - ENTERPRISE VIRTUALIZATION SYSTEM
+// ============================================================================
+
+/**
+ * Performance Components για High-Performance UI Elements
+ * Enterprise-class virtualized tables, metrics dashboards, and analytics
+ *
+ * Optimized για smooth 60fps rendering με minimal repaints
+ *
+ * @example
+ * ```tsx
+ * <div style={performanceComponents.virtualizedTable.container} />
+ * <span style={performanceComponents.metrics.label} />
+ * ```
+ */
+export const performanceComponents = {
+  // Virtualized Table System
+  virtualizedTable: {
+    // Main container
+    container: {
+      position: 'relative' as const,
+      overflow: 'hidden' as const,
+      backgroundColor: colors.background.primary,
+      border: `1px solid ${colors.border.primary}`,
+      borderRadius: borderRadius.md,
+      willChange: 'scroll-position' as const // Performance optimization
+    },
+
+    // Header section
+    header: {
+      position: 'sticky' as const,
+      top: 0,
+      backgroundColor: colors.background.secondary,
+      borderBottom: `1px solid ${colors.border.primary}`,
+      zIndex: 1,
+      padding: spacing[3],
+      fontWeight: typography.fontWeight.semibold,
+      fontSize: typography.fontSize.sm,
+      color: colors.text.primary
+    },
+
+    // Scrollable content area
+    scrollableContent: {
+      position: 'relative' as const,
+      overflow: 'auto' as const,
+      willChange: 'scroll-position, contents' as const // Performance hint
+    },
+
+    // Row styling
+    row: {
+      base: {
+        display: 'flex',
+        alignItems: 'center',
+        padding: `${spacing[2]} ${spacing[3]}`,
+        borderBottom: `1px solid ${colors.border.secondary}`,
+        transition: `background-color ${animation.duration.fast}`,
+        cursor: 'default' as const
+      },
+
+      interactive: {
+        cursor: 'pointer' as const,
+        '&:hover': {
+          backgroundColor: colors.background.hover
+        }
+      }
+    },
+
+    // Cell styling
+    cell: {
+      base: {
+        display: 'flex',
+        alignItems: 'center',
+        minWidth: 0, // Allow text truncation
+        padding: `0 ${spacing[2]}`,
+        color: colors.text.primary,
+        fontSize: typography.fontSize.sm
+      },
+
+      flexible: {
+        flex: 1,
+        minWidth: 0
+      }
+    }
+  },
+
+  // Performance Metrics Components
+  metrics: {
+    // Individual metric card
+    card: {
+      padding: spacing[4],
+      backgroundColor: colors.background.secondary,
+      borderRadius: borderRadius.md,
+      border: `1px solid ${colors.border.secondary}`
+    },
+
+    // Metric labels and values
+    label: {
+      primary: {
+        fontWeight: typography.fontWeight.medium,
+        fontSize: typography.fontSize.sm,
+        color: colors.text.primary
+      },
+
+      secondary: {
+        color: colors.text.secondary
+      },
+
+      tertiary: {
+        color: colors.text.tertiary
+      }
+    },
+
+    // Metric values με severity colors
+    value: {
+      primary: {
+        fontWeight: typography.fontWeight.semibold,
+        fontSize: typography.fontSize.lg,
+        color: colors.text.primary
+      },
+
+      success: { color: colors.green[600] },
+      warning: { color: colors.orange[600] },
+      error: { color: colors.red[600] },
+      info: { color: colors.blue[600] }
+    }
+  },
+
+  // Loading and States
+  states: {
+    loading: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: spacing[8],
+      color: colors.text.secondary
+    }
+  },
+
+  // Performance Optimizations
+  optimizations: {
+    willChangeTransform: { willChange: 'transform' as const },
+    willChangeScroll: { willChange: 'scroll-position' as const },
+    gpuAccelerated: { transform: 'translateZ(0)' }
+  },
+
+  // Chart Components
+  chartComponents: {
+    // Legend Components
+    legend: {
+      container: {
+        display: 'flex' as const,
+        alignItems: 'center' as const,
+        justifyContent: 'center' as const,
+        gap: spacing[4]
+      },
+
+      item: {
+        base: {
+          display: 'flex' as const,
+          alignItems: 'center' as const,
+          gap: spacing[1.5]
+        },
+
+        icon: {
+          height: spacing[3],
+          width: spacing[3],
+          color: colors.text.tertiary
+        }
+      },
+
+      indicator: {
+        base: {
+          height: spacing[2],
+          width: spacing[2],
+          flexShrink: 0,
+          borderRadius: borderRadius.sm
+        }
+      },
+
+      // Top/Bottom positioned legends
+      positioning: {
+        top: { paddingBottom: spacing[3] },
+        bottom: { paddingTop: spacing[3] },
+        left: { paddingRight: spacing[3] },
+        right: { paddingLeft: spacing[3] }
+      }
+    },
+
+    // Tooltip Components
+    tooltip: {
+      indicator: {
+        dot: {
+          height: '10px',
+          width: '10px',
+          flexShrink: 0,
+          borderRadius: borderRadius.sm
+        },
+
+        line: {
+          width: '4px',
+          flexShrink: 0,
+          borderRadius: borderRadius.sm
+        },
+
+        dashed: {
+          width: 0,
+          border: '1.5px dashed',
+          backgroundColor: 'transparent',
+          flexShrink: 0
+        },
+
+        // Base styling με CSS variables
+        cssVariables: {
+          border: `1px solid var(--color-border)`,
+          backgroundColor: `var(--color-bg)`
+        }
+      },
+
+      container: {
+        base: {
+          backgroundColor: colors.surface.primary,
+          border: `1px solid ${colors.border.primary}`,
+          borderRadius: borderRadius.md,
+          padding: spacing[3],
+          boxShadow: shadows.md
+        },
+
+        content: {
+          fontSize: typography.fontSize.sm,
+          color: colors.text.primary
+        }
+      }
+    },
+
+    // Chart Colors Palette
+    colors: {
+      // Primary data series
+      primary: [
+        colors.blue[500],
+        colors.green[500],
+        colors.purple[500],
+        colors.orange[500],
+        colors.red[500],
+        colors.teal[500]
+      ],
+
+      // Status-based colors
+      status: {
+        success: colors.green[500],
+        warning: colors.orange[500],
+        error: colors.red[500],
+        info: colors.blue[500],
+        neutral: colors.gray[500]
+      }
+    }
+  }
+} as const;
+
+// ============================================================================
+// CHART COMPONENTS
+// ============================================================================
+
+/**
+ * Chart components design tokens για data visualization
+ *
+ * ✅ ENTERPRISE REFACTORED: Inline styles → Centralized tokens
+ * ✅ Type-safe chart styling patterns
+ * ✅ Dynamic color management για chart elements
+ * ✅ Fortune 500 grade data visualization standards
+ *
+ * Usage:
+ * - ChartLegend.tsx: Legend colors, indicators, tooltips
+ * - ChartTooltip.tsx: Tooltip indicators, backgrounds
+ * - Chart containers: Sizing, spacing, responsive patterns
+ */
+export const chartComponents = {
+  // Legend Components
+  legend: {
+    container: {
+      display: 'flex' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      gap: spacing[4]
+    },
+
+    item: {
+      base: {
+        display: 'flex' as const,
+        alignItems: 'center' as const,
+        gap: spacing[1.5]
+      },
+
+      icon: {
+        height: spacing[3],
+        width: spacing[3],
+        color: colors.text.tertiary
+      }
+    },
+
+    indicator: {
+      base: {
+        height: spacing[2],
+        width: spacing[2],
+        flexShrink: 0,
+        borderRadius: borderRadius.sm
+      },
+
+      /**
+       * Dynamic color utility για chart legend indicators
+       * Replaces: style={{ backgroundColor: item.color }}
+       */
+      withColor: (color: string): React.CSSProperties => ({
+        backgroundColor: color
+      })
+    },
+
+    // Top/Bottom positioned legends
+    positioning: {
+      top: { paddingBottom: spacing[3] },
+      bottom: { paddingTop: spacing[3] },
+      left: { paddingRight: spacing[3] },
+      right: { paddingLeft: spacing[3] }
+    }
+  },
+
+  // Tooltip Components
+  tooltip: {
+    indicator: {
+      dot: {
+        height: '10px',
+        width: '10px',
+        flexShrink: 0,
+        borderRadius: borderRadius.sm
+      },
+
+      line: {
+        width: '4px',
+        flexShrink: 0,
+        borderRadius: borderRadius.sm
+      },
+
+      dashed: {
+        width: 0,
+        border: '1.5px dashed',
+        backgroundColor: 'transparent',
+        flexShrink: 0
+      },
+
+      /**
+       * CSS Variables approach για dynamic colors
+       * Replaces: { "--color-bg": color, "--color-border": color }
+       */
+      withColor: (color: string | undefined): React.CSSProperties => ({
+        '--color-bg': color,
+        '--color-border': color
+      } as React.CSSProperties),
+
+      // Base styling με CSS variables
+      cssVariables: {
+        border: `1px solid var(--color-border)`,
+        backgroundColor: `var(--color-bg)`
+      }
+    },
+
+    container: {
+      base: {
+        backgroundColor: colors.surface.primary,
+        border: `1px solid ${colors.border.primary}`,
+        borderRadius: borderRadius.md,
+        padding: spacing[3],
+        boxShadow: shadows.md
+      },
+
+      content: {
+        fontSize: typography.fontSize.sm,
+        color: colors.text.primary
+      }
+    }
+  },
+
+  // Chart Container Components
+  container: {
+    base: {
+      position: 'relative' as const,
+      width: '100%',
+      height: '100%'
+    },
+
+    responsive: {
+      width: '100%',
+      height: 'auto',
+      aspectRatio: '16/9'
+    },
+
+    // Size variants
+    sizes: {
+      sm: { height: '200px' },
+      md: { height: '300px' },
+      lg: { height: '400px' },
+      xl: { height: '500px' }
+    }
+  },
+
+  // Chart Axis Components
+  axis: {
+    line: {
+      stroke: colors.border.secondary,
+      strokeWidth: 1
+    },
+
+    tick: {
+      fontSize: typography.fontSize.xs,
+      fill: colors.text.secondary
+    },
+
+    label: {
+      fontSize: typography.fontSize.sm,
+      fill: colors.text.primary,
+      fontWeight: typography.fontWeight.medium
+    }
+  },
+
+  // Chart Colors Palette (για consistent data visualization)
+  colors: {
+    // Primary data series
+    primary: [
+      colors.blue[500],
+      colors.green[500],
+      colors.purple[500],
+      colors.orange[500],
+      colors.red[500],
+      colors.teal[500]
+    ],
+
+    // Secondary data series
+    secondary: [
+      colors.blue[300],
+      colors.green[300],
+      colors.purple[300],
+      colors.orange[300],
+      colors.red[300],
+      colors.teal[300]
+    ],
+
+    // Status-based colors
+    status: {
+      success: colors.green[500],
+      warning: colors.orange[500],
+      error: colors.red[500],
+      info: colors.blue[500],
+      neutral: colors.gray[500]
+    },
+
+    // Grid lines
+    grid: {
+      major: colors.border.secondary,
+      minor: colors.border.tertiary
+    }
+  },
+
+  // Animation & Transitions
+  animations: {
+    fadeIn: {
+      opacity: 1,
+      transition: `opacity ${transitions.duration.base} ${transitions.easing.easeOut}`
+    },
+
+    slideUp: {
+      transform: 'translateY(0)',
+      transition: `transform ${transitions.duration.base} ${transitions.easing.easeOut}`
+    },
+
+    scale: {
+      transform: 'scale(1)',
+      transition: `transform ${transitions.duration.fast} ${transitions.easing.easeOut}`
+    }
+  }
 } as const;

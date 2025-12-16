@@ -6,12 +6,24 @@ import { cn } from '@/lib/utils';
 import { GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 import { nearbyProjects } from './nearbyProjects';
 import { NearbyProjectMarker } from './NearbyProjectMarker';
+import {
+  getProjectMarkerPosition,
+  getMapCanvasStyles,
+  getMapGridStyles,
+  getMainBuildingMarkerStyles,
+  getDistanceCircleStyles,
+  getScaleIndicatorStyles,
+  getMapTypeIndicatorStyles,
+  getMapViewDisplayName,
+  type MapViewType,
+  type ProjectStatusType
+} from './MapComponents.styles';
 
 interface MapCanvasProps {
     buildingName: string;
-    mapView: 'satellite' | 'street' | 'hybrid';
+    mapView: MapViewType;
     showNearbyProjects: boolean;
-    selectedLayer: 'all' | 'active' | 'completed';
+    selectedLayer: ProjectStatusType;
 }
 
 export function MapCanvas({ buildingName, mapView, showNearbyProjects, selectedLayer }: MapCanvasProps) {
@@ -53,10 +65,7 @@ export function MapCanvas({ buildingName, mapView, showNearbyProjects, selectedL
                         <NearbyProjectMarker
                             key={project.id}
                             project={project}
-                            position={{
-                                top: `${40 + (index * 15)}%`,
-                                left: `${35 + (index * 20)}%`
-                            }}
+                            position={getProjectMarkerPosition(index)}
                         />
                     ))}
 

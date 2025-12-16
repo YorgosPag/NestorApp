@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { layoutUtilities } from '@/styles/design-tokens';
 import {
   Search,
   X,
@@ -615,13 +616,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
             <Card
               ref={dropdownRef}
               className="shadow-xl border bg-background border-border"
-              style={{
-                position: 'fixed',
-                top: dropdownPosition.top,
-                left: dropdownPosition.left,
-                width: dropdownPosition.width,
-                zIndex: 9999
-              }}
+              style={layoutUtilities.dropdown.portal(dropdownPosition)}
             >
               <CardContent className={getEmployeeSelectorCardStyle()}>
                 {isSearching ? (

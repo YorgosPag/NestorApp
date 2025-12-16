@@ -237,7 +237,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
             disabled:opacity-50 disabled:cursor-not-allowed
           "
         >
-          <span style={{ transform: 'scaleX(-1)' }}>↷</span>
+          <span className="scale-x-[-1]">↷</span>
         </button>
         <button
           onClick={onRedo}

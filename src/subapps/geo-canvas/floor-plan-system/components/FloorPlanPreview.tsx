@@ -3,6 +3,7 @@
 import React from 'react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import type { ParserResult } from '../types';
+import { layoutUtilities } from '@/styles/design-tokens';
 
 /**
  * 🖼️ FLOOR PLAN PREVIEW COMPONENT
@@ -51,7 +52,7 @@ export function FloorPlanPreview({ result, file, className = '' }: FloorPlanPrev
               src={result.thumbnail}
               alt="Floor plan preview"
               className="max-w-full h-auto rounded"
-              style={{ maxHeight: '400px' }}
+              style={{ maxHeight: layoutUtilities.maxHeight(400) }}
             />
           </figure>
         </section>

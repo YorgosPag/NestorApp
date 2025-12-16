@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { layoutUtilities } from '@/styles/design-tokens';
 
 // Import types
 import type { Property } from '@/types/property-viewer';
@@ -118,9 +119,9 @@ function ReadOnlyLayerItem({
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger>
-                    <div 
+                    <div
                       className="w-3 h-3 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: categoryInfo.color }}
+                      style={layoutUtilities.dxf.colors.backgroundColor(categoryInfo.color)}
                     />
                   </TooltipTrigger>
                   <TooltipContent>
@@ -478,9 +479,9 @@ export function ReadOnlyLayerViewer({
                   {categories.map(category => (
                     <SelectItem key={category} value={category}>
                       <div className="flex items-center gap-2">
-                        <div 
+                        <div
                           className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: getCategoryInfo(category).color }}
+                          style={layoutUtilities.dxf.colors.backgroundColor(getCategoryInfo(category).color)}
                         />
                         {getCategoryInfo(category).name}
                       </div>
@@ -522,16 +523,16 @@ export function ReadOnlyLayerViewer({
 
         {/* Layers List */}
         {!layerState.isLoading && (
-          <ScrollArea style={{ maxHeight }}>
+          <ScrollArea style={{ maxHeight: layoutUtilities.maxHeight(maxHeight) }}>
             <div className="space-y-2">
               {Object.entries(groupedLayers).map(([category, layers]) => (
                 <div key={category}>
                   <h4 className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-2">
                     {category !== 'other' && getCategoryInfo(category) && (
                       <>
-                        <div 
+                        <div
                           className="w-2 h-2 rounded-full"
-                          style={{ backgroundColor: getCategoryInfo(category).color }}
+                          style={layoutUtilities.dxf.colors.backgroundColor(getCategoryInfo(category).color)}
                         />
                         {getCategoryInfo(category).name}
                       </>

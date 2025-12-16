@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
+import { layoutUtilities, chartComponents, interactionUtilities } from '@/styles/design-tokens';
 
 interface ValidationError {
   type: string;
@@ -33,14 +34,7 @@ export function StatusLegend({
         'select-none', // Prevent text selection
         className
       )}
-      style={{
-        position: 'absolute', // Use absolute, not fixed
-        pointerEvents: 'none', // Make it non-interactive
-        userSelect: 'none', // Prevent selection
-        WebkitUserSelect: 'none',
-        MozUserSelect: 'none',
-        msUserSelect: 'none'
-      }}
+      style={interactionUtilities.nonInteractive}
     >
       <div className="text-xs font-medium text-gray-900 mb-2">
         Κατάσταση Ακινήτων
@@ -51,11 +45,11 @@ export function StatusLegend({
           <div 
             key={index} 
             className="flex items-center gap-2 text-xs"
-            style={{ pointerEvents: 'none' }}
+            style={interactionUtilities.pointerEvents.none}
           >
             <div 
               className="w-3 h-3 rounded-full border border-gray-300"
-              style={{ backgroundColor: item.color }}
+              style={chartComponents.legend.indicator.withColor(item.color)}
             />
             <span className="text-gray-700 flex-1">{item.label}</span>
             <span className="text-gray-500 font-mono">{item.count}</span>

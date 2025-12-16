@@ -9,6 +9,7 @@ import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { BaseButton } from './BaseButton';
+import { portalComponents } from '@/styles/design-tokens';
 
 interface BaseModalProps {
   isOpen: boolean;
@@ -116,7 +117,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
       {/* Backdrop */}
       <div
         className={`fixed inset-0 bg-black bg-opacity-50 transition-opacity ${overlayClassName}`}
-        style={{ zIndex }}
+        style={{ zIndex: portalComponents.modal.backdrop.zIndex(zIndex) }}
         onClick={handleBackdropClick}
         aria-hidden="true"
       />
@@ -124,7 +125,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
       {/* Modal Container */}
       <div
         className="fixed inset-0 overflow-y-auto"
-        style={{ zIndex: zIndex + 1 }}
+        style={{ zIndex: portalComponents.modal.content.zIndex(zIndex) }}
       >
         <div className="flex items-center justify-center min-h-full p-4 text-center sm:p-0">
           {/* Modal Content */}

@@ -104,7 +104,7 @@ export function FilesCard() {
           </article>
         </section>
 
-        <aside className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800" style={{display: layoutUtilities.display.none}} id="upload-progress" role="status" aria-label="Upload progress">
+        <aside className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800 hidden" id="upload-progress" role="status" aria-label="Upload progress">
           <div className="flex items-center space-x-3">
             <div className="flex-shrink-0"><div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div></div>
             <div className="flex-1">

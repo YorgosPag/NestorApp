@@ -11,6 +11,7 @@ import {
   getAllStatuses
 } from '@/constants/statuses';
 import { STATUS_COLORS_MAPPING } from '@/subapps/dxf-viewer/config/color-mapping';
+import { layoutUtilities } from '@/styles/design-tokens';
 
 interface PropertyStatusManagerProps {
   onStatusChange?: (newStatus: PropertyStatus) => void;
@@ -186,7 +187,7 @@ export function PropertyStatusManager({
                   {/* Color Indicator */}
                   <div
                     className="w-4 h-4 rounded border-2 border-white shadow-sm"
-                    style={{ backgroundColor: statusColor }}
+                    style={layoutUtilities.dxf.colors.backgroundColor(statusColor)}
                   />
 
                   {/* Status Label */}

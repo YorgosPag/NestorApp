@@ -1,6 +1,8 @@
 
 'use client';
 
+import { svgUtilities } from '@/styles/design-tokens';
+
 interface Point {
   x: number;
   y: number;
@@ -44,7 +46,7 @@ export function MeasurementOverlay({ startPoint, endPoint, scale }: MeasurementO
         textAnchor="middle"
         fontSize="12"
         fill="#ef4444"
-        style={{ paintOrder: 'stroke', stroke: 'white', strokeWidth: '3px', strokeLinejoin: 'round' }}
+        style={svgUtilities.text.withStroke('white', 3)}
       >
         {realDist}m
       </text>

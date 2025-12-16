@@ -8,6 +8,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react';
 import { useTheme } from '../theme/ThemeProvider';
+import { layoutUtilities } from '@/styles/design-tokens';
 
 // ============================================================================
 // SEARCH TYPES και INTERFACES
@@ -420,18 +421,16 @@ const SearchInput: React.FC<SearchInputProps> = ({
         placeholder={placeholder}
         style={{
           ...inputStyle,
-          borderColor: focused ? 'var(--color-border-focus)' : 'var(--color-border-primary)',
-          boxShadow: focused ? 'var(--shadow-focus)' : 'none'
+          borderColor: layoutUtilities.cssVars.borderColor(focused),
+          boxShadow: layoutUtilities.cssVars.boxShadow(focused)
         }}
       />
 
       {/* Search Icon */}
       <div style={{
-        position: 'absolute',
-        right: 'var(--spacing-3)',
-        top: '50%',
-        transform: 'translateY(-50%)',
-        color: 'var(--color-text-tertiary)',
+        ...layoutUtilities.cssVars.absoluteCenterY,
+        right: layoutUtilities.cssVars.spacing(3),
+        color: layoutUtilities.cssVars.textColor('tertiary'),
         pointerEvents: 'none'
       }}>
         {loading ? '⏳' : '🔍'}
@@ -568,7 +567,7 @@ const Filter: React.FC<FilterProps> = ({
                 fontSize: '12px'
               }}
             />
-            <span style={{ color: 'var(--color-text-secondary)', fontSize: '12px' }}>to</span>
+            <span style={{ color: layoutUtilities.cssVars.textColor('secondary'), fontSize: layoutUtilities.cssVars.fontSize('12px') }}>to</span>
             <input
               type="number"
               min={config.min}
@@ -581,12 +580,9 @@ const Filter: React.FC<FilterProps> = ({
               })}
               style={{
                 width: '80px',
-                padding: 'var(--spacing-1) var(--spacing-2)',
-                border: '1px solid var(--color-border-primary)',
-                borderRadius: 'var(--radius-sm)',
-                backgroundColor: 'var(--color-bg-primary)',
-                color: 'var(--color-text-primary)',
-                fontSize: '12px'
+                padding: layoutUtilities.cssVars.padding(1, 2),
+                ...layoutUtilities.cssVars.inputBase,
+                fontSize: layoutUtilities.cssVars.fontSize('12px')
               }}
             />
           </div>
@@ -924,9 +920,9 @@ export const SearchSystem: React.FC<SearchSystemProps> = ({
   };
 
   return (
-    <div className={`search-system ${className}`} style={{ width: '100%' }}>
+    <div className={`search-system ${className}`} style={layoutUtilities.cssVars.fullWidth}>
       {/* Search Input */}
-      <div style={{ marginBottom: 'var(--spacing-4)' }}>
+      <div style={{ marginBottom: layoutUtilities.cssVars.spacing(4) }}>
         <SearchInput
           value={query}
           onChange={setQuery}

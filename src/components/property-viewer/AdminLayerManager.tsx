@@ -36,6 +36,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { getDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 
 // Import types
 import type { Property } from '@/types/property-viewer';
@@ -144,9 +145,8 @@ function CreateLayerDialog({ open, onOpenChange, onCreateLayer }: CreateLayerDia
                 {Object.entries(LAYER_CATEGORIES).map(([key, info]) => (
                   <SelectItem key={key} value={key}>
                     <div className="flex items-center gap-2">
-                      <div 
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: info.color }}
+                      <div
+                        className={`w-3 h-3 rounded-full ${getDynamicBackgroundClass(info.color)}`}
                       />
                       {info.name}
                     </div>
@@ -255,9 +255,8 @@ function LayerItem({
             )}
             
             {categoryInfo && (
-              <div 
-                className="w-3 h-3 rounded-full flex-shrink-0"
-                style={{ backgroundColor: categoryInfo.color }}
+              <div
+                className={`w-3 h-3 rounded-full flex-shrink-0 ${getDynamicBackgroundClass(categoryInfo.color)}`}
                 title={categoryInfo.name}
               />
             )}
@@ -687,9 +686,8 @@ export function AdminLayerManager({
                 {categories.map(category => (
                   <SelectItem key={category} value={category}>
                     <div className="flex items-center gap-2">
-                      <div 
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: getCategoryInfo(category).color }}
+                      <div
+                        className={`w-3 h-3 rounded-full ${getDynamicBackgroundClass(getCategoryInfo(category).color)}`}
                       />
                       {getCategoryInfo(category).name}
                     </div>
@@ -746,9 +744,8 @@ export function AdminLayerManager({
                   <h4 className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-2">
                     {category !== 'other' && getCategoryInfo(category) && (
                       <>
-                        <div 
-                          className="w-2 h-2 rounded-full"
-                          style={{ backgroundColor: getCategoryInfo(category).color }}
+                        <div
+                          className={`w-2 h-2 rounded-full ${getDynamicBackgroundClass(getCategoryInfo(category).color)}`}
                         />
                         {getCategoryInfo(category).name}
                       </>

@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { ChevronDown, Check } from 'lucide-react';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useEnterprisePortal, createPortalConfig } from '@/components/ui/enterprise-portal';
+import { portalComponents, layoutUtilities } from '@/styles/design-tokens';
 
 // Import relationship types
 import type { RelationshipType } from '@/types/contacts/relationships';
@@ -160,13 +161,8 @@ export const CustomRelationshipSelect: React.FC<CustomRelationshipSelectProps> =
       {isOpen && dropdownPosition && typeof document !== 'undefined' && createPortal(
         <div
           style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100vw',
-            height: '100vh',
-            zIndex: 2147483647,
-            pointerEvents: 'none'
+            ...portalComponents.overlay.fullscreen,
+            zIndex: portalComponents.zIndex.critical
           }}
         >
           <Card
@@ -175,16 +171,16 @@ export const CustomRelationshipSelect: React.FC<CustomRelationshipSelectProps> =
             data-custom-relationship-select="true"
             data-custom-dropdown-portal="true"
             style={{
-              position: 'absolute',
-              top: dropdownPosition.top,
-              left: dropdownPosition.left,
-              width: dropdownPosition.width,
-              height: 'auto',
-              minHeight: '150px',
-              zIndex: 2147483647,
-              maxHeight: '300px',
-              overflow: 'hidden',
-              pointerEvents: 'auto'
+              ...portalComponents.dropdown.custom({
+                top: dropdownPosition.top,
+                left: dropdownPosition.left,
+                width: dropdownPosition.width,
+                height: 'auto',
+                minHeight: '150px',
+                maxHeight: '300px'
+              }),
+              zIndex: portalComponents.zIndex.critical,
+              overflow: 'hidden'
             }}
           >
           <CardContent className="p-0">

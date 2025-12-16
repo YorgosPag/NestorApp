@@ -3,7 +3,6 @@
 import * as React from "react"
 import { ThemeProvider as NextThemesProvider } from "next-themes"
 import { type ThemeProviderProps } from "next-themes/dist/types"
-import { layoutUtilities } from "@/styles/design-tokens"
 
 export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
   const [mounted, setMounted] = React.useState(false)
@@ -15,7 +14,7 @@ export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
 
   // Prevent hydration mismatch flash
   if (!mounted) {
-    return <div style={{ visibility: layoutUtilities.visibility.hidden }}>{children}</div>
+    return <div className="invisible">{children}</div>
   }
 
   return (

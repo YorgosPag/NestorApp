@@ -10,6 +10,7 @@ import { CoordinateTransforms } from '../rendering/core/CoordinateTransforms';
 import type { Point2D, Viewport } from '../rendering/types/Types';
 import type { SceneModel } from '../types/scene';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { portalComponents } from '@/styles/design-tokens';
 
 interface CoordinateCalibrationOverlayProps {
   mousePos: Point2D | null;
@@ -88,7 +89,7 @@ export default function CoordinateCalibrationOverlay({
   const currentRoundTripError = mousePos ? calculateRoundTripError(mousePos) : null;
 
   return (
-    <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 3000 }}>
+    <div className="fixed inset-0 pointer-events-none" style={{ zIndex: portalComponents.overlay.calibration.zIndex() }}>
       <div className="absolute top-4 left-4 bg-gray-900 text-white p-4 rounded-lg shadow-lg pointer-events-auto" style={{ minWidth: 380, maxWidth: 450, maxHeight: '90vh', overflowY: 'auto' }}>
         <div className="flex justify-between items-center mb-3">
           <h3 className="text-lg font-bold text-cyan-400">🔧 Καλιμπράρισμα Συντεταγμένων</h3>

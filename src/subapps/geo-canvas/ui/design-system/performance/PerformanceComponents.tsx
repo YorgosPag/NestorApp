@@ -22,7 +22,35 @@ import { useTheme } from '../theme/ThemeProvider';
 import { adminBoundariesAnalytics } from '../../../services/performance/AdminBoundariesPerformanceAnalytics';
 import type { AdminBoundariesMetrics, AdminBoundariesAlert } from '../../../services/performance/AdminBoundariesPerformanceAnalytics';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { layoutUtilities } from '@/styles/design-tokens';
+import { getDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 import styles from './PerformanceComponents.module.css';
+import {
+  getVirtualizedTableContainerStyles,
+  getVirtualListStyles,
+  getTableRowStyles,
+  getTableCellStyles,
+  getVirtualizedTableClass,
+  getVirtualizedImageContainerStyles,
+  getVirtualizedImageStyles,
+  getImagePlaceholderStyles,
+  getLoadingContainerStyles,
+  getLoadingContentStyles,
+  getSpinnerContainerStyles,
+  getSpinnerStyles,
+  getLoadingTextStyles,
+  getPerformanceMetricsContainerStyles,
+  getSectionBorderStyles,
+  getSectionTitleStyles,
+  getMetricLabelStyles,
+  getMetricTimestampStyles,
+  getAlertSeverityColor,
+  getAlertItemStyles,
+  getAlertTitleStyles,
+  getAlertDescriptionStyles,
+  getAlertTimestampStyles,
+  getDynamicHeaderStyles
+} from './PerformanceComponents.styles';
 
 // ============================================================================
 // VIRTUALIZED LIST COMPONENT
@@ -84,13 +112,13 @@ export const VirtualizedList = memo(<T,>({
     <div
       ref={containerRef}
       className={`${styles.virtualizedList} ${className}`}
-      style={{ height: containerHeight }}
+      style={getVirtualizedTableContainerStyles(containerHeight)}
       onScroll={handleScroll}
     >
       {/* Total height spacer */}
       <div
         className={styles.virtualizedListSpacer}
-        style={{ height: totalHeight }}
+        style={getVirtualListStyles(totalHeight)}
       >
         {/* Visible items */}
         {visibleItems.map(({ item, originalIndex }) => (
@@ -98,8 +126,8 @@ export const VirtualizedList = memo(<T,>({
             key={keyExtractor(item, originalIndex)}
             className={styles.virtualizedListItem}
             style={{
-              top: originalIndex * itemHeight,
-              height: itemHeight
+              top: layoutUtilities.pixels(originalIndex * itemHeight),
+              height: layoutUtilities.pixels(itemHeight)
             }}
           >
             {renderItem(item, originalIndex)}
@@ -169,7 +197,7 @@ export const VirtualizedTable = memo(<T,>({
   const renderRow = useCallback((item: T, index: number) => (
     <div
       className={`${styles.tableRow} ${onRowClick ? styles.tableRowHover : ''}`}
-      style={{ cursor: onRowClick ? 'pointer' : 'default' }}
+      style={getTableRowStyles(onRowClick)}
       onClick={() => onRowClick?.(item, index)}
     >
       {columns.map((column) => (
@@ -179,7 +207,7 @@ export const VirtualizedTable = memo(<T,>({
             column.align === 'center' ? styles.tableCellCenter :
             column.align === 'right' ? styles.tableCellRight : ''
           }`}
-          style={{ width: column.width || 150 }}
+          style={getTableCellStyles(column.width)}
         >
           {column.render(item, index)}
         </div>
@@ -188,11 +216,11 @@ export const VirtualizedTable = memo(<T,>({
   ), [columns, onRowClick]);
 
   return (
-    <div className={`${styles.virtualizedTable} ${className}`} style={{ height: containerHeight }}>
+    <div className={getVirtualizedTableClass(className)} style={getVirtualizedTableContainerStyles(containerHeight, className)}>
       {/* Header */}
       <div
         className={styles.tableHeader}
-        style={{ height: headerHeight }}
+        style={getDynamicHeaderStyles(headerHeight)}
       >
         {columns.map((column) => (
           <div
@@ -202,7 +230,7 @@ export const VirtualizedTable = memo(<T,>({
               column.align === 'right' ? styles.tableHeaderCellRight : ''
             }`}
             style={{
-              width: column.width || 150,
+              ...getTableCellStyles(column.width),
               cursor: column.sortable ? 'pointer' : 'default'
             }}
             onClick={() => column.sortable && handleSort(column.key)}
@@ -292,7 +320,7 @@ export const LazyImage: React.FC<LazyImageProps> = memo(({
     <div
       ref={imgRef}
       className={`${styles.lazyImageContainer} ${className}`}
-      style={{ width, height }}
+      style={getVirtualizedImageContainerStyles(width, height)}
     >
       {!inView && (
         <div className={styles.lazyImagePlaceholderText}>
@@ -321,7 +349,7 @@ export const LazyImage: React.FC<LazyImageProps> = memo(({
             onLoad={handleLoad}
             onError={handleError}
             className={`${styles.lazyImage} ${loaded ? styles.lazyImageFadeIn : ''}`}
-            style={{ opacity: loaded ? 1 : 0 }}
+            style={getVirtualizedImageStyles(loaded)}
           />
         </>
       )}
@@ -397,17 +425,7 @@ export const DebouncedInput: React.FC<DebouncedInputProps> = memo(({
       onChange={handleChange}
       placeholder={placeholder}
       className={`debounced-input ${className}`}
-      style={{
-        width: '100%',
-        padding: 'var(--spacing-2) var(--spacing-3)',
-        border: '1px solid var(--color-border-primary)',
-        borderRadius: 'var(--radius-md)',
-        backgroundColor: 'var(--color-bg-primary)',
-        color: 'var(--color-text-primary)',
-        fontSize: '14px',
-        outline: 'none',
-        transition: 'border-color var(--duration-fast) var(--easing-ease-in-out)'
-      }}
+      style={getLoadingTextStyles()}
     />
   );
 });
@@ -466,52 +484,28 @@ export const Card: React.FC<CardProps> = memo(({
     <div
       className={`card ${className}`}
       onClick={onClick}
-      style={{
-        borderRadius: 'var(--radius-lg)',
-        overflow: 'hidden',
-        cursor: onClick ? 'pointer' : 'default',
-        transition: 'all var(--duration-fast) var(--easing-ease-in-out)',
-        ...getVariantStyles()
-      }}
+      style={getLoadingContainerStyles()}
     >
       {/* Header */}
-      <div style={{
-        padding: 'var(--spacing-4) var(--spacing-4) var(--spacing-2)',
-        borderBottom: subtitle || footer ? '1px solid var(--color-border-primary)' : 'none'
-      }}>
-        <h3 style={{
-          margin: 0,
-          fontSize: '16px',
-          fontWeight: '600',
-          color: 'var(--color-text-primary)'
-        }}>
+      <div style={getLoadingContentStyles()}>
+        <h3 style={getLoadingTextStyles()}>
           {title}
         </h3>
         {subtitle && (
-          <p style={{
-            margin: 'var(--spacing-1) 0 0',
-            fontSize: '14px',
-            color: 'var(--color-text-secondary)'
-          }}>
+          <p style={getLoadingTextStyles()}>
             {subtitle}
           </p>
         )}
       </div>
 
       {/* Content */}
-      <div style={{
-        padding: 'var(--spacing-4)'
-      }}>
+      <div style={getLoadingContentStyles()}>
         {content}
       </div>
 
       {/* Footer */}
       {footer && (
-        <div style={{
-          padding: 'var(--spacing-2) var(--spacing-4) var(--spacing-4)',
-          borderTop: '1px solid var(--color-border-primary)',
-          backgroundColor: 'var(--color-bg-secondary)'
-        }}>
+        <div style={getLoadingContentStyles()}>
           {footer}
         </div>
       )}
@@ -577,22 +571,11 @@ export const InfiniteScroll = memo(<T,>({
       {hasMore && (
         <div
           ref={loadingRef}
-          style={{
-            padding: 'var(--spacing-4)',
-            textAlign: 'center',
-            color: 'var(--color-text-secondary)'
-          }}
+          style={getLoadingContentStyles()}
         >
           {loading ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--spacing-2)' }}>
-              <div className="spinner" style={{
-                width: '16px',
-                height: '16px',
-                border: '2px solid var(--color-border-primary)',
-                borderTop: '2px solid var(--color-primary-500)',
-                borderRadius: '50%',
-                animation: 'spin 1s linear infinite'
-              }} />
+            <div style={getSpinnerContainerStyles()}>
+              <div className="spinner" style={getSpinnerStyles()} />
               Loading more...
             </div>
           ) : (
@@ -602,12 +585,7 @@ export const InfiniteScroll = memo(<T,>({
       )}
 
       {!hasMore && items.length > 0 && (
-        <div style={{
-          padding: 'var(--spacing-4)',
-          textAlign: 'center',
-          color: 'var(--color-text-tertiary)',
-          fontSize: '14px'
-        }}>
+        <div style={getLoadingTextStyles()}>
           No more items to load
         </div>
       )}
@@ -842,16 +820,12 @@ export const AdminBoundariesPerformancePanel = memo(({
   return (
     <div
       className={`${styles.performanceMonitor} fixed top-4 right-4 w-96 rounded-lg shadow-xl border z-50 max-h-96 overflow-hidden ${className}`}
-      style={{
-        backgroundColor: theme.colors.surface,
-        color: theme.colors.text,
-        borderColor: theme.colors.border
-      }}
+      style={getPerformanceMetricsContainerStyles()}
     >
       {/* Header */}
       <div
         className="flex items-center justify-between p-4 border-b"
-        style={{ borderColor: theme.colors.border }}
+        style={getSectionBorderStyles(theme.colors.border)}
       >
         <h3 className="font-semibold text-lg flex items-center gap-2">
           🏛️ Admin Boundaries Performance
@@ -860,7 +834,7 @@ export const AdminBoundariesPerformancePanel = memo(({
           <button
             onClick={onClose}
             className={`p-1 rounded ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
-            style={{ color: theme.colors.textSecondary }}
+            style={getMetricLabelStyles(theme.colors.textSecondary)}
           >
             ✕
           </button>
@@ -873,24 +847,24 @@ export const AdminBoundariesPerformancePanel = memo(({
           <div className="p-4 space-y-4">
             {/* Search Performance */}
             <div className="space-y-2">
-              <h4 className="font-medium text-sm" style={{ color: theme.colors.primary }}>
+              <h4 className="font-medium text-sm" style={getSectionTitleStyles(theme.colors.primary)}>
                 🔍 Search Performance
               </h4>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span style={{ color: theme.colors.textSecondary }}>Avg Time:</span>
+                  <span style={getMetricLabelStyles(theme.colors.textSecondary)}>Avg Time:</span>
                   <span className="ml-2 font-mono">{formatTime(metrics.search.averageSearchTime)}</span>
                 </div>
                 <div>
-                  <span style={{ color: theme.colors.textSecondary }}>Success Rate:</span>
+                  <span style={getMetricLabelStyles(theme.colors.textSecondary)}>Success Rate:</span>
                   <span className="ml-2 font-mono">{metrics.search.searchSuccessRate}%</span>
                 </div>
                 <div>
-                  <span style={{ color: theme.colors.textSecondary }}>Cache Hit:</span>
+                  <span style={getMetricLabelStyles(theme.colors.textSecondary)}>Cache Hit:</span>
                   <span className="ml-2 font-mono">{metrics.search.cacheHitRate}%</span>
                 </div>
                 <div>
-                  <span style={{ color: theme.colors.textSecondary }}>Total:</span>
+                  <span style={getMetricLabelStyles(theme.colors.textSecondary)}>Total:</span>
                   <span className="ml-2 font-mono">{metrics.search.totalSearches}</span>
                 </div>
               </div>
@@ -898,24 +872,24 @@ export const AdminBoundariesPerformancePanel = memo(({
 
             {/* API Performance */}
             <div className="space-y-2">
-              <h4 className="font-medium text-sm" style={{ color: theme.colors.primary }}>
+              <h4 className="font-medium text-sm" style={getSectionTitleStyles(theme.colors.primary)}>
                 🌍 Overpass API
               </h4>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span style={{ color: theme.colors.textSecondary }}>Response Time:</span>
+                  <span style={getMetricLabelStyles(theme.colors.textSecondary)}>Response Time:</span>
                   <span className="ml-2 font-mono">{formatTime(metrics.overpassApi.averageResponseTime)}</span>
                 </div>
                 <div>
-                  <span style={{ color: theme.colors.textSecondary }}>Requests:</span>
+                  <span style={getMetricLabelStyles(theme.colors.textSecondary)}>Requests:</span>
                   <span className="ml-2 font-mono">{metrics.overpassApi.totalRequests}</span>
                 </div>
                 <div>
-                  <span style={{ color: theme.colors.textSecondary }}>Failed:</span>
+                  <span style={getMetricLabelStyles(theme.colors.textSecondary)}>Failed:</span>
                   <span className="ml-2 font-mono">{metrics.overpassApi.failedRequests}</span>
                 </div>
                 <div>
-                  <span style={{ color: theme.colors.textSecondary }}>Data Size:</span>
+                  <span style={getMetricLabelStyles(theme.colors.textSecondary)}>Data Size:</span>
                   <span className="ml-2 font-mono">{metrics.overpassApi.dataSize}MB</span>
                 </div>
               </div>
@@ -923,24 +897,24 @@ export const AdminBoundariesPerformancePanel = memo(({
 
             {/* Boundary Processing */}
             <div className="space-y-2">
-              <h4 className="font-medium text-sm" style={{ color: theme.colors.primary }}>
+              <h4 className="font-medium text-sm" style={getSectionTitleStyles(theme.colors.primary)}>
                 🗺️ Boundary Processing
               </h4>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span style={{ color: theme.colors.textSecondary }}>Processing:</span>
+                  <span style={getMetricLabelStyles(theme.colors.textSecondary)}>Processing:</span>
                   <span className="ml-2 font-mono">{formatTime(metrics.boundaries.averageProcessingTime)}</span>
                 </div>
                 <div>
-                  <span style={{ color: theme.colors.textSecondary }}>Rendering:</span>
+                  <span style={getMetricLabelStyles(theme.colors.textSecondary)}>Rendering:</span>
                   <span className="ml-2 font-mono">{formatTime(metrics.boundaries.renderingTime)}</span>
                 </div>
                 <div>
-                  <span style={{ color: theme.colors.textSecondary }}>Processed:</span>
+                  <span style={getMetricLabelStyles(theme.colors.textSecondary)}>Processed:</span>
                   <span className="ml-2 font-mono">{metrics.boundaries.processedBoundaries}</span>
                 </div>
                 <div>
-                  <span style={{ color: theme.colors.textSecondary }}>Complexity:</span>
+                  <span style={getMetricLabelStyles(theme.colors.textSecondary)}>Complexity:</span>
                   <span className="ml-2 font-mono">{Math.round(metrics.boundaries.geometryComplexity)}</span>
                 </div>
               </div>
@@ -950,9 +924,9 @@ export const AdminBoundariesPerformancePanel = memo(({
 
         {/* Alerts */}
         {alerts.length > 0 && (
-          <div className="border-t" style={{ borderColor: theme.colors.border }}>
+          <div className="border-t" style={getSectionBorderStyles(theme.colors.border)}>
             <div className="p-4">
-              <h4 className="font-medium text-sm mb-3" style={{ color: theme.colors.primary }}>
+              <h4 className="font-medium text-sm mb-3" style={getSectionTitleStyles(theme.colors.primary)}>
                 🚨 Active Alerts ({alerts.length})
               </h4>
               <div className="space-y-2 max-h-32 overflow-y-auto">
@@ -960,22 +934,19 @@ export const AdminBoundariesPerformancePanel = memo(({
                   <div
                     key={alert.id}
                     className="flex items-start gap-2 text-xs p-2 rounded"
-                    style={{
-                      backgroundColor: theme.colors.surfaceHover,
-                      borderLeft: `3px solid ${getAlertColor(alert.severity)}`
-                    }}
+                    style={getAlertItemStyles(getAlertSeverityColor(alert.severity), theme.colors.surfaceHover)}
                   >
                     <span>{getAlertIcon(alert.severity)}</span>
                     <div className="flex-1">
-                      <div className="font-medium" style={{ color: getAlertColor(alert.severity) }}>
+                      <div className="font-medium" style={getAlertTitleStyles(getAlertSeverityColor(alert.severity))}>
                         {alert.message}
                       </div>
                       {alert.suggestion && (
-                        <div className="mt-1" style={{ color: theme.colors.textSecondary }}>
+                        <div className="mt-1" style={getMetricLabelStyles(theme.colors.textSecondary)}>
                           💡 {alert.suggestion}
                         </div>
                       )}
-                      <div className="text-xs mt-1" style={{ color: theme.colors.textTertiary }}>
+                      <div className="text-xs mt-1" style={getAlertTimestampStyles(theme.colors.textTertiary)}>
                         {new Date(alert.timestamp).toLocaleTimeString()}
                       </div>
                     </div>
@@ -983,7 +954,7 @@ export const AdminBoundariesPerformancePanel = memo(({
                 ))}
               </div>
               {alerts.length > 5 && (
-                <div className="text-xs text-center mt-2" style={{ color: theme.colors.textSecondary }}>
+                <div className="text-xs text-center mt-2" style={getMetricLabelStyles(theme.colors.textSecondary)}>
                   +{alerts.length - 5} more alerts
                 </div>
               )}
@@ -994,11 +965,7 @@ export const AdminBoundariesPerformancePanel = memo(({
         {/* Status */}
         <div
           className="p-3 border-t text-center text-xs"
-          style={{
-            borderColor: theme.colors.border,
-            backgroundColor: theme.colors.surfaceHover,
-            color: theme.colors.textSecondary
-          }}
+          style={getPerformanceMetricsContainerStyles()}
         >
           {isMonitoring ? (
             <span className="flex items-center justify-center gap-2">

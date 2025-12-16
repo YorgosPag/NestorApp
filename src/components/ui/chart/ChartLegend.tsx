@@ -4,14 +4,17 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 import { useChart } from "./ChartContext"
 import { getPayloadConfigFromPayload } from "./chartHelpers"
+import {
+  getLegendContainerStyles,
+  getLegendItemStyles,
+  type ChartLegendProps,
+  type ChartPayloadItem
+} from "./ChartComponents.styles"
+import { layoutUtilities } from '@/styles/design-tokens';
 
 const ChartLegendContent = React.forwardRef<
   HTMLDivElement,
-  React.ComponentProps<"div"> &
-    Pick<any, "payload" | "verticalAlign"> & {
-      hideIcon?: boolean
-      nameKey?: string
-    }
+  React.ComponentProps<"div"> & ChartLegendProps
 >(
   (
     { className, hideIcon = false, payload, verticalAlign = "bottom", nameKey },
@@ -26,13 +29,10 @@ const ChartLegendContent = React.forwardRef<
     return (
       <div
         ref={ref}
-        className={cn(
-          "flex items-center justify-center gap-4",
-          verticalAlign === "top" ? "pb-3" : "pt-3",
-          className
-        )}
+        className={cn(className)}
+        style={getLegendContainerStyles(verticalAlign)}
       >
-        {payload.map((item: any) => {
+        {payload.map((item: ChartPayloadItem) => {
           const key = `${nameKey || item.dataKey || "value"}`
           const itemConfig = getPayloadConfigFromPayload(config, item, key)
 
@@ -40,17 +40,16 @@ const ChartLegendContent = React.forwardRef<
             <div
               key={item.value}
               className={cn(
-                "flex items-center gap-1.5 [&>svg]:h-3 [&>svg]:w-3 [&>svg]:text-muted-foreground"
+                "[&>svg]:h-3 [&>svg]:w-3 [&>svg]:text-muted-foreground"
               )}
+              style={getLegendItemStyles()}
             >
               {itemConfig?.icon && !hideIcon ? (
                 <itemConfig.icon />
               ) : (
                 <div
-                  className="h-2 w-2 shrink-0 rounded-[2px]"
-                  style={{
-                    backgroundColor: item.color,
-                  }}
+                  className="shrink-0 rounded-[2px]"
+                  style={layoutUtilities.dxf.colors.backgroundColor(item.color)}
                 />
               )}
               {itemConfig?.label}

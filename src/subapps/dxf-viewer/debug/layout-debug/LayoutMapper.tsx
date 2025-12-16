@@ -1,6 +1,7 @@
 'use client';
 import React, { useEffect, useState, useRef } from 'react';
 import { HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
+import { portalComponents } from '@/styles/design-tokens';
 
 interface ElementMetrics {
   name: string;
@@ -103,7 +104,7 @@ export default function LayoutMapper() {
 
   if (!isVisible) {
     return (
-      <div className="fixed top-2 right-2 text-xs text-gray-500 bg-black bg-opacity-50 px-2 py-1 rounded" style={{ zIndex: 2147483645 }}>
+      <div className="fixed top-2 right-2 text-xs text-gray-500 bg-black bg-opacity-50 px-2 py-1 rounded" style={{ zIndex: portalComponents.overlay.debug.info.zIndex() }}>
         Press Ctrl+Shift+L για Layout Debug
       </div>
     );
@@ -113,7 +114,7 @@ export default function LayoutMapper() {
     <>
       {/* Corner Markers */}
       {metrics.length > 0 && (
-        <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 2147483646 }}>
+        <div className="fixed inset-0 pointer-events-none" style={{ zIndex: portalComponents.overlay.debug.main.zIndex() }}>
           {metrics.map(({ name, rect, className }) =>
             rect && (
               <div
@@ -149,7 +150,7 @@ export default function LayoutMapper() {
       {/* Info Panel */}
       <div
         className="fixed top-20 right-4 bg-black bg-opacity-95 text-green-400 p-4 rounded text-xs font-mono max-w-md"
-        style={{ zIndex: 2147483647 }}
+        style={{ zIndex: portalComponents.overlay.debug.controls.zIndex() }}
       >
         <div className="flex justify-between items-center mb-2">
           <h3 className="text-white font-bold">🎯 LAYOUT MAPPER</h3>

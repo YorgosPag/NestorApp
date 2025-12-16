@@ -2,6 +2,8 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
+import { getDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
+import { layoutUtilities } from '@/styles/design-tokens';
 
 /**
  * 🎨 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΟ THEME-AWARE PROGRESS BAR
@@ -70,10 +72,12 @@ export function ThemeProgressBar({
         sizeClasses[size]
       )}>
         <div
-          className={cn("h-full transition-all duration-300 ease-in-out rounded-full")}
+          className={cn(
+            "h-full transition-all duration-300 ease-in-out rounded-full",
+            getDynamicBackgroundClass(getProgressBarColor(progress))
+          )}
           style={{
-            width: `${Math.min(100, Math.max(0, progress))}%`,
-            backgroundColor: getProgressBarColor(progress)
+            width: layoutUtilities.percentage(Math.min(100, Math.max(0, progress)))
           }}
         />
       </div>

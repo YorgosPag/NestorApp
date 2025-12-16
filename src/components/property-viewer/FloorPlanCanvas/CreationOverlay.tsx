@@ -43,8 +43,7 @@ export function CreationOverlay({
       <svg 
         width="100%" 
         height="100%" 
-        className="absolute inset-0"
-        style={{ zIndex: 15 }}
+        className="absolute inset-0 z-[15]"
       >
         {/* Existing polyline */}
         {points.length > 1 && (

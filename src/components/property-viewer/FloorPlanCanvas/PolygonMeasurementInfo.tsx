@@ -3,6 +3,7 @@
 'use client';
 
 import type { Property } from '@/types/property-viewer';
+import { svgUtilities } from '@/styles/design-tokens';
 
 interface PolygonMeasurementInfoProps {
   polygon: Property;
@@ -49,7 +50,7 @@ export function PolygonMeasurementInfo({ polygon, scale }: PolygonMeasurementInf
         fontSize="10"
         fill="#1f2937"
         className="font-mono"
-        style={{ paintOrder: 'stroke', stroke: 'white', strokeWidth: '3px', strokeLinejoin: 'round' }}
+        style={svgUtilities.text.withStroke('white', 3)}
       >
         {realArea.toFixed(2)}m² / {realPerimeter.toFixed(2)}m
       </text>

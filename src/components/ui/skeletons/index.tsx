@@ -2,6 +2,12 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
+import {
+  getSkeletonTableGridStyles,
+  getSkeletonBarHeight,
+  getSkeletonChartContainerStyles,
+  getSkeletonChartBarsStyles
+} from './SkeletonComponents.styles';
 
 // Base skeleton component
 export function Skeleton({ 
@@ -135,7 +141,10 @@ export function SkeletonTable({
     >
       {showHeader && (
         <div className="border-b bg-muted/50 p-4">
-          <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }}>
+          <div
+            className="grid gap-4"
+            style={getSkeletonTableGridStyles(columns)}
+          >
             {Array.from({ length: columns }).map((_, i) => (
               <Skeleton key={i} className="h-4 w-20" />
             ))}
@@ -146,7 +155,10 @@ export function SkeletonTable({
       <div className="divide-y">
         {Array.from({ length: rows }).map((_, rowIndex) => (
           <div key={rowIndex} className="p-4">
-            <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }}>
+            <div
+              className="grid gap-4"
+              style={getSkeletonTableGridStyles(columns)}
+            >
               {Array.from({ length: columns }).map((_, colIndex) => (
                 <Skeleton key={colIndex} className="h-4 w-full" />
               ))}
@@ -241,7 +253,7 @@ export function SkeletonChart({
               <Skeleton
                 key={i}
                 className="w-8"
-                style={{ height: `${Math.random() * 80 + 20}%` }}
+                style={getSkeletonBarHeight(20, 100)}
               />
             ))}
           </div>

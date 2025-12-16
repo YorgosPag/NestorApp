@@ -7,6 +7,8 @@ import type { UseEnterpriseFileUploadConfig, FileUploadResult } from '@/hooks/us
 import { UI_COLORS } from '@/subapps/dxf-viewer/config/color-config';
 import { PhotoPreview } from './utils/PhotoPreview';
 import { usePhotoUploadLogic } from './utils/usePhotoUploadLogic';
+import { getDynamicBackgroundClass } from './utils/dynamic-styles';
+import { layoutUtilities } from '@/styles/design-tokens';
 import {
   PHOTO_HEIGHTS,
   PHOTO_TEXT_COLORS,
@@ -221,13 +223,11 @@ export function EnterprisePhotoUpload({
             ${currentPreview ? 'border-2 border-dashed border-green-300 bg-green-50' : `${PHOTO_COLORS.PHOTO_BACKGROUND} ${PHOTO_BORDERS.EMPTY_STATE} rounded-lg flex items-center justify-center text-center cursor-pointer transition-colors ${PHOTO_BORDERS.EMPTY_HOVER} p-6 flex-col`}
             ${disabled && !currentPreview ? 'opacity-50 cursor-not-allowed' : disabled ? 'cursor-default' : ''}
             ${hasError ? 'border-red-300 bg-red-50' : ''}
+            ${!currentPreview ? getDynamicBackgroundClass(PHOTO_COLORS.EMPTY_STATE_BACKGROUND) : ''}
           `}
           onDrop={disabled ? undefined : handleDropWithValidation}
           onDragOver={disabled ? undefined : uploadLogic.handleDragOver}
           onClick={disabled ? undefined : handleClickWithValidation}
-          style={{
-            backgroundColor: currentPreview ? undefined : PHOTO_COLORS.EMPTY_STATE_BACKGROUND,
-          }}
         >
           {currentPreview ? (
             <PhotoPreview
@@ -275,13 +275,11 @@ export function EnterprisePhotoUpload({
           ${disabled && !currentPreview ? 'opacity-50 cursor-not-allowed' : disabled ? 'cursor-default' : ''}
           ${hasError ? 'border-red-300 bg-red-50' : ''}
           ${isLoading ? 'pointer-events-none' : ''}
+          ${!currentPreview ? getDynamicBackgroundClass(PHOTO_COLORS.EMPTY_STATE_BACKGROUND) : ''}
         `}
         onDrop={disabled ? undefined : handleDropWithValidation}
         onDragOver={disabled ? undefined : uploadLogic.handleDragOver}
         onClick={disabled || isLoading ? undefined : handleClickWithValidation}
-        style={{
-          backgroundColor: currentPreview ? undefined : PHOTO_COLORS.EMPTY_STATE_BACKGROUND,
-        }}
       >
         {/* Loading State */}
         {isLoading && (
@@ -297,7 +295,7 @@ export function EnterprisePhotoUpload({
                 <div className={`w-32 ${PHOTO_COLORS.PROGRESS_BACKGROUND} rounded-full h-2 mt-2 mx-auto`}>
                   <div
                     className={`bg-blue-600 h-2 rounded-full ${PHOTO_HOVER_EFFECTS.ALL_TRANSITION}`}
-                    style={{ width: `${upload.progress}%` }}
+                    style={{ width: layoutUtilities.percentage(upload.progress) }}
                   />
                 </div>
               )}
