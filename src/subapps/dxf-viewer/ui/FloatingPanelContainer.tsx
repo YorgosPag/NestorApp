@@ -18,7 +18,6 @@ import { useLevels } from '../systems/levels';
 import { useFloatingPanelState, type PanelType } from './hooks/useFloatingPanelState';
 import { useLayerOperations } from './hooks/useLayerOperations';
 import { useFloatingPanelHandle, type SideTab, type FloatingPanelHandle as FloatingPanelHandleType } from './hooks/useFloatingPanelHandle';
-import { canvasUtilities } from '@/styles/design-tokens';
 
 // Re-export FloatingPanelHandle type
 export type { FloatingPanelHandleType as FloatingPanelHandle };
@@ -118,7 +117,7 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
   }
 
   return (
-    <div style={canvasUtilities.overlays.floatingPanel.container}>
+    <div style={{ width: '384px', height: '100%', overflow: 'hidden', backgroundColor: '#111827', borderRadius: '0.5rem', position: 'relative' }}>
       <div className="bg-gray-800 rounded-t-lg border-b border-gray-500">
         <PanelTabs
           activePanel={activePanel}
@@ -128,8 +127,8 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
         />
       </div>
 
-      <div style={canvasUtilities.overlays.floatingPanel.contentArea}>
-        <div style={canvasUtilities.overlays.floatingPanel.innerContent}>
+      <div style={{ width: '384px', maxHeight: 'calc(100vh - 240px)', overflow: 'hidden auto', backgroundColor: '#111827', color: '#f3f4f6', padding: '1rem 0.5rem' }}>
+        <div style={{ width: '368px', overflow: 'hidden' }}>
           {renderPanelContent()}
         </div>
       </div>

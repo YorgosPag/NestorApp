@@ -16,7 +16,6 @@ import type { SceneModel } from '../types/scene';
 import { FloatingPanelContainer, type FloatingPanelHandle } from '../ui/FloatingPanelContainer';
 import { AutoSaveStatus } from '../ui/components/AutoSaveStatus';
 import { CentralizedAutoSaveStatus } from '../ui/components/CentralizedAutoSaveStatus';
-import { canvasUtilities } from '@/styles/design-tokens';
 
 // ✅ ENTERPRISE: Type-safe props interface
 interface SidebarSectionProps {
@@ -43,10 +42,10 @@ export const SidebarSection = React.memo<SidebarSectionProps>(({
   activeTool,
 }) => {
   return (
-    <div style={canvasUtilities.overlays.dxfSidebar.container}>
-      <div style={canvasUtilities.overlays.dxfSidebar.panel}>
+    <div style={{ width: '384px', minWidth: '384px', maxWidth: '384px', height: '100%', flexShrink: 0, position: 'relative', overflow: 'hidden', pointerEvents: 'auto' }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, width: '384px', height: '100%', overflow: 'hidden', backgroundColor: '#111827', borderRadius: '0.5rem', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', border: '1px solid #6B7280' }}>
         {/* FLOATING PANEL CONTENT AREA */}
-        <div style={canvasUtilities.overlays.dxfSidebar.contentArea}>
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: '120px', overflow: 'hidden' }}>
           <FloatingPanelContainer
             ref={floatingRef}
             sceneModel={currentScene}
@@ -60,7 +59,7 @@ export const SidebarSection = React.memo<SidebarSectionProps>(({
         {/* STATUS BAR AT BOTTOM */}
         <div
           className="space-y-2"
-          style={canvasUtilities.overlays.dxfSidebar.statusBar}
+          style={{ position: 'absolute', bottom: 0, left: 0, right: 0, borderBottomLeftRadius: '0.5rem', borderBottomRightRadius: '0.5rem', backgroundColor: '#1F2937', borderTop: '1px solid #6B7280', padding: '1rem' }}
         >
           {/* Scene Auto-Save Status */}
           <AutoSaveStatus />

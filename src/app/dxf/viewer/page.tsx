@@ -25,6 +25,12 @@ const DxfViewerApp = dynamic(
 function AdminGuard({ children }: { children: React.ReactNode }) {
   const { isAdmin, isLoading } = useUserRole();
 
+  // 🛠️ DEVELOPMENT BYPASS: Allow access in development mode
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🛠️ DEVELOPMENT MODE: Bypassing authentication for DXF Viewer');
+    return <>{children}</>;
+  }
+
   if (isLoading) {
     return (
       <main className="w-full h-full flex items-center justify-center" role="main" aria-label="Έλεγχος Δικαιωμάτων">

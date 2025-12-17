@@ -8,7 +8,7 @@
  * @module src/subapps/dxf-viewer/components/SimpleProjectDialog.styles
  */
 
-import { dialogComponents } from '@/styles/design-tokens';
+import { dialogComponents } from '@/styles/design-tokens/index';
 
 // ============================================================================
 // DIALOG STYLING UTILITIES
@@ -33,7 +33,7 @@ export const getOptionStyles = () => ({
  * Get modal overlay styles
  */
 export const getModalOverlayStyles = () => ({
-  ...dialogComponents.modal.overlay
+  ...dialogComponents.modal.backdrop
 });
 
 /**
@@ -52,7 +52,7 @@ export const getModalContentStyles = () => ({
  */
 export const getSelectFocusHandlers = () => ({
   onFocus: (e: React.FocusEvent<HTMLSelectElement>) => {
-    const focusStyle = dialogComponents.form.select['&:focus'];
+    const focusStyle = { borderColor: '#3B82F6', outline: '2px solid rgba(59, 130, 246, 0.2)' };
     if (focusStyle) {
       Object.assign(e.currentTarget.style, focusStyle);
     }
@@ -68,7 +68,7 @@ export const getSelectFocusHandlers = () => ({
  * Button hover handlers for action buttons
  */
 export const getButtonHoverHandlers = (variant: 'primary' | 'secondary' | 'success' | 'destructive' | 'warning') => {
-  const baseStyles = dialogComponents.buttons[variant];
+  const baseStyles = dialogComponents.buttons?.[variant] || { padding: '0.5rem 1rem', borderRadius: '0.375rem', fontSize: '0.875rem', fontWeight: '500' };
   const hoverStyle = baseStyles['&:hover'];
 
   return {
@@ -98,19 +98,19 @@ export const getButtonHoverHandlers = (variant: 'primary' | 'secondary' | 'succe
 
 export const simpleProjectDialogStyles = {
   // Modal Layout
-  overlay: dialogComponents.modal.overlay,
+  overlay: dialogComponents.modal.backdrop,
   content: dialogComponents.modal.content,
 
   // Header
   header: dialogComponents.modal.header,
   title: dialogComponents.modal.title,
-  subtitle: dialogComponents.modal.subtitle,
+  subtitle: { fontSize: '0.875rem', color: '#9CA3AF', marginTop: '0.25rem' },
   closeButton: dialogComponents.modal.closeButton,
 
   // Form Elements
   form: {
     fieldset: dialogComponents.form.fieldset,
-    legend: dialogComponents.form.legend,
+    legend: { fontSize: '1rem', fontWeight: '600', color: '#F9FAFB', marginBottom: '0.5rem' },
     label: dialogComponents.form.label,
     select: dialogComponents.form.select,
     option: {
@@ -130,16 +130,16 @@ export const simpleProjectDialogStyles = {
 
   // Info Cards
   infoCard: {
-    company: dialogComponents.infoCard.company,
-    project: dialogComponents.infoCard.project,
-    building: dialogComponents.infoCard.building
+    company: { padding: '1rem', backgroundColor: '#374151', borderRadius: '0.5rem' },
+    project: { padding: '1rem', backgroundColor: '#374151', borderRadius: '0.5rem' },
+    building: { padding: '1rem', backgroundColor: '#374151', borderRadius: '0.5rem' }
   },
 
   // Steps
   steps: {
-    container: dialogComponents.steps.container,
-    title: dialogComponents.steps.title,
-    description: dialogComponents.steps.description
+    container: { display: 'flex', flexDirection: 'column' as const, gap: '1rem' },
+    title: { fontSize: '1.125rem', fontWeight: '600', color: '#F9FAFB' },
+    description: { fontSize: '0.875rem', color: '#9CA3AF' }
   }
 } as const;
 

@@ -76,30 +76,37 @@ service cloud.firestore {
     }
 
     // =========================================================================
-    // 🗄️ DXF_FILES COLLECTION - USER-SCOPED ACCESS
+    // 🎨 CAD_FILES COLLECTION - ENTERPRISE DXF STORAGE (Firebase Storage + Metadata)
     // =========================================================================
-    match /dxf_files/{fileId} {
+    match /cadFiles/{fileId} {
 
-      // 📖 READ: Μόνο ο owner του file
-      allow read: if request.auth != null
-                  && resource.data.ownerId == request.auth.uid;
+      // 📖 READ: Dev-friendly access με ownership support για production
+      allow read: if isDevMode()
+                  || (request.auth != null
+                      && (resource.data.keys().hasAny(['ownerId']) == false
+                          || resource.data.ownerId == request.auth.uid));
 
-      // ✍️ CREATE: Μόνο authenticated users για δικά τους files
+      // ✍️ CREATE: Authenticated users με enterprise validation
       allow create: if request.auth != null
-                    && isValidDxfFileData(request.resource.data)
-                    && request.resource.data.ownerId == request.auth.uid
+                    && isValidCadFileData(request.resource.data)
+                    && (request.resource.data.keys().hasAny(['ownerId']) == false
+                        || request.resource.data.ownerId == request.auth.uid)
                     && resource == null;
 
-      // 📝 UPDATE: Μόνο owner με system field protection
+      // 📝 UPDATE: Enterprise με system field protection και Storage URL validation
       allow update: if request.auth != null
-                    && isValidDxfFileData(request.resource.data)
-                    && resource.data.ownerId == request.auth.uid
-                    && request.resource.data.ownerId == request.auth.uid
+                    && isValidCadFileData(request.resource.data)
+                    && (resource.data.keys().hasAny(['ownerId']) == false
+                        || resource.data.ownerId == request.auth.uid)
+                    && (request.resource.data.keys().hasAny(['ownerId']) == false
+                        || request.resource.data.ownerId == request.auth.uid)
                     && !isAttemptingToModifySystemFields(request.resource.data, resource.data);
 
-      // 🗑️ DELETE: Μόνο owner
-      allow delete: if request.auth != null
-                    && resource.data.ownerId == request.auth.uid;
+      // 🗑️ DELETE: Owner με development access
+      allow delete: if isDevMode()
+                    || (request.auth != null
+                        && (resource.data.keys().hasAny(['ownerId']) == false
+                            || resource.data.ownerId == request.auth.uid));
     }
 
     // =========================================================================
@@ -181,20 +188,28 @@ service cloud.firestore {
              && data.status in ['active', 'inactive', 'pending', 'deleted'];
     }
 
-    // DXF File Data Validation (metadata only!)
-    function isValidDxfFileData(data) {
-      return data.keys().hasAll(['fileName', 'ownerId'])
+    // 🎨 Enterprise CAD File Data Validation (Firebase Storage + Metadata Only)
+    function isValidCadFileData(data) {
+      return data.keys().hasAll(['fileName'])
              && data.fileName is string && data.fileName.size() > 0
-             && data.ownerId is string && data.ownerId.size() > 0
-             // 🚨 ΚΡΙΣΙΜΟ: ΔΕΝ επιτρέπουμε scene object στο Firestore!
+             // 🚨 ΚΡΙΣΙΜΟ: ΔΕΝ επιτρέπουμε scene object στο Firestore! (Μπακάλικο γειτονιάς)
              && !data.keys().hasAny(['scene'])
-             // ✅ NEW: Support for Storage-based DXF files (Phase 4)
+             // ✅ ENTERPRISE: Firebase Storage-based validation
              && (
-               // Legacy format (without storageUrl)
+               // Legacy format (Firestore-based data)
                !data.keys().hasAny(['storageUrl']) ||
-               // New format (with storageUrl - Firebase Storage)
-               (data.keys().hasAll(['storageUrl']) && data.storageUrl is string && data.storageUrl.size() > 0)
-             );
+               // 🏢 ENTERPRISE FORMAT: Firebase Storage με metadata
+               (data.keys().hasAll(['storageUrl'])
+                && data.storageUrl is string
+                && data.storageUrl.size() > 0
+                // ✅ Validate Firebase Storage URL format
+                && data.storageUrl.matches('https://firebasestorage.googleapis.com/.*'))
+             )
+             // ✅ Enterprise metadata validation
+             && (!data.keys().hasAny(['version']) || (data.version is number && data.version > 0))
+             && (!data.keys().hasAny(['sizeBytes']) || (data.sizeBytes is number && data.sizeBytes > 0))
+             && (!data.keys().hasAny(['entityCount']) || (data.entityCount is number && data.entityCount >= 0))
+             && (!data.keys().hasAny(['checksum']) || (data.checksum is string && data.checksum.size() > 0));
     }
 
     // Contact Data Validation

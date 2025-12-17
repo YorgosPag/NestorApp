@@ -40,7 +40,7 @@ export {
  * Βασίζονται στα κύρια effects για consistency.
  */
 
-import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
+import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS, HOVER_TEXT_EFFECTS, HOVER_SHADOWS, CORE_HOVER_TRANSFORMS } from '@/components/ui/effects';
 
 // DXF Viewer specific patterns
 export const DXF_HOVER_PATTERNS = {
@@ -89,8 +89,8 @@ export const MIGRATION_MAP = {
 
   // DXF specific common patterns
   'hover:bg-white': 'hover:bg-white', // Keep as is (special case)
-  'hover:shadow-md': HOVER_SHADOWS.MEDIUM,
-  'hover:scale-105': CORE_HOVER_TRANSFORMS.SCALE_UP,
+  'hover:shadow-md': HOVER_SHADOWS.SUBTLE,
+  'hover:scale-105': CORE_HOVER_TRANSFORMS.SCALE_UP_SMALL,
 } as const;
 
 export default DXF_HOVER_PATTERNS;

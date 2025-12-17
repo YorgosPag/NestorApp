@@ -193,7 +193,11 @@
       "Bash(TYPESCRIPT_CHECK=false PORT=3005 npm run dev)",
       "Bash(npm run validate:i18n:*)",
       "Bash(npm run lint)",
-      "Bash(touch:*)"
+      "Bash(touch:*)",
+      "Bash(npx tsx:*)",
+      "Bash(npx ts-node:*)",
+      "Read(//c//**)",
+      "Bash(SKIP_ENV_VALIDATION=true npm run dev)"
     ],
     "deny": [],
     "ask": []

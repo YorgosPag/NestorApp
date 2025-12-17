@@ -8,7 +8,7 @@
  * @module src/subapps/dxf-viewer/ui/components/CentralizedAutoSaveStatus.styles
  */
 
-import { statusIndicatorComponents } from '../../../../../../src/styles/design-tokens';
+import { statusIndicatorComponents, autoSaveStatusTokens } from '@/styles/design-tokens/index';
 
 // ============================================================================
 // DYNAMIC STYLE UTILITIES
@@ -42,10 +42,19 @@ export const getSettingsDotStyle = (
   isActive: boolean,
   type: 'general' | 'specific' = 'general'
 ) => {
-  const dotConfig = statusIndicatorComponents.settingsDots[type].dot;
+  const baseStyle = {
+    width: '0.5rem',
+    height: '0.5rem',
+    borderRadius: '50%',
+    flexShrink: 0,
+    transition: 'background-color 150ms ease'
+  };
+  const activeColor = type === 'general' ? '#3B82F6' : '#22C55E';
+  const inactiveColor = '#6B7280';
+
   return {
-    ...dotConfig.base,
-    ...(isActive ? dotConfig.active : dotConfig.inactive)
+    ...baseStyle,
+    backgroundColor: isActive ? activeColor : inactiveColor
   };
 };
 
@@ -53,27 +62,34 @@ export const getSettingsDotStyle = (
  * Get general settings dot style (blue)
  */
 export const getGeneralSettingsDotStyle = (isActive: boolean) => ({
-  ...statusIndicatorComponents.settingsDots.general.dot.base,
-  backgroundColor: isActive
-    ? statusIndicatorComponents.settingsDots.general.dot.active.backgroundColor
-    : statusIndicatorComponents.settingsDots.general.dot.inactive.backgroundColor
+  width: '0.5rem',
+  height: '0.5rem',
+  borderRadius: '50%',
+  flexShrink: 0,
+  transition: 'background-color 150ms ease',
+  backgroundColor: isActive ? '#3B82F6' : '#6B7280'
 });
 
 /**
  * Get specific settings dot style (green)
  */
 export const getSpecificSettingsDotStyle = (isActive: boolean) => ({
-  ...statusIndicatorComponents.settingsDots.specific.dot.base,
-  backgroundColor: isActive
-    ? statusIndicatorComponents.settingsDots.specific.dot.active.backgroundColor
-    : statusIndicatorComponents.settingsDots.specific.dot.inactive.backgroundColor
+  width: '0.5rem',
+  height: '0.5rem',
+  borderRadius: '50%',
+  flexShrink: 0,
+  transition: 'background-color 150ms ease',
+  backgroundColor: isActive ? '#22C55E' : '#6B7280'
 });
 
 /**
  * Get separator style
  */
 export const getSeparatorStyle = () => ({
-  ...statusIndicatorComponents.separator
+  width: '1px',
+  height: '1rem',
+  backgroundColor: '#6B7280',
+  opacity: 0.7
 });
 
 /**
@@ -84,14 +100,14 @@ export const getCompactStatusStyle = (
   saveStatus?: string
 ) => {
   if (isAutoSaving) {
-    return statusIndicatorComponents.compact.saving;
+    return statusIndicatorComponents.statusColors.saving;
   }
 
   switch (saveStatus) {
     case 'error':
-      return statusIndicatorComponents.compact.error;
+      return statusIndicatorComponents.statusColors.error;
     default:
-      return statusIndicatorComponents.compact.success;
+      return statusIndicatorComponents.statusColors.success;
   }
 };
 
@@ -137,29 +153,33 @@ export const centralizedAutoSaveStatusStyles = {
   container: statusIndicatorComponents.container,
 
   // Compact container
-  compactContainer: statusIndicatorComponents.compactContainer,
+  compactContainer: statusIndicatorComponents.container,
 
   // Status messages
   statusMessage: {
-    primary: statusIndicatorComponents.statusMessage.primary,
-    secondary: statusIndicatorComponents.statusMessage.secondary
+    primary: statusIndicatorComponents.text.primary,
+    secondary: statusIndicatorComponents.text.secondary
   },
 
-  // Settings indicators
+  // Settings indicators (fallback to basic styles)
   settingsDots: {
-    container: statusIndicatorComponents.settingsDots.container,
-    general: statusIndicatorComponents.settingsDots.general,
-    specific: statusIndicatorComponents.settingsDots.specific
+    container: { display: 'flex', gap: '0.5rem', alignItems: 'center' },
+    general: { dot: { base: statusIndicatorComponents.statusDot, active: { backgroundColor: '#3B82F6' }, inactive: { backgroundColor: '#6B7280' } } },
+    specific: { dot: { base: statusIndicatorComponents.statusDot, active: { backgroundColor: '#22C55E' }, inactive: { backgroundColor: '#6B7280' } } }
   },
 
   // Separator
   separator: statusIndicatorComponents.separator,
 
-  // Status icons
-  statusIcon: statusIndicatorComponents.statusIcon,
+  // Status icons (fallback to statusDot)
+  statusIcon: statusIndicatorComponents.statusDot,
 
-  // Compact variants
-  compact: statusIndicatorComponents.compact
+  // Compact variants (fallback to statusColors)
+  compact: {
+    saving: statusIndicatorComponents.statusColors.saving,
+    error: statusIndicatorComponents.statusColors.error,
+    success: statusIndicatorComponents.statusColors.success
+  }
 } as const;
 
 // ============================================================================

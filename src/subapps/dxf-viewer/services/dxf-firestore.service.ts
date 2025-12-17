@@ -3,6 +3,11 @@ import { doc, setDoc, getDoc, serverTimestamp, Timestamp } from 'firebase/firest
 import { ref, uploadBytes, getDownloadURL, getBytes } from 'firebase/storage';
 import { COLLECTIONS } from '../../../config/firestore-collections';
 import type { SceneModel } from '../types/scene';
+import {
+  DxfSecurityValidator,
+  type SecurityValidationResult,
+  SecuritySeverity
+} from '../security/DxfSecurityValidator';
 
 export interface DxfFileMetadata {
   id: string;
@@ -13,6 +18,11 @@ export interface DxfFileMetadata {
   checksum?: string;
   sizeBytes?: number;
   entityCount?: number;
+  securityValidation?: {
+    validatedAt: Timestamp;
+    validationResults: SecurityValidationResult[];
+    isSecure: boolean;
+  };
 }
 
 export interface DxfFileRecord {
@@ -74,8 +84,71 @@ export class DxfFirestoreService {
   // 🚀 NEW STORAGE-BASED METHODS (PHASE 4)
   // ==========================================================================
 
+  // ==========================================================================
+  // 🔒 ENTERPRISE SECURITY METHODS (PHASE 1)
+  // ==========================================================================
+
   /**
-   * Save scene to Firebase Storage + metadata to Firestore
+   * Enterprise validation before save operations
+   */
+  static async validateForSave(fileName: string, scene: SceneModel): Promise<{
+    isValid: boolean;
+    fileId: string;
+    sanitizedFileName: string;
+    validationResults: SecurityValidationResult[];
+  }> {
+    console.log('🔒 [DxfFirestore] Running enterprise security validation...');
+
+    // Estimate file size from scene JSON
+    const sceneJson = JSON.stringify(scene, null, 0);
+    const estimatedFileSize = sceneJson.length;
+
+    // Run complete validation workflow
+    const validationResults = DxfSecurityValidator.validateDxfUpload({
+      fileName,
+      fileSize: estimatedFileSize,
+      scene
+    });
+
+    // Generate secure identifiers
+    const sanitizedFileName = DxfSecurityValidator.sanitizeFileName(fileName);
+    const fileId = DxfSecurityValidator.generateSecureFileId(fileName);
+
+    // Check if validation passed
+    const isValid = !DxfSecurityValidator.hasBlockingErrors(validationResults);
+
+    const summary = DxfSecurityValidator.getValidationSummary(validationResults);
+
+    console.log('🔒 [DxfFirestore] Security validation summary:', {
+      isValid,
+      fileId,
+      sanitizedFileName,
+      criticalErrors: summary.criticalErrors,
+      highErrors: summary.highErrors,
+      mediumErrors: summary.mediumErrors,
+      lowWarnings: summary.lowWarnings
+    });
+
+    if (!isValid) {
+      console.error('❌ [DxfFirestore] Security validation FAILED:', {
+        fileName,
+        fileId,
+        blockingErrors: validationResults.filter(r =>
+          !r.isValid && (r.severity === SecuritySeverity.HIGH || r.severity === SecuritySeverity.CRITICAL)
+        ).map(r => r.message)
+      });
+    }
+
+    return {
+      isValid,
+      fileId,
+      sanitizedFileName,
+      validationResults
+    };
+  }
+
+  /**
+   * Save scene to Firebase Storage + metadata to Firestore (Enterprise Edition)
    */
   static async saveToStorage(fileId: string, fileName: string, scene: SceneModel): Promise<boolean> {
     try {
@@ -104,6 +177,9 @@ export class DxfFirestoreService {
       const currentMetadata = await this.getFileMetadata(fileId);
       const newVersion = (currentMetadata?.version || 0) + 1;
 
+      // 4.5. Run security validation for audit trail
+      const validation = await this.validateForSave(fileName, scene);
+
       // 5. Save metadata to Firestore (NO SCENE DATA)
       const metadata: DxfFileMetadata = {
         id: fileId,
@@ -113,7 +189,12 @@ export class DxfFirestoreService {
         version: newVersion,
         checksum: this.generateSceneChecksum(scene),
         sizeBytes: sceneBytes.length,
-        entityCount: scene.entities.length
+        entityCount: scene.entities.length,
+        securityValidation: {
+          validatedAt: serverTimestamp() as Timestamp,
+          validationResults: validation.validationResults,
+          isSecure: validation.isValid
+        }
       };
 
       const docRef = doc(db, this.COLLECTION_NAME, fileId);
@@ -127,8 +208,43 @@ export class DxfFirestoreService {
       });
 
       return true;
-    } catch (error) {
-      console.error('❌ [DxfFirestore] Storage save failed:', error);
+    } catch (error: unknown) {
+      // Enterprise error handling with detailed logging
+      const errorDetails = {
+        operation: 'saveToStorage',
+        fileId,
+        fileName,
+        entityCount: scene.entities.length,
+        timestamp: new Date().toISOString(),
+        error: error instanceof Error ? {
+          name: error.name,
+          message: error.message,
+          stack: error.stack
+        } : { message: String(error) }
+      };
+
+      console.error('❌ [DxfFirestore] Storage save failed:', errorDetails);
+
+      // Attempt recovery strategies for common errors
+      if (error instanceof Error) {
+        // Check for quota exceeded error
+        if (error.message.includes('quota') || error.message.includes('QUOTA_EXCEEDED')) {
+          console.warn('💾 [DxfFirestore] Storage quota exceeded - consider cleanup');
+          // In production, could trigger automatic cleanup or notification
+        }
+
+        // Check for network errors
+        if (error.message.includes('network') || error.message.includes('fetch')) {
+          console.warn('🌐 [DxfFirestore] Network error detected - retries may help');
+          // In production, could implement automatic retry with exponential backoff
+        }
+
+        // Check for permissions errors
+        if (error.message.includes('permission') || error.message.includes('PERMISSION_DENIED')) {
+          console.error('🔒 [DxfFirestore] Permission denied - check Firebase rules');
+        }
+      }
+
       return false;
     }
   }
@@ -168,8 +284,41 @@ export class DxfFirestoreService {
         version: metadata.version,
         checksum: metadata.checksum
       };
-    } catch (error) {
-      console.error('❌ [DxfFirestore] Storage load failed:', error);
+    } catch (error: unknown) {
+      // Enterprise error handling for load operations
+      const errorDetails = {
+        operation: 'loadFromStorage',
+        fileId,
+        timestamp: new Date().toISOString(),
+        error: error instanceof Error ? {
+          name: error.name,
+          message: error.message,
+          stack: error.stack
+        } : { message: String(error) }
+      };
+
+      console.error('❌ [DxfFirestore] Storage load failed:', errorDetails);
+
+      // Analyze error for recovery options
+      if (error instanceof Error) {
+        // Check for file not found errors
+        if (error.message.includes('404') || error.message.includes('not found')) {
+          console.warn('📂 [DxfFirestore] File not found in Storage - may be legacy Firestore file');
+          // Caller should try fallback to Firestore
+        }
+
+        // Check for network errors
+        if (error.message.includes('network') || error.message.includes('fetch')) {
+          console.warn('🌐 [DxfFirestore] Network error during load - retry may help');
+        }
+
+        // Check for corrupted file errors
+        if (error.message.includes('JSON') || error.message.includes('parse')) {
+          console.error('💥 [DxfFirestore] File corruption detected - JSON parse failed');
+          // In production, could mark file for repair or backup restoration
+        }
+      }
+
       return null;
     }
   }
@@ -234,7 +383,57 @@ export class DxfFirestoreService {
   // ==========================================================================
 
   /**
+   * 🔒 Enterprise Auto-save with Security Validation (V3)
+   */
+  static async autoSaveV3(fileName: string, scene: SceneModel): Promise<{
+    success: boolean;
+    fileId?: string;
+    validationResults?: SecurityValidationResult[];
+    errorMessage?: string;
+  }> {
+    try {
+      console.log('🔒 [DxfFirestore] Enterprise auto-save V3 starting...', { fileName });
+
+      // Step 1: Run security validation first
+      const validation = await this.validateForSave(fileName, scene);
+
+      if (!validation.isValid) {
+        const summary = DxfSecurityValidator.getValidationSummary(validation.validationResults);
+        return {
+          success: false,
+          validationResults: validation.validationResults,
+          errorMessage: `Security validation failed: ${summary.criticalErrors + summary.highErrors} blocking errors found`
+        };
+      }
+
+      // Step 2: Use validated file ID and sanitized name
+      const success = await this.saveToStorage(validation.fileId, validation.sanitizedFileName, scene);
+
+      if (success) {
+        console.log('✅ [DxfFirestore] Enterprise auto-save V3 completed successfully');
+        return {
+          success: true,
+          fileId: validation.fileId,
+          validationResults: validation.validationResults
+        };
+      } else {
+        return {
+          success: false,
+          errorMessage: 'Storage operation failed'
+        };
+      }
+    } catch (error: unknown) {
+      console.error('❌ [DxfFirestore] Enterprise auto-save V3 failed:', error);
+      return {
+        success: false,
+        errorMessage: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  }
+
+  /**
    * Auto-save with intelligent routing (Storage for new files, Firestore for legacy)
+   * @deprecated Use autoSaveV3 for enterprise security features
    */
   static async autoSaveV2(fileId: string, fileName: string, scene: SceneModel): Promise<boolean> {
     // Check if file already exists to determine save method
