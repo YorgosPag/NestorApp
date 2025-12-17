@@ -121,8 +121,10 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
     setHierarchy(prev => ({ ...prev, loading: true, error: null }));
     
     try {
+      console.log('🔄 [ProjectHierarchy] Starting to load companies...');
 
       const companies = await getAllActiveCompanies();
+      console.log('✅ [ProjectHierarchy] Companies loaded successfully:', companies.length);
 
       // Remove duplicates by id AND by companyName (multiple deduplication strategies)
       const uniqueCompanies = companies.reduce((unique, company) => {
@@ -157,10 +159,22 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
       companiesLoadedRef.current = true;
 
     } catch (error) {
-      console.error('Error loading companies from Firestore:', error);
+      console.error('❌ [ProjectHierarchy] Error loading companies:', error);
+
+      // Enhanced error details for debugging
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorStack = error instanceof Error ? error.stack : 'No stack trace';
+
+      console.error('❌ [ProjectHierarchy] Error details:', {
+        message: errorMessage,
+        stack: errorStack,
+        type: typeof error,
+        error: error
+      });
+
       setHierarchy(prev => ({
         ...prev,
-        error: error instanceof Error ? error.message : 'Failed to load companies from Firestore',
+        error: `Σφάλμα φόρτωσης: ${errorMessage}`,
         loading: false
       }));
     } finally {
@@ -196,6 +210,19 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
       // Load projects using API endpoint instead of server action
 
       const response = await fetch(`/api/projects/by-company/${companyId}`);
+
+      // Enhanced error handling - check if response is HTML (404 page)
+      const contentType = response.headers.get('content-type');
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`API Error (${response.status}): ${errorText.substring(0, 200)}`);
+      }
+
+      if (!contentType || !contentType.includes('application/json')) {
+        const responseText = await response.text();
+        throw new Error(`Expected JSON but got: ${contentType}. Response: ${responseText.substring(0, 200)}`);
+      }
+
       const result = await response.json();
 
       if (!result.success) {

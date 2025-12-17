@@ -1,11 +1,27 @@
 'use client';
 import React, { useState, useEffect } from 'react';
+import {
+  Building,
+  Building2,
+  Home,
+  Package,
+  ParkingCircle,
+  Folder,
+  ChevronDown
+} from 'lucide-react';
 import { useProjectHierarchy } from '../contexts/ProjectHierarchyContext';
 import { SelectionButton } from './shared/SelectionButton';
 import type { DxfDestination } from '../pipeline/types';
 import type { CompanyContact } from '../../../types/contacts';
 import type { Project, Building, Floor } from '../contexts/ProjectHierarchyContext';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS, HOVER_TEXT_EFFECTS } from '../ui/effects';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface HierarchicalDestinationSelectorProps {
   onDestinationSelect: (destId: string) => void;
@@ -146,12 +162,12 @@ export function HierarchicalDestinationSelector({
 
   const getDestinationIcon = (type: string) => {
     switch (type) {
-      case 'project': return '🏗️';
-      case 'building': return '🏢';
-      case 'floor': return '🏠';
-      case 'storage': return '📦';
-      case 'parking': return '🅿️';
-      default: return '📁';
+      case 'project': return Building;
+      case 'building': return Building2;
+      case 'floor': return Home;
+      case 'storage': return Package;
+      case 'parking': return ParkingCircle;
+      default: return Folder;
     }
   };
 
@@ -189,9 +205,10 @@ export function HierarchicalDestinationSelector({
           <>
             <button
               onClick={() => setCurrentStep('company')}
-              className={`text-blue-400 ${HOVER_TEXT_EFFECTS.LIGHTER}`}
+              className={`text-blue-400 ${HOVER_TEXT_EFFECTS.LIGHTER} flex items-center space-x-1`}
             >
-              🏢 {selectedCompany.companyName}
+              <Building className="h-4 w-4" />
+              <span>{selectedCompany.companyName}</span>
             </button>
             {selectedProject && <span className="text-gray-500">→</span>}
           </>
@@ -200,9 +217,10 @@ export function HierarchicalDestinationSelector({
           <>
             <button
               onClick={() => setCurrentStep('project')}
-              className={`text-blue-400 ${HOVER_TEXT_EFFECTS.LIGHTER}`}
+              className={`text-blue-400 ${HOVER_TEXT_EFFECTS.LIGHTER} flex items-center space-x-1`}
             >
-              📁 {selectedProject.name}
+              <Folder className="h-4 w-4" />
+              <span>{selectedProject.name}</span>
             </button>
             {selectedBuilding && <span className="text-gray-500">→</span>}
           </>
@@ -211,15 +229,19 @@ export function HierarchicalDestinationSelector({
           <>
             <button
               onClick={() => setCurrentStep('building')}
-              className={`text-blue-400 ${HOVER_TEXT_EFFECTS.LIGHTER}`}
+              className={`text-blue-400 ${HOVER_TEXT_EFFECTS.LIGHTER} flex items-center space-x-1`}
             >
-              🏢 {selectedBuilding.name}
+              <Building2 className="h-4 w-4" />
+              <span>{selectedBuilding.name}</span>
             </button>
             {selectedFloor && <span className="text-gray-500">→</span>}
           </>
         )}
         {selectedFloor && (
-          <span className="text-gray-300">🏠 {selectedFloor.name}</span>
+          <span className="text-gray-300 flex items-center space-x-1">
+            <Home className="h-4 w-4" />
+            <span>{selectedFloor.name}</span>
+          </span>
         )}
       </div>
 
@@ -236,7 +258,7 @@ export function HierarchicalDestinationSelector({
                 <SelectionButton
                   key={company.id}
                   onClick={() => handleCompanySelect(company.id!)}
-                  icon="🏢"
+                  icon={<Building className="h-5 w-5" />}
                   title={company.companyName}
                   subtitle={company.industry}
                   extraInfo={company.vatNumber ? `ΑΦΜ: ${company.vatNumber}` : undefined}
@@ -248,31 +270,31 @@ export function HierarchicalDestinationSelector({
 
         {/* Project Selection */}
         {currentStep === 'project' && selectedCompany && (
-          <>
+          <div className="space-y-3">
+            <label className="text-sm font-medium text-white">Επιλέξτε Έργο</label>
             {projects.length === 0 ? (
-              <div className="text-gray-500 text-center py-8">
+              <div className="text-gray-500 text-center py-8 bg-gray-800 rounded-lg border border-gray-600">
                 Δεν βρέθηκαν έργα για την επιλεγμένη εταιρεία.
               </div>
             ) : (
-              projects.map(project => (
-                <button
-                  key={project.id}
-                  onClick={() => handleProjectSelect(project.id)}
-                  className={`w-full text-left p-4 rounded-lg border border-gray-600 ${HOVER_BORDER_EFFECTS.GRAY} ${HOVER_BACKGROUND_EFFECTS.MUTED} transition-colors`}
-                >
-                  <div className="flex items-center space-x-3">
-                    <span className="text-2xl">📁</span>
-                    <div>
-                      <div className="text-white font-medium">{project.name}</div>
-                      <div className="text-gray-400 text-sm">
-                        {project.buildings.length} κτίρια
+              <Select onValueChange={handleProjectSelect}>
+                <SelectTrigger className="w-full bg-gray-700 border-gray-600 text-white">
+                  <SelectValue placeholder="-- Επιλέξτε Έργο --" />
+                </SelectTrigger>
+                <SelectContent>
+                  {projects.map(project => (
+                    <SelectItem key={project.id} value={project.id}>
+                      <div className="flex items-center space-x-2">
+                        <Folder className="h-4 w-4 text-blue-400" />
+                        <span>{project.name}</span>
+                        <span className="text-gray-400 text-xs">({project.buildings.length} κτίρια)</span>
                       </div>
-                    </div>
-                  </div>
-                </button>
-              ))
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             )}
-          </>
+          </div>
         )}
 
         {/* Building Selection */}
@@ -287,7 +309,7 @@ export function HierarchicalDestinationSelector({
                 <SelectionButton
                   key={building.id}
                   onClick={() => handleBuildingSelect(building.id)}
-                  icon="🏢"
+                  icon={<Building2 className="h-5 w-5" />}
                   title={building.name}
                   subtitle={`${building.floors.length} όροφοι`}
                 />
@@ -311,7 +333,7 @@ export function HierarchicalDestinationSelector({
                   className={`w-full text-left p-4 rounded-lg border border-gray-600 ${HOVER_BORDER_EFFECTS.GRAY} ${HOVER_BACKGROUND_EFFECTS.MUTED} transition-colors`}
                 >
                   <div className="flex items-center space-x-3">
-                    <span className="text-2xl">🏠</span>
+                    <Home className="h-6 w-6 text-blue-400" />
                     <div>
                       <div className="text-white font-medium">{floor.name}</div>
                       <div className="text-gray-400 text-sm">
@@ -339,7 +361,9 @@ export function HierarchicalDestinationSelector({
                 }`}
               >
                 <div className="flex items-center space-x-3">
-                  <span className="text-2xl">{getDestinationIcon(dest.type)}</span>
+                  {React.createElement(getDestinationIcon(dest.type), {
+                    className: "h-6 w-6 text-blue-400"
+                  })}
                   <div>
                     <div className="text-white font-medium">{dest.label}</div>
                     <div className="text-gray-400 text-sm capitalize">{dest.type}</div>

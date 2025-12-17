@@ -1,5 +1,15 @@
 'use client';
 import React, { useState } from 'react';
+import {
+  Building,
+  Building2,
+  Home,
+  DoorOpen,
+  Package,
+  ParkingCircle,
+  Folder,
+  X
+} from 'lucide-react';
 import { useProjectHierarchy } from '../contexts/ProjectHierarchyContext';
 import { useDxfPipeline } from '../pipeline/useDxfPipeline';
 import { HierarchicalDestinationSelector } from './HierarchicalDestinationSelector';
@@ -105,13 +115,13 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
 
   const getDestinationIcon = (type: string) => {
     switch (type) {
-      case 'project': return '🏗️';
-      case 'building': return '🏢';
-      case 'floor': return '🏠';
-      case 'unit': return '🚪';
-      case 'storage': return '📦';
-      case 'parking': return '🅿️';
-      default: return '📁';
+      case 'project': return Building;
+      case 'building': return Building2;
+      case 'floor': return Home;
+      case 'unit': return DoorOpen;
+      case 'storage': return Package;
+      case 'parking': return ParkingCircle;
+      default: return Folder;
     }
   };
 
@@ -139,11 +149,11 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
               {selectedFile?.name && `Processing: ${selectedFile.name}`}
             </p>
           </div>
-          <button 
+          <button
             onClick={handleClose}
-            className={`text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} text-2xl`}
+            className={`text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} p-1`}
           >
-            ×
+            <X className="h-6 w-6" />
           </button>
         </div>
 
@@ -188,7 +198,9 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
               </h3>
               <div className="bg-gray-700 p-4 rounded-lg mb-6">
                 <div className="flex items-center space-x-3">
-                  <span className="text-2xl">{getDestinationIcon(selectedDestination.type)}</span>
+                  {React.createElement(getDestinationIcon(selectedDestination.type), {
+                    className: "h-6 w-6 text-blue-400"
+                  })}
                   <div>
                     <div className="text-white font-medium">{selectedDestination.label}</div>
                     <div className="text-gray-400 text-sm">Destination: {selectedDestination.type}</div>
@@ -281,8 +293,12 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
               </p>
               {selectedDestination && (
                 <div className="bg-gray-700 p-3 rounded-lg inline-block">
-                  <span className="text-lg mr-2">{getDestinationIcon(selectedDestination.type)}</span>
-                  <span className="text-white">{selectedDestination.label}</span>
+                  <div className="flex items-center space-x-2">
+                    {React.createElement(getDestinationIcon(selectedDestination.type), {
+                      className: "h-5 w-5 text-green-400"
+                    })}
+                    <span className="text-white">{selectedDestination.label}</span>
+                  </div>
                 </div>
               )}
             </div>
