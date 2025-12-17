@@ -18,11 +18,10 @@ import {
   colors,
   typography,
   spacing,
-  animations,
+  animation as animations,
   dashboardComponents,
-  borderRadius,
-  componentSizes
-} from '../../../../../src/styles/design-tokens';
+  borderRadius
+} from '../../../../src/styles/design-tokens';
 
 // ============================================================================
 // 🎯 ENTERPRISE TYPE DEFINITIONS

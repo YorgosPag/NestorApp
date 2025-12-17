@@ -1,7 +1,9 @@
 'use client';
 import React from 'react';
 import type { Point2D } from '../../rendering/types/Types';
-import { portalComponents, canvasUtilities } from '@/styles/design-tokens';
+// Enterprise Canvas UI Migration - Phase B
+import { portalComponents } from '@/styles/design-tokens';
+import { canvasUI } from '@/styles/design-tokens/canvas';
 
 interface MarqueeState {
   active: boolean;
@@ -36,7 +38,7 @@ export default function SelectionMarqueeOverlay({
   return (
     <div className={`absolute inset-0 pointer-events-none ${className}`}>
       <div
-        style={canvasUtilities.overlays.marquee.rectangle(
+        style={canvasUI.positioning.marquee.rectangle(
           left,
           top,
           width,

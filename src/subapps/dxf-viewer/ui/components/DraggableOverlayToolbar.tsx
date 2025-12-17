@@ -5,7 +5,8 @@ import type { OverlayEditorMode, Status, OverlayKind } from '../../overlays/type
 import type { ToolType } from '../toolbar/types';
 import { OverlayToolbar } from '../OverlayToolbar';
 import { usePrecisionPositioning } from '../../utils/precision-positioning';
-import { canvasUtilities } from '@/styles/design-tokens';
+// Enterprise Canvas UI Migration - Phase B
+import { canvasUI } from '@/styles/design-tokens/canvas';
 
 interface DraggableOverlayToolbarProps {
   mode: OverlayEditorMode;
@@ -98,14 +99,14 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
   return (
     <div
       ref={toolbarRef}
-      style={canvasUtilities.overlays.floatingPanel.overlayToolbar.container(position, isDragging)}
+      style={canvasUI.positioning.floatingPanel.overlayToolbar.container(position, isDragging)}
       className="bg-gray-900 rounded-lg shadow-xl border border-gray-500 select-none"
       onMouseDown={handleMouseDown}
     >
       {/* Drag Handle - Visible area for dragging */}
       <div
         className="bg-gray-700 rounded-t-lg px-3 py-1 border-b border-gray-600 flex items-center justify-between cursor-grab active:cursor-grabbing"
-        style={canvasUtilities.overlays.floatingPanel.overlayToolbar.dragHandle}
+        style={canvasUI.positioning.floatingPanel.overlayToolbar.dragHandle}
       >
         <span className="text-xs text-gray-400 font-medium">🔧 Overlay Tools</span>
         <div className="flex gap-1">

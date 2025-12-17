@@ -7,7 +7,8 @@
 import React from 'react';
 import { ColorPickerModal } from './layers/components/ColorPickerModal';
 import type { SceneModel } from '../../types/scene';
-import { canvasUtilities } from '@/styles/design-tokens';
+// Enterprise Canvas UI Migration - Phase B
+import { canvasUI } from '@/styles/design-tokens/canvas';
 
 interface ColorMenuState {
   open: boolean;
@@ -80,7 +81,7 @@ export const ColorManager: React.FC<ColorManagerProps> = ({
 
   return (
     <div
-      style={canvasUtilities.overlays.cadStatusBar.colorManager.container(colorMenu.x, colorMenu.y)}
+      style={canvasUI.positioning.statusBarOverlays.colorManagerContainer(colorMenu.x, colorMenu.y)}
       onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }} // μη αφήσεις click να "τρυπήσει" στον καμβά
       onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }} // μην «ξαναανοίξει» το browser menu
     >

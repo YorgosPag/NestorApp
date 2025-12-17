@@ -24,7 +24,8 @@ import { useColorAreaState } from '@react-stately/color';
 import { parseColor as parseAriaColor } from '@react-stately/color';
 import { useFocusRing } from '@react-aria/focus';
 import type { AriaColorAreaProps } from '@react-aria/color';
-import { canvasUtilities } from '@/styles/design-tokens';
+// Enterprise Canvas UI Migration - Phase B
+import { canvasUI } from '@/styles/design-tokens/canvas';
 
 interface EnterpriseColorAreaProps {
   /** Current color value (hex) */
@@ -124,7 +125,7 @@ export function EnterpriseColorArea({
       {...colorAreaProps}
       ref={containerRef}
       className={`relative rounded-lg overflow-hidden ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-crosshair'} ${className}`}
-      style={canvasUtilities.geoInteractive.colorPickerArea(size)}
+      style={canvasUI.colorPicker.colorPickerArea(size)}
     >
       {/* Color gradient background */}
       <div
@@ -142,7 +143,7 @@ export function EnterpriseColorArea({
           ${isFocusVisible ? 'ring-2 ring-blue-500 ring-offset-2' : ''}
           ${disabled ? 'pointer-events-none' : ''}
         `}
-        style={canvasUtilities.geoInteractive.colorPickerThumb(
+        style={canvasUI.colorPicker.colorPickerThumb(
           thumbPosition,
           state.value.toString('css')
         )}

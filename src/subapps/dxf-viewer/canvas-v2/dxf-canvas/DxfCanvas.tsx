@@ -26,7 +26,8 @@ import type { GridSettings, RulerSettings, ColorLayer } from '../layer-canvas/la
 import { GridRenderer } from '../../rendering/ui/grid/GridRenderer';
 import { RulerRenderer } from '../../rendering/ui/ruler/RulerRenderer';
 import { createUIRenderContext, DEFAULT_UI_TRANSFORM } from '../../rendering/ui/core/UIRenderContext';
-import { canvasUtilities } from '@/styles/design-tokens';
+// Enterprise Canvas UI Migration - Phase B
+import { canvasUI } from '@/styles/design-tokens/canvas';
 
 // ✅ MOVED OUTSIDE COMPONENT - Prevents re-render loop
 const DEFAULT_RENDER_OPTIONS: DxfRenderOptions = {
@@ -392,7 +393,7 @@ export const DxfCanvas = React.forwardRef<DxfCanvasRef, DxfCanvasProps>(({
       ref={canvasRef}
       className={`dxf-canvas ${className}`}
       {...props} // 🎯 SPREAD: Περνάω τα extra props (data-canvas-type κ.λπ.)
-      style={canvasUtilities.layers.dxfCanvasWithTools(activeTool, crosshairSettings?.enabled)}
+      style={canvasUI.positioning.layers.dxfCanvasWithTools(activeTool, crosshairSettings?.enabled)}
       onMouseDown={(e) => mouseHandlers.handleMouseDown(e, canvasRef.current!)}
       onMouseMove={(e) => mouseHandlers.handleMouseMove(e, canvasRef.current!)}
       onMouseUp={mouseHandlers.handleMouseUp}

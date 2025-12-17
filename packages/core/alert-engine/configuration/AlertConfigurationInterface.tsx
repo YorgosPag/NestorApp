@@ -41,7 +41,7 @@ import {
 import {
   colors,
   configurationComponents
-} from '../../../../../src/styles/design-tokens';
+} from '../../../../src/styles/design-tokens';
 
 // ============================================================================
 // CONFIGURATION TYPES

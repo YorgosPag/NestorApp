@@ -9,6 +9,8 @@
 import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react';
 import { useTheme } from '../theme/ThemeProvider';
 import { chartComponents } from '@/styles/design-tokens';
+// Enterprise Canvas UI Migration - Phase B
+import { canvasUI } from '@/styles/design-tokens/canvas';
 
 // ============================================================================
 // CHART TYPES και INTERFACES
@@ -414,7 +416,7 @@ export const LineChart: React.FC<LineChartProps> = ({
             strokeWidth={strokeWidth}
             strokeLinecap="round"
             strokeLinejoin="round"
-            style={canvasUtilities.geoInteractive.chartElementTransition(animated, 'normal')}
+            style={canvasUI.charts.chartElementTransition(animated, 'normal')}
           />
         )}
 
@@ -428,7 +430,7 @@ export const LineChart: React.FC<LineChartProps> = ({
             fill={point.color || colors.primary}
             stroke={colors.background}
             strokeWidth={2}
-            style={canvasUtilities.geoInteractive.chartInteraction(interactive, animated, 'fast')}
+            style={canvasUI.charts.chartInteraction(interactive, animated, 'fast')}
           />
         ))}
 
@@ -640,7 +642,7 @@ export const BarChart: React.FC<BarChartProps> = ({
               rx={cornerRadius}
               ry={cornerRadius}
               opacity={hoveredBar?.index === index ? 0.8 : 1}
-              style={canvasUtilities.geoInteractive.chartElementStyle(animated, interactive, 'normal')}
+              style={canvasUI.charts.chartElementStyle(animated, interactive, 'normal')}
             />
 
             {/* Value labels */}
@@ -866,7 +868,7 @@ export const PieChart: React.FC<PieChartProps> = ({
               stroke={colors.background}
               strokeWidth={2}
               opacity={hoveredSlice?.index === index ? 0.8 : 1}
-              style={canvasUtilities.geoInteractive.chartElementStyle(animated, interactive, 'normal')}
+              style={canvasUI.charts.chartElementStyle(animated, interactive, 'normal')}
             />
 
             {/* Labels */}

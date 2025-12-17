@@ -8,7 +8,7 @@
  * @module src/subapps/dxf-viewer/components/SimpleProjectDialog.styles
  */
 
-import { dialogComponents } from '@/styles/design-tokens/index';
+import { dialogComponents } from '@/styles/design-tokens';
 
 // ============================================================================
 // DIALOG STYLING UTILITIES

@@ -15,8 +15,8 @@ import {
   typography,
   borderRadius,
   shadows,
-  animations
-} from '../../../../../src/styles/design-tokens';
+  animation as animations
+} from '../../../../src/styles/design-tokens';
 
 // ============================================================================
 // DYNAMIC STATUS UTILITIES

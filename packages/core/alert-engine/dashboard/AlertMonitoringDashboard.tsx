@@ -21,8 +21,8 @@ import {
   dashboardComponents,
   typography,
   spacing,
-  animations
-} from '../../../../../src/styles/design-tokens';
+  animation as animations
+} from '../../../../src/styles/design-tokens';
 import {
   dashboardStyles,
   metricsCardStyles,

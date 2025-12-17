@@ -33,7 +33,8 @@ import { createUnifiedCanvasSystem } from '../../rendering/canvas';
 import type { CanvasManager, CanvasInstance } from '../../rendering/canvas/core/CanvasManager';
 import type { CanvasEventSystem } from '../../rendering/canvas/core/CanvasEventSystem';
 import type { CanvasSettings } from '../../rendering/canvas/core/CanvasSettings';
-import { canvasUtilities } from '@/styles/design-tokens';
+// Enterprise Canvas UI Migration - Phase B
+import { canvasUI } from '@/styles/design-tokens/canvas';
 
 // ✅ ΦΑΣΗ 7: Event system κεντρικοποιημένο στο rendering/canvas/core/CanvasEventSystem
 import { canvasEventBus, CANVAS_EVENTS, subscribeToTransformChanges } from '../../rendering/canvas/core/CanvasEventSystem';
@@ -522,7 +523,7 @@ export const LayerCanvas = React.forwardRef<HTMLCanvasElement, LayerCanvasProps>
       className={`layer-canvas ${className}`}
       {...props} // 🎯 SPREAD: Περνάω τα extra props (data-canvas-type κ.λπ.)
       style={{
-        ...canvasUtilities.layers.layerCanvasWithTools(activeTool, crosshairSettings.enabled),
+        ...canvasUI.positioning.layers.layerCanvasWithTools(activeTool, crosshairSettings.enabled),
         // 🔥 FORCE EVENTS: Ensure this canvas captures all mouse events
         touchAction: 'none', // 🎯 ENTERPRISE: Prevent browser touch gestures (pinch-zoom, pan)
         userSelect: 'none',

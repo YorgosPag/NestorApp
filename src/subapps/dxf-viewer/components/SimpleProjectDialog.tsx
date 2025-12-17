@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Triangle, Building, Building2, Folder, Home } from 'lucide-react';
+import { Triangle, Building2, Folder, Home, Building as BuildingIcon } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -25,23 +25,21 @@ import { UnitFloorplanService } from '../../../services/floorplans/UnitFloorplan
 import { useNotifications } from '../../../providers/NotificationProvider';
 import DxfImportModal from './DxfImportModal';
 import type { SceneModel } from '../types/scene';
-import { HOVER_TEXT_EFFECTS, INTERACTIVE_PATTERNS, FORM_BUTTON_EFFECTS } from '@/components/ui/effects';
+import { HOVER_TEXT_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { MODAL_CONFIGURATIONS, getModalConfig, getModalZIndex } from '../config/modal-config';
 import {
-  simpleProjectDialogStyles,
-  getSelectStyles,
-  getOptionStyles,
-  getSelectFocusHandlers,
-  getButtonHoverHandlers,
-  getButtonPropsForAction,
-  getInfoCardStyles,
-  getLoadingStyles,
-  getErrorStyles,
-  getEmptyStateStyles,
-  getStatusTextStyles,
-  getHierarchyDisplayStyles,
-  getFloorplanOptionsStyles
-} from './SimpleProjectDialog.styles';
+  ProjectModalContainer,
+  ModalFormSection,
+  ModalField,
+  ModalActions,
+  ModalContentGrid,
+  ErrorModalContainer
+} from './modal/ModalContainer';
+import { MODAL_TYPOGRAPHY, DXF_MODAL_TYPOGRAPHY } from '../config/modal-typography';
+import { MODAL_COLOR_SCHEMES, getModalColorScheme, getModalIconColor } from '../config/modal-colors';
+import { MODAL_FLEX_PATTERNS, MODAL_DIMENSIONS, MODAL_SPACING, getIconSize } from '../config/modal-layout';
+import { getSelectStyles, getSelectPlaceholder, MODAL_SELECT_ITEM_PATTERNS } from '../config/modal-select';
+import { CompaniesLoadingState, ProjectsLoadingState, ModalEmptyState, InlineLoading, ModalErrorState } from './modal/ModalLoadingStates';
 
 interface SimpleProjectDialogProps {
   isOpen: boolean;
@@ -400,12 +398,12 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
           className={modalConfig.className}
           style={{ zIndex: modalConfig.zIndex }}
         >
-          <DialogHeader className="space-y-3">
-            <DialogTitle className="flex items-center gap-3">
-              <Triangle className="h-6 w-6 text-orange-500" />
+          <DialogHeader className={MODAL_SPACING.SPACE.blockMedium}>
+            <DialogTitle className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>
+              <Triangle className={`${getIconSize('title')} ${getModalIconColor('dxf_technical')}`} />
               <section>
-                <h1 className="text-xl font-semibold text-white">Enhanced DXF Import</h1>
-                <p className="text-gray-400 text-sm">
+                <h1 className={`${DXF_MODAL_TYPOGRAPHY.TITLE.emphasized}`}>Enhanced DXF Import</h1>
+                <p className={`${DXF_MODAL_TYPOGRAPHY.DESCRIPTION.default}`}>
                   {currentStep === 'company' ? 'Βήμα 1: Επιλογή Εταιρείας' :
                    currentStep === 'project' ? 'Βήμα 2: Επιλογή Έργου' :
                    currentStep === 'building' ? 'Βήμα 3: Επιλογή Κτιρίου' : 'Βήμα 4: Επιλογή Μονάδας'}
@@ -415,43 +413,41 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
           </DialogHeader>
 
         {/* Content */}
-        <main className="p-6">
+        <main className={MODAL_SPACING.CONTAINER.padding}>
 
           {/* Company Selection - Step 1 */}
           {currentStep === 'company' && (
-            <fieldset className="mb-6">
-              <legend className="block text-white font-medium mb-3">
+            <fieldset className={MODAL_SPACING.SECTIONS.betweenSections}>
+              <legend className={`block ${DXF_MODAL_TYPOGRAPHY.LABEL.default} ${MODAL_SPACING.SECTIONS.betweenItems}`}>
                 Επιλογή Εταιρείας
               </legend>
             
             {loading ? (
-              <div className="flex items-center space-x-3 p-3 bg-gray-700 rounded-lg">
-                <div className="animate-spin w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full"></div>
-                <span className="text-gray-300">Φόρτωση εταιρειών...</span>
-              </div>
+              <InlineLoading message="Φόρτωση εταιρειών..." type="card" />
             ) : error ? (
-              <div className="p-3 bg-red-900/20 border border-red-600 rounded-lg">
-                <p className="text-red-300 text-sm mb-2">Σφάλμα φόρτωσης: {error}</p>
-                <button
+              <ErrorModalContainer title="">
+                <p className={`${DXF_MODAL_TYPOGRAPHY.DESCRIPTION.error} ${MODAL_SPACING.CONTAINER.paddingSmall}`}>Σφάλμα φόρτωσης: {error}</p>
+                <Button
                   onClick={loadCompanies}
-                  className={`px-3 py-1 bg-red-600 text-white text-sm rounded ${FORM_BUTTON_EFFECTS.DESTRUCTIVE}`}
+                  variant="destructive"
+                  size="sm"
                 >
                   Ξαναδοκιμή
-                </button>
-              </div>
+                </Button>
+              </ErrorModalContainer>
             ) : (
               <Select value={selectedCompanyId} onValueChange={handleCompanyChange}>
-                <SelectTrigger className="w-full bg-gray-700 border-gray-600 text-white">
+                <SelectTrigger className={getSelectStyles().trigger}>
                   <SelectValue placeholder="-- Επιλέξτε Εταιρεία --" />
                 </SelectTrigger>
                 <SelectContent>
                   {companies?.map(company => (
                     <SelectItem key={company.id} value={company.id}>
-                      <div className="flex items-center space-x-2">
-                        <Building className="h-4 w-4 text-blue-400" />
+                      <div className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>
+                        <BuildingIcon className={`${getIconSize('field')} ${getModalIconColor('info')}`} />
                         <span>{company.companyName}</span>
                         {company.industry && (
-                          <span className="text-gray-400 text-xs">({company.industry})</span>
+                          <span className={`${DXF_MODAL_TYPOGRAPHY.DESCRIPTION.default}`}>({company.industry})</span>
                         )}
                       </div>
                     </SelectItem>
@@ -461,55 +457,50 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
             )}
             
               {(!companies || companies.length === 0) && !loading && !error && (
-                <div className="mt-3 p-3 bg-gray-700 rounded-lg">
-                  <p className="text-gray-300 text-sm">Δεν βρέθηκαν εταιρείες στο σύστημα.</p>
-                </div>
+                <ProjectModalContainer title="" className="bg-gray-700 border-gray-600">
+                  <p className={`${DXF_MODAL_TYPOGRAPHY.DESCRIPTION.default}`}>Δεν βρέθηκαν εταιρείες στο σύστημα.</p>
+                </ProjectModalContainer>
               )}
             </fieldset>
           )}
 
           {/* Project Selection - Step 2 */}
           {currentStep === 'project' && (
-            <div className="mb-6">
-              <label className="block text-white font-medium mb-3">
+            <div className={MODAL_SPACING.SECTIONS.betweenSections}>
+              <label className={`block ${DXF_MODAL_TYPOGRAPHY.LABEL.default} ${MODAL_SPACING.SECTIONS.betweenItems}`}>
                 Επιλογή Έργου
               </label>
 
               {/* Selected Company Info */}
               {selectedCompany && (
-                <div className="mb-4 p-3 bg-blue-900/20 border border-blue-600 rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    <Building className="h-5 w-5 text-blue-400" />
+                <ProjectModalContainer title="" className="${MODAL_SPACING.SECTIONS.betweenItems} bg-blue-50 dark:bg-blue-950/30 border-blue-500/20">
+                  <div className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>
+                    <BuildingIcon className={`${getIconSize('title')} ${getModalIconColor('info')}`} />
                     <div>
-                      <p className="text-white text-sm font-medium">{selectedCompany.companyName}</p>
-                      <p className="text-blue-300 text-xs">{selectedCompany.industry}</p>
+                      <p className={`${DXF_MODAL_TYPOGRAPHY.TITLE.default}`}>{selectedCompany.companyName}</p>
+                      <p className={`${DXF_MODAL_TYPOGRAPHY.DESCRIPTION.default}`}>{selectedCompany.industry}</p>
                     </div>
                   </div>
-                </div>
+                </ProjectModalContainer>
               )}
 
               {loading ? (
-                <div className="flex items-center space-x-3 p-3 bg-gray-700 rounded-lg">
-                  <div className="animate-spin w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full"></div>
-                  <span className="text-gray-300">Φόρτωση έργων...</span>
-                </div>
+                <InlineLoading message="Φόρτωση έργων..." type="card" />
               ) : error ? (
-                <div className="p-3 bg-red-900/20 border border-red-600 rounded-lg">
-                  <p className="text-red-300 text-sm mb-2">Σφάλμα φόρτωσης έργων: {error}</p>
-                </div>
+                <ModalErrorState message={`Σφάλμα φόρτωσης έργων: ${error}`} />
               ) : (
                 <Select value={selectedProjectId} onValueChange={handleProjectChange}>
-                  <SelectTrigger className="w-full bg-gray-700 border-gray-600 text-white">
+                  <SelectTrigger className={getSelectStyles().trigger}>
                     <SelectValue placeholder="-- Επιλέξτε Έργο --" />
                   </SelectTrigger>
                   <SelectContent>
                     {projects?.map(project => (
                       <SelectItem key={project.id} value={project.id}>
-                        <div className="flex items-center space-x-2">
-                          <Folder className="h-4 w-4 text-blue-400" />
+                        <div className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>
+                          <Folder className={`${getIconSize('field')} ${getModalIconColor('info')}`} />
                           <span>{project.name}</span>
                           {project.buildings?.length > 0 && (
-                            <span className="text-gray-400 text-xs">({project.buildings.length} κτίρια)</span>
+                            <span className={DXF_MODAL_TYPOGRAPHY.DESCRIPTION.default}>({project.buildings.length} κτίρια)</span>
                           )}
                         </div>
                       </SelectItem>
@@ -519,57 +510,63 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
               )}
 
               {(!projects || projects.length === 0) && !loading && !error && selectedCompany && (
-                <div className="mt-3 p-3 bg-gray-700 rounded-lg">
-                  <p className="text-gray-300 text-sm">Δεν βρέθηκαν έργα για την επιλεγμένη εταιρεία.</p>
-                </div>
+                <ProjectModalContainer title="" className="bg-gray-800 border-gray-600">
+                  <p className={`${DXF_MODAL_TYPOGRAPHY.DESCRIPTION.default}`}>Δεν βρέθηκαν έργα για την επιλεγμένη εταιρεία.</p>
+                </ProjectModalContainer>
               )}
             </div>
           )}
 
           {/* Building Selection - Step 3 */}
           {currentStep === 'building' && (
-            <div className="mb-6">
-              <label className="block text-white font-medium mb-3">
+            <div className={MODAL_SPACING.SECTIONS.betweenSections}>
+              <label className={`block ${DXF_MODAL_TYPOGRAPHY.LABEL.default} ${MODAL_SPACING.SECTIONS.betweenItems}`}>
                 Επιλογή Κτιρίου
               </label>
 
               {/* Selected Company & Project Info */}
               {selectedCompany && selectedProject && (
-                <div className="mb-4 space-y-3">
-                  <div className="p-3 bg-blue-900/20 border border-blue-600 rounded-lg">
-                    <div className="flex items-center space-x-2">
-                      <Building className="h-5 w-5 text-blue-400" />
+                <div className={`${MODAL_SPACING.SECTIONS.betweenSections} ${MODAL_FLEX_PATTERNS.COLUMN.stretchWithGap}`}>
+                  <ProjectModalContainer
+                    title=""
+                    className="bg-blue-50 dark:bg-blue-950/30 border-blue-500/20"
+                  >
+                    <div className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>
+                      <BuildingIcon className={`${getIconSize('title')} ${getModalIconColor('info')}`} />
                       <div>
-                        <p className="text-white text-sm font-medium">{selectedCompany.companyName}</p>
-                        <p className="text-blue-300 text-xs">{selectedCompany.industry}</p>
+                        <p className={`${DXF_MODAL_TYPOGRAPHY.TITLE.default}`}>{selectedCompany.companyName}</p>
+                        <p className={`${DXF_MODAL_TYPOGRAPHY.DESCRIPTION.default}`}>{selectedCompany.industry}</p>
                       </div>
                     </div>
-                  </div>
-                  <div className="p-3 bg-green-900/20 border border-green-600 rounded-lg">
-                    <div className="flex items-center space-x-2">
-                      <Building2 className="h-5 w-5 text-green-400" />
+                  </ProjectModalContainer>
+                  <ProjectModalContainer
+                    title=""
+                    className="bg-green-50 dark:bg-green-950/30 border-green-500/20"
+                  >
+                    <div className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>
+                      <Building2 className={`${getIconSize('title')} ${getModalIconColor('success')}`} />
                       <div>
-                        <p className="text-white text-sm font-medium">{selectedProject.name}</p>
-                        <p className="text-green-300 text-xs">{selectedProject.buildings?.length || 0} κτίρια</p>
+                        <p className={`${DXF_MODAL_TYPOGRAPHY.TITLE.default}`}>{selectedProject.name}</p>
+                        <p className={`${DXF_MODAL_TYPOGRAPHY.DESCRIPTION.default}`}>{selectedProject.buildings?.length || 0} κτίρια</p>
                       </div>
                     </div>
-                  </div>
+                  </ProjectModalContainer>
                 </div>
               )}
 
               {buildings.length > 0 ? (
                 <Select value={selectedBuildingId} onValueChange={handleBuildingChange}>
-                  <SelectTrigger className="w-full bg-gray-700 border-gray-600 text-white">
+                  <SelectTrigger className={getSelectStyles().trigger}>
                     <SelectValue placeholder="-- Επιλέξτε Κτίριο --" />
                   </SelectTrigger>
                   <SelectContent>
                     {buildings?.map(building => (
                       <SelectItem key={building.id} value={building.id}>
-                        <div className="flex items-center space-x-2">
-                          <Building2 className="h-4 w-4 text-purple-400" />
+                        <div className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>
+                          <Building2 className={`${getIconSize('field')} ${getModalIconColor('warning')}`} />
                           <span>{building.name}</span>
                           {building.floors && (
-                            <span className="text-gray-400 text-xs">({building.floors.length} όροφοι)</span>
+                            <span className={DXF_MODAL_TYPOGRAPHY.DESCRIPTION.default}>({building.floors.length} όροφοι)</span>
                           )}
                         </div>
                       </SelectItem>
@@ -577,115 +574,121 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                   </SelectContent>
                 </Select>
               ) : (
-                <div className="p-3 bg-gray-700 rounded-lg">
-                  <p className="text-gray-300 text-sm">Δεν βρέθηκαν κτίρια για το επιλεγμένο έργο.</p>
-                </div>
+                <ProjectModalContainer title="" className="bg-gray-800 border-gray-600">
+                  <p className={`${DXF_MODAL_TYPOGRAPHY.DESCRIPTION.default}`}>Δεν βρέθηκαν κτίρια για το επιλεγμένο έργο.</p>
+                </ProjectModalContainer>
               )}
             </div>
           )}
 
           {/* Status */}
-          <div className="text-center text-gray-400 text-sm">
+          <div className={MODAL_FLEX_PATTERNS.COLUMN.center}>
             {currentStep === 'company' && companies.length > 0 && !loading && (
-              <p>Βρέθηκαν {companies.length} διαθέσιμες εταιρείες</p>
+              <p className={`${DXF_MODAL_TYPOGRAPHY.DESCRIPTION.default}`}>Βρέθηκαν {companies.length} διαθέσιμες εταιρείες</p>
             )}
             {currentStep === 'project' && projects.length > 0 && !loading && (
-              <p>Βρέθηκαν {projects.length} έργα για την επιλεγμένη εταιρεία</p>
+              <p className={`${DXF_MODAL_TYPOGRAPHY.DESCRIPTION.default}`}>Βρέθηκαν {projects.length} έργα για την επιλεγμένη εταιρεία</p>
             )}
             {currentStep === 'building' && buildings.length > 0 && (
-              <p>Βρέθηκαν {buildings.length} κτίρια για το επιλεγμένο έργο</p>
+              <p className={`${DXF_MODAL_TYPOGRAPHY.DESCRIPTION.default}`}>Βρέθηκαν {buildings.length} κτίρια για το επιλεγμένο έργο</p>
             )}
             {currentStep === 'unit' && units.length > 0 && (
-              <p>Βρέθηκαν {units.length} μονάδες για το επιλεγμένο κτίριο</p>
+              <p className={`${DXF_MODAL_TYPOGRAPHY.DESCRIPTION.default}`}>Βρέθηκαν {units.length} μονάδες για το επιλεγμένο κτίριο</p>
             )}
           </div>
 
           {/* Floorplan Options - Only shown when project is selected */}
           {currentStep === 'project' && selectedProjectId && (
-            <div className="mt-6 p-4 bg-gray-700 rounded-lg border-t border-gray-600">
-              <h3 className="text-white font-medium mb-3 text-center">Επιλέξτε Κάτοψη για Φόρτωση</h3>
-              <div className="flex gap-3 justify-center">
-                <button
+            <ProjectModalContainer title="Επιλέξτε Κάτοψη για Φόρτωση" className="${MODAL_SPACING.SECTIONS.betweenBlocks} bg-gray-700 border-gray-600">
+              <ModalActions alignment="center">
+                <Button
                   onClick={() => handleLoadFloorplan('project')}
-                  className={`px-4 py-2 bg-blue-600 text-white rounded font-medium flex-1 max-w-[160px] ${FORM_BUTTON_EFFECTS.PRIMARY}`}
+                  variant="default"
+                  size="default"
+                  className={MODAL_DIMENSIONS.BUTTONS.flex}
                 >
                   Κάτοψη Έργου
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={() => handleLoadFloorplan('parking')}
-                  className={`px-4 py-2 bg-green-600 text-white rounded font-medium flex-1 max-w-[160px] ${FORM_BUTTON_EFFECTS.SUCCESS}`}
+                  variant="default"
+                  size="default"
+                  className={`${MODAL_DIMENSIONS.BUTTONS.flex} bg-green-600 hover:bg-green-700`}
                 >
                   Κάτοψη Θ.Σ.
-                </button>
-              </div>
-              <p className="text-gray-400 text-xs text-center mt-2">
+                </Button>
+              </ModalActions>
+              <p className={`${DXF_MODAL_TYPOGRAPHY.DESCRIPTION.default} ${MODAL_FLEX_PATTERNS.COLUMN.center} ${MODAL_SPACING.CONTAINER.paddingSmall}`}>
                 Η κάτοψη θα φορτωθεί στον καμβά και στην αντίστοιχη καρτέλα του έργου
               </p>
-            </div>
+            </ProjectModalContainer>
           )}
 
           {/* Building Floorplan Options - Only shown when building is selected */}
           {currentStep === 'building' && selectedBuildingId && (
-            <div className="mt-6 p-4 bg-gray-700 rounded-lg border-t border-gray-600">
-              <h3 className="text-white font-medium mb-3 text-center">Επιλέξτε Κάτοψη Κτιρίου για Φόρτωση</h3>
-              <div className="flex gap-3 justify-center">
-                <button
+            <ProjectModalContainer title="Επιλέξτε Κάτοψη Κτιρίου για Φόρτωση" className="${MODAL_SPACING.SECTIONS.betweenBlocks} bg-gray-700 border-gray-600">
+              <ModalActions alignment="center">
+                <Button
                   onClick={() => handleLoadFloorplan('building')}
-                  className={`px-4 py-2 bg-blue-600 text-white rounded font-medium flex-1 max-w-[160px] ${FORM_BUTTON_EFFECTS.PRIMARY}`}
+                  variant="default"
+                  size="default"
+                  className={MODAL_DIMENSIONS.BUTTONS.flex}
                 >
                   Κάτοψη Κτιρίου
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={() => handleLoadFloorplan('storage')}
-                  className={`px-4 py-2 bg-green-600 text-white rounded font-medium flex-1 max-w-[160px] ${FORM_BUTTON_EFFECTS.SUCCESS}`}
+                  variant="default"
+                  size="default"
+                  className={`${MODAL_DIMENSIONS.BUTTONS.flex} bg-green-600 hover:bg-green-700`}
                 >
                   Κάτοψη Αποθηκών
-                </button>
-              </div>
-              <p className="text-gray-400 text-xs text-center mt-2">
+                </Button>
+              </ModalActions>
+              <p className={`${DXF_MODAL_TYPOGRAPHY.DESCRIPTION.default} ${MODAL_FLEX_PATTERNS.COLUMN.center} ${MODAL_SPACING.CONTAINER.paddingSmall}`}>
                 Η κάτοψη θα φορτωθεί στον καμβά και στη διαχείριση κτιρίων
               </p>
-            </div>
+            </ProjectModalContainer>
           )}
 
           {/* Step 4: Unit Selection - Only shown when in unit step */}
           {currentStep === 'unit' && (
-            <div className="mt-6">
-              <h3 className="text-white font-medium mb-4">Βήμα 4: Επιλογή Μονάδας</h3>
+            <div className={MODAL_SPACING.SECTIONS.betweenBlocks}>
+              <h3 className={`${DXF_MODAL_TYPOGRAPHY.TITLE.default} ${MODAL_SPACING.SECTIONS.betweenItems}`}>Βήμα 4: Επιλογή Μονάδας</h3>
               
               {/* Hierarchy Display */}
-              <div className="space-y-3 mb-4 text-sm">
-                <div className="flex items-center gap-2 text-gray-300">
-                  <span className="font-medium">Εταιρεία:</span>
-                  <span className="text-blue-400">{companies?.find(c => c.id === selectedCompanyId)?.companyName}</span>
+              <div className={`${MODAL_SPACING.SPACE.blockMedium} ${MODAL_SPACING.SECTIONS.betweenSections}`}>
+                <div className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>
+                  <span className={`${DXF_MODAL_TYPOGRAPHY.LABEL.default}`}>Εταιρεία:</span>
+                  <span className={getModalIconColor('info')}>{companies?.find(c => c.id === selectedCompanyId)?.companyName}</span>
                 </div>
-                <div className="flex items-center gap-2 text-gray-300">
-                  <span className="font-medium">Έργο:</span>
-                  <span className="text-green-400">{projects?.find(p => p.id === selectedProjectId)?.name}</span>
+                <div className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>
+                  <span className={`${DXF_MODAL_TYPOGRAPHY.LABEL.default}`}>Έργο:</span>
+                  <span className={getModalIconColor('success')}>{projects?.find(p => p.id === selectedProjectId)?.name}</span>
                 </div>
-                <div className="flex items-center gap-2 text-gray-300">
-                  <span className="font-medium">Κτίριο:</span>
-                  <span className="text-purple-400">{buildings?.find(b => b.id === selectedBuildingId)?.name}</span>
+                <div className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>
+                  <span className={`${DXF_MODAL_TYPOGRAPHY.LABEL.default}`}>Κτίριο:</span>
+                  <span className={getModalIconColor('warning')}>{buildings?.find(b => b.id === selectedBuildingId)?.name}</span>
                 </div>
               </div>
 
               {/* Units Selection */}
               {units.length > 0 ? (
                 <Select value={selectedUnitId} onValueChange={handleUnitChange}>
-                  <SelectTrigger className="w-full bg-gray-700 border-gray-600 text-white">
+                  <SelectTrigger className={getSelectStyles().trigger}>
                     <SelectValue placeholder="-- Επιλέξτε Μονάδα --" />
                   </SelectTrigger>
                   <SelectContent>
                     {units?.map(unit => (
                       <SelectItem key={unit.id} value={unit.id}>
-                        <div className="flex items-center space-x-2">
-                          <Home className="h-4 w-4 text-orange-400" />
+                        <div className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>
+                          <Home className={`${getIconSize('field')} ${getModalIconColor('upload')}`} />
                           <span>{unit.name || unit.unitName}</span>
                           {unit.type && (
-                            <span className="text-gray-400 text-xs">({unit.type})</span>
+                            <span className={DXF_MODAL_TYPOGRAPHY.DESCRIPTION.default}>({unit.type})</span>
                           )}
                           {unit.floor && (
-                            <span className="text-gray-400 text-xs">- {unit.floor}ος όροφος</span>
+                            <span className={DXF_MODAL_TYPOGRAPHY.DESCRIPTION.default}>- {unit.floor}ος όροφος</span>
                           )}
                         </div>
                       </SelectItem>
@@ -693,33 +696,34 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                   </SelectContent>
                 </Select>
               ) : (
-                <div className="p-3 bg-gray-700 rounded-lg">
-                  <p className="text-gray-300 text-sm">Δεν βρέθηκαν μονάδες για το επιλεγμένο κτίριο.</p>
-                </div>
+                <ProjectModalContainer title="" className="bg-gray-800 border-gray-600">
+                  <p className={`${DXF_MODAL_TYPOGRAPHY.DESCRIPTION.default}`}>Δεν βρέθηκαν μονάδες για το επιλεγμένο κτίριο.</p>
+                </ProjectModalContainer>
               )}
             </div>
           )}
 
           {/* Unit Floorplan Options - Only shown when unit is selected */}
           {currentStep === 'unit' && selectedUnitId && (
-            <div className="mt-6 p-4 bg-gray-700 rounded-lg border-t border-gray-600">
-              <h3 className="text-white font-medium mb-3 text-center">Επιλέξτε Κάτοψη Μονάδας για Φόρτωση</h3>
-              <div className="flex gap-3 justify-center">
-                <button
+            <ProjectModalContainer title="Επιλέξτε Κάτοψη Μονάδας για Φόρτωση" className="${MODAL_SPACING.SECTIONS.betweenBlocks} bg-gray-700 border-gray-600">
+              <ModalActions alignment="center">
+                <Button
                   onClick={() => handleLoadFloorplan('unit')}
-                  className={`px-4 py-2 bg-orange-600 text-white rounded font-medium flex-1 max-w-[160px] ${FORM_BUTTON_EFFECTS.WARNING}`}
+                  variant="default"
+                  size="default"
+                  className={`${MODAL_DIMENSIONS.BUTTONS.flex} bg-orange-600 hover:bg-orange-700`}
                 >
                   Κάτοψη Μονάδας
-                </button>
-              </div>
-              <p className="text-gray-400 text-xs text-center mt-2">
+                </Button>
+              </ModalActions>
+              <p className={`${DXF_MODAL_TYPOGRAPHY.DESCRIPTION.default} ${MODAL_FLEX_PATTERNS.COLUMN.center} ${MODAL_SPACING.CONTAINER.paddingSmall}`}>
                 Η κάτοψη θα φορτωθεί στον καμβά και στη διαχείριση μονάδων
               </p>
-            </div>
+            </ProjectModalContainer>
           )}
         </main>
 
-          <DialogFooter className="flex justify-between">
+          <DialogFooter className={MODAL_FLEX_PATTERNS.ROW.spaceBetween}>
             <Button
               variant="outline"
               onClick={currentStep === 'company' ? handleClose : handleBack}

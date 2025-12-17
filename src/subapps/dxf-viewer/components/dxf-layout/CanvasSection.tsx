@@ -33,7 +33,8 @@ import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms'
 import { serviceRegistry } from '../../services';
 // 🎯 DEBUG: Import canvas alignment tester
 import { CanvasAlignmentTester } from '../../debug/canvas-alignment-test';
-import { canvasUtilities } from '@/styles/design-tokens';
+// Enterprise Canvas UI Migration - Phase B
+import { canvasUI } from '@/styles/design-tokens/canvas';
 
 /**
  * Renders the main canvas area, including the renderer and floating panels.
@@ -840,10 +841,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
                 }
               }}
               className="absolute inset-0 w-full h-full"
-              style={canvasUtilities.layers.canvasOverlayWithPointerControl ? canvasUtilities.layers.canvasOverlayWithPointerControl(activeTool) : {
-                touchAction: 'none',
-                pointerEvents: ['line', 'polyline', 'polygon', 'circle', 'rectangle'].includes(activeTool) ? 'none' : 'auto'
-              }}
+              style={canvasUI.positioning.layers.canvasOverlayWithPointerControl(activeTool)}
             />
           )}
 

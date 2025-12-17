@@ -17,6 +17,16 @@ import {
 } from '@/components/ui/dialog';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { getModalConfig } from '../config/modal-config';
+import {
+  UploadModalContainer,
+  ModalFormSection,
+  ModalField,
+  ModalActions
+} from './modal/ModalContainer';
+import { DXF_MODAL_TYPOGRAPHY } from '../config/modal-typography';
+import { getModalColorScheme, getModalIconColor } from '../config/modal-colors';
+import { MODAL_FLEX_PATTERNS, getIconSize } from '../config/modal-layout';
+import { getSelectStyles } from '../config/modal-select';
 
 interface DxfImportModalProps {
     isOpen: boolean;
@@ -73,96 +83,88 @@ const DxfImportModal: React.FC<DxfImportModalProps> = ({ isOpen, onClose, onImpo
                 style={{ zIndex: modalConfig.zIndex }}
             >
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                        <Upload className="h-5 w-5 text-orange-500" />
+                    <DialogTitle className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>
+                        <Upload className={`${getIconSize('title')} ${getModalIconColor('upload')}`} />
                         Εισαγωγή Αρχείου DXF
                     </DialogTitle>
                 </DialogHeader>
 
-                <form id="dxf-import-form" onSubmit={handleSubmit} className="space-y-6">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-3">
-                            Αρχείο DXF
-                        </label>
-
-                        {/* Hidden file input */}
-                        <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept=".dxf"
-                            onChange={handleFileChange}
-                            disabled={isLoading}
-                            className="hidden"
-                        />
-
-                        {/* Centralized Button for file selection */}
-                        <Button
-                            type="button"
-                            onClick={handleFileButtonClick}
-                            disabled={isLoading}
-                            variant="outline"
-                            className="w-full bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
+                <form id="dxf-import-form" onSubmit={handleSubmit}>
+                    <ModalFormSection>
+                        <ModalField
+                            label="Αρχείο DXF"
+                            required
+                            description={!selectedFile ? "Δεν επιλέχθηκε κανένα αρχείο." : undefined}
                         >
-                            <Upload className="h-4 w-4 mr-2" />
-                            {selectedFile ? selectedFile.name : 'Επιλογή αρχείου'}
-                        </Button>
+                            {/* Hidden file input */}
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept=".dxf"
+                                onChange={handleFileChange}
+                                disabled={isLoading}
+                                className="hidden"
+                            />
 
-                        {!selectedFile && (
-                            <p className="text-xs text-gray-400 mt-1">
-                                Δεν επιλέχθηκε κανένα αρχείο.
-                            </p>
-                        )}
-                    </div>
+                            {/* Centralized Button for file selection */}
+                            <Button
+                                type="button"
+                                onClick={handleFileButtonClick}
+                                disabled={isLoading}
+                                variant="outline"
+                                className={getSelectStyles().trigger}
+                            >
+                                <Upload className={`${getIconSize('field')} mr-2 ${getModalIconColor('upload')}`} />
+                                {selectedFile ? selectedFile.name : 'Επιλογή αρχείου'}
+                            </Button>
+                        </ModalField>
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-3">
-                            Κωδικοποίηση Χαρακτήρων
-                        </label>
-
-                        {/* Centralized Select Component */}
-                        <Select value={encoding} onValueChange={setEncoding} disabled={isLoading}>
-                            <SelectTrigger className="w-full bg-gray-700 border-gray-600 text-white">
-                                <SelectValue placeholder="Επιλέξτε κωδικοποίηση" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="windows-1253">
-                                    <span>Windows-1253 (Greek)</span>
-                                </SelectItem>
-                                <SelectItem value="UTF-8">
-                                    <span>UTF-8 (Προεπιλογή)</span>
-                                </SelectItem>
-                                <SelectItem value="windows-1252">
-                                    <span>Windows-1252 (Western)</span>
-                                </SelectItem>
-                                <SelectItem value="ISO-8859-7">
-                                    <span>ISO-8859-7 (Greek)</span>
-                                </SelectItem>
-                            </SelectContent>
-                        </Select>
-
-                        <p className="text-xs text-gray-400 mt-1">
-                            Επιλέξτε Windows-1253 αν τα Ελληνικά δεν εμφανίζονται σωστά.
-                        </p>
-                    </div>
-
+                        <ModalField
+                            label="Κωδικοποίηση Χαρακτήρων"
+                            description="Επιλέξτε Windows-1253 αν τα Ελληνικά δεν εμφανίζονται σωστά."
+                        >
+                            {/* Centralized Select Component */}
+                            <Select value={encoding} onValueChange={setEncoding} disabled={isLoading}>
+                                <SelectTrigger className={getSelectStyles().trigger}>
+                                    <SelectValue placeholder="Επιλέξτε κωδικοποίηση" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="windows-1253">
+                                        <span>Windows-1253 (Greek)</span>
+                                    </SelectItem>
+                                    <SelectItem value="UTF-8">
+                                        <span>UTF-8 (Προεπιλογή)</span>
+                                    </SelectItem>
+                                    <SelectItem value="windows-1252">
+                                        <span>Windows-1252 (Western)</span>
+                                    </SelectItem>
+                                    <SelectItem value="ISO-8859-7">
+                                        <span>ISO-8859-7 (Greek)</span>
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </ModalField>
+                    </ModalFormSection>
                 </form>
 
                 <DialogFooter>
-                    <Button
-                        type="button"
-                        variant="outline"
-                        onClick={handleClose}
-                        disabled={isLoading}
-                    >
-                        Ακύρωση
-                    </Button>
-                    <Button
-                        type="submit"
-                        form="dxf-import-form"
-                        disabled={!selectedFile || isLoading}
-                    >
-                        {isLoading ? 'Εισαγωγή...' : 'Εισαγωγή'}
-                    </Button>
+                    <ModalActions alignment="right">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={handleClose}
+                            disabled={isLoading}
+                        >
+                            Ακύρωση
+                        </Button>
+                        <Button
+                            type="submit"
+                            form="dxf-import-form"
+                            disabled={!selectedFile || isLoading}
+                        >
+                            {isLoading ? 'Εισαγωγή...' : 'Εισαγωγή'}
+                        </Button>
+                    </ModalActions>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

@@ -1,7 +1,9 @@
 'use client';
 import React from 'react';
 import type { Point2D } from '../../rendering/types/Types';
-import { portalComponents, canvasUtilities } from '@/styles/design-tokens';
+// Enterprise Canvas UI Migration - Phase B
+import { portalComponents } from '@/styles/design-tokens';
+import { canvasUI } from '@/styles/design-tokens/canvas';
 
 interface ZoomWindowState {
   isActive: boolean;
@@ -32,7 +34,7 @@ export default function ZoomWindowOverlay({
   return (
     <div className={`absolute inset-0 pointer-events-none ${className}`}>
       <div
-        style={canvasUtilities.zoom.window.rectangle(left, top, width, height)}
+        style={canvasUI.positioning.zoomWindow.rectangle(left, top, width, height)}
       />
     </div>
   );

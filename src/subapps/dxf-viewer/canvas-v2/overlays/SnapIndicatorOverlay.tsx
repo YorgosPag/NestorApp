@@ -1,7 +1,9 @@
 'use client';
 import React from 'react';
 import type { Point2D } from '../../rendering/types/Types';
-import { portalComponents, layoutUtilities, canvasUtilities } from '@/styles/design-tokens';
+// Enterprise Canvas UI Migration - Phase B
+import { portalComponents, layoutUtilities } from '@/styles/design-tokens';
+import { canvasUI } from '@/styles/design-tokens/canvas';
 
 interface SnapResult {
   point: Point2D;
@@ -29,7 +31,7 @@ export default function SnapIndicatorOverlay({
 
   return (
     <div className={className} style={portalComponents.overlay.fullscreen}>
-      <div style={canvasUtilities.overlays.snapIndicator.point(point.x, point.y)} />
+      <div style={canvasUI.positioning.snapIndicator.point(point.x, point.y)} />
     </div>
   );
 }

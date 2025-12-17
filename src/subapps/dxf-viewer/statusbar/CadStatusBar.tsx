@@ -1,6 +1,7 @@
 'use client';
 import React, { useEffect } from 'react';
-import { canvasUtilities } from '@/styles/design-tokens';
+// Enterprise Canvas UI Migration - Phase B
+import { canvasUI } from '@/styles/design-tokens/canvas';
 
 type Toggle = { on: boolean; toggle: () => void };
 
@@ -73,18 +74,18 @@ export default function CadStatusBar({
     <button 
       onClick={toggle.toggle} 
       style={{
-        ...canvasUtilities.overlays.cadStatusBar.button,
-        ...(toggle.on ? canvasUtilities.overlays.cadStatusBar.buttonActive : {})
+        ...canvasUI.positioning.cadStatusBar.button,
+        ...(toggle.on ? canvasUI.positioning.cadStatusBar.buttonActive : {})
       }}
       title={`${description} (${fkey})`}
     >
-      <span style={canvasUtilities.overlays.cadStatusBar.label}>{label}</span>
-      <span style={canvasUtilities.overlays.cadStatusBar.functionKey}>{fkey}</span>
+      <span style={canvasUI.positioning.cadStatusBar.label}>{label}</span>
+      <span style={canvasUI.positioning.cadStatusBar.functionKey}>{fkey}</span>
     </button>
   );
 
   return (
-    <div style={canvasUtilities.overlays.cadStatusBar.container}>
+    <div style={canvasUI.positioning.cadStatusBar.container}>
       <StatusButton 
         label="OSNAP" 
         toggle={osnap} 
@@ -123,7 +124,7 @@ export default function CadStatusBar({
       />
 
       {/* Status info */}
-      <div style={canvasUtilities.overlays.cadStatusBar.statusInfo}>
+      <div style={canvasUI.positioning.cadStatusBar.statusInfo}>
         CAD Mode | Press F-keys for shortcuts
       </div>
     </div>

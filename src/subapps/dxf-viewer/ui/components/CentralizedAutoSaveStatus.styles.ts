@@ -8,7 +8,7 @@
  * @module src/subapps/dxf-viewer/ui/components/CentralizedAutoSaveStatus.styles
  */
 
-import { statusIndicatorComponents, autoSaveStatusTokens } from '@/styles/design-tokens/index';
+import { statusIndicatorComponents, autoSaveStatusTokens } from '@/styles/design-tokens';
 
 // ============================================================================
 // DYNAMIC STYLE UTILITIES

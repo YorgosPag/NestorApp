@@ -13,7 +13,9 @@
 import * as React from 'react';
 import type { UnifiedTestReport } from './unified-test-runner';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
-import { canvasUtilities, layoutUtilities } from '@/styles/design-tokens';
+// Enterprise Canvas UI Migration - Phase B
+import { canvasUI } from '@/styles/design-tokens/canvas';
+import { layoutUtilities } from '@/styles/design-tokens';
 import {
   getTestResultsInteractiveAutoStyles
 } from '../ui/DxfViewerComponents.styles';
@@ -121,12 +123,12 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
   return (
     <div
       className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-75"
-      style={canvasUtilities.overlays.floatingPanel.testModal.backdrop}
+      style={canvasUI.positioning.floatingPanel.testModal.backdrop}
       onClick={onClose}
     >
       <div
         className="relative bg-gray-900 rounded-lg shadow-2xl border border-gray-600 flex flex-col"
-        style={canvasUtilities.overlays.floatingPanel.testModal.content}
+        style={canvasUI.positioning.floatingPanel.testModal.content}
         onClick={(e) => e.stopPropagation()}
       >
         {/* HEADER */}

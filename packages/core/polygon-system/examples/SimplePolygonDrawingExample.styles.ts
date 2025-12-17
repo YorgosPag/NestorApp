@@ -16,7 +16,7 @@ import {
   borderRadius,
   shadows,
   animations
-} from '../../../../../src/styles/design-tokens';
+} from '../../../../src/styles/design-tokens';
 
 // ============================================================================
 // DYNAMIC STYLE UTILITIES

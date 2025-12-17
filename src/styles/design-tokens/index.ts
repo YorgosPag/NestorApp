@@ -15,18 +15,20 @@
 
 // Re-export existing base tokens from the main design-tokens file
 export {
-  spacing,
-  typography,
   borderRadius,
   shadows,
   animation,
-  semanticColors,
   zIndex,
   gridPatterns,
   componentSizes,
   breakpoints,
   interactiveStates,
   designTokens as baseDesignTokens
+} from '../design-tokens';
+
+// Additional re-exports for backward compatibility
+export {
+  animation as animations
 } from '../design-tokens';
 
 // ============================================================================
@@ -124,16 +126,124 @@ export type {
 } from './components/portal-tokens';
 
 // ============================================================================
+// NEW ENTERPRISE MODULES - PERFORMANCE & CHART COMPONENTS
+// ============================================================================
+
+// Performance Components
+export {
+  performanceComponents,
+  virtualizationUtilities,
+  // Legacy compatibility
+  designTokenPerformanceComponents,
+  designTokenVirtualizationUtilities,
+  type PerformanceComponents,
+  type VirtualizationUtilities,
+  type VirtualizedTableComponents,
+  type MetricsComponents,
+  type PerformanceStates
+} from './components/performance-tokens';
+
+// Chart Components
+export {
+  chartComponents,
+  chartUtilities,
+  // Legacy compatibility
+  designTokenChartComponents,
+  designTokenChartUtilities,
+  type ChartComponents,
+  type ChartUtilities,
+  type ChartLegendComponents,
+  type ChartTooltipComponents,
+  type ChartContainerComponents,
+  type ChartColors,
+  type ChartStatusColor
+} from './components/chart-tokens';
+
+// Base Tokens (imported from dedicated modules)
+export {
+  colors,
+  semanticColors,
+  getColor,
+  getSemanticColor,
+  // Legacy compatibility
+  designTokenColors,
+  designTokenSemanticColors,
+  type ColorPalette,
+  type SemanticColorPalette,
+  type ColorValue,
+  type ColorPath
+} from './base/colors';
+
+export {
+  typography,
+  typographyPresets,
+  getTypography,
+  getTypographyStyles,
+  // Legacy compatibility
+  designTokenTypography,
+  designTokenTypographyPresets,
+  type TypographyScale,
+  type TypographyPresets,
+  type FontSize,
+  type FontWeight,
+  type LineHeight,
+  type LetterSpacing
+} from './base/typography';
+
+export {
+  spacing,
+  spacingPresets,
+  responsiveSpacing,
+  getSpacing,
+  getComponentSpacing,
+  getSpacingStyles,
+  // Legacy compatibility
+  designTokenSpacing,
+  designTokenSpacingPresets,
+  type SpacingScale,
+  type SpacingPresets,
+  type SpacingSize,
+  type ComponentSpacingSize
+} from './base/spacing';
+
+// Layout Utilities
+export {
+  layoutUtilities,
+  responsiveLayoutUtilities,
+  layoutPresets,
+  // Legacy compatibility
+  designTokenLayoutUtilities,
+  designTokenResponsiveLayoutUtilities,
+  designTokenLayoutPresets,
+  type LayoutUtilities,
+  type ResponsiveLayoutUtilities,
+  type LayoutPresets,
+  type FlexDirection,
+  type JustifyContent,
+  type AlignItems
+} from './utilities/layout-utilities';
+
+// Canvas Utilities (NEW: Massive 1,850 lines extracted!)
+export {
+  canvasUtilities,
+  canvasHelpers,
+  // Legacy compatibility
+  designTokenCanvasUtilities,
+  designTokenCanvasHelpers,
+  type CanvasUtilities,
+  type CanvasHelpers,
+  type CanvasPosition,
+  type CanvasBounds
+} from './utilities/canvas-utilities';
+
+// ============================================================================
 // UNIFIED TOKEN OBJECT - SINGLE IMPORT CONVENIENCE
 // ============================================================================
 
 import {
-  spacing,
-  typography,
   borderRadius,
   shadows,
   animation,
-  semanticColors,
   zIndex,
   gridPatterns,
   componentSizes,
@@ -182,6 +292,22 @@ import {
   portalComponents,
   photoPreviewComponents
 } from './components/portal-tokens';
+import {
+  performanceComponents,
+  virtualizationUtilities
+} from './components/performance-tokens';
+import {
+  chartComponents,
+  chartUtilities
+} from './components/chart-tokens';
+import { colors } from './base/colors';
+import { typography } from './base/typography';
+import { spacing } from './base/spacing';
+import {
+  layoutUtilities,
+  responsiveLayoutUtilities,
+  layoutPresets
+} from './utilities/layout-utilities';
 
 /**
  * 🎯 UNIFIED DESIGN TOKENS OBJECT
@@ -190,7 +316,8 @@ import {
  * Μπορεί να χρησιμοποιηθεί για programmatic access ή utility functions.
  */
 export const unifiedDesignTokens = {
-  // Base Design System
+  // Base Design System (NEW: From dedicated modules)
+  colors,
   spacing,
   typography,
   borderRadius,
@@ -202,6 +329,31 @@ export const unifiedDesignTokens = {
   componentSizes,
   breakpoints,
   interactiveStates,
+
+  // Layout System (NEW: Extracted utilities)
+  layout: {
+    utilities: layoutUtilities,
+    responsive: responsiveLayoutUtilities,
+    presets: layoutPresets
+  },
+
+  // Canvas System (NEW: Massive extraction - 1,850 lines!)
+  canvas: {
+    utilities: canvasUtilities,
+    helpers: canvasHelpers
+  },
+
+  // Performance System (NEW: Enterprise performance components)
+  performance: {
+    components: performanceComponents,
+    virtualization: virtualizationUtilities
+  },
+
+  // Chart System (NEW: Consolidated chart components)
+  charts: {
+    components: chartComponents,
+    utilities: chartUtilities
+  },
 
   // Extended Semantic Layer
   alert: {
@@ -265,7 +417,7 @@ export const unifiedDesignTokens = {
  */
 
 // Legacy colors export - maps to new semantic structure
-export const colors = {
+export const legacyColors = {
   // Primary brand colors (από base tokens)
   primary: semanticColors.propertyStatus,
 
@@ -290,6 +442,46 @@ export const dashboardComponents = {
   loadingState: loadingStateTokens,
   dashboardLayout: dashboardLayoutTokens
 } as const;
+
+// Configuration components (συμβατότητα με alert engine)
+export const configurationComponents = {
+  ...dashboardComponents,
+  // Ειδικά sections για configuration interface
+  configurationCard: {
+    base: {
+      backgroundColor: '#ffffff',
+      border: '1px solid #e5e7eb',
+      borderRadius: '0.5rem',
+      padding: '1rem',
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+    },
+    selected: {
+      backgroundColor: '#eff6ff',
+      borderColor: '#3b82f6',
+    },
+    statusDot: {
+      width: '8px',
+      height: '8px',
+      borderRadius: '9999px',
+      display: 'inline-block',
+      marginRight: '0.5rem',
+    }
+  },
+  layout: {
+    container: { padding: '2rem' },
+    header: { marginBottom: '2rem' },
+    title: { fontSize: '1.5rem', fontWeight: '700' },
+    subtitle: { fontSize: '1rem', color: '#6b7280' },
+    contentGrid: { display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '2rem' },
+    sidebar: { padding: '1.5rem' }
+  },
+  buttons: {
+    primary: modalTokens,
+    secondary: modalTokens,
+    small: modalTokens
+  }
+};
 
 // Legacy map components - mapped to new tokens
 export const mapComponents = {
@@ -356,7 +548,7 @@ export const getDialogButtonVariant = (variant: keyof typeof dialogButtonTokens.
 // ============================================================================
 
 export type UnifiedDesignTokens = typeof unifiedDesignTokens;
-export type LegacyColors = typeof colors;
+export type LegacyColors = typeof legacyColors;
 export type LegacyDashboardComponents = typeof dashboardComponents;
 export type LegacyMapComponents = typeof mapComponents;
 export type LegacyDialogComponents = typeof dialogComponents;

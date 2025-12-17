@@ -1,0 +1,3543 @@
+// Design tokens για το unified design system
+// Αυτό το αρχείο περιέχει όλες τις τυποποιημένες τιμές για styling
+
+export const spacing = {
+  // Base spacing scale (σε rem)
+  xs: '0.25rem',    // 4px
+  sm: '0.5rem',     // 8px
+  md: '1rem',       // 16px
+  lg: '1.5rem',     // 24px
+  xl: '2rem',       // 32px
+  '2xl': '3rem',    // 48px
+  '3xl': '4rem',    // 64px
+  
+  // Component-specific spacing
+  component: {
+    padding: {
+      xs: '0.5rem',     // 8px - tight padding
+      sm: '0.75rem',    // 12px - small padding
+      md: '1rem',       // 16px - default padding
+      lg: '1.5rem',     // 24px - large padding
+      xl: '2rem',       // 32px - extra large padding
+    },
+    gap: {
+      xs: '0.25rem',    // 4px - tight gap
+      sm: '0.5rem',     // 8px - small gap
+      md: '1rem',       // 16px - default gap
+      lg: '1.5rem',     // 24px - large gap
+    },
+    margin: {
+      xs: '0.25rem',    // 4px
+      sm: '0.5rem',     // 8px
+      md: '1rem',       // 16px
+      lg: '1.5rem',     // 24px
+      xl: '2rem',       // 32px
+    }
+  }
+} as const;
+
+export const typography = {
+  // Font sizes (σε rem)
+  fontSize: {
+    xs: '0.75rem',     // 12px
+    sm: '0.875rem',    // 14px
+    base: '1rem',      // 16px
+    lg: '1.125rem',    // 18px
+    xl: '1.25rem',     // 20px
+    '2xl': '1.5rem',   // 24px
+    '3xl': '1.875rem', // 30px
+    '4xl': '2.25rem',  // 36px
+  },
+  
+  // Line heights
+  lineHeight: {
+    tight: '1.25',
+    snug: '1.375',
+    normal: '1.5',
+    relaxed: '1.625',
+    loose: '2',
+  },
+  
+  // Font weights
+  fontWeight: {
+    normal: '400',
+    medium: '500',
+    semibold: '600',
+    bold: '700',
+  },
+  
+  // Letter spacing
+  letterSpacing: {
+    tight: '-0.025em',
+    normal: '0',
+    wide: '0.025em',
+  }
+} as const;
+
+export const borderRadius = {
+  none: '0',
+  sm: '0.125rem',    // 2px
+  default: '0.25rem', // 4px
+  md: '0.375rem',    // 6px
+  lg: '0.5rem',      // 8px
+  xl: '0.75rem',     // 12px
+  '2xl': '1rem',     // 16px
+  full: '9999px',
+} as const;
+
+export const shadows = {
+  // Box shadows για elevation
+  none: 'none',
+  sm: '0 1px 2px 0 rgb(0 0 0 / 0.05)',
+  default: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
+  md: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+  lg: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
+  xl: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
+  '2xl': '0 25px 50px -12px rgb(0 0 0 / 0.25)',
+  
+  // Drop shadows για επιφάνειες
+  inner: 'inset 0 2px 4px 0 rgb(0 0 0 / 0.05)',
+} as const;
+
+export const animation = {
+  // Animation durations
+  duration: {
+    fast: '150ms',
+    normal: '200ms',
+    slow: '300ms',
+    slower: '500ms',
+  },
+  
+  // Easing functions
+  easing: {
+    linear: 'linear',
+    ease: 'ease',
+    easeIn: 'ease-in',
+    easeOut: 'ease-out',
+    easeInOut: 'ease-in-out',
+    custom: 'cubic-bezier(0.4, 0, 0.2, 1)',
+  },
+} as const;
+
+// Transition system για animations
+export const transitions = {
+  duration: {
+    fast: '150ms',
+    base: '300ms',
+    slow: '500ms'
+  },
+
+  easing: {
+    easeIn: 'ease-in',
+    easeOut: 'ease-out',
+    easeInOut: 'ease-in-out'
+  }
+} as const;
+
+// Color system - Base colors για το design system
+export const colors = {
+  // Basic color palette
+  background: {
+    primary: '#ffffff',
+    secondary: '#f8fafc',
+    tertiary: '#f1f5f9',
+    hover: '#f1f5f9',
+    overlay: 'rgba(0, 0, 0, 0.5)'
+  },
+
+  text: {
+    primary: '#1e293b',
+    secondary: '#64748b',
+    tertiary: '#94a3b8',
+    inverse: '#ffffff'
+  },
+
+  border: {
+    primary: '#e2e8f0',
+    secondary: '#cbd5e1',
+    tertiary: '#f1f5f9'
+  },
+
+  surface: {
+    primary: '#ffffff',
+    secondary: '#f8fafc'
+  },
+
+  // Semantic colors
+  primary: {
+    500: '#3b82f6'
+  },
+
+  // Accent colors
+  accent: {
+    primary: '#3b82f6'
+  },
+
+  // Status colors
+  blue: { 300: '#93c5fd', 500: '#3b82f6', 600: '#2563eb' },
+  green: { 300: '#86efac', 500: '#22c55e', 600: '#16a34a' },
+  purple: { 300: '#c4b5fd', 500: '#8b5cf6', 600: '#7c3aed' },
+  orange: { 300: '#fdba74', 500: '#f97316', 600: '#ea580c' },
+  red: { 300: '#fca5a5', 500: '#ef4444', 600: '#dc2626' },
+  teal: { 300: '#5eead4', 500: '#14b8a6', 600: '#0d9488' },
+  gray: { 50: '#f9fafb', 100: '#f3f4f6', 500: '#6b7280' }
+} as const;
+
+// Semantic color mapping για application-specific χρώματα
+export const semanticColors = {
+  // Status colors (χρησιμοποιώντας CSS variables)
+  status: {
+    success: 'hsl(var(--status-success))',
+    info: 'hsl(var(--status-info))',
+    warning: 'hsl(var(--status-warning))',
+    error: 'hsl(var(--status-error))',
+    purple: 'hsl(var(--status-purple))',
+  },
+  
+  // Property status colors
+  propertyStatus: {
+    'for-sale': 'hsl(var(--status-success))',     // Green
+    'for-rent': 'hsl(var(--status-info))',       // Blue
+    'reserved': 'hsl(var(--status-warning))',    // Orange
+    'sold': 'hsl(var(--status-error))',          // Red
+    'landowner': 'hsl(var(--status-purple))',    // Purple
+  },
+  
+  // Building status colors
+  buildingStatus: {
+    active: 'hsl(var(--status-success))',
+    construction: 'hsl(var(--status-warning))',
+    planned: 'hsl(var(--status-info))',
+    completed: 'hsl(var(--status-purple))',
+  }
+} as const;
+
+// Z-index scale για layering
+export const zIndex = {
+  hide: -1,
+  auto: 'auto',
+  base: 0,
+  docked: 10,
+  dropdown: 1000,
+  sticky: 1100,
+  banner: 1200,
+  overlay: 1300,
+  modal: 1400,
+  popover: 1500,
+  skipLink: 1600,
+  toast: 1700,
+  tooltip: 1800,
+} as const;
+
+// Grid patterns για layout consistency
+export const gridPatterns = {
+  // Stats grids
+  stats: {
+    mobile: 'grid-cols-1',
+    tablet: 'sm:grid-cols-2',
+    desktop: 'lg:grid-cols-4',
+    gap: 'gap-4',
+    full: 'grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
+  },
+  
+  // Action buttons
+  actions: {
+    mobile: 'grid-cols-1',
+    tablet: 'sm:grid-cols-3',
+    gap: 'gap-4',
+    full: 'grid gap-4 grid-cols-1 sm:grid-cols-3'
+  },
+  
+  // Card grids
+  cards: {
+    mobile: 'grid-cols-1',
+    tablet: 'md:grid-cols-2',
+    desktop: 'lg:grid-cols-3',
+    gap: 'gap-6',
+    full: 'grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+  },
+  
+  // Form layouts
+  form: {
+    single: 'grid-cols-1',
+    double: 'md:grid-cols-2',
+    triple: 'lg:grid-cols-3',
+    gap: 'gap-4',
+    fullDouble: 'grid gap-4 grid-cols-1 md:grid-cols-2',
+    fullTriple: 'grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+  }
+} as const;
+
+// Component size variants
+export const componentSizes = {
+  // Button sizes
+  button: {
+    xs: 'h-6 px-2 text-xs',
+    sm: 'h-8 px-3 text-sm',
+    md: 'h-10 px-4 text-sm',
+    lg: 'h-12 px-6 text-base',
+    xl: 'h-14 px-8 text-lg',
+  },
+  
+  // Input sizes
+  input: {
+    sm: 'h-8 text-xs',
+    md: 'h-10 text-sm',
+    lg: 'h-12 text-base',
+  },
+  
+  // Icon sizes
+  icon: {
+    xs: 'h-3 w-3',
+    sm: 'h-4 w-4',
+    md: 'h-5 w-5',
+    lg: 'h-6 w-6',
+    xl: 'h-8 w-8',
+    '2xl': 'h-10 w-10',
+  },
+  
+  // Avatar sizes
+  avatar: {
+    xs: 'h-6 w-6',
+    sm: 'h-8 w-8',
+    md: 'h-10 w-10',
+    lg: 'h-12 w-12',
+    xl: 'h-16 w-16',
+  }
+} as const;
+
+// Responsive breakpoints (matching Tailwind defaults)
+export const breakpoints = {
+  sm: '640px',
+  md: '768px',
+  lg: '1024px',
+  xl: '1280px',
+  '2xl': '1536px',
+} as const;
+
+// Interactive states για consistent hover/focus patterns
+export const interactiveStates = {
+  // Card interactions
+  card: {
+    base: 'transition-all duration-200',
+    hover: 'hover:shadow-md hover:scale-[1.02]',
+    focus: 'focus:ring-2 focus:ring-ring focus:ring-offset-2',
+    active: 'active:scale-[0.98]',
+    full: 'transition-all duration-200 hover:shadow-md hover:scale-[1.02] focus:ring-2 focus:ring-ring focus:ring-offset-2 active:scale-[0.98]'
+  },
+  
+  // Button interactions
+  button: {
+    base: 'transition-colors duration-200',
+    hover: 'hover:opacity-90',
+    focus: 'focus:ring-2 focus:ring-ring focus:ring-offset-2',
+    active: 'active:scale-95',
+    full: 'transition-colors duration-200 hover:opacity-90 focus:ring-2 focus:ring-ring focus:ring-offset-2 active:scale-95'
+  },
+  
+  // Link interactions
+  link: {
+    base: 'transition-colors duration-200',
+    hover: 'hover:text-primary hover:underline',
+    focus: 'focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:rounded-sm',
+    full: 'transition-colors duration-200 hover:text-primary hover:underline focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:rounded-sm'
+  }
+} as const;
+
+// Helper functions για type-safe access
+export const getSpacing = (size: keyof typeof spacing) => spacing[size];
+export const getTypography = (property: keyof typeof typography, size: string) =>
+  typography[property][size as keyof typeof typography[typeof property]];
+export const getShadow = (size: keyof typeof shadows) => shadows[size];
+export const getAnimation = (property: keyof typeof animation, value: string) =>
+  animation[property][value as keyof typeof animation[typeof property]];
+
+// ============================================================================
+// BACKWARD COMPATIBILITY EXPORTS - LEGACY SUPPORT
+// ============================================================================
+
+/**
+ * 🔄 LEGACY COMPATIBILITY EXPORTS
+ *
+ * Re-export advanced tokens από το modular system για backward compatibility
+ * με existing geo-canvas code.
+ */
+
+// Note: Advanced tokens are available via './design-tokens/index' import
+// Removed re-export to prevent circular dependency
+
+
+// Export all tokens as a single object για convenience
+export const designTokens = {
+  spacing,
+  typography,
+  borderRadius,
+  shadows,
+  animation,
+  transitions,
+  colors,
+  semanticColors,
+  zIndex,
+  gridPatterns,
+  componentSizes,
+  breakpoints,
+  interactiveStates,
+} as const;
+
+// Layout utilities για positioning, dimensions, και display states
+export const layoutUtilities = {
+  // Positioning patterns για dynamic placement
+  positioning: {
+    absolute: 'absolute' as const,
+    relative: 'relative' as const,
+    fixed: 'fixed' as const,
+    sticky: 'sticky' as const,
+  },
+
+  // Dimension utilities για responsive sizing
+  dimensions: {
+    auto: 'auto' as const,
+    full: '100%' as const,
+    screen: '100vw' as const,
+    screenHeight: '100vh' as const,
+    fitContent: 'fit-content' as const,
+    minContent: 'min-content' as const,
+    maxContent: 'max-content' as const,
+  },
+
+  // Display state utilities για visibility control
+  display: {
+    block: 'block' as const,
+    inline: 'inline' as const,
+    inlineBlock: 'inline-block' as const,
+    flex: 'flex' as const,
+    grid: 'grid' as const,
+    none: 'none' as const,
+  },
+
+  // Grid layout utilities για dynamic grid patterns
+  grid: {
+    templateColumns: (columns: number) => ({ gridTemplateColumns: `repeat(${columns}, 1fr)` }),
+    templateColumnsCustom: (pattern: string) => ({ gridTemplateColumns: pattern }),
+    autoColumns: (size: string) => ({ gridAutoColumns: size }),
+    gap: (size: number, unit: 'px' | 'rem' = 'rem') => ({ gap: `${size}${unit}` }),
+  },
+
+  // Visibility utilities για show/hide patterns
+  visibility: {
+    visible: 'visible' as const,
+    hidden: 'hidden' as const,
+    collapse: 'collapse' as const,
+  },
+
+  // Overflow utilities για content handling
+  overflow: {
+    visible: 'visible' as const,
+    hidden: 'hidden' as const,
+    scroll: 'scroll' as const,
+    auto: 'auto' as const,
+  },
+
+  // Dynamic percentage generator για width/height
+  percentage: (value: number): string => `${Math.max(0, Math.min(100, value))}%`,
+
+  // Dynamic pixel value generator
+  pixels: (value: number): string => `${value}px`,
+
+  // Dynamic rem value generator
+  rem: (value: number): string => `${value}rem`,
+
+  // Random height generator για chart skeletons & data visualization
+  randomHeight: (min: number = 20, max: number = 100): string => `${Math.random() * (max - min) + min}%`,
+
+  // Dynamic height utilities για scroll containers & responsive sizing
+  maxHeight: (value: string | number): string => typeof value === 'number' ? `${value}px` : value,
+
+  // Dynamic positioning utilities για absolute/relative positioning
+  position: (top: string, left: string): { top: string; left: string } => ({ top, left }),
+
+  // Position preset patterns για common use cases
+  positionPresets: {
+    centerAbsolute: { top: '50%', left: '50%' },
+    topLeft: { top: '0', left: '0' },
+    topRight: { top: '0', right: '0' },
+    bottomLeft: { bottom: '0', left: '0' },
+    bottomRight: { bottom: '0', right: '0' },
+  },
+
+  // Dynamic dropdown positioning για portals & overlays
+  dropdown: {
+    fixed: (top: number, left: number, width: number, zIndex: number = 9999) => ({
+      position: 'fixed' as const,
+      top: `${top}px`,
+      left: `${left}px`,
+      width: `${width}px`,
+      zIndex,
+    }),
+    portal: (position: { top: number; left: number; width: number }, zIndex: number = 9999) => ({
+      position: 'fixed' as const,
+      top: `${position.top}px`,
+      left: `${position.left}px`,
+      width: `${position.width}px`,
+      zIndex,
+    }),
+  },
+
+  // CSS Custom Properties utilities για geo-canvas design system compatibility
+  cssVars: {
+    // Color utilities
+    borderColor: (focused: boolean) => focused ? 'var(--color-border-focus)' : 'var(--color-border-primary)',
+    textColor: (variant: 'primary' | 'secondary' | 'tertiary') => `var(--color-text-${variant})`,
+    backgroundColor: (variant: 'primary' | 'secondary' | 'surface') => `var(--color-bg-${variant})`,
+
+    // Spacing utilities
+    spacing: (size: number | string) => `var(--spacing-${size})`,
+    marginBottom: (size: number | string) => ({ marginBottom: `var(--spacing-${size})` }),
+    padding: (vertical: number | string, horizontal?: number | string) =>
+      horizontal ? `var(--spacing-${vertical}) var(--spacing-${horizontal})` : `var(--spacing-${vertical})`,
+
+    // Shadow utilities
+    boxShadow: (focused: boolean) => focused ? 'var(--shadow-focus)' : 'none',
+
+    // Border utilities
+    border: (variant: 'primary' | 'secondary' = 'primary') => `1px solid var(--color-border-${variant})`,
+    borderRadius: (size: 'sm' | 'md' | 'lg' = 'sm') => `var(--radius-${size})`,
+
+    // Typography utilities
+    fontSize: (size: string | number) => typeof size === 'string' ? size : `${size}px`,
+
+    // Empty state typography patterns
+    emptyState: {
+      icon: { fontSize: '48px', marginBottom: 'var(--spacing-2)' },
+      title: { fontSize: '16px', marginBottom: 'var(--spacing-1)' },
+      subtitle: { fontSize: '14px' },
+    },
+
+    // UI help text patterns
+    helpText: {
+      small: { fontSize: '12px', opacity: 0.8 },
+      muted: { fontSize: '11px', color: 'var(--color-text-tertiary)' },
+    },
+
+    // Text styling utilities για preview buttons
+    textStyle: {
+      bold: { fontWeight: 'bold', fontStyle: 'normal', textDecoration: 'none' },
+      italic: { fontWeight: 'normal', fontStyle: 'italic', textDecoration: 'none' },
+      underline: { fontWeight: 'normal', fontStyle: 'normal', textDecoration: 'underline' },
+      strikethrough: { fontWeight: 'normal', fontStyle: 'normal', textDecoration: 'line-through' },
+      normal: { fontWeight: 'normal', fontStyle: 'normal', textDecoration: 'none' },
+
+      // Typography effects για technical notation
+      superscript: { fontSize: '60%', verticalAlign: 'super' as const },
+      subscript: { fontSize: '60%', verticalAlign: 'sub' as const },
+
+      // Dynamic style based on button type
+      forButton: (styleKey: string) => ({
+        fontWeight: styleKey === 'isBold' ? 'bold' : 'normal',
+        fontStyle: styleKey === 'isItalic' ? 'italic' : 'normal',
+        textDecoration:
+          styleKey === 'isUnderline' ? 'underline' :
+          styleKey === 'isStrikethrough' ? 'line-through' : 'none'
+      }),
+    },
+
+    // Flex layout utilities με CSS custom properties
+    flex: {
+      column: (gap?: number | string) => ({
+        display: 'flex',
+        flexDirection: 'column' as const,
+        gap: gap ? `var(--spacing-${gap})` : undefined,
+      }),
+      row: (gap?: number | string) => ({
+        display: 'flex',
+        alignItems: 'center',
+        gap: gap ? `var(--spacing-${gap})` : undefined,
+      }),
+      columnGap: (gap: number | string) => ({
+        display: 'flex',
+        flexDirection: 'column' as const,
+        gap: `var(--spacing-${gap})`,
+      }),
+      rowGap: (gap: number | string) => ({
+        display: 'flex',
+        alignItems: 'center',
+        gap: `var(--spacing-${gap})`,
+      }),
+      // Dynamic flex basis for fixed-width flex items (replaces inline flex: '0 0 Npx')
+      fixedWidth: (width: number) => ({
+        flex: `0 0 ${width}px`,
+      }),
+      // Interactive label pattern for form controls
+      labelRow: (gap: number | string) => ({
+        display: 'flex',
+        alignItems: 'center',
+        gap: `var(--spacing-${gap})`,
+        fontSize: '12px',
+        color: 'var(--color-text-primary)',
+        cursor: 'pointer',
+      }),
+    },
+
+    // Layout utilities για common patterns
+    fullWidth: { width: '100%' },
+    contentContainer: {
+      padding: 'var(--spacing-4)',
+      overflowY: 'auto' as const,
+      flex: 1
+    },
+
+    // Debug/Calibration overlays enterprise patterns
+    debugPanel: {
+      base: {
+        minWidth: 380,
+        maxWidth: 450,
+        maxHeight: '90vh',
+        overflowY: 'auto' as const
+      },
+      tooltip: {
+        position: 'absolute' as const,
+        top: 20,
+        left: -10,
+        fontSize: 10,
+        color: 'white',
+        background: 'rgba(0,0,0,0.8)',
+        padding: '1px 4px',
+        borderRadius: 2,
+        whiteSpace: 'nowrap' as const
+      }
+    },
+
+    // Test components styling (temporary utilities)
+    testContainer: {
+      padding: 'var(--spacing-5)',
+      border: '1px solid var(--color-border-secondary)',
+      margin: 'var(--spacing-2)',
+      borderRadius: 'var(--radius-md)',
+      backgroundColor: 'var(--color-bg-secondary)'
+    },
+
+    // Debug floating panels
+    debugFloat: {
+      main: {
+        position: 'fixed' as const,
+        top: 10,
+        right: 10,
+        background: 'rgba(0,0,0,0.8)',
+        color: 'white',
+        padding: 'var(--spacing-2)',
+        zIndex: 10000,
+        fontSize: '12px',
+        borderRadius: 'var(--radius-sm)'
+      },
+      button: {
+        margin: 'var(--spacing-1)',
+        padding: 'var(--spacing-1)',
+        fontSize: '10px',
+        backgroundColor: 'var(--color-bg-primary)',
+        color: 'var(--color-text-primary)',
+        border: '1px solid var(--color-border-primary)',
+        borderRadius: 'var(--radius-sm)',
+        cursor: 'pointer'
+      }
+    },
+
+    // Interactive elements patterns
+    interactive: {
+      auto: { pointerEvents: 'auto' as const },
+      none: { pointerEvents: 'none' as const },
+      minHeight: (height: string | number) => ({
+        minHeight: typeof height === 'number' ? `${height}px` : height
+      }),
+      maxHeight: (height: string | number) => ({
+        maxHeight: typeof height === 'number' ? `${height}px` : height
+      }),
+      // Combined min and max height utility (replaces inline minHeight + maxHeight patterns)
+      heightRange: (minHeight: string | number, maxHeight: string | number) => ({
+        minHeight: typeof minHeight === 'number' ? `${minHeight}px` : minHeight,
+        maxHeight: typeof maxHeight === 'number' ? `${maxHeight}px` : maxHeight
+      })
+    },
+    inputBase: {
+      border: '1px solid var(--color-border-primary)',
+      borderRadius: 'var(--radius-sm)',
+      backgroundColor: 'var(--color-bg-primary)',
+      color: 'var(--color-text-primary)',
+    },
+
+    // Transform utilities
+    transform: {
+      centerY: 'translateY(-50%)',
+      centerX: 'translateX(-50%)',
+      center: 'translate(-50%, -50%)',
+    },
+
+    // Common positioning patterns με CSS vars
+    absoluteCenter: {
+      position: 'absolute',
+      top: '50%',
+      left: '50%',
+      transform: 'translate(-50%, -50%)',
+    },
+
+    absoluteCenterY: {
+      position: 'absolute',
+      top: '50%',
+      transform: 'translateY(-50%)',
+    },
+  },
+
+  // DXF-specific utilities για cursor, crosshair, και settings components
+  dxf: {
+    // Crosshair line utilities
+    crosshairLine: {
+      solid: (width: number, color: string) => ({
+        height: `${width}px`,
+        backgroundColor: color,
+      }),
+
+      dashed: (width: number, color: string) => ({
+        height: `${width}px`,
+        background: `repeating-linear-gradient(to right, ${color} 0, ${color} ${width * 6}px, transparent ${width * 6}px, transparent ${width * 12}px)`,
+      }),
+
+      dotted: (width: number, color: string) => ({
+        height: `${width}px`,
+        background: `repeating-linear-gradient(to right, ${color} 0, ${color} ${width}px, transparent ${width}px, transparent ${width * 8}px)`,
+      }),
+
+      dashDot: (width: number, color: string) => ({
+        height: `${width}px`,
+        background: `repeating-linear-gradient(to right,
+          ${color} 0, ${color} ${width * 6}px,
+          transparent ${width * 6}px, transparent ${width * 8}px,
+          ${color} ${width * 8}px, ${color} ${width * 10}px,
+          transparent ${width * 10}px, transparent ${width * 18}px)`,
+      }),
+    },
+
+    // Dynamic dimension utilities για DXF settings
+    dimensions: {
+      lineWidth: (width: number) => ({ height: `${width}px` }),
+      dynamicHeight: (value: number, unit: 'px' | '%' = 'px') => ({ height: `${value}${unit}` }),
+      dynamicWidth: (value: number, unit: 'px' | '%' = 'px') => ({ width: `${value}${unit}` }),
+    },
+
+    // Color utilities για dynamic cursor colors
+    colors: {
+      backgroundColor: (color: string) => ({ backgroundColor: color }),
+      borderColor: (color: string) => ({ borderColor: color }),
+      color: (color: string) => ({ color }),
+    },
+
+    // Composite utilities για common DXF patterns
+    composite: {
+      coloredBar: (height: number, color: string) => ({
+        height: `${height}px`,
+        backgroundColor: color,
+      }),
+    },
+
+    // Color swatch utilities για palette systems
+    swatch: {
+      square: (size: number, color: string) => ({
+        width: `${size}px`,
+        height: `${size}px`,
+        backgroundColor: color,
+      }),
+      withDimensions: (width: number, height: number, color: string) => ({
+        width: `${width}px`,
+        height: `${height}px`,
+        backgroundColor: color,
+      }),
+      withOpacity: (color: string, opacity: number = 1) => ({
+        backgroundColor: color,
+        opacity,
+      }),
+    },
+
+    // Grid utilities για color palette layouts
+    grid: {
+      swatchGrid: (columns: number, swatchSize: number) => ({
+        gridTemplateColumns: `repeat(${columns}, ${swatchSize}px)`,
+      }),
+    },
+
+    // Line preview utilities για style visualization
+    linePreview: {
+      withHeight: (height: number | string, background: string) => ({
+        height: typeof height === 'number' ? `${height}px` : height,
+        background,
+      }),
+      thin: (background: string) => ({
+        height: '2px',
+        background,
+      }),
+    },
+
+    // Canvas utilities για DXF viewport styling
+    canvas: {
+      fullSize: {
+        display: 'block' as const,
+        width: '100%',
+        height: '100%',
+      },
+      interactive: {
+        display: 'block' as const,
+        width: '100%',
+        height: '100%',
+        touchAction: 'none' as const,
+      },
+      withBackground: (backgroundColor: string) => ({
+        display: 'block' as const,
+        width: '100%',
+        height: '100%',
+        backgroundColor,
+      }),
+      overlay: {
+        position: 'absolute' as const,
+        top: 0,
+        left: 0,
+        pointerEvents: 'none' as const,
+      },
+    },
+
+    // Cursor utilities για DXF interaction modes
+    cursor: {
+      none: { cursor: 'none' as const },
+      crosshair: { cursor: 'crosshair' as const },
+      pointer: { cursor: 'pointer' as const },
+      grab: { cursor: 'grab' as const },
+      grabbing: { cursor: 'grabbing' as const },
+      move: { cursor: 'move' as const },
+      default: { cursor: 'default' as const },
+    },
+
+    // Dynamic positioning utilities για calibration overlays
+    positioning: {
+      absoluteAt: (x: number, y: number, width: number = 16, height: number = 16) => ({
+        position: 'absolute' as const,
+        left: `${x - width / 2}px`,
+        top: `${y - height / 2}px`,
+        width: `${width}px`,
+        height: `${height}px`,
+      }),
+      absoluteTopLeft: (x: number, y: number) => ({
+        position: 'absolute' as const,
+        left: `${x}px`,
+        top: `${y}px`,
+      }),
+      tooltip: (x: number, y: number, offsetX: number = 15, offsetY: number = -35) => ({
+        position: 'absolute' as const,
+        left: `${x + offsetX}px`,
+        top: `${y + offsetY}px`,
+      }),
+    },
+
+    // Debugging utilities για calibration και testing
+    debug: {
+      testMarker: (x: number, y: number, isSuccess: boolean) => ({
+        position: 'absolute' as const,
+        left: `${x - 8}px`,
+        top: `${y - 8}px`,
+        width: '16px',
+        height: '16px',
+        borderRadius: '50%',
+        background: isSuccess ? 'rgba(0,255,0,0.8)' : 'rgba(255,165,0,0.8)',
+        border: '2px solid white',
+        boxShadow: `0 0 10px ${isSuccess ? 'rgba(0,255,0,0.8)' : 'rgba(255,165,0,0.8)'}`,
+        pointerEvents: 'none' as const,
+        animation: 'pulse 2s infinite',
+      }),
+      tooltip: {
+        position: 'absolute' as const,
+        bottom: '100%',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        background: 'rgba(0, 0, 0, 0.9)',
+        color: 'white',
+        padding: '2px 6px',
+        borderRadius: '3px',
+        fontSize: '10px',
+        whiteSpace: 'nowrap' as const,
+        pointerEvents: 'none' as const,
+      },
+    },
+
+    // Dropdown utilities για settings components
+    dropdown: {
+      content: {
+        zIndex: 9999,
+        position: 'absolute' as const,
+        backgroundColor: '#374151', // gray-700
+        border: '1px solid #4B5563', // gray-600
+        backdropFilter: 'none' as const,
+        WebkitBackdropFilter: 'none' as const,
+      },
+      highZIndex: {
+        zIndex: 9999,
+        position: 'absolute' as const,
+      },
+    },
+
+    // Animation utilities για interactive elements
+    animation: {
+      delay: (seconds: number) => ({ animationDelay: `${seconds}s` }),
+      duration: (milliseconds: number) => ({ animationDuration: `${milliseconds}ms` }),
+      pingWithDelay: (delaySeconds: number) => ({
+        animation: 'ping 1s cubic-bezier(0, 0, 0.2, 1) infinite',
+        animationDelay: `${delaySeconds}s`
+      }),
+    },
+
+    // Label utilities για forms και controls
+    labels: {
+      inverse: {
+        color: 'var(--color-text-inverse)',
+        fontSize: '0.875rem', // sm equivalent
+      },
+      primary: {
+        color: 'var(--color-text-primary)',
+        fontSize: '0.875rem',
+      },
+      small: {
+        fontSize: '0.75rem', // xs equivalent
+        color: 'var(--color-text-secondary)',
+      },
+      extraSmall: {
+        fontSize: '0.75rem', // xs equivalent
+        color: 'var(--color-text-primary)',
+      },
+    },
+
+    // Dynamic color utilities για enterprise styling patterns
+    dynamicColor: {
+      text: (color: string): React.CSSProperties => ({ color }),
+      background: (color: string): React.CSSProperties => ({ backgroundColor: color }),
+      border: (color: string): React.CSSProperties => ({ borderColor: color }),
+    },
+
+    // Typography utilities για enterprise components
+    typography: {
+      alertTitle: {
+        fontWeight: typography.fontWeight.medium,
+        fontSize: typography.fontSize.sm,
+        color: colors.text.primary
+      } as React.CSSProperties,
+    },
+  },
+} as const;
+
+// ============================================================================
+// PORTAL COMPONENTS - ENTERPRISE OVERLAY SYSTEM
+// ============================================================================
+
+/**
+ * Portal Components για Overlay & Dropdown Systems
+ * Enterprise-class portal management με z-index hierarchy και positioning
+ */
+export const portalComponents = {
+  overlay: {
+    fullscreen: {
+      position: 'fixed' as const,
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      pointerEvents: 'none' as const,
+    },
+    backdrop: (zIndex: number = 1000) => ({
+      position: 'fixed' as const,
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      zIndex,
+      pointerEvents: 'auto' as const,
+    }),
+  },
+
+  dropdown: {
+    absolute: (top: number, left: number, width: number, height?: number | string) => ({
+      position: 'absolute' as const,
+      top: `${top}px`,
+      left: `${left}px`,
+      width: `${width}px`,
+      height: height ? (typeof height === 'number' ? `${height}px` : height) : 'auto',
+      pointerEvents: 'auto' as const,
+    }),
+    custom: (config: {
+      top: number;
+      left: number;
+      width: number;
+      height?: number | string;
+      minHeight?: string;
+      maxHeight?: string
+    }) => ({
+      position: 'absolute' as const,
+      top: `${config.top}px`,
+      left: `${config.left}px`,
+      width: `${config.width}px`,
+      height: config.height ? (typeof config.height === 'number' ? `${config.height}px` : config.height) : 'auto',
+      minHeight: config.minHeight || undefined,
+      maxHeight: config.maxHeight || undefined,
+      pointerEvents: 'auto' as const,
+    }),
+  },
+
+  modal: {
+    backdrop: {
+      zIndex: (customZIndex?: number) => customZIndex || 2000,
+    },
+    content: {
+      zIndex: (customZIndex?: number) => (customZIndex || 2000) + 1,
+    },
+  },
+
+  zIndex: {
+    dropdown: 1000,
+    modal: 2000,
+    tooltip: 3000,
+    critical: 2147483647, // Maximum zIndex
+    overlay: 1400, // Add overlay zIndex
+  }
+} as const;
+
+// Extended portalComponents for dynamic zIndex functions
+export const portalComponentsExtended = {
+  ...portalComponents,
+  overlay: {
+    ...portalComponents.overlay,
+    base: { zIndex: () => 1300 },
+    fullscreen: { zIndex: () => 1400 },
+    crosshair: { zIndex: () => 1450 },
+    selection: { zIndex: () => 1460 },
+    tooltip: { zIndex: () => 1470 },
+    snap: { zIndex: () => 1480 },
+    search: { zIndex: () => 1490 },
+    searchResults: { zIndex: () => 1500 },
+    controls: { zIndex: () => 1510 },
+    zoom: { zIndex: () => 1520 }
+  },
+  canvas: {
+    fullscreen: { zIndex: () => 1400 },
+    layers: {
+      dxf: { zIndex: () => 1200 },
+      layer: { zIndex: () => 1210 }
+    }
+  }
+};
+
+// ============================================================================
+// SVG UTILITIES - GRAPHICS RENDERING SYSTEM
+// ============================================================================
+
+/**
+ * SVG Utilities για Canvas & Graphics Rendering
+ * Enterprise-class SVG styling με text effects και shape patterns
+ */
+export const svgUtilities = {
+  text: {
+    withStroke: (strokeColor: string = 'white', strokeWidth: number = 4) => ({
+      paintOrder: 'stroke' as const,
+      stroke: strokeColor,
+      strokeWidth: `${strokeWidth}px`,
+      strokeLinejoin: 'round' as const,
+    }),
+    outlined: (strokeColor: string = 'white', strokeWidth: number = 2) => ({
+      paintOrder: 'stroke' as const,
+      stroke: strokeColor,
+      strokeWidth: `${strokeWidth}px`,
+      strokeLinecap: 'round' as const,
+      strokeLinejoin: 'round' as const,
+    }),
+  },
+
+  shapes: {
+    backgroundRect: (color: string, opacity: number = 1) => ({
+      fill: color,
+      opacity,
+      pointerEvents: 'none' as const,
+    }),
+  },
+} as const;
+
+// ============================================================================
+// INTERACTION UTILITIES - USER INTERFACE CONTROL
+// ============================================================================
+
+/**
+ * Interaction Utilities για User Input & Selection Control
+ * Enterprise-class interaction management με cross-browser compatibility
+ */
+export const interactionUtilities = {
+  pointerEvents: {
+    none: { pointerEvents: 'none' as const },
+    auto: { pointerEvents: 'auto' as const },
+    all: { pointerEvents: 'all' as const },
+  },
+
+  userSelect: {
+    none: {
+      userSelect: 'none' as const,
+      WebkitUserSelect: 'none' as const,
+      MozUserSelect: 'none' as const,
+      msUserSelect: 'none' as const,
+    },
+    text: { userSelect: 'text' as const },
+    all: { userSelect: 'all' as const },
+  },
+
+  // Combined interaction patterns για common use cases
+  nonInteractive: {
+    position: 'absolute' as const,
+    pointerEvents: 'none' as const,
+    userSelect: 'none' as const,
+    WebkitUserSelect: 'none' as const,
+    MozUserSelect: 'none' as const,
+    msUserSelect: 'none' as const,
+  },
+
+  overlay: {
+    position: 'absolute' as const,
+    pointerEvents: 'auto' as const,
+    userSelect: 'text' as const,
+  },
+} as const;
+
+// ============================================================================
+// MODULAR DESIGN TOKENS INTEGRATION
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE DESIGN TOKENS V2
+ *
+ * @description Για πρόσβαση στα επεκταμένα design tokens (alerts, dashboard, maps, dialogs),
+ * χρησιμοποιήστε το modular system:
+ *
+ * @example
+ * ```typescript
+ * // Single import για όλα τα tokens
+ * import { unifiedDesignTokens } from '@/styles/design-tokens';
+ *
+ * // Specific imports για performance
+ * import { alertSeverityColors } from '@/styles/design-tokens';
+ * import { dashboardLayoutTokens } from '@/styles/design-tokens';
+ * import { mapButtonTokens } from '@/styles/design-tokens';
+ *
+ * // Legacy compatibility
+ * import { colors, dashboardComponents } from '@/styles/design-tokens';
+ * ```
+ *
+ * @see ./design-tokens/index.ts - Πλήρης documentation & API
+ */
+export const DESIGN_TOKENS_V2_INFO = {
+  version: '2.1.0',
+  description: 'Enterprise-class modular design tokens με performance optimization support',
+  migrationGuide: 'See ./design-tokens/index.ts for full API documentation',
+  modules: [
+    'semantic/alert-tokens.ts - Alert severity, status, AutoSave indicators',
+    'components/dashboard-tokens.ts - Dashboard layouts, metrics, charts',
+    'components/map-tokens.ts - Map interfaces, polygons, drawing tools',
+    'components/dialog-tokens.ts - Modals, forms, wizards, steps',
+    'performance/performance-tokens.ts - Virtualized tables, metrics, analytics'
+  ]
+} as const;
+
+// ============================================================================
+// PERFORMANCE COMPONENTS - ENTERPRISE VIRTUALIZATION SYSTEM
+// ============================================================================
+
+/**
+ * Performance Components για High-Performance UI Elements
+ * Enterprise-class virtualized tables, metrics dashboards, and analytics
+ *
+ * Optimized για smooth 60fps rendering με minimal repaints
+ *
+ * @example
+ * ```tsx
+ * <div style={performanceComponents.virtualizedTable.container} />
+ * <span style={performanceComponents.metrics.label} />
+ * ```
+ */
+export const performanceComponents = {
+  // Virtualized Table System
+  virtualizedTable: {
+    // Main container
+    container: {
+      position: 'relative' as const,
+      overflow: 'hidden' as const,
+      backgroundColor: colors.background.primary,
+      border: `1px solid ${colors.border.primary}`,
+      borderRadius: borderRadius.md,
+      willChange: 'scroll-position' as const // Performance optimization
+    },
+
+    // Header section
+    header: {
+      position: 'sticky' as const,
+      top: 0,
+      backgroundColor: colors.background.secondary,
+      borderBottom: `1px solid ${colors.border.primary}`,
+      zIndex: 1,
+      padding: spacing[3],
+      fontWeight: typography.fontWeight.semibold,
+      fontSize: typography.fontSize.sm,
+      color: colors.text.primary
+    },
+
+    // Scrollable content area
+    scrollableContent: {
+      position: 'relative' as const,
+      overflow: 'auto' as const,
+      willChange: 'scroll-position, contents' as const // Performance hint
+    },
+
+    // Row styling
+    row: {
+      base: {
+        display: 'flex',
+        alignItems: 'center',
+        padding: `${spacing[2]} ${spacing[3]}`,
+        borderBottom: `1px solid ${colors.border.secondary}`,
+        transition: `background-color ${animation.duration.fast}`,
+        cursor: 'default' as const
+      },
+
+      interactive: {
+        cursor: 'pointer' as const,
+        '&:hover': {
+          backgroundColor: colors.background.hover
+        }
+      }
+    },
+
+    // Cell styling
+    cell: {
+      base: {
+        display: 'flex',
+        alignItems: 'center',
+        minWidth: 0, // Allow text truncation
+        padding: `0 ${spacing[2]}`,
+        color: colors.text.primary,
+        fontSize: typography.fontSize.sm
+      },
+
+      flexible: {
+        flex: 1,
+        minWidth: 0
+      }
+    }
+  },
+
+  // Performance Metrics Components
+  metrics: {
+    // Individual metric card
+    card: {
+      padding: spacing[4],
+      backgroundColor: colors.background.secondary,
+      borderRadius: borderRadius.md,
+      border: `1px solid ${colors.border.secondary}`
+    },
+
+    // Metric labels and values
+    label: {
+      primary: {
+        fontWeight: typography.fontWeight.medium,
+        fontSize: typography.fontSize.sm,
+        color: colors.text.primary
+      },
+
+      secondary: {
+        color: colors.text.secondary
+      },
+
+      tertiary: {
+        color: colors.text.tertiary
+      }
+    },
+
+    // Metric values με severity colors
+    value: {
+      primary: {
+        fontWeight: typography.fontWeight.semibold,
+        fontSize: typography.fontSize.lg,
+        color: colors.text.primary
+      },
+
+      success: { color: colors.green[600] },
+      warning: { color: colors.orange[600] },
+      error: { color: colors.red[600] },
+      info: { color: colors.blue[600] }
+    }
+  },
+
+  // Loading and States
+  states: {
+    loading: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: spacing[8],
+      color: colors.text.secondary
+    }
+  },
+
+  // Performance Optimizations
+  optimizations: {
+    willChangeTransform: { willChange: 'transform' as const },
+    willChangeScroll: { willChange: 'scroll-position' as const },
+    gpuAccelerated: { transform: 'translateZ(0)' }
+  },
+
+  // Chart Components
+  chartComponents: {
+    // Legend Components
+    legend: {
+      container: {
+        display: 'flex' as const,
+        alignItems: 'center' as const,
+        justifyContent: 'center' as const,
+        gap: spacing[4]
+      },
+
+      item: {
+        base: {
+          display: 'flex' as const,
+          alignItems: 'center' as const,
+          gap: spacing[1.5]
+        },
+
+        icon: {
+          height: spacing[3],
+          width: spacing[3],
+          color: colors.text.tertiary
+        }
+      },
+
+      indicator: {
+        base: {
+          height: spacing[2],
+          width: spacing[2],
+          flexShrink: 0,
+          borderRadius: borderRadius.sm
+        }
+      },
+
+      // Top/Bottom positioned legends
+      positioning: {
+        top: { paddingBottom: spacing[3] },
+        bottom: { paddingTop: spacing[3] },
+        left: { paddingRight: spacing[3] },
+        right: { paddingLeft: spacing[3] }
+      }
+    },
+
+    // Tooltip Components
+    tooltip: {
+      indicator: {
+        dot: {
+          height: '10px',
+          width: '10px',
+          flexShrink: 0,
+          borderRadius: borderRadius.sm
+        },
+
+        line: {
+          width: '4px',
+          flexShrink: 0,
+          borderRadius: borderRadius.sm
+        },
+
+        dashed: {
+          width: 0,
+          border: '1.5px dashed',
+          backgroundColor: 'transparent',
+          flexShrink: 0
+        },
+
+        // Base styling με CSS variables
+        cssVariables: {
+          border: `1px solid var(--color-border)`,
+          backgroundColor: `var(--color-bg)`
+        }
+      },
+
+      container: {
+        base: {
+          backgroundColor: colors.surface.primary,
+          border: `1px solid ${colors.border.primary}`,
+          borderRadius: borderRadius.md,
+          padding: spacing[3],
+          boxShadow: shadows.md
+        },
+
+        content: {
+          fontSize: typography.fontSize.sm,
+          color: colors.text.primary
+        }
+      }
+    },
+
+    // Chart Colors Palette
+    colors: {
+      // Primary data series
+      primary: [
+        colors.blue[500],
+        colors.green[500],
+        colors.purple[500],
+        colors.orange[500],
+        colors.red[500],
+        colors.teal[500]
+      ],
+
+      // Status-based colors
+      status: {
+        success: colors.green[500],
+        warning: colors.orange[500],
+        error: colors.red[500],
+        info: colors.blue[500],
+        neutral: colors.gray[500]
+      }
+    }
+  }
+} as const;
+
+// ============================================================================
+// CHART COMPONENTS
+// ============================================================================
+
+/**
+ * Chart components design tokens για data visualization
+ *
+ * ✅ ENTERPRISE REFACTORED: Inline styles → Centralized tokens
+ * ✅ Type-safe chart styling patterns
+ * ✅ Dynamic color management για chart elements
+ * ✅ Fortune 500 grade data visualization standards
+ *
+ * Usage:
+ * - ChartLegend.tsx: Legend colors, indicators, tooltips
+ * - ChartTooltip.tsx: Tooltip indicators, backgrounds
+ * - Chart containers: Sizing, spacing, responsive patterns
+ */
+export const chartComponents = {
+  // Legend Components
+  legend: {
+    container: {
+      display: 'flex' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      gap: spacing[4]
+    },
+
+    item: {
+      base: {
+        display: 'flex' as const,
+        alignItems: 'center' as const,
+        gap: spacing[1.5]
+      },
+
+      icon: {
+        height: spacing[3],
+        width: spacing[3],
+        color: colors.text.tertiary
+      }
+    },
+
+    indicator: {
+      base: {
+        height: spacing[2],
+        width: spacing[2],
+        flexShrink: 0,
+        borderRadius: borderRadius.sm
+      },
+
+      /**
+       * Dynamic color utility για chart legend indicators
+       * Replaces: style={{ backgroundColor: item.color }}
+       */
+      withColor: (color: string): React.CSSProperties => ({
+        backgroundColor: color
+      })
+    },
+
+    // Top/Bottom positioned legends
+    positioning: {
+      top: { paddingBottom: spacing[3] },
+      bottom: { paddingTop: spacing[3] },
+      left: { paddingRight: spacing[3] },
+      right: { paddingLeft: spacing[3] }
+    }
+  },
+
+  // Tooltip Components
+  tooltip: {
+    indicator: {
+      dot: {
+        height: '10px',
+        width: '10px',
+        flexShrink: 0,
+        borderRadius: borderRadius.sm
+      },
+
+      line: {
+        width: '4px',
+        flexShrink: 0,
+        borderRadius: borderRadius.sm
+      },
+
+      dashed: {
+        width: 0,
+        border: '1.5px dashed',
+        backgroundColor: 'transparent',
+        flexShrink: 0
+      },
+
+      /**
+       * CSS Variables approach για dynamic colors
+       * Replaces: { "--color-bg": color, "--color-border": color }
+       */
+      withColor: (color: string | undefined): React.CSSProperties => ({
+        '--color-bg': color,
+        '--color-border': color
+      } as React.CSSProperties),
+
+      // Base styling με CSS variables
+      cssVariables: {
+        border: `1px solid var(--color-border)`,
+        backgroundColor: `var(--color-bg)`
+      }
+    },
+
+    container: {
+      base: {
+        backgroundColor: colors.surface.primary,
+        border: `1px solid ${colors.border.primary}`,
+        borderRadius: borderRadius.md,
+        padding: spacing[3],
+        boxShadow: shadows.md
+      },
+
+      content: {
+        fontSize: typography.fontSize.sm,
+        color: colors.text.primary
+      }
+    }
+  },
+
+  // Chart Container Components
+  container: {
+    base: {
+      position: 'relative' as const,
+      width: '100%',
+      height: '100%'
+    },
+
+    responsive: {
+      width: '100%',
+      height: 'auto',
+      aspectRatio: '16/9'
+    },
+
+    // Size variants
+    sizes: {
+      sm: { height: '200px' },
+      md: { height: '300px' },
+      lg: { height: '400px' },
+      xl: { height: '500px' }
+    }
+  },
+
+  // Chart Title & Layout Components (ENTERPRISE ADDITION - 2025-12-16)
+  title: {
+    container: {
+      textAlign: 'center' as const,
+      marginBottom: spacing[2]
+    },
+
+    main: {
+      margin: 0,
+      fontSize: typography.fontSize.lg,
+      fontWeight: typography.fontWeight.semibold,
+      color: colors.text.primary
+    },
+
+    subtitle: {
+      margin: '4px 0 0 0',
+      fontSize: typography.fontSize.xs,
+      color: colors.text.secondary
+    }
+  },
+
+  // Chart Layout & Positioning
+  layout: {
+    // Main chart containers με dynamic dimensions
+    container: (width?: number, height?: number): React.CSSProperties => ({
+      position: 'relative',
+      width: width || '100%',
+      height: height || '100%'
+    }),
+
+    // Interactive cursor patterns
+    interactive: (enabled: boolean): React.CSSProperties => ({
+      cursor: enabled ? 'pointer' : 'default'
+    }),
+
+    // Chart content styling for tooltips
+    tooltip: {
+      fontWeight: 'bold' as const
+    }
+  },
+
+  // Chart Axis Components
+  axis: {
+    line: {
+      stroke: colors.border.secondary,
+      strokeWidth: 1
+    },
+
+    tick: {
+      fontSize: typography.fontSize.xs,
+      fill: colors.text.secondary
+    },
+
+    label: {
+      fontSize: typography.fontSize.sm,
+      fill: colors.text.primary,
+      fontWeight: typography.fontWeight.medium
+    }
+  },
+
+  // Chart Colors Palette (για consistent data visualization)
+  colors: {
+    // Primary data series
+    primary: [
+      colors.blue[500],
+      colors.green[500],
+      colors.purple[500],
+      colors.orange[500],
+      colors.red[500],
+      colors.teal[500]
+    ],
+
+    // Secondary data series
+    secondary: [
+      colors.blue[300],
+      colors.green[300],
+      colors.purple[300],
+      colors.orange[300],
+      colors.red[300],
+      colors.teal[300]
+    ],
+
+    // Status-based colors
+    status: {
+      success: colors.green[500],
+      warning: colors.orange[500],
+      error: colors.red[500],
+      info: colors.blue[500],
+      neutral: colors.gray[500]
+    },
+
+    // Grid lines
+    grid: {
+      major: colors.border.secondary,
+      minor: colors.border.tertiary
+    }
+  },
+
+  // Animation & Transitions
+  animations: {
+    fadeIn: {
+      opacity: 1,
+      transition: `opacity ${transitions.duration.base} ${transitions.easing.easeOut}`
+    },
+
+    slideUp: {
+      transform: 'translateY(0)',
+      transition: `transform ${transitions.duration.base} ${transitions.easing.easeOut}`
+    },
+
+    scale: {
+      transform: 'scale(1)',
+      transition: `transform ${transitions.duration.fast} ${transitions.easing.easeOut}`
+    }
+  }
+} as const;
+
+// ============================================================================
+// CANVAS UTILITIES - DXF & GEO-CANVAS SYSTEMS
+// ============================================================================
+
+/**
+ * 🎯 ENTERPRISE CANVAS UTILITIES
+ *
+ * ✅ CRITICAL REFACTORING: 478+ inline styles → Centralized Canvas System
+ * ✅ Single Source of Truth για όλα τα Canvas & Overlay components
+ * ✅ Type-safe, Fortune 500-grade canvas management
+ *
+ * TARGETS:
+ * - DXF Canvas & Overlays: 50+ instances (DxfCanvas, LayerCanvas, CrosshairOverlay, etc.)
+ * - Geo-Canvas InteractiveMap: 30+ instances (SearchSystem, FloorPlanCanvas, etc.)
+ * - Settings Components: 25+ instances (Color previews, dynamic styling)
+ *
+ * PATTERNS REPLACED:
+ * - style={{ zIndex: 999, position: 'absolute', pointerEvents: 'none' }}
+ * - style={{ left: pos.x, top: pos.y, width: size.width, height: size.height }}
+ * - style={{ backgroundColor: color, opacity: 0.5 }}
+ * - style={{ position: 'fixed', inset: 0 }}
+ *
+ * @author Claude Enterprise Architect
+ * @date 2025-12-16
+ */
+export const canvasUtilities = {
+  // ============================================================================
+  // DXF CANVAS CORE PATTERNS
+  // ============================================================================
+
+  /**
+   * DXF Canvas Base Containers
+   * Replaces: style={{ position: 'relative', width: '100%', height: '100%' }}
+   */
+  container: {
+    base: {
+      position: 'relative' as const,
+      width: '100%',
+      height: '100%',
+      overflow: 'hidden'
+    },
+
+    fullscreen: {
+      position: 'fixed' as const,
+      inset: 0,
+      zIndex: portalComponentsExtended.canvas.fullscreen.zIndex(),
+      overflow: 'hidden'
+    },
+
+    /**
+     * Dynamic container με custom dimensions
+     * Replaces: style={{ width: `${width}px`, height: `${height}px` }}
+     */
+    withDimensions: (width: number, height: number): React.CSSProperties => ({
+      width: `${width}px`,
+      height: `${height}px`,
+      position: 'relative' as const,
+      overflow: 'hidden'
+    })
+  },
+
+  // ============================================================================
+  // CANVAS LAYERS & Z-INDEX MANAGEMENT
+  // ============================================================================
+
+  /**
+   * Canvas Layer Z-Index System
+   * Replaces: style={{ zIndex: 15 }}, style={{ zIndex: 10 }}, etc.
+   */
+  layers: {
+    // Main canvas layers
+    dxfCanvas: {
+      position: 'absolute' as const,
+      inset: 0,
+      zIndex: portalComponentsExtended.canvas.layers.dxf.zIndex(),
+      pointerEvents: 'auto' as const
+    },
+
+    layerCanvas: {
+      position: 'absolute' as const,
+      inset: 0,
+      zIndex: portalComponentsExtended.canvas.layers.layer.zIndex(),
+      pointerEvents: 'auto' as const
+    },
+
+    /**
+     * DXF Canvas με dynamic tool states
+     * Replaces: DxfCanvas.tsx complex inline style με cursor, zIndex
+     */
+    dxfCanvasWithTools: (
+      activeTool: string,
+      crosshairEnabled: boolean = false
+    ): React.CSSProperties => ({
+      position: 'absolute' as const,
+      left: 0,
+      top: 0,
+      width: '100%',
+      height: '100%',
+      zIndex: 0, // DXF canvas below layer canvas
+      touchAction: 'none', // Enterprise: Prevent browser touch gestures
+      cursor: activeTool === 'pan' ? 'grab' :
+             (crosshairEnabled ? 'none' : 'crosshair')
+    }),
+
+    /**
+     * Layer Canvas με dynamic tool states
+     * Replaces: LayerCanvas.tsx complex inline style με cursor, border, zIndex
+     */
+    layerCanvasWithTools: (
+      activeTool: string,
+      crosshairEnabled: boolean = false
+    ): React.CSSProperties => ({
+      position: 'absolute' as const,
+      left: 0,
+      top: 0,
+      width: '100%',
+      height: '100%',
+      zIndex: 10, // Layer canvas above DXF canvas
+      pointerEvents: 'auto' as const,
+      cursor: activeTool === 'pan' ? 'grab' :
+             (crosshairEnabled ? 'none' : 'crosshair'),
+      backgroundColor: 'transparent',
+      border: activeTool === 'layering' ? '2px solid lime' : 'none'
+    }),
+
+    // Overlay layers
+    overlayBase: {
+      position: 'absolute' as const,
+      inset: 0,
+      zIndex: portalComponentsExtended.overlay.base.zIndex(),
+      pointerEvents: 'none' as const
+    },
+
+    /**
+     * Custom z-index με pointer events control
+     * Replaces: style={{ zIndex: customZ, pointerEvents: 'none' }}
+     */
+    withZIndex: (zIndex: number, pointerEvents: 'none' | 'auto' = 'none'): React.CSSProperties => ({
+      position: 'absolute' as const,
+      inset: 0,
+      zIndex,
+      pointerEvents
+    })
+  },
+
+  // ============================================================================
+  // OVERLAY POSITIONING PATTERNS
+  // ============================================================================
+
+  /**
+   * Overlay Position Management
+   * Replaces: style={{ left: x, top: y }}, style={{ transform: 'translate(...)' }}
+   */
+  positioning: {
+    /**
+     * Absolute positioning με coordinates
+     * Replaces: style={{ position: 'absolute', left: x, top: y }}
+     */
+    absolute: (x: number, y: number): React.CSSProperties => ({
+      position: 'absolute' as const,
+      left: `${x}px`,
+      top: `${y}px`
+    }),
+
+    /**
+     * Centered positioning με offset
+     * Replaces: style={{ left: x - 10, top: y - 10 }}
+     */
+    centered: (x: number, y: number, offsetX: number = 0, offsetY: number = 0): React.CSSProperties => ({
+      position: 'absolute' as const,
+      left: `${x + offsetX}px`,
+      top: `${y + offsetY}px`,
+      transform: 'translate(-50%, -50%)'
+    }),
+
+    /**
+     * Transform-based positioning
+     * Replaces: style={{ transform: `translate(${x}px, ${y}px)` }}
+     */
+    transform: (x: number, y: number): React.CSSProperties => ({
+      transform: `translate(${x}px, ${y}px)`
+    }),
+
+    /**
+     * Fixed positioning for full-screen overlays
+     * Replaces: style={{ position: 'fixed', inset: 0 }}
+     */
+    fullscreenOverlay: {
+      position: 'fixed' as const,
+      inset: 0,
+      zIndex: portalComponentsExtended.overlay.fullscreen.zIndex(),
+      pointerEvents: 'auto' as const
+    }
+  },
+
+  // ============================================================================
+  // DYNAMIC STYLING PATTERNS
+  // ============================================================================
+
+  /**
+   * Dynamic Canvas Styles
+   * Replaces complex dynamic inline styles με props
+   */
+  dynamic: {
+    /**
+     * Background color με opacity
+     * Replaces: style={{ backgroundColor: color, opacity: alpha }}
+     */
+    background: (color: string, opacity: number = 1): React.CSSProperties => ({
+      backgroundColor: color,
+      opacity
+    }),
+
+    /**
+     * Border styling με dynamic color
+     * Replaces: style={{ border: `2px solid ${color}` }}
+     */
+    border: (color: string, width: number = 1, style: string = 'solid'): React.CSSProperties => ({
+      border: `${width}px ${style} ${color}`
+    }),
+
+    /**
+     * Dynamic sizing patterns
+     * Replaces: style={{ width: `${size}%`, height: `${height}px` }}
+     */
+    size: (width: string | number, height: string | number): React.CSSProperties => ({
+      width: typeof width === 'number' ? `${width}px` : width,
+      height: typeof height === 'number' ? `${height}px` : height
+    }),
+
+    /**
+     * CSS Variables για runtime values
+     * Replaces: style={{ '--custom-var': value }}
+     */
+    cssVars: (vars: Record<string, string | number>): React.CSSProperties => {
+      const cssProps: Record<string, string> = {};
+      Object.entries(vars).forEach(([key, value]) => {
+        const varKey = key.startsWith('--') ? key : `--${key}`;
+        cssProps[varKey] = typeof value === 'number' ? `${value}px` : value;
+      });
+      return cssProps as React.CSSProperties;
+    }
+  },
+
+  // ============================================================================
+  // SPECIALIZED OVERLAY TYPES
+  // ============================================================================
+
+  /**
+   * Specialized Overlay Patterns
+   */
+  overlays: {
+    /**
+     * Crosshair Overlay Styling
+     * Replaces: CrosshairOverlay.tsx inline styles
+     */
+    crosshair: {
+      container: {
+        position: 'absolute' as const,
+        inset: 0,
+        pointerEvents: 'none' as const,
+        zIndex: portalComponentsExtended.overlay.crosshair.zIndex()
+      },
+
+      line: {
+        position: 'absolute' as const,
+        backgroundColor: colors.primary[500],
+        opacity: 0.7
+      },
+
+      horizontal: (y: number): React.CSSProperties => ({
+        ...canvasUtilities.overlays.crosshair.line,
+        left: 0,
+        right: 0,
+        top: `${y}px`,
+        height: '1px'
+      }),
+
+      vertical: (x: number): React.CSSProperties => ({
+        ...canvasUtilities.overlays.crosshair.line,
+        top: 0,
+        bottom: 0,
+        left: `${x}px`,
+        width: '1px'
+      })
+    },
+
+    /**
+     * Selection Marquee Overlay
+     * Replaces: SelectionMarqueeOverlay.tsx inline styles
+     */
+    marquee: {
+      container: {
+        position: 'absolute' as const,
+        inset: 0,
+        pointerEvents: 'none' as const,
+        zIndex: portalComponentsExtended.overlay.selection.zIndex()
+      },
+
+      /**
+       * Dynamic marquee rectangle με window/crossing modes
+       * Replaces: style={{ left: x, top: y, width: w, height: h, border: ... }}
+       */
+      rectangle: (
+        x: number,
+        y: number,
+        width: number,
+        height: number,
+        kind: 'window' | 'crossing' = 'window'
+      ): React.CSSProperties => {
+        const isWindow = kind === 'window';
+        const borderColor = isWindow ? colors.blue[500] : colors.green[500];
+        const backgroundColor = isWindow ? `${colors.blue[100]}33` : `${colors.green[100]}33`; // 20% opacity
+
+        return {
+          position: 'absolute' as const,
+          left: `${x}px`,
+          top: `${y}px`,
+          width: `${width}px`,
+          height: `${height}px`,
+          border: `2px solid ${borderColor}`,
+          backgroundColor,
+          pointerEvents: 'none' as const,
+          zIndex: portalComponentsExtended.overlay.selection.zIndex()
+        };
+      }
+    },
+
+    /**
+     * Tooltip Overlays
+     * Replaces: CursorTooltipOverlay.tsx inline styles
+     */
+    tooltip: {
+      container: {
+        position: 'absolute' as const,
+        padding: spacing[2],
+        backgroundColor: colors.surface.primary,
+        border: `1px solid ${colors.border.primary}`,
+        borderRadius: borderRadius.md,
+        boxShadow: shadows.md,
+        fontSize: typography.fontSize.sm,
+        color: colors.text.primary,
+        pointerEvents: 'none' as const,
+        zIndex: portalComponentsExtended.overlay.tooltip.zIndex()
+      },
+
+      /**
+       * Positioned tooltip
+       * Replaces: style={{ left: x + 10, top: y - 30 }}
+       */
+      positioned: (x: number, y: number, offsetX: number = 10, offsetY: number = -30): React.CSSProperties => ({
+        ...canvasUtilities.overlays.tooltip.container,
+        left: `${x + offsetX}px`,
+        top: `${y + offsetY}px`
+      })
+    },
+
+    /**
+     * Floating Panel Container (DXF Viewer)
+     * Replaces: FloatingPanelContainer.tsx inline styles
+     */
+    floatingPanel: {
+      /**
+       * Main container for floating panel
+       * Replaces: style={{ width: '384px', height: '100%', overflow: 'hidden', backgroundColor: '#111827', borderRadius: '8px', position: 'relative' }}
+       */
+      container: {
+        width: '384px',
+        height: '100%',
+        overflow: 'hidden' as const,
+        backgroundColor: colors.gray[900], // #111827
+        borderRadius: borderRadius.lg,
+        position: 'relative' as const
+      },
+
+      /**
+       * Content area with scrollable content
+       * Replaces: style={{ width: '384px', maxHeight: 'calc(100vh - 240px)', overflow: 'hidden auto', backgroundColor: '#111827', color: '#f3f4f6', padding: '12px 8px' }}
+       */
+      contentArea: {
+        width: '384px',
+        maxHeight: 'calc(100vh - 240px)',
+        overflow: 'hidden auto' as const,
+        backgroundColor: colors.gray[900], // #111827
+        color: colors.gray[100], // #f3f4f6
+        padding: `${spacing[3]} ${spacing[2]}` // 12px 8px
+      },
+
+      /**
+       * Inner content wrapper
+       * Replaces: style={{ width: '368px', overflow: 'hidden' }}
+       */
+      innerContent: {
+        width: '368px',
+        overflow: 'hidden' as const
+      },
+
+      /**
+       * Canvas overlay integration
+       * Replaces: DxfCanvasOverlayIntegration.tsx inline style
+       */
+      canvasOverlay: {
+        position: 'absolute' as const,
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        pointerEvents: 'none' as const,
+        zIndex: 100
+      },
+
+      /**
+       * Test Results Modal (Debug)
+       * Replaces: TestResultsModal.tsx inline styles
+       */
+      testModal: {
+        /**
+         * Modal backdrop with maximum z-index
+         * Replaces: style={{ pointerEvents: 'auto', zIndex: 999999 }}
+         */
+        backdrop: {
+          pointerEvents: 'auto' as const,
+          zIndex: 999999 // Very high z-index to be above everything
+        },
+
+        /**
+         * Modal content container
+         * Replaces: style={{ width: '90%', maxWidth: '1200px', height: '85vh', maxHeight: '900px', pointerEvents: 'auto', zIndex: 1000000 }}
+         */
+        content: {
+          width: '90%',
+          maxWidth: '1200px',
+          height: '85vh',
+          maxHeight: '900px',
+          pointerEvents: 'auto' as const,
+          zIndex: 1000000 // Even higher for modal content
+        }
+      },
+
+      /**
+       * Draggable Overlay Properties Panel
+       * Replaces: DraggableOverlayProperties.tsx inline styles
+       */
+      overlayProperties: {
+        /**
+         * Main draggable container
+         * Replaces: style={{ position: 'fixed', left: `${position.x}px`, top: `${position.y}px`, zIndex: 1000, pointerEvents: 'auto', cursor: isDragging ? 'grabbing' : 'grab', width: '320px' }}
+         */
+        container: (position: { x: number; y: number }, isDragging: boolean): React.CSSProperties => ({
+          position: 'fixed' as const,
+          left: `${position.x}px`,
+          top: `${position.y}px`,
+          zIndex: 1000,
+          pointerEvents: 'auto' as const,
+          cursor: isDragging ? 'grabbing' : 'grab',
+          width: '320px'
+        }),
+
+        /**
+         * Drag handle header with minimum height
+         * Replaces: style={{ minHeight: '32px' }}
+         */
+        dragHandle: {
+          minHeight: '32px'
+        },
+
+        /**
+         * Button with pointer events
+         * Replaces: style={{ pointerEvents: 'auto' }}
+         */
+        button: {
+          pointerEvents: 'auto' as const
+        }
+      },
+
+      /**
+       * Draggable Overlay Toolbar Panel
+       * Replaces: DraggableOverlayToolbar.tsx inline styles
+       */
+      overlayToolbar: {
+        /**
+         * Main draggable toolbar container
+         * Replaces: style={{ position: 'fixed', left: `${position.x}px`, top: `${position.y}px`, zIndex: 1000, pointerEvents: 'auto', cursor: isDragging ? 'grabbing' : 'grab' }}
+         */
+        container: (position: { x: number; y: number }, isDragging: boolean): React.CSSProperties => ({
+          position: 'fixed' as const,
+          left: `${position.x}px`,
+          top: `${position.y}px`,
+          zIndex: 1000,
+          pointerEvents: 'auto' as const,
+          cursor: isDragging ? 'grabbing' : 'grab'
+        }),
+
+        /**
+         * Toolbar drag handle header
+         * Replaces: style={{ minHeight: '24px' }}
+         */
+        dragHandle: {
+          minHeight: '24px'
+        }
+      },
+
+      /**
+       * Enterprise Contact Dropdown
+       * Replaces: enterprise-contact-dropdown.tsx inline styles
+       */
+      contactDropdown: {
+        /**
+         * Dropdown positioning and sizing
+         * Replaces: style={{ top: buttonRect.bottom + 8, left: buttonRect.left, width: buttonRect.width, minWidth: '200px', maxHeight: '400px', overflow: 'hidden' }}
+         */
+        positioning: (buttonRect: DOMRect): React.CSSProperties => ({
+          top: buttonRect.bottom + 8,
+          left: buttonRect.left,
+          width: buttonRect.width,
+          minWidth: '200px',
+          maxHeight: '400px',
+          overflow: 'hidden' as const
+        }),
+
+        /**
+         * Scrollable results area with custom scrollbar
+         * Replaces: style={{ maxHeight: '300px', minHeight: '200px', scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 transparent', WebkitScrollbarWidth: '6px' }}
+         */
+        scrollableResults: {
+          maxHeight: '300px',
+          minHeight: '200px',
+          scrollbarWidth: 'thin' as const,
+          scrollbarColor: '#cbd5e1 transparent',
+          WebkitScrollbarWidth: '6px'
+        }
+      },
+
+      /**
+       * CAD Status Bar (DXF Viewer)
+       * Replaces: CadStatusBar.tsx S object inline styles
+       */
+      cadStatusBar: {
+        /**
+         * Main status bar container
+         * Replaces: S.bar
+         */
+        container: {
+          display: 'flex' as const,
+          gap: spacing[1.5], // 6px
+          padding: `${spacing[1.5]} ${spacing[3]}`, // 6px 12px
+          background: colors.gray[900], // #1b1b1b
+          borderTop: `1px solid ${colors.gray[700]}`, // #2a2a2a
+          alignItems: 'center' as const,
+          boxShadow: '0 -2px 4px rgba(0,0,0,0.2)'
+        },
+
+        /**
+         * Toggle button base styles
+         * Replaces: S.btn
+         */
+        button: {
+          display: 'flex' as const,
+          flexDirection: 'column' as const,
+          alignItems: 'center' as const,
+          padding: `${spacing[1]} ${spacing[2]}`, // 4px 8px
+          borderRadius: borderRadius.sm,
+          border: `1px solid ${colors.gray[600]}`, // #444
+          background: colors.gray[800], // #252525
+          color: colors.gray[300], // #ddd
+          cursor: 'pointer' as const,
+          transition: 'all 0.2s ease',
+          minWidth: '50px'
+        },
+
+        /**
+         * Active button state
+         * Replaces: S.on
+         */
+        buttonActive: {
+          background: colors.blue[500], // #3a7afe
+          borderColor: colors.blue[500],
+          color: colors.white,
+          boxShadow: '0 0 8px rgba(58, 122, 254, 0.3)'
+        },
+
+        /**
+         * Button label text
+         * Replaces: S.label
+         */
+        label: {
+          fontSize: typography.fontSize.xs, // 11px equivalent
+          fontWeight: typography.fontWeight.semibold,
+          lineHeight: typography.lineHeight.tight
+        },
+
+        /**
+         * Function key indicator
+         * Replaces: S.fkey
+         */
+        functionKey: {
+          fontSize: '9px',
+          opacity: 0.7,
+          lineHeight: typography.lineHeight.none
+        },
+
+        /**
+         * Status information text
+         * Replaces: S.statusInfo
+         */
+        statusInfo: {
+          marginLeft: 'auto' as const,
+          fontSize: typography.fontSize.xs,
+          color: colors.gray[500], // #666
+          fontStyle: 'italic' as const
+        }
+      },
+
+      /**
+       * Color Manager Modal
+       * Replaces: ColorManager.tsx inline style
+       */
+      colorManager: {
+        /**
+         * Fixed positioned color picker container
+         * Replaces: style={{ position: 'fixed', left: colorMenu.x, top: colorMenu.y, zIndex: 9999 }}
+         */
+        container: (x: number, y: number): React.CSSProperties => ({
+          position: 'fixed' as const,
+          left: x,
+          top: y,
+          zIndex: 9999
+        })
+      }
+    },
+
+    /**
+     * Snap Indicator Overlays
+     * Replaces: SnapIndicatorOverlay.tsx inline styles
+     */
+    snapIndicator: {
+      point: (x: number, y: number, size: number = 8): React.CSSProperties => ({
+        position: 'absolute' as const,
+        left: `${x - size / 2}px`,
+        top: `${y - size / 2}px`,
+        width: `${size}px`,
+        height: `${size}px`,
+        borderRadius: '50%',
+        backgroundColor: colors.accent.primary,
+        border: `2px solid ${colors.surface.primary}`,
+        pointerEvents: 'none' as const,
+        zIndex: portalComponentsExtended.overlay.snap.zIndex()
+      }),
+
+      line: {
+        base: {
+          position: 'absolute' as const,
+          backgroundColor: colors.accent.primary,
+          opacity: 0.8,
+          pointerEvents: 'none' as const,
+          zIndex: portalComponentsExtended.overlay.snap.zIndex()
+        },
+
+        horizontal: (x1: number, x2: number, y: number): React.CSSProperties => ({
+          ...canvasUtilities.overlays.snapIndicator.line.base,
+          left: `${Math.min(x1, x2)}px`,
+          top: `${y}px`,
+          width: `${Math.abs(x2 - x1)}px`,
+          height: '1px'
+        }),
+
+        vertical: (x: number, y1: number, y2: number): React.CSSProperties => ({
+          ...canvasUtilities.overlays.snapIndicator.line.base,
+          left: `${x}px`,
+          top: `${Math.min(y1, y2)}px`,
+          width: '1px',
+          height: `${Math.abs(y2 - y1)}px`
+        })
+      }
+    }
+  },
+
+  // ============================================================================
+  // GEO-CANVAS SPECIFIC PATTERNS
+  // ============================================================================
+
+  /**
+   * Geo-Canvas InteractiveMap Patterns
+   * Replaces: SearchSystem.tsx, FloorPlanCanvas.tsx inline styles
+   */
+  geoCanvas: {
+    /**
+     * Interactive Map Container
+     * Replaces: style={{ position: 'relative', width: '100%', height: '100vh' }}
+     */
+    mapContainer: {
+      position: 'relative' as const,
+      width: '100%',
+      height: '100vh',
+      overflow: 'hidden'
+    },
+
+    /**
+     * Floor Plan Canvas Layer System
+     * Replaces: FloorPlanCanvasLayer.tsx complex inline styles
+     */
+    floorPlanCanvasLayer: {
+      /**
+       * Container με dynamic pointer events και z-index
+       * Replaces: Complex container με disableInteractions logic
+       */
+      container: (
+        disableInteractions: boolean,
+        hasOnClick: boolean,
+        zIndex: number = 1000
+      ): React.CSSProperties => ({
+        position: 'absolute' as const,
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        pointerEvents: disableInteractions ? 'none' : (hasOnClick ? 'auto' : 'none'),
+        zIndex
+      }),
+
+      /**
+       * Canvas element με full dimensions
+       * Replaces: Canvas element basic styling
+       */
+      canvas: {
+        width: '100%',
+        height: '100%',
+        display: 'block' as const
+      }
+    },
+
+    /**
+     * Floor Plan Controls System
+     * Replaces: FloorPlanControls.tsx inline styles
+     */
+    floorPlanControls: {
+      /**
+       * Main controls container
+       * Replaces: style={{ minWidth: '280px', border: '1px solid #e5e7eb' }}
+       */
+      container: {
+        minWidth: '280px',
+        border: '1px solid #e5e7eb',
+        backgroundColor: '#ffffff',
+        borderRadius: '0.5rem', // rounded-lg
+        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)', // shadow-lg
+        padding: '1rem' // p-4
+      }
+    },
+
+    /**
+     * Search Overlay Positioning
+     * Replaces: SearchSystem.tsx positioning patterns
+     */
+    searchOverlay: {
+      base: {
+        position: 'absolute' as const,
+        top: spacing[4],
+        left: spacing[4],
+        right: spacing[4],
+        zIndex: portalComponentsExtended.overlay.search.zIndex(),
+        pointerEvents: 'auto' as const
+      },
+
+      results: {
+        position: 'absolute' as const,
+        top: '100%',
+        left: 0,
+        right: 0,
+        marginTop: spacing[2],
+        backgroundColor: colors.surface.primary,
+        border: `1px solid ${colors.border.primary}`,
+        borderRadius: borderRadius.md,
+        boxShadow: shadows.lg,
+        maxHeight: '400px',
+        overflowY: 'auto' as const,
+        zIndex: portalComponentsExtended.overlay.searchResults.zIndex()
+      }
+    },
+
+    /**
+     * Floor Plan Control Patterns
+     * Replaces: FloorPlanControls.tsx inline styles
+     */
+    controls: {
+      panel: {
+        position: 'absolute' as const,
+        top: spacing[4],
+        right: spacing[4],
+        backgroundColor: colors.surface.primary,
+        border: `1px solid ${colors.border.primary}`,
+        borderRadius: borderRadius.md,
+        padding: spacing[3],
+        boxShadow: shadows.md,
+        zIndex: portalComponentsExtended.overlay.controls.zIndex()
+      },
+
+      button: {
+        base: {
+          padding: `${spacing[2]} ${spacing[3]}`,
+          backgroundColor: colors.surface.secondary,
+          border: `1px solid ${colors.border.primary}`,
+          borderRadius: borderRadius.sm,
+          fontSize: typography.fontSize.sm,
+          color: colors.text.primary,
+          cursor: 'pointer'
+        },
+
+        active: {
+          backgroundColor: colors.primary[100],
+          borderColor: colors.primary[500],
+          color: colors.primary[700]
+        }
+      }
+    }
+  },
+
+  // ============================================================================
+  // ZOOM & INTERACTION OVERLAYS
+  // ============================================================================
+
+  /**
+   * Zoom Window & Interactive Overlays
+   */
+  zoom: {
+    /**
+     * Zoom Window Overlay
+     * Replaces: ZoomWindowOverlay.tsx inline styles
+     */
+    window: {
+      container: {
+        position: 'absolute' as const,
+        inset: 0,
+        pointerEvents: 'none' as const,
+        zIndex: portalComponentsExtended.overlay.zoom.zIndex()
+      },
+
+      /**
+       * Zoom window rectangle με dashed border
+       * Replaces: style={{ left: x, top: y, width: w, height: h, border: 'dashed blue' }}
+       */
+      rectangle: (x: number, y: number, width: number, height: number): React.CSSProperties => ({
+        position: 'absolute' as const,
+        left: `${x}px`,
+        top: `${y}px`,
+        width: `${width}px`,
+        height: `${height}px`,
+        border: `2px dashed ${colors.blue[500]}`,
+        backgroundColor: `${colors.blue[100]}33`, // 20% opacity
+        pointerEvents: 'none' as const,
+        zIndex: portalComponentsExtended.overlay.zoom.zIndex()
+      })
+    }
+  },
+
+  // ============================================================================
+  // GEO-CANVAS INTERACTIVE ELEMENTS
+  // ============================================================================
+
+  /**
+   * GeoCanvas Specific Interactive Patterns
+   * Replaces: InteractiveMap.tsx complex inline styles
+   */
+  geoInteractive: {
+    /**
+     * Conditional cursor patterns για interactive states
+     * Replaces: cursor: shouldHighlight ? 'pointer' : (complete ? 'default' : 'pointer')
+     */
+    cursor: {
+      conditionalPointer: (condition1: boolean, condition2: boolean): React.CSSProperties => ({
+        cursor: condition1 ? 'pointer' : (condition2 ? 'default' : 'pointer')
+      }),
+      drawingState: (isDrawing: boolean, isPicking: boolean): React.CSSProperties => ({
+        cursor: isDrawing || isPicking ? 'crosshair' : 'default'
+      })
+    },
+
+    /**
+     * Interactive control point styling
+     * Replaces: complex zIndex + pointerEvents + cursor combinations
+     */
+    controlPoint: {
+      base: {
+        zIndex: portalComponents.zIndex.critical,
+        pointerEvents: 'auto' as const,
+      },
+      withCursor: (shouldHighlightFirst: boolean, isComplete: boolean): React.CSSProperties => ({
+        zIndex: portalComponents.zIndex.critical,
+        pointerEvents: 'auto' as const,
+        cursor: shouldHighlightFirst ? 'pointer' : (isComplete ? 'default' : 'pointer')
+      })
+    },
+
+    /**
+     * Accuracy circle geometry patterns
+     * Replaces: dynamic circle styling με radius, colors, transforms
+     */
+    accuracyCircle: (
+      radius: number,
+      color: string,
+      opacity: number = 0.2
+    ): React.CSSProperties => ({
+      width: radius * 2,
+      height: radius * 2,
+      borderRadius: '50%',
+      border: `2px solid ${color}`,
+      backgroundColor: `${color}${Math.round(opacity * 255).toString(16).padStart(2, '0')}`,
+      transform: 'translate(-50%, -50%)',
+      left: '50%',
+      top: '50%',
+      position: 'absolute' as const,
+      pointerEvents: 'none' as const
+    }),
+    accuracyZone: (
+      size: number,
+      color: string,
+      level: 'excellent' | 'good' | 'moderate' | 'poor',
+      opacity: number = 0.25
+    ): React.CSSProperties => ({
+      width: size,
+      height: size,
+      backgroundColor: `${color}${Math.round(opacity * 255).toString(16).padStart(2, '0')}`,
+      border: `2px solid ${color}`,
+      borderRadius: level === 'excellent' ? '50%' :
+                   level === 'good' ? '4px' : '0',
+      transform: 'translate(-50%, -50%) rotate(45deg)',
+      left: '50%',
+      top: '50%',
+      position: 'absolute' as const,
+      pointerEvents: 'none' as const,
+      zIndex: portalComponents.zIndex.modal
+    }),
+    legendItem: (color: string): React.CSSProperties => ({
+      borderColor: color
+    }),
+    pinMarker: (
+      pointRadius: number,
+      opacity: number = 0.7
+    ): React.CSSProperties => ({
+      width: 20,
+      height: 28,
+      background: 'linear-gradient(135deg, #3b82f6, #60a5fa)',
+      borderRadius: '50% 50% 50% 0%',
+      transform: 'translate(-50%, -100%) rotate(-45deg)',
+      border: '1px solid white',
+      boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+      cursor: 'crosshair',
+      position: 'relative' as const,
+      opacity
+    }),
+    pinCenterDot: (): React.CSSProperties => ({
+      position: 'absolute' as const,
+      top: '30%',
+      left: '30%',
+      width: 4,
+      height: 4,
+      backgroundColor: 'white',
+      borderRadius: '50%',
+      transform: 'rotate(45deg)'
+    }),
+    drawingPoint: (index: number): React.CSSProperties => ({
+      width: 12,
+      height: 12,
+      backgroundColor: '#3b82f6',
+      borderRadius: '50%',
+      border: '2px solid #1e40af',
+      transform: 'translate(-50%, -50%)',
+      cursor: 'pointer',
+      animation: 'pulse 1s ease-in-out infinite'
+    }),
+    radiusLabel: (): React.CSSProperties => ({
+      background: 'rgba(0,0,0,0.8)',
+      color: 'white',
+      padding: '4px 8px',
+      borderRadius: '4px',
+      fontSize: '12px',
+      fontWeight: 'bold',
+      transform: 'translate(-50%, -50%)',
+      whiteSpace: 'nowrap' as const,
+      pointerEvents: 'none' as const
+    }),
+    polygonVertex: (
+      pointRadius: number,
+      pointColor: string,
+      strokeColor: string
+    ): React.CSSProperties => ({
+      width: pointRadius * 2,
+      height: pointRadius * 2,
+      backgroundColor: pointColor,
+      borderRadius: '50%',
+      border: `1px solid ${strokeColor}`,
+      transform: 'translate(-50%, -50%)',
+      cursor: 'pointer'
+    }),
+
+    /**
+     * Control point styling με full interaction states
+     * Replaces: complex style objects with zIndex, pointerEvents, cursor
+     */
+    controlPointInteraction: (
+      isSelected: boolean,
+      shouldHighlight: boolean,
+      isCompleted: boolean
+    ): React.CSSProperties => ({
+      zIndex: shouldHighlight ? portalComponents.zIndex.modal + 200 :
+              isSelected ? portalComponents.zIndex.modal + 100 :
+              portalComponents.zIndex.modal,
+      pointerEvents: isCompleted ? 'none' : 'auto',
+      cursor: isCompleted ? 'default' : (shouldHighlight ? 'pointer' : 'pointer')
+    }),
+
+    /**
+     * Accuracy zone icon rotation
+     * Replaces: style={{ transform: 'rotate(-45deg)' }}
+     */
+    accuracyZoneIcon: (): React.CSSProperties => ({
+      transform: 'rotate(-45deg)'
+    }),
+
+    /**
+     * Preview radius label με blue background
+     * Replaces: complex preview styling με specific blue colors και opacity
+     */
+    previewRadiusLabel: (opacity: number = 0.8): React.CSSProperties => ({
+      background: 'rgba(59, 130, 246, 0.9)',
+      color: 'white',
+      padding: '2px 6px',
+      borderRadius: '3px',
+      fontSize: '11px',
+      fontWeight: 'bold',
+      transform: 'translate(-50%, -50%)',
+      whiteSpace: 'nowrap' as const,
+      pointerEvents: 'none' as const,
+      opacity
+    }),
+
+    /**
+     * Dynamic pin marker με gradient background και custom colors
+     * Replaces: complex pin styling με dynamic gradients
+     */
+    dynamicPinMarker: (
+      strokeColor: string,
+      fillColor: string
+    ): React.CSSProperties => ({
+      width: 24,
+      height: 32,
+      background: `linear-gradient(135deg, ${strokeColor}, ${fillColor})`,
+      borderRadius: '50% 50% 50% 0%',
+      transform: 'translate(-50%, -100%) rotate(-45deg)',
+      border: '2px solid white',
+      boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
+      cursor: 'pointer',
+      position: 'relative' as const
+    }),
+
+    /**
+     * Dynamic pin center dot με enhanced sizing
+     * Replaces: nested position styling για pin center
+     */
+    dynamicPinCenterDot: (): React.CSSProperties => ({
+      position: 'absolute' as const,
+      top: '30%',
+      left: '30%',
+      width: 6,
+      height: 6,
+      backgroundColor: 'white',
+      borderRadius: '50%',
+      transform: 'rotate(45deg)'
+    }),
+
+    /**
+     * Enhanced accuracy circle με custom zIndex support
+     * Replaces: spread operator με manual zIndex override
+     */
+    accuracyCircleWithZIndex: (
+      radius: number,
+      color: string,
+      opacity: number = 0.125,
+      customZIndex?: number
+    ): React.CSSProperties => ({
+      width: radius * 2,
+      height: radius * 2,
+      borderRadius: '50%',
+      border: `2px solid ${color}`,
+      backgroundColor: `${color}${Math.round(opacity * 255).toString(16).padStart(2, '0')}`,
+      transform: 'translate(-50%, -50%)',
+      left: '50%',
+      top: '50%',
+      position: 'absolute' as const,
+      pointerEvents: 'none' as const,
+      zIndex: customZIndex ?? portalComponents.zIndex.modal
+    }),
+
+    /**
+     * Floor plan overlay styling
+     * Replaces: inline floor plan style configurations
+     */
+    floorPlanOverlay: (
+      opacity: number,
+      strokeColor: string = '#000000',
+      strokeWidth: number = 2
+    ) => ({
+      opacity,
+      strokeColor,
+      strokeWidth
+    }),
+
+    /**
+     * 🏢 FLOOR PLAN DRAGGABLE PANEL SYSTEM
+     * Enterprise patterns για draggable panels, dialogs, και control interfaces
+     * Replaces: FloorPlanControlPointPicker.tsx inline styles
+     */
+
+    /**
+     * Draggable panel container με position control
+     * Replaces: complex fixed positioning με shadows και borders
+     */
+    draggablePanelContainer: (
+      position: { x: number; y: number },
+      isDragging: boolean,
+      customZIndex?: number
+    ): React.CSSProperties => ({
+      position: 'fixed' as const,
+      left: `${position.x}px`,
+      top: `${position.y}px`,
+      zIndex: customZIndex ?? 1000,
+      backgroundColor: 'white',
+      border: '2px solid #3b82f6',
+      borderRadius: '8px',
+      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+      minWidth: '380px',
+      maxWidth: '500px',
+      maxHeight: '85vh',
+      display: 'flex',
+      flexDirection: 'column' as const,
+      userSelect: isDragging ? 'none' : 'auto'
+    }),
+
+    /**
+     * Draggable panel handle με grab cursor states
+     * Replaces: drag handle styling με cursor states
+     */
+    draggablePanelHandle: (isDragging: boolean): React.CSSProperties => ({
+      cursor: isDragging ? 'grabbing' : 'grab',
+      backgroundColor: '#3b82f6',
+      color: 'white',
+      padding: '12px 16px',
+      borderTopLeftRadius: '6px',
+      borderTopRightRadius: '6px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      fontWeight: 600,
+      fontSize: '16px'
+    }),
+
+    /**
+     * Panel tab navigation container
+     * Replaces: tab container με background και borders
+     */
+    draggablePanelTabNavigation: (): React.CSSProperties => ({
+      display: 'flex',
+      backgroundColor: '#f8fafc',
+      borderBottom: '1px solid #e2e8f0'
+    }),
+
+    /**
+     * Panel tab button με active states
+     * Replaces: tab button styling με conditional states
+     */
+    draggablePanelTabButton: (
+      isActive: boolean,
+      isDisabled?: boolean
+    ): React.CSSProperties => ({
+      flex: 1,
+      padding: '12px 16px',
+      border: 'none',
+      backgroundColor: isActive ? 'white' : 'transparent',
+      color: isDisabled ? '#94a3b8' : (isActive ? '#3b82f6' : '#64748b'),
+      fontWeight: isActive ? 600 : 400,
+      cursor: isDisabled ? 'not-allowed' : 'pointer',
+      borderBottom: isActive ? '2px solid #3b82f6' : '2px solid transparent',
+      transition: 'all 0.2s ease'
+    }),
+
+    /**
+     * Panel form section container
+     * Replaces: form section styling με consistent spacing
+     */
+    draggablePanelFormSection: (hasError?: boolean): React.CSSProperties => ({
+      padding: '20px',
+      backgroundColor: 'white',
+      borderBottom: '1px solid #f1f5f9',
+      borderColor: hasError ? '#ef4444' : '#f1f5f9'
+    }),
+
+    /**
+     * Panel button styling με variant support
+     * Replaces: button inline styles με consistent theming
+     */
+    draggablePanelButton: (
+      variant: 'primary' | 'secondary' | 'success' | 'danger' = 'primary',
+      isDisabled?: boolean,
+      isFullWidth?: boolean
+    ): React.CSSProperties => {
+      const variants = {
+        primary: {
+          backgroundColor: isDisabled ? '#e2e8f0' : '#3b82f6',
+          color: isDisabled ? '#94a3b8' : 'white',
+          border: 'none'
+        },
+        secondary: {
+          backgroundColor: isDisabled ? '#f8fafc' : '#f1f5f9',
+          color: isDisabled ? '#94a3b8' : '#475569',
+          border: '1px solid #e2e8f0'
+        },
+        success: {
+          backgroundColor: isDisabled ? '#e2e8f0' : '#10b981',
+          color: isDisabled ? '#94a3b8' : 'white',
+          border: 'none'
+        },
+        danger: {
+          backgroundColor: isDisabled ? '#e2e8f0' : '#ef4444',
+          color: isDisabled ? '#94a3b8' : 'white',
+          border: 'none'
+        }
+      };
+
+      return {
+        ...variants[variant],
+        padding: '8px 16px',
+        borderRadius: '6px',
+        fontWeight: 500,
+        fontSize: '14px',
+        cursor: isDisabled ? 'not-allowed' : 'pointer',
+        transition: 'all 0.2s ease',
+        width: isFullWidth ? '100%' : 'auto',
+        minHeight: '36px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '8px'
+      };
+    },
+
+    /**
+     * Panel input field styling με error states
+     * Replaces: input field inline styles
+     */
+    draggablePanelInput: (
+      hasError?: boolean,
+      isDisabled?: boolean
+    ): React.CSSProperties => ({
+      width: '100%',
+      padding: '8px 12px',
+      border: `1px solid ${hasError ? '#ef4444' : '#e2e8f0'}`,
+      borderRadius: '6px',
+      fontSize: '14px',
+      backgroundColor: isDisabled ? '#f8fafc' : 'white',
+      color: isDisabled ? '#94a3b8' : '#1e293b',
+      cursor: isDisabled ? 'not-allowed' : 'text',
+      transition: 'all 0.2s ease',
+      outline: 'none'
+    }),
+
+    /**
+     * Panel help text styling
+     * Replaces: help text inline styles
+     */
+    draggablePanelHelpText: (hasError?: boolean): React.CSSProperties => ({
+      fontSize: '12px',
+      color: hasError ? '#ef4444' : '#64748b',
+      marginTop: '4px',
+      lineHeight: 1.4
+    }),
+
+    /**
+     * Panel spacing utilities
+     * Replaces: margin/padding inline styles
+     */
+    draggablePanelSpacing: {
+      section: { marginBottom: '16px' },
+      field: { marginBottom: '12px' },
+      group: { marginBottom: '20px' },
+      button: { marginTop: '16px' }
+    },
+
+    /**
+     * Progress bar με dynamic width percentage
+     * Replaces: style={{ width: `${percent}%` }}
+     */
+    draggablePanelProgressBar: (percentage: number): React.CSSProperties => ({
+      width: `${Math.min(Math.max(0, percentage), 100)}%`,
+      transition: 'width 0.3s ease'
+    }),
+
+    /**
+     * Fixed sidebar panel για dashboard και management interfaces
+     * Replaces: Alert dashboard fixed positioning
+     */
+    fixedSidebarPanel: (
+      side: 'left' | 'right' = 'right',
+      width: string = '480px'
+    ): React.CSSProperties => ({
+      position: 'fixed' as const,
+      top: '80px',
+      [side]: '16px',
+      width,
+      maxHeight: 'calc(100vh - 100px)',
+      zIndex: 300,
+      overflow: 'auto' as const
+    }),
+
+    /**
+     * 📄 PDF VIEWER CONTAINER SYSTEM
+     * Enterprise utilities for PDF display components
+     */
+
+    /**
+     * PDF container with dimensions
+     * Replaces: style={{ width: layoutUtilities.pixels(width), height: layoutUtilities.pixels(height) }}
+     */
+    pdfContainer: (width: number, height: number): React.CSSProperties => ({
+      width: layoutUtilities.pixels(width),
+      height: layoutUtilities.pixels(height)
+    }),
+
+    /**
+     * PDF fallback container (no file state)
+     * Replaces: inline styles for empty PDF state
+     */
+    pdfFallbackContainer: (width: number, height: number): React.CSSProperties => ({
+      width: layoutUtilities.pixels(width),
+      height: layoutUtilities.pixels(height),
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.background.secondary,
+      border: `2px dashed ${colors.border.default}`,
+      borderRadius: spacing.radius.md
+    }),
+
+    /**
+     * PDF display wrapper
+     * Replaces: style={{ width: layoutUtilities.pixels(width), height: layoutUtilities.pixels(height) }}
+     */
+    pdfDisplayWrapper: (width: number, height: number): React.CSSProperties => ({
+      width: layoutUtilities.pixels(width),
+      height: layoutUtilities.pixels(height),
+      border: `1px solid ${colors.border.default}`,
+      borderRadius: spacing.radius.md,
+      overflow: 'hidden' as const,
+      backgroundColor: colors.background.secondary
+    }),
+
+    /**
+     * 🎛️ ENTERPRISE DROPDOWN SYSTEM
+     * Portal-based dropdown με dynamic positioning
+     */
+
+    /**
+     * Portal dropdown container με dynamic positioning
+     * Replaces: style={{ top, left, width, minWidth, maxHeight, overflow }} για portal dropdowns
+     */
+    portalDropdownContainer: (
+      buttonRect: { bottom: number; left: number; width: number },
+      minWidth: string = '200px',
+      maxHeight: string = '400px'
+    ): React.CSSProperties => ({
+      position: 'fixed' as const,
+      top: buttonRect.bottom + 8,
+      left: buttonRect.left,
+      width: buttonRect.width,
+      minWidth,
+      maxHeight,
+      overflow: 'hidden' as const,
+      zIndex: 99999
+    }),
+
+    /**
+     * Scrollable results container για dropdown options
+     * Replaces: scrollable area με custom scrollbar styling
+     */
+    dropdownScrollableResults: (
+      maxHeight: string = '300px',
+      minHeight: string = '200px'
+    ): React.CSSProperties => ({
+      maxHeight,
+      minHeight,
+      overflowY: 'scroll' as const,
+      scrollbarWidth: 'thin' as any,
+      scrollbarColor: '#cbd5e1 transparent',
+      WebkitScrollbarWidth: '6px'
+    }),
+
+    /**
+     * 📄 DOCUMENT PREVIEW SYSTEM
+     * Enterprise utilities για document live preview scaling
+     */
+
+    /**
+     * Document preview scaling container με transform origin
+     * Replaces: style={{ transform: scale, transformOrigin, width }} για document preview
+     */
+    documentPreviewScale: (scale: number): React.CSSProperties => ({
+      transform: `scale(${scale})`,
+      transformOrigin: 'top center' as const,
+      width: `${100 / scale}%`
+    }),
+
+    /**
+     * 🖼️ CANVAS DISPLAY SYSTEM
+     * Enterprise utilities για full-size canvas elements
+     */
+
+    /**
+     * Full-size canvas display container
+     * Replaces: style={{ width: '100%', height: '100%', display: 'block' }}
+     */
+    canvasFullDisplay: (): React.CSSProperties => ({
+      width: '100%',
+      height: '100%',
+      display: 'block'
+    }),
+
+    /**
+     * 📱 MOBILE SLIDE-IN SYSTEM
+     * Enterprise utilities για mobile detail panels
+     */
+
+    /**
+     * Mobile slide header με fixed height
+     * Replaces: style={{ height: layoutUtilities.pixels(48), minHeight: pixels(48), maxHeight: pixels(48) }}
+     */
+    mobileSlideHeader: (headerHeight: number = 48): React.CSSProperties => ({
+      height: layoutUtilities.pixels(headerHeight),
+      minHeight: layoutUtilities.pixels(headerHeight),
+      maxHeight: layoutUtilities.pixels(headerHeight)
+    }),
+
+    /**
+     * Mobile slide content με dynamic height
+     * Replaces: style={{ height: calc(100vh - headerHeight), flex: '1 1 auto' }}
+     */
+    mobileSlideContent: (headerHeight: number = 48): React.CSSProperties => ({
+      height: `calc(100vh - ${layoutUtilities.pixels(headerHeight)})`,
+      flex: '1 1 auto'
+    }),
+
+    /**
+     * 🎯 DEBUG CROSSHAIR SYSTEM
+     * Enterprise utilities για debug overlay positioning
+     */
+
+    /**
+     * Debug crosshair positioning με mouse offset
+     * Replaces: style={{ left: mouseScreen.x - 10, top: mouseScreen.y - 10 }}
+     */
+    debugCrosshairPosition: (mouseX: number, mouseY: number, offset: number = 10): React.CSSProperties => ({
+      left: mouseX - offset,
+      top: mouseY - offset,
+      position: 'absolute' as const
+    }),
+
+    /**
+     * 🎨 COLOR PICKER SYSTEM
+     * Enterprise utilities για color picker components
+     */
+
+    /**
+     * Color picker area container με size και touch action
+     * Replaces: style={{ width: size, height: size, touchAction: 'none' }}
+     */
+    colorPickerArea: (size: string): React.CSSProperties => ({
+      width: size,
+      height: size,
+      touchAction: 'none'
+    }),
+
+    /**
+     * Color picker thumb positioning με background color
+     * Replaces: style={{ left: position.x, top: position.y, backgroundColor: color }}
+     */
+    colorPickerThumb: (position: { x: number; y: number }, backgroundColor: string): React.CSSProperties => ({
+      left: position.x,
+      top: position.y,
+      backgroundColor
+    }),
+
+    /**
+     * 📊 ADVANCED CHARTS ANIMATION SYSTEM
+     * Enterprise patterns για chart animations και interactions
+     * Replaces: AdvancedCharts.tsx inline animation styles
+     */
+
+    /**
+     * Chart element transition animation για SVG elements
+     * Replaces: style={{ transition: animated ? 'all 0.3s ease' : 'none' }}
+     */
+    chartElementTransition: (
+      animated: boolean,
+      duration: 'fast' | 'normal' | 'slow' = 'normal'
+    ): React.CSSProperties => {
+      const durations = {
+        fast: animation.duration.normal,    // 200ms
+        normal: animation.duration.slow,    // 300ms
+        slow: animation.duration.slower     // 500ms
+      };
+
+      return {
+        transition: animated ? `all ${durations[duration]} ${animation.easing.ease}` : 'none'
+      };
+    },
+
+    /**
+     * Chart interaction styling με cursor states
+     * Replaces: cursor inline styles για interactive charts
+     */
+    chartInteraction: (
+      interactive: boolean,
+      animated: boolean = true,
+      duration: 'fast' | 'normal' | 'slow' = 'fast'
+    ): React.CSSProperties => {
+      const durations = {
+        fast: animation.duration.fast,      // 150ms
+        normal: animation.duration.normal,  // 200ms
+        slow: animation.duration.slow       // 300ms
+      };
+
+      return {
+        cursor: interactive ? 'pointer' : 'default',
+        transition: animated ? `all ${durations[duration]} ${animation.easing.easeInOut}` : 'none'
+      };
+    },
+
+    /**
+     * Chart combined animation & interaction utilities
+     * Replaces: combined transition + cursor inline styles
+     */
+    chartElementStyle: (
+      animated: boolean,
+      interactive: boolean,
+      duration: 'fast' | 'normal' | 'slow' = 'normal'
+    ): React.CSSProperties => ({
+      ...canvasUtilities.geoInteractive.chartElementTransition(animated, duration),
+      cursor: interactive ? 'pointer' : 'default'
+    }),
+
+    /**
+     * 📐 DXF VIEWER SIDEBAR SYSTEM
+     * Enterprise patterns για DXF sidebar, status bars, και floating panel containers
+     * Replaces: SidebarSection.tsx inline styles
+     */
+
+    /**
+     * DXF Sidebar main container με fixed width και positioning
+     * Replaces: SidebarSection container με hardcoded 384px width
+     */
+    dxfSidebar: {
+      container: {
+        width: '384px',
+        minWidth: '384px',
+        maxWidth: '384px',
+        height: '100%',
+        flexShrink: 0,
+        position: 'relative' as const,
+        overflow: 'hidden',
+        pointerEvents: 'auto' as const
+      },
+
+      /**
+       * Sidebar panel με enterprise dark theme και shadows
+       * Replaces: Inner div με backgroundColor #111827 και borders
+       */
+      panel: {
+        position: 'absolute' as const,
+        top: 0,
+        left: 0,
+        width: '384px',
+        height: '100%',
+        overflow: 'hidden',
+        backgroundColor: '#111827', // DXF dark theme
+        borderRadius: borderRadius.lg,
+        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+        border: '1px solid #6B7280'
+      },
+
+      /**
+       * Floating panel content area με reserved space για status bar
+       * Replaces: FloatingPanelContainer positioning με bottom: 120px
+       */
+      contentArea: {
+        position: 'absolute' as const,
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: '120px', // Reserve space for status bar
+        overflow: 'hidden'
+      },
+
+      /**
+       * Status bar container στο bottom του sidebar
+       * Replaces: Status bar με absolute positioning και border styling
+       */
+      statusBar: {
+        position: 'absolute' as const,
+        bottom: 0,
+        left: 0,
+        right: 0,
+        borderBottomLeftRadius: borderRadius.lg,
+        borderBottomRightRadius: borderRadius.lg,
+        backgroundColor: '#1F2937', // gray-800 equivalent
+        borderTop: '1px solid #6B7280', // gray-500 equivalent
+        padding: spacing[3]
+      }
+    },
+
+    /**
+     * 📱 RESPONSIVE DASHBOARD LAYOUT SYSTEM
+     * Enterprise patterns για responsive layouts, grids, sidebar management
+     * Replaces: ResponsiveDashboard.tsx inline styles
+     */
+
+    /**
+     * Responsive grid system με dynamic columns
+     * Replaces: gridStyle objects με columns και gap calculation
+     */
+    responsiveGrid: (columns: number, gap: number): React.CSSProperties => ({
+      display: 'grid',
+      gridTemplateColumns: `repeat(${columns}, 1fr)`,
+      gap: `var(--spacing-${gap})`,
+      width: '100%'
+    }),
+
+    /**
+     * Grid item με responsive spanning
+     * Replaces: gridColumn calculations για span και offset
+     */
+    responsiveGridItem: (
+      span: number,
+      offset: number = 0,
+      order?: number
+    ): React.CSSProperties => ({
+      gridColumn: offset > 0 ? `${offset + 1} / span ${span}` : `span ${span}`,
+      order: order || 'initial'
+    }),
+
+    /**
+     * Card grid με auto-fill και minmax
+     * Replaces: auto-fill pattern με responsive cards
+     */
+    responsiveCardGrid: (
+      minCardWidth: number,
+      maxCardWidth: number,
+      gap: number
+    ): React.CSSProperties => ({
+      display: 'grid',
+      gridTemplateColumns: `repeat(auto-fill, minmax(${minCardWidth}px, ${maxCardWidth}px))`,
+      gap: `var(--spacing-${gap})`,
+      justifyContent: 'center',
+      width: '100%'
+    }),
+
+    /**
+     * Dashboard sidebar με collapsible behavior
+     * Replaces: sidebar positioning και transition logic
+     */
+    dashboardSidebar: (
+      isCollapsed: boolean,
+      width: number,
+      collapsedWidth: number
+    ): React.CSSProperties => ({
+      width: isCollapsed ? `${collapsedWidth}px` : `${width}px`,
+      height: '100vh',
+      backgroundColor: 'var(--color-bg-secondary)',
+      borderRight: '1px solid var(--color-border-primary)',
+      transition: 'width var(--duration-base) var(--easing-ease-in-out)',
+      position: 'fixed' as const,
+      left: 0,
+      top: 0,
+      zIndex: 1000,
+      overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column' as const
+    }),
+
+    /**
+     * Sidebar toggle button με positioning
+     * Replaces: toggle button styling και positioning
+     */
+    sidebarToggleButton: (isCollapsed: boolean): React.CSSProperties => ({
+      position: 'absolute' as const,
+      top: '16px',
+      right: isCollapsed ? '8px' : '16px',
+      padding: '8px',
+      backgroundColor: 'var(--color-bg-primary)',
+      border: '1px solid var(--color-border-primary)',
+      borderRadius: 'var(--radius-md)',
+      cursor: 'pointer',
+      transition: 'all var(--duration-fast) var(--easing-ease-in-out)',
+      zIndex: 1001,
+      width: '32px',
+      height: '32px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: '14px'
+    }),
+
+    /**
+     * Sidebar content area με padding
+     * Replaces: sidebar content styling με conditional padding
+     */
+    sidebarContent: (isCollapsed: boolean): React.CSSProperties => ({
+      flex: 1,
+      overflow: 'auto' as const,
+      padding: isCollapsed ? '48px 8px 16px' : '48px 16px 16px'
+    }),
+
+    /**
+     * Dashboard header με sidebar-aware positioning
+     * Replaces: header positioning που αλλάζει βάσει sidebar state
+     */
+    dashboardHeader: (
+      height: number,
+      sidebarWidth: number,
+      sidebarCollapsed: boolean
+    ): React.CSSProperties => ({
+      height: `${height}px`,
+      backgroundColor: 'var(--color-bg-primary)',
+      borderBottom: '1px solid var(--color-border-primary)',
+      position: 'fixed' as const,
+      top: 0,
+      left: sidebarCollapsed ? '64px' : `${sidebarWidth}px`,
+      right: 0,
+      zIndex: 999,
+      display: 'flex',
+      alignItems: 'center',
+      padding: '0 var(--spacing-6)',
+      transition: 'left var(--duration-base) var(--easing-ease-in-out)'
+    }),
+
+    /**
+     * Dashboard footer με responsive positioning
+     * Replaces: footer positioning logic
+     */
+    dashboardFooter: (
+      height: number,
+      sidebarWidth: number,
+      sidebarCollapsed: boolean
+    ): React.CSSProperties => ({
+      height: `${height}px`,
+      backgroundColor: 'var(--color-bg-secondary)',
+      borderTop: '1px solid var(--color-border-primary)',
+      position: 'fixed' as const,
+      bottom: 0,
+      left: sidebarCollapsed ? '64px' : `${sidebarWidth}px`,
+      right: 0,
+      zIndex: 999,
+      display: 'flex',
+      alignItems: 'center',
+      padding: '0 var(--spacing-6)',
+      transition: 'left var(--duration-base) var(--easing-ease-in-out)'
+    }),
+
+    /**
+     * Main content area με responsive margins
+     * Replaces: main content positioning logic
+     */
+    dashboardMainContent: (
+      sidebarWidth: number,
+      sidebarCollapsed: boolean,
+      headerHeight: number,
+      footerHeight: number
+    ): React.CSSProperties => ({
+      marginLeft: sidebarCollapsed ? '64px' : `${sidebarWidth}px`,
+      marginTop: `${headerHeight}px`,
+      marginBottom: footerHeight > 0 ? `${footerHeight}px` : 0,
+      minHeight: `calc(100vh - ${headerHeight}px - ${footerHeight}px)`,
+      backgroundColor: 'var(--color-bg-tertiary)',
+      transition: 'margin-left var(--duration-base) var(--easing-ease-in-out)',
+      overflow: 'auto' as const
+    }),
+
+    /**
+     * Content container με centering και max-width
+     * Replaces: container styling logic
+     */
+    dashboardContentContainer: (
+      fluid: boolean,
+      centered: boolean
+    ): React.CSSProperties => ({
+      maxWidth: fluid ? '100%' : 'var(--container-max-width, 1280px)',
+      margin: centered ? '0 auto' : '0',
+      padding: 'var(--spacing-6)',
+      width: '100%'
+    }),
+
+    /**
+     * Dashboard layout base styling
+     * Replaces: layout wrapper styling
+     */
+    dashboardLayout: (): React.CSSProperties => ({
+      minHeight: '100vh',
+      backgroundColor: 'var(--color-bg-tertiary)',
+      fontFamily: 'var(--font-family-sans)',
+      color: 'var(--color-text-primary)',
+      position: 'relative' as const,
+      overflow: 'hidden'
+    }),
+
+    /**
+     * Mobile overlay για sidebar
+     * Replaces: mobile overlay styling με visibility control
+     */
+    dashboardMobileOverlay: (
+      showMobileOverlay: boolean,
+      prefersReducedMotion: boolean
+    ): React.CSSProperties => ({
+      position: 'fixed' as const,
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'var(--color-bg-overlay)',
+      zIndex: 999,
+      opacity: showMobileOverlay ? 1 : 0,
+      visibility: showMobileOverlay ? 'visible' : 'hidden',
+      transition: prefersReducedMotion
+        ? 'none'
+        : 'opacity var(--duration-base) var(--easing-ease-in-out), visibility var(--duration-base) var(--easing-ease-in-out)'
+    }),
+
+    /**
+     * Container με responsive max-width
+     * Replaces: container size variants
+     */
+    responsiveContainer: (size: 'sm' | 'md' | 'lg' | 'xl' | 'full'): React.CSSProperties => {
+      const maxWidths = {
+        sm: '640px',
+        md: '768px',
+        lg: '1024px',
+        xl: '1280px',
+        full: '100%'
+      };
+
+      return {
+        maxWidth: maxWidths[size],
+        margin: '0 auto',
+        padding: '0 var(--spacing-4)',
+        width: '100%'
+      };
+    },
+
+    /**
+     * Responsive spacer component
+     * Replaces: spacer dimension calculations
+     */
+    responsiveSpacer: (
+      spacingValue: number,
+      direction: 'horizontal' | 'vertical'
+    ): React.CSSProperties => ({
+      [direction === 'horizontal' ? 'width' : 'height']: `var(--spacing-${spacingValue})`,
+      [direction === 'horizontal' ? 'height' : 'width']: direction === 'horizontal' ? '1px' : '100%',
+      flexShrink: 0
+    }),
+
+    /**
+     * Mobile layout spacing
+     * Replaces: mobile margin calculations
+     */
+    mobileLayoutSpacing: (gap: number): React.CSSProperties => ({
+      marginBottom: `var(--spacing-${gap})`
+    })
+  }
+} as const;

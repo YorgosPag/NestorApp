@@ -8,7 +8,8 @@
 
 import React, { useState, useEffect, useCallback, ReactNode } from 'react';
 import { useTheme, useBreakpoint } from '../theme/ThemeProvider';
-import { canvasUtilities } from '@/styles/design-tokens';
+// Enterprise Canvas UI Migration - Phase B
+import { canvasUI } from '@/styles/design-tokens/canvas';
 
 // ============================================================================
 // LAYOUT TYPES
@@ -107,7 +108,7 @@ export const Grid: React.FC<GridProps> = ({
   return (
     <div
       className={`responsive-grid ${className}`}
-      style={canvasUtilities.geoInteractive.responsiveGrid(cols, gapValue)}
+      style={canvasUI.positioning.responsive.responsiveGrid(cols, gapValue)}
     >
       {children}
     </div>
@@ -130,7 +131,7 @@ export const GridItem: React.FC<GridItemProps> = ({
   return (
     <div
       className={`grid-item ${className}`}
-      style={canvasUtilities.geoInteractive.responsiveGridItem(spanValue, offsetValue, orderValue)}
+      style={canvasUI.positioning.responsive.responsiveGridItem(spanValue, offsetValue, orderValue)}
     >
       {children}
     </div>
@@ -149,7 +150,7 @@ export const CardGrid: React.FC<CardGridProps> = ({
   return (
     <div
       className={`card-grid ${className}`}
-      style={canvasUtilities.geoInteractive.responsiveCardGrid(minCardWidth, maxCardWidth, gap)}
+      style={canvasUI.positioning.responsive.responsiveCardGrid(minCardWidth, maxCardWidth, gap)}
     >
       {children}
     </div>
@@ -193,18 +194,18 @@ const Sidebar: React.FC<SidebarProps> = ({
   return (
     <aside
       className={`dashboard-sidebar ${className}`}
-      style={canvasUtilities.geoInteractive.dashboardSidebar(isCollapsed, width, collapsedWidth)}
+      style={canvasUI.positioning.responsive.dashboardSidebar(isCollapsed, width, collapsedWidth)}
     >
       <button
         onClick={onToggle}
-        style={canvasUtilities.geoInteractive.sidebarToggleButton(isCollapsed)}
+        style={canvasUI.positioning.responsive.sidebarToggleButton(isCollapsed)}
         title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
       >
         {isCollapsed ? '→' : '←'}
       </button>
 
-      <div style={canvasUtilities.geoInteractive.sidebarContent(isCollapsed)}>
+      <div style={canvasUI.positioning.responsive.sidebarContent(isCollapsed)}>
         {children}
       </div>
     </aside>
@@ -235,7 +236,7 @@ const Header: React.FC<HeaderProps> = ({
   return (
     <header
       className={`dashboard-header ${className}`}
-      style={canvasUtilities.geoInteractive.dashboardHeader(height, sidebarWidth, sidebarCollapsed)}
+      style={canvasUI.positioning.responsive.dashboardHeader(height, sidebarWidth, sidebarCollapsed)}
     >
       {children}
     </header>
@@ -266,7 +267,7 @@ const Footer: React.FC<FooterProps> = ({
   return (
     <footer
       className={`dashboard-footer ${className}`}
-      style={canvasUtilities.geoInteractive.dashboardFooter(height, sidebarWidth, sidebarCollapsed)}
+      style={canvasUI.positioning.responsive.dashboardFooter(height, sidebarWidth, sidebarCollapsed)}
     >
       {children}
     </footer>
@@ -304,9 +305,9 @@ const MainContent: React.FC<MainContentProps> = ({
   return (
     <main
       className={`dashboard-main ${className}`}
-      style={canvasUtilities.geoInteractive.dashboardMainContent(sidebarWidth, sidebarCollapsed, headerHeight, footerHeight)}
+      style={canvasUI.positioning.responsive.dashboardMainContent(sidebarWidth, sidebarCollapsed, headerHeight, footerHeight)}
     >
-      <div style={canvasUtilities.geoInteractive.dashboardContentContainer(fluid, centered)}>
+      <div style={canvasUI.positioning.responsive.dashboardContentContainer(fluid, centered)}>
         {children}
       </div>
     </main>
@@ -391,14 +392,14 @@ export const ResponsiveDashboard: React.FC<DashboardLayoutProps> = ({
   return (
     <div
       className={`responsive-dashboard ${className}`}
-      style={canvasUtilities.geoInteractive.dashboardLayout()}
+      style={canvasUI.positioning.responsive.dashboardLayout()}
       data-sidebar-collapsed={sidebarCollapsed}
       data-breakpoint={breakpoint}
     >
       {/* Mobile Overlay */}
       {showMobileOverlay && (
         <div
-          style={canvasUtilities.geoInteractive.dashboardMobileOverlay(showMobileOverlay, prefersReducedMotion)}
+          style={canvasUI.positioning.responsive.dashboardMobileOverlay(showMobileOverlay, prefersReducedMotion)}
           onClick={toggleSidebar}
           aria-hidden="true"
         />
@@ -479,7 +480,7 @@ export const TwoColumnLayout: React.FC<{
   if (isMobile) {
     return (
       <div className={`two-column-layout-mobile ${className}`}>
-        <div style={canvasUtilities.geoInteractive.mobileLayoutSpacing(gap)}>
+        <div style={canvasUI.positioning.responsive.mobileLayoutSpacing(gap)}>
           {leftColumn}
         </div>
         <div>
@@ -541,10 +542,10 @@ export const ThreeColumnLayout: React.FC<{
   if (isMobile) {
     return (
       <div className={`three-column-layout-mobile ${className}`}>
-        <div style={canvasUtilities.geoInteractive.mobileLayoutSpacing(gap)}>
+        <div style={canvasUI.positioning.responsive.mobileLayoutSpacing(gap)}>
           {leftColumn}
         </div>
-        <div style={canvasUtilities.geoInteractive.mobileLayoutSpacing(gap)}>
+        <div style={canvasUI.positioning.responsive.mobileLayoutSpacing(gap)}>
           {centerColumn}
         </div>
         <div>
@@ -588,7 +589,7 @@ export const Container: React.FC<{
   return (
     <div
       className={`container container-${size} ${className}`}
-      style={canvasUtilities.geoInteractive.responsiveContainer(size)}
+      style={canvasUI.positioning.responsive.responsiveContainer(size)}
     >
       {children}
     </div>
@@ -610,7 +611,7 @@ export const Spacer: React.FC<{
 
   return <div
     className={`spacer spacer-${direction}`}
-    style={canvasUtilities.geoInteractive.responsiveSpacer(spacingValue, direction)}
+    style={canvasUI.positioning.responsive.responsiveSpacer(spacingValue, direction)}
   />;
 };
 
