@@ -8,8 +8,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
-import { dxfComponentStyles, dxfAccessibility } from '../styles/DxfZIndexSystem.styles';
+import { getModalConfig } from '../config/modal-config';
 
 interface DxfImportModalProps {
     isOpen: boolean;
@@ -56,34 +63,23 @@ const DxfImportModal: React.FC<DxfImportModalProps> = ({ isOpen, onClose, onImpo
         onClose();
     };
 
-    if (!isOpen) return null;
+    // Get enterprise modal configuration for nested modals
+    const modalConfig = getModalConfig('DXF_IMPORT');
 
     return (
-        <section
-            className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[60]"
-            style={dxfComponentStyles.importModal}
-            {...dxfAccessibility.getModalProps('DXF Import')}
-            onClick={handleClose}
-        >
-            <article
-                className="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-md mx-4"
-                onClick={(e) => e.stopPropagation()}
-                role="document"
-                aria-labelledby="dxf-import-title"
+        <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+            <DialogContent
+                className={modalConfig.className}
+                style={{ zIndex: modalConfig.zIndex }}
             >
-                <div className="flex justify-between items-center mb-4">
-                    <h3 id="dxf-import-title" className="text-lg font-medium text-white">Εισαγωγή Αρχείου DXF</h3>
-                    <button 
-                        type="button" 
-                        onClick={handleClose} 
-                        className={`text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} text-2xl`}
-                        disabled={isLoading}
-                    >
-                        ×
-                    </button>
-                </div>
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                        <Upload className="h-5 w-5 text-orange-500" />
+                        Εισαγωγή Αρχείου DXF
+                    </DialogTitle>
+                </DialogHeader>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form id="dxf-import-form" onSubmit={handleSubmit} className="space-y-6">
                     <div>
                         <label className="block text-sm font-medium text-gray-300 mb-3">
                             Αρχείο DXF
@@ -149,25 +145,27 @@ const DxfImportModal: React.FC<DxfImportModalProps> = ({ isOpen, onClose, onImpo
                         </p>
                     </div>
 
-                    <div className="flex justify-end space-x-3 pt-4">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={handleClose}
-                            disabled={isLoading}
-                        >
-                            Ακύρωση
-                        </Button>
-                        <Button
-                            type="submit"
-                            disabled={!selectedFile || isLoading}
-                        >
-                            {isLoading ? 'Εισαγωγή...' : 'Εισαγωγή'}
-                        </Button>
-                    </div>
                 </form>
-            </article>
-        </section>
+
+                <DialogFooter>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleClose}
+                        disabled={isLoading}
+                    >
+                        Ακύρωση
+                    </Button>
+                    <Button
+                        type="submit"
+                        form="dxf-import-form"
+                        disabled={!selectedFile || isLoading}
+                    >
+                        {isLoading ? 'Εισαγωγή...' : 'Εισαγωγή'}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     );
 };
 

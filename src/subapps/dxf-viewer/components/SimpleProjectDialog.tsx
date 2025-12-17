@@ -8,6 +8,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { useProjectHierarchy, type Building, type Unit } from '../contexts/ProjectHierarchyContext';
 import { useFloorplan } from '../../../contexts/FloorplanContext';
 import { dxfImportService } from '../io/dxf-import';
@@ -18,6 +26,7 @@ import { useNotifications } from '../../../providers/NotificationProvider';
 import DxfImportModal from './DxfImportModal';
 import type { SceneModel } from '../types/scene';
 import { HOVER_TEXT_EFFECTS, INTERACTIVE_PATTERNS, FORM_BUTTON_EFFECTS } from '@/components/ui/effects';
+import { MODAL_CONFIGURATIONS, getModalConfig, getModalZIndex } from '../config/modal-config';
 import {
   simpleProjectDialogStyles,
   getSelectStyles,
@@ -381,32 +390,29 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 backdrop-blur-sm flex items-center justify-center z-50">
-      <dialog className="bg-gray-800 border border-gray-600 rounded-lg shadow-2xl max-w-md w-full mx-4" open={isOpen}>
+  // Get enterprise modal configuration
+  const modalConfig = getModalConfig('PROJECT_WIZARD');
 
-        {/* Header */}
-        <header className="p-6 border-b border-gray-600">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-3">
+  return (
+    <>
+      <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+        <DialogContent
+          className={modalConfig.className}
+          style={{ zIndex: modalConfig.zIndex }}
+        >
+          <DialogHeader className="space-y-3">
+            <DialogTitle className="flex items-center gap-3">
               <Triangle className="h-6 w-6 text-orange-500" />
-              <div>
+              <section>
                 <h1 className="text-xl font-semibold text-white">Enhanced DXF Import</h1>
                 <p className="text-gray-400 text-sm">
                   {currentStep === 'company' ? 'Βήμα 1: Επιλογή Εταιρείας' :
-                   currentStep === 'project' ? 'Βήμα 2: Επιλογή Έργου' : 'Βήμα 3: Επιλογή Κτιρίου'}
+                   currentStep === 'project' ? 'Βήμα 2: Επιλογή Έργου' :
+                   currentStep === 'building' ? 'Βήμα 3: Επιλογή Κτιρίου' : 'Βήμα 4: Επιλογή Μονάδας'}
                 </p>
-              </div>
-            </div>
-            <button
-              onClick={handleClose}
-              className={`text-gray-400 text-2xl ${HOVER_TEXT_EFFECTS.WHITE}`}
-              aria-label="Close dialog"
-            >
-              ×
-            </button>
-          </div>
-        </header>
+              </section>
+            </DialogTitle>
+          </DialogHeader>
 
         {/* Content */}
         <main className="p-6">
@@ -713,57 +719,59 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
           )}
         </main>
 
-        {/* Footer */}
-        <div className="p-6 border-t border-gray-600 flex justify-between">
-          <button
-            onClick={currentStep === 'company' ? handleClose : handleBack}
-            className={`px-4 py-2 text-gray-200 bg-gray-700 rounded ${FORM_BUTTON_EFFECTS.SECONDARY}`}
-          >
-            {currentStep === 'company' ? 'Ακύρωση' : '← Προηγούμενο'}
-          </button>
-          
-          {currentStep === 'company' ? (
-            <button
-              onClick={handleNext}
-              disabled={!selectedCompanyId}
-              className={`px-6 py-2 bg-blue-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded font-medium ${FORM_BUTTON_EFFECTS.PRIMARY}`}
+          <DialogFooter className="flex justify-between">
+            <Button
+              variant="outline"
+              onClick={currentStep === 'company' ? handleClose : handleBack}
             >
-              Επόμενο →
-            </button>
-          ) : currentStep === 'project' ? (
-            <button
-              onClick={handleNext}
-              disabled={!selectedProjectId}
-              className={`px-6 py-2 bg-blue-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded font-medium ${FORM_BUTTON_EFFECTS.PRIMARY}`}
-            >
-              Επόμενο →
-            </button>
-          ) : currentStep === 'building' ? (
-            <button
-              onClick={handleNext}
-              disabled={!selectedBuildingId}
-              className={`px-6 py-2 bg-blue-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded font-medium ${FORM_BUTTON_EFFECTS.PRIMARY}`}
-            >
-              Επόμενο →
-            </button>
-          ) : (
-            <button
-              onClick={() => console.log('Ready for unit floorplan selection:', selectedUnitId)}
-              disabled={!selectedUnitId}
-              className={`px-6 py-2 bg-green-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded font-medium ${FORM_BUTTON_EFFECTS.SUCCESS}`}
-            >
-              Έτοιμο
-            </button>
-          )}
-        </div>
-      </dialog>
+              {currentStep === 'company' ? 'Ακύρωση' : '← Προηγούμενο'}
+            </Button>
 
-      {/* DXF Import Modal */}
+            {currentStep === 'company' && (
+              <Button
+                onClick={handleNext}
+                disabled={!selectedCompanyId}
+              >
+                Επόμενο →
+              </Button>
+            )}
+
+            {currentStep === 'project' && (
+              <Button
+                onClick={handleNext}
+                disabled={!selectedProjectId}
+              >
+                Επόμενο →
+              </Button>
+            )}
+
+            {currentStep === 'building' && (
+              <Button
+                onClick={handleNext}
+                disabled={!selectedBuildingId}
+              >
+                Επόμενο →
+              </Button>
+            )}
+
+            {currentStep === 'unit' && (
+              <Button
+                onClick={() => console.log('Ready for unit floorplan selection:', selectedUnitId)}
+                disabled={!selectedUnitId}
+              >
+                Έτοιμο
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* DXF Import Modal - Nested Modal */}
       <DxfImportModal
         isOpen={showDxfModal}
         onClose={() => setShowDxfModal(false)}
         onImport={handleDxfImportFromModal}
       />
-    </div>
+    </>
   );
 }
