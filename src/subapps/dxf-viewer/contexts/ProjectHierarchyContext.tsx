@@ -201,8 +201,9 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
       if (!result.success) {
         throw new Error(result.error || 'Failed to load projects from API');
       }
-      
-      const projectsData = result.projects;
+
+      // Fix: API επιστρέφει data στο result.data.projects, όχι result.projects
+      const projectsData = result.data?.projects || [];
 
       // Transform to our structure with buildings data
       const projects: Project[] = projectsData.map((project) => {

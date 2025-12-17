@@ -85,7 +85,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
 
   // Auto-load companies when dialog opens
   useEffect(() => {
-    if (isOpen && companies.length === 0) {
+    if (isOpen && (!companies || companies.length === 0)) {
 
       loadCompanies();
     }
@@ -106,7 +106,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
   const loadBuildingsForProject = async (projectId: string) => {
     try {
 
-      const selectedProjectData = projects.find(p => p.id === projectId);
+      const selectedProjectData = projects?.find(p => p.id === projectId);
       if (selectedProjectData?.buildings) {
         setBuildings(selectedProjectData.buildings);
 
@@ -436,7 +436,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                 <option value="" style={getOptionStyles()}>
                   -- Επιλέξτε Εταιρεία --
                 </option>
-                {companies.map(company => (
+                {companies?.map(company => (
                   <option
                     key={company.id}
                     value={company.id}
@@ -445,11 +445,11 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                     {company.companyName}
                     {company.industry && ` (${company.industry})`}
                   </option>
-                ))}
+                )) || []}
               </select>
             )}
             
-              {companies.length === 0 && !loading && !error && (
+              {(!companies || companies.length === 0) && !loading && !error && (
                 <div className="mt-3 p-3 bg-gray-700 rounded-lg">
                   <p className="text-gray-300 text-sm">Δεν βρέθηκαν εταιρείες στο σύστημα.</p>
                 </div>
@@ -497,20 +497,20 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                   <option value="" style={getOptionStyles()}>
                     -- Επιλέξτε Έργο --
                   </option>
-                  {projects.map(project => (
+                  {projects?.map(project => (
                     <option
                       key={project.id}
                       value={project.id}
                       style={getOptionStyles()}
                     >
                       {project.name}
-                      {project.buildings.length > 0 && ` (${project.buildings.length} κτίρια)`}
+                      {project.buildings?.length > 0 && ` (${project.buildings.length} κτίρια)`}
                     </option>
-                  ))}
+                  )) || []}
                 </select>
               )}
 
-              {projects.length === 0 && !loading && !error && selectedCompany && (
+              {(!projects || projects.length === 0) && !loading && !error && selectedCompany && (
                 <div className="mt-3 p-3 bg-gray-700 rounded-lg">
                   <p className="text-gray-300 text-sm">Δεν βρέθηκαν έργα για την επιλεγμένη εταιρεία.</p>
                 </div>
@@ -560,7 +560,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                   <option value="" style={getOptionStyles()}>
                     -- Επιλέξτε Κτίριο --
                   </option>
-                  {buildings.map(building => (
+                  {buildings?.map(building => (
                     <option
                       key={building.id}
                       value={building.id}
@@ -656,11 +656,11 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                 </div>
                 <div className="flex items-center gap-2 text-gray-300">
                   <span className="font-medium">Έργο:</span>
-                  <span className="text-green-400">{projects.find(p => p.id === selectedProjectId)?.name}</span>
+                  <span className="text-green-400">{projects?.find(p => p.id === selectedProjectId)?.name}</span>
                 </div>
                 <div className="flex items-center gap-2 text-gray-300">
                   <span className="font-medium">Κτίριο:</span>
-                  <span className="text-purple-400">{buildings.find(b => b.id === selectedBuildingId)?.name}</span>
+                  <span className="text-purple-400">{buildings?.find(b => b.id === selectedBuildingId)?.name}</span>
                 </div>
               </div>
 
@@ -676,7 +676,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                   <option value="" style={getOptionStyles()}>
                     -- Επιλέξτε Μονάδα --
                   </option>
-                  {units.map(unit => (
+                  {units?.map(unit => (
                     <option
                       key={unit.id}
                       value={unit.id}
