@@ -159,6 +159,11 @@ function formatColorWithOpacity(color: string, opacity?: number): string {
  * Inject dynamic CSS style into document
  */
 function injectDynamicStyle(className: string, property: string, value: string): void {
+  // 🌐 SERVER-SIDE RENDERING SAFETY: Check if we're in the browser
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return; // Skip during server-side rendering
+  }
+
   // Check if style already exists
   if (document.querySelector(`.${className}`)) return;
 

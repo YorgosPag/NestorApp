@@ -75,16 +75,16 @@ export class NavigationApiService {
       }
 
       const projectsResult = await projectsResponse.json();
-      if (!projectsResult.success || !projectsResult.projects) {
+      if (!projectsResult.success || !projectsResult.data?.projects) {
         console.log(`📊 No projects found for company ${companyId}`);
         return [];
       }
 
-      console.log(`📊 Found ${projectsResult.projects.length} projects for company ${companyId}`);
+      console.log(`📊 Found ${projectsResult.data.projects.length} projects for company ${companyId}`);
 
       // For each project, load buildings and floors using enterprise normalized structure
       const projectsWithBuildings = await Promise.all(
-        projectsResult.projects.map(async (project: any) => {
+        projectsResult.data.projects.map(async (project: NavigationProject) => {
           try {
             console.log(`🏗️ Loading buildings for project: ${project.id} (${project.name})`);
 
@@ -101,7 +101,7 @@ export class NavigationApiService {
 
             // For each building, load floors from normalized floors collection
             const buildingsWithFloors = await Promise.all(
-              buildingsResult.buildings.map(async (building: any) => {
+              buildingsResult.buildings.map(async (building: NavigationBuilding) => {
                 try {
                   // Enterprise query: Load floors by buildingId foreign key
                   const floorsResponse = await fetch(`/api/floors?buildingId=${building.id}`);
@@ -111,9 +111,13 @@ export class NavigationApiService {
                     return { ...building, floors: [] };
                   }
 
+                  // Extract floors from correct API structure (data.floors)
+                  const floors = floorsResult.data?.floors || floorsResult.floors || [];
+                  console.log(`🏗️ Building ${building.id}: Found ${floors.length} floors`);
+
                   // For each floor, load units
                   const floorsWithUnits = await Promise.all(
-                    floorsResult.floors.map(async (floor: any) => {
+                    floors.map(async (floor: NavigationFloor) => {
                       try {
                         // Load units for this floor
                         const unitsResponse = await fetch(`/api/units?floorId=${floor.id}&buildingId=${building.id}`);
@@ -125,7 +129,7 @@ export class NavigationApiService {
                           id: floor.id,
                           name: floor.name,
                           number: floor.number,
-                          units: units.map((unit: any) => ({
+                          units: units.map((unit: NavigationUnit) => ({
                             id: unit.id,
                             name: unit.name,
                             type: unit.type

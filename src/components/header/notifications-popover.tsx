@@ -9,11 +9,25 @@ import {
 import { Button } from "@/components/ui/button"
 import { CommonBadge } from "@/core/badges"
 import { Bell } from "lucide-react"
-import { defaultNotifications } from "@/constants/header"
+import { getNotifications } from "@/constants/header"
 import { NotificationItem } from "@/components/header/notification-item"
 
 export function NotificationsPopover() {
-  const [notifications] = React.useState(defaultNotifications)
+  const [notifications, setNotifications] = React.useState([])
+
+  React.useEffect(() => {
+    const loadNotifications = async () => {
+      try {
+        const data = await getNotifications()
+        setNotifications(data)
+      } catch (error) {
+        console.error('Error loading notifications:', error)
+        setNotifications([])
+      }
+    }
+
+    loadNotifications()
+  }, [])
 
   return (
     <Popover>
