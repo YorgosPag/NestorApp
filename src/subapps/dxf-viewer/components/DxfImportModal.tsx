@@ -1,4 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
+import { Upload } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { dxfComponentStyles, dxfAccessibility } from '../styles/DxfZIndexSystem.styles';
 
@@ -12,11 +21,16 @@ const DxfImportModal: React.FC<DxfImportModalProps> = ({ isOpen, onClose, onImpo
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [encoding, setEncoding] = useState('windows-1253');
     const [isLoading, setIsLoading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         if (event.target.files && event.target.files.length > 0) {
             setSelectedFile(event.target.files[0]);
         }
+    };
+
+    const handleFileButtonClick = () => {
+        fileInputRef.current?.click();
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -46,7 +60,7 @@ const DxfImportModal: React.FC<DxfImportModalProps> = ({ isOpen, onClose, onImpo
 
     return (
         <section
-            className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center"
+            className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[60]"
             style={dxfComponentStyles.importModal}
             {...dxfAccessibility.getModalProps('DXF Import')}
             onClick={handleClose}
@@ -71,56 +85,85 @@ const DxfImportModal: React.FC<DxfImportModalProps> = ({ isOpen, onClose, onImpo
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label htmlFor="dxf-file-input" className="block text-sm font-medium text-gray-300 mb-1">
+                        <label className="block text-sm font-medium text-gray-300 mb-3">
                             Αρχείο DXF
                         </label>
+
+                        {/* Hidden file input */}
                         <input
-                            id="dxf-file-input"
+                            ref={fileInputRef}
                             type="file"
                             accept=".dxf"
                             onChange={handleFileChange}
                             disabled={isLoading}
-                            className={`w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-sky-600 file:text-white ${HOVER_BACKGROUND_EFFECTS.FILE_INPUT} disabled:opacity-50`}
+                            className="hidden"
                         />
+
+                        {/* Centralized Button for file selection */}
+                        <Button
+                            type="button"
+                            onClick={handleFileButtonClick}
+                            disabled={isLoading}
+                            variant="outline"
+                            className="w-full bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
+                        >
+                            <Upload className="h-4 w-4 mr-2" />
+                            {selectedFile ? selectedFile.name : 'Επιλογή αρχείου'}
+                        </Button>
+
+                        {!selectedFile && (
+                            <p className="text-xs text-gray-400 mt-1">
+                                Δεν επιλέχθηκε κανένα αρχείο.
+                            </p>
+                        )}
                     </div>
 
                     <div>
-                        <label htmlFor="encoding-select" className="block text-sm font-medium text-gray-300 mb-1">
+                        <label className="block text-sm font-medium text-gray-300 mb-3">
                             Κωδικοποίηση Χαρακτήρων
                         </label>
-                        <select
-                            id="encoding-select"
-                            value={encoding}
-                            onChange={(e) => setEncoding(e.target.value)}
-                            disabled={isLoading}
-                            className="w-full bg-gray-900 border border-gray-600 rounded-md focus:ring-sky-500 focus:border-sky-500 text-white p-2 disabled:opacity-50"
-                        >
-                            <option value="windows-1253">Windows-1253 (Greek)</option>
-                            <option value="UTF-8">UTF-8 (Προεπιλογή)</option>
-                            <option value="windows-1252">Windows-1252 (Western)</option>
-                            <option value="ISO-8859-7">ISO-8859-7 (Greek)</option>
-                        </select>
+
+                        {/* Centralized Select Component */}
+                        <Select value={encoding} onValueChange={setEncoding} disabled={isLoading}>
+                            <SelectTrigger className="w-full bg-gray-700 border-gray-600 text-white">
+                                <SelectValue placeholder="Επιλέξτε κωδικοποίηση" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="windows-1253">
+                                    <span>Windows-1253 (Greek)</span>
+                                </SelectItem>
+                                <SelectItem value="UTF-8">
+                                    <span>UTF-8 (Προεπιλογή)</span>
+                                </SelectItem>
+                                <SelectItem value="windows-1252">
+                                    <span>Windows-1252 (Western)</span>
+                                </SelectItem>
+                                <SelectItem value="ISO-8859-7">
+                                    <span>ISO-8859-7 (Greek)</span>
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+
                         <p className="text-xs text-gray-400 mt-1">
                             Επιλέξτε Windows-1253 αν τα Ελληνικά δεν εμφανίζονται σωστά.
                         </p>
                     </div>
 
                     <div className="flex justify-end space-x-3 pt-4">
-                        <button 
-                            type="button" 
+                        <Button
+                            type="button"
+                            variant="outline"
                             onClick={handleClose}
                             disabled={isLoading}
-                            className={`px-4 py-2 text-sm font-medium rounded-md bg-gray-600 ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-gray-500 text-white disabled:opacity-50`}
                         >
                             Ακύρωση
-                        </button>
-                        <button 
-                            type="submit" 
+                        </Button>
+                        <Button
+                            type="submit"
                             disabled={!selectedFile || isLoading}
-                            className={`px-4 py-2 text-sm font-medium rounded-md bg-sky-600 ${HOVER_BACKGROUND_EFFECTS.BLUE_LIGHT} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-sky-500 disabled:bg-gray-500 disabled:cursor-not-allowed text-white`}
                         >
                             {isLoading ? 'Εισαγωγή...' : 'Εισαγωγή'}
-                        </button>
+                        </Button>
                     </div>
                 </form>
             </article>

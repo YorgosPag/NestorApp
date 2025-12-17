@@ -11,7 +11,7 @@
  * 🔄 MIGRATED (2025-10-09): Phase 3.1 - Enterprise Adapter
  */
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 // 🔄 MIGRATED (2025-10-09): Phase 3.2 - Direct Enterprise (no adapter)
 import { useDxfSettings } from '../../settings-provider';
 import {
@@ -45,6 +45,36 @@ function useDxfSettingsSafe() {
 
 export function CentralizedAutoSaveStatus() {
   const dxfSettings = useDxfSettingsSafe();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Detect if any modal is open by checking for modal overlays
+  useEffect(() => {
+    const checkForModals = () => {
+      // Check for modal overlays with high z-index (z-50 or higher)
+      const modalOverlays = document.querySelectorAll('[class*="fixed"][class*="inset-0"]');
+      const hasOpenModal = Array.from(modalOverlays).some(overlay => {
+        const computedStyle = window.getComputedStyle(overlay);
+        const zIndex = parseInt(computedStyle.zIndex || '0');
+        return zIndex >= 50 && computedStyle.display !== 'none';
+      });
+      setIsModalOpen(hasOpenModal);
+    };
+
+    // Check immediately
+    checkForModals();
+
+    // Set up observer for DOM changes (when modals open/close)
+    const observer = new MutationObserver(checkForModals);
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class', 'style']
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
   if (!dxfSettings) return null;
 
   const { settings, isAutoSaving, hasUnsavedChanges } = dxfSettings;
@@ -113,13 +143,18 @@ export function CentralizedAutoSaveStatus() {
     return 'text-gray-400 border-gray-500/30';
   };
 
+  // Dynamic z-index: Lower when modal is open, high when no modal
+  const getZIndexClass = () => {
+    return isModalOpen ? 'z-10' : 'z-[9999]';
+  };
+
   return (
     <section
       className={`
         flex items-center gap-2 px-3 py-2
         bg-gray-800/50 rounded-md border
-        transition-all duration-200 relative z-[9999]
-        ${getStatusColor()}
+        transition-all duration-200 relative
+        ${getStatusColor()} ${getZIndexClass()}
       `}
       style={centralizedAutoSaveStatusStyles.container}
       {...getStatusContainerProps()}
@@ -178,6 +213,32 @@ export function CentralizedAutoSaveStatus() {
  */
 export function CentralizedAutoSaveStatusCompact() {
   const dxfSettings = useDxfSettingsSafe();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Same modal detection logic as main component
+  useEffect(() => {
+    const checkForModals = () => {
+      const modalOverlays = document.querySelectorAll('[class*="fixed"][class*="inset-0"]');
+      const hasOpenModal = Array.from(modalOverlays).some(overlay => {
+        const computedStyle = window.getComputedStyle(overlay);
+        const zIndex = parseInt(computedStyle.zIndex || '0');
+        return zIndex >= 50 && computedStyle.display !== 'none';
+      });
+      setIsModalOpen(hasOpenModal);
+    };
+
+    checkForModals();
+    const observer = new MutationObserver(checkForModals);
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class', 'style']
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
   if (!dxfSettings) return null;
 
   const { isAutoSaving, settings } = dxfSettings;
@@ -208,9 +269,14 @@ export function CentralizedAutoSaveStatusCompact() {
     return `Αυτόματη αποθήκευση ενεργή για: ${systems.join(', ')}`;
   };
 
+  // Dynamic z-index for compact version
+  const getCompactZIndexClass = () => {
+    return isModalOpen ? 'z-10' : 'z-[9999]';
+  };
+
   return (
     <div
-      className="flex items-center justify-center w-4 h-4"
+      className={`flex items-center justify-center w-4 h-4 relative ${getCompactZIndexClass()}`}
       style={centralizedAutoSaveStatusStyles.compactContainer}
       title={getCompactTooltipText(isAutoSaving, settings.saveStatus)}
       {...getStatusContainerProps()}

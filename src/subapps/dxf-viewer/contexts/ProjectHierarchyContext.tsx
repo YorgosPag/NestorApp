@@ -121,9 +121,30 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
     setHierarchy(prev => ({ ...prev, loading: true, error: null }));
     
     try {
-      console.log('🔄 [ProjectHierarchy] Starting to load companies...');
+      console.log('🔄 [ProjectHierarchy] Starting to load companies via API...');
 
-      const companies = await getAllActiveCompanies();
+      // Use API endpoint instead of direct service call to debug server issues
+      const response = await fetch('/api/companies');
+
+      // Enhanced error handling - check if response is HTML (500 error page)
+      const contentType = response.headers.get('content-type');
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Companies API Error (${response.status}): ${errorText.substring(0, 200)}...`);
+      }
+
+      if (!contentType || !contentType.includes('application/json')) {
+        const responseText = await response.text();
+        throw new Error(`Expected JSON but got: ${contentType}. Response: ${responseText.substring(0, 200)}...`);
+      }
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to load companies from API');
+      }
+
+      const companies = result.data?.companies || [];
       console.log('✅ [ProjectHierarchy] Companies loaded successfully:', companies.length);
 
       // Remove duplicates by id AND by companyName (multiple deduplication strategies)

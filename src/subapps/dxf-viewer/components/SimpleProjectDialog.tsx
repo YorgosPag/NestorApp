@@ -1,5 +1,13 @@
 'use client';
 import React, { useState, useEffect } from 'react';
+import { Triangle, Building, Building2, Folder, Home } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useProjectHierarchy, type Building, type Unit } from '../contexts/ProjectHierarchyContext';
 import { useFloorplan } from '../../../contexts/FloorplanContext';
 import { dxfImportService } from '../io/dxf-import';
@@ -381,7 +389,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
         <header className="p-6 border-b border-gray-600">
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-3">
-              <span className="text-2xl">🔺</span>
+              <Triangle className="h-6 w-6 text-orange-500" />
               <div>
                 <h1 className="text-xl font-semibold text-white">Enhanced DXF Import</h1>
                 <p className="text-gray-400 text-sm">
@@ -426,27 +434,24 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                 </button>
               </div>
             ) : (
-              <select
-                value={selectedCompanyId}
-                onChange={(e) => handleCompanyChange(e.target.value)}
-                className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:outline-none"
-                style={getSelectStyles()}
-                {...getSelectFocusHandlers()}
-              >
-                <option value="" style={getOptionStyles()}>
-                  -- Επιλέξτε Εταιρεία --
-                </option>
-                {companies?.map(company => (
-                  <option
-                    key={company.id}
-                    value={company.id}
-                    style={getOptionStyles()}
-                  >
-                    {company.companyName}
-                    {company.industry && ` (${company.industry})`}
-                  </option>
-                )) || []}
-              </select>
+              <Select value={selectedCompanyId} onValueChange={handleCompanyChange}>
+                <SelectTrigger className="w-full bg-gray-700 border-gray-600 text-white">
+                  <SelectValue placeholder="-- Επιλέξτε Εταιρεία --" />
+                </SelectTrigger>
+                <SelectContent>
+                  {companies?.map(company => (
+                    <SelectItem key={company.id} value={company.id}>
+                      <div className="flex items-center space-x-2">
+                        <Building className="h-4 w-4 text-blue-400" />
+                        <span>{company.companyName}</span>
+                        {company.industry && (
+                          <span className="text-gray-400 text-xs">({company.industry})</span>
+                        )}
+                      </div>
+                    </SelectItem>
+                  )) || []}
+                </SelectContent>
+              </Select>
             )}
             
               {(!companies || companies.length === 0) && !loading && !error && (
@@ -468,7 +473,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
               {selectedCompany && (
                 <div className="mb-4 p-3 bg-blue-900/20 border border-blue-600 rounded-lg">
                   <div className="flex items-center space-x-2">
-                    <span className="text-lg">🏢</span>
+                    <Building className="h-5 w-5 text-blue-400" />
                     <div>
                       <p className="text-white text-sm font-medium">{selectedCompany.companyName}</p>
                       <p className="text-blue-300 text-xs">{selectedCompany.industry}</p>
@@ -487,27 +492,24 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                   <p className="text-red-300 text-sm mb-2">Σφάλμα φόρτωσης έργων: {error}</p>
                 </div>
               ) : (
-                <select
-                  value={selectedProjectId}
-                  onChange={(e) => handleProjectChange(e.target.value)}
-                  className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:outline-none"
-                  style={getSelectStyles()}
-                  {...getSelectFocusHandlers()}
-                >
-                  <option value="" style={getOptionStyles()}>
-                    -- Επιλέξτε Έργο --
-                  </option>
-                  {projects?.map(project => (
-                    <option
-                      key={project.id}
-                      value={project.id}
-                      style={getOptionStyles()}
-                    >
-                      {project.name}
-                      {project.buildings?.length > 0 && ` (${project.buildings.length} κτίρια)`}
-                    </option>
-                  )) || []}
-                </select>
+                <Select value={selectedProjectId} onValueChange={handleProjectChange}>
+                  <SelectTrigger className="w-full bg-gray-700 border-gray-600 text-white">
+                    <SelectValue placeholder="-- Επιλέξτε Έργο --" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {projects?.map(project => (
+                      <SelectItem key={project.id} value={project.id}>
+                        <div className="flex items-center space-x-2">
+                          <Folder className="h-4 w-4 text-blue-400" />
+                          <span>{project.name}</span>
+                          {project.buildings?.length > 0 && (
+                            <span className="text-gray-400 text-xs">({project.buildings.length} κτίρια)</span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    )) || []}
+                  </SelectContent>
+                </Select>
               )}
 
               {(!projects || projects.length === 0) && !loading && !error && selectedCompany && (
@@ -530,7 +532,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                 <div className="mb-4 space-y-3">
                   <div className="p-3 bg-blue-900/20 border border-blue-600 rounded-lg">
                     <div className="flex items-center space-x-2">
-                      <span className="text-lg">🏢</span>
+                      <Building className="h-5 w-5 text-blue-400" />
                       <div>
                         <p className="text-white text-sm font-medium">{selectedCompany.companyName}</p>
                         <p className="text-blue-300 text-xs">{selectedCompany.industry}</p>
@@ -539,7 +541,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                   </div>
                   <div className="p-3 bg-green-900/20 border border-green-600 rounded-lg">
                     <div className="flex items-center space-x-2">
-                      <span className="text-lg">🏗️</span>
+                      <Building2 className="h-5 w-5 text-green-400" />
                       <div>
                         <p className="text-white text-sm font-medium">{selectedProject.name}</p>
                         <p className="text-green-300 text-xs">{selectedProject.buildings?.length || 0} κτίρια</p>
@@ -550,27 +552,24 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
               )}
 
               {buildings.length > 0 ? (
-                <select
-                  value={selectedBuildingId}
-                  onChange={(e) => handleBuildingChange(e.target.value)}
-                  className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:outline-none"
-                  style={getSelectStyles()}
-                  {...getSelectFocusHandlers()}
-                >
-                  <option value="" style={getOptionStyles()}>
-                    -- Επιλέξτε Κτίριο --
-                  </option>
-                  {buildings?.map(building => (
-                    <option
-                      key={building.id}
-                      value={building.id}
-                      style={getOptionStyles()}
-                    >
-                      {building.name}
-                      {building.floors && ` (${building.floors.length} όροφοι)`}
-                    </option>
-                  ))}
-                </select>
+                <Select value={selectedBuildingId} onValueChange={handleBuildingChange}>
+                  <SelectTrigger className="w-full bg-gray-700 border-gray-600 text-white">
+                    <SelectValue placeholder="-- Επιλέξτε Κτίριο --" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {buildings?.map(building => (
+                      <SelectItem key={building.id} value={building.id}>
+                        <div className="flex items-center space-x-2">
+                          <Building2 className="h-4 w-4 text-purple-400" />
+                          <span>{building.name}</span>
+                          {building.floors && (
+                            <span className="text-gray-400 text-xs">({building.floors.length} όροφοι)</span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               ) : (
                 <div className="p-3 bg-gray-700 rounded-lg">
                   <p className="text-gray-300 text-sm">Δεν βρέθηκαν κτίρια για το επιλεγμένο έργο.</p>
@@ -666,28 +665,27 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
 
               {/* Units Selection */}
               {units.length > 0 ? (
-                <select
-                  value={selectedUnitId}
-                  onChange={(e) => handleUnitChange(e.target.value)}
-                  className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:outline-none"
-                  style={getSelectStyles()}
-                  {...getSelectFocusHandlers()}
-                >
-                  <option value="" style={getOptionStyles()}>
-                    -- Επιλέξτε Μονάδα --
-                  </option>
-                  {units?.map(unit => (
-                    <option
-                      key={unit.id}
-                      value={unit.id}
-                      style={getOptionStyles()}
-                    >
-                      {unit.name || unit.unitName}
-                      {unit.type && ` (${unit.type})`}
-                      {unit.floor && ` - ${unit.floor}ος όροφος`}
-                    </option>
-                  ))}
-                </select>
+                <Select value={selectedUnitId} onValueChange={handleUnitChange}>
+                  <SelectTrigger className="w-full bg-gray-700 border-gray-600 text-white">
+                    <SelectValue placeholder="-- Επιλέξτε Μονάδα --" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {units?.map(unit => (
+                      <SelectItem key={unit.id} value={unit.id}>
+                        <div className="flex items-center space-x-2">
+                          <Home className="h-4 w-4 text-orange-400" />
+                          <span>{unit.name || unit.unitName}</span>
+                          {unit.type && (
+                            <span className="text-gray-400 text-xs">({unit.type})</span>
+                          )}
+                          {unit.floor && (
+                            <span className="text-gray-400 text-xs">- {unit.floor}ος όροφος</span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               ) : (
                 <div className="p-3 bg-gray-700 rounded-lg">
                   <p className="text-gray-300 text-sm">Δεν βρέθηκαν μονάδες για το επιλεγμένο κτίριο.</p>
