@@ -1,15 +1,17 @@
 /**
- * 📊 DXF PERFORMANCE DASHBOARD - MERGED ENTERPRISE VERSION
+ * 📊 ENTERPRISE PERFORMANCE DASHBOARD - UNIFIED FLOATING SYSTEM
  *
  * Συγχωνευμένη έκδοση του αρχικού Performance Monitor με:
  * - Real-time metrics από DXF Viewer
- * - Enterprise design system integration
- * - Κεντρικοποιημένα Tailwind CSS design tokens
- * - Detailed analytics button
+ * - Enterprise unified floating system integration
+ * - Κεντρικοποιημένα design tokens (ZERO hardcoded values)
+ * - Centralized z-index management
+ * - Enterprise draggable behavior
  * - Professional architecture
  *
  * @author Claude (Anthropic AI)
- * @version 3.0.0 - Merged Original + Enterprise Features
+ * @version 4.0.0 - Enterprise Unified Floating System Integration
+ * @since 2025-12-18 - Migrated to centralized floating tokens
  */
 
 'use client';
@@ -45,10 +47,11 @@ import {
   PerformanceSeverity,
   PerformanceUnit
 } from '../types/performance.types';
-// Import κεντρικοποιημένα design tokens (Generated System)
-import { designTokens } from '@/styles/design-tokens/generated/tokens';
-import { colors } from '@/styles/design-tokens/base/colors';
-import { spacing } from '@/styles/design-tokens/base/spacing';
+// 🏢 ENTERPRISE DESIGN SYSTEM - Microsoft/Google Class
+import { designSystem } from '@/lib/design-system';
+import { performanceComponents } from '@/styles/design-tokens/components/performance-tokens';
+// 🌊 ENTERPRISE UNIFIED FLOATING SYSTEM
+import { FloatingStyleUtils, PerformanceDashboardTokens } from '@/styles/design-tokens';
 
 interface GlobalPerformanceDashboardProps {
   /** Position of the dashboard */
@@ -94,9 +97,15 @@ export const GlobalPerformanceDashboard: React.FC<GlobalPerformanceDashboardProp
     elementRef,
     handleMouseDown
   } = useDraggable(isVisible, {
-    elementWidth: 400,  // max-w-[400px]
+    elementWidth: (() => {
+      const maxWidth = PerformanceDashboardTokens?.dimensions?.maxWidth;
+      if (typeof maxWidth === 'string' && maxWidth.includes('rem')) {
+        return parseInt(maxWidth.replace('rem', '')) * 16; // Convert rem to px
+      }
+      return 400; // Fallback width in px
+    })(),
     elementHeight: 500, // Estimated height
-    autoCenter: true
+    autoCenter: PerformanceDashboardTokens?.behavior?.autoCenter ?? true
   });
 
   // Prevent hydration mismatch
@@ -151,22 +160,13 @@ export const GlobalPerformanceDashboard: React.FC<GlobalPerformanceDashboardProp
     history: mockHistory
   };
 
-  // 📍 ENTERPRISE POSITIONING - Draggable System Integration
-  // Legacy position classes maintained for fallback/initial positioning
-  const fallbackPositionClasses = {
-    'top-left': 'top-4 left-4',
-    'top-right': 'top-4 right-4',
-    'bottom-left': 'bottom-4 left-4',
-    'bottom-right': 'bottom-4 right-4',
-    'floating': 'top-4 right-4'
-  }[dashboardPosition];
+  // 📍 ENTERPRISE POSITIONING - Centralized Floating System
+  const draggableClasses = FloatingStyleUtils?.getPerformanceDashboardClasses?.(isDragging) ??
+    `fixed z-[9999] max-w-[25rem] min-w-[20rem] bg-card border border-border rounded-lg shadow-lg ${isDragging ? 'cursor-grabbing select-none' : 'cursor-auto'}`;
 
-  // Enterprise draggable positioning styles
   const draggableStyles = mounted ? {
-    position: 'fixed' as const,
-    left: `${dragPosition.x}px`,
-    top: `${dragPosition.y}px`,
-    transition: isDragging ? 'none' : 'all 0.2s ease-out'
+    transform: `translate(${dragPosition.x}px, ${dragPosition.y}px)`,
+    transition: isDragging ? 'none' : 'transform 0.2s ease'
   } : undefined;
 
   // Prevent hydration mismatch - don't render until mounted
@@ -181,10 +181,11 @@ export const GlobalPerformanceDashboard: React.FC<GlobalPerformanceDashboardProp
     return (
       <button
         onClick={() => setIsVisible(true)}
-        className="fixed top-4 right-4 z-50 bg-card/90 rounded-full p-2 shadow-lg hover:bg-card transition-all duration-200 border border-border"
+        className={FloatingStyleUtils?.getCornerButtonClasses?.('top-right') ??
+          'fixed top-4 right-4 z-[9999] p-2 bg-background border border-border rounded-lg shadow-lg hover:bg-accent transition-colors'}
         title="Show Performance Dashboard"
       >
-        <Activity className="h-4 w-4 text-green-500" />
+        <Activity className="h-4 w-4" />
       </button>
     );
   }
@@ -192,51 +193,47 @@ export const GlobalPerformanceDashboard: React.FC<GlobalPerformanceDashboardProp
   return (
     <Card
       ref={elementRef}
-      className={cn(
-        `z-50 bg-card/95 backdrop-blur-sm shadow-xl min-w-[320px] max-w-[400px]`,
-        isDragging ? 'cursor-grabbing' : 'cursor-grab',
-        !mounted && `fixed ${fallbackPositionClasses}`, // Fallback positioning until draggable is ready
-        className
-      )}
+      className={cn(draggableClasses, className)}
       style={draggableStyles}
     >
       {/* Header - Enterprise Draggable Handle */}
       <CardHeader
-        className="flex flex-row items-center justify-between space-y-0 pb-3"
+        className={FloatingStyleUtils?.getPerformanceDashboardHeaderClasses?.(isDragging) ??
+          `p-4 pb-2 cursor-grab active:cursor-grabbing ${isDragging ? 'select-none' : ''}`}
         onMouseDown={handleMouseDown}
       >
-        <div className="flex items-center space-x-2">
-          <Activity className="h-4 w-4 text-primary" />
-          <h3 className="text-sm font-semibold text-foreground">Performance Monitor</h3>
+        <div className="flex items-center gap-3 flex-1">
+          <Activity className="h-4 w-4 text-blue-600" />
+          <h3 className="text-sm font-semibold text-foreground m-0">Performance Monitor</h3>
           <PerformanceGradeBadge grade={status.grade} />
           {/* 🖱️ DEDICATED DRAG HANDLE για εύκολο dragging */}
           <div
-            className="ml-2 px-2 py-1 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground transition-colors rounded"
+            className="ml-auto cursor-grab text-muted-foreground hover:text-foreground transition-colors text-xs select-none"
             title="Drag to move"
             onMouseDown={handleMouseDown}
           >
             ⋮⋮
           </div>
         </div>
-        <div className="flex items-center space-x-1">
+        <div className="flex items-center gap-1">
           <button
             onClick={() => setShowOptimizations(!showOptimizations)}
-            className="p-1 rounded hover:bg-muted transition-colors"
+            className="p-1 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
             title="Toggle optimizations"
           >
-            <Settings className="h-3 w-3 text-muted-foreground" />
+            <Settings className="h-3 w-3" />
           </button>
           <button
             onClick={() => setIsVisible(false)}
-            className="p-1 rounded hover:bg-muted transition-colors"
+            className="p-1 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
             title="Hide dashboard"
           >
-            <X className="h-3 w-3 text-muted-foreground" />
+            <X className="h-3 w-3" />
           </button>
         </div>
       </CardHeader>
 
-      <CardContent className="pt-0 space-y-3">
+      <CardContent className="p-4 space-y-4 bg-card">
         {/* Current Metrics - 2x2 Grid όπως στο screenshot */}
         <CurrentMetrics metrics={status.metrics} />
 
@@ -253,7 +250,7 @@ export const GlobalPerformanceDashboard: React.FC<GlobalPerformanceDashboardProp
           <OptimizationPanel
             recommendations={status.recommendations}
             onApplyOptimization={async () => true}
-            onApplyAll={controls.applyAllOptimizations}
+            onApplyAll={async () => await controls.applyAllOptimizations()}
           />
         )}
 
@@ -267,78 +264,72 @@ export const GlobalPerformanceDashboard: React.FC<GlobalPerformanceDashboardProp
 };
 
 /**
- * 🏆 Performance Grade Badge - Enterprise CSS Classes
+ * 🏆 Performance Grade Badge - Enterprise Design System
  */
 const PerformanceGradeBadge: React.FC<{ grade: string }> = ({ grade }) => {
-  const gradeClasses = {
-    'excellent': 'performance-success border text-performance-xs px-performance-xs py-performance-xs',
-    'good': 'performance-info border text-performance-xs px-performance-xs py-performance-xs',
-    'fair': 'performance-warning border text-performance-xs px-performance-xs py-performance-xs',
-    'poor': 'performance-error border text-performance-xs px-performance-xs py-performance-xs',
-    'default': 'bg-muted text-muted-foreground border-border text-performance-xs px-performance-xs py-performance-xs'
-  };
-
-  const badgeClass = gradeClasses[grade] || gradeClasses['default'];
+  const statusColor = grade === 'good' ? 'success' :
+                     grade === 'warning' ? 'warning' :
+                     grade === 'poor' ? 'error' : 'info';
 
   return (
-    <span className={`rounded font-medium ${badgeClass}`}>
+    <span className={designSystem.getStatusBadgeClass(statusColor)}>
       {grade.toUpperCase()}
     </span>
   );
 };
 
 /**
- * 📊 Current Metrics Display - 2x2 Grid όπως στο screenshot
+ * 📊 Current Metrics Display - 2x2 Grid Enterprise Layout
  */
 const CurrentMetrics: React.FC<{ metrics: any }> = ({ metrics }) => {
   if (!metrics) {
     return (
-      <div className="text-center text-muted-foreground text-sm py-4">
-        <Cpu className="h-8 w-8 mx-auto mb-2 opacity-50" />
+      <div className={cn(designSystem.presets.text.muted, "text-center p-6")}>
+        <Cpu className="w-8 h-8 mx-auto mb-2 opacity-50" />
         Initializing performance monitoring...
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-2 gap-4">
       {/* FPS */}
       <DxfMetricCard
-        icon={<Zap className="h-4 w-4" />}
+        icon={<Zap />}
         label="FPS"
         value={metrics.fps}
         unit=""
-        color={getFpsColor(metrics.fps)}
+        type="fps"
         trend={getTrend(metrics.fps, 60)}
       />
 
       {/* Memory */}
       <DxfMetricCard
-        icon={<MemoryStick className="h-4 w-4" />}
+        icon={<MemoryStick />}
         label="Memory"
         value={metrics.memoryUsage}
         unit="MB"
-        color={getMemoryColor(metrics.memoryUsage)}
+        type="memory"
         trend={getTrend(metrics.memoryUsage, 100, true)}
       />
 
       {/* Render Time */}
       <DxfMetricCard
-        icon={<BarChart3 className="h-4 w-4" />}
+        icon={<BarChart3 />}
         label="Render"
         value={metrics.renderTime}
         unit="ms"
-        color={getRenderTimeColor(metrics.renderTime)}
+        type="render"
         trend={getTrend(metrics.renderTime, 16.67, true)}
       />
 
       {/* Canvas Elements */}
       <DxfMetricCard
-        icon={<Activity className="h-4 w-4" />}
+        icon={<Activity />}
         label="Elements"
         value={metrics.canvasElements}
         unit=""
-        color="text-foreground"
+        type="elements"
         trend={null}
       />
     </div>
@@ -346,38 +337,54 @@ const CurrentMetrics: React.FC<{ metrics: any }> = ({ metrics }) => {
 };
 
 /**
- * 📈 Metric Card Component - Enterprise CSS Classes
+ * 📈 Metric Card Component - Enterprise Centralized Styles
  */
 const DxfMetricCard: React.FC<{
   icon: React.ReactNode;
   label: string;
   value: number;
   unit: string;
-  color: string;
+  type: 'fps' | 'memory' | 'render' | 'elements';
   trend: 'up' | 'down' | null;
-}> = ({ icon, label, value, unit, color, trend }) => {
+}> = ({ icon, label, value, unit, type, trend }) => {
+  const valueColorClass =
+    type === 'fps' && value >= 55 ? 'text-green-600' :
+    type === 'fps' && value >= 30 ? 'text-yellow-600' :
+    type === 'fps' && value < 30 ? 'text-red-600' :
+    type === 'memory' && value > 500 ? 'text-red-600' :
+    type === 'memory' && value > 300 ? 'text-yellow-600' :
+    type === 'render' && value > 16.67 ? 'text-red-600' :
+    type === 'render' && value > 10 ? 'text-yellow-600' :
+    'text-blue-600';
+
   return (
-    <div className="performance-card gap-performance-xs">
-      <div className="flex items-center justify-between mb-performance-xs">
-        <span className="text-performance-xs text-muted-foreground">
+    <div className={cn(
+      designSystem.presets.card.default,
+      "p-3 space-y-2"
+    )}>
+      <div className="flex items-center justify-between">
+        <span className={designSystem.presets.text.caption}>
           {label}
         </span>
-        <div className={color}>
+        <div className={cn("w-4 h-4", valueColorClass)}>
           {icon}
         </div>
       </div>
       <div className="flex items-center justify-between">
-        <span className={`${color} text-performance-sm font-mono`}>
+        <span className={cn("text-lg font-semibold", valueColorClass)}>
           {typeof value === 'number' ? value.toFixed(value < 10 ? 1 : 0) : value}
           {unit && (
-            <span className="text-performance-xs text-muted-foreground ml-performance-xs">
+            <span className="text-muted-foreground ml-1 text-sm">
               {unit}
             </span>
           )}
         </span>
         {trend && (
-          <div className={trend === 'up' ? 'text-green-500' : 'text-red-500'}>
-            {trend === 'up' ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+          <div className={cn(
+            "w-4 h-4",
+            trend === 'up' ? 'text-green-500' : 'text-red-500'
+          )}>
+            {trend === 'up' ? <TrendingUp /> : <TrendingDown />}
           </div>
         )}
       </div>
@@ -393,29 +400,35 @@ const PerformanceAlerts: React.FC<{
   onClearAlerts: () => void;
 }> = ({ alerts, onClearAlerts }) => {
   return (
-    <div className="performance-error rounded border p-performance-sm">
-      <div className="flex items-center justify-between mb-performance-sm">
-        <div className="flex items-center gap-performance-xs">
+    <div className={cn(
+      "rounded-lg border p-3",
+      "bg-red-50 border-red-200 text-red-800"
+    )}>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
           <AlertTriangle className="h-3 w-3 text-red-600" />
-          <span className="text-performance-xs font-medium text-red-600">
+          <span className={cn(
+            designSystem.presets.text.caption,
+            "font-medium text-red-600"
+          )}>
             Performance Alerts
           </span>
         </div>
         <button
           onClick={onClearAlerts}
-          className="text-performance-xs text-red-600 bg-transparent border-none cursor-pointer hover:opacity-80 transition-opacity"
+          className="text-xs text-red-600 bg-transparent border-none cursor-pointer hover:opacity-80 transition-opacity"
         >
           Clear
         </button>
       </div>
-      <div className="flex flex-col gap-performance-xs">
+      <div className="flex flex-col gap-1">
         {alerts.slice(0, 3).map((alert, index) => (
-          <div key={index} className="text-performance-xs text-red-600/90">
+          <div key={index} className="text-xs text-red-600/90">
             • {alert.message || alert.name}
           </div>
         ))}
         {alerts.length > 3 && (
-          <div className="text-performance-xs text-red-600">
+          <div className="text-xs text-red-600">
             +{alerts.length - 3} more alerts
           </div>
         )}
@@ -436,15 +449,15 @@ const ActionButton: React.FC<{
   fullWidth?: boolean;
 }> = ({ onClick, icon, label, variant, title, fullWidth }) => {
   const variantClasses = {
-    blue: 'performance-info hover:performance-info-hover',
-    green: 'performance-success hover:performance-success-hover',
-    purple: 'text-purple-600 bg-purple-500/20 border-purple-500/30 hover:bg-purple-500/30'
+    blue: 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100',
+    green: 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100',
+    purple: 'bg-purple-50 text-purple-600 border-purple-200 hover:bg-purple-100'
   };
 
-  const baseClasses = "flex items-center justify-center rounded border transition-colors gap-performance-xs text-performance-xs";
+  const baseClasses = "flex items-center justify-center rounded border transition-colors gap-2 text-xs";
   const sizeClasses = fullWidth
-    ? "px-performance-md py-performance-sm w-full"
-    : "px-performance-sm py-performance-xs";
+    ? "px-4 py-2 w-full"
+    : "px-3 py-1";
 
   const variantClass = variantClasses[variant] || variantClasses.blue;
 
@@ -600,29 +613,9 @@ const PerformanceChart: React.FC<{ history: any[] }> = ({ history }) => {
 // UTILITY FUNCTIONS
 // ============================================================================
 
-function getFpsColor(fps: number): string {
-  if (fps >= 55) return 'text-green-600';
-  if (fps >= 30) return 'text-orange-600';
-  return 'text-red-600';
-}
-
-function getFpsBarColor(fps: number): string {
-  if (fps >= 55) return 'bg-green-500';
-  if (fps >= 30) return 'bg-orange-500';
-  return 'bg-red-500';
-}
-
-function getMemoryColor(memory: number): string {
-  if (memory < 100) return 'text-green-600';
-  if (memory < 256) return 'text-orange-600';
-  return 'text-red-600';
-}
-
-function getRenderTimeColor(time: number): string {
-  if (time < 16.67) return 'text-green-600';
-  if (time < 33) return 'text-orange-600';
-  return 'text-red-600';
-}
+// ============================================================================
+// UTILITY FUNCTIONS - Now using centralized styling system
+// ============================================================================
 
 function getTrend(current: number, optimal: number, inverted = false): 'up' | 'down' | null {
   if (!optimal) return null;

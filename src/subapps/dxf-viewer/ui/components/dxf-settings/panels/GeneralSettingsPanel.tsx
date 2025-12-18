@@ -50,6 +50,7 @@
 
 import React, { Suspense } from 'react';
 import { useTabNavigation } from '../hooks/useTabNavigation';
+import { PANEL_TOKENS } from '../../../../config/panel-tokens';
 import { TabNavigation } from '../shared/TabNavigation';
 import { LazyLinesTab, LazyTextTab, LazyGripsTab } from '../LazyComponents';
 import { LinePreview } from '../settings/shared/LinePreview';
@@ -139,7 +140,7 @@ export const GeneralSettingsPanel: React.FC<GeneralSettingsPanelProps> = ({
       gripSettings: gripSettings?.settings
     });
     return (
-      <div className={`${className} px-4 py-8 text-center text-gray-400`}>
+      <div className={`${className} ${PANEL_TOKENS.GENERAL_SETTINGS.FALLBACK_CONTENT.BASE}`}>
         Φόρτωση ρυθμίσεων...
       </div>
     );
@@ -210,7 +211,7 @@ export const GeneralSettingsPanel: React.FC<GeneralSettingsPanelProps> = ({
       </div>
 
       {/* Tab Navigation */}
-      <div className="border-b border-gray-600 mb-4">
+      <div className={PANEL_TOKENS.GENERAL_SETTINGS.TAB_NAVIGATION.CONTAINER}>
         <TabNavigation
           tabs={tabs}
           activeTab={activeTab}
@@ -222,7 +223,7 @@ export const GeneralSettingsPanel: React.FC<GeneralSettingsPanelProps> = ({
       {/* Tab Content (Lazy Loaded) */}
       <Suspense
         fallback={
-          <div className="px-4 py-8 text-center text-gray-400">
+          <div className={PANEL_TOKENS.GENERAL_SETTINGS.LOADING_STATE.BASE}>
             Φόρτωση...
           </div>
         }

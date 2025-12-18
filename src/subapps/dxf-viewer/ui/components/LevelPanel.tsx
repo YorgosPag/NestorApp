@@ -6,7 +6,7 @@ const DEBUG_LEVEL_PANEL = false;
 import React, { useState, useMemo, useCallback } from 'react';
 import { Trash2, Plus, Building2, Edit, MousePointer, Pen, Move, Info, Shapes } from 'lucide-react';
 import { useOverlayStore } from '../../overlays/overlay-store';
-import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
+import { PANEL_TOKENS, PanelTokenUtils } from '../../config/panel-tokens';
 import { OverlayList } from '../OverlayList';
 import { useGripContext } from '../../providers/GripProvider';
 import { SceneInfoSection } from './SceneInfoSection'; // 🔺 ADDED: Import SceneInfoSection
@@ -249,7 +249,7 @@ export function LevelPanel({
   }, [handleLayeringActivation]); // Dependency στη function για να αναδημιουργηθεί αν αλλάξει
 
   return (
-    <div className="h-full flex flex-col px-1 py-2 space-y-4">
+    <div className={`${PANEL_TOKENS.LEVEL_PANEL.CONTAINER.BASE} ${PANEL_TOKENS.LEVEL_PANEL.CONTAINER.PADDING} ${PANEL_TOKENS.LEVEL_PANEL.CONTAINER.SECTION}`}>
       {/* 🔺 ADDED: Scene Info Section moved from Properties */}
       <SceneInfoSection 
         scene={scene || null} 
@@ -257,14 +257,14 @@ export function LevelPanel({
       />
       
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-          <Building2 className="w-5 h-5" />
+        <h3 className={PANEL_TOKENS.LEVEL_PANEL.HEADER.TEXT}>
+          <Building2 className={PANEL_TOKENS.LEVEL_PANEL.HEADER.ICON} />
           Επίπεδα Έργου
         </h3>
       </div>
 
       {Array.isArray(levels) && levels.length > 0 ? (
-        <div className="space-y-2">
+        <div className={PANEL_TOKENS.LEVEL_PANEL.CONTAINER.SECTION}>
           {levels.map((level) => {
 
             const scene = levelScenes[level.id];
@@ -275,11 +275,7 @@ export function LevelPanel({
             return (
               <div
                 key={level.id}
-                className={`p-3 rounded-lg border transition-all ${
-                  currentLevelId === level.id
-                    ? 'bg-blue-600 border-blue-500 text-white'
-                    : `bg-gray-700 border-gray-600 text-gray-300 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
-                }`}
+                className={PanelTokenUtils.getLevelCardClasses(currentLevelId === level.id)}
               >
                 <div className="flex items-center justify-between min-w-0">
                   {isEditing ? (
@@ -290,7 +286,7 @@ export function LevelPanel({
                         onChange={(e) => setEditingName(e.target.value)}
                         onBlur={() => handleRename(level.id)}
                         onKeyDown={(e) => e.key === 'Enter' && handleRename(level.id)}
-                        className="w-full bg-gray-800 border border-gray-500 rounded px-2 py-1 text-white text-sm"
+                        className={PANEL_TOKENS.LEVEL_PANEL.LEVEL_INPUT.BASE}
                         autoFocus
                       />
                     </div>
@@ -304,7 +300,7 @@ export function LevelPanel({
                       }));
                     }}>
                       <div className="font-medium">{level.name}</div>
-                      <div className="text-xs opacity-75">
+                      <div className={PANEL_TOKENS.TABS.TAB_LABEL.SIZE} style={{opacity: 0.75}}>
                         {hasContent ? `${scene.entities.length} στοιχεία` : 'Κενό επίπεδο'}
                       </div>
                     </div>
@@ -316,7 +312,7 @@ export function LevelPanel({
                           e.stopPropagation();
                           startEditing(level);
                         }}
-                        className={`p-1 text-gray-400 rounded ${HOVER_TEXT_EFFECTS.WHITE} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+                        className={PANEL_TOKENS.LEVEL_PANEL.ACTION_BUTTON.EDIT}
                         title="Μετονομασία επιπέδου"
                       >
                         <Edit className="w-4 h-4" />
@@ -327,7 +323,7 @@ export function LevelPanel({
                           e.stopPropagation();
                           handleDeleteLevel(level.id);
                         }}
-                        className={`p-1 text-red-400 rounded ${HOVER_TEXT_EFFECTS.RED} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+                        className={PANEL_TOKENS.LEVEL_PANEL.ACTION_BUTTON.DELETE}
                         title="Διαγραφή επιπέδου"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -340,14 +336,14 @@ export function LevelPanel({
           })}
         </div>
       ) : (
-        <div className="text-center py-8 text-gray-400">
-          <Building2 className="w-12 h-12 mx-auto mb-3 opacity-50" />
+        <div className={PANEL_TOKENS.LEVEL_PANEL.EMPTY_STATE.CONTAINER}>
+          <Building2 className={PANEL_TOKENS.LEVEL_PANEL.EMPTY_STATE.ICON} />
           <p>Δεν υπάρχουν επίπεδα</p>
         </div>
       )}
 
-      <div className="space-y-2 pt-4 border-t border-gray-700">
-        <div className="flex gap-2">
+      <div className={PANEL_TOKENS.LEVEL_PANEL.ADD_SECTION.CONTAINER}>
+        <div className={PANEL_TOKENS.LEVEL_PANEL.ADD_SECTION.FORM}>
           <input
             type="text"
             value={newLevelName}
@@ -355,16 +351,16 @@ export function LevelPanel({
             onKeyDown={(e) => e.key === 'Enter' && handleAddLevel()}
             placeholder="Όνομα νέου επιπέδου..."
             disabled={isAdding}
-            className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm placeholder-gray-400 focus:border-blue-500 focus:outline-none disabled:opacity-50"
+            className={PANEL_TOKENS.LEVEL_PANEL.ADD_INPUT.BASE}
           />
           <button
             type="button"
             onClick={handleAddLevel}
             disabled={isAdding}
-            className={`px-3 py-2 bg-green-600 disabled:opacity-50 text-white rounded flex items-center gap-1 ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+            className={PANEL_TOKENS.LEVEL_PANEL.ADD_BUTTON.BASE}
           >
             {isAdding ? (
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              <div className={PANEL_TOKENS.LEVEL_PANEL.ADD_BUTTON.LOADING_SPINNER}></div>
             ) : (
               <Plus className="w-4 h-4" />
             )}
@@ -374,7 +370,7 @@ export function LevelPanel({
 
       {/* 🔺 ADDED: LayersSection moved from Properties */}
       {scene && Object.keys(scene.layers).length > 0 && (
-        <div className="mt-4 pt-4 border-t border-gray-700">
+        <div className={PANEL_TOKENS.LEVEL_PANEL.SECTIONS_BORDER}>
           <LayersSection
             scene={scene}
             selectedEntityIds={selectedEntityIds}
@@ -401,7 +397,7 @@ export function LevelPanel({
 
       {/* Editing Toolbox - shown when layering tool is active */}
       
-      <div className="mt-4 pt-4 border-t border-gray-700 flex-1 min-h-0">
+      <div className={PANEL_TOKENS.LEVEL_PANEL.OVERLAY_SECTION}>
         <OverlayList
             overlays={currentOverlays}
             selectedOverlayId={overlayStore.selectedOverlayId}

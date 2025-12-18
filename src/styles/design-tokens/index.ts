@@ -125,6 +125,31 @@ export type {
   PortalPlacement
 } from './components/portal-tokens';
 
+// Floating System Components - Enterprise Unified System
+export {
+  FLOATING_LAYERS,
+  FLOATING_POSITIONING,
+  FLOATING_DIMENSIONS,
+  FLOATING_BEHAVIORS,
+  FloatingStyleUtils,
+  FLOATING_SYSTEM_TOKENS,
+  // Specific component tokens
+  PerformanceDashboardTokens,
+  ModalTokens,
+  // Legacy compatibility exports
+  PERFORMANCE_DASHBOARD_Z_INDEX,
+  MODAL_Z_INDEX,
+  OVERLAY_Z_INDEX
+} from './components/floating-system-tokens';
+
+export type {
+  FloatingLayer,
+  FloatingPosition,
+  FloatingDimension,
+  FloatingBehavior,
+  FloatingConfig
+} from './components/floating-system-tokens';
+
 // ============================================================================
 // NEW ENTERPRISE MODULES - PERFORMANCE & CHART COMPONENTS
 // ============================================================================

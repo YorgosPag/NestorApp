@@ -6,6 +6,7 @@ import { useOverlayManager } from '../state/overlay-manager';
 import type { RegionStatus } from '../types/overlay';
 import { STATUS_COLORS_MAPPING, getStatusColors } from '../config/color-mapping';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { PANEL_TOKENS } from '../config/panel-tokens';
 import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 import { REGION_STATUS_LABELS } from '../../../constants/statuses';
 
@@ -91,7 +92,7 @@ export function OverlayPanel({ isDrawingMode, drawingStatus, onStartDrawing, onS
       </div>
 
       {/* Instructions */}
-      <div className="bg-gray-700 rounded p-3 space-y-1">
+      <div className={PANEL_TOKENS.OVERLAY_PANEL.INFO_SECTION.BASE}>
         <div className="text-xs text-gray-300">
           • Κλικ για επιλογή περιοχών
         </div>

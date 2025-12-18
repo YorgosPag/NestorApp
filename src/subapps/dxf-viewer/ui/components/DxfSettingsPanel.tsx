@@ -1,6 +1,6 @@
 'use client';
 
-import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { PANEL_TOKENS, PanelTokenUtils } from '../../config/panel-tokens';
 
 /**
  * ╔════════════════════════════════════════════════════════════════════════════╗
@@ -92,27 +92,19 @@ export function DxfSettingsPanel({ className = '' }: DxfSettingsPanelProps) {
   // ============================================================================
 
   return (
-    <div className={`bg-gray-800 text-white ${className}`}>
+    <div className={`${PANEL_TOKENS.DXF_SETTINGS.CONTAINER.BASE} ${className}`}>
       {/* Main Tabs - General/Specific */}
-      <div className="border-b border-gray-600 mb-4">
-        <nav className="flex gap-1 p-2">
+      <div className={PANEL_TOKENS.DXF_SETTINGS.TAB_NAVIGATION.CONTAINER}>
+        <nav className={PANEL_TOKENS.DXF_SETTINGS.TAB_NAVIGATION.NAV}>
           <button
             onClick={() => setActiveMainTab('general')}
-            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-              activeMainTab === 'general'
-                ? 'bg-blue-600 text-white'
-                : `text-gray-400 ${HOVER_TEXT_EFFECTS.WHITE} ${HOVER_BACKGROUND_EFFECTS.GRAY_DARKER}`
-            }`}
+            className={PanelTokenUtils.getDxfSettingsTabClasses(activeMainTab === 'general')}
           >
             Γενικές Ρυθμίσεις
           </button>
           <button
             onClick={() => setActiveMainTab('specific')}
-            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-              activeMainTab === 'specific'
-                ? 'bg-blue-600 text-white'
-                : `text-gray-400 ${HOVER_TEXT_EFFECTS.WHITE} ${HOVER_BACKGROUND_EFFECTS.GRAY_DARKER}`
-            }`}
+            className={PanelTokenUtils.getDxfSettingsTabClasses(activeMainTab === 'specific')}
           >
             Ειδικές Ρυθμίσεις
           </button>
@@ -121,11 +113,11 @@ export function DxfSettingsPanel({ className = '' }: DxfSettingsPanelProps) {
 
       {/* Content based on active main tab */}
       {activeMainTab === 'general' && (
-        <GeneralSettingsPanel className="min-h-[850px] max-h-[96vh] overflow-y-auto" />
+        <GeneralSettingsPanel className={PANEL_TOKENS.DXF_SETTINGS.CONTENT.GENERAL} />
       )}
 
       {activeMainTab === 'specific' && (
-        <SpecificSettingsPanel />
+        <SpecificSettingsPanel className={PANEL_TOKENS.DXF_SETTINGS.CONTENT.SPECIFIC} />
       )}
     </div>
   );

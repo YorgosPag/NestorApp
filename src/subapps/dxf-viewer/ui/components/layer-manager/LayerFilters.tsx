@@ -1,5 +1,6 @@
 import React from 'react';
-import { Search } from 'lucide-react';
+import { SearchInput } from '@/components/ui/search/SearchInput';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { LayerFiltersProps } from './types';
 
 export function LayerFilters({
@@ -11,28 +12,26 @@ export function LayerFilters({
 }: LayerFiltersProps) {
   return (
     <div className="space-y-2">
-      <div className="relative">
-        <Search className="absolute left-2 top-2.5 h-3 w-3 text-gray-400" />
-        <input
-          type="text"
-          placeholder="Αναζήτηση layers..."
-          value={searchQuery}
-          onChange={(e) => onSearchChange(e.target.value)}
-          className="w-full pl-7 h-8 text-sm bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400 focus:border-blue-500 focus:outline-none"
-        />
-      </div>
+      <SearchInput
+        value={searchQuery}
+        onChange={onSearchChange}
+        placeholder="Αναζήτηση layers..."
+        className="h-8 bg-gray-700 border-gray-600 text-white placeholder-gray-400"
+        debounceMs={300}
+      />
       
-      <select
-        value={selectedCategory}
-        onChange={(e) => onCategoryChange(e.target.value)}
-        className="w-full h-8 text-sm bg-gray-700 border border-gray-600 rounded text-white focus:border-blue-500 focus:outline-none"
-      >
-        {categories.map(category => (
-          <option key={category.value} value={category.value}>
-            {category.label}
-          </option>
-        ))}
-      </select>
+      <Select value={selectedCategory} onValueChange={onCategoryChange}>
+        <SelectTrigger className="h-8 bg-gray-700 border-gray-600 text-white focus:border-blue-500">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {categories.map(category => (
+            <SelectItem key={category.value} value={category.value}>
+              {category.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }

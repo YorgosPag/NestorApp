@@ -3,6 +3,7 @@
 // PURPOSE: Router for all 7 Specific Settings categories with lazy loading
 
 import { INTERACTIVE_PATTERNS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
+import { PANEL_TOKENS, PanelTokenUtils } from '../../../../config/panel-tokens';
 
 /**
  * ╔════════════════════════════════════════════════════════════════════════════╗
@@ -198,17 +199,14 @@ export const SpecificSettingsPanel: React.FC<SpecificSettingsPanelProps> = ({
             onClick={() => setActiveCategory(category.id)}
             disabled={category.comingSoon}
             title={category.title}
-            className={`h-8 w-8 p-0 rounded-md border transition-colors duration-150 flex items-center justify-center relative ${
-              activeCategory === category.id
-                ? `bg-blue-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} text-white border-blue-500`
-                : category.comingSoon
-                ? 'bg-gray-700 text-gray-500 border-gray-600 cursor-not-allowed opacity-50'
-                : `bg-gray-700 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-gray-300 border-gray-600 ${HOVER_BORDER_EFFECTS.GRAY}`
-            }`}
+            className={PanelTokenUtils.getSpecificCategoryButtonClasses(
+              activeCategory === category.id,
+              category.comingSoon
+            )}
           >
             {category.icon}
             {category.comingSoon && (
-              <span className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full text-[8px] flex items-center justify-center text-white font-bold">
+              <span className={PANEL_TOKENS.SPECIFIC_SETTINGS.COMING_SOON_BADGE.BASE}>
                 !
               </span>
             )}
@@ -219,7 +217,7 @@ export const SpecificSettingsPanel: React.FC<SpecificSettingsPanelProps> = ({
       {/* Category Content */}
       <Suspense
         fallback={
-          <div className="px-4 py-8 text-center text-gray-400">
+          <div className={PANEL_TOKENS.SPECIFIC_SETTINGS.FALLBACK_CONTENT.BASE}>
             Φόρτωση...
           </div>
         }
