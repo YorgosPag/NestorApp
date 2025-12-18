@@ -53,6 +53,51 @@
     'Warning: Each child in a list'
   ];
 
+  // ═══ PERFORMANCE MONITORING NOISE PATTERNS ═══
+
+  const BLOCKED_PERFORMANCE_PATTERNS = [
+    'Performance monitoring started',
+    'Performance monitoring stopped',
+    'monitoring started',
+    'monitoring stopped',
+    'Memory monitoring started',
+    'Memory monitoring stopped',
+    'Production monitoring started',
+    'Production monitoring stopped',
+    'Security monitoring started',
+    'Container monitoring started',
+    'Container monitoring stopped',
+    'Infrastructure monitoring started',
+    'Infrastructure monitoring stopped',
+    'Pipeline monitoring started',
+    'Pipeline monitoring enabled',
+    'Automated monitoring started',
+    'Automated monitoring stopped',
+    'Starting monitoring',
+    'Stopping monitoring',
+    'Starting container monitoring',
+    'Stopping container monitoring',
+    'Starting infrastructure monitoring',
+    'Stopping infrastructure monitoring',
+    'MEMORY LEAK DETECTOR - Starting monitoring',
+    'PRODUCTION MONITORING - Starting comprehensive monitoring',
+    '📊 Performance monitoring',
+    '🛑 Performance monitoring',
+    '📊 Security monitoring',
+    '📊 Starting container monitoring',
+    '📊 Pipeline monitoring',
+    '🛑 Stopping',
+    '✅ Memory monitoring',
+    '✅ Production monitoring',
+    '✅ Container monitoring',
+    '✅ Infrastructure monitoring',
+    '🔍 MEMORY LEAK DETECTOR',
+    '🚨 Technical: Automated monitoring',
+    '🏢 Professional: Setting up batch real estate monitoring',
+    '✅ Professional: Batch monitoring setup completed',
+    '📊 Professional: Real estate monitoring dashboard opened'
+  ];
+
   // ═══ INTELLIGENT PATTERN DETECTION ═══
 
   function containsBlockedPattern(args) {
@@ -67,13 +112,20 @@
         const hasProductionPattern = isProduction &&
           BLOCKED_PRODUCTION_PATTERNS.some(pattern => arg.includes(pattern));
 
-        return hasReactPattern || hasProductionPattern;
+        // Performance monitoring patterns (development + production)
+        const hasPerformancePattern = BLOCKED_PERFORMANCE_PATTERNS.some(pattern =>
+          arg.includes(pattern)
+        );
+
+        return hasReactPattern || hasProductionPattern || hasPerformancePattern;
       }
 
       // Check stringified objects
       if (arg && typeof arg === 'object') {
         const str = arg.toString();
-        return BLOCKED_REACT_PATTERNS.some(pattern => str.includes(pattern));
+        const hasReactPattern = BLOCKED_REACT_PATTERNS.some(pattern => str.includes(pattern));
+        const hasPerformancePattern = BLOCKED_PERFORMANCE_PATTERNS.some(pattern => str.includes(pattern));
+        return hasReactPattern || hasPerformancePattern;
       }
 
       return false;
@@ -156,7 +208,8 @@
         },
         patterns: {
           react: BLOCKED_REACT_PATTERNS,
-          production: BLOCKED_PRODUCTION_PATTERNS
+          production: BLOCKED_PRODUCTION_PATTERNS,
+          performance: BLOCKED_PERFORMANCE_PATTERNS
         }
       };
     }

@@ -42,7 +42,7 @@ describe('GeoCanvasApp', () => {
   it('shows enterprise architecture info', () => {
     render(<GeoCanvasApp />);
 
-    expect(screen.getByText('🏗️ Architecture Overview')).toBeInTheDocument();
+    expect(screen.getByText('Architecture Overview')).toBeInTheDocument();
     expect(screen.getByText(/Centralized System/)).toBeInTheDocument();
     expect(screen.getByText(/Technology Stack/)).toBeInTheDocument();
   });

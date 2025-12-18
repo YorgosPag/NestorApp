@@ -26,6 +26,7 @@ import { PageErrorBoundary, ComponentErrorBoundary } from '@/components/ui/Error
 import ErrorReportingDashboard from '@/components/development/ErrorReportingDashboard';
 import { useAnalytics } from '@/services/AnalyticsBridge';
 import { TRANSITION_PRESETS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { CraneIcon } from '@/subapps/dxf-viewer/components/icons';
 import type { GeoCanvasAppProps } from '../types';
 import type { GeoCoordinate, DxfCoordinate } from '../types';
 
@@ -713,8 +714,9 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
 
                   {/* Architecture Overview */}
                   <div className="mt-8 p-6 bg-gray-800 rounded-lg">
-                    <h3 className="text-lg font-semibold mb-4 text-blue-400">
-                      🏗️ {isLoading ? 'Επισκόπηση Αρχιτεκτονικής' : t('phaseDetails.architectureOverview.title')}
+                    <h3 className="text-lg font-semibold mb-4 text-blue-400 flex items-center gap-2">
+                      <CraneIcon className="h-5 w-5" />
+                      {isLoading ? 'Επισκόπηση Αρχιτεκτονικής' : t('phaseDetails.architectureOverview.title')}
                     </h3>
                     <div className="text-sm text-gray-300 space-y-2">
                       <p>

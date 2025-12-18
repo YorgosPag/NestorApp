@@ -8,6 +8,7 @@ import {
   Building2, Warehouse, LayoutGrid, FileSignature, ClipboardCheck, PlayCircle,
   BarChart3
 } from 'lucide-react';
+import { CraneIcon } from '@/subapps/dxf-viewer/components/icons';
 
 // ============================================================================
 // 🔥 CENTRALIZED ICON MAPPING - SINGLE SOURCE OF TRUTH
@@ -115,7 +116,7 @@ export const ICON_MAPPING = {
   // 🏗️ Building/Project icons (from GenericBuildingTabsRenderer)
   '🏠': Home,
   '🏢': Building,
-  '🏗️': Construction,
+  '🏗️': CraneIcon,
   '📐': Ruler,
   '📊': BarChart,
   '📹': Video,

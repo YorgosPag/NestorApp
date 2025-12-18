@@ -513,7 +513,7 @@ export class GeoAlertPerformanceOptimization {
       this.updateOptimizationRecommendations();
     }, 30000); // Κάθε 30 δευτερόλεπτα
 
-    console.log('📊 Performance monitoring started');
+    // console.log('📊 Performance monitoring started'); // DISABLED - προκαλούσε loops
   }
 
   /**

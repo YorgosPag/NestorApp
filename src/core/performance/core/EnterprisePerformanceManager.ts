@@ -87,7 +87,7 @@ export class EnterprisePerformanceManager {
     this.startPerformanceObserver();
     this.startMetricCollection();
 
-    console.log(`✅ Enterprise Performance Monitoring started (interval: ${this.config.interval}ms)`);
+    // console.log(`✅ Enterprise Performance Monitoring started (interval: ${this.config.interval}ms)`); // DISABLED - προκαλούσε loops
   }
 
   /**
@@ -108,7 +108,7 @@ export class EnterprisePerformanceManager {
       this.performanceObserver = undefined;
     }
 
-    console.log('⏹️ Performance monitoring stopped');
+    // console.log('⏹️ Performance monitoring stopped'); // DISABLED - προκαλούσε loops
   }
 
   // 📊 METRIC COLLECTION & MANAGEMENT
@@ -226,7 +226,7 @@ export class EnterprisePerformanceManager {
       this.startMonitoring();
     }
 
-    console.log('🔧 Performance monitoring configuration updated');
+    // console.log('🔧 Performance monitoring configuration updated'); // DISABLED - προκαλούσε loops
   }
 
   /**

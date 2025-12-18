@@ -164,6 +164,81 @@ const headerConfig = createEnterpriseHeader()
 
 ---
 
+## 🖱️ **DRAGGABLE SYSTEM - ENTERPRISE CENTRALIZED HOOK** (2025-12-18):
+
+### 🏆 **ENTERPRISE DRAGGABLE FOUNDATION** ✅ **PHASE 1.1 COMPLETE**
+**Location**: `src/hooks/useDraggable.ts` ← **Single Source of Truth**
+
+**ΑΝΤΙΚΑΤΕΣΤΗΣΕ**: Multiple διάσπαρτα draggable implementations → **Centralized Enterprise Hook**
+
+#### **🎯 ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ ΣΤΟΧΟΣ - ZERO DUPLICATES:**
+```typescript
+// ❌ ΠΡΙΝ: 3 Διάσπαρτα Systems
+src/subapps/dxf-viewer/ui/components/tests-modal/hooks/useDraggableModal.ts    (64 lines)
+src/subapps/dxf-viewer/ui/components/DraggableOverlayProperties.tsx            (40 lines duplicate)
+src/subapps/dxf-viewer/ui/components/DraggableOverlayToolbar.tsx               (30 lines duplicate)
+
+// ✅ ΜΕΤΑ: Centralized Enterprise System
+src/hooks/useDraggable.ts                                                      (200+ lines, A+ quality)
+```
+
+#### **🏢 ENTERPRISE FEATURES:** ✅ **PROFESSIONAL ARCHITECTURE**
+- ✅ **Auto-positioning**: Smart centering με viewport awareness
+- ✅ **Button Exclusion**: Professional interaction handling (no drag on buttons/inputs)
+- ✅ **Viewport Bounds**: Automatic constraint management
+- ✅ **TypeScript Excellence**: Full interfaces, zero any types
+- ✅ **Memory Efficiency**: Optimized event listeners με cleanup
+- ✅ **Configurable API**: Options-based design για maximum flexibility
+
+#### **📊 MIGRATION STATUS:** ✅ **PERFORMANCE MONITOR INTEGRATED**
+- ✅ **Phase 1.1**: Central hook created (Enterprise A+ quality)
+- ✅ **Phase 1.2**: Performance Monitor integration (COMPLETE)
+- ⏸️ **Phase 2.1**: DraggableOverlayProperties migration (READY)
+- ⏸️ **Phase 2.2**: DraggableOverlayToolbar migration (READY)
+
+#### **🎯 ΧΡΗΣΗ - ENTERPRISE API:**
+```typescript
+// 🚀 Basic Usage (Performance Monitor ready)
+const { position, isDragging, elementRef, handleMouseDown } = useDraggable(isVisible);
+
+// 🏢 Advanced Usage με configuration
+const { position, setPosition, ...handlers } = useDraggable(isVisible, {
+  initialPosition: { x: 100, y: 50 },
+  autoCenter: false,
+  elementWidth: 400,
+  elementHeight: 300,
+  minPosition: { x: 0, y: 0 }
+});
+
+// 🎨 Component Integration
+<div
+  ref={elementRef}
+  onMouseDown={handleMouseDown}
+  style={{ transform: `translate(${position.x}px, ${position.y}px)` }}
+  className={isDragging ? 'cursor-grabbing' : 'cursor-grab'}
+>
+  {/* Draggable Content */}
+</div>
+```
+
+#### **💰 BUSINESS IMPACT:**
+- 🎯 **Target Elimination**: 70 lines duplicate code across 2 components (IN PROGRESS)
+- 🏢 **Centralized**: Single source of truth για draggable functionality
+- ⚡ **Performance**: Enterprise event management με optimized listeners
+- 🔧 **Maintainability**: Professional TypeScript architecture
+- 📈 **Scalability**: Extensible design για future touch support
+- ✅ **IMPLEMENTED**: Performance Monitor now fully draggable με enterprise standards
+
+#### **🎯 PHASE 1.2 SUCCESS - PERFORMANCE MONITOR DRAGGABLE:**
+- ✅ **Integration**: useDraggable hook successfully applied
+- ✅ **Zero Breaking Changes**: Εμφάνιση παραμένει ακριβώς ίδια
+- ✅ **Enterprise UX**: Smart button exclusion, smooth positioning
+- ✅ **Professional Features**: Auto-centering, viewport bounds, transition effects
+- ✅ **TypeScript Safety**: Naming conflicts resolved (position → dashboardPosition)
+- ✅ **Performance**: Optimized event handling, memory-efficient implementation
+
+---
+
 ### 🔍 **SEARCH SYSTEMS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ COMPONENTS** (2025-12-15):
 **Location**: `src/components/ui/search/`
 

@@ -16,6 +16,7 @@
 import React from 'react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { INTERACTIVE_PATTERNS, HOVER_SHADOWS } from '@/components/ui/effects';
+import { CraneIcon } from '@/subapps/dxf-viewer/components/icons';
 
 export interface FloorPlanUploadButtonProps {
   /**
@@ -86,7 +87,7 @@ export function FloorPlanUploadButton({
         </>
       ) : (
         <>
-          <span className="text-lg">🏗️</span>
+          <CraneIcon className="h-4 w-4" />
           <span>{t('floorPlan.uploadButton.text')}</span>
         </>
       )}

@@ -201,7 +201,7 @@ export class AdminBoundariesPerformanceAnalytics {
       this.collectBoundariesMetrics();
     }, interval);
 
-    console.log('🏛️ Administrative Boundaries Performance Monitoring started');
+    // console.log('🏛️ Administrative Boundaries Performance Monitoring started'); // DISABLED - προκαλούσε loops
   }
 
   public stopMonitoring(): void {
@@ -212,7 +212,7 @@ export class AdminBoundariesPerformanceAnalytics {
       this.monitoringInterval = null;
     }
 
-    console.log('🏛️ Administrative Boundaries Performance Monitoring stopped');
+    // console.log('🏛️ Administrative Boundaries Performance Monitoring stopped'); // DISABLED - προκαλούσε loops
   }
 
   // ============================================================================

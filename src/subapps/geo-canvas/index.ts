@@ -216,7 +216,7 @@ export class GeoAlertSystem {
 
     try {
       // Phase 7: Start performance monitoring
-      console.log('📊 Phase 7: Starting performance monitoring...');
+      // console.log('📊 Phase 7: Starting performance monitoring...'); // DISABLED - προκαλούσε loops
       this.performanceMonitor.startMonitoring();
       this.memoryDetector.startMonitoring();
       subsystemResults['performance-monitoring'] = true;

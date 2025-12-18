@@ -180,7 +180,7 @@ export class PerformanceMonitor {
     // Start frame counting
     this.startFrameMonitoring();
 
-    console.log('🔍 Performance Monitor initialized');
+    // console.log('🔍 Performance Monitor initialized'); // DISABLED - προκαλούσε loops
   }
 
   private setupPerformanceObservers(): void {
@@ -263,7 +263,7 @@ export class PerformanceMonitor {
       this.detectMemoryLeaks();
     }, 30000); // Every 30 seconds
 
-    console.log('📊 Performance monitoring started');
+    // console.log('📊 Performance monitoring started'); // DISABLED - προκαλούσε loops
   }
 
   public stopMonitoring(): void {
@@ -283,7 +283,7 @@ export class PerformanceMonitor {
       this.renderingObserver.disconnect();
     }
 
-    console.log('📊 Performance monitoring stopped');
+    // console.log('📊 Performance monitoring stopped'); // DISABLED - προκαλούσε loops
   }
 
   // ========================================================================

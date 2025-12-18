@@ -178,15 +178,15 @@ export function OptimizedAppProvider({
       // Enable memory monitoring
       enableMemoryMonitoring();
 
-      // Log optimization status
-      console.group('🚀 App Optimizations Enabled');
-      console.log('✅ Performance monitoring');
-      console.log('✅ Memory leak detection');
-      console.log('✅ Advanced caching');
-      console.log('✅ Error boundaries with recovery');
-      console.log('✅ Progressive loading');
-      console.log('✅ Lazy route loading');
-      console.groupEnd();
+      // Log optimization status - DISABLED to avoid console noise
+      // console.group('🚀 App Optimizations Enabled');
+      // console.log('✅ Performance monitoring');
+      // console.log('✅ Memory leak detection');
+      // console.log('✅ Advanced caching');
+      // console.log('✅ Error boundaries with recovery');
+      // console.log('✅ Progressive loading');
+      // console.log('✅ Lazy route loading');
+      // console.groupEnd();
 
       // Add debug helpers to window
       (window as any).__appOptimizations = {

@@ -25,6 +25,7 @@ import {
   DialogFooter
 } from '@/components/ui/dialog';
 import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS, HOVER_SHADOWS } from '@/components/ui/effects';
+import { CraneIcon } from '@/subapps/dxf-viewer/components/icons';
 import { FloorPlanPreview } from './FloorPlanPreview';
 import type { ParserResult } from '../types';
 
@@ -194,8 +195,9 @@ export function FloorPlanUploadModal({
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[600px] bg-gray-900 text-white border-gray-700">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-blue-400">
-            🏗️ {t('floorPlan.uploadModal.title')}
+          <DialogTitle className="text-2xl font-bold text-blue-400 flex items-center gap-2">
+            <CraneIcon className="h-6 w-6" />
+            {t('floorPlan.uploadModal.title')}
           </DialogTitle>
           <DialogDescription className="text-gray-400">
             {t('floorPlan.uploadModal.description')}

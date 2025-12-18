@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { HardHat, Ruler, FileText, ExternalLink, Settings, Database, AlertTriangle, Bell, Monitor, Zap, X, Home, Building, Sparkles } from 'lucide-react';
+import { CraneIcon } from '@/subapps/dxf-viewer/components/icons';
 import { useCentralizedPolygonSystem } from '../systems/polygon-system';
 import { useRealEstateMatching } from '@/services/real-estate-monitor/useRealEstateMatching';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
@@ -331,7 +332,8 @@ export function TechnicalDrawingInterface({
             {t('drawingInterfaces.technical.openViewer')} <ExternalLink className="w-3 h-3" />
           </a>
         </div>
-        <p className="text-xs text-gray-500 mt-1">
+        <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+          <CraneIcon className="h-3 w-3" />
           {t('drawingInterfaces.technical.cadEnvironment')}
         </p>
       </div>

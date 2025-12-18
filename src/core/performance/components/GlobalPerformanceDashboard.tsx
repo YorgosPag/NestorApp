@@ -15,6 +15,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useDraggable } from '../../../hooks/useDraggable';
 import {
   Activity,
   Cpu,
@@ -72,7 +73,7 @@ interface GlobalPerformanceDashboardProps {
  * 📊 Main Performance Dashboard Component - DXF Style με Enterprise Design
  */
 export const GlobalPerformanceDashboard: React.FC<GlobalPerformanceDashboardProps> = ({
-  position = 'top-right',
+  position: dashboardPosition = 'top-right',
   minimizable = true,
   defaultMinimized = false,
   showDetails = true,
@@ -85,6 +86,18 @@ export const GlobalPerformanceDashboard: React.FC<GlobalPerformanceDashboardProp
   const [isVisible, setIsVisible] = useState(true);
   const [showOptimizations, setShowOptimizations] = useState(false);
   const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set());
+
+  // 🖱️ ENTERPRISE DRAGGABLE SYSTEM - Centralized Hook
+  const {
+    position: dragPosition,
+    isDragging,
+    elementRef,
+    handleMouseDown
+  } = useDraggable(isVisible, {
+    elementWidth: 400,  // max-w-[400px]
+    elementHeight: 500, // Estimated height
+    autoCenter: true
+  });
 
   // Prevent hydration mismatch
   useEffect(() => {
@@ -138,19 +151,31 @@ export const GlobalPerformanceDashboard: React.FC<GlobalPerformanceDashboardProp
     history: mockHistory
   };
 
-  // Position classes
-  const positionClasses = {
+  // 📍 ENTERPRISE POSITIONING - Draggable System Integration
+  // Legacy position classes maintained for fallback/initial positioning
+  const fallbackPositionClasses = {
     'top-left': 'top-4 left-4',
     'top-right': 'top-4 right-4',
     'bottom-left': 'bottom-4 left-4',
     'bottom-right': 'bottom-4 right-4',
     'floating': 'top-4 right-4'
-  }[position];
+  }[dashboardPosition];
+
+  // Enterprise draggable positioning styles
+  const draggableStyles = mounted ? {
+    position: 'fixed' as const,
+    left: `${dragPosition.x}px`,
+    top: `${dragPosition.y}px`,
+    transition: isDragging ? 'none' : 'all 0.2s ease-out'
+  } : undefined;
 
   // Prevent hydration mismatch - don't render until mounted
   if (!mounted) {
     return null;
   }
+
+  // DEBUG: Component is rendering
+  console.log('🎯 PERFORMANCE MONITOR: Component is rendering!', { isVisible, mounted });
 
   if (!isVisible) {
     return (
@@ -165,16 +190,33 @@ export const GlobalPerformanceDashboard: React.FC<GlobalPerformanceDashboardProp
   }
 
   return (
-    <Card className={cn(
-      `fixed ${positionClasses} z-50 bg-card/95 backdrop-blur-sm shadow-xl min-w-[320px] max-w-[400px]`,
-      className
-    )}>
-      {/* Header - Enterprise Style με CardHeader */}
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+    <Card
+      ref={elementRef}
+      className={cn(
+        `z-50 bg-card/95 backdrop-blur-sm shadow-xl min-w-[320px] max-w-[400px]`,
+        isDragging ? 'cursor-grabbing' : 'cursor-grab',
+        !mounted && `fixed ${fallbackPositionClasses}`, // Fallback positioning until draggable is ready
+        className
+      )}
+      style={draggableStyles}
+    >
+      {/* Header - Enterprise Draggable Handle */}
+      <CardHeader
+        className="flex flex-row items-center justify-between space-y-0 pb-3"
+        onMouseDown={handleMouseDown}
+      >
         <div className="flex items-center space-x-2">
           <Activity className="h-4 w-4 text-primary" />
           <h3 className="text-sm font-semibold text-foreground">Performance Monitor</h3>
           <PerformanceGradeBadge grade={status.grade} />
+          {/* 🖱️ DEDICATED DRAG HANDLE για εύκολο dragging */}
+          <div
+            className="ml-2 px-2 py-1 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground transition-colors rounded"
+            title="Drag to move"
+            onMouseDown={handleMouseDown}
+          >
+            ⋮⋮
+          </div>
         </div>
         <div className="flex items-center space-x-1">
           <button

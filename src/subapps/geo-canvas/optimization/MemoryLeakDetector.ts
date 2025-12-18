@@ -250,7 +250,7 @@ export class GeoAlertMemoryLeakDetector {
       return;
     }
 
-    console.log('🔍 MEMORY LEAK DETECTOR - Starting monitoring...');
+    // console.log('🔍 MEMORY LEAK DETECTOR - Starting monitoring...'); // DISABLED - προκαλούσε loops
     this.isMonitoring = true;
 
     // Take initial snapshot
@@ -264,7 +264,7 @@ export class GeoAlertMemoryLeakDetector {
       this.cleanup();
     }, this.config.monitoring.interval);
 
-    console.log(`✅ Memory monitoring started (interval: ${this.config.monitoring.interval}ms)`);
+    // console.log(`✅ Memory monitoring started (interval: ${this.config.monitoring.interval}ms)`); // DISABLED - προκαλούσε loops
   }
 
   /**
@@ -273,7 +273,7 @@ export class GeoAlertMemoryLeakDetector {
   public stopMonitoring(): void {
     if (!this.isMonitoring) return;
 
-    console.log('🛑 Stopping memory monitoring...');
+    // console.log('🛑 Stopping memory monitoring...'); // DISABLED - προκαλούσε loops
     this.isMonitoring = false;
 
     if (this.monitoringInterval) {
@@ -285,7 +285,7 @@ export class GeoAlertMemoryLeakDetector {
       this.performanceObserver.disconnect();
     }
 
-    console.log('✅ Memory monitoring stopped');
+    // console.log('✅ Memory monitoring stopped'); // DISABLED - προκαλούσε loops
   }
 
   // ========================================================================

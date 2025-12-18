@@ -129,7 +129,7 @@ export function usePerformanceOptimization(
       updateStatus();
     }, monitoringInterval);
 
-    console.log('📊 Performance monitoring started');
+    // console.log('📊 Performance monitoring started'); // DISABLED - προκαλούσε loops
   }, [monitoringInterval, updateStatus]);
 
   /**
@@ -142,7 +142,7 @@ export function usePerformanceOptimization(
     }
 
     setIsMonitoringActive(false);
-    console.log('🛑 Performance monitoring stopped');
+    // console.log('🛑 Performance monitoring stopped'); // DISABLED - προκαλούσε loops
   }, []);
 
   /**
