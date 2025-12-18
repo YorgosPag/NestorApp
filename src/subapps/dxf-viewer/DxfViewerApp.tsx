@@ -11,7 +11,7 @@ import { SelectionSystem } from './systems/selection';
 import { CursorSystem } from './systems/cursor';
 import { ToolbarsSystem } from './systems/toolbars';
 import { RulersGridSystem } from './systems/rulers-grid/RulersGridSystem';
-import { DxfViewerErrorBoundary } from './components/ErrorBoundary';
+import ErrorBoundary from '@/components/ui/ErrorBoundary/ErrorBoundary';
 import { StorageErrorBoundary } from './components/StorageErrorBoundary';
 import { ProjectHierarchyProvider } from './contexts/ProjectHierarchyContext';
 // ✅ ΑΦΑΙΡΕΣΗ ΠΑΛΙΩΝ PREVIEW SETTINGS PROVIDERS - ΔΙΑΓΡΑΜΜΕΝΑ
@@ -53,7 +53,13 @@ export function DxfViewerApp(props: DxfViewerAppProps) {
   return (
     <NotificationProvider>
       <StorageErrorBoundary>
-        <DxfViewerErrorBoundary>
+        <ErrorBoundary
+          componentName="DxfViewer"
+          enableRetry={true}
+          maxRetries={2}
+          enableReporting={true}
+          showErrorDetails={true}
+        >
           {/* ===== ΝΕΑ UNIFIED PROVIDERS (για internal use από contexts) ===== */}
           {/* 🗑️ REMOVED: ConfigurationProvider - MERGED into DxfSettingsProvider */}
               <ProjectHierarchyProvider>
@@ -91,7 +97,7 @@ export function DxfViewerApp(props: DxfViewerAppProps) {
                 </DxfSettingsProvider>
               </ProjectHierarchyProvider>
           {/* 🗑️ REMOVED: ConfigurationProvider closing tag */}
-      </DxfViewerErrorBoundary>
+      </ErrorBoundary>
     </StorageErrorBoundary>
     </NotificationProvider>
   );

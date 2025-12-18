@@ -4428,7 +4428,7 @@ const gripStyles = useEntityStyles('grip');
 ```
 NotificationProvider
 └─ StorageErrorBoundary
-   └─ DxfViewerErrorBoundary
+   └─ ErrorBoundary (Enterprise Centralized)
       └─ ConfigurationProvider         ← Unified config system
          └─ StyleManagerProvider       ← Style management
             └─ DxfSettingsProvider     ← Central settings with auto-save

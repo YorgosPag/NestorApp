@@ -98,7 +98,7 @@ export class StorageErrorBoundary extends Component<Props, State> {
               </CardHeader>
               <CardContent className="space-y-4">
                 {this.state.storageInfo && (
-                  <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded">
+                  <div className="text-sm text-muted-foreground bg-muted p-3 rounded">
                     <div className="font-semibold mb-2">📊 Storage Usage:</div>
                     <div>Χρησιμοποιημένο: {StorageManager.formatBytes(this.state.storageInfo.usage)}</div>
                     <div>Συνολικό: {StorageManager.formatBytes(this.state.storageInfo.quota)}</div>
@@ -115,7 +115,8 @@ export class StorageErrorBoundary extends Component<Props, State> {
                     <li>Application cache</li>
                   </ul>
                   <p className="mt-2 font-semibold text-xs">
-                    ⚠️ Τα αποθηκευμένα projects δεν θα επηρεαστούν.
+                    <AlertTriangle className="inline w-3 h-3 mr-1" />
+                    Τα αποθηκευμένα projects δεν θα επηρεαστούν.
                   </p>
                 </div>
 
@@ -163,8 +164,8 @@ export class StorageErrorBoundary extends Component<Props, State> {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="text-sm bg-red-50 p-3 rounded border border-red-200">
-                <div className="font-mono text-xs text-red-800">
+              <div className="text-sm bg-destructive/10 p-3 rounded border border-destructive/20">
+                <div className="font-mono text-xs text-destructive">
                   {this.state.error?.message || 'Unknown error'}
                 </div>
               </div>

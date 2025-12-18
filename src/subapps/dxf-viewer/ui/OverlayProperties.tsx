@@ -6,6 +6,7 @@ import { Label } from '../../../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import { Button } from '../../../components/ui/button';
 import { Separator } from '../../../components/ui/separator';
+import { X } from 'lucide-react';
 import { CommonBadge } from '../../../core/badges';
 import { STATUS_COLORS, STATUS_LABELS, KIND_LABELS, type Overlay, type Status, type OverlayKind } from '../overlays/types';
 import { layoutUtilities } from '@/styles/design-tokens';
@@ -81,7 +82,11 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm">Ιδιότητες Overlay</CardTitle>
-          {onClose && <Button variant="ghost" size="sm" onClick={onClose}>✕</Button>}
+          {onClose && (
+            <Button variant="ghost" size="sm" onClick={onClose}>
+              <X className="w-4 h-4" />
+            </Button>
+          )}
         </div>
       </CardHeader>
       <CardContent className="space-y-4">

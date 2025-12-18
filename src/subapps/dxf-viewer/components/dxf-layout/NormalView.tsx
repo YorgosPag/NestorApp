@@ -4,6 +4,7 @@ import type { DXFViewerLayoutProps } from '../../integration/types';
 import { ToolbarSection } from './ToolbarSection';
 import { CanvasSection } from './CanvasSection';
 import type { OverlayEditorMode, Status, OverlayKind } from '../../overlays/types';
+import { DXF_VIEWER_BACKGROUNDS } from '../../config/panel-tokens';
 
 /**
  * Renders the DXF viewer in its normal, non-fullscreen layout.
@@ -15,7 +16,7 @@ export const NormalView: React.FC<DXFViewerLayoutProps> = (props) => {
   const [currentKind, setCurrentKind] = useState<OverlayKind>('unit');
 
   return (
-    <div className="relative flex flex-col h-full bg-gray-900">
+    <div className={`relative flex flex-col h-full ${DXF_VIEWER_BACKGROUNDS.VIEW_CONTAINER_CLASS}`}>
       <ToolbarSection 
         {...props} 
         overlayMode={overlayMode}

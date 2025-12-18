@@ -175,7 +175,7 @@ App.tsx
  └─ DxfViewerApp.tsx
      └─ NotificationProvider
          └─ StorageErrorBoundary
-             └─ DxfViewerErrorBoundary
+             └─ ErrorBoundary (Enterprise Centralized)
                  └─ StyleManagerProvider         ← Style management
                      └─ DxfSettingsProvider      ← ⭐ CENTRAL SETTINGS
                          └─ GripProvider         ← Grip-specific settings

@@ -1,11 +1,12 @@
 'use client';
-import React from 'react';
+import React, { useState, useRef } from 'react';
+import { useDraggable } from '../../../hooks/useDraggable';
 // import { Separator } from '../../../components/ui/separator';
 // Προσωρινή λύση - αντικατάσταση με div
 const Separator = ({ orientation, className }: { orientation?: string; className?: string }) => (
   <div className={className} />
 );
-import { MousePointer, Pen, X, Copy, Grid, Square, Circle, Triangle, Edit } from 'lucide-react';
+import { MousePointer, Pen, X, Copy, Grid, Square, Circle, Triangle, Edit, RotateCcw, RotateCw } from 'lucide-react';
 import { STATUS_COLORS, STATUS_LABELS, KIND_LABELS, type Status, type OverlayKind, type OverlayEditorMode } from '../overlays/types';
 import type { PropertyStatus } from '../../../constants/statuses';
 import { useUnifiedOverlayCreation } from '../hooks/overlay/useUnifiedOverlayCreation';
@@ -120,8 +121,42 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
     }
   };
 
+  // 🎯 DRAGGABLE FUNCTIONALITY
+  const {
+    position: dragPosition,
+    isDragging,
+    elementRef,
+    handleMouseDown
+  } = useDraggable(true, {
+    elementWidth: 400,
+    elementHeight: 60,
+    autoCenter: true
+  });
+
+  const draggableStyles = {
+    left: dragPosition.x,
+    top: dragPosition.y,
+    transform: 'none', // Override center transform when dragging
+    cursor: isDragging ? 'grabbing' : 'auto'
+  };
+
   return (
-    <div className="flex items-center gap-2 p-2 bg-gray-800 border border-gray-500 rounded-lg flex-wrap">
+    <div
+      ref={elementRef}
+      style={draggableStyles}
+      className="fixed z-[80] flex items-center gap-2 p-2 bg-gray-800 border border-gray-500 rounded-lg flex-wrap shadow-xl select-none pointer-events-auto"
+      onMouseEnter={(e) => e.stopPropagation()}
+      onMouseMove={(e) => e.stopPropagation()}
+      onMouseLeave={(e) => e.stopPropagation()}
+    >
+      {/* Drag Handle */}
+      <div
+        onMouseDown={handleMouseDown}
+        className="cursor-grab active:cursor-grabbing p-1 hover:bg-gray-700 rounded"
+        title="Drag to move toolbar"
+      >
+        <div className="w-2 h-4 bg-gray-500 rounded-sm"></div>
+      </div>
       {/* Drawing Modes */}
       <div className="flex items-center gap-1">
         {modeButtons.map(({ mode: btnMode, icon: Icon, label, key }) => (
@@ -209,7 +244,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
             disabled:opacity-50 disabled:cursor-not-allowed
           "
         >
-          {Copy ? <Copy className="w-4 h-4" /> : <span className="text-xs">📋</span>}
+          <Copy className="w-4 h-4" />
         </button>
         
         <button
@@ -223,7 +258,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
             disabled:opacity-50 disabled:cursor-not-allowed
           "
         >
-          {X ? <X className="w-4 h-4" /> : <span className="text-xs">✖</span>}
+          <X className="w-4 h-4" />
         </button>
       </div>
 
@@ -242,7 +277,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
             disabled:opacity-50 disabled:cursor-not-allowed
           "
         >
-          <span className="scale-x-[-1]">↷</span>
+          <RotateCcw className="w-4 h-4" />
         </button>
         <button
           onClick={onRedo}
@@ -255,7 +290,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
             disabled:opacity-50 disabled:cursor-not-allowed
           "
         >
-          <span>↷</span>
+          <RotateCw className="w-4 h-4" />
         </button>
       </div>
     </div>

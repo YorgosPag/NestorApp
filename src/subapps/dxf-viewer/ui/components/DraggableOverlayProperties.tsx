@@ -3,8 +3,8 @@
 import React from 'react';
 import { OverlayProperties } from '../OverlayProperties';
 import { usePrecisionPositioning } from '../../utils/precision-positioning';
-import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
-import { canvasUtilities } from '@/styles/design-tokens';
+import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '../../../../components/ui/effects';
+import { PANEL_COLORS } from '../../config/panel-tokens';
 
 interface DraggableOverlayPropertiesProps {
   overlay: any;
@@ -81,27 +81,40 @@ export const DraggableOverlayProperties: React.FC<DraggableOverlayPropertiesProp
   return (
     <div
       ref={containerRef}
-      style={canvasUtilities?.overlays?.floatingPanel?.overlayProperties?.container?.(position, isDragging) ?? {
+      style={{
         position: 'fixed',
         left: position.x,
         top: position.y,
-        zIndex: 50,
+        zIndex: 90,
         cursor: isDragging ? 'grabbing' : 'auto',
-        userSelect: isDragging ? 'none' : 'auto'
+        userSelect: isDragging ? 'none' : 'auto',
+        backgroundColor: PANEL_COLORS.BG_PRIMARY,
+        color: PANEL_COLORS.TEXT_PRIMARY
       }}
       className="bg-gray-900 rounded-lg shadow-xl border border-gray-500 select-none"
+      onMouseEnter={(e) => e.stopPropagation()}
+      onMouseLeave={(e) => e.stopPropagation()}
     >
       {/* Drag Handle Header */}
       <div
-        className="bg-gray-700 rounded-t-lg px-3 py-2 border-b border-gray-600 flex items-center justify-between cursor-grab active:cursor-grabbing"
-        style={canvasUtilities?.overlays?.floatingPanel?.overlayProperties?.dragHandle ?? {}}
+        className={`bg-gray-700 rounded-t-lg px-3 py-2 border-b border-gray-600 flex items-center justify-between ${
+          isDragging ? 'cursor-grabbing' : 'cursor-grab'
+        } transition-colors hover:bg-gray-600`}
+        style={{ backgroundColor: PANEL_COLORS.BG_SECONDARY }}
         onMouseDown={handleMouseDown}
       >
-        <span className="text-sm text-gray-300 font-medium">🏠 Overlay Properties</span>
+        <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-0.5">
+            <div className="w-1 h-1 bg-gray-500 rounded-full"></div>
+            <div className="w-1 h-1 bg-gray-500 rounded-full"></div>
+            <div className="w-1 h-1 bg-gray-500 rounded-full"></div>
+          </div>
+          <span className="text-sm text-gray-300 font-medium">🏠 Overlay Properties</span>
+        </div>
         <button
           onClick={onClose}
           className={`text-gray-400 hover:text-white text-lg leading-none w-6 h-6 flex items-center justify-center rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} transition-colors`}
-          style={canvasUtilities?.overlays?.floatingPanel?.overlayProperties?.button ?? {}}
+          style={{ backgroundColor: PANEL_COLORS.BG_TERTIARY, color: PANEL_COLORS.TEXT_SECONDARY }}
         >
           ✕
         </button>

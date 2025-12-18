@@ -71,6 +71,27 @@ export const PANEL_COLORS = {
 } as const;
 
 // ============================================================================
+// DXF VIEWER BACKGROUND SYSTEM - ENTERPRISE CENTRALIZATION
+// ============================================================================
+
+/**
+ * 🏗️ DXF VIEWER BACKGROUND TOKENS
+ * Κεντρικοποιημένα background colors που αντικαθιστούν hardcoded bg-gray-* values
+ * στα main layout components του DXF Viewer
+ */
+export const DXF_VIEWER_BACKGROUNDS = {
+  // Main layout backgrounds
+  MAIN_CONTAINER: PANEL_COLORS.BG_PRIMARY,     // Replaces bg-gray-800 in DxfViewerContent.tsx
+  VIEW_CONTAINER: '#111827',                   // Replaces bg-gray-900 in NormalView.tsx (darker main area)
+  CANVAS_BACKGROUND: '#f9fafb',                // Light canvas background for better contrast
+
+  // Layout utility classes
+  MAIN_CONTAINER_CLASS: 'bg-gray-800',         // For Tailwind compilation
+  VIEW_CONTAINER_CLASS: 'bg-gray-900',         // For Tailwind compilation
+  CANVAS_BACKGROUND_CLASS: 'bg-gray-50',       // For Tailwind compilation
+} as const;
+
+// ============================================================================
 // PANEL LAYOUT TOKENS - ENTERPRISE SPACING SYSTEM
 // ============================================================================
 

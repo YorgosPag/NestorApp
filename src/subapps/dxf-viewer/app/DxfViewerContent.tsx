@@ -824,7 +824,7 @@ Check console for detailed metrics`;
         onTransformReady={handleTransformReady}
       >
       <div
-        className="flex h-full p-2 gap-2 bg-gray-800"
+        className={`flex h-full p-2 gap-2 ${DXF_VIEWER_BACKGROUNDS.MAIN_CONTAINER_CLASS}`}
         style={{
           // 🔥 ΔΙΟΡΘΩΣΗ: Disable pointer events όταν layering tool είναι ενεργό
           pointerEvents: activeTool === 'layering' ? 'none' : 'auto'
