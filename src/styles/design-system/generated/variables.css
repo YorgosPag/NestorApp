@@ -1,0 +1,145 @@
+/**
+ * 🤖 AUTO-GENERATED CSS VARIABLES
+ *
+ * Generated από design-tokens.json
+ * DO NOT EDIT MANUALLY - Changes will be overwritten
+ *
+ * Build command: npm run build:tokens
+ * Source: design-tokens.json
+ */
+
+:root {
+  --color-brand-primary-50: #eff6ff;
+  --color-brand-primary-100: #dbeafe;
+  --color-brand-primary-500: #3b82f6;
+  --color-brand-primary-600: #2563eb;
+  --color-brand-primary-700: #1d4ed8;
+  --color-brand-success-50: #f0fdf4;
+  --color-brand-success-500: #22c55e;
+  --color-brand-success-600: #16a34a;
+  --color-brand-warning-50: #fff7ed;
+  --color-brand-warning-500: #f97316;
+  --color-brand-warning-600: #ea580c;
+  --color-brand-error-50: #fef2f2;
+  --color-brand-error-500: #ef4444;
+  --color-brand-error-600: #dc2626;
+  --color-brand-info-50: #eff6ff;
+  --color-brand-info-500: #3b82f6;
+  --color-brand-info-600: #2563eb;
+  --color-semantic-success: #16a34a;
+  --color-semantic-warning: #ea580c;
+  --color-semantic-error: #dc2626;
+  --color-semantic-info: #2563eb;
+  --color-background-primary: #ffffff;
+  --color-background-secondary: #f9fafb;
+  --color-background-muted: #f3f4f6;
+  --color-background-hover: #f9fafb;
+  --color-text-primary: #111827;
+  --color-text-secondary: #6b7280;
+  --color-text-muted: #9ca3af;
+  --color-text-on-primary: #ffffff;
+  --color-border-primary: #e5e7eb;
+  --color-border-secondary: #f3f4f6;
+  --color-border-focus: #3b82f6;
+  --spacing-base-xs: 4px;
+  --spacing-base-sm: 8px;
+  --spacing-base-md: 16px;
+  --spacing-base-lg: 24px;
+  --spacing-base-xl: 32px;
+  --spacing-base-2xl: 48px;
+  --spacing-base-3xl: 64px;
+  --spacing-component-padding-xs: 8px;
+  --spacing-component-padding-sm: 12px;
+  --spacing-component-padding-md: 16px;
+  --spacing-component-padding-lg: 24px;
+  --spacing-component-gap-xs: 4px;
+  --spacing-component-gap-sm: 8px;
+  --spacing-component-gap-md: 16px;
+  --spacing-component-gap-lg: 24px;
+  --spacing-component-margin-xs: 4px;
+  --spacing-component-margin-sm: 8px;
+  --spacing-component-margin-md: 16px;
+  --spacing-component-margin-lg: 24px;
+  --typography-font-size-xs: 12px;
+  --typography-font-size-sm: 14px;
+  --typography-font-size-base: 16px;
+  --typography-font-size-lg: 18px;
+  --typography-font-size-xl: 20px;
+  --typography-font-weight-normal: 400;
+  --typography-font-weight-medium: 500;
+  --typography-font-weight-semibold: 600;
+  --typography-font-weight-bold: 700;
+  --typography-font-family-sans: ui-sans-serif, system-ui, sans-serif;
+  --typography-font-family-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace;
+  --typography-line-height-tight: 1.25;
+  --typography-line-height-normal: 1.5;
+  --typography-line-height-loose: 1.75;
+  --performance-component-success-background: color-mix(in srgb, {color.brand.success.600} 10%, transparent);
+  --performance-component-success-border: color-mix(in srgb, {color.brand.success.600} 20%, transparent);
+  --performance-component-success-hover: color-mix(in srgb, {color.brand.success.600} 30%, transparent);
+  --performance-component-warning-background: color-mix(in srgb, {color.brand.warning.600} 10%, transparent);
+  --performance-component-warning-border: color-mix(in srgb, {color.brand.warning.600} 20%, transparent);
+  --performance-component-warning-hover: color-mix(in srgb, {color.brand.warning.600} 30%, transparent);
+  --performance-component-error-background: color-mix(in srgb, {color.brand.error.600} 10%, transparent);
+  --performance-component-error-border: color-mix(in srgb, {color.brand.error.600} 20%, transparent);
+  --performance-component-error-hover: color-mix(in srgb, {color.brand.error.600} 30%, transparent);
+  --performance-component-info-background: color-mix(in srgb, {color.brand.info.600} 10%, transparent);
+  --performance-component-info-border: color-mix(in srgb, {color.brand.info.600} 20%, transparent);
+  --performance-component-info-hover: color-mix(in srgb, {color.brand.info.600} 30%, transparent);
+  --performance-component-card-background: color-mix(in srgb, #f3f4f6 50%, transparent);
+  --performance-component-card-border: #f3f4f6;
+  --performance-component-card-padding: 12px;
+  --interactive-states-focus-ring-color: #3b82f6;
+  --interactive-states-focus-ring-width: 2px;
+  --interactive-states-focus-ring-offset: 2px;
+  --interactive-states-disabled-opacity: 0.5;
+  --animation-duration-fast: 150ms;
+  --animation-duration-normal: 200ms;
+  --animation-duration-slow: 300ms;
+  --animation-easing-ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --animation-easing-ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --animation-easing-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --border-radius-none: 0px;
+  --border-radius-sm: 2px;
+  --border-radius-md: 6px;
+  --border-radius-lg: 8px;
+  --border-radius-xl: 12px;
+  --border-radius-full: 9999px;
+}
+
+/* 🏢 ENTERPRISE UTILITY CLASSES - Auto-Generated */
+
+.performance-success {
+  background-color: var(--performance-component-success-background);
+  color: var(--color-semantic-success);
+  border-color: var(--performance-component-success-border);
+}
+
+.performance-warning {
+  background-color: var(--performance-component-warning-background);
+  color: var(--color-semantic-warning);
+  border-color: var(--performance-component-warning-border);
+}
+
+.performance-error {
+  background-color: var(--performance-component-error-background);
+  color: var(--color-semantic-error);
+  border-color: var(--performance-component-error-border);
+}
+
+.performance-info {
+  background-color: var(--performance-component-info-background);
+  color: var(--color-semantic-info);
+  border-color: var(--performance-component-info-border);
+}
+
+.performance-card {
+  background-color: var(--performance-component-card-background);
+  border: 1px solid var(--performance-component-card-border);
+  border-radius: var(--border-radius-lg);
+  padding: var(--performance-component-card-padding);
+}

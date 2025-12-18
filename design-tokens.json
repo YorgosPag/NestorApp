@@ -1,0 +1,188 @@
+{
+  "global": {
+    "meta": {
+      "version": "2.0.0",
+      "description": "Enterprise Design Tokens - Pagonis Application",
+      "author": "Γιώργος Παγωνής + Claude Code (Anthropic AI)",
+      "generated": "automated"
+    }
+  },
+  "color": {
+    "brand": {
+      "primary": {
+        "50": { "value": "#eff6ff", "type": "color" },
+        "100": { "value": "#dbeafe", "type": "color" },
+        "500": { "value": "#3b82f6", "type": "color" },
+        "600": { "value": "#2563eb", "type": "color" },
+        "700": { "value": "#1d4ed8", "type": "color" }
+      },
+      "success": {
+        "50": { "value": "#f0fdf4", "type": "color" },
+        "500": { "value": "#22c55e", "type": "color" },
+        "600": { "value": "#16a34a", "type": "color" }
+      },
+      "warning": {
+        "50": { "value": "#fff7ed", "type": "color" },
+        "500": { "value": "#f97316", "type": "color" },
+        "600": { "value": "#ea580c", "type": "color" }
+      },
+      "error": {
+        "50": { "value": "#fef2f2", "type": "color" },
+        "500": { "value": "#ef4444", "type": "color" },
+        "600": { "value": "#dc2626", "type": "color" }
+      },
+      "info": {
+        "50": { "value": "#eff6ff", "type": "color" },
+        "500": { "value": "#3b82f6", "type": "color" },
+        "600": { "value": "#2563eb", "type": "color" }
+      }
+    },
+    "semantic": {
+      "success": { "value": "{color.brand.success.600}", "type": "color" },
+      "warning": { "value": "{color.brand.warning.600}", "type": "color" },
+      "error": { "value": "{color.brand.error.600}", "type": "color" },
+      "info": { "value": "{color.brand.info.600}", "type": "color" }
+    },
+    "background": {
+      "primary": { "value": "#ffffff", "type": "color" },
+      "secondary": { "value": "#f9fafb", "type": "color" },
+      "muted": { "value": "#f3f4f6", "type": "color" },
+      "hover": { "value": "#f9fafb", "type": "color" }
+    },
+    "text": {
+      "primary": { "value": "#111827", "type": "color" },
+      "secondary": { "value": "#6b7280", "type": "color" },
+      "muted": { "value": "#9ca3af", "type": "color" },
+      "on-primary": { "value": "#ffffff", "type": "color" }
+    },
+    "border": {
+      "primary": { "value": "#e5e7eb", "type": "color" },
+      "secondary": { "value": "#f3f4f6", "type": "color" },
+      "focus": { "value": "{color.brand.primary.500}", "type": "color" }
+    }
+  },
+  "spacing": {
+    "base": {
+      "xs": { "value": "4", "type": "spacing" },
+      "sm": { "value": "8", "type": "spacing" },
+      "md": { "value": "16", "type": "spacing" },
+      "lg": { "value": "24", "type": "spacing" },
+      "xl": { "value": "32", "type": "spacing" },
+      "2xl": { "value": "48", "type": "spacing" },
+      "3xl": { "value": "64", "type": "spacing" }
+    },
+    "component": {
+      "padding": {
+        "xs": { "value": "{spacing.base.sm}", "type": "spacing" },
+        "sm": { "value": "12", "type": "spacing" },
+        "md": { "value": "{spacing.base.md}", "type": "spacing" },
+        "lg": { "value": "{spacing.base.lg}", "type": "spacing" }
+      },
+      "gap": {
+        "xs": { "value": "{spacing.base.xs}", "type": "spacing" },
+        "sm": { "value": "{spacing.base.sm}", "type": "spacing" },
+        "md": { "value": "{spacing.base.md}", "type": "spacing" },
+        "lg": { "value": "{spacing.base.lg}", "type": "spacing" }
+      },
+      "margin": {
+        "xs": { "value": "{spacing.base.xs}", "type": "spacing" },
+        "sm": { "value": "{spacing.base.sm}", "type": "spacing" },
+        "md": { "value": "{spacing.base.md}", "type": "spacing" },
+        "lg": { "value": "{spacing.base.lg}", "type": "spacing" }
+      }
+    }
+  },
+  "typography": {
+    "fontSize": {
+      "xs": { "value": "12", "type": "fontSizes" },
+      "sm": { "value": "14", "type": "fontSizes" },
+      "base": { "value": "16", "type": "fontSizes" },
+      "lg": { "value": "18", "type": "fontSizes" },
+      "xl": { "value": "20", "type": "fontSizes" }
+    },
+    "fontWeight": {
+      "normal": { "value": "400", "type": "fontWeights" },
+      "medium": { "value": "500", "type": "fontWeights" },
+      "semibold": { "value": "600", "type": "fontWeights" },
+      "bold": { "value": "700", "type": "fontWeights" }
+    },
+    "fontFamily": {
+      "sans": { "value": "ui-sans-serif, system-ui, sans-serif", "type": "fontFamilies" },
+      "mono": { "value": "ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace", "type": "fontFamilies" }
+    },
+    "lineHeight": {
+      "tight": { "value": "1.25", "type": "lineHeights" },
+      "normal": { "value": "1.5", "type": "lineHeights" },
+      "loose": { "value": "1.75", "type": "lineHeights" }
+    }
+  },
+  "performance": {
+    "component": {
+      "success": {
+        "background": { "value": "color-mix(in srgb, {color.semantic.success} 10%, transparent)", "type": "color" },
+        "border": { "value": "color-mix(in srgb, {color.semantic.success} 20%, transparent)", "type": "color" },
+        "hover": { "value": "color-mix(in srgb, {color.semantic.success} 30%, transparent)", "type": "color" }
+      },
+      "warning": {
+        "background": { "value": "color-mix(in srgb, {color.semantic.warning} 10%, transparent)", "type": "color" },
+        "border": { "value": "color-mix(in srgb, {color.semantic.warning} 20%, transparent)", "type": "color" },
+        "hover": { "value": "color-mix(in srgb, {color.semantic.warning} 30%, transparent)", "type": "color" }
+      },
+      "error": {
+        "background": { "value": "color-mix(in srgb, {color.semantic.error} 10%, transparent)", "type": "color" },
+        "border": { "value": "color-mix(in srgb, {color.semantic.error} 20%, transparent)", "type": "color" },
+        "hover": { "value": "color-mix(in srgb, {color.semantic.error} 30%, transparent)", "type": "color" }
+      },
+      "info": {
+        "background": { "value": "color-mix(in srgb, {color.semantic.info} 10%, transparent)", "type": "color" },
+        "border": { "value": "color-mix(in srgb, {color.semantic.info} 20%, transparent)", "type": "color" },
+        "hover": { "value": "color-mix(in srgb, {color.semantic.info} 30%, transparent)", "type": "color" }
+      },
+      "card": {
+        "background": { "value": "color-mix(in srgb, {color.background.muted} 50%, transparent)", "type": "color" },
+        "border": { "value": "{color.border.secondary}", "type": "color" },
+        "padding": { "value": "{spacing.component.padding.sm}", "type": "spacing" }
+      }
+    }
+  },
+  "interactive": {
+    "states": {
+      "focus": {
+        "ring": {
+          "color": { "value": "{color.brand.primary.500}", "type": "color" },
+          "width": { "value": "2", "type": "spacing" },
+          "offset": { "value": "2", "type": "spacing" }
+        }
+      },
+      "disabled": {
+        "opacity": { "value": "0.5", "type": "opacity" }
+      }
+    }
+  },
+  "animation": {
+    "duration": {
+      "fast": { "value": "150ms", "type": "duration" },
+      "normal": { "value": "200ms", "type": "duration" },
+      "slow": { "value": "300ms", "type": "duration" }
+    },
+    "easing": {
+      "ease-out": { "value": "cubic-bezier(0, 0, 0.2, 1)", "type": "cubicBezier" },
+      "ease-in": { "value": "cubic-bezier(0.4, 0, 1, 1)", "type": "cubicBezier" },
+      "ease-in-out": { "value": "cubic-bezier(0.4, 0, 0.2, 1)", "type": "cubicBezier" }
+    }
+  },
+  "shadow": {
+    "sm": { "value": "0 1px 2px 0 rgba(0, 0, 0, 0.05)", "type": "boxShadow" },
+    "md": { "value": "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)", "type": "boxShadow" },
+    "lg": { "value": "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)", "type": "boxShadow" },
+    "xl": { "value": "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)", "type": "boxShadow" }
+  },
+  "borderRadius": {
+    "none": { "value": "0", "type": "borderRadius" },
+    "sm": { "value": "2", "type": "borderRadius" },
+    "md": { "value": "6", "type": "borderRadius" },
+    "lg": { "value": "8", "type": "borderRadius" },
+    "xl": { "value": "12", "type": "borderRadius" },
+    "full": { "value": "9999", "type": "borderRadius" }
+  }
+}

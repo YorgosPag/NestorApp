@@ -85,25 +85,25 @@ export const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
   }
 
   return (
-    <div className={`fixed ${positionClasses} z-50 bg-gray-900 bg-opacity-95 backdrop-blur-sm rounded-lg shadow-xl border border-gray-700 min-w-[320px] max-w-[400px]`}>
+    <div className={`fixed ${positionClasses} z-50 bg-card/95 backdrop-blur-sm rounded-lg shadow-xl border border-border min-w-[320px] max-w-[400px]`}>
       {/* Header */}
-      <div className="flex items-center justify-between p-3 border-b border-gray-800">
+      <div className="flex items-center justify-between p-3 border-b border-border">
         <div className="flex items-center space-x-2">
-          <Activity className="h-4 w-4 text-blue-400" />
-          <h3 className="text-sm font-semibold text-gray-200">Performance Monitor</h3>
+          <Activity className="h-4 w-4 text-primary" />
+          <h3 className="text-sm font-semibold text-foreground">Performance Monitor</h3>
           <PerformanceGradeBadge grade={status.grade} />
         </div>
         <div className="flex items-center space-x-1">
           <button
             onClick={() => setShowOptimizations(!showOptimizations)}
-            className="p-1 rounded hover:bg-gray-800 transition-colors"
+            className="p-1 rounded hover:bg-muted transition-colors"
             title="Toggle optimizations"
           >
-            <Settings className="h-3 w-3 text-gray-400" />
+            <Settings className="h-3 w-3 text-muted-foreground" />
           </button>
           <button
             onClick={() => setIsVisible(false)}
-            className="p-1 rounded hover:bg-gray-800 transition-colors"
+            className="p-1 rounded hover:bg-muted transition-colors"
             title="Hide dashboard"
           >
             ×
@@ -263,9 +263,9 @@ const MetricCard: React.FC<{
   trend: 'up' | 'down' | null;
 }> = ({ icon, label, value, unit, color, trend }) => {
   return (
-    <div className="bg-gray-800 bg-opacity-50 rounded p-2">
+    <div className="bg-muted/50 rounded p-2 border border-border">
       <div className="flex items-center justify-between mb-1">
-        <span className="text-xs text-gray-400">{label}</span>
+        <span className="text-xs text-muted-foreground">{label}</span>
         <div className={color}>
           {icon}
         </div>
@@ -273,10 +273,10 @@ const MetricCard: React.FC<{
       <div className="flex items-center justify-between">
         <span className={`text-sm font-mono ${color}`}>
           {typeof value === 'number' ? value.toFixed(value < 10 ? 1 : 0) : value}
-          {unit && <span className="text-xs text-gray-500 ml-1">{unit}</span>}
+          {unit && <span className="text-xs text-muted-foreground ml-1">{unit}</span>}
         </span>
         {trend && (
-          <div className={`${trend === 'up' ? 'text-green-400' : 'text-red-400'}`}>
+          <div className={`${trend === 'up' ? 'text-green-500' : 'text-red-500'}`}>
             {trend === 'up' ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
           </div>
         )}
@@ -293,27 +293,27 @@ const PerformanceAlerts: React.FC<{
   onClearAlerts: () => void;
 }> = ({ alerts, onClearAlerts }) => {
   return (
-    <div className="bg-red-950 bg-opacity-50 border border-red-900 rounded p-2">
+    <div className="bg-destructive/10 border border-destructive/20 rounded p-2">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center space-x-1">
-          <AlertTriangle className="h-3 w-3 text-red-400" />
-          <span className="text-xs font-medium text-red-300">Performance Alerts</span>
+          <AlertTriangle className="h-3 w-3 text-destructive" />
+          <span className="text-xs font-medium text-destructive">Performance Alerts</span>
         </div>
         <button
           onClick={onClearAlerts}
-          className="text-xs text-red-400 hover:text-red-300"
+          className="text-xs text-destructive hover:text-destructive/80"
         >
           Clear
         </button>
       </div>
       <div className="space-y-1">
         {alerts.slice(0, 3).map((alert, index) => (
-          <div key={index} className="text-xs text-red-300">
+          <div key={index} className="text-xs text-destructive/90">
             • {alert.message}
           </div>
         ))}
         {alerts.length > 3 && (
-          <div className="text-xs text-red-400">
+          <div className="text-xs text-destructive">
             +{alerts.length - 3} more alerts
           </div>
         )}
@@ -330,30 +330,42 @@ const QuickActions: React.FC<{
   recommendations: any[];
 }> = ({ controls, recommendations }) => {
   return (
-    <div className="flex items-center justify-between">
-      <div className="flex space-x-2">
-        <button
-          onClick={controls.measurePerformance}
-          className="flex items-center space-x-1 px-2 py-1 bg-blue-900 bg-opacity-50 text-blue-300 text-xs rounded hover:bg-opacity-70 transition-colors"
-          title="Measure performance"
-        >
-          <RefreshCcw className="h-3 w-3" />
-          <span>Test</span>
-        </button>
-        {recommendations.length > 0 && (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="flex space-x-2">
           <button
-            onClick={controls.applyAllOptimizations}
-            className="flex items-center space-x-1 px-2 py-1 bg-green-900 bg-opacity-50 text-green-300 text-xs rounded hover:bg-opacity-70 transition-colors"
-            title="Apply all optimizations"
+            onClick={controls.measurePerformance}
+            className="flex items-center space-x-1 px-2 py-1 bg-blue-500/20 text-blue-600 text-xs rounded hover:bg-blue-500/30 transition-colors border border-blue-500/30"
+            title="Measure performance"
           >
-            <Zap className="h-3 w-3" />
-            <span>Optimize</span>
+            <RefreshCcw className="h-3 w-3" />
+            <span>Test</span>
           </button>
-        )}
+          {recommendations.length > 0 && (
+            <button
+              onClick={controls.applyAllOptimizations}
+              className="flex items-center space-x-1 px-2 py-1 bg-green-500/20 text-green-600 text-xs rounded hover:bg-green-500/30 transition-colors border border-green-500/30"
+              title="Apply all optimizations"
+            >
+              <Zap className="h-3 w-3" />
+              <span>Optimize</span>
+            </button>
+          )}
+        </div>
+        <span className="text-xs text-muted-foreground">
+          {recommendations.length} recommendations
+        </span>
       </div>
-      <span className="text-xs text-gray-400">
-        {recommendations.length} recommendations
-      </span>
+
+      {/* 📊 DETAILED ANALYTICS BUTTON */}
+      <button
+        onClick={() => window.open('/admin/performance', '_blank')}
+        className="w-full flex items-center justify-center space-x-1 px-3 py-1.5 bg-purple-500/20 text-purple-600 text-xs rounded hover:bg-purple-500/30 transition-colors border border-purple-500/30"
+        title="Open detailed analytics dashboard"
+      >
+        <BarChart3 className="h-3 w-3" />
+        <span>Detailed Analytics</span>
+      </button>
     </div>
   );
 };

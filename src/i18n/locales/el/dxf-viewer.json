@@ -80,7 +80,7 @@
     "hierarchy": {
       "title": "Ιεραρχία",
       "description": "Project Hierarchy & Destinations",
-      "projectHierarchy": "🏗️ Ιεραρχία Έργων",
+      "projectHierarchy": "Ιεραρχία Έργων",
       "loading": "Φόρτωση έργων...",
       "error": "Ιεραρχία Έργων - Σφάλμα",
       "retry": "Ξαναδοκιμή",
@@ -90,12 +90,12 @@
       "noProjects": "Δεν βρέθηκαν έργα",
       "buildings": "Κτίρια",
       "floors": "Όροφοι",
-      "availableDestinations": "🎯 Διαθέσιμοι Προορισμοί DXF",
+      "availableDestinations": "Διαθέσιμοι Προορισμοί DXF",
       "buildingsCount": "{count, plural, =0 {κτίρια} one {κτίριο} other {κτίρια}}",
       "floorsCount": "{count, plural, =0 {ορόφους} one {όροφο} other {ορόφους}}",
       "unitsCount": "{count, plural, =0 {μονάδες} one {μονάδα} other {μονάδες}}",
-      "parkingSpots": "🅿️ {count} θέσεις στάθμευσης",
-      "storageAreas": "📦 {count} αποθήκες"
+      "parkingSpots": "{count} θέσεις στάθμευσης",
+      "storageAreas": "{count} αποθήκες"
     },
     "layers": {
       "title": "Layers",

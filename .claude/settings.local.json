@@ -197,7 +197,8 @@
       "Bash(npx tsx:*)",
       "Bash(npx ts-node:*)",
       "Read(//c//**)",
-      "Bash(SKIP_ENV_VALIDATION=true npm run dev)"
+      "Bash(SKIP_ENV_VALIDATION=true npm run dev)",
+      "WebFetch(domain:lucide.dev)"
     ],
     "deny": [],
     "ask": []

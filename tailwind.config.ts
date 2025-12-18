@@ -63,9 +63,56 @@ export default {
           border: 'hsl(var(--sidebar-border))',
           ring: 'hsl(var(--sidebar-ring))',
         },
+        // 🏢 ENTERPRISE PERFORMANCE SYSTEM - CSS Variables Integration
+        performance: {
+          success: {
+            DEFAULT: 'var(--color-success)',
+            bg: 'var(--performance-success-bg)',
+            border: 'var(--performance-success-border)',
+            hover: 'var(--hover-success-bg)',
+          },
+          warning: {
+            DEFAULT: 'var(--color-warning)',
+            bg: 'var(--performance-warning-bg)',
+            border: 'var(--performance-warning-border)',
+            hover: 'var(--hover-warning-bg)',
+          },
+          error: {
+            DEFAULT: 'var(--color-error)',
+            bg: 'var(--performance-error-bg)',
+            border: 'var(--performance-error-border)',
+            hover: 'var(--hover-error-bg)',
+          },
+          info: {
+            DEFAULT: 'var(--color-info)',
+            bg: 'var(--performance-info-bg)',
+            border: 'var(--performance-info-border)',
+            hover: 'var(--hover-info-bg)',
+          },
+          card: {
+            DEFAULT: 'var(--performance-card-bg)',
+            border: 'var(--performance-card-border)',
+          }
+        },
       },
       textColor: {
         'sidebar-foreground': 'hsl(var(--sidebar-foreground))',
+      },
+      // 🏢 ENTERPRISE SPACING SYSTEM - CSS Variables Integration
+      spacing: {
+        'performance-xs': 'var(--spacing-component-gap-xs)',
+        'performance-sm': 'var(--spacing-component-gap-sm)',
+        'performance-md': 'var(--spacing-component-gap-md)',
+        'performance-lg': 'var(--spacing-component-gap-lg)',
+      },
+      // 🏢 ENTERPRISE TYPOGRAPHY SYSTEM - CSS Variables Integration
+      fontSize: {
+        'performance-xs': ['var(--font-size-xs)', { lineHeight: '1.25' }],
+        'performance-sm': ['var(--font-size-sm)', { lineHeight: '1.25' }],
+      },
+      fontWeight: {
+        'performance-medium': 'var(--font-weight-medium)',
+        'performance-semibold': 'var(--font-weight-semibold)',
       },
       borderRadius: {
         lg: 'var(--radius)',

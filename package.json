@@ -13,10 +13,11 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "next dev",
-    "dev:fast": "pnpm dlx next dev",
-    "dev:clean": "pnpm run clear-cache && next dev",
-    "build": "next build",
+    "build:tokens": "node scripts/build-design-tokens.js",
+    "dev": "pnpm run build:tokens && next dev",
+    "dev:fast": "pnpm run build:tokens && pnpm dlx next dev",
+    "dev:clean": "pnpm run clear-cache && pnpm run build:tokens && next dev",
+    "build": "pnpm run build:tokens && next build",
     "build:clean": "node scripts/clear-cache.js && pnpm run build",
     "start": "next start",
     "lint": "next lint",

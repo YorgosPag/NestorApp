@@ -100,8 +100,9 @@ import { DebugToolbar } from '../debug/DebugToolbar';
 // ✅ CENTRALIZED: Use existing LazyLoadWrapper system
 import { LazyFullLayoutDebug } from '../ui/components/LazyLoadWrapper';
 
-// ⚡ PERFORMANCE DASHBOARD - Enterprise performance monitoring
-import { PerformanceDashboard } from '../ui/components/PerformanceDashboard';
+// 🚀 ENTERPRISE PERFORMANCE SYSTEM - Centralized monitoring (2025-12-18)
+import { GlobalPerformanceDashboard } from '../../../core/performance/components/GlobalPerformanceDashboard';
+import { PerformanceCategory } from '../../../core/performance/types/performance.types';
 
 export function DxfViewerContent(props: DxfViewerAppProps) {
   const floatingRef = React.useRef<FloatingPanelHandle>(null);
@@ -908,12 +909,21 @@ Check console for detailed metrics`;
         showCopyableNotification={showCopyableNotification}
       />
 
-      {/* ⚡ PERFORMANCE DASHBOARD - Enterprise monitoring */}
-      <PerformanceDashboard
-        compact={false}
+      {/* 🚀 ENTERPRISE PERFORMANCE SYSTEM - Global monitoring */}
+      <GlobalPerformanceDashboard
         position="top-right"
-        autoHide={false}
+        minimizable={true}
+        defaultMinimized={false}
         showDetails={true}
+        updateInterval={1000}
+        categories={[
+          PerformanceCategory.RENDERING,
+          PerformanceCategory.API_RESPONSE,
+          PerformanceCategory.CACHE_HIT,
+          PerformanceCategory.MEMORY,
+          PerformanceCategory.APPLICATION
+        ]}
+        theme="auto"
       />
       </div>
       </TransformProvider>

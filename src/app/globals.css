@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 🤖 AUTO-GENERATED DESIGN SYSTEM - Enterprise CSS Variables */
+@import '../styles/design-system/generated/variables.css';
+
 /* Import dropdown z-index overrides */
 /* Dropdown overrides inlined for Next.js 16 compatibility */
 

@@ -1,12 +1,13 @@
+"use client";
+
 /**
  * @module LazyLoadWrapper
  * @description Lazy loading wrapper για performance optimization
  * Conference-ready code splitting και lazy loading
  */
 
-import React, { Suspense, lazy, ComponentType } from 'react';
+import React, { Suspense, lazy, ComponentType, Component, ErrorInfo } from 'react';
 import { Loader2 } from 'lucide-react';
-import { HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 
 interface LazyLoadWrapperProps {
   fallback?: React.ReactNode;
@@ -28,20 +29,27 @@ const DefaultFallback = () => (
 /**
  * Error boundary για lazy loaded components
  */
-class LazyErrorBoundary extends React.Component<
-  { children: React.ReactNode; fallback?: React.ReactNode },
-  { hasError: boolean; error?: Error }
-> {
-  constructor(props: { children: React.ReactNode; fallback?: React.ReactNode }) {
+interface LazyErrorBoundaryProps {
+  children: React.ReactNode;
+  fallback?: React.ReactNode;
+}
+
+interface LazyErrorBoundaryState {
+  hasError: boolean;
+  error?: Error;
+}
+
+class LazyErrorBoundary extends Component<LazyErrorBoundaryProps, LazyErrorBoundaryState> {
+  constructor(props: LazyErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false };
   }
 
-  static getDerivedStateFromError(error: Error) {
+  static getDerivedStateFromError(error: Error): LazyErrorBoundaryState {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('[LazyLoadWrapper] Component failed to load:', error, errorInfo);
   }
 
@@ -57,7 +65,7 @@ class LazyErrorBoundary extends React.Component<
           </p>
           <button
             onClick={() => this.setState({ hasError: false })}
-            className={`mt-2 text-xs text-red-400 underline ${HOVER_TEXT_EFFECTS.RED}`}
+            className="mt-2 text-xs text-red-400 underline hover:text-red-300 transition-colors"
           >
             Retry
           </button>
@@ -164,6 +172,13 @@ export const LazyHierarchyDebugPanel = withLazyLoad(
 
 export const LazyColorPalettePanel = withLazyLoad(
   () => import('./DxfSettingsPanel').then(m => ({ default: m.DxfSettingsPanel }))
+);
+
+/**
+ * 🚀 ENTERPRISE: Performance Dashboard - Client-Only
+ */
+export const LazyGlobalPerformanceDashboard = withLazyLoad(
+  () => import('@/core/performance/components/GlobalPerformanceDashboard')
 );
 
 /**

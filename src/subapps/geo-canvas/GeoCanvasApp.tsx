@@ -6,6 +6,8 @@ import { CacheProvider } from '../../contexts/CacheProvider';
 import { OptimizedUserRoleProvider } from '../../contexts/OptimizedUserRoleContext';
 import { GeoCanvasContent } from './app/GeoCanvasContent';
 import { GeoCanvasErrorBoundary } from './components/ErrorBoundary';
+import { GlobalPerformanceDashboard } from '../../core/performance/components/GlobalPerformanceDashboard';
+import { PerformanceCategory } from '../../core/performance/types/performance.types';
 import type { GeoCanvasAppProps } from './types';
 
 /**
@@ -41,6 +43,22 @@ export function GeoCanvasApp(props: GeoCanvasAppProps) {
             }>
               <GeoCanvasContent {...props} />
             </Suspense>
+
+            {/* 🚀 ENTERPRISE PERFORMANCE SYSTEM - GEO-CANVAS MONITORING */}
+            <GlobalPerformanceDashboard
+              position="bottom-left"
+              minimizable={true}
+              defaultMinimized={true}
+              showDetails={false}
+              updateInterval={3000}
+              categories={[
+                PerformanceCategory.RENDERING,
+                PerformanceCategory.MEMORY,
+                PerformanceCategory.CACHE_HIT,
+                PerformanceCategory.APPLICATION
+              ]}
+              theme="dark"
+            />
 
           </GeoCanvasErrorBoundary>
         </OptimizedUserRoleProvider>
