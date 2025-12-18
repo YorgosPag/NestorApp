@@ -100,6 +100,9 @@ import { DebugToolbar } from '../debug/DebugToolbar';
 // ✅ CENTRALIZED: Use existing LazyLoadWrapper system
 import { LazyFullLayoutDebug } from '../ui/components/LazyLoadWrapper';
 
+// ⚡ PERFORMANCE DASHBOARD - Enterprise performance monitoring
+import { PerformanceDashboard } from '../ui/components/PerformanceDashboard';
+
 export function DxfViewerContent(props: DxfViewerAppProps) {
   const floatingRef = React.useRef<FloatingPanelHandle>(null);
   const state = useDxfViewerState();
@@ -903,6 +906,14 @@ Check console for detailed metrics`;
         isOpen={testsModalOpen}
         onClose={() => setTestsModalOpen(false)}
         showCopyableNotification={showCopyableNotification}
+      />
+
+      {/* ⚡ PERFORMANCE DASHBOARD - Enterprise monitoring */}
+      <PerformanceDashboard
+        compact={false}
+        position="top-right"
+        autoHide={false}
+        showDetails={true}
       />
       </div>
       </TransformProvider>

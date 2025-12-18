@@ -4,6 +4,7 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { withErrorHandling, apiSuccess } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { CacheHelpers } from '@/lib/cache/enterprise-api-cache';
 
 export const GET = withErrorHandling(async (
   request: NextRequest,
@@ -12,25 +13,27 @@ export const GET = withErrorHandling(async (
     console.log(`🏗️ API (Client SDK): Loading projects for companyId: "${params.companyId}"`);
 
     try {
-      // Use Client SDK (same as seed scripts)
-      console.log('🔍 DEBUG: Fetching ALL projects to see available companyIds...');
-      const allProjectsQuery = query(collection(db, COLLECTIONS.PROJECTS));
-      const allSnapshot = await getDocs(allProjectsQuery);
-      console.log(`🔍 DEBUG: Total projects in Firestore: ${allSnapshot.docs.length}`);
+      // 🚀 ENTERPRISE CACHING: Check cache first
+      const cachedProjects = CacheHelpers.getCachedProjectsByCompany(params.companyId);
+      if (cachedProjects) {
+        console.log(`⚡ API: CACHE HIT - Returning ${cachedProjects.length} cached projects for company ${params.companyId}`);
+        return apiSuccess({
+          projects: cachedProjects,
+          companyId: params.companyId,
+          source: 'cache',
+          cached: true
+        }, `Found ${cachedProjects.length} cached projects for company ${params.companyId}`);
+      }
 
-      allSnapshot.docs.forEach(doc => {
-        const data = doc.data();
-        console.log(`🔍 DEBUG: Project ID=${doc.id}, companyId="${data.companyId}", company="${data.company}", name="${data.name}"`);
-      });
+      console.log('🔍 API: Cache miss - Fetching from Firestore...');
 
-      // Now do the specific query
+      // 🚀 PERFORMANCE: Skip the debugging "fetch ALL projects" - go directly to specific query
       const projectsQuery = query(
         collection(db, COLLECTIONS.PROJECTS),
         where('companyId', '==', params.companyId)
       );
 
       const snapshot = await getDocs(projectsQuery);
-      console.log('🔍 Found', snapshot.docs.length, COLLECTIONS.PROJECTS);
       console.log(`🏗️ API (Client SDK): Found ${snapshot.docs.length} projects for companyId "${params.companyId}"`);
 
       const projects = snapshot.docs.map(doc => ({
@@ -38,16 +41,16 @@ export const GET = withErrorHandling(async (
         ...doc.data()
       }));
 
-      console.log(`🏗️ API (Client SDK): Projects:`, projects.map(p => ({
-        id: p.id,
-        name: p.name,
-        company: p.company
-      })));
+      // 💾 ENTERPRISE CACHING: Store in cache for future requests
+      CacheHelpers.cacheProjectsByCompany(params.companyId, projects);
+
+      console.log(`✅ API: Found ${projects.length} projects for company ${params.companyId} (cached for 3 minutes)`);
 
       return apiSuccess({
         projects,
         companyId: params.companyId,
-        source: 'client-sdk'
+        source: 'firestore',
+        cached: false
       }, `Found ${projects.length} projects for company ${params.companyId}`);
 
     } catch (error: unknown) {
