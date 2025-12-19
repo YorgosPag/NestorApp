@@ -3,8 +3,10 @@
 import React from 'react';
 import { OverlayProperties } from '../OverlayProperties';
 import { usePrecisionPositioning } from '../../utils/precision-positioning';
-import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '../../../../components/ui/effects';
-import { PANEL_COLORS } from '../../config/panel-tokens';
+import { useDraggable } from '../../../../hooks/useDraggable';
+import { Card, CardHeader, CardContent } from '../../../../components/ui/card';
+import { Activity, X } from 'lucide-react';
+import { performanceMonitorUtilities } from '../../../../styles/design-tokens/components/performance-tokens';
 // Enterprise floating panel design tokens integration
 
 interface DraggableOverlayPropertiesProps {
@@ -18,7 +20,7 @@ export const DraggableOverlayProperties: React.FC<DraggableOverlayPropertiesProp
   onUpdate,
   onClose
 }) => {
-  // CENTRALIZED PRECISION POSITIONING
+  // CENTRALIZED PRECISION POSITIONING for initial placement
   const containerRef = React.useRef<HTMLDivElement>(null);
   const { position: initialPosition } = usePrecisionPositioning(containerRef, {
     targetPoint: { x: 2550, y: 1230 },
@@ -26,116 +28,85 @@ export const DraggableOverlayProperties: React.FC<DraggableOverlayPropertiesProp
     dependencies: [overlay]
   });
 
-  const [position, setPosition] = React.useState<{x: number; y: number}>(initialPosition || { x: 0, y: 0 });
-  const [isDragging, setIsDragging] = React.useState(false);
-  const [dragStart, setDragStart] = React.useState({ x: 0, y: 0 });
-
-  // Update position when initial position changes (on first mount)
-  React.useEffect(() => {
-    if (initialPosition) {
-      setPosition(initialPosition);
+  // ✅ ENTERPRISE CENTRALIZED DRAGGING SYSTEM
+  const draggable = useDraggable(true, {
+    initialPosition: initialPosition || { x: 0, y: 0 },
+    autoCenter: false, // Use precision positioning instead
+    elementWidth: 320,
+    elementHeight: 400,
+    minPosition: { x: 0, y: 0 },
+    maxPosition: {
+      x: window.innerWidth - 320,
+      y: window.innerHeight - 400
     }
-  }, [initialPosition?.x, initialPosition?.y]);
+  });
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    // Only start drag if clicking on the header, not buttons or inputs
-    if ((e.target as HTMLElement).closest('button, input, select')) {
-      return;
-    }
-    setIsDragging(true);
-    setDragStart({
-      x: e.clientX - position.x,
-      y: e.clientY - position.y
-    });
-  };
-
+  // Update position when precision positioning changes
   React.useEffect(() => {
-    if (!isDragging) return;
+    if (initialPosition && !draggable.isDragging) {
+      draggable.setPosition(initialPosition);
+    }
+  }, [initialPosition?.x, initialPosition?.y, draggable.isDragging]);
 
-    // Inline event handlers to avoid TypeScript callback dependency issues
-    const handleMouseMove = (e: MouseEvent) => {
-      const newX = e.clientX - dragStart.x;
-      const newY = e.clientY - dragStart.y;
-
-      // Keep within viewport bounds
-      const maxX = window.innerWidth - 320; // Panel width
-      const maxY = window.innerHeight - 400; // Panel height estimate
-
-      setPosition({
-        x: Math.max(0, Math.min(newX, maxX)),
-        y: Math.max(0, Math.min(newY, maxY))
-      });
-    };
-
-    const handleMouseUp = () => {
-      setIsDragging(false);
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isDragging, dragStart.x, dragStart.y]);
-
-  const combinedStyles = React.useMemo(() => ({
-    // Enterprise draggable positioning (from floating-system-tokens)
-    position: 'fixed' as const,
-    cursor: (isDragging ? 'grabbing' : 'grab') as 'grab' | 'grabbing',
-    userSelect: 'none' as const,
-    left: position?.x || 0,
-    top: position?.y || 0,
-    zIndex: 50, // Enterprise floating panels z-index (from floating-system-tokens)
-    borderRadius: '8px',
-    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-    border: `1px solid ${PANEL_COLORS.BORDER_SECONDARY}`,
-    backgroundColor: PANEL_COLORS.BG_PRIMARY,
-    color: PANEL_COLORS.TEXT_PRIMARY,
-    '--bg-secondary': PANEL_COLORS.BG_SECONDARY,
-    '--bg-tertiary': PANEL_COLORS.BG_TERTIARY,
-    '--text-secondary': PANEL_COLORS.TEXT_SECONDARY
-  } as React.CSSProperties & Record<string, string>), [position, isDragging]);
+  // Sync refs for precision positioning compatibility
+  React.useEffect(() => {
+    if (draggable.elementRef.current) {
+      containerRef.current = draggable.elementRef.current;
+    }
+  }, [draggable.elementRef.current]);
 
   return (
-    <div
-      ref={containerRef}
-      style={combinedStyles}
+    <Card
+      ref={draggable.elementRef}
+      className={performanceMonitorUtilities.getOverlayContainerClasses()}
+      style={{
+        left: draggable.position?.x || 0,
+        top: draggable.position?.y || 0,
+        ...performanceMonitorUtilities.getOverlayContainerStyles()
+      }}
       onMouseEnter={(e) => e.stopPropagation()}
       onMouseLeave={(e) => e.stopPropagation()}
     >
-      {/* Drag Handle Header */}
-      <div
-        className={`bg-[var(--bg-secondary)] rounded-t-lg px-3 py-2 border-b border-gray-600 flex items-center justify-between ${
-          isDragging ? 'cursor-grabbing' : 'cursor-grab'
-        } transition-colors hover:bg-gray-600`}
-        onMouseDown={handleMouseDown}
+      <CardHeader
+        className={performanceMonitorUtilities.getOverlayHeaderClasses()}
+        style={performanceMonitorUtilities.getOverlayHeaderStyles()}
+        onMouseDown={draggable.handleMouseDown}
       >
-        <div className="flex items-center gap-2">
-          <div className="flex flex-col gap-0.5">
-            <div className="w-1 h-1 bg-gray-500 rounded-full"></div>
-            <div className="w-1 h-1 bg-gray-500 rounded-full"></div>
-            <div className="w-1 h-1 bg-gray-500 rounded-full"></div>
-          </div>
-          <span className="text-sm text-gray-300 font-medium">🏠 Overlay Properties</span>
-        </div>
-        <button
-          onClick={onClose}
-          className={`bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-white text-lg leading-none w-6 h-6 flex items-center justify-center rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} transition-colors`}
-        >
-          ✕
-        </button>
-      </div>
+        <div className="flex items-center gap-3 flex-1">
+          <Activity className="h-4 w-4" style={performanceMonitorUtilities.getOverlayIconStyles('primary')} />
+          <h3 className="text-sm font-semibold" style={performanceMonitorUtilities.getOverlayTitleStyles()}>Overlay Properties</h3>
 
-      {/* Properties Panel Content */}
-      <div className="p-0">
+          <div
+            className="ml-auto cursor-grab transition-colors text-xs select-none"
+            style={performanceMonitorUtilities.getOverlayIconStyles('secondary')}
+            title="Drag to move"
+            onMouseDown={draggable.handleMouseDown}
+          >
+            ⋮⋮
+          </div>
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={onClose}
+            className="p-1 rounded transition-colors"
+            style={performanceMonitorUtilities.getOverlayButtonStyles()}
+            title="Hide properties"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+      </CardHeader>
+
+      <CardContent
+        className="space-y-4"
+        style={performanceMonitorUtilities.getOverlayContentStyles()}
+      >
         <OverlayProperties
           overlay={overlay}
           onUpdate={onUpdate}
           onClose={onClose}
         />
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };

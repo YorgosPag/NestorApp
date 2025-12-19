@@ -202,7 +202,11 @@
       "Bash(TYPESCRIPT_CHECK=false npm run dev)",
       "Bash(xxd:*)",
       "Bash(npx lighthouse:*)",
-      "Bash(do echo \"Test $i:\")"
+      "Bash(do echo \"Test $i:\")",
+      "Bash(start chrome --new-window --incognito http://localhost:3000)",
+      "Read(//f//**)",
+      "Read(//f/Pagonis_Nestor. 08-09-2025/**)",
+      "Bash(cp:*)"
     ],
     "deny": [],
     "ask": []

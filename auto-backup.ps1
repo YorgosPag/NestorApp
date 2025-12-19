@@ -1,12 +1,12 @@
 ﻿# ===================================================================
-# AUTOMATIC SUBAPPS BACKUP SCRIPT
+# AUTOMATIC FULL APPLICATION BACKUP SCRIPT
 # ===================================================================
 # Χρήση: .\auto-backup.ps1
 #
 # Τι κάνει:
 # 1. Διαβάζει BACKUP_SUMMARY.json (που έχει γράψει ο Claude)
 # 2. Δημιουργεί CHANGELOG.md αυτόματα
-# 3. Ζιπάρει ολόκληρο τον subapps folder (geo-canvas, dxf-viewer, κλπ.)
+# 3. Ζιπάρει ΟΛΟΚΛΗΡΗ την εφαρμογή (src/, public/, config files, κλπ.)
 # 4. ZERO ερωτήσεις - ΠΛΗΡΩΣ ΑΥΤΟΜΑΤΟ!
 # ===================================================================
 
@@ -18,14 +18,14 @@ $Host.UI.RawUI.ForegroundColor = "White"
 
 Write-Host ""
 Write-Host "╔═══════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-Write-Host "║         AUTOMATIC SUBAPPS BACKUP                         ║" -ForegroundColor Cyan
+Write-Host "║      AUTOMATIC FULL APPLICATION BACKUP                   ║" -ForegroundColor Cyan
 Write-Host "╚═══════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
 Write-Host ""
 
 # ===================================================================
 # Paths
 # ===================================================================
-$sourcePath = "F:\Pagonis_Nestor\src\subapps"
+$sourcePath = "F:\Pagonis_Nestor"  # WHOLE APPLICATION instead of just subapps
 $destinationRoot = "C:\Users\user\Downloads\BuckUps\Zip_BuckUps-2"
 $summaryFile = "F:\Pagonis_Nestor\BACKUP_SUMMARY.json"
 $timestamp = Get-Date -Format "yyyyMMdd_HHmm"
@@ -168,7 +168,7 @@ $notes
 
 ## 📚 METADATA
 
-- **Source Path:** F:\Pagonis_Nestor\src\subapps
+- **Source Path:** F:\Pagonis_Nestor (Whole Application)
 - **Backup Location:** C:\Users\user\Downloads\BuckUps\Zip_BuckUps-2
 - **Timestamp:** $timestamp
 $(if ($summary.contributors) {
@@ -221,23 +221,23 @@ Write-Host "⏳ Preparing files..." -ForegroundColor Cyan
 
 New-Item -ItemType Directory -Path $tempFolder -Force | Out-Null
 
-# Copy entire subapps folder (excluding heavy folders)
-Write-Host "   📁 Copying source files..." -ForegroundColor White
+# Copy entire application (excluding heavy folders)
+Write-Host "   📁 Copying whole application..." -ForegroundColor White
 
 # Exclude heavy folders that are not needed for backup
 $excludeFolders = @("node_modules", ".next", "dist", "build", ".git", "coverage", "*.log")
 
 # Use robocopy for better performance and exclusion support
-$destination = Join-Path $tempFolder "subapps"
+$destination = Join-Path $tempFolder "Nestor_Pagonis_App"
 New-Item -ItemType Directory -Path $destination -Force | Out-Null
 
-# Robocopy with exclusions (much faster)
+# Robocopy with exclusions (much faster) - WHOLE APPLICATION
 $robocopyArgs = @(
     "`"$sourcePath`"",
     "`"$destination`"",
     "/E",        # Copy subdirectories including empty ones
-    "/XD", "node_modules", ".next", "dist", "build", ".git", "coverage", # Exclude directories
-    "/XF", "*.log", "*.tmp",  # Exclude file types
+    "/XD", "node_modules", ".next", "dist", "build", ".git", "coverage", "backups", # Exclude directories
+    "/XF", "*.log", "*.tmp", "localhost*.json", "localhost*.html",  # Exclude file types
     "/MT:8",     # Multi-threaded (8 threads)
     "/NFL",      # No file list
     "/NDL"       # No directory list
@@ -300,8 +300,8 @@ Write-Host "📊 Μέγεθος:   $([math]::Round($fileSize, 2)) MB" -Foregroun
 Write-Host ""
 
 Write-Host "📋 Περιεχόμενα ZIP:" -ForegroundColor Yellow
-Write-Host "   ├── CHANGELOG.md  ← Πλήρεις λεπτομέρειες (auto-generated)" -ForegroundColor White
-Write-Host "   └── subapps\      ← Όλα τα subapps (εκτός node_modules, .next, dist)" -ForegroundColor White
+Write-Host "   ├── CHANGELOG.md         ← Πλήρεις λεπτομέρειες (auto-generated)" -ForegroundColor White
+Write-Host "   └── Nestor_Pagonis_App\  ← ΟΛΟΚΛΗΡΗ η εφαρμογή (εκτός node_modules, .next, dist)" -ForegroundColor White
 Write-Host ""
 
 Write-Host "🎯 Category: [$category]" -ForegroundColor $(

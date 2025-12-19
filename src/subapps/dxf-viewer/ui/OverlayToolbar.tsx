@@ -36,12 +36,13 @@ interface OverlayToolbarProps {
   onUndo: () => void;
   onRedo: () => void;
   onToolChange?: (tool: string) => void; // 🔺 NEW: Callback για να ενημερώσει το global activeTool
+  disableFloating?: boolean; // 🔺 NEW: Disable floating positioning when used inside DraggableOverlayToolbar
 }
 
 export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
   mode, onModeChange, currentStatus, onStatusChange, currentKind, onKindChange,
   snapEnabled, onSnapToggle, selectedOverlayId, onDuplicate, onDelete,
-  canUndo, canRedo, onUndo, onRedo, onToolChange,
+  canUndo, canRedo, onUndo, onRedo, onToolChange, disableFloating = false,
 }) => {
   const { startOverlayCreation } = useUnifiedOverlayCreation();
   const overlayStore = useOverlayStore();
@@ -127,13 +128,13 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
     isDragging,
     elementRef,
     handleMouseDown
-  } = useDraggable(true, {
+  } = useDraggable(!disableFloating, {
     elementWidth: 400,
     elementHeight: 60,
     autoCenter: true
   });
 
-  const draggableStyles = {
+  const draggableStyles = disableFloating ? {} : {
     left: dragPosition.x,
     top: dragPosition.y,
     transform: 'none', // Override center transform when dragging
@@ -144,19 +145,21 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
     <div
       ref={elementRef}
       style={draggableStyles}
-      className="fixed z-[80] flex items-center gap-2 p-2 bg-gray-800 border border-gray-500 rounded-lg flex-wrap shadow-xl select-none pointer-events-auto"
+      className={`${disableFloating ? 'relative' : 'fixed z-[80]'} flex items-center gap-2 p-2 bg-gray-800 border border-gray-500 rounded-lg flex-wrap shadow-xl select-none pointer-events-auto`}
       onMouseEnter={(e) => e.stopPropagation()}
       onMouseMove={(e) => e.stopPropagation()}
       onMouseLeave={(e) => e.stopPropagation()}
     >
       {/* Drag Handle */}
-      <div
-        onMouseDown={handleMouseDown}
-        className="cursor-grab active:cursor-grabbing p-1 hover:bg-gray-700 rounded"
-        title="Drag to move toolbar"
-      >
-        <div className="w-2 h-4 bg-gray-500 rounded-sm"></div>
-      </div>
+      {!disableFloating && (
+        <div
+          onMouseDown={handleMouseDown}
+          className="cursor-grab active:cursor-grabbing p-1 hover:bg-gray-700 rounded"
+          title="Drag to move toolbar"
+        >
+          <div className="w-2 h-4 bg-gray-500 rounded-sm"></div>
+        </div>
+      )}
       {/* Drawing Modes */}
       <div className="flex items-center gap-1">
         {modeButtons.map(({ mode: btnMode, icon: Icon, label, key }) => (
