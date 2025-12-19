@@ -1,8 +1,8 @@
 'use client';
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { PropertyManagementPageContent } from '@/components/property-management/PropertyManagementPageContent';
 import { PropertyGridView } from '@/features/property-grid/PropertyGridView';
+import { PropertyManagementPageContent } from '@/components/property-management/PropertyManagementPageContent';
 
 function PropertiesPageContent() {
   const searchParams = useSearchParams();

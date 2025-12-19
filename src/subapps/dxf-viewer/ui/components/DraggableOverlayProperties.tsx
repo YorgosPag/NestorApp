@@ -5,6 +5,7 @@ import { OverlayProperties } from '../OverlayProperties';
 import { usePrecisionPositioning } from '../../utils/precision-positioning';
 import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '../../../../components/ui/effects';
 import { PANEL_COLORS } from '../../config/panel-tokens';
+// Enterprise floating panel design tokens integration
 
 interface DraggableOverlayPropertiesProps {
   overlay: any;
@@ -25,14 +26,16 @@ export const DraggableOverlayProperties: React.FC<DraggableOverlayPropertiesProp
     dependencies: [overlay]
   });
 
-  const [position, setPosition] = React.useState(initialPosition);
+  const [position, setPosition] = React.useState<{x: number; y: number}>(initialPosition || { x: 0, y: 0 });
   const [isDragging, setIsDragging] = React.useState(false);
   const [dragStart, setDragStart] = React.useState({ x: 0, y: 0 });
 
   // Update position when initial position changes (on first mount)
   React.useEffect(() => {
-    setPosition(initialPosition);
-  }, [initialPosition.x, initialPosition.y]);
+    if (initialPosition) {
+      setPosition(initialPosition);
+    }
+  }, [initialPosition?.x, initialPosition?.y]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     // Only start drag if clicking on the header, not buttons or inputs
@@ -47,9 +50,10 @@ export const DraggableOverlayProperties: React.FC<DraggableOverlayPropertiesProp
   };
 
   React.useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isDragging) return;
+    if (!isDragging) return;
 
+    // Inline event handlers to avoid TypeScript callback dependency issues
+    const handleMouseMove = (e: MouseEvent) => {
       const newX = e.clientX - dragStart.x;
       const newY = e.clientY - dragStart.y;
 
@@ -67,40 +71,45 @@ export const DraggableOverlayProperties: React.FC<DraggableOverlayPropertiesProp
       setIsDragging(false);
     };
 
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-    }
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
 
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging, dragStart]);
+  }, [isDragging, dragStart.x, dragStart.y]);
+
+  const combinedStyles = React.useMemo(() => ({
+    // Enterprise draggable positioning (from floating-system-tokens)
+    position: 'fixed' as const,
+    cursor: (isDragging ? 'grabbing' : 'grab') as 'grab' | 'grabbing',
+    userSelect: 'none' as const,
+    left: position?.x || 0,
+    top: position?.y || 0,
+    zIndex: 50, // Enterprise floating panels z-index (from floating-system-tokens)
+    borderRadius: '8px',
+    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    border: `1px solid ${PANEL_COLORS.BORDER_SECONDARY}`,
+    backgroundColor: PANEL_COLORS.BG_PRIMARY,
+    color: PANEL_COLORS.TEXT_PRIMARY,
+    '--bg-secondary': PANEL_COLORS.BG_SECONDARY,
+    '--bg-tertiary': PANEL_COLORS.BG_TERTIARY,
+    '--text-secondary': PANEL_COLORS.TEXT_SECONDARY
+  } as React.CSSProperties & Record<string, string>), [position, isDragging]);
 
   return (
     <div
       ref={containerRef}
-      style={{
-        position: 'fixed',
-        left: position.x,
-        top: position.y,
-        zIndex: 90,
-        cursor: isDragging ? 'grabbing' : 'auto',
-        userSelect: isDragging ? 'none' : 'auto',
-        backgroundColor: PANEL_COLORS.BG_PRIMARY,
-        color: PANEL_COLORS.TEXT_PRIMARY
-      }}
-      className="bg-gray-900 rounded-lg shadow-xl border border-gray-500 select-none"
+      style={combinedStyles}
       onMouseEnter={(e) => e.stopPropagation()}
       onMouseLeave={(e) => e.stopPropagation()}
     >
       {/* Drag Handle Header */}
       <div
-        className={`bg-gray-700 rounded-t-lg px-3 py-2 border-b border-gray-600 flex items-center justify-between ${
+        className={`bg-[var(--bg-secondary)] rounded-t-lg px-3 py-2 border-b border-gray-600 flex items-center justify-between ${
           isDragging ? 'cursor-grabbing' : 'cursor-grab'
         } transition-colors hover:bg-gray-600`}
-        style={{ backgroundColor: PANEL_COLORS.BG_SECONDARY }}
         onMouseDown={handleMouseDown}
       >
         <div className="flex items-center gap-2">
@@ -113,8 +122,7 @@ export const DraggableOverlayProperties: React.FC<DraggableOverlayPropertiesProp
         </div>
         <button
           onClick={onClose}
-          className={`text-gray-400 hover:text-white text-lg leading-none w-6 h-6 flex items-center justify-center rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} transition-colors`}
-          style={{ backgroundColor: PANEL_COLORS.BG_TERTIARY, color: PANEL_COLORS.TEXT_SECONDARY }}
+          className={`bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-white text-lg leading-none w-6 h-6 flex items-center justify-center rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} transition-colors`}
         >
           ✕
         </button>

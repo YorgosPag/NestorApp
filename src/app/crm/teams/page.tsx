@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Users2, Plus, Settings, Shield, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { EnterpriseTeamsService } from '@/services/teams/EnterpriseTeamsService';
+import { enterpriseTeamsService } from '@/services/teams/EnterpriseTeamsService';
 import type { EnterpriseTeam, EnterpriseTeamMember } from '@/services/teams/EnterpriseTeamsService';
 
 interface DisplayTeam {
@@ -15,8 +15,8 @@ interface DisplayTeam {
   members: EnterpriseTeamMember[];
 }
 
-// Initialize the enterprise teams service
-const teamsService = EnterpriseTeamsService.getInstance();
+// Use the singleton instance of enterprise teams service
+const teamsService = enterpriseTeamsService;
 
 const getInitials = (name: string) => {
   return name.split(' ').map(n => n[0]).join('').toUpperCase();

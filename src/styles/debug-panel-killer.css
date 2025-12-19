@@ -1,0 +1,67 @@
+/**
+ * 🚫 DEBUG PANEL KILLER - Force Hide All Debug Panels
+ *
+ * This CSS file contains aggressive rules to hide any debug panels
+ * that might be appearing due to browser cache or other issues.
+ */
+
+/* Hide any element containing "OVERLAY" and "TOOLS" */
+[data-debug*="overlay" i] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Hide any element containing "DEBUG" */
+[data-debug*="debug" i] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Hide elements with green borders that might be debug panels */
+div[style*="border-color: green" i],
+div[style*="border: 2px solid green" i],
+div[style*="border: 1px solid green" i] {
+  display: none !important;
+}
+
+/* Hide any div containing "OVERLAY TOOLS" text */
+div:has-text("OVERLAY TOOLS") {
+  display: none !important;
+}
+
+/* CSS4 selector fallback - hide divs containing debug-related text */
+div[class*="debug" i],
+div[id*="debug" i],
+div[class*="overlay-debug" i],
+div[id*="overlay-debug" i] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Hide DraggableOverlayToolbar completely */
+div[data-component="DraggableOverlayToolbar"],
+div[class*="DraggableOverlayToolbar" i] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Nuclear option - hide any fixed positioned div with green styling */
+div[style*="position: fixed" i][style*="green" i] {
+  display: none !important;
+}
+
+/* Hide any div with z-index 99999 that might be a debug overlay */
+div[style*="z-index: 99999" i] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}

@@ -54,6 +54,16 @@ const ERROR_MAPPINGS: Record<string, ErrorMapping> = {
     namespace: 'errors',
     fallback: 'Ο χώρος αποθήκευσης έχει εξαντληθεί'
   },
+  'DXF.STORAGE_ERROR': {
+    key: 'storage.error',
+    namespace: 'dxf-viewer',
+    fallback: 'Storage Γεμάτο'
+  },
+  'DXF.GENERIC_ERROR': {
+    key: 'generic.error',
+    namespace: 'dxf-viewer',
+    fallback: 'Σφάλμα DXF Viewer'
+  },
 
   // Property management errors
   'PROPERTY.NOT_FOUND': {

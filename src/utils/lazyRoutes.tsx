@@ -172,6 +172,26 @@ export const LazyRoutes = {
     () => import('@/subapps/dxf-viewer/DxfViewerApp').then(mod => ({ default: mod.default })),
     { loadingType: 'spinner', ssr: false }
   ),
+
+  // ⚡ NEW ADDITIONS: Recently identified heavy components που χρειάζονται lazy loading
+
+  // Projects/Audit Management (heavy with data tables και reports)
+  Projects: createLazyRoute(
+    () => import('@/components/projects/projects-page-content').then(mod => ({ default: mod.ProjectsPageContent })),
+    { loadingType: 'dashboard', ssr: false }
+  ),
+
+  // Email Analytics Dashboard (heavy με charts και metrics)
+  EmailAnalytics: createLazyRoute(
+    () => import('@/components/crm/EmailAnalyticsDashboard').then(mod => ({ default: mod.EmailAnalyticsDashboard })),
+    { loadingType: 'dashboard', ssr: false }
+  ),
+
+  // ⚡ ENTERPRISE: Units Management (heavy με PropertyGridView και complex state)
+  Units: createLazyRoute(
+    () => import('@/app/units/page').then(mod => ({ default: mod.default })),
+    { loadingType: 'dashboard', ssr: false }
+  ),
 } as const;
 
 // Export types for TypeScript support

@@ -131,9 +131,7 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
       )}
 
       {/* DRAGGABLE OVERLAY TOOLBAR */}
-      {((activeTool === 'layering' ||
-        (activeTool === 'polyline' && overlayMode === 'draw')) ||
-        overlayStore.getSelectedOverlay()) && (
+      {true && (
         <DraggableOverlayToolbar
           mode={overlayMode}
           onModeChange={setOverlayMode}
@@ -154,18 +152,26 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
         />
       )}
 
-      {/* DRAGGABLE OVERLAY PROPERTIES */}
-      {overlayStore.getSelectedOverlay() && (
-        <DraggableOverlayProperties
-          overlay={overlayStore.getSelectedOverlay()}
-          onUpdate={(overlayId, updates) =>
-            overlayStore.update(overlayId, updates)
-          }
-          onClose={() => {
-            overlayStore.setSelectedOverlay(null);
-          }}
-        />
-      )}
+      {/* DRAGGABLE OVERLAY PROPERTIES - ALWAYS VISIBLE */}
+      <DraggableOverlayProperties
+        overlay={overlayStore.getSelectedOverlay() || {
+          id: 'dummy-overlay',
+          type: 'rectangle',
+          status: 'for-sale',
+          kind: 'measurement',
+          visible: true,
+          locked: false,
+          layer: 'base',
+          style: { strokeColor: '#0066cc', fillColor: '#0066cc', strokeWidth: 2 },
+          vertices: [{ x: 100, y: 100 }, { x: 200, y: 100 }, { x: 200, y: 200 }, { x: 100, y: 200 }]
+        }}
+        onUpdate={(overlayId, updates) =>
+          overlayStore.update(overlayId, updates)
+        }
+        onClose={() => {
+          overlayStore.setSelectedOverlay(null);
+        }}
+      />
 
       {/* PROFESSIONAL LAYOUT DEBUG SYSTEM */}
       {isFeatureEnabled('LAYOUT_DEBUG_SYSTEM') && <LazyFullLayoutDebug />}

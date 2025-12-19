@@ -9,7 +9,6 @@ import { Separator } from '../../../components/ui/separator';
 import { X } from 'lucide-react';
 import { CommonBadge } from '../../../core/badges';
 import { STATUS_COLORS, STATUS_LABELS, KIND_LABELS, type Overlay, type Status, type OverlayKind } from '../overlays/types';
-import { layoutUtilities } from '@/styles/design-tokens';
 
 interface OverlayPropertiesProps {
   overlay: Overlay | null;
@@ -17,8 +16,30 @@ interface OverlayPropertiesProps {
   onClose?: () => void;
 }
 
-function calculatePolygonArea(polygon: Array<[number, number]>): number {
-  if (polygon.length < 3) return 0;
+/**
+ * Enterprise-grade type guard for polygon validation
+ * Implements defensive programming principles used by major software companies
+ */
+function isValidPolygon(polygon: unknown): polygon is Array<[number, number]> {
+  return (
+    Array.isArray(polygon) &&
+    polygon.length >= 3 &&
+    polygon.every(point =>
+      Array.isArray(point) &&
+      point.length === 2 &&
+      typeof point[0] === 'number' &&
+      typeof point[1] === 'number'
+    )
+  );
+}
+
+/**
+ * Safe polygon area calculation with enterprise error handling
+ * Uses Shoelace formula with comprehensive input validation
+ */
+function calculatePolygonArea(polygon: unknown): number {
+  if (!isValidPolygon(polygon)) return 0;
+
   let area = 0;
   for (let i = 0; i < polygon.length; i++) {
     const j = (i + 1) % polygon.length;
@@ -27,8 +48,13 @@ function calculatePolygonArea(polygon: Array<[number, number]>): number {
   return Math.abs(area) / 2;
 }
 
-function calculatePolygonPerimeter(polygon: Array<[number, number]>): number {
-  if (polygon.length < 2) return 0;
+/**
+ * Safe polygon perimeter calculation with enterprise error handling
+ * Uses Euclidean distance formula with comprehensive input validation
+ */
+function calculatePolygonPerimeter(polygon: unknown): number {
+  if (!isValidPolygon(polygon)) return 0;
+
   let perimeter = 0;
   for (let i = 0; i < polygon.length; i++) {
     const j = (i + 1) % polygon.length;
@@ -94,9 +120,7 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
         <div className="flex items-center gap-2">
           <div
             className="w-4 h-4 rounded border"
-            style={layoutUtilities.dxf.colors.backgroundColor(
-              STATUS_COLORS[overlay.status || 'for-sale']
-            )}
+            style={{ backgroundColor: STATUS_COLORS[overlay.status || 'for-sale'] }}
           />
           <CommonBadge
             status="company"
@@ -130,7 +154,7 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
                   <div className="flex items-center gap-2">
                     <div
                       className="w-3 h-3 rounded"
-                      style={layoutUtilities.dxf.colors.backgroundColor(STATUS_COLORS[status])}
+                      style={{ backgroundColor: STATUS_COLORS[status] }}
                     />
                     {STATUS_LABELS[status]}
                   </div>
@@ -173,7 +197,7 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
         <div className="space-y-2">
           <Label className="text-xs">Γεωμετρία</Label>
           <div className="text-xs text-muted-foreground space-y-1">
-            <div>Σημεία: {overlay.polygon.length}</div>
+            <div>Σημεία: {overlay && overlay.polygon ? overlay.polygon.length : 0}</div>
             <div>Εμβαδό: {area.toFixed(2)} m²</div>
             <div>Περίμετρος: {perimeter.toFixed(2)} m</div>
           </div>
@@ -182,3 +206,5 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
     </Card>
   );
 };
+
+export default OverlayProperties;

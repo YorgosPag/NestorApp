@@ -133,6 +133,7 @@
   },
   "devDependencies": {
     "@napi-rs/canvas": "^0.1.80",
+    "@next/bundle-analyzer": "16.1.0",
     "@playwright/test": "^1.55.1",
     "@swc/core": "^1.13.5",
     "@swc/jest": "^0.2.39",
@@ -142,8 +143,8 @@
     "@types/jest-axe": "^3.5.9",
     "@types/jsdom": "^27.0.0",
     "@types/node": "^20.16.5",
-    "@types/pixelmatch": "^5.2.6",
     "@types/pg": "^8.11.10",
+    "@types/pixelmatch": "^5.2.6",
     "@types/pngjs": "^6.0.5",
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",

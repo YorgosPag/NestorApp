@@ -5,7 +5,7 @@ import { NotificationProvider } from '../../providers/NotificationProvider';
 import { CacheProvider } from '../../contexts/CacheProvider';
 import { OptimizedUserRoleProvider } from '../../contexts/OptimizedUserRoleContext';
 import { GeoCanvasContent } from './app/GeoCanvasContent';
-import { GeoCanvasErrorBoundary } from './components/ErrorBoundary';
+import ErrorBoundary from '@/components/ui/ErrorBoundary/ErrorBoundary';
 import { GlobalPerformanceDashboard } from '../../core/performance/components/GlobalPerformanceDashboard';
 import { PerformanceCategory } from '../../core/performance/types/performance.types';
 import type { GeoCanvasAppProps } from './types';
@@ -25,7 +25,13 @@ export function GeoCanvasApp(props: GeoCanvasAppProps) {
     <NotificationProvider>
       <CacheProvider>
         <OptimizedUserRoleProvider>
-          <GeoCanvasErrorBoundary>
+          <ErrorBoundary
+            componentName="GeoCanvas"
+            enableRetry={true}
+            maxRetries={3}
+            enableReporting={true}
+            showErrorDetails={true}
+          >
             {/* 🏢 ENTERPRISE PROVIDERS STACK */}
             {/* TODO Phase 2: GeoTransformProvider */}
             {/* TODO Phase 3: MapLibreProvider */}
@@ -60,7 +66,7 @@ export function GeoCanvasApp(props: GeoCanvasAppProps) {
               theme="dark"
             />
 
-          </GeoCanvasErrorBoundary>
+          </ErrorBoundary>
         </OptimizedUserRoleProvider>
       </CacheProvider>
     </NotificationProvider>

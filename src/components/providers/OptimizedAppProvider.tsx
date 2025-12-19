@@ -3,12 +3,13 @@
 import React, { useEffect, Suspense } from 'react';
 import { CacheProvider } from '@/contexts/CacheProvider';
 import { OptimizedUserRoleProvider } from '@/contexts/OptimizedUserRoleContext';
-import { PageErrorBoundary } from '@/components/ui/ErrorBoundary/ErrorBoundary';
+import ErrorBoundary from '@/components/ui/ErrorBoundary/ErrorBoundary';
 import { performanceMonitor, enablePerformanceLogging } from '@/utils/performanceMonitor';
 import { memoryLeakDetector, enableMemoryMonitoring } from '@/utils/memoryLeakDetector';
 import { Skeleton } from '@/components/ui/skeletons';
 import { ProgressiveLoader, LoadingPresets, useProgressiveLoader } from '@/components/ui/progress/ProgressiveLoader';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects/hover-effects';
+import { AlertTriangle } from 'lucide-react';
 
 interface OptimizedAppProviderProps {
   children: React.ReactNode;
@@ -118,7 +119,7 @@ function MemoryWrapper({ children }: { children: React.ReactNode }) {
 // Error boundary with app-specific fallback
 function AppErrorBoundary({ children }: { children: React.ReactNode }) {
   return (
-    <PageErrorBoundary
+    <ErrorBoundary
       componentName="App"
       enableRetry={true}
       maxRetries={2}
@@ -128,7 +129,7 @@ function AppErrorBoundary({ children }: { children: React.ReactNode }) {
           <div className="max-w-lg w-full p-6">
             <div className="text-center">
               <div className="h-16 w-16 bg-red-100 dark:bg-red-900/20 rounded-full mx-auto mb-4 flex items-center justify-center">
-                <div className="h-8 w-8 text-red-600 dark:text-red-400">⚠️</div>
+                <AlertTriangle className="h-8 w-8 text-red-600 dark:text-red-400" />
               </div>
               <h1 className="text-2xl font-bold text-foreground mb-2">Application Error</h1>
               <p className="text-muted-foreground mb-6">
@@ -160,7 +161,7 @@ function AppErrorBoundary({ children }: { children: React.ReactNode }) {
       )}
     >
       {children}
-    </PageErrorBoundary>
+    </ErrorBoundary>
   );
 }
 

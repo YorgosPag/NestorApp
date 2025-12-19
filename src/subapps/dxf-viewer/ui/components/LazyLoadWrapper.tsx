@@ -6,8 +6,9 @@
  * Conference-ready code splitting και lazy loading
  */
 
-import React, { Suspense, lazy, ComponentType, Component, ErrorInfo } from 'react';
+import React, { Suspense, lazy, ComponentType } from 'react';
 import { Loader2 } from 'lucide-react';
+import ErrorBoundary from '@/components/ui/ErrorBoundary/ErrorBoundary';
 
 interface LazyLoadWrapperProps {
   fallback?: React.ReactNode;
@@ -27,55 +28,24 @@ const DefaultFallback = () => (
 );
 
 /**
- * Error boundary για lazy loaded components
+ * Custom fallback για lazy loading errors
  */
-interface LazyErrorBoundaryProps {
-  children: React.ReactNode;
-  fallback?: React.ReactNode;
-}
-
-interface LazyErrorBoundaryState {
-  hasError: boolean;
-  error?: Error;
-}
-
-class LazyErrorBoundary extends Component<LazyErrorBoundaryProps, LazyErrorBoundaryState> {
-  constructor(props: LazyErrorBoundaryProps) {
-    super(props);
-    this.state = { hasError: false };
-  }
-
-  static getDerivedStateFromError(error: Error): LazyErrorBoundaryState {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('[LazyLoadWrapper] Component failed to load:', error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="p-4 border border-red-900 bg-red-950 rounded-lg">
-          <h3 className="text-sm font-semibold text-red-400 mb-2">
-            Component Loading Error
-          </h3>
-          <p className="text-xs text-red-300">
-            {this.state.error?.message || 'Failed to load component'}
-          </p>
-          <button
-            onClick={() => this.setState({ hasError: false })}
-            className="mt-2 text-xs text-red-400 underline hover:text-red-300 transition-colors"
-          >
-            Retry
-          </button>
-        </div>
-      );
-    }
-
-    return this.props.children;
-  }
-}
+const LazyLoadErrorFallback = (error: Error, errorInfo: any, retry: () => void) => (
+  <div className="p-4 border border-destructive bg-destructive/10 rounded-lg">
+    <h3 className="text-sm font-semibold text-destructive mb-2">
+      Component Loading Error
+    </h3>
+    <p className="text-xs text-muted-foreground">
+      {error?.message || 'Failed to load component'}
+    </p>
+    <button
+      onClick={retry}
+      className="mt-2 text-xs text-destructive underline hover:text-destructive/80 transition-colors"
+    >
+      Retry
+    </button>
+  </div>
+);
 
 /**
  * HOC για lazy loading με error handling
@@ -86,11 +56,16 @@ export function withLazyLoad<T extends ComponentType<React.ComponentProps<T>>>(
   const LazyComponent = lazy(importFunction);
 
   return React.memo((props: React.ComponentProps<T>) => (
-    <LazyErrorBoundary>
+    <ErrorBoundary
+      componentName="LazyComponent"
+      enableRetry={true}
+      maxRetries={2}
+      fallback={LazyLoadErrorFallback}
+    >
       <Suspense fallback={<DefaultFallback />}>
         <LazyComponent {...props} />
       </Suspense>
-    </LazyErrorBoundary>
+    </ErrorBoundary>
   ));
 }
 
@@ -135,14 +110,19 @@ export const LazyLoadWrapper: React.FC<LazyLoadWrapperProps> = ({
   // This is a placeholder - actual implementation would dynamically import
   // For now, returning children or fallback
   return (
-    <LazyErrorBoundary fallback={fallback}>
+    <ErrorBoundary
+      componentName="LazyLoadWrapper"
+      enableRetry={true}
+      maxRetries={2}
+      fallback={LazyLoadErrorFallback}
+    >
       <Suspense fallback={fallback || <DefaultFallback />}>
         <div {...props}>
           {/* Component will be loaded here */}
           {props.children}
         </div>
       </Suspense>
-    </LazyErrorBoundary>
+    </ErrorBoundary>
   );
 };
 

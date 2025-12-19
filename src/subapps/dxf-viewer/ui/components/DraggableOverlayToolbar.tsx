@@ -99,24 +99,19 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
   return (
     <div
       ref={toolbarRef}
-      style={canvasUI.positioning.floatingPanel.overlayToolbar.container(position, isDragging)}
-      className="bg-gray-900 rounded-lg shadow-xl border border-gray-500 select-none"
-      onMouseDown={handleMouseDown}
+      style={{
+        position: 'fixed',
+        top: '20px',
+        left: '20px',
+        zIndex: 1000,
+        display: 'block',
+        visibility: 'visible',
+        opacity: 1,
+        pointerEvents: 'auto'
+      }}
+      className="select-none"
     >
-      {/* Drag Handle - Visible area for dragging */}
-      <div
-        className="bg-gray-700 rounded-t-lg px-3 py-1 border-b border-gray-600 flex items-center justify-between cursor-grab active:cursor-grabbing"
-        style={canvasUI.positioning.floatingPanel.overlayToolbar.dragHandle}
-      >
-        <span className="text-xs text-gray-400 font-medium">🔧 Overlay Tools</span>
-        <div className="flex gap-1">
-          <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
-          <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
-          <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
-        </div>
-      </div>
-
-      {/* Actual Toolbar Content */}
+      {/* OVERLAY TOOLBAR CONTENT */}
       <OverlayToolbar
         mode={props.mode}
         onModeChange={props.onModeChange}

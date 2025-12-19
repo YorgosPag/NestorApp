@@ -59,31 +59,36 @@ import { useLevelManager } from '../systems/levels/useLevels';
 import { useGripContext } from '../providers/GripProvider';
 import { globalRulerStore } from '../settings-provider';
 
-// UI Components
+// ⚡ LCP OPTIMIZATION: Critical UI Components (Load immediately for paint)
 import { FloatingPanelContainer, type FloatingPanelHandle } from '../ui/FloatingPanelContainer';
+import { DXF_VIEWER_BACKGROUNDS } from '../config/panel-tokens';
 import { EnhancedDXFToolbar } from '../ui/toolbar';
-import { OverlayToolbar } from '../ui/OverlayToolbar';
-import { ColorManager } from '../ui/components/ColorManager';
-import { ProSnapToolbar } from '../ui/components/ProSnapToolbar';
-import { TestsModal } from '../ui/components/TestsModal';
-import CursorSettingsPanel from '../ui/CursorSettingsPanel';
-import CoordinateCalibrationOverlay from '../ui/CoordinateCalibrationOverlay';
-import { AutoSaveStatus } from '../ui/components/AutoSaveStatus';
-import { CentralizedAutoSaveStatus } from '../ui/components/CentralizedAutoSaveStatus';
-import { OverlayProperties } from '../ui/OverlayProperties';
-import { DraggableOverlayToolbar } from '../ui/components/DraggableOverlayToolbar';
-import { DraggableOverlayProperties } from '../ui/components/DraggableOverlayProperties';
-import { ToolbarWithCursorCoordinates } from '../ui/components/ToolbarWithCursorCoordinates';
+
+// 🚀 LAZY LOADED: Non-Critical UI Components (Load after initial paint to reduce LCP)
+const OverlayToolbar = React.lazy(() => import('../ui/OverlayToolbar').then(mod => ({ default: mod.OverlayToolbar })));
+const ColorManager = React.lazy(() => import('../ui/components/ColorManager').then(mod => ({ default: mod.ColorManager })));
+const ProSnapToolbar = React.lazy(() => import('../ui/components/ProSnapToolbar').then(mod => ({ default: mod.ProSnapToolbar })));
+const TestsModal = React.lazy(() => import('../ui/components/TestsModal').then(mod => ({ default: mod.TestsModal })));
+const CursorSettingsPanel = React.lazy(() => import('../ui/CursorSettingsPanel'));
+const CoordinateCalibrationOverlay = React.lazy(() => import('../ui/CoordinateCalibrationOverlay'));
+const AutoSaveStatus = React.lazy(() => import('../ui/components/AutoSaveStatus').then(mod => ({ default: mod.AutoSaveStatus })));
+const CentralizedAutoSaveStatus = React.lazy(() => import('../ui/components/CentralizedAutoSaveStatus').then(mod => ({ default: mod.CentralizedAutoSaveStatus })));
+const OverlayProperties = React.lazy(() => import('../ui/OverlayProperties').then(mod => ({ default: mod.OverlayProperties })));
+const DraggableOverlayToolbar = React.lazy(() => import('../ui/components/DraggableOverlayToolbar').then(mod => ({ default: mod.DraggableOverlayToolbar })));
+const DraggableOverlayProperties = React.lazy(() => import('../ui/components/DraggableOverlayProperties').then(mod => ({ default: mod.DraggableOverlayProperties })));
+const ToolbarWithCursorCoordinates = React.lazy(() => import('../ui/components/ToolbarWithCursorCoordinates').then(mod => ({ default: mod.ToolbarWithCursorCoordinates })));
 
 // Layout Components - Canvas V2
 import { DXFViewerLayout } from '../integration/DXFViewerLayout';
 import { getKindFromLabel } from '../config/color-mapping';
 import { isFeatureEnabled } from '../config/experimental-features';
 
-// ✅ PHASE 5: Layout Section Components
+// ⚡ LCP OPTIMIZATION: Critical layout for initial paint
 import { SidebarSection } from '../layout/SidebarSection';
-import { MainContentSection } from '../layout/MainContentSection';
-import { FloatingPanelsSection } from '../layout/FloatingPanelsSection';
+
+// 🚀 AGGRESSIVE LAZY LOADING: Heavy layout sections loaded after initial paint
+const MainContentSection = React.lazy(() => import('../layout/MainContentSection').then(mod => ({ default: mod.MainContentSection })));
+const FloatingPanelsSection = React.lazy(() => import('../layout/FloatingPanelsSection').then(mod => ({ default: mod.FloatingPanelsSection })));
 
 // ✅ ENTERPRISE ARCHITECTURE: Transform Context (Single Source of Truth)
 import { TransformProvider, useTransform } from '../contexts/TransformContext';
@@ -97,14 +102,25 @@ import { type UnifiedTestReport } from '../debug/unified-test-runner';
 // 🛠️ DEBUG TOOLBAR - Consolidated debug/test controls (development only)
 import { DebugToolbar } from '../debug/DebugToolbar';
 
-// ✅ CENTRALIZED: Use existing LazyLoadWrapper system
-import { LazyFullLayoutDebug } from '../ui/components/LazyLoadWrapper';
+// ✅ PERFORMANCE: Use existing LazyLoadWrapper system για heavy components
+import {
+  LazyFullLayoutDebug,
+  LazyGlobalPerformanceDashboard,
+  withLazyLoad
+} from '../ui/components/LazyLoadWrapper';
+
+// ⚡ ENTERPRISE: DXF Performance Optimizer (729 γραμμές Enterprise system)
+import { dxfPerformanceOptimizer } from '../performance/DxfPerformanceOptimizer';
 
 // 🚀 ENTERPRISE PERFORMANCE SYSTEM - Centralized monitoring (2025-12-18)
 import { GlobalPerformanceDashboard } from '../../../core/performance/components/GlobalPerformanceDashboard';
 import { PerformanceCategory } from '../../../core/performance/types/performance.types';
 
-export function DxfViewerContent(props: DxfViewerAppProps) {
+// ✅ PERFORMANCE: Memoize το main component για να αποφύγουμε άχρηστα re-renders
+export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
+  // 🔍 DEBUG: Component mounting verification
+  console.log('🔍 DxfViewerContent: Component mounting/re-rendering');
+
   const floatingRef = React.useRef<FloatingPanelHandle>(null);
   const state = useDxfViewerState();
   const notifications = useNotifications();
@@ -118,7 +134,60 @@ export function DxfViewerContent(props: DxfViewerAppProps) {
   // 🧪 TESTS MODAL - State για tests button
   const [testsModalOpen, setTestsModalOpen] = React.useState(false);
 
-  // 🔧 HELPER: Replace alert() with notification + copy button
+  // ⚡ ENTERPRISE: Initialize DXF Performance Optimizer
+  React.useEffect(() => {
+    console.log('🔍 DxfPerformanceOptimizer: Starting initialization useEffect v2');
+
+    // 🎯 LIGHTHOUSE OPTIMIZATION: Target 7.0s → <2.5s LCP
+    dxfPerformanceOptimizer.updateConfig({
+      rendering: {
+        enableRequestAnimationFrame: true,
+        maxFPS: 60,
+        enableCanvasBuffering: true,
+        enableViewportCulling: true,
+        enableLOD: true,
+        debounceDelay: 8, // Increased from 16ms for better LCP
+      },
+      memory: {
+        enableGarbageCollection: true,
+        maxMemoryUsage: 384, // Increased for better performance
+        enableMemoryProfiling: true,
+        memoryCheckInterval: 3000, // More frequent checks
+      },
+      bundling: {
+        enableChunkSplitting: true,
+        enablePreloading: true,
+        maxChunkSize: 200, // Smaller chunks for faster initial load
+        enableTreeShaking: true,
+      },
+      monitoring: {
+        enableRealTimeMonitoring: true,
+        performanceThresholds: {
+          maxLoadTime: 2500,    // Target: <2.5s (from 7.0s Lighthouse)
+          maxRenderTime: 12.0,  // More aggressive than 16.67ms
+          maxMemoryUsage: 384,  // Match memory config
+          minFPS: 45            // Higher target FPS
+        },
+        enableAlerts: true
+      }
+    });
+
+    // 🚀 ENTERPRISE: Enable critical optimizations immediately
+    dxfPerformanceOptimizer.applyOptimizationById('canvas_buffer');
+    dxfPerformanceOptimizer.applyOptimizationById('viewport_culling');
+
+    // ⚡ PERFORMANCE: Direct imports - no preloading needed
+    console.log('🚀 Direct imports loaded for optimal performance');
+
+    console.log('⚡ DXF Performance Optimizer: ACTIVATED - Targeting 7.0s→<2.5s LCP');
+
+    return () => {
+      // Cleanup όταν component unmounts
+      // dxfPerformanceOptimizer.destroy(); // Removed - singleton pattern
+    };
+  }, []);
+
+  // ✅ PERFORMANCE: Memoize heavy callbacks
   const showCopyableNotification = React.useCallback((message: string, type: 'success' | 'info' | 'warning' | 'error' = 'info') => {
     const notifyMethod = notifications[type];
     notifyMethod(message, {
@@ -225,7 +294,7 @@ export function DxfViewerContent(props: DxfViewerAppProps) {
     handleAction(action, data);
   }, [handleAction]);
 
-  // 🧪 CREATE wrapped state with new handleAction
+  // ✅ PERFORMANCE: Memoize wrapped state to prevent unnecessary child re-renders
   const wrappedState = React.useMemo(() => ({
     ...state,
     handleAction: wrappedHandleAction,
@@ -386,7 +455,10 @@ Check console for detailed metrics`;
     }
   }, [currentScene]); // ✅ FIXED: Removed canvasOps from dependency array
 
-  // 🚨 FIXED: Replaced periodic sync with event-based sync to prevent infinite loops
+  // ✅ PERFORMANCE: Use ref to avoid canvasTransform dependency (prevents infinite loops)
+  const canvasTransformRef = React.useRef(canvasTransform);
+  canvasTransformRef.current = canvasTransform;
+
   React.useEffect(() => {
     if (activeTool !== 'layering') return;
 
@@ -395,10 +467,11 @@ Check console for detailed metrics`;
       try {
         if (!newTransform) return;
 
+        const currentTransform = canvasTransformRef.current;
         // Only update if values changed significantly - STRONGER thresholds
-        if (Math.abs(canvasTransform.scale - newTransform.scale) > 0.01 ||
-            Math.abs(canvasTransform.offsetX - newTransform.offsetX) > 5 ||
-            Math.abs(canvasTransform.offsetY - newTransform.offsetY) > 5) {
+        if (Math.abs(currentTransform.scale - newTransform.scale) > 0.01 ||
+            Math.abs(currentTransform.offsetX - newTransform.offsetX) > 5 ||
+            Math.abs(currentTransform.offsetY - newTransform.offsetY) > 5) {
           setCanvasTransform({
             scale: newTransform.scale || 1,
             offsetX: newTransform.offsetX || 0,
@@ -411,7 +484,7 @@ Check console for detailed metrics`;
     });
 
     return cleanup;
-  }, [activeTool, eventBus, canvasTransform, setCanvasTransform]);
+  }, [activeTool, eventBus, setCanvasTransform]);
 
   // ✅ REF: Store the Context setTransform function
   const contextSetTransformRef = React.useRef<((t: ViewTransform) => void) | null>(null);
@@ -773,13 +846,18 @@ Check console for detailed metrics`;
     return cleanup;
   }, [eventBus, setSelectedEntityIds]);
 
-  // helper: μετατόπιση όλων των επιλεγμένων κατά (dx, dy) σε world units
+  // ✅ PERFORMANCE: Memoize selection set to avoid recreating on every call
+  const selectionIdSet = React.useMemo(() =>
+    new Set(selectedEntityIds || []),
+    [selectedEntityIds]
+  );
+
+  // ✅ PERFORMANCE: Optimize nudgeSelection with memoized selection set
   const nudgeSelection = React.useCallback((dx: number, dy: number) => {
     if (!currentScene || !selectedEntityIds?.length) return;
-    const idSet = new Set(selectedEntityIds);
 
     const moved = currentScene.entities.map(e => {
-      if (!idSet.has(e.id)) return e;
+      if (!selectionIdSet.has(e.id)) return e;
 
       if (e.type === 'line' && e.start && e.end) {
         return {
@@ -804,7 +882,7 @@ Check console for detailed metrics`;
     const updated = { ...currentScene, entities: moved };
     handleSceneChange(updated);
     // Scene rendering is handled by Canvas V2 system
-  }, [currentScene, selectedEntityIds, handleSceneChange]);
+  }, [currentScene, selectionIdSet, handleSceneChange]);
 
   // Keyboard shortcuts hook
   const { handleCanvasMouseMove } = useKeyboardShortcuts({
@@ -840,8 +918,9 @@ Check console for detailed metrics`;
         activeTool={activeTool}
       />
 
-      {/* ✅ PHASE 5: Main Content Section */}
-      <MainContentSection
+      {/* 🚀 LCP OPTIMIZATION: Lazy-loaded Main Content Section */}
+      <React.Suspense fallback={<div className="flex-1 bg-gray-50 animate-pulse" />}>
+        <MainContentSection
         state={wrappedState}
         currentScene={currentScene}
         handleFileImportWithEncoding={handleFileImportWithEncoding}
@@ -872,10 +951,12 @@ Check console for detailed metrics`;
         panToWorldOrigin={panToWorldOrigin}
         showCalibration={showCalibration}
         handleCalibrationToggle={handleCalibrationToggle}
-      />
+        />
+      </React.Suspense>
 
-      {/* ✅ PHASE 5: Floating Panels Section */}
-      <FloatingPanelsSection
+      {/* 🚀 LCP OPTIMIZATION: Lazy-loaded Floating Panels Section */}
+      <React.Suspense fallback={<div className="w-80 bg-gray-50 animate-pulse" />}>
+        <FloatingPanelsSection
         colorMenu={colorMenu}
         currentScene={currentScene}
         handleSceneChange={handleSceneChange}
@@ -900,17 +981,20 @@ Check console for detailed metrics`;
         setTestModalOpen={setTestModalOpen}
         testReport={testReport}
         formattedTestReport={formattedTestReport}
-      />
+        />
+      </React.Suspense>
 
-      {/* 🧪 TESTS MODAL - Tests button modal */}
-      <TestsModal
-        isOpen={testsModalOpen}
-        onClose={() => setTestsModalOpen(false)}
-        showCopyableNotification={showCopyableNotification}
-      />
+      {/* 🚀 LCP OPTIMIZATION: Lazy-loaded Tests Modal for reduced initial bundle */}
+      <React.Suspense fallback={<div style={{ display: 'none' }} />}>
+        <TestsModal
+          isOpen={testsModalOpen}
+          onClose={() => setTestsModalOpen(false)}
+          showCopyableNotification={showCopyableNotification}
+        />
+      </React.Suspense>
 
-      {/* 🚀 ENTERPRISE PERFORMANCE SYSTEM - Global monitoring */}
-      <GlobalPerformanceDashboard
+      {/* ⚡ ENTERPRISE: Lazy-loaded Performance System με Bundle Monitoring */}
+      <LazyGlobalPerformanceDashboard
         position="top-right"
         minimizable={true}
         defaultMinimized={false}
@@ -929,4 +1013,6 @@ Check console for detailed metrics`;
       </TransformProvider>
     </CanvasProvider>
   );
-}
+});
+
+export default DxfViewerContent;

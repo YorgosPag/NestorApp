@@ -1,7 +1,9 @@
 'use client';
 
-import { ProjectsPageContent } from '@/components/projects/projects-page-content';
+// ⚡ ENTERPRISE: Use LazyRoutes instead of direct import για bundle optimization
+import { LazyRoutes } from '@/utils/lazyRoutes';
 
 export default function ProjectsPage() {
-  return <ProjectsPageContent />;
+  const Projects = LazyRoutes.Projects;
+  return <Projects />;
 }

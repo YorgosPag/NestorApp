@@ -1,12 +1,12 @@
 'use client';
 
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo as ReactErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home, ArrowLeft, Bug, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { errorTracker } from '@/services/ErrorTracker';
 
-interface ErrorInfo {
+interface CustomErrorInfo {
   componentStack: string;
   errorBoundary?: string;
   errorBoundaryStack?: string;
@@ -15,7 +15,7 @@ interface ErrorInfo {
 interface ErrorBoundaryState {
   hasError: boolean;
   error: Error | null;
-  errorInfo: ErrorInfo | null;
+  errorInfo: CustomErrorInfo | null;
   retryCount: number;
   isReporting: boolean;
   reportSent: boolean;
@@ -24,8 +24,8 @@ interface ErrorBoundaryState {
 
 interface ErrorBoundaryProps {
   children: ReactNode;
-  fallback?: (error: Error, errorInfo: ErrorInfo, retry: () => void) => ReactNode;
-  onError?: (error: Error, errorInfo: ErrorInfo, errorId: string) => void;
+  fallback?: (error: Error, errorInfo: CustomErrorInfo, retry: () => void) => ReactNode;
+  onError?: (error: Error, errorInfo: CustomErrorInfo, errorId: string) => void;
   enableRetry?: boolean;
   maxRetries?: number;
   enableReporting?: boolean;
@@ -59,7 +59,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  componentDidCatch(error: Error, errorInfo: ReactErrorInfo) {
     const { onError, componentName } = this.props;
 
     this.setState({ errorInfo });

@@ -51,7 +51,7 @@ import {
 import { designSystem } from '@/lib/design-system';
 import { performanceComponents } from '@/styles/design-tokens/components/performance-tokens';
 // 🌊 ENTERPRISE UNIFIED FLOATING SYSTEM
-import { FloatingStyleUtils, PerformanceDashboardTokens } from '@/styles/design-tokens';
+import { FloatingStyleUtils, PerformanceDashboardTokens } from '@/styles/design-tokens/components/floating-system-tokens';
 
 interface GlobalPerformanceDashboardProps {
   /** Position of the dashboard */
