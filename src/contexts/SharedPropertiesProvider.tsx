@@ -1,7 +1,7 @@
 'use client';
 
-// DEBUG FLAG - Set to false to disable performance-heavy logging
-const DEBUG_SHARED_PROPERTIES_PROVIDER = true;
+// 🎯 PRODUCTION: Debug disabled για καθαρότερα logs στην obligations/new page
+const DEBUG_SHARED_PROPERTIES_PROVIDER = false;
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';

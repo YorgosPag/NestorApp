@@ -1,4 +1,4 @@
-import type { PropertyStatus } from '../../../constants/statuses';
+import type { PropertyStatus } from '../../../constants/property-statuses-enterprise';
 
 // 🔺 ΕΝΙΑΊΟΣ STATUS_COLORS MAPPER - κεντρική αλήθεια για όλα τα overlay colors
 // Μετατρέπει τα κεντρικά CSS variables σε concrete hex colors για canvas rendering
@@ -23,7 +23,7 @@ export const BUTTON_STATUS_COLORS: Record<PropertyStatus, string> = Object.fromE
 
 // 🔺 ΚΕΝΤΡΙΚΟΣ MAPPER: Ελληνικά → Αγγλικά status names
 // Χρησιμοποιεί τα κεντρικά PROPERTY_STATUS_LABELS για consistency
-import { PROPERTY_STATUS_LABELS } from '../../../constants/statuses';
+import { ENHANCED_STATUS_LABELS as PROPERTY_STATUS_LABELS } from '../../../constants/property-statuses-enterprise';
 const GREEK_TO_ENGLISH_STATUS: Record<string, PropertyStatus> = Object.fromEntries(
   Object.entries(PROPERTY_STATUS_LABELS).map(([english, greek]) => [greek, english as PropertyStatus])
 ) as Record<string, PropertyStatus>;

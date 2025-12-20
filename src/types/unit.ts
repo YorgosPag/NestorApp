@@ -1,5 +1,5 @@
 
-import { PropertyStatus } from '@/constants/statuses';
+import { PropertyStatus } from '@/constants/property-statuses-enterprise';
 
 // Use centralized PropertyStatus with additional 'rented' status for units
 export type UnitStatus = PropertyStatus | 'rented';

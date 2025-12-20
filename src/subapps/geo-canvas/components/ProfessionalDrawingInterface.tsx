@@ -9,7 +9,7 @@ import { PropertyStatusManager } from './PropertyStatusManager';
 import { useRealEstateMatching } from '@/services/real-estate-monitor/useRealEstateMatching';
 import type { RealEstatePolygon } from '@geo-alert/core';
 import type { ParserResult } from '../floor-plan-system/types';
-import type { PropertyStatus } from '@/constants/statuses';
+import type { PropertyStatus } from '@/constants/property-statuses-enterprise';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS, HOVER_SHADOWS, TRANSITION_PRESETS } from '@/components/ui/effects';
 
 interface ProfessionalDrawingInterfaceProps {

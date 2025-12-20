@@ -4,7 +4,7 @@ import React from 'react';
 import { Home, Euro, User } from 'lucide-react';
 import type { UnitModel } from '../types';
 import { getStatusColor } from '../utils/status';
-import { getStatusLabel } from '@/constants/statuses';
+import { getStatusLabel } from '@/constants/property-statuses-enterprise';
 import { formatCurrency } from '@/lib/intl-utils';
 import { HOVER_SHADOWS } from '@/components/ui/effects';
 

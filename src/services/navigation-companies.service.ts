@@ -121,11 +121,13 @@ export class NavigationCompaniesService {
       const q = query(collection(db, NAVIGATION_COMPANIES_COLLECTION));
       const snapshot = await getDocs(q);
 
-      console.log(`🧭 CACHE MISS: ${NAVIGATION_COMPANIES_COLLECTION} collection has ${snapshot.docs.length} documents`);
+      // 🎯 PRODUCTION: Μείωση logging verbosity για obligations/new page
+      // console.log(`🧭 CACHE MISS: ${NAVIGATION_COMPANIES_COLLECTION} collection has ${snapshot.docs.length} documents`);
 
       const contactIds = snapshot.docs.map(doc => {
         const data = doc.data() as NavigationCompanyEntry;
-        console.log(`🧭 DEBUG: navigation entry - contactId: ${data.contactId}, addedBy: ${data.addedBy}`);
+        // 🎯 PRODUCTION: Αφαίρεση debug logs για καθαρότερη κονσόλα
+        // console.log(`🧭 DEBUG: navigation entry - contactId: ${data.contactId}, addedBy: ${data.addedBy}`);
         return data.contactId;
       });
 
@@ -133,7 +135,10 @@ export class NavigationCompaniesService {
       cache.data = contactIds;
       cache.timestamp = now;
 
-      console.log(`🧭 CACHED: Returning ${contactIds.length} navigation company IDs:`, contactIds);
+      // 🎯 PRODUCTION: Μόνο summary log αντί για verbose details
+      if (contactIds.length > 0) {
+        console.log(`🧭 Navigation: ${contactIds.length} companies cached`);
+      }
       return contactIds;
     } catch (error) {
       console.error('❌ Error fetching navigation company IDs:', error);

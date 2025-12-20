@@ -1,7 +1,7 @@
 'use client';
 
 import type { ProjectStatus } from '@/types/project';
-import { PROPERTY_STATUS_LABELS, PROPERTY_STATUS_COLORS } from '@/constants/statuses';
+import { ENHANCED_STATUS_LABELS as PROPERTY_STATUS_LABELS, ENHANCED_STATUS_COLORS as PROPERTY_STATUS_COLORS } from '@/constants/property-statuses-enterprise';
 import { getDaysUntilCompletion as getDaysUntilCompletionI18n } from '@/lib/intl-utils';
 import { brandClasses } from '@/styles/design-tokens';
 
@@ -30,8 +30,8 @@ export const getDaysUntilCompletion = (completionDate?: string) => {
 };
 
 // 🎯 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΟ: Χρησιμοποιούμε τα centralized constants αντί για διάσπαρτα
-// ⚠️ DEPRECATED: Αυτά τα constants μεταφέρθηκαν στο /constants/statuses.ts
-// 🔄 BACKWARD COMPATIBILITY: Re-exports for legacy support
+// ✅ MIGRATED: Property statuses τώρα στο /constants/property-statuses-enterprise.ts
+// 🔄 BACKWARD COMPATIBILITY: Project statuses only (non-property)
 
 export const STATUS_COLORS: Record<string, string> = {
     // Project-specific statuses (non-property)

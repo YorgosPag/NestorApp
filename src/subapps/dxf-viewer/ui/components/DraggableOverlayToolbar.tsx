@@ -3,7 +3,7 @@
 import React from 'react';
 import type { OverlayEditorMode, Status, OverlayKind } from '../../overlays/types';
 import type { ToolType } from '../toolbar/types';
-import type { PropertyStatus } from '../../../../constants/statuses';
+import type { PropertyStatus } from '../../../../constants/property-statuses-enterprise';
 import { usePrecisionPositioning } from '../../utils/precision-positioning';
 import { useDraggable } from '../../../../hooks/useDraggable';
 import { Card, CardHeader, CardContent } from '../../../../components/ui/card';

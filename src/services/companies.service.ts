@@ -7,8 +7,8 @@ import { getNavigationCompanyIds } from './navigation-companies.service';
 import { getProjectsByCompanyId } from './projects.service';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
-// DEBUG FLAG - Set to false to disable performance-heavy logging
-const DEBUG_COMPANIES_SERVICE = true;
+// 🎯 PRODUCTION: DEBUG FLAG disabled για καθαρότερα logs στην obligations/new page
+const DEBUG_COMPANIES_SERVICE = false;
 
 // 🏢 ENTERPRISE: Centralized Firestore collection configuration
 const CONTACTS_COLLECTION = COLLECTIONS.CONTACTS;

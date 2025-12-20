@@ -6,10 +6,10 @@ import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import {
   PropertyStatus,
-  PROPERTY_STATUS_LABELS,
-  getStatusClasses,
-  getAllStatuses
-} from '@/constants/statuses';
+  ENHANCED_STATUS_LABELS as PROPERTY_STATUS_LABELS,
+  ENHANCED_STATUS_COLORS as PROPERTY_STATUS_COLORS,
+  getAllEnhancedStatuses as getAllStatuses
+} from '@/constants/property-statuses-enterprise';
 import { STATUS_COLORS_MAPPING } from '@/subapps/dxf-viewer/config/color-mapping';
 import { layoutUtilities } from '@/styles/design-tokens';
 
@@ -173,7 +173,6 @@ export function PropertyStatusManager({
             {getAllStatuses().map((status) => {
               const isVisible = isStatusVisible(status);
               const statusColor = getStatusColor(status);
-              const statusClasses = getStatusClasses(status);
 
               return (
                 <div

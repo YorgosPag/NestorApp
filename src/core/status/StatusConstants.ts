@@ -1,16 +1,29 @@
 /**
  * 🏷️ CENTRAL STATUS CONSTANTS
  *
- * Enterprise-class status definitions - Single Source of Truth
- * Όλες οι status definitions σε ένα κεντρικό αρχείο
+ * ✅ CENTRALIZED: Uses existing BadgeDefinition interface
+ * ✅ NO DUPLICATES: Leverages core/types/BadgeTypes.ts
+ * ✅ CLEAN: Enterprise-class status definitions
  */
 
-import type { BadgeSystemConfig, ObligationStatus } from '../types/BadgeTypes';
+import type {
+  BadgeDefinition,
+  BadgeSystemConfig,
+  ObligationStatus,
+  ProjectStatus,
+  BuildingStatus,
+  ContactStatus,
+  PropertyStatus,
+  UnitStatus,
+  NavigationStatus
+} from '../types/BadgeTypes';
 import { brandClasses } from '@/styles/design-tokens';
 
-// ===== PROJECTS STATUS DEFINITIONS =====
+// ============================================================================
+// PROJECT STATUS DEFINITIONS
+// ============================================================================
 
-export const PROJECT_STATUSES = {
+export const PROJECT_STATUSES: Record<ProjectStatus, BadgeDefinition> = {
   planning: {
     label: 'Σχεδιασμός',
     variant: 'outline',
@@ -62,9 +75,11 @@ export const PROJECT_STATUSES = {
   }
 } as const;
 
-// ===== BUILDINGS STATUS DEFINITIONS =====
+// ============================================================================
+// BUILDING STATUS DEFINITIONS
+// ============================================================================
 
-export const BUILDING_STATUSES = {
+export const BUILDING_STATUSES: Record<BuildingStatus, BadgeDefinition> = {
   available: {
     label: 'Διαθέσιμο',
     variant: 'success',
@@ -130,9 +145,11 @@ export const BUILDING_STATUSES = {
   }
 } as const;
 
-// ===== CONTACTS STATUS DEFINITIONS =====
+// ============================================================================
+// CONTACT STATUS DEFINITIONS
+// ============================================================================
 
-export const CONTACT_STATUSES = {
+export const CONTACT_STATUSES: Record<ContactStatus, BadgeDefinition> = {
   active: {
     label: 'Ενεργή',
     variant: 'success',
@@ -192,9 +209,11 @@ export const CONTACT_STATUSES = {
   }
 } as const;
 
-// ===== PROPERTY STATUS DEFINITIONS =====
+// ============================================================================
+// PROPERTY STATUS DEFINITIONS
+// ============================================================================
 
-export const PROPERTY_STATUSES = {
+export const PROPERTY_STATUSES: Record<PropertyStatus, BadgeDefinition> = {
   // Βασικές καταστάσεις (legacy - διατηρούμε για backward compatibility)
   available: {
     label: 'Διαθέσιμο',
@@ -427,9 +446,11 @@ export const PROPERTY_STATUSES = {
   }
 } as const;
 
-// ===== UNIT STATUS DEFINITIONS =====
+// ============================================================================
+// UNIT STATUS DEFINITIONS
+// ============================================================================
 
-export const UNIT_STATUSES = {
+export const UNIT_STATUSES: Record<UnitStatus, BadgeDefinition> = {
   available: {
     label: 'Διαθέσιμη',
     variant: 'success',
@@ -483,9 +504,11 @@ export const UNIT_SALE_STATUS_LABELS = {
   [UNIT_SALE_STATUS.PENDING]: 'Εκκρεμεί'
 } as const;
 
-// ===== NAVIGATION STATUS DEFINITIONS =====
+// ============================================================================
+// NAVIGATION STATUS DEFINITIONS
+// ============================================================================
 
-export const NAVIGATION_STATUSES = {
+export const NAVIGATION_STATUSES: Record<NavigationStatus, BadgeDefinition> = {
   no_projects: {
     label: 'Χωρίς έργα',
     variant: 'warning',
@@ -530,9 +553,11 @@ export const NAVIGATION_STATUSES = {
   }
 } as const;
 
-// ===== COMMON/SHARED STATUSES =====
+// ============================================================================
+// COMMON STATUS DEFINITIONS
+// ============================================================================
 
-export const COMMON_STATUSES = {
+export const COMMON_STATUSES: Record<string, BadgeDefinition> = {
   new: {
     label: 'Νέο',
     variant: 'info',
@@ -577,9 +602,11 @@ export const COMMON_STATUSES = {
   }
 } as const;
 
-// ===== OBLIGATION STATUS DEFINITIONS =====
+// ============================================================================
+// OBLIGATION STATUS DEFINITIONS
+// ============================================================================
 
-export const OBLIGATION_STATUSES = {
+export const OBLIGATION_STATUSES: Record<ObligationStatus, BadgeDefinition> = {
   draft: {
     label: 'Προσχέδιο',
     variant: 'warning',
@@ -603,7 +630,9 @@ export const OBLIGATION_STATUSES = {
   }
 } as const;
 
-// ===== OBLIGATION STATUS UTILITIES =====
+// ============================================================================
+// UTILITIES
+// ============================================================================
 
 export const getObligationStatusLabel = (status: ObligationStatus): string => {
   return OBLIGATION_STATUSES[status]?.label || status;
@@ -634,7 +663,9 @@ export const getObligationStatusIcon = (status: ObligationStatus): string => {
   return iconMap[status] || "📄";
 };
 
-// ===== UNIFIED BADGE SYSTEM CONFIG =====
+// ============================================================================
+// UNIFIED BADGE SYSTEM CONFIG
+// ============================================================================
 
 export const UNIFIED_BADGE_SYSTEM: BadgeSystemConfig = {
   domains: {

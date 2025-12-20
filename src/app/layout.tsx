@@ -20,6 +20,7 @@ import { NavigationProvider } from '@/components/navigation';
 import { PhotoPreviewProvider } from '@/providers/PhotoPreviewProvider';
 import { ClientOnlyPerformanceDashboard } from '@/core/performance/components/ClientOnlyPerformanceDashboard';
 import { PerformanceCategory } from '@/core/performance/types/performance.types';
+import { GlobalErrorSetup } from '@/components/GlobalErrorSetup';
 
 const roboto = Roboto({
   subsets: ["latin", "greek"],
@@ -97,6 +98,9 @@ export default function RootLayout({
 
                 {/* 🔧 TEMPORARY: Both toast systems until migration completes - Client-side only */}
                 <ToasterClient />
+
+                {/* 🚨 GLOBAL ERROR TRACKER SETUP */}
+                <GlobalErrorSetup />
 
                 {/* 🚀 ENTERPRISE PERFORMANCE SYSTEM - GLOBAL MONITORING */}
                 {typeof window !== 'undefined' && (

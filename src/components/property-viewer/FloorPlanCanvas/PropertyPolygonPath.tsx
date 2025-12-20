@@ -5,7 +5,7 @@
 import { cn } from "@/lib/utils";
 import type { Property } from '@/types/property-viewer';
 import { STATUS_COLORS_MAPPING } from '@/subapps/dxf-viewer/config/color-mapping';
-import type { PropertyStatus } from '@/constants/statuses';
+import type { PropertyStatus } from '@/constants/property-statuses-enterprise';
 
 interface PropertyPolygonPathProps {
   property: Property;

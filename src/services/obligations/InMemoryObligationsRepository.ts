@@ -34,7 +34,8 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
         }
       })) as ObligationDocument[];
 
-      console.log(`✅ Loaded ${obligations.length} real obligations from Firebase`);
+      // 🎯 PRODUCTION: Μείωση logging verbosity για obligations/new page
+      // console.log(`✅ Loaded ${obligations.length} real obligations from Firebase`);
       return obligations;
     } catch (error) {
       console.error('❌ Error fetching obligations from Firebase:', error);
@@ -304,6 +305,7 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
 export class InMemoryObligationsRepository extends FirestoreObligationsRepository {
   constructor() {
     super();
-    console.warn('🚨 InMemoryObligationsRepository is deprecated! Use FirestoreObligationsRepository instead.');
+    // 🎯 PRODUCTION: Αφαίρεση deprecation warning για καθαρότερη κονσόλα
+    // console.warn('🚨 InMemoryObligationsRepository is deprecated! Use FirestoreObligationsRepository instead.');
   }
 }

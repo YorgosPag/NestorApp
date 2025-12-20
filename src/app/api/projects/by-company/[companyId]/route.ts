@@ -10,13 +10,15 @@ export const GET = withErrorHandling(async (
   request: NextRequest,
   { params }: { params: { companyId: string } }
 ) => {
-    console.log(`🏗️ API (Client SDK): Loading projects for companyId: "${params.companyId}"`);
+    // 🎯 PRODUCTION: Reduced API logging για καθαρότερη κονσόλα
+    // console.log(`🏗️ API (Client SDK): Loading projects for companyId: "${params.companyId}"`);
 
     try {
       // 🚀 ENTERPRISE CACHING: Check cache first
       const cachedProjects = CacheHelpers.getCachedProjectsByCompany(params.companyId);
       if (cachedProjects) {
-        console.log(`⚡ API: CACHE HIT - Returning ${cachedProjects.length} cached projects for company ${params.companyId}`);
+        // 🎯 PRODUCTION: Reduced cache logging
+        // console.log(`⚡ API: CACHE HIT - Returning ${cachedProjects.length} cached projects for company ${params.companyId}`);
         return apiSuccess({
           projects: cachedProjects,
           companyId: params.companyId,
@@ -25,7 +27,8 @@ export const GET = withErrorHandling(async (
         }, `Found ${cachedProjects.length} cached projects for company ${params.companyId}`);
       }
 
-      console.log('🔍 API: Cache miss - Fetching from Firestore...');
+      // 🎯 PRODUCTION: Reduced verbosity
+      // console.log('🔍 API: Cache miss - Fetching from Firestore...');
 
       // 🚀 PERFORMANCE: Skip the debugging "fetch ALL projects" - go directly to specific query
       const projectsQuery = query(

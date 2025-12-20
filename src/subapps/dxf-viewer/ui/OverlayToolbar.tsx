@@ -8,7 +8,7 @@ const Separator = ({ orientation, className }: { orientation?: string; className
 );
 import { MousePointer, Pen, X, Copy, Grid, Square, Circle, Triangle, Edit, RotateCcw, RotateCw } from 'lucide-react';
 import { STATUS_COLORS, STATUS_LABELS, KIND_LABELS, type Status, type OverlayKind, type OverlayEditorMode } from '../overlays/types';
-import type { PropertyStatus } from '../../../constants/statuses';
+import type { PropertyStatus } from '../../../constants/property-statuses-enterprise';
 import { useUnifiedOverlayCreation } from '../hooks/overlay/useUnifiedOverlayCreation';
 import { toolStyleStore } from '../stores/ToolStyleStore';
 import { STATUS_COLORS_MAPPING, BUTTON_STATUS_COLORS, getKindFromLabel } from '../config/color-mapping';

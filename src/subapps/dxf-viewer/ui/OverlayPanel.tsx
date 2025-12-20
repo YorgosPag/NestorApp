@@ -8,7 +8,7 @@ import { STATUS_COLORS_MAPPING, getStatusColors } from '../config/color-mapping'
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { PANEL_TOKENS } from '../config/panel-tokens';
 import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
-import { REGION_STATUS_LABELS } from '../../../constants/statuses';
+import { ENHANCED_STATUS_LABELS as REGION_STATUS_LABELS } from '../../../constants/property-statuses-enterprise';
 
 interface OverlayPanelProps {
   isDrawingMode: boolean;
@@ -18,7 +18,7 @@ interface OverlayPanelProps {
 }
 
 // 🎯 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΟ: Χρησιμοποιούμε τα centralized constants αντί για διάσπαρτα
-// Τα STATUS_LABELS τώρα έρχονται από REGION_STATUS_LABELS στο constants/statuses.ts
+// ✅ MIGRATED: STATUS_LABELS τώρα από REGION_STATUS_LABELS στο property-statuses-enterprise.ts
 
 export function OverlayPanel({ isDrawingMode, drawingStatus, onStartDrawing, onStopDrawing }: OverlayPanelProps) {
   const { 

@@ -10,7 +10,7 @@
  * @module DxfViewerComponents.styles
  */
 
-import type { PropertyStatus } from '../../../constants/statuses';
+import type { PropertyStatus } from '../../../constants/property-statuses-enterprise';
 import { BUTTON_STATUS_COLORS } from '../config/color-mapping';
 
 // ============================================================================

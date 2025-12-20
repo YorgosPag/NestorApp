@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS, CORE_HOVER_TRANSFORMS, HOVER_TEXT_EFFECTS } from '../../../../../ui/effects';
 import { useDynamicBackgroundClass, useDynamicBorderClass } from '@/components/ui/utils/dynamic-styles';
-import { PROPERTY_STATUS_LABELS, PROPERTY_STATUS_COLORS } from '@/constants/statuses';
+import { ENHANCED_STATUS_LABELS as PROPERTY_STATUS_LABELS, ENHANCED_STATUS_COLORS as PROPERTY_STATUS_COLORS } from '@/constants/property-statuses-enterprise';
 
 interface LayersSettingsProps {
   // Για μελλοντική επέκταση μπορούμε να προσθέσουμε props

@@ -65,7 +65,8 @@ export class NavigationApiService {
       }
 
       // 🏢 ENTERPRISE PATTERN: Load real data from normalized collections FOR ALL COMPANIES
-      console.log(`🔍 Loading projects for company: ${companyId}`);
+      // 🎯 PRODUCTION: Reduced logging verbosity για καθαρότερη κονσόλα
+      // console.log(`🔍 Loading projects for company: ${companyId}`);
 
       // Load projects from projects API (normalized structure)
       const projectsResponse = await fetch(`/api/projects/by-company/${companyId}`);

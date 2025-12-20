@@ -1,7 +1,7 @@
 // src/subapps/dxf-viewer/overlays/types.ts
 // Overlay types, constants και enums για το DXF Viewer Βήμα 2
 
-import { PropertyStatus, PROPERTY_STATUS_LABELS, PROPERTY_STATUS_COLORS, DEFAULT_PROPERTY_STATUS } from '../../../constants/statuses';
+import { PropertyStatus, ENHANCED_STATUS_LABELS as PROPERTY_STATUS_LABELS, ENHANCED_STATUS_COLORS as PROPERTY_STATUS_COLORS, DEFAULT_PROPERTY_STATUS } from '../../../constants/property-statuses-enterprise';
 import type { Point2D } from '../rendering/types/Types';
 
 export type Scope = 'project' | 'building' | 'floor' | 'unit' | 'parking' | 'storage';

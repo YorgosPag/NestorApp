@@ -2,7 +2,7 @@
  * 🏢 ENTERPRISE PROPERTY STATUS SYSTEM
  *
  * Enterprise-class κεντρικοποιημένο σύστημα διαχείρισης καταστάσεων ακινήτων
- * Βασίζεται στο υπάρχον statuses.ts με πλήρη backward compatibility
+ * Self-contained αρχείο με όλα τα property status definitions
  *
  * @created 2025-12-14
  * @author Claude AI Assistant
@@ -10,12 +10,49 @@
  * @enterprise Production-ready status management system
  */
 
-import {
-  PropertyStatus,
-  PROPERTY_STATUS_LABELS,
-  PROPERTY_STATUS_COLORS,
-  DEFAULT_PROPERTY_STATUS
-} from './statuses';
+// ============================================================================
+// CORE PROPERTY STATUS DEFINITIONS (Self-contained)
+// ============================================================================
+
+export type PropertyStatus =
+  | 'for-sale'
+  | 'for-rent'
+  | 'reserved'
+  | 'sold'
+  | 'landowner'
+  | 'rented'           // 🔴 Ενοικιάστηκε
+  | 'under-negotiation' // 🟡 Υπό διαπραγμάτευση
+  | 'coming-soon'      // 🟣 Σύντομα διαθέσιμο
+  | 'off-market'       // ⚪ Εκτός αγοράς
+  | 'unavailable';     // ⚫ Μη διαθέσιμο
+
+export const PROPERTY_STATUS_LABELS: Record<PropertyStatus, string> = {
+  'for-sale': 'Προς Πώληση',
+  'for-rent': 'Προς Ενοικίαση',
+  'reserved': 'Δεσμευμένο',
+  'sold': 'Πουλημένο',
+  'landowner': 'Οικοπεδούχου',
+  'rented': 'Ενοικιάστηκε',
+  'under-negotiation': 'Υπό Διαπραγμάτευση',
+  'coming-soon': 'Σύντομα Διαθέσιμο',
+  'off-market': 'Εκτός Αγοράς',
+  'unavailable': 'Μη Διαθέσιμο',
+};
+
+export const PROPERTY_STATUS_COLORS: Record<PropertyStatus, string> = {
+  'for-sale': 'hsl(var(--status-success))',     // 🟢 Πράσινο - διαθέσιμο
+  'for-rent': 'hsl(var(--status-info))',       // 🔵 Μπλε - ενεργό
+  'reserved': 'hsl(var(--status-warning))',    // 🟡 Πορτοκαλί - δεσμευμένο
+  'sold': 'hsl(var(--status-error))',          // 🔴 Κόκκινο - πωλημένο
+  'landowner': 'hsl(var(--status-purple))',    // 🟣 Μοβ - ειδική κατάσταση
+  'rented': 'hsl(var(--status-error-dark))',   // 🔴 Σκούρο κόκκινο - ενοικιάστηκε
+  'under-negotiation': 'hsl(var(--status-warning-light))', // 🟡 Ανοιχτό πορτοκαλί
+  'coming-soon': 'hsl(var(--status-purple-light))',        // 🟣 Ανοιχτό μοβ
+  'off-market': 'hsl(var(--neutral-400))',     // ⚪ Γκρι - εκτός αγοράς
+  'unavailable': 'hsl(var(--neutral-500))',    // ⚫ Σκούρο γκρι - μη διαθέσιμο
+};
+
+export const DEFAULT_PROPERTY_STATUS: PropertyStatus = 'for-sale';
 
 // ============================================================================
 // ENHANCED STATUS TYPES
@@ -329,15 +366,7 @@ export function getStatusesByCategory(category: keyof typeof STATUS_CATEGORIES):
  * Εξαγωγή όλων των υπαρχόντων functions με enhanced functionality
  * Το υπάρχον κώδικα θα δουλεύει χωρίς καμία αλλαγή
  */
-// 🔧 EXPORT FIX: Explicit exports για hot-reload compatibility
-export {
-  PROPERTY_STATUS_LABELS,
-  PROPERTY_STATUS_COLORS,
-  DEFAULT_PROPERTY_STATUS
-} from './statuses';
-
-// ✅ FIXED: Single export for PropertyStatus as type only
-export type { PropertyStatus } from './statuses';
+// ✅ SELF-CONTAINED: Όλα τα definitions είναι τώρα στο ίδιο αρχείο
 
 // Enhanced versions που δεδουλεύουν με και BasicPropertyStatus και Enhanced
 export const getStatusLabel = getEnhancedStatusLabel;
