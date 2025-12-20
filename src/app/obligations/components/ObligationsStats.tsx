@@ -29,9 +29,9 @@ export function ObligationsStats({ stats }: ObligationsStatsProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
       <StatCard title="Σύνολο" value={stats.total} icon={FileText} />
-      <StatCard title="Προσχέδια" value={stats.drafts} icon={FileText} colorClass="text-yellow-500" />
-      <StatCard title="Ολοκληρωμένες" value={stats.completed} icon={FileText} colorClass="text-green-500" />
-      <StatCard title="Εγκεκριμένες" value={stats.approved} icon={FileText} colorClass="text-blue-500" />
+      <StatCard title="Προσχέδια" value={stats.drafts} icon={FileText} colorClass="text-amber-500" />
+      <StatCard title="Ολοκληρωμένες" value={stats.completed} icon={FileText} colorClass="text-accent-foreground" />
+      <StatCard title="Εγκεκριμένες" value={stats.approved} icon={FileText} colorClass="text-primary" />
     </div>
   );
 }

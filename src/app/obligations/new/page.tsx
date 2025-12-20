@@ -34,9 +34,9 @@ import {
 } from "@/types/obligations";
 import { DEFAULT_TEMPLATE_SECTIONS } from '@/types/mock-obligations';
 import { obligationsService } from "@/services/obligations.service";
-// import { TableOfContents } from "@/components/obligations/table-of-contents";
-// import StructureEditor from "@/components/obligations/structure-editor";
-// import LivePreview from "@/components/obligations/live-preview";
+import { TableOfContents } from "@/components/obligations/table-of-contents";
+import StructureEditor from "@/components/obligations/structure-editor";
+import LivePreview from "@/components/obligations/live-preview";
 import Link from "next/link";
 
 interface FormData {
@@ -81,7 +81,7 @@ export default function NewObligationPage() {
       deliveryDate: undefined,
       notaryName: ""
     },
-    sections: []
+    sections: DEFAULT_TEMPLATE_SECTIONS
   });
 
   const [useTemplate, setUseTemplate] = useState(true);
@@ -339,7 +339,7 @@ export default function NewObligationPage() {
             </Link>
             <div>
               <h1 className="text-2xl font-bold">Νέα Συγγραφή Υποχρεώσεων</h1>
-              <p className="text-gray-600 text-sm">Δημιουργήστε μια νέα συγγραφή υποχρεώσεων με live preview</p>
+              <p className="text-muted-foreground text-sm">Δημιουργήστε μια νέα συγγραφή υποχρεώσεων με live preview</p>
             </div>
           </div>
 

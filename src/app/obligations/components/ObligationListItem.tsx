@@ -43,7 +43,7 @@ export function ObligationListItem({ obligation, onDelete, onDuplicate }: Obliga
                 className={getStatusColor(obligation.status)}
               />
             </div>
-            <CardDescription className="text-sm text-gray-600">
+            <CardDescription className="text-sm text-muted-foreground">
               <div className="space-y-1">
                 <div><strong>Έργο:</strong> {obligation.projectName}</div>
                 <div><strong>Εργολάβος:</strong> {obligation.contractorCompany}</div>
@@ -84,7 +84,7 @@ export function ObligationListItem({ obligation, onDelete, onDuplicate }: Obliga
                 Εξαγωγή PDF
               </DropdownMenuItem>
               <DropdownMenuItem 
-                className="flex items-center gap-2 text-red-600 cursor-pointer"
+                className="flex items-center gap-2 text-destructive cursor-pointer"
                 onClick={() => onDelete(obligation.id, obligation.title)}
               >
                 <Trash2 className="h-4 w-4" />
@@ -96,7 +96,7 @@ export function ObligationListItem({ obligation, onDelete, onDuplicate }: Obliga
       </CardHeader>
       
       <CardContent className="pt-0">
-        <div className="flex justify-between text-sm text-gray-500">
+        <div className="flex justify-between text-sm text-muted-foreground">
           <span>Δημιουργήθηκε: {createdDate}</span>
           <span>Τελευταία ενημέρωση: {updatedDate}</span>
         </div>

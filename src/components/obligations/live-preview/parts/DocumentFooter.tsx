@@ -9,7 +9,7 @@ interface DocumentFooterProps {
 
 export function DocumentFooter({ sectionsCount, articlesCount, paragraphsCount, zoomDisplay }: DocumentFooterProps) {
   return (
-    <div className="flex items-center justify-between p-4 border-t bg-gray-50 text-sm text-gray-600">
+    <div className="flex items-center justify-between p-4 border-t bg-muted/30 text-sm text-muted-foreground">
       <div>
         {sectionsCount} ενότητες • {articlesCount} άρθρα • {paragraphsCount} παράγραφοι
       </div>

@@ -30,8 +30,8 @@ export function TocItem({
       <div
         className={cn(
           "group flex items-center gap-2 py-2 px-3 rounded-md cursor-pointer transition-colors",
-          "hover:bg-gray-50 dark:hover:bg-gray-800",
-          isActive && "bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-200 dark:border-blue-700",
+          "hover:bg-accent/10",
+          isActive && "bg-primary/10 text-primary border border-primary/20",
           indentClass
         )}
         onClick={() => onClick?.(item)}
@@ -70,7 +70,7 @@ export function TocItem({
             "text-sm truncate block",
             item.type === 'section' && "font-semibold",
             item.type === 'article' && "font-medium",
-            item.type === 'paragraph' && "font-normal text-gray-600 dark:text-gray-400"
+            item.type === 'paragraph' && "font-normal text-muted-foreground"
           )}>
             {item.title}
           </span>
@@ -83,7 +83,7 @@ export function TocItem({
         )}
 
         {compact && (
-          <span className="text-xs text-gray-400 uppercase tracking-wide">
+          <span className="text-xs text-muted-foreground/80 uppercase tracking-wide">
             {item.type === 'section' ? 'ΕΝ' : item.type === 'article' ? 'ΑΡ' : 'ΠΑ'}
           </span>
         )}

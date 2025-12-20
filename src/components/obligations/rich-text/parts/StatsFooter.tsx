@@ -7,7 +7,7 @@ interface StatsFooterProps {
 
 export function StatsFooter({ words, chars }: StatsFooterProps) {
   return (
-    <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t">
+    <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">
       <div className="space-x-4">
         <span aria-live="polite">Λέξεις: {words}</span>
         <span aria-live="polite">Χαρακτήρες: {chars}</span>

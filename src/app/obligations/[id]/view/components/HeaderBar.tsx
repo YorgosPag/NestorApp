@@ -38,7 +38,7 @@ export function HeaderBar({ obligation }: HeaderBarProps) {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">
+          <h1 className="text-3xl font-bold text-foreground">
             {obligation.title}
           </h1>
           <div className="flex items-center gap-4 mt-2">
@@ -47,7 +47,7 @@ export function HeaderBar({ obligation }: HeaderBarProps) {
               customLabel={getStatusLabel(obligation.status)}
               variant="outline"
             />
-            <span className="text-gray-600 text-sm">
+            <span className="text-muted-foreground text-sm">
               Ενημερώθηκε: {formatDate(obligation.updatedAt)}
             </span>
           </div>

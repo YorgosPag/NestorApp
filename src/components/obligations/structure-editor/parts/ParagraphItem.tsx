@@ -41,12 +41,12 @@ export function ParagraphItem({
       onDragOver={handlers.handleDragOver}
       onDrop={(e) => handlers.handleDrop(e, 'paragraph', index, articleId)}
       className={cn(
-        "group flex items-start gap-3 p-3 border-l-2 border-gray-200 ml-8",
-        isActive && "border-l-blue-500 bg-blue-50",
+        "group flex items-start gap-3 p-3 border-l-2 border-muted ml-8",
+        isActive && "border-l-primary bg-primary/10",
         dragState?.dragId === paragraph.id && "opacity-50"
       )}
     >
-      {!readOnly && <GripVertical className="h-4 w-4 text-gray-400 cursor-move opacity-0 group-hover:opacity-100 mt-1" />}
+      {!readOnly && <GripVertical className="h-4 w-4 text-muted-foreground cursor-move opacity-0 group-hover:opacity-100 mt-1" />}
       <Badge variant="outline" className="text-xs mt-1 min-w-6">{paragraph.number}</Badge>
       <div className="flex-1 space-y-2">
         {isEditing ? (
@@ -64,15 +64,15 @@ export function ParagraphItem({
             </div>
           </div>
         ) : (
-          <div className="cursor-pointer text-sm text-gray-700 hover:text-gray-900" onClick={() => handlers.startEditing('paragraph', paragraph.id)}>
-            {paragraph.content || <span className="text-gray-400 italic">Κλικ για προσθήκη περιεχομένου...</span>}
+          <div className="cursor-pointer text-sm text-foreground hover:text-foreground/80" onClick={() => handlers.startEditing('paragraph', paragraph.id)}>
+            {paragraph.content || <span className="text-muted-foreground italic">Κλικ για προσθήκη περιεχομένου...</span>}
           </div>
         )}
       </div>
       {!readOnly && !isEditing && (
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
           <Button variant="ghost" size="sm" onClick={() => handlers.startEditing('paragraph', paragraph.id)} className="h-7 px-2"><Edit3 className="h-3 w-3" /></Button>
-          <Button variant="ghost" size="sm" onClick={() => handlers.deleteParagraph(sectionId, articleId, paragraph.id)} className="h-7 px-2 text-red-600 hover:text-red-700"><Trash2 className="h-3 w-3" /></Button>
+          <Button variant="ghost" size="sm" onClick={() => handlers.deleteParagraph(sectionId, articleId, paragraph.id)} className="h-7 px-2 text-destructive hover:text-destructive/80"><Trash2 className="h-3 w-3" /></Button>
         </div>
       )}
     </div>

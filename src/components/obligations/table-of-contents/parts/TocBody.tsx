@@ -40,16 +40,16 @@ export function TocBody({
         <div className="mt-4 pt-4 border-t">
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
-              <div className="text-lg font-semibold text-blue-600">{stats.sections}</div>
-              <div className="text-xs text-gray-500">Ενότητες</div>
+              <div className="text-lg font-semibold text-primary">{stats.sections}</div>
+              <div className="text-xs text-muted-foreground">Ενότητες</div>
             </div>
             <div>
-              <div className="text-lg font-semibold text-green-600">{stats.articles}</div>
-              <div className="text-xs text-gray-500">Άρθρα</div>
+              <div className="text-lg font-semibold text-accent-foreground">{stats.articles}</div>
+              <div className="text-xs text-muted-foreground">Άρθρα</div>
             </div>
             <div>
-              <div className="text-lg font-semibold text-gray-600">{stats.paragraphs}</div>
-              <div className="text-xs text-gray-500">Παράγραφοι</div>
+              <div className="text-lg font-semibold text-foreground">{stats.paragraphs}</div>
+              <div className="text-xs text-muted-foreground">Παράγραφοι</div>
             </div>
           </div>
         </div>

@@ -68,7 +68,7 @@ export function SectionsCard({ sections = [], updateSections }: SectionsCardProp
         </div>
 
         {showTemplates && (
-          <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+          <div className="mt-4 p-4 bg-muted/30 rounded-lg">
             <h4 className="font-medium mb-3">Επιλέξτε πρότυπο άρθρο:</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-60 overflow-y-auto">
               {DEFAULT_TEMPLATE_SECTIONS.map((template) => (
@@ -123,7 +123,7 @@ export function SectionsCard({ sections = [], updateSections }: SectionsCardProp
                 ) : (
                   <div>
                     <div className="prose max-w-none mb-4">
-                      <div className="bg-gray-50 p-4 rounded-lg text-sm whitespace-pre-wrap">
+                      <div className="bg-muted/30 p-4 rounded-lg text-sm whitespace-pre-wrap">
                         {section.content || 'Δεν έχει προστεθεί περιεχόμενο ακόμα...'}
                       </div>
                     </div>
@@ -144,8 +144,8 @@ export function SectionsCard({ sections = [], updateSections }: SectionsCardProp
           ))}
         </Accordion>
         {safeSections.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
-            <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+          <div className="text-center py-8 text-muted-foreground">
+            <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
             <p>Δεν έχουν προστεθεί άρθρα ακόμα</p>
             <p className="text-sm">Κλικ "Νέο Άρθρο" για να ξεκινήσετε</p>
           </div>

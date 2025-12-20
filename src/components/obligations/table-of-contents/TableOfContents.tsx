@@ -35,9 +35,9 @@ export default function TableOfContents({
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
-            <BookOpen className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-            <p className="text-sm text-gray-500">Δεν υπάρχουν ενότητες ακόμα</p>
-            <p className="text-xs text-gray-400 mt-1">
+            <BookOpen className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+            <p className="text-sm text-muted-foreground">Δεν υπάρχουν ενότητες ακόμα</p>
+            <p className="text-xs text-muted-foreground/80 mt-1">
               Προσθέστε ενότητες για να δημιουργηθεί ο πίνακας περιεχομένων
             </p>
           </div>

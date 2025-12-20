@@ -14,7 +14,7 @@ export function HeaderBar({ sectionsCount, readOnly, onAddSection }: HeaderBarPr
     <div className="flex items-center justify-between">
       <div>
         <h3 className="font-semibold text-lg">Δομή Εγγράφου</h3>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-muted-foreground">
           {sectionsCount} {sectionsCount === 1 ? 'ενότητα' : 'ενότητες'}
         </p>
       </div>

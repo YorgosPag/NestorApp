@@ -12,12 +12,12 @@ interface PreviewHeaderProps {
 
 export function PreviewHeader({ showToc, onToggleToc, onPrint }: PreviewHeaderProps) {
   return (
-    <div className="flex items-center justify-between p-4 border-b bg-gray-50">
+    <div className="flex items-center justify-between p-4 border-b bg-muted/30">
       <div className="flex items-center gap-3">
-        <Eye className="h-5 w-5 text-gray-600" />
+        <Eye className="h-5 w-5 text-muted-foreground" />
         <div>
-          <h3 className="font-medium">Προεπισκόπηση</h3>
-          <p className="text-sm text-gray-600">Live preview του εγγράφου</p>
+          <h3 className="font-medium text-foreground">Προεπισκόπηση</h3>
+          <p className="text-sm text-muted-foreground">Live preview του εγγράφου</p>
         </div>
       </div>
       <div className="flex items-center gap-2">

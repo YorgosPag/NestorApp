@@ -11,22 +11,22 @@ interface DocumentHeaderProps {
 
 export function DocumentHeader({ doc }: DocumentHeaderProps) {
   return (
-    <div className="text-center space-y-4 p-8 border-b bg-gray-50">
+    <div className="text-center space-y-4 p-8 border-b bg-muted/30">
       <div className="space-y-2">
-        <h1 className="text-2xl font-bold text-gray-900 uppercase tracking-wide">
+        <h1 className="text-2xl font-bold text-foreground uppercase tracking-wide">
           {doc.contractorCompany || "ΕΡΓΟΛΑΒΟΣ ΕΤΑΙΡΕΙΑ"}
         </h1>
-        <div className="text-sm text-gray-600">ΤΕΧΝΙΚΗ ΕΤΑΙΡΕΙΑ ΚΑΤΑΣΚΕΥΩΝ</div>
+        <div className="text-sm text-muted-foreground">ΤΕΧΝΙΚΗ ΕΤΑΙΡΕΙΑ ΚΑΤΑΣΚΕΥΩΝ</div>
       </div>
 
       <div className="space-y-3">
-        <h2 className="text-xl font-semibold text-red-700 underline decoration-2">
+        <h2 className="text-xl font-semibold text-primary underline decoration-2">
           ΣΥΓΓΡΑΦΗ ΥΠΟΧΡΕΩΣΕΩΝ
         </h2>
         <h3 className="text-lg font-medium">
           {doc.title || "Νέα Συγγραφή Υποχρεώσεων"}
         </h3>
-        <div className="text-base text-gray-700">
+        <div className="text-base text-foreground">
           {doc.projectName || "Όνομα Έργου"}
         </div>
       </div>
@@ -35,29 +35,29 @@ export function DocumentHeader({ doc }: DocumentHeaderProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 pt-6 border-t text-sm">
           {doc.projectDetails.location && (
             <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-gray-500" />
-              <span className="text-gray-600">Τοποθεσία:</span>
+              <MapPin className="h-4 w-4 text-muted-foreground" />
+              <span className="text-muted-foreground">Τοποθεσία:</span>
               <span>{doc.projectDetails.location}</span>
             </div>
           )}
           {doc.projectDetails.address && (
             <div className="flex items-center gap-2">
-              <Building className="h-4 w-4 text-gray-500" />
-              <span className="text-gray-600">Διεύθυνση:</span>
+              <Building className="h-4 w-4 text-muted-foreground" />
+              <span className="text-muted-foreground">Διεύθυνση:</span>
               <span>{doc.projectDetails.address}</span>
             </div>
           )}
           {doc.projectDetails.plotNumber && (
             <div className="flex items-center gap-2">
-              <Hash className="h-4 w-4 text-gray-500" />
-              <span className="text-gray-600">Οικόπεδο:</span>
+              <Hash className="h-4 w-4 text-muted-foreground" />
+              <span className="text-muted-foreground">Οικόπεδο:</span>
               <span>{doc.projectDetails.plotNumber}</span>
             </div>
           )}
           {doc.projectDetails.buildingPermitNumber && (
             <div className="flex items-center gap-2">
-              <FileText className="h-4 w-4 text-gray-500" />
-              <span className="text-gray-600">Οικ. Άδεια:</span>
+              <FileText className="h-4 w-4 text-muted-foreground" />
+              <span className="text-muted-foreground">Οικ. Άδεια:</span>
               <span>{doc.projectDetails.buildingPermitNumber}</span>
             </div>
           )}
@@ -67,8 +67,8 @@ export function DocumentHeader({ doc }: DocumentHeaderProps) {
       {doc.owners && doc.owners.length > 0 && (
         <div className="mt-6 pt-6 border-t">
           <div className="flex items-center gap-2 mb-3">
-            <Users className="h-4 w-4 text-gray-500" />
-            <span className="font-medium text-gray-700">Ιδιοκτήτες:</span>
+            <Users className="h-4 w-4 text-muted-foreground" />
+            <span className="font-medium text-foreground">Ιδιοκτήτες:</span>
           </div>
           <div className="space-y-2 text-sm">
             {doc.owners.map((owner, index) => (
@@ -85,7 +85,7 @@ export function DocumentHeader({ doc }: DocumentHeaderProps) {
         </div>
       )}
 
-      <div className="flex justify-between items-center mt-6 pt-6 border-t text-xs text-gray-500">
+      <div className="flex justify-between items-center mt-6 pt-6 border-t text-xs text-muted-foreground">
         <div>
           Κατάσταση:{" "}
           <Badge variant="outline">

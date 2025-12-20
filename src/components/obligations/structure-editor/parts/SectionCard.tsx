@@ -50,19 +50,19 @@ export function SectionCard({
       onDrop={(e) => handlers.handleDrop(e, 'section', index)}
       className={cn(
         "group relative",
-        isActive && "ring-2 ring-blue-500",
+        isActive && "ring-2 ring-primary",
         dragState?.dragId === section.id && "opacity-50"
       )}
     >
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
-          {!readOnly && <GripVertical className="h-4 w-4 text-gray-400 cursor-move opacity-0 group-hover:opacity-100" />}
+          {!readOnly && <GripVertical className="h-4 w-4 text-muted-foreground cursor-move opacity-0 group-hover:opacity-100" />}
           {(hasArticles || section.content) && (
             <Button variant="ghost" size="sm" onClick={() => handlers.toggleExpanded(section.id)} className="h-6 w-6 p-0">
               {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
             </Button>
           )}
-          <FileText className="h-4 w-4 text-blue-600" />
+          <FileText className="h-4 w-4 text-primary" />
           <Badge variant="outline">{section.number}</Badge>
           <div className="flex-1">
             {isEditing ? (
@@ -91,7 +91,7 @@ export function SectionCard({
               </div>
             ) : (
               <div className="cursor-pointer" onClick={() => handlers.startEditing('section', section.id)}>
-                <CardTitle className="text-base">{section.title || <span className="text-gray-400 italic">Χωρίς τίτλο</span>}</CardTitle>
+                <CardTitle className="text-base">{section.title || <span className="text-muted-foreground italic">Χωρίς τίτλο</span>}</CardTitle>
                 <div className="flex items-center gap-2 mt-1">
                   <Badge variant="secondary" className="text-xs">{categoryLabels[section.category]}</Badge>
                   {section.isRequired && <Badge variant="destructive" className="text-xs">Απαραίτητο</Badge>}
@@ -110,7 +110,7 @@ export function SectionCard({
                 <>
                   <Button variant="ghost" size="sm" onClick={() => handlers.addArticle(section.id)} className="h-8 px-2" title="Προσθήκη άρθρου"><Plus className="h-4 w-4" /></Button>
                   <Button variant="ghost" size="sm" onClick={() => handlers.duplicateSection(section.id)} className="h-8 px-2" title="Αντιγραφή ενότητας"><Copy className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="sm" onClick={() => handlers.deleteSection(section.id)} className="h-8 px-2 text-red-600 hover:text-red-700"><Trash2 className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="sm" onClick={() => handlers.deleteSection(section.id)} className="h-8 px-2 text-destructive hover:text-destructive/80"><Trash2 className="h-4 w-4" /></Button>
                 </>
               )}
             </div>
@@ -131,7 +131,7 @@ export function SectionCard({
             </div>
           )}
           {!isEditing && section.content && (
-            <div className="mb-4 p-3 bg-gray-50 rounded-md">
+            <div className="mb-4 p-3 bg-muted/30 rounded-md">
               <div className="prose prose-sm max-w-none text-sm">{section.content}</div>
             </div>
           )}

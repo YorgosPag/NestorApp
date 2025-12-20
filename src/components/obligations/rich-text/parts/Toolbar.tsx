@@ -40,7 +40,7 @@ export function Toolbar({
   const ariaLabels = getAriaLabels();
 
   return (
-    <div className="flex items-center gap-1 p-2 border rounded-md bg-gray-50 flex-wrap">
+    <div className="flex items-center gap-1 p-2 border rounded-md bg-muted/30 flex-wrap">
       {/* Text formatting */}
       <div className="flex items-center gap-1">
         <Button type="button" variant="ghost" size="sm" onClick={onBold} className="h-8 w-8 p-0" title={ariaLabels.bold} aria-label={ariaLabels.bold} disabled={isPreview || disabled}>
@@ -54,7 +54,7 @@ export function Toolbar({
         </Button>
       </div>
 
-      <div className="h-6 w-px bg-gray-300 mx-1" />
+      <div className="h-6 w-px bg-muted-foreground/30 mx-1" />
 
       {/* Lists and quotes */}
       <div className="flex items-center gap-1">
@@ -69,7 +69,7 @@ export function Toolbar({
         </Button>
       </div>
 
-      <div className="h-6 w-px bg-gray-300 mx-1" />
+      <div className="h-6 w-px bg-muted-foreground/30 mx-1" />
 
       {/* Undo/Redo */}
       <div className="flex items-center gap-1">

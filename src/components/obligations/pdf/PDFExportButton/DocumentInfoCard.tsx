@@ -12,20 +12,20 @@ interface DocumentInfoCardProps {
 
 export function DocumentInfoCard({ document }: DocumentInfoCardProps) {
   return (
-    <Card className="bg-blue-50 border-blue-200">
+    <Card className="bg-primary/10 border-primary/20">
       <CardContent className="pt-4">
         <div className="flex items-start gap-3">
-          <FileText className="h-5 w-5 text-blue-600 mt-0.5" />
+          <FileText className="h-5 w-5 text-primary mt-0.5" />
           <div className="flex-1">
-            <h4 className="font-medium text-blue-900">
+            <h4 className="font-medium text-foreground">
               {document.title}
             </h4>
-            <p className="text-sm text-blue-700">{document.projectName}</p>
-            <p className="text-xs text-blue-600 mt-1">
+            <p className="text-sm text-foreground">{document.projectName}</p>
+            <p className="text-xs text-muted-foreground mt-1">
               {document.contractorCompany}
             </p>
           </div>
-          <Badge variant="outline" className="text-blue-700 border-blue-300">
+          <Badge variant="outline" className="text-primary border-primary/30">
             {document.status === "draft" && "📝 Προσχέδιο"}
             {document.status === "completed" && "✅ Ολοκληρωμένο"}
             {document.status === "approved" && "🔐 Εγκεκριμένο"}

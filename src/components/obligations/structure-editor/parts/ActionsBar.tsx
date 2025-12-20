@@ -43,7 +43,7 @@ export function ActionsBar({
       {itemType === 'section' && (
         <Button variant="ghost" size="sm" onClick={onDuplicate} className="h-7 px-2"><Copy className="h-3 w-3" /></Button>
       )}
-      <Button variant="ghost" size="sm" onClick={onDelete} className="h-7 px-2 text-red-600 hover:text-red-700"><Trash2 className="h-3 w-3" /></Button>
+      <Button variant="ghost" size="sm" onClick={onDelete} className="h-7 px-2 text-destructive hover:text-destructive/80"><Trash2 className="h-3 w-3" /></Button>
     </div>
   );
 }

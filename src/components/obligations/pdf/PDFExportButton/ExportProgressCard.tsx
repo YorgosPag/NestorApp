@@ -22,13 +22,13 @@ export function ExportProgressCard({ progress }: ExportProgressCardProps) {
   
   if (isComplete) {
     return (
-      <Card className="bg-green-50 border-green-200">
+      <Card className="bg-accent/20 border-accent/40">
         <CardContent className="pt-4">
           <div className="flex items-center gap-3">
-            <CheckCircle className="h-5 w-5 text-green-600" />
+            <CheckCircle className="h-5 w-5 text-accent-foreground" />
             <div>
-              <h4 className="font-medium text-green-900">Επιτυχία</h4>
-              <p className="text-sm text-green-700">Το PDF δημιουργήθηκε επιτυχώς.</p>
+              <h4 className="font-medium text-foreground">Επιτυχία</h4>
+              <p className="text-sm text-muted-foreground">Το PDF δημιουργήθηκε επιτυχώς.</p>
             </div>
           </div>
         </CardContent>
@@ -41,14 +41,14 @@ export function ExportProgressCard({ progress }: ExportProgressCardProps) {
       <CardContent className="pt-6">
         <div className="space-y-4">
           <div className="flex items-center gap-3">
-            <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
             <div>
               <h4 className="font-medium">Δημιουργία PDF...</h4>
-              <p className="text-sm text-gray-600">{getProgressMessage(progress)}</p>
+              <p className="text-sm text-muted-foreground">{getProgressMessage(progress)}</p>
             </div>
           </div>
           <Progress value={progress} className="w-full" />
-          <div className="text-center text-sm text-gray-500">{progress}% ολοκληρώθηκε</div>
+          <div className="text-center text-sm text-muted-foreground">{progress}% ολοκληρώθηκε</div>
         </div>
       </CardContent>
     </Card>

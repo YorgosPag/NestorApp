@@ -18,9 +18,9 @@ export function TableOfContentsPart({ toc, activeItemId, onClick, show }: TableO
     <div key={item.id} className="space-y-1">
       <div
         className={cn(
-          "flex justify-between items-center py-2 px-3 rounded cursor-pointer hover:bg-gray-50",
+          "flex justify-between items-center py-2 px-3 rounded cursor-pointer hover:bg-accent/50",
           level > 0 && `ml-${level * 6}`,
-          activeItemId === item.id && (level === 0 ? "bg-blue-50 text-blue-700" : "bg-green-50 text-green-700")
+          activeItemId === item.id && (level === 0 ? "bg-primary/20 text-primary" : "bg-accent/30 text-accent-foreground")
         )}
         onClick={() => onClick(item)}
       >
@@ -33,7 +33,7 @@ export function TableOfContentsPart({ toc, activeItemId, onClick, show }: TableO
           </span>
         </div>
         {item.page && (
-          <span className="text-xs text-gray-500">σελ. {item.page}</span>
+          <span className="text-xs text-muted-foreground">σελ. {item.page}</span>
         )}
       </div>
       {item.children?.map(child => renderTocItem(child, level + 1))}

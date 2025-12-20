@@ -33,33 +33,33 @@ export function DocumentSidebar({ obligation, contentSummary }: DocumentSidebarP
         <CardContent className="space-y-4">
           <div className="space-y-3">
             <div className="flex items-center gap-3">
-              <Building className="h-4 w-4 text-gray-500" />
+              <Building className="h-4 w-4 text-muted-foreground" />
               <div>
                 <p className="text-sm font-medium">Έργο</p>
-                <p className="text-sm text-gray-600">{obligation.projectName}</p>
+                <p className="text-sm text-muted-foreground">{obligation.projectName}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <Users className="h-4 w-4 text-gray-500" />
+              <Users className="h-4 w-4 text-muted-foreground" />
               <div>
                 <p className="text-sm font-medium">Εργολάβος</p>
-                <p className="text-sm text-gray-600">{obligation.contractorCompany}</p>
+                <p className="text-sm text-muted-foreground">{obligation.contractorCompany}</p>
               </div>
             </div>
             {obligation.projectDetails?.location && (
               <div className="flex items-center gap-3">
-                <MapPin className="h-4 w-4 text-gray-500" />
+                <MapPin className="h-4 w-4 text-muted-foreground" />
                 <div>
                   <p className="text-sm font-medium">Τοποθεσία</p>
-                  <p className="text-sm text-gray-600">{obligation.projectDetails.location}</p>
+                  <p className="text-sm text-muted-foreground">{obligation.projectDetails.location}</p>
                 </div>
               </div>
             )}
             <div className="flex items-center gap-3">
-              <Calendar className="h-4 w-4 text-gray-500" />
+              <Calendar className="h-4 w-4 text-muted-foreground" />
               <div>
                 <p className="text-sm font-medium">Δημιουργήθηκε</p>
-                <p className="text-sm text-gray-600">{formatDate(obligation.createdAt)}</p>
+                <p className="text-sm text-muted-foreground">{formatDate(obligation.createdAt)}</p>
               </div>
             </div>
           </div>
@@ -68,12 +68,12 @@ export function DocumentSidebar({ obligation, contentSummary }: DocumentSidebarP
             <div className="space-y-2">
               <h4 className="text-sm font-medium">Στατιστικά</h4>
               <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="text-center p-2 bg-blue-50 rounded"><div className="font-semibold text-blue-700">{contentSummary.sections}</div><div className="text-blue-600 text-xs">Ενότητες</div></div>
-                <div className="text-center p-2 bg-green-50 rounded"><div className="font-semibold text-green-700">{contentSummary.articles}</div><div className="text-green-600 text-xs">Άρθρα</div></div>
-                <div className="text-center p-2 bg-gray-50 rounded"><div className="font-semibold text-gray-700">{contentSummary.paragraphs}</div><div className="text-gray-600 text-xs">Παράγραφοι</div></div>
-                <div className="text-center p-2 bg-purple-50 rounded"><div className="font-semibold text-purple-700">{contentSummary.words.toLocaleString()}</div><div className="text-purple-600 text-xs">Λέξεις</div></div>
+                <div className="text-center p-2 bg-primary/10 rounded"><div className="font-semibold text-primary">{contentSummary.sections}</div><div className="text-primary/80 text-xs">Ενότητες</div></div>
+                <div className="text-center p-2 bg-accent/10 rounded"><div className="font-semibold text-accent-foreground">{contentSummary.articles}</div><div className="text-accent-foreground/80 text-xs">Άρθρα</div></div>
+                <div className="text-center p-2 bg-muted/30 rounded"><div className="font-semibold text-foreground">{contentSummary.paragraphs}</div><div className="text-muted-foreground text-xs">Παράγραφοι</div></div>
+                <div className="text-center p-2 bg-secondary/20 rounded"><div className="font-semibold text-foreground">{contentSummary.words.toLocaleString()}</div><div className="text-muted-foreground text-xs">Λέξεις</div></div>
               </div>
-              <div className="text-center text-xs text-gray-500 mt-2">
+              <div className="text-center text-xs text-muted-foreground mt-2">
                 Εκτιμώμενος χρόνος ανάγνωσης: {contentSummary.readingTime} λεπτά
               </div>
             </div>

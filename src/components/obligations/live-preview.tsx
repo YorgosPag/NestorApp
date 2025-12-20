@@ -54,7 +54,7 @@ export default function LivePreview({
   }, []);
 
   return (
-    <div className={cn("bg-white", className)}>
+    <div className={cn("bg-background", className)}>
       <PreviewHeader 
         showToc={showToc}
         onToggleToc={() => setShowToc(prev => !prev)}
@@ -70,7 +70,7 @@ export default function LivePreview({
               width: `${100 / scale}%`,
             }}
           >
-            <div className="max-w-4xl mx-auto bg-white shadow-sm">
+            <div className="max-w-4xl mx-auto bg-card shadow-sm">
               <DocumentHeader doc={doc} />
               
               <TableOfContentsPart 

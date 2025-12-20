@@ -29,7 +29,7 @@ export function SidebarStats({ obligation }: SidebarStatsProps) {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-600">Σύνολο άρθρων</span>
+          <span className="text-sm text-muted-foreground">Σύνολο άρθρων</span>
           <CommonBadge
             status="company"
             customLabel={stats.sectionsCount.toString()}
@@ -37,7 +37,7 @@ export function SidebarStats({ obligation }: SidebarStatsProps) {
           />
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-600">Απαραίτητα</span>
+          <span className="text-sm text-muted-foreground">Απαραίτητα</span>
           <CommonBadge
             status="company"
             customLabel={stats.requiredCount.toString()}
@@ -45,7 +45,7 @@ export function SidebarStats({ obligation }: SidebarStatsProps) {
           />
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-600">Ιδιοκτήτες</span>
+          <span className="text-sm text-muted-foreground">Ιδιοκτήτες</span>
           <CommonBadge
             status="company"
             customLabel={stats.ownersCount.toString()}
@@ -53,7 +53,7 @@ export function SidebarStats({ obligation }: SidebarStatsProps) {
           />
         </div>
         <Separator />
-        <div className="text-xs text-gray-500">
+        <div className="text-xs text-muted-foreground">
           <div>Δημιουργήθηκε: {formatDate(obligation.createdAt)}</div>
           <div>Ενημερώθηκε: {formatDate(obligation.updatedAt)}</div>
         </div>

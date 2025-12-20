@@ -40,21 +40,21 @@ export function ExportOptionsCard({ exportOptions, onChange, contentSummary }: E
               <input aria-label="Συμπερίληψη πίνακα περιεχομένων" type="checkbox" checked={exportOptions.includeTableOfContents} onChange={(e) => onChange({ ...exportOptions, includeTableOfContents: e.target.checked })} className="rounded" />
               <div>
                 <span className="text-sm font-medium">Πίνακας Περιεχομένων</span>
-                <p className="text-xs text-gray-500">Αυτόματος πίνακας με navigation links</p>
+                <p className="text-xs text-muted-foreground">Αυτόματος πίνακας με navigation links</p>
               </div>
             </label>
             <label className="flex items-center gap-3">
               <input aria-label="Συμπερίληψη αρίθμησης σελίδων" type="checkbox" checked={exportOptions.includePageNumbers} onChange={(e) => onChange({ ...exportOptions, includePageNumbers: e.target.checked })} className="rounded" />
               <div>
                 <span className="text-sm font-medium">Αρίθμηση Σελίδων</span>
-                <p className="text-xs text-gray-500">Footer με αριθμούς σελίδων και στοιχεία</p>
+                <p className="text-xs text-muted-foreground">Footer με αριθμούς σελίδων και στοιχεία</p>
               </div>
             </label>
             <label className="flex items-center gap-3">
               <input aria-label="Συμπερίληψη λογότυπου" type="checkbox" checked={exportOptions.includeLogo} onChange={(e) => onChange({ ...exportOptions, includeLogo: e.target.checked })} className="rounded" />
               <div>
                 <span className="text-sm font-medium">Λογότυπο Εταιρείας</span>
-                <p className="text-xs text-gray-500">Προσθήκη λογοτύπου στο header</p>
+                <p className="text-xs text-muted-foreground">Προσθήκη λογοτύπου στο header</p>
               </div>
             </label>
           </div>
@@ -68,14 +68,14 @@ export function ExportOptionsCard({ exportOptions, onChange, contentSummary }: E
                     <input aria-label="Ποιότητα Standard" type="radio" name="quality" checked={exportOptions.quality === "standard"} onChange={() => onChange({ ...exportOptions, quality: "standard" })} className="rounded-full" />
                     <div>
                         <span className="text-sm font-medium">Στάνταρ</span>
-                        <p className="text-xs text-gray-500">Βασική μορφοποίηση, μικρότερο μέγεθος</p>
+                        <p className="text-xs text-muted-foreground">Βασική μορφοποίηση, μικρότερο μέγεθος</p>
                     </div>
                 </label>
                 <label className="flex items-center gap-3">
                     <input aria-label="Ποιότητα High" type="radio" name="quality" checked={exportOptions.quality === "high"} onChange={() => onChange({ ...exportOptions, quality: "high" })} className="rounded-full" />
                     <div>
                         <span className="text-sm font-medium">Υψηλή Ποιότητα</span>
-                        <p className="text-xs text-gray-500">Βελτιωμένα περιθώρια και typography</p>
+                        <p className="text-xs text-muted-foreground">Βελτιωμένα περιθώρια και typography</p>
                     </div>
                 </label>
             </div>
@@ -86,14 +86,14 @@ export function ExportOptionsCard({ exportOptions, onChange, contentSummary }: E
           <h4 className="font-medium text-sm">Προεπισκόπηση Εγγράφου</h4>
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div className="space-y-2">
-              <div className="flex justify-between"><span className="text-gray-600">Ενότητες:</span><Badge variant="outline">{contentSummary.sections}</Badge></div>
-              <div className="flex justify-between"><span className="text-gray-600">Άρθρα:</span><Badge variant="outline">{contentSummary.articles}</Badge></div>
-              <div className="flex justify-between"><span className="text-gray-600">Παράγραφοι:</span><Badge variant="outline">{contentSummary.paragraphs}</Badge></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Ενότητες:</span><Badge variant="outline">{contentSummary.sections}</Badge></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Άρθρα:</span><Badge variant="outline">{contentSummary.articles}</Badge></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Παράγραφοι:</span><Badge variant="outline">{contentSummary.paragraphs}</Badge></div>
             </div>
             <div className="space-y-2">
-              <div className="flex justify-between"><span className="text-gray-600">Λέξεις:</span><Badge variant="outline">{contentSummary.words.toLocaleString("el-GR")}</Badge></div>
-              <div className="flex justify-between"><span className="text-gray-600">Ανάγνωση:</span><Badge variant="outline">{contentSummary.readingTime} λεπτά</Badge></div>
-              <div className="flex justify-between"><span className="text-gray-600">Εκτιμώμενες σελίδες:</span><Badge variant="outline">~{Math.ceil(contentSummary.words / 300)}</Badge></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Λέξεις:</span><Badge variant="outline">{contentSummary.words.toLocaleString("el-GR")}</Badge></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Ανάγνωση:</span><Badge variant="outline">{contentSummary.readingTime} λεπτά</Badge></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Εκτιμώμενες σελίδες:</span><Badge variant="outline">~{Math.ceil(contentSummary.words / 300)}</Badge></div>
             </div>
           </div>
         </div>

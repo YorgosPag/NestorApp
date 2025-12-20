@@ -34,12 +34,12 @@ export default function ObligationsPage() {
 
         <div className="space-y-4">
           {loading ? (
-             <div className="text-center py-8 text-gray-500">
+             <div className="text-center py-8 text-muted-foreground">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
                 <p>Φόρτωση...</p>
              </div>
           ) : error ? (
-            <div className="text-center py-8 text-red-500">
+            <div className="text-center py-8 text-destructive">
                 <p>{error}</p>
             </div>
           ) : filteredObligations.map((obligation) => (
