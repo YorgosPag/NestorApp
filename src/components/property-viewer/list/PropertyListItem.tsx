@@ -6,7 +6,7 @@ import { PropertyBadge } from '@/core/badges';
 import { Home, Building, MapPin, Euro, Ruler } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
-import { formatFloorLabel } from "@/components/building-management/BuildingCard/BuildingCardUtils";
+import { formatFloorLabel } from "@/lib/intl-utils";
 import type { Property } from '@/types/property-viewer';
 import { PROPERTY_STATUS_CONFIG, PROPERTY_TYPE_ICONS } from '@/lib/property-utils';
 

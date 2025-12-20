@@ -10,7 +10,8 @@ import { PropertyHoverPriceArea } from '@/features/property-hover/components/Pro
 import { PropertyHoverDescription } from '@/features/property-hover/components/PropertyHoverDescription';
 import { PropertyHoverInstruction } from '@/features/property-hover/components/PropertyHoverInstruction';
 
-import { formatFloorLabel, formatPricePerSqm } from '@/components/building-management/BuildingCard/BuildingCardUtils';
+import { formatFloorLabel } from '@/lib/intl-utils';
+import { formatPricePerSqm } from '@/components/building-management/BuildingCard/BuildingCardUtils';
 import type { Property } from '@/types/property-viewer';
 import { useHoveredProperty } from '@/features/property-hover/hooks/useHoveredProperty';
 

@@ -25,7 +25,7 @@ export function BuildingListItemStats({ building }: BuildingListItemStatsProps) 
       </div>
       <div>
         <p className="text-muted-foreground">Αξία</p>
-        <p className="font-medium">{formatCurrency(building.totalValue || 0)}</p>
+        <p className="font-medium">{formatCurrency((building.totalValue ?? 0))}</p>
       </div>
     </div>
   );

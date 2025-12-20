@@ -9,7 +9,7 @@ import { Home, Building, MapPin, Euro, Ruler, Edit3, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ExtendedPropertyDetails, Property } from '@/types/property-viewer';
 import { PROPERTY_STATUS_CONFIG } from '@/lib/property-utils';
-import { formatFloorLabel } from '@/components/building-management/BuildingCard/BuildingCardUtils';
+import { formatFloorLabel } from '@/lib/intl-utils';
 
 interface PropertyMetaProps {
   property: ExtendedPropertyDetails;

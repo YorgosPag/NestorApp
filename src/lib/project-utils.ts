@@ -2,6 +2,7 @@
 
 import type { ProjectStatus } from '@/types/project';
 import { PROPERTY_STATUS_LABELS, PROPERTY_STATUS_COLORS } from '@/constants/statuses';
+import { getDaysUntilCompletion as getDaysUntilCompletionI18n } from '@/lib/intl-utils';
 
 // ⚠️ DEPRECATED: Use formatCurrency from intl-utils.ts for enterprise currency formatting
 // 🔄 BACKWARD COMPATIBILITY: This function is maintained for legacy support
@@ -22,13 +23,9 @@ export const getProgressColor = (progress: number) => {
     return 'text-blue-500';
 };
 
+// ✅ ENTERPRISE MIGRATION: Using centralized getDaysUntilCompletion
 export const getDaysUntilCompletion = (completionDate?: string) => {
-    if (!completionDate) return null;
-    const today = new Date();
-    const completion = new Date(completionDate);
-    const diffTime = completion.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
+    return getDaysUntilCompletionI18n(completionDate);
 };
 
 // 🎯 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΟ: Χρησιμοποιούμε τα centralized constants αντί για διάσπαρτα

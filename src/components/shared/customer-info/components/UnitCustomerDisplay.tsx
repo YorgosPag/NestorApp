@@ -25,6 +25,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { formatDate } from '@/lib/intl-utils'; // ✅ Using centralized function
 
 import { useCustomerInfo } from '../hooks/useCustomerInfo';
 import type { Property } from '@/types/property-viewer';
@@ -193,7 +194,7 @@ export function UnitCustomerDisplay({
               {customerName}
             </div>
             <div className="text-xs text-muted-foreground">
-              {statusText} • {unit.saleDate ? new Date(unit.saleDate).toLocaleDateString('el-GR') : 'Άγνωστη ημερομηνία'}
+              {statusText} • {unit.saleDate ? formatDate(new Date(unit.saleDate)) : 'Άγνωστη ημερομηνία'}
             </div>
           </div>
         </div>

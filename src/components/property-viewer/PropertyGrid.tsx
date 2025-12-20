@@ -8,7 +8,7 @@ import { Home, Building, MapPin, Euro, Ruler } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { COMPLEX_HOVER_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import type { Property } from '@/types/property-viewer';
-import { formatFloorLabel } from '../building-management/BuildingCard/BuildingCardUtils';
+import { formatFloorLabel } from '@/lib/intl-utils';
 
 const statusConfig = {
   'for-sale': {

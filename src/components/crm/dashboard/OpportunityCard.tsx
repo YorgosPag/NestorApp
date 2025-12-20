@@ -8,6 +8,7 @@ import { COMPLEX_HOVER_EFFECTS, TRANSITION_PRESETS, INTERACTIVE_PATTERNS, GROUP_
 import type { Opportunity, FirestoreishTimestamp } from '@/types/crm';
 import { format } from 'date-fns';
 import { el } from 'date-fns/locale';
+import { formatDateTime } from '@/lib/intl-utils';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -42,20 +43,20 @@ const getStatusColor = (status?: Opportunity['stage']) => {
     return STAGE_COLORS[status!] ?? 'bg-gray-100 text-gray-800';
 };
 
-// Safe date formatter
+// ✅ ENTERPRISE MIGRATION: Using centralized formatDateTime for consistent date formatting
 const formatDate = (timestamp: FirestoreishTimestamp): string => {
     if (!timestamp) return 'Άγνωστη ημερομηνία';
-    
+
     try {
-      const date = timestamp instanceof Date 
-        ? timestamp 
-        : typeof (timestamp as any).toDate === 'function' 
-        ? (timestamp as any).toDate() 
+      const date = timestamp instanceof Date
+        ? timestamp
+        : typeof (timestamp as any).toDate === 'function'
+        ? (timestamp as any).toDate()
         : new Date(timestamp);
-        
+
       if (isNaN(date.getTime())) return 'Άγνωστη ημερομηνία';
 
-      return format(date, 'dd/MM/yyyy HH:mm', { locale: el });
+      return formatDateTime(date); // ✅ Using centralized function
     } catch (err) {
       return 'Άγνωστη ημερομηνία';
     }

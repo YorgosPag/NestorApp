@@ -3,6 +3,7 @@
 import React from 'react';
 import { Calendar } from 'lucide-react';
 import type { ExtendedPropertyDetails } from '@/types/property-viewer';
+import { formatDate } from '@/lib/intl-utils'; // ✅ Using centralized function
 
 interface PropertyDatesProps {
   dates: ExtendedPropertyDetails['dates'];
@@ -18,10 +19,10 @@ export function PropertyDates({ dates }: PropertyDatesProps) {
         Ημερομηνίες
       </h4>
       <div className="space-y-1 text-xs text-muted-foreground">
-        {dates.created && <div>Δημιουργία: {new Date(dates.created).toLocaleDateString('el-GR')}</div>}
-        {dates.updated && <div>Ενημέρωση: {new Date(dates.updated).toLocaleDateString('el-GR')}</div>}
+        {dates.created && <div>Δημιουργία: {formatDate(new Date(dates.created))}</div>}
+        {dates.updated && <div>Ενημέρωση: {formatDate(new Date(dates.updated))}</div>}
         {dates.available && (
-          <div>Διαθεσιμότητα: {new Date(dates.available).toLocaleDateString('el-GR')}</div>
+          <div>Διαθεσιμότητα: {formatDate(new Date(dates.available))}</div>
         )}
       </div>
     </div>

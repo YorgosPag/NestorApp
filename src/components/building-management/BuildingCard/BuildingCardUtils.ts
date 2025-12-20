@@ -1,7 +1,7 @@
 'use client';
 
 import { Home, Building2, Users } from 'lucide-react';
-import { formatFloorLabel as formatFloorLabelI18n, getCategoryLabel as getCategoryLabelI18n, getStatusLabel as getStatusLabelI18n, getPricePerSqmUnit, formatNumber } from '@/lib/intl-utils';
+import { formatFloorLabel as formatFloorLabelI18n, getCategoryLabel as getCategoryLabelI18n, getStatusLabel as getStatusLabelI18n, getPricePerSqmUnit, formatNumber, getDaysUntilCompletion as getDaysUntilCompletionI18n } from '@/lib/intl-utils';
 
 
 
@@ -37,13 +37,9 @@ export const getCategoryLabel = (category: string) => {
     return getCategoryLabelI18n(category);
 };
 
+// ✅ ENTERPRISE MIGRATION: Using centralized getDaysUntilCompletion
 export const getDaysUntilCompletion = (completionDate?: string) => {
-    if (!completionDate) return null;
-    const today = new Date();
-    const completion = new Date(completionDate);
-    const diffTime = completion.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
+    return getDaysUntilCompletionI18n(completionDate);
 };
 
 export const getStatusColor = (status: string) => {

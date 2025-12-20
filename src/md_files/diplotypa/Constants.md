@@ -1,9 +1,50 @@
-# ΑΝΑΛΥΣΗ: CONSTANT DUPLICATES - DXF VIEWER
+# ΑΝΑΛΥΣΗ: DUPLICATE FUNCTIONS & CONSTANTS CONSOLIDATION
 
-**Ημερομηνία**: 2025-10-03
+**Ημερομηνία**: 2025-10-03 (Initial) / 2025-12-20 (Updated & Consolidated)
 **Ερευνητής**: Claude
-**Scope**: src/subapps/dxf-viewer
-**Αρχεία**: 561 TypeScript files
+**Scope**: Full application + DXF Viewer
+**Αρχεία**: 561+ TypeScript files
+
+## ✅ FORMATDATE CONSOLIDATION COMPLETED (2025-12-20)
+
+### ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ FORMATDATE FUNCTIONS
+
+**Single Source of Truth**: `src/lib/intl-utils.ts`
+
+**Consolidated Functions (Session 2025-12-20)**:
+- ✅ `src/components/dates.tsx` → Replaced with centralized formatDate
+- ✅ `src/components/generic/UnifiedInbox.tsx` → Replaced with centralized formatDate
+- ✅ `src/components/cards/OpportunityCard.tsx` → Replaced with centralized formatDate
+- ✅ `src/components/units/list/ListItem/UnitListItemFooter.tsx` → Replaced with centralized formatDate
+- ✅ `src/components/generic/GenericTabRenderer.tsx` → Replaced with centralized formatDate
+- ✅ `src/components/obligations/live-preview/parts/DocumentHeader.tsx` → Replaced formatDateSSR with centralized formatDate
+- ✅ `src/components/property-viewer/details/PropertyDates.tsx` → Replaced 3 toLocaleDateString calls with centralized formatDate
+- ✅ `src/components/shared/customer-info/components/UnitCustomerDisplay.tsx` → Replaced toLocaleDateString call with centralized formatDate
+
+**Garbage Cleanup (Session 2025-12-20)**:
+- 🗑️ `src/hooks/useContactForm.OLD.ts` → Deleted (unused old file)
+- 🗑️ `src/components/contacts/relationships/RelationshipsSummary.old.tsx` → Deleted (unused old file)
+- 🗑️ `src/subapps/dxf-viewer/ui/components/TestsModal.old.tsx` → Deleted (unused old file)
+- 🗑️ `src/hooks/usePhotoSlotHandlers.ts` → Deleted (empty file with only deletion comment)
+
+**Migration Pattern Applied**:
+```typescript
+// ❌ BEFORE: Duplicate formatDate functions
+function formatDate(date: Date): string {
+  return date.toLocaleDateString('el-GR');
+}
+
+// ✅ AFTER: Centralized import
+import { formatDate } from '@/lib/intl-utils';
+```
+
+**Impact**: Zero conflicts - All formatDate functions now use single source of truth
+
+**Enterprise Benefits**:
+- 🎯 Consistent date formatting across entire application
+- 🔧 SSR/Client hydration compatibility
+- 🌍 Proper internationalization support
+- 🔒 Type-safe date handling
 
 ---
 

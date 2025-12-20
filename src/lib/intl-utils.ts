@@ -380,3 +380,16 @@ export const formatDateGreek = (dateInput?: Date | string | number): string => {
     return '-';
   }
 };
+
+/**
+ * ✅ CENTRALIZED: Calculate days until completion date
+ * Consolidates duplicate functions from BuildingCardUtils.ts and project-utils.ts
+ */
+export const getDaysUntilCompletion = (completionDate?: string): number | null => {
+  if (!completionDate) return null;
+  const today = new Date();
+  const completion = new Date(completionDate);
+  const diffTime = completion.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays;
+};

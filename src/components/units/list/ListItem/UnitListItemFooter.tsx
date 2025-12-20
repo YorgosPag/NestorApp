@@ -4,12 +4,13 @@ import React from 'react';
 import Link from 'next/link';
 import { Calendar, Clock } from 'lucide-react';
 import type { Property } from '@/types/property-viewer';
+import { formatDate as formatDateCentralized } from '@/lib/intl-utils';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { UnitCustomerDisplay } from '@/components/shared/customer-info';
 
 
-// Safe date formatting function
+// ✅ ENTERPRISE MIGRATION: Using centralized formatDate for consistent formatting
 function formatDate(dateString: string | null | undefined): string {
   if (!dateString) return 'N/A';
   try {
@@ -18,11 +19,7 @@ function formatDate(dateString: string | null | undefined): string {
     if (isNaN(date.getTime())) {
       return 'Άγνωστη Ημερομηνία';
     }
-    return date.toLocaleDateString('el-GR', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
+    return formatDateCentralized(date); // ✅ Using centralized function
   } catch (error) {
     return 'Άκυρη Ημερομηνία';
   }

@@ -3,6 +3,7 @@
 import React from 'react';
 import type { FieldConfig, SectionConfig } from '@/config/company-gemi-config';
 import { getIconComponent } from './utils/IconMapping';
+import { formatDate } from '@/lib/intl-utils';
 
 // ============================================================================
 // INTERFACES
@@ -26,6 +27,7 @@ export interface GenericTabRendererProps {
 // ============================================================================
 
 /**
+ * ✅ ENTERPRISE MIGRATION: Using centralized formatDate for consistent formatting
  * Formats a date value for display
  */
 function formatDateValue(value: any): string {
@@ -33,7 +35,7 @@ function formatDateValue(value: any): string {
 
   try {
     const date = new Date(value);
-    return date.toLocaleDateString('el-GR');
+    return formatDate(date); // ✅ Using centralized function
   } catch {
     return 'Άκυρη ημερομηνία';
   }
