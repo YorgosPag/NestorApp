@@ -23,16 +23,22 @@ export default function ObligationsPage() {
 
   return (
     <PageLayout>
-      <div className="p-4 md:p-6 lg:p-8 space-y-6">
-        <ObligationsHeader
-          filters={filters}
-          onFilterChange={handleFilterChange}
-          onSearch={handleSearch}
-        />
-        
-        {stats && <ObligationsStats stats={stats} />}
+      <main className="p-4 md:p-6 lg:p-8 space-y-6">
+        <header>
+          <ObligationsHeader
+            filters={filters}
+            onFilterChange={handleFilterChange}
+            onSearch={handleSearch}
+          />
+        </header>
 
-        <div className="space-y-4">
+        {stats && (
+          <section aria-label="Στατιστικά υποχρεώσεων">
+            <ObligationsStats stats={stats} />
+          </section>
+        )}
+
+        <section className="space-y-4" aria-label="Λίστα υποχρεώσεων">
           {loading ? (
              <div className="text-center py-8 text-muted-foreground">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
@@ -58,8 +64,8 @@ export default function ObligationsPage() {
               <p className="text-sm">Δοκιμάστε να αλλάξετε τα κριτήρια αναζήτησης.</p>
             </div>
           )}
-        </div>
-      </div>
+        </section>
+      </main>
     </PageLayout>
   );
 }

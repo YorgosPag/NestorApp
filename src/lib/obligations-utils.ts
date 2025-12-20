@@ -578,15 +578,102 @@ export const stripHtmlTags = (html: string): string =>
 
 export const convertMarkdownToHtml = (markdown: string): string => {
   if (!markdown) return "";
-  return markdown
-    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*(.*?)\*/g, "<em>$1</em>")
-    .replace(/<u>(.*?)<\/u>/g, "<u>$1</u>")
-    .replace(/^> (.*$)/gm, "<blockquote>$1</blockquote>")
-    .replace(/^\* (.*$)/gm, "<ul><li>$1</li></ul>")
-    .replace(/<\/ul>\n<ul>/g, "")
-    .replace(/^1\. (.*$)/gm, "<ol><li>$1</li></ol>")
-    .replace(/<\/ol>\n<ol>/g, "");
+
+  let html = markdown;
+
+  // 1. Handle bold text
+  html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+
+  // 2. Handle italic text
+  html = html.replace(/\*(.*?)\*/g, "<em>$1</em>");
+
+  // 3. Handle underline text
+  html = html.replace(/<u>(.*?)<\/u>/g, "<u>$1</u>");
+
+  // 4. Handle blockquotes
+  html = html.replace(/^> (.*$)/gm, "<blockquote>$1</blockquote>");
+
+  // 5. Handle bullet lists (multi-line support)
+  const bulletLines = html.split('\n');
+  let inBulletList = false;
+  const processedLines: string[] = [];
+
+  bulletLines.forEach((line) => {
+    const isBulletLine = /^\* (.*)$/.test(line);
+
+    if (isBulletLine && !inBulletList) {
+      // Start new bullet list
+      processedLines.push('<ul>');
+      processedLines.push(`<li>${line.replace(/^\* /, '')}</li>`);
+      inBulletList = true;
+    } else if (isBulletLine && inBulletList) {
+      // Continue bullet list
+      processedLines.push(`<li>${line.replace(/^\* /, '')}</li>`);
+    } else if (!isBulletLine && inBulletList) {
+      // End bullet list
+      processedLines.push('</ul>');
+      processedLines.push(line);
+      inBulletList = false;
+    } else {
+      processedLines.push(line);
+    }
+  });
+
+  // Close any open bullet list
+  if (inBulletList) {
+    processedLines.push('</ul>');
+  }
+
+  html = processedLines.join('\n');
+
+  // 6. Handle numbered lists (similar logic)
+  const numberedLines = html.split('\n');
+  let inNumberedList = false;
+  const processedNumberedLines: string[] = [];
+
+  numberedLines.forEach((line) => {
+    const isNumberedLine = /^\d+\. (.*)$/.test(line);
+
+    if (isNumberedLine && !inNumberedList) {
+      // Start new numbered list
+      processedNumberedLines.push('<ol>');
+      processedNumberedLines.push(`<li>${line.replace(/^\d+\. /, '')}</li>`);
+      inNumberedList = true;
+    } else if (isNumberedLine && inNumberedList) {
+      // Continue numbered list
+      processedNumberedLines.push(`<li>${line.replace(/^\d+\. /, '')}</li>`);
+    } else if (!isNumberedLine && inNumberedList) {
+      // End numbered list
+      processedNumberedLines.push('</ol>');
+      processedNumberedLines.push(line);
+      inNumberedList = false;
+    } else {
+      processedNumberedLines.push(line);
+    }
+  });
+
+  // Close any open numbered list
+  if (inNumberedList) {
+    processedNumberedLines.push('</ol>');
+  }
+
+  html = processedNumberedLines.join('\n');
+
+  // 7. Handle paragraphs (convert double line breaks to paragraph breaks)
+  html = html.replace(/\n\n/g, '</p><p>');
+
+  // 8. Handle single line breaks (convert to <br>)
+  html = html.replace(/\n/g, '<br>');
+
+  // 9. Wrap in paragraph tags if not already wrapped
+  if (!html.startsWith('<p>') && !html.startsWith('<ul>') && !html.startsWith('<ol>') && !html.startsWith('<blockquote>')) {
+    html = `<p>${html}</p>`;
+  }
+
+  // 10. Fix paragraph closing/opening tags
+  html = html.replace(/<\/p><p>/g, '</p>\n<p>');
+
+  return html;
 };
 
 /* ============================================================================

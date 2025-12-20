@@ -2,11 +2,12 @@
 
 import { useState, useCallback } from 'react';
 import type { ObligationSection, ObligationArticle, ObligationParagraph } from '@/types/obligations';
-import { createNewSection, createNewArticle, createNewParagraph, renumberSections } from '@/types/obligations';
+import { createNewSection, createNewArticle, createNewParagraph, renumberSections, renumberArticles } from '@/types/obligations';
 import type { DragState, DragKind } from '../dnd/dnd-types';
 
 interface UseStructureEditorStateProps {
   initialSections: ObligationSection[];
+  sections: ObligationSection[]; // Add current sections prop
   onSectionsChange: (sections: ObligationSection[]) => void;
   onActiveItemChange?: (item: { type: 'section' | 'article' | 'paragraph'; id: string } | null) => void;
   readOnly?: boolean;
@@ -14,6 +15,7 @@ interface UseStructureEditorStateProps {
 
 export function useStructureEditorState({
   initialSections,
+  sections,
   onSectionsChange,
   onActiveItemChange,
   readOnly,
@@ -43,29 +45,29 @@ export function useStructureEditorState({
   // Section Handlers
   const addSection = useCallback(() => {
     if (readOnly) return;
-    const newSection = createNewSection(initialSections.length);
-    const newSections = [...initialSections, newSection];
+    const newSection = createNewSection(sections.length);
+    const newSections = [...sections, newSection];
     onSectionsChange(renumberSections(newSections));
     setExpandedItems(prev => [...prev, newSection.id]);
     startEditing('section', newSection.id);
-  }, [readOnly, initialSections, onSectionsChange, startEditing]);
+  }, [readOnly, sections, onSectionsChange, startEditing]);
 
   const updateSection = useCallback((sectionId: string, updates: Partial<ObligationSection>) => {
     if (readOnly) return;
-    const newSections = initialSections.map(s => s.id === sectionId ? { ...s, ...updates } : s);
+    const newSections = sections.map(s => s.id === sectionId ? { ...s, ...updates } : s);
     onSectionsChange(newSections);
-  }, [readOnly, initialSections, onSectionsChange]);
+  }, [readOnly, sections, onSectionsChange]);
 
   const deleteSection = useCallback((sectionId: string) => {
     if (readOnly) return;
-    const newSections = initialSections.filter(s => s.id !== sectionId);
+    const newSections = sections.filter(s => s.id !== sectionId);
     onSectionsChange(renumberSections(newSections));
     if (editingItem === sectionId) stopEditing();
-  }, [readOnly, initialSections, onSectionsChange, editingItem, stopEditing]);
+  }, [readOnly, sections, onSectionsChange, editingItem, stopEditing]);
 
   const duplicateSection = useCallback((sectionId: string) => {
     if (readOnly) return;
-    const sectionToDuplicate = initialSections.find(s => s.id === sectionId);
+    const sectionToDuplicate = sections.find(s => s.id === sectionId);
     if (!sectionToDuplicate) return;
     const newId = () => `id-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -73,7 +75,7 @@ export function useStructureEditorState({
       ...sectionToDuplicate,
       id: newId(),
       title: `${sectionToDuplicate.title} (Αντίγραφο)`,
-      order: initialSections.length,
+      order: sections.length,
       articles: (sectionToDuplicate.articles || []).map(article => {
         const newArticleId = newId();
         return {
@@ -84,68 +86,68 @@ export function useStructureEditorState({
         };
       }),
     };
-    const newSections = [...initialSections, duplicatedSection];
+    const newSections = [...sections, duplicatedSection];
     onSectionsChange(renumberSections(newSections));
-  }, [readOnly, initialSections, onSectionsChange]);
+  }, [readOnly, sections, onSectionsChange]);
 
   // Article Handlers
   const addArticle = useCallback((sectionId: string) => {
     if (readOnly) return;
-    const section = initialSections.find(s => s.id === sectionId);
+    const section = sections.find(s => s.id === sectionId);
     if (!section) return;
     const newArticle = createNewArticle(sectionId, section.articles?.length || 0);
     updateSection(sectionId, { articles: [...(section.articles || []), newArticle], isExpanded: true });
     setExpandedItems(prev => [...prev, sectionId, newArticle.id]);
     startEditing('article', newArticle.id);
-  }, [readOnly, initialSections, updateSection, startEditing]);
+  }, [readOnly, sections, updateSection, startEditing]);
   
   const updateArticle = useCallback((sectionId: string, articleId: string, updates: Partial<ObligationArticle>) => {
       if (readOnly) return;
       updateSection(sectionId, {
-          articles: initialSections.find(s => s.id === sectionId)?.articles?.map(a =>
+          articles: sections.find(s => s.id === sectionId)?.articles?.map(a =>
               a.id === articleId ? { ...a, ...updates } : a
           )
       });
-  }, [readOnly, initialSections, updateSection]);
+  }, [readOnly, sections, updateSection]);
 
   const deleteArticle = useCallback((sectionId: string, articleId: string) => {
       if (readOnly) return;
       updateSection(sectionId, {
-          articles: initialSections.find(s => s.id === sectionId)?.articles?.filter(a => a.id !== articleId)
+          articles: sections.find(s => s.id === sectionId)?.articles?.filter(a => a.id !== articleId)
       });
       if (editingItem === articleId) stopEditing();
-  }, [readOnly, initialSections, updateSection, editingItem, stopEditing]);
+  }, [readOnly, sections, updateSection, editingItem, stopEditing]);
   
   // Paragraph Handlers
   const addParagraph = useCallback((sectionId: string, articleId: string) => {
     if (readOnly) return;
-    const section = initialSections.find(s => s.id === sectionId);
+    const section = sections.find(s => s.id === sectionId);
     const article = section?.articles?.find(a => a.id === articleId);
     if (!article) return;
     const newParagraph = createNewParagraph(articleId, article.paragraphs?.length || 0);
     updateArticle(sectionId, articleId, { paragraphs: [...(article.paragraphs || []), newParagraph], isExpanded: true });
     setExpandedItems(prev => [...prev, sectionId, articleId]);
     startEditing('paragraph', newParagraph.id);
-  }, [readOnly, initialSections, updateArticle, startEditing]);
+  }, [readOnly, sections, updateArticle, startEditing]);
 
   const updateParagraph = useCallback((sectionId: string, articleId: string, paragraphId: string, updates: Partial<ObligationParagraph>) => {
     if (readOnly) return;
-    const section = initialSections.find(s => s.id === sectionId);
+    const section = sections.find(s => s.id === sectionId);
     updateArticle(sectionId, articleId, {
       paragraphs: section?.articles?.find(a => a.id === articleId)?.paragraphs?.map(p =>
         p.id === paragraphId ? { ...p, ...updates } : p
       )
     });
-  }, [readOnly, initialSections, updateArticle]);
+  }, [readOnly, sections, updateArticle]);
 
   const deleteParagraph = useCallback((sectionId: string, articleId: string, paragraphId: string) => {
     if (readOnly) return;
-    const section = initialSections.find(s => s.id === sectionId);
+    const section = sections.find(s => s.id === sectionId);
     updateArticle(sectionId, articleId, {
       paragraphs: section?.articles?.find(a => a.id === articleId)?.paragraphs?.filter(p => p.id !== paragraphId)
     });
     if (editingItem === paragraphId) stopEditing();
-  }, [readOnly, initialSections, updateArticle, editingItem, stopEditing]);
+  }, [readOnly, sections, updateArticle, editingItem, stopEditing]);
 
   // DND Handlers
   const handleDragStart = useCallback((e: React.DragEvent, type: DragKind, id: string, index: number, parentId?: string) => {
@@ -166,12 +168,12 @@ export function useStructureEditorState({
     const { dragType, dragIndex, parentId: dragParentId } = dragState;
 
     if (dragType === 'section' && targetType === 'section') {
-      const newSections = [...initialSections];
+      const newSections = [...sections];
       const [draggedSection] = newSections.splice(dragIndex, 1);
       newSections.splice(targetIndex, 0, draggedSection);
       onSectionsChange(renumberSections(newSections));
     } else if (dragType === 'article' && targetType === 'article' && dragParentId === targetParentId) {
-      const section = initialSections.find(s => s.id === dragParentId);
+      const section = sections.find(s => s.id === dragParentId);
       if (!section || !section.articles) return;
       const newArticles = [...section.articles];
       const [draggedArticle] = newArticles.splice(dragIndex, 1);
@@ -179,7 +181,7 @@ export function useStructureEditorState({
       updateSection(dragParentId, { articles: renumberArticles(newArticles) });
     }
     setDragState(null);
-  }, [readOnly, dragState, initialSections, onSectionsChange, updateSection]);
+  }, [readOnly, dragState, sections, onSectionsChange, updateSection]);
 
   return {
     state: {

@@ -180,7 +180,7 @@ export default function NewObligationPage() {
         if (i === index) {
             if (field === 'share') {
                 const raw = value as string;
-                const parsed = raw === '' ? '' : (parseFloat(raw) || 0);
+                const parsed = raw === '' ? undefined : (parseFloat(raw) || 0);
                 return { ...owner, [field]: parsed };
             }
             return { ...owner, [field]: value };
@@ -469,7 +469,18 @@ export default function NewObligationPage() {
                       status: "draft",
                       createdAt: new Date(),
                       updatedAt: new Date(),
-                      tableOfContents: generateTableOfContents(formData.sections),
+                      tableOfContents: generateTableOfContents({
+                        id: '',
+                        title: formData.title,
+                        projectName: formData.projectName,
+                        contractorCompany: formData.contractorCompany,
+                        owners: formData.owners,
+                        createdAt: new Date(),
+                        updatedAt: new Date(),
+                        status: 'draft' as const,
+                        sections: formData.sections,
+                        projectDetails: formData.projectDetails
+                      }),
                       sections: formData.sections,
                       projectDetails: formData.projectDetails,
                       owners: formData.owners

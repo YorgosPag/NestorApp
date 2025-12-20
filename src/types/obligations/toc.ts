@@ -4,6 +4,11 @@ import type { ObligationDocument, TableOfContentsItem } from './contracts';
 export const generateTableOfContents = (document: ObligationDocument): TableOfContentsItem[] => {
   const toc: TableOfContentsItem[] = [];
 
+  // Guard against undefined sections
+  if (!document.sections) {
+    return toc;
+  }
+
   document.sections
     .sort((a, b) => a.order - b.order)
     .forEach((section) => {
@@ -18,7 +23,7 @@ export const generateTableOfContents = (document: ObligationDocument): TableOfCo
 
       if (section.articles) {
         section.articles
-          .sort((a, b) => a.order - b.order)
+          ?.sort((a, b) => a.order - b.order)
           .forEach((article) => {
             const articleToc: TableOfContentsItem = {
               id: article.id,
@@ -32,7 +37,7 @@ export const generateTableOfContents = (document: ObligationDocument): TableOfCo
 
             if (article.paragraphs) {
               article.paragraphs
-                .sort((a, b) => a.order - b.order)
+                ?.sort((a, b) => a.order - b.order)
                 .forEach((paragraph) => {
                   const paragraphToc: TableOfContentsItem = {
                     id: paragraph.id,

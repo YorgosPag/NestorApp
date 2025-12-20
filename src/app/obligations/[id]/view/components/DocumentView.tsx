@@ -18,11 +18,11 @@ export function DocumentView({ obligation }: DocumentViewProps) {
     <Card>
       <CardContent className="p-0">
         <ScrollArea className="h-[1200px]">
-          <div className="p-8">
+          <article className="p-8">
             {/* Sections */}
             <div className="space-y-8">
               {sortSections(obligation.sections || []).map((section) => (
-                <div key={section.id} id={`section-${section.id}`} className="space-y-4">
+                <section key={section.id} id={`section-${section.id}`} className="space-y-4" aria-labelledby={`section-title-${section.id}`}>
                   {/* Section Header */}
                   <div className="border-b-2 border-primary pb-2">
                     <div className="flex items-center gap-3 mb-2">
@@ -39,7 +39,7 @@ export function DocumentView({ obligation }: DocumentViewProps) {
                         className="text-xs"
                       />
                     </div>
-                    <h2 className="text-xl font-bold text-primary uppercase tracking-wide">{section.title}</h2>
+                    <h2 id={`section-title-${section.id}`} className="text-xl font-bold text-primary uppercase tracking-wide">{section.title}</h2>
                   </div>
 
                   {/* Section Content */}
@@ -87,20 +87,20 @@ export function DocumentView({ obligation }: DocumentViewProps) {
                       ))}
                     </div>
                   )}
-                </div>
+                </section>
               ))}
             </div>
 
             {/* Document Footer */}
-            <div className="mt-16 pt-8 border-t text-center text-sm text-muted-foreground">
+            <footer className="mt-16 pt-8 border-t text-center text-sm text-muted-foreground">
               <div className="space-y-2">
                 <div><strong>{obligation.contractorCompany}</strong></div>
                 <div>{obligation.projectDetails?.address || 'Διεύθυνση Εταιρείας'}</div>
                 <div>Τηλ: +30 210 XXXXXXX | Email: info@company.gr</div>
                 <div className="mt-4 text-xs">Συγγραφή Υποχρεώσεων - {new Date().toLocaleDateString('el-GR')}</div>
               </div>
-            </div>
-          </div>
+            </footer>
+          </article>
         </ScrollArea>
       </CardContent>
     </Card>

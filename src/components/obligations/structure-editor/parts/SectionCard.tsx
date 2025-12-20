@@ -27,6 +27,8 @@ interface SectionCardProps {
   dragState: ReturnType<typeof useStructureEditorState>['state']['dragState'];
   handlers: Handlers;
   activeItemId?: string;
+  expandedItems: string[];
+  editingItem: string | null;
 }
 
 export function SectionCard({
@@ -39,11 +41,14 @@ export function SectionCard({
   dragState,
   handlers,
   activeItemId,
+  expandedItems,
+  editingItem,
 }: SectionCardProps) {
   const hasArticles = section.articles && section.articles.length > 0;
 
   return (
     <Card
+      id={`section-${section.id}`}
       draggable={!readOnly}
       onDragStart={(e) => handlers.handleDragStart(e, 'section', section.id, index)}
       onDragOver={handlers.handleDragOver}

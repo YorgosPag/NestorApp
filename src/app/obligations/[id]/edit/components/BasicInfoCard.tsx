@@ -24,15 +24,15 @@ export function BasicInfoCard({ obligation, updateObligation }: BasicInfoCardPro
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
+          <fieldset>
             <Label htmlFor="title">Τίτλος</Label>
             <Input
               id="title"
               value={obligation.title}
               onChange={(e) => updateObligation('title', e.target.value)}
             />
-          </div>
-          <div>
+          </fieldset>
+          <fieldset>
             <Label htmlFor="status">Κατάσταση</Label>
             <Select
               value={obligation.status}
@@ -49,25 +49,25 @@ export function BasicInfoCard({ obligation, updateObligation }: BasicInfoCardPro
                 <SelectItem value="approved">Εγκεκριμένο</SelectItem>
               </SelectContent>
             </Select>
-          </div>
+          </fieldset>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
+          <fieldset>
             <Label htmlFor="project">Όνομα Έργου</Label>
             <Input
               id="project"
               value={obligation.projectName}
               onChange={(e) => updateObligation('projectName', e.target.value)}
             />
-          </div>
-          <div>
+          </fieldset>
+          <fieldset>
             <Label htmlFor="contractor">Εργολάβος</Label>
             <Input
               id="contractor"
               value={obligation.contractorCompany}
               onChange={(e) => updateObligation('contractorCompany', e.target.value)}
             />
-          </div>
+          </fieldset>
         </div>
       </CardContent>
     </Card>

@@ -96,10 +96,10 @@ export function ObligationListItem({ obligation, onDelete, onDuplicate }: Obliga
       </CardHeader>
       
       <CardContent className="pt-0">
-        <div className="flex justify-between text-sm text-muted-foreground">
-          <span>Δημιουργήθηκε: {createdDate}</span>
-          <span>Τελευταία ενημέρωση: {updatedDate}</span>
-        </div>
+        <footer className="flex justify-between text-sm text-muted-foreground">
+          <time dateTime={obligation.createdAt}>Δημιουργήθηκε: {createdDate}</time>
+          <time dateTime={obligation.updatedAt}>Τελευταία ενημέρωση: {updatedDate}</time>
+        </footer>
       </CardContent>
     </Card>
   );

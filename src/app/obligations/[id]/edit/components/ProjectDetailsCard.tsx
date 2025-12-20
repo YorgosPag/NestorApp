@@ -29,7 +29,7 @@ export function ProjectDetailsCard({ projectDetails, updateProjectDetails }: Pro
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div>
+        <fieldset>
           <Label htmlFor="location" className="text-xs">Τοποθεσία</Label>
           <Input
             id="location"
@@ -37,8 +37,8 @@ export function ProjectDetailsCard({ projectDetails, updateProjectDetails }: Pro
             value={projectDetails?.location || ''}
             onChange={(e) => handleUpdate('location', e.target.value)}
           />
-        </div>
-        <div>
+        </fieldset>
+        <fieldset>
           <Label htmlFor="address" className="text-xs">Διεύθυνση</Label>
           <Textarea
             id="address"
@@ -46,7 +46,7 @@ export function ProjectDetailsCard({ projectDetails, updateProjectDetails }: Pro
             value={projectDetails?.address || ''}
             onChange={(e) => handleUpdate('address', e.target.value)}
           />
-        </div>
+        </fieldset>
       </CardContent>
     </Card>
   );

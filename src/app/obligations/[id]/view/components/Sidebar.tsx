@@ -24,9 +24,10 @@ interface DocumentSidebarProps {
 
 export function DocumentSidebar({ obligation, contentSummary }: DocumentSidebarProps) {
   return (
-    <div className="lg:col-span-1 space-y-6">
+    <aside className="lg:col-span-1 space-y-6" aria-label="Πλαϊνή πληροφορίες">
       {/* Document Info */}
-      <Card>
+      <section aria-label="Στοιχεία εγγράφου">
+        <Card>
         <CardHeader className="pb-4">
           <CardTitle className="text-lg">Στοιχεία Εγγράφου</CardTitle>
         </CardHeader>
@@ -79,11 +80,13 @@ export function DocumentSidebar({ obligation, contentSummary }: DocumentSidebarP
             </div>
           )}
         </CardContent>
-      </Card>
+        </Card>
+      </section>
 
       {/* Owners */}
       {obligation.owners && obligation.owners.length > 0 && (
-        <Card>
+        <section aria-label="Ιδιοκτήτες">
+          <Card>
           <CardHeader className="pb-4">
             <CardTitle className="text-lg">Ιδιοκτήτες</CardTitle>
           </CardHeader>
@@ -104,14 +107,18 @@ export function DocumentSidebar({ obligation, contentSummary }: DocumentSidebarP
               ))}
             </div>
           </CardContent>
-        </Card>
+          </Card>
+        </section>
       )}
 
       {/* Table of Contents */}
-      <TableOfContents items={obligation.tableOfContents || []} compact={true} />
+      <section aria-label="Πίνακας περιεχομένων">
+        <TableOfContents items={obligation.tableOfContents || []} compact={true} />
+      </section>
 
       {/* Export Options */}
-      <Card>
+      <section aria-label="Εξαγωγή">
+        <Card>
         <CardHeader className="pb-4">
           <CardTitle className="text-lg flex items-center gap-2"><Download className="h-4 w-4" />Εξαγωγή</CardTitle>
         </CardHeader>
@@ -120,7 +127,8 @@ export function DocumentSidebar({ obligation, contentSummary }: DocumentSidebarP
           <PrintButton document={obligation} className="w-full justify-start" />
           <Button variant="outline" size="sm" className="w-full justify-start"><FileText className="h-4 w-4 mr-2" />Εξαγωγή Word</Button>
         </CardContent>
-      </Card>
-    </div>
+        </Card>
+      </section>
+    </aside>
   );
 }
