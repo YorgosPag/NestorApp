@@ -10,6 +10,9 @@ interface PreviewProps {
 }
 
 export function Preview({ html, placeholder, minHeight, maxHeight }: PreviewProps) {
+  // DEBUG: Log what HTML we receive
+  console.log('Preview component received HTML:', html);
+
   // SSR Guard
   if (typeof window === 'undefined') {
     return (

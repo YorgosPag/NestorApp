@@ -18,7 +18,7 @@ export function StatsFooter({ words, chars }: StatsFooterProps) {
           <strong>Συντομεύσεις:</strong> Ctrl+B (έντονα), Ctrl+I (πλάγια), Ctrl+U (υπογράμμιση)
         </div>
         <div>
-          <strong>Μορφοποίηση:</strong> **έντονα**, *πλάγια*, - λίστες, 1. αριθμημένες
+          <strong>Μορφοποίηση:</strong> **έντονα**, *πλάγια*, <u>υπογράμμιση</u>, - λίστες
         </div>
       </div>
     </div>

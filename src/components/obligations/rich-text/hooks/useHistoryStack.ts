@@ -34,16 +34,22 @@ export function useHistoryStack(
     });
   }, [index, max]);
 
-  const setValue = useCallback((newValue: string) => {
+  const setValue = useCallback((newValue: string, immediate = false) => {
     onValueChange(newValue);
 
-    if (debounceTimeoutRef.current) {
-      clearTimeout(debounceTimeoutRef.current);
-    }
-
-    debounceTimeoutRef.current = setTimeout(() => {
+    if (immediate) {
+      // For immediate updates (like undo/redo), push immediately
       push(newValue);
-    }, debounceMs);
+    } else {
+      // For user typing, debounce the history push
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+
+      debounceTimeoutRef.current = setTimeout(() => {
+        push(newValue);
+      }, debounceMs);
+    }
   }, [onValueChange, push, debounceMs]);
 
   const undo = useCallback(() => {

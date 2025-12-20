@@ -20,6 +20,10 @@ interface ToolbarProps {
   onRedo: () => void;
   canUndo: boolean;
   canRedo: boolean;
+  // Visual state for active formatting
+  activeBold?: boolean;
+  activeItalic?: boolean;
+  activeUnderline?: boolean;
 }
 
 export function Toolbar({
@@ -35,7 +39,10 @@ export function Toolbar({
   onUndo,
   onRedo,
   canUndo,
-  canRedo
+  canRedo,
+  activeBold = false,
+  activeItalic = false,
+  activeUnderline = false
 }: ToolbarProps) {
   const ariaLabels = getAriaLabels();
 
@@ -43,13 +50,43 @@ export function Toolbar({
     <div className="flex items-center gap-1 p-2 border rounded-md bg-muted/30 flex-wrap">
       {/* Text formatting */}
       <div className="flex items-center gap-1">
-        <Button type="button" variant="ghost" size="sm" onClick={onBold} className="h-8 w-8 p-0" title={ariaLabels.bold} aria-label={ariaLabels.bold} disabled={isPreview || disabled}>
+        <Button
+          type="button"
+          variant={activeBold ? "default" : "ghost"}
+          size="sm"
+          onClick={onBold}
+          className="h-8 w-8 p-0"
+          title="Έντονα (Ctrl+B)"
+          aria-label="Έντονα (Ctrl+B)"
+          aria-pressed={activeBold}
+          disabled={isPreview || disabled}
+        >
           <Bold className="h-4 w-4" />
         </Button>
-        <Button type="button" variant="ghost" size="sm" onClick={onItalic} className="h-8 w-8 p-0" title={ariaLabels.italic} aria-label={ariaLabels.italic} disabled={isPreview || disabled}>
+        <Button
+          type="button"
+          variant={activeItalic ? "default" : "ghost"}
+          size="sm"
+          onClick={onItalic}
+          className="h-8 w-8 p-0"
+          title="Πλάγια (Ctrl+I)"
+          aria-label="Πλάγια (Ctrl+I)"
+          aria-pressed={activeItalic}
+          disabled={isPreview || disabled}
+        >
           <Italic className="h-4 w-4" />
         </Button>
-        <Button type="button" variant="ghost" size="sm" onClick={onUnderline} className="h-8 w-8 p-0" title={ariaLabels.underline} aria-label={ariaLabels.underline} disabled={isPreview || disabled}>
+        <Button
+          type="button"
+          variant={activeUnderline ? "default" : "ghost"}
+          size="sm"
+          onClick={onUnderline}
+          className="h-8 w-8 p-0"
+          title="Υπογράμμιση (Ctrl+U)"
+          aria-label="Υπογράμμιση (Ctrl+U)"
+          aria-pressed={activeUnderline}
+          disabled={isPreview || disabled}
+        >
           <Underline className="h-4 w-4" />
         </Button>
       </div>

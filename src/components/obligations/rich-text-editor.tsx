@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { useHistoryStack } from './rich-text/hooks/useHistoryStack';
 import { useFormatter } from './rich-text/hooks/useFormatter';
 import { useShortcuts } from './rich-text/hooks/useShortcuts';
+import { useFormattingState } from './rich-text/hooks/useFormattingState';
 import { convertMarkdownToHtml, getWordCount, getCharacterCount } from '@/lib/obligations-utils';
 
 import { Toolbar } from './rich-text/parts/Toolbar';
@@ -72,6 +73,9 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     onRedo: redo
   });
 
+  // Smart formatting state detection
+  const formattingState = useFormattingState(textareaRef, currentValue);
+
   const htmlPreview = useMemo(() => convertMarkdownToHtml(currentValue), [currentValue]);
   const wordCount = useMemo(() => getWordCount(currentValue), [currentValue]);
   const charCount = useMemo(() => getCharacterCount(currentValue), [currentValue]);
@@ -92,6 +96,9 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         onRedo={redo}
         canUndo={canUndo}
         canRedo={canRedo}
+        activeBold={formattingState.bold}
+        activeItalic={formattingState.italic}
+        activeUnderline={formattingState.underline}
       />
       
       {isPreviewMode ? (

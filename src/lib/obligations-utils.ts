@@ -577,18 +577,27 @@ export const stripHtmlTags = (html: string): string =>
   html.replace(/<[^>]*>/g, "");
 
 export const convertMarkdownToHtml = (markdown: string): string => {
+  console.log('convertMarkdownToHtml input:', markdown); // DEBUG
+
   if (!markdown) return "";
 
   let html = markdown;
 
-  // 1. Handle bold text
+  // STEP 1: Handle bold text first (double asterisks)
   html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+  console.log('After bold processing:', html); // DEBUG
 
-  // 2. Handle italic text
-  html = html.replace(/\*(.*?)\*/g, "<em>$1</em>");
+  // STEP 2: Handle italic text (single asterisks) - simple approach
+  html = html.replace(/\*([^*\n]+?)\*/g, "<em>$1</em>");
+  console.log('After italic processing:', html); // DEBUG
 
-  // 3. Handle underline text
+  // STEP 3: Handle underline text
   html = html.replace(/<u>(.*?)<\/u>/g, "<u>$1</u>");
+  console.log('After underline processing:', html); // DEBUG
+
+  // SIMPLIFIED RETURN FOR TESTING
+  console.log('Final HTML output:', html); // DEBUG
+  return html;
 
   // 4. Handle blockquotes
   html = html.replace(/^> (.*$)/gm, "<blockquote>$1</blockquote>");
@@ -599,16 +608,16 @@ export const convertMarkdownToHtml = (markdown: string): string => {
   const processedLines: string[] = [];
 
   bulletLines.forEach((line) => {
-    const isBulletLine = /^\* (.*)$/.test(line);
+    const isBulletLine = /^- (.*)$/.test(line);
 
     if (isBulletLine && !inBulletList) {
       // Start new bullet list
       processedLines.push('<ul>');
-      processedLines.push(`<li>${line.replace(/^\* /, '')}</li>`);
+      processedLines.push(`<li>${line.replace(/^- /, '')}</li>`);
       inBulletList = true;
     } else if (isBulletLine && inBulletList) {
       // Continue bullet list
-      processedLines.push(`<li>${line.replace(/^\* /, '')}</li>`);
+      processedLines.push(`<li>${line.replace(/^- /, '')}</li>`);
     } else if (!isBulletLine && inBulletList) {
       // End bullet list
       processedLines.push('</ul>');
