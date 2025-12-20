@@ -3,17 +3,19 @@
 
 import { format, isToday, isTomorrow, isPast } from 'date-fns';
 import { el } from 'date-fns/locale';
+import { formatDateTime } from '@/lib/intl-utils';
 import type { FirestoreishTimestamp } from '@/types/crm';
 
+// ✅ ENTERPRISE MIGRATION COMPLETE: formatDate now uses centralized intl-utils
 export const formatDate = (timestamp?: FirestoreishTimestamp) => {
   if (!timestamp) return 'Άγνωστη ημερομηνία';
   try {
-    const date = timestamp instanceof Date 
-        ? timestamp 
+    const date = timestamp instanceof Date
+        ? timestamp
         : typeof timestamp === 'string'
         ? new Date(timestamp)
         : (timestamp as any).toDate();
-    return format(date, 'dd MMMM yyyy, HH:mm', { locale: el });
+    return formatDateTime(date);
   } catch (err) {
     return 'Άγνωστη ημερομηνία';
   }

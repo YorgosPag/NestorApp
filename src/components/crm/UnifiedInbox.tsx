@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { CommonBadge } from '@/core/badges';
+import { formatDateTime } from '@/lib/intl-utils';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { HOVER_BACKGROUND_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
@@ -121,9 +122,10 @@ const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) =
     setFilters(prev => ({ ...prev, [key]: value }));
   };
 
+  // ✅ ENTERPRISE MIGRATION: Using centralized formatDateTime for consistent formatting
   const formatDate = (timestamp) => {
     if (!timestamp) return { relative: '', full: '' };
-    
+
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
     const now = new Date();
     const diffHours = (now - date) / (1000 * 60 * 60);
@@ -133,9 +135,9 @@ const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) =
     else if (diffHours < 24) relative = `${Math.floor(diffHours)}ω`;
     else if (diffHours < 48) relative = 'Χθες';
 
-    return { 
-      relative, 
-      full: date.toLocaleString('el-GR') 
+    return {
+      relative,
+      full: formatDateTime(date) // ✅ Using centralized function
     };
   };
 
