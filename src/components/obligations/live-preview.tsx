@@ -25,7 +25,7 @@ interface LivePreviewProps {
   className?: string;
 }
 
-export default function LivePreview({
+export function LivePreview({
   document: doc,
   activeItemId,
   onItemClick,
@@ -111,3 +111,6 @@ export function CompactPreview(props: LivePreviewProps) {
     </div>
   );
 }
+
+// Default export for backward compatibility
+export default LivePreview;

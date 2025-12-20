@@ -207,7 +207,8 @@
       "Read(//f//**)",
       "Read(//f/Pagonis_Nestor. 08-09-2025/**)",
       "Bash(cp:*)",
-      "Bash(PORT=3005 SKIP_ENV_VALIDATION=true TYPESCRIPT_CHECK=false npm run dev)"
+      "Bash(PORT=3005 SKIP_ENV_VALIDATION=true TYPESCRIPT_CHECK=false npm run dev)",
+      "Bash(ren:*)"
     ],
     "deny": [],
     "ask": []

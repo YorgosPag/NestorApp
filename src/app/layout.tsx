@@ -18,8 +18,13 @@ import { cn } from "@/lib/utils";
 import { I18nProvider } from '@/components/providers/I18nProvider';
 import { NavigationProvider } from '@/components/navigation';
 import { PhotoPreviewProvider } from '@/providers/PhotoPreviewProvider';
-import { ClientOnlyPerformanceDashboard } from '@/core/performance/components/ClientOnlyPerformanceDashboard';
+import dynamic from 'next/dynamic';
 import { PerformanceCategory } from '@/core/performance/types/performance.types';
+
+const ClientOnlyPerformanceDashboard = dynamic(
+  () => import('@/core/performance/components/ClientOnlyPerformanceDashboard').then(mod => ({ default: mod.ClientOnlyPerformanceDashboard })),
+  { ssr: false }
+);
 import { GlobalErrorSetup } from '@/components/GlobalErrorSetup';
 
 const roboto = Roboto({
@@ -103,24 +108,22 @@ export default function RootLayout({
                 <GlobalErrorSetup />
 
                 {/* 🚀 ENTERPRISE PERFORMANCE SYSTEM - GLOBAL MONITORING */}
-                {typeof window !== 'undefined' && (
-                  <ClientOnlyPerformanceDashboard
-                    position="top-right"
-                    minimizable={true}
-                    defaultMinimized={false}
-                    showDetails={true}
-                    updateInterval={2000}
-                    categories={[
-                      PerformanceCategory.RENDERING,
-                      PerformanceCategory.API_RESPONSE,
-                      PerformanceCategory.CACHE_HIT,
-                      PerformanceCategory.CACHE_MISS,
-                      PerformanceCategory.MEMORY,
-                      PerformanceCategory.NETWORK
-                    ]}
-                    theme="auto"
-                  />
-                )}
+                <ClientOnlyPerformanceDashboard
+                  position="top-right"
+                  minimizable={true}
+                  defaultMinimized={false}
+                  showDetails={true}
+                  updateInterval={2000}
+                  categories={[
+                    PerformanceCategory.RENDERING,
+                    PerformanceCategory.API_RESPONSE,
+                    PerformanceCategory.CACHE_HIT,
+                    PerformanceCategory.CACHE_MISS,
+                    PerformanceCategory.MEMORY,
+                    PerformanceCategory.NETWORK
+                  ]}
+                  theme="auto"
+                />
 
                 {/* ✅ το κεντρικοποιημένο NotificationProvider (sonner-based) */}
                 </NotificationProvider>
