@@ -276,7 +276,7 @@ export const notificationConfig = {
     email: process.env.NEXT_PUBLIC_ALERT_EMAIL,
     webhook: process.env.NEXT_PUBLIC_ALERT_WEBHOOK,
     slack: process.env.NEXT_PUBLIC_SLACK_WEBHOOK,
-    adminEmail: process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'admin@nestor-pagonis.gr'
+    adminEmail: process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'georgios.pagonis@gmail.com'
   },
 
   // **⏰ Rate Limiting**
