@@ -39,13 +39,24 @@ import StructureEditor from "@/components/obligations/structure-editor";
 import LivePreview from "@/components/obligations/live-preview";
 import Link from "next/link";
 
+// 🏢 ENTERPRISE: Import existing κεντρικοποιημένων components & services
+import { CompaniesService } from "@/services/companies.service";
+import { getProjectsByCompanyId } from "@/services/projects.service";
+import type { Contact } from "@/types/contacts";
+import type { ProjectStructure } from "@/services/projects/contracts";
+
 interface FormData {
   title: string;
   projectName: string;
-  contractorCompany: string;
+  contractorCompany: string; // 🔄 BACKWARD COMPATIBILITY: Κρατάμε για legacy data
   owners: Owner[];
   projectDetails: ProjectDetails;
   sections: ObligationSection[];
+
+  // 🏢 ENTERPRISE: Νέα πεδία για database integration
+  companyId?: string;        // Σύνδεση με companies collection
+  projectId?: string | number; // Σύνδεση με projects collection
+  buildingId?: string;       // Σύνδεση με buildings collection (optional)
 }
 
 
@@ -70,7 +81,7 @@ export default function NewObligationPage() {
   const [formData, setFormData] = useState<FormData>({
     title: "",
     projectName: "",
-    contractorCompany: "Χ.Γ.Γ. ΠΑΓΩΝΗΣ Ο.Ε.",
+    contractorCompany: "Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.", // 🔧 ΔΙΟΡΘΩΣΗ: Σωστή εταιρική ονομασία
     owners: [{ id: "1", name: "", share: 100 }],
     projectDetails: {
       location: "",
@@ -81,7 +92,12 @@ export default function NewObligationPage() {
       deliveryDate: undefined,
       notaryName: ""
     },
-    sections: DEFAULT_TEMPLATE_SECTIONS
+    sections: DEFAULT_TEMPLATE_SECTIONS,
+
+    // 🏢 ENTERPRISE: Initialize νέων πεδίων
+    companyId: undefined,      // Θα συμπληρωθεί από company selection
+    projectId: undefined,      // Θα συμπληρωθεί από project selection
+    buildingId: undefined      // Optional - για specific building obligations
   });
 
   const [useTemplate, setUseTemplate] = useState(true);
@@ -143,6 +159,53 @@ export default function NewObligationPage() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // 🏢 ENTERPRISE: State για companies & projects
+  const [companies, setCompanies] = useState<Contact[]>([]);
+  const [projects, setProjects] = useState<ProjectStructure[]>([]);
+  const [loadingCompanies, setLoadingCompanies] = useState(false);
+  const [loadingProjects, setLoadingProjects] = useState(false);
+
+  // 🏢 ENTERPRISE: Load companies on component mount
+  useEffect(() => {
+    const loadCompanies = async () => {
+      setLoadingCompanies(true);
+      try {
+        const companiesService = new CompaniesService();
+        const companyContacts = await companiesService.getAllActiveCompanies();
+        setCompanies(companyContacts);
+      } catch (error) {
+        console.error("Error loading companies:", error);
+      } finally {
+        setLoadingCompanies(false);
+      }
+    };
+
+    loadCompanies();
+  }, []);
+
+  // 🏢 ENTERPRISE: Load projects when company changes
+  useEffect(() => {
+    const loadProjectsForCompany = async () => {
+      if (!formData.companyId) {
+        setProjects([]);
+        return;
+      }
+
+      setLoadingProjects(true);
+      try {
+        const projectsData = await getProjectsByCompanyId(formData.companyId);
+        setProjects(projectsData);
+      } catch (error) {
+        console.error("Error loading projects for company:", error);
+        setProjects([]);
+      } finally {
+        setLoadingProjects(false);
+      }
+    };
+
+    loadProjectsForCompany();
+  }, [formData.companyId]);
 
   // Auto-resize all textareas when content changes
   useEffect(() => {
@@ -220,12 +283,63 @@ export default function NewObligationPage() {
     return generateTableOfContents(mockDocument);
   }, [formData]);
 
+  // 🏢 ENTERPRISE: Transform companies for centralized Select
+  const companyOptions = useMemo(() =>
+    companies.map(company => ({
+      id: company.id,
+      name: company.companyName || 'Άγνωστη εταιρεία'
+    })),
+    [companies]
+  );
+
+  // 🏢 ENTERPRISE: Transform projects for centralized Select
+  const projectOptions = useMemo(() =>
+    projects.map(project => ({
+      id: String(project.id),
+      name: project.name || 'Άγνωστο έργο'
+    })),
+    [projects]
+  );
+
   const handleInputChange = useCallback((field: keyof FormData, value: any) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
   }, []);
+
+  // 🏢 ENTERPRISE: Company selection handler
+  const handleCompanySelection = useCallback((companyId: string) => {
+    const selectedCompany = companies.find(c => c.id === companyId);
+
+    setFormData(prev => ({
+      ...prev,
+      companyId,
+      // 🔄 BACKWARD COMPATIBILITY: Update legacy field too
+      contractorCompany: selectedCompany?.companyName || prev.contractorCompany,
+      // Reset project when company changes
+      projectId: undefined,
+      projectName: ""
+    }));
+  }, [companies]);
+
+  // 🏢 ENTERPRISE: Project selection handler
+  const handleProjectSelection = useCallback((projectId: string | number) => {
+    const selectedProject = projects.find(p => p.id === projectId);
+
+    setFormData(prev => ({
+      ...prev,
+      projectId,
+      // 🔄 BACKWARD COMPATIBILITY: Update legacy field too
+      projectName: selectedProject?.name || prev.projectName,
+      // 🔗 AUTO-FILL: Update project details if available
+      projectDetails: {
+        ...prev.projectDetails,
+        location: selectedProject?.location || prev.projectDetails.location,
+        address: selectedProject?.address || prev.projectDetails.address
+      }
+    }));
+  }, [projects]);
 
   const handleProjectDetailsChange = useCallback((field: keyof ProjectDetails, value: string) => {
     setFormData(prev => ({
@@ -358,8 +472,8 @@ export default function NewObligationPage() {
 
   const handleSubmit = async () => {
     setIsLoading(true);
-    
-    // Validation
+
+    // 🏢 ENTERPRISE VALIDATION
     if (!formData.title.trim()) {
       alert("Παρακαλώ εισάγετε τίτλο");
       setIsLoading(false);
@@ -372,11 +486,53 @@ export default function NewObligationPage() {
       return;
     }
 
+    // 🔗 ENTERPRISE: Validate company selection (optional but recommended)
+    if (!formData.companyId) {
+      console.warn("⚠️ No company selected - obligation will use legacy contractorCompany field");
+    }
+
     try {
-      const newObligation = await obligationsService.create({
+      // 🏢 ENTERPRISE: Build rich obligation data
+      const selectedCompany = formData.companyId ? companies.find(c => c.id === formData.companyId) : null;
+      const selectedProject = formData.projectId ? projects.find(p => p.id === formData.projectId) : null;
+
+      // 🔗 ENTERPRISE: Create obligation με full integration
+      const obligationData = {
         ...formData,
-        status: "draft"
+        status: "draft" as const,
+
+        // 🏢 ENTERPRISE: Rich company details (if company selected)
+        ...(selectedCompany && {
+          companyDetails: {
+            name: selectedCompany.companyName || formData.contractorCompany,
+            email: selectedCompany.email,
+            phone: selectedCompany.phone,
+            address: selectedCompany.address,
+            registrationNumber: selectedCompany.taxNumber
+          }
+        }),
+
+        // 🔗 ENTERPRISE: Rich project details (if project selected)
+        ...(selectedProject && {
+          projectInfo: {
+            description: selectedProject.description,
+            location: selectedProject.location,
+            startDate: selectedProject.startDate,
+            endDate: selectedProject.endDate,
+            projectType: selectedProject.type,
+            budget: selectedProject.budget
+          }
+        })
+      };
+
+      console.log("🏢 Creating obligation with enterprise data:", {
+        hasCompany: !!formData.companyId,
+        hasProject: !!formData.projectId,
+        companyName: selectedCompany?.companyName,
+        projectName: selectedProject?.name
       });
+
+      const newObligation = await obligationsService.create(obligationData);
 
       router.push(`/obligations/${newObligation.id}/edit`);
     } catch (error) {
@@ -441,6 +597,60 @@ export default function NewObligationPage() {
                 <CardTitle className="text-base">Βασικές Πληροφορίες</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* 🏢 ENTERPRISE: Company & Project Selection ΠΡΩΤΑ */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <fieldset className="space-y-2">
+                    <Label className="text-sm">Εταιρεία Κατασκευαστή *</Label>
+                    <Select
+                      value={formData.companyId || ""}
+                      onValueChange={handleCompanySelection}
+                      disabled={loadingCompanies}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue
+                          placeholder={loadingCompanies ? "Φόρτωση εταιρειών..." : "Επιλέξτε εταιρεία"}
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {companyOptions.map((company) => (
+                          <SelectItem key={company.id} value={company.id}>
+                            {company.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </fieldset>
+
+                  <fieldset className="space-y-2">
+                    <Label className="text-sm">Έργο (Προαιρετικό)</Label>
+                    <Select
+                      value={formData.projectId ? String(formData.projectId) : ""}
+                      onValueChange={(value) => handleProjectSelection(value)}
+                      disabled={!formData.companyId || loadingProjects}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue
+                          placeholder={
+                            !formData.companyId
+                              ? "Πρώτα επιλέξτε εταιρεία"
+                              : loadingProjects
+                              ? "Φόρτωση έργων..."
+                              : "Επιλέξτε έργο"
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {projectOptions.map((project) => (
+                          <SelectItem key={project.id} value={project.id}>
+                            {project.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </fieldset>
+                </div>
+
+                {/* Τίτλος και Όνομα Έργου ΚΑΤΩ από τα dropdowns */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <fieldset>
                     <Label htmlFor="title" className="text-sm">Τίτλος *</Label>
@@ -464,16 +674,6 @@ export default function NewObligationPage() {
                     />
                   </fieldset>
                 </div>
-
-                <fieldset>
-                  <Label htmlFor="contractorCompany" className="text-sm">Εργολάβος</Label>
-                  <Input
-                    id="contractorCompany"
-                    value={formData.contractorCompany}
-                    onChange={(e) => handleInputChange("contractorCompany", e.target.value)}
-                    className="mt-1"
-                  />
-                </fieldset>
               </CardContent>
             </Card>
 

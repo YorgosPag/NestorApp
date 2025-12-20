@@ -82,7 +82,7 @@ export const MOCK_OBLIGATIONS: ObligationDocument[] = [
     id: "1",
     title: "Συγγραφή Υποχρεώσεων - Οικόπεδο Αθανασιάδη",
     projectName: "Επέκταση Θέρμης",
-    contractorCompany: "Χ.Γ.Γ. ΠΑΓΩΝΗΣ Ο.Ε.",
+    contractorCompany: "Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.",
     owners: [
       { id: "1", name: "Αθανασιάδης Απόστολος", share: 33.33 },
       { id: "2", name: "Αθανασιάδης Αντώνης", share: 33.33 },
@@ -106,7 +106,7 @@ export const MOCK_OBLIGATIONS: ObligationDocument[] = [
     id: "2",
     title: "Συγγραφή Υποχρεώσεων - Πολυκατοικία Κεντρικής",
     projectName: "Νέα Πολυκατοικία",
-    contractorCompany: "Χ.Γ.Γ. ΠΑΓΩΝΗΣ Ο.Ε.",
+    contractorCompany: "Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.",
     owners: [
       { id: "4", name: "Παπαδόπουλος Γιάννης", share: 100 }
     ],

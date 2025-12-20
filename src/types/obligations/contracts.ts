@@ -4,7 +4,7 @@ export interface ObligationDocument {
   id: string;
   title: string;
   projectName: string;
-  contractorCompany: string;
+  contractorCompany: string; // 🔄 BACKWARD COMPATIBILITY: Κρατάμε για legacy data
   owners: Owner[];
   createdAt: Date;
   updatedAt: Date;
@@ -12,6 +12,31 @@ export interface ObligationDocument {
   sections: ObligationSection[];
   projectDetails: ProjectDetails;
   tableOfContents?: TableOfContentsItem[];
+
+  // 🏢 ENTERPRISE: Νέα πεδία για database integration
+  // ✅ Optional για πλήρη backward compatibility
+  companyId?: string;        // Σύνδεση με companies collection (Firebase ID)
+  projectId?: string | number; // Σύνδεση με projects collection (supports both string & number IDs)
+  buildingId?: string;       // Σύνδεση με buildings collection (optional για specific building obligations)
+
+  // 🔗 ENTERPRISE: Rich company information (auto-populated από companyId)
+  companyDetails?: {
+    name: string;           // Αυτόματα από companies.service
+    email?: string;
+    phone?: string;
+    address?: string;
+    registrationNumber?: string;
+  };
+
+  // 🔗 ENTERPRISE: Rich project information (auto-populated από projectId)
+  projectInfo?: {
+    description?: string;   // Αυτόματα από projects.service
+    location?: string;
+    startDate?: Date;
+    endDate?: Date;
+    projectType?: string;
+    budget?: number;
+  };
 }
 
 export interface Owner {
