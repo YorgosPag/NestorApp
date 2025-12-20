@@ -89,6 +89,60 @@ export default function NewObligationPage() {
   const [viewMode, setViewMode] = useState<'split' | 'edit-only'>('split');
   const [activeItem, setActiveItem] = useState<{type: 'section' | 'article' | 'paragraph', id: string} | null>(null);
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
+  const [dynamicHeight, setDynamicHeight] = useState('calc(100vh-120px)');
+  const previewContentRef = useRef<HTMLDivElement>(null);
+  const calculateHeightRef = useRef<() => void>();
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const textareaTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const expandedTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Height calculation function
+  const calculateHeight = useCallback(() => {
+    if (previewContentRef.current) {
+      const scrollHeight = previewContentRef.current.scrollHeight;
+      const viewportHeight = window.innerHeight;
+      const headerHeight = 120;
+      const minHeight = 400;
+
+      // ΓΙΩΡΓΟΣ: Κόκκινο container να είναι 2300px
+      const neededHeight = 2300;
+
+      // Debug logging για το ύψος του κίτρινου container
+      console.log('🟨 ΚΙΤΡΙΝΟ CONTAINER HEIGHT:', {
+        scrollHeight: `${scrollHeight}px`,
+        viewportHeight: `${viewportHeight}px`,
+        headerHeight: `${headerHeight}px`,
+        calculatedNeededHeight: `${neededHeight}px`,
+        finalDynamicHeight: `${neededHeight}px`
+      });
+
+      setDynamicHeight(`${neededHeight}px`);
+    }
+  }, []);
+
+  // Store current function in ref
+  calculateHeightRef.current = calculateHeight;
+
+  // Setup effects
+  useEffect(() => {
+    // Initial calculation with delay - Strict Mode safe
+    timerRef.current = setTimeout(() => {
+      calculateHeightRef.current?.();
+    }, 100);
+
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    // Window resize handler using ref to avoid dependency issues
+    const handleResize = () => calculateHeightRef.current?.();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Auto-resize all textareas when content changes
   useEffect(() => {
@@ -102,10 +156,14 @@ export default function NewObligationPage() {
       });
     };
 
-    // Run after a small delay to ensure DOM is updated
-    const timeoutId = setTimeout(autoResizeAllTextareas, 100);
+    // Run after a small delay to ensure DOM is updated - Strict Mode safe
+    textareaTimerRef.current = setTimeout(autoResizeAllTextareas, 100);
 
-    return () => clearTimeout(timeoutId);
+    return () => {
+      if (textareaTimerRef.current) {
+        clearTimeout(textareaTimerRef.current);
+      }
+    };
   }, [formData.sections]); // Re-run when sections change
 
   // Auto-resize textareas when accordion items are expanded
@@ -119,11 +177,17 @@ export default function NewObligationPage() {
       });
     };
 
-    // Run after a small delay to ensure DOM is updated after expansion
-    const timeoutId = setTimeout(autoResizeAllTextareas, 150);
+    // Run after a small delay to ensure DOM is updated after expansion - Strict Mode safe
+    expandedTimerRef.current = setTimeout(autoResizeAllTextareas, 150);
 
-    return () => clearTimeout(timeoutId);
+    return () => {
+      if (expandedTimerRef.current) {
+        clearTimeout(expandedTimerRef.current);
+      }
+    };
   }, [expandedItems]); // Re-run when accordion items expand/collapse
+
+  // CSS overscroll-behavior χειρίζεται το synchronized scrolling φυσικά
 
   // Initialize with template if selected
   useEffect(() => {
@@ -328,7 +392,7 @@ export default function NewObligationPage() {
 
   return (
     <PageLayout>
-      <main className="max-w-full mx-auto p-4 md:p-6 lg:p-8">
+      <div className="max-w-full mx-auto p-4 md:p-6 lg:p-8">
         {/* Header */}
         <header className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
@@ -364,7 +428,11 @@ export default function NewObligationPage() {
         </header>
 
         {/* Main Content */}
-        <section className={`grid gap-6 ${viewMode === 'split' ? 'lg:grid-cols-[1fr_1fr]' : 'lg:grid-cols-1'} w-full`} aria-label="Επεξεργασία υποχρέωσης">
+        <section
+          className={`flex-1 grid gap-6 ${viewMode === 'split' ? 'lg:grid-cols-[1fr_1fr] lg:items-start' : 'lg:grid-cols-1'} w-full min-h-0 overflow-y-auto overscroll-contain`}
+          aria-label="Επεξεργασία υποχρέωσης"
+          style={{ maxHeight: 'calc(100vh - 120px)' }}
+        >
           {/* Left Panel - Editor */}
           <section className="space-y-6" aria-label="Φόρμα επεξεργασίας">
             {/* Basic Information */}
@@ -449,16 +517,23 @@ export default function NewObligationPage() {
 
           {/* Right Panel - Live Preview */}
           {viewMode === 'split' && (
-            <aside className="space-y-6" aria-label="Προεπισκόπηση">
-              <Card>
-                <CardHeader>
+            <aside className="space-y-6 relative" aria-label="Προεπισκόπηση">
+              <Card
+                className="flex flex-col relative"
+                style={{ height: dynamicHeight }}
+              >
+                <CardHeader className="relative z-10 bg-card">
                   <CardTitle className="text-base flex items-center gap-2">
                     <Eye className="h-4 w-4" />
                     Live Preview
                   </CardTitle>
                   <CardDescription>Δείτε πως θα φαίνεται το τελικό έγγραφο</CardDescription>
                 </CardHeader>
-                <CardContent className="p-0 max-h-[800px] overflow-hidden">
+                <CardContent
+                  ref={previewContentRef}
+                  className="p-0 absolute inset-x-0 top-[100px] bottom-0 overflow-y-auto overscroll-auto"
+                  data-testid="preview-card-content"
+                >
                   <LivePreview
                     className="border-0"
                     document={{
@@ -469,18 +544,7 @@ export default function NewObligationPage() {
                       status: "draft",
                       createdAt: new Date(),
                       updatedAt: new Date(),
-                      tableOfContents: generateTableOfContents({
-                        id: '',
-                        title: formData.title,
-                        projectName: formData.projectName,
-                        contractorCompany: formData.contractorCompany,
-                        owners: formData.owners,
-                        createdAt: new Date(),
-                        updatedAt: new Date(),
-                        status: 'draft' as const,
-                        sections: formData.sections,
-                        projectDetails: formData.projectDetails
-                      }),
+                      tableOfContents: tableOfContents,
                       sections: formData.sections,
                       projectDetails: formData.projectDetails,
                       owners: formData.owners
@@ -494,7 +558,7 @@ export default function NewObligationPage() {
             </aside>
           )}
         </section>
-      </main>
+      </div>
     </PageLayout>
   );
 }
