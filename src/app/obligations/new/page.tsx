@@ -13,15 +13,9 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   ArrowLeft,
-  Plus,
-  Trash2,
   Save,
-  FileText,
   Eye,
-  ChevronRight,
-  ChevronDown,
-  Layout,
-  BookOpen
+  Layout
 } from "lucide-react";
 import { PageLayout } from "@/components/app/page-layout";
 import { 
@@ -40,6 +34,9 @@ import {
 } from "@/types/obligations";
 import { DEFAULT_TEMPLATE_SECTIONS } from '@/types/mock-obligations';
 import { obligationsService } from "@/services/obligations.service";
+// import { TableOfContents } from "@/components/obligations/table-of-contents";
+// import StructureEditor from "@/components/obligations/structure-editor";
+// import LivePreview from "@/components/obligations/live-preview";
 import Link from "next/link";
 
 interface FormData {
@@ -326,301 +323,8 @@ export default function NewObligationPage() {
     }
   };
 
-  const renderTableOfContents = useCallback(() => {
-    const renderTocItem = (item: TableOfContentsItem) => (
-      <div key={item.id} className="ml-4">
-        <div 
-          className={`flex items-center gap-2 py-1 text-sm cursor-pointer hover:bg-gray-100 rounded px-2 ${
-            activeItem?.id === item.id ? 'bg-blue-50 text-blue-700' : 'text-gray-600'
-          }`}
-          onClick={() => setActiveItem({ type: item.type, id: item.id })}
-        >
-          <span className="font-mono text-xs min-w-8">{item.number}</span>
-          <span className="truncate">{item.title}</span>
-        </div>
-        {item.children?.map(renderTocItem)}
-      </div>
-    );
 
-    return (
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <BookOpen className="h-4 w-4" />
-            Πίνακας Περιεχομένων
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ScrollArea className="h-48">
-            {tableOfContents.length > 0 ? (
-              <div className="space-y-1">
-                {tableOfContents.map(renderTocItem)}
-              </div>
-            ) : (
-              <p className="text-sm text-gray-500 italic">
-                Προσθέστε ενότητες για να δημιουργηθεί ο πίνακας περιεχομένων
-              </p>
-            )}
-          </ScrollArea>
-        </CardContent>
-      </Card>
-    );
-  }, [tableOfContents, activeItem]);
 
-  const renderPreview = useCallback(() => {
-    return (
-      <div className="space-y-4">
-        {/* Document Header */}
-        <Card>
-          <CardHeader className="text-center">
-            <CardTitle className="text-xl">{formData.title || "Νέα Συγγραφή Υποχρεώσεων"}</CardTitle>
-            <CardDescription className="text-base">{formData.projectName || "Όνομα Έργου"}</CardDescription>
-          </CardHeader>
-        </Card>
-
-        {/* Table of Contents */}
-        {renderTableOfContents()}
-
-        {/* Sections Preview */}
-        <ScrollArea className="h-96">
-          <div className="space-y-4">
-            {formData.sections.map((section) => (
-              <Card 
-                key={section.id} 
-                className={`${activeItem?.id === section.id ? 'ring-2 ring-blue-500' : ''}`}
-              >
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Badge variant="outline">{section.number}</Badge>
-                    {section.title}
-                  </CardTitle>
-                </CardHeader>
-                {section.content && (
-                  <CardContent className="pt-0">
-                    <div className="prose prose-sm max-w-none text-sm text-gray-700">
-                      {section.content}
-                    </div>
-                  </CardContent>
-                )}
-
-                {/* Articles Preview */}
-                {section.articles && section.articles.length > 0 && (
-                  <CardContent className="pt-0">
-                    <div className="space-y-3 ml-4">
-                      {section.articles.map((article) => (
-                        <div 
-                          key={article.id}
-                          className={`border-l-2 border-gray-200 pl-4 ${
-                            activeItem?.id === article.id ? 'border-blue-500' : ''
-                          }`}
-                        >
-                          <h4 className="font-medium text-sm flex items-center gap-2">
-                            <Badge variant="secondary" className="text-xs">{article.number}</Badge>
-                            {article.title}
-                          </h4>
-                          {article.content && (
-                            <div className="text-xs text-gray-600 mt-1">
-                              {article.content}
-                            </div>
-                          )}
-
-                          {/* Paragraphs Preview */}
-                          {article.paragraphs && article.paragraphs.length > 0 && (
-                            <div className="space-y-2 mt-2 ml-4">
-                              {article.paragraphs.map((paragraph) => (
-                                <div 
-                                  key={paragraph.id}
-                                  className={`text-xs ${
-                                    activeItem?.id === paragraph.id ? 'bg-blue-50 p-2 rounded' : ''
-                                  }`}
-                                >
-                                  <span className="font-mono mr-2">{paragraph.number}.</span>
-                                  {paragraph.content}
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                )}
-              </Card>
-            ))}
-
-            {formData.sections.length === 0 && (
-              <Card>
-                <CardContent className="text-center py-8">
-                  <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <p className="text-gray-500">Δεν έχουν προστεθεί ενότητες ακόμα</p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </ScrollArea>
-      </div>
-    );
-  }, [formData, activeItem, renderTableOfContents]);
-
-  const renderStructureEditor = useCallback(() => {
-    return (
-      <div className="space-y-4">
-        {/* Add Section Button */}
-        <div className="flex items-center justify-between">
-          <h3 className="font-medium">Δομή Εγγράφου</h3>
-          <Button onClick={addSection} size="sm" className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            Νέα Ενότητα
-          </Button>
-        </div>
-
-        {/* Sections Editor */}
-        <ScrollArea className="h-96">
-          <div className="space-y-2">
-            {formData.sections.map((section) => (
-              <Card key={section.id} className="p-3">
-                <div className="space-y-3">
-                  {/* Section Header */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleExpanded(section.id)}
-                        className="p-0 h-6 w-6"
-                      >
-                        {expandedItems.includes(section.id) ? 
-                          <ChevronDown className="h-4 w-4" /> : 
-                          <ChevronRight className="h-4 w-4" />
-                        }
-                      </Button>
-                      <Badge variant="outline">{section.number}</Badge>
-                      <span className="text-sm font-medium">{section.title || "Χωρίς τίτλο"}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => addArticle(section.id)}
-                        className="h-7 px-2"
-                      >
-                        <Plus className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => deleteSection(section.id)}
-                        className="h-7 px-2 text-red-600"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Section Content Editor */}
-                  {expandedItems.includes(section.id) && (
-                    <div className="space-y-3 pl-6">
-                      <div className="space-y-2">
-                        <Input
-                          placeholder="Τίτλος ενότητας"
-                          value={section.title}
-                          onChange={(e) => updateSection(section.id, { title: e.target.value })}
-                          className="text-sm"
-                        />
-                        <Textarea
-                          placeholder="Περιεχόμενο ενότητας"
-                          value={section.content}
-                          onChange={(e) => {
-                            updateSection(section.id, { content: e.target.value });
-                            // Auto-resize on change
-                            autoResize(e.target as HTMLTextAreaElement);
-                          }}
-                          onInput={(e) => {
-                            // Also auto-resize on input (for copy/paste)
-                            autoResize(e.target as HTMLTextAreaElement);
-                          }}
-                          className="text-sm resize-y overflow-hidden"
-                          style={{
-                            minHeight: '60px',
-                            maxHeight: '300px'
-                          }}
-                        />
-                      </div>
-
-                      {/* Articles */}
-                      {section.articles && section.articles.map((article) => (
-                        <Card key={article.id} className="p-2 bg-gray-50">
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <Badge variant="secondary" className="text-xs">{article.number}</Badge>
-                                <span className="text-xs">{article.title || "Χωρίς τίτλο"}</span>
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => addParagraph(section.id, article.id)}
-                                className="h-6 px-2 text-xs"
-                              >
-                                + Παράγραφος
-                              </Button>
-                            </div>
-                            
-                            <Input
-                              placeholder="Τίτλος άρθρου"
-                              value={article.title}
-                              onChange={(e) => updateArticle(section.id, article.id, { title: e.target.value })}
-                              className="text-xs h-7"
-                            />
-
-                            {/* Paragraphs */}
-                            {article.paragraphs && article.paragraphs.map((paragraph) => (
-                              <div key={paragraph.id} className="flex items-center gap-2 ml-4">
-                                <span className="text-xs font-mono min-w-6">{paragraph.number}.</span>
-                                <Textarea
-                                  placeholder="Περιεχόμενο παραγράφου"
-                                  value={paragraph.content}
-                                  onChange={(e) => {
-                                    updateParagraph(section.id, article.id, paragraph.id, { content: e.target.value });
-                                    // Auto-resize on change
-                                    autoResize(e.target as HTMLTextAreaElement);
-                                  }}
-                                  onInput={(e) => {
-                                    // Also auto-resize on input (for copy/paste)
-                                    autoResize(e.target as HTMLTextAreaElement);
-                                  }}
-                                  className="text-xs resize-y overflow-hidden"
-                                  style={{
-                                    minHeight: '40px',
-                                    maxHeight: '200px'
-                                  }}
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </Card>
-            ))}
-          </div>
-        </ScrollArea>
-      </div>
-    );
-  }, [
-    formData.sections, 
-    addSection, 
-    toggleExpanded, 
-    expandedItems, 
-    addArticle, 
-    deleteSection, 
-    updateSection, 
-    addParagraph,
-    updateArticle,
-    updateParagraph
-  ]);
 
   return (
     <PageLayout>
@@ -732,7 +436,12 @@ export default function NewObligationPage() {
                 <CardTitle className="text-base">Δομή & Περιεχόμενο</CardTitle>
               </CardHeader>
               <CardContent>
-                {renderStructureEditor()}
+                <StructureEditor
+                  sections={formData.sections}
+                  onSectionsChange={(sections) => handleInputChange("sections", sections)}
+                  activeItemId={activeItem?.id}
+                  onActiveItemChange={setActiveItem}
+                />
               </CardContent>
             </Card>
           </div>
@@ -748,7 +457,22 @@ export default function NewObligationPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {renderPreview()}
+                  <LivePreview
+                    document={{
+                      id: 'new-obligation',
+                      title: formData.title || 'Νέα Συγγραφή Υποχρεώσεων',
+                      projectName: formData.projectName || 'Όνομα Έργου',
+                      sections: formData.sections,
+                      status: 'draft',
+                      createdAt: new Date(),
+                      updatedAt: new Date(),
+                      contractorCompany: formData.contractorCompany,
+                      owners: formData.owners
+                    }}
+                    activeItemId={activeItem?.id}
+                    onItemClick={setActiveItem}
+                    viewMode="preview"
+                  />
                 </CardContent>
               </Card>
             </div>
