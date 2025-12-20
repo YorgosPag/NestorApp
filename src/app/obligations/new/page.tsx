@@ -328,19 +328,19 @@ export default function NewObligationPage() {
 
   return (
     <PageLayout>
-      <div className="max-w-full mx-auto p-4 md:p-6 lg:p-8">
+      <main className="max-w-full mx-auto p-4 md:p-6 lg:p-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <header className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
             <Link href="/obligations">
               <Button variant="ghost" size="sm">
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             </Link>
-            <div>
+            <hgroup>
               <h1 className="text-2xl font-bold">Νέα Συγγραφή Υποχρεώσεων</h1>
               <p className="text-muted-foreground text-sm">Δημιουργήστε μια νέα συγγραφή υποχρεώσεων με live preview</p>
-            </div>
+            </hgroup>
           </div>
 
           <div className="flex items-center gap-3">
@@ -361,12 +361,12 @@ export default function NewObligationPage() {
               {isLoading ? "Δημιουργία..." : "Δημιουργία"}
             </Button>
           </div>
-        </div>
+        </header>
 
         {/* Main Content */}
-        <div className={`grid gap-6 ${viewMode === 'split' ? 'lg:grid-cols-[1fr_1fr]' : 'lg:grid-cols-1'} w-full`}>
+        <section className={`grid gap-6 ${viewMode === 'split' ? 'lg:grid-cols-[1fr_1fr]' : 'lg:grid-cols-1'} w-full`} aria-label="Επεξεργασία υποχρέωσης">
           {/* Left Panel - Editor */}
-          <div className="space-y-6">
+          <section className="space-y-6" aria-label="Φόρμα επεξεργασίας">
             {/* Basic Information */}
             <Card>
               <CardHeader>
@@ -374,7 +374,7 @@ export default function NewObligationPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
+                  <fieldset>
                     <Label htmlFor="title" className="text-sm">Τίτλος *</Label>
                     <Input
                       id="title"
@@ -383,9 +383,9 @@ export default function NewObligationPage() {
                       placeholder="π.χ. Συγγραφή Υποχρεώσεων - Οικόπεδο Αθανασιάδη"
                       className="mt-1"
                     />
-                  </div>
-                  
-                  <div>
+                  </fieldset>
+
+                  <fieldset>
                     <Label htmlFor="projectName" className="text-sm">Όνομα Έργου *</Label>
                     <Input
                       id="projectName"
@@ -394,10 +394,10 @@ export default function NewObligationPage() {
                       placeholder="π.χ. Επέκταση Θέρμης"
                       className="mt-1"
                     />
-                  </div>
+                  </fieldset>
                 </div>
 
-                <div>
+                <fieldset>
                   <Label htmlFor="contractorCompany" className="text-sm">Εργολάβος</Label>
                   <Input
                     id="contractorCompany"
@@ -405,7 +405,7 @@ export default function NewObligationPage() {
                     onChange={(e) => handleInputChange("contractorCompany", e.target.value)}
                     className="mt-1"
                   />
-                </div>
+                </fieldset>
               </CardContent>
             </Card>
 
@@ -444,29 +444,34 @@ export default function NewObligationPage() {
                 />
               </CardContent>
             </Card>
-          </div>
+          </section>
+
 
           {/* Right Panel - Live Preview */}
           {viewMode === 'split' && (
-            <div className="space-y-6">
+            <aside className="space-y-6" aria-label="Προεπισκόπηση">
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
                     <Eye className="h-4 w-4" />
-                    Προεπισκόπηση
+                    Live Preview
                   </CardTitle>
+                  <CardDescription>Δείτε πως θα φαίνεται το τελικό έγγραφο</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-0 max-h-[800px] overflow-hidden">
                   <LivePreview
+                    className="border-0"
                     document={{
-                      id: 'new-obligation',
-                      title: formData.title || 'Νέα Συγγραφή Υποχρεώσεων',
-                      projectName: formData.projectName || 'Όνομα Έργου',
-                      sections: formData.sections,
-                      status: 'draft',
+                      id: "preview",
+                      title: formData.title || "Νέα Συγγραφή Υποχρεώσεων",
+                      projectName: formData.projectName || "Άγνωστο έργο",
+                      contractorCompany: formData.contractorCompany || "Άγνωστος εργολάβος",
+                      status: "draft",
                       createdAt: new Date(),
                       updatedAt: new Date(),
-                      contractorCompany: formData.contractorCompany,
+                      tableOfContents: generateTableOfContents(formData.sections),
+                      sections: formData.sections,
+                      projectDetails: formData.projectDetails,
                       owners: formData.owners
                     }}
                     activeItemId={activeItem?.id}
@@ -475,10 +480,10 @@ export default function NewObligationPage() {
                   />
                 </CardContent>
               </Card>
-            </div>
+            </aside>
           )}
-        </div>
-      </div>
+        </section>
+      </main>
     </PageLayout>
   );
 }
