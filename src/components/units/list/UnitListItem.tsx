@@ -11,7 +11,8 @@ import { UnitListItemStats } from './ListItem/UnitListItemStats';
 import { UnitListItemProgress } from './ListItem/UnitListItemProgress';
 import { UnitListItemFooter } from './ListItem/UnitListItemFooter';
 import { UnitListItemActions } from './ListItem/UnitListItemActions';
-import { getStatusColor, getStatusLabel, getPropertyTypeIcon, getPropertyTypeLabel } from './ListItem/UnitListItemUtils';
+import { getPropertyTypeIcon, getPropertyTypeLabel } from './ListItem/UnitListItemUtils';
+import { getStatusColor, getStatusLabel } from '@/constants/statuses';
 
 interface UnitListItemProps {
   unit: Property;

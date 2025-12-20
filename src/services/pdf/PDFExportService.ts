@@ -2,7 +2,7 @@
 
 import type { ObligationDocument, TableOfContentsItem } from '@/types/obligations';
 import { generateTableOfContents } from '@/types/obligations';
-import { formatDate } from '@/lib/obligations-utils';
+import { formatDate } from '@/lib/intl-utils';
 import type { PDFExportOptions, IPDFDoc, Margins } from './contracts';
 import { JSPDFLoader } from './loader/JSPDFLoader';
 import { CoverRenderer } from './renderers/CoverRenderer';

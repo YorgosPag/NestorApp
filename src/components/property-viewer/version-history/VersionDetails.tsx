@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { formatDate, formatSize } from './version-utils';
+import { formatSize } from './version-utils';
+import { formatDateTime as formatDate } from '@/lib/intl-utils';
 
 export function VersionDetails({
   version,

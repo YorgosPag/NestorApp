@@ -1,23 +1,9 @@
 'use client';
 
 import { Home, Building2, Users } from 'lucide-react';
-import { formatFloorLabel as formatFloorLabelI18n, getCategoryLabel as getCategoryLabelI18n, getStatusLabel as getStatusLabelI18n, getPricePerSqmUnit, formatCurrency as formatCurrencyIntl, formatDate as formatDateIntl, formatNumber } from '@/lib/intl-utils';
+import { formatFloorLabel as formatFloorLabelI18n, getCategoryLabel as getCategoryLabelI18n, getStatusLabel as getStatusLabelI18n, getPricePerSqmUnit, formatNumber } from '@/lib/intl-utils';
 
-export const formatCurrency = (amount: number) => {
-    return formatCurrencyIntl(amount, 'EUR', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0
-    });
-};
 
-export const formatDate = (dateString?: string) => {
-    if (!dateString) return '-';
-    return formatDateIntl(new Date(dateString), {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-    });
-};
 
 export const formatFloorLabel = (floor: number): string => {
     return formatFloorLabelI18n(floor);

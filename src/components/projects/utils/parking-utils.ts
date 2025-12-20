@@ -26,17 +26,4 @@ export const getParkingTypeLabel = (type: ParkingSpotType) => PARKING_TYPE_LABEL
 export const getParkingStatusLabel = (status: ParkingSpotStatus) => PARKING_STATUS_LABELS[status] || status;
 export const getParkingStatusColor = (status: ParkingSpotStatus) => PARKING_STATUS_COLORS[status] || '';
 
-export const formatNumber = (value: any): string => {
-  const num = Number(value);
-  if (isNaN(num) || num === 0) return '';
-  return num.toLocaleString('el-GR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-};
 
-export const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('el-GR', {
-      style: 'currency',
-      currency: 'EUR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
-};

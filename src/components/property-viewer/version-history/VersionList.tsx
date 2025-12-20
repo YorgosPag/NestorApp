@@ -4,7 +4,8 @@ import React from 'react';
 import { CommonBadge } from '@/core/badges';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { cn } from '@/lib/utils';
-import { formatDate, formatSize } from './version-utils';
+import { formatSize } from './version-utils';
+import { formatDateTime as formatDate } from '@/lib/intl-utils';
 
 export function VersionList({
   versions,

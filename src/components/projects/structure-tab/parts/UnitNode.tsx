@@ -3,7 +3,8 @@
 import React from 'react';
 import { Home, Euro, User } from 'lucide-react';
 import type { UnitModel } from '../types';
-import { getStatusColor, getStatusText } from '../utils/status';
+import { getStatusColor } from '../utils/status';
+import { getStatusLabel } from '@/constants/statuses';
 import { formatCurrency } from '@/lib/intl-utils';
 import { HOVER_SHADOWS } from '@/components/ui/effects';
 
@@ -20,7 +21,7 @@ export const UnitNode = ({ unit }: { unit: UnitModel }) => {
               <div className="flex items-center gap-2 mb-1">
                 <span className="font-semibold text-gray-800 dark:text-gray-200">{unit.name}</span>
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(unit.status)}`}>
-                  {getStatusText(unit.status)}
+                  {getStatusLabel(unit.status)}
                 </span>
               </div>
               <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">

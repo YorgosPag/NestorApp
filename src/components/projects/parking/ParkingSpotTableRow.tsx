@@ -15,7 +15,8 @@ import {
 import { Eye, Pencil, Trash2, MoreVertical, Map } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ParkingSpot } from '@/types/parking';
-import { getParkingTypeLabel, getParkingStatusLabel, getParkingStatusColor, formatNumber } from '../utils/parking-utils';
+import { getParkingTypeLabel, getParkingStatusLabel, getParkingStatusColor } from '../utils/parking-utils';
+import { formatNumber } from '@/lib/intl-utils';
 import styles from '@/components/ui/table/EnterpriseTable.module.css';
 
 interface ParkingSpotTableRowProps {

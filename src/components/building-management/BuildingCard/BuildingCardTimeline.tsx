@@ -4,7 +4,8 @@ import React from 'react';
 import { Calendar } from "lucide-react";
 import { cn } from '@/lib/utils';
 import type { Building } from '../BuildingsPageContent';
-import { formatDate, getDaysUntilCompletion } from './BuildingCardUtils';
+import { formatDate } from '@/lib/intl-utils';
+import { getDaysUntilCompletion } from './BuildingCardUtils';
 
 
 interface BuildingCardTimelineProps {

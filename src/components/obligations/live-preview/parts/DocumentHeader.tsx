@@ -3,7 +3,15 @@
 import { Badge } from "@/components/ui/badge";
 import { Building, FileText, Hash, MapPin, Users } from "lucide-react";
 import type { ObligationDocument } from '@/types/obligations';
-import { formatDate, getStatusLabel } from "@/lib/obligations-utils";
+// SSR-safe date formatting to avoid hydration errors
+const formatDateSSR = (date: Date | string | number): string => {
+  return new Intl.DateTimeFormat('el-GR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(new Date(date));
+};
+import { getStatusLabel } from "@/lib/obligations-utils";
 
 interface DocumentHeaderProps {
     doc: Partial<ObligationDocument>;
@@ -92,7 +100,7 @@ export function DocumentHeader({ doc }: DocumentHeaderProps) {
             {getStatusLabel(doc.status || "draft")}
           </Badge>
         </div>
-        <div>{formatDate(doc.updatedAt || new Date())}</div>
+        <div>{formatDateSSR(doc.updatedAt || new Date())}</div>
       </div>
     </div>
   );

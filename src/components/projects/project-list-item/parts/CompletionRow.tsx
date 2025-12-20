@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { Calendar } from 'lucide-react';
-import { formatDate } from '@/lib/project-utils';
+import { formatDate } from '@/lib/intl-utils';
 
 interface CompletionRowProps {
     completionDate?: string;

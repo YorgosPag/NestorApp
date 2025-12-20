@@ -9,7 +9,7 @@ import {
   Ruler
 } from 'lucide-react';
 import type { ParkingStats } from '@/types/parking';
-import { formatCurrency } from '../utils/parking-utils';
+import { formatCurrency } from '@/lib/intl-utils';
 
 interface ParkingStatsSummaryProps {
     stats: ParkingStats;

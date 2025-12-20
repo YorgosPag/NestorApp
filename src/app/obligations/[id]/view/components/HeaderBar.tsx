@@ -20,7 +20,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { ObligationDocument } from "@/types/obligations";
-import { formatDate, getStatusLabel } from "@/lib/obligations-utils";
+import { formatDate } from "@/lib/intl-utils";
+import { getStatusLabel } from "@/lib/obligations-utils";
 import PDFExportButton, { QuickPDFExportButton, PrintButton } from "@/components/obligations/pdf-export-button";
 import Link from "next/link";
 

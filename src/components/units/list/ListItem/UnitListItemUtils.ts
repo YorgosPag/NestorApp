@@ -2,27 +2,6 @@
 
 import { Home, Building, Warehouse, Store, Car, Briefcase } from 'lucide-react';
 
-export const getStatusColor = (status: string) => {
-    switch (status) {
-        case 'for-sale': return 'bg-blue-500';
-        case 'sold': return 'bg-red-500';
-        case 'for-rent': return 'bg-yellow-500';
-        case 'rented': return 'bg-green-500';
-        case 'reserved': return 'bg-purple-500';
-        default: return 'bg-gray-400';
-    }
-};
-
-export const getStatusLabel = (status: string) => {
-    switch (status) {
-        case 'for-sale': return 'Προς Πώληση';
-        case 'sold': return 'Πουλημένο';
-        case 'for-rent': return 'Προς Ενοικίαση';
-        case 'rented': return 'Ενοικιασμένο';
-        case 'reserved': return 'Κρατημένο';
-        default: return status.charAt(0).toUpperCase() + status.slice(1);
-    }
-};
 
 export const getPropertyTypeIcon = (type: string) => {
     const typeUpper = type.toUpperCase();

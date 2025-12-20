@@ -12,14 +12,8 @@ export const formatCurrency = (amount: number) => {
     return centralizedFormatter(amount, 'EUR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 };
 
-// ⚠️ DEPRECATED: Use formatDateShort from intl-utils.ts for enterprise date formatting
-// 🔄 BACKWARD COMPATIBILITY: This function is maintained for legacy support
-// 📍 MIGRATION: import { formatDateShort } from '@/lib/intl-utils'
-export const formatDate = (dateString?: string) => {
-    // Re-export centralized function for backward compatibility
-    const { formatDateShort } = require('./intl-utils');
-    return formatDateShort(dateString);
-};
+// ✅ ENTERPRISE MIGRATION COMPLETE: formatDate fully migrated to intl-utils.ts
+// All imports have been updated to use @/lib/intl-utils
 
 export const getProgressColor = (progress: number) => {
     if (progress < 25) return 'text-red-500';

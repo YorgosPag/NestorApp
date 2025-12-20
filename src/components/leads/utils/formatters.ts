@@ -1,5 +1,3 @@
-import { format } from "date-fns";
-import { el } from "date-fns/locale";
 import type { Opportunity } from '@/types/crm';
 
 export const getStatusColor = (status?: Opportunity['stage']) => {
@@ -16,13 +14,3 @@ export const getStatusColor = (status?: Opportunity['stage']) => {
     return colors[status || ''] || 'bg-gray-100 text-gray-800';
 };
 
-export const formatDate = (timestamp: any) => {
-  if (!timestamp) return "Άγνωστη ημερομηνία";
-  try {
-    const date = timestamp?.toDate ? timestamp.toDate() : new Date(timestamp);
-    if (isNaN(date.getTime())) return 'Άγνωστη ημερομηνία';
-    return format(date, "dd/MM/yyyy HH:mm", { locale: el });
-  } catch {
-    return "Άγνωστη ημερομηνία";
-  }
-};

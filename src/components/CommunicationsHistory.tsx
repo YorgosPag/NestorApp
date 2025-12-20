@@ -2,8 +2,9 @@
 import { Archive } from 'lucide-react';
 import {
   getTypeIcon, getTypeColor, getStatusIcon, getStatusColor,
-  getDirectionLabel, formatDate, getRelativeTime
+  getDirectionLabel, getRelativeTime
 } from './communications/utils/formatters';
+import { formatDateTime as formatDate } from '@/lib/intl-utils';
 import { useCommunicationsHistory } from './communications/hooks/useCommunicationsHistory';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 

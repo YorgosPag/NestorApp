@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { formatCurrency } from '../../BuildingCard/BuildingCardUtils';
+import { formatCurrency } from '@/lib/intl-utils';
 import type { Building } from '../../BuildingsPageContent';
 
 interface BuildingListItemStatsProps {

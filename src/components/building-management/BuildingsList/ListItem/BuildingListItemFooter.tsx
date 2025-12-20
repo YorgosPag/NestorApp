@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Calendar } from 'lucide-react';
-import { formatDate } from '../../BuildingCard/BuildingCardUtils';
+import { formatDate } from '@/lib/intl-utils';
 
 interface BuildingListItemFooterProps {
   completionDate?: string;

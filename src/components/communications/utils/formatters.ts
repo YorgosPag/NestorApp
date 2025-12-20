@@ -1,6 +1,5 @@
 import { Mail, Phone, MessageSquare, Send, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
-import { format } from 'date-fns';
-import { el } from 'date-fns/locale';
+import { formatDateTime } from '@/lib/intl-utils';
 
 export const getTypeIcon = (type: string) => ({
   email: Mail, sms: MessageSquare, call: Phone, whatsapp: MessageSquare, telegram: Send,
@@ -29,16 +28,6 @@ export const getStatusColor = (status: string) => ({
 export const getDirectionLabel = (direction: string) =>
   direction === 'inbound' ? 'Εισερχόμενο' : 'Εξερχόμενο';
 
-export const formatDate = (timestamp: any) => {
-  if (!timestamp) return 'Άγνωστη ημερομηνία';
-  try {
-    const date = timestamp?.toDate ? timestamp.toDate() : new Date(timestamp);
-    if(isNaN(date.getTime())) return 'Άγνωστη ημερομηνία';
-    return format(date, 'dd/MM/yyyy HH:mm', { locale: el });
-  } catch {
-    return 'Άγνωστη ημερομηνία';
-  }
-};
 
 export const getRelativeTime = (timestamp: any) => {
   if (!timestamp) return '';
@@ -53,7 +42,7 @@ export const getRelativeTime = (timestamp: any) => {
     if (diffInHours < 24) return `${diffInHours} ώρες πριν`;
     const diffInDays = Math.floor(diffInHours / 24);
     if (diffInDays < 7) return `${diffInDays} μέρες πριν`;
-    return formatDate(timestamp);
+    return formatDateTime(timestamp);
   } catch {
     return '';
   }

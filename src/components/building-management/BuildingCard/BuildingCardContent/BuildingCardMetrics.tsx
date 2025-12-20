@@ -7,7 +7,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { Building } from '../../BuildingsPageContent';
-import { formatCurrency } from '../BuildingCardUtils';
+import { formatCurrency } from '@/lib/intl-utils';
 
 interface BuildingCardMetricsProps {
   building: Building;

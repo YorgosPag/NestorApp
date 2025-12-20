@@ -1,8 +1,3 @@
-export const formatDate = (timestamp: any): string => {
-    if (!timestamp) return '';
-    const date = timestamp?.toDate ? timestamp.toDate() : new Date(timestamp);
-    return date.toLocaleString('el-GR');
-};
 
 export const formatSize = (bytes: number): string => {
     if (!bytes) return '0 B';

@@ -5,7 +5,8 @@ import { EditOpportunityModal } from "@/components/crm/dashboard/EditOpportunity
 import SendEmailModal from "@/components/email/SendEmailModal";
 import { useLeadsList } from "./hooks/useLeadsList";
 import { LeadCard } from "./LeadCard";
-import { getStatusColor, formatDate } from "./utils/formatters";
+import { getStatusColor } from "./utils/formatters";
+import { formatDateTime as formatDate } from '@/lib/intl-utils';
 import type { Opportunity } from "@/types/crm";
 import { HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects/hover-effects';
 

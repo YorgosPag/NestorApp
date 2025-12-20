@@ -7,7 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Calendar, MapPin, Building, Users, Download, FileText } from "lucide-react";
 import type { ObligationDocument } from "@/types/obligations";
-import { formatDate } from "@/lib/obligations-utils";
+import { formatDate } from "@/lib/intl-utils";
 import { TableOfContents } from "@/components/obligations/table-of-contents";
 import PDFExportButton, { PrintButton } from "@/components/obligations/pdf-export-button";
 

@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CommonBadge } from "@/core/badges";
 import { Separator } from "@/components/ui/separator";
 import { ObligationDocument } from "@/types/obligations";
-import { formatDate } from "@/lib/obligations-utils";
+import { formatDate } from "@/lib/intl-utils";
 
 interface SidebarStatsProps {
   obligation: ObligationDocument;

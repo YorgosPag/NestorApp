@@ -14,7 +14,8 @@ import {
 import { MoreVertical, Eye, Edit, Copy, Trash2, Download } from "lucide-react";
 import { ObligationDocument } from "@/types/obligations";
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
-import { getStatusColor, getStatusLabel, formatDate } from "@/lib/obligations-utils";
+import { formatDate } from "@/lib/intl-utils";
+import { getStatusColor, getStatusLabel } from "@/lib/obligations-utils";
 
 interface ObligationListItemProps {
   obligation: ObligationDocument;

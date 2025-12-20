@@ -1,4 +1,3 @@
-
 export const getStatusColor = (status: string) => {
   switch (status) {
     case "sold": return "text-green-600 bg-green-50 dark:bg-green-900/20 dark:text-green-400";
@@ -10,13 +9,3 @@ export const getStatusColor = (status: string) => {
   }
 };
 
-export const getStatusText = (status: string) => {
-  const labels: Record<string, string> = {
-    "for-sale": "Προς Πώληση",
-    "sold": "Πουλημένο",
-    "for-rent": "Προς Ενοικίαση",
-    "rented": "Ενοικιασμένο",
-    "reserved": "Κρατημένο",
-  };
-  return labels[status] ?? status;
-};
