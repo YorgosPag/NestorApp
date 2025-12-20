@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -51,6 +51,23 @@ interface FormData {
   sections: ObligationSection[];
 }
 
+
+// Helper function to auto-resize textarea
+const autoResize = (textarea: HTMLTextAreaElement) => {
+  textarea.style.height = 'auto';
+
+  // Get min and max heights from inline styles if they exist
+  const computedStyle = window.getComputedStyle(textarea);
+  const minHeight = parseInt(computedStyle.minHeight) || 40;
+  const maxHeight = parseInt(computedStyle.maxHeight) || 300;
+
+  // Calculate the needed height
+  const scrollHeight = textarea.scrollHeight;
+  const newHeight = Math.max(minHeight, Math.min(maxHeight, scrollHeight));
+
+  textarea.style.height = newHeight + 'px';
+};
+
 export default function NewObligationPage() {
   const router = useRouter();
   const [formData, setFormData] = useState<FormData>({
@@ -75,7 +92,42 @@ export default function NewObligationPage() {
   const [viewMode, setViewMode] = useState<'split' | 'edit-only'>('split');
   const [activeItem, setActiveItem] = useState<{type: 'section' | 'article' | 'paragraph', id: string} | null>(null);
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
-  
+
+  // Auto-resize all textareas when content changes
+  useEffect(() => {
+    const autoResizeAllTextareas = () => {
+      // Find all textareas in the document
+      const textareas = document.querySelectorAll('textarea');
+      textareas.forEach(textarea => {
+        if (textarea instanceof HTMLTextAreaElement) {
+          autoResize(textarea);
+        }
+      });
+    };
+
+    // Run after a small delay to ensure DOM is updated
+    const timeoutId = setTimeout(autoResizeAllTextareas, 100);
+
+    return () => clearTimeout(timeoutId);
+  }, [formData.sections]); // Re-run when sections change
+
+  // Auto-resize textareas when accordion items are expanded
+  useEffect(() => {
+    const autoResizeAllTextareas = () => {
+      const textareas = document.querySelectorAll('textarea');
+      textareas.forEach(textarea => {
+        if (textarea instanceof HTMLTextAreaElement) {
+          autoResize(textarea);
+        }
+      });
+    };
+
+    // Run after a small delay to ensure DOM is updated after expansion
+    const timeoutId = setTimeout(autoResizeAllTextareas, 150);
+
+    return () => clearTimeout(timeoutId);
+  }, [expandedItems]); // Re-run when accordion items expand/collapse
+
   // Initialize with template if selected
   useEffect(() => {
     if (useTemplate && formData.sections.length === 0) {
@@ -478,9 +530,20 @@ export default function NewObligationPage() {
                         <Textarea
                           placeholder="Περιεχόμενο ενότητας"
                           value={section.content}
-                          onChange={(e) => updateSection(section.id, { content: e.target.value })}
-                          rows={3}
-                          className="text-sm"
+                          onChange={(e) => {
+                            updateSection(section.id, { content: e.target.value });
+                            // Auto-resize on change
+                            autoResize(e.target as HTMLTextAreaElement);
+                          }}
+                          onInput={(e) => {
+                            // Also auto-resize on input (for copy/paste)
+                            autoResize(e.target as HTMLTextAreaElement);
+                          }}
+                          className="text-sm resize-y overflow-hidden"
+                          style={{
+                            minHeight: '60px',
+                            maxHeight: '300px'
+                          }}
                         />
                       </div>
 
@@ -517,9 +580,20 @@ export default function NewObligationPage() {
                                 <Textarea
                                   placeholder="Περιεχόμενο παραγράφου"
                                   value={paragraph.content}
-                                  onChange={(e) => updateParagraph(section.id, article.id, paragraph.id, { content: e.target.value })}
-                                  rows={2}
-                                  className="text-xs"
+                                  onChange={(e) => {
+                                    updateParagraph(section.id, article.id, paragraph.id, { content: e.target.value });
+                                    // Auto-resize on change
+                                    autoResize(e.target as HTMLTextAreaElement);
+                                  }}
+                                  onInput={(e) => {
+                                    // Also auto-resize on input (for copy/paste)
+                                    autoResize(e.target as HTMLTextAreaElement);
+                                  }}
+                                  className="text-xs resize-y overflow-hidden"
+                                  style={{
+                                    minHeight: '40px',
+                                    maxHeight: '200px'
+                                  }}
                                 />
                               </div>
                             ))}
@@ -550,7 +624,7 @@ export default function NewObligationPage() {
 
   return (
     <PageLayout>
-      <div className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8">
+      <div className="max-w-full mx-auto p-4 md:p-6 lg:p-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
@@ -586,7 +660,7 @@ export default function NewObligationPage() {
         </div>
 
         {/* Main Content */}
-        <div className={`grid gap-6 ${viewMode === 'split' ? 'lg:grid-cols-2' : 'lg:grid-cols-1'}`}>
+        <div className={`grid gap-6 ${viewMode === 'split' ? 'lg:grid-cols-[1fr_1fr]' : 'lg:grid-cols-1'} w-full`}>
           {/* Left Panel - Editor */}
           <div className="space-y-6">
             {/* Basic Information */}
