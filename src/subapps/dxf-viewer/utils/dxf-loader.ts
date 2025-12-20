@@ -8,7 +8,9 @@ import type {
 } from '../types/scene';
 
 function genId(prefix = 'e'): string {
-  return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
+  // ✅ ENTERPRISE MIGRATION: Using centralized ID generation
+  const { generateRandomId } = require('@/lib/obligations/utils');
+  return generateRandomId(prefix, 8); // Same length as original (slice(2, 10) = 8 chars)
 }
 
 export async function readFileAsText(file: File): Promise<string> {

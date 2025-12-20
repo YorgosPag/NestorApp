@@ -126,24 +126,29 @@ export function generateSocialUrl(platform: string, username: string): string {
  * @returns Boolean indicating if URL is valid
  */
 export function validateSocialUrl(url: string, platform?: SocialPlatform): boolean {
-  if (!url?.trim()) return false;
-
+  // ✅ ENTERPRISE MIGRATION: Delegating to centralized social platform system
+  // BACKWARDS COMPATIBLE: Same interface, enterprise implementation
   try {
-    const urlObj = new URL(url);
+    const { validateSocialUrl: enterpriseValidator } = require('@/lib/social-platform-system');
+    return enterpriseValidator(url, platform as any); // Type mapping handled internally
+  } catch (error) {
+    console.warn('Enterprise social validator not available, using fallback');
+    if (!url?.trim()) return false;
 
-    if (platform) {
-      const expectedTemplate = SOCIAL_URL_TEMPLATES[platform];
-      const expectedDomain = new URL(expectedTemplate.replace('{username}', 'test')).hostname;
-      return urlObj.hostname === expectedDomain;
+    try {
+      const urlObj = new URL(url);
+      if (platform) {
+        const expectedTemplate = SOCIAL_URL_TEMPLATES[platform];
+        const expectedDomain = new URL(expectedTemplate.replace('{username}', 'test')).hostname;
+        return urlObj.hostname === expectedDomain;
+      }
+
+      const knownDomains = Object.values(SOCIAL_URL_TEMPLATES)
+        .map(template => new URL(template.replace('{username}', 'test')).hostname);
+      return knownDomains.includes(urlObj.hostname);
+    } catch {
+      return false;
     }
-
-    // Γενική validation - check αν είναι γνωστή πλατφόρμα
-    const knownDomains = Object.values(SOCIAL_URL_TEMPLATES)
-      .map(template => new URL(template.replace('{username}', 'test')).hostname);
-
-    return knownDomains.includes(urlObj.hostname);
-  } catch {
-    return false;
   }
 }
 

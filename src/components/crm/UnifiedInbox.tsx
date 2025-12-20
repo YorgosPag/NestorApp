@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { CommonBadge } from '@/core/badges';
 import { formatDateTime } from '@/lib/intl-utils';
+import { truncateText } from '@/lib/obligations-utils'; // ✅ Using centralized function
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { HOVER_BACKGROUND_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
@@ -130,7 +131,7 @@ const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) =
     const now = new Date();
     const diffHours = (now - date) / (1000 * 60 * 60);
 
-    let relative = date.toLocaleDateString('el-GR');
+    let relative = formatDateTime(date);
     if (diffHours < 1) relative = 'Τώρα';
     else if (diffHours < 24) relative = `${Math.floor(diffHours)}ω`;
     else if (diffHours < 48) relative = 'Χθες';
@@ -141,10 +142,6 @@ const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) =
     };
   };
 
-  const truncateText = (text, maxLength = 100) => {
-    if (!text) return '';
-    return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
-  };
 
   if (loading) {
     return (

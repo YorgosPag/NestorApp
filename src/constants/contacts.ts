@@ -8,6 +8,7 @@
 import { Users, Building2, Landmark } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { brandClasses } from '@/styles/design-tokens';
 
 // 📋 CONTACT TYPES - Μοναδική πηγή αλήθειας για τύπους επαφών
 export const CONTACT_TYPES = {
@@ -21,11 +22,12 @@ export type ContactType = typeof CONTACT_TYPES[keyof typeof CONTACT_TYPES];
 // 🎨 CONTACT COLORS - Κεντρικοποιημένα χρώματα για κάθε τύπο επαφής
 export const CONTACT_COLORS = {
   [CONTACT_TYPES.INDIVIDUAL]: {
-    primary: 'text-blue-500',
-    hover: HOVER_TEXT_EFFECTS.BLUE,
-    bg: 'bg-blue-50',
-    border: 'border-blue-200',
-    ring: 'ring-blue-100',
+    // ✅ BRAND CONSISTENCY: Using centralized brand colors
+    primary: brandClasses.primary.text,
+    hover: brandClasses.primary.hover.text,
+    bg: brandClasses.primary.bg,
+    border: brandClasses.primary.border,
+    ring: brandClasses.primary.ring,
   },
   [CONTACT_TYPES.COMPANY]: {
     primary: 'text-purple-500',

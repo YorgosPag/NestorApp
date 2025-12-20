@@ -15,7 +15,7 @@ import { MoreVertical, Eye, Edit, Copy, Trash2, Download } from "lucide-react";
 import { ObligationDocument } from "@/types/obligations";
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { formatDate } from "@/lib/intl-utils";
-import { getStatusColor, getStatusLabel } from "@/lib/obligations-utils";
+import { getObligationStatusColor, getObligationStatusLabel } from "@/core/status/StatusConstants";
 
 interface ObligationListItemProps {
   obligation: ObligationDocument;
@@ -39,9 +39,9 @@ export function ObligationListItem({ obligation, onDelete, onDuplicate }: Obliga
               <CardTitle className="text-lg">{obligation.title}</CardTitle>
               <CommonBadge
                 status="company"
-                customLabel={getStatusLabel(obligation.status)}
+                customLabel={getObligationStatusLabel(obligation.status)}
                 variant="secondary"
-                className={getStatusColor(obligation.status)}
+                className={getObligationStatusColor(obligation.status)}
               />
             </div>
             <CardDescription className="text-sm text-muted-foreground">

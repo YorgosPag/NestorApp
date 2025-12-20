@@ -338,10 +338,11 @@ export class RelationshipValidationService {
 
   /**
    * 📧 Validate Email Format
+   * ✅ ENTERPRISE MIGRATION: Using centralized email validation
    */
   private static isValidEmail(email: string): boolean {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+    const { isValidEmail: enterpriseValidator } = require('@/components/ui/email-sharing/types');
+    return enterpriseValidator(email);
   }
 
   /**

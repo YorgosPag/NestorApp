@@ -64,7 +64,9 @@ export class RegionGeometry {
  */
 export class RegionOperations {
   static generateRegionId(): string {
-    return `region_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    // ✅ ENTERPRISE MIGRATION: Using centralized ID generation
+    const { generateRandomId } = require('@/lib/obligations/utils');
+    return generateRandomId('region', 7); // Same length as original (slice(2, 9) = 7 chars)
   }
 
   static createDefaultLayer(): OverlayLayer {

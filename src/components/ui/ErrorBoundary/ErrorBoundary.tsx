@@ -1,10 +1,11 @@
 'use client';
 
 import React, { Component, ErrorInfo as ReactErrorInfo, ReactNode } from 'react';
-import { AlertTriangle, RefreshCw, Home, ArrowLeft, Bug, Copy, Check } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Home, ArrowLeft, Bug, Copy, Check, Mail, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { errorTracker } from '@/services/ErrorTracker';
+import { notificationConfig } from '@/config/error-reporting';
 
 interface CustomErrorInfo {
   componentStack: string;
@@ -20,6 +21,9 @@ interface ErrorBoundaryState {
   isReporting: boolean;
   reportSent: boolean;
   errorId: string | null;
+  isSendingToAdmin: boolean;
+  emailSent: boolean;
+  copySuccess: boolean;
 }
 
 interface ErrorBoundaryProps {
@@ -46,7 +50,10 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
       retryCount: 0,
       isReporting: false,
       reportSent: false,
-      errorId: null
+      errorId: null,
+      isSendingToAdmin: false,
+      emailSent: false,
+      copySuccess: false
     };
   }
 
@@ -155,7 +162,9 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
       error: null,
       errorInfo: null,
       retryCount: prevState.retryCount + 1,
-      reportSent: false
+      reportSent: false,
+      emailSent: false,
+      copySuccess: false
     }));
   };
 
@@ -192,7 +201,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     }
   };
 
-  private copyErrorDetails = () => {
+  private copyErrorDetails = async () => {
     const { error, errorInfo, errorId } = this.state;
     if (!error) return;
 
@@ -202,10 +211,140 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
       stack: error.stack,
       componentStack: errorInfo?.componentStack,
       timestamp: new Date().toISOString(),
-      url: window.location.href
+      url: window.location.href,
+      userAgent: navigator.userAgent,
+      userId: this.getUserId(),
+      component: this.props.componentName
     };
 
-    navigator.clipboard.writeText(JSON.stringify(errorDetails, null, 2));
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(errorDetails, null, 2));
+      this.setState({ copySuccess: true });
+      setTimeout(() => this.setState({ copySuccess: false }), 2000);
+    } catch (error) {
+      console.error('Failed to copy error details:', error);
+    }
+  };
+
+  private sendToAdmin = async () => {
+    const { error, errorInfo, errorId } = this.state;
+    if (!error || !errorId) return;
+
+    this.setState({ isSendingToAdmin: true });
+
+    try {
+      const errorDetails = {
+        errorId,
+        message: error.message,
+        stack: error.stack,
+        componentStack: errorInfo?.componentStack,
+        timestamp: new Date().toISOString(),
+        url: window.location.href,
+        userAgent: navigator.userAgent,
+        userId: this.getUserId(),
+        component: this.props.componentName || 'Unknown',
+        severity: this.getErrorSeverity(error),
+        retryCount: this.state.retryCount
+      };
+
+      const emailPayload = {
+        to: notificationConfig.channels.adminEmail,
+        subject: `🚨 ${this.getErrorSeverity(error).toUpperCase()} Error Report - ${this.props.componentName || 'Application'}`,
+        templateId: 'error-report',
+        message: this.formatErrorForEmail(errorDetails),
+        priority: this.getErrorSeverity(error) === 'critical' ? 'high' : 'normal',
+        category: 'error-report'
+      };
+
+      const response = await fetch('/api/communications/email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(emailPayload)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to send email: ${response.statusText}`);
+      }
+
+      this.setState({ emailSent: true });
+
+      // Track successful admin email
+      errorTracker.captureUserError(
+        'Error report sent to admin',
+        'sendToAdmin',
+        { errorId, adminEmail: notificationConfig.channels.adminEmail }
+      );
+
+    } catch (sendError) {
+      console.error('Failed to send error to admin:', sendError);
+
+      // Track failed admin email
+      errorTracker.captureError(
+        sendError instanceof Error ? sendError : new Error(String(sendError)),
+        'error',
+        'system',
+        {
+          component: 'ErrorBoundary',
+          action: 'sendToAdmin',
+          metadata: { originalErrorId: errorId }
+        }
+      );
+    } finally {
+      this.setState({ isSendingToAdmin: false });
+    }
+  };
+
+  private getErrorSeverity(error: Error): 'critical' | 'error' | 'warning' {
+    const message = error.message.toLowerCase();
+
+    // Critical errors
+    if (message.includes('authentication') ||
+        message.includes('authorization') ||
+        message.includes('security') ||
+        message.includes('payment') ||
+        message.includes('data corruption')) {
+      return 'critical';
+    }
+
+    // Regular errors
+    if (message.includes('network') ||
+        message.includes('api') ||
+        message.includes('database')) {
+      return 'error';
+    }
+
+    return 'warning';
+  }
+
+  private formatErrorForEmail(errorDetails: any): string {
+    return `
+🚨 ERROR REPORT - GEO-ALERT SYSTEM
+
+📋 ERROR DETAILS:
+• Error ID: ${errorDetails.errorId}
+• Message: ${errorDetails.message}
+• Component: ${errorDetails.component}
+• Severity: ${errorDetails.severity.toUpperCase()}
+• Retry Count: ${errorDetails.retryCount}
+
+⏰ OCCURRENCE:
+• Timestamp: ${errorDetails.timestamp}
+• URL: ${errorDetails.url}
+• User ID: ${errorDetails.userId || 'Anonymous'}
+
+🔧 TECHNICAL DETAILS:
+• User Agent: ${errorDetails.userAgent}
+• Component Stack:
+${errorDetails.componentStack || 'Not available'}
+
+📚 ERROR STACK:
+${errorDetails.stack || 'Stack trace not available'}
+
+---
+Αυτό το email στάλθηκε αυτόματα από το GEO-ALERT Error Reporting System.
+    `.trim();
   };
 
   private goHome = () => {
@@ -223,7 +362,17 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   }
 
   render() {
-    const { hasError, error, errorInfo, retryCount, isReporting, reportSent } = this.state;
+    const {
+      hasError,
+      error,
+      errorInfo,
+      retryCount,
+      isReporting,
+      reportSent,
+      isSendingToAdmin,
+      emailSent,
+      copySuccess
+    } = this.state;
     const { 
       children, 
       fallback, 
@@ -299,38 +448,99 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
                 </Button>
               </div>
 
-              {/* Error Reporting */}
+              {/* Enterprise Error Reporting & Admin Notification */}
               {enableReporting && (
-                <div className="flex items-center justify-between p-4 bg-muted rounded-md mb-6">
-                  <div className="flex items-center space-x-3">
-                    <Bug className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">Help us improve</p>
-                      <p className="text-sm text-muted-foreground">
-                        Report this error to help us fix the issue
-                      </p>
+                <div className="space-y-4">
+                  {/* Copy & Admin Email Actions */}
+                  <div className="flex items-center justify-between p-4 bg-muted rounded-md">
+                    <div className="flex items-center space-x-3">
+                      <Bug className="h-5 w-5 text-muted-foreground" />
+                      <div>
+                        <p className="font-medium">Error Actions</p>
+                        <p className="text-sm text-muted-foreground">
+                          Copy details or notify administrator
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex space-x-2">
+                      <Button
+                        onClick={this.copyErrorDetails}
+                        disabled={copySuccess}
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center space-x-2"
+                      >
+                        {copySuccess ? (
+                          <>
+                            <Check className="h-4 w-4 text-green-600" />
+                            <span>Copied!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-4 w-4" />
+                            <span>Copy Details</span>
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        onClick={this.sendToAdmin}
+                        disabled={isSendingToAdmin || emailSent}
+                        variant={this.getErrorSeverity(error) === 'critical' ? 'destructive' : 'default'}
+                        size="sm"
+                        className="flex items-center space-x-2"
+                      >
+                        {isSendingToAdmin ? (
+                          <>
+                            <RefreshCw className="h-4 w-4 animate-spin" />
+                            <span>Sending...</span>
+                          </>
+                        ) : emailSent ? (
+                          <>
+                            <Check className="h-4 w-4 text-green-600" />
+                            <span>Sent to Admin</span>
+                          </>
+                        ) : (
+                          <>
+                            <Mail className="h-4 w-4" />
+                            <span>Notify Admin</span>
+                          </>
+                        )}
+                      </Button>
                     </div>
                   </div>
-                  <Button
-                    onClick={this.reportError}
-                    disabled={isReporting || reportSent}
-                    variant="outline"
-                    size="sm"
-                  >
-                    {isReporting ? (
-                      <>
-                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                        Sending...
-                      </>
-                    ) : reportSent ? (
-                      <>
-                        <Check className="h-4 w-4 mr-2 text-green-600" />
-                        Sent
-                      </>
-                    ) : (
-                      'Report Error'
-                    )}
-                  </Button>
+
+                  {/* Traditional Error Reporting */}
+                  <div className="flex items-center justify-between p-4 bg-muted/50 rounded-md">
+                    <div className="flex items-center space-x-3">
+                      <Send className="h-5 w-5 text-muted-foreground" />
+                      <div>
+                        <p className="font-medium">Anonymous Report</p>
+                        <p className="text-sm text-muted-foreground">
+                          Send anonymous report to help improve the system
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      onClick={this.reportError}
+                      disabled={isReporting || reportSent}
+                      variant="outline"
+                      size="sm"
+                    >
+                      {isReporting ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                          Sending...
+                        </>
+                      ) : reportSent ? (
+                        <>
+                          <Check className="h-4 w-4 mr-2 text-green-600" />
+                          Sent
+                        </>
+                      ) : (
+                        'Report Error'
+                      )}
+                    </Button>
+                  </div>
                 </div>
               )}
 
@@ -348,8 +558,13 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
                           onClick={this.copyErrorDetails}
                           variant="ghost"
                           size="sm"
+                          disabled={copySuccess}
                         >
-                          <Copy className="h-4 w-4" />
+                          {copySuccess ? (
+                            <Check className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
                         </Button>
                       </div>
                       <pre className="text-xs bg-muted p-3 rounded overflow-auto max-h-40">

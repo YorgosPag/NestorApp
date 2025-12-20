@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { ObligationDocument } from "@/types/obligations";
 import { formatDate } from "@/lib/intl-utils";
-import { getStatusLabel } from "@/lib/obligations-utils";
+import { getObligationStatusLabel } from "@/core/status/StatusConstants";
 import PDFExportButton, { QuickPDFExportButton, PrintButton } from "@/components/obligations/pdf-export-button";
 import Link from "next/link";
 
@@ -45,7 +45,7 @@ export function HeaderBar({ obligation }: HeaderBarProps) {
           <div className="flex items-center gap-4 mt-2">
             <CommonBadge
               status="company"
-              customLabel={getStatusLabel(obligation.status)}
+              customLabel={getObligationStatusLabel(obligation.status)}
               variant="outline"
             />
             <span className="text-muted-foreground text-sm">

@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Building, FileText, Hash, MapPin, Users } from "lucide-react";
 import type { ObligationDocument } from '@/types/obligations';
 import { formatDate } from '@/lib/intl-utils'; // ✅ Using centralized function
-import { getStatusLabel } from "@/lib/obligations-utils";
+import { getObligationStatusLabel } from "@/core/status/StatusConstants";
 
 interface DocumentHeaderProps {
     doc: Partial<ObligationDocument>;
@@ -90,7 +90,7 @@ export function DocumentHeader({ doc }: DocumentHeaderProps) {
         <div>
           Κατάσταση:{" "}
           <Badge variant="outline">
-            {getStatusLabel(doc.status || "draft")}
+            {getObligationStatusLabel(doc.status || "draft")}
           </Badge>
         </div>
         <div>{formatDate(doc.updatedAt || new Date())}</div>

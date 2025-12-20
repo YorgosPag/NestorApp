@@ -1,3 +1,5 @@
+export type ObligationStatus = 'draft' | 'completed' | 'approved';
+
 export interface ObligationDocument {
   id: string;
   title: string;
@@ -6,7 +8,7 @@ export interface ObligationDocument {
   owners: Owner[];
   createdAt: Date;
   updatedAt: Date;
-  status: 'draft' | 'completed' | 'approved';
+  status: ObligationStatus;
   sections: ObligationSection[];
   projectDetails: ProjectDetails;
   tableOfContents?: TableOfContentsItem[];

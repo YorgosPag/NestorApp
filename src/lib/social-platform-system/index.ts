@@ -313,28 +313,8 @@ export default SocialPlatformSystem;
 // TYPE EXPORTS - CLEAN TYPE API
 // ============================================================================
 
-// Re-export all types για clean imports
-export type {
-  // Platform types
-  SocialPlatformType,
-  UnifiedSocialPlatform,
-  PlatformCapabilities,
-
-  // Sharing types
-  ShareData,
-  ShareResult,
-  PropertyShareData,
-  PhotoShareData,
-
-  // Profile types
-  SocialProfile,
-  ProfileValidationResult,
-
-  // Analytics types
-  UtmParameters,
-  ShareAnalyticsEvent,
-  AnalyticsSummary
-} from './platform-config';
+// ✅ FIXED: All types εξάγονται ήδη στα προηγούμενα export blocks
+// Δεν χρειάζεται duplicate export block εδώ
 
 // ============================================================================
 // DOCUMENTATION EXPORTS

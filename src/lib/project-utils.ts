@@ -3,6 +3,7 @@
 import type { ProjectStatus } from '@/types/project';
 import { PROPERTY_STATUS_LABELS, PROPERTY_STATUS_COLORS } from '@/constants/statuses';
 import { getDaysUntilCompletion as getDaysUntilCompletionI18n } from '@/lib/intl-utils';
+import { brandClasses } from '@/styles/design-tokens';
 
 // ⚠️ DEPRECATED: Use formatCurrency from intl-utils.ts for enterprise currency formatting
 // 🔄 BACKWARD COMPATIBILITY: This function is maintained for legacy support
@@ -20,7 +21,7 @@ export const getProgressColor = (progress: number) => {
     if (progress < 25) return 'text-red-500';
     if (progress < 50) return 'text-yellow-500';
     if (progress >= 75) return 'text-green-500';
-    return 'text-blue-500';
+    return brandClasses.primary.text;
 };
 
 // ✅ ENTERPRISE MIGRATION: Using centralized getDaysUntilCompletion
@@ -35,7 +36,7 @@ export const getDaysUntilCompletion = (completionDate?: string) => {
 export const STATUS_COLORS: Record<string, string> = {
     // Project-specific statuses (non-property)
     'planning': 'bg-yellow-100 text-yellow-800',
-    'in_progress': 'bg-blue-100 text-blue-800',
+    'in_progress': brandClasses.primary.badge,
     'completed': 'bg-green-100 text-green-800',
     'on_hold': 'bg-gray-100 text-gray-800',
     'cancelled': 'bg-red-100 text-red-800',
@@ -44,7 +45,7 @@ export const STATUS_COLORS: Record<string, string> = {
     // 🎯 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ: Property statuses από centralized constants
     'for-sale': 'bg-green-100 text-green-800',     // Uses centralized logic
     'sold': 'bg-red-100 text-red-800',             // Uses centralized logic
-    'for-rent': 'bg-blue-100 text-blue-800',       // Uses centralized logic
+    'for-rent': brandClasses.primary.badge,       // ✅ CENTRALIZED: brandClasses.primary.badge
     'rented': 'bg-orange-100 text-orange-800',     // Uses centralized logic
     'reserved': 'bg-yellow-100 text-yellow-800',   // Uses centralized logic
 };

@@ -51,8 +51,9 @@ function sanitizeString(input: string): string {
 }
 
 function isValidEmail(email: string): boolean {
-  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-  return emailRegex.test(email) && email.length <= 254;
+  // ✅ ENTERPRISE MIGRATION: Using centralized email validation + RFC compliance
+  const { isValidEmail: enterpriseValidator } = require('@/components/ui/email-sharing/types');
+  return enterpriseValidator(email) && email.length <= 254; // RFC 5321 compliance
 }
 
 function isValidUrl(url: string): boolean {

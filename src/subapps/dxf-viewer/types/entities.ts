@@ -198,9 +198,9 @@ export const isTextEntity = (entity: Entity): entity is TextEntity =>
 export const isDimensionEntity = (entity: Entity): entity is DimensionEntity =>
   entity.type === 'dimension';
 
-// Utility functions
-export const generateEntityId = (): string =>
-  `entity_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+// ✅ ENTERPRISE MIGRATION: generateEntityId moved to systems/entity-creation/utils.ts
+// Re-export from centralized location for backward compatibility
+export { generateEntityId } from '../systems/entity-creation/utils';
 
 export const getEntityBounds = (entity: Entity): { minX: number; minY: number; maxX: number; maxY: number } => {
   switch (entity.type) {

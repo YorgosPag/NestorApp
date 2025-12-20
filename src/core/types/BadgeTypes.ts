@@ -22,7 +22,7 @@ export type BadgeSize = 'sm' | 'default' | 'lg';
 
 // ===== DOMAIN DEFINITIONS =====
 
-export type DomainType = 'PROJECT' | 'BUILDING' | 'CONTACT' | 'PROPERTY' | 'UNIT' | 'NAVIGATION';
+export type DomainType = 'PROJECT' | 'BUILDING' | 'CONTACT' | 'PROPERTY' | 'UNIT' | 'NAVIGATION' | 'OBLIGATION';
 
 // ===== STATUS TYPE UNIONS =====
 
@@ -107,6 +107,11 @@ export type NavigationStatus =
   | 'success'
   | 'info';
 
+export type ObligationStatus =
+  | 'draft'
+  | 'completed'
+  | 'approved';
+
 // ===== BADGE CONFIGURATION INTERFACE =====
 
 export interface BadgeDefinition {
@@ -131,6 +136,7 @@ export interface BadgeSystemConfig {
     PROPERTY: Record<PropertyStatus, BadgeDefinition>;
     UNIT: Record<UnitStatus, BadgeDefinition>;
     NAVIGATION: Record<NavigationStatus, BadgeDefinition>;
+    OBLIGATION: Record<ObligationStatus, BadgeDefinition>;
   };
   common: Record<string, BadgeDefinition>;
 }

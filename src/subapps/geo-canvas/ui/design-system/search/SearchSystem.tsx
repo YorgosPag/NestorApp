@@ -7,6 +7,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react';
+import { highlightSearchTerm } from '@/lib/obligations-utils'; // ✅ Using centralized function
 import { useTheme } from '../theme/ThemeProvider';
 import { layoutUtilities } from '@/styles/design-tokens';
 import {
@@ -204,8 +205,8 @@ export class SearchEngine {
           item,
           score,
           matches,
-          highlightedTitle: this.highlightText(item.title, normalizedQuery),
-          highlightedDescription: this.highlightText(item.description || '', normalizedQuery)
+          highlightedTitle: highlightSearchTerm(item.title, normalizedQuery, ""),
+          highlightedDescription: highlightSearchTerm(item.description || '', normalizedQuery, "")
         });
       }
     }
@@ -259,12 +260,6 @@ export class SearchEngine {
     return 1 - distance / maxLen;
   }
 
-  private highlightText(text: string, query: string): string {
-    if (!query.trim() || !text) return text;
-
-    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-    return text.replace(regex, '<mark>$1</mark>');
-  }
 
   private applyFilters(items: SearchableItem[], filters: ActiveFilter[]): SearchableItem[] {
     return items.filter(item => {

@@ -1220,3 +1220,79 @@ export { canvasUtilities } from './design-tokens/utilities/canvas-utilities';
  */
 import { autoSaveStatusTokens } from './design-tokens/semantic/alert-tokens';
 export const statusIndicatorComponents = autoSaveStatusTokens;
+
+// ============================================================================
+// 🎨 BRAND CONSISTENCY - CSS CLASS MAPPINGS
+// ============================================================================
+
+/**
+ * ✅ ENTERPRISE: Centralized CSS class mappings για brand consistency
+ * Replaces hardcoded Tailwind classes με design system values
+ */
+export const brandClasses = {
+  // Primary brand colors
+  primary: {
+    text: 'text-blue-500',        // colors.blue[500]
+    bg: 'bg-blue-50',            // light background
+    bgDark: 'bg-blue-500',       // solid background
+    border: 'border-blue-200',    // subtle border
+    ring: 'ring-blue-100',       // focus ring
+
+    // Interactive states
+    hover: {
+      text: 'hover:text-blue-600',
+      bg: 'hover:bg-blue-100',
+      border: 'hover:border-blue-500',
+    },
+
+    // Badge styles
+    badge: 'bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full',
+
+    // Focus states
+    focus: 'focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:ring-offset-0',
+  },
+
+  // Loading/spinner colors
+  loading: {
+    spinner: 'border-blue-600',
+    spinnerLight: 'border-blue-400',
+  },
+
+  // Status indicators
+  info: {
+    text: 'text-blue-700',
+    bg: 'bg-blue-50',
+    border: 'border-blue-200',
+
+    // Card styles
+    card: 'bg-blue-50 rounded-lg p-4 border-2 border-blue-200',
+    title: 'text-blue-700',
+  },
+
+  // Interactive elements
+  interactive: {
+    button: 'bg-blue-600 text-white font-medium',
+    buttonHover: 'hover:bg-blue-700',
+    link: 'text-blue-600 hover:text-blue-700',
+  },
+
+  // Effect classes
+  effects: {
+    shadow: 'hover:shadow-blue-500/20',
+    borderGlow: 'hover:border-blue-500/50',
+    scale: 'hover:scale-110',
+  }
+} as const;
+
+/**
+ * 🔧 Helper function να get brand classes dynamically
+ */
+export const getBrandClass = (category: keyof typeof brandClasses, variant?: string): string => {
+  const categoryClasses = brandClasses[category];
+
+  if (variant && typeof categoryClasses === 'object' && variant in categoryClasses) {
+    return (categoryClasses as any)[variant];
+  }
+
+  return typeof categoryClasses === 'string' ? categoryClasses : '';
+};

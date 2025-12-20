@@ -623,8 +623,9 @@ export class ConfigurationTestingSuite {
   // ============================================================================
 
   private isValidEmail(email: string): boolean {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+    // ✅ ENTERPRISE MIGRATION: Using centralized email validation
+    const { isValidEmail: enterpriseValidator } = require('@/components/ui/email-sharing/types');
+    return enterpriseValidator(email);
   }
 
   private isValidUrl(url: string): boolean {

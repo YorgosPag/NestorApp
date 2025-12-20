@@ -2,6 +2,7 @@
 
 import { Home, Building2, Users } from 'lucide-react';
 import { formatFloorLabel as formatFloorLabelI18n, getCategoryLabel as getCategoryLabelI18n, getStatusLabel as getStatusLabelI18n, getPricePerSqmUnit, formatNumber, getDaysUntilCompletion as getDaysUntilCompletionI18n } from '@/lib/intl-utils';
+import { brandClasses } from '@/styles/design-tokens';
 
 
 
@@ -19,7 +20,7 @@ export const formatPricePerSqm = (price?: number, area?: number): string => {
 export const getProgressColor = (progress: number) => {
     if (progress < 25) return 'text-red-500';
     if (progress < 50) return 'text-yellow-500';
-    if (progress < 75) return 'text-blue-500';
+    if (progress < 75) return brandClasses.primary.text;
     return 'text-green-500';
 };
 
@@ -45,7 +46,7 @@ export const getDaysUntilCompletion = (completionDate?: string) => {
 export const getStatusColor = (status: string) => {
     switch (status) {
         case 'active': return 'bg-green-500';
-        case 'construction': return 'bg-blue-500';
+        case 'construction': return brandClasses.primary.bgDark;
         case 'planned': return 'bg-yellow-500';
         case 'completed': return 'bg-gray-500';
         default: return 'bg-gray-400';

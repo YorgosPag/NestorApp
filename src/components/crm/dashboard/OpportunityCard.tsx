@@ -9,6 +9,7 @@ import type { Opportunity, FirestoreishTimestamp } from '@/types/crm';
 import { format } from 'date-fns';
 import { el } from 'date-fns/locale';
 import { formatDateTime } from '@/lib/intl-utils';
+import { brandClasses } from '@/styles/design-tokens';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -29,7 +30,7 @@ import {
 
 // Constants for stage colors, defined outside the component for stable reference.
 const STAGE_COLORS: Record<NonNullable<Opportunity['stage']>, string> = {
-    'initial_contact': 'bg-blue-100 text-blue-800',
+    'initial_contact': brandClasses.primary.badge,
     'qualification': 'bg-yellow-100 text-yellow-800',
     'viewing': 'bg-purple-100 text-purple-800',
     'proposal': 'bg-orange-100 text-orange-800',

@@ -134,10 +134,11 @@ export const ContactInfoUtils = {
 
   /**
    * Validate email format
+   * ✅ ENTERPRISE MIGRATION: Using centralized email validation
    */
   validateEmail: (email: string): boolean => {
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    return emailRegex.test(email);
+    const { isValidEmail } = require('@/components/ui/email-sharing/types');
+    return isValidEmail(email);
   }
 } as const;
 

@@ -111,6 +111,21 @@ export interface SystemConfiguration {
       readonly notifications: string;
     };
   };
+  readonly businessRules: {
+    readonly obligations: {
+      readonly qualityThreshold: number;
+      readonly progressThresholds: {
+        readonly excellent: number;
+        readonly good: number;
+        readonly moderate: number;
+      };
+      readonly wordCountThresholds: {
+        readonly minimum: number;
+        readonly excellent: number;
+      };
+      readonly defaultReadingSpeed: number;
+    };
+  };
 }
 
 /**
@@ -236,6 +251,21 @@ export const DEFAULT_SYSTEM_CONFIG: SystemConfiguration = {
       maps: '',
       weather: '',
       notifications: ''
+    }
+  },
+  businessRules: {
+    obligations: {
+      qualityThreshold: 50, // Ελάχιστες λέξεις για ποιοτικό περιεχόμενο
+      progressThresholds: {
+        excellent: 90, // 90%+ = Άριστη πρόοδος
+        good: 70,      // 70-89% = Καλή πρόοδος
+        moderate: 50   // 50-69% = Μέτρια πρόοδος
+      },
+      wordCountThresholds: {
+        minimum: 10,     // Ελάχιστες λέξεις ανά ενότητα
+        excellent: 200   // Άριστες λέξεις ανά ενότητα
+      },
+      defaultReadingSpeed: 200 // Λέξεις ανά λεπτό (μέσος όρος ενήλικα)
     }
   }
 } as const;

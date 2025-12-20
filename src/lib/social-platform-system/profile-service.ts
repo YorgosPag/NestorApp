@@ -509,12 +509,8 @@ export const extractUsernameFromSocialUrl = ProfileService.extractUsernameFromUr
  */
 export const getSupportedSocialPlatforms = ProfileService.getSupportedProfilePlatforms;
 
-/**
- * 🎯 Detect Platform από URL - Function Export
- *
- * BACKWARDS COMPATIBLE με existing socialUrlGenerator.ts code
- */
-export const detectPlatformFromUrl = detectPlatformFromUrl;
+// ✅ FIXED: detectPlatformFromUrl εξάγεται ήδη από το import στο top
+// Δεν χρειάζεται duplicate export εδώ
 
 // ============================================================================
 // LEGACY COMPATIBILITY - MIGRATION HELPERS

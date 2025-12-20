@@ -255,6 +255,13 @@ export class ErrorTracker {
     // Send to external services
     this.sendToExternalServices(errorReport);
 
+    // **🚀 AUTO ADMIN EMAIL FOR CRITICAL/ERROR SEVERITY**
+    if (severity === 'critical' || severity === 'error') {
+      this.sendToAdminAsync(errorReport).catch(emailError => {
+        this.log('Failed to send admin email', emailError);
+      });
+    }
+
     // **🚀 ANALYTICS INTEGRATION** - Track error στο AnalyticsBridge
     try {
       // Dynamically import για να αποφύγουμε circular dependencies
@@ -482,6 +489,89 @@ export class ErrorTracker {
     }).catch(err => {
       this.log('Failed to send error to custom endpoint', err);
     });
+  }
+
+  // **🚀 ADMIN EMAIL FUNCTIONALITY - ENTERPRISE INTEGRATION**
+  private async sendToAdminAsync(errorReport: ErrorReport): Promise<void> {
+    try {
+      // Dynamically import configuration to avoid circular deps
+      const { notificationConfig } = await import('@/config/error-reporting');
+
+      if (!notificationConfig.channels.adminEmail) {
+        this.log('No admin email configured, skipping admin notification');
+        return;
+      }
+
+      const emailPayload = {
+        to: notificationConfig.channels.adminEmail,
+        subject: `🚨 ${errorReport.severity.toUpperCase()} Error - ${errorReport.context.component || 'Application'}`,
+        templateId: 'error-report',
+        message: this.formatErrorForAdminEmail(errorReport),
+        priority: errorReport.severity === 'critical' ? 'high' : 'normal',
+        category: 'error-report'
+      };
+
+      const response = await fetch('/api/communications/email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(emailPayload)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Admin email failed: ${response.statusText}`);
+      }
+
+      this.log('Admin email sent successfully', { errorId: errorReport.id });
+
+    } catch (error) {
+      this.log('Failed to send admin email', error);
+      // Don't throw - we don't want admin email failure to break error tracking
+    }
+  }
+
+  private formatErrorForAdminEmail(errorReport: ErrorReport): string {
+    const { context } = errorReport;
+
+    return `
+🚨 AUTOMATIC ERROR REPORT - GEO-ALERT SYSTEM
+
+📋 ERROR SUMMARY:
+• Error ID: ${errorReport.id}
+• Severity: ${errorReport.severity.toUpperCase()}
+• Category: ${errorReport.category}
+• Message: ${errorReport.message}
+• Count: ${errorReport.count} occurrence(s)
+
+⏰ TIMING:
+• First Seen: ${new Date(errorReport.firstSeen).toLocaleString('el-GR')}
+• Last Seen: ${new Date(errorReport.lastSeen).toLocaleString('el-GR')}
+
+👤 USER CONTEXT:
+• User ID: ${context.userId || 'Anonymous'}
+• User Type: ${context.userType || 'Unknown'}
+• Session: ${context.sessionId}
+
+🌐 LOCATION:
+• URL: ${context.url}
+• Route: ${context.route}
+• Component: ${context.component || 'Unknown'}
+• Action: ${context.action || 'N/A'}
+
+🔧 TECHNICAL:
+• User Agent: ${context.userAgent}
+• Build Version: ${context.buildVersion || 'Unknown'}
+
+📚 STACK TRACE:
+${errorReport.stack || 'Stack trace not available'}
+
+${context.metadata ? `\n📊 ADDITIONAL METADATA:\n${JSON.stringify(context.metadata, null, 2)}` : ''}
+
+---
+⚡ Αυτό το email στάλθηκε αυτόματα από το ErrorTracker service
+🕒 Timestamp: ${new Date().toLocaleString('el-GR')}
+    `.trim();
   }
 
   // ============================================================================

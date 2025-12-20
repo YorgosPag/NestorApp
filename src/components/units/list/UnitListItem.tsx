@@ -5,6 +5,7 @@ import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
 import type { Property } from '@/types/property-viewer';
+import { brandClasses } from '@/styles/design-tokens';
 
 import { UnitListItemHeader } from './ListItem/UnitListItemHeader';
 import { UnitListItemStats } from './ListItem/UnitListItemStats';
@@ -41,7 +42,7 @@ export function UnitListItem({
                     "relative p-3 rounded-lg border cursor-pointer group",
                     INTERACTIVE_PATTERNS.CARD_STANDARD,
                     isSelected
-                    ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20 shadow-sm"
+                    ? `${brandClasses.primary.border} ${brandClasses.primary.bg} dark:bg-blue-950/20 shadow-sm`
                     : "border-border bg-card"
                 )}
                 onClick={() => onSelect(false)}

@@ -5,7 +5,8 @@
  * Όλες οι status definitions σε ένα κεντρικό αρχείο
  */
 
-import type { BadgeSystemConfig } from '../types/BadgeTypes';
+import type { BadgeSystemConfig, ObligationStatus } from '../types/BadgeTypes';
+import { brandClasses } from '@/styles/design-tokens';
 
 // ===== PROJECTS STATUS DEFINITIONS =====
 
@@ -576,6 +577,63 @@ export const COMMON_STATUSES = {
   }
 } as const;
 
+// ===== OBLIGATION STATUS DEFINITIONS =====
+
+export const OBLIGATION_STATUSES = {
+  draft: {
+    label: 'Προσχέδιο',
+    variant: 'warning',
+    color: '#D97706',
+    backgroundColor: '#FFFBEB',
+    icon: 'edit'
+  },
+  completed: {
+    label: 'Ολοκληρωμένο',
+    variant: 'success',
+    color: '#059669',
+    backgroundColor: '#ECFDF5',
+    icon: 'check'
+  },
+  approved: {
+    label: 'Εγκεκριμένο',
+    variant: 'info',
+    color: '#3B82F6',
+    backgroundColor: '#EFF6FF',
+    icon: 'checkCircle'
+  }
+} as const;
+
+// ===== OBLIGATION STATUS UTILITIES =====
+
+export const getObligationStatusLabel = (status: ObligationStatus): string => {
+  return OBLIGATION_STATUSES[status]?.label || status;
+};
+
+export const getObligationStatusColor = (status: ObligationStatus): string => {
+  const config = OBLIGATION_STATUSES[status];
+  if (!config) return 'bg-gray-100 text-gray-800 border-gray-200';
+
+  // Generate Tailwind classes από τα centralized colors
+  const isYellow = config.color === '#D97706';
+  const isGreen = config.color === '#059669';
+  const isBlue = config.color === '#3B82F6';
+
+  if (isYellow) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+  if (isGreen) return 'bg-green-100 text-green-800 border-green-200';
+  if (isBlue) return brandClasses.primary.badge;
+
+  return 'bg-gray-100 text-gray-800 border-gray-200';
+};
+
+export const getObligationStatusIcon = (status: ObligationStatus): string => {
+  const iconMap: Record<ObligationStatus, string> = {
+    draft: "📝",
+    completed: "✅",
+    approved: "🔐"
+  };
+  return iconMap[status] || "📄";
+};
+
 // ===== UNIFIED BADGE SYSTEM CONFIG =====
 
 export const UNIFIED_BADGE_SYSTEM: BadgeSystemConfig = {
@@ -585,7 +643,8 @@ export const UNIFIED_BADGE_SYSTEM: BadgeSystemConfig = {
     CONTACT: CONTACT_STATUSES,
     PROPERTY: PROPERTY_STATUSES,
     UNIT: UNIT_STATUSES,
-    NAVIGATION: NAVIGATION_STATUSES
+    NAVIGATION: NAVIGATION_STATUSES,
+    OBLIGATION: OBLIGATION_STATUSES
   },
   common: COMMON_STATUSES
 };

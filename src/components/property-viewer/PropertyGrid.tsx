@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { COMPLEX_HOVER_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import type { Property } from '@/types/property-viewer';
 import { formatFloorLabel } from '@/lib/intl-utils';
+import { brandClasses } from '@/styles/design-tokens';
 
 const statusConfig = {
   'for-sale': {
@@ -18,8 +19,8 @@ const statusConfig = {
   },
   'for-rent': {
     label: 'Προς Ενοικίαση',
-    color: 'border-blue-500 bg-blue-50 dark:bg-blue-950/20',
-    textColor: 'text-blue-700 dark:text-blue-300'
+    color: `${brandClasses.primary.border} ${brandClasses.primary.bg} dark:bg-blue-950/20`,
+    textColor: brandClasses.primary.text
   },
   'sold': {
     label: 'Πουλημένο',
