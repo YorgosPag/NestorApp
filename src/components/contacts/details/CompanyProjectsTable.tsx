@@ -8,19 +8,25 @@ import { Briefcase } from 'lucide-react';
 import type { Project } from '@/types/project';
 import { cn } from '@/lib/utils';
 import { getProjectLabel } from '@/lib/project-utils';
-import { getProjectsByCompanyId } from '@/services/projects.service';
+import { useCompanyRelationships } from '@/services/relationships/hooks/useEnterpriseRelationships';
 
 
 function CompanyProjectsTable({ companyId }: { companyId: string }) {
     const [projects, setProjects] = useState<Project[]>([]);
 
+    // 🚀 ENTERPRISE RELATIONSHIP ENGINE: Hook για centralized company-projects relationship
+    const companyRelationships = useCompanyRelationships(companyId);
+
     useEffect(() => {
         let isMounted = true;
         const fetchProjects = async () => {
             try {
-                const companyProjects = await getProjectsByCompanyId(companyId);
+                // 🏗️ ENTERPRISE: Loading projects μέσω centralized Relationship Engine
+                console.log(`🏗️ ENTERPRISE CompanyProjectsTable: Loading projects for company ${companyId}`);
+                const companyProjects = await companyRelationships.getProjects();
                 if (isMounted) {
                     setProjects(companyProjects);
+                    console.log(`✅ ENTERPRISE CompanyProjectsTable: Loaded ${companyProjects.length} projects for company ${companyId}`);
                 }
             } catch (error) {
                 console.error("Failed to fetch projects for company:", error);

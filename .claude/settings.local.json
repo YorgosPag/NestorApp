@@ -210,7 +210,8 @@
       "Bash(PORT=3005 SKIP_ENV_VALIDATION=true TYPESCRIPT_CHECK=false npm run dev)",
       "Bash(ren:*)",
       "Bash(git cherry-pick:*)",
-      "Bash(git stash:*)"
+      "Bash(git stash:*)",
+      "Bash(SKIP_ENV_VALIDATION=true TYPESCRIPT_CHECK=false PORT=3333 npm run dev)"
     ],
     "deny": [],
     "ask": []

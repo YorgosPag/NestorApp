@@ -757,3 +757,73 @@ export function useProjectRelationships(projectId: string) {
     ...relationships
   };
 }
+
+/**
+ * 🏢 Hook για Building-specific relationship operations
+ * @enterprise Complete Building→Floors→Units hierarchy management
+ */
+export function useBuildingRelationships(buildingId: string) {
+  const relationships = useEnterpriseRelationships();
+
+  const getProject = useCallback(async () => {
+    return await relationships.getParent('building', buildingId, 'project');
+  }, [relationships, buildingId]);
+
+  const getFloors = useCallback(async () => {
+    return await relationships.getChildren('building', buildingId, 'floor');
+  }, [relationships, buildingId]);
+
+  const getUnits = useCallback(async () => {
+    // 🏗️ ENTERPRISE: Direct Building→Units relationship via hierarchical query
+    return await relationships.getChildren('building', buildingId, 'unit');
+  }, [relationships, buildingId]);
+
+  const addFloor = useCallback(async (floorId: string, options?: CreateRelationshipOptions) => {
+    return await relationships.createRelationship('building', buildingId, 'floor', floorId, options);
+  }, [relationships, buildingId]);
+
+  const getBuildingHierarchy = useCallback(async (options?: HierarchyQueryOptions) => {
+    return await relationships.getHierarchy('building', buildingId, options);
+  }, [relationships, buildingId]);
+
+  return {
+    getProject,
+    getFloors,
+    getUnits,
+    addFloor,
+    getBuildingHierarchy,
+    ...relationships
+  };
+}
+
+/**
+ * 🏠 Hook για Floor-specific relationship operations
+ * @enterprise Complete Floor→Units hierarchy management
+ */
+export function useFloorRelationships(floorId: string) {
+  const relationships = useEnterpriseRelationships();
+
+  const getBuilding = useCallback(async () => {
+    return await relationships.getParent('floor', floorId, 'building');
+  }, [relationships, floorId]);
+
+  const getUnits = useCallback(async () => {
+    return await relationships.getChildren('floor', floorId, 'unit');
+  }, [relationships, floorId]);
+
+  const addUnit = useCallback(async (unitId: string, options?: CreateRelationshipOptions) => {
+    return await relationships.createRelationship('floor', floorId, 'unit', unitId, options);
+  }, [relationships, floorId]);
+
+  const getFloorHierarchy = useCallback(async (options?: HierarchyQueryOptions) => {
+    return await relationships.getHierarchy('floor', floorId, options);
+  }, [relationships, floorId]);
+
+  return {
+    getBuilding,
+    getUnits,
+    addUnit,
+    getFloorHierarchy,
+    ...relationships
+  };
+}

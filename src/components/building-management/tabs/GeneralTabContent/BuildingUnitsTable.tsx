@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { UnitBadge } from '@/core/badges';
 import { Button } from '@/components/ui/button';
 import { Package, Eye } from 'lucide-react';
-import { getUnitsByBuilding } from '@/services/units.service';
+import { useBuildingRelationships } from '@/services/relationships/hooks/useEnterpriseRelationships';
 import type { Property } from '@/types/property-viewer';
 import { getStatusColor, getStatusLabel } from '@/lib/project-utils';
 
@@ -16,13 +16,20 @@ function BuildingUnitsTable({ buildingId }: { buildingId: number }) {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
+  // 🏗️ ENTERPRISE RELATIONSHIP ENGINE: Complete Building→Units hierarchy management
+  const buildingRelationships = useBuildingRelationships(`building-${buildingId}`);
+
   useEffect(() => {
     // Simulate fetching units for the building
     const fetchUnits = async () => {
         try {
             setLoading(true);
-            const buildingUnits = await getUnitsByBuilding(`building-${buildingId}`);
+            // 🏢 ENTERPRISE: Loading units μέσω centralized Building Relationship Engine
+            console.log(`🏗️ ENTERPRISE BuildingUnitsTable: Loading units for building building-${buildingId}`);
+            const buildingUnits = await buildingRelationships.getUnits();
             setUnits(buildingUnits);
+            console.log(`✅ ENTERPRISE BuildingUnitsTable: Loaded ${buildingUnits.length} units for building building-${buildingId}`);
+
         } catch (error) {
             console.error("Failed to fetch units for building:", error);
             setUnits([]);

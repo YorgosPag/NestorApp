@@ -6,27 +6,50 @@ import { CacheHelpers } from '@/lib/cache/enterprise-api-cache';
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('🏗️ API: Loading buildings...');
+    // 🏗️ ENTERPRISE: Extract projectId parameter for filtering
+    const { searchParams } = new URL(request.url);
+    const projectId = searchParams.get('projectId');
 
-    // 🚀 ENTERPRISE CACHING: Check cache first
-    const cachedBuildings = CacheHelpers.getCachedAllBuildings();
-    if (cachedBuildings) {
-      console.log(`⚡ API: CACHE HIT - Returning ${cachedBuildings.length} cached buildings`);
-      return NextResponse.json({
-        success: true,
-        buildings: cachedBuildings,
-        count: cachedBuildings.length,
-        cached: true
-      });
+    if (projectId) {
+      console.log(`🏗️ API: Loading buildings for project ${projectId}...`);
+    } else {
+      console.log('🏗️ API: Loading all buildings...');
+    }
+
+    // 🚀 ENTERPRISE CACHING: Check cache first (only for all buildings)
+    if (!projectId) {
+      const cachedBuildings = CacheHelpers.getCachedAllBuildings();
+      if (cachedBuildings) {
+        console.log(`⚡ API: CACHE HIT - Returning ${cachedBuildings.length} cached buildings`);
+        return NextResponse.json({
+          success: true,
+          buildings: cachedBuildings,
+          count: cachedBuildings.length,
+          cached: true
+        });
+      }
     }
 
     console.log('🔍 API: Cache miss - Fetching from Firestore...');
 
-    // Get all buildings from Firestore
-    const buildingsQuery = query(
-      collection(db, COLLECTIONS.BUILDINGS),
-      orderBy('createdAt', 'desc')
-    );
+    // 🎯 ENTERPRISE: Build query with optional projectId filter
+    let buildingsQuery;
+
+    if (projectId) {
+      // 🎯 ENTERPRISE: Filter buildings by projectId relationship
+      const { where } = await import('firebase/firestore');
+      buildingsQuery = query(
+        collection(db, COLLECTIONS.BUILDINGS),
+        where('projectId', '==', projectId),
+        orderBy('createdAt', 'desc')
+      );
+    } else {
+      // Get all buildings
+      buildingsQuery = query(
+        collection(db, COLLECTIONS.BUILDINGS),
+        orderBy('createdAt', 'desc')
+      );
+    }
 
     const snapshot = await getDocs(buildingsQuery);
 
@@ -35,16 +58,23 @@ export async function GET(request: NextRequest) {
       ...doc.data()
     }));
 
-    // 💾 ENTERPRISE CACHING: Store in cache for future requests
-    CacheHelpers.cacheAllBuildings(buildings);
+    // 💾 ENTERPRISE CACHING: Store in cache for future requests (only for all buildings)
+    if (!projectId) {
+      CacheHelpers.cacheAllBuildings(buildings);
+    }
 
-    console.log(`✅ API: Found ${buildings.length} buildings (cached for 2 minutes)`);
+    if (projectId) {
+      console.log(`✅ API: Found ${buildings.length} buildings for project ${projectId}`);
+    } else {
+      console.log(`✅ API: Found ${buildings.length} buildings (cached for 2 minutes)`);
+    }
 
     return NextResponse.json({
       success: true,
       buildings,
       count: buildings.length,
-      cached: false
+      cached: false,
+      projectId: projectId || undefined
     });
 
   } catch (error) {

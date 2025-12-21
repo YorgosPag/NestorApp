@@ -110,15 +110,16 @@ export const stripHtmlTags = (html: string): string =>
   html.replace(/<[^>]*>/g, '').trim();
 
 export const sanitizeHtml = (html: string): string => {
-  // ✅ ENTERPRISE MIGRATION: Delegating to production-ready HTML sanitizer
-  // Using enterprise implementation for proper security validation
-  try {
-    const { sanitizeHtml: enterpriseSanitizer } = require('@/app/obligations/[id]/view/utils/html-sanitize');
-    return enterpriseSanitizer(html);
-  } catch (error) {
-    console.warn('Enterprise sanitizer not available, using fallback');
-    return html.replace(/<script[^>]*>.*?<\/script>/gi, '').trim();
-  }
+  // ✅ BASIC HTML SANITIZATION: Removing dangerous scripts and tags
+  // For enterprise-grade sanitization, consider using DOMPurify or similar library
+  return html
+    .replace(/<script[^>]*>.*?<\/script>/gi, '')
+    .replace(/<iframe[^>]*>.*?<\/iframe>/gi, '')
+    .replace(/<object[^>]*>.*?<\/object>/gi, '')
+    .replace(/<embed[^>]*>.*?<\/embed>/gi, '')
+    .replace(/javascript:/gi, '')
+    .replace(/on\w+\s*=/gi, '')
+    .trim();
 };
 
 export const convertMarkdownToHtml = (markdown: string): string => {

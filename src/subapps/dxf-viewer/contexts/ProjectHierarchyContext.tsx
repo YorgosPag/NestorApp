@@ -6,7 +6,6 @@ const DEBUG_PROJECT_HIERARCHY = false;
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 // Import existing services
-import { getProjectsByCompanyId, getProjectStructure } from '../../../services/projects.service';
 import { getAllActiveCompanies } from '../../../services/companies.service';
 import type { CompanyContact } from '../../../types/contacts';
 

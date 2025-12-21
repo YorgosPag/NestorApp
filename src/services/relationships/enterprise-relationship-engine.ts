@@ -351,6 +351,21 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
           return projects;
         }
 
+        if (parentType === 'building' && childType === 'unit') {
+          // 🏢 FALLBACK: Read directly from units collection with buildingId
+          const unitsCollection = database.collection('units');
+          const unitsQuery = unitsCollection.where('buildingId', '==', parentId);
+
+          const unitsSnap = await unitsQuery.get();
+          const units = unitsSnap.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as readonly TChild[];
+
+          console.log(`✅ ENTERPRISE FALLBACK: Found ${units.length} units for building ${parentId} via direct lookup`);
+          return units;
+        }
+
         // For other relationships, return empty
         console.log(`❌ ENTERPRISE: No fallback available for ${parentType}-${childType} relationship`);
         return [];
