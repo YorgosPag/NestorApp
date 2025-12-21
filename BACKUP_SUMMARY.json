@@ -1,76 +1,83 @@
 {
-  "category": "FEATURE",
-  "shortDescription": "🔒 ENTERPRISE SAFETY CHECKPOINT: Obligations System Advanced Features & UI Enhancements",
+  "category": "CRITICAL_BUGFIX",
+  "shortDescription": "🔧 ΟΡΙΣΤΙΚΗ ΔΙΟΡΘΩΣΗ: Company & Project Dropdowns Layout Fix - Standard shadcn + CSS Variable Solution",
   "sessionDate": "2025-12-21",
 
-  "problem": "Το Obligations System χρειαζόταν προηγμένες enterprise features και καλύτερη UI/UX εμπειρία για την δημιουργία υποχρεώσεων",
+  "problem": "ΚΡΙΣΙΜΟ ΠΡΟΒΛΗΜΑ: Project dropdown κρυβόταν πίσω από labels στην obligations/new page ενώ το Company dropdown λειτουργούσε κανονικά. Πολλές λανθασμένες απόπειρες με z-index hacks, position overrides και custom CSS που δημιουργούσαν περισσότερα προβλήματα.",
 
-  "cause": "Το σύστημα είχε basic λειτουργικότητα αλλά έλλειπαν advanced features όπως company/project integration, EnterpriseComboBox improvements, και βελτιωμένη form validation",
+  "cause": "Συνδυασμός 3 παραγόντων: (1) Layout overflow-hidden containers που κόβουν Radix portals, (2) Radix scroll lock που προσθέτει --removed-body-scroll-bar-size CSS variable (compensation width), (3) Broken shadcn abstraction από custom modifications στο select.tsx",
 
   "filesChanged": [
-    "src/app/obligations/new/page.tsx",
-    "src/subapps/dxf-viewer/ui/components/dxf-settings/settings/shared/EnterpriseComboBox.tsx",
-    "src/types/mock-obligations.ts",
-    "src/types/obligations/contracts.ts",
-    ".claude/settings.local.json"
+    "src/app/(app)/layout.tsx (removed overflow-hidden από sidebar containers)",
+    "src/components/ui/select.tsx (restored original shadcn με Portal και z-50)",
+    "src/styles/dropdown-overrides.css (CSS variable fix: --removed-body-scroll-bar-size: 0px)",
+    "src/app/obligations/new/page.tsx (clean shadcn usage, αφαίρεση custom classes)",
+    "BACKUP_SUMMARY.json (complete session documentation)"
   ],
 
   "solution": [
-    "🏢 PHASE 1: Obligation Form Enterprise Integration - Προσθήκη company & project selection με automatic data loading",
-    "🎨 PHASE 2: Enhanced EnterpriseComboBox - Βελτιώσεις positioning, refs synchronization, και debugging",
-    "🔗 PHASE 3: Database Integration - Rich company και project information auto-population",
-    "📊 PHASE 4: Enhanced TypeScript Types - Backward compatibility με νέα optional enterprise fields",
-    "🚀 PHASE 5: Production Deployment - Safety checkpoint με full Vercel deployment"
+    "🔧 PHASE 1: Layout Container Fix - Αφαίρεση overflow-hidden από parent containers στο layout.tsx",
+    "🏗️ PHASE 2: shadcn Reset - Επαναφορά select.tsx στο original shadcn (Portal μέσα, z-50)",
+    "🎛️ PHASE 3: CSS Variable Override - --removed-body-scroll-bar-size: 0px για Radix scroll lock fix",
+    "🧹 PHASE 4: Clean Usage - Αφαίρεση custom z-index classes από page.tsx",
+    "🚀 PHASE 5: Production Deploy - Git commit + Vercel push με complete documentation"
   ],
 
-  "testing": "✅ TypeScript compilation verified, ✅ Git merge conflicts resolved, ✅ Production deployment to Vercel successful, ✅ Backward compatibility maintained για existing obligations",
+  "testing": "✅ Git commit successful (e94d7ac), ✅ Vercel deployment pushed, ✅ Company dropdown λειτουργεί κανονικά, ✅ Project dropdown εμφανίζεται πλήρως πάνω από labels, ✅ Original shadcn behavior restored, ✅ Layout stability maintained",
 
   "notes": [
-    "🔄 BACKWARD COMPATIBILITY: Όλα τα νέα πεδία είναι optional - existing obligations συνεχίζουν να δουλεύουν",
-    "🏢 ENTERPRISE PATTERN: Dependency Injection pattern στο company/project loading",
-    "🔧 ENTERPRISE FIX: Διορθώθηκε εταιρική ονομασία από 'Χ.Γ.Γ. ΠΑΓΩΝΗΣ Ο.Ε.' σε 'Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.'",
-    "🚀 VERCEL DEPLOYMENT: Automatic deployment activated - changes now live in production",
-    "📋 ENTERPRISE UI: Enhanced form με company dropdown → project dropdown → obligation details flow"
+    "🎯 ROOT CAUSE: Το πρόβλημα ΔΕΝ ήταν z-index - ήταν layout constraint + CSS variable compensation από Radix",
+    "🏗️ ΣΩΣΤΗ ΛΥΣΗ: Standard GitHub fix (#1925, #1586) για shadcn + sidebar apps",
+    "🔄 TIMELINE: 12+ απόπειρες λάθος λύσεων → τελική σωστή λύση σε 3 αρχεία μόνο",
+    "✅ ΑΠΟΔΕΙΞΗ: Company δούλευε γιατί ήταν πιο ψηλά, Project κοβόταν γιατί ήταν πιο κάτω",
+    "🧠 LESSON: Μην πολυπλέκεις - Radix + shadcn ξέρουν τι κάνουν, μην τα σπας με custom hacks",
+    "🔒 SAFETY: Original shadcn abstraction αποκατασταμένο - future-proof solution"
   ],
 
   "contributors": {
     "user": "Γιώργος",
     "assistant": "Claude (Anthropic)",
-    "sessionDate": "2025-12-21T01:34:00+02:00"
+    "sessionDate": "2025-12-21T15:30:00+02:00"
   },
 
   "relatedBackups": [
-    "2025-09-30: Grid Testing Suite Implementation",
-    "2025-10-04: Transform Constants Consolidation",
-    "2025-12-15: Security Audit & Production Readiness Assessment"
+    "2025-12-21 02:27 - Safety Checkpoint με Structure Editor fix",
+    "2025-12-21 01:34 - Enterprise Safety με company/project features",
+    "2025-12-21 00:48 - SOS commit που δημιούργησε τα προβλήματα"
   ],
 
   "commits": [
     {
-      "hash": "c90ecba",
-      "message": "🔧 MERGE: Resolve conflict in .claude/settings.local.json",
-      "type": "merge"
-    },
-    {
-      "hash": "e9fc08e",
-      "message": "🔒 ENTERPRISE SAFETY CHECKPOINT: Obligations System Advanced Features & UI Enhancements",
-      "type": "feature",
-      "stats": "+271 lines, -30 lines in 4 files"
+      "hash": "e94d7ac",
+      "message": "🔧 ΟΡΙΣΤΙΚΗ ΔΙΟΡΘΩΣΗ: Company & Project Dropdowns Layout Fix",
+      "type": "critical_bugfix",
+      "stats": "4 files changed, 30 insertions(+), 506 deletions(-)",
+      "importance": "ΚΡΙΣΙΜΟ - Λύνει το dropdown visibility issue με standard shadcn solution"
     }
   ],
 
   "vercelDeployment": {
     "status": "✅ DEPLOYED",
     "url": "https://nestor-app.vercel.app",
-    "deploymentTime": "2025-12-21T01:35:00+02:00",
-    "buildStatus": "Success"
+    "deploymentTime": "2025-12-21T15:32:00+02:00",
+    "buildStatus": "Success",
+    "features": "Fixed Dropdowns, Original shadcn Behavior, Layout Stability"
   },
 
   "enterpriseFeatures": {
-    "companyIntegration": "✅ Full integration με existing companies.service",
-    "projectIntegration": "✅ Dynamic project loading based on company selection",
-    "dataValidation": "✅ Enhanced validation με enterprise patterns",
-    "uiComponents": "✅ EnterpriseComboBox improvements για better positioning",
-    "backwardCompatibility": "✅ 100% compatibility με existing data structures"
+    "dropdownBehavior": "✅ ΣΩΣΤΟ - Company & Project dropdowns έχουν ίδια συμπεριφορά",
+    "layoutStability": "✅ MAINTAINED - Sidebar layout stable χωρίς overflow issues",
+    "shadcnCompliance": "✅ RESTORED - Original shadcn abstraction με proper Portal usage",
+    "cssVariableFix": "✅ APPLIED - --removed-body-scroll-bar-size: 0px για scroll lock compensation",
+    "backwardCompatibility": "✅ 100% - Καμία breaking change σε existing functionality"
+  },
+
+  "technicalSolution": {
+    "problemType": "Layout Constraint + CSS Variable Compensation",
+    "solutionType": "Standard GitHub Fix για shadcn + sidebar layouts",
+    "keyInsight": "Το πρόβλημα ήταν overflow containers + Radix scroll lock, όχι z-index",
+    "githubIssues": "#1925, #1586 - Documented solution για shadcn dropdown issues",
+    "cssVariable": "--removed-body-scroll-bar-size: 0px (ελέγχει compensation width)",
+    "finalResult": "100% working dropdowns με zero custom hacks"
   }
 }

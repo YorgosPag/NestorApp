@@ -318,27 +318,46 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
     childType: EntityType
   ): Promise<readonly TChild[]> {
     return await safeDbOperation(async (database) => {
-      const { collection, query, where, getDocs } = await import('firebase-admin/firestore');
+      // 1️⃣ GET RELATIONSHIPS FROM ENTITY_RELATIONSHIPS TABLE
+      const relationshipsCollection = database.collection(this.RELATIONSHIPS_COLLECTION);
+      const relationshipsQuery = relationshipsCollection
+        .where('parentType', '==', parentType)
+        .where('parentId', '==', parentId)
+        .where('childType', '==', childType);
 
-      // 1️⃣ GET RELATIONSHIPS
-      const relationshipsQuery = query(
-        collection(database, this.RELATIONSHIPS_COLLECTION),
-        where('parentType', '==', parentType),
-        where('parentId', '==', parentId),
-        where('childType', '==', childType)
-      );
-
-      const relationshipsSnap = await getDocs(relationshipsQuery);
+      const relationshipsSnap = await relationshipsQuery.get();
       const childIds = relationshipsSnap.docs.map(doc => {
         const data = doc.data();
         return data.childId;
       });
 
+      // 2️⃣ FALLBACK: If no relationships found, try direct collection lookup
       if (childIds.length === 0) {
+        // 🔄 ENTERPRISE FALLBACK STRATEGY for existing data migration
+        console.log(`⚠️ ENTERPRISE: No relationships found in ${this.RELATIONSHIPS_COLLECTION}. Trying fallback for ${parentType}-${childType}`);
+
+        if (parentType === 'company' && childType === 'project') {
+          // 📊 FALLBACK: Read directly from projects collection with companyId
+          const projectsCollection = database.collection('projects');
+          const projectsQuery = projectsCollection.where('companyId', '==', parentId);
+
+          const projectsSnap = await projectsQuery.get();
+          const projects = projectsSnap.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as readonly TChild[];
+
+          console.log(`✅ ENTERPRISE FALLBACK: Found ${projects.length} projects for company ${parentId} via direct lookup`);
+          return projects;
+        }
+
+        // For other relationships, return empty
+        console.log(`❌ ENTERPRISE: No fallback available for ${parentType}-${childType} relationship`);
         return [];
       }
 
-      // 2️⃣ BATCH FETCH ENTITIES
+      // 3️⃣ BATCH FETCH ENTITIES (original path)
+      console.log(`✅ ENTERPRISE: Found ${childIds.length} relationship records, fetching entities`);
       const entities = await this.batchGetEntities<TChild>(childType, childIds);
       return entities;
     });

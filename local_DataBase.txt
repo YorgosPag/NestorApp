@@ -439,3 +439,36 @@ service cloud.firestore {
     }
   }
 }
+
+projects
+
+projects
+
+mR6tY8uI3oP5qW7eA9sD
+
+pzK8mN3xQw9vR2dL4jF7
+
+xL2nV4bC6mZ8kJ9hG1fQ
+mR6tY8uI3oP5qW7eA9sD
+company
+"Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε."
+(string)
+
+
+companyId
+"pzNUy8ksddGCtcQMqumR"
+(string)
+
+
+name
+"Μεγάλου Αλεξάνδρου Συγκρότημα"
+(string)
+
+
+progress
+25
+(number)
+
+
+status
+"planning"

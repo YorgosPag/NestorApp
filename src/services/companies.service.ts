@@ -7,8 +7,8 @@ import { getNavigationCompanyIds } from './navigation-companies.service';
 import { getProjectsByCompanyId } from './projects.service';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
-// 🎯 PRODUCTION: DEBUG FLAG disabled για καθαρότερα logs στην obligations/new page
-const DEBUG_COMPANIES_SERVICE = false;
+// 🎯 PRODUCTION: DEBUG FLAG enabled για διάγνωση του προβλήματος ΠΑΓΩΝΗΣ
+const DEBUG_COMPANIES_SERVICE = true;
 
 // 🏢 ENTERPRISE: Centralized Firestore collection configuration
 const CONTACTS_COLLECTION = COLLECTIONS.CONTACTS;
@@ -198,13 +198,26 @@ export class CompaniesService {
         .filter((contact): contact is CompanyContact => contact.type === 'company');
 
       // Φιλτράρουμε μόνο τις εταιρείες που είναι relevant
-      const relevantCompanies = allCompanies.filter(company =>
-        allRelevantCompanyIds.includes(company.id!)
-      );
+      const relevantCompanies = allCompanies.filter(company => {
+        const isRelevant = allRelevantCompanyIds.includes(company.id!);
+        if (DEBUG_COMPANIES_SERVICE && company.id === 'pzNUy8ksddGCtcQMqumR') {
+          console.log(`🔍 ΠΑΓΩΝΗΣ filtering check:`, {
+            companyId: company.id,
+            companyName: company.companyName,
+            isInRelevantIds: isRelevant,
+            relevantIdsArray: allRelevantCompanyIds,
+            companyExists: !!company.id
+          });
+        }
+        return isRelevant;
+      });
 
       if (DEBUG_COMPANIES_SERVICE) {
         console.log(`🏢 Total companies from Firestore: ${allCompanies.length}`);
         console.log(`🎯 Relevant companies: ${relevantCompanies.length}`);
+        console.log(`🔍 All company IDs from Firestore:`, allCompanies.map(c => c.id));
+        console.log(`🔍 Relevant company IDs array:`, allRelevantCompanyIds);
+        console.log(`🔍 Filtered relevant companies:`, relevantCompanies.map(c => `${c.id} - ${c.companyName}`));
       }
 
       return relevantCompanies;

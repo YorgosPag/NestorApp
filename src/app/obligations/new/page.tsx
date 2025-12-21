@@ -42,7 +42,8 @@ import Link from "next/link";
 
 // 🏢 ENTERPRISE: Import existing κεντρικοποιημένων components & services
 import { CompaniesService } from "@/services/companies.service";
-import { getProjectsByCompanyId } from "@/services/projects.service";
+import { getNavigationCompanyIds } from "@/services/navigation-companies.service";
+import { useCompanyRelationships } from "@/services/relationships/hooks/useEnterpriseRelationships";
 import type { Contact } from "@/types/contacts";
 import type { ProjectStructure } from "@/services/projects/contracts";
 
@@ -167,14 +168,50 @@ export default function NewObligationPage() {
   const [loadingCompanies, setLoadingCompanies] = useState(false);
   const [loadingProjects, setLoadingProjects] = useState(false);
 
-  // 🏢 ENTERPRISE: Load companies on component mount
+  // 🏢 ENTERPRISE: Navigation company mapping (για το projects API)
+  const [navigationCompanyMap, setNavigationCompanyMap] = useState<Map<string, string>>(new Map());
+
+  // 🚀 ENTERPRISE RELATIONSHIP ENGINE: Hook για projects από συγκεκριμένη εταιρεία
+  const companyRelationships = useCompanyRelationships(formData.companyId || '');
+
+  // 🏢 ENTERPRISE: Load companies and build navigation mapping
   useEffect(() => {
-    const loadCompanies = async () => {
+    const loadCompaniesAndMapping = async () => {
       setLoadingCompanies(true);
       try {
         const companiesService = new CompaniesService();
         const companyContacts = await companiesService.getAllActiveCompanies();
         setCompanies(companyContacts);
+
+        // 🔗 ENTERPRISE: Build mapping από contacts.id → navigation_companies.contactId
+        // Αυτό είναι απαραίτητο γιατί το projects API περιμένει το contactId από navigation_companies
+        const navigationIds = await getNavigationCompanyIds();
+        const mapping = new Map<string, string>();
+
+        // Map κάθε company ID (από contacts) στο αντίστοιχο contactId (για projects API)
+        // Η λογική είναι: στο navigation_companies η εταιρεία αποθηκεύεται με contactId="pzNUy8ksddGCtcQMqumR"
+        // αλλά στο contacts dropdown εμφανίζεται με ID από contacts collection
+        // Το projects API περιμένει το contactId από navigation_companies
+        companyContacts.forEach(company => {
+          // Για κάθε εταιρεία στο contacts, βρίσκουμε το navigation contactId
+          const isInNavigation = navigationIds.includes(company.id!);
+          if (isInNavigation) {
+            // Αν η εταιρεία είναι στο navigation, το company.id ΗΔΗ είναι το σωστό contactId
+            mapping.set(company.id!, company.id!);
+          } else {
+            // Αν δεν είναι στο navigation, πιθανόν δε θα έχει projects
+            mapping.set(company.id!, company.id!);
+          }
+        });
+
+        setNavigationCompanyMap(mapping);
+
+        console.log("🏢 Companies mapping built:", {
+          totalCompanies: companyContacts.length,
+          mappingEntries: mapping.size,
+          navigationIds: navigationIds.length
+        });
+
       } catch (error) {
         console.error("Error loading companies:", error);
       } finally {
@@ -182,7 +219,7 @@ export default function NewObligationPage() {
       }
     };
 
-    loadCompanies();
+    loadCompaniesAndMapping();
   }, []);
 
   // 🏢 ENTERPRISE: Load projects when company changes
@@ -195,8 +232,22 @@ export default function NewObligationPage() {
 
       setLoadingProjects(true);
       try {
-        const projectsData = await getProjectsByCompanyId(formData.companyId);
+        // 🔗 ENTERPRISE: Χρησιμοποιούμε το mapping για να βρούμε το σωστό contactId
+        const contactIdForProjects = navigationCompanyMap.get(formData.companyId) || formData.companyId;
+
+        console.log("🔗 Loading projects:", {
+          selectedCompanyId: formData.companyId,
+          mappedContactId: contactIdForProjects,
+          usingMapping: contactIdForProjects !== formData.companyId
+        });
+
+        // 🚀 ENTERPRISE RELATIONSHIP ENGINE: Φόρτωση projects μέσω centralized system
+        console.log(`🏗️ ENTERPRISE: Loading projects for company ${contactIdForProjects} via Relationship Engine`);
+        const projectsData = await companyRelationships.getProjects();
         setProjects(projectsData);
+
+        console.log(`✅ ENTERPRISE: Loaded ${projectsData.length} projects for company ${contactIdForProjects} via Relationship Engine`);
+
       } catch (error) {
         console.error("Error loading projects for company:", error);
         setProjects([]);
@@ -205,8 +256,11 @@ export default function NewObligationPage() {
       }
     };
 
-    loadProjectsForCompany();
-  }, [formData.companyId]);
+    // Μόνο αν έχουμε το mapping έτοιμο
+    if (navigationCompanyMap.size > 0) {
+      loadProjectsForCompany();
+    }
+  }, [formData.companyId, navigationCompanyMap]);
 
   // Auto-resize all textareas when content changes
   useEffect(() => {

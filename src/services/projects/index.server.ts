@@ -10,8 +10,10 @@ const productionRepo = new NewFirestoreRepo(); // Αντικατέστησε τ�
 const service = new ProjectsService(firestoreRepo, productionRepo);
 
 export async function getProjectsByCompanyId(companyId: string) {
-    // Debug logging removed: console.log(`🏗️ SERVER ACTION: getProjectsByCompanyId called with: "${companyId}"`);
-    return await service.getProjectsByCompanyId(companyId);
+    console.log(`🏗️ SERVER ACTION: getProjectsByCompanyId called with: "${companyId}"`);
+    const result = await service.getProjectsByCompanyId(companyId);
+    console.log(`🏗️ SERVER ACTION: returning ${result.length} projects for companyId "${companyId}"`);
+    return result;
 }
 
 export async function getProjectStructure(projectId: number) {
