@@ -35,7 +35,7 @@ import {
 import { DEFAULT_TEMPLATE_SECTIONS } from '@/types/mock-obligations';
 import { obligationsService } from "@/services/obligations.service";
 import { TableOfContents } from "@/components/obligations/table-of-contents";
-import StructureEditor from "@/components/obligations/structure-editor/StructureEditor";
+import StructureEditor from "@/components/obligations/structure-editor";
 import LivePreview from "@/components/obligations/live-preview";
 import { RichTextEditor } from "@/components/obligations/rich-text-editor";
 import Link from "next/link";
@@ -586,9 +586,8 @@ export default function NewObligationPage() {
 
         {/* Main Content */}
         <section
-          className={`flex-1 grid gap-6 ${viewMode === 'split' ? 'lg:grid-cols-[1fr_1fr] lg:items-start' : 'lg:grid-cols-1'} w-full min-h-0 overflow-y-auto overscroll-contain`}
+          className={`obligations-page flex-1 grid gap-6 ${viewMode === 'split' ? 'lg:grid-cols-[1fr_1fr] lg:items-start' : 'lg:grid-cols-1'} w-full min-h-0`}
           aria-label="Επεξεργασία υποχρέωσης"
-          style={{ maxHeight: 'calc(100vh - 120px)' }}
         >
           {/* Left Panel - Editor */}
           <section className="space-y-6" aria-label="Φόρμα επεξεργασίας">
@@ -612,7 +611,7 @@ export default function NewObligationPage() {
                           placeholder={loadingCompanies ? "Φόρτωση εταιρειών..." : "Επιλέξτε εταιρεία"}
                         />
                       </SelectTrigger>
-                      <SelectContent className="max-h-80 !z-[9999] relative">
+                      <SelectContent className="max-h-80">
                         {companyOptions.map((company) => (
                           <SelectItem key={company.id} value={company.id}>
                             {company.name}
@@ -640,7 +639,7 @@ export default function NewObligationPage() {
                           }
                         />
                       </SelectTrigger>
-                      <SelectContent className="max-h-80 !z-[9999] relative">
+                      <SelectContent className="max-h-80">
                         {projectOptions.map((project) => (
                           <SelectItem key={project.id} value={project.id}>
                             {project.name}

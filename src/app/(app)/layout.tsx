@@ -79,15 +79,18 @@ export default function RootLayout({
                     <NavigationProvider>
                       <PhotoPreviewProvider>
                         <SidebarProvider>
-                      <div className="flex h-screen w-full max-w-full overflow-hidden">
-                        <AppSidebar />
-                        <SidebarInset className="flex flex-1 flex-col w-full max-w-full overflow-hidden">
-                          <AppHeader />
-                          <main className="flex-1 overflow-y-auto overflow-x-hidden bg-background/95 w-full max-w-full">
-                              {children}
-                          </main>
-                        </SidebarInset>
-                      </div>
+                          {/* Αφαίρεση overflow-hidden εδώ – άσε το layout να "αναπνεύσει" */}
+                          <div className="flex h-screen w-full max-w-full">
+                            <AppSidebar />
+                            {/* Αφαίρεση overflow-hidden εδώ – scrolling μόνο στο content */}
+                            <SidebarInset className="flex flex-1 flex-col w-full max-w-full">
+                              <AppHeader />
+                              {/* Κράτα scroll μόνο εδώ – dropdown portals ξεφεύγουν */}
+                              <main className="flex-1 overflow-y-auto overflow-x-hidden bg-background/95 w-full max-w-full">
+                                {children}
+                              </main>
+                            </SidebarInset>
+                          </div>
                         </SidebarProvider>
                       </PhotoPreviewProvider>
                     </NavigationProvider>
