@@ -1,0 +1,441 @@
+https://console.firebase.google.com/project/pagonis-87766/firestore/databases/-default-/data/~2Fnavigation_companies~2F0Sc66EXtdxyedUqPa9gZ
+
+NestorPagonis
+Cloud Firestore
+Database
+Cloud Firestore
+Database
+Aggiungi database
+Dati
+Regole
+Indici
+Disaster recovery
+Utilizzo
+Extensions
+Proteggi le tue risorse di Cloud Firestore da comportamenti illeciti, come fatturazione fraudolenta o phishing
+
+
+
+navigation_companies
+0Sc66EXtdxyedUqPa9gZ
+(default)
+
+building_floorplans
+
+buildings
+
+contact_relationships
+
+contacts
+
+dxf-overlay-levels
+
+dxf-viewer-levels
+
+dxf_files
+
+floors
+
+navigation_companies
+
+notifications
+
+obligation-sections
+
+opportunities
+
+parking_spots
+
+project_floorplans
+
+projects
+
+storage_units
+
+unit_floorplans
+
+units
+navigation_companies
+
+0Sc66EXtdxyedUqPa9gZ
+
+6Kt2diEzFMEUTRfBFoRp
+
+FSwTyNQTookbzLRmUvk5
+
+FftpdXjJKYMkhfJ2MRK8
+
+PXEjVVdbo4VHngDqnzZ2
+
+cgFAPafErQwRc6lF0qSb
+
+xcFsEPYGzC4WWe6oZKT4
+
+y2O9WBw5jVo1McX0QmjA
+
+y6lAYYdJHta5CckDqk76
+0Sc66EXtdxyedUqPa9gZ
+addedAt
+17 dicembre 2025 alle ore 00:34:23 UTC+2
+(timestamp)
+
+
+addedBy
+"system"
+(string)
+
+
+complianceLevel
+"enterprise"
+(string)
+
+
+contactId
+"pzNUy8ksddGCtcQMqumR"
+(string)
+
+
+createdAt
+17 dicembre 2025 alle ore 01:24:28 UTC+2
+(timestamp)
+
+
+lastCleaned
+17 dicembre 2025 alle ore 01:24:28 UTC+2
+(timestamp)
+
+
+schemaVersion
+"2.0.0-pure"
+(string)
+
+
+status
+"active"
+(string)
+
+
+updatedAt
+17 dicembre 2025 alle ore 01:24:28 UTC+2
+(timestamp)
+
+
+version
+1
+(number)
+
+
+Località del database: eur3
+
+
+https://console.firebase.google.com/project/pagonis-87766/storage/pagonis-87766.firebasestorage.app/files/~2Fcontacts~2Fphotos
+
+NestorPagonis
+Storage
+pagonis-87766.firebasestorage.app
+File
+Regole
+Utilizzo
+Extensions
+Proteggi le tue risorse di Storage da comportamenti illeciti, come fatturazione fraudolenta o phishing
+gs://pagonis-87766.firebasestorage.app
+contacts
+photos
+
+Nome
+Dimensioni
+Tipo
+Ultima modifica
+
+GEO_3_PAGONIS_3_photo_1.jpg
+156.53 KB	image/jpeg	11 dic 2025
+
+Γιώργος_Παπαδόπουλος_photo_1.jpg
+156.53 KB	image/jpeg	13 dic 2025
+
+
+https://console.firebase.google.com/project/pagonis-87766/storage/pagonis-87766.firebasestorage.app/rules
+
+NestorPagonis
+Storage
+pagonis-87766.firebasestorage.app
+File
+Regole
+Utilizzo
+Extensions
+Scrivi Security Rules per controllare l'accesso a Storage in base ai contenuti del tuo database Firestore.
+Playground regole
+Tipo di simulazione
+get
+Posizione
+/b/pagonis-87766.firebasestorage.app/o
+path/to/resource
+rules_version = '2';
+  service firebase.storage {
+    match /b/{bucket}/o {
+      // ΠΡΟΣΟΧΗ: Public write για floor-plans (μόνο για debug)
+      match /floor-plans/{allPaths=**} {
+        allow read: if true;
+        allow write: if true; // ΑΦΑΙΡΕΣΤΕ ΑΡΓΟΤΕΡΑ!
+      }
+
+      // NEW: Για contact photos (PUBLIC για testing)
+      match /contacts/photos/{allPaths=**} {
+        allow read, write: if true;
+      }
+
+      // Όλα άλλα κλειστα
+      match /{allPaths=**} {
+        allow read, write: if false;
+      }
+    }
+  }
+
+  https://console.firebase.google.com/project/pagonis-87766/firestore/databases/-default-/security/rules
+
+  rules_version = '2';
+
+// =============================================================================
+// 🔒 PRODUCTION-GRADE FIRESTORE SECURITY RULES
+// =============================================================================
+//
+// 🎯 ΣΤΡΑΤΗΓΙΚΗ: Deny-all by default, explicit allow per collection
+// 🛡️ ΑΡΧΗ: Zero Trust - καμια προσβαση χωρις authentication & authorization
+// ⚠️ ΚΡΙΣΙΜΟ: Αυτες οι rules προστατευουν την εφαρμογη απο unauthorized access
+//
+// =============================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =========================================================================
+    // 🔓 ADMIN SDK BYPASS - ΠΡΟΣΩΡΙΝΟ ΓΙΑ PROJECT COMPANY IDS FIX
+    // =========================================================================
+    // ΚΡΙΣΙΜΟ: Αυτο επιτρεπει Firebase Admin SDK operations
+    // ⚠️ ΠΡΟΣΟΧΗ: Μονο για migration purposes - αφαιρειται μετα το fix
+    match /{document=**} {
+      allow read, write: if true; // TEMPORARY FULL ACCESS FOR ADMIN SDK
+    }
+
+    // =========================================================================
+    // 🚫 DEFAULT DENY-ALL RULE (DISABLED TEMPORARILY)
+    // =========================================================================
+    // Οποιαδηποτε συλλογη που ΔΕΝ εχει explicit rule → ΑΡΝΗΣΗ
+    // TEMPORARILY DISABLED FOR ADMIN SDK OPERATIONS
+    // match /{document=**} {
+    //   allow read, write: if false;
+    // }
+
+    // =========================================================================
+    // 📁 PROJECTS COLLECTION - PUBLIC READ ACCESS
+    // =========================================================================
+    match /projects/{projectId} {
+
+      // 📖 READ: Public read access for projects listing (like buildings/units)
+      allow read: if true;
+
+      // ✍️ CREATE: Μονο authenticated users με validated data
+      allow create: if request.auth != null
+                    && isValidProjectData(request.resource.data)
+                    && resource == null; // Ensure document doesn't exist
+
+      // 📝 UPDATE: Μονο authenticated users με validation + ADMIN SDK BYPASS
+      allow update: if (request.auth != null
+                    && isValidProjectData(request.resource.data)
+                    && resource != null  // Ensure document exists
+                    && !isAttemptingToModifySystemFields(request.resource.data, resource.data))
+                    || request.auth.token.admin == true; // 🔓 ADMIN SDK BYPASS
+
+      // 🗑️ DELETE: Μονο authenticated users
+      allow delete: if request.auth != null
+                    && resource != null; // Ensure document exists
+    }
+
+    // =========================================================================
+    // 👥 CONTACT_RELATIONSHIPS COLLECTION - STRICT OWNERSHIP
+    // =========================================================================
+    match /contact_relationships/{relationshipId} {
+
+      // 📖 READ: Μονο authenticated users που ειναι source ή target
+      allow read: if request.auth != null
+                  && (resource.data.sourceContactId == request.auth.uid
+                      || resource.data.targetContactId == request.auth.uid);
+
+      // ✍️ CREATE: Μονο authenticated users για δικες τους relationships
+      allow create: if request.auth != null
+                    && isValidRelationshipData(request.resource.data)
+                    && (request.resource.data.sourceContactId == request.auth.uid
+                        || request.resource.data.targetContactId == request.auth.uid)
+                    && resource == null;
+
+      // 📝 UPDATE: Μονο owners με system field protection
+      allow update: if request.auth != null
+                    && isValidRelationshipData(request.resource.data)
+                    && (resource.data.sourceContactId == request.auth.uid
+                        || resource.data.targetContactId == request.auth.uid)
+                    && !isAttemptingToModifySystemFields(request.resource.data, resource.data);
+
+      // 🗑️ DELETE: Μονο owners
+      allow delete: if request.auth != null
+                    && (resource.data.sourceContactId == request.auth.uid
+                        || resource.data.targetContactId == request.auth.uid);
+    }
+
+    // =========================================================================
+    // 🗄️ DXF_FILES COLLECTION - USER-SCOPED ACCESS
+    // =========================================================================
+    match /dxf_files/{fileId} {
+
+      // 📖 READ: Μονο ο owner του file
+      allow read: if request.auth != null
+                  && resource.data.ownerId == request.auth.uid;
+
+      // ✍️ CREATE: Μονο authenticated users για δικα τους files
+      allow create: if request.auth != null
+                    && isValidDxfFileData(request.resource.data)
+                    && request.resource.data.ownerId == request.auth.uid
+                    && resource == null;
+
+      // 📝 UPDATE: Μονο owner με system field protection
+      allow update: if request.auth != null
+                    && isValidDxfFileData(request.resource.data)
+                    && resource.data.ownerId == request.auth.uid
+                    && request.resource.data.ownerId == request.auth.uid
+                    && !isAttemptingToModifySystemFields(request.resource.data, resource.data);
+
+      // 🗑️ DELETE: Μονο owner
+      allow delete: if request.auth != null
+                    && resource.data.ownerId == request.auth.uid;
+    }
+
+    // =========================================================================
+    // 🏢 COMPANIES COLLECTION - READ-ONLY FOR AUTHENTICATED
+    // =========================================================================
+    match /companies/{companyId} {
+
+      // 📖 READ: Μονο authenticated users
+      allow read: if request.auth != null;
+
+      // ✍️ CREATE/UPDATE/DELETE: ΟΧΙ απο client - μονο admin/server
+      allow write: if false;
+    }
+
+    // =========================================================================
+    // 🏠 BUILDINGS & UNITS - PUBLIC READ ACCESS
+    // =========================================================================
+    match /buildings/{buildingId} {
+      allow read: if true; // Public read access for buildings listing
+      allow write: if false; // Admin/server only
+    }
+
+    match /units/{unitId} {
+      allow read: if true; // Public read access for units listing
+      allow write: if false; // Admin/server only
+    }
+
+    // =========================================================================
+    // 🏗️ FLOORS COLLECTION - PUBLIC READ ACCESS
+    // =========================================================================
+    match /floors/{floorId} {
+      allow read: if true; // Public read access for floors listing
+      allow write: if false; // Admin/server only
+    }
+
+    // =========================================================================
+    // 🔔 NOTIFICATIONS COLLECTION - PUBLIC READ ACCESS
+    // =========================================================================
+    match /notifications/{notificationId} {
+      allow read: if true; // Public read access for notifications
+      allow write: if false; // Admin/server only
+    }
+
+    // =========================================================================
+    // 📞 CONTACTS COLLECTION - PUBLIC READ ACCESS + ADMIN WRITE
+    // =========================================================================
+    match /contacts/{contactId} {
+
+      // 📖 READ: Public read access for contacts listing (like buildings/units/projects)
+      allow read: if true;
+
+      // ✍️ CREATE: Allow authenticated users (admin operations + self-registration)
+      allow create: if request.auth != null
+                    && isValidContactData(request.resource.data)
+                    && resource == null;
+
+      // 📝 UPDATE: Allow authenticated users (admin operations + self-update)
+      allow update: if request.auth != null
+                    && isValidContactData(request.resource.data);
+
+      // 🗑️ DELETE: Allow authenticated users (admin operations + self-delete)
+      allow delete: if request.auth != null
+                    && resource != null;
+    }
+
+    // =========================================================================
+    // 🧭 NAVIGATION COMPANIES COLLECTION - PUBLIC READ ACCESS
+    // =========================================================================
+    match /navigation_companies/{navigationId} {
+      allow read: if true; // Public read access for navigation companies listing
+      allow write: if false; // Admin/server only
+    }
+
+    // =========================================================================
+    // 🔒 HELPER FUNCTIONS - VALIDATION & SECURITY
+    // =========================================================================
+
+    // Project Data Validation
+    function isValidProjectData(data) {
+      return data.keys().hasAll(['name', 'status', 'company'])
+             && data.name is string && data.name.size() > 0
+             && data.status in ['planning', 'in_progress', 'completed', 'on_hold', 'cancelled']
+             && data.company is string && data.company.size() > 0;
+    }
+
+    // Relationship Data Validation
+    function isValidRelationshipData(data) {
+      return data.keys().hasAll(['sourceContactId', 'targetContactId', 'relationshipType', 'status'])
+             && data.sourceContactId is string && data.sourceContactId.size() > 0
+             && data.targetContactId is string && data.targetContactId.size() > 0
+             && data.relationshipType in ['employee', 'manager', 'partner', 'client', 'vendor']
+             && data.status in ['active', 'inactive', 'pending', 'deleted'];
+    }
+
+    // DXF File Data Validation (metadata only!)
+    function isValidDxfFileData(data) {
+      return data.keys().hasAll(['fileName', 'ownerId'])
+             && data.fileName is string && data.fileName.size() > 0
+             && data.ownerId is string && data.ownerId.size() > 0
+             // 🚨 ΚΡΙΣΙΜΟ: ΔΕΝ επιτρεπουμε scene object στο Firestore!
+             && !data.keys().hasAny(['scene'])
+             // ✅ NEW: Support for Storage-based DXF files (Phase 4)
+             && (
+               // Legacy format (without storageUrl)
+               !data.keys().hasAny(['storageUrl']) ||
+               // New format (with storageUrl - Firebase Storage)
+               (data.keys().hasAll(['storageUrl']) && data.storageUrl is string && data.storageUrl.size() > 0)
+             );
+    }
+
+    // Contact Data Validation
+    function isValidContactData(data) {
+      return data.keys().hasAll(['email'])
+             && data.email is string
+             && data.email.matches('.*@.*\\..*'); // Basic email validation
+    }
+
+    // System Fields Protection
+    function isAttemptingToModifySystemFields(newData, existingData) {
+      let systemFields = ['createdAt', 'createdBy', 'ownerId', 'id'];
+      return systemFields.hasAny(
+        newData.diff(existingData).affectedKeys()
+      );
+    }
+
+    // Relationship checking helper
+    function hasRelationshipWithContact(userId, contactId) {
+      // This would need to be implemented based on your relationship logic
+      // For now, allowing basic access - you can refine this later
+      return true;
+    }
+  }
+}

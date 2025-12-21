@@ -35,8 +35,9 @@ import {
 import { DEFAULT_TEMPLATE_SECTIONS } from '@/types/mock-obligations';
 import { obligationsService } from "@/services/obligations.service";
 import { TableOfContents } from "@/components/obligations/table-of-contents";
-import StructureEditor from "@/components/obligations/structure-editor";
+import StructureEditor from "@/components/obligations/structure-editor/StructureEditor";
 import LivePreview from "@/components/obligations/live-preview";
+import { RichTextEditor } from "@/components/obligations/rich-text-editor";
 import Link from "next/link";
 
 // 🏢 ENTERPRISE: Import existing κεντρικοποιημένων components & services
@@ -611,7 +612,7 @@ export default function NewObligationPage() {
                           placeholder={loadingCompanies ? "Φόρτωση εταιρειών..." : "Επιλέξτε εταιρεία"}
                         />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="max-h-80 !z-[9999] relative">
                         {companyOptions.map((company) => (
                           <SelectItem key={company.id} value={company.id}>
                             {company.name}
@@ -639,7 +640,7 @@ export default function NewObligationPage() {
                           }
                         />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="max-h-80 !z-[9999] relative">
                         {projectOptions.map((project) => (
                           <SelectItem key={project.id} value={project.id}>
                             {project.name}

@@ -12,6 +12,20 @@
   max-width: 400px !important;
 }
 
+/* 🔧 FIX: Extra high z-index for obligations page dropdowns */
+/* Ensure project dropdown appears above labels in obligations/new page */
+[data-radix-select-content],
+.radix-select-content,
+[data-state="open"][data-radix-select-content] {
+  z-index: 99999 !important;
+  position: fixed !important;
+}
+
+/* Extra protection for Select Portal containers */
+[data-radix-portal] {
+  z-index: 99999 !important;
+}
+
 /* Force high z-index for Radix Popper wrapper */
 [data-radix-popper-content-wrapper] {
   z-index: 99999 !important;

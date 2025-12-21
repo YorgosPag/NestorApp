@@ -1,6 +1,6 @@
 import type { ObligationDocument, ObligationTemplate } from '@/types/obligations';
 import type { IObligationsService, IObligationsRepository, SearchFilters, ObligationStats } from './contracts';
-import { InMemoryObligationsRepository } from './InMemoryObligationsRepository';
+import { FirestoreObligationsRepository } from './InMemoryObligationsRepository';
 
 class ObligationsService implements IObligationsService {
   private static instance: ObligationsService;
@@ -12,8 +12,8 @@ class ObligationsService implements IObligationsService {
 
   public static getInstance(): ObligationsService {
     if (!ObligationsService.instance) {
-      // In a real app, you might inject the repository based on environment
-      const repository = new InMemoryObligationsRepository();
+      // 🏢 PRODUCTION: Use Firestore repository instead of deprecated InMemory
+      const repository = new FirestoreObligationsRepository();
       ObligationsService.instance = new ObligationsService(repository);
     }
     return ObligationsService.instance;
