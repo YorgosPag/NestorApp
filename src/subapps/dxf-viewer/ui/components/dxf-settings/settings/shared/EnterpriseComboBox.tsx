@@ -301,19 +301,13 @@ export function EnterpriseComboBox<T>({
     whileElementsMounted: autoUpdate // Auto-update on scroll/resize
   });
 
-  // 🔧 ENTERPRISE FIX: Improved refs synchronization with callback pattern
-  const setReferenceRef = useCallback((node: HTMLButtonElement | null) => {
-    buttonRef.current = node;
-    if (node) {
-      refs.setReference(node);
-    }
+  // Sync refs with Floating UI
+  useEffect(() => {
+    refs.setReference(buttonRef.current);
   }, [refs]);
 
-  const setFloatingRef = useCallback((node: HTMLDivElement | null) => {
-    listboxRef.current = node;
-    if (node) {
-      refs.setFloating(node);
-    }
+  useEffect(() => {
+    refs.setFloating(listboxRef.current);
   }, [refs]);
 
   // ===== FLATTEN OPTIONS =====
@@ -508,11 +502,9 @@ export function EnterpriseComboBox<T>({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
-      // Check if click is outside both button and dropdown
       if (
-        buttonRef.current && !buttonRef.current.contains(target) &&
-        listboxRef.current && !listboxRef.current.contains(target)
+        buttonRef.current && !buttonRef.current.contains(event.target as Node) &&
+        listboxRef.current && !listboxRef.current.contains(event.target as Node)
       ) {
         setIsOpen(false);
         setHighlightedIndex(-1);
@@ -574,12 +566,9 @@ export function EnterpriseComboBox<T>({
   const renderListbox = () => {
     if (!isOpen) return null;
 
-    // 🔧 DEBUG: Log positioning styles για debugging
-    console.log('🔧 EnterpriseComboBox floatingStyles:', floatingStyles);
-
     const listboxContent = (
       <div
-        ref={setFloatingRef}
+        ref={listboxRef}
         id={listboxId}
         role="listbox"
         aria-labelledby={ariaLabelledBy || (label ? labelId : undefined)}
@@ -591,12 +580,7 @@ export function EnterpriseComboBox<T>({
           backgroundColor: '#374151',
           border: '1px solid #4B5563',
           maxHeight,
-          zIndex: dropdownZIndex, // 🏢 ENTERPRISE: Configurable z-index
-          // 🔧 ENTERPRISE FALLBACK: Ensure minimum positioning values
-          position: floatingStyles.position || 'absolute',
-          top: floatingStyles.top ?? '100%',
-          left: floatingStyles.left ?? '0',
-          minWidth: '200px' // Ensure dropdown is visible
+          zIndex: dropdownZIndex // 🏢 ENTERPRISE: Configurable z-index
         }}
       >
         {/* 🏢 VIRTUALIZATION: For large lists (100+ items) */}
@@ -690,7 +674,7 @@ export function EnterpriseComboBox<T>({
       {/* Combobox Trigger */}
       <div className="relative">
         <button
-          ref={setReferenceRef}
+          ref={buttonRef}
           id={comboboxId}
           role="combobox"
           aria-haspopup="listbox"
