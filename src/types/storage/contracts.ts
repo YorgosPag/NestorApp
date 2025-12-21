@@ -1,22 +1,40 @@
 // Storage unit types and interfaces for building management system
 
-export type StorageType = 'storage' | 'parking';
+export type StorageType = 'large' | 'small' | 'basement' | 'ground' | 'special';
 
-export type StorageStatus = 'available' | 'sold' | 'reserved' | 'maintenance';
+export type StorageStatus = 'available' | 'occupied' | 'maintenance' | 'reserved';
 
 export interface Coordinates {
   x: number;
   y: number;
 }
 
+// Main Storage interface for centralized architecture
+export interface Storage {
+  id: string;
+  name: string;
+  type: StorageType;
+  status: StorageStatus;
+  building: string;
+  floor: string;
+  area: number; // in square meters
+  description?: string;
+  price?: number; // in euros
+  lastUpdated?: Date;
+  projectId?: string;
+  owner?: string;
+  notes?: string;
+}
+
+// Legacy interface for backward compatibility
 export interface StorageUnit {
   id: string;
   code: string;
-  type: StorageType;
+  type: 'storage' | 'parking';
   floor: string;
   area: number; // in square meters
   price: number; // in euros
-  status: StorageStatus;
+  status: 'available' | 'sold' | 'reserved' | 'maintenance';
   description: string;
   building: string;
   project: string;
@@ -37,8 +55,8 @@ export interface StorageUnit {
 }
 
 export interface StorageFilter {
-  type?: StorageType | 'all';
-  status?: StorageStatus | 'all';
+  type?: 'storage' | 'parking' | 'all';
+  status?: 'available' | 'sold' | 'reserved' | 'maintenance' | 'all';
   floor?: string | 'all';
   minArea?: number;
   maxArea?: number;

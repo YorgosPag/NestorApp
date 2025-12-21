@@ -15,6 +15,12 @@ export {
   defaultProjectFilters
 } from './configs';
 
+// Storage Configurations
+export {
+  storageFiltersConfig,
+  defaultStorageFilters
+} from './configs/storageFiltersConfig';
+
 // Types
 export type {
   FilterFieldType,
@@ -30,3 +36,8 @@ export type {
   BuildingFilterState,
   ProjectFilterState
 } from './types';
+
+// Storage Types
+export type {
+  StorageFilterState
+} from './configs/storageFiltersConfig';
