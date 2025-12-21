@@ -9,7 +9,7 @@
 
 import { useMemo } from 'react';
 import type { ContactRelationship } from '@/types/contacts/relationships';
-import type { DashboardStat } from '@/core/dashboards/UnifiedDashboard';
+import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { calculateRelationshipStats, type RelationshipStats } from '../../utils/summary/statistics-calculator';
 import {
   Users,

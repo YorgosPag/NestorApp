@@ -9,7 +9,7 @@ import { getContactDisplayName } from '@/types/contacts';
 import { ContactsService } from '@/services/contacts.service';
 import { CONTACT_TYPES } from '@/constants/contacts';
 import { ContactsHeader } from './page/ContactsHeader';
-import { UnifiedDashboard, type DashboardStat } from '@/core/dashboards/UnifiedDashboard';
+import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import {
   Users,
   Building2,

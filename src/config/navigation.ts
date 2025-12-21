@@ -20,6 +20,14 @@ import {
   FileText,
   Construction, // Added icon
   MapPin, // Added for Geo-Canvas
+  Layout, // For Χώροι (Physical Spaces)
+  DollarSign, // For Πωλήσεις (Sellable Assets)
+  Home as HomeIcon, // For Διαμερίσματα
+  Package, // For Αποθήκες
+  Car, // For Parking
+  Users as UsersIcon, // For Κοινόχρηστοι
+  ShoppingCart, // For Διαθέσιμα
+  CheckCircle, // For Πωλημένα
 } from "lucide-react"
 import type { MenuItem } from "@/types/sidebar"
 
@@ -58,10 +66,60 @@ export const mainMenuItems: MenuItem[] = [
     badge: null,
   },
   {
-    title: process.env.NEXT_PUBLIC_NAV_UNITS_TITLE || "Μονάδες (Units)",
-    icon: Archive,
-    href: "/units",
+    title: process.env.NEXT_PUBLIC_NAV_SPACES_TITLE || "Χώροι",
+    icon: Layout,
+    href: "/spaces",
     badge: null,
+    subItems: [
+      {
+        title: 'Διαμερίσματα',
+        icon: HomeIcon,
+        href: '/spaces/apartments'
+      },
+      {
+        title: 'Αποθήκες',
+        icon: Package,
+        href: '/spaces/storage'
+      },
+      {
+        title: 'Θέσεις Στάθμευσης',
+        icon: Car,
+        href: '/spaces/parking'
+      },
+      {
+        title: 'Κοινόχρηστοι Χώροι',
+        icon: UsersIcon,
+        href: '/spaces/common'
+      }
+    ]
+  },
+  {
+    title: process.env.NEXT_PUBLIC_NAV_SALES_TITLE || "Πωλήσεις",
+    icon: DollarSign,
+    href: "/sales",
+    badge: null,
+    subItems: [
+      {
+        title: 'Διαθέσιμα Διαμερίσματα',
+        icon: HomeIcon,
+        href: '/sales/available-apartments'
+      },
+      {
+        title: 'Διαθέσιμες Αποθήκες',
+        icon: Package,
+        href: '/sales/available-storage'
+      },
+      {
+        title: 'Διαθέσιμα Parking',
+        icon: Car,
+        href: '/sales/available-parking'
+      },
+      {
+        title: 'Πωλημένα Ακίνητα',
+        icon: CheckCircle,
+        href: '/sales/sold'
+      }
+    ]
   },
   {
     title: "CRM",

@@ -4,7 +4,7 @@ import React, { useCallback, Suspense } from 'react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useUnitsViewerState } from '@/hooks/useUnitsViewerState';
 import { UnitsHeader } from '@/components/units/page/UnitsHeader';
-import { UnifiedDashboard, type DashboardStat } from '@/core/dashboards/UnifiedDashboard';
+import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import {
   Home,
   TrendingUp,

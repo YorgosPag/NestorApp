@@ -12,7 +12,7 @@ import { useProjectsStats } from '@/hooks/useProjectsStats';
 import { projectsConfig } from '@/components/core/CompactToolbar';
 
 import { ProjectsHeader } from './ProjectsHeader';
-import { UnifiedDashboard, type DashboardStat } from '@/core/dashboards/UnifiedDashboard';
+import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import {
   Briefcase,
   TrendingUp,

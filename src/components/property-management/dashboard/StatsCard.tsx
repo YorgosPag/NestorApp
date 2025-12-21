@@ -9,7 +9,7 @@ interface StatsCardProps {
     value: string | number;
     icon: React.ElementType;
     color: string;
-    onClick?: () => void; // 🔥 NEW: Click handler για filtering
+    onClick?: () => void;
 }
 
 export function StatsCard({ title, value, icon: Icon, color, onClick }: StatsCardProps) {
@@ -51,9 +51,9 @@ export function StatsCard({ title, value, icon: Icon, color, onClick }: StatsCar
         yellow: 'text-yellow-500',
         indigo: 'text-indigo-500'
     };
-    
+
     const colorKey = color as keyof typeof colorClasses;
-    
+
     return (
         <Card
             className={`${colorClasses[colorKey]} ${onClick ? `cursor-pointer ${INTERACTIVE_PATTERNS.CARD_ENHANCED}` : ''} min-w-0 max-w-full overflow-hidden`}
@@ -71,3 +71,5 @@ export function StatsCard({ title, value, icon: Icon, color, onClick }: StatsCar
         </Card>
     );
 }
+
+export default StatsCard;

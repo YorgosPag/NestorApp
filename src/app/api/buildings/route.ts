@@ -37,11 +37,11 @@ export async function GET(request: NextRequest) {
 
     if (projectId) {
       // 🎯 ENTERPRISE: Filter buildings by projectId relationship
+      // Note: Removed orderBy to avoid composite index requirement
       const { where } = await import('firebase/firestore');
       buildingsQuery = query(
         collection(db, COLLECTIONS.BUILDINGS),
-        where('projectId', '==', projectId),
-        orderBy('createdAt', 'desc')
+        where('projectId', '==', projectId)
       );
     } else {
       // Get all buildings

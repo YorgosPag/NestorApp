@@ -1,13 +1,18 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { StatsCard } from '@/components/property-management/dashboard/StatsCard';
+import { StatsCard } from './StatsCard';
 
 interface DashboardStat {
   title: string;
   value: string | number;
+  description?: string;
   icon: React.ElementType;
-  color: 'blue' | 'green' | 'purple' | 'orange' | 'cyan' | 'pink' | 'gray' | 'red' | 'yellow' | 'indigo';
+  color?: 'blue' | 'green' | 'purple' | 'orange' | 'cyan' | 'pink' | 'gray' | 'red' | 'yellow' | 'indigo';
+  trend?: {
+    value: number;
+    label: string;
+  };
 }
 
 interface UnifiedDashboardProps {
@@ -16,6 +21,8 @@ interface UnifiedDashboardProps {
   className?: string;
   additionalContainers?: React.ReactNode; // Optional additional containers below stats
   onCardClick?: (stat: DashboardStat, index: number) => void; // 🔥 NEW: Click handler για filtering
+  title?: string; // Optional title
+  variant?: string; // Optional variant (not used but accepted for compatibility)
 }
 
 export function UnifiedDashboard({
@@ -23,7 +30,9 @@ export function UnifiedDashboard({
   columns = 6,
   className = "p-4 border-b bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20",
   additionalContainers,
-  onCardClick
+  onCardClick,
+  title,
+  variant
 }: UnifiedDashboardProps) {
 
   const [isMobile, setIsMobile] = useState(false);
@@ -68,7 +77,7 @@ export function UnifiedDashboard({
             title={stat.title}
             value={stat.value}
             icon={stat.icon}
-            color={stat.color}
+            color={stat.color || 'blue'}
             onClick={onCardClick ? () => onCardClick(stat, index) : undefined}
           />
         ))}

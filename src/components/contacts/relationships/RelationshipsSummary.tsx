@@ -18,7 +18,7 @@ import { Users, Building2 } from 'lucide-react';
 // 🏢 ENTERPRISE: Import centralized components και hooks
 import type { ContactType } from '@/types/contacts';
 import type { ContactRelationship } from '@/types/contacts/relationships'; // 🏢 ENTERPRISE: Type-safe relationships
-import type { DashboardStat } from '@/core/dashboards/UnifiedDashboard';
+import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { useContactNames } from './hooks/useContactNames';
 import { useRelationshipContext } from './context/RelationshipProvider';
 import { useOrganizationTree } from './hooks/useOrganizationTree';

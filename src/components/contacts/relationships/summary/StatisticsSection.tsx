@@ -11,8 +11,8 @@
 
 import React from 'react';
 import type { ContactRelationship } from '@/types/contacts/relationships';
-import type { DashboardStat } from '@/core/dashboards/UnifiedDashboard';
-import { UnifiedDashboard } from '@/core/dashboards/UnifiedDashboard';
+import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
+import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { useRelationshipStatistics } from '../hooks/summary/useRelationshipStatistics';
 
 // ============================================================================

@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 import { BuildingsList } from './BuildingsList';
 import { BuildingDetails } from './BuildingDetails';
 import { BuildingsHeader } from './BuildingsPage/BuildingsHeader';
-import { UnifiedDashboard, type DashboardStat } from '@/core/dashboards/UnifiedDashboard';
+import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import {
   Building,
   TrendingUp,
