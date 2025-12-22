@@ -96,6 +96,30 @@ export const UNITS_COMPONENT_MAPPING = {
 } as const;
 
 // ============================================================================
+// CONTACT COMPONENT MAPPING
+// ============================================================================
+
+import { ContactBasicInfoTab } from '../../contacts/tabs/ContactBasicInfoTab';
+import { ContactCommunicationTab } from '../../contacts/tabs/ContactCommunicationTab';
+import { ContactRelationshipsTab } from '../../contacts/tabs/ContactRelationshipsTab';
+import { ContactPhotosTab } from '../../contacts/tabs/ContactPhotosTab';
+import { PlaceholderContactTab } from '../../contacts/tabs/PlaceholderContactTab';
+
+export const CONTACT_COMPONENT_MAPPING = {
+  'ContactBasicInfoTab': ContactBasicInfoTab,
+  'ContactCommunicationTab': ContactCommunicationTab,
+  'ContactPersonalInfoTab': PlaceholderContactTab, // Future implementation
+  'ContactCompanyInfoTab': PlaceholderContactTab,  // Future implementation
+  'ContactServicesInfoTab': PlaceholderContactTab, // Future implementation
+  'ContactAddressesTab': PlaceholderContactTab,    // Future implementation
+  'ContactRelationshipsTab': ContactRelationshipsTab,
+  'ContactPhotosTab': ContactPhotosTab,
+  'ContactLogoTab': PlaceholderContactTab,         // Future implementation
+  'ContactHistoryTab': PlaceholderContactTab,      // Future implementation
+  'PlaceholderContactTab': PlaceholderContactTab,
+} as const;
+
+// ============================================================================
 // MASTER COMPONENT MAPPING (ALL COMBINED)
 // ============================================================================
 
@@ -108,6 +132,7 @@ export const MASTER_COMPONENT_MAPPING = {
   ...BUILDING_COMPONENT_MAPPING,
   ...STORAGE_COMPONENT_MAPPING,
   ...UNITS_COMPONENT_MAPPING,
+  ...CONTACT_COMPONENT_MAPPING,
 } as const;
 
 // ============================================================================
@@ -118,6 +143,7 @@ export type ProjectComponentName = keyof typeof PROJECT_COMPONENT_MAPPING;
 export type BuildingComponentName = keyof typeof BUILDING_COMPONENT_MAPPING;
 export type StorageComponentName = keyof typeof STORAGE_COMPONENT_MAPPING;
 export type UnitsComponentName = keyof typeof UNITS_COMPONENT_MAPPING;
+export type ContactComponentName = keyof typeof CONTACT_COMPONENT_MAPPING;
 export type MasterComponentName = keyof typeof MASTER_COMPONENT_MAPPING;
 
 // ============================================================================
@@ -127,7 +153,7 @@ export type MasterComponentName = keyof typeof MASTER_COMPONENT_MAPPING;
 /**
  * Factory function για να πάρεις το σωστό mapping based on type
  */
-export function getComponentMapping(type: 'project' | 'building' | 'storage' | 'units' | 'master') {
+export function getComponentMapping(type: 'project' | 'building' | 'storage' | 'units' | 'contact' | 'master') {
   switch (type) {
     case 'project':
       return PROJECT_COMPONENT_MAPPING;
@@ -137,6 +163,8 @@ export function getComponentMapping(type: 'project' | 'building' | 'storage' | '
       return STORAGE_COMPONENT_MAPPING;
     case 'units':
       return UNITS_COMPONENT_MAPPING;
+    case 'contact':
+      return CONTACT_COMPONENT_MAPPING;
     case 'master':
       return MASTER_COMPONENT_MAPPING;
     default:

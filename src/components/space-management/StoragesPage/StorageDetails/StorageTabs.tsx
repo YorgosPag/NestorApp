@@ -26,7 +26,7 @@ export function StorageTabs({ storage }: StorageTabsProps) {
       data={storage}
       componentMapping={STORAGE_COMPONENT_MAPPING}
       defaultTab="general"
-      theme="warning"
+      theme="default"
     />
   );
 }

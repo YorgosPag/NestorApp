@@ -30,7 +30,7 @@ export function BuildingTabs({ building }: BuildingTabsProps) {
             data={building}
             componentMapping={BUILDING_COMPONENT_MAPPING}
             defaultTab="general"
-            theme="warning"
+            theme="default"
             additionalData={{
                 buildingFloorplan,
                 storageFloorplan,

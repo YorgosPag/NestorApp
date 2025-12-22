@@ -1,0 +1,75 @@
+'use client';
+
+import React from 'react';
+import type { Contact } from '@/types/contacts';
+import type { ContactFormData } from '@/types/ContactFormTypes';
+import { DynamicContactArrays } from '@/components/contacts/dynamic/DynamicContactArrays';
+
+interface ContactCommunicationTabProps {
+  data: Contact;
+  additionalData?: {
+    formData?: ContactFormData;
+    disabled?: boolean;
+    setFormData?: (data: ContactFormData) => void;
+  };
+}
+
+/**
+ * 🏢 ENTERPRISE: Contact Communication Tab
+ *
+ * Centralized tab για επικοινωνία (phones, emails, websites, social media).
+ * Χρησιμοποιεί το existing DynamicContactArrays component.
+ */
+export function ContactCommunicationTab({
+  data,
+  additionalData,
+}: ContactCommunicationTabProps) {
+  // Extract data from additionalData prop (UniversalTabsRenderer pattern)
+  const {
+    formData,
+    disabled = true,
+    setFormData,
+  } = additionalData || {};
+
+  const effectiveFormData = formData || data;
+
+  const handlePhonesChange = React.useCallback((phones: any[]) => {
+    if (setFormData && formData) {
+      setFormData({ ...formData, phones });
+    }
+  }, [setFormData, formData]);
+
+  const handleEmailsChange = React.useCallback((emails: any[]) => {
+    if (setFormData && formData) {
+      setFormData({ ...formData, emails });
+    }
+  }, [setFormData, formData]);
+
+  const handleWebsitesChange = React.useCallback((websites: any[]) => {
+    if (setFormData && formData) {
+      setFormData({ ...formData, websites });
+    }
+  }, [setFormData, formData]);
+
+  const handleSocialMediaChange = React.useCallback((socialMedia: any[]) => {
+    if (setFormData && formData) {
+      setFormData({ ...formData, socialMediaArray: socialMedia });
+    }
+  }, [setFormData, formData]);
+
+  return (
+    <div className="space-y-6">
+      <DynamicContactArrays
+        phones={effectiveFormData.phones || []}
+        emails={effectiveFormData.emails || []}
+        websites={effectiveFormData.websites || []}
+        socialMedia={effectiveFormData.socialMediaArray || []}
+        disabled={disabled}
+        onPhonesChange={handlePhonesChange}
+        onEmailsChange={handleEmailsChange}
+        onWebsitesChange={handleWebsitesChange}
+        onSocialMediaChange={handleSocialMediaChange}
+      />
+    </div>
+  );
+}
