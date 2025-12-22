@@ -28,6 +28,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   PROJECT: 'proj',
   BUILDING: 'bldg',
   UNIT: 'unit',
+  STORAGE: 'stor',
   CONTACT: 'cont',
   FLOOR: 'flr',
   DOCUMENT: 'doc',
@@ -187,6 +188,14 @@ export class EnterpriseIdService {
   }
 
   /**
+   * 📦 Generate Storage ID
+   * Format: stor_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+   */
+  generateStorageId(): string {
+    return this.generateId(ENTERPRISE_ID_PREFIXES.STORAGE).id;
+  }
+
+  /**
    * 📞 Generate Contact ID
    * Format: cont_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
    */
@@ -316,6 +325,7 @@ export const generateCompanyId = () => enterpriseIdService.generateCompanyId();
 export const generateProjectId = () => enterpriseIdService.generateProjectId();
 export const generateBuildingId = () => enterpriseIdService.generateBuildingId();
 export const generateUnitId = () => enterpriseIdService.generateUnitId();
+export const generateStorageId = () => enterpriseIdService.generateStorageId();
 export const generateContactId = () => enterpriseIdService.generateContactId();
 export const generateFloorId = () => enterpriseIdService.generateFloorId();
 export const generateDocumentId = () => enterpriseIdService.generateDocumentId();

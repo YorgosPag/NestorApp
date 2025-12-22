@@ -39,6 +39,7 @@ export class EnterpriseAPICache {
     companies: 5 * 60 * 1000,        // 5 minutes για companies
     projects: 3 * 60 * 1000,         // 3 minutes για projects
     buildings: 2 * 60 * 1000,        // 2 minutes για buildings
+    storages: 2 * 60 * 1000,         // 2 minutes για storages
     floors: 1 * 60 * 1000,           // 1 minute για floors
     units: 30 * 1000,                // 30 seconds για units
     navigation: 10 * 60 * 1000,      // 10 minutes για navigation
@@ -185,6 +186,7 @@ export class EnterpriseAPICache {
     if (key.includes('companies')) return this.TTL_CONFIG.companies;
     if (key.includes('projects')) return this.TTL_CONFIG.projects;
     if (key.includes('buildings')) return this.TTL_CONFIG.buildings;
+    if (key.includes('storages')) return this.TTL_CONFIG.storages;
     if (key.includes('floors')) return this.TTL_CONFIG.floors;
     if (key.includes('units')) return this.TTL_CONFIG.units;
     if (key.includes('navigation')) return this.TTL_CONFIG.navigation;
@@ -253,6 +255,28 @@ export class CacheHelpers {
   }
 
   /**
+   * 📦 Cache storages για specific project
+   */
+  static cacheStoragesByProject(projectId: string, storages: any[]): void {
+    this.cache.set(`api:storages:project:${projectId}`, storages);
+  }
+
+  static getCachedStoragesByProject(projectId: string): any[] | null {
+    return this.cache.get(`api:storages:project:${projectId}`);
+  }
+
+  /**
+   * 📦 Cache all storages data
+   */
+  static cacheAllStorages(storages: any[]): void {
+    this.cache.set('api:storages:all', storages);
+  }
+
+  static getCachedAllStorages(): any[] | null {
+    return this.cache.get('api:storages:all');
+  }
+
+  /**
    * 🔥 Smart cache invalidation
    */
   static invalidateCompanyData(companyId: string): void {
@@ -263,6 +287,7 @@ export class CacheHelpers {
   static invalidateProjectData(projectId: string): void {
     this.cache.invalidatePattern(`project:${projectId}`);
     this.cache.invalidatePattern(`buildings:project:${projectId}`);
+    this.cache.invalidatePattern(`storages:project:${projectId}`);
   }
 
   /**

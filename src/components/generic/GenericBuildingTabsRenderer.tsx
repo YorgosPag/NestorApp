@@ -51,7 +51,6 @@ export interface GenericBuildingTabsRendererProps {
   /** Additional data for specific tabs */
   additionalData?: {
     buildingFloorplan?: any;
-    storageFloorplan?: any;
     floorplansLoading?: boolean;
     floorplansError?: string;
     refetchFloorplans?: () => void;
@@ -144,31 +143,17 @@ export function GenericBuildingTabsRenderer({
 
     // Special handling για FloorplanViewerTab
     if (tab.component === 'FloorplanViewerTab') {
-      if (tab.value === 'floorplan') {
-        return {
-          ...baseProps,
-          title: 'Κάτοψη Κτιρίου',
-          floorplanData: additionalData.buildingFloorplan?.scene,
-          onAddFloorplan: () => {
-            console.log('Add building floorplan for building:', building.id);
-          },
-          onEditFloorplan: () => {
-            console.log('Edit building floorplan for building:', building.id);
-          },
-        };
-      } else if (tab.value === 'storage-floorplans') {
-        return {
-          ...baseProps,
-          title: 'Κατόψεις Αποθηκών',
-          floorplanData: additionalData.storageFloorplan?.scene,
-          onAddFloorplan: () => {
-            console.log('Add storage floorplan for building:', building.id);
-          },
-          onEditFloorplan: () => {
-            console.log('Edit storage floorplan for building:', building.id);
-          },
-        };
-      }
+      return {
+        ...baseProps,
+        title: 'Κάτοψη Κτιρίου',
+        floorplanData: additionalData.buildingFloorplan?.scene,
+        onAddFloorplan: () => {
+          console.log('Add building floorplan for building:', building.id);
+        },
+        onEditFloorplan: () => {
+          console.log('Edit building floorplan for building:', building.id);
+        },
+      };
     }
 
     // Special handling για PlaceholderTab

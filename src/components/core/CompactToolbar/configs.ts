@@ -425,3 +425,133 @@ export const unitsToolbarConfig: CompactToolbarConfig = {
     help: true
   }
 };
+
+// Storages Configuration
+export const storagesToolbarConfig: CompactToolbarConfig = {
+  searchPlaceholder: 'Αναζήτηση αποθηκών...',
+
+  labels: {
+    newItem: 'Νέα Αποθήκη',
+    editItem: 'Επεξεργασία',
+    deleteItems: 'Διαγραφή',
+    filters: 'Φίλτρα',
+    favorites: 'Αγαπημένες',
+    archive: 'Αρχειοθέτηση',
+    export: 'Εξαγωγή',
+    import: 'Εισαγωγή',
+    refresh: 'Ανανέωση',
+    preview: 'Προεπισκόπηση',
+    copy: 'Αντιγραφή',
+    share: 'Κοινοποίηση',
+    reports: 'Αναφορές',
+    settings: 'Ρυθμίσεις',
+    favoritesManagement: 'Διαχείριση αγαπημένων',
+    help: 'Βοήθεια',
+    sorting: 'Ταξινόμηση αποθηκών'
+  },
+
+  tooltips: {
+    newItem: 'Νέα Αποθήκη (Ctrl+N)',
+    editItem: 'Επεξεργασία επιλεγμένης αποθήκης',
+    deleteItems: 'Διαγραφή επιλεγμένων αποθηκών',
+    filters: 'Φίλτρα αποθηκών',
+    favorites: 'Προσθήκη στις αγαπημένες',
+    archive: 'Αρχειοθέτηση επιλεγμένων',
+    export: 'Εξαγωγή δεδομένων',
+    import: 'Εισαγωγή δεδομένων',
+    refresh: 'Ανανέωση δεδομένων (F5)',
+    preview: 'Προεπισκόπηση αποθήκης',
+    copy: 'Αντιγραφή επιλεγμένων',
+    share: 'Κοινοποίηση αποθηκών',
+    reports: 'Δημιουργία αναφορών',
+    settings: 'Ρυθμίσεις αποθηκών',
+    favoritesManagement: 'Διαχείριση αγαπημένων',
+    help: 'Βοήθεια και οδηγίες (F1)',
+    sorting: 'Ταξινόμηση αποθηκών'
+  },
+
+  filterCategories: [
+    {
+      id: 'status',
+      label: 'Κατάσταση αποθήκης',
+      options: [
+        { value: 'available', label: 'Διαθέσιμες' },
+        { value: 'occupied', label: 'Κατειλημμένες' },
+        { value: 'reserved', label: 'Κρατημένες' },
+        { value: 'maintenance', label: 'Συντήρηση' }
+      ]
+    },
+    {
+      id: 'type',
+      label: 'Τύπος αποθήκης',
+      options: [
+        { value: 'large', label: 'Μεγάλες' },
+        { value: 'small', label: 'Μικρές' },
+        { value: 'basement', label: 'Υπόγειες' },
+        { value: 'ground', label: 'Ισόγειες' },
+        { value: 'special', label: 'Ειδικές' }
+      ]
+    },
+    {
+      id: 'building',
+      label: 'Κτίριο',
+      options: [
+        { value: 'building-a', label: 'Κτίριο Α' },
+        { value: 'building-b', label: 'Κτίριο Β' },
+        { value: 'building-c', label: 'Κτίριο Γ' },
+        { value: 'building-d', label: 'Κτίριο Δ' }
+      ]
+    },
+    {
+      id: 'area',
+      label: 'Επιφάνεια',
+      options: [
+        { value: 'area-under-10', label: '< 10 m²' },
+        { value: 'area-10-25', label: '10 - 25 m²' },
+        { value: 'area-25-50', label: '25 - 50 m²' },
+        { value: 'area-50-100', label: '50 - 100 m²' },
+        { value: 'area-over-100', label: '> 100 m²' }
+      ]
+    },
+    {
+      id: 'price',
+      label: 'Τιμή',
+      options: [
+        { value: 'price-under-5k', label: '< 5.000 €' },
+        { value: 'price-5k-15k', label: '5.000 - 15.000 €' },
+        { value: 'price-15k-30k', label: '15.000 - 30.000 €' },
+        { value: 'price-30k-50k', label: '30.000 - 50.000 €' },
+        { value: 'price-over-50k', label: '> 50.000 €' }
+      ]
+    }
+  ],
+
+  sortOptions: [
+    { field: 'name', ascLabel: 'Όνομα (Α-Ζ)', descLabel: 'Όνομα (Ζ-Α)' },
+    { field: 'area', ascLabel: 'Επιφάνεια (Μικρή → Μεγάλη)', descLabel: 'Επιφάνεια (Μεγάλη → Μικρή)' },
+    { field: 'price', ascLabel: 'Τιμή (Χαμηλή → Υψηλή)', descLabel: 'Τιμή (Υψηλή → Χαμηλή)' },
+    { field: 'status', ascLabel: 'Κατάσταση (Α-Ζ)', descLabel: 'Κατάσταση (Ζ-Α)' },
+    { field: 'building', ascLabel: 'Κτίριο (Α-Ζ)', descLabel: 'Κτίριο (Ζ-Α)' },
+    { field: 'type', ascLabel: 'Τύπος (Α-Ζ)', descLabel: 'Τύπος (Ζ-Α)' }
+  ],
+
+  availableActions: {
+    newItem: true,
+    editItem: true,
+    deleteItems: true,
+    filters: true,
+    favorites: true,
+    archive: true,
+    export: true,
+    import: true,
+    refresh: true,
+    sorting: true,
+    preview: true,
+    copy: true,
+    share: true,
+    reports: true,
+    settings: true,
+    favoritesManagement: true,
+    help: true
+  }
+};

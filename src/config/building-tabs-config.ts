@@ -123,26 +123,12 @@ export const BUILDING_TABS: BuildingTabConfig[] = [
     component: 'StorageTab',
   },
   {
-    id: 'storage-floorplans',
-    label: 'Κατόψεις Αποθηκών',
-    value: 'storage-floorplans',
-    icon: 'layout-grid',
-    description: 'Κατόψεις και διάταξη αποθηκών',
-    order: 6,
-    enabled: true,
-    component: 'FloorplanViewerTab',
-    componentProps: {
-      title: 'Κατόψεις Αποθηκών',
-      floorplanType: 'storage'
-    }
-  },
-  {
     id: 'contracts',
     label: 'Συμβόλαια',
     value: 'contracts',
     icon: 'file-signature',
     description: 'Συμβόλαια και συμφωνίες πελατών',
-    order: 7,
+    order: 6,
     enabled: true,
     component: 'PlaceholderTab',
     componentProps: {
@@ -156,7 +142,7 @@ export const BUILDING_TABS: BuildingTabConfig[] = [
     value: 'protocols',
     icon: 'clipboard-check',
     description: 'Υ.Δ.Τοιχοποιίας & Πρωτόκολλα',
-    order: 8,
+    order: 7,
     enabled: true,
     component: 'PlaceholderTab',
     componentProps: {
@@ -170,7 +156,7 @@ export const BUILDING_TABS: BuildingTabConfig[] = [
     value: 'photos',
     icon: 'camera',
     description: 'Φωτογραφίες κτιρίου και εργασιών',
-    order: 9,
+    order: 8,
     enabled: true,
     component: 'PhotosTabContent',
   },
@@ -180,7 +166,7 @@ export const BUILDING_TABS: BuildingTabConfig[] = [
     value: 'customers',
     icon: 'users',
     description: 'Πελάτες που έχουν αγοράσει μονάδες σε αυτό το κτίριο',
-    order: 10,
+    order: 9,
     enabled: true,
     component: 'BuildingCustomersTab',
   },
@@ -190,7 +176,7 @@ export const BUILDING_TABS: BuildingTabConfig[] = [
     value: 'videos',
     icon: 'play-circle',
     description: 'Videos κτιρίου και εργασιών',
-    order: 11,
+    order: 10,
     enabled: true,
     component: 'VideosTabContent',
   }
