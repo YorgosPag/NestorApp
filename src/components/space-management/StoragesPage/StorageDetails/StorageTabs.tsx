@@ -3,7 +3,7 @@
 import React from 'react';
 import type { Storage } from '@/types/storage/contracts';
 import { getSortedStorageTabs } from '@/config/storage-tabs-config';
-import { GenericStorageTabsRenderer } from '@/components/generic/GenericStorageTabsRenderer';
+import { UniversalTabsRenderer, STORAGE_COMPONENT_MAPPING, convertToUniversalConfig } from '@/components/generic';
 
 interface StorageTabsProps {
   storage: Storage;
@@ -13,7 +13,7 @@ interface StorageTabsProps {
  * Professional Storage Tabs Component
  *
  * Χρησιμοποιεί κεντρικοποιημένη διαμόρφωση από storage-tabs-config.ts
- * και GenericStorageTabsRenderer για consistent rendering.
+ * και UniversalTabsRenderer για consistent rendering.
  * ZERO HARDCODED VALUES - όλα από centralized configuration.
  */
 export function StorageTabs({ storage }: StorageTabsProps) {
@@ -21,10 +21,12 @@ export function StorageTabs({ storage }: StorageTabsProps) {
   const tabs = getSortedStorageTabs();
 
   return (
-    <GenericStorageTabsRenderer
-      tabs={tabs}
-      storage={storage}
+    <UniversalTabsRenderer
+      tabs={tabs.map(convertToUniversalConfig)}
+      data={storage}
+      componentMapping={STORAGE_COMPONENT_MAPPING}
       defaultTab="general"
+      theme="warning"
     />
   );
 }

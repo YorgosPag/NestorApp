@@ -18,13 +18,12 @@ export function BuildingDetails({ building }: BuildingDetailsProps) {
     <DetailsContainer
       selectedItem={building}
       header={<BuildingDetailsHeader building={building!} />}
+      tabsRenderer={<BuildingTabs building={building!} />}
       emptyStateProps={{
         icon: Building2,
         title: "Επιλέξτε ένα κτίριο",
         description: "Επιλέξτε ένα κτίριο από τη λίστα για να δείτε τις λεπτομέρειές του."
       }}
-    >
-      <BuildingTabs building={building!} />
-    </DetailsContainer>
+    />
   );
 }

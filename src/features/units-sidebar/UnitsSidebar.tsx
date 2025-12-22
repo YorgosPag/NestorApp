@@ -1,12 +1,13 @@
 'use client';
 
 import React from 'react';
-import { Edit, Trash2 } from 'lucide-react';
+import { Edit, Trash2, Home } from 'lucide-react';
 
 import { UnitsList } from '@/components/units/UnitsList';
-import { GenericUnitsTabsRenderer } from '@/components/generic';
+import { UniversalTabsRenderer, UNITS_COMPONENT_MAPPING, convertToUniversalConfig } from '@/components/generic';
 import { getSortedUnitsTabs } from '@/config/units-tabs-config';
 import { MobileDetailsSlideIn } from '@/core/layouts';
+import { DetailsContainer } from '@/core/containers';
 import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 import { useUnitsSidebar } from './hooks/useUnitsSidebar';
@@ -33,32 +34,37 @@ export function UnitsSidebar({
   // Get units tabs from centralized config
   const unitsTabs = getSortedUnitsTabs();
 
-  // Details content component
+  // Details content component using centralized DetailsContainer
   const detailsContent = (
-    <div className="flex-1 flex flex-col min-h-0 bg-card border rounded-lg shadow-sm">
-      <UnitDetailsHeader unit={selectedUnit} />
-
-      <div className="flex-1 flex flex-col min-h-0">
-        <div className="shrink-0 border-b px-4">
-          <GenericUnitsTabsRenderer
-            tabs={unitsTabs}
-            selectedUnit={selectedUnit}
-            defaultTab="info"
-            additionalData={{
-              safeFloors,
-              currentFloor,
-              safeViewerProps,
-              safeViewerPropsWithFloors,
-              setShowHistoryPanel,
-              units
-            }}
-            globalProps={{
-              unitId: selectedUnit?.id
-            }}
-          />
-        </div>
-      </div>
-    </div>
+    <DetailsContainer
+      selectedItem={selectedUnit}
+      header={<UnitDetailsHeader unit={selectedUnit} />}
+      tabsRenderer={
+        <UniversalTabsRenderer
+          tabs={unitsTabs.map(convertToUniversalConfig)}
+          data={selectedUnit}
+          componentMapping={UNITS_COMPONENT_MAPPING}
+          defaultTab="info"
+          theme="default"
+          additionalData={{
+            safeFloors,
+            currentFloor,
+            safeViewerProps,
+            safeViewerPropsWithFloors,
+            setShowHistoryPanel,
+            units
+          }}
+          globalProps={{
+            unitId: selectedUnit?.id
+          }}
+        />
+      }
+      emptyStateProps={{
+        icon: Home,
+        title: "Επιλέξτε μια μονάδα",
+        description: "Επιλέξτε μια μονάδα από τη λίστα για να δείτε τις λεπτομέρειές της."
+      }}
+    />
   );
 
   return (

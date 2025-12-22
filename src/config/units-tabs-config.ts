@@ -117,7 +117,7 @@ export const UNITS_TABS: UnitsTabConfig[] = [
     value: 'photos',
     icon: 'camera',
     description: 'Φωτογραφίες της μονάδας',
-    order: 4,
+    order: 5,
     enabled: true,
     component: 'PhotosTabContent',
   },
@@ -127,7 +127,7 @@ export const UNITS_TABS: UnitsTabConfig[] = [
     value: 'videos',
     icon: 'video',
     description: 'Videos της μονάδας',
-    order: 5,
+    order: 6,
     enabled: true,
     component: 'VideosTabContent',
   }

@@ -5,7 +5,7 @@ import type { Project } from '@/types/project';
 import { ProjectDetailsHeader } from './ProjectDetailsHeader';
 import { Briefcase } from 'lucide-react';
 import { useProjectFloorplans } from '../../hooks/useProjectFloorplans';
-import { GenericProjectTabsRenderer } from '@/components/generic';
+import { UniversalTabsRenderer, PROJECT_COMPONENT_MAPPING, convertToUniversalConfig } from '@/components/generic';
 import { getSortedProjectTabs } from '@/config/project-tabs-config';
 import { DetailsContainer } from '@/core/containers';
 
@@ -32,10 +32,12 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
             selectedItem={project}
             header={<ProjectDetailsHeader project={project!} />}
             tabsRenderer={
-                <GenericProjectTabsRenderer
-                    tabs={projectTabs}
-                    project={project!}
+                <UniversalTabsRenderer
+                    tabs={projectTabs.map(convertToUniversalConfig)}
+                    data={project!}
+                    componentMapping={PROJECT_COMPONENT_MAPPING}
                     defaultTab="general"
+                    theme="default"
                     additionalData={{
                         projectFloorplan,
                         parkingFloorplan,

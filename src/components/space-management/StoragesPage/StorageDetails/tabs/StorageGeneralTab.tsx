@@ -132,7 +132,11 @@ export function StorageGeneralTab({ storage }: StorageGeneralTabProps) {
           {storage.lastUpdated && (
             <div>
               <label className="text-sm font-medium text-muted-foreground">Τελευταία Ενημέρωση</label>
-              <p className="mt-1 text-sm">{formatDate(storage.lastUpdated.toISOString())}</p>
+              <p className="mt-1 text-sm">{formatDate(
+                storage.lastUpdated instanceof Date
+                  ? storage.lastUpdated.toISOString()
+                  : storage.lastUpdated
+              )}</p>
             </div>
           )}
           {storage.owner && (

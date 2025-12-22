@@ -23,17 +23,36 @@ export type { ServiceFormTabRendererProps } from './ServiceFormTabRenderer';
 export { GenericTabRenderer } from './GenericTabRenderer';
 export type { GenericTabRendererProps } from './GenericTabRenderer';
 
-// Project Tab Components
-export { GenericProjectTabsRenderer } from './GenericProjectTabsRenderer';
-export type { GenericProjectTabsRendererProps } from './GenericProjectTabsRenderer';
+// 🚀 UNIVERSAL TABS RENDERER - Enterprise Centralized Solution
+export { UniversalTabsRenderer } from './UniversalTabsRenderer';
+export type { UniversalTabsRendererProps, UniversalTabConfig } from './UniversalTabsRenderer';
+export { convertToUniversalConfig, isUniversalTabConfig } from './UniversalTabsRenderer';
 
-// Building Tab Components
-export { GenericBuildingTabsRenderer } from './GenericBuildingTabsRenderer';
-export type { GenericBuildingTabsRendererProps } from './GenericBuildingTabsRenderer';
+// Component Mappings για Universal Renderer
+export {
+  PROJECT_COMPONENT_MAPPING,
+  BUILDING_COMPONENT_MAPPING,
+  STORAGE_COMPONENT_MAPPING,
+  UNITS_COMPONENT_MAPPING,
+  MASTER_COMPONENT_MAPPING,
+  getComponentMapping
+} from './mappings';
 
-// Units Tab Components
-export { GenericUnitsTabsRenderer } from './GenericUnitsTabsRenderer';
-export type { GenericUnitsTabsRendererProps } from './GenericUnitsTabsRenderer';
+export type {
+  ProjectComponentName,
+  BuildingComponentName,
+  StorageComponentName,
+  UnitsComponentName,
+  MasterComponentName
+} from './mappings';
+
+// ⚠️ LEGACY RENDERERS - DEPRECATED ⚠️
+// These are kept for reference but should NOT be used in new code
+// Use UniversalTabsRenderer instead
+//
+// export { GenericProjectTabsRenderer } from './GenericProjectTabsRenderer';
+// export { GenericBuildingTabsRenderer } from './GenericBuildingTabsRenderer';
+// export { GenericUnitsTabsRenderer } from './GenericUnitsTabsRenderer';
 
 // CRM Dashboard Tab Components
 export { GenericCRMDashboardTabsRenderer } from './GenericCRMDashboardTabsRenderer';

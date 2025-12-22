@@ -3,7 +3,7 @@
 import React from 'react';
 import type { Building } from '../BuildingsPageContent';
 import { useBuildingFloorplans } from '../../../hooks/useBuildingFloorplans';
-import { GenericBuildingTabsRenderer } from '@/components/generic';
+import { UniversalTabsRenderer, BUILDING_COMPONENT_MAPPING, convertToUniversalConfig } from '@/components/generic';
 import { getSortedBuildingTabs } from '@/config/building-tabs-config';
 
 interface BuildingTabsProps {
@@ -25,10 +25,12 @@ export function BuildingTabs({ building }: BuildingTabsProps) {
     const buildingTabs = getSortedBuildingTabs();
 
     return (
-        <GenericBuildingTabsRenderer
-            tabs={buildingTabs}
-            building={building}
+        <UniversalTabsRenderer
+            tabs={buildingTabs.map(convertToUniversalConfig)}
+            data={building}
+            componentMapping={BUILDING_COMPONENT_MAPPING}
             defaultTab="general"
+            theme="warning"
             additionalData={{
                 buildingFloorplan,
                 storageFloorplan,

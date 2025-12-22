@@ -1,8 +1,7 @@
 'use client';
 
 import React from 'react';
-import { TabsContent } from "@/components/ui/tabs";
-import { TabsOnlyTriggers, type TabDefinition } from "@/components/ui/navigation/TabsComponents";
+import { TabsOnlyTriggers, TabsContent, type TabDefinition } from "@/components/ui/navigation/TabsComponents";
 import type { StorageTabConfig } from '@/config/storage-tabs-config';
 import type { Storage } from '@/types/storage/contracts';
 import { getIconComponent } from './utils/IconMapping';
@@ -142,6 +141,13 @@ export function GenericStorageTabsRenderer({
       tabs={tabDefinitions}
       defaultTab={defaultTab}
       theme="warning"
-    />
+    >
+      {/* Render TabsContent panels manually */}
+      {tabDefinitions.map((tabDef) => (
+        <TabsContent key={tabDef.id} value={tabDef.id}>
+          {tabDef.content}
+        </TabsContent>
+      ))}
+    </TabsOnlyTriggers>
   );
 }

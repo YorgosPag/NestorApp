@@ -20,7 +20,7 @@ export interface Storage {
   area: number; // in square meters
   description?: string;
   price?: number; // in euros
-  lastUpdated?: Date;
+  lastUpdated?: Date | string;
   projectId?: string;
   owner?: string;
   notes?: string;
