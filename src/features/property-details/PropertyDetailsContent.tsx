@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import type { Property } from '@/types/property-viewer';
+import type { Property, ExtendedPropertyDetails } from '@/types/property-viewer';
 import type { PropertyDetailsContentProps } from './types';
 
 import { MultiLevelNavigation } from '@/components/property-viewer/details/MultiLevelNavigation';
@@ -23,18 +23,43 @@ import { useNotifications } from '@/providers/NotificationProvider';
 
 export function PropertyDetailsContent({
   property,
+  unit, // Support for UniversalTabsRenderer compatibility
+  data, // Support for UniversalTabsRenderer compatibility
   onSelectFloor,
   onUpdateProperty,
-  isReadOnly = false,
-}: PropertyDetailsContentProps) {
+  isReadOnly = false
+}: Partial<PropertyDetailsContentProps> & {
+  property?: ExtendedPropertyDetails & { buyerMismatch?: boolean };
+  unit?: ExtendedPropertyDetails;
+  data?: ExtendedPropertyDetails;
+  onSelectFloor?: (floorId: string | null) => void;
+  onUpdateProperty?: (propertyId: string, updates: Partial<Property>) => void;
+  isReadOnly?: boolean;
+}) {
   const notifications = useNotifications();
-  const isMultiLevel = property.isMultiLevel || property.type === 'Μεζονέτα';
+
+  // Resolve the actual property from all possible sources (enterprise pattern)
+  const resolvedProperty = property || unit || data;
+
+  // Early return if no property data available
+  if (!resolvedProperty) {
+    console.warn('PropertyDetailsContent: No property data provided');
+    return null;
+  }
+
+  // Type guard για buyerMismatch property
+  const hasPropertyWithMismatch = (prop: unknown): prop is ExtendedPropertyDetails & { buyerMismatch: boolean } => {
+    return typeof prop === 'object' && prop !== null && 'buyerMismatch' in prop;
+  };
+
+  // Determine if property is multi-level based on type
+  const isMultiLevel = resolvedProperty.type === 'Μεζονέτα';
 
   // attachments (ίδια λογική με mock)
-  const { storage: attachedStorage, parking: attachedParking } = resolveAttachments(property);
+  const { storage: attachedStorage, parking: attachedParking } = resolveAttachments(resolvedProperty);
 
   // safe update (ίδια συμπεριφορά: no-op όταν read-only)
-  const safeOnUpdateProperty = makeSafeUpdate(isReadOnly, onUpdateProperty);
+  const safeOnUpdateProperty = makeSafeUpdate(isReadOnly, onUpdateProperty || (() => {}));
 
   // Share handlers
   const handleShareSuccess = () => {
@@ -50,30 +75,30 @@ export function PropertyDetailsContent({
     <div className="space-y-4 p-1">
       {isReadOnly && <ReadOnlyBanner />}
 
-      {property.buyerMismatch && !isReadOnly && <BuyerMismatchAlert />}
+      {hasPropertyWithMismatch(resolvedProperty) && resolvedProperty.buyerMismatch && !isReadOnly && <BuyerMismatchAlert />}
 
       {isMultiLevel && (
         <MultiLevelNavigation
-          property={property}
-          onSelectFloor={onSelectFloor}
-          currentFloorId={property.floorId}
+          property={resolvedProperty}
+          onSelectFloor={onSelectFloor || (() => {})}
+          currentFloorId={resolvedProperty.floorId}
         />
       )}
 
       <PropertyMeta
-        property={property}
+        property={resolvedProperty}
         onUpdateProperty={safeOnUpdateProperty}
       />
 
       {/* Share Button - Always visible for easy sharing */}
       <div className="flex justify-end">
         <PropertyShareButton
-          propertyId={property.id}
-          propertyTitle={property.name}
-          propertyDescription={property.description}
-          propertyPrice={property.price}
-          propertyArea={property.area}
-          propertyLocation={`${property.building}, Όροφος ${property.floor}`}
+          propertyId={resolvedProperty.id}
+          propertyTitle={resolvedProperty.name}
+          propertyDescription={resolvedProperty.description}
+          propertyPrice={resolvedProperty.price}
+          propertyArea={resolvedProperty.area}
+          propertyLocation={`${resolvedProperty.building}, Όροφος ${resolvedProperty.floor}`}
           source="property_details"
           variant="outline"
           size="sm"
@@ -83,9 +108,9 @@ export function PropertyDetailsContent({
       </div>
 
       {/* Customer Information Card - Centralized System */}
-      {property.soldTo && !isReadOnly && (
+      {resolvedProperty.soldTo && !isReadOnly && (
         <UnifiedCustomerCard
-          contactId={property.soldTo}
+          contactId={resolvedProperty.soldTo}
           context="unit"
           variant="compact"
           size="md"
@@ -96,12 +121,12 @@ export function PropertyDetailsContent({
 
       <AttachmentsBlock storage={attachedStorage} parking={attachedParking} />
 
-      <ContactsBlock owner={property.owner} agent={property.agent} />
+      <ContactsBlock owner={resolvedProperty.owner} agent={resolvedProperty.agent} />
 
       {/* Hide sensitive documents in read-only mode */}
-      {!isReadOnly && <DocumentsBlock documents={property.documents || []} />}
+      {!isReadOnly && <DocumentsBlock documents={resolvedProperty.documents || []} />}
 
-      <DatesBlock dates={property.dates} />
+      <DatesBlock dates={resolvedProperty.dates} />
 
       {/* Show limited info message in read-only mode */}
       {isReadOnly && <LimitedInfoNotice />}

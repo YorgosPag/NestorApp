@@ -2,6 +2,9 @@
 
 import React, { useState, useCallback } from 'react';
 import { Users, Edit, Check, X } from 'lucide-react';
+import { useEmptyStateMessages, useActionMessages } from '@/hooks/useEnterpriseMessages';
+import { useIconSizes } from '@/hooks/useIconSizes';
+import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { Button } from '@/components/ui/button';
 import type { Contact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes'; // 🏢 ENTERPRISE: Type-safe form data
@@ -27,6 +30,12 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
   const [isEditing, setIsEditing] = useState(false);
   const [editedData, setEditedData] = useState<Partial<ContactFormData>>({});
   const photoModal = useGlobalPhotoPreview();
+
+  // 🗨️ ENTERPRISE: Centralized systems
+  const emptyStateMessages = useEmptyStateMessages();
+  const actionMessages = useActionMessages();
+  const iconSizes = useIconSizes();
+  const layout = useLayoutClasses();
 
   const handleUnitAdded = useCallback(() => {
     // TODO: Refresh data when unit is added
@@ -146,8 +155,7 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
         }
         emptyStateProps={{
           icon: Users,
-          title: "Επιλέξτε μια επαφή",
-          description: "Επιλέξτε μια επαφή από τη λίστα για να δείτε τις λεπτομέρειές της."
+          ...emptyStateMessages.contact
         }}
       >
         {/* 🎯 EDIT MODE TOOLBAR - Μόνο για Mobile (Desktop κουμπιά στην επικεφαλίδα) */}
@@ -156,30 +164,30 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
             <div className="flex justify-end mb-4">
               <Button
                 onClick={handleStartEdit}
-                className="flex items-center gap-2"
+                className={layout.flexCenterGap2}
                 variant="outline"
               >
-                <Edit className="w-4 h-4" />
-                Επεξεργασία
+                <Edit className={iconSizes.sm} />
+                {actionMessages.edit}
               </Button>
             </div>
           ) : (
-            <div className="flex justify-end gap-2 mb-4">
+            <div className={`${layout.flexGap2} justify-end mb-4`}>
               <Button
                 onClick={handleSaveEdit}
-                className="flex items-center gap-2"
+                className={layout.flexCenterGap2}
                 variant="default"
               >
-                <Check className="w-4 h-4" />
-                Αποθήκευση
+                <Check className={iconSizes.sm} />
+                {actionMessages.save}
               </Button>
               <Button
                 onClick={handleCancelEdit}
-                className="flex items-center gap-2"
+                className={layout.flexCenterGap2}
                 variant="outline"
               >
-                <X className="w-4 h-4" />
-                Ακύρωση
+                <X className={iconSizes.sm} />
+                {actionMessages.cancel}
               </Button>
             </div>
           )}
@@ -201,8 +209,8 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
             onPhotoClick: handlePhotoClick,
           }}
           globalProps={{
-            contactId: contact!.id,
-            contactType: contact!.type,
+            contactId: contact?.id || '',
+            contactType: contact?.type || 'individual',
           }}
         />
       </DetailsContainer>

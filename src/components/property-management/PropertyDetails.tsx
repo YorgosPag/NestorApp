@@ -1,12 +1,16 @@
 'use client';
 
 import React from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { PropertyBadge } from '@/core/badges';
-import { CommonBadge } from '@/core/badges';
+import { PropertyBadge, CommonBadge } from '@/core/badges';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { EntityDetailsHeader } from '@/core/entity-headers';
+import { useIconSizes } from '@/hooks/useIconSizes';
+import { useLayoutClasses } from '@/hooks/useLayoutClasses';
+import { useTypography } from '@/hooks/useTypography';
+import { useButtonPatterns } from '@/hooks/useButtonPatterns';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 import {
   Home, Building, MapPin, Euro, Ruler, Users, Phone, Mail, FileText, ExternalLink, Calendar
 } from 'lucide-react';
@@ -22,29 +26,37 @@ interface PropertyDetailsProps {
 export function PropertyDetails({ property }: PropertyDetailsProps) {
   const statusInfo = PROPERTY_STATUS_CONFIG[property.status] || PROPERTY_STATUS_CONFIG.default;
 
+  // 🏢 ENTERPRISE: Centralized systems
+  const iconSizes = useIconSizes();
+  const layout = useLayoutClasses();
+  const typography = useTypography();
+  const buttonPatterns = useButtonPatterns();
+  const colors = useSemanticColors();
+
   return (
-    <Card className="flex-1 flex flex-col min-w-0">
-      <CardHeader>
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <CardTitle className="text-lg">{property.code}</CardTitle>
-            <p className="text-sm text-muted-foreground">{property.description}</p>
-          </div>
-          <PropertyBadge
-            status={property.status as any}
-            size="sm"
-            className="text-xs"
-          />
-        </div>
-      </CardHeader>
+    <div className={layout.cardFlexCol}>
+      <EntityDetailsHeader
+        icon={Home}
+        title={property.code}
+        subtitle={property.description}
+        badges={[
+          {
+            type: 'status',
+            value: property.status,
+            variant: 'default',
+            size: 'sm'
+          }
+        ]}
+        variant="default"
+      />
       <ScrollArea className="flex-1">
-        <CardContent className="space-y-4">
+        <div className="p-4 space-y-4">
           <Separator />
           
-          <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className={`${layout.gridCols2Gap4} ${typography.body.sm}`}>
             <PropertyInfoItem icon={<Building />} label="Κτίριο" value={property.building} />
             <PropertyInfoItem icon={<MapPin />} label="Όροφος" value={property.floor} />
-            <PropertyInfoItem icon={<Euro />} label="Τιμή" value={`${property.price.toLocaleString('el-GR')} €`} valueClassName="font-semibold text-green-600" iconClassName="text-green-600" />
+            <PropertyInfoItem icon={<Euro />} label="Τιμή" value={`${property.price.toLocaleString('el-GR')} €`} valueClassName={`font-semibold ${colors.text.price}`} iconClassName={colors.text.price} />
             <PropertyInfoItem icon={<Ruler />} label="Εμβαδόν" value={`${property.area} m²`} />
             <PropertyInfoItem icon={<Home />} label="Δωμάτια" value={property.rooms} />
             <PropertyInfoItem icon={<Home />} label="Μπαλκόνι" value={property.balconyArea ? `${property.balconyArea} m²` : '-'} />
@@ -54,17 +66,17 @@ export function PropertyDetails({ property }: PropertyDetailsProps) {
 
           {property.status === 'sold' && (
             <div className="space-y-3">
-                <h4 className="font-semibold text-sm">Αγοραστής</h4>
+                <h4 className={typography.heading.sm}>Αγοραστής</h4>
                 <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-sm">
-                        <Users className="w-4 h-4 text-muted-foreground" />
+                    <div className={`${layout.flexCenterGap2} ${typography.body.sm}`}>
+                        <Users className={`${iconSizes.sm} text-muted-foreground`} />
                         <span>{property.buyer || '-'}</span>
                     </div>
-                    <Button variant="outline" size="sm" className="text-xs h-7">Προβολή Επαφής</Button>
+                    <Button {...buttonPatterns.actions.view} className={`${typography.body.xs} h-7`}>Προβολή Επαφής</Button>
                 </div>
                 {property.saleDate && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Calendar className="w-4 h-4" />
+                  <div className={`${layout.flexCenterGap2} ${typography.special.secondary}`}>
+                    <Calendar className={iconSizes.sm} />
                     <span>Ημ/νία Πώλησης: {new Date(property.saleDate).toLocaleDateString('el-GR')}</span>
                   </div>
                 )}
@@ -73,7 +85,7 @@ export function PropertyDetails({ property }: PropertyDetailsProps) {
 
           {property.features && property.features.length > 0 && (
             <div className="space-y-2">
-              <h4 className="font-semibold text-sm">Χαρακτηριστικά</h4>
+              <h4 className={typography.heading.sm}>Χαρακτηριστικά</h4>
               <div className="flex flex-wrap gap-2">
                 {property.features.map((feature, index) => (
                   <CommonBadge
@@ -87,8 +99,8 @@ export function PropertyDetails({ property }: PropertyDetailsProps) {
             </div>
           )}
 
-        </CardContent>
+        </div>
       </ScrollArea>
-    </Card>
+    </div>
   );
 }

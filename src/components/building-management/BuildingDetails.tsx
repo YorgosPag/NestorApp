@@ -3,6 +3,7 @@
 
 import React from 'react';
 import { Building2 } from 'lucide-react';
+import { useEmptyStateMessages } from '@/hooks/useEnterpriseMessages';
 import type { Building } from './BuildingsPageContent';
 import { BuildingDetailsHeader } from './BuildingDetails/BuildingDetailsHeader';
 import { BuildingTabs } from './BuildingDetails/BuildingTabs';
@@ -14,6 +15,9 @@ interface BuildingDetailsProps {
 }
 
 export function BuildingDetails({ building }: BuildingDetailsProps) {
+  // 🗨️ ENTERPRISE: Centralized messages system
+  const emptyStateMessages = useEmptyStateMessages();
+
   return (
     <DetailsContainer
       selectedItem={building}
@@ -21,8 +25,7 @@ export function BuildingDetails({ building }: BuildingDetailsProps) {
       tabsRenderer={<BuildingTabs building={building!} />}
       emptyStateProps={{
         icon: Building2,
-        title: "Επιλέξτε ένα κτίριο",
-        description: "Επιλέξτε ένα κτίριο από τη λίστα για να δείτε τις λεπτομέρειές του."
+        ...emptyStateMessages.building
       }}
     />
   );

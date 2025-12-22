@@ -2,6 +2,8 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
+import { useButtonPatterns } from '@/hooks/useButtonPatterns';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,22 +28,24 @@ interface BuildingListItemActionsProps {
 }
 
 export function BuildingListItemActions({ isFavorite, onToggleFavorite, onEdit }: BuildingListItemActionsProps) {
+  // 🏢 ENTERPRISE: Centralized systems
+  const buttonPatterns = useButtonPatterns();
+  const colors = useSemanticColors();
+
   return (
     <div className={`absolute top-2 right-2 flex items-center gap-1 opacity-0 z-10 ${GROUP_HOVER_PATTERNS.SHOW_ON_GROUP} ${TRANSITION_PRESETS.OPACITY}`}>
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
-            variant="ghost"
-            size="sm"
+            {...buttonPatterns.icons.iconSmall}
             onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}
             onMouseDown={(e) => e.stopPropagation()}
-            className="h-6 w-6 p-0"
           >
             <Star
               className={cn(
                 "w-4 h-4",
                 isFavorite
-                  ? "text-yellow-500 fill-yellow-500"
+                  ? `${colors.text.warning} fill-yellow-500`
                   : `${HOVER_TEXT_EFFECTS.YELLOW}`
               )}
             />
@@ -54,7 +58,7 @@ export function BuildingListItemActions({ isFavorite, onToggleFavorite, onEdit }
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onMouseDown={(e) => e.stopPropagation()}>
+          <Button {...buttonPatterns.icons.iconSmall} onMouseDown={(e) => e.stopPropagation()}>
             <MoreVertical className="w-3 h-3" />
           </Button>
         </DropdownMenuTrigger>

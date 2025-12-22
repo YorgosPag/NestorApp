@@ -26,6 +26,13 @@ export {
   designTokens as baseDesignTokens
 } from '../design-tokens';
 
+// ============================================================================
+// 🎯 ICON SIZES - ENTERPRISE CENTRALIZED ACCESS
+// ============================================================================
+
+// Export icon sizes for direct access
+export const iconSizes = componentSizes.icon;
+
 // Additional re-exports for backward compatibility
 export {
   animation as animations

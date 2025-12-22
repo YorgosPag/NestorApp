@@ -86,11 +86,17 @@ export const STORAGE_COMPONENT_MAPPING = {
 // UNITS COMPONENT MAPPING
 // ============================================================================
 
-// Units components - using existing tabs from config instead of non-existent files
-// These imports will be resolved at runtime through the universal renderer
+import { PropertyDetailsContent } from '../../property-viewer/details/PropertyDetailsContent';
+import { UnitCustomerTab } from '../../units/tabs/UnitCustomerTab';
+import { FloorPlanTab } from '../../../features/units-sidebar/components/FloorPlanTab';
 
 export const UNITS_COMPONENT_MAPPING = {
-  // Units tabs will use the existing generic renderer until specific tabs are implemented
+  'PropertyDetailsContent': PropertyDetailsContent,
+  'UnitCustomerTab': UnitCustomerTab,
+  'FloorPlanTab': FloorPlanTab,
+  'PhotosTabContent': PhotosTabContent,
+  'VideosTabContent': VideosTabContent,
+  'DocumentsPlaceholder': PlaceholderTab,
   'PlaceholderTab': PlaceholderTab,
   'FloorplanViewerTab': FloorplanViewerTab,
 } as const;

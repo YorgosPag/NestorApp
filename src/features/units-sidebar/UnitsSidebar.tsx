@@ -2,6 +2,9 @@
 
 import React from 'react';
 import { Edit, Trash2, Home } from 'lucide-react';
+import { useEmptyStateMessages } from '@/hooks/useEnterpriseMessages';
+import { useIconSizes } from '@/hooks/useIconSizes';
+import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 
 import { UnitsList } from '@/components/units/UnitsList';
 import { UniversalTabsRenderer, UNITS_COMPONENT_MAPPING, convertToUniversalConfig } from '@/components/generic';
@@ -24,6 +27,11 @@ export function UnitsSidebar({
   selectedUnitIds,
   onAssignmentSuccess,
 }: UnitsSidebarProps) {
+  // 🗨️ ENTERPRISE: Centralized systems
+  const emptyStateMessages = useEmptyStateMessages();
+  const iconSizes = useIconSizes();
+  const layout = useLayoutClasses();
+
   const {
     safeFloors,
     currentFloor,
@@ -61,8 +69,7 @@ export function UnitsSidebar({
       }
       emptyStateProps={{
         icon: Home,
-        title: "Επιλέξτε μια μονάδα",
-        description: "Επιλέξτε μια μονάδα από τη λίστα για να δείτε τις λεπτομέρειές της."
+        ...emptyStateMessages.unit
       }}
     />
   );
@@ -70,7 +77,7 @@ export function UnitsSidebar({
   return (
     <>
       {/* 🖥️ DESKTOP: Standard split layout */}
-      <div className="hidden md:flex flex-1 gap-4 min-h-0">
+      <div className={`hidden md:flex flex-1 ${layout.flexGap4} min-h-0`}>
         <UnitsList
           units={units}
           selectedUnitIds={selectedUnitIds}
@@ -102,14 +109,14 @@ export function UnitsSidebar({
               className={`p-2 rounded-md border bg-background border-border ${INTERACTIVE_PATTERNS.ACCENT_HOVER} ${TRANSITION_PRESETS.FAST_COLORS}`}
               aria-label="Επεξεργασία Μονάδας"
             >
-              <Edit className="h-4 w-4" />
+              <Edit className={iconSizes.sm} />
             </button>
             <button
               onClick={() => {/* TODO: Delete unit handler */}}
               className={`p-2 rounded-md border bg-background border-border text-destructive ${INTERACTIVE_PATTERNS.ACCENT_HOVER} ${TRANSITION_PRESETS.FAST_COLORS}`}
               aria-label="Διαγραφή Μονάδας"
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className={iconSizes.sm} />
             </button>
           </>
         }

@@ -3,6 +3,7 @@
 import React from 'react';
 import { CommonBadge } from '@/core/badges';
 import { Button } from '@/components/ui/button';
+import { useButtonPatterns } from '@/hooks/useButtonPatterns';
 import { Edit, Save, X, CheckCircle } from 'lucide-react';
 
 interface HeaderProps {
@@ -15,6 +16,9 @@ interface HeaderProps {
 }
 
 export function Header({ building, isEditing, autoSaving, lastSaved, setIsEditing, handleSave }: HeaderProps) {
+  // 🏢 ENTERPRISE: Centralized systems
+  const buttonPatterns = useButtonPatterns();
+
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-3">
@@ -58,13 +62,13 @@ export function Header({ building, isEditing, autoSaving, lastSaved, setIsEditin
       
       <div className="flex items-center gap-2">
         {!isEditing ? (
-          <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+          <Button {...buttonPatterns.actions.edit} onClick={() => setIsEditing(true)}>
             <Edit className="w-4 h-4 mr-2" />
             Επεξεργασία
           </Button>
         ) : (
           <>
-            <Button variant="outline" size="sm" onClick={() => setIsEditing(false)}>
+            <Button {...buttonPatterns.actions.cancel} onClick={() => setIsEditing(false)}>
               <X className="w-4 h-4 mr-2" />
               Ακύρωση
             </Button>

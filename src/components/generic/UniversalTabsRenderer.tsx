@@ -145,6 +145,8 @@ export function UniversalTabsRenderer<TData = unknown>({
           storage={data} // For backward compatibility με storage components
           unit={data} // For backward compatibility με unit components
           selectedUnit={data} // For backward compatibility με unit components
+          // For PlaceholderTab compatibility
+          icon={getIconComponent(tabConfig.icon)}
           {...additionalData}
           {...globalProps}
           {...tabConfig.componentProps}

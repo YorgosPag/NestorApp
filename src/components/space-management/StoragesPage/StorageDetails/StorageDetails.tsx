@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Warehouse } from 'lucide-react';
+import { useEmptyStateMessages } from '@/hooks/useEnterpriseMessages';
 import type { Storage } from '@/types/storage/contracts';
 import { StorageDetailsHeader } from './StorageDetailsHeader';
 import { StorageTabs } from './StorageTabs';
@@ -12,6 +13,9 @@ interface StorageDetailsProps {
 }
 
 export function StorageDetails({ storage }: StorageDetailsProps) {
+  // 🗨️ ENTERPRISE: Centralized messages system
+  const emptyStateMessages = useEmptyStateMessages();
+
   return (
     <DetailsContainer
       selectedItem={storage}
@@ -19,8 +23,7 @@ export function StorageDetails({ storage }: StorageDetailsProps) {
       tabsRenderer={storage ? <StorageTabs storage={storage} /> : null}
       emptyStateProps={{
         icon: Warehouse,
-        title: "Επιλέξτε μια αποθήκη",
-        description: "Επιλέξτε μια αποθήκη από τη λίστα για να δείτε τις λεπτομέρειές της."
+        ...emptyStateMessages.storage
       }}
     />
   );

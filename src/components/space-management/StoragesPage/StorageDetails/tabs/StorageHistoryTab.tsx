@@ -152,14 +152,14 @@ export function StorageHistoryTab({ storage }: StorageHistoryTabProps) {
                          storage.status === 'reserved' ? 'Κρατημένη' :
                          storage.status === 'maintenance' ? 'Συντήρηση' : 'Άγνωστη'}`,
       description: `Η αποθήκη βρίσκεται σε κατάσταση: ${storage.status}`,
-      date: storage.lastUpdated || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+      date: storage.lastUpdated ? new Date(storage.lastUpdated) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
       actor: 'Σύστημα',
       status: 'completed',
       metadata: {
         newValue: storage.status
       }
     }
-  ].sort((a, b) => b.date.getTime() - a.date.getTime()); // Ταξινομημένα κατά ημερομηνία
+  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()); // Ταξινομημένα κατά ημερομηνία
 
   const eventsByType = {
     total: historyEvents.length,
@@ -305,7 +305,7 @@ export function StorageHistoryTab({ storage }: StorageHistoryTabProps) {
             <div>
               <label className="font-medium text-muted-foreground">Τελευταία Ενημέρωση:</label>
               <span className="ml-2">
-                {storage.lastUpdated ? formatDate(storage.lastUpdated.toISOString()) : 'Δεν έχει καταγραφεί'}
+                {storage.lastUpdated ? formatDate(new Date(storage.lastUpdated).toISOString()) : 'Δεν έχει καταγραφεί'}
               </span>
             </div>
             {storage.owner && (
