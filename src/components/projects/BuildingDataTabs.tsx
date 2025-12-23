@@ -83,7 +83,7 @@ export function BuildingDataTabs({
     <TabsOnlyTriggers
       tabs={buildingTabs}
       defaultTab="general-plot-data"
-      theme="warning"
+      theme="default"
     >
       {buildingTabs.map((tab) => (
         <TabsContent key={tab.id} value={tab.id} className="mt-8 overflow-x-auto">

@@ -15,8 +15,7 @@ import { useGlobalPhotoPreview } from '@/providers/PhotoPreviewProvider';
 import { DetailsContainer } from '@/core/containers';
 import { ContactsService } from '@/services/contacts.service';
 import { mapContactToFormData } from '@/utils/contactForm/contactMapper';
-import { UniversalTabsRenderer, CONTACT_COMPONENT_MAPPING, convertToUniversalConfig } from '@/components/generic';
-import { getSortedContactTabs } from '@/config/contact-tabs-config';
+import { UnifiedContactTabbedSection } from '@/components/ContactFormSections/UnifiedContactTabbedSection';
 
 interface ContactDetailsProps {
   contact: Contact | null;
@@ -193,25 +192,15 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
           )}
         </div>
 
-        <UniversalTabsRenderer
-          tabs={getSortedContactTabs(contact?.type || 'individual').map(convertToUniversalConfig)}
-          data={contact!}
-          componentMapping={CONTACT_COMPONENT_MAPPING}
-          defaultTab="basicInfo"
-          theme="default"
-          additionalData={{
-            formData: isEditing ? editedData : enhancedFormData,
-            handleChange: handleFieldChange,
-            handleSelectChange: handleSelectChange,
-            setFormData: isEditing ? setEditedData : undefined,
-            disabled: !isEditing,
-            relationshipsMode: isEditing ? "full" : "summary",
-            onPhotoClick: handlePhotoClick,
-          }}
-          globalProps={{
-            contactId: contact?.id || '',
-            contactType: contact?.type || 'individual',
-          }}
+        <UnifiedContactTabbedSection
+          contactType={contact?.type || 'individual'}
+          formData={isEditing ? editedData : enhancedFormData} // 🎯 Use edited data when editing
+          handleChange={handleFieldChange} // 🎯 Enable changes when editing
+          handleSelectChange={handleSelectChange} // 🎯 Enable select changes when editing
+          setFormData={isEditing ? setEditedData : undefined} // 🔧 FIX: Pass setFormData when in edit mode
+          disabled={!isEditing} // 🎯 Enable editing when in edit mode
+          relationshipsMode={isEditing ? "full" : "summary"} // 🎯 KEY: Full mode when editing, summary when viewing
+          onPhotoClick={handlePhotoClick} // 🖼️ Photo click handler για gallery preview
         />
       </DetailsContainer>
 

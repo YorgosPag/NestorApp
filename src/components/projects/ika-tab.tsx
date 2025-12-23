@@ -41,7 +41,7 @@ export function IkaTab() {
     <TabsOnlyTriggers
       tabs={ikaTabs}
       defaultTab="workers"
-      theme="warning"
+      theme="default"
     >
       {ikaTabs.map((tab) => (
         <TabsContent key={tab.id} value={tab.id} className="mt-8 overflow-x-auto">

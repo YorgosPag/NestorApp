@@ -66,7 +66,7 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
   const availableUnits = stats ? stats.totalUnits - stats.soldUnits : 0;
 
   // Get centralized theme configuration
-  const themeConfig = getThemeVariant('warning');
+  const themeConfig = getThemeVariant('default');
 
   return (
     <>

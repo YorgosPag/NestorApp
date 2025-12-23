@@ -188,7 +188,7 @@ export function GenericProjectTabsRenderer({
     <TabsOnlyTriggers
       tabs={tabDefinitions}
       defaultTab={defaultTab}
-      theme="warning"
+      theme="default"
     >
       {tabDefinitions.map((tab) => (
         <TabsContent key={tab.id} value={tab.id} className="mt-8 overflow-x-auto">

@@ -113,7 +113,7 @@ export function ContactsToolbar(props: ContactsToolbarProps) {
       defaultTab="actions"
       selectedItems={selectedItems}
       selectionMessage={selectionMessage}
-      theme="warning"
+      theme="default"
     />
   );
 }

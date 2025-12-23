@@ -27,7 +27,7 @@ export function DocumentsProjectTab() {
     <TabsOnlyTriggers
       tabs={documentTabs}
       defaultTab="contracts"
-      theme="warning"
+      theme="default"
     >
       {documentTabs.map((tab) => (
         <TabsContent key={tab.id} value={tab.id} className="mt-8 overflow-x-auto">

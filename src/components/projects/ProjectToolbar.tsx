@@ -173,7 +173,7 @@ export function ProjectToolbar({
         defaultTab="actions"
         selectedItems={selectedItems}
         selectionMessage={selectionMessage}
-        theme="warning"
+        theme="default"
       />
 
     </div>

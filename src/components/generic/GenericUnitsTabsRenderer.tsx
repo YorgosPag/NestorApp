@@ -245,7 +245,7 @@ export function GenericUnitsTabsRenderer({
     <TabsOnlyTriggers
       tabs={tabDefinitions}
       defaultTab={defaultTab}
-      theme="warning"
+      theme="default"
     >
       {tabDefinitions.map((tab) => (
         <TabsContent key={tab.id} value={tab.id} className="flex-1 overflow-y-auto">

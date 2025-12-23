@@ -140,7 +140,7 @@ export function GenericStorageTabsRenderer({
     <TabsOnlyTriggers
       tabs={tabDefinitions}
       defaultTab={defaultTab}
-      theme="warning"
+      theme="default"
     >
       {/* Render TabsContent panels manually */}
       {tabDefinitions.map((tabDef) => (

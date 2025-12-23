@@ -176,7 +176,7 @@ export function GenericFormTabRenderer({
       <TabsOnlyTriggers
         tabs={tabs}
         defaultTab={tabs[0]?.id || "basicInfo"}
-        theme="warning"
+        theme="default"
       >
         {tabs.map((tab) => (
           <TabsContent key={tab.id} value={tab.id} className="mt-4">
