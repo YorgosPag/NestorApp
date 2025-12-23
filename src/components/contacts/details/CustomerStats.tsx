@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Home, Ruler, Euro } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { formatCurrency, formatNumber } from '@/lib/intl-utils';
 import { getUnitsByOwner } from '@/services/units.service';
 import type { Property } from '@/types/property-viewer';
@@ -18,11 +19,13 @@ interface Stats {
   totalValue: number;
 }
 
-const StatCard = ({ icon: Icon, value, label, loading, colorClass }: { icon: React.ElementType, value: string | number, label: string, loading: boolean, colorClass: string }) => (
+const StatCard = ({ icon: Icon, value, label, loading, colorClass }: { icon: React.ElementType, value: string | number, label: string, loading: boolean, colorClass: string }) => {
+    const iconSizes = useIconSizes();
+    return (
     <Card className={colorClass}>
         <CardContent className="p-4 flex items-center gap-4">
             <div className={`p-2 rounded-lg ${colorClass.replace('bg-', 'bg-opacity-20 ')}`}>
-               <Icon className="w-6 h-6" />
+               <Icon className={iconSizes.lg} />
             </div>
             <div>
                 {loading ? (
@@ -39,7 +42,8 @@ const StatCard = ({ icon: Icon, value, label, loading, colorClass }: { icon: Rea
             </div>
         </CardContent>
     </Card>
-);
+    );
+};
 
 export function CustomerStats({ contactId }: CustomerStatsProps) {
   const [stats, setStats] = useState<Stats | null>(null);

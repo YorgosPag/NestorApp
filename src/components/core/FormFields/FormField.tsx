@@ -22,6 +22,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { HelpCircle, Eye, EyeOff } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // Types για το unified form field system
 export interface SelectOption {
@@ -158,6 +159,7 @@ export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>((
   labelClassName,
   ...props
 }, ref) => {
+  const iconSizes = useIconSizes();
   const { t } = useTranslation('forms');
   const [showPassword, setShowPassword] = React.useState(false);
   
@@ -303,9 +305,9 @@ export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>((
               disabled={disabled}
             >
               {showPassword ? (
-                <EyeOff className="h-4 w-4" />
+                <EyeOff className={iconSizes.sm} />
               ) : (
-                <Eye className="h-4 w-4" />
+                <Eye className={iconSizes.sm} />
               )}
             </Button>
           </div>
@@ -376,7 +378,7 @@ export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>((
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                <HelpCircle className={`${iconSizes.sm} text-muted-foreground`} />
               </TooltipTrigger>
               <TooltipContent>
                 <p>{tooltip}</p>
@@ -386,7 +388,7 @@ export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>((
         )}
         
         {loading && (
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
+          <div className={`${iconSizes.sm} animate-spin rounded-full border-2 border-gray-300 border-t-blue-600`} />
         )}
       </div>
     );
@@ -408,7 +410,7 @@ export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>((
             disabled={disabled}
             title={action.label}
           >
-            <action.icon className="h-4 w-4" />
+            <action.icon className={iconSizes.sm} />
           </Button>
         ))}
       </div>

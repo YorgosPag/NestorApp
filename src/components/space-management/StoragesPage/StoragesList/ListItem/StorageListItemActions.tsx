@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
+import { useIconSizes } from '@/hooks/useIconSizes';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,6 +26,8 @@ interface StorageListItemActionsProps {
 }
 
 export function StorageListItemActions({ isFavorite, onToggleFavorite, onEdit }: StorageListItemActionsProps) {
+  const iconSizes = useIconSizes();
+
   return (
     <div className={`absolute top-2 right-2 flex items-center gap-1 opacity-0 z-10 ${GROUP_HOVER_PATTERNS.SHOW_ON_GROUP} ${TRANSITION_PRESETS.OPACITY}`}>
       <Tooltip>
@@ -34,11 +37,11 @@ export function StorageListItemActions({ isFavorite, onToggleFavorite, onEdit }:
             size="sm"
             onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}
             onMouseDown={(e) => e.stopPropagation()}
-            className="h-6 w-6 p-0"
+            className={`${iconSizes.md} p-0`}
           >
             <Star
               className={cn(
-                "w-4 h-4",
+                iconSizes.sm,
                 isFavorite
                   ? "text-yellow-500 fill-yellow-500"
                   : `${HOVER_TEXT_EFFECTS.YELLOW}`
@@ -53,19 +56,19 @@ export function StorageListItemActions({ isFavorite, onToggleFavorite, onEdit }:
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onMouseDown={(e) => e.stopPropagation()}>
-            <MoreVertical className="w-3 h-3" />
+          <Button variant="ghost" size="sm" className={`${iconSizes.md} p-0`} onMouseDown={(e) => e.stopPropagation()}>
+            <MoreVertical className={iconSizes.xs} />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem><Eye className="w-4 h-4 mr-2" />Προβολή</DropdownMenuItem>
-          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }}><Edit className="w-4 h-4 mr-2" />Επεξεργασία</DropdownMenuItem>
+          <DropdownMenuItem><Eye className={`${iconSizes.sm} mr-2`} />Προβολή</DropdownMenuItem>
+          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }}><Edit className={`${iconSizes.sm} mr-2`} />Επεξεργασία</DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem><FileText className="w-4 h-4 mr-2" />Λεπτομέρειες</DropdownMenuItem>
-          <DropdownMenuItem><Archive className="w-4 h-4 mr-2" />Αρχειοθέτηση</DropdownMenuItem>
+          <DropdownMenuItem><FileText className={`${iconSizes.sm} mr-2`} />Λεπτομέρειες</DropdownMenuItem>
+          <DropdownMenuItem><Archive className={`${iconSizes.sm} mr-2`} />Αρχειοθέτηση</DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}>
-            <Star className="w-4 h-4 mr-2" />
+            <Star className={`${iconSizes.sm} mr-2`} />
             {isFavorite ? 'Αφαίρεση από αγαπημένες' : 'Προσθήκη στις αγαπημένες'}
           </DropdownMenuItem>
         </DropdownMenuContent>

@@ -6,6 +6,7 @@ import { CommonBadge } from '../../../../core/badges';
 import { Eye, Maximize, RotateCcw } from "lucide-react";
 import type { DXFViewerLayoutProps } from '../../integration/types';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 type StatusBarProps = Pick<
   DXFViewerLayoutProps,
@@ -26,7 +27,9 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   measurements,
   onViewModeChange,
   onClear
-}) => (
+}) => {
+  const iconSizes = useIconSizes();
+  return (
   <div className="flex gap-2 p-2 items-center bg-gray-800 border-b border-gray-600">
     <Button
       variant="outline"
@@ -34,7 +37,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
       className={`bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-white border-gray-600`}
       onClick={() => onViewModeChange('normal')}
     >
-      <Eye className="w-4 h-4 mr-2" />
+      <Eye className={`${iconSizes.sm} mr-2`} />
       Normal
     </Button>
     <Button
@@ -43,7 +46,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
       className={`bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-white border-gray-600`}
       onClick={() => onViewModeChange('fullscreen')}
     >
-      <Maximize className="w-4 h-4 mr-2" />
+      <Maximize className={`${iconSizes.sm} mr-2`} />
       Fullscreen
     </Button>
     <Button 
@@ -52,7 +55,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
       className={`bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-white border-gray-600`}
       onClick={onClear}
     >
-      <RotateCcw className="w-4 h-4 mr-2" />
+      <RotateCcw className={`${iconSizes.sm} mr-2`} />
       Clear
     </Button>
     
@@ -130,4 +133,5 @@ export const StatusBar: React.FC<StatusBarProps> = ({
         </div>
     )}
   </div>
-);
+  );
+};

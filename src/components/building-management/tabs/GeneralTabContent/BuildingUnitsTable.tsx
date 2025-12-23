@@ -8,10 +8,14 @@ import { UnitBadge } from '@/core/badges';
 import { Button } from '@/components/ui/button';
 import { Package, Eye } from 'lucide-react';
 import { useBuildingRelationships } from '@/services/relationships/hooks/useEnterpriseRelationships';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { Property } from '@/types/property-viewer';
 import { getStatusColor, getStatusLabel } from '@/lib/project-utils';
 
 function BuildingUnitsTable({ buildingId }: { buildingId: number }) {
+  // 🏢 ENTERPRISE: Centralized icon sizes
+  const iconSizes = useIconSizes();
+
   const [units, setUnits] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -53,7 +57,7 @@ function BuildingUnitsTable({ buildingId }: { buildingId: number }) {
     return (
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Package className="w-5 h-5"/>Μονάδες Κτιρίου</CardTitle>
+          <CardTitle className="flex items-center gap-2"><Package className={iconSizes.md}/>Μονάδες Κτιρίου</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">Δεν υπάρχουν καταχωρημένες μονάδες για αυτό το κτίριο.</p>
@@ -65,7 +69,7 @@ function BuildingUnitsTable({ buildingId }: { buildingId: number }) {
   return (
     <Card className="mt-6">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2"><Package className="w-5 h-5"/>Μονάδες Κτιρίου</CardTitle>
+        <CardTitle className="flex items-center gap-2"><Package className={iconSizes.md}/>Μονάδες Κτιρίου</CardTitle>
         <CardDescription>Λίστα των ακινήτων που περιλαμβάνονται σε αυτό το κτίριο.</CardDescription>
       </CardHeader>
       <CardContent>
@@ -94,7 +98,7 @@ function BuildingUnitsTable({ buildingId }: { buildingId: number }) {
                 </TableCell>
                 <TableCell className="text-right">
                   <Button variant="ghost" size="sm" onClick={() => handleViewUnit(unit.id)}>
-                    <Eye className="w-4 h-4 mr-2" />
+                    <Eye className={`${iconSizes.sm} mr-2`} />
                     Προβολή
                   </Button>
                 </TableCell>

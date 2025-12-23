@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { parkingComponentsStyles } from './ParkingComponents.styles';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface ParkingColumnHeaderProps {
   column: { key: string; label: string };
@@ -21,6 +22,7 @@ export function ParkingColumnHeader({
   onSort,
   onResizeStart
 }: ParkingColumnHeaderProps) {
+  const iconSizes = useIconSizes();
   return (
     <div
       className="border-r last:border-r-0 whitespace-nowrap overflow-hidden relative"
@@ -34,7 +36,7 @@ export function ParkingColumnHeader({
       >
         <span>{column.label}</span>
         <ArrowUpDown className={cn(
-          "ml-2 h-3 w-3 transition-transform",
+          `ml-2 ${iconSizes.xs} transition-transform`,
           sortConfig?.key === column.key ? 'text-primary' : 'text-muted-foreground/50',
           sortConfig?.key === column.key && sortConfig.direction === 'desc' && 'rotate-180'
         )} />

@@ -74,6 +74,7 @@
 
 import React, { useState, useCallback, useId, useRef, useEffect, useMemo, memo } from 'react';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // ===== TYPES =====
 
@@ -191,23 +192,23 @@ ErrorIcon.displayName = 'ErrorIcon';
 
 // ===== SIZE & VARIANT STYLES =====
 
-const sizeStyles: Record<AccordionSize, { header: string; content: string; icon: string }> = {
+const getSizeStyles = (iconSizes: ReturnType<typeof useIconSizes>): Record<AccordionSize, { header: string; content: string; icon: string }> => ({
   sm: {
     header: 'px-3 py-2 text-xs',
     content: 'px-3 py-3 text-xs',
-    icon: 'w-3 h-3'
+    icon: iconSizes.xs
   },
   md: {
     header: 'px-4 py-3 text-sm',
     content: 'px-4 py-4 text-sm',
-    icon: 'w-4 h-4'
+    icon: iconSizes.sm
   },
   lg: {
     header: 'px-5 py-4 text-base',
     content: 'px-5 py-5 text-base',
-    icon: 'w-5 h-5'
+    icon: iconSizes.md
   }
-};
+});
 
 const variantStyles: Record<AccordionVariant, { container: string; header: string }> = {
   default: {
@@ -262,6 +263,7 @@ export const AccordionSection = memo(function AccordionSection({
   headingLevel = 3,
   reducedMotion = false
 }: AccordionSectionProps) {
+  const iconSizes = useIconSizes();
 
   // ===== STATE (Controlled/Uncontrolled Hybrid) =====
 
@@ -405,10 +407,10 @@ export const AccordionSection = memo(function AccordionSection({
   // ===== STYLES =====
 
   const styles = useMemo(() => ({
-    size: sizeStyles[size],
+    size: getSizeStyles(iconSizes)[size],
     variant: variantStyles[variant],
     density: densityStyles[density]
-  }), [size, variant, density]);
+  }), [size, variant, density, iconSizes]);
 
   // ===== RENDER CHEVRON =====
 

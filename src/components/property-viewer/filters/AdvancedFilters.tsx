@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ interface AdvancedFiltersProps {
 }
 
 export function AdvancedFilters({ features, onFeatureChange }: AdvancedFiltersProps) {
+    const iconSizes = useIconSizes();
     const { t } = useTranslation('properties');
     const [showAdvanced, setShowAdvanced] = useState(false);
     
@@ -29,7 +31,7 @@ export function AdvancedFilters({ features, onFeatureChange }: AdvancedFiltersPr
         <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced} className="pt-2">
             <CollapsibleTrigger asChild>
                 <Button variant="link" size="sm">
-                    <Filter className="w-4 h-4 mr-2"/>
+                    <Filter className={`${iconSizes.sm} mr-2`}/>
                     {showAdvanced ? t('filters.advanced.hide') : t('filters.advanced.show')}
                 </Button>
             </CollapsibleTrigger>

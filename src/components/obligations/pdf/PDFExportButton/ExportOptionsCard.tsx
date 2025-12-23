@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Settings } from "lucide-react";
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { ExportOptions } from "./types";
 
 interface ExportOptionsCardProps {
@@ -20,11 +21,12 @@ interface ExportOptionsCardProps {
 }
 
 export function ExportOptionsCard({ exportOptions, onChange, contentSummary }: ExportOptionsCardProps) {
+  const iconSizes = useIconSizes();
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-lg flex items-center gap-2">
-          <Settings className="h-5 w-5" />
+          <Settings className={iconSizes.md} />
           Επιλογές Εξαγωγής
         </CardTitle>
         <CardDescription>

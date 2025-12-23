@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { GripVertical, ChevronRight, ChevronDown, FileText, Plus, Edit3, Save, X, Copy, Trash2 } from 'lucide-react';
 import { RichTextEditor } from '@/components/obligations/rich-text-editor';
 import { cn } from '@/lib/utils';
@@ -44,6 +45,7 @@ export function SectionCard({
   expandedItems,
   editingItem,
 }: SectionCardProps) {
+  const iconSizes = useIconSizes();
   const hasArticles = section.articles && section.articles.length > 0;
 
   return (
@@ -61,13 +63,13 @@ export function SectionCard({
     >
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
-          {!readOnly && <GripVertical className="h-4 w-4 text-muted-foreground cursor-move opacity-0 group-hover:opacity-100" />}
+          {!readOnly && <GripVertical className={`${iconSizes.sm} text-muted-foreground cursor-move opacity-0 group-hover:opacity-100`} />}
           {(hasArticles || section.content) && (
-            <Button variant="ghost" size="sm" onClick={() => handlers.toggleExpanded(section.id)} className="h-6 w-6 p-0">
-              {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            <Button variant="ghost" size="sm" onClick={() => handlers.toggleExpanded(section.id)} className={`${iconSizes.md} p-0`}>
+              {isExpanded ? <ChevronDown className={iconSizes.sm} /> : <ChevronRight className={iconSizes.sm} />}
             </Button>
           )}
-          <FileText className="h-4 w-4 text-primary" />
+          <FileText className={`${iconSizes.sm} text-primary`} />
           <Badge variant="outline">{section.number}</Badge>
           <div className="flex-1">
             {isEditing ? (
@@ -108,14 +110,14 @@ export function SectionCard({
             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
               {isEditing ? (
                 <>
-                  <Button size="sm" onClick={handlers.stopEditing}><Save className="h-4 w-4" /></Button>
-                  <Button size="sm" variant="outline" onClick={handlers.stopEditing}><X className="h-4 w-4" /></Button>
+                  <Button size="sm" onClick={handlers.stopEditing}><Save className={iconSizes.sm} /></Button>
+                  <Button size="sm" variant="outline" onClick={handlers.stopEditing}><X className={iconSizes.sm} /></Button>
                 </>
               ) : (
                 <>
-                  <Button variant="ghost" size="sm" onClick={() => handlers.addArticle(section.id)} className="h-8 px-2" title="Προσθήκη άρθρου"><Plus className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="sm" onClick={() => handlers.duplicateSection(section.id)} className="h-8 px-2" title="Αντιγραφή ενότητας"><Copy className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="sm" onClick={() => handlers.deleteSection(section.id)} className="h-8 px-2 text-destructive hover:text-destructive/80"><Trash2 className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="sm" onClick={() => handlers.addArticle(section.id)} className="h-8 px-2" title="Προσθήκη άρθρου"><Plus className={iconSizes.sm} /></Button>
+                  <Button variant="ghost" size="sm" onClick={() => handlers.duplicateSection(section.id)} className="h-8 px-2" title="Αντιγραφή ενότητας"><Copy className={iconSizes.sm} /></Button>
+                  <Button variant="ghost" size="sm" onClick={() => handlers.deleteSection(section.id)} className="h-8 px-2 text-destructive hover:text-destructive/80"><Trash2 className={iconSizes.sm} /></Button>
                 </>
               )}
             </div>

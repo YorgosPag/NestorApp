@@ -3,6 +3,7 @@
 
 import React from 'react';
 import { User, Mail, Phone, Tag, Calendar } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { Opportunity } from '@/types/crm';
 import { formatDate } from '../utils/dates';
 import { getStatusColor } from '../utils/status';
@@ -12,12 +13,14 @@ interface ContactCardProps {
 }
 
 export function ContactCard({ lead }: ContactCardProps) {
+  const iconSizes = useIconSizes();
+
   return (
     <div className="bg-white dark:bg-card rounded-lg shadow p-6">
       <h3 className="text-lg font-semibold mb-4">Στοιχεία Επαφής</h3>
       <div className="space-y-3">
         <div className="flex items-center gap-3">
-          <User className="w-5 h-5 text-gray-400" />
+          <User className={`${iconSizes.md} text-gray-400`} />
           <div>
             <p className="font-medium">{lead.fullName}</p>
             <p className="text-sm text-gray-600 dark:text-muted-foreground">Πλήρες όνομα</p>
@@ -25,7 +28,7 @@ export function ContactCard({ lead }: ContactCardProps) {
         </div>
         {lead.email && (
           <div className="flex items-center gap-3">
-            <Mail className="w-5 h-5 text-gray-400" />
+            <Mail className={`${iconSizes.md} text-gray-400`} />
             <div>
               <p className="font-medium">{lead.email}</p>
               <p className="text-sm text-gray-600 dark:text-muted-foreground">Email</p>
@@ -34,7 +37,7 @@ export function ContactCard({ lead }: ContactCardProps) {
         )}
         {lead.phone && (
           <div className="flex items-center gap-3">
-            <Phone className="w-5 h-5 text-gray-400" />
+            <Phone className={`${iconSizes.md} text-gray-400`} />
             <div>
               <p className="font-medium">{lead.phone}</p>
               <p className="text-sm text-gray-600 dark:text-muted-foreground">Τηλέφωνο</p>
@@ -42,7 +45,7 @@ export function ContactCard({ lead }: ContactCardProps) {
           </div>
         )}
         <div className="flex items-center gap-3">
-          <Tag className="w-5 h-5 text-gray-400" />
+          <Tag className={`${iconSizes.md} text-gray-400`} />
           <div>
             <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(lead.stage)}`}>
               {lead.stage}
@@ -51,7 +54,7 @@ export function ContactCard({ lead }: ContactCardProps) {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Calendar className="w-5 h-5 text-gray-400" />
+          <Calendar className={`${iconSizes.md} text-gray-400`} />
           <div>
             <p className="font-medium">{formatDate(lead.createdAt)}</p>
             <p className="text-sm text-gray-600 dark:text-muted-foreground">Ημερομηνία δημιουργίας</p>

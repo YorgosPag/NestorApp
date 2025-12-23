@@ -4,6 +4,7 @@ import React from 'react';
 import { formatCurrency } from '@/lib/intl-utils';
 import type { Storage } from '@/types/storage/contracts';
 import { BarChart3, TrendingUp, DollarSign, Square } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface StorageStatsTabProps {
   storage: Storage;
@@ -22,6 +23,7 @@ function getEfficiencyScore(storage: Storage): number {
 }
 
 export function StorageStatsTab({ storage }: StorageStatsTabProps) {
+  const iconSizes = useIconSizes();
   const pricePerSqm = storage.price && storage.area ? storage.price / storage.area : 0;
   const efficiencyScore = getEfficiencyScore(storage);
 
@@ -58,7 +60,7 @@ export function StorageStatsTab({ storage }: StorageStatsTabProps) {
       {/* Statistics Cards */}
       <section>
         <h3 className="font-semibold mb-4 flex items-center gap-2">
-          <BarChart3 className="h-5 w-5" />
+          <BarChart3 className={iconSizes.md} />
           Στατιστικά Αποθήκης
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -66,7 +68,7 @@ export function StorageStatsTab({ storage }: StorageStatsTabProps) {
             const IconComponent = stat.icon;
             return (
               <div key={index} className="bg-card border rounded-lg p-4 text-center">
-                <IconComponent className={`w-8 h-8 mx-auto mb-2 ${stat.color}`} />
+                <IconComponent className={`${iconSizes.xl} mx-auto mb-2 ${stat.color}`} />
                 <p className="text-lg font-semibold">{stat.value}</p>
                 <p className="text-sm text-muted-foreground">{stat.label}</p>
               </div>

@@ -13,12 +13,14 @@ import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Activity } from "@/types/dashboard";
 import { INTERACTIVE_PATTERNS } from "@/components/ui/effects";
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface RecentActivitiesProps {
   activities: Activity[];
 }
 
 export function RecentActivities({ activities }: RecentActivitiesProps) {
+  const iconSizes = useIconSizes();
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -31,7 +33,7 @@ export function RecentActivities({ activities }: RecentActivitiesProps) {
         <Button variant="ghost" size="sm" asChild>
           <Link href="/activities">
             Προβολή όλων
-            <ArrowRight className="ml-1 h-4 w-4" />
+            <ArrowRight className={`ml-1 ${iconSizes.sm}`} />
           </Link>
         </Button>
       </CardHeader>
@@ -48,7 +50,7 @@ export function RecentActivities({ activities }: RecentActivitiesProps) {
                   activity.color
                 )}
               >
-                <activity.icon className="h-5 w-5" />
+                <activity.icon className={iconSizes.md} />
               </div>
               <div className="flex-1 space-y-1">
                 <p className="text-sm font-medium">{activity.title}</p>

@@ -20,8 +20,10 @@ import { Plus, Sparkles, Upload, Mic } from "lucide-react"
 import { GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects'
 import { CommonBadge } from "@/core/badges"
 import { quickActions } from "@/constants/header"
+import { useIconSizes } from '@/hooks/useIconSizes'
 
 export function QuickAddMenu() {
+  const iconSizes = useIconSizes();
   return (
     <TooltipProvider>
       <DropdownMenu>
@@ -33,8 +35,8 @@ export function QuickAddMenu() {
                 size="icon"
                 className={`relative text-white shadow-lg ${GRADIENT_HOVER_EFFECTS.PRIMARY_BUTTON}`}
               >
-                <Plus className="h-4 w-4" />
-                <Sparkles className="absolute -top-1 -right-1 h-3 w-3 text-yellow-300 animate-pulse" />
+                <Plus className={iconSizes.sm} />
+                <Sparkles className={`absolute -top-1 -right-1 ${iconSizes.xs} text-yellow-300 animate-pulse`} />
               </Button>
             </DropdownMenuTrigger>
           </TooltipTrigger>
@@ -47,18 +49,18 @@ export function QuickAddMenu() {
           <DropdownMenuSeparator />
           {quickActions.map((action) => (
             <DropdownMenuItem key={action.label} className="cursor-pointer">
-              <action.icon className="mr-2 h-4 w-4" />
+              <action.icon className={`mr-2 ${iconSizes.sm}`} />
               <span>{action.label}</span>
               <DropdownMenuShortcut>⌘{action.shortcut}</DropdownMenuShortcut>
             </DropdownMenuItem>
           ))}
           <DropdownMenuSeparator />
           <DropdownMenuItem className="cursor-pointer">
-            <Upload className="mr-2 h-4 w-4" />
+            <Upload className={`mr-2 ${iconSizes.sm}`} />
             <span>Εισαγωγή από αρχείο</span>
           </DropdownMenuItem>
           <DropdownMenuItem className="cursor-pointer">
-            <Mic className="mr-2 h-4 w-4" />
+            <Mic className={`mr-2 ${iconSizes.sm}`} />
             <span>Φωνητική εισαγωγή</span>
             <CommonBadge
               status="company"

@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { CommonBadge } from '@/core/badges';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 import { useCustomerInfo } from '../hooks/useCustomerInfo';
 import { CustomerActionButtons } from './CustomerActionButtons';
@@ -48,6 +49,8 @@ export function UnifiedCustomerCard({
   // HOOKS & STATE
   // ========================================================================
 
+  const iconSizes = useIconSizes();
+
   const {
     customerInfo,
     extendedInfo,
@@ -72,21 +75,21 @@ export function UnifiedCustomerCard({
   const sizeClasses = {
     sm: {
       card: 'p-3',
-      avatar: 'h-8 w-8',
+      avatar: iconSizes.xl,
       title: 'text-sm font-medium',
       subtitle: 'text-xs',
       spacing: 'space-y-2'
     },
     md: {
       card: 'p-4',
-      avatar: 'h-10 w-10',
+      avatar: iconSizes.xl2,
       title: 'text-base font-semibold',
       subtitle: 'text-sm',
       spacing: 'space-y-3'
     },
     lg: {
       card: 'p-6',
-      avatar: 'h-12 w-12',
+      avatar: iconSizes.xl3,
       title: 'text-lg font-semibold',
       subtitle: 'text-base',
       spacing: 'space-y-4'
@@ -158,21 +161,21 @@ export function UnifiedCustomerCard({
           <section className="mt-1 space-y-1">
             {displayInfo.primaryPhone && (
               <p className={`${styles.subtitle} text-muted-foreground flex items-center gap-1`}>
-                <Phone className="w-3 h-3 shrink-0" />
+                <Phone className={`${iconSizes.xs} shrink-0`} />
                 <span className="truncate">{displayInfo.primaryPhone}</span>
               </p>
             )}
 
             {displayInfo.primaryEmail && !compact && (
               <p className={`${styles.subtitle} text-muted-foreground flex items-center gap-1`}>
-                <Mail className="w-3 h-3 shrink-0" />
+                <Mail className={`${iconSizes.xs} shrink-0`} />
                 <span className="truncate">{displayInfo.primaryEmail}</span>
               </p>
             )}
 
             {extendedInfo?.city && !compact && (
               <p className={`${styles.subtitle} text-muted-foreground flex items-center gap-1`}>
-                <MapPin className="w-3 h-3 shrink-0" />
+                <MapPin className={`${iconSizes.xs} shrink-0`} />
                 <span className="truncate">{extendedInfo.city}</span>
               </p>
             )}
@@ -242,10 +245,10 @@ export function UnifiedCustomerCard({
           <div className="flex items-center gap-3">
             <div className={`${styles.avatar} bg-muted rounded-full shrink-0`} />
             <div className="flex-1 space-y-2">
-              <div className="h-4 bg-muted rounded w-3/4" />
-              <div className="h-3 bg-muted rounded w-1/2" />
+              <div className={`${iconSizes.sm} bg-muted rounded w-3/4`} />
+              <div className={`${iconSizes.xs} bg-muted rounded w-1/2`} />
             </div>
-            <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+            <Loader2 className={`${iconSizes.sm} animate-spin text-muted-foreground`} />
           </div>
         </CardContent>
       </Card>
@@ -262,7 +265,7 @@ export function UnifiedCustomerCard({
         <CardContent className={styles.card}>
           <div className="flex items-center gap-3 text-destructive">
             <div className={`${styles.avatar} bg-destructive/10 rounded-full shrink-0 flex items-center justify-center`}>
-              <Users className="w-4 h-4" />
+              <Users className={iconSizes.sm} />
             </div>
             <div className="flex-1">
               <p className={styles.title}>Σφάλμα φόρτωσης</p>
@@ -355,7 +358,7 @@ export function UnifiedCustomerCard({
 
             {context === 'unit' && (
               <Button variant="ghost" size="sm" className="shrink-0">
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className={iconSizes.sm} />
               </Button>
             )}
           </div>
@@ -377,14 +380,14 @@ export function UnifiedCustomerCard({
               <section className="space-y-2">
                 {displayInfo.primaryPhone && (
                   <div className="flex items-center gap-2 text-sm">
-                    <Phone className="w-4 h-4 text-muted-foreground" />
+                    <Phone className={`${iconSizes.sm} text-muted-foreground`} />
                     <span>{displayInfo.primaryPhone}</span>
                   </div>
                 )}
 
                 {displayInfo.primaryEmail && (
                   <div className="flex items-center gap-2 text-sm">
-                    <Mail className="w-4 h-4 text-muted-foreground" />
+                    <Mail className={`${iconSizes.sm} text-muted-foreground`} />
                     <span className="truncate">{displayInfo.primaryEmail}</span>
                   </div>
                 )}

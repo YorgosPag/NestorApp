@@ -30,6 +30,7 @@ import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 import { UnifiedCustomerCard } from '@/components/shared/customer-info';
 import { useOptimizedCustomerInfo } from './hooks/useOptimizedCustomerInfo';
@@ -58,6 +59,7 @@ interface CustomerProfileSectionProps {
 }
 
 function CustomerProfileSection({ customerId, unitPrice }: CustomerProfileSectionProps) {
+  const iconSizes = useIconSizes();
   const {
     customerInfo,
     loading,
@@ -71,11 +73,11 @@ function CustomerProfileSection({ customerId, unitPrice }: CustomerProfileSectio
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <User className="w-5 h-5 text-blue-600" />
+            <User className={`${iconSizes.md} text-blue-600`} />
             Πληροφορίες Πελάτη
             <div className="ml-auto">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                <div className={`${iconSizes.sm} border-2 border-blue-600 border-t-transparent rounded-full animate-spin`} />
                 <span>Φόρτωση...</span>
               </div>
             </div>
@@ -85,7 +87,7 @@ function CustomerProfileSection({ customerId, unitPrice }: CustomerProfileSectio
           {/* ENTERPRISE: Professional Skeleton Loader */}
           <div className="space-y-4">
             <div className="flex items-center gap-4">
-              <Skeleton className="h-16 w-16 rounded-full" />
+              <Skeleton className={`${iconSizes.xl2} rounded-full`} />
               <div className="space-y-2 flex-1">
                 <Skeleton className="h-4 w-32" />
                 <Skeleton className="h-3 w-24" />
@@ -120,13 +122,13 @@ function CustomerProfileSection({ customerId, unitPrice }: CustomerProfileSectio
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-destructive" />
+            <AlertTriangle className={`${iconSizes.md} text-destructive`} />
             Σφάλμα Φόρτωσης Πελάτη
           </CardTitle>
         </CardHeader>
         <CardContent>
           <Alert variant="destructive">
-            <AlertTriangle className="w-4 h-4" />
+            <AlertTriangle className={iconSizes.sm} />
             <AlertDescription>
               Δεν ήταν δυνατή η φόρτωση των στοιχείων του πελάτη: {error}
             </AlertDescription>
@@ -157,7 +159,7 @@ function CustomerProfileSection({ customerId, unitPrice }: CustomerProfileSectio
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <User className="w-5 h-5 text-blue-600" />
+          <User className={`${iconSizes.md} text-blue-600`} />
           Πληροφορίες Πελάτη
           <Badge variant="outline" className="ml-auto">
             Φορτώθηκε
@@ -180,42 +182,42 @@ function CustomerProfileSection({ customerId, unitPrice }: CustomerProfileSectio
             tabIndex={0}
             title="Κλικ για προβολή στη λίστα επαφών"
           >
-            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
-              <User className="w-8 h-8 text-primary" />
+            <div className={`${iconSizes.xl4} bg-primary/10 rounded-full flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors`}>
+              <User className={`${iconSizes.xl} text-primary`} />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
                 <h3 className="font-semibold text-lg group-hover:text-primary transition-colors">
                   {customerInfo?.displayName || 'Άγνωστος πελάτης'}
                 </h3>
-                <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors opacity-0 group-hover:opacity-100" />
+                <ExternalLink className={`${iconSizes.sm} text-muted-foreground group-hover:text-primary transition-colors opacity-0 group-hover:opacity-100`} />
               </div>
               {customerInfo?.primaryPhone && (
                 <p className="text-muted-foreground flex items-center gap-2 mb-1">
-                  <Phone className="w-4 h-4" />
+                  <Phone className={iconSizes.sm} />
                   {customerInfo.primaryPhone}
                 </p>
               )}
               {customerInfo?.primaryEmail && (
                 <p className="text-muted-foreground flex items-center gap-2 mb-1">
-                  <Mail className="w-4 h-4" />
+                  <Mail className={iconSizes.sm} />
                   <span className="truncate">{customerInfo.primaryEmail}</span>
                 </p>
               )}
               <div className="text-xs text-muted-foreground flex items-center gap-2">
-                <Calendar className="w-3 h-3" />
+                <Calendar className={iconSizes.xs} />
                 Φόρτωση: {customerInfo ? new Date(customerInfo.fetchedAt).toLocaleTimeString('el-GR') : '—'}
               </div>
             </div>
             <div className="flex items-center text-muted-foreground group-hover:text-primary transition-colors">
-              <ArrowRight className="w-5 h-5" />
+              <ArrowRight className={iconSizes.md} />
             </div>
           </div>
 
           {/* ENTERPRISE: Navigation Hint */}
           <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
             <p className="text-sm text-blue-700 dark:text-blue-300 flex items-center gap-2">
-              <ExternalLink className="w-4 h-4" />
+              <ExternalLink className={iconSizes.sm} />
               <strong>Tip:</strong> Κάνε κλικ στα στοιχεία του πελάτη για να τον δεις στη λίστα επαφών
             </p>
           </div>
@@ -250,7 +252,7 @@ function CustomerProfileSection({ customerId, unitPrice }: CustomerProfileSectio
                 window.open(contactsUrl, '_blank');
               }}
             >
-              <ExternalLink className="w-4 h-4 mr-2" />
+              <ExternalLink className={`${iconSizes.sm} mr-2`} />
               Λίστα Επαφών
             </Button>
 
@@ -263,7 +265,7 @@ function CustomerProfileSection({ customerId, unitPrice }: CustomerProfileSectio
                   window.open(`tel:${cleanPhone}`, '_self');
                 }}
               >
-                <Phone className="w-4 h-4 mr-2" />
+                <Phone className={`${iconSizes.sm} mr-2`} />
                 Κλήση
               </Button>
             )}
@@ -274,7 +276,7 @@ function CustomerProfileSection({ customerId, unitPrice }: CustomerProfileSectio
                 size="sm"
                 onClick={() => window.open(`mailto:${customerInfo.primaryEmail}`, '_self')}
               >
-                <Mail className="w-4 h-4 mr-2" />
+                <Mail className={`${iconSizes.sm} mr-2`} />
                 Email
               </Button>
             )}
@@ -295,6 +297,7 @@ export function UnitCustomerTab({
   additionalData,
   globalProps
 }: UnitCustomerTabProps) {
+  const iconSizes = useIconSizes();
 
   // ========================================================================
   // ENTERPRISE VALIDATION: Unit Customer Checks
@@ -310,7 +313,7 @@ export function UnitCustomerTab({
   if (!selectedUnit) {
     return (
       <div className="p-6 text-center">
-        <User className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+        <User className={`${iconSizes.xl3} mx-auto text-muted-foreground mb-4`} />
         <p className="text-muted-foreground">
           Δεν έχει επιλεχθεί μονάδα
         </p>
@@ -323,14 +326,14 @@ export function UnitCustomerTab({
       <Card className="m-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Home className="w-5 h-5 text-blue-600" />
+            <Home className={`${iconSizes.md} text-blue-600`} />
             Διαθέσιμη Μονάδα
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
-            <div className="bg-blue-50 dark:bg-blue-950/20 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-              <Home className="w-8 h-8 text-blue-600" />
+            <div className={`bg-blue-50 dark:bg-blue-950/20 rounded-full ${iconSizes.xl4} flex items-center justify-center mx-auto mb-4`}>
+              <Home className={`${iconSizes.xl} text-blue-600`} />
             </div>
             <h3 className="font-semibold text-lg mb-2">
               Η μονάδα "{selectedUnit.name}" είναι διαθέσιμη
@@ -340,7 +343,7 @@ export function UnitCustomerTab({
             </p>
             <Button variant="outline" asChild>
               <a href="/crm/calendar">
-                <Calendar className="w-4 h-4 mr-2" />
+                <Calendar className={`${iconSizes.sm} mr-2`} />
                 Προγραμματισμός Ξενάγησης
               </a>
             </Button>
@@ -355,13 +358,13 @@ export function UnitCustomerTab({
       <Card className="m-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-orange-600" />
+            <AlertTriangle className={`${iconSizes.md} text-orange-600`} />
             Πωλημένη Μονάδα χωρίς Πελάτη
           </CardTitle>
         </CardHeader>
         <CardContent>
           <Alert>
-            <AlertTriangle className="w-4 h-4" />
+            <AlertTriangle className={iconSizes.sm} />
             <AlertDescription>
               Η μονάδα έχει status "{selectedUnit.status}" αλλά δεν έχει συνδεδεμένο πελάτη.
               Αυτό μπορεί να υποδηλώνει πρόβλημα στη βάση δεδομένων ή ότι η σύνδεση πελάτη δεν έχει ολοκληρωθεί.
@@ -386,7 +389,7 @@ export function UnitCustomerTab({
 
           <div className="mt-6">
             <Button variant="outline" className="w-full">
-              <FileText className="w-4 h-4 mr-2" />
+              <FileText className={`${iconSizes.sm} mr-2`} />
               Διαχείριση Συναλλαγής
             </Button>
           </div>
@@ -406,7 +409,7 @@ export function UnitCustomerTab({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Home className="w-5 h-5 text-green-600" />
+            <Home className={`${iconSizes.md} text-green-600`} />
             Στοιχεία Συναλλαγής
           </CardTitle>
         </CardHeader>
@@ -462,7 +465,7 @@ export function UnitCustomerTab({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Home className="w-5 h-5 text-orange-600" />
+            <Home className={`${iconSizes.md} text-orange-600`} />
             Διαχείριση Σχέσης Ακινήτου
           </CardTitle>
         </CardHeader>
@@ -470,7 +473,7 @@ export function UnitCustomerTab({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
             <Button variant="outline" className="justify-start h-auto p-4">
-              <FileText className="w-5 h-5 mr-3 text-blue-600" />
+              <FileText className={`${iconSizes.md} mr-3 text-blue-600`} />
               <div className="text-left">
                 <div className="font-medium">Έγγραφα Συναλλαγής</div>
                 <div className="text-sm text-muted-foreground">
@@ -480,7 +483,7 @@ export function UnitCustomerTab({
             </Button>
 
             <Button variant="outline" className="justify-start h-auto p-4">
-              <Calendar className="w-5 h-5 mr-3 text-green-600" />
+              <Calendar className={`${iconSizes.md} mr-3 text-green-600`} />
               <div className="text-left">
                 <div className="font-medium">Ιστορικό Συναλλαγών</div>
                 <div className="text-sm text-muted-foreground">
@@ -490,7 +493,7 @@ export function UnitCustomerTab({
             </Button>
 
             <Button variant="outline" className="justify-start h-auto p-4">
-              <Phone className="w-5 h-5 mr-3 text-purple-600" />
+              <Phone className={`${iconSizes.md} mr-3 text-purple-600`} />
               <div className="text-left">
                 <div className="font-medium">Επικοινωνία</div>
                 <div className="text-sm text-muted-foreground">
@@ -500,7 +503,7 @@ export function UnitCustomerTab({
             </Button>
 
             <Button variant="outline" className="justify-start h-auto p-4">
-              <Home className="w-5 h-5 mr-3 text-indigo-600" />
+              <Home className={`${iconSizes.md} mr-3 text-indigo-600`} />
               <div className="text-left">
                 <div className="font-medium">Άλλα Ακίνητα</div>
                 <div className="text-sm text-muted-foreground">
@@ -517,7 +520,7 @@ export function UnitCustomerTab({
       <Card className={INTERACTIVE_PATTERNS.SUBTLE_HOVER}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Phone className="w-5 h-5 text-green-600" />
+            <Phone className={`${iconSizes.md} text-green-600`} />
             Γρήγορες Ενέργειες
           </CardTitle>
         </CardHeader>
@@ -528,7 +531,7 @@ export function UnitCustomerTab({
               variant="default"
               onClick={() => window.open(`tel:${selectedUnit.soldTo}`, '_self')}
             >
-              <Phone className="w-4 h-4 mr-2" />
+              <Phone className={`${iconSizes.sm} mr-2`} />
               Άμεση Κλήση
             </Button>
 
@@ -536,7 +539,7 @@ export function UnitCustomerTab({
               variant="outline"
               onClick={() => window.open(`/contacts?contactId=${selectedUnit.soldTo}`, '_blank')}
             >
-              <User className="w-4 h-4 mr-2" />
+              <User className={`${iconSizes.sm} mr-2`} />
               Πλήρες Προφίλ
             </Button>
 
@@ -547,7 +550,7 @@ export function UnitCustomerTab({
                 console.log('Schedule follow-up for customer:', selectedUnit.soldTo);
               }}
             >
-              <Calendar className="w-4 h-4 mr-2" />
+              <Calendar className={`${iconSizes.sm} mr-2`} />
               Προγραμματισμός
             </Button>
 
@@ -558,7 +561,7 @@ export function UnitCustomerTab({
                 console.log('Generate customer report for:', selectedUnit.soldTo);
               }}
             >
-              <FileText className="w-4 h-4 mr-2" />
+              <FileText className={`${iconSizes.sm} mr-2`} />
               Αναφορά
             </Button>
 

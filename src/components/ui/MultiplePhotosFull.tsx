@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Image, Upload } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { EnterprisePhotoUpload } from './EnterprisePhotoUpload';
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 import {
@@ -106,6 +107,7 @@ export function MultiplePhotosFull({
   onPhotoClick,
   showPhotosWhenDisabled = false
 }: MultiplePhotosFullProps) {
+  const iconSizes = useIconSizes();
 
   // ========================================================================
   // COMPUTED VALUES
@@ -330,7 +332,7 @@ export function MultiplePhotosFull({
             input.click();
           }}
         >
-          <Upload className={`w-8 h-8 ${PHOTO_TEXT_COLORS.MUTED} mx-auto mb-2`} />
+          <Upload className={`${iconSizes.xl} ${PHOTO_TEXT_COLORS.MUTED} mx-auto mb-2`} />
           <p className={`text-sm font-medium ${PHOTO_TEXT_COLORS.MEDIUM} mb-1`}>
             {getDragDropText()}
           </p>

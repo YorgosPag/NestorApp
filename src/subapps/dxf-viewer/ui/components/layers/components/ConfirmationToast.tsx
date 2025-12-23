@@ -3,6 +3,7 @@
 import React from 'react';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { AlertTriangle, Trash2, GitMerge } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface ConfirmationToastProps {
   title: string;
@@ -25,18 +26,20 @@ export function ConfirmationToast({
   onConfirm,
   onCancel
 }: ConfirmationToastProps) {
+  const iconSizes = useIconSizes();
+
   return (
     <div className="flex flex-col gap-3 p-4 max-w-md bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
       <div className="flex items-start gap-3">
         {/* Icon */}
         <div className="flex-shrink-0 mt-1">
           {destructive ? (
-            <div className="w-8 h-8 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
-              <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400" />
+            <div className={`${iconSizes.xl} bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center`}>
+              <Trash2 className={`${iconSizes.sm} text-red-600 dark:text-red-400`} />
             </div>
           ) : (
-            <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
-              <GitMerge className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <div className={`${iconSizes.xl} bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center`}>
+              <GitMerge className={`${iconSizes.sm} text-blue-600 dark:text-blue-400`} />
             </div>
           )}
         </div>
@@ -53,7 +56,7 @@ export function ConfirmationToast({
           {/* Irreversible Warning */}
           {irreversible && (
             <div className="flex items-center gap-2 mt-3 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-200 dark:border-yellow-700">
-              <AlertTriangle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 flex-shrink-0" />
+              <AlertTriangle className={`${iconSizes.sm} text-yellow-600 dark:text-yellow-400 flex-shrink-0`} />
               <span className="text-xs text-yellow-700 dark:text-yellow-300 font-medium">
                 ⚠️ Αυτή η ενέργεια δεν μπορεί να αναιρεθεί!
               </span>

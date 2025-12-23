@@ -2,6 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Building, FileText, Hash, MapPin, Users } from "lucide-react";
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { ObligationDocument } from '@/types/obligations';
 import { formatDate } from '@/lib/intl-utils'; // ✅ Using centralized function
 import { getObligationStatusLabel } from "@/core/status/StatusConstants";
@@ -11,6 +12,8 @@ interface DocumentHeaderProps {
 }
 
 export function DocumentHeader({ doc }: DocumentHeaderProps) {
+  const iconSizes = useIconSizes();
+
   return (
     <div className="text-center space-y-4 p-8 border-b bg-muted/30">
       <div className="space-y-2">
@@ -36,28 +39,28 @@ export function DocumentHeader({ doc }: DocumentHeaderProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 pt-6 border-t text-sm">
           {doc.projectDetails.location && (
             <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-muted-foreground" />
+              <MapPin className={`${iconSizes.sm} text-muted-foreground`} />
               <span className="text-muted-foreground">Τοποθεσία:</span>
               <span>{doc.projectDetails.location}</span>
             </div>
           )}
           {doc.projectDetails.address && (
             <div className="flex items-center gap-2">
-              <Building className="h-4 w-4 text-muted-foreground" />
+              <Building className={`${iconSizes.sm} text-muted-foreground`} />
               <span className="text-muted-foreground">Διεύθυνση:</span>
               <span>{doc.projectDetails.address}</span>
             </div>
           )}
           {doc.projectDetails.plotNumber && (
             <div className="flex items-center gap-2">
-              <Hash className="h-4 w-4 text-muted-foreground" />
+              <Hash className={`${iconSizes.sm} text-muted-foreground`} />
               <span className="text-muted-foreground">Οικόπεδο:</span>
               <span>{doc.projectDetails.plotNumber}</span>
             </div>
           )}
           {doc.projectDetails.buildingPermitNumber && (
             <div className="flex items-center gap-2">
-              <FileText className="h-4 w-4 text-muted-foreground" />
+              <FileText className={`${iconSizes.sm} text-muted-foreground`} />
               <span className="text-muted-foreground">Οικ. Άδεια:</span>
               <span>{doc.projectDetails.buildingPermitNumber}</span>
             </div>
@@ -68,7 +71,7 @@ export function DocumentHeader({ doc }: DocumentHeaderProps) {
       {doc.owners && doc.owners.length > 0 && (
         <div className="mt-6 pt-6 border-t">
           <div className="flex items-center gap-2 mb-3">
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <Users className={`${iconSizes.sm} text-muted-foreground`} />
             <span className="font-medium text-foreground">Ιδιοκτήτες:</span>
           </div>
           <div className="space-y-2 text-sm">

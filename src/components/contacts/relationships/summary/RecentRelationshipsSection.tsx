@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { ChevronUp, ChevronDown } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { ContactRelationship } from '@/types/contacts/relationships';
 import { getRelationshipDisplayProps } from '../utils/relationship-types';
 import type { ContactNamesMap } from '../utils/summary/contact-navigation';
@@ -59,6 +60,7 @@ export const RecentRelationshipsSection: React.FC<RecentRelationshipsSectionProp
   onRelationshipClick,
   className = "mb-6"
 }) => {
+  const iconSizes = useIconSizes();
   // ============================================================================
   // STATE
   // ============================================================================
@@ -192,12 +194,12 @@ export const RecentRelationshipsSection: React.FC<RecentRelationshipsSectionProp
         >
           {showAllRelationships ? (
             <>
-              <ChevronUp className="h-4 w-4 mr-2" />
+              <ChevronUp className={`${iconSizes.sm} mr-2`} />
               Προβολή λίγων
             </>
           ) : (
             <>
-              <ChevronDown className="h-4 w-4 mr-2" />
+              <ChevronDown className={`${iconSizes.sm} mr-2`} />
               Προβολή όλων ({relationships.length - 3} ακόμα)
             </>
           )}

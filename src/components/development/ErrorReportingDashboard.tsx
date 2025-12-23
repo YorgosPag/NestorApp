@@ -15,6 +15,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { errorTracker } from '@/services/ErrorTracker';
 import type { ErrorReport } from '@/services/ErrorTracker';
 import { HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
@@ -28,6 +29,7 @@ export function ErrorReportingDashboard({
   position = 'bottom-right',
   minimized = true
 }: ErrorReportingDashboardProps) {
+  const iconSizes = useIconSizes();
   const [isMinimized, setIsMinimized] = useState(minimized);
   const [stats, setStats] = useState(errorTracker.getStats());
   const [errors, setErrors] = useState<ErrorReport[]>([]);
@@ -90,7 +92,7 @@ export function ErrorReportingDashboard({
           onClick={() => setIsMinimized(false)}
         >
           <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+            <div className={`${iconSizes.xs} bg-green-500 rounded-full animate-pulse`}></div>
             <span className="text-sm font-mono">
               🛡️ Errors: {stats.totalErrors}
             </span>
@@ -115,7 +117,7 @@ export function ErrorReportingDashboard({
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-gray-700">
             <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+              <div className={`${iconSizes.xs} bg-green-500 rounded-full animate-pulse`}></div>
               <h3 className="font-semibold">🛡️ Error Tracking</h3>
             </div>
             <div className="flex items-center space-x-2">

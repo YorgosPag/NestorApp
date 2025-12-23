@@ -6,6 +6,7 @@ import { Button } from '../../../components/ui/button';
 import { Card, CardContent } from '../../../components/ui/card';
 import { HardDrive, Trash2, AlertTriangle } from 'lucide-react';
 import { useNotifications } from '../../../providers/NotificationProvider';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { layoutUtilities } from '@/styles/design-tokens';
 
 interface StorageStatusProps {
@@ -14,6 +15,7 @@ interface StorageStatusProps {
 }
 
 export function StorageStatus({ showDetails = false, className }: StorageStatusProps) {
+  const iconSizes = useIconSizes();
   const { storageInfo, checkStorage } = useStorageMonitor();
   const notifications = useNotifications();
   const [isClearing, setIsClearing] = React.useState(false);
@@ -60,7 +62,7 @@ export function StorageStatus({ showDetails = false, className }: StorageStatusP
       <CardContent className="p-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <HardDrive className={`h-4 w-4 ${isCritical ? 'text-red-500' : isWarning ? 'text-amber-500' : 'text-gray-500'}`} />
+            <HardDrive className={`${iconSizes.sm} ${isCritical ? 'text-red-500' : isWarning ? 'text-amber-500' : 'text-gray-500'}`} />
             <div className="text-sm">
               <div className="font-medium">Storage</div>
               {showDetails && (
@@ -73,7 +75,7 @@ export function StorageStatus({ showDetails = false, className }: StorageStatusP
           
           <div className="flex items-center gap-2">
             {(isWarning || isCritical) && (
-              <AlertTriangle className={`h-4 w-4 ${isCritical ? 'text-red-500' : 'text-amber-500'}`} />
+              <AlertTriangle className={`${iconSizes.sm} ${isCritical ? 'text-red-500' : 'text-amber-500'}`} />
             )}
             
             {showDetails && (
@@ -84,7 +86,7 @@ export function StorageStatus({ showDetails = false, className }: StorageStatusP
                 variant="outline"
                 className="text-xs"
               >
-                <Trash2 className="h-3 w-3 mr-1" />
+                <Trash2 className={`${iconSizes.xs} mr-1`} />
                 {isClearing ? 'Clearing...' : 'Clear'}
               </Button>
             )}
@@ -139,7 +141,7 @@ export function StorageStatusIndicator() {
   
   return (
     <div className="flex items-center gap-1 text-xs text-amber-600">
-      <HardDrive className="h-3 w-3" />
+      <HardDrive className={iconSizes.xs} />
       <span>{usagePercentage.toFixed(0)}%</span>
     </div>
   );

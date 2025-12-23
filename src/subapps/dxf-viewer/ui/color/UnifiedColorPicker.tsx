@@ -14,6 +14,7 @@
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { EnterpriseColorPicker } from './EnterpriseColorPicker';
 import { EnterpriseColorDialog, ColorDialogTrigger } from './EnterpriseColorDialog';
 import { EnterpriseColorField } from './EnterpriseColorField';
@@ -100,6 +101,8 @@ function InlineColorPicker({
   layout = 'horizontal',
   colorInputSize = 'medium'
 }: UnifiedColorPickerProps) {
+  const iconSizes = useIconSizes();
+
   const handleColorChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     onChange(e.target.value);
   }, [onChange]);
@@ -111,19 +114,19 @@ function InlineColorPicker({
   // Size classes
   const previewSizeClasses = useMemo(() => {
     switch (previewSize) {
-      case 'small': return 'w-6 h-6';
-      case 'medium': return 'w-10 h-8';
-      case 'large': return 'w-12 h-12';
-      default: return 'w-10 h-8';
+      case 'small': return iconSizes.md;
+      case 'medium': return iconSizes.xl2;
+      case 'large': return iconSizes.xl3;
+      default: return iconSizes.xl2;
     }
   }, [previewSize]);
 
   const colorInputSizeClasses = useMemo(() => {
     switch (colorInputSize) {
-      case 'small': return 'w-8 h-6';
-      case 'medium': return 'w-16 h-8';
-      case 'large': return 'w-20 h-10';
-      default: return 'w-16 h-8';
+      case 'small': return iconSizes.xl;
+      case 'medium': return iconSizes.xl4;
+      case 'large': return iconSizes.xl5;
+      default: return iconSizes.xl4;
     }
   }, [colorInputSize]);
 
@@ -163,7 +166,8 @@ function InlineColorPicker({
           onChange={handleTextChange}
           disabled={disabled}
           placeholder="#ffffff"
-          className="w-24 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{ width: '6rem' }}
         />
       )}
     </div>
@@ -200,6 +204,7 @@ function ModalColorPicker({
   showRecent = true,
   size = 'standard'
 }: UnifiedColorPickerProps) {
+  const iconSizes = useIconSizes();
   const [isOpen, setIsOpen] = useState(false);
 
   const handleClose = useCallback(() => {
@@ -214,7 +219,7 @@ function ModalColorPicker({
       className="inline-flex items-center space-x-2"
     >
       <div
-        className="w-6 h-6 rounded border border-gray-600"
+        className={`${iconSizes.md} rounded border border-gray-600`}
         style={layoutUtilities.dxf.colors.backgroundColor(value)}
       />
       {triggerText && (

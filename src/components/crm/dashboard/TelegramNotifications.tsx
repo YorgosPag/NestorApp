@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, query, where, orderBy, onSnapshot, limit } from 'firebase/firestore';
 import { Bell, MessageCircle, User, Clock } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
@@ -17,6 +18,7 @@ interface TelegramMessage {
 }
 
 export function TelegramNotifications() {
+  const iconSizes = useIconSizes();
   const [newMessages, setNewMessages] = useState<TelegramMessage[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -91,9 +93,9 @@ export function TelegramNotifications() {
         className={`relative p-2 text-gray-600 ${HOVER_TEXT_EFFECTS.BLUE} ${HOVER_BACKGROUND_EFFECTS.BLUE_LIGHT} rounded-lg transition-colors`}
         title="Telegram Messages"
       >
-        <MessageCircle className="w-6 h-6" />
+        <MessageCircle className={iconSizes.lg} />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+          <span className={`absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full ${iconSizes.md} flex items-center justify-center`}>
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
@@ -105,7 +107,7 @@ export function TelegramNotifications() {
           <div className="p-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-gray-900 flex items-center">
-                <MessageCircle className="w-4 h-4 mr-2" />
+                <MessageCircle className={`${iconSizes.sm} mr-2`} />
                 Telegram Messages
               </h3>
               <button
@@ -113,7 +115,7 @@ export function TelegramNotifications() {
                 className={`text-xs text-blue-600 ${HOVER_TEXT_EFFECTS.BLUE_DARK}`}
                 title="Enable Browser Notifications"
               >
-                <Bell className="w-4 h-4" />
+                <Bell className={iconSizes.sm} />
               </button>
             </div>
           </div>
@@ -121,7 +123,7 @@ export function TelegramNotifications() {
           <div className="max-h-96 overflow-y-auto">
             {newMessages.length === 0 ? (
               <div className="p-4 text-center text-gray-500">
-                <MessageCircle className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                <MessageCircle className={`${iconSizes.xl} mx-auto mb-2 text-gray-300`} />
                 <p>Δεν υπάρχουν νέα μηνύματα</p>
               </div>
             ) : (
@@ -134,7 +136,7 @@ export function TelegramNotifications() {
                 >
                   <div className="flex items-start space-x-3">
                     <div className="flex-shrink-0">
-                      <User className="w-8 h-8 text-gray-400 bg-gray-100 rounded-full p-1" />
+                      <User className={`${iconSizes.xl} text-gray-400 bg-gray-100 rounded-full p-1`} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
@@ -142,7 +144,7 @@ export function TelegramNotifications() {
                           User {message.from.slice(-6)}
                         </p>
                         <div className="flex items-center text-xs text-gray-500">
-                          <Clock className="w-3 h-3 mr-1" />
+                          <Clock className={`${iconSizes.xs} mr-1`} />
                           {formatTime(message.createdAt)}
                         </div>
                       </div>

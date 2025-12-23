@@ -13,6 +13,7 @@ import {
   Settings
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 
@@ -45,7 +46,7 @@ export function LayersPanel({
   onLayersChange,
   className
 }: LayersPanelProps) {
-  
+  const iconSizes = useIconSizes();
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
 
   const updateLayer = (layerId: string, updates: Partial<Layer>) => {
@@ -78,22 +79,22 @@ export function LayersPanel({
       <Button
         variant="ghost"
         size="sm"
-        className="h-6 w-6 p-0"
+        className={`${iconSizes.lg} p-0`}
         onClick={(e) => {
           e.stopPropagation();
           toggleVisibility(layer.id);
         }}
       >
         {layer.visible ? (
-          <Eye className="h-4 w-4 text-green-600" />
+          <Eye className={`${iconSizes.sm} text-green-600`} />
         ) : (
-          <EyeOff className="h-4 w-4 text-gray-400" />
+          <EyeOff className={`${iconSizes.sm} text-gray-400`} />
         )}
       </Button>
 
       {/* Color Indicator */}
       <div
-        className={`w-4 h-4 rounded border border-gray-300 ${layerBgClass}`}
+        className={`${iconSizes.sm} rounded border border-gray-300 ${layerBgClass}`}
       />
 
       {/* Layer Name */}
@@ -117,11 +118,11 @@ export function LayersPanel({
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-medium">Layers</h3>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-            <Plus className="h-4 w-4" />
+          <Button variant="ghost" size="sm" className={`${iconSizes.lg} p-0`}>
+            <Plus className={iconSizes.sm} />
           </Button>
-          <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-            <Settings className="h-4 w-4" />
+          <Button variant="ghost" size="sm" className={`${iconSizes.lg} p-0`}>
+            <Settings className={iconSizes.sm} />
           </Button>
         </div>
       </div>
@@ -136,15 +137,15 @@ export function LayersPanel({
         <div className="mt-3 pt-3 border-t border-gray-200">
           <div className="text-xs text-gray-600 mb-2">Layer Controls</div>
           <div className="flex items-center gap-1">
-            <Button variant="outline" size="sm" className="h-6 text-xs">
-              <Edit className="h-3 w-3 mr-1" />
+            <Button variant="outline" size="sm" className={`${iconSizes.lg} text-xs`}>
+              <Edit className={`${iconSizes.xs} mr-1`} />
               Edit
             </Button>
-            <Button variant="outline" size="sm" className="h-6 text-xs">
+            <Button variant="outline" size="sm" className={`${iconSizes.lg} text-xs`}>
               <Copy className="h-3 w-3 mr-1" />
               Copy
             </Button>
-            <Button variant="outline" size="sm" className="h-6 text-xs">
+            <Button variant="outline" size="sm" className={`${iconSizes.lg} text-xs`}>
               <Move className="h-3 w-3 mr-1" />
               Move
             </Button>

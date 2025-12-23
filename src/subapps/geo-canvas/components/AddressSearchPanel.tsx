@@ -3,6 +3,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Search, MapPin, Navigation, X, Clock, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // ✅ Enterprise Address Resolver Integration
 import { useAddressResolver, type GreekAddress, type GeocodingResult } from '@/services/real-estate-monitor/AddressResolver';
@@ -43,6 +44,7 @@ export function AddressSearchPanel({
   onClose,
   className = ''
 }: AddressSearchPanelProps) {
+  const iconSizes = useIconSizes();
 
   // ✅ Enterprise AddressResolver Hook
   const { resolve, getCacheStats } = useAddressResolver();
@@ -277,7 +279,7 @@ export function AddressSearchPanel({
       onClick={() => handleLocationSelect(result)}
       className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer ${HOVER_BACKGROUND_EFFECTS.LIGHT}"
     >
-      <MapPin className="w-5 h-5 text-blue-600 flex-shrink-0" />
+      <MapPin className={`${iconSizes.md} text-blue-600 flex-shrink-0`} />
       <div className="flex-1 min-w-0">
         <div className="text-sm font-medium text-gray-900 truncate">
           {result.address.fullAddress || `${result.address.street} ${result.address.number || ''}`}
@@ -310,7 +312,7 @@ export function AddressSearchPanel({
       onClick={() => handleLocationSelect(result)}
       className="flex items-center gap-3 p-2 rounded-lg cursor-pointer ${HOVER_BACKGROUND_EFFECTS.LIGHT}"
     >
-      <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
+      <Clock className={`${iconSizes.sm} text-gray-400 flex-shrink-0`} />
       <div className="flex-1 min-w-0">
         <div className="text-sm text-gray-700 truncate">
           {result.address.fullAddress || `${result.address.street} ${result.address.number || ''}`}
@@ -378,7 +380,7 @@ export function AddressSearchPanel({
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-          <Search className="w-5 h-5 text-blue-600" />
+          <Search className={`${iconSizes.md} text-blue-600`} />
           Αναζήτηση Θέσης
         </h3>
         {onClose && (
@@ -386,7 +388,7 @@ export function AddressSearchPanel({
             onClick={onClose}
             className="text-gray-400 ${HOVER_TEXT_EFFECTS.DARKER} transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className={iconSizes.md} />
           </button>
         )}
       </div>
@@ -433,7 +435,7 @@ export function AddressSearchPanel({
               disabled={isSearching || isLoadingBoundaries}
             />
             {(isSearching || isLoadingBoundaries) && (
-              <Loader2 className="absolute right-3 top-2.5 w-4 h-4 text-gray-400 animate-spin" />
+              <Loader2 className={`absolute right-3 top-2.5 ${iconSizes.sm} text-gray-400 animate-spin`} />
             )}
           </div>
           <button
@@ -441,7 +443,7 @@ export function AddressSearchPanel({
             disabled={isSearching || isLoadingBoundaries || !searchQuery.trim()}
             className={`px-4 py-2 bg-blue-600 text-white rounded-lg ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors`}
           >
-            <Search className="w-4 h-4" />
+            <Search className={iconSizes.sm} />
           </button>
         </div>
 
@@ -462,9 +464,9 @@ export function AddressSearchPanel({
           className={`w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors`}
         >
           {isGettingLocation ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
+            <Loader2 className={`${iconSizes.md} animate-spin`} />
           ) : (
-            <Navigation className="w-5 h-5" />
+            <Navigation className={iconSizes.md} />
           )}
           <span className="font-medium">
             {isGettingLocation ? 'Εντοπισμός θέσης...' : 'Βρες τη θέση μου'}
@@ -475,7 +477,7 @@ export function AddressSearchPanel({
         {lastGpsLocation && (
           <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-lg">
             <div className="flex items-center gap-2 text-sm text-green-700">
-              <CheckCircle className="w-4 h-4" />
+              <CheckCircle className={iconSizes.sm} />
               <span>
                 Τελευταία θέση: Ακρίβεια ±{Math.round(lastGpsLocation.accuracy)}m
               </span>
@@ -488,7 +490,7 @@ export function AddressSearchPanel({
       {(searchError || gpsError || boundariesError) && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
           <div className="flex items-center gap-2 text-sm text-red-700">
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <AlertCircle className={`${iconSizes.sm} flex-shrink-0`} />
             <span>{searchError || gpsError || boundariesError}</span>
           </div>
         </div>

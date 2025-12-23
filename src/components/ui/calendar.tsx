@@ -7,6 +7,7 @@ import { DayPicker } from "react-day-picker"
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects'
+import { useIconSizes } from '@/hooks/useIconSizes'
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>
 
@@ -16,6 +17,7 @@ function Calendar({
   showOutsideDays = true,
   ...props
 }: CalendarProps) {
+  const iconSizes = useIconSizes();
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
@@ -56,10 +58,10 @@ function Calendar({
       }}
       components={{
         IconLeft: ({ className, ...props }) => (
-          <ChevronLeft className={cn("h-4 w-4", className)} {...props} />
+          <ChevronLeft className={cn(iconSizes.sm, className)} {...props} />
         ),
         IconRight: ({ className, ...props }) => (
-          <ChevronRight className={cn("h-4 w-4", className)} {...props} />
+          <ChevronRight className={cn(iconSizes.sm, className)} {...props} />
         ),
       }}
       {...props}

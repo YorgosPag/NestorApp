@@ -155,7 +155,8 @@ export type IconName = keyof typeof ICON_MAPPING;
  * @example
  * ```tsx
  * const IconComponent = getIconComponent('file-text');
- * <IconComponent className="w-4 h-4" />
+ * const iconSizes = useIconSizes();
+ * <IconComponent className={iconSizes.sm} />
  * ```
  */
 export function getIconComponent(iconName: string) {
@@ -194,7 +195,8 @@ export function isValidIcon(iconName: string): iconName is IconName {
  * @example
  * ```tsx
  * import { createIconElement } from './IconMapping';
- * const iconElement = createIconElement('file-text', { className: 'w-4 h-4' });
+ * const iconSizes = useIconSizes();
+ * const iconElement = createIconElement('file-text', { className: iconSizes.sm });
  * ```
  */
 export function createIconElement(iconName: string, props: any = {}) {

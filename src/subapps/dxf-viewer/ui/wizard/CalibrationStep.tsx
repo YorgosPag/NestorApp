@@ -5,8 +5,10 @@ import { Ruler, AlertCircle, CheckCircle } from 'lucide-react';
 import { useLevels } from '../../systems/levels';
 import { createDefaultCalibration } from './utils/calibration-utils';
 import { HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 export function CalibrationStep() {
+  const iconSizes = useIconSizes();
   const { setCalibration } = useLevels();
   const [units, setUnits] = useState<'mm' | 'cm' | 'm' | 'in' | 'ft'>('mm');
   const [skipCalibration, setSkipCalibration] = useState(true);
@@ -89,7 +91,7 @@ export function CalibrationStep() {
               Χρήση εγγενών μονάδων και κλίμακας του DXF αρχείου. Καλύτερο για τις περισσότερες αρχιτεκτονικές κατόψεις.
             </p>
             <div className="flex items-center mt-2 text-green-400">
-              <CheckCircle className="w-4 h-4 mr-1" />
+              <CheckCircle className={`${iconSizes.sm} mr-1`} />
               <span className="text-xs">Γρήγορη εισαγωγή, διατηρεί την αρχική κλίμακα</span>
             </div>
           </div>
@@ -110,7 +112,7 @@ export function CalibrationStep() {
               Ορισμός κλίμακας μετρώντας μια γνωστή απόσταση στο σχέδιο.
             </p>
             <div className="flex items-center mt-2 text-blue-400">
-              <Ruler className="w-4 h-4 mr-1" />
+              <Ruler className={`${iconSizes.sm} mr-1`} />
               <span className="text-xs">Ακριβής βαθμονόμηση για προσαρμοσμένη κλίμακα</span>
             </div>
           </div>

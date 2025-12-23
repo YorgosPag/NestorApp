@@ -3,6 +3,7 @@
 
 import React from 'react';
 import { Building2, TrendingUp, DollarSign, Settings } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { GenericListHeader } from '@/components/shared/GenericListHeader';
 import { Button } from '@/components/ui/button';
 
@@ -25,6 +26,7 @@ export function BuildingsListHeader({
     showToolbar = false,
     onToolbarToggle
 }: BuildingsListHeaderProps) {
+    const iconSizes = useIconSizes();
     return (
         <div>
             {/* 🏢 ENTERPRISE CENTRALIZED GenericListHeader - ΜΙΑ ΠΗΓΗ ΑΛΗΘΕΙΑΣ */}
@@ -43,12 +45,12 @@ export function BuildingsListHeader({
             <div className="px-4 pb-4 border-b bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20">
                 <div className="grid grid-cols-2 gap-3 text-xs">
                     <div className="flex items-center gap-1">
-                        <TrendingUp className="w-3 h-3 text-green-600" />
+                        <TrendingUp className={`${iconSizes.xs} text-green-600`} />
                         <span className="text-muted-foreground">Ενεργά:</span>
                         <span className="font-medium">{activeProjectsCount}</span>
                     </div>
                     <div className="flex items-center gap-1">
-                        <DollarSign className="w-3 h-3 text-green-600" />
+                        <DollarSign className={`${iconSizes.xs} text-green-600`} />
                         <span className="text-muted-foreground">Αξία:</span>
                         <span className="font-medium">{(totalValue / 1000000).toFixed(1)}M€</span>
                     </div>

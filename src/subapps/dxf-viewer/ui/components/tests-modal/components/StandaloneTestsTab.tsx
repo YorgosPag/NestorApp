@@ -8,6 +8,7 @@ import React from 'react';
 import { Play, CheckCircle2 } from 'lucide-react';
 import type { TestState, StandaloneTestHandlers } from '../types/tests.types';
 import { HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface StandaloneTestsTabProps {
   testState: TestState;
@@ -18,6 +19,8 @@ export const StandaloneTestsTab: React.FC<StandaloneTestsTabProps> = ({
   testState,
   standaloneTests
 }) => {
+  const iconSizes = useIconSizes();
+
   return (
     <>
       <div>
@@ -42,9 +45,9 @@ export const StandaloneTestsTab: React.FC<StandaloneTestsTabProps> = ({
               {testState.runningTests.has('coordinate-reversibility') ? (
                 <div className="animate-spin text-base">⏳</div>
               ) : testState.completedTests.has('coordinate-reversibility') ? (
-                <CheckCircle2 className="w-5 h-5 text-green-400" />
+                <CheckCircle2 className={`${iconSizes.md} text-green-400`} />
               ) : (
-                <Play className="w-5 h-5 text-gray-400" />
+                <Play className={`${iconSizes.md} text-gray-400`} />
               )}
             </div>
             <div className="flex-1 min-w-0">
@@ -69,9 +72,9 @@ export const StandaloneTestsTab: React.FC<StandaloneTestsTabProps> = ({
               {testState.runningTests.has('grid-workflow') ? (
                 <div className="animate-spin text-base">⏳</div>
               ) : testState.completedTests.has('grid-workflow') ? (
-                <CheckCircle2 className="w-5 h-5 text-green-400" />
+                <CheckCircle2 className={`${iconSizes.md} text-green-400`} />
               ) : (
-                <Play className="w-5 h-5 text-gray-400" />
+                <Play className={`${iconSizes.md} text-gray-400`} />
               )}
             </div>
             <div className="flex-1 min-w-0">

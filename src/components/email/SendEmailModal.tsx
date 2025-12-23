@@ -1,5 +1,6 @@
 "use client";
 import { Mail, Send, X } from "lucide-react";
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSendEmailModal } from "./hooks/useSendEmailModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { HOVER_TEXT_EFFECTS, HOVER_BORDER_EFFECTS, TRANSITION_PRESETS } from "@/components/ui/effects";
 
 export default function SendEmailModal({ lead, isOpen, onClose, onEmailSent }: any) {
+  const iconSizes = useIconSizes();
   const {
     formData, templates, loading,
     handleTemplateChange, handleChange, handleSubmit
@@ -19,14 +21,14 @@ export default function SendEmailModal({ lead, isOpen, onClose, onEmailSent }: a
       <div className="bg-white dark:bg-card rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b">
           <div className="flex items-center gap-3">
-            <Mail className="w-6 h-6 text-blue-600" />
+            <Mail className={`${iconSizes.lg} text-blue-600`} />
             <div>
               <h3 className="text-lg font-semibold">Αποστολή Email</h3>
               <p className="text-sm text-gray-600">Προς: {lead.fullName} ({lead.email})</p>
             </div>
           </div>
           <button onClick={onClose} className={`p-1 ${HOVER_TEXT_EFFECTS.GRAY_600_TO_800} ${TRANSITION_PRESETS.STANDARD_COLORS}`}>
-            <X className="w-5 h-5" />
+            <X className={iconSizes.md} />
           </button>
         </div>
 
@@ -44,7 +46,7 @@ export default function SendEmailModal({ lead, isOpen, onClose, onEmailSent }: a
                   }`}
                 >
                   <div className="flex items-center gap-2 mb-1">
-                    <template.icon className="w-4 h-4" />
+                    <template.icon className={iconSizes.sm} />
                     <span className="font-medium">{template.name}</span>
                   </div>
                   <p className="text-xs text-gray-600">{template.description}</p>
@@ -85,7 +87,7 @@ export default function SendEmailModal({ lead, isOpen, onClose, onEmailSent }: a
               disabled={loading}
               className="flex-1 flex items-center justify-center gap-2"
             >
-              <Send className="w-4 h-4" />
+              <Send className={iconSizes.sm} />
               {loading ? 'Αποστολή...' : 'Αποστολή Email'}
             </Button>
             <Button type="button" onClick={onClose} variant="outline">

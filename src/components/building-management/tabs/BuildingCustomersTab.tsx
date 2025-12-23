@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { CustomerInfoCompact } from '@/components/shared/customer-info';
 import { Users } from "lucide-react";
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { ProjectCustomer } from "@/types/project";
 
 interface BuildingCustomersTabProps {
@@ -11,6 +12,7 @@ interface BuildingCustomersTabProps {
 }
 
 export function BuildingCustomersTab({ buildingId }: BuildingCustomersTabProps) {
+  const iconSizes = useIconSizes();
   const [customers, setCustomers] = useState<ProjectCustomer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +48,7 @@ export function BuildingCustomersTab({ buildingId }: BuildingCustomersTabProps) 
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Users className="w-5 h-5" />
+            <Users className={iconSizes.md} />
             Πελάτες Κτιρίου
           </CardTitle>
         </CardHeader>
@@ -62,7 +64,7 @@ export function BuildingCustomersTab({ buildingId }: BuildingCustomersTabProps) 
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Users className="w-5 h-5" />
+            <Users className={iconSizes.md} />
             Πελάτες Κτιρίου
           </CardTitle>
         </CardHeader>
@@ -80,13 +82,13 @@ export function BuildingCustomersTab({ buildingId }: BuildingCustomersTabProps) 
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Users className="w-5 h-5" />
+            <Users className={iconSizes.md} />
             Πελάτες Κτιρίου
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
-            <Users className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+            <Users className={`${iconSizes.xl3} mx-auto text-muted-foreground mb-4`} />
             <p className="text-sm text-muted-foreground">
               Δεν υπάρχουν καταχωρημένοι πελάτες για αυτό το κτίριο.
             </p>
@@ -100,7 +102,7 @@ export function BuildingCustomersTab({ buildingId }: BuildingCustomersTabProps) 
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Users className="w-5 h-5" />
+          <Users className={iconSizes.md} />
           Πελάτες Κτιρίου
         </CardTitle>
         <CardDescription>

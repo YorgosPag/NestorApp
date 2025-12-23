@@ -1,5 +1,6 @@
 'use client';
 import { Archive } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import {
   getTypeIcon, getTypeColor, getStatusIcon, getStatusColor,
   getDirectionLabel, getRelativeTime
@@ -9,12 +10,13 @@ import { useCommunicationsHistory } from './communications/hooks/useCommunicatio
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 export default function CommunicationsHistory({ contactId }) {
+  const iconSizes = useIconSizes();
   const { communications, loading, error, fetchCommunications } = useCommunicationsHistory(contactId);
 
   if (loading) return (
     <section className="flex items-center justify-center py-8" aria-label="Loading communications">
       <div className="text-center">
-        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
+        <div className={`animate-spin rounded-full ${iconSizes.md} border-b-2 border-blue-600 mx-auto mb-2`}></div>
         <p className="text-sm text-gray-600">Φόρτωση επικοινωνιών...</p>
       </div>
     </section>
@@ -31,7 +33,7 @@ export default function CommunicationsHistory({ contactId }) {
 
   if (communications.length === 0) return (
     <section className="text-center py-8" aria-label="No communications found">
-      <Archive className="w-8 h-8 text-gray-400 mx-auto mb-3" />
+      <Archive className={`${iconSizes.xl} text-gray-400 mx-auto mb-3`} />
       <h4 className="text-sm font-medium text-gray-900 mb-1">Δεν υπάρχουν επικοινωνίες</h4>
       <p className="text-xs text-gray-600">Το ιστορικό επικοινωνιών θα εμφανιστεί εδώ</p>
     </section>
@@ -57,8 +59,8 @@ export default function CommunicationsHistory({ contactId }) {
                 <div className="absolute left-6 top-12 bottom-0 w-0.5 bg-gray-200"></div>
               )}
               <article className="flex gap-4">
-                <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${getTypeColor(comm.type)}`}>
-                  <TypeIcon className="w-5 h-5" />
+                <div className={`flex-shrink-0 ${iconSizes.xl2} rounded-full flex items-center justify-center ${getTypeColor(comm.type)}`}>
+                  <TypeIcon className={iconSizes.md} />
                 </div>
                 <div className="flex-1 bg-white border rounded-lg p-4 shadow-sm">
                   <header className="flex items-start justify-between mb-2">
@@ -81,7 +83,7 @@ export default function CommunicationsHistory({ contactId }) {
                       </dl>
                     </div>
                     <div className={`flex items-center gap-1 ${getStatusColor(comm.status)}`}>
-                      <StatusIcon className="w-4 h-4" />
+                      <StatusIcon className={iconSizes.sm} />
                       <span className="text-xs capitalize">{comm.status}</span>
                     </div>
                   </header>

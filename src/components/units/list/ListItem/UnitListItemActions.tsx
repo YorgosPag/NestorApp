@@ -17,6 +17,7 @@ import {
 import { Star, MoreVertical, Edit, Eye, Copy, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { GROUP_HOVER_PATTERNS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface UnitListItemActionsProps {
   isFavorite: boolean;
@@ -25,6 +26,7 @@ interface UnitListItemActionsProps {
 }
 
 export function UnitListItemActions({ isFavorite, onToggleFavorite, onEdit }: UnitListItemActionsProps) {
+  const iconSizes = useIconSizes();
   return (
     <div className={`absolute top-2 right-2 flex items-center gap-1 opacity-0 ${GROUP_HOVER_PATTERNS.SHOW_ON_GROUP} transition-opacity z-10`}>
       <Tooltip>
@@ -34,11 +36,11 @@ export function UnitListItemActions({ isFavorite, onToggleFavorite, onEdit }: Un
             size="sm"
             onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}
             onMouseDown={(e) => e.stopPropagation()}
-            className="h-6 w-6 p-0"
+            className={`${iconSizes.lg} p-0`}
           >
             <Star
               className={cn(
-                "w-4 h-4 transition-colors",
+                `${iconSizes.sm} transition-colors`,
                 isFavorite
                   ? "text-yellow-500 fill-yellow-500"
                   : `text-gray-400 ${HOVER_TEXT_EFFECTS.YELLOW}`
@@ -56,33 +58,33 @@ export function UnitListItemActions({ isFavorite, onToggleFavorite, onEdit }: Un
           <Button 
             variant="ghost" 
             size="sm" 
-            className="h-6 w-6 p-0" 
+            className={`${iconSizes.lg} p-0`} 
             onMouseDown={(e) => e.stopPropagation()}
           >
-            <MoreVertical className="w-3 h-3" />
+            <MoreVertical className={iconSizes.xs} />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem>
-            <Eye className="w-4 h-4 mr-2" />
+            <Eye className={`${iconSizes.sm} mr-2`} />
             Προβολή
           </DropdownMenuItem>
           <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }}>
-            <Edit className="w-4 h-4 mr-2" />
+            <Edit className={`${iconSizes.sm} mr-2`} />
             Επεξεργασία
           </DropdownMenuItem>
           <DropdownMenuItem>
-            <Copy className="w-4 h-4 mr-2" />
+            <Copy className={`${iconSizes.sm} mr-2`} />
             Αντιγραφή
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}>
-            <Star className="w-4 h-4 mr-2" />
+            <Star className={`${iconSizes.sm} mr-2`} />
             {isFavorite ? 'Αφαίρεση από αγαπημένα' : 'Προσθήκη στα αγαπημένα'}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem className="text-red-600">
-            <Trash2 className="w-4 h-4 mr-2" />
+            <Trash2 className={`${iconSizes.sm} mr-2`} />
             Διαγραφή
           </DropdownMenuItem>
         </DropdownMenuContent>

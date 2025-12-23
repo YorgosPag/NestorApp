@@ -20,6 +20,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { SearchInputProps } from './types';
 import { SEARCH_CONFIG, SEARCH_UI, DEBOUNCE_PRESETS } from './constants';
 
@@ -43,6 +44,7 @@ export function SearchInput({
   onBlur,
   ...props
 }: SearchInputProps) {
+  const iconSizes = useIconSizes();
   // 🚀 Enterprise debouncing implementation
   const [localValue, setLocalValue] = useState(value);
 
@@ -106,7 +108,7 @@ export function SearchInput({
   // 🧹 Clear button classes
   const clearButtonClasses = cn(
     'absolute right-3 top-1/2 -translate-y-1/2',
-    'h-4 w-4 text-muted-foreground hover:text-foreground',
+    `${iconSizes.sm} text-muted-foreground hover:text-foreground`,
     'cursor-pointer transition-colors',
     'focus:outline-none focus:ring-1 focus:ring-blue-500 focus:rounded'
   );

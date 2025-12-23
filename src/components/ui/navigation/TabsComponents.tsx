@@ -8,6 +8,7 @@ import { LucideIcon } from 'lucide-react';
 export { TabsContent };
 import { cn } from '@/lib/utils';
 import { THEME_VARIANTS, getThemeVariant, type ThemeVariant } from '@/components/ui/theme/ThemeComponents';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // Centralized tabs styling using the theme system
 export const TABS_STYLES = {
@@ -66,6 +67,7 @@ export function TabsContainer({
   className,
   onTabChange
 }: TabsContainerProps) {
+  const iconSizes = useIconSizes();
   const [activeTab, setActiveTab] = useState(defaultTab || tabs[0]?.id);
 
   const handleTabChange = (tabId: string) => {
@@ -97,7 +99,7 @@ export function TabsContainer({
               disabled={tab.disabled}
               className={themeConfig?.tabTrigger}
             >
-              <tab.icon className="w-4 h-4" />
+              {React.createElement(tab.icon, { className: iconSizes.sm })}
               <span className="hidden sm:inline">{tab.label}</span>
             </TabsTrigger>
           ))}
@@ -174,6 +176,7 @@ export function TabsOnlyTriggers({
   onTabChange,
   children
 }: TabsOnlyTriggersProps) {
+  const iconSizes = useIconSizes();
   const [activeTab, setActiveTab] = useState(defaultTab || tabs[0]?.id);
 
   const handleTabChange = (tabId: string) => {
@@ -205,7 +208,7 @@ export function TabsOnlyTriggers({
               disabled={tab.disabled}
               className={themeConfig?.tabTrigger}
             >
-              <tab.icon className="w-4 h-4" />
+              {React.createElement(tab.icon, { className: iconSizes.sm })}
               <span className="hidden sm:inline">{tab.label}</span>
             </TabsTrigger>
           ))}

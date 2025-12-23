@@ -12,6 +12,7 @@ import { NavigationCardToolbar } from './NavigationCardToolbar';
 import { SelectItemModal } from '../dialogs/SelectItemModal';
 import { Building, Home, Construction, Users, MapPin, Map, Car, Package, Layers, Factory } from 'lucide-react';
 import { useNavigation } from '../core/NavigationContext';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,6 +44,7 @@ export function DesktopMultiColumn({
   onAddCompanyClick,
   navigationCompanyIds
 }: DesktopMultiColumnProps) {
+  const iconSizes = useIconSizes();
   const {
     companies,
     projects,
@@ -332,7 +334,7 @@ export function DesktopMultiColumn({
         <section className="bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-3"
                  role="region" aria-label="Εταιρείες">
           <header className="flex items-center gap-2 mb-2">
-            <Building className="h-5 w-5 text-blue-600" />
+            <Building className={`${iconSizes.md} text-blue-600`} />
             <h3 className="font-semibold text-gray-900 dark:text-foreground">Εταιρείες</h3>
           </header>
 
@@ -403,7 +405,7 @@ export function DesktopMultiColumn({
           <section className="bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-3"
                    role="region" aria-label="Έργα">
             <header className="flex items-center gap-2 mb-2">
-              <Home className="h-5 w-5 text-green-600" />
+              <Home className={`${iconSizes.md} text-green-600`} />
               <h3 className="font-semibold text-gray-900 dark:text-foreground">Έργα</h3>
             </header>
 
@@ -456,7 +458,7 @@ export function DesktopMultiColumn({
           <section className="bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-3"
                    role="region" aria-label="Κτίρια">
             <header className="flex items-center gap-2 mb-2">
-              <Building className="h-5 w-5 text-purple-600" />
+              <Building className={`${iconSizes.md} text-purple-600`} />
               <h3 className="font-semibold text-gray-900 dark:text-foreground">Κτίρια</h3>
             </header>
 
@@ -508,7 +510,7 @@ export function DesktopMultiColumn({
           <section className="bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-3"
                    role="region" aria-label="Όροφοι">
             <header className="flex items-center gap-2 mb-2">
-              <Users className="h-5 w-5 text-orange-600" />
+              <Users className={`${iconSizes.md} text-orange-600`} />
               <h3 className="font-semibold text-gray-900 dark:text-foreground">Όροφοι</h3>
             </header>
 
@@ -560,7 +562,7 @@ export function DesktopMultiColumn({
           <section className="bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-3"
                    role="region" aria-label="Μονάδες">
             <header className="flex items-center gap-2 mb-2">
-              <Home className="h-5 w-5 text-teal-600" />
+              <Home className={`${iconSizes.md} text-teal-600`} />
               <h3 className="font-semibold text-gray-900 dark:text-foreground">Μονάδες</h3>
             </header>
 
@@ -607,7 +609,7 @@ export function DesktopMultiColumn({
           <section className="bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-3"
                    role="region" aria-label="Ενέργειες">
             <header className="flex items-center gap-2 mb-4">
-              <MapPin className="h-5 w-5 text-red-600" />
+              <MapPin className={`${iconSizes.md} text-red-600`} />
               <h3 className="font-semibold text-gray-900 dark:text-foreground">Ενέργειες</h3>
             </header>
             <ul className="space-y-2 list-none" role="list" aria-label="Λίστα Ενεργειών">

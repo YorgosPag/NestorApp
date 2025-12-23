@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Building, Briefcase } from "lucide-react";
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface BasicProjectInfoTabProps {
     data: {
@@ -19,6 +20,7 @@ interface BasicProjectInfoTabProps {
 }
 
 export function BasicProjectInfoTab({ data, setData, isEditing }: BasicProjectInfoTabProps) {
+    const iconSizes = useIconSizes();
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setData((prev: any) => ({...prev, [e.target.name]: e.target.value}));
     };
@@ -27,7 +29,7 @@ export function BasicProjectInfoTab({ data, setData, isEditing }: BasicProjectIn
         <Card>
             <CardHeader className="pb-4">
                 <div className="flex items-center gap-2">
-                    <Briefcase className="w-5 h-5 text-primary" />
+                    <Briefcase className={`${iconSizes.md} text-primary`} />
                     <CardTitle className="text-lg">Βασικές Πληροφορίες Έργου</CardTitle>
                 </div>
                 <CardDescription>
@@ -48,7 +50,7 @@ export function BasicProjectInfoTab({ data, setData, isEditing }: BasicProjectIn
                 <div className="space-y-2">
                     <Label htmlFor="companyName" className="text-sm font-medium">Εταιρεία</Label>
                      <div className="relative">
-                        <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Building className={`absolute left-3 top-1/2 -translate-y-1/2 ${iconSizes.sm} text-muted-foreground`} />
                         <Input 
                             id="companyName" 
                             name="companyName" 

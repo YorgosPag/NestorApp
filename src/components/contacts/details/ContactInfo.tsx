@@ -10,6 +10,7 @@ import { CONTACT_TYPES } from '@/constants/contacts';
 import { CustomerStats } from './CustomerStats';
 import { CustomerPropertiesTable } from './CustomerPropertiesTable';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface ContactInfoProps {
   contact: Contact;
@@ -18,6 +19,7 @@ interface ContactInfoProps {
 }
 
 export function ContactInfo({ contact, onAddUnit, onRefresh }: ContactInfoProps) {
+  const iconSizes = useIconSizes();
     const { t } = useTranslation('contacts');
     const email = getPrimaryEmail(contact);
     const phone = getPrimaryPhone(contact);
@@ -28,7 +30,7 @@ export function ContactInfo({ contact, onAddUnit, onRefresh }: ContactInfoProps)
             <h4 className="font-semibold text-sm">{t('details.contactInfo.title')}</h4>
             {email && (
                 <div className="flex items-center gap-2 text-sm">
-                    <Mail className="w-4 h-4 text-muted-foreground" />
+                    <Mail className={`${iconSizes.sm} text-muted-foreground`} />
                     <a
                         href={`https://mail.google.com/mail/?view=cm&to=${email}`}
                         target="_blank"
@@ -43,7 +45,7 @@ export function ContactInfo({ contact, onAddUnit, onRefresh }: ContactInfoProps)
             )}
             {phone && (
                 <div className="flex items-center gap-2 text-sm">
-                    <Phone className="w-4 h-4 text-muted-foreground" />
+                    <Phone className={`${iconSizes.sm} text-muted-foreground`} />
                     <a
                         href={`tel:${phone}`}
                         className={INTERACTIVE_PATTERNS.LINK_PRIMARY}

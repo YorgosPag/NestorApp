@@ -12,6 +12,7 @@
 
 import * as React from 'react';
 import type { UnifiedTestReport } from './unified-test-runner';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 // Enterprise Canvas UI Migration - Phase B
 import { canvasUI } from '@/styles/design-tokens/canvas';
@@ -41,6 +42,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
   report,
   formattedReport
 }) => {
+  const iconSizes = useIconSizes();
   const [copied, setCopied] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState<'summary' | 'details' | 'raw'>('summary');
 
@@ -144,7 +146,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className={`text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} text-2xl leading-none w-10 h-10 flex items-center justify-center rounded ${HOVER_BACKGROUND_EFFECTS.GRAY_BUTTON} transition-colors`}
+            className={`text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} text-2xl leading-none ${iconSizes.xl2} flex items-center justify-center rounded ${HOVER_BACKGROUND_EFFECTS.GRAY_BUTTON} transition-colors`}
           >
             ✕
           </button>

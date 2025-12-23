@@ -11,19 +11,21 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ToolbarButton } from '@/components/ui/ToolbarButton';
 import { Upload, Download, FileText } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface ToolbarExportMenuProps {
   onExport: () => void;
 }
 
 export function ToolbarExportMenu({ onExport }: ToolbarExportMenuProps) {
+  const iconSizes = useIconSizes();
   return (
     <div className="flex items-center gap-1">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <div>
             <ToolbarButton tooltip="Εξαγωγή Δεδομένων">
-              <Download className="w-4 h-4" />
+              <Download className={iconSizes.sm} />
             </ToolbarButton>
           </div>
         </DropdownMenuTrigger>
@@ -31,11 +33,11 @@ export function ToolbarExportMenu({ onExport }: ToolbarExportMenuProps) {
           <DropdownMenuLabel>Εξαγωγή σε:</DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={onExport}>
-            <FileText className="w-4 h-4 mr-2" />
+            <FileText className={`${iconSizes.sm} mr-2`} />
             Excel (.xlsx)
           </DropdownMenuItem>
           <DropdownMenuItem onClick={onExport}>
-            <FileText className="w-4 h-4 mr-2" />
+            <FileText className={`${iconSizes.sm} mr-2`} />
             PDF Αναφορά
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -45,7 +47,7 @@ export function ToolbarExportMenu({ onExport }: ToolbarExportMenuProps) {
         tooltip="Εισαγωγή Δεδομένων"
         onClick={() => console.log('Importing...')}
       >
-        <Upload className="w-4 h-4" />
+        <Upload className={iconSizes.sm} />
       </ToolbarButton>
     </div>
   );

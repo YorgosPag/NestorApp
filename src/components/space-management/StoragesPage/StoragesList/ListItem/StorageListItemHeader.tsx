@@ -5,6 +5,7 @@ import { MapPin, Warehouse } from "lucide-react";
 import { cn } from '@/lib/utils';
 import type { Storage } from '@/types/storage/contracts';
 import { EntityDetailsHeader } from '@/core/entity-headers';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface StorageListItemHeaderProps {
   storage: Storage;
@@ -42,6 +43,7 @@ function getTypeLabel(type: Storage['type']) {
 }
 
 export function StorageListItemHeader({ storage }: StorageListItemHeaderProps) {
+  const iconSizes = useIconSizes();
   return (
     <EntityDetailsHeader
       icon={Warehouse}
@@ -67,7 +69,7 @@ export function StorageListItemHeader({ storage }: StorageListItemHeaderProps) {
 
       {/* Building and Floor */}
       <div className="flex items-center gap-1 text-xs text-muted-foreground">
-        <MapPin className="w-3 h-3" />
+        <MapPin className={iconSizes.xs} />
         <span className="truncate">{storage.building} • {storage.floor}</span>
       </div>
     </EntityDetailsHeader>

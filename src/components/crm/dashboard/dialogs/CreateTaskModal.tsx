@@ -4,19 +4,20 @@ import { useState, useEffect, useCallback } from 'react';
 import { addTask } from '@/services/tasks.service';
 import { getOpportunities } from '@/services/opportunities.service';
 import toast from 'react-hot-toast';
-import { 
-  X, 
-  Plus, 
-  Phone, 
-  Calendar, 
-  Users, 
-  Mail, 
-  FileText, 
+import {
+  X,
+  Plus,
+  Phone,
+  Calendar,
+  Users,
+  Mail,
+  FileText,
   AlertCircle,
   Clock,
   User,
   Loader2
 } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { Opportunity, CrmTask } from '@/types/crm';
 import type { CrmTaskType, CrmTaskPriority } from '@/types/crm-extra';
 import { Button } from '@/components/ui/button';
@@ -74,6 +75,7 @@ const initialFormData: FormState = {
 };
 
 export default function CreateTaskModal({ isOpen, onClose, onTaskCreated, preselectedLead = null }: CreateTaskModalProps) {
+  const iconSizes = useIconSizes();
   const [formData, setFormData] = useState<FormState>(initialFormData);
   const [leads, setLeads] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(false);
@@ -178,7 +180,7 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated, presel
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Plus className="w-5 h-5" />
+            <Plus className={iconSizes.md} />
             Δημιουργία Νέας Εργασίας
           </DialogTitle>
           <DialogDescription>
@@ -199,7 +201,7 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated, presel
                   }`}
                   disabled={loading}
                 >
-                  <div className="flex items-center gap-2 font-medium"><type.icon className="w-3 h-3" />{type.name}</div>
+                  <div className="flex items-center gap-2 font-medium"><type.icon className={iconSizes.xs} />{type.name}</div>
                 </button>
               ))}
             </div>
@@ -246,7 +248,7 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated, presel
         <DialogFooter>
           <Button type="button" variant="ghost" onClick={onClose} disabled={loading}>Άκυρο</Button>
           <Button type="submit" form="task-form" disabled={loading}>
-            {loading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Δημιουργία...</> : 'Δημιουργία Εργασίας'}
+            {loading ? <><Loader2 className={`${iconSizes.sm} mr-2 animate-spin`} />Δημιουργία...</> : 'Δημιουργία Εργασίας'}
           </Button>
         </DialogFooter>
       </DialogContent>

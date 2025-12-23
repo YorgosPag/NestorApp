@@ -26,8 +26,10 @@ import {
   Archive,
 } from 'lucide-react';
 import { ProjectViewSwitch } from './ProjectViewSwitch';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 export function ProjectsPageContent() {
+  const iconSizes = useIconSizes();
   // Φόρτωση έργων από Firestore αντί για sample data
   const { projects: firestoreProjects, loading, error } = useFirestoreProjects();
 
@@ -126,7 +128,7 @@ export function ProjectsPageContent() {
     return (
       <main className="h-full flex items-center justify-center" role="main" aria-label="Φόρτωση Έργων">
         <section className="text-center" role="status" aria-live="polite">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <div className={`animate-spin rounded-full ${iconSizes.xl} border-b-2 border-primary mx-auto mb-4`}></div>
           <p>Φόρτωση έργων από βάση δεδομένων...</p>
         </section>
       </main>

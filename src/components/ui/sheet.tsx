@@ -7,6 +7,7 @@ import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects'
+import { useIconSizes } from '@/hooks/useIconSizes'
 
 // ╭─────────────────────────────────────────────╮
 // │          SECTION: Sheet Root Primitives     │
@@ -20,19 +21,22 @@ const SheetPortal = SheetPrimitive.Portal
 const SheetClose = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Close>,
   React.ComponentPropsWithoutRef<typeof SheetPrimitive.Close>
->(({ className, ...props }, ref) => (
-  <SheetPrimitive.Close
-    ref={ref}
-    className={cn(
-      `absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity ${INTERACTIVE_PATTERNS.FADE_IN} focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary`,
-      className
-    )}
-    {...props}
-  >
-    <X className="h-4 w-4" />
-    <span className="sr-only">Close</span>
-  </SheetPrimitive.Close>
-))
+>(({ className, ...props }, ref) => {
+  const iconSizes = useIconSizes();
+  return (
+    <SheetPrimitive.Close
+      ref={ref}
+      className={cn(
+        `absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity ${INTERACTIVE_PATTERNS.FADE_IN} focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary`,
+        className
+      )}
+      {...props}
+    >
+      <X className={iconSizes.sm} />
+      <span className="sr-only">Close</span>
+    </SheetPrimitive.Close>
+  );
+})
 SheetClose.displayName = SheetPrimitive.Close.displayName
 
 

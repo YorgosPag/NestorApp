@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Scale } from "lucide-react";
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { normalizeNumericInput, validateNumericInput } from './shared/input-validation';
 
 interface ScaleControlsProps {
@@ -13,6 +14,7 @@ export const ScaleControls: React.FC<ScaleControlsProps> = ({
   currentZoom,
   onSetScale
 }) => {
+  const iconSizes = useIconSizes();
   const [inputValue, setInputValue] = useState<string>('');
   const [isEditing, setIsEditing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -90,7 +92,7 @@ export const ScaleControls: React.FC<ScaleControlsProps> = ({
 
   return (
     <div className="flex items-center gap-1 bg-gray-900 rounded px-2 py-1">
-      <Scale className="w-3 h-3 text-gray-400" />
+      <Scale className={`${iconSizes.xs} text-gray-400`} />
       <span className="text-xs text-gray-400">1:</span>
       
       <input

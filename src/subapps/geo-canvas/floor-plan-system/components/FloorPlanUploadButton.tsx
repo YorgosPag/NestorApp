@@ -16,6 +16,7 @@
 import React from 'react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { INTERACTIVE_PATTERNS, HOVER_SHADOWS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { CraneIcon } from '@/subapps/dxf-viewer/components/icons';
 
 export interface FloorPlanUploadButtonProps {
@@ -60,6 +61,7 @@ export function FloorPlanUploadButton({
   loading = false,
   className = ''
 }: FloorPlanUploadButtonProps) {
+  const iconSizes = useIconSizes();
   const { t } = useTranslationLazy('geo-canvas');
 
   return (
@@ -82,12 +84,12 @@ export function FloorPlanUploadButton({
     >
       {loading ? (
         <>
-          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+          <div className={`animate-spin rounded-full ${iconSizes.sm} border-2 border-white border-t-transparent`}></div>
           <span>{t('floorPlan.uploadButton.loading')}</span>
         </>
       ) : (
         <>
-          <CraneIcon className="h-4 w-4" />
+          <CraneIcon className={iconSizes.sm} />
           <span>{t('floorPlan.uploadButton.text')}</span>
         </>
       )}

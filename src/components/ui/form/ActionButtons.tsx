@@ -6,6 +6,7 @@ import { CommonBadge } from '@/core/badges';
 import { Loader2, Save, X, Trash2, Plus, Edit, Archive, RotateCcw, Phone, Mail, MessageSquare, Download, Upload, HelpCircle, Star, RefreshCw, ArrowUpAZ, ArrowDownZA } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { INTERACTIVE_PATTERNS } from '../effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // Enterprise Button Categorization - Global Design System Standards
 // Based on Google Material Design, Microsoft Fluent, Apple HIG, Bootstrap 5
@@ -80,6 +81,7 @@ export function SaveButton({
   onClick,
   className
 }: BaseButtonProps) {
+  const iconSizes = useIconSizes();
   return (
     <Button
       type="submit"
@@ -89,12 +91,12 @@ export function SaveButton({
     >
       {loading ? (
         <>
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          <Loader2 className={`mr-2 ${iconSizes.sm} animate-spin`} />
           Αποθήκευση...
         </>
       ) : (
         <>
-          <Save className="mr-2 h-4 w-4" />
+          <Save className={`mr-2 ${iconSizes.sm}`} />
           {children}
         </>
       )}
@@ -109,6 +111,7 @@ export function CancelButton({
   onClick,
   className
 }: BaseButtonProps) {
+  const iconSizes = useIconSizes();
   return (
     <Button
       type="button"
@@ -117,7 +120,7 @@ export function CancelButton({
       disabled={disabled}
       className={cn(BUTTON_STYLES.variants.cancel, className)}
     >
-      <X className="mr-2 h-4 w-4" />
+      <X className={`mr-2 ${iconSizes.sm}`} />
       {children}
     </Button>
   );
@@ -131,6 +134,7 @@ export function DeleteButton({
   onClick,
   className
 }: BaseButtonProps) {
+  const iconSizes = useIconSizes();
   return (
     <Button
       type="button"
@@ -140,12 +144,12 @@ export function DeleteButton({
     >
       {loading ? (
         <>
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          <Loader2 className={`mr-2 ${iconSizes.sm} animate-spin`} />
           Διαγραφή...
         </>
       ) : (
         <>
-          <Trash2 className="mr-2 h-4 w-4" />
+          <Trash2 className={`mr-2 ${iconSizes.sm}`} />
           {children}
         </>
       )}
@@ -160,6 +164,7 @@ export function AddButton({
   onClick,
   className
 }: BaseButtonProps) {
+  const iconSizes = useIconSizes();
   return (
     <Button
       type="button"
@@ -167,7 +172,7 @@ export function AddButton({
       disabled={disabled}
       className={cn(BUTTON_STYLES.variants.add, className)}
     >
-      <Plus className="mr-2 h-4 w-4" />
+      <Plus className={`mr-2 ${iconSizes.sm}`} />
       {children}
     </Button>
   );
@@ -180,6 +185,7 @@ export function EditButton({
   onClick,
   className
 }: BaseButtonProps) {
+  const iconSizes = useIconSizes();
   return (
     <Button
       type="button"
@@ -187,7 +193,7 @@ export function EditButton({
       disabled={disabled}
       className={cn(BUTTON_STYLES.variants.edit, className)}
     >
-      <Edit className="mr-2 h-4 w-4" />
+      <Edit className={`mr-2 ${iconSizes.sm}`} />
       {children}
     </Button>
   );
@@ -201,6 +207,7 @@ export function ArchiveButton({
   onClick,
   className
 }: BaseButtonProps) {
+  const iconSizes = useIconSizes();
   return (
     <Button
       type="button"
@@ -210,12 +217,12 @@ export function ArchiveButton({
     >
       {loading ? (
         <>
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          <Loader2 className={`mr-2 ${iconSizes.sm} animate-spin`} />
           Αρχειοθέτηση...
         </>
       ) : (
         <>
-          <Archive className="mr-2 h-4 w-4" />
+          <Archive className={`mr-2 ${iconSizes.sm}`} />
           {children}
         </>
       )}
@@ -231,6 +238,7 @@ export function RestoreButton({
   onClick,
   className
 }: BaseButtonProps) {
+  const iconSizes = useIconSizes();
   return (
     <Button
       type="button"
@@ -240,12 +248,12 @@ export function RestoreButton({
     >
       {loading ? (
         <>
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          <Loader2 className={`mr-2 ${iconSizes.sm} animate-spin`} />
           Επαναφορά...
         </>
       ) : (
         <>
-          <RotateCcw className="mr-2 h-4 w-4" />
+          <RotateCcw className={`mr-2 ${iconSizes.sm}`} />
           {children}
         </>
       )}
@@ -262,6 +270,7 @@ export function ToolbarAddButton({
   size = 'sm',
   variant = 'default'
 }: BaseButtonProps) {
+  const iconSizes = useIconSizes();
   // Use centralized styling for default variant
   const buttonClassName = variant === 'default'
     ? cn(BUTTON_STYLES.variants.add, "flex items-center gap-2 min-w-[100px] justify-start", className)
@@ -275,7 +284,7 @@ export function ToolbarAddButton({
       disabled={disabled}
       className={buttonClassName}
     >
-      <Plus className="w-4 h-4" />
+      <Plus className={iconSizes.sm} />
       <span className="hidden md:inline">{children}</span>
     </Button>
   );
@@ -289,6 +298,7 @@ export function ToolbarEditButton({
   size = 'sm',
   variant = 'outline'
 }: BaseButtonProps) {
+  const iconSizes = useIconSizes();
   // Use centralized styling for outline variant (edit action)
   const buttonClassName = variant === 'outline'
     ? cn(BUTTON_STYLES.variants.edit, "flex items-center gap-2 min-w-[100px] justify-start", className)
@@ -302,7 +312,7 @@ export function ToolbarEditButton({
       disabled={disabled}
       className={buttonClassName}
     >
-      <Edit className="w-4 h-4" />
+      <Edit className={iconSizes.sm} />
       <span className="hidden md:inline">{children}</span>
     </Button>
   );
@@ -317,6 +327,7 @@ export function ToolbarDeleteButton({
   variant = 'destructive',
   badge
 }: BaseButtonProps) {
+  const iconSizes = useIconSizes();
   // Use centralized styling for destructive variant
   const buttonClassName = variant === 'destructive'
     ? cn(BUTTON_STYLES.variants.delete, "flex items-center gap-2 min-w-[100px] justify-start", className)
@@ -330,7 +341,7 @@ export function ToolbarDeleteButton({
       disabled={disabled}
       className={buttonClassName}
     >
-      <Trash2 className="w-4 h-4" />
+      <Trash2 className={iconSizes.sm} />
       <span className="hidden md:inline">{children}</span>
       {badge && (
         <CommonBadge
@@ -353,6 +364,7 @@ export function ToolbarArchiveButton({
   variant = 'ghost',
   badge
 }: BaseButtonProps) {
+  const iconSizes = useIconSizes();
   return (
     <Button
       size={size}
@@ -360,7 +372,7 @@ export function ToolbarArchiveButton({
       disabled={disabled}
       className={cn(BUTTON_CATEGORIES.utility, "text-orange-400 flex items-center gap-2 min-w-[100px] justify-start", className)}
     >
-      <Archive className="w-4 h-4" />
+      <Archive className={iconSizes.sm} />
       <span className="hidden md:inline">{children}</span>
       {badge && (
         <CommonBadge
@@ -382,6 +394,7 @@ export function ToolbarCallButton({
   className,
   size = 'sm'
 }: BaseButtonProps) {
+  const iconSizes = useIconSizes();
   return (
     <Button
       size={size}
@@ -389,7 +402,7 @@ export function ToolbarCallButton({
       disabled={disabled}
       className={cn(BUTTON_STYLES.variants.call, "flex items-center gap-2 min-w-[100px] justify-start", className)}
     >
-      <Phone className="w-4 h-4" />
+      <Phone className={iconSizes.sm} />
       <span className="hidden md:inline">{children}</span>
     </Button>
   );
@@ -402,6 +415,7 @@ export function ToolbarEmailButton({
   className,
   size = 'sm'
 }: BaseButtonProps) {
+  const iconSizes = useIconSizes();
   return (
     <Button
       size={size}
@@ -409,7 +423,7 @@ export function ToolbarEmailButton({
       disabled={disabled}
       className={cn(BUTTON_STYLES.variants.email, "flex items-center gap-2 min-w-[100px] justify-start", className)}
     >
-      <Mail className="w-4 h-4" />
+      <Mail className={iconSizes.sm} />
       <span className="hidden md:inline">{children}</span>
     </Button>
   );
@@ -422,6 +436,7 @@ export function ToolbarSMSButton({
   className,
   size = 'sm'
 }: BaseButtonProps) {
+  const iconSizes = useIconSizes();
   return (
     <Button
       size={size}
@@ -429,7 +444,7 @@ export function ToolbarSMSButton({
       disabled={disabled}
       className={cn(BUTTON_STYLES.variants.sms, "flex items-center gap-2 min-w-[100px] justify-start", className)}
     >
-      <MessageSquare className="w-4 h-4" />
+      <MessageSquare className={iconSizes.sm} />
       <span className="hidden md:inline">{children}</span>
     </Button>
   );
@@ -443,6 +458,7 @@ export function ToolbarExportButton({
   className,
   size = 'sm'
 }: BaseButtonProps) {
+  const iconSizes = useIconSizes();
   return (
     <Button
       size={size}
@@ -450,7 +466,7 @@ export function ToolbarExportButton({
       disabled={disabled}
       className={cn(BUTTON_STYLES.variants.export, "flex items-center gap-2 min-w-[100px] justify-start", className)}
     >
-      <Download className="w-4 h-4" />
+      <Download className={iconSizes.sm} />
       <span className="hidden md:inline">{children}</span>
     </Button>
   );
@@ -463,6 +479,7 @@ export function ToolbarImportButton({
   className,
   size = 'sm'
 }: BaseButtonProps) {
+  const iconSizes = useIconSizes();
   return (
     <Button
       size={size}
@@ -470,7 +487,7 @@ export function ToolbarImportButton({
       disabled={disabled}
       className={cn(BUTTON_STYLES.variants.import, "flex items-center gap-2 min-w-[100px] justify-start", className)}
     >
-      <Upload className="w-4 h-4" />
+      <Upload className={iconSizes.sm} />
       <span className="hidden md:inline">{children}</span>
     </Button>
   );
@@ -484,7 +501,8 @@ export function ToolbarSortToggleButton({
   size = 'sm',
   sortDirection = 'asc'
 }: BaseButtonProps & { sortDirection?: 'asc' | 'desc' }) {
-  const icon = sortDirection === 'asc' ? <ArrowUpAZ className="w-4 h-4" /> : <ArrowDownZA className="w-4 h-4" />;
+  const iconSizes = useIconSizes();
+  const icon = sortDirection === 'asc' ? <ArrowUpAZ className={iconSizes.sm} /> : <ArrowDownZA className={iconSizes.sm} />;
 
   return (
     <Button
@@ -506,6 +524,7 @@ export function ToolbarHelpButton({
   className,
   size = 'sm'
 }: BaseButtonProps) {
+  const iconSizes = useIconSizes();
   return (
     <Button
       size={size}
@@ -513,7 +532,7 @@ export function ToolbarHelpButton({
       disabled={disabled}
       className={cn(BUTTON_STYLES.variants.help, "flex items-center gap-2 min-w-[100px] justify-start", className)}
     >
-      <HelpCircle className="w-4 h-4" />
+      <HelpCircle className={iconSizes.sm} />
       <span className="hidden md:inline">{children}</span>
     </Button>
   );
@@ -532,6 +551,7 @@ export function ToolbarFavoritesButton({
   size = 'sm',
   active = false
 }: FilterButtonProps) {
+  const iconSizes = useIconSizes();
   // Active state uses primary color, inactive uses utility (subtle)
   const buttonClassName = active
     ? cn(BUTTON_CATEGORIES.primary, "flex items-center gap-2 min-w-[100px] justify-start", className)
@@ -544,7 +564,7 @@ export function ToolbarFavoritesButton({
       disabled={disabled}
       className={buttonClassName}
     >
-      <Star className="w-4 h-4" />
+      <Star className={iconSizes.sm} />
       <span className="hidden md:inline">{children}</span>
     </Button>
   );
@@ -558,6 +578,7 @@ export function ToolbarArchivedFilterButton({
   size = 'sm',
   active = false
 }: FilterButtonProps) {
+  const iconSizes = useIconSizes();
   // Active state uses primary color, inactive uses utility (subtle)
   const buttonClassName = active
     ? cn(BUTTON_CATEGORIES.primary, "flex items-center gap-2 min-w-[100px] justify-start", className)
@@ -570,7 +591,7 @@ export function ToolbarArchivedFilterButton({
       disabled={disabled}
       className={buttonClassName}
     >
-      <Archive className="w-4 h-4" />
+      <Archive className={iconSizes.sm} />
       <span className="hidden md:inline">{children}</span>
     </Button>
   );
@@ -584,6 +605,7 @@ export function ToolbarRefreshButton({
   className,
   size = 'sm'
 }: BaseButtonProps) {
+  const iconSizes = useIconSizes();
   return (
     <Button
       size={size}
@@ -591,7 +613,7 @@ export function ToolbarRefreshButton({
       disabled={disabled}
       className={cn(BUTTON_CATEGORIES.utility, "text-cyan-400 flex items-center gap-2 min-w-[100px] justify-start", className)}
     >
-      <RefreshCw className="w-4 h-4" />
+      <RefreshCw className={iconSizes.sm} />
       <span className="hidden md:inline">{children}</span>
     </Button>
   );

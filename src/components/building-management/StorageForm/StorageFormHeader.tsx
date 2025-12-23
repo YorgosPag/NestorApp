@@ -3,6 +3,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { X, Package, Car } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { cn } from '@/lib/utils';
 import type { StorageType } from '@/types/storage';
 
@@ -19,6 +20,7 @@ export function StorageFormHeader({
   formTitle,
   onCancel,
 }: StorageFormHeaderProps) {
+  const iconSizes = useIconSizes();
   return (
     <div
       className={cn(
@@ -32,13 +34,13 @@ export function StorageFormHeader({
         <div className="flex items-center gap-3">
           <div
             className={cn(
-              "flex h-10 w-10 items-center justify-center rounded-lg shadow-sm",
+              `flex ${iconSizes.xl2} items-center justify-center rounded-lg shadow-sm`,
               formType === 'storage'
                 ? "bg-purple-100 text-purple-700"
                 : "bg-orange-100 text-orange-700"
             )}
           >
-            {formType === 'storage' ? <Package className="w-5 h-5" /> : <Car className="w-5 h-5" />}
+            {formType === 'storage' ? <Package className={iconSizes.md} /> : <Car className={iconSizes.md} />}
           </div>
           <div>
             <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
@@ -49,8 +51,8 @@ export function StorageFormHeader({
             </p>
           </div>
         </div>
-        <Button variant="ghost" size="icon" onClick={onCancel} className="h-8 w-8">
-          <X className="w-4 h-4" />
+        <Button variant="ghost" size="icon" onClick={onCancel} className={iconSizes.xl}>
+          <X className={iconSizes.sm} />
         </Button>
       </div>
     </div>

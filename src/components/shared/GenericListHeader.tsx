@@ -16,6 +16,7 @@
 import React from 'react';
 import { LucideIcon, Settings } from 'lucide-react';
 import { SectionHeader } from '@/core/headers';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { Button } from '@/components/ui/button';
 import { SearchInput } from '@/components/ui/search'; // 🏢 Enterprise centralized search - Same as navigation modal
 
@@ -63,6 +64,7 @@ export function GenericListHeader({
     showToolbar = false,
     onToolbarToggle
 }: GenericListHeaderProps) {
+    const iconSizes = useIconSizes();
     return (
         <div className="p-3 border-b bg-card flex items-center gap-2">
             {/* Left: Unified Section Header */}
@@ -95,7 +97,7 @@ export function GenericListHeader({
                     title="Εργαλειοθήκη"
                     aria-label="Toggle toolbar"
                 >
-                    <Settings className="h-3 w-3" />
+                    <Settings className={iconSizes.xs} />
                 </Button>
             )}
         </div>

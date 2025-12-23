@@ -10,6 +10,7 @@ import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { BaseButton } from './BaseButton';
 import { portalComponents } from '@/styles/design-tokens';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface BaseModalProps {
   isOpen: boolean;
@@ -246,6 +247,7 @@ export const LoadingModal: React.FC<{
   title = 'Φόρτωση...',
   message = 'Παρακαλώ περιμένετε...'
 }) => {
+  const iconSizes = useIconSizes();
   return (
     <BaseModal
       isOpen={isOpen}
@@ -257,7 +259,7 @@ export const LoadingModal: React.FC<{
       showCloseButton={false}
     >
       <div className="flex items-center space-x-3">
-        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+        <div className={`animate-spin rounded-full ${iconSizes.lg} border-b-2 border-blue-500`}></div>
         <span className="text-gray-200">{message}</span>
       </div>
     </BaseModal>

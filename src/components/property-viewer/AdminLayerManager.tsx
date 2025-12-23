@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { CommonBadge } from '@/core/badges';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { 
   Layers, 
   Eye, 
@@ -83,6 +84,7 @@ interface CreateLayerDialogProps {
 }
 
 function CreateLayerDialog({ open, onOpenChange, onCreateLayer }: CreateLayerDialogProps) {
+  const iconSizes = useIconSizes();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<LayerCategory>('annotations');
@@ -146,7 +148,7 @@ function CreateLayerDialog({ open, onOpenChange, onCreateLayer }: CreateLayerDia
                   <SelectItem key={key} value={key}>
                     <div className="flex items-center gap-2">
                       <div
-                        className={`w-3 h-3 rounded-full ${getDynamicBackgroundClass(info.color)}`}
+                        className={`${iconSizes.xs} rounded-full ${getDynamicBackgroundClass(info.color)}`}
                       />
                       {info.name}
                     </div>
@@ -164,7 +166,7 @@ function CreateLayerDialog({ open, onOpenChange, onCreateLayer }: CreateLayerDia
                 id="layer-color"
                 value={color}
                 onChange={(e) => setColor(e.target.value)}
-                className="w-10 h-8 rounded border"
+                className={`${iconSizes.xl2} h-8 rounded border`}
               />
               <Input
                 value={color}
@@ -216,6 +218,7 @@ function LayerItem({
   onDelete,
   onRename
 }: LayerItemProps) {
+  const iconSizes = useIconSizes();
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameName, setRenameName] = useState(layer.name);
   
@@ -247,16 +250,16 @@ function LayerItem({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-4 w-4 p-0"
+                className={`${iconSizes.sm} p-0`}
                 onClick={onToggleExpand}
               >
-                {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                {isExpanded ? <ChevronDown className={iconSizes.xs} /> : <ChevronRight className={iconSizes.xs} />}
               </Button>
             )}
             
             {categoryInfo && (
               <div
-                className={`w-3 h-3 rounded-full flex-shrink-0 ${getDynamicBackgroundClass(categoryInfo.color)}`}
+                className={`${iconSizes.xs} rounded-full flex-shrink-0 ${getDynamicBackgroundClass(categoryInfo.color)}`}
                 title={categoryInfo.name}
               />
             )}
@@ -305,55 +308,55 @@ function LayerItem({
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 w-6 p-0"
+              className={`${iconSizes.md} p-0`}
               onClick={onToggleVisibility}
               title={layer.isVisible ? 'Απόκρυψη' : 'Εμφάνιση'}
             >
-              {layer.isVisible ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+              {layer.isVisible ? <Eye className={iconSizes.xs} /> : <EyeOff className={iconSizes.xs} />}
             </Button>
             
             {/* Lock */}
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 w-6 p-0"
+              className={`${iconSizes.md} p-0`}
               onClick={onToggleLock}
               disabled={layer.isSystem}
               title={layer.isLocked ? 'Ξεκλείδωμα' : 'Κλείδωμα'}
             >
-              {layer.isLocked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
+              {layer.isLocked ? <Lock className={iconSizes.xs} /> : <Unlock className={iconSizes.xs} />}
             </Button>
             
             {/* More options */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                  <MoreVertical className="h-3 w-3" />
+                <Button variant="ghost" size="sm" className={`${iconSizes.md} p-0`}>
+                  <MoreVertical className={iconSizes.xs} />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 {!layer.isSystem && (
                   <>
                     <DropdownMenuItem onClick={() => setIsRenaming(true)}>
-                      <Type className="h-3 w-3 mr-2" />
+                      <Type className={`${iconSizes.xs} mr-2`} />
                       Μετονομασία
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={onDuplicate}>
-                      <Copy className="h-3 w-3 mr-2" />
+                      <Copy className={`${iconSizes.xs} mr-2`} />
                       Αντιγραφή
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                   </>
                 )}
                 <DropdownMenuItem>
-                  <Download className="h-3 w-3 mr-2" />
+                  <Download className={`${iconSizes.xs} mr-2`} />
                   Export Layer
                 </DropdownMenuItem>
                 {!layer.isSystem && (
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={onDelete} className="text-destructive">
-                      <Trash2 className="h-3 w-3 mr-2" />
+                      <Trash2 className={`${iconSizes.xs} mr-2`} />
                       Διαγραφή
                     </DropdownMenuItem>
                   </>
@@ -387,19 +390,19 @@ function LayerItem({
                 {layer.elements.slice(0, 5).map((element) => (
                   <div key={element.id} className="flex items-center justify-between text-xs">
                     <span className="text-muted-foreground flex items-center gap-2">
-                      {element.type === 'property' && <Grid className="h-3 w-3" />}
-                      {element.type === 'annotation' && <Type className="h-3 w-3" />}
-                      {element.type === 'measurement' && <Ruler className="h-3 w-3" />}
-                      {element.type === 'line' && <PenTool className="h-3 w-3" />}
+                      {element.type === 'property' && <Grid className={iconSizes.xs} />}
+                      {element.type === 'annotation' && <Type className={iconSizes.xs} />}
+                      {element.type === 'measurement' && <Ruler className={iconSizes.xs} />}
+                      {element.type === 'line' && <PenTool className={iconSizes.xs} />}
                       {element.type} - {element.id.substring(0, 8)}...
                     </span>
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-4 w-4 p-0"
+                      className={`${iconSizes.sm} p-0`}
                       onClick={() => {/* Toggle element visibility */}}
                     >
-                      {element.isVisible ? <Eye className="h-2 w-2" /> : <EyeOff className="h-2 w-2" />}
+                      {element.isVisible ? <Eye className={iconSizes.xs} /> : <EyeOff className={iconSizes.xs} />}
                     </Button>
                   </div>
                 ))}
@@ -432,6 +435,7 @@ export function AdminLayerManager({
   enableRealTimeSync = true,
   showSyncStatus = true
 }: AdminLayerManagerProps) {
+  const iconSizes = useIconSizes();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [expandedLayers, setExpandedLayers] = useState<Set<string>>(new Set());
@@ -585,7 +589,7 @@ export function AdminLayerManager({
         onClick={onToggleCollapse}
         className={className}
       >
-        <Layers className="h-4 w-4" />
+        <Layers className={iconSizes.sm} />
       </Button>
     );
   }
@@ -608,14 +612,14 @@ export function AdminLayerManager({
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm flex items-center gap-2">
-              <Layers className="h-4 w-4" />
+              <Layers className={iconSizes.sm} />
               Layer Manager
               {showSyncStatus && (
                 <div className="flex items-center gap-1">
                   {syncState.isConnected ? (
-                    <div className="w-2 h-2 bg-green-500 rounded-full" title="Συνδεδεμένο - Real-time sync ενεργό" />
+                    <div className={`${iconSizes.xs} bg-green-500 rounded-full`} title="Συνδεδεμένο - Real-time sync ενεργό" />
                   ) : (
-                    <div className="w-2 h-2 bg-red-500 rounded-full" title="Αποσυνδεδεμένο" />
+                    <div className={`${iconSizes.xs} bg-red-500 rounded-full`} title="Αποσυνδεδεμένο" />
                   )}
                   {syncState.pendingOperations > 0 && (
                     <CommonBadge
@@ -628,30 +632,30 @@ export function AdminLayerManager({
                 </div>
               )}
               {onToggleCollapse && (
-                <Button variant="ghost" size="sm" onClick={onToggleCollapse} className="h-4 w-4 p-0 ml-1">
-                  <ChevronDown className="h-3 w-3" />
+                <Button variant="ghost" size="sm" onClick={onToggleCollapse} className={`${iconSizes.sm} p-0 ml-1`}>
+                  <ChevronDown className={iconSizes.xs} />
                 </Button>
               )}
             </CardTitle>
             
             <div className="flex items-center gap-1">
               <Button variant="ghost" size="sm" onClick={() => setShowCreateDialog(true)}>
-                <Plus className="h-3 w-3" />
+                <Plus className={iconSizes.xs} />
               </Button>
               
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm">
-                    <Settings className="h-3 w-3" />
+                    <Settings className={iconSizes.xs} />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem>
-                    <Download className="h-3 w-3 mr-2" />
+                    <Download className={`${iconSizes.xs} mr-2`} />
                     Export όλα τα Layers
                   </DropdownMenuItem>
                   <DropdownMenuItem>
-                    <Upload className="h-3 w-3 mr-2" />
+                    <Upload className={`${iconSizes.xs} mr-2`} />
                     Import Layers
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
@@ -668,7 +672,7 @@ export function AdminLayerManager({
           {/* Search and Filters */}
           <div className="space-y-2">
             <div className="relative">
-              <Search className="absolute left-2 top-2.5 h-3 w-3 text-muted-foreground" />
+              <Search className={`absolute left-2 top-2.5 ${iconSizes.xs} text-muted-foreground`} />
               <Input
                 placeholder="Αναζήτηση layers..."
                 value={searchQuery}
@@ -687,7 +691,7 @@ export function AdminLayerManager({
                   <SelectItem key={category} value={category}>
                     <div className="flex items-center gap-2">
                       <div
-                        className={`w-3 h-3 rounded-full ${getDynamicBackgroundClass(getCategoryInfo(category).color)}`}
+                        className={`${iconSizes.xs} rounded-full ${getDynamicBackgroundClass(getCategoryInfo(category).color)}`}
                       />
                       {getCategoryInfo(category).name}
                     </div>
@@ -745,7 +749,7 @@ export function AdminLayerManager({
                     {category !== 'other' && getCategoryInfo(category) && (
                       <>
                         <div
-                          className={`w-2 h-2 rounded-full ${getDynamicBackgroundClass(getCategoryInfo(category).color)}`}
+                          className={`${iconSizes.xs} rounded-full ${getDynamicBackgroundClass(getCategoryInfo(category).color)}`}
                         />
                         {getCategoryInfo(category).name}
                       </>
@@ -780,7 +784,7 @@ export function AdminLayerManager({
               
               {filteredLayers.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
-                  <Layers className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <Layers className={`${iconSizes.xl} mx-auto mb-2 opacity-50`} />
                   <p className="text-sm">Δεν βρέθηκαν layers</p>
                   <p className="text-xs">Δημιουργήστε ένα νέο layer ή αλλάξτε τα φίλτρα</p>
                 </div>

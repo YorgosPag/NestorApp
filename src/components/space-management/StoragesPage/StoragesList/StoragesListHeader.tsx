@@ -4,6 +4,7 @@ import React from 'react';
 import { Warehouse, CheckCircle, DollarSign, TrendingUp } from 'lucide-react';
 import { GenericListHeader } from '@/components/shared/GenericListHeader';
 import type { Storage } from '@/types/storage/contracts';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface StoragesListHeaderProps {
     storages: Storage[];
@@ -20,6 +21,7 @@ export function StoragesListHeader({
     showToolbar = false,
     onToolbarToggle
 }: StoragesListHeaderProps) {
+    const iconSizes = useIconSizes();
     // Calculate statistics
     const availableCount = storages.filter(storage => storage.status === 'available').length;
     const occupiedCount = storages.filter(storage => storage.status === 'occupied').length;
@@ -45,22 +47,22 @@ export function StoragesListHeader({
             <div className="px-4 pb-4 border-b bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20">
                 <div className="grid grid-cols-2 gap-3 text-xs">
                     <div className="flex items-center gap-1">
-                        <CheckCircle className="w-3 h-3 text-green-600" />
+                        <CheckCircle className={`${iconSizes.xs} text-green-600`} />
                         <span className="text-muted-foreground">Διαθέσιμες:</span>
                         <span className="font-medium">{availableCount}</span>
                     </div>
                     <div className="flex items-center gap-1">
-                        <TrendingUp className="w-3 h-3 text-blue-600" />
+                        <TrendingUp className={`${iconSizes.xs} text-blue-600`} />
                         <span className="text-muted-foreground">Κατειλημμένες:</span>
                         <span className="font-medium">{occupiedCount}</span>
                     </div>
                     <div className="flex items-center gap-1">
-                        <DollarSign className="w-3 h-3 text-green-600" />
+                        <DollarSign className={`${iconSizes.xs} text-green-600`} />
                         <span className="text-muted-foreground">Συν. Αξία:</span>
                         <span className="font-medium">{(totalValue / 1000).toFixed(0)}K€</span>
                     </div>
                     <div className="flex items-center gap-1">
-                        <Warehouse className="w-3 h-3 text-orange-600" />
+                        <Warehouse className={`${iconSizes.xs} text-orange-600`} />
                         <span className="text-muted-foreground">Συν. Επιφάνεια:</span>
                         <span className="font-medium">{totalArea.toFixed(0)} m²</span>
                     </div>

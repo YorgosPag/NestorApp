@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { SEARCH_UI } from './constants';
 
 interface QuickSearchProps {
@@ -43,6 +44,7 @@ export function QuickSearch({
   disabled = false,
   compact = true
 }: QuickSearchProps) {
+  const iconSizes = useIconSizes();
 
   // 🧹 Clear search handler
   const handleClear = () => {
@@ -57,7 +59,7 @@ export function QuickSearch({
 
   const iconClasses = cn(
     "absolute left-2 top-1/2 transform -translate-y-1/2 text-muted-foreground",
-    compact ? "w-3 h-3" : "w-4 h-4"
+    compact ? iconSizes.xs : iconSizes.sm
   );
 
   const inputClasses = cn(
@@ -69,7 +71,7 @@ export function QuickSearch({
 
   const clearButtonClasses = cn(
     "absolute right-1 top-1/2 transform -translate-y-1/2 p-0",
-    compact ? "h-6 w-6" : "h-8 w-8"
+    compact ? iconSizes.lg : iconSizes.xl
   );
 
   return (
@@ -98,7 +100,7 @@ export function QuickSearch({
           tabIndex={-1}
           aria-label="Clear search"
         >
-          <X className="w-4 h-4" />
+          <X className={iconSizes.sm} />
         </Button>
       )}
     </div>

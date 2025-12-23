@@ -5,6 +5,7 @@ import { Plus, Minus } from "lucide-react";
 import { normalizeNumericInput, validateNumericInput } from './shared/input-validation';
 import { ZOOM_FACTORS } from '../../config/transform-config';
 import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface ZoomControlsProps {
   currentZoom: number;
@@ -19,6 +20,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
   onZoomOut,
   onSetZoom
 }) => {
+  const iconSizes = useIconSizes();
   const [inputValue, setInputValue] = useState<string>('');
   const [isEditing, setIsEditing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -135,7 +137,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
         className={`h-6 w-6 p-0 text-gray-300 ${HOVER_TEXT_EFFECTS.WHITE} flex items-center justify-center rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} transition-colors`}
         title={`Zoom Out (-${ZOOM_STEP_PERCENTAGE}%) - Πληκτρολόγιο: -`}
       >
-        <Minus className="w-3 h-3" />
+        <Minus className={iconSizes.xs} />
       </button>
       
       <input
@@ -158,7 +160,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
         className={`h-6 w-6 p-0 text-gray-300 ${HOVER_TEXT_EFFECTS.WHITE} flex items-center justify-center rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} transition-colors`}
         title={`Zoom In (+${ZOOM_STEP_PERCENTAGE}%) - Πληκτρολόγιο: +`}
       >
-        <Plus className="w-3 h-3" />
+        <Plus className={iconSizes.xs} />
       </button>
     </div>
   );

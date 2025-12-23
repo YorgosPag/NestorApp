@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { Copy, Trash2, Palette } from "lucide-react";
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { Property } from '@/types/property-viewer';
 import type { LayerState } from '../useLayerStates';
 import { PROPERTY_STATUS_CONFIG } from "@/lib/property-utils";
@@ -27,6 +28,7 @@ export function PropertyLayerDetails({
   onDuplicate,
   onDelete,
 }: PropertyLayerDetailsProps) {
+  const iconSizes = useIconSizes();
   const statusInfo = PROPERTY_STATUS_CONFIG[property.status] || PROPERTY_STATUS_CONFIG.default;
 
   // 🎨 ENTERPRISE DYNAMIC STYLING - NO INLINE STYLES (CLAUDE.md compliant)
@@ -38,7 +40,7 @@ export function PropertyLayerDetails({
         <Label className="text-xs">Χρώμα:</Label>
         <div className={`w-6 h-4 rounded border ${statusColorBgClass}`} />
         <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
-          <Palette className="h-3 w-3 mr-1" /> Αλλαγή
+          <Palette className={`${iconSizes.xs} mr-1`} /> Αλλαγή
         </Button>
       </div>
       <div className="space-y-1">
@@ -69,10 +71,10 @@ export function PropertyLayerDetails({
       <div className="text-xs text-muted-foreground">Κόμβοι: {property.vertices.length}</div>
       <div className="flex gap-1 pt-1">
         <Button variant="outline" size="sm" className="h-7 px-2 text-xs flex-1" onClick={onDuplicate}>
-          <Copy className="h-3 w-3 mr-1" /> Διπλ.
+          <Copy className={`${iconSizes.xs} mr-1`} /> Διπλ.
         </Button>
         <Button variant="outline" size="sm" className={`h-7 w-7 p-0 text-destructive ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`} onClick={onDelete}>
-          <Trash2 className="h-3 w-3" />
+          <Trash2 className={iconSizes.xs} />
         </Button>
       </div>
     </div>

@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS, CORE_HOVER_TRANSFORMS, HOVER_TEXT_EFFECTS } from '../../../../../ui/effects';
 import { useDynamicBackgroundClass, useDynamicBorderClass } from '@/components/ui/utils/dynamic-styles';
 import { ENHANCED_STATUS_LABELS as PROPERTY_STATUS_LABELS, ENHANCED_STATUS_COLORS as PROPERTY_STATUS_COLORS } from '@/constants/property-statuses-enterprise';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface LayersSettingsProps {
   // Για μελλοντική επέκταση μπορούμε να προσθέσουμε props
 }
 
 export const LayersSettings: React.FC<LayersSettingsProps> = () => {
+  const iconSizes = useIconSizes();
   const [activeTab, setActiveTab] = useState<'outlines' | 'fills'>('outlines');
   const [selectedPreset, setSelectedPreset] = useState<number>(0);
 
@@ -53,7 +55,7 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
               <div
                 key={preset.name}
                 className={`
-                  w-8 h-8 border-2 rounded cursor-pointer transition-transform
+                  border-2 rounded cursor-pointer transition-transform ${iconSizes.lg}
                   ${CORE_HOVER_TRANSFORMS.SCALE_UP}
                   ${preset.borderClass}
                   ${activeTab === 'fills' ? preset.bgWithOpacityClass : ''}
@@ -110,7 +112,7 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
                     }`}
                   >
                     <div
-                      className={`w-full h-6 rounded border border-gray-400 ${preset.bgClass}`}
+                      className={`w-full ${iconSizes.lg} rounded border border-gray-400 ${preset.bgClass}`}
                     />
                     <div className="text-xs text-white mt-1 truncate">{preset.name}</div>
                   </button>
@@ -125,8 +127,8 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
                   <div className="font-medium">Εμφάνιση Περιγραμμάτων</div>
                   <div className="font-normal text-gray-400">Ενεργοποίηση/Απενεργοποίηση των περιγραμμάτων</div>
                 </div>
-                <div className="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-green-600">
-                  <span className="pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transition duration-200 ease-in-out transform translate-x-5" />
+                <div className={`relative inline-flex ${iconSizes.lg} ${iconSizes.xl3} flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-green-600`}>
+                  <span className={`pointer-events-none inline-block ${iconSizes.sm} rounded-full bg-white shadow transition duration-200 ease-in-out transform translate-x-5`} />
                 </div>
               </div>
             </div>
@@ -150,7 +152,7 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
                     }`}
                   >
                     <div
-                      className={`w-full h-6 rounded border border-gray-400 ${preset.bgClass}`}
+                      className={`w-full ${iconSizes.lg} rounded border border-gray-400 ${preset.bgClass}`}
                     />
                     <div className="text-xs text-white mt-1 truncate">{preset.name}</div>
                   </button>
@@ -173,7 +175,7 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
                   defaultValue="1.0"
                   className="flex-1"
                 />
-                <div className="w-12 text-xs bg-gray-600 text-white rounded px-2 py-1 text-center">
+                <div className={`${iconSizes.xl3} text-xs bg-gray-600 text-white rounded px-2 py-1 text-center`}>
                   100%
                 </div>
               </div>
@@ -186,8 +188,8 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
                   <div className="font-medium">Εμφάνιση Γεμισμάτων</div>
                   <div className="font-normal text-gray-400">Ενεργοποίηση/Απενεργοποίηση των γεμισμάτων</div>
                 </div>
-                <div className="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-green-600">
-                  <span className="pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transition duration-200 ease-in-out transform translate-x-5" />
+                <div className={`relative inline-flex ${iconSizes.lg} ${iconSizes.xl3} flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-green-600`}>
+                  <span className={`pointer-events-none inline-block ${iconSizes.sm} rounded-full bg-white shadow transition duration-200 ease-in-out transform translate-x-5`} />
                 </div>
               </div>
             </div>

@@ -10,6 +10,7 @@ import { createColorGroupKey, type ColorGroupCommonProps } from './utils';
 import { DEFAULT_LAYER_COLOR } from '../../../config/color-config';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
 import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface ColorGroupItemProps extends Pick<ColorGroupCommonProps, 
   'setExpandedColorGroups' | 'setColorPickerColorGroup' | 'setEditingColorGroup' | 
@@ -49,6 +50,7 @@ export function ColorGroupItem({
 
   layerItemProps
 }: ColorGroupItemProps) {
+  const iconSizes = useIconSizes();
 
   const representativeColor = scene.layers[layerNames[0]]?.color || DEFAULT_LAYER_COLOR;
 
@@ -142,9 +144,9 @@ export function ColorGroupItem({
             title={isExpanded ? "Σύμπτυξη" : "Ανάπτυξη"}
           >
             {isExpanded ? (
-              <ChevronDown className="w-4 h-4" />
+              <ChevronDown className={iconSizes.sm} />
             ) : (
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className={iconSizes.sm} />
             )}
           </button>
 
@@ -152,7 +154,7 @@ export function ColorGroupItem({
           <div className="relative">
             <button
               onClick={handleColorPickerToggle}
-              className={`w-4 h-4 rounded border border-gray-500 ${HOVER_BORDER_EFFECTS.BLUE} ${colorBgClass}`}
+              className={`${iconSizes.sm} rounded border border-gray-500 ${HOVER_BORDER_EFFECTS.BLUE} ${colorBgClass}`}
               title="Αλλαγή χρώματος Color Group"
             />
           </div>
@@ -187,11 +189,11 @@ export function ColorGroupItem({
             title={allVisible ? "Απόκρυψη Color Group" : "Εμφάνιση Color Group"}
           >
             {allVisible ? (
-              <Eye className="w-4 h-4" />
+              <Eye className={iconSizes.sm} />
             ) : someVisible ? (
-              <Eye className="w-4 h-4 opacity-50" />
+              <Eye className={`${iconSizes.sm} opacity-50`} />
             ) : (
-              <EyeOff className="w-4 h-4" />
+              <EyeOff className={iconSizes.sm} />
             )}
           </button>
           
@@ -201,7 +203,7 @@ export function ColorGroupItem({
             className={`p-1 text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT}`}
             title="Μετονομασία Color Group"
           >
-            <Edit2 className="w-4 h-4" />
+            <Edit2 className={iconSizes.sm} />
           </button>
           
           {/* Delete Button */}
@@ -210,7 +212,7 @@ export function ColorGroupItem({
             className={`p-1 text-red-600 ${HOVER_TEXT_EFFECTS.RED}`}
             title="Διαγραφή Color Group"
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 className={iconSizes.sm} />
           </button>
         </div>
       </div>

@@ -1,9 +1,12 @@
 import React from 'react';
 import { Layers, Eye, EyeOff, MoreVertical } from 'lucide-react';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { LayerListProps } from './types';
 
 export function LayerList({ layers, onToggleVisibility, onLayerAction }: LayerListProps) {
+  const iconSizes = useIconSizes();
+
   const getCategoryColor = (category: string) => {
     switch (category) {
       case 'electrical':
@@ -20,7 +23,7 @@ export function LayerList({ layers, onToggleVisibility, onLayerAction }: LayerLi
   if (layers.length === 0) {
     return (
       <div className="text-center py-8 text-gray-400">
-        <Layers className="w-8 h-8 mx-auto mb-2 opacity-50" />
+        <Layers className={`${iconSizes.xl} mx-auto mb-2 opacity-50`} />
         <p className="text-sm">Δεν βρέθηκαν layers</p>
         <p className="text-xs">Δημιουργήστε ένα νέο layer ή αλλάξτε τα φίλτρα</p>
       </div>
@@ -48,7 +51,7 @@ export function LayerList({ layers, onToggleVisibility, onLayerAction }: LayerLi
                 className={`p-1 text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} transition-colors`}
                 title={layer.visible ? 'Απόκρυψη' : 'Εμφάνιση'}
               >
-                {layer.visible ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                {layer.visible ? <Eye className={iconSizes.xs} /> : <EyeOff className={iconSizes.xs} />}
               </button>
               
               <button
@@ -56,7 +59,7 @@ export function LayerList({ layers, onToggleVisibility, onLayerAction }: LayerLi
                 className={`p-1 text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} transition-colors`}
                 title="Περισσότερες επιλογές"
               >
-                <MoreVertical className="w-3 h-3" />
+                <MoreVertical className={iconSizes.xs} />
               </button>
             </div>
           </div>

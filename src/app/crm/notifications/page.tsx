@@ -5,8 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Bell, CheckCheck, Filter } from 'lucide-react';
 import { useNotifications } from './useNotifications';
 import { NotificationCard } from './NotificationCard';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 export default function CrmNotificationsPage() {
+  const iconSizes = useIconSizes();
   const notifications = useNotifications();
 
   return (
@@ -16,18 +18,18 @@ export default function CrmNotificationsPage() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
-                <Bell className="w-6 h-6" />
+                <Bell className={iconSizes.lg} />
                 Κέντρο Ειδοποιήσεων
               </CardTitle>
               <CardDescription>Όλες οι ενημερώσεις σας σε ένα μέρος.</CardDescription>
             </div>
             <div className="flex items-center gap-2">
                 <Button variant="outline">
-                    <Filter className="w-4 h-4 mr-2"/>
+                    <Filter className={`${iconSizes.sm} mr-2`}/>
                     Φίλτρα
                 </Button>
                  <Button>
-                    <CheckCheck className="w-4 h-4 mr-2"/>
+                    <CheckCheck className={`${iconSizes.sm} mr-2`}/>
                     Όλες ως διαβασμένες
                 </Button>
             </div>

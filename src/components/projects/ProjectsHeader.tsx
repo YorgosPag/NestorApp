@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Building2, Filter } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { PageHeader } from '@/core/headers';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import type { ViewMode } from '@/core/headers';
@@ -33,6 +34,7 @@ export function ProjectsHeader({
   setShowFilters,
   projectCount,
 }: ProjectsHeaderProps) {
+  const iconSizes = useIconSizes();
   return (
     <PageHeader
       variant="sticky-rounded"
@@ -70,7 +72,7 @@ export function ProjectsHeader({
             }`}
             aria-label="Toggle filters"
           >
-            <Filter className="h-4 w-4" />
+            <Filter className={iconSizes.sm} />
           </button>
         ] : undefined
       }}

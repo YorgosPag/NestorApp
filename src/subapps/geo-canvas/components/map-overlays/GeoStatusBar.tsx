@@ -18,6 +18,7 @@
 
 import React from 'react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { GeoControlPoint } from '../../types';
 
 // ============================================================================
@@ -71,6 +72,7 @@ export const GeoStatusBar: React.FC<GeoStatusBarProps> = ({
   showAccuracyCircles,
   className = ''
 }) => {
+  const iconSizes = useIconSizes();
   const { t } = useTranslationLazy('geo-canvas');
 
   // ========================================================================
@@ -99,7 +101,7 @@ export const GeoStatusBar: React.FC<GeoStatusBarProps> = ({
       {/* Map Loading Status */}
       <div className="flex items-center space-x-2">
         <div
-          className={`w-2 h-2 rounded-full ${mapLoaded ? 'bg-green-400' : 'bg-yellow-400'}`}
+          className={`${iconSizes.xs} rounded-full ${mapLoaded ? 'bg-green-400' : 'bg-yellow-400'}`}
           aria-label={mapLoaded ? t('map.status.mapLoaded') : t('map.status.mapLoading')}
         />
         <span>{mapLoaded ? t('map.status.mapLoaded') : t('map.status.mapLoading')}</span>
@@ -108,7 +110,7 @@ export const GeoStatusBar: React.FC<GeoStatusBarProps> = ({
       {/* Transformation Status */}
       {isCalibrated && (
         <div className="flex items-center space-x-2">
-          <div className="w-2 h-2 rounded-full bg-blue-400" aria-label={t('map.status.transformationActive')} />
+          <div className={`${iconSizes.xs} rounded-full bg-blue-400`} aria-label={t('map.status.transformationActive')} />
           <span>{t('map.status.transformationActive')}</span>
         </div>
       )}
@@ -118,14 +120,14 @@ export const GeoStatusBar: React.FC<GeoStatusBarProps> = ({
         <>
           <div className="flex items-center space-x-2">
             <div
-              className={`w-2 h-2 rounded-full ${polygonStats.isDrawing ? 'bg-yellow-400' : 'bg-gray-400'}`}
+              className={`${iconSizes.xs} rounded-full ${polygonStats.isDrawing ? 'bg-yellow-400' : 'bg-gray-400'}`}
               aria-label={t('map.status.polygons')}
             />
             <span>{t('map.status.polygons')}: {polygonStats.totalPolygons}</span>
           </div>
           {polygonStats.isDrawing && (
             <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" aria-label={t('map.status.drawingActive')} />
+              <div className={`${iconSizes.xs} rounded-full bg-green-400 animate-pulse`} aria-label={t('map.status.drawingActive')} />
               <span>{t('map.status.drawingActive')}</span>
             </div>
           )}

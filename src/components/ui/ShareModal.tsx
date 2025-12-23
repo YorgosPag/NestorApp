@@ -13,6 +13,7 @@
 import React from 'react';
 import { Share2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { designSystem } from '@/lib/design-system';
 import { getSocialShareUrls, getPhotoSocialShareUrls, trackShareEvent } from '@/lib/share-utils';
 
@@ -53,6 +54,7 @@ export function ShareModal({
   // STATE MANAGEMENT - Simplified με κεντρικοποιημένα components
   // ============================================================================
 
+  const iconSizes = useIconSizes();
   const [showEmailForm, setShowEmailForm] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
 
@@ -220,10 +222,10 @@ export function ShareModal({
         {/* HEADER με Design System */}
         <DialogHeader className="text-center space-y-3" role="banner">
           <figure className={designSystem.cn(
-            "mx-auto w-12 h-12 rounded-full flex items-center justify-center",
+            `mx-auto ${iconSizes['2xl']} rounded-full flex items-center justify-center`,
             designSystem.getStatusColor('info', 'bg')
           )} role="img" aria-label="Εικονίδιο Κοινοποίησης">
-            <Share2 className="w-6 h-6 text-white" />
+            <Share2 className={`${iconSizes.lg} text-white`} />
           </figure>
 
           <DialogTitle className={designSystem.cn(

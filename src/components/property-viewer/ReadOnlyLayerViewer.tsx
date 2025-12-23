@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { CommonBadge } from '@/core/badges';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { 
   Layers, 
   Eye, 
@@ -96,6 +97,7 @@ function ReadOnlyLayerItem({
   onVisibilityChange,
   onOpacityChange
 }: ReadOnlyLayerItemProps) {
+  const iconSizes = useIconSizes();
   const categoryInfo = layer.metadata?.category ? getCategoryInfo(layer.metadata.category) : null;
 
   return (
@@ -108,10 +110,10 @@ function ReadOnlyLayerItem({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-4 w-4 p-0"
+                className={`${iconSizes.sm} p-0`}
                 onClick={onToggleExpand}
               >
-                {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                {isExpanded ? <ChevronDown className={iconSizes.xs} /> : <ChevronRight className={iconSizes.xs} />}
               </Button>
             )}
             
@@ -120,7 +122,7 @@ function ReadOnlyLayerItem({
                 <Tooltip>
                   <TooltipTrigger>
                     <div
-                      className="w-3 h-3 rounded-full flex-shrink-0"
+                      className={`${iconSizes.xs} rounded-full flex-shrink-0`}
                       style={layoutUtilities.dxf.colors.backgroundColor(categoryInfo.color)}
                     />
                   </TooltipTrigger>
@@ -164,10 +166,10 @@ function ReadOnlyLayerItem({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-6 w-6 p-0"
+                    className={`${iconSizes.md} p-0`}
                     onClick={() => onVisibilityChange(!visibilityState.isVisible)}
                   >
-                    {visibilityState.isVisible ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                    {visibilityState.isVisible ? <Eye className={iconSizes.xs} /> : <EyeOff className={iconSizes.xs} />}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -203,10 +205,10 @@ function ReadOnlyLayerItem({
                 {layer.elements.slice(0, 5).map((element) => (
                   <div key={element.id} className="flex items-center justify-between text-xs">
                     <span className="text-muted-foreground flex items-center gap-2">
-                      {element.type === 'property' && <Grid className="h-3 w-3" />}
-                      {element.type === 'annotation' && <Type className="h-3 w-3" />}
-                      {element.type === 'measurement' && <Ruler className="h-3 w-3" />}
-                      {element.type === 'line' && <PenTool className="h-3 w-3" />}
+                      {element.type === 'property' && <Grid className={iconSizes.xs} />}
+                      {element.type === 'annotation' && <Type className={iconSizes.xs} />}
+                      {element.type === 'measurement' && <Ruler className={iconSizes.xs} />}
+                      {element.type === 'line' && <PenTool className={iconSizes.xs} />}
                       {element.type} - {element.id.substring(0, 8)}...
                     </span>
                     <span className="text-xs text-muted-foreground">
@@ -242,6 +244,7 @@ export function ReadOnlyLayerViewer({
   showStatistics = true,
   maxHeight = "400px"
 }: ReadOnlyLayerViewerProps) {
+  const iconSizes = useIconSizes();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [expandedLayers, setExpandedLayers] = useState<Set<string>>(new Set());
@@ -390,8 +393,8 @@ export function ReadOnlyLayerViewer({
         onClick={onToggleCollapse}
         className={className}
       >
-        <Layers className="h-4 w-4" />
-        {!layerState.isConnected && <WifiOff className="h-3 w-3 ml-1 text-destructive" />}
+        <Layers className={iconSizes.sm} />
+        {!layerState.isConnected && <WifiOff className={`${iconSizes.xs} ml-1 text-destructive`} />}
       </Button>
     );
   }
@@ -401,11 +404,11 @@ export function ReadOnlyLayerViewer({
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm flex items-center gap-2">
-            <Layers className="h-4 w-4" />
+            <Layers className={iconSizes.sm} />
             Layers
             {onToggleCollapse && (
-              <Button variant="ghost" size="sm" onClick={onToggleCollapse} className="h-4 w-4 p-0 ml-1">
-                <ChevronUp className="h-3 w-3" />
+              <Button variant="ghost" size="sm" onClick={onToggleCollapse} className={`${iconSizes.sm} p-0 ml-1`}>
+                <ChevronUp className={iconSizes.xs} />
               </Button>
             )}
           </CardTitle>
@@ -416,9 +419,9 @@ export function ReadOnlyLayerViewer({
               <Tooltip>
                 <TooltipTrigger>
                   {layerState.isConnected ? (
-                    <Wifi className="h-4 w-4 text-green-500" />
+                    <Wifi className={`${iconSizes.sm} text-green-500`} />
                   ) : (
-                    <WifiOff className="h-4 w-4 text-destructive" />
+                    <WifiOff className={`${iconSizes.sm} text-destructive`} />
                   )}
                 </TooltipTrigger>
                 <TooltipContent>
@@ -441,7 +444,7 @@ export function ReadOnlyLayerViewer({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger>
-                  <Info className="h-4 w-4 text-muted-foreground" />
+                  <Info className={`${iconSizes.sm} text-muted-foreground`} />
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Λειτουργία προβολής μόνο</p>
@@ -459,7 +462,7 @@ export function ReadOnlyLayerViewer({
           <div className="space-y-2">
             {showSearch && (
               <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-3 w-3 text-muted-foreground" />
+                <Search className={`absolute left-2 top-2.5 ${iconSizes.xs} text-muted-foreground`} />
                 <Input
                   placeholder="Αναζήτηση layers..."
                   value={searchQuery}
@@ -480,7 +483,7 @@ export function ReadOnlyLayerViewer({
                     <SelectItem key={category} value={category}>
                       <div className="flex items-center gap-2">
                         <div
-                          className="w-3 h-3 rounded-full"
+                          className={`${iconSizes.xs} rounded-full`}
                           style={layoutUtilities.dxf.colors.backgroundColor(getCategoryInfo(category).color)}
                         />
                         {getCategoryInfo(category).name}
@@ -515,7 +518,7 @@ export function ReadOnlyLayerViewer({
         {layerState.isLoading && (
           <div className="text-center py-4 text-muted-foreground">
             <div className="flex items-center justify-center gap-2">
-              <div className="w-4 h-4 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin" />
+              <div className={`${iconSizes.sm} border-2 border-muted-foreground border-t-transparent rounded-full animate-spin`} />
               <span className="text-sm">Φόρτωση layers...</span>
             </div>
           </div>
@@ -531,7 +534,7 @@ export function ReadOnlyLayerViewer({
                     {category !== 'other' && getCategoryInfo(category) && (
                       <>
                         <div
-                          className="w-2 h-2 rounded-full"
+                          className={`${iconSizes.xs} rounded-full`}
                           style={layoutUtilities.dxf.colors.backgroundColor(getCategoryInfo(category).color)}
                         />
                         {getCategoryInfo(category).name}
@@ -562,7 +565,7 @@ export function ReadOnlyLayerViewer({
               
               {filteredLayers.length === 0 && !layerState.isLoading && (
                 <div className="text-center py-8 text-muted-foreground">
-                  <Layers className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <Layers className={`${iconSizes.xl} mx-auto mb-2 opacity-50`} />
                   <p className="text-sm">Δεν βρέθηκαν layers</p>
                   {layerState.isConnected ? (
                     <p className="text-xs">Περιμένετε να δημιουργηθούν layers από τους διαχειριστές</p>

@@ -6,6 +6,7 @@ import { Home, MapPin, SlidersHorizontal } from 'lucide-react';
 import { usePublicPropertyViewer } from '@/hooks/usePublicPropertyViewer';
 import { PageHeader } from '@/core/headers';
 import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 import { usePropertyGridFilters } from './hooks/usePropertyGridFilters';
 import { PropertyCard } from './components/PropertyCard';
@@ -16,6 +17,7 @@ import { ViewModeToggle } from './components/ViewModeToggle';
 import { AdvancedFiltersPanel } from './components/AdvancedFiltersPanel';
 
 export function PropertyGridView() {
+  const iconSizes = useIconSizes();
   const router = useRouter();
   const { properties, filters, setFilters } = usePublicPropertyViewer();
 
@@ -79,7 +81,7 @@ export function PropertyGridView() {
                   showFilters ? 'bg-blue-50 dark:bg-blue-900/50 border-blue-300 text-blue-600' : `border-gray-200 dark:border-border ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
                 }`}
               >
-                <SlidersHorizontal className="h-4 w-4" />
+                <SlidersHorizontal className={iconSizes.sm} />
                 <span className="font-medium">Φίλτρα</span>
               </button>
             ]
@@ -92,7 +94,7 @@ export function PropertyGridView() {
                 onClick={handleViewAllFloorPlan}
                 className={`px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg transition-all flex items-center gap-2 font-medium h-8 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
               >
-                <MapPin className="h-4 w-4" />
+                <MapPin className={iconSizes.sm} />
                 Προβολή σε Κάτοψη
               </button>
             ]
@@ -128,7 +130,7 @@ export function PropertyGridView() {
             </div>
           ) : (
             <div className="text-center py-12 px-4 sm:px-0">
-              <Home className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+              <Home className={`${iconSizes.xl2} text-gray-300 dark:text-gray-600 mx-auto mb-4`} />
               <h3 className="text-lg font-medium text-gray-900 dark:text-foreground mb-2">Δεν βρέθηκαν ακίνητα</h3>
               <p className="text-gray-500 dark:text-muted-foreground">Δοκιμάστε να αλλάξετε τα κριτήρια αναζήτησης</p>
             </div>
@@ -149,7 +151,7 @@ export function PropertyGridView() {
             onClick={handleViewAllFloorPlan}
             className={`px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg transition-all font-medium inline-flex items-center gap-2 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
           >
-            <MapPin className="h-5 w-5" />
+            <MapPin className={iconSizes.md} />
             Προβολή Κάτοψης Ορόφου
           </button>
         </div>

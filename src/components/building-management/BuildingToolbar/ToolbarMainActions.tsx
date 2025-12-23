@@ -15,6 +15,7 @@ import {
 import { ToolbarButton } from '@/components/ui/ToolbarButton';
 import { Plus, Edit, Trash2 } from "lucide-react";
 import { useTranslation } from "@/i18n";
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 interface ToolbarMainActionsProps {
@@ -23,6 +24,7 @@ interface ToolbarMainActionsProps {
 
 export function ToolbarMainActions({ selectedItemsCount }: ToolbarMainActionsProps) {
   const { t } = useTranslation('properties');
+  const iconSizes = useIconSizes();
   
   const handleNewBuilding = () => {
     console.log('Creating new building...');
@@ -43,7 +45,7 @@ export function ToolbarMainActions({ selectedItemsCount }: ToolbarMainActionsPro
         onClick={handleNewBuilding}
         className={INTERACTIVE_PATTERNS.SUCCESS_HOVER}
       >
-        <Plus className="w-4 h-4" />
+        <Plus className={iconSizes.sm} />
       </ToolbarButton>
 
       <ToolbarButton
@@ -52,7 +54,7 @@ export function ToolbarMainActions({ selectedItemsCount }: ToolbarMainActionsPro
         className={INTERACTIVE_PATTERNS.PRIMARY_HOVER}
         disabled={selectedItemsCount === 0}
       >
-        <Edit className="w-4 h-4" />
+        <Edit className={iconSizes.sm} />
       </ToolbarButton>
 
       <AlertDialog>
@@ -63,7 +65,7 @@ export function ToolbarMainActions({ selectedItemsCount }: ToolbarMainActionsPro
               className={INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}
               disabled={selectedItemsCount === 0}
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className={iconSizes.sm} />
             </ToolbarButton>
           </div>
         </AlertDialogTrigger>

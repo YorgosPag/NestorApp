@@ -4,18 +4,20 @@ import React from 'react';
 import { Calendar } from 'lucide-react';
 import type { ExtendedPropertyDetails } from '@/types/property-viewer';
 import { formatDate } from '@/lib/intl-utils'; // ✅ Using centralized function
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface PropertyDatesProps {
   dates: ExtendedPropertyDetails['dates'];
 }
 
 export function PropertyDates({ dates }: PropertyDatesProps) {
+  const iconSizes = useIconSizes();
   if (!dates) return null;
 
   return (
     <div className="space-y-1">
       <h4 className="text-xs font-medium flex items-center gap-1">
-        <Calendar className="h-3 w-3" />
+        <Calendar className={iconSizes.xs} />
         Ημερομηνίες
       </h4>
       <div className="space-y-1 text-xs text-muted-foreground">

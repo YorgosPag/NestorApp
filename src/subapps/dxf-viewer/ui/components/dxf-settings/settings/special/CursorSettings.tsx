@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useCursorSettings } from '../../../../../systems/cursor';
 import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import {
   getCursorPreviewBorderStyles,
@@ -17,6 +18,7 @@ import {
 type LineStyle = 'solid' | 'dashed' | 'dotted' | 'dash-dot';
 
 export function CursorSettings() {
+  const iconSizes = useIconSizes();
   // Αφαιρείται το tab state - όλες οι ρυθμίσεις θα εμφανίζονται μαζί
 
   // 🔺 REAL CURSOR SYSTEM INTEGRATION - Αντικατάσταση mock state
@@ -91,7 +93,7 @@ export function CursorSettings() {
                 }`}
               >
                 <div
-                  className="w-4 h-4 mx-auto rounded-full border-2"
+                  className={`${iconSizes.sm} mx-auto rounded-full border-2`}
                   style={getCursorPreviewBorderStyles(settings.cursor.color)}
                 ></div>
                 <span className="block mt-1">Κύκλος</span>
@@ -105,7 +107,7 @@ export function CursorSettings() {
                 }`}
               >
                 <div
-                  className="w-4 h-4 mx-auto border-2"
+                  className={`${iconSizes.sm} mx-auto border-2`}
                   style={getCursorPreviewBorderStyles(settings.cursor.color)}
                 ></div>
                 <span className="block mt-1">Τετράγωνο</span>
@@ -214,7 +216,7 @@ export function CursorSettings() {
                 onChange={(e) => handleCursorLineWidthChange(parseFloat(e.target.value))}
                 className="flex-1"
               />
-              <div className="w-12 text-xs bg-gray-600 text-white rounded px-2 py-1 text-center">{settings.cursor.line_width || 1}px</div>
+              <div className={`${iconSizes.xs} text-xs bg-gray-600 text-white rounded px-2 py-1 text-center`}>{settings.cursor.line_width || 1}px</div>
             </div>
             <div className="flex gap-1">
               {[1, 1.5, 2, 3, 4, 5].map(width => (
@@ -253,7 +255,7 @@ export function CursorSettings() {
                 onChange={(e) => handleCursorSizeChange(parseInt(e.target.value))}
                 className="flex-1"
               />
-              <div className="w-12 text-xs bg-gray-600 text-white rounded px-2 py-1 text-center">{settings.cursor.size}px</div>
+              <div className={`${iconSizes.xs} text-xs bg-gray-600 text-white rounded px-2 py-1 text-center`}>{settings.cursor.size}px</div>
             </div>
             <div className="flex gap-1">
               {[5, 10, 15, 25, 50].map(size => (
@@ -292,7 +294,7 @@ export function CursorSettings() {
                 onChange={(e) => handleCursorOpacityChange(parseFloat(e.target.value))}
                 className="flex-1"
               />
-              <div className="w-12 text-xs bg-gray-600 text-white rounded px-2 py-1 text-center">{Math.round(settings.cursor.opacity * 100)}%</div>
+              <div className={`${iconSizes.xs} text-xs bg-gray-600 text-white rounded px-2 py-1 text-center`}>{Math.round(settings.cursor.opacity * 100)}%</div>
             </div>
           </div>
 

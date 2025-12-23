@@ -6,6 +6,7 @@ import { AccordionSection, useAccordion } from '../shared/AccordionSection';
 import type { GripSettings } from '../../../../types/gripSettings';
 import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
 import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // SVG Icons για τα accordion sections
 const CogIcon = ({ className }: { className?: string }) => (
@@ -34,6 +35,7 @@ const AdjustmentsIcon = ({ className }: { className?: string }) => (
 );
 
 export function GripSettings() {
+  const iconSizes = useIconSizes();
   // 🎯 ΔΙΟΡΘΩΣΗ: Χρήση unified hook αντί για γενικό για override λειτουργικότητα
   const { settings: { gripSettings }, updateGripSettings, resetToDefaults } = useUnifiedGripPreview();
 
@@ -70,7 +72,7 @@ export function GripSettings() {
             id="grips-enabled"
             checked={gripSettings.enabled}
             onChange={(e) => updateSettings({ enabled: e.target.checked })}
-            className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
+            className={`${iconSizes.sm} text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2`}
           />
           <label
             htmlFor="grips-enabled"
@@ -91,7 +93,7 @@ export function GripSettings() {
         {/* 1. ΒΑΣΙΚΕΣ ΡΥΘΜΙΣΕΙΣ */}
         <AccordionSection
           title="Βασικές Ρυθμίσεις"
-          icon={<CogIcon className="w-4 h-4" />}
+          icon={<CogIcon className={iconSizes.sm} />}
           isOpen={isOpen('basic')}
           onToggle={() => toggleSection('basic')}
           disabled={false}
@@ -158,7 +160,7 @@ export function GripSettings() {
         {/* 2. ΧΡΩΜΑΤΑ GRIPS */}
         <AccordionSection
           title="Χρώματα Grips"
-          icon={<ColorSwatchIcon className="w-4 h-4" />}
+          icon={<ColorSwatchIcon className={iconSizes.sm} />}
           isOpen={isOpen('colors')}
           onToggle={() => toggleSection('colors')}
           disabled={false}
@@ -235,7 +237,7 @@ export function GripSettings() {
         {/* 3. ΤΥΠΟΙ GRIPS */}
         <AccordionSection
           title="Τύποι Grips"
-          icon={<ViewGridIcon className="w-4 h-4" />}
+          icon={<ViewGridIcon className={iconSizes.sm} />}
           isOpen={isOpen('types')}
           onToggle={() => toggleSection('types')}
           disabled={false}
@@ -278,7 +280,7 @@ export function GripSettings() {
         {/* 4. ΠΡΟΧΩΡΗΜΕΝΕΣ ΡΥΘΜΙΣΕΙΣ */}
         <AccordionSection
           title="Προχωρημένες Ρυθμίσεις"
-          icon={<AdjustmentsIcon className="w-4 h-4" />}
+          icon={<AdjustmentsIcon className={iconSizes.sm} />}
           isOpen={isOpen('advanced')}
           onToggle={() => toggleSection('advanced')}
           disabled={false}

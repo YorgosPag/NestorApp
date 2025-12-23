@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import type { Project } from '@/types/project';
 import { formatDate } from '@/lib/intl-utils';
 import { getDaysUntilCompletion } from '@/lib/project-utils';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 
 interface ProjectCardTimelineProps {
@@ -13,6 +14,7 @@ interface ProjectCardTimelineProps {
 }
 
 export function ProjectCardTimeline({ project }: ProjectCardTimelineProps) {
+  const iconSizes = useIconSizes();
   const daysUntilCompletion = getDaysUntilCompletion(project.completionDate);
 
   if (!project.completionDate) return null;
@@ -21,7 +23,7 @@ export function ProjectCardTimeline({ project }: ProjectCardTimelineProps) {
     <div className="px-6 pb-6 pt-2 border-t border-border/50">
       <div className="flex items-center justify-between text-xs">
         <div className="flex items-center gap-1 text-muted-foreground">
-          <Calendar className="w-3 h-3" />
+          <Calendar className={iconSizes.xs} />
           <span>Παράδοση:</span>
         </div>
         <div className="text-right">

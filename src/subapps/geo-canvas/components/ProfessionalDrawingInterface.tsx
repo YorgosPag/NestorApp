@@ -3,6 +3,7 @@
 import React, { useState, useCallback } from 'react';
 import { Upload, FileImage, FileText, Layers, Building, Check, X, Bell, BarChart, Settings } from 'lucide-react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { useCentralizedPolygonSystem } from '../systems/polygon-system';
 import { FloorPlanUploadModal } from '../floor-plan-system/components/FloorPlanUploadModal';
 import { PropertyStatusManager } from './PropertyStatusManager';
@@ -43,6 +44,7 @@ export function ProfessionalDrawingInterface({
   onFloorPlanUploaded,
   onRealEstateAlertCreated
 }: ProfessionalDrawingInterfaceProps) {
+  const iconSizes = useIconSizes();
   const { t, isLoading } = useTranslationLazy('geo-canvas');
   const [selectedTool, setSelectedTool] = useState<'upload' | 'polygon' | 'auto-detect' | 'property-manager' | 'monitoring-dashboard' | null>(null);
   // ✅ ENTERPRISE: Combine local and centralized drawing state
@@ -307,7 +309,7 @@ export function ProfessionalDrawingInterface({
               ${isDrawing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.ENHANCED}'}
             `}
           >
-            <Upload className="w-8 h-8 mb-2 text-green-600" />
+            <Upload className={`${iconSizes.lg} mb-2 text-green-600`} />
             <span className="text-sm font-medium">{t('hardcodedTexts.ui.upload')}</span>
             <span className="text-xs text-gray-500">Κάτοψη</span>
           </button>
@@ -326,7 +328,7 @@ export function ProfessionalDrawingInterface({
               ${actualIsDrawing && selectedTool !== 'polygon' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.ENHANCED}'}
             `}
           >
-            <Building className="w-8 h-8 mb-2 text-blue-600" />
+            <Building className={`${iconSizes.lg} mb-2 text-blue-600`} />
             <span className="text-sm font-medium">{t('drawingInterfaces.professional.tools.property')}</span>
             <span className="text-xs text-gray-500">{t('drawingInterfaces.professional.tools.propertyManual')}</span>
           </button>
@@ -345,7 +347,7 @@ export function ProfessionalDrawingInterface({
               ${(actualIsDrawing || !parserResult) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.ENHANCED}'}
             `}
           >
-            <Layers className="w-8 h-8 mb-2 text-purple-600" />
+            <Layers className={`${iconSizes.lg} mb-2 text-purple-600`} />
             <span className="text-sm font-medium">{t('hardcodedTexts.ui.autoDetect')}</span>
             <span className="text-xs text-gray-500">{t('drawingInterfaces.professional.tools.autoDetectAuto')}</span>
           </button>
@@ -364,7 +366,7 @@ export function ProfessionalDrawingInterface({
               ${isDrawing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.ENHANCED}'}
             `}
           >
-            <Building className="w-8 h-8 mb-2 text-orange-600" />
+            <Building className={`${iconSizes.lg} mb-2 text-orange-600`} />
             <span className="text-sm font-medium">{t('hardcodedTexts.ui.properties')}</span>
             <span className="text-xs text-gray-500">{t('hardcodedTexts.ui.status')}</span>
           </button>
@@ -383,7 +385,7 @@ export function ProfessionalDrawingInterface({
               ${isDrawing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.ENHANCED}'}
             `}
           >
-            <BarChart className="w-8 h-8 mb-2 text-blue-600" />
+            <BarChart className={`${iconSizes.lg} mb-2 text-blue-600`} />
             <span className="text-sm font-medium">{t('hardcodedTexts.ui.monitor')}</span>
             <span className="text-xs text-gray-500">{t('drawingInterfaces.professional.tools.monitoringMarket')}</span>
           </button>
@@ -396,7 +398,7 @@ export function ProfessionalDrawingInterface({
               onClick={handleComplete}
               className="flex-1 flex items-center justify-center gap-2 bg-green-500 text-white py-3 px-4 rounded-lg ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} transition-colors"
             >
-              <Check className="w-5 h-5" />
+              <Check className={iconSizes.md} />
               <span className="font-medium">Ολοκλήρωση</span>
             </button>
 
@@ -404,7 +406,7 @@ export function ProfessionalDrawingInterface({
               onClick={handleCancel}
               className="flex-1 flex items-center justify-center gap-2 bg-red-500 text-white py-3 px-4 rounded-lg ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} transition-colors"
             >
-              <X className="w-5 h-5" />
+              <X className={iconSizes.md} />
               <span className="font-medium">Ακύρωση</span>
             </button>
           </div>
@@ -417,7 +419,7 @@ export function ProfessionalDrawingInterface({
               onClick={handleAutoDetect}
               className="w-full flex items-center justify-center gap-2 bg-purple-500 text-white py-3 px-4 rounded-lg ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} transition-colors"
             >
-              <Layers className="w-5 h-5" />
+              <Layers className={iconSizes.md} />
               <span className="font-medium">Ανίχνευση Δωματίων</span>
             </button>
           </div>
@@ -513,7 +515,7 @@ export function ProfessionalDrawingInterface({
         <div className="mt-4 bg-white rounded-lg shadow-lg border border-gray-200 p-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              <BarChart className="w-5 h-5 text-blue-600" />
+              <BarChart className={`${iconSizes.md} text-blue-600`} />
               {t('realEstateMonitoring.title')}
             </h3>
             <button
@@ -523,7 +525,7 @@ export function ProfessionalDrawingInterface({
               }}
               className="text-gray-500 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}"
             >
-              <X className="w-5 h-5" />
+              <X className={iconSizes.md} />
             </button>
           </div>
 
@@ -561,7 +563,7 @@ export function ProfessionalDrawingInterface({
                   : 'bg-gray-50 border-gray-300 text-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT}'
               }`}
             >
-              <Settings className="w-4 h-4" />
+              <Settings className={iconSizes.sm} />
               <span className="text-sm font-medium">{t('realEstateMonitoring.actions.batchMode')}</span>
             </button>
 
@@ -574,7 +576,7 @@ export function ProfessionalDrawingInterface({
               disabled={polygons.length === 0}
               className="flex items-center justify-center gap-2 bg-green-500 text-white py-2 px-4 rounded-lg ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} transition-colors disabled:opacity-50"
             >
-              <Bell className="w-4 h-4" />
+              <Bell className={iconSizes.sm} />
               <span className="text-sm font-medium">{t('realEstateMonitoring.actions.monitorAll', { count: polygons.length })}</span>
             </button>
 
@@ -586,7 +588,7 @@ export function ProfessionalDrawingInterface({
               disabled={realEstateStats.totalMatches === 0}
               className="flex items-center justify-center gap-2 bg-gray-500 text-white py-2 px-4 rounded-lg ${HOVER_BACKGROUND_EFFECTS.MUTED} transition-colors disabled:opacity-50"
             >
-              <FileText className="w-4 h-4" />
+              <FileText className={iconSizes.sm} />
               <span className="text-sm font-medium">{t('realEstateMonitoring.actions.exportCsv')}</span>
             </button>
           </div>

@@ -6,8 +6,10 @@ import { Search, Plus } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { ContactsList } from './ContactsList';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 export function ContactsTab() {
+  const iconSizes = useIconSizes();
   const [filterType, setFilterType] = useState('all');
   
   return (
@@ -35,7 +37,7 @@ export function ContactsTab() {
           
           <div className="flex items-center gap-3">
             <div className="relative">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <Search className={`${iconSizes.sm} absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400`} />
               <input
                 type="text"
                 placeholder="Αναζήτηση επαφών..."
@@ -43,7 +45,7 @@ export function ContactsTab() {
               />
             </div>
             <button className={`px-4 py-2 bg-blue-600 text-white rounded-lg ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} flex items-center gap-2`}>
-              <Plus className="w-4 h-4" />
+              <Plus className={iconSizes.sm} />
               Νέα Επαφή
             </button>
           </div>

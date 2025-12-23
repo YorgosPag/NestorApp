@@ -7,7 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
+import { canvasUtilities } from '@/styles/design-tokens/utilities/canvas-utilities';
 
 export interface ContactSummary {
   id: string;
@@ -49,6 +51,7 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
   className,
   readonly = false
 }) => {
+  const iconSizes = useIconSizes();
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
@@ -287,7 +290,7 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
         onMouseEnter={() => setHighlightedIndex(index)}
       >
         <div className="flex items-start space-x-3">
-          <Icon className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+          <Icon className={`${iconSizes.md} text-muted-foreground mt-0.5 flex-shrink-0`} />
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between">
@@ -303,7 +306,7 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
               <div className="flex items-center space-x-2 mt-1 text-xs text-muted-foreground">
                 {contact.company && (
                   <>
-                    <Building2 className="h-3 w-3" />
+                    <Building2 className={iconSizes.xs} />
                     <span>{contact.company}</span>
                   </>
                 )}
@@ -320,13 +323,13 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
               <div className="flex items-center space-x-3 text-xs text-muted-foreground">
                 {contact.email && (
                   <div className="flex items-center space-x-1">
-                    <Mail className="h-3 w-3" />
+                    <Mail className={iconSizes.xs} />
                     <span className="truncate">{contact.email}</span>
                   </div>
                 )}
                 {contact.phone && (
                   <div className="flex items-center space-x-1">
-                    <Phone className="h-3 w-3" />
+                    <Phone className={iconSizes.xs} />
                     <span>{contact.phone}</span>
                   </div>
                 )}
@@ -387,17 +390,17 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
               type="button"
               onClick={clearSelection}
               className={cn(
-                "h-4 w-4 rounded-sm flex items-center justify-center text-muted-foreground",
+                `${iconSizes.sm} rounded-sm flex items-center justify-center text-muted-foreground`,
                 INTERACTIVE_PATTERNS.SUBTLE_HOVER,
                 TRANSITION_PRESETS.STANDARD_COLORS
               )}
               title="Καθαρισμός επιλογής"
             >
-              <X className="h-3 w-3" />
+              <X className={iconSizes.xs} />
             </button>
           )}
           <ChevronDown className={cn(
-            "h-4 w-4",
+            iconSizes.sm,
             TRANSITION_PRESETS.STANDARD_TRANSFORM,
             isOpen ? "rotate-180" : ""
           )} />
@@ -419,7 +422,7 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
           {/* Search Input */}
           <div className="p-3 border-b border-border">
             <div className="relative">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Search className={`absolute left-2 top-2.5 ${iconSizes.sm} text-muted-foreground`} />
               <Input
                 ref={inputRef}
                 value={searchQuery}
@@ -438,7 +441,7 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
           >
                   {isSearching ? (
                     <div className="p-4 text-center text-muted-foreground">
-                      <Loader2 className="h-6 w-6 mx-auto mb-2 animate-spin" />
+                      <Loader2 className={`${iconSizes.lg} mx-auto mb-2 animate-spin`} />
                       <span className="text-sm">Αναζήτηση...</span>
                     </div>
                   ) : searchResults.length > 0 ? (
@@ -452,7 +455,7 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
                     </>
                   ) : (
                     <div className="p-4 text-center text-muted-foreground">
-                      <Search className="h-6 w-6 mx-auto mb-2" />
+                      <Search className={`${iconSizes.lg} mx-auto mb-2`} />
                       <span className="text-sm">
                         {searchQuery ? 'Δεν βρέθηκαν αποτελέσματα' : 'Ξεκινήστε να πληκτρολογείτε για αναζήτηση'}
                       </span>

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { X, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -63,6 +64,7 @@ export const FloatingCardHeader: React.FC<FloatingCardHeaderProps> = ({
   cardClassName,
   variant = 'default'
 }) => {
+  const iconSizes = useIconSizes();
   const styles = headerVariants[variant];
   return (
     <Card
@@ -111,7 +113,7 @@ export const FloatingCardHeader: React.FC<FloatingCardHeaderProps> = ({
               className="p-1 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
               title="Hide dashboard"
             >
-              <X className="h-3 w-3" />
+              <X className={iconSizes.xs} />
             </button>
           )}
         </div>
@@ -144,7 +146,7 @@ export const PerformanceCardHeader: React.FC<Omit<FloatingCardHeaderProps, 'titl
   return (
     <FloatingCardHeader
       title={title}
-      icon={<div className="w-4 h-4 bg-blue-500 rounded" />}
+      icon={<div className={`${iconSizes.sm} bg-blue-500 rounded`} />}
       {...props}
     />
   );

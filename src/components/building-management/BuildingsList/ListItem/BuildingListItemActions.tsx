@@ -4,6 +4,7 @@ import React from 'react';
 import { Button } from "@/components/ui/button";
 import { useButtonPatterns } from '@/hooks/useButtonPatterns';
 import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,6 +32,7 @@ export function BuildingListItemActions({ isFavorite, onToggleFavorite, onEdit }
   // 🏢 ENTERPRISE: Centralized systems
   const buttonPatterns = useButtonPatterns();
   const colors = useSemanticColors();
+  const iconSizes = useIconSizes();
 
   return (
     <div className={`absolute top-2 right-2 flex items-center gap-1 opacity-0 z-10 ${GROUP_HOVER_PATTERNS.SHOW_ON_GROUP} ${TRANSITION_PRESETS.OPACITY}`}>
@@ -43,7 +45,7 @@ export function BuildingListItemActions({ isFavorite, onToggleFavorite, onEdit }
           >
             <Star
               className={cn(
-                "w-4 h-4",
+                iconSizes.sm,
                 isFavorite
                   ? `${colors.text.warning} fill-yellow-500`
                   : `${HOVER_TEXT_EFFECTS.YELLOW}`
@@ -59,15 +61,15 @@ export function BuildingListItemActions({ isFavorite, onToggleFavorite, onEdit }
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button {...buttonPatterns.icons.iconSmall} onMouseDown={(e) => e.stopPropagation()}>
-            <MoreVertical className="w-3 h-3" />
+            <MoreVertical className={iconSizes.xs} />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem><Eye className="w-4 h-4 mr-2" />Προβολή</DropdownMenuItem>
-          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }}><Edit className="w-4 h-4 mr-2" />Επεξεργασία</DropdownMenuItem>
+          <DropdownMenuItem><Eye className={`${iconSizes.sm} mr-2`} />Προβολή</DropdownMenuItem>
+          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }}><Edit className={`${iconSizes.sm} mr-2`} />Επεξεργασία</DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}>
-            <Star className="w-4 h-4 mr-2" />
+            <Star className={`${iconSizes.sm} mr-2`} />
             {isFavorite ? 'Αφαίρεση από αγαπημένα' : 'Προσθήκη στα αγαπημένα'}
           </DropdownMenuItem>
         </DropdownMenuContent>

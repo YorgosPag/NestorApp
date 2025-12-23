@@ -6,12 +6,14 @@ import { type Photo } from '@/components/generic/utils/PhotoItem';
 import { EnterprisePhotoUpload } from '@/components/ui/EnterprisePhotoUpload';
 import { PhotoGrid } from '@/components/building-management/tabs/PhotosTabContent/PhotoGrid';
 import { Camera, Image, Upload, Calendar } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface StoragePhotosTabProps {
   storage: Storage;
 }
 
 export function StoragePhotosTab({ storage }: StoragePhotosTabProps) {
+  const iconSizes = useIconSizes();
   // Γεννάμε πραγματικές φωτογραφίες βάση των στοιχείων της αποθήκης
   const initialPhotos: Photo[] = [
     {
@@ -92,7 +94,7 @@ export function StoragePhotosTab({ storage }: StoragePhotosTabProps) {
       {/* Στατιστικά Φωτογραφιών */}
       <section className="p-6">
         <h3 className="font-semibold mb-4 flex items-center gap-2">
-          <Camera className="h-5 w-5" />
+          <Camera className={iconSizes.md} />
           Επισκόπηση Φωτογραφιών
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -118,7 +120,7 @@ export function StoragePhotosTab({ storage }: StoragePhotosTabProps) {
       {/* Upload Περιοχή */}
       <div className="bg-white rounded-lg border p-6">
         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <Upload className="h-5 w-5" />
+          <Upload className={iconSizes.md} />
           Φωτογραφίες Αποθήκης {storage.name}
         </h3>
         <div className="mb-4 p-4 bg-accent/50 rounded-lg">
@@ -157,7 +159,7 @@ export function StoragePhotosTab({ storage }: StoragePhotosTabProps) {
         {/* Όλες οι Φωτογραφίες */}
         <section>
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <Image className="h-5 w-5" />
+            <Image className={iconSizes.md} />
             Όλες οι Φωτογραφίες ({photos.length})
           </h3>
           <PhotoGrid photos={photos} />
@@ -167,7 +169,7 @@ export function StoragePhotosTab({ storage }: StoragePhotosTabProps) {
         {photosByCategory.exterior.length > 0 && (
           <section>
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Image className="h-5 w-5 text-blue-600" />
+              <Image className={`${iconSizes.md} text-blue-600`} />
               Εξωτερικές Φωτογραφίες ({photosByCategory.exterior.length})
             </h3>
             <PhotoGrid photos={photosByCategory.exterior} />
@@ -178,7 +180,7 @@ export function StoragePhotosTab({ storage }: StoragePhotosTabProps) {
         {photosByCategory.interior.length > 0 && (
           <section>
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Image className="h-5 w-5 text-green-600" />
+              <Image className={`${iconSizes.md} text-green-600`} />
               Εσωτερικές Φωτογραφίες ({photosByCategory.interior.length})
             </h3>
             <PhotoGrid photos={photosByCategory.interior} />
@@ -189,7 +191,7 @@ export function StoragePhotosTab({ storage }: StoragePhotosTabProps) {
         {photosByCategory.maintenance.length > 0 && (
           <section>
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Image className="h-5 w-5 text-orange-600" />
+              <Image className={`${iconSizes.md} text-orange-600`} />
               Συντήρηση & Εργασίες ({photosByCategory.maintenance.length})
             </h3>
             <PhotoGrid photos={photosByCategory.maintenance} />

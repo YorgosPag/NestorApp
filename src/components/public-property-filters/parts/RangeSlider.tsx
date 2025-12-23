@@ -3,6 +3,7 @@ import React from "react";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import type { RangeSliderProps } from "../types";
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 export function RangeSlider({
   label,
@@ -15,11 +16,12 @@ export function RangeSlider({
   formatLeft,
   formatRight,
 }: RangeSliderProps) {
+  const iconSizes = useIconSizes();
   const [left, right] = value;
   return (
     <div className="space-y-2">
       <Label className="text-sm font-medium flex items-center gap-2">
-        {Icon ? <Icon className="w-4 h-4" /> : null}
+        {Icon ? <Icon className={iconSizes.sm} /> : null}
         {label}
       </Label>
       <div className="px-2">

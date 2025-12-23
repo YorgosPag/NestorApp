@@ -15,6 +15,7 @@ import {
   Circle,
   Activity
 } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface StorageHistoryTabProps {
   storage: Storage;
@@ -72,6 +73,7 @@ function getStatusIcon(status: HistoryEvent['status']) {
 }
 
 export function StorageHistoryTab({ storage }: StorageHistoryTabProps) {
+  const iconSizes = useIconSizes();
   // Γεννάμε πραγματικό ιστορικό βάση των στοιχείων της αποθήκης
   const historyEvents: HistoryEvent[] = [
     {
@@ -174,7 +176,7 @@ export function StorageHistoryTab({ storage }: StorageHistoryTabProps) {
       {/* Στατιστικά Ιστορικού */}
       <section>
         <h3 className="font-semibold mb-4 flex items-center gap-2">
-          <Activity className="h-5 w-5" />
+          <Activity className={iconSizes.md} />
           Επισκόπηση Ιστορικού
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -204,7 +206,7 @@ export function StorageHistoryTab({ storage }: StorageHistoryTabProps) {
       {/* Timeline Γεγονότων */}
       <section>
         <h3 className="font-semibold mb-4 flex items-center gap-2">
-          <Clock className="h-5 w-5" />
+          <Clock className={iconSizes.md} />
           Χρονολόγιο Γεγονότων
         </h3>
         <div className="space-y-4">
@@ -222,8 +224,8 @@ export function StorageHistoryTab({ storage }: StorageHistoryTabProps) {
 
                 <div className="flex gap-4">
                   {/* Icon */}
-                  <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${getEventColor(event.type)}`}>
-                    <EventIcon className="h-5 w-5" />
+                  <div className={`flex-shrink-0 ${iconSizes.xl2} rounded-full flex items-center justify-center ${getEventColor(event.type)}`}>
+                    <EventIcon className={iconSizes.md} />
                   </div>
 
                   {/* Content */}
@@ -235,7 +237,7 @@ export function StorageHistoryTab({ storage }: StorageHistoryTabProps) {
                           <p className="text-sm text-muted-foreground mt-1">{event.description}</p>
                         </div>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground ml-4">
-                          <StatusIcon className="h-3 w-3" />
+                          <StatusIcon className={iconSizes.xs} />
                           {event.status === 'completed' ? 'Ολοκληρώθηκε' :
                            event.status === 'in_progress' ? 'Σε εξέλιξη' :
                            event.status === 'pending' ? 'Εκκρεμές' : 'Ακυρώθηκε'}
@@ -245,12 +247,12 @@ export function StorageHistoryTab({ storage }: StorageHistoryTabProps) {
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <div className="flex items-center gap-4">
                           <span className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
+                            <Calendar className={iconSizes.xs} />
                             {formatDate(event.date.toISOString())}
                           </span>
                           {event.actor && (
                             <span className="flex items-center gap-1">
-                              <User className="h-3 w-3" />
+                              <User className={iconSizes.xs} />
                               {event.actor}
                             </span>
                           )}

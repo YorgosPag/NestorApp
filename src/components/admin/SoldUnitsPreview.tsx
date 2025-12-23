@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Eye, EyeOff, RefreshCw, Home } from 'lucide-react';
 import { ContactsService } from '@/services/contacts.service';
 import { UNIT_SALE_STATUS_LABELS, UNIT_SALE_STATUS } from '@/core/status/StatusConstants';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface Unit {
   id: string;
@@ -30,6 +31,7 @@ interface ContactLookup {
 }
 
 export function SoldUnitsPreview() {
+  const iconSizes = useIconSizes();
   const [units, setUnits] = useState<Unit[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -146,7 +148,7 @@ export function SoldUnitsPreview() {
                 <p className="text-sm text-muted-foreground">Σύνολο Units</p>
                 <p className="text-2xl font-bold">{units.length}</p>
               </div>
-              <Home className="w-8 h-8 text-muted-foreground" />
+              <Home className={`${iconSizes.xl} text-muted-foreground`} />
             </div>
           </CardContent>
         </Card>
@@ -201,7 +203,7 @@ export function SoldUnitsPreview() {
                 size="sm"
                 onClick={() => setShowAll(!showAll)}
               >
-                {showAll ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
+                {showAll ? <EyeOff className={`${iconSizes.sm} mr-2`} /> : <Eye className={`${iconSizes.sm} mr-2`} />}
                 {showAll ? `Μόνο ${process.env.NEXT_PUBLIC_PRIMARY_PROJECT_NAME || 'Main Project'}` : 'Όλα τα Units'}
               </Button>
               <Button
@@ -211,9 +213,9 @@ export function SoldUnitsPreview() {
                 disabled={loading}
               >
                 {loading ? (
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  <RefreshCw className={`${iconSizes.sm} mr-2 animate-spin`} />
                 ) : (
-                  <RefreshCw className="w-4 h-4 mr-2" />
+                  <RefreshCw className={`${iconSizes.sm} mr-2`} />
                 )}
                 Ανανέωση
               </Button>

@@ -8,6 +8,7 @@
 import React, { useState, useCallback } from 'react';
 import { AlertTriangle, Settings, Bell, Plus, Map } from 'lucide-react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
 
 // Core Alert Engine Integration
@@ -41,6 +42,7 @@ export function AlertManagementPanel({
   onClose
 }: AlertManagementPanelProps) {
   const { t } = useTranslationLazy('geo-canvas');
+  const iconSizes = useIconSizes();
   const [activeTab, setActiveTab] = useState<'create' | 'manage' | 'preferences'>('create');
 
   // Alert Engine Integration
@@ -246,7 +248,7 @@ export function AlertManagementPanel({
       {/* Status Footer */}
       <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 rounded-b-lg">
         <div className="flex items-center text-sm text-gray-600">
-          <div className={`w-2 h-2 rounded-full mr-2 ${isInitialized ? 'bg-green-500' : 'bg-red-500'}`}></div>
+          <div className={`${iconSizes.xs} rounded-full mr-2 ${isInitialized ? 'bg-green-500' : 'bg-red-500'}`}></div>
           Alert Engine: {isInitialized ? 'Connected' : 'Disconnected'}
         </div>
       </div>

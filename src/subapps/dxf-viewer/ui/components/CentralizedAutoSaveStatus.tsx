@@ -12,6 +12,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 // 🔄 MIGRATED (2025-10-09): Phase 3.2 - Direct Enterprise (no adapter)
 import { useDxfSettings } from '../../settings-provider';
 import {
@@ -44,6 +45,7 @@ function useDxfSettingsSafe() {
 }
 
 export function CentralizedAutoSaveStatus() {
+  const iconSizes = useIconSizes();
   const dxfSettings = useDxfSettingsSafe();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -82,13 +84,13 @@ export function CentralizedAutoSaveStatus() {
   const getStatusIcon = () => {
     if (isAutoSaving) {
       return (
-        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500"></div>
+        <div className={`animate-spin rounded-full ${iconSizes.xs} border-b-2 border-blue-500`}></div>
       );
     }
 
     if (settings.saveStatus === 'saved') {
       return (
-        <svg className="h-3 w-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className={`${iconSizes.xs} text-green-500`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
         </svg>
       );
@@ -96,14 +98,14 @@ export function CentralizedAutoSaveStatus() {
 
     if (settings.saveStatus === 'error') {
       return (
-        <svg className="h-3 w-3 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className={`${iconSizes.xs} text-red-500`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
         </svg>
       );
     }
 
     return (
-      <svg className="h-3 w-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className={`${iconSizes.xs} text-gray-400`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
       </svg>
     );
@@ -212,6 +214,7 @@ export function CentralizedAutoSaveStatus() {
  * Compact version
  */
 export function CentralizedAutoSaveStatusCompact() {
+  const iconSizes = useIconSizes();
   const dxfSettings = useDxfSettingsSafe();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -245,14 +248,14 @@ export function CentralizedAutoSaveStatusCompact() {
 
   const getIcon = () => {
     if (isAutoSaving) {
-      return <div className="animate-spin rounded-full h-2 w-2 border border-blue-500 border-t-transparent"></div>;
+      return <div className={`animate-spin rounded-full ${iconSizes.xxs} border border-blue-500 border-t-transparent`}></div>;
     }
 
     if (settings.saveStatus === 'error') {
-      return <div className="h-2 w-2 rounded-full bg-red-500"></div>;
+      return <div className={`${iconSizes.xxs} rounded-full bg-red-500`}></div>;
     }
 
-    return <div className="h-2 w-2 rounded-full bg-green-500"></div>;
+    return <div className={`${iconSizes.xxs} rounded-full bg-green-500`}></div>;
   };
 
   const getTooltip = () => {
@@ -276,7 +279,7 @@ export function CentralizedAutoSaveStatusCompact() {
 
   return (
     <div
-      className={`flex items-center justify-center w-4 h-4 relative ${getCompactZIndexClass()}`}
+      className={`flex items-center justify-center ${iconSizes.sm} relative ${getCompactZIndexClass()}`}
       style={centralizedAutoSaveStatusStyles.compactContainer}
       title={getCompactTooltipText(isAutoSaving, settings.saveStatus)}
       {...getStatusContainerProps()}

@@ -4,10 +4,12 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Search, MapPin, Home, Filter, TrendingUp, Building, ArrowRight, ChevronDown, Star, Users, Shield } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS, GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
 
 export function LandingPage() {
+  const iconSizes = useIconSizes();
   const { t } = useTranslation('landing');
   const router = useRouter();
   const [searchType, setSearchType] = useState('');
@@ -92,7 +94,7 @@ export function LandingPage() {
                     <option value="Μεζονέτα">{t('search.types.maisonette')}</option>
                     <option value="Αποθήκη">{t('search.types.storage')}</option>
                   </select>
-                  <ChevronDown aria-hidden="true" className="absolute right-3 bottom-3.5 h-5 w-5 text-gray-400 pointer-events-none" />
+                  <ChevronDown aria-hidden="true" className={`absolute right-3 bottom-3.5 ${iconSizes.md} text-gray-400 pointer-events-none`} />
                 </fieldset>
 
                 {/* Location */}
@@ -101,7 +103,7 @@ export function LandingPage() {
                     {t('search.location')}
                   </label>
                   <div className="relative">
-                    <MapPin className="absolute left-3 top-3.5 h-5 w-5 text-gray-400" />
+                    <MapPin className={`absolute left-3 top-3.5 ${iconSizes.md} text-gray-400`} />
                     <input
                       id="search-location"
                       aria-label={t('search.location')}
@@ -132,7 +134,7 @@ export function LandingPage() {
                       </option>
                     ))}
                   </select>
-                  <ChevronDown aria-hidden="true" className="absolute right-3 bottom-3.5 h-5 w-5 text-gray-400 pointer-events-none" />
+                  <ChevronDown aria-hidden="true" className={`absolute right-3 bottom-3.5 ${iconSizes.md} text-gray-400 pointer-events-none`} />
                 </fieldset>
 
                 {/* Area Range */}
@@ -160,7 +162,7 @@ export function LandingPage() {
                       {process.env.NEXT_PUBLIC_AREA_RANGE_3_MAX || '150'}+ m²
                     </option>
                   </select>
-                  <ChevronDown aria-hidden="true" className="absolute right-3 bottom-3.5 h-5 w-5 text-gray-400 pointer-events-none" />
+                  <ChevronDown aria-hidden="true" className={`absolute right-3 bottom-3.5 ${iconSizes.md} text-gray-400 pointer-events-none`} />
                 </fieldset>
               </fieldset>
 
@@ -168,7 +170,7 @@ export function LandingPage() {
                 type="submit"
                 className={`w-full mt-6 px-6 py-3 ${GRADIENT_HOVER_EFFECTS.PRIMARY_BUTTON} flex items-center justify-center gap-2 ${TRANSITION_PRESETS.STANDARD_ALL}`}
               >
-                <Search className="h-5 w-5" />
+                <Search className={iconSizes.md} />
                 Αναζήτηση Ακινήτων
               </button>
             </form>
@@ -185,7 +187,7 @@ export function LandingPage() {
                 Μεζονέτες
               </Link>
               <Link href="/properties?view=floorplan" className={`px-4 py-2 bg-white/80 dark:bg-gray-800/50 dark:border dark:border-gray-700 backdrop-blur text-sm font-medium text-blue-600 dark:text-blue-400 rounded-full flex items-center gap-1 ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`}>
-                <MapPin className="h-4 w-4" />
+                <MapPin className={iconSizes.sm} />
                 Δείτε σε Κάτοψη
               </Link>
             </nav>
@@ -232,8 +234,8 @@ export function LandingPage() {
           <ul className="grid md:grid-cols-3 gap-8">
             <li>
               <article className={`bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm ${INTERACTIVE_PATTERNS.CARD_STANDARD}`}>
-                <figure className="w-12 h-12 bg-blue-100 dark:bg-blue-900/50 rounded-lg flex items-center justify-center mb-4">
-                  <MapPin className="h-6 w-6 text-blue-600" />
+                <figure className={`${iconSizes.xl2} bg-blue-100 dark:bg-blue-900/50 rounded-lg flex items-center justify-center mb-4`}>
+                  <MapPin className={`${iconSizes.lg} text-blue-600`} />
                 </figure>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
                 Διαδραστική Κάτοψη
@@ -246,8 +248,8 @@ export function LandingPage() {
 
             <li>
               <article className={`bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm ${INTERACTIVE_PATTERNS.CARD_STANDARD}`}>
-                <figure className="w-12 h-12 bg-purple-100 dark:bg-purple-900/50 rounded-lg flex items-center justify-center mb-4">
-                  <Shield className="h-6 w-6 text-purple-600" />
+                <figure className={`${iconSizes.xl2} bg-purple-100 dark:bg-purple-900/50 rounded-lg flex items-center justify-center mb-4`}>
+                  <Shield className={`${iconSizes.lg} text-purple-600`} />
                 </figure>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
                 Εγγυημένη Ποιότητα
@@ -260,8 +262,8 @@ export function LandingPage() {
 
             <li>
               <article className={`bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm ${INTERACTIVE_PATTERNS.CARD_STANDARD}`}>
-                <figure className="w-12 h-12 bg-green-100 dark:bg-green-900/50 rounded-lg flex items-center justify-center mb-4">
-                  <Users className="h-6 w-6 text-green-600" />
+                <figure className={`${iconSizes.xl2} bg-green-100 dark:bg-green-900/50 rounded-lg flex items-center justify-center mb-4`}>
+                  <Users className={`${iconSizes.lg} text-green-600`} />
                 </figure>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
                 Προσωπική Εξυπηρέτηση
@@ -292,7 +294,7 @@ export function LandingPage() {
             <li>
               <article className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden cursor-pointer ${INTERACTIVE_PATTERNS.CARD_ENHANCED}`} onClick={() => router.push('/properties')}>
               <figure className="h-48 bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
-                <Home className="h-16 w-16 text-white" aria-hidden="true" />
+                <Home className={`${iconSizes.huge} text-white`} aria-hidden="true" />
               </figure>
               <div className="p-6">
                 <div className="flex justify-between items-start mb-2">
@@ -304,11 +306,11 @@ export function LandingPage() {
                 <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-2">€65.000</p>
                 <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">35 m² • 1ος όροφος</p>
                 <div className="flex items-center gap-1">
-                  <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                  <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                  <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                  <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                  <Star className="h-4 w-4 text-gray-300 dark:text-gray-600" />
+                  <Star className={`${iconSizes.sm} text-yellow-500 fill-current`} />
+                  <Star className={`${iconSizes.sm} text-yellow-500 fill-current`} />
+                  <Star className={`${iconSizes.sm} text-yellow-500 fill-current`} />
+                  <Star className={`${iconSizes.sm} text-yellow-500 fill-current`} />
+                  <Star className={`${iconSizes.sm} text-gray-300 dark:text-gray-600`} />
                   <span className="text-sm text-gray-600 dark:text-gray-400 ml-2">4.0</span>
                 </div>
               </div>
@@ -319,7 +321,7 @@ export function LandingPage() {
             <li>
               <article className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden cursor-pointer ${INTERACTIVE_PATTERNS.CARD_ENHANCED}`} onClick={() => router.push('/properties')}>
                 <figure className="h-48 bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center">
-                  <Building className="h-16 w-16 text-white" aria-hidden="true" />
+                  <Building className={`${iconSizes.huge} text-white`} aria-hidden="true" />
                 </figure>
               <div className="p-6">
                 <div className="flex justify-between items-start mb-2">
@@ -331,11 +333,11 @@ export function LandingPage() {
                 <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-2">€145.000</p>
                 <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">75 m² • 2 υπνοδωμάτια</p>
                 <div className="flex items-center gap-1">
-                  <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                  <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                  <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                  <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                  <Star className="h-4 w-4 text-yellow-500 fill-current" />
+                  <Star className={`${iconSizes.sm} text-yellow-500 fill-current`} />
+                  <Star className={`${iconSizes.sm} text-yellow-500 fill-current`} />
+                  <Star className={`${iconSizes.sm} text-yellow-500 fill-current`} />
+                  <Star className={`${iconSizes.sm} text-yellow-500 fill-current`} />
+                  <Star className={`${iconSizes.sm} text-yellow-500 fill-current`} />
                   <span className="text-sm text-gray-600 dark:text-gray-400 ml-2">5.0</span>
                 </div>
               </div>
@@ -346,7 +348,7 @@ export function LandingPage() {
             <li>
               <article className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden cursor-pointer ${INTERACTIVE_PATTERNS.CARD_ENHANCED}`} onClick={() => router.push('/properties')}>
                 <figure className="h-48 bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
-                  <TrendingUp className="h-16 w-16 text-white" aria-hidden="true" />
+                  <TrendingUp className={`${iconSizes.huge} text-white`} aria-hidden="true" />
                 </figure>
               <div className="p-6">
                 <div className="flex justify-between items-start mb-2">
@@ -358,11 +360,11 @@ export function LandingPage() {
                 <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-2">€280.000</p>
                 <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">145 m² • 3 υπνοδωμάτια</p>
                 <div className="flex items-center gap-1">
-                  <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                  <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                  <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                  <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                  <Star className="h-4 w-4 text-gray-300 dark:text-gray-600" />
+                  <Star className={`${iconSizes.sm} text-yellow-500 fill-current`} />
+                  <Star className={`${iconSizes.sm} text-yellow-500 fill-current`} />
+                  <Star className={`${iconSizes.sm} text-yellow-500 fill-current`} />
+                  <Star className={`${iconSizes.sm} text-yellow-500 fill-current`} />
+                  <Star className={`${iconSizes.sm} text-gray-300 dark:text-gray-600`} />
                   <span className="text-sm text-gray-600 dark:text-gray-400 ml-2">4.5</span>
                 </div>
               </div>
@@ -376,7 +378,7 @@ export function LandingPage() {
               className={`inline-flex items-center gap-2 px-8 py-3 ${GRADIENT_HOVER_EFFECTS.PRIMARY_BUTTON} ${TRANSITION_PRESETS.STANDARD_ALL}`}
             >
               Δείτε Όλα τα Ακίνητα
-              <ArrowRight className="h-5 w-5" />
+              <ArrowRight className={iconSizes.md} />
             </Link>
           </footer>
         </div>
@@ -402,7 +404,7 @@ export function LandingPage() {
               href="/properties?view=floorplan"
               className={`px-8 py-3 bg-transparent border-2 border-white text-white font-semibold rounded-lg flex items-center justify-center gap-2 ${INTERACTIVE_PATTERNS.BUTTON_OUTLINE}`}
             >
-              <MapPin className="h-5 w-5" />
+              <MapPin className={iconSizes.md} />
               Προβολή σε Κάτοψη
             </Link>
           </nav>

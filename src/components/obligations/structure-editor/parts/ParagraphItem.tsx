@@ -4,6 +4,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { GripVertical, Edit3, Save, X, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ObligationParagraph } from '@/types/obligations';
@@ -34,6 +35,8 @@ export function ParagraphItem({
   dragState,
   handlers,
 }: ParagraphItemProps) {
+  const iconSizes = useIconSizes();
+
   return (
     <div
       draggable={!readOnly}
@@ -46,7 +49,7 @@ export function ParagraphItem({
         dragState?.dragId === paragraph.id && "opacity-50"
       )}
     >
-      {!readOnly && <GripVertical className="h-4 w-4 text-muted-foreground cursor-move opacity-0 group-hover:opacity-100 mt-1" />}
+      {!readOnly && <GripVertical className={`${iconSizes.sm} text-muted-foreground cursor-move opacity-0 group-hover:opacity-100 mt-1`} />}
       <Badge variant="outline" className="text-xs mt-1 min-w-6">{paragraph.number}</Badge>
       <div className="flex-1 space-y-2">
         {isEditing ? (
@@ -59,8 +62,8 @@ export function ParagraphItem({
               className="text-sm"
             />
             <div className="flex items-center gap-2">
-              <Button size="sm" onClick={handlers.stopEditing}><Save className="h-3 w-3 mr-1" />Αποθήκευση</Button>
-              <Button size="sm" variant="outline" onClick={handlers.stopEditing}><X className="h-3 w-3" /></Button>
+              <Button size="sm" onClick={handlers.stopEditing}><Save className={`${iconSizes.xs} mr-1`} />Αποθήκευση</Button>
+              <Button size="sm" variant="outline" onClick={handlers.stopEditing}><X className={iconSizes.xs} /></Button>
             </div>
           </div>
         ) : (
@@ -71,8 +74,8 @@ export function ParagraphItem({
       </div>
       {!readOnly && !isEditing && (
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
-          <Button variant="ghost" size="sm" onClick={() => handlers.startEditing('paragraph', paragraph.id)} className="h-7 px-2"><Edit3 className="h-3 w-3" /></Button>
-          <Button variant="ghost" size="sm" onClick={() => handlers.deleteParagraph(sectionId, articleId, paragraph.id)} className="h-7 px-2 text-destructive hover:text-destructive/80"><Trash2 className="h-3 w-3" /></Button>
+          <Button variant="ghost" size="sm" onClick={() => handlers.startEditing('paragraph', paragraph.id)} className="h-7 px-2"><Edit3 className={iconSizes.xs} /></Button>
+          <Button variant="ghost" size="sm" onClick={() => handlers.deleteParagraph(sectionId, articleId, paragraph.id)} className="h-7 px-2 text-destructive hover:text-destructive/80"><Trash2 className={iconSizes.xs} /></Button>
         </div>
       )}
     </div>

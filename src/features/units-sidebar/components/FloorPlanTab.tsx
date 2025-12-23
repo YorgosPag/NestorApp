@@ -6,6 +6,7 @@ import type { Property } from '@/types/property-viewer';
 import type { FloorData } from '../types';
 import { FloorplanViewerTab } from '@/components/projects/tabs/FloorplanViewerTab';
 import { useUnitFloorplans } from '@/hooks/useUnitFloorplans';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface FloorPlanTabProps {
     selectedUnit: Property | null;
@@ -20,7 +21,8 @@ interface FloorPlanTabProps {
 export function FloorPlanTab({
     selectedUnit,
 }: FloorPlanTabProps) {
-    
+    const iconSizes = useIconSizes();
+
     // Load unit floorplan from Firestore
     const {
         unitFloorplan,
@@ -33,7 +35,7 @@ export function FloorPlanTab({
     if (!selectedUnit) {
         return (
             <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-8">
-              <Home className="h-16 w-16 mb-4 opacity-50" />
+              <Home className={`${iconSizes['2xl']} mb-4 opacity-50`} />
               <h3 className="text-xl font-semibold mb-2">Επιλέξτε μια μονάδα</h3>
               <p className="text-sm max-w-sm">
                 Επιλέξτε μια μονάδα από τη λίστα αριστερά για να δείτε την κάτοψή της και να αλληλεπιδράσετε με αυτή.

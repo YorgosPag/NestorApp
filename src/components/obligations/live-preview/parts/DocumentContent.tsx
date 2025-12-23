@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { FileText } from "lucide-react";
 import type { ObligationDocument } from '@/types/obligations';
 import { cn } from "@/lib/utils";
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface DocumentContentProps {
     doc: Partial<ObligationDocument>;
@@ -11,12 +12,13 @@ interface DocumentContentProps {
 }
 
 export function DocumentContent({ doc, activeItemId }: DocumentContentProps) {
+  const iconSizes = useIconSizes();
   const sections = doc.sections || [];
 
   if (sections.length === 0) {
     return (
       <div className="text-center py-16">
-        <FileText className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+        <FileText className={`${iconSizes.xl4} mx-auto mb-4 text-muted-foreground`} />
         <h3 className="text-lg font-medium text-muted-foreground mb-2">Δεν υπάρχει περιεχόμενο</h3>
         <p className="text-sm text-muted-foreground/70">Προσθέστε ενότητες στον editor για να δείτε την προεπισκόπηση</p>
       </div>
@@ -48,7 +50,7 @@ export function DocumentContent({ doc, activeItemId }: DocumentContentProps) {
               {article.content && <div className="prose prose-sm max-w-none text-foreground" dangerouslySetInnerHTML={{ __html: article.content.replace(/\n/g, "<br />") }} />}
               {article.paragraphs?.map((paragraph) => (
                 <div key={paragraph.id} id={`preview-${paragraph.id}`} className={cn("flex gap-3 text-sm text-foreground", activeItemId === paragraph.id && "bg-accent/30 -ml-3 pl-3 py-2 rounded")}>
-                  <span className="font-mono text-muted-foreground min-w-6">{paragraph.number}.</span>
+                  <span className={`font-mono text-muted-foreground ${iconSizes.lg}`}>{paragraph.number}.</span>
                   <div className="flex-1" dangerouslySetInnerHTML={{ __html: paragraph.content.replace(/\n/g, "<br />") }} />
                 </div>
               ))}

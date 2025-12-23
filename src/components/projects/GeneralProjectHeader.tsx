@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { CommonBadge } from '@/core/badges';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { Button } from '@/components/ui/button';
 import { Edit, Save, X, CheckCircle } from 'lucide-react';
 
@@ -14,6 +15,7 @@ interface GeneralProjectHeaderProps {
 }
 
 export function GeneralProjectHeader({ isEditing, autoSaving, lastSaved, setIsEditing, handleSave }: GeneralProjectHeaderProps) {
+    const iconSizes = useIconSizes();
     const handleCancel = () => {
         // Here you might want to reset form data to its initial state
         setIsEditing(false);
@@ -45,7 +47,7 @@ export function GeneralProjectHeader({ isEditing, autoSaving, lastSaved, setIsEd
                     </>
                     ) : lastSaved ? (
                     <>
-                        <CheckCircle className="w-3 h-3 text-green-600" />
+                        <CheckCircle className={`${iconSizes.xs} text-green-600`} />
                         <span className="text-green-600">
                         Αποθηκεύτηκε {lastSaved.toLocaleTimeString('el-GR')}
                         </span>
@@ -58,17 +60,17 @@ export function GeneralProjectHeader({ isEditing, autoSaving, lastSaved, setIsEd
             <div className="flex items-center gap-2">
                 {!isEditing ? (
                 <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
-                    <Edit className="w-4 h-4 mr-2" />
+                    <Edit className={`${iconSizes.sm} mr-2`} />
                     Επεξεργασία
                 </Button>
                 ) : (
                 <>
                     <Button variant="outline" size="sm" onClick={handleCancel}>
-                        <X className="w-4 h-4 mr-2" />
+                        <X className={`${iconSizes.sm} mr-2`} />
                         Ακύρωση
                     </Button>
                     <Button size="sm" onClick={handleSave}>
-                        <Save className="w-4 h-4 mr-2" />
+                        <Save className={`${iconSizes.sm} mr-2`} />
                         Αποθήκευση
                     </Button>
                 </>

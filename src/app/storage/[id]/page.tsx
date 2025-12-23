@@ -8,26 +8,29 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { getStorageUnitById } from '@/services/storage.service';
 import type { StorageUnit } from '@/types/storage';
-import { 
-  Package, 
-  Car, 
-  Euro, 
-  Ruler, 
-  Building, 
-  MapPin, 
+import {
+  Package,
+  Car,
+  Euro,
+  Ruler,
+  Building,
+  MapPin,
   CheckCircle,
   Link as LinkIcon,
-  ArrowLeft
+  ArrowLeft,
+  User
 } from 'lucide-react';
 import { getParkingStatusLabel, getParkingStatusColor, getParkingTypeLabel } from '@/components/projects/utils/parking-utils';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: React.ReactNode }) {
+    const iconSizes = useIconSizes();
     if (!value) return null;
     return (
         <div className="flex items-center gap-3">
-            <Icon className="w-4 h-4 text-muted-foreground" />
+            <Icon className={`${iconSizes.sm} text-muted-foreground`} />
             <span className="text-sm font-medium w-32">{label}:</span>
             <span className="text-sm text-foreground">{value}</span>
         </div>
@@ -36,6 +39,7 @@ function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType, label:
 
 
 export default function StorageUnitPage({ params }: { params: { id: string } }) {
+  const iconSizes = useIconSizes();
   const [unit, setUnit] = useState<StorageUnit | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -58,11 +62,11 @@ export default function StorageUnitPage({ params }: { params: { id: string } }) 
     return (
         <div className="p-8">
             <Card>
-                <CardHeader><Skeleton className="h-8 w-1/2" /></CardHeader>
+                <CardHeader><Skeleton className={`${iconSizes.xl} w-1/2`} /></CardHeader>
                 <CardContent className="space-y-4">
-                    <Skeleton className="h-6 w-full" />
-                    <Skeleton className="h-6 w-2/3" />
-                    <Skeleton className="h-6 w-3/4" />
+                    <Skeleton className={`${iconSizes.lg} w-full`} />
+                    <Skeleton className={`${iconSizes.lg} w-2/3`} />
+                    <Skeleton className={`${iconSizes.lg} w-3/4`} />
                 </CardContent>
             </Card>
         </div>
@@ -83,7 +87,7 @@ export default function StorageUnitPage({ params }: { params: { id: string } }) 
        <div className="mb-4">
             <Button asChild variant="outline" size="sm">
                 <Link href="/projects">
-                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    <ArrowLeft className={`${iconSizes.sm} mr-2`} />
                     Επιστροφή στα Έργα
                 </Link>
             </Button>
@@ -93,7 +97,7 @@ export default function StorageUnitPage({ params }: { params: { id: string } }) 
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
                 <div className="p-3 rounded-lg bg-muted">
-                    <MainIcon className="w-6 h-6 text-primary" />
+                    <MainIcon className={`${iconSizes.lg} text-primary`} />
                 </div>
                 <div>
                     <CardTitle className="text-2xl">{unit.code}</CardTitle>

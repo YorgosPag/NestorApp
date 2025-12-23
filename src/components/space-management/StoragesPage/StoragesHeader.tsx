@@ -5,6 +5,7 @@ import { Warehouse, Filter } from 'lucide-react';
 import { PageHeader } from '@/core/headers';
 import type { ViewMode } from '@/core/headers';
 import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface StoragesHeaderProps {
   viewMode: 'list' | 'grid' | 'byType' | 'byStatus';
@@ -30,6 +31,8 @@ export function StoragesHeader({
   showFilters,
   setShowFilters,
 }: StoragesHeaderProps) {
+  const iconSizes = useIconSizes();
+
   return (
     <PageHeader
       variant="sticky-rounded"
@@ -67,7 +70,7 @@ export function StoragesHeader({
             }`}
             aria-label="Toggle filters"
           >
-            <Filter className="h-4 w-4" />
+            <Filter className={iconSizes.sm} />
           </button>
         ] : undefined
       }}

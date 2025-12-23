@@ -9,6 +9,7 @@ import { ChevronDown, ChevronRight, MapPin } from 'lucide-react';
 import { HOVER_TEXT_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { cn } from '@/lib/utils';
 import { NavigationTree } from './NavigationTree';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface NavigationSidebarProps {
   isExpanded?: boolean;
@@ -19,6 +20,7 @@ export function NavigationSidebar({
   isExpanded = false,
   onToggleExpanded
 }: NavigationSidebarProps) {
+  const iconSizes = useIconSizes();
 
   return (
     <div className="space-y-2">
@@ -32,12 +34,12 @@ export function NavigationSidebar({
             TRANSITION_PRESETS.STANDARD_COLORS
           )}
         >
-          <MapPin className="h-4 w-4" />
+          <MapPin className={iconSizes.sm} />
           <span className="font-medium">Πλοήγηση</span>
           {isExpanded ? (
-            <ChevronDown className="h-4 w-4 ml-auto" />
+            <ChevronDown className={`${iconSizes.sm} ml-auto`} />
           ) : (
-            <ChevronRight className="h-4 w-4 ml-auto" />
+            <ChevronRight className={`${iconSizes.sm} ml-auto`} />
           )}
         </button>
       </div>

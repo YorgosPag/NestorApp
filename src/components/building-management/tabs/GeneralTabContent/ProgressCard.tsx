@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CommonBadge } from '@/core/badges';
 import { ThemeProgressBar } from '@/core/progress/ThemeProgressBar';
 import { TrendingUp } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 
@@ -13,11 +14,13 @@ interface ProgressCardProps {
 }
 
 export function ProgressCard({ progress }: ProgressCardProps) {
+  const iconSizes = useIconSizes();
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <TrendingUp className="w-5 h-5" />
+          <TrendingUp className={iconSizes.md} />
           Πρόοδος Έργου
         </CardTitle>
       </CardHeader>

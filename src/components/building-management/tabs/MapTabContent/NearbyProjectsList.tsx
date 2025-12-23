@@ -4,6 +4,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Building2 } from 'lucide-react';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { cn } from '@/lib/utils';
 
 const nearbyProjects = [
@@ -34,11 +35,13 @@ const nearbyProjects = [
 ];
 
 export function NearbyProjectsList() {
+    const iconSizes = useIconSizes();
+
     return (
         <Card>
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                    <Building2 className="w-5 h-5" />
+                    <Building2 className={iconSizes.md} />
                     Γειτονικά Έργα
                 </CardTitle>
             </CardHeader>
@@ -48,7 +51,7 @@ export function NearbyProjectsList() {
                         <div key={project.id} className={`flex items-center justify-between p-4 border rounded-lg ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} transition-colors`}>
                             <div className="flex items-center gap-3">
                                 <div className={cn(
-                                    "w-3 h-3 rounded-full",
+                                    `${iconSizes.xs} rounded-full`,
                                     project.status === 'active' ? 'bg-blue-500' :
                                         project.status === 'completed' ? 'bg-green-500' :
                                             'bg-yellow-500'

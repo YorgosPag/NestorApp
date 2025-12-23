@@ -4,6 +4,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { BaseCard, CardAction, CardStatus } from '@/components/core/BaseCard';
 import { MapPin, Ruler, Home, Eye, Edit, Trash2 } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { StorageUnit } from '@/types/storage';
 
 interface PropertyCardProps {
@@ -27,6 +28,7 @@ export function PropertyCard({
   showActions = true,
   selectable = false,
 }: PropertyCardProps) {
+  const iconSizes = useIconSizes();
   const { t } = useTranslation('properties');
 
   // Δημιουργία status configuration
@@ -130,14 +132,14 @@ export function PropertyCard({
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
           {property.area && (
             <div className="flex items-center gap-1">
-              <Ruler className="h-4 w-4" />
+              <Ruler className={iconSizes.sm} />
               <span>{property.area} τ.μ.</span>
             </div>
           )}
           
           {property.floor && (
             <div className="flex items-center gap-1">
-              <Home className="h-4 w-4" />
+              <Home className={iconSizes.sm} />
               <span>{property.floor}</span>
             </div>
           )}
@@ -146,7 +148,7 @@ export function PropertyCard({
         {/* Τοποθεσία αν υπάρχει */}
         {property.coordinates && (
           <div className="flex items-center gap-1 text-sm text-muted-foreground">
-            <MapPin className="h-4 w-4" />
+            <MapPin className={iconSizes.sm} />
             <span>X: {property.coordinates.x}, Y: {property.coordinates.y}</span>
           </div>
         )}

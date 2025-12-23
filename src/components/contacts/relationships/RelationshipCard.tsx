@@ -24,6 +24,7 @@ import {
   ChevronRight,
   MapPin
 } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // 🏢 ENTERPRISE: Import centralized utilities
 import { getRelationshipDisplayProps } from './utils/relationship-types';
@@ -55,6 +56,8 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
   // ============================================================================
   // 🏢 ENTERPRISE: Use centralized contact name hook
   // ============================================================================
+
+  const iconSizes = useIconSizes();
 
   // 🔧 ENTERPRISE FIX: Show the "other" contact in the relationship
   // Determine which contact to show based on which one is NOT the current contact
@@ -93,9 +96,9 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
               className="p-1"
             >
               {isExpanded ? (
-                <ChevronDown className="h-4 w-4" />
+                <ChevronDown className={iconSizes.sm} />
               ) : (
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className={iconSizes.sm} />
               )}
             </Button>
 
@@ -145,7 +148,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
                   className="h-8 w-8 p-0"
                   title="Επεξεργασία σχέσης"
                 >
-                  <Edit className="h-4 w-4" />
+                  <Edit className={iconSizes.sm} />
                 </Button>
               )}
               {onDelete && (
@@ -160,7 +163,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
                   className={`h-8 w-8 p-0 ${HOVER_TEXT_EFFECTS.RED}`}
                   title="Διαγραφή σχέσης"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className={iconSizes.sm} />
                 </Button>
               )}
             </div>
@@ -176,7 +179,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
             {/* Department */}
             {relationship.department && (
               <div className="flex items-center space-x-2">
-                <Building2 className="h-4 w-4 text-gray-500" />
+                <Building2 className={`${iconSizes.sm} text-gray-500`} />
                 <span className="text-sm">{relationship.department}</span>
               </div>
             )}
@@ -184,7 +187,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
             {/* Start Date */}
             {relationship.startDate && (
               <div className="flex items-center space-x-2">
-                <Calendar className="h-4 w-4 text-gray-500" />
+                <Calendar className={`${iconSizes.sm} text-gray-500`} />
                 <span className="text-sm">
                   Από: {new Date(relationship.startDate).toLocaleDateString('el-GR')}
                 </span>
@@ -194,7 +197,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
             {/* Business Phone */}
             {relationship.contactInfo?.businessPhone && (
               <div className="flex items-center space-x-2">
-                <Phone className="h-4 w-4 text-gray-500" />
+                <Phone className={`${iconSizes.sm} text-gray-500`} />
                 <span className="text-sm">{relationship.contactInfo.businessPhone}</span>
                 {relationship.contactInfo.extensionNumber && (
                   <span className="text-xs text-gray-400">
@@ -207,7 +210,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
             {/* Business Email */}
             {relationship.contactInfo?.businessEmail && (
               <div className="flex items-center space-x-2">
-                <Mail className="h-4 w-4 text-gray-500" />
+                <Mail className={`${iconSizes.sm} text-gray-500`} />
                 <a
                   href={`mailto:${relationship.contactInfo.businessEmail}`}
                   className={`text-sm ${INTERACTIVE_PATTERNS.LINK_PRIMARY}`}
@@ -221,7 +224,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
             {/* Business Address */}
             {relationship.contactInfo?.businessAddress && (
               <div className="flex items-center space-x-2 md:col-span-2">
-                <MapPin className="h-4 w-4 text-gray-500" />
+                <MapPin className={`${iconSizes.sm} text-gray-500`} />
                 <span className="text-sm">{relationship.contactInfo.businessAddress}</span>
               </div>
             )}
@@ -229,7 +232,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
             {/* End Date */}
             {relationship.endDate && (
               <div className="flex items-center space-x-2">
-                <Calendar className="h-4 w-4 text-red-500" />
+                <Calendar className={`${iconSizes.sm} text-red-500`} />
                 <span className="text-sm text-red-600">
                   Έως: {new Date(relationship.endDate).toLocaleDateString('el-GR')}
                 </span>

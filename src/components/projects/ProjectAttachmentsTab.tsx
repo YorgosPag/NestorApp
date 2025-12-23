@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Folder, Eye } from "lucide-react";
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface ProjectAttachmentsTabProps {
     data: {
@@ -17,6 +18,7 @@ interface ProjectAttachmentsTabProps {
 }
 
 export function ProjectAttachmentsTab({ data, setData }: ProjectAttachmentsTabProps) {
+    const iconSizes = useIconSizes();
     const handleFileSelect = (field: string) => {
         // This would open a file dialog in a real application
         console.log(`Selecting file for ${field}`);
@@ -26,7 +28,7 @@ export function ProjectAttachmentsTab({ data, setData }: ProjectAttachmentsTabPr
         <Card>
             <CardHeader className="pb-4">
                 <div className="flex items-center gap-2">
-                    <Folder className="w-5 h-5 text-primary" />
+                    <Folder className={`${iconSizes.md} text-primary`} />
                     <CardTitle className="text-lg">Συνημμένα Αρχεία</CardTitle>
                 </div>
                 <CardDescription>
@@ -44,10 +46,10 @@ export function ProjectAttachmentsTab({ data, setData }: ProjectAttachmentsTabPr
                             className="h-10 bg-muted/30"
                         />
                         <Button variant="outline" size="icon" className="h-10 w-10 shrink-0" onClick={() => handleFileSelect('mapPath')}>
-                            <Folder className="h-4 w-4" />
+                            <Folder className={iconSizes.sm} />
                         </Button>
                         <Button variant="outline" size="icon" className="h-10 w-10 shrink-0">
-                            <Eye className="h-4 w-4" />
+                            <Eye className={iconSizes.sm} />
                         </Button>
                     </div>
                 </div>
@@ -62,10 +64,10 @@ export function ProjectAttachmentsTab({ data, setData }: ProjectAttachmentsTabPr
                             className="h-10 bg-muted/30"
                         />
                          <Button variant="outline" size="icon" className="h-10 w-10 shrink-0" onClick={() => handleFileSelect('floorPlanPath')}>
-                            <Folder className="h-4 w-4" />
+                            <Folder className={iconSizes.sm} />
                         </Button>
                         <Button variant="outline" size="icon" className="h-10 w-10 shrink-0">
-                            <Eye className="h-4 w-4" />
+                            <Eye className={iconSizes.sm} />
                         </Button>
                     </div>
                 </div>
@@ -80,10 +82,10 @@ export function ProjectAttachmentsTab({ data, setData }: ProjectAttachmentsTabPr
                             className="h-10 bg-muted/30"
                         />
                          <Button variant="outline" size="icon" className="h-10 w-10 shrink-0" onClick={() => handleFileSelect('percentagesPath')}>
-                            <Folder className="h-4 w-4" />
+                            <Folder className={iconSizes.sm} />
                         </Button>
                         <Button variant="outline" size="icon" className="h-10 w-10 shrink-0">
-                            <Eye className="h-4 w-4" />
+                            <Eye className={iconSizes.sm} />
                         </Button>
                     </div>
                 </div>

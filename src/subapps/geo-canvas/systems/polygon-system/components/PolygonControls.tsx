@@ -9,6 +9,7 @@
 
 import React from 'react';
 import { MapPin, Hexagon, Hand, Trash2, Check, X, Home } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { PolygonType } from '@geo-alert/core';
 import { usePolygonSystemContext } from '../hooks/usePolygonSystemContext';
 import type { PolygonControlsProps } from '../types/polygon-system.types';
@@ -32,6 +33,7 @@ export function PolygonControls({
   onClearAll,
   className = ''
 }: PolygonControlsProps) {
+  const iconSizes = useIconSizes();
   const { state, actions, config } = usePolygonSystemContext();
 
   // ============================================================================
@@ -148,7 +150,7 @@ export function PolygonControls({
             state.currentTool === 'simple' ? styles.primary : styles.secondary
           }`}
         >
-          <Hexagon className="w-4 h-4" />
+          <Hexagon className={iconSizes.sm} />
           {config.role === 'technical' ? 'POLY' : 'Περίγραμμα'}
         </button>
 
@@ -159,7 +161,7 @@ export function PolygonControls({
             state.currentTool === 'freehand' ? styles.primary : styles.secondary
           }`}
         >
-          <Hand className="w-4 h-4" />
+          <Hand className={iconSizes.sm} />
           {config.role === 'technical' ? 'FREE' : 'Ελεύθερο'}
         </button>
 
@@ -172,7 +174,7 @@ export function PolygonControls({
                 state.currentTool === 'point' ? styles.primary : styles.secondary
               }`}
             >
-              <MapPin className="w-4 h-4" />
+              <MapPin className={iconSizes.sm} />
               Σημείο
             </button>
 
@@ -183,7 +185,7 @@ export function PolygonControls({
                 state.currentTool === 'real-estate' ? styles.primary : styles.secondary
               }`}
             >
-              <Home className="w-4 h-4" />
+              <Home className={iconSizes.sm} />
               Ακίνητο
             </button>
           </>
@@ -197,7 +199,7 @@ export function PolygonControls({
             onClick={handleComplete}
             className={`flex-1 ${styles.button} ${styles.success}`}
           >
-            <Check className="w-4 h-4" />
+            <Check className={iconSizes.sm} />
             {config.role === 'technical' ? 'DONE' : 'Τέλος'}
           </button>
 
@@ -205,7 +207,7 @@ export function PolygonControls({
             onClick={handleCancel}
             className={`flex-1 ${styles.button} ${styles.danger}`}
           >
-            <X className="w-4 h-4" />
+            <X className={iconSizes.sm} />
             {config.role === 'technical' ? 'STOP' : 'Άκυρο'}
           </button>
         </div>
@@ -217,7 +219,7 @@ export function PolygonControls({
           onClick={handleClearAll}
           className={`w-full ${styles.button} ${styles.secondary}`}
         >
-          <Trash2 className="w-4 h-4" />
+          <Trash2 className={iconSizes.sm} />
           {config.role === 'technical' ? `CLR_ALL(${state.polygons.length})` : `Καθάρισμα (${state.polygons.length})`}
         </button>
       )}

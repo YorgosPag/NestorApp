@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Link2, X, Trash2, Plus } from 'lucide-react';
 import type { Connection, ConnectionType } from '@/types/connections';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface ConnectionControlsProps {
     connectionType: ConnectionType;
@@ -28,6 +29,8 @@ export function ConnectionControls({
     connections,
     clearConnections,
 }: ConnectionControlsProps) {
+    const iconSizes = useIconSizes();
+
     return (
         <div className="space-y-2">
              <div className="space-y-2">
@@ -46,17 +49,17 @@ export function ConnectionControls({
             </div>
             
             <Button onClick={toggleConnectionMode} className="w-full" variant={isConnecting ? "destructive" : "default"}>
-                {isConnecting ? <X className="mr-2 h-4 w-4"/> : <Link2 className="mr-2 h-4 w-4"/>}
+                {isConnecting ? <X className={`mr-2 ${iconSizes.sm}`}/> : <Link2 className={`mr-2 ${iconSizes.sm}`}/>}
                 {isConnecting ? 'Ακύρωση Σύνδεσης' : 'Νέα Σύνδεση'}
             </Button>
             
             <Button onClick={createGroup} className="w-full" variant="outline" disabled={selectedPropertyIds.length < 2}>
-                <Plus className="mr-2 h-4 w-4"/>
+                <Plus className={`mr-2 ${iconSizes.sm}`}/>
                 Δημιουργία Ομάδας ({selectedPropertyIds.length} επιλεγμένα)
             </Button>
             
             <Button onClick={clearConnections} className="w-full" variant="outline" disabled={connections.length === 0}>
-                <Trash2 className="mr-2 h-4 w-4"/>
+                <Trash2 className={`mr-2 ${iconSizes.sm}`}/>
                 Καθαρισμός Συνδέσεων
             </Button>
         </div>

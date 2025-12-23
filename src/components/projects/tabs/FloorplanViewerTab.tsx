@@ -4,6 +4,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Map, Plus, Edit } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { canvasUtilities } from '@/styles/design-tokens';
 
 interface FloorplanViewerTabProps {
@@ -19,6 +20,7 @@ export function FloorplanViewerTab({
   onAddFloorplan, 
   onEditFloorplan 
 }: FloorplanViewerTabProps) {
+  const iconSizes = useIconSizes();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -184,7 +186,7 @@ export function FloorplanViewerTab({
       <CardHeader className="pb-3">
         <div className="flex justify-between items-center">
           <CardTitle className="flex items-center gap-2">
-            <Map className="w-5 h-5" />
+            <Map className={iconSizes.md} />
             {title}
           </CardTitle>
           <div className="flex gap-2">
@@ -194,7 +196,7 @@ export function FloorplanViewerTab({
               onClick={onAddFloorplan}
               className="flex items-center gap-1"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className={iconSizes.sm} />
               Προσθήκη Κάτοψη Έργου
             </Button>
             <Button 
@@ -204,7 +206,7 @@ export function FloorplanViewerTab({
               disabled={!floorplanData}
               className="flex items-center gap-1"
             >
-              <Edit className="w-4 h-4" />
+              <Edit className={iconSizes.sm} />
               Επεξεργασία Κάτοψη Έργου
             </Button>
           </div>
@@ -214,7 +216,7 @@ export function FloorplanViewerTab({
       <CardContent className="p-2 flex-1 min-h-[500px]">
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <div className={`animate-spin rounded-full ${iconSizes.lg} border-b-2 border-primary`}></div>
             <span className="ml-3">Φόρτωση κάτοψης...</span>
           </div>
         ) : floorplanData ? (
@@ -227,7 +229,7 @@ export function FloorplanViewerTab({
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center h-64 text-center">
-            <Map className="w-12 h-12 text-gray-400 mb-4" />
+            <Map className={`${iconSizes.xl} text-gray-400 mb-4`} />
             <h3 className="text-lg font-semibold text-gray-600 mb-2">Δεν υπάρχει κάτοψη</h3>
             <p className="text-gray-500 mb-4">Πατήστε "Προσθήκη Κάτοψη Έργου" για να φορτώσετε κάτοψη</p>
           </div>

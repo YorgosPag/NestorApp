@@ -3,6 +3,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { BaseToolbar, ToolbarAction, ToolbarFilter } from '@/components/core/BaseToolbar';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { 
   Plus, 
   Edit, 
@@ -58,6 +59,7 @@ export function BuildingToolbar({
   loading = false,
   disabled = false,
 }: BuildingToolbarProps) {
+  const iconSizes = useIconSizes();
   const { t } = useTranslation('building');
   
   // Primary actions (always visible)
@@ -200,17 +202,17 @@ export function BuildingToolbar({
           <DropdownMenuSeparator />
           
           <DropdownMenuItem onClick={() => onExport('pdf')}>
-            <FileText className="h-4 w-4 mr-2" />
+            <FileText className={`${iconSizes.sm} mr-2`} />
             {t('toolbar.export.pdf', { ns: 'properties' })}
           </DropdownMenuItem>
           
           <DropdownMenuItem onClick={() => onExport('stats')}>
-            <BarChart3 className="h-4 w-4 mr-2" />
+            <BarChart3 className={`${iconSizes.sm} mr-2`} />
             {t('toolbar.export.stats', { ns: 'properties' })}
           </DropdownMenuItem>
           
           <DropdownMenuItem onClick={() => onExport('timeline')}>
-            <Timeline className="h-4 w-4 mr-2" />
+            <Timeline className={`${iconSizes.sm} mr-2`} />
             {t('toolbar.export.timeline', { ns: 'properties' })}
           </DropdownMenuItem>
         </>

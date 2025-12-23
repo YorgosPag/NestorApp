@@ -7,6 +7,7 @@ import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button';
 import { CommonBadge } from '@/core/badges';
 import { Heart, MoreVertical } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -99,6 +100,8 @@ const BaseCard = forwardRef<HTMLDivElement, BaseCardProps>(({
   onClick,
   ...props
 }, ref) => {
+  const iconSizes = useIconSizes();
+
   // Styling variants
   const cardVariants = {
     default: 'border bg-card text-card-foreground shadow-sm',
@@ -180,7 +183,7 @@ const BaseCard = forwardRef<HTMLDivElement, BaseCardProps>(({
               onClick={handleFavoriteClick}
             >
               <Heart className={cn(
-                'h-4 w-4',
+                iconSizes.sm,
                 isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-600'
               )} />
             </Button>
@@ -227,7 +230,7 @@ const BaseCard = forwardRef<HTMLDivElement, BaseCardProps>(({
                 onClick={handleFavoriteClick}
               >
                 <Heart className={cn(
-                  'h-4 w-4',
+                  iconSizes.sm,
                   isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-600'
                 )} />
               </Button>
@@ -245,7 +248,7 @@ const BaseCard = forwardRef<HTMLDivElement, BaseCardProps>(({
                 disabled={primaryAction.disabled}
               >
                 {primaryAction.icon && (
-                  <primaryAction.icon className="h-4 w-4 mr-1" />
+                  <primaryAction.icon className={`${iconSizes.sm} mr-1`} />
                 )}
                 {primaryAction.label}
               </Button>
@@ -256,7 +259,7 @@ const BaseCard = forwardRef<HTMLDivElement, BaseCardProps>(({
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm">
-                    <MoreVertical className="h-4 w-4" />
+                    <MoreVertical className={iconSizes.sm} />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
@@ -270,7 +273,7 @@ const BaseCard = forwardRef<HTMLDivElement, BaseCardProps>(({
                       disabled={action.disabled}
                     >
                       {action.icon && (
-                        <action.icon className="h-4 w-4 mr-2" />
+                        <action.icon className={`${iconSizes.sm} mr-2`} />
                       )}
                       {action.label}
                     </DropdownMenuItem>

@@ -3,6 +3,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Building } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { FormRowSelect } from './form/FormRowSelect';
 import { FormRowInput } from './form/FormRowInput';
 import { FormRowCoordinates } from './form/FormRowCoordinates';
@@ -23,11 +24,12 @@ export function StorageFormSpecs({
   isCalculatingPrice,
   availableFloors,
 }: Props) {
+  const iconSizes = useIconSizes();
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <Building className="w-5 h-5" />
+          <Building className={iconSizes.md} />
           Τοποθεσία & Προδιαγραφές
         </CardTitle>
       </CardHeader>
@@ -58,7 +60,7 @@ export function StorageFormSpecs({
             error={errors.price}
             required
             trailingElement={isCalculatingPrice ? (
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary" />
+              <div className={`animate-spin rounded-full ${iconSizes.sm} border-b-2 border-primary`} />
             ) : undefined}
             helper={
               formData.area && formData.price && formData.area > 0

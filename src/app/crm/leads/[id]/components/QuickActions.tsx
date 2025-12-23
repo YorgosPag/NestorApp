@@ -6,6 +6,7 @@ import { Send, PhoneCall, Plus, Edit3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import type { Opportunity } from '@/types/crm';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface QuickActionsProps {
   lead: Opportunity;
@@ -15,6 +16,7 @@ interface QuickActionsProps {
 }
 
 export function QuickActions({ lead, onEdit, onNewTask, onSendEmail }: QuickActionsProps) {
+  const iconSizes = useIconSizes();
   const handleCall = () => {
     if (!lead.phone) {
       toast.error('Αυτό το lead δεν έχει τηλέφωνο');
@@ -42,7 +44,7 @@ export function QuickActions({ lead, onEdit, onNewTask, onSendEmail }: QuickActi
           disabled={!lead.email}
           className={`w-full flex items-center justify-start gap-3 px-4 py-3 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-200 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
         >
-          <Send className="w-5 h-5" />
+          <Send className={iconSizes.md} />
           Αποστολή Email
         </Button>
         <Button
@@ -50,21 +52,21 @@ export function QuickActions({ lead, onEdit, onNewTask, onSendEmail }: QuickActi
           disabled={!lead.phone}
           className={`w-full flex items-center justify-start gap-3 px-4 py-3 bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-200 ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`}
         >
-          <PhoneCall className="w-5 h-5" />
+          <PhoneCall className={iconSizes.md} />
           Κλήση
         </Button>
         <Button
           onClick={onNewTask}
           className={`w-full flex items-center justify-start gap-3 px-4 py-3 bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-200 ${INTERACTIVE_PATTERNS.PURPLE_HOVER}`}
         >
-          <Plus className="w-5 h-5" />
+          <Plus className={iconSizes.md} />
           Νέα Εργασία
         </Button>
         <Button
           onClick={onEdit}
           className={`w-full flex items-center justify-start gap-3 px-4 py-3 bg-gray-50 text-gray-700 dark:bg-gray-700/20 dark:text-gray-200 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
         >
-          <Edit3 className="w-5 h-5" />
+          <Edit3 className={iconSizes.md} />
           Επεξεργασία
         </Button>
       </div>

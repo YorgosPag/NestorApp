@@ -10,8 +10,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 export function LoginForm() {
+  const iconSizes = useIconSizes();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -70,7 +72,7 @@ export function LoginForm() {
                 <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? (
                     <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className={`mr-2 ${iconSizes.sm} animate-spin`} />
                     {t('login.submitting')}
                     </>
                 ) : (

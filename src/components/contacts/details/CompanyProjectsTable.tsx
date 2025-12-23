@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ProjectBadge } from '@/core/badges';
 import { ThemeProgressBar } from '@/core/progress/ThemeProgressBar';
 import { Briefcase } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { Project } from '@/types/project';
 import { cn } from '@/lib/utils';
 import { getProjectLabel } from '@/lib/project-utils';
@@ -12,6 +13,7 @@ import { useCompanyRelationships } from '@/services/relationships/hooks/useEnter
 
 
 function CompanyProjectsTable({ companyId }: { companyId: string }) {
+    const iconSizes = useIconSizes();
     const [projects, setProjects] = useState<Project[]>([]);
 
     // 🚀 ENTERPRISE RELATIONSHIP ENGINE: Hook για centralized company-projects relationship
@@ -51,7 +53,7 @@ function CompanyProjectsTable({ companyId }: { companyId: string }) {
     return (
         <div className="mt-4">
             <h4 className="font-semibold mb-2 text-sm flex items-center gap-2">
-                <Briefcase className="w-4 h-4 text-muted-foreground"/>
+                <Briefcase className={`${iconSizes.sm} text-muted-foreground`}/>
                 Σχετικά Έργα
             </h4>
             <div className="border rounded-lg">

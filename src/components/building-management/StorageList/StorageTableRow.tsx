@@ -6,6 +6,7 @@ import { CommonBadge } from "@/core/badges";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Link, Ruler, Euro, Building } from 'lucide-react';
 import type { StorageUnit, StorageType, StorageStatus } from '@/types/storage';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { formatPrice, formatArea } from '../StorageCard/StorageCardUtils';
 import { cn } from '@/lib/utils';
 import { StorageRowActions } from './StorageRowActions';
@@ -33,6 +34,7 @@ export function StorageTableRow({
   getTypeIcon,
   getTypeLabel,
 }: StorageTableRowProps) {
+  const iconSizes = useIconSizes();
   const TypeIcon = getTypeIcon(unit.type);
 
   return (
@@ -52,25 +54,25 @@ export function StorageTableRow({
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-2">
-          <TypeIcon className="w-4 h-4" />
+          <TypeIcon className={iconSizes.sm} />
           <span className="text-sm">{getTypeLabel(unit.type)}</span>
         </div>
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-1 text-sm">
-          <Building className="w-3 h-3 text-muted-foreground" />
+          <Building className={`${iconSizes.xs} text-muted-foreground`} />
           {unit.floor}
         </div>
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-1 text-sm">
-          <Ruler className="w-3 h-3 text-muted-foreground" />
+          <Ruler className={`${iconSizes.xs} text-muted-foreground`} />
           {formatArea(unit.area)}
         </div>
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-1 text-sm font-medium">
-          <Euro className="w-3 h-3 text-muted-foreground" />
+          <Euro className={`${iconSizes.xs} text-muted-foreground`} />
           {formatPrice(unit.price)}
         </div>
       </TableCell>
@@ -84,7 +86,7 @@ export function StorageTableRow({
       <TableCell>
         {unit.linkedProperty ? (
           <div className="flex items-center gap-1 text-sm text-primary">
-            <Link className="w-3 h-3" />
+            <Link className={iconSizes.xs} />
             {unit.linkedProperty}
           </div>
         ) : (

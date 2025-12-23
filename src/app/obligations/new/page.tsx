@@ -38,6 +38,7 @@ import { TableOfContents } from "@/components/obligations/table-of-contents";
 import StructureEditor from "@/components/obligations/structure-editor";
 import LivePreview from "@/components/obligations/live-preview";
 import { RichTextEditor } from "@/components/obligations/rich-text-editor";
+import { useIconSizes } from '@/hooks/useIconSizes';
 import Link from "next/link";
 
 // 🏢 ENTERPRISE: Import existing κεντρικοποιημένων components & services
@@ -79,6 +80,7 @@ const autoResize = (textarea: HTMLTextAreaElement) => {
 };
 
 export default function NewObligationPage() {
+  const iconSizes = useIconSizes();
   const router = useRouter();
   const [formData, setFormData] = useState<FormData>({
     title: "",
@@ -609,7 +611,7 @@ export default function NewObligationPage() {
           <div className="flex items-center gap-4">
             <Link href="/obligations">
               <Button variant="ghost" size="sm">
-                <ArrowLeft className="h-4 w-4" />
+                <ArrowLeft className={iconSizes.sm} />
               </Button>
             </Link>
             <hgroup>
@@ -624,7 +626,7 @@ export default function NewObligationPage() {
               onClick={() => setViewMode(viewMode === 'split' ? 'edit-only' : 'split')}
               size="sm"
             >
-              <Layout className="h-4 w-4 mr-2" />
+              <Layout className={`${iconSizes.sm} mr-2`} />
               {viewMode === 'split' ? 'Μόνο επεξεργασία' : 'Split View'}
             </Button>
             <Button 
@@ -632,7 +634,7 @@ export default function NewObligationPage() {
               disabled={isLoading}
               className="flex items-center gap-2"
             >
-              <Save className="h-4 w-4" />
+              <Save className={iconSizes.sm} />
               {isLoading ? "Δημιουργία..." : "Δημιουργία"}
             </Button>
           </div>
@@ -743,7 +745,7 @@ export default function NewObligationPage() {
                     id="useTemplate"
                     checked={useTemplate}
                     onChange={(e) => setUseTemplate(e.target.checked)}
-                    className="h-4 w-4"
+                    className={iconSizes.sm}
                   />
                   <Label htmlFor="useTemplate" className="text-sm">
                     Χρήση προεπιλεγμένου προτύπου ({DEFAULT_TEMPLATE_SECTIONS.length} ενότητες)
@@ -778,7 +780,7 @@ export default function NewObligationPage() {
               >
                 <CardHeader className="relative z-10 bg-card">
                   <CardTitle className="text-base flex items-center gap-2">
-                    <Eye className="h-4 w-4" />
+                    <Eye className={iconSizes.sm} />
                     Live Preview
                   </CardTitle>
                   <CardDescription>Δείτε πως θα φαίνεται το τελικό έγγραφο</CardDescription>

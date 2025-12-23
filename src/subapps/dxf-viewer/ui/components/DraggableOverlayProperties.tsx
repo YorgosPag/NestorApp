@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { OverlayProperties } from '../OverlayProperties';
 import { usePrecisionPositioning } from '../../utils/precision-positioning';
 import { useDraggable } from '../../../../hooks/useDraggable';
@@ -20,6 +21,7 @@ export const DraggableOverlayProperties: React.FC<DraggableOverlayPropertiesProp
   onUpdate,
   onClose
 }) => {
+  const iconSizes = useIconSizes();
   // CENTRALIZED PRECISION POSITIONING for initial placement
   const containerRef = React.useRef<HTMLDivElement>(null);
   const { position: initialPosition } = usePrecisionPositioning(containerRef, {
@@ -73,7 +75,7 @@ export const DraggableOverlayProperties: React.FC<DraggableOverlayPropertiesProp
         onMouseDown={draggable.handleMouseDown}
       >
         <div className="flex items-center gap-3 flex-1">
-          <Activity className="h-4 w-4" style={performanceMonitorUtilities.getOverlayIconStyles('primary')} />
+          <Activity className={iconSizes.sm} style={performanceMonitorUtilities.getOverlayIconStyles('primary')} />
           <h3 className="text-sm font-semibold" style={performanceMonitorUtilities.getOverlayTitleStyles()}>Overlay Properties</h3>
 
           <div
@@ -92,7 +94,7 @@ export const DraggableOverlayProperties: React.FC<DraggableOverlayPropertiesProp
             style={performanceMonitorUtilities.getOverlayButtonStyles()}
             title="Hide properties"
           >
-            <X className="h-3 w-3" />
+            <X className={iconSizes.xs} />
           </button>
         </div>
       </CardHeader>

@@ -5,6 +5,7 @@ import { CommonBadge } from '@/core/badges';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { cn } from '@/lib/utils';
 import { formatSize } from './version-utils';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { formatDateTime as formatDate } from '@/lib/intl-utils';
 
 export function VersionList({
@@ -16,6 +17,7 @@ export function VersionList({
   selectedVersionId: string | null;
   onSelect: (v: any) => void;
 }) {
+  const iconSizes = useIconSizes();
   return (
     <div className="p-4 space-y-2">
       {versions.map(version => (
@@ -58,7 +60,7 @@ export function VersionList({
               </div>
             </div>
             {version.thumbnail && (
-              <img src={version.thumbnail} alt="Thumbnail" className="w-16 h-16 object-cover rounded ml-4 border" />
+              <img src={version.thumbnail} alt="Thumbnail" className={`${iconSizes.xl4} object-cover rounded ml-4 border`} />
             )}
           </div>
         </div>

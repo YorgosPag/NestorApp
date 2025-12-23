@@ -14,6 +14,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Users, Building2 } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // 🏢 ENTERPRISE: Import centralized components και hooks
 import type { ContactType } from '@/types/contacts';
@@ -77,6 +78,7 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
   // HOOKS
   // ============================================================================
 
+  const iconSizes = useIconSizes();
   const router = useRouter();
 
   const {
@@ -177,7 +179,7 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
         <CardHeader>
           <CardTitle className="flex items-center">
             <div className="flex items-center space-x-2">
-              <Users className="h-5 w-5" />
+              <Users className={iconSizes.md} />
               <span>Σχέσεις Επαφής</span>
             </div>
           </CardTitle>
@@ -194,7 +196,7 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
           {shouldShowTree && (
             <div className="mt-6 mb-6">
               <div className="flex items-center space-x-2 mb-4">
-                <Building2 className="h-5 w-5 text-blue-600" />
+                <Building2 className={`${iconSizes.md} text-blue-600`} />
                 <h4 className="text-sm font-medium text-gray-900">Οργανωτικό Διάγραμμα</h4>
               </div>
               <div className="bg-gray-50 rounded-lg p-4 border">

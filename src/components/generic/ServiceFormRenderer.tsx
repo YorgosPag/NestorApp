@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { FormField, FormInput } from '@/components/ui/form/FormComponents';
 import { UniversalClickableField } from '@/components/ui/form/UniversalClickableField';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { ServiceFieldConfig, ServiceSectionConfig } from '@/config/service-config';
 import { getIconComponent } from './utils/IconMapping';
 
@@ -162,6 +163,8 @@ export function ServiceFormRenderer({
   onPhotosChange,
   customRenderers
 }: ServiceFormRendererProps) {
+  const iconSizes = useIconSizes();
+
   if (!sections || sections.length === 0) {
     return null;
   }
@@ -172,7 +175,7 @@ export function ServiceFormRenderer({
         <div key={section.id} className="space-y-6 md:space-y-4">
           {/* Section Header */}
           <div className="flex items-center gap-2 pb-2 border-b">
-            {getIconComponent(section.icon) && React.createElement(getIconComponent(section.icon), { className: "w-4 h-4" })}
+            {getIconComponent(section.icon) && React.createElement(getIconComponent(section.icon), { className: iconSizes.sm })}
             <h3 className="font-semibold text-sm">{section.title}</h3>
           </div>
 

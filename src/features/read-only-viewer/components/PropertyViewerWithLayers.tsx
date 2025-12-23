@@ -5,12 +5,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CommonBadge } from '@/core/badges';
 import { Separator } from '@/components/ui/separator';
-import { 
-  Home, 
-  Layers, 
-  Eye, 
-  EyeOff, 
-  Wifi, 
+import {
+  Home,
+  Layers,
+  Eye,
+  EyeOff,
+  Wifi,
   WifiOff,
   ZoomIn,
   ZoomOut,
@@ -18,6 +18,7 @@ import {
   Download,
   Info
 } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // Import components
 import { ReadOnlyLayerViewer } from '@/components/property-viewer/ReadOnlyLayerViewer';
@@ -61,6 +62,7 @@ export function PropertyViewerWithLayers({
   onPropertySelect,
   onLayerVisibilityChange
 }: PropertyViewerWithLayersProps) {
+  const iconSizes = useIconSizes();
   const [zoomLevel, setZoomLevel] = useState(100);
   const [showLayers, setShowLayers] = useState(showLayerPanel);
   const [isLayersCollapsed, setIsLayersCollapsed] = useState(false);
@@ -142,7 +144,7 @@ export function PropertyViewerWithLayers({
     return (
       <Card className={className}>
         <CardContent className="flex flex-col items-center justify-center h-96 text-center text-muted-foreground">
-          <Home className="h-16 w-16 mb-4 opacity-50" />
+          <Home className={`${iconSizes.xl6} mb-4 opacity-50`} />
           <h3 className="text-xl font-semibold mb-2">Δεν υπάρχει διαθέσιμη κάτοψη</h3>
           <p className="text-sm max-w-sm">
             Δεν υπάρχουν διαθέσιμα δεδομένα κάτοψης για αυτό το ακίνητο.
@@ -168,10 +170,10 @@ export function PropertyViewerWithLayers({
                       variant={showLayers ? "default" : "ghost"}
                       size="sm" 
                       onClick={() => setShowLayers(!showLayers)}
-                      className="h-8 w-8 p-0" 
+                      className={`${iconSizes.xl} p-0`} 
                       aria-label="Layers"
                     >
-                      <Layers className="h-4 w-4" />
+                      <Layers className={iconSizes.sm} />
                     </Button>
                   </li>
                 )}
@@ -181,17 +183,17 @@ export function PropertyViewerWithLayers({
                 {/* Zoom Controls */}
                 {enableZoom && (
                   <li className="flex items-center gap-1 bg-muted p-1 rounded-md">
-                    <Button variant="ghost" size="sm" onClick={handleZoomOut} className="h-8 w-8 p-0">
-                      <ZoomOut className="h-4 w-4" />
+                    <Button variant="ghost" size="sm" onClick={handleZoomOut} className={`${iconSizes.xl} p-0`}>
+                      <ZoomOut className={iconSizes.sm} />
                     </Button>
                     <div className="px-2 text-xs">
                       {zoomLevel}%
                     </div>
-                    <Button variant="ghost" size="sm" onClick={handleZoomIn} className="h-8 w-8 p-0">
-                      <ZoomIn className="h-4 w-4" />
+                    <Button variant="ghost" size="sm" onClick={handleZoomIn} className={`${iconSizes.xl} p-0`}>
+                      <ZoomIn className={iconSizes.sm} />
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={handleResetZoom} className="h-8 w-8 p-0">
-                      <RotateCcw className="h-4 w-4" />
+                    <Button variant="ghost" size="sm" onClick={handleResetZoom} className={`${iconSizes.xl} p-0`}>
+                      <RotateCcw className={iconSizes.sm} />
                     </Button>
                   </li>
                 )}
@@ -204,19 +206,19 @@ export function PropertyViewerWithLayers({
                     variant="ghost" 
                     size="sm" 
                     onClick={handleShowInfo}
-                    className="h-8 w-8 p-0" 
+                    className={`${iconSizes.xl} p-0`} 
                     aria-label="Πληροφορίες"
                   >
-                    <Info className="h-4 w-4" />
+                    <Info className={iconSizes.sm} />
                   </Button>
                   <Button 
                     variant="ghost" 
                     size="sm" 
                     onClick={handleDownload} 
-                    className="h-8 w-8 p-0" 
+                    className={`${iconSizes.xl} p-0`} 
                     aria-label="Φόρτωση"
                   >
-                    <Download className="h-4 w-4" />
+                    <Download className={iconSizes.sm} />
                   </Button>
                 </li>
               </ul>
@@ -344,7 +346,7 @@ export function PropertyViewerWithLayers({
           </div>
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1">
-              <div className="w-2 h-2 bg-green-500 rounded-full" />
+              <div className={`${iconSizes.xs} bg-green-500 rounded-full`} />
               <span>Ενημερώσεις σε πραγματικό χρόνο</span>
             </div>
           </div>

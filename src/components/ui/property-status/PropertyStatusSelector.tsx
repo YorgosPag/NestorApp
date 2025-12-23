@@ -13,6 +13,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import {
   Select,
   SelectContent,
@@ -133,6 +134,7 @@ export function PropertyStatusSelector({
   onStatusChange,
   onValidate
 }: PropertyStatusSelectorProps) {
+  const iconSizes = useIconSizes();
 
   // ========================================================================
   // STATE
@@ -381,7 +383,7 @@ export function PropertyStatusSelector({
                     {/* Warning */}
                     {option.warning && (
                       <div className="flex items-center gap-1 text-xs text-destructive">
-                        <AlertTriangle className="h-3 w-3" />
+                        <AlertTriangle className={iconSizes.xs} />
                         <span>{option.warning}</span>
                       </div>
                     )}
@@ -396,7 +398,7 @@ export function PropertyStatusSelector({
       {/* Validation Message */}
       {validationMessage && (
         <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-md">
-          <AlertTriangle className="h-4 w-4 text-destructive flex-shrink-0" />
+          <AlertTriangle className={`${iconSizes.sm} text-destructive flex-shrink-0`} />
           <span className="text-sm text-destructive">{validationMessage}</span>
         </div>
       )}
@@ -405,7 +407,7 @@ export function PropertyStatusSelector({
       {showReasonField && selectedStatus && (
         <div className="space-y-3 p-4 bg-muted/50 border rounded-md">
           <div className="flex items-center gap-2">
-            <Info className="h-4 w-4 text-blue-500" />
+            <Info className={`${iconSizes.sm} text-blue-500`} />
             <Label className="text-sm font-medium">
               Αιτιολογία Αλλαγής {requireReason && '*'}
             </Label>
@@ -434,7 +436,7 @@ export function PropertyStatusSelector({
               onClick={() => handleConfirmChange(selectedStatus, reason)}
               disabled={requireReason && !reason.trim()}
             >
-              <Check className="h-4 w-4 mr-1" />
+              <Check className={`${iconSizes.sm} mr-1`} />
               Επιβεβαίωση
             </Button>
           </div>

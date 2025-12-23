@@ -12,6 +12,7 @@
 
 import React from 'react';
 import { X, FlaskConical } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 // Custom hooks (extracted)
@@ -39,6 +40,8 @@ export const TestsModal: React.FC<TestsModalProps> = ({
   onClose,
   showCopyableNotification
 }) => {
+  const iconSizes = useIconSizes();
+
   // ============================================================================
   // STATE MANAGEMENT (using custom hooks)
   // ============================================================================
@@ -77,7 +80,7 @@ export const TestsModal: React.FC<TestsModalProps> = ({
           onMouseDown={draggable.handleMouseDown}
         >
           <div className="flex items-center gap-2">
-            <FlaskConical className="w-6 h-6 text-purple-400" />
+            <FlaskConical className={`${iconSizes.lg} text-purple-400`} />
             <h2 className="text-xl font-bold text-white">DXF Viewer Tests</h2>
             <span className="text-xs text-gray-500 ml-2">↔️ Drag to move</span>
           </div>
@@ -85,7 +88,7 @@ export const TestsModal: React.FC<TestsModalProps> = ({
             onClick={onClose}
             className={`p-1 rounded transition-colors ${HOVER_BACKGROUND_EFFECTS.LIGHT}`}
           >
-            <X className="w-6 h-6 text-gray-400" />
+            <X className={`${iconSizes.lg} text-gray-400`} />
           </button>
         </div>
 

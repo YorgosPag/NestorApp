@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Building2 } from 'lucide-react';
 import { useLevels } from '../../systems/levels';
 import { HOVER_BORDER_EFFECTS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface LevelSelectionStepProps {
     onNext: () => void;
@@ -11,10 +12,11 @@ interface LevelSelectionStepProps {
 }
 
 export function LevelSelectionStep({ onNext, onClose }: LevelSelectionStepProps) {
-  const { 
-    levels, 
-    importWizard, 
-    setSelectedLevel 
+  const iconSizes = useIconSizes();
+  const {
+    levels,
+    importWizard,
+    setSelectedLevel
   } = useLevels();
   
   const [showNewLevelForm, setShowNewLevelForm] = useState(false);
@@ -69,7 +71,7 @@ export function LevelSelectionStep({ onNext, onClose }: LevelSelectionStepProps)
               className="mr-3"
             />
             <div className="flex items-center flex-1">
-              <Building2 className="w-4 h-4 text-gray-400 mr-2" />
+              <Building2 className={`${iconSizes.sm} text-gray-400 mr-2`} />
               <div>
                 <div className="text-white font-medium">{level.name}</div>
                 {level.isDefault && (
@@ -93,7 +95,7 @@ export function LevelSelectionStep({ onNext, onClose }: LevelSelectionStepProps)
                 : `border-gray-600 ${HOVER_BORDER_EFFECTS.MUTED}`
             }`}
           >
-            <Plus className="w-4 h-4 text-gray-400 mr-2" />
+            <Plus className={`${iconSizes.sm} text-gray-400 mr-2`} />
             <span className="text-gray-300">Δημιουργία Νέου Επιπέδου</span>
           </button>
         ) : (

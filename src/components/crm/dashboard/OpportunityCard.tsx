@@ -3,6 +3,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Users, Mail, Phone, Calendar, FileText, Edit, Trash2 } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { CommonBadge } from '@/core/badges';
 import { COMPLEX_HOVER_EFFECTS, TRANSITION_PRESETS, INTERACTIVE_PATTERNS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 import type { Opportunity, FirestoreishTimestamp } from '@/types/crm';
@@ -64,6 +65,7 @@ const formatDate = (timestamp: FirestoreishTimestamp): string => {
 };
 
 export function OpportunityCard({ opportunity, onEdit, onDelete }: { opportunity: Opportunity, onEdit: (opportunity: Opportunity) => void, onDelete: (opportunityId: string, opportunityName: string) => void }) {
+    const iconSizes = useIconSizes();
     const router = useRouter();
 
     const handleCardClick = () => {
@@ -80,7 +82,7 @@ export function OpportunityCard({ opportunity, onEdit, onDelete }: { opportunity
         >
             <div className="flex items-start justify-between mb-2">
                 <h4 className="font-medium text-sm text-foreground flex items-center gap-2">
-                    <Users className="w-4 h-4" />
+                    <Users className={iconSizes.sm} />
                     {opportunity.fullName || opportunity.title}
                 </h4>
                 <CommonBadge
@@ -94,18 +96,18 @@ export function OpportunityCard({ opportunity, onEdit, onDelete }: { opportunity
             <div className="space-y-1.5 text-xs text-muted-foreground">
                 {opportunity.email && (
                     <div className="flex items-center gap-2">
-                        <Mail className="w-3.5 h-3.5" />
+                        <Mail className={iconSizes.xs} />
                         <span>{opportunity.email}</span>
                     </div>
                 )}
                 {opportunity.phone && (
                     <div className="flex items-center gap-2">
-                        <Phone className="w-3.5 h-3.5" />
+                        <Phone className={iconSizes.xs} />
                         <span>{opportunity.phone}</span>
                     </div>
                 )}
                 <div className="flex items-center gap-2">
-                    <Calendar className="w-3.5 h-3.5" />
+                    <Calendar className={iconSizes.xs} />
                     <span>{formatDate(opportunity.createdAt)}</span>
                 </div>
             </div>
@@ -113,7 +115,7 @@ export function OpportunityCard({ opportunity, onEdit, onDelete }: { opportunity
             {opportunity.notes && (
                 <div className="mt-2 pt-2 border-t text-xs text-muted-foreground">
                     <p className="flex items-start gap-2">
-                        <FileText className="w-3.5 h-3.5 mt-0.5 shrink-0"/>
+                        <FileText className={`${iconSizes.xs} mt-0.5 shrink-0`}/>
                         <span className="flex-1">{opportunity.notes}</span>
                     </p>
                 </div>
@@ -131,14 +133,14 @@ export function OpportunityCard({ opportunity, onEdit, onDelete }: { opportunity
                          <Button 
                             variant="ghost" 
                             size="sm" 
-                            className="h-7 w-7 p-0"
+                            className={`${iconSizes.xl} p-0`}
                             onClick={(e) => {
                                 e.stopPropagation();
                                 onEdit(opportunity);
                             }}
                             aria-label="Επεξεργασία"
                         >
-                            <Edit className="w-3.5 h-3.5" />
+                            <Edit className={iconSizes.xs} />
                         </Button>
                     </TooltipTrigger>
                     <TooltipContent>
@@ -153,11 +155,11 @@ export function OpportunityCard({ opportunity, onEdit, onDelete }: { opportunity
                                 <Button
                                     variant="ghost"
                                     size="sm"
-                                    className={`h-7 w-7 p-0 ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`}
+                                    className={`${iconSizes.xl} p-0 ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`}
                                     onClick={(e) => e.stopPropagation()}
                                     aria-label="Διαγραφή"
                                 >
-                                    <Trash2 className="w-3.5 h-3.5" />
+                                    <Trash2 className={iconSizes.xs} />
                                 </Button>
                             </AlertDialogTrigger>
                         </TooltipTrigger>

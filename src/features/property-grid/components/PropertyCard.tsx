@@ -1,10 +1,12 @@
 'use client';
 import { Eye, ArrowRight, Heart, Square, Bed, Bath, Building } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { PropertyBadge, CommonBadge } from '@/core/badges';
 import { getPropertyImage } from '../utils/images';
 import { COMPLEX_HOVER_EFFECTS, TRANSITION_PRESETS, INTERACTIVE_PATTERNS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 
 export function PropertyCard({ property, onViewFloorPlan }: { property: any; onViewFloorPlan: (id: string) => void; }) {
+  const iconSizes = useIconSizes();
   return (
     <article className={`w-full flex flex-col bg-white dark:bg-card rounded-xl shadow-md ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden group cursor-pointer ${COMPLEX_HOVER_EFFECTS.FEATURE_CARD}`} itemScope itemType="https://schema.org/RealEstateProperty">
       <header className="relative h-48 overflow-hidden bg-gray-100 dark:bg-muted/30">
@@ -20,7 +22,7 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: any; onV
           />
         </aside>
         <button className={`absolute top-3 right-3 p-2 bg-white/90 dark:bg-gray-800/80 backdrop-blur rounded-full ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}>
-          <Heart className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+          <Heart className={`${iconSizes.sm} text-gray-600 dark:text-gray-300`} />
         </button>
       </header>
 
@@ -29,7 +31,7 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: any; onV
           <section aria-label="Πληροφορίες Ακινήτου">
             <h3 className="text-lg font-bold text-gray-900 dark:text-foreground" itemProp="name">{property.name}</h3>
             <p className="text-sm text-gray-500 dark:text-muted-foreground flex items-center gap-1 mt-1">
-              <Building className="h-3 w-3" />
+              <Building className={iconSizes.xs} />
               <span itemProp="location">{property.project} • {property.building} • {property.floor}ος όροφος</span>
             </p>
           </section>
@@ -46,18 +48,18 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: any; onV
 
         <section className="flex flex-wrap items-center gap-2 sm:gap-4 text-gray-600 dark:text-muted-foreground text-sm mb-4" aria-label="Χαρακτηριστικά Ακινήτου">
           <span className="flex items-center gap-1" itemProp="floorSize">
-            <Square className="h-4 w-4" />
+            <Square className={iconSizes.sm} />
             {property.area} m²
           </span>
           {property.bedrooms !== undefined && property.bedrooms > 0 && (
             <span className="flex items-center gap-1" itemProp="numberOfRooms">
-              <Bed className="h-4 w-4" />
+              <Bed className={iconSizes.sm} />
               {property.bedrooms}
             </span>
           )}
           {property.bathrooms !== undefined && property.bathrooms > 0 && (
             <span className="flex items-center gap-1" itemProp="numberOfBathroomsTotal">
-              <Bath className="h-4 w-4" />
+              <Bath className={iconSizes.sm} />
               {property.bathrooms}
             </span>
           )}
@@ -80,11 +82,11 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: any; onV
             onClick={() => onViewFloorPlan(property.id)}
             className={`flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg flex items-center justify-center gap-2 text-sm font-medium ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
           >
-            <Eye className="h-4 w-4" />
+            <Eye className={iconSizes.sm} />
             Δείτε στην κάτοψη
           </button>
           <button className={`px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}>
-            <ArrowRight className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+            <ArrowRight className={`${iconSizes.sm} text-gray-600 dark:text-gray-300`} />
           </button>
         </footer>
       </main>

@@ -7,6 +7,7 @@ import { EntityDetailsHeader } from '@/core/entity-headers';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { Property } from '@/types/property-viewer';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface UnitListItemHeaderProps {
   unit: Property;
@@ -19,6 +20,7 @@ export function UnitListItemHeader({
   getCategoryIcon,
   getCategoryLabel
 }: UnitListItemHeaderProps) {
+  const iconSizes = useIconSizes();
   const CategoryIcon = getCategoryIcon(unit.type);
 
   // ENTERPRISE: Customer ownership indicator
@@ -46,7 +48,7 @@ export function UnitListItemHeader({
             variant="outline"
             className="flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-green-50 text-green-700 border-green-200 dark:bg-green-950/20 dark:text-green-400 dark:border-green-800"
           >
-            <User className="w-3 h-3" />
+            <User className={iconSizes.xs} />
             <span>Πελάτης</span>
           </Badge>
         )}
@@ -55,7 +57,7 @@ export function UnitListItemHeader({
       {/* Building Location Info */}
       {unit.building && (
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
-          <MapPin className="w-3 h-3 flex-shrink-0" />
+          <MapPin className={`${iconSizes.xs} flex-shrink-0`} />
           <span className="truncate">{unit.building} - Όροφος {unit.floor}</span>
         </div>
       )}

@@ -12,6 +12,7 @@ import {
 } from '@/constants/property-statuses-enterprise';
 import { STATUS_COLORS_MAPPING } from '@/subapps/dxf-viewer/config/color-mapping';
 import { layoutUtilities } from '@/styles/design-tokens';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface PropertyStatusManagerProps {
   onStatusChange?: (newStatus: PropertyStatus) => void;
@@ -39,6 +40,7 @@ export function PropertyStatusManager({
   className = ''
 }: PropertyStatusManagerProps) {
   // ✅ ENTERPRISE: All hooks must be declared BEFORE any conditional returns
+  const iconSizes = useIconSizes();
   const { t, isLoading } = useTranslationLazy('geo-canvas');
   const [selectedStatuses, setSelectedStatuses] = useState<PropertyStatus[]>(getAllStatuses());
   const [colorScheme, setColorScheme] = useState<'status' | 'price' | 'type'>('status');
@@ -95,7 +97,7 @@ export function PropertyStatusManager({
       <div className="mb-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <Building className="w-5 h-5 text-blue-600" />
+            <Building className={`${iconSizes.md} text-blue-600`} />
             {t('propertyStatusManager.title')}
           </h3>
           <button
@@ -103,7 +105,7 @@ export function PropertyStatusManager({
             className={`p-2 text-gray-500 ${HOVER_TEXT_EFFECTS.DARKER} transition-colors`}
             title="Toggle Legend"
           >
-            {showLegend ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+            {showLegend ? <Eye className={iconSizes.sm} /> : <EyeOff className={iconSizes.sm} />}
           </button>
         </div>
         <p className="text-sm text-gray-600 mt-1">
@@ -114,7 +116,7 @@ export function PropertyStatusManager({
       {/* Color Scheme Selector */}
       <div className="mb-4">
         <label className="text-sm font-medium text-gray-700 mb-2 block flex items-center gap-2">
-          <Palette className="w-4 h-4" />
+          <Palette className={iconSizes.sm} />
           {t('propertyStatusManager.colorScheme.title')}
         </label>
         <div className="flex gap-2">
@@ -156,7 +158,7 @@ export function PropertyStatusManager({
         <div className="mb-4">
           <div className="flex items-center justify-between mb-3">
             <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-              <Tag className="w-4 h-4" />
+              <Tag className={iconSizes.sm} />
               {t('propertyStatusManager.statusCategories')}
             </label>
             <button
@@ -185,7 +187,7 @@ export function PropertyStatusManager({
                 >
                   {/* Color Indicator */}
                   <div
-                    className="w-4 h-4 rounded border-2 border-white shadow-sm"
+                    className={`${iconSizes.sm} rounded border-2 border-white shadow-sm`}
                     style={layoutUtilities.dxf.colors.backgroundColor(statusColor)}
                   />
 
@@ -204,7 +206,7 @@ export function PropertyStatusManager({
                     }`}
                     title={isVisible ? t('propertyStatusManager.hide') : t('propertyStatusManager.show')}
                   >
-                    {isVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                    {isVisible ? <Eye className={iconSizes.sm} /> : <EyeOff className={iconSizes.sm} />}
                   </button>
                 </div>
               );
@@ -216,7 +218,7 @@ export function PropertyStatusManager({
       {/* Statistics */}
       <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
         <div className="flex items-center gap-2 mb-2">
-          <Info className="w-4 h-4 text-blue-600" />
+          <Info className={`${iconSizes.sm} text-blue-600`} />
           <span className="text-sm font-medium text-blue-900">{t('propertyStatusManager.statistics.title')}</span>
         </div>
         <div className="grid grid-cols-2 gap-4 text-sm">

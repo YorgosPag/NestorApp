@@ -7,6 +7,7 @@
 import React from 'react';
 import { Play, CheckCircle2 } from 'lucide-react';
 import { INTERACTIVE_PATTERNS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface TestButtonProps {
   test: {
@@ -26,6 +27,8 @@ export const TestButton: React.FC<TestButtonProps> = ({
   isCompleted,
   onRun
 }) => {
+  const iconSizes = useIconSizes();
+
   return (
     <button
       onClick={() => onRun(test.id, test.action)}
@@ -42,9 +45,9 @@ export const TestButton: React.FC<TestButtonProps> = ({
         {isRunning ? (
           <div className="animate-spin text-base">⏳</div>
         ) : isCompleted ? (
-          <CheckCircle2 className="w-5 h-5 text-green-400" />
+          <CheckCircle2 className={`${iconSizes.md} text-green-400`} />
         ) : (
-          <Play className="w-5 h-5 text-gray-400" />
+          <Play className={`${iconSizes.md} text-gray-400`} />
         )}
       </div>
       <div className="flex-1 min-w-0">

@@ -5,6 +5,9 @@ import { BaseCard } from '@/components/core/BaseCard/BaseCard';
 import { CommonBadge } from '@/core/badges';
 import { HOVER_SHADOWS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { formatDate } from '@/lib/intl-utils';
+import { useIconSizes } from '@/hooks/useIconSizes';
+import { getStatusBadgeClass } from '@/lib/design-system';
+import { badgeVariants } from '@/components/ui/badge';
 import { 
   Clock, 
   Calendar, 
@@ -114,8 +117,9 @@ export function TaskCard({
   showAssignee = true,
   compact = false
 }: TaskCardProps) {
+  const iconSizes = useIconSizes();
   const [isFavorite, setIsFavorite] = useState(false);
-  
+
   const TaskTypeIcon = getTaskTypeIcon(task.type);
   const overdue = isOverdue(task.dueDate, task.status);
 
@@ -132,7 +136,7 @@ export function TaskCard({
           : overdue
           ? "from-red-100 via-pink-50 to-red-100 dark:from-red-950 dark:via-pink-950 dark:to-red-900"  
           : "from-blue-100 via-indigo-50 to-purple-100 dark:from-blue-950 dark:via-indigo-950 dark:to-purple-900",
-        logo: <TaskTypeIcon className={`w-8 h-8 ${
+        logo: <TaskTypeIcon className={`${iconSizes.xl} ${
           task.status === 'completed' ? 'text-green-600 dark:text-green-400' :
           overdue ? 'text-red-600 dark:text-red-400' :
           'text-blue-600 dark:text-blue-400'
@@ -178,7 +182,7 @@ export function TaskCard({
             <div className={`flex items-center gap-2 text-sm ${
               overdue ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground'
             }`}>
-              <Calendar className="w-4 h-4" />
+              <Calendar className={iconSizes.sm} />
               <span>{formatTaskDate(task.dueDate)}</span>
               {overdue && <span className="text-xs font-medium">(Εκπρόθεσμη)</span>}
             </div>
@@ -190,7 +194,7 @@ export function TaskCard({
           title: 'Ανατέθηκε σε',
           content: (
             <div className="flex items-center gap-2 text-sm">
-              <User className="w-4 h-4 text-muted-foreground" />
+              <User className={`${iconSizes.sm} text-muted-foreground`} />
               <span>{task.assignedTo}</span>
             </div>
           )
@@ -203,19 +207,19 @@ export function TaskCard({
             <div className="space-y-1 text-sm">
               {task.contactId && (
                 <div className="flex items-center gap-2">
-                  <User className="w-3 h-3 text-muted-foreground" />
+                  <User className={`${iconSizes.xs} text-muted-foreground`} />
                   <span className="text-xs">Contact: {task.contactId}</span>
                 </div>
               )}
               {task.projectId && (
                 <div className="flex items-center gap-2">
-                  <FileText className="w-3 h-3 text-muted-foreground" />
+                  <FileText className={`${iconSizes.xs} text-muted-foreground`} />
                   <span className="text-xs">Project: {task.projectId}</span>
                 </div>
               )}
               {task.unitId && (
                 <div className="flex items-center gap-2">
-                  <MapPin className="w-3 h-3 text-muted-foreground" />
+                  <MapPin className={`${iconSizes.xs} text-muted-foreground`} />
                   <span className="text-xs">Unit: {task.unitId}</span>
                 </div>
               )}
@@ -229,7 +233,7 @@ export function TaskCard({
           content: (
             <div className="space-y-2 text-sm">
               <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-muted-foreground" />
+                <MapPin className={`${iconSizes.sm} text-muted-foreground`} />
                 <span>{task.viewingDetails.location}</span>
               </div>
               {task.viewingDetails.units.length > 0 && (
@@ -253,7 +257,7 @@ export function TaskCard({
           title: 'Ολοκληρώθηκε',
           content: (
             <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
-              <CheckCircle className="w-4 h-4" />
+              <CheckCircle className={iconSizes.sm} />
               <span>{formatTaskDate(task.completedAt)}</span>
             </div>
           )

@@ -7,16 +7,20 @@ import { Home, CheckCircle, Ruler } from 'lucide-react';
 import type { ProjectStats as StatsType } from '@/types/project';
 import { getProjectStats } from '@/services/projects.service';
 import { cn } from '@/lib/utils';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface ProjectStatsProps {
   projectId: number;
 }
 
-const StatCard = ({ icon: Icon, value, label, loading, colorClass }: { icon: React.ElementType, value: string | number, label: string, loading: boolean, colorClass: string }) => (
+const StatCard = ({ icon: Icon, value, label, loading, colorClass }: { icon: React.ElementType, value: string | number, label: string, loading: boolean, colorClass: string }) => {
+    const iconSizes = useIconSizes();
+
+    return (
     <Card className={cn("p-4", colorClass)}>
         <div className="flex items-center gap-4">
             <div className="p-3 rounded-lg bg-white/20">
-               <Icon className="w-6 h-6" />
+               <Icon className={iconSizes.md} />
             </div>
             <div>
                 {loading ? (
@@ -33,7 +37,8 @@ const StatCard = ({ icon: Icon, value, label, loading, colorClass }: { icon: Rea
             </div>
         </div>
     </Card>
-);
+    );
+};
 
 export function ProjectStats({ projectId }: ProjectStatsProps) {
   const [stats, setStats] = useState<StatsType | null>(null);

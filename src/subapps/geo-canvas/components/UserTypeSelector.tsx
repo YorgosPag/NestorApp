@@ -5,6 +5,7 @@ import { UserType } from '@/contexts/OptimizedUserRoleContext';
 import { Users, Briefcase, HardHat } from 'lucide-react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { HOVER_BORDER_EFFECTS, HOVER_SHADOWS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface UserTypeSelectorProps {
   currentType?: UserType;
@@ -23,6 +24,7 @@ interface UserTypeSelectorProps {
  * - Technical: Full DXF/DWG support με CAD precision
  */
 export function UserTypeSelector({ currentType, onSelect, disabled }: UserTypeSelectorProps) {
+  const iconSizes = useIconSizes();
   const { t, isLoading } = useTranslationLazy('geo-canvas');
 
   // ✅ ENTERPRISE: Return loading state while translations load
@@ -30,10 +32,10 @@ export function UserTypeSelector({ currentType, onSelect, disabled }: UserTypeSe
     return (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="animate-pulse">
-          <div className="h-6 bg-gray-200 rounded mb-4"></div>
+          <div className={`${iconSizes.lg} bg-gray-200 rounded mb-4`}></div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-32 bg-gray-200 rounded-lg"></div>
+              <div key={i} className={`${iconSizes.xl8} bg-gray-200 rounded-lg`}></div>
             ))}
           </div>
         </div>
@@ -52,21 +54,21 @@ export function UserTypeSelector({ currentType, onSelect, disabled }: UserTypeSe
       type: 'citizen',
       label: t('userTypeSelector.types.citizen.title'),
       description: t('userTypeSelector.types.citizen.description'),
-      icon: <Users className="w-6 h-6" />,
+      icon: <Users className={iconSizes.lg} />,
       color: 'bg-blue-500'
     },
     {
       type: 'professional',
       label: t('userTypeSelector.types.professional.title'),
       description: t('userTypeSelector.types.professional.description'),
-      icon: <Briefcase className="w-6 h-6" />,
+      icon: <Briefcase className={iconSizes.lg} />,
       color: 'bg-green-500'
     },
     {
       type: 'technical',
       label: t('userTypeSelector.types.technical.title'),
       description: t('userTypeSelector.types.technical.description'),
-      icon: <HardHat className="w-6 h-6" />,
+      icon: <HardHat className={iconSizes.lg} />,
       color: 'bg-purple-500'
     }
   ];
@@ -94,7 +96,7 @@ export function UserTypeSelector({ currentType, onSelect, disabled }: UserTypeSe
           >
             {/* Icon */}
             <div className={`
-              w-12 h-12 rounded-full flex items-center justify-center mb-3
+              ${iconSizes.xl3} rounded-full flex items-center justify-center mb-3
               ${userType.color} text-white
             `}>
               {userType.icon}
@@ -113,7 +115,7 @@ export function UserTypeSelector({ currentType, onSelect, disabled }: UserTypeSe
             {/* Selected indicator */}
             {currentType === userType.type && (
               <div className="absolute top-2 right-2">
-                <div className={`w-3 h-3 rounded-full ${userType.color}`} />
+                <div className={`${iconSizes.xs} rounded-full ${userType.color}`} />
               </div>
             )}
           </button>

@@ -34,6 +34,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 type ViewMode = 'view' | 'create' | 'measure' | 'edit';
 
@@ -72,7 +73,7 @@ export function FloorPlanToolbar({
   onFullscreen,
   className
 }: FloorPlanToolbarProps) {
-  
+  const iconSizes = useIconSizes();
   const [isUploading, setIsUploading] = useState(false);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -118,7 +119,7 @@ export function FloorPlanToolbar({
             active && `bg-blue-600 text-white ${HOVER_BACKGROUND_EFFECTS.BLUE_BUTTON}`
           )}
         >
-          <Icon className="h-4 w-4" />
+          <Icon className={iconSizes.sm} />
         </Button>
       </TooltipTrigger>
       <TooltipContent>
@@ -154,7 +155,7 @@ export function FloorPlanToolbar({
                   className="h-8"
                 >
                   <label htmlFor="pdf-upload" className="cursor-pointer">
-                    <Upload className="h-4 w-4 mr-2" />
+                    <Upload className={`${iconSizes.sm} mr-2`} />
                     {isUploading ? 'Φόρτωση...' : 'Φόρτωση PDF'}
                   </label>
                 </Button>
@@ -262,16 +263,16 @@ export function FloorPlanToolbar({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-                <Settings className="h-4 w-4" />
+                <Settings className={iconSizes.sm} />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem>
-                <Download className="h-4 w-4 mr-2" />
+                <Download className={`${iconSizes.sm} mr-2`} />
                 Εξαγωγή PNG
               </DropdownMenuItem>
               <DropdownMenuItem>
-                <Download className="h-4 w-4 mr-2" />
+                <Download className={`${iconSizes.sm} mr-2`} />
                 Εξαγωγή PDF
               </DropdownMenuItem>
             </DropdownMenuContent>

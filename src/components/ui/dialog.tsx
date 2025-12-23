@@ -6,6 +6,7 @@ import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { INTERACTIVE_PATTERNS, HOVER_COLOR_EFFECTS } from '@/components/ui/effects'
+import { useIconSizes } from '@/hooks/useIconSizes'
 
 const Dialog = DialogPrimitive.Root
 
@@ -16,19 +17,22 @@ const DialogPortal = DialogPrimitive.Portal
 const DialogClose = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Close>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Close>
->(({ className, ...props }, ref) => (
-  <DialogPrimitive.Close
-    ref={ref}
-    className={cn(
-      `absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity ${HOVER_COLOR_EFFECTS.FADE_IN} focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground`,
-      className
-    )}
-    {...props}
-  >
-    <X className="h-4 w-4" />
-    <span className="sr-only">Close</span>
-  </DialogPrimitive.Close>
-))
+>(({ className, ...props }, ref) => {
+  const iconSizes = useIconSizes();
+  return (
+    <DialogPrimitive.Close
+      ref={ref}
+      className={cn(
+        `absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity ${HOVER_COLOR_EFFECTS.FADE_IN} focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground`,
+        className
+      )}
+      {...props}
+    >
+      <X className={iconSizes.sm} />
+      <span className="sr-only">Close</span>
+    </DialogPrimitive.Close>
+  );
+})
 DialogClose.displayName = DialogPrimitive.Close.displayName
 
 const DialogOverlay = React.forwardRef<

@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useRef } from 'react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { useDraggable } from '../../../hooks/useDraggable';
 // import { Separator } from '../../../components/ui/separator';
 // Προσωρινή λύση - αντικατάσταση με div
@@ -44,6 +45,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
   snapEnabled, onSnapToggle, selectedOverlayId, onDuplicate, onDelete,
   canUndo, canRedo, onUndo, onRedo, onToolChange, disableFloating = false,
 }) => {
+  const iconSizes = useIconSizes();
   const { startOverlayCreation } = useUnifiedOverlayCreation();
   const overlayStore = useOverlayStore();
 
@@ -157,7 +159,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
           className="cursor-grab active:cursor-grabbing p-1 hover:bg-gray-700 rounded"
           title="Drag to move toolbar"
         >
-          <div className="w-2 h-4 bg-gray-500 rounded-sm"></div>
+          <div className={`${iconSizes.xs} ${iconSizes.sm} bg-gray-500 rounded-sm`}></div>
         </div>
       )}
       {/* Drawing Modes */}
@@ -176,13 +178,13 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
               }
             `}
           >
-            {Icon ? <Icon className="w-4 h-4" /> : <span className="text-xs">?</span>}
+            {Icon ? <Icon className={iconSizes.sm} /> : <span className="text-xs">?</span>}
             <span className="hidden sm:inline text-xs">{label}</span>
           </button>
         ))}
       </div>
 
-      <Separator orientation="vertical" className="h-6 bg-gray-500" />
+      <Separator orientation="vertical" className={`${iconSizes.lg} bg-gray-500`} />
 
       {/* Status Palette */}
       <div className="flex items-center gap-2">
@@ -193,7 +195,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
               key={status}
               onClick={() => onStatusChange(status)}
               title={STATUS_LABELS[status]}
-              className="w-6 h-6 rounded-md border-2 transition-all duration-150"
+              className={`${iconSizes.lg} rounded-md border-2 transition-all duration-150`}
               style={getStatusColorButtonStyles(
                 status as PropertyStatus,
                 currentStatus === status
@@ -203,7 +205,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
         </div>
       </div>
 
-      <Separator orientation="vertical" className="h-6 bg-gray-500" />
+      <Separator orientation="vertical" className={`${iconSizes.lg} bg-gray-500`} />
 
       {/* Kind Selection */}
       <div className="flex items-center gap-2">
@@ -217,7 +219,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
                 onClick={() => onKindChange(kind)}
                 title={KIND_LABELS[kind]}
                 className={`
-                  h-8 w-8 p-0 rounded-md border transition-colors duration-150
+                  ${iconSizes.xl} p-0 rounded-md border transition-colors duration-150
                   flex items-center justify-center
                   ${currentKind === kind 
                     ? `bg-blue-600 text-white border-blue-500 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}` 
@@ -225,14 +227,14 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
                   }
                 `}
               >
-                {Icon ? <Icon className="w-4 h-4" /> : <span className="text-xs">?</span>}
+                {Icon ? <Icon className={iconSizes.sm} /> : <span className="text-xs">?</span>}
               </button>
             );
           })}
         </div>
       </div>
 
-      <Separator orientation="vertical" className="h-6 bg-gray-500" />
+      <Separator orientation="vertical" className={`${iconSizes.lg} bg-gray-500`} />
 
       {/* Actions */}
       <div className="flex items-center gap-1">
@@ -247,7 +249,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
             disabled:opacity-50 disabled:cursor-not-allowed
           "
         >
-          <Copy className="w-4 h-4" />
+          <Copy className={iconSizes.sm} />
         </button>
         
         <button
@@ -261,11 +263,11 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
             disabled:opacity-50 disabled:cursor-not-allowed
           "
         >
-          <X className="w-4 h-4" />
+          <X className={iconSizes.sm} />
         </button>
       </div>
 
-      <Separator orientation="vertical" className="h-6 bg-gray-500" />
+      <Separator orientation="vertical" className={`${iconSizes.lg} bg-gray-500`} />
 
       {/* Undo/Redo */}
       <div className="flex items-center gap-1">
@@ -280,7 +282,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
             disabled:opacity-50 disabled:cursor-not-allowed
           "
         >
-          <RotateCcw className="w-4 h-4" />
+          <RotateCcw className={iconSizes.sm} />
         </button>
         <button
           onClick={onRedo}
@@ -293,7 +295,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
             disabled:opacity-50 disabled:cursor-not-allowed
           "
         >
-          <RotateCw className="w-4 h-4" />
+          <RotateCw className={iconSizes.sm} />
         </button>
       </div>
     </div>

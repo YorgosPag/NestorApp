@@ -9,10 +9,12 @@ import {
 import { Button } from "@/components/ui/button"
 import { CommonBadge } from "@/core/badges"
 import { Bell } from "lucide-react"
+import { useIconSizes } from '@/hooks/useIconSizes'
 import { getNotifications } from "@/constants/header"
 import { NotificationItem } from "@/components/header/notification-item"
 
 export function NotificationsPopover() {
+  const iconSizes = useIconSizes();
   const [notifications, setNotifications] = React.useState([])
 
   React.useEffect(() => {
@@ -33,13 +35,13 @@ export function NotificationsPopover() {
     <Popover>
       <PopoverTrigger asChild>
         <Button variant="outline" size="icon" className="relative">
-          <Bell className="h-4 w-4" />
+          <Bell className={iconSizes.sm} />
           {notifications.length > 0 && (
             <CommonBadge
               status="company"
               customLabel={notifications.length.toString()}
               variant="destructive"
-              className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs"
+              className={`absolute -top-1 -right-1 ${iconSizes.md} p-0 flex items-center justify-center text-xs`}
             />
           )}
         </Button>

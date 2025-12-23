@@ -20,6 +20,7 @@ import { useFloorPlanUpload } from '../floor-plan-system/hooks/useFloorPlanUploa
 import { useFloorPlanControlPoints } from '../floor-plan-system/hooks/useFloorPlanControlPoints';
 import { useGeoTransformation } from '../floor-plan-system/hooks/useGeoTransformation';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSnapEngine } from '../floor-plan-system/snapping';
 import { useOptimizedUserRole } from '@/contexts/OptimizedUserRoleContext';
 import { PageErrorBoundary, ComponentErrorBoundary } from '@/components/ui/ErrorBoundary/ErrorBoundary';
@@ -40,6 +41,7 @@ import type { GeoCoordinate, DxfCoordinate } from '../types';
  * Phase 4-8: Advanced features από roadmap
  */
 export function GeoCanvasContent(props: GeoCanvasAppProps) {
+  const iconSizes = useIconSizes();
   const { t, isLoading } = useTranslationLazy('geo-canvas');
   const { user, setUserType, isCitizen, isProfessional, isTechnical } = useOptimizedUserRole();
   const [activeView, setActiveView] = useState<'foundation' | 'georeferencing' | 'map'>('georeferencing');
@@ -558,7 +560,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-gray-900 text-white">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className={`animate-spin rounded-full ${iconSizes['2xl']} border-b-2 border-blue-600 mx-auto mb-4`}></div>
           <p className="text-white">{t('loadingStates.loadingTranslations')}</p>
         </div>
       </div>
@@ -715,7 +717,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                   {/* Architecture Overview */}
                   <div className="mt-8 p-6 bg-gray-800 rounded-lg">
                     <h3 className="text-lg font-semibold mb-4 text-blue-400 flex items-center gap-2">
-                      <CraneIcon className="h-5 w-5" />
+                      <CraneIcon className={iconSizes.md} />
                       {isLoading ? 'Επισκόπηση Αρχιτεκτονικής' : t('phaseDetails.architectureOverview.title')}
                     </h3>
                     <div className="text-sm text-gray-300 space-y-2">
@@ -920,27 +922,27 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
               </h3>
               <ul className="space-y-2 text-sm list-none">
                 <li className="flex items-center space-x-2">
-                  <span className="w-2 h-2 bg-green-400 rounded-full" aria-hidden="true"></span>
+                  <span className={`${iconSizes.xs} bg-green-400 rounded-full`} aria-hidden="true"></span>
                   <span>{t('sidebar.availableFeatures.controlPointManagement')}</span>
                 </li>
                 <li className="flex items-center space-x-2">
-                  <span className="w-2 h-2 bg-green-400 rounded-full" aria-hidden="true"></span>
+                  <span className={`${iconSizes.xs} bg-green-400 rounded-full`} aria-hidden="true"></span>
                   <span>{t('sidebar.availableFeatures.affineTransformation')}</span>
                 </li>
                 <li className="flex items-center space-x-2">
-                  <span className="w-2 h-2 bg-green-400 rounded-full" aria-hidden="true"></span>
+                  <span className={`${iconSizes.xs} bg-green-400 rounded-full`} aria-hidden="true"></span>
                   <span>{t('sidebar.availableFeatures.accuracyValidation')}</span>
                 </li>
                 <li className="flex items-center space-x-2">
-                  <span className="w-2 h-2 bg-green-400 rounded-full" aria-hidden="true"></span>
+                  <span className={`${iconSizes.xs} bg-green-400 rounded-full`} aria-hidden="true"></span>
                   <span>{t('sidebar.availableFeatures.spatialDistributionAnalysis')}</span>
                 </li>
                 <li className="flex items-center space-x-2">
-                  <span className="w-2 h-2 bg-green-400 rounded-full" aria-hidden="true"></span>
+                  <span className={`${iconSizes.xs} bg-green-400 rounded-full`} aria-hidden="true"></span>
                   <span>{t('sidebar.availableFeatures.rmsErrorCalculation')}</span>
                 </li>
                 <li className="flex items-center space-x-2">
-                  <span className="w-2 h-2 bg-green-400 rounded-full" aria-hidden="true"></span>
+                  <span className={`${iconSizes.xs} bg-green-400 rounded-full`} aria-hidden="true"></span>
                   <span>{t('sidebar.availableFeatures.coordinateTransformation')}</span>
                 </li>
               </ul>

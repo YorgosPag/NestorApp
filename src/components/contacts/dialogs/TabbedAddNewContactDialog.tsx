@@ -18,12 +18,14 @@ import type { ContactType } from '@/types/contacts';
 import { Loader2, User, Building, Shield, Building2, Landmark } from 'lucide-react';
 import type { AddNewContactDialogProps, ContactFormData } from '@/types/ContactFormTypes';
 import { useContactForm } from '@/hooks/useContactForm';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { getTypeIcon, getTypeLabel } from '@/utils/contactFormUtils';
 import { UnifiedContactTabbedSection } from '@/components/ContactFormSections/UnifiedContactTabbedSection';
 import { RelationshipProvider } from '@/components/contacts/relationships/context/RelationshipProvider';
 import { CONTACT_TYPES, getContactIcon, getContactLabel } from '@/constants/contacts';
 
 export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, editContact, onLiveChange }: AddNewContactDialogProps) {
+  const iconSizes = useIconSizes();
   const {
     formData,
     setFormData,
@@ -93,19 +95,19 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
                     <SelectContent>
                       <SelectItem value={CONTACT_TYPES.INDIVIDUAL}>
                         <div className="flex items-center gap-2">
-                          <User className="w-4 h-4" />
+                          <User className={iconSizes.sm} />
                           <span>{getContactLabel(CONTACT_TYPES.INDIVIDUAL, 'singular')}</span>
                         </div>
                       </SelectItem>
                       <SelectItem value={CONTACT_TYPES.COMPANY}>
                         <div className="flex items-center gap-2">
-                          <Building2 className="w-4 h-4" />
+                          <Building2 className={iconSizes.sm} />
                           <span>{getContactLabel(CONTACT_TYPES.COMPANY, 'singular')}</span>
                         </div>
                       </SelectItem>
                       <SelectItem value={CONTACT_TYPES.SERVICE}>
                         <div className="flex items-center gap-2">
-                          <Landmark className="w-4 h-4" />
+                          <Landmark className={iconSizes.sm} />
                           <span>{getContactLabel(CONTACT_TYPES.SERVICE, 'singular')}</span>
                         </div>
                       </SelectItem>

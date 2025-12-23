@@ -4,26 +4,31 @@ import { useUserRole } from '@/contexts/UserRoleContext';
 import dynamic from 'next/dynamic';
 import { Suspense } from 'react';
 import { UnifiedProviders } from '@/subapps/dxf-viewer/providers/UnifiedProviders';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // Dynamic import to avoid SSR issues with localStorage
 // 🔧 FIXED: Import DxfViewerApp (with all providers) instead of DxfViewerContent directly
 const DxfViewerApp = dynamic(
   () => import('@/subapps/dxf-viewer/DxfViewerApp').then(mod => ({ default: mod.DxfViewerApp })),
   {
-    loading: () => (
-      <main className="w-full h-full flex items-center justify-center" role="main" aria-label="Φόρτωση DXF Viewer">
-        <section className="text-center" role="status" aria-live="polite">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+    loading: () => {
+      const iconSizes = useIconSizes();
+      return (
+        <main className="w-full h-full flex items-center justify-center" role="main" aria-label="Φόρτωση DXF Viewer">
+          <section className="text-center" role="status" aria-live="polite">
+            <div className={`animate-spin rounded-full ${iconSizes.xl2} border-b-2 border-blue-600 mx-auto mb-4`}></div>
           <p className="text-gray-600">Φόρτωση DXF Viewer...</p>
-        </section>
-      </main>
-    ),
+          </section>
+        </main>
+      );
+    },
     ssr: false // Disable SSR to avoid localStorage issues
   }
 );
 
 function AdminGuard({ children }: { children: React.ReactNode }) {
   const { isAdmin, isLoading } = useUserRole();
+  const iconSizes = useIconSizes();
 
   // 🛠️ DEVELOPMENT BYPASS: Allow access in development mode
   if (process.env.NODE_ENV === 'development') {
@@ -35,7 +40,7 @@ function AdminGuard({ children }: { children: React.ReactNode }) {
     return (
       <main className="w-full h-full flex items-center justify-center" role="main" aria-label="Έλεγχος Δικαιωμάτων">
         <section className="text-center" role="status" aria-live="polite">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className={`animate-spin rounded-full ${iconSizes.xl} border-b-2 border-blue-600 mx-auto mb-4`}></div>
           <p className="text-gray-600">Έλεγχος δικαιωμάτων...</p>
         </section>
       </main>
@@ -65,6 +70,7 @@ function AdminGuard({ children }: { children: React.ReactNode }) {
 }
 
 export default function DxfViewerPage() {
+  const iconSizes = useIconSizes();
   return (
     <AdminGuard>
       {/* UnifiedProviders includes all required contexts: Levels, Overlay, Selection, Cursor, etc. */}
@@ -73,7 +79,7 @@ export default function DxfViewerPage() {
           <Suspense fallback={
             <section className="w-full h-full flex items-center justify-center" role="status" aria-live="polite">
               <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <div className={`animate-spin rounded-full ${iconSizes.xl2} border-b-2 border-blue-600 mx-auto mb-4`}></div>
                 <p className="text-gray-600">Φόρτωση DXF Viewer...</p>
               </div>
             </section>

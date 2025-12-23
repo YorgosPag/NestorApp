@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Building2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface BasicInfoCardProps {
     formData: { name: string; description: string };
@@ -16,11 +17,12 @@ interface BasicInfoCardProps {
 }
 
 export function BasicInfoCard({ formData, updateField, isEditing, errors }: BasicInfoCardProps) {
+  const iconSizes = useIconSizes();
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Building2 className="w-5 h-5" />
+          <Building2 className={iconSizes.md} />
           Βασικές Πληροφορίες
         </CardTitle>
       </CardHeader>

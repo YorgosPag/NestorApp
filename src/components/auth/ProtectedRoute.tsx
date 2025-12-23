@@ -4,8 +4,10 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader2 } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const iconSizes = useIconSizes();
   const { user, loading } = useAuth();
   const router = useRouter();
 
@@ -19,7 +21,7 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
     return (
       <div className="h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            <Loader2 className={`${iconSizes.lg} animate-spin text-muted-foreground`} />
             <p className="text-muted-foreground">Φόρτωση...</p>
         </div>
       </div>

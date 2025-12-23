@@ -6,6 +6,7 @@
 
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 /**
  * ╔════════════════════════════════════════════════════════════════════════════╗
@@ -43,6 +44,7 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
   // ============================================================================
   // HOOKS
   // ============================================================================
+  const iconSizes = useIconSizes();
 
   const {
     state: { rulers: rulerSettings },
@@ -190,13 +192,13 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
         </div>
         <div className="flex items-center gap-2">
           <div
-            className={`w-6 h-6 rounded border border-gray-500 ${rulerBgClass}`}
+            className={`${iconSizes.md} rounded border border-gray-500 ${rulerBgClass}`}
           />
           <input
             type="color"
             value={rulerBackgroundColor}
             onChange={(e) => handleRulerBackgroundColorChange(e.target.value)}
-            className="w-8 h-6 rounded border-0 cursor-pointer"
+            className={`${iconSizes.lg} h-6 rounded border-0 cursor-pointer`}
           />
           <input
             type="text"

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Building2 } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { cn } from '@/lib/utils';
 import { GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 import { nearbyProjects } from './nearbyProjects';
@@ -27,6 +28,7 @@ interface MapCanvasProps {
 }
 
 export function MapCanvas({ buildingName, mapView, showNearbyProjects, selectedLayer }: MapCanvasProps) {
+    const iconSizes = useIconSizes();
     const filteredProjects = nearbyProjects.filter(project => {
         if (selectedLayer === 'all') return true;
         return project.status === selectedLayer;
@@ -51,7 +53,7 @@ export function MapCanvas({ buildingName, mapView, showNearbyProjects, selectedL
                         <div className="relative group">
                             <div className="animate-bounce">
                                 <div className="bg-red-500 p-3 rounded-full shadow-lg border-4 border-white">
-                                    <Building2 className="w-6 h-6 text-white" />
+                                    <Building2 className={`${iconSizes.lg} text-white`} />
                                 </div>
                             </div>
                             <div className={`absolute top-14 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-75 text-white px-3 py-1 rounded text-sm whitespace-nowrap opacity-0 ${GROUP_HOVER_PATTERNS.SHOW_ON_GROUP} transition-opacity`}>
@@ -71,14 +73,14 @@ export function MapCanvas({ buildingName, mapView, showNearbyProjects, selectedL
 
                     {/* Distance circles */}
                     <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                        <div className="w-32 h-32 border-2 border-blue-300 border-dashed rounded-full opacity-30"></div>
-                        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 border-2 border-blue-200 border-dashed rounded-full opacity-20"></div>
+                        <div className={`${iconSizes.xl8} border-2 border-blue-300 border-dashed rounded-full opacity-30`}></div>
+                        <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 ${iconSizes.xl12} border-2 border-blue-200 border-dashed rounded-full opacity-20`}></div>
                     </div>
 
                     {/* Scale indicator */}
                     <div className="absolute bottom-4 left-4 bg-white bg-opacity-90 px-3 py-2 rounded text-sm">
                         <div className="flex items-center gap-2">
-                            <div className="w-16 h-1 bg-black"></div>
+                            <div className={`${iconSizes.xl4} h-1 bg-black`}></div>
                             <span>100m</span>
                         </div>
                     </div>

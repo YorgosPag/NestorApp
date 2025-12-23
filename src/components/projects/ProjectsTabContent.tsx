@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -42,6 +43,7 @@ export function ActionsTabContent({
   onEditProject,
   onDeleteProject
 }: TabContentProps) {
+  const iconSizes = useIconSizes();
   return (
     <>
       <Button
@@ -50,7 +52,7 @@ export function ActionsTabContent({
         onClick={onNewProject}
         className="relative"
       >
-        <Plus className="h-4 w-4 mr-1" />
+        <Plus className={`${iconSizes.sm} mr-1`} />
         Νέο Έργο
       </Button>
 
@@ -60,7 +62,7 @@ export function ActionsTabContent({
         onClick={() => selectedItems[0] && onEditProject?.(selectedItems[0])}
         disabled={selectedItems.length !== 1}
       >
-        <Edit className="h-4 w-4 mr-1" />
+        <Edit className={`${iconSizes.sm} mr-1`} />
         Επεξεργασία
       </Button>
 
@@ -70,7 +72,7 @@ export function ActionsTabContent({
         onClick={() => onDeleteProject?.(selectedItems)}
         disabled={selectedItems.length === 0}
       >
-        <Trash2 className="h-4 w-4 mr-1" />
+        <Trash2 className={`${iconSizes.sm} mr-1`} />
         Διαγραφή
         {selectedItems.length > 0 && (
           <span className="ml-1 bg-background text-destructive px-1 rounded text-xs">
@@ -87,7 +89,7 @@ export function ImportExportTabContent({ onExport }: TabContentProps) {
   return (
     <>
       <Button variant="outline" size="sm" onClick={onExport}>
-        <Download className="h-4 w-4 mr-1" />
+        <Download className={`${iconSizes.sm} mr-1`} />
         Εξαγωγή
       </Button>
 
@@ -96,7 +98,7 @@ export function ImportExportTabContent({ onExport }: TabContentProps) {
         size="sm"
         onClick={() => console.log('Import projects...')}
       >
-        <Upload className="h-4 w-4 mr-1" />
+        <Upload className={`${iconSizes.sm} mr-1`} />
         Εισαγωγή
       </Button>
     </>
@@ -108,10 +110,11 @@ export function ManagementTabContent({
   selectedItems = [],
   onRefresh
 }: TabContentProps) {
+  const iconSizes = useIconSizes();
   return (
     <>
       <Button variant="outline" size="sm" onClick={onRefresh}>
-        <RefreshCw className="h-4 w-4 mr-1" />
+        <RefreshCw className={`${iconSizes.sm} mr-1`} />
         Ανανέωση
       </Button>
 
@@ -121,7 +124,7 @@ export function ManagementTabContent({
         onClick={() => console.log('Archive selected projects...')}
         disabled={selectedItems.length === 0}
       >
-        <Archive className="h-4 w-4 mr-1" />
+        <Archive className={`${iconSizes.sm} mr-1`} />
         Αρχειοθέτηση
       </Button>
 
@@ -131,7 +134,7 @@ export function ManagementTabContent({
         onClick={() => console.log('Add to favorites...')}
         disabled={selectedItems.length === 0}
       >
-        <Star className="h-4 w-4 mr-1" />
+        <Star className={`${iconSizes.sm} mr-1`} />
         Αγαπημένα
       </Button>
 
@@ -141,7 +144,7 @@ export function ManagementTabContent({
         onClick={() => console.log('Share projects...')}
         disabled={selectedItems.length === 0}
       >
-        <Share className="h-4 w-4 mr-1" />
+        <Share className={`${iconSizes.sm} mr-1`} />
         Κοινοποίηση
       </Button>
     </>
@@ -150,6 +153,7 @@ export function ManagementTabContent({
 
 // 🛠️ Εργαλεία (Tools)
 export function ToolsTabContent({ selectedItems = [] }: TabContentProps) {
+  const iconSizes = useIconSizes();
   return (
     <>
       <Button
@@ -158,7 +162,7 @@ export function ToolsTabContent({ selectedItems = [] }: TabContentProps) {
         onClick={() => console.log('View on map...')}
         disabled={selectedItems.length === 0}
       >
-        <MapPin className="h-4 w-4 mr-1" />
+        <MapPin className={`${iconSizes.sm} mr-1`} />
         Χάρτης
       </Button>
 
@@ -167,7 +171,7 @@ export function ToolsTabContent({ selectedItems = [] }: TabContentProps) {
         size="sm"
         onClick={() => console.log('Show help...')}
       >
-        <HelpCircle className="h-4 w-4 mr-1" />
+        <HelpCircle className={`${iconSizes.sm} mr-1`} />
         Βοήθεια
       </Button>
     </>
@@ -185,13 +189,14 @@ export function SearchFiltersTabContent({
   statusTabs = [],
   typeTabs = []
 }: TabContentProps) {
+  const iconSizes = useIconSizes();
   const [sortDirection, setSortDirection] = React.useState<'asc' | 'desc'>('asc');
 
   return (
     <>
       {/* Search Input */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${iconSizes.sm} text-muted-foreground`} />
         <Input
           placeholder="Αναζήτηση έργων..."
           value={searchTerm}
@@ -248,7 +253,7 @@ export function SearchFiltersTabContent({
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm" className="relative">
-            <ArrowUpDown className="h-4 w-4 mr-1" />
+            <ArrowUpDown className={`${iconSizes.sm} mr-1`} />
             Ταξινόμηση {sortDirection === 'asc' ? '↑' : '↓'}
           </Button>
         </DropdownMenuTrigger>

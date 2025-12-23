@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Plus } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { GenericCRMDashboardTabsRenderer, GenericPeriodSelector } from '@/components/generic';
 import { getSortedCRMDashboardTabs } from '@/config/crm-dashboard-tabs-config';
 import { getSortedPeriods } from '@/config/period-selector-config';
@@ -9,6 +10,7 @@ import { TelegramNotifications } from './TelegramNotifications';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 export function CRMDashboardPageContent() {
+  const iconSizes = useIconSizes();
   const [selectedPeriod, setSelectedPeriod] = useState('week');
 
   // Get CRM Dashboard tabs from centralized config
@@ -33,7 +35,7 @@ export function CRMDashboardPageContent() {
                 theme="compact"
               />
               <button className={`px-4 py-2 text-white rounded-lg flex items-center gap-2 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}>
-                <Plus className="w-4 h-4" />
+                <Plus className={iconSizes.sm} />
                 Νέα Επαφή
               </button>
             </nav>

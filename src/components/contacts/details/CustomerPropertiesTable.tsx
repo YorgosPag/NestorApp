@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { getUnitsByOwner } from '@/services/units.service';
 import type { Property } from '@/types/property-viewer';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -15,6 +16,7 @@ interface CustomerPropertiesTableProps {
 }
 
 export function CustomerPropertiesTable({ contactId, onAddUnit }: CustomerPropertiesTableProps) {
+    const iconSizes = useIconSizes();
     const [properties, setProperties] = useState<Property[]>([]);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
@@ -52,11 +54,11 @@ export function CustomerPropertiesTable({ contactId, onAddUnit }: CustomerProper
         <div className="mt-4">
             <div className="flex justify-between items-center mb-2">
                 <h4 className="font-semibold text-sm flex items-center gap-2">
-                    <Home className="w-4 h-4 text-muted-foreground"/>
+                    <Home className={`${iconSizes.sm} text-muted-foreground`}/>
                     Ακίνητα Πελάτη ({properties.length})
                 </h4>
                 <Button variant="outline" size="sm" onClick={onAddUnit}>
-                    <Plus className="w-4 h-4 mr-2"/>
+                    <Plus className={`${iconSizes.sm} mr-2`}/>
                     Προσθήκη Ακινήτου
                 </Button>
             </div>
@@ -92,7 +94,7 @@ export function CustomerPropertiesTable({ contactId, onAddUnit }: CustomerProper
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <Button variant="ghost" size="sm" onClick={() => handleViewUnit(prop.id)}>
-                                            <Eye className="w-4 h-4 mr-2"/>
+                                            <Eye className={`${iconSizes.sm} mr-2`}/>
                                             Προβολή
                                         </Button>
                                     </TableCell>

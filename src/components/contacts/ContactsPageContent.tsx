@@ -41,10 +41,14 @@ import { MobileCompactHeader } from '@/core/headers';
 import { CompactToolbar, contactsConfig } from '@/components/core/CompactToolbar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // 🚫 MOCK DATA ΕΝΤΕΛΩΣ ΑΦΑΙΡΕΜΕΝΑ - Καθαρή εφαρμογή χωρίς seed functionality
 
 export function ContactsPageContent() {
+  // 🏢 ENTERPRISE: Centralized icon sizes
+  const iconSizes = useIconSizes();
+
   // URL parameters
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -532,7 +536,7 @@ export function ContactsPageContent() {
         <div className="px-4 py-2 bg-green-50 border-b border-green-200">
           <div className="flex items-center justify-between max-w-full">
             <div className="flex items-center space-x-2">
-              <Filter className="h-4 w-4 text-green-600" />
+              <Filter className={`${iconSizes.sm} text-green-600`} />
               <span className="text-sm text-green-800">
                 Προβολή πελάτη: <strong>{contactName}</strong>
               </span>
@@ -545,7 +549,7 @@ export function ContactsPageContent() {
               className={`flex items-center space-x-1 px-2 py-1 text-sm text-green-600 rounded ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_GHOST}`}
               title="Επιστροφή στη λίστα επαφών"
             >
-              <X className="h-4 w-4" />
+              <X className={iconSizes.sm} />
               <span>Επιστροφή</span>
             </button>
           </div>
@@ -560,7 +564,7 @@ export function ContactsPageContent() {
         <div className="px-4 py-2 bg-blue-50 border-b border-blue-200">
           <div className="flex items-center justify-between max-w-full">
             <div className="flex items-center space-x-2">
-              <Filter className="h-4 w-4 text-blue-600" />
+              <Filter className={`${iconSizes.sm} text-blue-600`} />
               <span className="text-sm text-blue-800">
                 Φιλτράρισμα για: <strong>"{filterValue}"</strong>
               </span>
@@ -573,7 +577,7 @@ export function ContactsPageContent() {
               className={`flex items-center space-x-1 px-2 py-1 text-sm text-blue-600 rounded ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_GHOST}`}
               title="Εμφάνιση όλων των επαφών"
             >
-              <X className="h-4 w-4" />
+              <X className={iconSizes.sm} />
               <span>Καθάρισμα</span>
             </button>
           </div>
@@ -699,14 +703,14 @@ export function ContactsPageContent() {
                       className={`p-2 rounded-md border bg-background border-border ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
                       aria-label="Επεξεργασία Επαφής"
                     >
-                      <Edit className="h-4 w-4" />
+                      <Edit className={iconSizes.sm} />
                     </button>
                     <button
                       onClick={() => handleDeleteContacts()}
                       className={`p-2 rounded-md border bg-background border-border text-destructive ${INTERACTIVE_PATTERNS.BUTTON_DESTRUCTIVE_GHOST} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
                       aria-label="Διαγραφή Επαφής"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className={iconSizes.sm} />
                     </button>
                   </>
                 }
@@ -765,3 +769,6 @@ export function ContactsPageContent() {
     </TooltipProvider>
   );
 }
+
+// Default export για compatibility
+export default ContactsPageContent;

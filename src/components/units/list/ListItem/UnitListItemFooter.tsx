@@ -8,6 +8,7 @@ import { formatDate as formatDateCentralized } from '@/lib/intl-utils';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { UnitCustomerDisplay } from '@/components/shared/customer-info';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 
 // ✅ ENTERPRISE MIGRATION: Using centralized formatDate for consistent formatting
@@ -30,6 +31,7 @@ interface UnitListItemFooterProps {
 }
 
 export function UnitListItemFooter({ unit }: UnitListItemFooterProps) {
+  const iconSizes = useIconSizes();
   // ========================================================================
   // ENTERPRISE LOGIC: Progressive Disclosure Pattern
   // ========================================================================
@@ -45,7 +47,7 @@ export function UnitListItemFooter({ unit }: UnitListItemFooterProps) {
           <TooltipTrigger asChild>
             <Button variant="ghost" size="sm" className="w-full justify-start text-xs text-muted-foreground p-0 h-auto" asChild>
                <Link href="/crm/calendar">
-                <Clock className="w-3 h-3 mr-2" />
+                <Clock className={`${iconSizes.xs} mr-2`} />
                 <span>Διαθέσιμο για προβολή</span>
               </Link>
             </Button>
@@ -90,7 +92,7 @@ export function UnitListItemFooter({ unit }: UnitListItemFooterProps) {
       {/* ENTERPRISE: Sale Date (only if no customer info shown above) */}
       {!hasCustomerLink && unit.saleDate && (
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
-          <Calendar className="w-3 h-3" />
+          <Calendar className={iconSizes.xs} />
           <span>
             {unit.status === 'sold' ? 'Ημ/νία Πώλησης:' : 'Ημ/νία Ενοικίασης:'} {formatDate(unit.saleDate)}
           </span>

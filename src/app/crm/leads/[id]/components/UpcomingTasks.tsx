@@ -3,6 +3,7 @@
 
 import React, { useMemo } from 'react';
 import { Clock } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { CrmTask } from '@/types/crm';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { getTaskDateColor, formatTaskDate } from '../utils/dates';
@@ -13,6 +14,7 @@ interface UpcomingTasksProps {
 }
 
 export function UpcomingTasks({ tasks, router }: UpcomingTasksProps) {
+  const iconSizes = useIconSizes();
   const pendingTasks = useMemo(() => {
     return tasks
       .filter(task => task.status === 'pending' || task.status === 'in_progress')
@@ -33,7 +35,7 @@ export function UpcomingTasks({ tasks, router }: UpcomingTasksProps) {
               <h5 className="font-medium text-gray-900 dark:text-foreground">{task.title}</h5>
               <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-muted-foreground mt-1">
                 <span className={getTaskDateColor(task.dueDate, task.status)}>
-                  <Clock className="w-3 h-3 inline mr-1" />
+                  <Clock className={`${iconSizes.xs} inline mr-1`} />
                   {formatTaskDate(task.dueDate)}
                 </span>
                 <span className={`px-2 py-1 rounded-full text-xs ${task.priority === 'urgent' ? 'bg-red-100 text-red-700' : task.priority === 'high' ? 'bg-orange-100 text-orange-700' : task.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}>

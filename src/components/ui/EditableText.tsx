@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Check, X, Edit } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { cn } from '@/lib/utils';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
@@ -42,6 +43,7 @@ export function EditableText({
   maxLength,
   required = false
 }: EditableTextProps) {
+  const iconSizes = useIconSizes();
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
   const [isHovered, setIsHovered] = useState(false);
@@ -112,7 +114,7 @@ export function EditableText({
           className="h-8 w-8 p-0"
           title="Αποθήκευση"
         >
-          <Check className="w-4 h-4" />
+          <Check className={iconSizes.sm} />
         </Button>
         <Button
           size="sm"
@@ -121,7 +123,7 @@ export function EditableText({
           className="h-8 w-8 p-0"
           title="Ακύρωση"
         >
-          <X className="w-4 h-4" />
+          <X className={iconSizes.sm} />
         </Button>
       </div>
     );
@@ -143,7 +145,7 @@ export function EditableText({
       </span>
 
       {showEditIcon && !disabled && isHovered && !isEditing && (
-        <Edit className="w-3 h-3 text-muted-foreground opacity-70" />
+        <Edit className={`${iconSizes.xs} text-muted-foreground opacity-70`} />
       )}
     </div>
   );

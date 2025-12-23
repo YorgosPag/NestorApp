@@ -5,6 +5,7 @@ import { Filter, Plus, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 // Removed: useToast import (migrated to useNotifications)
 import type { Opportunity } from '@/types/crm';
 
@@ -16,13 +17,14 @@ import LeadsList from '@/components/leads/LeadsList';
 
 
 export function PipelineTab() {
-  const { 
-    opportunities, 
-    loading, 
-    error, 
-    fetchOpportunities, 
-    addOpportunity, 
-    deleteOpportunity: removeOpportunity 
+  const iconSizes = useIconSizes();
+  const {
+    opportunities,
+    loading,
+    error,
+    fetchOpportunities,
+    addOpportunity,
+    deleteOpportunity: removeOpportunity
   } = useOpportunities();
   
   const [openAddDialog, setOpenAddDialog] = useState(false);
@@ -45,11 +47,11 @@ export function PipelineTab() {
                 {viewMode === 'pipeline' ? 'Προβολή Λίστας' : 'Προβολή Pipeline'}
               </Button>
               <Button variant="outline" size="sm" onClick={fetchOpportunities}>
-                <Filter className="w-4 h-4 inline mr-1" />
+                <Filter className={`${iconSizes.sm} inline mr-1`} />
                 Ανανέωση
               </Button>
               <Button size="sm" onClick={() => setOpenAddDialog(true)}>
-                <Plus className="w-4 h-4 mr-2" />
+                <Plus className={`${iconSizes.sm} mr-2`} />
                 Νέο Lead
               </Button>
             </div>
@@ -60,7 +62,7 @@ export function PipelineTab() {
           {loading ? (
               <div className="flex items-center justify-center py-12">
                   <div className="text-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                      <div className={`animate-spin rounded-full ${iconSizes.xl} border-b-2 border-blue-600 mx-auto mb-2`}></div>
                       <p className="text-gray-600">Φόρτωση pipeline...</p>
                   </div>
               </div>
@@ -76,7 +78,7 @@ export function PipelineTab() {
               </div>
           ) : opportunities.length === 0 ? (
               <div className="text-center py-12">
-                  <User className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <User className={`${iconSizes.xl2} text-gray-400 mx-auto mb-4`} />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">Δεν υπάρχουν ευκαιρίες</h3>
                   <p className="text-gray-600">Προσθέστε την πρώτη σας ευκαιρία για να ξεκινήσετε!</p>
               </div>

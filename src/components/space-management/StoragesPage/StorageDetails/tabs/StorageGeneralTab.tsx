@@ -4,18 +4,20 @@ import React from 'react';
 import { formatDate, formatCurrency } from '@/lib/intl-utils';
 import type { Storage } from '@/types/storage/contracts';
 import { Warehouse, MapPin, Calendar, User, Building, Layers } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface StorageGeneralTabProps {
   storage: Storage;
 }
 
 export function StorageGeneralTab({ storage }: StorageGeneralTabProps) {
+  const iconSizes = useIconSizes();
   return (
     <div className="p-6 space-y-6">
       {/* Βασικές Πληροφορίες */}
       <section>
         <h3 className="font-semibold mb-4 flex items-center gap-2">
-          <Warehouse className="h-5 w-5" />
+          <Warehouse className={iconSizes.md} />
           Βασικές Πληροφορίες
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -52,7 +54,7 @@ export function StorageGeneralTab({ storage }: StorageGeneralTabProps) {
       {/* Τοποθεσία */}
       <section>
         <h3 className="font-semibold mb-4 flex items-center gap-2">
-          <MapPin className="h-5 w-5" />
+          <MapPin className={iconSizes.md} />
           Τοποθεσία
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -70,7 +72,7 @@ export function StorageGeneralTab({ storage }: StorageGeneralTabProps) {
       {/* Οικονομικά Στοιχεία */}
       <section>
         <h3 className="font-semibold mb-4 flex items-center gap-2">
-          <Building className="h-5 w-5" />
+          <Building className={iconSizes.md} />
           Οικονομικά Στοιχεία
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -102,7 +104,7 @@ export function StorageGeneralTab({ storage }: StorageGeneralTabProps) {
       {(storage.description || storage.notes) && (
         <section>
           <h3 className="font-semibold mb-4 flex items-center gap-2">
-            <Layers className="h-5 w-5" />
+            <Layers className={iconSizes.md} />
             Περιγραφή & Σημειώσεις
           </h3>
           <div className="space-y-4">
@@ -125,7 +127,7 @@ export function StorageGeneralTab({ storage }: StorageGeneralTabProps) {
       {/* Στοιχεία Ενημέρωσης */}
       <section>
         <h3 className="font-semibold mb-4 flex items-center gap-2">
-          <Calendar className="h-5 w-5" />
+          <Calendar className={iconSizes.md} />
           Στοιχεία Ενημέρωσης
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

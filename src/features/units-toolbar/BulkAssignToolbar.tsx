@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { User, Check, X } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { getContactDisplayName } from '@/types/contacts';
 import { useBulkAssign } from './hooks/useBulkAssign';
@@ -23,6 +24,7 @@ export function BulkAssignToolbar({
   onClearSelection: () => void;
   onAssignmentSuccess: () => void;
 }) {
+  const iconSizes = useIconSizes();
   const notifications = useNotifications();
   const {
     contacts,
@@ -39,7 +41,7 @@ export function BulkAssignToolbar({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <User className="w-4 h-4 text-blue-700 dark:text-blue-300" />
+            <User className={`${iconSizes.sm} text-blue-700 dark:text-blue-300`} />
             <Label className="text-sm font-medium text-blue-800 dark:text-blue-200">
               Μαζική Ανάθεση σε Πελάτη
             </Label>
@@ -62,7 +64,7 @@ export function BulkAssignToolbar({
             onClick={handleAssign}
             disabled={isLoading || !selectedContactId}
           >
-            <Check className="w-4 h-4 mr-2" />
+            <Check className={`${iconSizes.sm} mr-2`} />
             {isLoading ? 'Ανάθεση...' : 'Ανάθεση'}
           </Button>
         </div>
@@ -72,7 +74,7 @@ export function BulkAssignToolbar({
           className="text-xs"
           onClick={onClearSelection}
         >
-          <X className="w-3 h-3 mr-1" />
+          <X className={`${iconSizes.xs} mr-1`} />
           Καθαρισμός Επιλογής ({selectedIds.length})
         </Button>
       </div>

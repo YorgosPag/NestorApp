@@ -8,6 +8,7 @@
 import React, { forwardRef } from 'react';
 import { LucideIcon } from 'lucide-react';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // Button variants for consistent styling
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'outline' | 'tool' | 'tab' | 'action';
@@ -53,12 +54,12 @@ const sizeStyles: Record<ButtonSize, string> = {
   lg: 'h-12 px-6 text-lg'
 };
 
-const iconSizeStyles: Record<ButtonSize, string> = {
-  xs: 'w-3 h-3',
-  sm: 'w-4 h-4',
-  md: 'w-5 h-5',
-  lg: 'w-6 h-6'
-};
+const getIconSizeStyles = (iconSizes: ReturnType<typeof useIconSizes>): Record<ButtonSize, string> => ({
+  xs: iconSizes.xs,
+  sm: iconSizes.sm,
+  md: iconSizes.md,
+  lg: iconSizes.lg
+});
 
 export const BaseButton = forwardRef<HTMLButtonElement, BaseButtonProps>(
   (
@@ -79,11 +80,12 @@ export const BaseButton = forwardRef<HTMLButtonElement, BaseButtonProps>(
     },
     ref
   ) => {
+    const iconSizes = useIconSizes();
     const baseClasses = 'inline-flex items-center justify-center rounded-md border transition-colors duration-150 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2';
-    
+
     const variantClass = isActive ? activeVariantStyles[variant] : variantStyles[variant];
     const sizeClass = sizeStyles[size];
-    const iconSizeClass = iconSizeStyles[size];
+    const iconSizeClass = getIconSizeStyles(iconSizes)[size];
     
     const disabledClass = disabled ? 'opacity-50 cursor-not-allowed' : '';
     const widthClass = fullWidth ? 'w-full' : '';

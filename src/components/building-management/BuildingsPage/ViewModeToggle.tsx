@@ -10,6 +10,7 @@ import {
   FolderOpen,
   CheckSquare,
 } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface ViewModeToggleProps {
   viewMode: 'list' | 'grid' | 'byType' | 'byStatus';
@@ -17,6 +18,7 @@ interface ViewModeToggleProps {
 }
 
 export function ViewModeToggle({ viewMode, setViewMode }: ViewModeToggleProps) {
+  const iconSizes = useIconSizes();
   return (
     <>
       <Tooltip>
@@ -26,7 +28,7 @@ export function ViewModeToggle({ viewMode, setViewMode }: ViewModeToggleProps) {
             size="sm"
             onClick={() => setViewMode('list')}
           >
-            <List className="w-4 h-4" />
+            <List className={iconSizes.sm} />
           </Button>
         </TooltipTrigger>
         <TooltipContent>Προβολή Λίστας</TooltipContent>
@@ -38,7 +40,7 @@ export function ViewModeToggle({ viewMode, setViewMode }: ViewModeToggleProps) {
             size="sm"
             onClick={() => setViewMode('grid')}
           >
-            <LayoutGrid className="w-4 h-4" />
+            <LayoutGrid className={iconSizes.sm} />
           </Button>
         </TooltipTrigger>
         <TooltipContent>Προβολή Πλέγματος</TooltipContent>
@@ -50,7 +52,7 @@ export function ViewModeToggle({ viewMode, setViewMode }: ViewModeToggleProps) {
             size="sm"
             onClick={() => setViewMode('byType')}
           >
-            <FolderOpen className="w-4 h-4 mr-2" />
+            <FolderOpen className={`${iconSizes.sm} mr-2`} />
             Ομαδοποίηση ανά Τύπο
           </Button>
         </TooltipTrigger>
@@ -63,7 +65,7 @@ export function ViewModeToggle({ viewMode, setViewMode }: ViewModeToggleProps) {
             size="sm"
             onClick={() => setViewMode('byStatus')}
           >
-            <CheckSquare className="w-4 h-4 mr-2" />
+            <CheckSquare className={`${iconSizes.sm} mr-2`} />
             Ομαδοποίηση ανά Κατάσταση
           </Button>
         </TooltipTrigger>

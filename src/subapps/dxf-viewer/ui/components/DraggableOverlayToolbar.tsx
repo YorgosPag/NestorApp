@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { OverlayEditorMode, Status, OverlayKind } from '../../overlays/types';
 import type { ToolType } from '../toolbar/types';
 import type { PropertyStatus } from '../../../../constants/property-statuses-enterprise';
@@ -42,6 +43,7 @@ interface DraggableOverlayToolbarProps {
 }
 
 export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (props) => {
+  const iconSizes = useIconSizes();
   // 🎯 OVERLAY CREATION & STORE HOOKS
   const { startOverlayCreation } = useUnifiedOverlayCreation();
   const overlayStore = useOverlayStore();
@@ -177,7 +179,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
       >
         {/* 🎯 HEADER ROW: Title, Drag Handle, Close */}
         <div className="flex items-center gap-3 flex-1">
-          <Activity className="h-4 w-4" style={performanceMonitorUtilities.getOverlayIconStyles('primary')} />
+          <Activity className={iconSizes.sm} style={performanceMonitorUtilities.getOverlayIconStyles('primary')} />
           <h3 className="text-sm font-semibold" style={performanceMonitorUtilities.getOverlayTitleStyles()}>Drawing Tools</h3>
 
           <div
@@ -194,7 +196,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
             style={performanceMonitorUtilities.getOverlayButtonStyles()}
             title="Hide toolbar"
           >
-            <X className="h-3 w-3" />
+            <X className={iconSizes.xs} />
           </button>
         </div>
       </CardHeader>
@@ -221,7 +223,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
                   }
                 `}
               >
-                {Icon ? <Icon className="w-4 h-4" /> : <span className="text-xs">?</span>}
+                {Icon ? <Icon className={iconSizes.sm} /> : <span className="text-xs">?</span>}
                 <span className="hidden sm:inline text-xs">{label}</span>
               </button>
             ))}
@@ -238,7 +240,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
                   key={status}
                   onClick={() => props.onStatusChange(status)}
                   title={STATUS_LABELS[status]}
-                  className="w-6 h-6 rounded-md border-2 transition-all duration-150"
+                  className={`${iconSizes.lg} rounded-md border-2 transition-all duration-150`}
                   style={getStatusColorButtonStyles(
                     status as PropertyStatus,
                     props.currentStatus === status
@@ -270,7 +272,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
                       }
                     `}
                   >
-                    {Icon ? <Icon className="w-4 h-4" /> : <span className="text-xs">?</span>}
+                    {Icon ? <Icon className={iconSizes.sm} /> : <span className="text-xs">?</span>}
                   </button>
                 );
               })}
@@ -292,7 +294,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
                 disabled:opacity-50 disabled:cursor-not-allowed
               "
             >
-              <Copy className="w-4 h-4" />
+              <Copy className={iconSizes.sm} />
             </button>
 
             <button
@@ -306,7 +308,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
                 disabled:opacity-50 disabled:cursor-not-allowed
               "
             >
-              <X className="w-4 h-4" />
+              <X className={iconSizes.sm} />
             </button>
           </div>
 
@@ -325,7 +327,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
                 disabled:opacity-50 disabled:cursor-not-allowed
               "
             >
-              <RotateCcw className="w-4 h-4" />
+              <RotateCcw className={iconSizes.sm} />
             </button>
             <button
               onClick={props.onRedo}
@@ -338,7 +340,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
                 disabled:opacity-50 disabled:cursor-not-allowed
               "
             >
-              <RotateCw className="w-4 h-4" />
+              <RotateCw className={iconSizes.sm} />
             </button>
           </div>
         </div>

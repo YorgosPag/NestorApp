@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { ChevronDown, Check } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useEnterprisePortal, createPortalConfig } from '@/components/ui/enterprise-portal';
 import { portalComponents, layoutUtilities } from '@/styles/design-tokens';
@@ -28,6 +29,7 @@ export const CustomRelationshipSelect: React.FC<CustomRelationshipSelectProps> =
   disabled = false,
   placeholder = "Επιλέξτε τύπο σχέσης"
 }) => {
+  const iconSizes = useIconSizes();
   const [isOpen, setIsOpen] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number; width: number } | null>(null);
 
@@ -147,14 +149,14 @@ export const CustomRelationshipSelect: React.FC<CustomRelationshipSelectProps> =
         <div className="flex items-center space-x-2 flex-1 text-left">
           {selectedConfig ? (
             <>
-              <selectedConfig.icon className="h-4 w-4 text-gray-600" />
+              <selectedConfig.icon className={`${iconSizes.sm} text-gray-600`} />
               <span className="text-foreground">{selectedConfig.label}</span>
             </>
           ) : (
             <span className="text-muted-foreground">{placeholder}</span>
           )}
         </div>
-        <ChevronDown className={`h-4 w-4 ${TRANSITION_PRESETS.STANDARD_TRANSFORM} ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`${iconSizes.sm} ${TRANSITION_PRESETS.STANDARD_TRANSFORM} ${isOpen ? 'rotate-180' : ''}`} />
       </Button>
 
       {/* Dropdown Portal - Debug Version */}
@@ -202,12 +204,12 @@ export const CustomRelationshipSelect: React.FC<CustomRelationshipSelectProps> =
                       ${isSelected ? 'bg-accent text-accent-foreground' : 'text-foreground'}
                     `}
                   >
-                    <Icon className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                    <Icon className={`${iconSizes.sm} flex-shrink-0 text-muted-foreground`} />
                     <span className="flex-1 text-sm font-medium">
                       {config.label}
                     </span>
                     {isSelected && (
-                      <Check className="h-4 w-4 text-primary ml-2" />
+                      <Check className={`${iconSizes.sm} text-primary ml-2`} />
                     )}
                   </div>
                 );

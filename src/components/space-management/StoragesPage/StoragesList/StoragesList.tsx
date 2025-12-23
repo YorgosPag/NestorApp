@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Warehouse } from 'lucide-react';
 import type { Storage } from '@/types/storage/contracts';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 import { StoragesListHeader } from './StoragesListHeader';
 import { StorageListItem } from './StorageListItem';
@@ -21,6 +22,7 @@ export function StoragesList({
   selectedStorage,
   onSelectStorage,
 }: StoragesListProps) {
+  const iconSizes = useIconSizes();
   const [favorites, setFavorites] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<'name' | 'area' | 'price' | 'status' | 'building' | 'type'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -169,7 +171,7 @@ export function StoragesList({
 
           {sortedStorages.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
-              <Warehouse className="w-12 h-12 mx-auto mb-2 opacity-50" />
+              <Warehouse className={`${iconSizes.xl3} mx-auto mb-2 opacity-50`} />
               <p>Δεν βρέθηκαν αποθήκες</p>
               {searchTerm && (
                 <p className="text-sm">για τον όρο "{searchTerm}"</p>

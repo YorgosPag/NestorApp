@@ -1,6 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import DxfImportModal from '../components/DxfImportModal';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface Props {
   className?: string;
@@ -13,6 +14,7 @@ export default function UploadDxfButton({
   title = 'Upload DXF', 
   onFileSelect
 }: Props) {
+  const iconSizes = useIconSizes();
   const [showModal, setShowModal] = useState(false);
 
   const handleImport = async (file: File, encoding: string) => {
@@ -40,7 +42,7 @@ export default function UploadDxfButton({
       >
         <svg 
           viewBox="0 0 24 24" 
-          className="w-4 h-4" 
+          className={iconSizes.sm} 
           fill="none" 
           stroke="currentColor" 
           strokeWidth="2"

@@ -4,6 +4,7 @@ import React, { useState, useCallback } from 'react';
 import { Eye, EyeOff, Settings, Layers, Palette, Sliders } from 'lucide-react';
 import type { AdminSearchResult } from '../types/administrative-types';
 import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // ============================================================================
 // TYPES
@@ -60,6 +61,7 @@ export function BoundaryLayerControlPanel({
   onAddNewBoundary,
   className = ''
 }: BoundaryLayerControlPanelProps) {
+  const iconSizes = useIconSizes();
 
   // State
   const [isExpanded, setIsExpanded] = useState(true);
@@ -131,7 +133,7 @@ export function BoundaryLayerControlPanel({
           }`}
           title={layer.visible ? 'Απόκρυψη' : 'Εμφάνιση'}
         >
-          {layer.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+          {layer.visible ? <Eye className={iconSizes.sm} /> : <EyeOff className={iconSizes.sm} />}
         </button>
 
         {/* Remove Button */}
@@ -170,7 +172,7 @@ export function BoundaryLayerControlPanel({
             onClick={() => setActiveStyleLayer(activeStyleLayer === layer.id ? null : layer.id)}
             className="flex items-center gap-2 text-xs text-gray-600 ${HOVER_TEXT_EFFECTS.DARKER} transition-colors"
           >
-            <Palette className="w-3 h-3" />
+            <Palette className={iconSizes.xs} />
             <span>Προσαρμογή στυλ</span>
           </button>
 
@@ -247,7 +249,7 @@ export function BoundaryLayerControlPanel({
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Layers className="w-5 h-5 text-blue-600" />
+            <Layers className={`${iconSizes.md} text-blue-600`} />
             <h3 className="text-lg font-semibold text-gray-900">
               Boundary Layers
             </h3>
@@ -284,7 +286,7 @@ export function BoundaryLayerControlPanel({
           <div className="space-y-3">
             {layers.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
-                <Layers className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                <Layers className={`${iconSizes.xl3} mx-auto mb-2 text-gray-300`} />
                 <p className="text-sm">Δεν υπάρχουν boundary layers</p>
                 <p className="text-xs">Κάντε κλικ "Προσθήκη Boundary" για να ξεκινήσετε</p>
               </div>

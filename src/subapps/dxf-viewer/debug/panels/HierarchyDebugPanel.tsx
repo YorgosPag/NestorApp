@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { Building, Building2, FolderIcon, Home, Package, ParkingCircle, Target } from 'lucide-react';
 import { CraneIcon } from '../../components/icons';
 import { useProjectHierarchy } from '../../contexts/ProjectHierarchyContext';
@@ -7,6 +8,7 @@ import { useTranslation } from '../../../../i18n';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 export function HierarchyDebugPanel() {
+  const iconSizes = useIconSizes();
   const { t } = useTranslation('dxf-viewer');
   const {
     companies,
@@ -32,7 +34,7 @@ export function HierarchyDebugPanel() {
     return (
       <div className="bg-gray-800 p-4 rounded-lg border border-gray-600">
         <h3 className="text-white text-lg font-semibold mb-2 flex items-center space-x-2">
-          <CraneIcon className="h-5 w-5 text-orange-500" />
+          <CraneIcon className={`${iconSizes.md} text-orange-500`} />
           <span>{t('panels.hierarchy.projectHierarchy')}</span>
         </h3>
         <p className="text-gray-400">{t('panels.hierarchy.loading')}</p>
@@ -58,7 +60,7 @@ export function HierarchyDebugPanel() {
   return (
     <div className="bg-gray-800 p-4 rounded-lg border border-gray-600">
       <h3 className="text-white text-lg font-semibold mb-4 flex items-center space-x-2">
-        <CraneIcon className="h-5 w-5 text-orange-500" />
+        <CraneIcon className={`${iconSizes.md} text-orange-500`} />
         <span>{t('panels.hierarchy.projectHierarchy')}</span>
       </h3>
       
@@ -79,7 +81,7 @@ export function HierarchyDebugPanel() {
                     : `bg-gray-700 text-gray-300 ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
                 }`}
               >
-                <Building className="h-4 w-4 inline mr-1" />{company.companyName}
+                <Building className={`${iconSizes.sm} inline mr-1`} />{company.companyName}
                 <span className="text-xs ml-2 opacity-70">
                   {company.industry}
                 </span>
@@ -94,7 +96,7 @@ export function HierarchyDebugPanel() {
         <div className="mb-4 pl-4 border-l-2 border-orange-500">
           <h4 className="text-orange-300 font-medium mb-2">
             <div className="flex items-center space-x-2">
-              <Building className="h-4 w-4" />
+              <Building className={iconSizes.sm} />
               <span>{selectedCompany.companyName}</span>
             </div>
           </h4>
@@ -120,7 +122,7 @@ export function HierarchyDebugPanel() {
                         : `bg-gray-700 text-gray-300 ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
                     }`}
                   >
-                    <FolderIcon className="h-4 w-4 inline mr-1" />{project.name}
+                    <FolderIcon className={`${iconSizes.sm} inline mr-1`} />{project.name}
                     <span className="text-xs ml-2 opacity-70">
                       ({project.buildings.length} {t('panels.hierarchy.buildingsCount', { count: project.buildings.length })})
                     </span>
@@ -137,7 +139,7 @@ export function HierarchyDebugPanel() {
         <div className="mb-4 pl-4 border-l-2 border-blue-500">
           <h4 className="text-blue-300 font-medium mb-2">
             <div className="flex items-center space-x-2">
-              <Building2 className="h-4 w-4" />
+              <Building2 className={iconSizes.sm} />
               <span>{selectedProject.name}</span>
             </div>
           </h4>
@@ -157,7 +159,7 @@ export function HierarchyDebugPanel() {
                         : `bg-gray-700 text-gray-300 ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
                     }`}
                   >
-                    <Building2 className="h-4 w-4 inline mr-1" />{building.name}
+                    <Building2 className={`${iconSizes.sm} inline mr-1`} />{building.name}
                     <span className="text-xs ml-2 opacity-70">
                       ({building.floors.length} {t('panels.hierarchy.floorsCount', { count: building.floors.length })})
                     </span>
@@ -170,7 +172,7 @@ export function HierarchyDebugPanel() {
           {/* Parking */}
           {selectedProject.parkingSpots && selectedProject.parkingSpots.length > 0 && (
             <div className="text-sm text-gray-400 flex items-center space-x-2">
-              <ParkingCircle className="h-4 w-4" />
+              <ParkingCircle className={iconSizes.sm} />
               <span>{t('panels.hierarchy.parkingSpots', { count: selectedProject.parkingSpots.length })}</span>
             </div>
           )}
@@ -182,7 +184,7 @@ export function HierarchyDebugPanel() {
         <div className="mb-4 pl-8 border-l-2 border-green-500">
           <h4 className="text-green-300 font-medium mb-2">
             <div className="flex items-center space-x-2">
-              <Building2 className="h-4 w-4" />
+              <Building2 className={iconSizes.sm} />
               <span>{selectedBuilding.name}</span>
             </div>
           </h4>
@@ -202,7 +204,7 @@ export function HierarchyDebugPanel() {
                         : `bg-gray-700 text-gray-300 ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
                     }`}
                   >
-                    <Home className="h-4 w-4 inline mr-1" />{floor.name}
+                    <Home className={`${iconSizes.sm} inline mr-1`} />{floor.name}
                     <span className="text-xs ml-2 opacity-70">
                       ({Array.isArray(floor.units) ? floor.units.length : 0} {t('panels.hierarchy.unitsCount', { count: Array.isArray(floor.units) ? floor.units.length : 0 })})
                     </span>
@@ -215,7 +217,7 @@ export function HierarchyDebugPanel() {
           {/* Storage Areas */}
           {selectedBuilding.storageAreas && selectedBuilding.storageAreas.length > 0 && (
             <div className="text-sm text-gray-400 flex items-center space-x-2">
-              <Package className="h-4 w-4" />
+              <Package className={iconSizes.sm} />
               <span>{t('panels.hierarchy.storageAreas', { count: selectedBuilding.storageAreas.length })}</span>
             </div>
           )}
@@ -227,7 +229,7 @@ export function HierarchyDebugPanel() {
         <div className="mb-4 pl-12 border-l-2 border-purple-500">
           <h4 className="text-purple-300 font-medium mb-2">
             <div className="flex items-center space-x-2">
-              <Home className="h-4 w-4" />
+              <Home className={iconSizes.sm} />
               <span>{selectedFloor.name}</span>
             </div>
           </h4>
@@ -235,7 +237,7 @@ export function HierarchyDebugPanel() {
             {Array.isArray(selectedFloor.units) ? selectedFloor.units.map(unit => (
               <div key={unit.id} className="text-gray-400 flex justify-between">
                 <span className="flex items-center space-x-1">
-                  <Home className="h-3 w-3" />
+                  <Home className={iconSizes.xs} />
                   <span>{unit.name}</span>
                 </span>
                 <span className={`px-1 rounded text-xs ${
@@ -258,7 +260,7 @@ export function HierarchyDebugPanel() {
       {/* Available Destinations */}
       <div className="mt-6 pt-4 border-t border-gray-600">
         <h4 className="text-gray-300 font-medium mb-2 flex items-center space-x-2">
-          <Target className="h-4 w-4 text-blue-400" />
+          <Target className={`${iconSizes.sm} text-blue-400`} />
           <span>{t('panels.hierarchy.availableDestinations')} ({destinations.length})</span>
         </h4>
         <div className="max-h-32 overflow-y-auto text-xs space-y-1">

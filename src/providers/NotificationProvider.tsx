@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useCallback, useRef, useEff
 import { toast, Toaster } from 'sonner';
 import { CheckCircle, AlertCircle, AlertTriangle, Info, Loader2, X } from 'lucide-react';
 import { useTranslation } from '@/i18n';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type {
   NotificationContextValue,
   NotificationOptions,
@@ -33,6 +34,7 @@ export function NotificationProvider({
   enableSounds = false
 }: NotificationProviderProps) {
   const { t } = useTranslation('common');
+  const iconSizes = useIconSizes();
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
   const [settings, setSettings] = useState<{
     defaultDuration: number;
@@ -98,23 +100,21 @@ export function NotificationProvider({
 
   // Get notification icon
   const getNotificationIcon = useCallback((type: NotificationType) => {
-    const iconProps = { className: "w-4 h-4" };
-    
     switch (type) {
       case 'success':
-        return <CheckCircle {...iconProps} className="w-4 h-4 text-green-500" />;
+        return <CheckCircle className={`${iconSizes.sm} text-green-500`} />;
       case 'error':
-        return <AlertCircle {...iconProps} className="w-4 h-4 text-red-500" />;
+        return <AlertCircle className={`${iconSizes.sm} text-red-500`} />;
       case 'warning':
-        return <AlertTriangle {...iconProps} className="w-4 h-4 text-yellow-500" />;
+        return <AlertTriangle className={`${iconSizes.sm} text-yellow-500`} />;
       case 'info':
-        return <Info {...iconProps} className="w-4 h-4 text-blue-500" />;
+        return <Info className={`${iconSizes.sm} text-blue-500`} />;
       case 'loading':
-        return <Loader2 {...iconProps} className="w-4 h-4 text-gray-500 animate-spin" />;
+        return <Loader2 className={`${iconSizes.sm} text-gray-500 animate-spin`} />;
       default:
-        return <Info {...iconProps} />;
+        return <Info className={iconSizes.sm} />;
     }
-  }, []);
+  }, [iconSizes.sm]);
 
   // Core notification function
   const notify = useCallback((message: string, options: NotificationOptions = {}): string => {

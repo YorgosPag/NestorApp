@@ -26,6 +26,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { formatDate } from '@/lib/intl-utils'; // ✅ Using centralized function
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 import { useCustomerInfo } from '../hooks/useCustomerInfo';
 import type { Property } from '@/types/property-viewer';
@@ -58,6 +59,7 @@ export function UnitCustomerDisplay({
   showActions = true,
   className = ''
 }: UnitCustomerDisplayProps) {
+  const iconSizes = useIconSizes();
 
   // ========================================================================
   // ENTERPRISE LOGIC: Real Database Checks
@@ -93,22 +95,22 @@ export function UnitCustomerDisplay({
       text: 'text-xs',
       gap: 'gap-2',
       padding: 'p-2',
-      iconSize: 'w-3 h-3',
-      buttonSize: 'h-6 w-6' as const
+      iconSize: iconSizes.xs,
+      buttonSize: iconSizes.md
     },
     md: {
       text: 'text-sm',
       gap: 'gap-3',
       padding: 'p-3',
-      iconSize: 'w-4 h-4',
-      buttonSize: 'h-7 w-7' as const
+      iconSize: iconSizes.sm,
+      buttonSize: iconSizes.md
     },
     lg: {
       text: 'text-base',
       gap: 'gap-4',
       padding: 'p-4',
-      iconSize: 'w-5 h-5',
-      buttonSize: 'h-8 w-8' as const
+      iconSize: iconSizes.md,
+      buttonSize: iconSizes.lg
     }
   };
 
@@ -123,8 +125,8 @@ export function UnitCustomerDisplay({
       <div className={`flex items-center ${styles.gap} ${className}`}>
         <User className={`${styles.iconSize} text-muted-foreground`} />
         <div className="space-y-1">
-          <Skeleton className="h-3 w-20" />
-          <Skeleton className="h-2 w-16" />
+          <Skeleton className={`${iconSizes.xs} w-20`} />
+          <Skeleton className={`h-2 w-16`} />
         </div>
       </div>
     );
@@ -268,13 +270,13 @@ export function UnitCustomerDisplay({
               <div className="space-y-1">
                 {customerInfo.primaryPhone && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Phone className="w-3 h-3" />
+                    <Phone className={iconSizes.xs} />
                     <span>{customerInfo.primaryPhone}</span>
                   </div>
                 )}
                 {customerInfo.primaryEmail && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Mail className="w-3 h-3" />
+                    <Mail className={iconSizes.xs} />
                     <span className="truncate">{customerInfo.primaryEmail}</span>
                   </div>
                 )}
@@ -288,7 +290,7 @@ export function UnitCustomerDisplay({
                   size="sm"
                   onClick={() => window.open(`/contacts?contactId=${unit.soldTo}`, '_blank')}
                 >
-                  <Eye className="w-3 h-3 mr-1" />
+                  <Eye className={`${iconSizes.xs} mr-1`} />
                   Προβολή
                 </Button>
 
@@ -301,7 +303,7 @@ export function UnitCustomerDisplay({
                       window.open(`tel:${cleanPhone}`, '_self');
                     }}
                   >
-                    <Phone className="w-3 h-3 mr-1" />
+                    <Phone className={`${iconSizes.xs} mr-1`} />
                     Κλήση
                   </Button>
                 )}

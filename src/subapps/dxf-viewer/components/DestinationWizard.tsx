@@ -10,6 +10,7 @@ import {
   Folder,
   X
 } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { useProjectHierarchy } from '../contexts/ProjectHierarchyContext';
 import { useDxfPipeline } from '../pipeline/useDxfPipeline';
 import { HierarchicalDestinationSelector } from './HierarchicalDestinationSelector';
@@ -26,6 +27,7 @@ interface DestinationWizardProps {
 type WizardStep = 'destination' | 'options' | 'processing' | 'complete';
 
 export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }: DestinationWizardProps) {
+  const iconSizes = useIconSizes();
   const [currentStep, setCurrentStep] = useState<WizardStep>('destination');
   const [selectedDestination, setSelectedDestination] = useState<DxfDestination | null>(null);
   const [processingOptions, setProcessingOptions] = useState<Omit<DxfProcessingOptions, 'destination'> & { destination: DxfDestination | null }>({
@@ -153,7 +155,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
             onClick={handleClose}
             className={`text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} p-1`}
           >
-            <X className="h-6 w-6" />
+            <X className={iconSizes.lg} />
           </button>
         </div>
 
@@ -162,7 +164,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
           <div className="flex items-center space-x-4">
             {['destination', 'options', 'processing', 'complete'].map((step, index) => (
               <div key={step} className="flex items-center">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                <div className={`${iconSizes.xl} rounded-full flex items-center justify-center text-sm font-medium ${
                   currentStep === step ? 'bg-blue-600 text-white' :
                   ['destination', 'options', 'processing', 'complete'].indexOf(currentStep) > index ? 'bg-green-600 text-white' :
                   'bg-gray-600 text-gray-300'
@@ -170,7 +172,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
                   {index + 1}
                 </div>
                 {index < 3 && (
-                  <div className={`w-12 h-1 mx-2 ${
+                  <div className={`${iconSizes['2xl']} h-1 mx-2 ${
                     ['destination', 'options', 'processing', 'complete'].indexOf(currentStep) > index ? 'bg-green-600' : 'bg-gray-600'
                   }`} />
                 )}
@@ -199,7 +201,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
               <div className="bg-gray-700 p-4 rounded-lg mb-6">
                 <div className="flex items-center space-x-3">
                   {React.createElement(getDestinationIcon(selectedDestination.type), {
-                    className: "h-6 w-6 text-blue-400"
+                    className: `${iconSizes.lg} text-blue-400`
                   })}
                   <div>
                     <div className="text-white font-medium">{selectedDestination.label}</div>
@@ -218,7 +220,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
                     type="checkbox"
                     checked={processingOptions.processLayers}
                     onChange={(e) => setProcessingOptions(prev => ({ ...prev, processLayers: e.target.checked }))}
-                    className="w-5 h-5 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
+                    className={`${iconSizes.md} text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500`}
                   />
                 </div>
 
@@ -231,7 +233,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
                     type="checkbox"
                     checked={processingOptions.preserveGrid}
                     onChange={(e) => setProcessingOptions(prev => ({ ...prev, preserveGrid: e.target.checked }))}
-                    className="w-5 h-5 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
+                    className={`${iconSizes.md} text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500`}
                   />
                 </div>
 
@@ -244,7 +246,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
                     type="checkbox"
                     checked={processingOptions.preserveRulers}
                     onChange={(e) => setProcessingOptions(prev => ({ ...prev, preserveRulers: e.target.checked }))}
-                    className="w-5 h-5 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
+                    className={`${iconSizes.md} text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500`}
                   />
                 </div>
 
@@ -257,7 +259,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
                     type="checkbox"
                     checked={processingOptions.autoScale}
                     onChange={(e) => setProcessingOptions(prev => ({ ...prev, autoScale: e.target.checked }))}
-                    className="w-5 h-5 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
+                    className={`${iconSizes.md} text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500`}
                   />
                 </div>
               </div>
@@ -267,7 +269,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
           {/* Step 3: Processing */}
           {currentStep === 'processing' && (
             <div className="text-center">
-              <div className="animate-spin w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+              <div className={`animate-spin ${iconSizes['2xl']} border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4`}></div>
               <h3 className="text-lg font-medium text-white mb-2">
                 Επεξεργασία κάτοψης...
               </h3>
@@ -280,8 +282,8 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
           {/* Step 4: Complete */}
           {currentStep === 'complete' && (
             <div className="text-center">
-              <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className={`${iconSizes['2xl']} bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4`}>
+                <svg className={`${iconSizes.lg} text-white`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
@@ -295,7 +297,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
                 <div className="bg-gray-700 p-3 rounded-lg inline-block">
                   <div className="flex items-center space-x-2">
                     {React.createElement(getDestinationIcon(selectedDestination.type), {
-                      className: "h-5 w-5 text-green-400"
+                      className: `${iconSizes.md} text-green-400`
                     })}
                     <span className="text-white">{selectedDestination.label}</span>
                   </div>

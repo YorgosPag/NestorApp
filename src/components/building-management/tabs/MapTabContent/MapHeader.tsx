@@ -3,6 +3,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Globe, Map as MapIcon, Satellite } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface MapHeaderProps {
     mapView: 'satellite' | 'street' | 'hybrid';
@@ -10,6 +11,8 @@ interface MapHeaderProps {
 }
 
 export function MapHeader({ mapView, setMapView }: MapHeaderProps) {
+    const iconSizes = useIconSizes();
+
     return (
         <div className="flex items-center justify-between">
             <div>
@@ -24,7 +27,7 @@ export function MapHeader({ mapView, setMapView }: MapHeaderProps) {
                     size="sm"
                     onClick={() => setMapView('street')}
                 >
-                    <MapIcon className="w-4 h-4 mr-2" />
+                    <MapIcon className={`${iconSizes.sm} mr-2`} />
                     Δρόμος
                 </Button>
                 <Button
@@ -32,7 +35,7 @@ export function MapHeader({ mapView, setMapView }: MapHeaderProps) {
                     size="sm"
                     onClick={() => setMapView('satellite')}
                 >
-                    <Satellite className="w-4 h-4 mr-2" />
+                    <Satellite className={`${iconSizes.sm} mr-2`} />
                     Δορυφόρος
                 </Button>
                 <Button
@@ -40,7 +43,7 @@ export function MapHeader({ mapView, setMapView }: MapHeaderProps) {
                     size="sm"
                     onClick={() => setMapView('hybrid')}
                 >
-                    <Globe className="w-4 h-4 mr-2" />
+                    <Globe className={`${iconSizes.sm} mr-2`} />
                     Υβριδικός
                 </Button>
             </div>

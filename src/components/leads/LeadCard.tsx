@@ -2,6 +2,7 @@
 import { User, Mail, Phone, Calendar, ExternalLink, Send, Edit3, Trash2 } from "lucide-react";
 import type { Opportunity } from '@/types/crm';
 import { INTERACTIVE_PATTERNS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 
 export function LeadCard({
@@ -21,18 +22,20 @@ export function LeadCard({
   formatDate: (ts: any) => string;
   getStatusColor: (status: string) => string;
 }) {
+  const iconSizes = useIconSizes();
+
   return (
     <article className={`bg-white border rounded-lg p-4 ${INTERACTIVE_PATTERNS.CARD_STANDARD}`} itemScope itemType="https://schema.org/Person">
       <header className="flex items-start justify-between">
         <section className="flex-1" aria-label="Lead Information">
           <div className="flex items-center gap-2 mb-2">
-            <User className="w-4 h-4 text-gray-500" />
+            <User className={`${iconSizes.sm} text-gray-500`} />
             <button
               onClick={() => onView(lead.id!)}
               className={`font-medium text-gray-900 flex items-center gap-1 group ${INTERACTIVE_PATTERNS.LINK_PRIMARY}`}
             >
               <span itemProp="name">{lead.fullName}</span>
-              <ExternalLink className={`w-3 h-3 ${GROUP_HOVER_PATTERNS.SHOW_ON_GROUP} ${INTERACTIVE_PATTERNS.FADE_IN_OUT}`} />
+              <ExternalLink className={`${iconSizes.xs} ${GROUP_HOVER_PATTERNS.SHOW_ON_GROUP} ${INTERACTIVE_PATTERNS.FADE_IN_OUT}`} />
             </button>
             <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(lead.stage)}`}>
               {lead.stage}
@@ -42,18 +45,18 @@ export function LeadCard({
           <address className="space-y-1 text-sm text-gray-600 not-italic">
             {lead.email && (
               <p className="flex items-center gap-2">
-                <Mail className="w-4 h-4" />
+                <Mail className={iconSizes.sm} />
                 <span itemProp="email">{lead.email}</span>
               </p>
             )}
             {lead.phone && (
               <p className="flex items-center gap-2">
-                <Phone className="w-4 h-4" />
+                <Phone className={iconSizes.sm} />
                 <span itemProp="telephone">{lead.phone}</span>
               </p>
             )}
             <p className="flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
+              <Calendar className={iconSizes.sm} />
               <span>Δημιουργήθηκε: {formatDate(lead.createdAt)}</span>
             </p>
           </address>
@@ -75,7 +78,7 @@ export function LeadCard({
               }`}
               title={lead.email ? "Αποστολή Email" : "Δεν υπάρχει email"}
             >
-              <Send className="w-4 h-4" />
+              <Send className={iconSizes.sm} />
               Email
             </button>
 
@@ -83,7 +86,7 @@ export function LeadCard({
               onClick={() => onEdit(lead)}
               className={`flex items-center gap-1 px-3 py-1.5 text-blue-600 rounded text-sm ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
             >
-              <Edit3 className="w-4 h-4" />
+              <Edit3 className={iconSizes.sm} />
               Επεξεργασία
             </button>
           </section>
@@ -93,7 +96,7 @@ export function LeadCard({
               onClick={() => onView(lead.id!)}
               className={`flex items-center gap-1 px-3 py-1.5 text-gray-600 rounded text-sm ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
             >
-              <ExternalLink className="w-4 h-4" />
+              <ExternalLink className={iconSizes.sm} />
               Προφίλ
             </button>
 
@@ -101,7 +104,7 @@ export function LeadCard({
               onClick={() => onDelete(lead.id!, lead.fullName!)}
               className={`flex items-center gap-1 px-3 py-1.5 text-red-600 rounded text-sm ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`}
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className={iconSizes.sm} />
               Διαγραφή
             </button>
           </section>

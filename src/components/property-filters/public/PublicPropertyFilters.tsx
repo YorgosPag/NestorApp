@@ -4,6 +4,7 @@ import React from 'react';
 import { Label } from '@/components/ui/label';
 import { Home, Euro, Ruler } from 'lucide-react';
 import type { FilterState } from '@/types/property-viewer';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 import { propertyTypes, availabilityOptions, PRICE_MAX, AREA_MAX } from './constants';
 import { usePublicPropertyFilterHandlers } from './hooks/usePublicPropertyFilterHandlers';
@@ -21,6 +22,8 @@ interface PublicPropertyFiltersProps {
  * παραμένουν ΑΠΑΡΑΛΛΑΚΤΑ. Μόνο σπάσιμο λογικής/σταθερών/μικρών components.
  */
 export function PublicPropertyFilters({ filters, onFiltersChange }: PublicPropertyFiltersProps) {
+  const iconSizes = useIconSizes();
+
   const {
     handleSearchChange,
     handleTypeChange,
@@ -40,7 +43,7 @@ export function PublicPropertyFilters({ filters, onFiltersChange }: PublicProper
         {/* Property Types */}
         <div className="space-y-3">
           <Label className="text-sm font-medium flex items-center gap-2">
-            <Home className="w-4 h-4" />
+            <Home className={iconSizes.sm} />
             Τύπος Ακινήτου
           </Label>
           <div className="space-y-2 max-h-32 overflow-y-auto">
@@ -77,7 +80,7 @@ export function PublicPropertyFilters({ filters, onFiltersChange }: PublicProper
           {/* Price Range */}
           <div className="space-y-2">
             <RangeSlider
-              icon={<Euro className="w-4 h-4" />}
+              icon={<Euro className={iconSizes.sm} />}
               label="Εύρος Τιμής"
               values={[filters.priceRange.min || 0, filters.priceRange.max || PRICE_MAX]}
               onValueChange={handlePriceRangeChange}
@@ -92,7 +95,7 @@ export function PublicPropertyFilters({ filters, onFiltersChange }: PublicProper
           {/* Area Range */}
           <div className="space-y-2">
             <RangeSlider
-              icon={<Ruler className="w-4 h-4" />}
+              icon={<Ruler className={iconSizes.sm} />}
               label="Εμβαδόν (m²)"
               values={[filters.areaRange.min || 0, filters.areaRange.max || AREA_MAX]}
               onValueChange={handleAreaRangeChange}

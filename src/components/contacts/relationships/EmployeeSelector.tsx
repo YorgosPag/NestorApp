@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { layoutUtilities } from '@/styles/design-tokens';
 import {
   Search,
@@ -200,6 +201,8 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
   className = '',
   maxResults = 50
 }) => {
+  const iconSizes = useIconSizes();
+
   // ============================================================================
   // 🏢 ENTERPRISE: STATE MANAGEMENT
   // ============================================================================
@@ -442,7 +445,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
         onMouseEnter={() => setHighlightedIndex(index)}
       >
         <div className="flex items-start space-x-3">
-          <Icon className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+          <Icon className={`${iconSizes.md} text-muted-foreground mt-0.5 flex-shrink-0`} />
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between">
@@ -458,7 +461,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
               <div className="flex items-center space-x-2 mt-1 text-xs text-muted-foreground">
                 {contact.company && (
                   <>
-                    <Building2 className="h-3 w-3" />
+                    <Building2 className={iconSizes.xs} />
                     <span>{contact.company}</span>
                   </>
                 )}
@@ -475,13 +478,13 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
               <div className="flex items-center space-x-3 text-xs text-muted-foreground">
                 {contact.email && (
                   <div className="flex items-center space-x-1">
-                    <Mail className="h-3 w-3" />
+                    <Mail className={iconSizes.xs} />
                     <span className="truncate">{contact.email}</span>
                   </div>
                 )}
                 {contact.phone && (
                   <div className="flex items-center space-x-1">
-                    <Phone className="h-3 w-3" />
+                    <Phone className={iconSizes.xs} />
                     <span>{contact.phone}</span>
                   </div>
                 )}
@@ -507,7 +510,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
     return (
       <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-md">
         <div className="flex items-center space-x-3 flex-1 min-w-0">
-          <Icon className="h-5 w-5 text-blue-600 flex-shrink-0" />
+          <Icon className={`${iconSizes.md} text-blue-600 flex-shrink-0`} />
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center space-x-2">
@@ -535,12 +538,12 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
             size="sm"
             onClick={clearSelection}
             className={cn(
-              "h-8 w-8 p-0 flex-shrink-0",
+              `${iconSizes.xl} p-0 flex-shrink-0`,
               HOVER_TEXT_EFFECTS.BLUE,
               HOVER_BACKGROUND_EFFECTS.BLUE_LIGHT
             )}
           >
-            <X className="h-4 w-4" />
+            <X className={iconSizes.sm} />
           </Button>
         )}
       </div>
@@ -586,7 +589,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
         <>
           {/* Search Input */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 ${iconSizes.sm}`} />
             <Input
               ref={searchInputRef}
               value={searchQuery}
@@ -597,16 +600,16 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
               disabled={readonly}
             />
             {isSearching && (
-              <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 animate-spin" />
+              <Loader2 className={`absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 ${iconSizes.sm} animate-spin`} />
             )}
             {searchQuery && !isSearching && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+                className={`absolute right-1 top-1/2 transform -translate-y-1/2 ${iconSizes.lg} p-0`}
               >
-                <X className="w-4 h-4" />
+                <X className={iconSizes.sm} />
               </Button>
             )}
           </div>
@@ -621,7 +624,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
               <CardContent className={getEmployeeSelectorCardStyle()}>
                 {isSearching ? (
                   <div className="p-4 text-center text-muted-foreground">
-                    <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+                    <Loader2 className={`${iconSizes.lg} animate-spin mx-auto mb-2`} />
                     <span className="text-sm">Αναζήτηση...</span>
                   </div>
                 ) : searchResults.length > 0 ? (
@@ -630,7 +633,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
                   </div>
                 ) : (
                   <div className="p-4 text-center text-muted-foreground">
-                    <Search className="h-6 w-6 mx-auto mb-2" />
+                    <Search className={`${iconSizes.lg} mx-auto mb-2`} />
                     <span className="text-sm">
                       {searchQuery ? 'Δεν βρέθηκαν αποτελέσματα' : 'Ξεκινήστε να πληκτρολογείτε για αναζήτηση'}
                     </span>

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Share2, Copy, Check, Home, MapPin, Euro, Ruler } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { ShareModal, useShareModal } from '@/components/ui/ShareModal';
 import { type ShareData } from '@/lib/share-utils';
 
@@ -36,6 +37,7 @@ export function ShareButton({
   onShareSuccess,
   onShareError,
 }: ShareButtonProps) {
+  const iconSizes = useIconSizes();
   const [justCopied, setJustCopied] = useState(false);
   const { isOpen, openModal, closeModal } = useShareModal();
 
@@ -77,7 +79,7 @@ export function ShareButton({
         {React.createElement(icon, { 
           className: cn(
             'transition-all duration-200',
-            size === 'icon' ? 'h-4 w-4' : 'h-4 w-4',
+            iconSizes.sm,
             showLabel && 'mr-2'
           )
         })}

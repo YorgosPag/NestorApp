@@ -15,12 +15,14 @@ import {
 import { ToolbarButton } from '@/components/ui/ToolbarButton';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface ToolbarMainActionsProps {
   selectedItemsCount: number;
 }
 
 export function ToolbarMainActions({ selectedItemsCount }: ToolbarMainActionsProps) {
+  const iconSizes = useIconSizes();
   const handleNew = () => console.log('Creating new unit...');
   const handleEdit = () => console.log('Editing unit...');
   const handleDelete = () => console.log('Deleting unit...');
@@ -32,7 +34,7 @@ export function ToolbarMainActions({ selectedItemsCount }: ToolbarMainActionsPro
         onClick={handleNew}
         className={`text-green-600 dark:text-green-500 ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`}
       >
-        <Plus className="w-4 h-4" />
+        <Plus className={iconSizes.sm} />
       </ToolbarButton>
 
       <ToolbarButton
@@ -41,7 +43,7 @@ export function ToolbarMainActions({ selectedItemsCount }: ToolbarMainActionsPro
         className={`text-blue-600 dark:text-blue-500 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
         disabled={selectedItemsCount === 0}
       >
-        <Edit className="w-4 h-4" />
+        <Edit className={iconSizes.sm} />
       </ToolbarButton>
 
       <AlertDialog>
@@ -52,7 +54,7 @@ export function ToolbarMainActions({ selectedItemsCount }: ToolbarMainActionsPro
               className={`text-red-600 dark:text-red-500 ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`}
               disabled={selectedItemsCount === 0}
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className={iconSizes.sm} />
             </ToolbarButton>
           </div>
         </AlertDialogTrigger>

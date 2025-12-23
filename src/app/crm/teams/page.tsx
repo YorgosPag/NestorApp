@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Users2, Plus, Settings, Shield, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { enterpriseTeamsService } from '@/services/teams/EnterpriseTeamsService';
 import type { EnterpriseTeam, EnterpriseTeamMember } from '@/services/teams/EnterpriseTeamsService';
 
@@ -23,6 +24,7 @@ const getInitials = (name: string) => {
 }
 
 export default function CrmTeamsPage() {
+  const iconSizes = useIconSizes();
   const [teams, setTeams] = useState<DisplayTeam[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -71,7 +73,7 @@ export default function CrmTeamsPage() {
       <div className="p-8">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center space-y-4">
-            <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
+            <Loader2 className={`${iconSizes.xl} animate-spin mx-auto text-primary`} />
             <p className="text-muted-foreground">Φόρτωση ομάδων...</p>
           </div>
         </div>
@@ -85,8 +87,8 @@ export default function CrmTeamsPage() {
       <div className="p-8">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center space-y-4">
-            <div className="w-8 h-8 bg-destructive/20 rounded-full flex items-center justify-center mx-auto">
-              <Shield className="w-4 h-4 text-destructive" />
+            <div className={`${iconSizes.xl} bg-destructive/20 rounded-full flex items-center justify-center mx-auto`}>
+              <Shield className={`${iconSizes.sm} text-destructive`} />
             </div>
             <div className="space-y-2">
               <p className="font-medium text-destructive">Σφάλμα φόρτωσης</p>
@@ -112,26 +114,26 @@ export default function CrmTeamsPage() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <div className="flex items-center gap-2">
-              <Users2 className="w-8 h-8 text-primary" />
+              <Users2 className={`${iconSizes.xl} text-primary`} />
               <h1 className="text-3xl font-bold">Ομάδες & Ρόλοι</h1>
             </div>
             <p className="text-muted-foreground">Διαχείριση των ομάδων εργασίας και των δικαιωμάτων τους.</p>
           </div>
           <Button>
-            <Plus className="w-4 h-4 mr-2" />
+            <Plus className={`${iconSizes.sm} mr-2`} />
             Νέα Ομάδα
           </Button>
         </div>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center space-y-4">
-            <Users2 className="w-12 h-12 text-muted-foreground/50 mx-auto" />
+            <Users2 className={`${iconSizes.xl2} text-muted-foreground/50 mx-auto`} />
             <div className="space-y-2">
               <p className="font-medium">Δεν βρέθηκαν ομάδες</p>
               <p className="text-sm text-muted-foreground">
                 Δημιουργήστε την πρώτη ομάδα για να ξεκινήσετε.
               </p>
               <Button className="mt-4">
-                <Plus className="w-4 h-4 mr-2" />
+                <Plus className={`${iconSizes.sm} mr-2`} />
                 Δημιουργία Ομάδας
               </Button>
             </div>
@@ -146,13 +148,13 @@ export default function CrmTeamsPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
             <div className="flex items-center gap-2">
-                <Users2 className="w-8 h-8 text-primary" />
+                <Users2 className={`${iconSizes.xl} text-primary`} />
                 <h1 className="text-3xl font-bold">Ομάδες & Ρόλοι</h1>
             </div>
           <p className="text-muted-foreground">Διαχείριση των ομάδων εργασίας και των δικαιωμάτων τους.</p>
         </div>
         <Button>
-          <Plus className="w-4 h-4 mr-2" />
+          <Plus className={`${iconSizes.sm} mr-2`} />
           Νέα Ομάδα
         </Button>
       </div>
@@ -164,7 +166,7 @@ export default function CrmTeamsPage() {
               <div className="flex items-center justify-between">
                 <CardTitle>{team.name}</CardTitle>
                 <Button variant="ghost" size="sm">
-                  <Settings className="w-4 h-4" />
+                  <Settings className={iconSizes.sm} />
                 </Button>
               </div>
               <CardDescription>{team.description}</CardDescription>
@@ -187,7 +189,7 @@ export default function CrmTeamsPage() {
               </div>
                <div className="pt-4">
                  <Button variant="outline" size="sm" className="w-full">
-                    <Shield className="w-4 h-4 mr-2" />
+                    <Shield className={`${iconSizes.sm} mr-2`} />
                     Διαχείριση Δικαιωμάτων
                 </Button>
                </div>

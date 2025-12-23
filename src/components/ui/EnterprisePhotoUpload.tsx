@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import { Camera, Loader2, AlertCircle } from 'lucide-react';
+import { Camera, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import { useEnterpriseFileUpload } from '@/hooks/useEnterpriseFileUpload';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { UseEnterpriseFileUploadConfig, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 import { UI_COLORS } from '@/subapps/dxf-viewer/config/color-config';
 import { PhotoPreview } from './utils/PhotoPreview';
@@ -98,6 +99,8 @@ export function EnterprisePhotoUpload({
   // ========================================================================
   // HOOKS & STATE
   // ========================================================================
+
+  const iconSizes = useIconSizes();
 
   const upload = useEnterpriseFileUpload({
     fileType: 'image',
@@ -248,7 +251,7 @@ export function EnterprisePhotoUpload({
             />
           ) : (
             <div className="flex flex-col items-center justify-center">
-              <Camera className={`w-12 h-12 ${PHOTO_TEXT_COLORS.MUTED} mb-3`} />
+              <Camera className={`${iconSizes.xl} ${PHOTO_TEXT_COLORS.MUTED} mb-3`} />
               <span className={`${PHOTO_TYPOGRAPHY.BODY} ${PHOTO_TEXT_COLORS.LIGHT_MUTED} mb-2`}>Προσθήκη {purpose === 'logo' ? 'λογοτύπου' : 'φωτογραφίας'}</span>
               <span className={`${PHOTO_TYPOGRAPHY.CAPTION} ${PHOTO_TEXT_COLORS.MUTED}`}>Κλικ ή σύρετε αρχείο</span>
             </div>
@@ -288,14 +291,14 @@ export function EnterprisePhotoUpload({
         {isLoading && (
           <div className={`absolute inset-0 ${PHOTO_COLORS.LOADING_OVERLAY} flex items-center justify-center`}>
             <div className="text-center">
-              <Loader2 className={`w-8 h-8 animate-spin ${PHOTO_SEMANTIC_COLORS.LOADING} mx-auto mb-2`} />
+              <Loader2 className={`${iconSizes.lg} animate-spin ${PHOTO_SEMANTIC_COLORS.LOADING} mx-auto mb-2`} />
               <p className={`${PHOTO_TYPOGRAPHY.LOADING} ${PHOTO_SEMANTIC_COLORS.INFO}`}>
                 {upload.uploadPhase === 'upload' && 'Ανέβασμα...'}
                 {upload.uploadPhase === 'processing' && 'Επεξεργασία...'}
                 {upload.uploadPhase === 'complete' && 'Ολοκληρώθηκε!'}
               </p>
               {showProgress && (
-                <div className={`w-32 ${PHOTO_COLORS.PROGRESS_BACKGROUND} rounded-full h-2 mt-2 mx-auto`}>
+                <div className={`${iconSizes.xl8} ${PHOTO_COLORS.PROGRESS_BACKGROUND} rounded-full h-2 mt-2 mx-auto`}>
                   <div
                     className={`bg-blue-600 h-2 rounded-full ${PHOTO_HOVER_EFFECTS.ALL_TRANSITION}`}
                     style={getProgressBarWidthStyles(upload.progress)}
@@ -325,13 +328,13 @@ export function EnterprisePhotoUpload({
           <div>
             {hasError ? (
               <>
-                <AlertCircle className={`w-12 h-12 ${PHOTO_SEMANTIC_COLORS.ERROR} mx-auto mb-2`} />
+                <AlertCircle className={`${iconSizes.xl} ${PHOTO_SEMANTIC_COLORS.ERROR} mx-auto mb-2`} />
                 <p className={`${PHOTO_TYPOGRAPHY.BODY} ${PHOTO_SEMANTIC_COLORS.ERROR} mb-1`}>Σφάλμα επιλογής αρχείου</p>
                 <p className={`${PHOTO_TYPOGRAPHY.ERROR} ${PHOTO_SEMANTIC_COLORS.ERROR}`}>{hasError}</p>
               </>
             ) : (
               <>
-                <Camera className={`w-12 h-12 ${PHOTO_TEXT_COLORS.ICON_LIGHT} mx-auto mb-2`} />
+                <Camera className={`${iconSizes.xl} ${PHOTO_TEXT_COLORS.ICON_LIGHT} mx-auto mb-2`} />
                 <p className={`${PHOTO_TYPOGRAPHY.BODY} ${PHOTO_TEXT_COLORS.ICON_LIGHT} mb-1`}>
                   Κάντε κλικ ή σύρετε {purpose === 'logo' ? 'λογότυπο' : 'φωτογραφία'} εδώ
                 </p>
@@ -350,7 +353,7 @@ export function EnterprisePhotoUpload({
       {currentFile && !isLoading && upload.success && (
         <div className="text-center">
           <p className={`${PHOTO_TYPOGRAPHY.SUCCESS} ${PHOTO_SEMANTIC_COLORS.SUCCESS} flex items-center justify-center gap-1`}>
-            <CheckCircle className="w-4 h-4" />
+            <CheckCircle className={iconSizes.sm} />
             Το {purpose === 'logo' ? 'λογότυπο' : 'φωτογραφία'} ανέβηκε επιτυχώς!
           </p>
         </div>

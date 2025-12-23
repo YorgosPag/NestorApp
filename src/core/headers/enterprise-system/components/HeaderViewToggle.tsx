@@ -17,6 +17,7 @@ import {
   BarChart3
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { HeaderViewToggleProps, ViewMode } from '../types';
 import { HEADER_THEME, VIEW_MODE_CONFIG } from '../constants';
 
@@ -26,6 +27,7 @@ export const HeaderViewToggle: React.FC<HeaderViewToggleProps> = ({
   viewModes = ['list', 'grid'],
   className
 }) => {
+  const iconSizes = useIconSizes();
   const getViewIcon = (mode: ViewMode) => {
     const iconMap = {
       list: List,
@@ -65,7 +67,7 @@ export const HeaderViewToggle: React.FC<HeaderViewToggleProps> = ({
                   !isLast && "rounded-r-none"
                 )}
               >
-                <Icon className="w-4 h-4" />
+                <Icon className={iconSizes.sm} />
               </Button>
             </TooltipTrigger>
             <TooltipContent>{getViewLabel(mode)}</TooltipContent>

@@ -3,6 +3,7 @@
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Home, MousePointer } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { statusConfig } from '@/features/property-hover/constants';
 import { PropertyHoverHeader } from '@/features/property-hover/components/PropertyHoverHeader';
 import { PropertyHoverLocation } from '@/features/property-hover/components/PropertyHoverLocation';
@@ -66,12 +67,13 @@ function PropertyHoverContent({ property }: { property: Property }) {
 }
 
 export function PropertyHoverInfo({ propertyId, properties }: PropertyHoverInfoProps) {
+  const iconSizes = useIconSizes();
   const property = useHoveredProperty(propertyId, properties);
 
   if (!propertyId) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4">
-        <MousePointer className="h-6 w-6 mb-2" />
+        <MousePointer className={`${iconSizes.md} mb-2`} />
         <p className="text-xs text-center">Περάστε το ποντίκι</p>
         <p className="text-xs text-center">πάνω από ένα ακίνητο</p>
         <p className="text-xs text-center mt-1 text-muted-foreground/70">στην κάτοψη για να δείτε</p>
@@ -83,7 +85,7 @@ export function PropertyHoverInfo({ propertyId, properties }: PropertyHoverInfoP
   if (!property) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4">
-        <Home className="h-6 w-6 mb-2" />
+        <Home className={`${iconSizes.md} mb-2`} />
         <p className="text-xs text-center">Δεν βρέθηκαν στοιχεία</p>
         <p className="text-xs text-center">για αυτό το ακίνητο</p>
       </div>

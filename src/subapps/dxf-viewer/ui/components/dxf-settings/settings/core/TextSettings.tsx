@@ -43,6 +43,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTextSettingsFromProvider } from '../../../../../settings-provider';
 import { AccordionSection, useAccordion } from '../shared/AccordionSection';
 import type { TextSettings } from '../../../../contexts/TextSettingsContext';
@@ -140,6 +141,8 @@ interface TextStyleButtonsProps {
 }
 
 function TextStyleButtons({ settings, onToggle }: TextStyleButtonsProps) {
+  const iconSizes = useIconSizes();
+
   return (
     <div className="flex flex-wrap gap-1">
       {TEXT_STYLE_BUTTONS.map((style) => (
@@ -147,7 +150,7 @@ function TextStyleButtons({ settings, onToggle }: TextStyleButtonsProps) {
           key={style.key}
           onClick={() => onToggle(style.key)}
           title={style.title}
-          className={`w-8 h-8 text-sm font-bold rounded border transition-colors ${
+          className={`${iconSizes.xl} text-sm font-bold rounded border transition-colors ${
             settings[style.key]
               ? 'bg-green-600 border-green-500 text-white'
               : 'bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} border-gray-600 text-gray-300'
@@ -333,7 +336,7 @@ export function TextSettings() {
             id="text-enabled"
             checked={textSettings.enabled}
             onChange={(e) => updateTextSettings({ enabled: e.target.checked })}
-            className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
+            className={`${iconSizes.sm} text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2`}
           />
           <label
             htmlFor="text-enabled"
@@ -355,7 +358,7 @@ export function TextSettings() {
         {/* 1. ΒΑΣΙΚΕΣ ΡΥΘΜΙΣΕΙΣ ΚΕΙΜΕΝΟΥ */}
         <AccordionSection
           title="Βασικές Ρυθμίσεις Κειμένου"
-          icon={<DocumentTextIcon className="w-4 h-4" />}
+          icon={<DocumentTextIcon className={iconSizes.sm} />}
           isOpen={isOpen('basic')}
           onToggle={() => toggleSection('basic')}
           disabled={!textSettings.enabled}
@@ -400,7 +403,7 @@ export function TextSettings() {
                   >
                     <div className="flex items-center">
                       <span className="text-base font-bold">A</span>
-                      <svg className="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className={`${iconSizes.xs} ml-0.5`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 15l7-7 7 7" />
                       </svg>
                     </div>
@@ -414,7 +417,7 @@ export function TextSettings() {
                   >
                     <div className="flex items-center">
                       <span className="text-xs font-bold">A</span>
-                      <svg className="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className={`${iconSizes.xs} ml-0.5`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
                       </svg>
                     </div>
@@ -444,7 +447,7 @@ export function TextSettings() {
         {/* 2. ΣΤΥΛ ΚΕΙΜΕΝΟΥ */}
         <AccordionSection
           title="Στυλ Κειμένου"
-          icon={<PaintbrushIcon className="w-4 h-4" />}
+          icon={<PaintbrushIcon className={iconSizes.sm} />}
           isOpen={isOpen('style')}
           onToggle={() => toggleSection('style')}
           disabled={!textSettings.enabled}
@@ -467,7 +470,7 @@ export function TextSettings() {
         {/* 3. ΠΡΟΧΩΡΗΜΕΝΑ ΕΦΕ */}
         <AccordionSection
           title="Προχωρημένα Εφέ"
-          icon={<SparklesIcon className="w-4 h-4" />}
+          icon={<SparklesIcon className={iconSizes.sm} />}
           isOpen={isOpen('advanced')}
           onToggle={() => toggleSection('advanced')}
           disabled={!textSettings.enabled}
@@ -489,7 +492,7 @@ export function TextSettings() {
         {/* 4. ΠΡΟΕΠΙΣΚΟΠΗΣΗ & ΠΛΗΡΟΦΟΡΙΕΣ */}
         <AccordionSection
           title="Προεπισκόπηση & Πληροφορίες"
-          icon={<EyeIcon className="w-4 h-4" />}
+          icon={<EyeIcon className={iconSizes.sm} />}
           isOpen={isOpen('preview')}
           onToggle={() => toggleSection('preview')}
           disabled={!textSettings.enabled}

@@ -3,6 +3,7 @@
 
 import React from 'react';
 import { Home } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
 import { Filter } from 'lucide-react';
@@ -28,6 +29,8 @@ export function PropertyViewerHeader({
   filters,
   onFiltersChange
 }: PropertyViewerHeaderProps) {
+  const iconSizes = useIconSizes();
+
   return (
     <div className="shrink-0">
       <PageHeader
@@ -54,7 +57,7 @@ export function PropertyViewerHeader({
         <Collapsible>
           <CollapsibleTrigger asChild>
             <Button variant="outline" className="w-full justify-start p-4 text-sm font-semibold">
-              <Filter className="w-4 h-4 mr-2"/>
+              <Filter className={`${iconSizes.sm} mr-2`}/>
               Φίλτρα Αναζήτησης
             </Button>
           </CollapsibleTrigger>

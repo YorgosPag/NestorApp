@@ -10,6 +10,7 @@ import { ProjectCardContent } from './ProjectCard/ProjectCardContent';
 import { ProjectCardTimeline } from './ProjectCard/ProjectCardTimeline';
 import { getStatusColor, getStatusLabel } from '@/lib/project-utils';
 import { Briefcase } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { PROJECT_STATUS_LABELS } from '@/types/project';
 import { COMPLEX_HOVER_EFFECTS } from '@/components/ui/effects';
 
@@ -26,6 +27,7 @@ export function ProjectCard({
   onClick,
   companyName,
 }: ProjectCardProps) {
+  const iconSizes = useIconSizes();
   const [isFavorite, setIsFavorite] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -50,7 +52,7 @@ export function ProjectCard({
         onMouseLeave={() => setIsHovered(false)}
       >
         {isSelected && (
-          <div className="absolute top-2 right-2 z-20 bg-primary text-white rounded-full w-5 h-5 text-xs flex items-center justify-center">
+          <div className={`absolute top-2 right-2 z-20 bg-primary text-white rounded-full ${iconSizes.md} text-xs flex items-center justify-center`}>
             ✓
           </div>
         )}
@@ -80,7 +82,7 @@ export function ProjectCard({
                 setIsFavorite(!isFavorite);
               },
               variant: 'ghost',
-              className: 'w-8 h-8 p-0'
+              className: `${iconSizes.xl} p-0`
             }
           ]}
           variant="compact"

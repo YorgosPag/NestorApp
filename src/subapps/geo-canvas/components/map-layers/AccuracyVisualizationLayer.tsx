@@ -17,6 +17,7 @@
 import React, { memo, useMemo } from 'react';
 import { Marker } from 'react-map-gl/maplibre';
 import type { GeoControlPoint } from '../../types';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { interactiveMapStyles, getAccuracyLevelColor } from '../InteractiveMap.styles';
 import { getDynamicTextClass } from '@/components/ui/utils/dynamic-styles';
 
@@ -102,6 +103,7 @@ export const AccuracyVisualizationLayer: React.FC<AccuracyVisualizationLayerProp
   mapLoaded = false,
   zoomLevel = 8
 }) => {
+  const iconSizes = useIconSizes();
   // Early return για performance
   if (!mapLoaded || !showAccuracyCircles || controlPoints.length === 0) {
     return null;
@@ -201,7 +203,7 @@ export const AccuracyVisualizationLayer: React.FC<AccuracyVisualizationLayerProp
             latitude={cp.geo.lat}
           >
             <div
-              className="pointer-events-none w-4 h-4 rounded-full"
+              className={`pointer-events-none ${iconSizes.sm} rounded-full`}
               style={{
                 backgroundColor: accuracyInfo.color,
                 opacity: 0.6,

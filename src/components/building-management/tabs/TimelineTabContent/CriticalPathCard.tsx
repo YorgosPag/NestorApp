@@ -4,13 +4,16 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CommonBadge } from '@/core/badges';
 import { AlertCircle } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 export function CriticalPathCard() {
+    const iconSizes = useIconSizes();
+
     return (
         <Card>
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                    <AlertCircle className="w-5 h-5 text-orange-500" />
+                    <AlertCircle className={`${iconSizes.md} text-orange-500`} />
                     Κρίσιμα Σημεία
                 </CardTitle>
             </CardHeader>

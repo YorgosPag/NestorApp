@@ -1,13 +1,14 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
-import WebSocketService, { 
-  WebSocketEventType, 
-  WebSocketMessage, 
-  WebSocketConnectionState 
+import WebSocketService, {
+  WebSocketEventType,
+  WebSocketMessage,
+  WebSocketConnectionState
 } from '@/services/websocket/WebSocketService';
 import { useOptimizedUserRole } from './OptimizedUserRoleContext';
 import { useCache } from './CacheProvider';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface WebSocketContextType {
   connectionState: WebSocketConnectionState;
@@ -34,13 +35,14 @@ interface WebSocketProviderProps {
   enableDevtools?: boolean;
 }
 
-export function WebSocketProvider({ 
-  children, 
+export function WebSocketProvider({
+  children,
   wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080/ws',
   enableDevtools = process.env.NODE_ENV === 'development'
 }: WebSocketProviderProps) {
   const { user, isAuthenticated } = useOptimizedUserRole();
   const cache = useCache();
+  const iconSizes = useIconSizes();
   const wsRef = useRef<WebSocketService | null>(null);
   const [connectionState, setConnectionState] = useState<WebSocketConnectionState>('disconnected');
   const [connectionAttempts, setConnectionAttempts] = useState(0);
@@ -373,7 +375,7 @@ export function WebSocketDebugPanel() {
     <div className="fixed top-4 right-4 z-50">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-3 h-3 rounded-full ${getConnectionColor()}`}
+        className={`${iconSizes.xs} rounded-full ${getConnectionColor()}`}
         title={`WebSocket: ${connectionState}`}
       >
         <span className="sr-only">WebSocket Status</span>

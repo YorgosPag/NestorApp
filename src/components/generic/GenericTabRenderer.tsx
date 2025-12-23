@@ -3,6 +3,7 @@
 import React from 'react';
 import type { FieldConfig, SectionConfig } from '@/config/company-gemi-config';
 import { getIconComponent } from './utils/IconMapping';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { formatDate } from '@/lib/intl-utils';
 
 // ============================================================================
@@ -164,12 +165,13 @@ function CompactSectionRenderer({
   customRenderers?: Record<string, any>;
   valueFormatters?: Record<string, any>;
 }) {
+  const iconSizes = useIconSizes();
   const IconComponent = getIconComponent(section.icon);
 
   return (
     <div className="space-y-2">
       <h5 className="font-medium text-sm flex items-center gap-2">
-        <IconComponent className="h-4 w-4" />
+        <IconComponent className={iconSizes.sm} />
         {section.title}
       </h5>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -201,12 +203,13 @@ function FullSectionRenderer({
   customRenderers?: Record<string, any>;
   valueFormatters?: Record<string, any>;
 }) {
+  const iconSizes = useIconSizes();
   const IconComponent = getIconComponent(section.icon);
 
   return (
     <div className="p-4 border rounded-lg space-y-4">
       <h4 className="font-semibold mb-3 flex items-center gap-2">
-        <IconComponent className="h-5 w-5" />
+        <IconComponent className={iconSizes.md} />
         {section.title}
       </h4>
       {section.description && (

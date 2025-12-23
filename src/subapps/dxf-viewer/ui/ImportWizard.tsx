@@ -8,6 +8,7 @@ import { PreviewStep } from './wizard/PreviewStep';
 import { X } from 'lucide-react';
 import { useWizardNavigation } from '../hooks/useWizardNavigation';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface ImportWizardProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ interface ImportWizardProps {
 }
 
 export function ImportWizard({ isOpen, onClose, onComplete }: ImportWizardProps) {
+  const iconSizes = useIconSizes();
   const { importWizard } = useLevels();
   const navigation = useWizardNavigation({ onComplete, onClose });
   const stepInfo = navigation.getStepInfo();
@@ -63,7 +65,7 @@ export function ImportWizard({ isOpen, onClose, onComplete }: ImportWizardProps)
             onClick={onClose}
             className={`p-2 text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HOVER} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} rounded`}
           >
-            <X className="w-5 h-5" />
+            <X className={iconSizes.md} />
           </button>
         </div>
 

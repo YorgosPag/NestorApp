@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, Filter } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { ParkingFilters } from '@/types/parking';
 import { PARKING_TYPE_LABELS, PARKING_STATUS_LABELS } from '@/types/parking';
 
@@ -14,11 +15,12 @@ interface ParkingFilterPanelProps {
 }
 
 export function ParkingFilterPanel({ filters, onFiltersChange }: ParkingFilterPanelProps) {
+    const iconSizes = useIconSizes();
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 p-4 bg-card border rounded-lg">
           <div className="lg:col-span-2 space-y-2">
             <Label htmlFor="search" className="text-xs font-medium flex items-center gap-1">
-              <Search className="w-3 h-3" />
+              <Search className={iconSizes.xs} />
               Αναζήτηση
             </Label>
             <Input
@@ -32,7 +34,7 @@ export function ParkingFilterPanel({ filters, onFiltersChange }: ParkingFilterPa
 
           <div className="space-y-2">
             <Label htmlFor="type-filter" className="text-xs font-medium flex items-center gap-1">
-              <Filter className="w-3 h-3" />
+              <Filter className={iconSizes.xs} />
               Τύπος
             </Label>
             <Select value={filters.type} onValueChange={(value) => onFiltersChange({ type: value })}>

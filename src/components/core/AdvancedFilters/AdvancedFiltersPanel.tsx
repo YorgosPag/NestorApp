@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { FilterField } from './FilterField';
 import { useGenericFilters } from './useGenericFilters';
 import type { FilterPanelConfig, GenericFilterState } from './types';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface AdvancedFiltersPanelProps<T extends GenericFilterState> {
   config: FilterPanelConfig;
@@ -24,6 +25,7 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
   onFiltersChange,
   defaultOpen = false
 }: AdvancedFiltersPanelProps<T>) {
+  const iconSizes = useIconSizes();
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isPanelOpen, setIsPanelOpen] = useState(defaultOpen);
 
@@ -69,7 +71,7 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
       <Collapsible open={isPanelOpen} onOpenChange={setIsPanelOpen} className="border bg-card rounded-lg">
         <CollapsibleTrigger asChild>
           <Button variant="ghost" className="w-full justify-start p-4 text-sm font-semibold">
-            <Filter className="w-4 h-4 mr-2" />
+            <Filter className={`${iconSizes.sm} mr-2`} />
             {config.title}
           </Button>
         </CollapsibleTrigger>
@@ -96,7 +98,7 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
                 <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced} className="pt-2">
                   <CollapsibleTrigger asChild>
                     <Button variant="link" size="sm">
-                      <Filter className="w-4 h-4 mr-2"/>
+                      <Filter className={`${iconSizes.sm} mr-2`}/>
                       {showAdvanced ? 'Απόκρυψη προηγμένων φίλτρων' : 'Εμφάνιση προηγμένων φίλτρων'}
                     </Button>
                   </CollapsibleTrigger>
@@ -124,7 +126,7 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
               {hasActiveFilters && (
                 <div className="flex justify-end pt-2">
                   <Button variant="ghost" size="sm" onClick={clearAllFilters}>
-                    <RotateCcw className="w-4 h-4 mr-2" />
+                    <RotateCcw className={`${iconSizes.sm} mr-2`} />
                     Επαναφορά Φίλτρων
                   </Button>
                 </div>

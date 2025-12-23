@@ -6,6 +6,7 @@ import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip
 import { Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { GROUP_HOVER_PATTERNS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface FavoriteButtonProps {
     isFavorite: boolean;
@@ -13,6 +14,7 @@ interface FavoriteButtonProps {
 }
 
 export function FavoriteButton({ isFavorite, onToggleFavorite }: FavoriteButtonProps) {
+    const iconSizes = useIconSizes();
     return (
         <Tooltip>
             <TooltipTrigger asChild>
@@ -27,7 +29,7 @@ export function FavoriteButton({ isFavorite, onToggleFavorite }: FavoriteButtonP
                 >
                     <Star
                         className={cn(
-                            "w-4 h-4 transition-colors",
+                            `${iconSizes.sm} transition-colors`,
                             isFavorite
                             ? "text-yellow-500 fill-yellow-500"
                             : `text-gray-400 ${HOVER_TEXT_EFFECTS.YELLOW}`

@@ -8,6 +8,7 @@ import { useNotificationStore } from '@/stores/notificationStore';
 import { fetchNotifications, connectSampleWS } from '@/api/notificationApi';
 import { useTranslation } from '@/i18n';
 import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 type DrawerState = { isOpen: boolean; open: () => void; close: () => void; };
 
@@ -32,6 +33,7 @@ const colorMap = {
 };
 
 export function NotificationDrawer() {
+  const iconSizes = useIconSizes();
   const { isOpen, close } = useNotificationDrawer();
   const { items, markRead } = useNotificationStore();
   const { t, i18n } = useTranslation('common');
@@ -151,7 +153,7 @@ export function NotificationDrawer() {
               className={`p-1.5 rounded-md ${HOVER_BACKGROUND_EFFECTS.ACCENT} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
               aria-label={t('buttons.close', { defaultValue: 'Close' })}
             >
-              <X className="w-5 h-5" />
+              <X className={iconSizes.md} />
             </button>
           </div>
         </header>
@@ -160,7 +162,7 @@ export function NotificationDrawer() {
           {/* ✅ ENTERPRISE: Error state UI */}
           {loadError ? (
             <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground p-4">
-              <AlertCircle className="w-8 h-8 text-red-500" />
+              <AlertCircle className={`${iconSizes.xl} text-red-500`} />
               <p className="text-sm text-center">{t('notifications.error', { defaultValue: 'Failed to load' })}</p>
               <button
                 type="button"
@@ -189,7 +191,7 @@ export function NotificationDrawer() {
                   className={`border-b p-4 ${HOVER_BACKGROUND_EFFECTS.ACCENT_SUBTLE} ${TRANSITION_PRESETS.STANDARD_COLORS} ${!n.read ? 'bg-accent/20' : ''}`}
                 >
                   <div className="flex items-start gap-3">
-                    <Icon className={`w-5 h-5 mt-0.5 flex-shrink-0 ${colorClass}`} />
+                    <Icon className={`${iconSizes.md} mt-0.5 flex-shrink-0 ${colorClass}`} />
                     <div className="min-w-0 flex-1">
                       <div className="font-medium text-sm mb-1">{n.title}</div>
                       {n.body && (

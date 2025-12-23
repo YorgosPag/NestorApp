@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PropertyBadge } from '@/core/badges';
 import { Home, Building, MapPin, Euro, Ruler } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { COMPLEX_HOVER_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import type { Property } from '@/types/property-viewer';
 import { formatFloorLabel } from '@/lib/intl-utils';
@@ -50,6 +51,7 @@ const propertyTypeIcons: { [key: string]: React.ElementType } = {
 };
 
 function PropertyCard({ property, onSelect, isSelected }: { property: Property, onSelect: () => void, isSelected: boolean }) {
+  const iconSizes = useIconSizes();
   const statusInfo = statusConfig[property.status as keyof typeof statusConfig] || { color: 'border-gray-500', label: 'Άγνωστο', textColor: 'text-gray-700' };
   const IconComponent = propertyTypeIcons[property.type] || Home;
 
@@ -66,7 +68,7 @@ function PropertyCard({ property, onSelect, isSelected }: { property: Property, 
         <div className="flex justify-between items-start">
             <div>
                 <CardTitle className="text-base flex items-center gap-2">
-                    <IconComponent className="w-4 h-4" />
+                    <IconComponent className={iconSizes.sm} />
                     {property.name}
                 </CardTitle>
                 <p className="text-xs text-muted-foreground">{property.type}</p>
@@ -80,21 +82,21 @@ function PropertyCard({ property, onSelect, isSelected }: { property: Property, 
       </CardHeader>
       <CardContent className="p-4 space-y-3">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Building className="w-3 h-3" />
+          <Building className={iconSizes.xs} />
           <span>{property.building}</span>
-          <MapPin className="w-3 h-3 ml-2" />
+          <MapPin className={`${iconSizes.xs} ml-2`} />
           <span>{formatFloorLabel(property.floor)}</span>
         </div>
         <div className="flex justify-between items-center text-sm">
             {property.price && (
                 <div className="flex items-center gap-1 font-semibold text-green-600">
-                    <Euro className="w-4 h-4"/>
+                    <Euro className={iconSizes.sm}/>
                     {property.price.toLocaleString('el-GR')}
                 </div>
             )}
             {property.area && (
                  <div className="flex items-center gap-1 text-muted-foreground">
-                    <Ruler className="w-4 h-4"/>
+                    <Ruler className={iconSizes.sm}/>
                     {property.area} τ.μ.
                 </div>
             )}
@@ -106,10 +108,11 @@ function PropertyCard({ property, onSelect, isSelected }: { property: Property, 
 
 
 export function PropertyGrid({ properties, onSelect, selectedPropertyIds }: { properties: Property[], onSelect: (id: string, shift: boolean) => void, selectedPropertyIds: string[] }) {
+  const iconSizes = useIconSizes();
   if (properties.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4">
-        <Home className="h-12 w-12 mb-4" />
+        <Home className={`${iconSizes.xl} mb-4`} />
         <h2 className="text-xl font-semibold">Δεν βρέθηκαν ακίνητα</h2>
         <p className="text-sm">Δοκιμάστε να αλλάξετε τα φίλτρα</p>
       </div>

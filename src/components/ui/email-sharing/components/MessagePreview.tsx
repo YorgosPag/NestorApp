@@ -13,6 +13,7 @@
 import React from 'react';
 import { designSystem } from '@/lib/design-system';
 import { MessageCircle, Eye } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // Types
 import type { MessagePreviewProps } from '../types';
@@ -37,6 +38,7 @@ export const MessagePreview: React.FC<MessagePreviewProps> = ({
   templateName,
   show = true
 }) => {
+  const iconSizes = useIconSizes();
   // Early return if hidden or no message
   if (!show || !message.trim()) return null;
 
@@ -48,7 +50,7 @@ export const MessagePreview: React.FC<MessagePreviewProps> = ({
         designSystem.getTypographyClass('xs', 'medium'),
         'text-blue-800 dark:text-blue-300'
       )} role="banner">
-        <Eye className="w-4 h-4" />
+        <Eye className={iconSizes.sm} />
         Προεπισκόπηση μηνύματος
         {templateName && (
           <span className="text-muted-foreground">
@@ -94,7 +96,7 @@ export const CompactMessagePreview: React.FC<MessagePreviewProps & {
   return (
     <aside className="p-2 bg-gray-50 dark:bg-gray-800 rounded border text-xs" role="region" aria-label="Compact Message Preview">
       <header className="flex items-center gap-1 text-muted-foreground mb-1" role="banner">
-        <MessageCircle className="w-3 h-3" />
+        <MessageCircle className={iconSizes.xs} />
         <span>Preview</span>
         {templateName && <span>• {templateName}</span>}
       </header>

@@ -17,6 +17,7 @@ import toast from 'react-hot-toast';
 import type { Contact } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts';
 import { Loader2, Archive, Users, Building, Shield } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { CONTACT_TYPES, getContactIcon, getContactLabel, getContactColor } from '@/constants/contacts';
 import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
@@ -35,6 +36,7 @@ export function ArchiveContactDialog({
   selectedContactIds = [],
   onContactsArchived
 }: ArchiveContactDialogProps) {
+  const iconSizes = useIconSizes();
   const [loading, setLoading] = useState(false);
   const [archiveReason, setArchiveReason] = useState('');
 
@@ -45,7 +47,7 @@ export function ArchiveContactDialog({
   const getContactIconComponent = (contact: Contact) => {
     const IconComponent = getContactIcon(contact.type);
     const colorClass = getContactColor(contact.type, 'primary');
-    return <IconComponent className={`h-4 w-4 ${colorClass}`} />;
+    return <IconComponent className={`${iconSizes.sm} ${colorClass}`} />;
   };
 
   const getDialogTitle = () => {
@@ -110,7 +112,7 @@ export function ArchiveContactDialog({
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-orange-600">
-            <Archive className="h-5 w-5" />
+            <Archive className={iconSizes.md} />
             {getDialogTitle()}
           </DialogTitle>
           <DialogDescription className="text-base">
@@ -179,12 +181,12 @@ export function ArchiveContactDialog({
           >
             {loading ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className={`mr-2 ${iconSizes.sm} animate-spin`} />
                 Αρχειοθέτηση...
               </>
             ) : (
               <>
-                <Archive className="mr-2 h-4 w-4" />
+                <Archive className={`mr-2 ${iconSizes.sm}`} />
                 {isMultipleArchive ? `Αρχειοθέτηση ${selectedContactIds.length} Επαφών` : 'Αρχειοθέτηση Επαφής'}
               </>
             )}

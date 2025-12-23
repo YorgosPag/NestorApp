@@ -4,12 +4,15 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { TRANSITION_PRESETS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { Lightbulb } from 'lucide-react';
 import { layoutUtilities } from '@/styles/design-tokens';
 import { costBreakdown, monthlyProgress } from './utils';
 import { analyticsOverviewStyles } from './AnalyticsOverview.styles';
 
 export default function AnalyticsOverview() {
+    const iconSizes = useIconSizes();
+
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Cost Breakdown */}
@@ -39,7 +42,7 @@ export default function AnalyticsOverview() {
 
                     <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
                         <div className="text-sm font-medium text-blue-900 dark:text-blue-200 mb-2 flex items-center gap-2">
-                            <Lightbulb className="h-4 w-4" />
+                            <Lightbulb className={iconSizes.sm} />
                             Ανάλυση
                         </div>
                         <p className="text-sm text-blue-700 dark:text-blue-300">

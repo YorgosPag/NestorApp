@@ -4,6 +4,7 @@ import React from 'react';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { Home, Filter } from 'lucide-react';
 import { PageHeader } from '@/core/headers';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { ViewMode as CoreViewMode } from '@/core/headers';
 
 export type UnitsViewMode = 'list' | 'grid';
@@ -32,6 +33,7 @@ export function UnitsHeader({
   showFilters,
   setShowFilters,
 }: UnitsHeaderProps) {
+  const iconSizes = useIconSizes();
   return (
     <PageHeader
         variant="sticky-rounded"
@@ -69,7 +71,7 @@ export function UnitsHeader({
               }`}
               aria-label="Toggle filters"
             >
-              <Filter className="h-4 w-4" />
+              <Filter className={iconSizes.sm} />
             </button>
           ] : undefined
         }}

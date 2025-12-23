@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Info } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface FormFieldProps {
   id: string;
@@ -40,6 +41,7 @@ export function FormField({
   useGrouping = false,
   isPercentage = false
 }: FormFieldProps) {
+  const iconSizes = useIconSizes();
   const formatValue = (val: number | string) => {
     if (typeof val === 'number') {
         if (isPercentage) {
@@ -72,7 +74,7 @@ export function FormField({
             {tooltipText && (
             <Tooltip>
                 <TooltipTrigger asChild>
-                <Info className="w-3 h-3 text-muted-foreground ml-1 inline-block cursor-help" />
+                <Info className={`${iconSizes.xs} text-muted-foreground ml-1 inline-block cursor-help`} />
                 </TooltipTrigger>
                 <TooltipContent>
                 <p>{tooltipText}</p>

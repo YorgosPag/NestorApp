@@ -8,6 +8,7 @@ import React from 'react';
 import { Play, CheckCircle2 } from 'lucide-react';
 import type { TestState, ApiTestHandlers } from '../types/tests.types';
 import { HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface UnitTestsTabProps {
   testState: TestState;
@@ -15,6 +16,8 @@ interface UnitTestsTabProps {
 }
 
 export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests }) => {
+  const iconSizes = useIconSizes();
+
   return (
     <>
       <div>
@@ -39,9 +42,9 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
               {testState.runningTests.has('run-vitest') ? (
                 <div className="animate-spin text-base">⏳</div>
               ) : testState.completedTests.has('run-vitest') ? (
-                <CheckCircle2 className="w-5 h-5 text-green-400" />
+                <CheckCircle2 className={`${iconSizes.md} text-green-400`} />
               ) : (
-                <Play className="w-5 h-5 text-gray-400" />
+                <Play className={`${iconSizes.md} text-gray-400`} />
               )}
             </div>
             <div className="flex-1 min-w-0">
@@ -66,9 +69,9 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
               {testState.runningTests.has('run-jest') ? (
                 <div className="animate-spin text-base">⏳</div>
               ) : testState.completedTests.has('run-jest') ? (
-                <CheckCircle2 className="w-5 h-5 text-green-400" />
+                <CheckCircle2 className={`${iconSizes.md} text-green-400`} />
               ) : (
-                <Play className="w-5 h-5 text-gray-400" />
+                <Play className={`${iconSizes.md} text-gray-400`} />
               )}
             </div>
             <div className="flex-1 min-w-0">
@@ -99,9 +102,9 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
             {testState.runningTests.has('run-playwright') ? (
               <div className="animate-spin text-base">⏳</div>
             ) : testState.completedTests.has('run-playwright') ? (
-              <CheckCircle2 className="w-5 h-5 text-green-400" />
+              <CheckCircle2 className={`${iconSizes.md} text-green-400`} />
             ) : (
-              <Play className="w-5 h-5 text-gray-400" />
+              <Play className={`${iconSizes.md} text-gray-400`} />
             )}
           </div>
           <div className="flex-1 min-w-0">

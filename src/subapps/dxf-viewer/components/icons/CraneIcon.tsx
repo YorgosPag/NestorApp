@@ -1,4 +1,5 @@
 import React from 'react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface CraneIconProps {
   className?: string;
@@ -6,14 +7,16 @@ interface CraneIconProps {
 }
 
 export const CraneIcon: React.FC<CraneIconProps> = ({
-  className = "h-5 w-5",
+  className,
   size
 }) => {
+  const iconSizes = useIconSizes();
+  const defaultClassName = className || iconSizes.md;
   const sizeStyles = size ? { width: size, height: size } : undefined;
 
   return (
     <svg
-      className={className}
+      className={defaultClassName}
       style={sizeStyles}
       viewBox="0 0 512 512"
       fill="currentColor"

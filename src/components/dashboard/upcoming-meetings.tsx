@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Calendar, Clock, MapPin, ChevronRight } from "lucide-react";
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { Meeting } from "@/types/dashboard";
 
 interface UpcomingMeetingsProps {
@@ -18,11 +19,12 @@ interface UpcomingMeetingsProps {
 }
 
 export function UpcomingMeetings({ meetings }: UpcomingMeetingsProps) {
+  const iconSizes = useIconSizes();
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-base">Επερχόμενα Ραντεβού</CardTitle>
-        <Calendar className="h-4 w-4 text-muted-foreground" />
+        <Calendar className={`${iconSizes.sm} text-muted-foreground`} />
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -34,13 +36,13 @@ export function UpcomingMeetings({ meetings }: UpcomingMeetingsProps) {
                     {meeting.title}
                   </p>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Clock className="h-3 w-3" />
+                    <Clock className={iconSizes.xs} />
                     <span>{meeting.time}</span>
                     <span>•</span>
                     <span>{meeting.date}</span>
                   </div>
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <MapPin className="h-3 w-3" />
+                    <MapPin className={iconSizes.xs} />
                     <span>{meeting.location}</span>
                   </div>
                 </div>
@@ -54,7 +56,7 @@ export function UpcomingMeetings({ meetings }: UpcomingMeetingsProps) {
         <Button asChild className="w-full" variant="ghost">
           <Link href="/calendar">
             Προβολή ημερολογίου
-            <ChevronRight className="ml-1 h-4 w-4" />
+            <ChevronRight className={`ml-1 ${iconSizes.sm}`} />
           </Link>
         </Button>
       </CardFooter>

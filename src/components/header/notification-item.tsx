@@ -2,6 +2,7 @@
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import type { Notification } from "@/types/header"
+import { useIconSizes } from '@/hooks/useIconSizes'
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects/hover-effects'
 
 interface NotificationItemProps {
@@ -9,6 +10,7 @@ interface NotificationItemProps {
 }
 
 export function NotificationItem({ notification }: NotificationItemProps) {
+  const iconSizes = useIconSizes();
   const getAvatarFallback = (name: string) => {
     const parts = name.split(" ")
     if (parts.length > 1) {
@@ -20,10 +22,10 @@ export function NotificationItem({ notification }: NotificationItemProps) {
   return (
     <div className={`flex items-start gap-3 p-2 rounded-lg cursor-pointer transition-colors ${HOVER_BACKGROUND_EFFECTS.MUTED}`}>
       <div
-        className={`h-8 w-8 rounded-full flex items-center justify-center mt-1 ${notification.color}`}
+        className={`${iconSizes.xl2} rounded-full flex items-center justify-center mt-1 ${notification.color}`}
       >
         <notification.icon
-          className={`h-4 w-4 ${notification.textColor}`}
+          className={`${iconSizes.sm} ${notification.textColor}`}
         />
       </div>
       <div className="flex-1 space-y-1">

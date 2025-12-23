@@ -21,6 +21,7 @@ import { INTERACTIVE_PATTERNS, HOVER_BORDER_EFFECTS } from '@/components/ui/effe
 
 // Icons
 import { Mail, Users, MessageCircle, Plus, Trash2, ArrowLeft, Palette } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // Services & Types
 import { EmailTemplatesService } from '@/services/email-templates.service';
@@ -89,6 +90,7 @@ export const EmailShareForm: React.FC<EmailShareFormProps> = ({
   error,
   config = {}
 }) => {
+  const iconSizes = useIconSizes();
   // ============================================================================
   // CONFIGURATION με DEFAULTS
   // ============================================================================
@@ -256,7 +258,7 @@ export const EmailShareForm: React.FC<EmailShareFormProps> = ({
           "mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-3",
           designSystem.getStatusColor('info', 'bg')
         )}>
-          <Mail className="w-6 h-6 text-white" />
+          <Mail className={`${iconSizes.lg} text-white`} />
         </div>
         <h3 className={designSystem.cn(
           designSystem.presets.text.title,
@@ -277,7 +279,7 @@ export const EmailShareForm: React.FC<EmailShareFormProps> = ({
               "flex items-center gap-2 mb-3",
               designSystem.getTypographyClass('sm', 'medium')
             )}>
-              <Palette className="w-4 h-4" />
+              <Palette className={iconSizes.sm} />
               Email Template
             </Label>
             <div className="grid grid-cols-3 gap-2">
@@ -321,7 +323,7 @@ export const EmailShareForm: React.FC<EmailShareFormProps> = ({
               "flex items-center gap-2",
               designSystem.getTypographyClass('sm', 'medium')
             )}>
-              <Users className="w-4 h-4" />
+              <Users className={iconSizes.sm} />
               Παραλήπτες Email
             </Label>
             {emailRecipients.length < finalConfig.maxRecipients && (
@@ -335,7 +337,7 @@ export const EmailShareForm: React.FC<EmailShareFormProps> = ({
                   INTERACTIVE_PATTERNS.PRIMARY_HOVER
                 )}
               >
-                <Plus className="w-4 h-4 mr-1" />
+                <Plus className={`${iconSizes.sm} mr-1`} />
                 Προσθήκη
               </Button>
             )}
@@ -366,7 +368,7 @@ export const EmailShareForm: React.FC<EmailShareFormProps> = ({
                     disabled={loading}
                     className={`text-red-500 ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className={iconSizes.sm} />
                   </Button>
                 )}
               </div>
@@ -387,7 +389,7 @@ export const EmailShareForm: React.FC<EmailShareFormProps> = ({
             "flex items-center gap-2 mb-2",
             designSystem.getTypographyClass('sm', 'medium')
           )}>
-            <MessageCircle className="w-4 h-4" />
+            <MessageCircle className={iconSizes.sm} />
             Προσωπικό Μήνυμα (προαιρετικό)
           </Label>
           <Textarea
@@ -468,7 +470,7 @@ export const EmailShareForm: React.FC<EmailShareFormProps> = ({
             disabled={loading}
             className="flex-1"
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
+            <ArrowLeft className={`${iconSizes.sm} mr-2`} />
             Πίσω
           </Button>
           <Button

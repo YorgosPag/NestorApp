@@ -36,6 +36,7 @@ import {
 } from '@/types/contacts';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getContactCardBackgrounds, getTypography } from '@/components/ui/theme/ThemeComponents';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 
 interface ContactListItemProps {
@@ -61,6 +62,7 @@ export function ContactListItem({
     onToggleFavorite,
     isTogglingFavorite = false
 }: ContactListItemProps) {
+    const iconSizes = useIconSizes();
     const photoModal = useGlobalPhotoPreview();
     const { icon: Icon } = typeInfoMap[contact.type];
 
@@ -221,11 +223,11 @@ export function ContactListItem({
                             )}
                         >
                             {isTogglingFavorite ? (
-                                <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                                <Loader2 className={`${iconSizes.sm} animate-spin text-blue-500`} />
                             ) : (
                                 <Star
                                     className={cn(
-                                        "w-4 h-4 transition-colors",
+                                        `${iconSizes.sm} transition-colors`,
                                         isFavorite
                                         ? "text-yellow-500 fill-yellow-500"
                                         : `text-gray-400 ${HOVER_TEXT_EFFECTS.YELLOW}`
@@ -250,7 +252,7 @@ export function ContactListItem({
                                 onClick={avatarImageUrl ? handleAvatarClick : undefined}
                                 className={cn("shrink-0", avatarImageUrl && "cursor-pointer")}
                             >
-                                <Avatar className="h-8 w-8">
+                                <Avatar className={iconSizes.xl}>
                                     <AvatarImage src={avatarImageUrl} alt={displayName} />
                                     <AvatarFallback className="text-xs bg-blue-100">{initials}</AvatarFallback>
                                 </Avatar>
@@ -262,13 +264,13 @@ export function ContactListItem({
                                     {/* Section 1: Name Only (no badges on mobile) */}
                                     <div className="flex items-center gap-2 shrink-0">
                                         <span className="font-medium text-sm whitespace-nowrap">{displayName}</span>
-                                        {isArchived && <Archive className="w-3 h-3 text-muted-foreground" />}
+                                        {isArchived && <Archive className={`${iconSizes.xs} text-muted-foreground`} />}
                                     </div>
 
                                     {/* Section 2: Phone */}
                                     {phone && (
                                         <div className="flex items-center gap-1 shrink-0 text-xs text-muted-foreground">
-                                            <Phone className="w-3 h-3" />
+                                            <Phone className={iconSizes.xs} />
                                             <a
                                                 href={`tel:${phone}`}
                                                 className={`whitespace-nowrap text-blue-600 ${INTERACTIVE_PATTERNS.LINK_PRIMARY}`}
@@ -283,7 +285,7 @@ export function ContactListItem({
                                     {/* Section 3: Email */}
                                     {email && (
                                         <div className="flex items-center gap-1 shrink-0 text-xs text-muted-foreground">
-                                            <Mail className="w-3 h-3" />
+                                            <Mail className={iconSizes.xs} />
                                             <a
                                                 href={`https://mail.google.com/mail/?view=cm&to=${email}`}
                                                 target="_blank"
@@ -330,7 +332,7 @@ export function ContactListItem({
                                 <ContactBadge status={contact.type} variant="outline" size="sm" />
                                 {isArchived && (
                                     <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-muted text-muted-foreground rounded-full">
-                                        <Archive className="w-3 h-3 mr-1" />
+                                        <Archive className={`${iconSizes.xs} mr-1`} />
                                         Αρχειοθετημένο
                                     </span>
                                 )}
@@ -341,7 +343,7 @@ export function ContactListItem({
                                 <div className="flex-1 min-w-0 space-y-1">
                                     {email && (
                                         <div className={cn("flex items-center gap-2", getTypography('labelSmall'))}>
-                                            <Mail className="w-3 h-3" />
+                                            <Mail className={iconSizes.xs} />
                                             <a
                                                 href={`https://mail.google.com/mail/?view=cm&to=${email}`}
                                                 target="_blank"
@@ -356,7 +358,7 @@ export function ContactListItem({
                                     )}
                                     {phone && (
                                         <div className={cn("flex items-center gap-2", getTypography('labelSmall'))}>
-                                            <Phone className="w-3 h-3" />
+                                            <Phone className={iconSizes.xs} />
                                             <a
                                                 href={`tel:${phone}`}
                                                 className={`truncate text-blue-600 ${INTERACTIVE_PATTERNS.LINK_PRIMARY}`}

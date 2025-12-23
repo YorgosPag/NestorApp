@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Camera } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { CompanyLogoCard, RepresentativePhotoCard, IndividualPhotoCard, ServiceLogoCard } from './PhotoPreviewCard';
 import {
   PHOTO_LAYOUTS,
@@ -60,6 +61,7 @@ export function PhotosPreview({
   onPhotoClick,
   className = ''
 }: PhotosPreviewProps) {
+  const iconSizes = useIconSizes();
 
   // ========================================================================
   // COMPANY PHOTOS LAYOUT
@@ -85,7 +87,7 @@ export function PhotosPreview({
     if (!hasLogo && !hasPhoto) {
       return (
         <div className={`text-center text-muted-foreground p-8 ${className}`}>
-          <Camera className={`w-16 h-16 mx-auto mb-4 ${PHOTO_TEXT_COLORS.MUTED}`} />
+          <Camera className={`${iconSizes.xl2} mx-auto mb-4 ${PHOTO_TEXT_COLORS.MUTED}`} />
           <p>Δεν υπάρχουν αποθηκευμένες φωτογραφίες</p>
         </div>
       );
@@ -97,7 +99,7 @@ export function PhotosPreview({
         {/* Header ακριβώς όπως στο individual */}
         <div className="flex items-center justify-between mb-6">
           <h4 className={`${PHOTO_TYPOGRAPHY.HEADER} flex items-center gap-2`}>
-            <Camera className="w-4 h-4" />
+            <Camera className={iconSizes.sm} />
             Φωτογραφίες Εταιρείας (2)
           </h4>
         </div>
@@ -166,7 +168,7 @@ export function PhotosPreview({
         {/* Header ακριβώς όπως στο modal */}
         <div className="flex items-center justify-between mb-6">
           <h4 className={`${PHOTO_TYPOGRAPHY.HEADER} flex items-center gap-2`}>
-            <Camera className="w-4 h-4" />
+            <Camera className={iconSizes.sm} />
             Φωτογραφίες ({totalPhotos}/6)
           </h4>
         </div>
@@ -213,7 +215,7 @@ export function PhotosPreview({
         {/* Header ακριβώς όπως στα άλλα contact types */}
         <div className="flex items-center justify-between mb-6">
           <h4 className={`${PHOTO_TYPOGRAPHY.HEADER} flex items-center gap-2`}>
-            <Camera className="w-4 h-4" />
+            <Camera className={iconSizes.sm} />
             Λογότυπο Δημόσιας Υπηρεσίας
           </h4>
         </div>
@@ -240,7 +242,7 @@ export function PhotosPreview({
 
   return (
     <div className={`text-center text-muted-foreground p-8 ${className}`}>
-      <Camera className={`w-16 h-16 mx-auto mb-4 ${PHOTO_TEXT_COLORS.MUTED}`} />
+      <Camera className={`${iconSizes.xl4} mx-auto mb-4 ${PHOTO_TEXT_COLORS.MUTED}`} />
       <p>Μη υποστηριζόμενος τύπος επαφής: {contactType}</p>
     </div>
   );

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Users, Link, CheckCircle, AlertTriangle, RefreshCw } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface LinkingResult {
   success: boolean;
@@ -17,6 +18,7 @@ interface LinkingResult {
 }
 
 export function LinkSoldUnitsToCustomers() {
+  const iconSizes = useIconSizes();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<LinkingResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +63,7 @@ export function LinkSoldUnitsToCustomers() {
     <Card className="w-full max-w-4xl">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Link className="w-6 h-6" />
+          <Link className={iconSizes.lg} />
           Σύνδεση Πωληθέντων Μονάδων με Πελάτες
         </CardTitle>
         <p className="text-sm text-muted-foreground">
@@ -81,12 +83,12 @@ export function LinkSoldUnitsToCustomers() {
           >
             {loading ? (
               <>
-                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                <RefreshCw className={`${iconSizes.sm} mr-2 animate-spin`} />
                 Συνδέω μονάδες με πελάτες...
               </>
             ) : (
               <>
-                <Users className="w-4 h-4 mr-2" />
+                <Users className={`${iconSizes.sm} mr-2`} />
                 Σύνδεση Sold Units με Contacts
               </>
             )}
@@ -96,7 +98,7 @@ export function LinkSoldUnitsToCustomers() {
         {/* Error Display */}
         {error && (
           <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
+            <AlertTriangle className={iconSizes.sm} />
             <AlertDescription>
               <strong>Σφάλμα:</strong> {error}
             </AlertDescription>
@@ -106,7 +108,7 @@ export function LinkSoldUnitsToCustomers() {
         {/* Success Result */}
         {result?.success && (
           <Alert>
-            <CheckCircle className="h-4 w-4 text-green-600" />
+            <CheckCircle className={`${iconSizes.sm} text-green-600`} />
             <AlertDescription>
               <strong>Επιτυχία!</strong> {result.message}
               {result.linkedUnits > 0 && (
@@ -134,7 +136,7 @@ export function LinkSoldUnitsToCustomers() {
                     className="flex items-center justify-between p-3 bg-muted rounded-md"
                   >
                     <div className="flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4 text-green-600" />
+                      <CheckCircle className={`${iconSizes.sm} text-green-600`} />
                       <span className="text-sm">
                         <strong>Unit:</strong> {update.unitId}
                       </span>
@@ -166,7 +168,7 @@ export function LinkSoldUnitsToCustomers() {
 
         {/* Warning */}
         <Alert>
-          <AlertTriangle className="h-4 w-4" />
+          <AlertTriangle className={iconSizes.sm} />
           <AlertDescription>
             <strong>Σημείωση:</strong> Αυτή η λειτουργία κάνει πραγματικές αλλαγές στη βάση δεδομένων.
             Σιγουρέψου ότι έχεις backup πριν προχωρήσεις.

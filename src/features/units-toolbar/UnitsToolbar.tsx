@@ -3,6 +3,7 @@ import React from 'react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { HelpCircle, Zap } from 'lucide-react';
 import { QuickSearch } from '@/components/ui/QuickSearch';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { ToolbarButton } from '@/components/ui/ToolbarButton';
 import { ToolbarFiltersMenu } from './components/ToolbarFiltersMenu';
 import { ToolbarExportMenu } from './components/ToolbarExportMenu';
@@ -25,6 +26,7 @@ export function UnitsToolbar({
   onAssignmentSuccess: () => void;
   totalUnits: number;
 }) {
+  const iconSizes = useIconSizes();
   const {
     isAdvancedMode,
     sortDirection,
@@ -93,10 +95,10 @@ export function UnitsToolbar({
                   : ''
               }
             >
-              <Zap className="w-4 h-4" />
+              <Zap className={iconSizes.sm} />
             </ToolbarButton>
             <ToolbarButton tooltip="Βοήθεια και Οδηγίες (F1)">
-              <HelpCircle className="w-4 h-4" />
+              <HelpCircle className={iconSizes.sm} />
             </ToolbarButton>
           </div>
         </div>

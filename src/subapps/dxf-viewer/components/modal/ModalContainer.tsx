@@ -10,6 +10,7 @@
 import React from 'react';
 import { BaseCard } from '@/components/core/BaseCard/BaseCard';
 import { AlertCircle, CheckCircle2, Info, AlertTriangle, Upload } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { spacing, typography } from '@/styles/design-tokens';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
@@ -35,6 +36,7 @@ export const ModalContainer: React.FC<ModalContainerProps> = ({
   icon,
   className = '',
 }) => {
+  const iconSizes = useIconSizes();
   const getVariantStyles = () => {
     switch (variant) {
       case 'info':
@@ -42,42 +44,42 @@ export const ModalContainer: React.FC<ModalContainerProps> = ({
           containerClass: 'border-blue-500/20 bg-blue-50 dark:bg-blue-950/30',
           iconColor: 'text-blue-500',
           titleColor: 'text-blue-700 dark:text-blue-300',
-          defaultIcon: <Info className="h-5 w-5" />,
+          defaultIcon: <Info className={iconSizes.md} />,
         };
       case 'success':
         return {
           containerClass: 'border-green-500/20 bg-green-50 dark:bg-green-950/30',
           iconColor: 'text-green-500',
           titleColor: 'text-green-700 dark:text-green-300',
-          defaultIcon: <CheckCircle2 className="h-5 w-5" />,
+          defaultIcon: <CheckCircle2 className={iconSizes.md} />,
         };
       case 'warning':
         return {
           containerClass: 'border-orange-500/20 bg-orange-50 dark:bg-orange-950/30',
           iconColor: 'text-orange-500',
           titleColor: 'text-orange-700 dark:text-orange-300',
-          defaultIcon: <AlertTriangle className="h-5 w-5" />,
+          defaultIcon: <AlertTriangle className={iconSizes.md} />,
         };
       case 'error':
         return {
           containerClass: 'border-red-500/20 bg-red-50 dark:bg-red-950/30',
           iconColor: 'text-red-500',
           titleColor: 'text-red-700 dark:text-red-300',
-          defaultIcon: <AlertCircle className="h-5 w-5" />,
+          defaultIcon: <AlertCircle className={iconSizes.md} />,
         };
       case 'upload':
         return {
           containerClass: 'border-orange-500/20 bg-gray-800 dark:bg-gray-800',
           iconColor: 'text-orange-500',
           titleColor: 'text-white dark:text-white',
-          defaultIcon: <Upload className="h-5 w-5" />,
+          defaultIcon: <Upload className={iconSizes.md} />,
         };
       default:
         return {
           containerClass: 'border-gray-200 dark:border-gray-600',
           iconColor: 'text-gray-500',
           titleColor: 'text-gray-900 dark:text-gray-100',
-          defaultIcon: <Info className="h-5 w-5" />,
+          defaultIcon: <Info className={iconSizes.md} />,
         };
     }
   };
@@ -126,7 +128,7 @@ export const UploadModalContainer: React.FC<{
     <ModalContainer
       variant="upload"
       title={title}
-      icon={<Upload className="h-5 w-5" />}
+      icon={<Upload className={iconSizes.md} />}
       className={className}
     >
       {children}

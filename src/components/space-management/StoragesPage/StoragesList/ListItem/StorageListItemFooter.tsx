@@ -3,6 +3,7 @@
 import React from 'react';
 import { Calendar, User } from 'lucide-react';
 import { formatDate } from '@/lib/intl-utils';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface StorageListItemFooterProps {
   lastUpdated?: Date | string;
@@ -10,6 +11,7 @@ interface StorageListItemFooterProps {
 }
 
 export function StorageListItemFooter({ lastUpdated, owner }: StorageListItemFooterProps) {
+  const iconSizes = useIconSizes();
   if (!lastUpdated && !owner) return null;
 
   return (
@@ -17,7 +19,7 @@ export function StorageListItemFooter({ lastUpdated, owner }: StorageListItemFoo
       <div className="flex items-center justify-between text-xs text-muted-foreground">
         {lastUpdated && (
           <div className="flex items-center gap-1">
-            <Calendar className="w-3 h-3" />
+            <Calendar className={iconSizes.xs} />
             <span>Ενημέρωση: {formatDate(
               lastUpdated instanceof Date
                 ? lastUpdated.toISOString()
@@ -27,7 +29,7 @@ export function StorageListItemFooter({ lastUpdated, owner }: StorageListItemFoo
         )}
         {owner && (
           <div className="flex items-center gap-1">
-            <User className="w-3 h-3" />
+            <User className={iconSizes.xs} />
             <span className="truncate max-w-24">{owner}</span>
           </div>
         )}

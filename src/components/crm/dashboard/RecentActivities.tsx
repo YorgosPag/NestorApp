@@ -3,8 +3,10 @@
 
 import React from 'react';
 import { Mail, PhoneCall, MessageSquare } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 export function RecentActivities() {
+    const iconSizes = useIconSizes();
     const activities = [
         { icon: Mail, text: "Email από Γ. Παπαδόπουλο", time: "2 λεπτά πριν" },
         { icon: PhoneCall, text: "Κλήση σε TechCorp", time: "15 λεπτά πριν" },
@@ -17,7 +19,7 @@ export function RecentActivities() {
                 {activities.map((activity, idx) => (
                     <li key={idx} className="flex items-center gap-3">
                         <div className="bg-gray-100 p-2 rounded-lg">
-                            <activity.icon className="w-5 h-5 text-gray-600" />
+                            <activity.icon className={`${iconSizes.md} text-gray-600`} />
                         </div>
                         <div>
                             <p className="text-sm font-medium">{activity.text}</p>

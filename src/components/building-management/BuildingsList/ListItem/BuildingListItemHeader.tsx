@@ -3,6 +3,7 @@
 import React from 'react';
 import { BuildingBadge } from "@/core/badges";
 import { MapPin } from "lucide-react";
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { cn } from '@/lib/utils';
 import type { Building } from '../../BuildingsPageContent';
 import { getStatusColor, getStatusLabel, getCategoryIcon, getCategoryLabel } from '../../BuildingCard/BuildingCardUtils';
@@ -13,6 +14,7 @@ interface BuildingListItemHeaderProps {
 }
 
 export function BuildingListItemHeader({ building }: BuildingListItemHeaderProps) {
+  const iconSizes = useIconSizes();
   const CategoryIcon = getCategoryIcon(building.category || 'mixed');
 
   return (
@@ -36,7 +38,7 @@ export function BuildingListItemHeader({ building }: BuildingListItemHeaderProps
       {/* Address inside EntityDetailsHeader */}
       {building.address && (
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
-          <MapPin className="w-3 h-3" />
+          <MapPin className={iconSizes.xs} />
           <span className="truncate">{building.address}</span>
         </div>
       )}

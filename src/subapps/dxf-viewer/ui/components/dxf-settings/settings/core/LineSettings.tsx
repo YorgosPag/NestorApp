@@ -81,6 +81,7 @@ import {
 import type { LineType, LineCapStyle, LineJoinStyle } from '../../../../../settings-core/types';
 import type { TemplateCategory } from '../../../../../contexts/LineSettingsContext';
 import { AccordionSection, useAccordion } from '../shared/AccordionSection';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // Simple SVG icons
 const SettingsIcon = ({ className }: { className?: string }) => (
@@ -115,6 +116,7 @@ const SwatchIcon = ({ className }: { className?: string }) => (
 );
 
 export function LineSettings({ contextType }: { contextType?: 'preview' | 'completion' }) {
+  const iconSizes = useIconSizes();
   // 🔺 ΔΙΟΡΘΩΣΗ: Χρήση unified hooks όπως σε TextSettings και GripSettings
   const generalLineSettings = useLineSettingsFromProvider();
   const notifications = useNotifications();
@@ -375,7 +377,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
             id="line-enabled"
             checked={settings.enabled}
             onChange={settingsUpdater.createCheckboxHandler('enabled')}
-            className="w-4 h-4 text-green-600 bg-gray-700 border-gray-600 rounded focus:ring-green-500 focus:ring-2"
+            className={`${iconSizes.sm} text-green-600 bg-gray-700 border-gray-600 rounded focus:ring-green-500 focus:ring-2`}
           />
           <label
             htmlFor="line-enabled"
@@ -397,7 +399,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
         {/* 1. ΠΡΌΤΥΠΑ & ΕΡΓΑΛΕΊΑ */}
         <AccordionSection
           title="Πρότυπα & Εργαλεία"
-          icon={<SwatchIcon className="w-4 h-4" />}
+          icon={<SwatchIcon className={iconSizes.sm} />}
           isOpen={isOpen('templates')}
           onToggle={() => toggleSection('templates')}
           disabled={!settings.enabled}
@@ -418,7 +420,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
         {/* 2. ΒΑΣΙΚΈΣ ΡΥΘΜΊΣΕΙΣ */}
         <AccordionSection
           title="Βασικές Ρυθμίσεις"
-          icon={<SettingsIcon className="w-4 h-4" />}
+          icon={<SettingsIcon className={iconSizes.sm} />}
           isOpen={isOpen('basic')}
           onToggle={() => toggleSection('basic')}
           disabled={!settings.enabled}
@@ -525,7 +527,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
         {/* 3. ΡΥΘΜΊΣΕΙΣ HOVER */}
         <AccordionSection
           title="Ρυθμίσεις Hover"
-          icon={<PaintbrushIcon className="w-4 h-4" />}
+          icon={<PaintbrushIcon className={iconSizes.sm} />}
           isOpen={isOpen('hover')}
           onToggle={() => toggleSection('hover')}
           disabled={!settings.enabled}
@@ -608,7 +610,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
         {/* 4. ΤΕΛΙΚΈΣ ΡΥΘΜΊΣΕΙΣ */}
         <AccordionSection
           title="Τελικές Ρυθμίσεις Γραμμής"
-          icon={<CpuChipIcon className="w-4 h-4" />}
+          icon={<CpuChipIcon className={iconSizes.sm} />}
           isOpen={isOpen('final')}
           onToggle={() => toggleSection('final')}
           disabled={!settings.enabled}
@@ -691,7 +693,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
         {/* 5. ΠΡΟΧΩΡΗΜΈΝΕΣ ΡΥΘΜΊΣΕΙΣ */}
         <AccordionSection
           title="Προχωρημένες Ρυθμίσεις"
-          icon={<AdjustmentsHorizontalIcon className="w-4 h-4" />}
+          icon={<AdjustmentsHorizontalIcon className={iconSizes.sm} />}
           isOpen={isOpen('advanced')}
           onToggle={() => toggleSection('advanced')}
           disabled={!settings.enabled}

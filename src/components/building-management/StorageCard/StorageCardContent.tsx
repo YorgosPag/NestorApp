@@ -9,6 +9,7 @@ import {
   Building,
   Ruler
 } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { StorageUnit } from '@/types/storage';
 import { formatPrice, formatArea, getPricePerSqm, getFeatureIcon } from './StorageCardUtils';
 
@@ -18,12 +19,13 @@ interface StorageCardContentProps {
 }
 
 export function StorageCardContent({ unit, getTypeIcon }: StorageCardContentProps) {
+    const iconSizes = useIconSizes();
     const TypeIcon = getTypeIcon(unit.type);
     return (
         <CardContent className="p-4 space-y-4">
             <div>
                 <h4 className={`font-semibold text-foreground truncate flex items-center gap-2 ${GROUP_HOVER_PATTERNS.TEXT_PRIMARY_ON_GROUP}`}>
-                    <TypeIcon className="w-4 h-4" />
+                    <TypeIcon className={iconSizes.sm} />
                     <span>{unit.code}</span>
                 </h4>
                 <p className="text-sm text-muted-foreground h-10 line-clamp-2">
@@ -34,7 +36,7 @@ export function StorageCardContent({ unit, getTypeIcon }: StorageCardContentProp
             <div className="grid grid-cols-2 gap-4 text-sm">
                 <div className="space-y-1">
                     <div className="flex items-center gap-1.5 text-muted-foreground">
-                        <Building className="w-4 h-4" />
+                        <Building className={iconSizes.sm} />
                         <span>Όροφος</span>
                     </div>
                     <div className="font-medium text-foreground">{unit.floor}</div>
@@ -42,7 +44,7 @@ export function StorageCardContent({ unit, getTypeIcon }: StorageCardContentProp
 
                 <div className="space-y-1">
                     <div className="flex items-center gap-1.5 text-muted-foreground">
-                        <Ruler className="w-4 h-4" />
+                        <Ruler className={iconSizes.sm} />
                         <span>Επιφάνεια</span>
                     </div>
                     <div className="font-medium text-foreground">{formatArea(unit.area)}</div>
@@ -65,7 +67,7 @@ export function StorageCardContent({ unit, getTypeIcon }: StorageCardContentProp
             {unit.linkedProperty && (
                 <div className="pt-3 border-t">
                     <div className="flex items-center gap-1.5 text-sm">
-                        <Link className="w-4 h-4 text-primary" />
+                        <Link className={`${iconSizes.sm} text-primary`} />
                         <span className="text-muted-foreground">Συνδεδεμένο:</span>
                         <span className="font-medium text-primary">{unit.linkedProperty}</span>
                     </div>
@@ -83,7 +85,7 @@ export function StorageCardContent({ unit, getTypeIcon }: StorageCardContentProp
                                     status="building"
                                     customLabel={
                                         <div className="flex items-center gap-1">
-                                            <FeatureIcon className="w-3 h-3" />
+                                            <FeatureIcon className={iconSizes.xs} />
                                             {feature}
                                         </div>
                                     }

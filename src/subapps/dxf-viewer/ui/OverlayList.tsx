@@ -9,6 +9,7 @@ import { Eye, EyeOff, Edit3, Trash2, Search } from 'lucide-react';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 import { STATUS_COLORS, STATUS_LABELS, KIND_LABELS, type Overlay } from '../overlays/types';
 import { layoutUtilities } from '@/styles/design-tokens';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface OverlayListProps {
   overlays: Overlay[];
@@ -27,6 +28,7 @@ export const OverlayList: React.FC<OverlayListProps> = ({
   onDelete,
   onToggleLayers,
 }) => {
+  const iconSizes = useIconSizes();
   const [searchQuery, setSearchQuery] = useState('');
   const [hiddenOverlays, setHiddenOverlays] = useState<Set<string>>(new Set());
   const selectedCardRef = React.useRef<HTMLDivElement>(null);
@@ -88,12 +90,12 @@ export const OverlayList: React.FC<OverlayListProps> = ({
         </div>
         
         <div className="relative mt-2">
-          <Search className="absolute left-2 top-2.5 w-4 h-4 text-gray-400" />
+          <Search className={`absolute left-2 top-2.5 ${iconSizes.sm} text-gray-400`} />
           <Input
             placeholder="Αναζήτηση..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-8 h-8 text-sm bg-gray-900 border-gray-600 text-white placeholder-gray-400"
+            className={`pl-8 ${iconSizes.xl} text-sm bg-gray-900 border-gray-600 text-white placeholder-gray-400`}
           />
         </div>
       </CardHeader>
@@ -125,13 +127,13 @@ export const OverlayList: React.FC<OverlayListProps> = ({
                       variant="ghost"
                       size="sm"
                       onClick={(e) => handleToggleVisibility(overlay.id, e)}
-                      className={`p-0.5 h-5 w-5 text-gray-400 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
+                      className={`p-0.5 ${iconSizes.md} text-gray-400 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
                     >
-                      {isVisible ? <Eye className="w-2.5 h-2.5" /> : <EyeOff className="w-2.5 h-2.5 opacity-50" />}
+                      {isVisible ? <Eye className={iconSizes.xs} /> : <EyeOff className={`${iconSizes.xs} opacity-50`} />}
                     </Button>
 
                     <div
-                      className="w-3 h-3 rounded border flex-shrink-0"
+                      className={`${iconSizes.xs} rounded border flex-shrink-0`}
                       style={layoutUtilities.dxf.colors.backgroundColor(
                         STATUS_COLORS[overlay.status || 'for-sale']
                       )}
@@ -149,19 +151,19 @@ export const OverlayList: React.FC<OverlayListProps> = ({
                         variant="ghost"
                         size="sm"
                         onClick={(e) => handleEdit(overlay.id, e)}
-                        className={`p-0.5 h-5 w-5 text-gray-400 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
+                        className={`p-0.5 ${iconSizes.md} text-gray-400 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
                         title="Επεξεργασία"
                       >
-                        <Edit3 className="w-2.5 h-2.5" />
+                        <Edit3 className={iconSizes.xs} />
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={(e) => handleDelete(overlay.id, e)}
-                        className={`p-0.5 h-5 w-5 ${HOVER_TEXT_EFFECTS.RED}`}
+                        className={`p-0.5 ${iconSizes.md} ${HOVER_TEXT_EFFECTS.RED}`}
                         title="Διαγραφή"
                       >
-                        <Trash2 className="w-2.5 h-2.5" />
+                        <Trash2 className={iconSizes.xs} />
                       </Button>
                     </div>
                   </div>

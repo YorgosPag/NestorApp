@@ -4,8 +4,10 @@
 import React from 'react';
 import { Mail, PhoneCall, Calendar, Plus } from 'lucide-react';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 export function QuickActions() {
+  const iconSizes = useIconSizes();
   const actions = [
     { label: 'Νέο Email', icon: Mail },
     { label: 'Καταγραφή Κλήσης', icon: PhoneCall },
@@ -18,7 +20,7 @@ export function QuickActions() {
       <nav className="grid grid-cols-2 gap-4" aria-label="Γρήγορες ενέργειες CRM">
         {actions.map((action, idx) => (
           <button key={idx} className={`flex flex-col items-center justify-center p-4 bg-gray-50 rounded-lg ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}>
-            <action.icon className="w-6 h-6 text-blue-600 mb-2" />
+            <action.icon className={`${iconSizes.lg} text-blue-600 mb-2`} />
             <span className="text-sm font-medium text-gray-800">{action.label}</span>
           </button>
         ))}

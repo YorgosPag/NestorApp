@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from '@/components/ui/button';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { Plus } from 'lucide-react';
 
 interface HeaderBarProps {
@@ -10,6 +11,8 @@ interface HeaderBarProps {
 }
 
 export function HeaderBar({ sectionsCount, readOnly, onAddSection }: HeaderBarProps) {
+  const iconSizes = useIconSizes();
+
   return (
     <div className="flex items-center justify-between">
       <div>
@@ -21,7 +24,7 @@ export function HeaderBar({ sectionsCount, readOnly, onAddSection }: HeaderBarPr
       {!readOnly && (
         <div className="flex items-center gap-2">
           <Button onClick={onAddSection} className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
+            <Plus className={iconSizes.sm} />
             Νέα Ενότητα
           </Button>
         </div>

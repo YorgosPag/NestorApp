@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Camera, Building2, User } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   PHOTO_SIZES,
@@ -72,6 +73,7 @@ export function PhotoPreviewCard({
   className = '',
   showHeader = true
 }: PhotoPreviewCardProps) {
+  const iconSizes = useIconSizes();
 
   // ========================================================================
   // COMPUTED VALUES
@@ -123,7 +125,7 @@ export function PhotoPreviewCard({
       {showHeader && (
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-sm">
-            <HeaderIcon className="h-4 w-4" />
+            <HeaderIcon className={iconSizes.sm} />
             {title}
           </CardTitle>
         </CardHeader>
@@ -147,7 +149,7 @@ export function PhotoPreviewCard({
           ) : (
             /* 🚫 EMPTY STATE: Ακριβώς όπως στο Modal */
             <div className="flex flex-col items-center justify-center">
-              <EmptyIcon className={`w-12 h-12 ${PHOTO_TEXT_COLORS.MUTED} mb-3`} />
+              <EmptyIcon className={`${iconSizes.xl} ${PHOTO_TEXT_COLORS.MUTED} mb-3`} />
               <span className={`text-sm font-medium ${PHOTO_TEXT_COLORS.LIGHT_MUTED} mb-2`}>{emptyText}</span>
               <span className={`text-xs ${PHOTO_TEXT_COLORS.MUTED}`}>Κλικ ή σύρετε αρχείο</span>
             </div>

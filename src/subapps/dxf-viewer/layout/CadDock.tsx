@@ -6,6 +6,7 @@ import 'dockview/dist/styles/dockview.css';
 // Import the ProSnapToolbar instead of deleted SnapButtonsPanel
 import { ProSnapToolbar } from '../ui/components/ProSnapToolbar';
 import { useProSnapIntegration } from '../hooks/common/useProSnapIntegration';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // 🔺 FIXED SNAPPING PANEL με ProSnapToolbar
 const SnappingView = memo(() => {
@@ -37,28 +38,32 @@ const SnappingView = memo(() => {
 SnappingView.displayName = 'SnappingView';
 
 // 📋 LAYERS PANEL
-const LayersView = memo(() => (
+const LayersView = memo(() => {
+  const iconSizes = useIconSizes();
+
+  return (
   <div className="p-3 bg-gray-900 text-white">
     <h3 className="text-sm font-semibold mb-2 text-gray-300">Layers</h3>
     <div className="space-y-1">
       <div className="flex items-center gap-2 text-sm">
-        <input type="checkbox" defaultChecked className="w-3 h-3" />
-        <span className="w-3 h-3 bg-red-500 rounded"></span>
+        <input type="checkbox" defaultChecked className={iconSizes.xs} />
+        <span className={`${iconSizes.xs} bg-red-500 rounded`}></span>
         <span>0 - Default</span>
       </div>
       <div className="flex items-center gap-2 text-sm">
-        <input type="checkbox" defaultChecked className="w-3 h-3" />
-        <span className="w-3 h-3 bg-blue-500 rounded"></span>
+        <input type="checkbox" defaultChecked className={iconSizes.xs} />
+        <span className={`${iconSizes.xs} bg-blue-500 rounded`}></span>
         <span>Geometry</span>
       </div>
       <div className="flex items-center gap-2 text-sm">
-        <input type="checkbox" defaultChecked className="w-3 h-3" />
-        <span className="w-3 h-3 bg-green-500 rounded"></span>
+        <input type="checkbox" defaultChecked className={iconSizes.xs} />
+        <span className={`${iconSizes.xs} bg-green-500 rounded`}></span>
         <span>Dimensions</span>
       </div>
     </div>
   </div>
-));
+  );
+});
 LayersView.displayName = 'LayersView';
 
 // 🔧 PROPERTIES PANEL

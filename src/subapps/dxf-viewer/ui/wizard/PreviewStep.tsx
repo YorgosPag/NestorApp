@@ -2,9 +2,11 @@
 
 import React from 'react';
 import { FileText, Building2, Ruler, CheckCircle, Scissors, AlertTriangle } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { useLevels } from '../../systems/levels';
 
 export function PreviewStep() {
+  const iconSizes = useIconSizes();
   const { levels, importWizard } = useLevels();
   
   const selectedLevel = importWizard.selectedLevelId 
@@ -34,7 +36,7 @@ export function PreviewStep() {
       {/* File Information */}
       <div className="bg-gray-700 rounded-lg p-4">
         <h4 className="text-sm font-medium text-blue-400 mb-3 flex items-center">
-          <FileText className="w-4 h-4 mr-2" />
+          <FileText className={`${iconSizes.sm} mr-2`} />
           Πληροφορίες Αρχείου
         </h4>
         <div className="space-y-2 text-sm">
@@ -58,7 +60,7 @@ export function PreviewStep() {
       {/* Level Assignment */}
       <div className="bg-gray-700 rounded-lg p-4">
         <h4 className="text-sm font-medium text-green-400 mb-3 flex items-center">
-          <Building2 className="w-4 h-4 mr-2" />
+          <Building2 className={`${iconSizes.sm} mr-2`} />
           Ανάθεση Επιπέδου
         </h4>
         <div className="space-y-2 text-sm">
@@ -80,7 +82,7 @@ export function PreviewStep() {
       {/* Scale & Units */}
       <div className="bg-gray-700 rounded-lg p-4">
         <h4 className="text-sm font-medium text-purple-400 mb-3 flex items-center">
-          <Ruler className="w-4 h-4 mr-2" />
+          <Ruler className={`${iconSizes.sm} mr-2`} />
           Κλίμακα & Μονάδες
         </h4>
         <div className="space-y-2 text-sm">
@@ -106,12 +108,12 @@ export function PreviewStep() {
       {/* DXF Processing Info */}
       <div className="bg-orange-900 bg-opacity-30 border border-orange-700 rounded-lg p-4">
         <h4 className="text-sm font-medium text-orange-400 mb-3 flex items-center">
-          <Scissors className="w-4 h-4 mr-2" />
+          <Scissors className={`${iconSizes.sm} mr-2`} />
           Επεξεργασία DXF
         </h4>
         <div className="space-y-2 text-sm text-orange-200">
           <div className="flex items-start">
-            <CheckCircle className="w-4 h-4 mr-2 text-green-400 mt-0.5" />
+            <CheckCircle className={`${iconSizes.sm} mr-2 text-green-400 mt-0.5`} />
             <span>Θα γίνει αυτόματη περικοπή κενής περιοχής γύρω από την κάτοψη</span>
           </div>
         </div>
@@ -122,7 +124,7 @@ export function PreviewStep() {
         <h4 className="text-sm font-medium text-blue-400 mb-3">Τι συμβαίνει στη συνέχεια;</h4>
         <div className="space-y-2 text-sm text-blue-200">
           <div className="flex items-center">
-            <CheckCircle className="w-4 h-4 mr-2 text-green-400" />
+            <CheckCircle className={`${iconSizes.sm} mr-2 text-green-400`} />
             <span>Το DXF αρχείο θα αναλυθεί και θα εισαχθεί</span>
           </div>
         </div>
@@ -132,7 +134,7 @@ export function PreviewStep() {
       {importWizard.newLevelName && (
         <div className="bg-yellow-900 bg-opacity-30 border border-yellow-700 rounded-lg p-3">
           <div className="flex items-center">
-            <AlertTriangle className="w-4 h-4 mr-2 text-yellow-400" />
+            <AlertTriangle className={`${iconSizes.sm} mr-2 text-yellow-400`} />
             <p className="text-sm text-yellow-200">
               <strong>Θα δημιουργηθεί νέο επίπεδο:</strong> "{importWizard.newLevelName}"
             </p>

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Users } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface EmptyStateProps {
   icon?: React.ElementType;
@@ -14,9 +15,10 @@ function DefaultEmptyState({
   title = "Κάντε μια επιλογή",
   description = "Επιλέξτε ένα στοιχείο από τη λίστα για να δείτε τις λεπτομέρειές του."
 }: EmptyStateProps) {
+  const iconSizes = useIconSizes();
   return (
     <div className="flex-1 flex flex-col items-center justify-center bg-card border rounded-lg min-w-0 shadow-sm text-center p-8">
-      <Icon className="w-16 h-16 text-muted-foreground mb-4" />
+      <Icon className={`${iconSizes.xl4} text-muted-foreground mb-4`} />
       <h2 className="text-xl font-semibold text-foreground">{title}</h2>
       <p className="text-muted-foreground">{description}</p>
     </div>

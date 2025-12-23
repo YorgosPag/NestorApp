@@ -17,6 +17,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useFirebaseAuth } from '@/contexts/FirebaseAuthContext';
 import { Loader2, Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // =============================================================================
 // INTERFACES
@@ -43,6 +44,7 @@ export function FirebaseLoginForm({
   description = 'Εισάγετε τα στοιχεία σας για πρόσβαση στην εφαρμογή',
   showSignUpOption = true
 }: FirebaseLoginFormProps) {
+  const iconSizes = useIconSizes();
   const { signIn, signUp, resetPassword, loading, error, clearError } = useFirebaseAuth();
 
   // Form state
@@ -227,7 +229,7 @@ export function FirebaseLoginForm({
           <div className="space-y-2">
             <label htmlFor="email" className="text-sm font-medium">Email</label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Mail className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${iconSizes.sm} text-gray-400`} />
               <Input
                 id="email"
                 type="email"
@@ -262,7 +264,7 @@ export function FirebaseLoginForm({
             <div className="space-y-2">
               <label htmlFor="password" className="text-sm font-medium">Κωδικός Πρόσβασης</label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Lock className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${iconSizes.sm} text-gray-400`} />
                 <Input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
@@ -279,9 +281,9 @@ export function FirebaseLoginForm({
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
                   {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
+                    <EyeOff className={iconSizes.sm} />
                   ) : (
-                    <Eye className="h-4 w-4" />
+                    <Eye className={iconSizes.sm} />
                   )}
                 </button>
               </div>
@@ -293,7 +295,7 @@ export function FirebaseLoginForm({
             <div className="space-y-2">
               <label htmlFor="confirmPassword" className="text-sm font-medium">Επιβεβαίωση Κωδικού</label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Lock className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${iconSizes.sm} text-gray-400`} />
                 <Input
                   id="confirmPassword"
                   type="password"
@@ -314,7 +316,7 @@ export function FirebaseLoginForm({
             className="w-full"
             disabled={isLoading}
           >
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isLoading && <Loader2 className={`mr-2 ${iconSizes.sm} animate-spin`} />}
             {getSubmitText()}
           </Button>
 

@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Info } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { StorageUnit, StorageType } from '@/types/storage';
 import { cn } from '@/lib/utils';
 
@@ -27,12 +28,13 @@ export function StorageFormBasicInfo({
   formType
 }: StorageFormBasicInfoProps) {
   const { t } = useTranslation('properties');
+  const iconSizes = useIconSizes();
   
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <Info className="w-5 h-5" />
+          <Info className={iconSizes.md} />
           {t('storage.form.basicInfo')}
         </CardTitle>
       </CardHeader>

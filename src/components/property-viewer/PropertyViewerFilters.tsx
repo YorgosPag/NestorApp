@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { Button } from "@/components/ui/button";
 import { RotateCcw } from "lucide-react";
 import type { FilterState } from '@/types/property-viewer';
@@ -16,6 +17,7 @@ interface PropertyViewerFiltersProps {
 }
 
 export function PropertyViewerFilters({ filters, onFiltersChange }: PropertyViewerFiltersProps) {
+  const iconSizes = useIconSizes();
   const {
     handleFilterChange,
     handleRangeChange,
@@ -39,7 +41,7 @@ export function PropertyViewerFilters({ filters, onFiltersChange }: PropertyView
         {hasActiveFilters && (
           <div className="flex justify-end pt-2">
               <Button variant="ghost" size="sm" onClick={clearAllFilters}>
-                  <RotateCcw className="w-4 h-4 mr-2" />
+                  <RotateCcw className={`${iconSizes.sm} mr-2`} />
                   Επαναφορά Φίλτρων
               </Button>
           </div>

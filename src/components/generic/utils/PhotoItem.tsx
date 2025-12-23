@@ -3,6 +3,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Eye, Download } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import {
   PHOTO_COLORS,
   PHOTO_BORDERS,
@@ -53,6 +54,8 @@ export interface PhotoItemProps {
  * - AI hint support για accessibility
  */
 export function PhotoItem({ photo }: PhotoItemProps) {
+  const iconSizes = useIconSizes();
+
   return (
     <div className="relative group">
       <div className={`aspect-square ${PHOTO_COLORS.PHOTO_BACKGROUND} rounded overflow-hidden shadow-sm ${PHOTO_COMBINED_EFFECTS.INTERACTIVE_CARD}`}>
@@ -66,10 +69,10 @@ export function PhotoItem({ photo }: PhotoItemProps) {
       <div className={`absolute inset-0 bg-black bg-opacity-0 transition-all duration-300 ease-in-out flex items-center justify-center opacity-0 ${GROUP_HOVER_PATTERNS.OVERLAY_ON_GROUP}`}>
         <div className="flex gap-2">
           <Button size="sm" variant="secondary">
-            <Eye className="w-4 h-4" />
+            <Eye className={iconSizes.sm} />
           </Button>
           <Button size="sm" variant="secondary">
-            <Download className="w-4 h-4" />
+            <Download className={iconSizes.sm} />
           </Button>
         </div>
       </div>

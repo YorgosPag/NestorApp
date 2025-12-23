@@ -11,6 +11,7 @@ import type { Point2D, Viewport } from '../rendering/types/Types';
 import type { SceneModel } from '../types/scene';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { portalComponents, layoutUtilities } from '@/styles/design-tokens';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import {
   getCalibrationOverlayContainerStyles,
   getCalibrationDebugPanelStyles,
@@ -43,6 +44,7 @@ export default function CoordinateCalibrationOverlay({
   show = false,
   onToggle
 }: CoordinateCalibrationOverlayProps) {
+  const iconSizes = useIconSizes();
   const [clickTests, setClickTests] = useState<ClickTest[]>([]);
   const [showDetails, setShowDetails] = useState(true);
   const clickIdRef = useRef(0);
@@ -113,7 +115,7 @@ export default function CoordinateCalibrationOverlay({
             <div className="text-cyan-300 font-semibold mb-2">📊 Κατάσταση Σκηνής:</div>
             <div className="flex justify-between items-center">
               <div>
-                <span className={`inline-block w-2 h-2 rounded-full mr-2 ${entitiesCount > 0 ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                <span className={`inline-block ${iconSizes.xs} rounded-full mr-2 ${entitiesCount > 0 ? 'bg-green-500' : 'bg-red-500'}`}></span>
                 <span className="text-white">Οντότητες: {entitiesCount}</span>
               </div>
               <div><span className="text-gray-400">Επίπεδα: {layersCount}</span></div>

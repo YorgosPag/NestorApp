@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Trash2 } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -48,6 +49,8 @@ export const SocialRenderer: React.FC<SocialRendererProps> = ({
   updateItem,
   removeItem
 }) => {
+  const iconSizes = useIconSizes();
+
   // 🎯 ΜΟΝΟ ΓΙΑ DESKTOP: Οριζόντιο layout σε γραμμή για social media
   if (isDesktop) {
     return (
@@ -135,7 +138,7 @@ export const SocialRenderer: React.FC<SocialRendererProps> = ({
             disabled={disabled}
             className={HOVER_TEXT_EFFECTS.RED}
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className={iconSizes.sm} />
           </Button>
         </div>
       </div>

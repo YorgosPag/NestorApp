@@ -12,6 +12,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Eye, Settings } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // ============================================================================
 // TYPES
@@ -46,6 +47,7 @@ export const ActionsSection: React.FC<ActionsSectionProps> = ({
   onManageRelationships,
   className
 }) => {
+  const iconSizes = useIconSizes();
   // ============================================================================
   // EARLY RETURN
   // ============================================================================
@@ -65,7 +67,7 @@ export const ActionsSection: React.FC<ActionsSectionProps> = ({
         variant="outline"
         className="flex-1 max-w-xs"
       >
-        <Eye className="h-4 w-4 mr-2" />
+        <Eye className={`${iconSizes.sm} mr-2`} />
         Προβολή & Διαχείριση
       </Button>
 
@@ -74,7 +76,7 @@ export const ActionsSection: React.FC<ActionsSectionProps> = ({
           onClick={onManageRelationships}
           className="flex-1 max-w-xs"
         >
-          <Settings className="h-4 w-4 mr-2" />
+          <Settings className={`${iconSizes.sm} mr-2`} />
           Επεξεργασία Σχέσεων
         </Button>
       )}

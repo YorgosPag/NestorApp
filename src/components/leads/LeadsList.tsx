@@ -1,6 +1,7 @@
 
 "use client";
 import { User } from "lucide-react";
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { EditOpportunityModal } from "@/components/crm/dashboard/EditOpportunityModal";
 import SendEmailModal from "@/components/email/SendEmailModal";
 import { useLeadsList } from "./hooks/useLeadsList";
@@ -11,6 +12,7 @@ import type { Opportunity } from "@/types/crm";
 import { HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects/hover-effects';
 
 export default function LeadsList({ refreshTrigger }: { refreshTrigger?: any }) {
+  const iconSizes = useIconSizes();
   const {
     leads, loading, error, fetchLeads,
     editingLead, showEditModal, emailingLead, showEmailModal,
@@ -22,7 +24,7 @@ export default function LeadsList({ refreshTrigger }: { refreshTrigger?: any }) 
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+          <div className={`animate-spin rounded-full ${iconSizes.xl} border-b-2 border-blue-600 mx-auto mb-2`}></div>
           <p className="text-gray-600">Φόρτωση leads...</p>
         </div>
       </div>
@@ -43,7 +45,7 @@ export default function LeadsList({ refreshTrigger }: { refreshTrigger?: any }) 
   if (leads.length === 0) {
     return (
       <div className="text-center py-12">
-        <User className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+        <User className={`${iconSizes.xl3} text-gray-400 mx-auto mb-4`} />
         <h3 className="text-lg font-medium text-gray-900 mb-2">Δεν υπάρχουν leads</h3>
         <p className="text-gray-600">Προσθέστε το πρώτο σας lead για να ξεκινήσετε!</p>
       </div>

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { TabsContent } from "@/components/ui/tabs";
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { TabsOnlyTriggers, type TabDefinition } from "@/components/ui/navigation/TabsComponents";
 import type { UnitsTabConfig } from '@/config/units-tabs-config';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -126,6 +127,7 @@ export function GenericUnitsTabsRenderer({
   customComponents = {},
   globalProps = {},
 }: GenericUnitsTabsRendererProps) {
+  const iconSizes = useIconSizes();
   // Φιλτράρισμα enabled tabs
   const enabledTabs = tabs.filter(tab => tab.enabled !== false);
 
@@ -200,7 +202,7 @@ export function GenericUnitsTabsRenderer({
             content
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
-              <Home className="h-12 w-12 mb-4 opacity-50" />
+              <Home className={`${iconSizes.xl3} mb-4 opacity-50`} />
               <h3 className="text-lg font-semibold mb-2">Επιλέξτε μια μονάδα</h3>
               <p className="text-sm">Επιλέξτε μια μονάδα από τη λίστα αριστερά για να δείτε τις πληροφορίες της.</p>
             </div>

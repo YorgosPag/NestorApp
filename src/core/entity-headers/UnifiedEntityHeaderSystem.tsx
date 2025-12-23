@@ -13,6 +13,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // ===== TYPES & INTERFACES =====
 
@@ -66,16 +67,18 @@ export const EntityDetailsHeader: React.FC<EntityHeaderProps> = ({
   className,
   children
 }) => {
+  const iconSizes = useIconSizes();
+
   const variantClasses = {
     default: "p-4",
     compact: "p-3",
     detailed: "p-6"
   };
 
-  const iconSizes = {
-    default: "h-10 w-10",
-    compact: "h-8 w-8",
-    detailed: "h-12 w-12"
+  const iconSizeClasses = {
+    default: iconSizes.xl2,
+    compact: iconSizes.xl,
+    detailed: iconSizes.xl3
   };
 
   const titleSizes = {
@@ -99,7 +102,7 @@ export const EntityDetailsHeader: React.FC<EntityHeaderProps> = ({
               key={avatarImageUrl || 'empty-avatar'}
               className={cn(
                 `flex-shrink-0 shadow-sm cursor-pointer ${INTERACTIVE_PATTERNS.OPACITY_HOVER} ${TRANSITION_PRESETS.OPACITY}`,
-                iconSizes[variant]
+                iconSizeClasses[variant]
               )}
               onClick={onAvatarClick}
             >
@@ -109,23 +112,27 @@ export const EntityDetailsHeader: React.FC<EntityHeaderProps> = ({
                 className="object-cover"
               />
               <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600">
-                <Icon className="text-white" style={{
-                  width: variant === 'detailed' ? '24px' : variant === 'compact' ? '16px' : '20px',
-                  height: variant === 'detailed' ? '24px' : variant === 'compact' ? '16px' : '20px'
-                }} />
+                <Icon className={cn(
+                  "text-white",
+                  variant === 'detailed' ? iconSizes.lg :
+                  variant === 'compact' ? iconSizes.sm :
+                  iconSizes.md
+                )} />
               </AvatarFallback>
             </Avatar>
           ) : (
             <div
               className={cn(
                 "flex items-center justify-center rounded-lg shadow-sm flex-shrink-0 bg-gradient-to-br from-blue-500 to-purple-600",
-                iconSizes[variant]
+                iconSizeClasses[variant]
               )}
             >
-              <Icon className="text-white" style={{
-                width: variant === 'detailed' ? '24px' : variant === 'compact' ? '16px' : '20px',
-                height: variant === 'detailed' ? '24px' : variant === 'compact' ? '16px' : '20px'
-              }} />
+              <Icon className={cn(
+                "text-white",
+                variant === 'detailed' ? iconSizes.lg :
+                variant === 'compact' ? iconSizes.sm :
+                iconSizes.md
+              )} />
             </div>
           )}
 
@@ -228,6 +235,7 @@ const EntityAction: React.FC<EntityHeaderAction> = ({
   variant = 'default',
   className
 }) => {
+  const iconSizes = useIconSizes();
   return (
     <Button
       variant={variant}
@@ -235,7 +243,7 @@ const EntityAction: React.FC<EntityHeaderAction> = ({
       onClick={onClick}
       className={cn("h-8", className)}
     >
-      {Icon && <Icon className="w-4 h-4 mr-2" />}
+      {Icon && <Icon className={`${iconSizes.sm} mr-2`} />}
       {label}
     </Button>
   );

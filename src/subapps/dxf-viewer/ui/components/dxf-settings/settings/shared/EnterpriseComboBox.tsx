@@ -64,6 +64,7 @@
 
 import React, { useState, useRef, useEffect, useId, useMemo, useCallback } from 'react';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { createPortal } from 'react-dom';
 import { useFloating, autoUpdate, offset, flip, shift, size } from '@floating-ui/react';
 // 🏢 ENTERPRISE: Import FixedSizeList from react-window
@@ -255,6 +256,7 @@ export function EnterpriseComboBox<T>({
   'aria-labelledby': ariaLabelledBy,
   name
 }: EnterpriseComboBoxProps<T>) {
+  const iconSizes = useIconSizes();
 
   // ===== UNIQUE IDs (ARIA) =====
 
@@ -563,7 +565,7 @@ export function EnterpriseComboBox<T>({
           )}
         </div>
         {showCheckmark && isSelected && !option.disabled && (
-          <CheckmarkIcon className="w-5 h-5 text-green-400 flex-shrink-0 ml-2" />
+          <CheckmarkIcon className={`${iconSizes.md} text-green-400 flex-shrink-0 ml-2`} />
         )}
       </div>
     );
@@ -716,7 +718,7 @@ export function EnterpriseComboBox<T>({
 
         {/* Chevron Icon */}
         <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-          <ChevronDownIcon className="w-4 h-4 text-gray-400" isOpen={isOpen} />
+          <ChevronDownIcon className={`${iconSizes.sm} text-gray-400`} isOpen={isOpen} />
         </div>
 
         {/* Listbox */}

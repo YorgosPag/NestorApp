@@ -9,6 +9,7 @@ import { EntityCard } from './components/EntityCard';
 import type { SceneModel } from '../../../types/scene';
 import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { layoutUtilities } from '@/styles/design-tokens';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface LayerItemProps {
   layerName: string;
@@ -105,7 +106,7 @@ export function LayerItem({
   onEntityColorChange,
   onEntityRename
 }: LayerItemProps) {
-  
+  const iconSizes = useIconSizes();
   const layer = scene.layers[layerName];
   const isEditing = editingLayer === layerName;
   const showColorPicker = colorPickerLayer === layerName;
@@ -210,9 +211,9 @@ export function LayerItem({
               title={isLayerExpanded ? "Σύμπτυξη στοιχείων" : "Ανάπτυξη στοιχείων"}
             >
               {isLayerExpanded ? (
-                <ChevronDown className="w-3 h-3" />
+                <ChevronDown className={iconSizes.xs} />
               ) : (
-                <ChevronRight className="w-3 h-3" />
+                <ChevronRight className={iconSizes.xs} />
               )}
             </button>
           )}
@@ -221,7 +222,7 @@ export function LayerItem({
           <div className="relative">
             <button
               onClick={handleColorPickerToggle}
-              className={`w-3 h-3 rounded border border-gray-500 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
+              className={`${iconSizes.xs} rounded border border-gray-500 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
               style={layoutUtilities.dxf.colors.backgroundColor(layer.color)}
               title="Αλλαγή χρώματος"
             />
@@ -259,7 +260,7 @@ export function LayerItem({
             className={`p-1 text-gray-400 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
             title={layer.visible ? "Απόκρυψη" : "Εμφάνιση"}
           >
-            {layer.visible ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+            {layer.visible ? <Eye className={iconSizes.xs} /> : <EyeOff className={iconSizes.xs} />}
           </button>
           
           {/* Edit Button */}
@@ -268,7 +269,7 @@ export function LayerItem({
             className={`p-1 text-gray-400 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
             title="Μετονομασία layer"
           >
-            <Edit2 className="w-3 h-3" />
+            <Edit2 className={iconSizes.xs} />
           </button>
           
           {/* Delete Button */}
@@ -277,7 +278,7 @@ export function LayerItem({
             className={`p-1 ${HOVER_TEXT_EFFECTS.RED}`}
             title="Διαγραφή"
           >
-            <Trash2 className="w-3 h-3" />
+            <Trash2 className={iconSizes.xs} />
           </button>
         </div>
       </div>

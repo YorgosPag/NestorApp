@@ -15,8 +15,10 @@ import CreateTaskModal from '@/components/crm/dashboard/dialogs/CreateTaskModal'
 import { TasksTab } from '@/components/crm/dashboard/TasksTab'; // Reusing TasksTab which is essentially a list
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 export default function CrmTasksPage() {
+  const iconSizes = useIconSizes();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [stats, setStats] = useState<any>(null);
@@ -72,7 +74,7 @@ export default function CrmTasksPage() {
           <div className="px-6 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Clock className="w-6 h-6 text-blue-600" />
+                <Clock className={`${iconSizes.lg} text-blue-600`} />
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900 dark:text-foreground">Εργασίες</h1>
                   <p className="text-gray-600 dark:text-muted-foreground mt-1">Διαχείριση εργασιών και υπενθυμίσεων</p>
@@ -80,7 +82,7 @@ export default function CrmTasksPage() {
               </div>
               
               <Button onClick={() => setShowCreateModal(true)}>
-                <Plus className="w-4 h-4 mr-2" />
+                <Plus className={`${iconSizes.sm} mr-2`} />
                 Νέα Εργασία
               </Button>
             </div>
@@ -95,14 +97,14 @@ export default function CrmTasksPage() {
                   <div className="flex-1">
                     <p className="text-sm text-gray-600 dark:text-muted-foreground mb-1">{card.title}</p>
                     {loadingStats ? (
-                      <Skeleton className="h-8 w-12 rounded-md" />
+                      <Skeleton className={`${iconSizes.xl} w-12 rounded-md`} />
                     ) : (
                       <p className="text-2xl font-bold text-gray-900 dark:text-foreground">{card.value}</p>
                     )}
                     <p className="text-xs text-gray-500 dark:text-muted-foreground/80 mt-1">{card.description}</p>
                   </div>
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getColorClasses(card.color)}`}>
-                    <card.icon className="w-5 h-5" />
+                  <div className={`${iconSizes.xl2} rounded-full flex items-center justify-center ${getColorClasses(card.color)}`}>
+                    <card.icon className={iconSizes.md} />
                   </div>
                 </div>
               </article>

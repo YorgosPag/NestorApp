@@ -4,6 +4,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SearchInput } from '@/components/ui/search'; // 🏢 ENTERPRISE centralized search
+import { useIconSizes } from '@/hooks/useIconSizes';
 import {
   Plus,
   Edit,
@@ -66,6 +67,7 @@ export function CompactToolbar({
   onFavoritesManagement,
   onHelp
 }: CompactToolbarProps) {
+  const iconSizes = useIconSizes();
 
   const handleFilterChange = (filter: string, checked: boolean) => {
     if (checked) {
@@ -87,11 +89,11 @@ export function CompactToolbar({
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0"
+            className={`${iconSizes.xl} p-0`}
             onClick={onNewItem}
             title={config.tooltips.newItem}
           >
-            <Plus className={`h-4 w-4 ${getIconColor('newItem')}`} />
+            <Plus className={`${iconSizes.sm} ${getIconColor('newItem')}`} />
           </Button>
         )}
 
@@ -100,12 +102,12 @@ export function CompactToolbar({
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0"
+            className={`${iconSizes.xl} p-0`}
             onClick={() => hasSelectedContact && onEditItem?.(0)}
             disabled={!hasSelectedContact}
             title={config.tooltips.editItem}
           >
-            <Edit className={`h-4 w-4 ${!hasSelectedContact ? 'text-gray-400' : getIconColor('editItem')}`} />
+            <Edit className={`${iconSizes.sm} ${!hasSelectedContact ? 'text-gray-400' : getIconColor('editItem')}`} />
           </Button>
         )}
 
@@ -114,12 +116,12 @@ export function CompactToolbar({
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0"
+            className={`${iconSizes.xl} p-0`}
             onClick={() => onDeleteItems?.(selectedItems)}
             disabled={hasSelectedContact !== undefined ? !hasSelectedContact : selectedItems.length === 0}
             title={config.tooltips.deleteItems}
           >
-            <Trash2 className={`h-4 w-4 ${hasSelectedContact !== undefined ? (!hasSelectedContact ? 'text-gray-400' : getIconColor('deleteItems')) : (selectedItems.length === 0 ? 'text-gray-400' : getIconColor('deleteItems'))}`} />
+            <Trash2 className={`${iconSizes.sm} ${hasSelectedContact !== undefined ? (!hasSelectedContact ? 'text-gray-400' : getIconColor('deleteItems')) : (selectedItems.length === 0 ? 'text-gray-400' : getIconColor('deleteItems'))}`} />
           </Button>
         )}
 
@@ -130,12 +132,12 @@ export function CompactToolbar({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 w-8 p-0 relative"
+                className={`${iconSizes.xl} p-0 relative`}
                 title={config.tooltips.filters}
               >
-                <Filter className={`h-4 w-4 ${getIconColor('filters')}`} />
+                <Filter className={`${iconSizes.sm} ${getIconColor('filters')}`} />
                 {activeFilters.length > 0 && (
-                  <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white text-xs font-medium rounded-full flex items-center justify-center">
+                  <span className={`absolute -top-1 -right-1 ${iconSizes.sm} bg-red-500 text-white text-xs font-medium rounded-full flex items-center justify-center`}>
                     {activeFilters.length}
                   </span>
                 )}
@@ -169,7 +171,7 @@ export function CompactToolbar({
                     onClick={() => onFiltersChange([])}
                     className="text-destructive"
                   >
-                    <X className="h-4 w-4 mr-2" />
+                    <X className={`${iconSizes.sm} mr-2`} />
                     Καθαρισμός όλων ({activeFilters.length})
                   </DropdownMenuItem>
                 </>
@@ -183,12 +185,12 @@ export function CompactToolbar({
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0"
+            className={`${iconSizes.xl} p-0`}
             onClick={() => console.log('Add to favorites...')}
             disabled={selectedItems.length === 0}
             title={config.tooltips.favorites}
           >
-            <Star className={`h-4 w-4 ${selectedItems.length === 0 ? 'text-gray-400' : getIconColor('favorites')}`} />
+            <Star className={`${iconSizes.sm} ${selectedItems.length === 0 ? 'text-gray-400' : getIconColor('favorites')}`} />
           </Button>
         )}
 
@@ -197,12 +199,12 @@ export function CompactToolbar({
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0"
+            className={`${iconSizes.xl} p-0`}
             onClick={() => console.log('Archive selected...')}
             disabled={selectedItems.length === 0}
             title={config.tooltips.archive}
           >
-            <Archive className={`h-4 w-4 ${selectedItems.length === 0 ? 'text-gray-400' : getIconColor('archive')}`} />
+            <Archive className={`${iconSizes.sm} ${selectedItems.length === 0 ? 'text-gray-400' : getIconColor('archive')}`} />
           </Button>
         )}
 
@@ -211,11 +213,11 @@ export function CompactToolbar({
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0"
+            className={`${iconSizes.xl} p-0`}
             onClick={onExport}
             title={config.tooltips.export}
           >
-            <Download className={`h-4 w-4 ${getIconColor('export')}`} />
+            <Download className={`${iconSizes.sm} ${getIconColor('export')}`} />
           </Button>
         )}
 
@@ -224,11 +226,11 @@ export function CompactToolbar({
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0"
+            className={`${iconSizes.xl} p-0`}
             onClick={onImport}
             title={config.tooltips.import}
           >
-            <Upload className={`h-4 w-4 ${getIconColor('import')}`} />
+            <Upload className={`${iconSizes.sm} ${getIconColor('import')}`} />
           </Button>
         )}
 
@@ -237,11 +239,11 @@ export function CompactToolbar({
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0"
+            className={`${iconSizes.xl} p-0`}
             onClick={onRefresh}
             title={config.tooltips.refresh}
           >
-            <RefreshCw className={`h-4 w-4 ${getIconColor('refresh')}`} />
+            <RefreshCw className={`${iconSizes.sm} ${getIconColor('refresh')}`} />
           </Button>
         )}
 
@@ -252,10 +254,10 @@ export function CompactToolbar({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 w-8 p-0"
+                className={`${iconSizes.xl} p-0`}
                 title={config.tooltips.sorting}
               >
-                <ArrowUpDown className={`h-4 w-4 ${getIconColor('sorting')}`} />
+                <ArrowUpDown className={`${iconSizes.sm} ${getIconColor('sorting')}`} />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
@@ -280,18 +282,18 @@ export function CompactToolbar({
         )}
 
         {/* Separator - visual divider */}
-        <div className="w-px h-6 bg-border mx-1"></div>
+        <div className={`w-px ${iconSizes.lg} bg-border mx-1`}></div>
 
         {/* Preview */}
         {config.availableActions.preview && (
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0"
+            className={`${iconSizes.xl} p-0`}
             onClick={onPreview}
             title={config.tooltips.preview}
           >
-            <Eye className={`h-4 w-4 ${getIconColor('preview')}`} />
+            <Eye className={`${iconSizes.sm} ${getIconColor('preview')}`} />
           </Button>
         )}
 
@@ -300,12 +302,12 @@ export function CompactToolbar({
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0"
+            className={`${iconSizes.xl} p-0`}
             onClick={onCopy}
             disabled={selectedItems.length === 0}
             title={config.tooltips.copy}
           >
-            <Copy className={`h-4 w-4 ${selectedItems.length === 0 ? 'text-gray-400' : getIconColor('copy')}`} />
+            <Copy className={`${iconSizes.sm} ${selectedItems.length === 0 ? 'text-gray-400' : getIconColor('copy')}`} />
           </Button>
         )}
 
@@ -314,11 +316,11 @@ export function CompactToolbar({
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0"
+            className={`${iconSizes.xl} p-0`}
             onClick={onShare}
             title={config.tooltips.share}
           >
-            <Share2 className={`h-4 w-4 ${getIconColor('share')}`} />
+            <Share2 className={`${iconSizes.sm} ${getIconColor('share')}`} />
           </Button>
         )}
 
@@ -327,11 +329,11 @@ export function CompactToolbar({
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0"
+            className={`${iconSizes.xl} p-0`}
             onClick={onReports}
             title={config.tooltips.reports}
           >
-            <FileText className={`h-4 w-4 ${getIconColor('reports')}`} />
+            <FileText className={`${iconSizes.sm} ${getIconColor('reports')}`} />
           </Button>
         )}
 
@@ -340,11 +342,11 @@ export function CompactToolbar({
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0"
+            className={`${iconSizes.xl} p-0`}
             onClick={onSettings}
             title={config.tooltips.settings}
           >
-            <Settings className={`h-4 w-4 ${getIconColor('settings')}`} />
+            <Settings className={`${iconSizes.sm} ${getIconColor('settings')}`} />
           </Button>
         )}
 
@@ -353,11 +355,11 @@ export function CompactToolbar({
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0"
+            className={`${iconSizes.xl} p-0`}
             onClick={onFavoritesManagement}
             title={config.tooltips.favoritesManagement}
           >
-            <Heart className={`h-4 w-4 ${getIconColor('favoritesManagement')}`} />
+            <Heart className={`${iconSizes.sm} ${getIconColor('favoritesManagement')}`} />
           </Button>
         )}
 
@@ -366,11 +368,11 @@ export function CompactToolbar({
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0"
+            className={`${iconSizes.xl} p-0`}
             onClick={onHelp}
             title={config.tooltips.help}
           >
-            <HelpCircle className={`h-4 w-4 ${getIconColor('help')}`} />
+            <HelpCircle className={`${iconSizes.sm} ${getIconColor('help')}`} />
           </Button>
         )}
 
@@ -391,7 +393,7 @@ export function CompactToolbar({
         {(headerTitle || headerCount !== undefined || HeaderIcon) && (
           <div className="flex items-center gap-2 flex-shrink-0">
             {HeaderIcon && (
-              <HeaderIcon className="h-4 w-4 text-blue-600" />
+              <HeaderIcon className={`${iconSizes.sm} text-blue-600`} />
             )}
             {headerTitle && (
               <span className="font-medium text-sm whitespace-nowrap">

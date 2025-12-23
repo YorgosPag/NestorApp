@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { CommonBadge } from '@/core/badges';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { Plus, Trash2, CheckCircle } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface StorageFormFeaturesProps {
   features: string[];
@@ -28,11 +29,12 @@ export function StorageFormFeatures({
   addCommonFeature,
   commonFeaturesForType,
 }: StorageFormFeaturesProps) {
+  const iconSizes = useIconSizes();
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <CheckCircle className="w-5 h-5" />
+          <CheckCircle className={iconSizes.md} />
           Χαρακτηριστικά
         </CardTitle>
       </CardHeader>
@@ -50,7 +52,7 @@ export function StorageFormFeatures({
                 disabled={features.includes(feature)}
                 className="text-xs"
               >
-                <Plus className="w-3 h-3 mr-1" />
+                <Plus className={`${iconSizes.xs} mr-1`} />
                 {feature}
               </Button>
             ))}
@@ -67,7 +69,7 @@ export function StorageFormFeatures({
               onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addFeature())}
             />
             <Button type="button" onClick={addFeature} variant="outline">
-              <Plus className="w-4 h-4" />
+              <Plus className={iconSizes.sm} />
             </Button>
           </div>
         </div>
@@ -88,7 +90,7 @@ export function StorageFormFeatures({
                         onClick={() => removeFeature(feature)}
                         className={`ml-1 text-destructive ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`}
                       >
-                        <Trash2 className="w-3 h-3" />
+                        <Trash2 className={iconSizes.xs} />
                       </button>
                     </div>
                   }

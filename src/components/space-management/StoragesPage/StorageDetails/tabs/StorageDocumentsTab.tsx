@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import type { Storage } from '@/types/storage/contracts';
 import { formatDate, formatCurrency } from '@/lib/intl-utils';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import {
   FileText,
   Download,
@@ -78,6 +79,8 @@ function getStatusLabel(status: Document['status']) {
 }
 
 export function StorageDocumentsTab({ storage }: StorageDocumentsTabProps) {
+  const iconSizes = useIconSizes();
+
   // Γεννάμε πραγματικά έγγραφα βάση των στοιχείων της αποθήκης
   const [documents] = useState<Document[]>([
     {
@@ -141,7 +144,7 @@ export function StorageDocumentsTab({ storage }: StorageDocumentsTabProps) {
       {/* Στατιστικά Εγγράφων */}
       <section>
         <h3 className="font-semibold mb-4 flex items-center gap-2">
-          <FileText className="h-5 w-5" />
+          <FileText className={iconSizes.md} />
           Επισκόπηση Εγγράφων
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -167,11 +170,11 @@ export function StorageDocumentsTab({ storage }: StorageDocumentsTabProps) {
       {/* Upload Περιοχή */}
       <section>
         <h3 className="font-semibold mb-4 flex items-center gap-2">
-          <Upload className="h-5 w-5" />
+          <Upload className={iconSizes.md} />
           Μεταφόρτωση Εγγράφων
         </h3>
         <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
-          <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+          <Upload className={`${iconSizes.xl} mx-auto mb-2 text-muted-foreground`} />
           <p className="text-sm text-muted-foreground mb-2">
             Σύρετε και αφήστε εδώ τα έγγραφά σας ή κάντε κλικ για επιλογή
           </p>
@@ -192,7 +195,7 @@ export function StorageDocumentsTab({ storage }: StorageDocumentsTabProps) {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3 flex-1">
                     <div className="p-2 bg-primary/10 rounded-md">
-                      <IconComponent className="h-5 w-5 text-primary" />
+                      <IconComponent className={`${iconSizes.md} text-primary`} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
@@ -203,17 +206,17 @@ export function StorageDocumentsTab({ storage }: StorageDocumentsTabProps) {
                       </div>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1">
-                          <FileText className="h-3 w-3" />
+                          <FileText className={iconSizes.xs} />
                           {getDocumentTypeLabel(doc.type)}
                         </span>
                         <span className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
+                          <Calendar className={iconSizes.xs} />
                           {formatDate(doc.lastModified.toISOString())}
                         </span>
                         <span>{doc.size}</span>
                         {doc.relatedTo && (
                           <span className="flex items-center gap-1">
-                            <User className="h-3 w-3" />
+                            <User className={iconSizes.xs} />
                             {doc.relatedTo}
                           </span>
                         )}
@@ -227,10 +230,10 @@ export function StorageDocumentsTab({ storage }: StorageDocumentsTabProps) {
                   </div>
                   <div className="flex gap-1">
                     <Button variant="ghost" size="sm">
-                      <Eye className="h-4 w-4" />
+                      <Eye className={iconSizes.sm} />
                     </Button>
                     <Button variant="ghost" size="sm">
-                      <Download className="h-4 w-4" />
+                      <Download className={iconSizes.sm} />
                     </Button>
                   </div>
                 </div>

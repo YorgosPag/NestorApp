@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { Square, Eye, EyeOff, Palette, MousePointer2 } from 'lucide-react';
 import { useOverlayManager } from '../state/overlay-manager';
 import type { RegionStatus } from '../types/overlay';
@@ -21,7 +22,8 @@ interface OverlayPanelProps {
 // ✅ MIGRATED: STATUS_LABELS τώρα από REGION_STATUS_LABELS στο property-statuses-enterprise.ts
 
 export function OverlayPanel({ isDrawingMode, drawingStatus, onStartDrawing, onStopDrawing }: OverlayPanelProps) {
-  const { 
+  const iconSizes = useIconSizes();
+  const {
     visibleRegions, 
     selectedRegionIds,
     toggleRegionVisibility,
@@ -39,7 +41,7 @@ export function OverlayPanel({ isDrawingMode, drawingStatus, onStartDrawing, onS
     <div className="space-y-4 p-4 border-t border-gray-700">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium text-white flex items-center gap-2">
-          <Square className="w-4 h-4" />
+          <Square className={iconSizes.sm} />
           Περιοχές Επικάλυψης
         </h3>
         <div className="flex items-center gap-1 text-xs text-gray-400">
@@ -53,12 +55,12 @@ export function OverlayPanel({ isDrawingMode, drawingStatus, onStartDrawing, onS
       <div className="space-y-2">
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" defaultChecked className="rounded" />
-          <Eye className="w-4 h-4" />
+          <Eye className={iconSizes.sm} />
           <span className="text-gray-300">Εμφάνιση Χερουλιών</span>
         </label>
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" defaultChecked className="rounded" />
-          <Palette className="w-4 h-4" />
+          <Palette className={iconSizes.sm} />
           <span className="text-gray-300">Εμφάνιση Ετικετών</span>
         </label>
       </div>
@@ -76,14 +78,14 @@ export function OverlayPanel({ isDrawingMode, drawingStatus, onStartDrawing, onS
             <div key={status} className="flex items-center justify-between">
               <label className="flex items-center gap-2 text-sm">
                 <div
-                  className={`w-3 h-3 rounded-full ${colorBgClass}`}
+                  className={`${iconSizes.xs} rounded-full ${colorBgClass}`}
                 />
                 <span className="text-gray-300">{REGION_STATUS_LABELS[status as RegionStatus]}</span>
               </label>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-400">{regions.length}</span>
                 <button className={`text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HOVER}`}>
-                  <Eye className="w-3 h-3" />
+                  <Eye className={iconSizes.xs} />
                 </button>
               </div>
             </div>

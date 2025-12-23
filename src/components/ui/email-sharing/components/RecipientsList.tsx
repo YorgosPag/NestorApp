@@ -17,6 +17,7 @@ import { Label } from '@/components/ui/label';
 import { designSystem } from '@/lib/design-system';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { Users, Plus, Trash2, AlertCircle, CheckCircle } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // Types
 import type { RecipientsListProps } from '../types';
@@ -47,6 +48,8 @@ export const RecipientsList: React.FC<RecipientsListProps> = ({
   validateEmails,
   showValidation = true
 }) => {
+  const iconSizes = useIconSizes();
+
   // ============================================================================
   // COMPUTED VALUES
   // ============================================================================
@@ -174,9 +177,9 @@ export const RecipientsList: React.FC<RecipientsListProps> = ({
             {showValidation && email.trim() && (
               <aside className="absolute right-2 top-1/2 transform -translate-y-1/2" role="status" aria-label="Κατάσταση Επικύρωσης">
                 {validation.isValid ? (
-                  <CheckCircle className="w-4 h-4 text-green-500" />
+                  <CheckCircle className={`${iconSizes.sm} text-green-500`} />
                 ) : (
-                  <AlertCircle className="w-4 h-4 text-red-500" />
+                  <AlertCircle className={`${iconSizes.sm} text-red-500`} />
                 )}
               </aside>
             )}
@@ -212,7 +215,7 @@ export const RecipientsList: React.FC<RecipientsListProps> = ({
             )}
             aria-label={`Remove email ${index + 1}`}
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 className={iconSizes.sm} />
           </Button>
         )}
       </article>
@@ -267,7 +270,7 @@ export const RecipientsList: React.FC<RecipientsListProps> = ({
           disabled && 'text-gray-400 dark:text-gray-500'
         )}>
           <Users className={designSystem.cn(
-            "w-4 h-4",
+            iconSizes.sm,
             disabled ? 'text-gray-400' : 'text-blue-600'
           )} />
           Παραλήπτες Email
@@ -287,7 +290,7 @@ export const RecipientsList: React.FC<RecipientsListProps> = ({
               disabled && 'opacity-50 cursor-not-allowed'
             )}
           >
-            <Plus className="w-4 h-4 mr-1" />
+            <Plus className={`${iconSizes.sm} mr-1`} />
             Προσθήκη
           </Button>
         )}
@@ -308,7 +311,7 @@ export const RecipientsList: React.FC<RecipientsListProps> = ({
             designSystem.getTypographyClass('sm', 'medium'),
             'text-red-800 dark:text-red-300 flex items-center gap-2'
           )}>
-            <AlertCircle className="w-4 h-4" />
+            <AlertCircle className={iconSizes.sm} />
             {customValidationError}
           </p>
         </aside>
@@ -344,6 +347,7 @@ export const CompactRecipientsList: React.FC<RecipientsListProps & {
   showValidation = true,
   showSummary = true
 }) => {
+  const iconSizes = useIconSizes();
   const validCount = recipients.filter(email => email.trim() && isValidEmail(email)).length;
 
   return (
@@ -352,7 +356,7 @@ export const CompactRecipientsList: React.FC<RecipientsListProps & {
         "flex items-center gap-1.5",
         designSystem.getTypographyClass('xs', 'medium')
       )}>
-        <Users className="w-3 h-3" />
+        <Users className={iconSizes.xs} />
         Παραλήπτες ({validCount})
       </Label>
 
@@ -383,7 +387,7 @@ export const CompactRecipientsList: React.FC<RecipientsListProps & {
                   INTERACTIVE_PATTERNS.BUTTON_DESTRUCTIVE_GHOST
                 )}
               >
-                <Trash2 className="w-3 h-3" />
+                <Trash2 className={iconSizes.xs} />
               </Button>
             )}
           </article>
@@ -401,7 +405,7 @@ export const CompactRecipientsList: React.FC<RecipientsListProps & {
               INTERACTIVE_PATTERNS.BUTTON_PRIMARY_GHOST
             )}
           >
-            <Plus className="w-3 h-3 mr-1" />
+            <Plus className={`${iconSizes.xs} mr-1`} />
             Προσθήκη Email
           </Button>
         )}

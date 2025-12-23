@@ -8,6 +8,7 @@ import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { ConfigurationAPI } from '@/core/configuration';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 /**
  * 🏢 ENTERPRISE: Database-driven contributor data (NO MORE HARDCODED VALUES)
@@ -55,6 +56,7 @@ const useContributors = () => {
 };
 
 export function ContributorsTab() {
+  const iconSizes = useIconSizes();
   const { contributors, isLoading, error } = useContributors();
 
   if (error) {
@@ -80,7 +82,7 @@ export function ContributorsTab() {
               <CardDescription>Λίστα με τους συντελεστές και τις επαφές τους για το έργο.</CardDescription>
             </div>
             <Button>
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className={`mr-2 ${iconSizes.sm}`} />
               Προσθήκη Συντελεστή
             </Button>
           </div>
@@ -112,16 +114,16 @@ export function ContributorsTab() {
                       <div className="flex items-center justify-end gap-2">
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <Pencil className="h-4 w-4 text-blue-600" />
+                            <Button variant="ghost" size="icon" className={`${iconSizes.xl} p-0`}>
+                              <Pencil className={`${iconSizes.sm} text-blue-600`} />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>Επεξεργασία</TooltipContent>
                         </Tooltip>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                             <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <Trash2 className="h-4 w-4 text-red-600" />
+                             <Button variant="ghost" size="icon" className={`${iconSizes.xl} p-0`}>
+                              <Trash2 className={`${iconSizes.sm} text-red-600`} />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>Διαγραφή</TooltipContent>

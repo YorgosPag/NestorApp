@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Home, Building, MapPin, Euro, Ruler, Edit3, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { ExtendedPropertyDetails, Property } from '@/types/property-viewer';
 import { PROPERTY_STATUS_CONFIG } from '@/lib/property-utils';
 import { formatFloorLabel } from '@/lib/intl-utils';
@@ -17,6 +18,7 @@ interface PropertyMetaProps {
 }
 
 export function PropertyMeta({ property, onUpdateProperty }: PropertyMetaProps) {
+  const iconSizes = useIconSizes();
   const statusInfo = PROPERTY_STATUS_CONFIG[property.status] || PROPERTY_STATUS_CONFIG.default;
 
   const handleEditClick = () => {
@@ -47,11 +49,11 @@ export function PropertyMeta({ property, onUpdateProperty }: PropertyMetaProps) 
       {/* Location */}
       <div className="space-y-2">
         <div className="flex items-center gap-2 text-xs">
-          <Building className="h-3 w-3 text-muted-foreground" />
+          <Building className={`${iconSizes.xs} text-muted-foreground`} />
           <span>{property.building}</span>
         </div>
         <div className="flex items-center gap-2 text-xs">
-          <MapPin className="h-3 w-3 text-muted-foreground" />
+          <MapPin className={`${iconSizes.xs} text-muted-foreground`} />
           <span>{formatFloorLabel(property.floor)}</span>
         </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -65,7 +67,7 @@ export function PropertyMeta({ property, onUpdateProperty }: PropertyMetaProps) 
       <div className="space-y-2">
         {property.price && (
           <div className="flex items-center gap-2 text-sm">
-            <Euro className="h-4 w-4 text-green-600" />
+            <Euro className={`${iconSizes.sm} text-green-600`} />
             <span className="font-semibold text-green-600">
               {property.price.toLocaleString('el-GR')}€
             </span>
@@ -74,13 +76,13 @@ export function PropertyMeta({ property, onUpdateProperty }: PropertyMetaProps) 
         <div className="grid grid-cols-2 gap-2 text-xs">
           {property.area && (
             <div className="flex items-center gap-1">
-              <Ruler className="h-3 w-3 text-muted-foreground" />
+              <Ruler className={`${iconSizes.xs} text-muted-foreground`} />
               <span>{property.area}τμ</span>
             </div>
           )}
           {property.rooms && (
             <div className="flex items-center gap-1">
-              <Home className="h-3 w-3 text-muted-foreground" />
+              <Home className={`${iconSizes.xs} text-muted-foreground`} />
               <span>{property.rooms} δωμ.</span>
             </div>
           )}
@@ -125,11 +127,11 @@ export function PropertyMeta({ property, onUpdateProperty }: PropertyMetaProps) 
       <Separator />
       <div className="flex gap-2">
         <Button variant="outline" size="sm" className="flex-1">
-          <Eye className="h-3 w-3 mr-1" />
+          <Eye className={`${iconSizes.xs} mr-1`} />
           Προβολή
         </Button>
         <Button variant="outline" size="sm" className="flex-1" onClick={handleEditClick}>
-          <Edit3 className="h-3 w-3 mr-1" />
+          <Edit3 className={`${iconSizes.xs} mr-1`} />
           Επεξ.
         </Button>
       </div>

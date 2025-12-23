@@ -19,6 +19,7 @@
 import React from 'react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // ============================================================================
 // 🎯 ENTERPRISE TYPE DEFINITIONS
@@ -79,6 +80,7 @@ export const GeoMapControls: React.FC<GeoMapControlsProps> = ({
   className = ''
 }) => {
   const { t } = useTranslationLazy('geo-canvas');
+  const iconSizes = useIconSizes();
 
   // ========================================================================
   // 🎨 RENDER COORDINATE PICKING CONTROLS
@@ -129,7 +131,7 @@ export const GeoMapControls: React.FC<GeoMapControlsProps> = ({
         <div className="flex items-center justify-between mb-2">
           <div className="text-xs text-gray-400">{t('map.controls.mapStyle')}</div>
           <div
-            className={`w-2 h-2 rounded-full ${mapLoaded ? 'bg-green-400' : 'bg-yellow-400'}`}
+            className={`${iconSizes.xs} rounded-full ${mapLoaded ? 'bg-green-400' : 'bg-yellow-400'}`}
             title={mapLoaded ? t('map.status.mapLoaded') : t('map.status.mapLoading')}
             aria-label={mapLoaded ? t('map.status.mapLoaded') : t('map.status.mapLoading')}
           />

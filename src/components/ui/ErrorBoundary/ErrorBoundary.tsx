@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { errorTracker } from '@/services/ErrorTracker';
 import { notificationConfig } from '@/config/error-reporting';
+import { componentSizes } from '@/styles/design-tokens';
 
 interface CustomErrorInfo {
   componentStack: string;
@@ -397,7 +398,7 @@ ${errorDetails.stack || 'Stack trace not available'}
               {/* Error Header */}
               <div className="flex items-center space-x-3 mb-6">
                 <div className="p-3 bg-red-100 dark:bg-red-900/20 rounded-full">
-                  <AlertTriangle className="h-8 w-8 text-red-600 dark:text-red-400" />
+                  <AlertTriangle className={`${componentSizes.icon.xl} text-red-600 dark:text-red-400`} />
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold text-red-900 dark:text-red-100">
@@ -424,7 +425,7 @@ ${errorDetails.stack || 'Stack trace not available'}
                     variant="default"
                     className="flex items-center space-x-2"
                   >
-                    <RefreshCw className="h-4 w-4" />
+                    <RefreshCw className={componentSizes.icon.sm} />
                     <span>Try Again {retryCount > 0 && `(${retryCount + 1}/${maxRetries + 1})`}</span>
                   </Button>
                 )}
@@ -434,7 +435,7 @@ ${errorDetails.stack || 'Stack trace not available'}
                   variant="outline"
                   className="flex items-center space-x-2"
                 >
-                  <ArrowLeft className="h-4 w-4" />
+                  <ArrowLeft className={componentSizes.icon.sm} />
                   <span>Go Back</span>
                 </Button>
 
@@ -443,7 +444,7 @@ ${errorDetails.stack || 'Stack trace not available'}
                   variant="outline"
                   className="flex items-center space-x-2"
                 >
-                  <Home className="h-4 w-4" />
+                  <Home className={componentSizes.icon.sm} />
                   <span>Go Home</span>
                 </Button>
               </div>
@@ -454,7 +455,7 @@ ${errorDetails.stack || 'Stack trace not available'}
                   {/* Copy & Admin Email Actions */}
                   <div className="flex items-center justify-between p-4 bg-muted rounded-md">
                     <div className="flex items-center space-x-3">
-                      <Bug className="h-5 w-5 text-muted-foreground" />
+                      <Bug className={`${componentSizes.icon.md} text-muted-foreground`} />
                       <div>
                         <p className="font-medium">Error Actions</p>
                         <p className="text-sm text-muted-foreground">
@@ -472,12 +473,12 @@ ${errorDetails.stack || 'Stack trace not available'}
                       >
                         {copySuccess ? (
                           <>
-                            <Check className="h-4 w-4 text-green-600" />
+                            <Check className={`${componentSizes.icon.sm} text-green-600`} />
                             <span>Copied!</span>
                           </>
                         ) : (
                           <>
-                            <Copy className="h-4 w-4" />
+                            <Copy className={componentSizes.icon.sm} />
                             <span>Copy Details</span>
                           </>
                         )}
@@ -491,17 +492,17 @@ ${errorDetails.stack || 'Stack trace not available'}
                       >
                         {isSendingToAdmin ? (
                           <>
-                            <RefreshCw className="h-4 w-4 animate-spin" />
+                            <RefreshCw className={`${componentSizes.icon.sm} animate-spin`} />
                             <span>Sending...</span>
                           </>
                         ) : emailSent ? (
                           <>
-                            <Check className="h-4 w-4 text-green-600" />
+                            <Check className={`${componentSizes.icon.sm} text-green-600`} />
                             <span>Sent to Admin</span>
                           </>
                         ) : (
                           <>
-                            <Mail className="h-4 w-4" />
+                            <Mail className={componentSizes.icon.sm} />
                             <span>Notify Admin</span>
                           </>
                         )}
@@ -512,7 +513,7 @@ ${errorDetails.stack || 'Stack trace not available'}
                   {/* Traditional Error Reporting */}
                   <div className="flex items-center justify-between p-4 bg-muted/50 rounded-md">
                     <div className="flex items-center space-x-3">
-                      <Send className="h-5 w-5 text-muted-foreground" />
+                      <Send className={`${componentSizes.icon.md} text-muted-foreground`} />
                       <div>
                         <p className="font-medium">Anonymous Report</p>
                         <p className="text-sm text-muted-foreground">
@@ -528,12 +529,12 @@ ${errorDetails.stack || 'Stack trace not available'}
                     >
                       {isReporting ? (
                         <>
-                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                          <RefreshCw className={`${componentSizes.icon.sm} mr-2 animate-spin`} />
                           Sending...
                         </>
                       ) : reportSent ? (
                         <>
-                          <Check className="h-4 w-4 mr-2 text-green-600" />
+                          <Check className={`${componentSizes.icon.sm} mr-2 text-green-600`} />
                           Sent
                         </>
                       ) : (
@@ -561,9 +562,9 @@ ${errorDetails.stack || 'Stack trace not available'}
                           disabled={copySuccess}
                         >
                           {copySuccess ? (
-                            <Check className="h-4 w-4 text-green-600" />
+                            <Check className={`${componentSizes.icon.sm} text-green-600`} />
                           ) : (
-                            <Copy className="h-4 w-4" />
+                            <Copy className={componentSizes.icon.sm} />
                           )}
                         </Button>
                       </div>
@@ -703,7 +704,7 @@ export function ComponentErrorBoundary({ children, ...props }: Omit<ErrorBoundar
               <p className="text-sm text-red-700 dark:text-red-300">{error.message}</p>
             </div>
             <Button onClick={retry} variant="outline" size="sm">
-              <RefreshCw className="h-4 w-4" />
+              <RefreshCw className={componentSizes.icon.sm} />
             </Button>
           </div>
         </div>

@@ -23,6 +23,7 @@ import { adminBoundariesAnalytics } from '../../../services/performance/AdminBou
 import type { AdminBoundariesMetrics, AdminBoundariesAlert } from '../../../services/performance/AdminBoundariesPerformanceAnalytics';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { layoutUtilities } from '@/styles/design-tokens';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { getDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 import styles from './PerformanceComponents.module.css';
 import {
@@ -739,6 +740,7 @@ export const AdminBoundariesPerformancePanel = memo(({
   refreshInterval = 5000
 }: AdminBoundariesPerformancePanelProps) => {
   const { theme } = useTheme();
+  const iconSizes = useIconSizes();
   const [metrics, setMetrics] = useState<AdminBoundariesMetrics | null>(null);
   const [alerts, setAlerts] = useState<AdminBoundariesAlert[]>([]);
   const [isMonitoring, setIsMonitoring] = useState(false);
@@ -969,7 +971,7 @@ export const AdminBoundariesPerformancePanel = memo(({
         >
           {isMonitoring ? (
             <span className="flex items-center justify-center gap-2">
-              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+              <span className={`${iconSizes.xs} bg-green-500 rounded-full animate-pulse`}></span>
               Monitoring Active • Updates every {refreshInterval / 1000}s
             </span>
           ) : (

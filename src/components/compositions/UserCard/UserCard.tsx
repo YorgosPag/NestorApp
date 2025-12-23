@@ -21,6 +21,7 @@ import {
   Award,
   Clock
 } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // Generic User interface for the UserCard
 interface UserProfile {
@@ -109,10 +110,10 @@ const formatLastActive = (lastActive: string | Date | undefined) => {
   return formatDate(lastActive);
 };
 
-export function UserCard({ 
-  user, 
-  onEdit, 
-  onMessage, 
+export function UserCard({
+  user,
+  onEdit,
+  onMessage,
   onView,
   onDeactivate,
   isSelected = false,
@@ -121,6 +122,7 @@ export function UserCard({
   showActions = true,
   compact = false
 }: UserCardProps) {
+  const iconSizes = useIconSizes();
   const [isFavorite, setIsFavorite] = useState(false);
   
   const RoleIcon = getRoleIcon(user.role || 'user');
@@ -142,10 +144,10 @@ export function UserCard({
           <img 
             src={user.avatar} 
             alt={user.name}
-            className="w-12 h-12 rounded-full object-cover border-2 border-white dark:border-gray-800"
+            className={`${iconSizes.xl3} rounded-full object-cover border-2 border-white dark:border-gray-800`}
           />
         ) : (
-          <RoleIcon className={`w-8 h-8 ${
+          <RoleIcon className={`${iconSizes.xl2} ${
             user.status === 'active' ? 'text-blue-600 dark:text-blue-400' :
             user.status === 'suspended' ? 'text-red-600 dark:text-red-400' :
             'text-gray-600 dark:text-gray-400'
@@ -196,13 +198,13 @@ export function UserCard({
             <div className="space-y-2">
               {user.email && (
                 <div className="flex items-center gap-2 text-sm">
-                  <Mail className="w-4 h-4 text-muted-foreground" />
+                  <Mail className={`${iconSizes.sm} text-muted-foreground`} />
                   <span className="truncate">{user.email}</span>
                 </div>
               )}
               {user.phone && (
                 <div className="flex items-center gap-2 text-sm">
-                  <Phone className="w-4 h-4 text-muted-foreground" />
+                  <Phone className={`${iconSizes.sm} text-muted-foreground`} />
                   <span>{user.phone}</span>
                 </div>
               )}
@@ -217,13 +219,13 @@ export function UserCard({
             <div className="space-y-2">
               {user.company && (
                 <div className="flex items-center gap-2 text-sm">
-                  <Building2 className="w-4 h-4 text-muted-foreground" />
+                  <Building2 className={`${iconSizes.sm} text-muted-foreground`} />
                   <span>{user.company}</span>
                 </div>
               )}
               {user.location && (
                 <div className="flex items-center gap-2 text-sm">
-                  <MapPin className="w-4 h-4 text-muted-foreground" />
+                  <MapPin className={`${iconSizes.sm} text-muted-foreground`} />
                   <span>{user.location}</span>
                 </div>
               )}
@@ -239,7 +241,7 @@ export function UserCard({
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Τελευταία σύνδεση:</span>
                 <span className="flex items-center gap-1">
-                  <Clock className="w-3 h-3" />
+                  <Clock className={iconSizes.xs} />
                   {formatLastActive(user.lastActive)}
                 </span>
               </div>
@@ -247,7 +249,7 @@ export function UserCard({
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Εγγραφή:</span>
                   <span className="flex items-center gap-1">
-                    <Calendar className="w-3 h-3" />
+                    <Calendar className={iconSizes.xs} />
                     {formatDate(user.joinedDate)}
                   </span>
                 </div>

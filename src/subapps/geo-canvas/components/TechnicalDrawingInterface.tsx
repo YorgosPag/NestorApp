@@ -6,6 +6,7 @@ import { CraneIcon } from '@/subapps/dxf-viewer/components/icons';
 import { useCentralizedPolygonSystem } from '../systems/polygon-system';
 import { useRealEstateMatching } from '@/services/real-estate-monitor/useRealEstateMatching';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS, HOVER_SHADOWS } from '@/components/ui/effects';
 import type { RealEstatePolygon } from '@geo-alert/core';
 
@@ -38,6 +39,7 @@ export function TechnicalDrawingInterface({
   onPolygonComplete,
   onRealEstateAlertCreated
 }: TechnicalDrawingInterfaceProps) {
+  const iconSizes = useIconSizes();
   const { t } = useTranslationLazy('geo-canvas');
   const [selectedTool, setSelectedTool] = useState<'dxf-viewer' | 'precision' | 'settings' | 'automated-alerts' | null>(null);
   // ✅ ENTERPRISE: Combine local and centralized drawing state
@@ -200,7 +202,7 @@ export function TechnicalDrawingInterface({
             ${isDrawing ? 'opacity-50 cursor-not-allowed' : `cursor-pointer ${HOVER_SHADOWS.MEDIUM}`}
           `}
         >
-          <ExternalLink className="w-8 h-8 mb-2 text-purple-600" />
+          <ExternalLink className={`${iconSizes.xl} mb-2 text-purple-600`} />
           <span className="text-sm font-medium">{t('hardcodedTexts.ui.dxfViewer')}</span>
           <span className="text-xs text-gray-500">{t('hardcodedTexts.ui.fullCad')}</span>
         </button>
@@ -219,7 +221,7 @@ export function TechnicalDrawingInterface({
             ${actualIsDrawing && selectedTool !== 'precision' ? 'opacity-50 cursor-not-allowed' : `cursor-pointer ${HOVER_SHADOWS.MEDIUM}`}
           `}
         >
-          <Ruler className="w-8 h-8 mb-2 text-blue-600" />
+          <Ruler className={`${iconSizes.xl} mb-2 text-blue-600`} />
           <span className="text-sm font-medium">{t('drawingInterfaces.technical.tools.precision')}</span>
           <span className="text-xs text-gray-500">mm-level</span>
         </button>
@@ -238,7 +240,7 @@ export function TechnicalDrawingInterface({
             ${isDrawing ? 'opacity-50 cursor-not-allowed' : `cursor-pointer ${HOVER_SHADOWS.MEDIUM}`}
           `}
         >
-          <Settings className="w-8 h-8 mb-2 text-gray-600" />
+          <Settings className={`${iconSizes.xl} mb-2 text-gray-600`} />
           <span className="text-sm font-medium">{t('drawingInterfaces.technical.tools.settings')}</span>
           <span className="text-xs text-gray-500">{t('drawingInterfaces.technical.tools.settingsAdvanced')}</span>
         </button>
@@ -257,7 +259,7 @@ export function TechnicalDrawingInterface({
             ${isDrawing ? 'opacity-50 cursor-not-allowed' : `cursor-pointer ${HOVER_SHADOWS.MEDIUM}`}
           `}
         >
-          <AlertTriangle className="w-8 h-8 mb-2 text-red-600" />
+          <AlertTriangle className={`${iconSizes.xl} mb-2 text-red-600`} />
           <span className="text-sm font-medium">{t('hardcodedTexts.ui.alerts')}</span>
           <span className="text-xs text-gray-500">{t('drawingInterfaces.technical.tools.alertsAuto')}</span>
         </button>
@@ -270,7 +272,7 @@ export function TechnicalDrawingInterface({
             onClick={handleComplete}
             className={`flex-1 flex items-center justify-center gap-2 bg-purple-500 text-white py-3 px-4 rounded-lg transition-colors ${HOVER_BACKGROUND_EFFECTS.PURPLE_DARKER}`}
           >
-            <Ruler className="w-5 h-5" />
+            <Ruler className={iconSizes.md} />
             <span className="font-medium">{t('drawingInterfaces.technical.actions.complete')}</span>
           </button>
 
@@ -320,7 +322,7 @@ export function TechnicalDrawingInterface({
       <div className="mt-4 p-3 bg-gray-50 rounded-md">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Database className="w-4 h-4 text-gray-600" />
+            <Database className={`${iconSizes.sm} text-gray-600`} />
             <span className="text-sm text-gray-700">{t('hardcodedTexts.labels.dxfViewerLabel')}</span>
           </div>
           <a
@@ -329,11 +331,11 @@ export function TechnicalDrawingInterface({
             rel="noopener noreferrer"
             className={`text-xs text-blue-600 flex items-center gap-1 ${INTERACTIVE_PATTERNS.LINK_PRIMARY}`}
           >
-            {t('drawingInterfaces.technical.openViewer')} <ExternalLink className="w-3 h-3" />
+            {t('drawingInterfaces.technical.openViewer')} <ExternalLink className={iconSizes.xs} />
           </a>
         </div>
         <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-          <CraneIcon className="h-3 w-3" />
+          <CraneIcon className={iconSizes.xs} />
           {t('drawingInterfaces.technical.cadEnvironment')}
         </p>
       </div>
@@ -372,7 +374,7 @@ export function TechnicalDrawingInterface({
         <div className="mt-4 bg-white rounded-lg shadow-lg border border-red-200 p-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-red-600" />
+              <AlertTriangle className={`${iconSizes.md} text-red-600`} />
               {t('drawingInterfaces.technical.automatedAlerts.title')}
             </h3>
             <button
@@ -382,7 +384,7 @@ export function TechnicalDrawingInterface({
               }}
               className={`text-gray-500 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
             >
-              <X className="w-5 h-5" />
+              <X className={iconSizes.md} />
             </button>
           </div>
 
@@ -457,7 +459,7 @@ export function TechnicalDrawingInterface({
                       className="rounded border-gray-300 text-red-600 focus:ring-red-500"
                     />
                     <span className="text-sm text-gray-700 flex items-center gap-1">
-                      <platform.icon className="w-4 h-4" />
+                      <platform.icon className={iconSizes.sm} />
                       {platform.name}
                       {platform.disabled && <span className="text-xs text-gray-400">{t('hardcodedTexts.values.comingSoon')}</span>}
                     </span>
@@ -480,7 +482,7 @@ export function TechnicalDrawingInterface({
               disabled={polygons.length === 0}
               className={`flex items-center justify-center gap-2 bg-red-500 text-white py-2 px-4 rounded-lg transition-colors disabled:opacity-50 ${HOVER_BACKGROUND_EFFECTS.RED_DARKER}`}
             >
-              <Zap className="w-4 h-4" />
+              <Zap className={iconSizes.sm} />
               <span className="text-sm font-medium">{t('hardcodedTexts.actions.automateAll')} ({polygons.length})</span>
             </button>
 
@@ -491,7 +493,7 @@ export function TechnicalDrawingInterface({
               }}
               className={`flex items-center justify-center gap-2 bg-green-500 text-white py-2 px-4 rounded-lg transition-colors ${HOVER_BACKGROUND_EFFECTS.GREEN_DARKER}`}
             >
-              <Monitor className="w-4 h-4" />
+              <Monitor className={iconSizes.sm} />
               <span className="text-sm font-medium">{t('hardcodedTexts.actions.startMonitoring')}</span>
             </button>
 
@@ -502,7 +504,7 @@ export function TechnicalDrawingInterface({
               }}
               className={`flex items-center justify-center gap-2 bg-gray-500 text-white py-2 px-4 rounded-lg transition-colors ${HOVER_BACKGROUND_EFFECTS.GRAY_DARKER}`}
             >
-              <Settings className="w-4 h-4" />
+              <Settings className={iconSizes.sm} />
               <span className="text-sm font-medium">{t('hardcodedTexts.actions.stopAll')}</span>
             </button>
           </div>

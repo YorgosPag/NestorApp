@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { Eye, Printer } from "lucide-react";
 import { getToggleTocAriaLabel } from '../utils/a11y';
 
@@ -11,10 +12,12 @@ interface PreviewHeaderProps {
 }
 
 export function PreviewHeader({ showToc, onToggleToc, onPrint }: PreviewHeaderProps) {
+  const iconSizes = useIconSizes();
+
   return (
     <div className="flex items-center justify-between p-4 border-b bg-muted/30">
       <div className="flex items-center gap-3">
-        <Eye className="h-5 w-5 text-muted-foreground" />
+        <Eye className={`${iconSizes.md} text-muted-foreground`} />
         <div>
           <h3 className="font-medium text-foreground">Προεπισκόπηση</h3>
           <p className="text-sm text-muted-foreground">Live preview του εγγράφου</p>
@@ -38,7 +41,7 @@ export function PreviewHeader({ showToc, onToggleToc, onPrint }: PreviewHeaderPr
           className="text-xs"
           aria-label="Εκτύπωση εγγράφου"
         >
-          <Printer className="h-4 w-4 mr-1" />
+          <Printer className={`${iconSizes.sm} mr-1`} />
           Εκτύπωση
         </Button>
       </div>

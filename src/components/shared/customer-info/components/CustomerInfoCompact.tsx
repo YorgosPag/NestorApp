@@ -16,6 +16,7 @@ import { Phone, Mail, Eye, Loader2, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 import { useCustomerInfo } from '../hooks/useCustomerInfo';
 import { CustomerActionButtons } from './CustomerActionButtons';
@@ -46,6 +47,7 @@ export function CustomerInfoCompact({
   // HOOKS & STATE
   // ========================================================================
 
+  const iconSizes = useIconSizes();
   const {
     customerInfo,
     loading,
@@ -143,14 +145,14 @@ export function CustomerInfoCompact({
 
         {showPhone && displayInfo.primaryPhone && (
           <p className={`${styles.subtext} text-muted-foreground truncate flex items-center gap-1`}>
-            <Phone className="w-3 h-3 shrink-0" />
+            <Phone className={`${iconSizes.xs} shrink-0`} />
             <span>{displayInfo.primaryPhone}</span>
           </p>
         )}
 
         {!showPhone && displayInfo.primaryEmail && (
           <p className={`${styles.subtext} text-muted-foreground truncate flex items-center gap-1`}>
-            <Mail className="w-3 h-3 shrink-0" />
+            <Mail className={`${iconSizes.xs} shrink-0`} />
             <span>{displayInfo.primaryEmail}</span>
           </p>
         )}
@@ -220,7 +222,7 @@ export function CustomerInfoCompact({
           </div>
           {/* Column 5: Actions */}
           <div className="flex items-center gap-1">
-            <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+            <Loader2 className={`${iconSizes.sm} animate-spin text-muted-foreground`} />
           </div>
         </div>
       );
@@ -238,7 +240,7 @@ export function CustomerInfoCompact({
             <div className="h-2 bg-muted rounded w-16 animate-pulse" />
           )}
         </div>
-        <Loader2 className="w-3 h-3 animate-spin text-muted-foreground shrink-0" />
+        <Loader2 className={`${iconSizes.xs} animate-spin text-muted-foreground shrink-0`} />
       </div>
     );
   }
@@ -256,7 +258,7 @@ export function CustomerInfoCompact({
         >
           <div className="flex items-center gap-3">
             <div className={`${styles.avatar} bg-destructive/10 rounded-full shrink-0 flex items-center justify-center`}>
-              <User className="w-3 h-3" />
+              <User className={iconSizes.xs} />
             </div>
             <span className={`${styles.text} font-medium truncate`}>Σφάλμα φόρτωσης</span>
           </div>
@@ -276,7 +278,7 @@ export function CustomerInfoCompact({
         style={containerStyle}
       >
         <div className={`${styles.avatar} bg-destructive/10 rounded-full shrink-0 flex items-center justify-center`}>
-          <User className="w-3 h-3" />
+          <User className={iconSizes.xs} />
         </div>
         <div className="flex-1">
           <p className={`${styles.text} font-medium truncate`}>
@@ -303,7 +305,7 @@ export function CustomerInfoCompact({
         >
           <div className="flex items-center gap-3">
             <div className={`${styles.avatar} bg-muted rounded-full shrink-0 flex items-center justify-center`}>
-              <User className="w-3 h-3" />
+              <User className={iconSizes.xs} />
             </div>
             <span className={`${styles.text} truncate`}>Δεν υπάρχει πελάτης</span>
           </div>
@@ -323,7 +325,7 @@ export function CustomerInfoCompact({
         style={containerStyle}
       >
         <div className={`${styles.avatar} bg-muted rounded-full shrink-0 flex items-center justify-center`}>
-          <User className="w-3 h-3" />
+          <User className={iconSizes.xs} />
         </div>
         <div className="flex-1">
           <p className={`${styles.text} truncate`}>
@@ -358,7 +360,7 @@ export function CustomerInfoCompact({
         <div className="flex items-center gap-2 min-w-0">
           {displayInfo?.primaryPhone ? (
             <>
-              <Phone className="w-4 h-4 text-muted-foreground shrink-0" />
+              <Phone className={`${iconSizes.sm} text-muted-foreground shrink-0`} />
               <span className={`${styles.text} text-foreground truncate`}>
                 {displayInfo.primaryPhone}
               </span>
@@ -372,7 +374,7 @@ export function CustomerInfoCompact({
         <div className="flex items-center gap-2 min-w-0">
           {displayInfo?.primaryEmail ? (
             <>
-              <Mail className="w-4 h-4 text-muted-foreground shrink-0" />
+              <Mail className={`${iconSizes.sm} text-muted-foreground shrink-0`} />
               <span className={`${styles.text} text-foreground truncate`}>
                 {displayInfo.primaryEmail}
               </span>
@@ -401,7 +403,7 @@ export function CustomerInfoCompact({
                 onClick={() => window.open(`/contacts?contactId=${contactId}`, '_blank')}
                 title="Προβολή πελάτη"
               >
-                <Eye className="w-4 h-4" />
+                <Eye className={iconSizes.sm} />
               </Button>
 
               {/* Phone Action (Τηλέφωνο) */}
@@ -416,7 +418,7 @@ export function CustomerInfoCompact({
                   }}
                   title="Κλήση"
                 >
-                  <Phone className="w-4 h-4" />
+                  <Phone className={iconSizes.sm} />
                 </Button>
               )}
 
@@ -431,7 +433,7 @@ export function CustomerInfoCompact({
                   }}
                   title="Αποστολή Email"
                 >
-                  <Mail className="w-4 h-4" />
+                  <Mail className={iconSizes.sm} />
                 </Button>
               )}
             </>

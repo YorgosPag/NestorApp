@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // ============================================================================
 // 🏢 ENTERPRISE IMPORTS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ SYSTEMS
@@ -61,6 +62,7 @@ export function UniversalCommunicationManager({
   disabled = false,
   onChange
 }: UniversalCommunicationManagerProps) {
+  const iconSizes = useIconSizes();
 
   // 🎯 RESPONSIVE STATE για desktop detection
   const [isDesktop, setIsDesktop] = useState(false);
@@ -188,7 +190,7 @@ export function UniversalCommunicationManager({
         <div className="w-full max-w-none min-w-full">
           <Label>{getPrimaryFieldLabel(config.type)}</Label>
           <div className="flex items-center gap-1">
-            <IconComponent className="w-4 h-4 text-gray-500" />
+            <IconComponent className={`${iconSizes.sm} text-gray-500`} />
             <Input
               type={getInputType(config.type)}
               value={item[config.fields.primary] || ''}
@@ -295,7 +297,7 @@ export function UniversalCommunicationManager({
     <section className="w-full max-w-none min-w-full space-y-4" aria-labelledby="comm-manager-title">
       {/* Header */}
       <header className="flex items-center gap-2 text-sm font-medium text-gray-700">
-        <IconComponent className="h-4 w-4" />
+        <IconComponent className={iconSizes.sm} />
         <h3 id="comm-manager-title">{config.title}</h3>
       </header>
 
@@ -443,7 +445,7 @@ export function UniversalCommunicationManager({
                   disabled={disabled}
                   className={`text-red-600 ${INTERACTIVE_PATTERNS.TEXT_DESTRUCTIVE}`}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className={iconSizes.sm} />
                 </Button>
               </footer>
             )}
@@ -454,7 +456,7 @@ export function UniversalCommunicationManager({
       {/* Empty State */}
       {items.length === 0 && (
         <section className={COMMUNICATION_STYLES.groupedTable.emptyState} aria-label="Empty state" role="status">
-          <IconComponent className="w-8 h-8 mb-2 mx-auto" />
+          <IconComponent className={`${iconSizes.xl} mb-2 mx-auto`} />
           <p>{config.emptyStateText}</p>
           <p className="text-sm mt-1">Προσθέστε τις πληροφορίες επικοινωνίας σας</p>
         </section>
@@ -468,7 +470,7 @@ export function UniversalCommunicationManager({
         disabled={disabled}
         className={`w-full ${COMMUNICATION_STYLES.groupedTable.input}`}
       >
-        <Plus className="h-4 w-4 mr-2" />
+        <Plus className={`${iconSizes.sm} mr-2`} />
         {config.addButtonText}
       </Button>
     </section>

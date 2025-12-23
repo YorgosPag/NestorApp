@@ -13,6 +13,7 @@ import {
   TrendingUp,
   BarChart3,
 } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // Placeholder stats for Sales
 const salesStats: DashboardStat[] = [
@@ -51,6 +52,7 @@ const salesStats: DashboardStat[] = [
 ];
 
 export default function SalesPage() {
+  const iconSizes = useIconSizes();
   return (
     <TooltipProvider>
       <div className="flex h-screen bg-background">
@@ -60,7 +62,7 @@ export default function SalesPage() {
           <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="flex h-14 items-center px-4">
               <div className="flex items-center gap-2">
-                <DollarSign className="h-5 w-5 text-muted-foreground" />
+                <DollarSign className={`${iconSizes.md} text-muted-foreground`} />
                 <h1 className="text-lg font-semibold">Πωλήσεις</h1>
               </div>
               <div className="ml-auto text-sm text-muted-foreground">
@@ -82,7 +84,7 @@ export default function SalesPage() {
               {/* Διαθέσιμα Section */}
               <div className="space-y-4">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <ShoppingCart className="h-5 w-5" />
+                  <ShoppingCart className={iconSizes.md} />
                   Διαθέσιμα προς Πώληση
                 </h2>
 
@@ -91,7 +93,7 @@ export default function SalesPage() {
                   <div className="p-4 bg-card border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 bg-primary/10 rounded-lg">
-                        <Home className="h-4 w-4 text-primary" />
+                        <Home className={`${iconSizes.sm} text-primary`} />
                       </div>
                       <h3 className="font-medium">Διαθέσιμα Διαμερίσματα</h3>
                       <span className="ml-auto bg-primary/20 text-primary px-2 py-1 rounded text-sm font-medium">
@@ -107,7 +109,7 @@ export default function SalesPage() {
                   <div className="p-4 bg-card border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 bg-orange-500/10 rounded-lg">
-                        <Package className="h-4 w-4 text-orange-500" />
+                        <Package className={`${iconSizes.sm} text-orange-500`} />
                       </div>
                       <h3 className="font-medium">Διαθέσιμες Αποθήκες</h3>
                       <span className="ml-auto bg-orange-500/20 text-orange-500 px-2 py-1 rounded text-sm font-medium">
@@ -123,7 +125,7 @@ export default function SalesPage() {
                   <div className="p-4 bg-card border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 bg-blue-500/10 rounded-lg">
-                        <Car className="h-4 w-4 text-blue-500" />
+                        <Car className={`${iconSizes.sm} text-blue-500`} />
                       </div>
                       <h3 className="font-medium">Διαθέσιμα Parking</h3>
                       <span className="ml-auto bg-blue-500/20 text-blue-500 px-2 py-1 rounded text-sm font-medium">
@@ -140,14 +142,14 @@ export default function SalesPage() {
               {/* Πωλημένα Section */}
               <div className="space-y-4">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5" />
+                  <CheckCircle className={iconSizes.md} />
                   Πωλημένα Ακίνητα
                 </h2>
 
                 <div className="p-6 bg-card border rounded-lg">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="p-2 bg-green-500/10 rounded-lg">
-                      <CheckCircle className="h-5 w-5 text-green-500" />
+                      <CheckCircle className={`${iconSizes.md} text-green-500`} />
                     </div>
                     <h3 className="font-semibold">Ολοκληρωμένες Πωλήσεις</h3>
                   </div>
@@ -183,7 +185,7 @@ export default function SalesPage() {
             {/* Info Message */}
             <div className="p-4 bg-muted/50 border border-dashed rounded-lg">
               <div className="flex items-center gap-2 text-sm">
-                <DollarSign className="h-4 w-4" />
+                <DollarSign className={iconSizes.sm} />
                 <span className="font-medium">Πωλήσιμα Ακίνητα</span>
               </div>
               <p className="text-sm text-muted-foreground mt-1">

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Users, Target, Calendar, Clock } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { RecentActivities } from './RecentActivities';
 import { QuickActions } from './QuickActions';
 import { TeamPerformance } from './TeamPerformance';
@@ -10,6 +11,7 @@ import { useTranslation } from '@/i18n';
 import type { Opportunity } from '@/types/crm';
 
 export function OverviewTab() {
+  const iconSizes = useIconSizes();
   const { t } = useTranslation('crm');
   
   const initialStats = [
@@ -66,7 +68,7 @@ export function OverviewTab() {
                 </p>
               </div>
               <div className={`p-3 bg-${stat.color}-100 rounded-lg`}>
-                <stat.icon className={`w-6 h-6 text-${stat.color}-600`} />
+                <stat.icon className={`${iconSizes.lg} text-${stat.color}-600`} />
               </div>
             </div>
           </div>

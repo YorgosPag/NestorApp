@@ -5,6 +5,7 @@ import { CommonBadge } from '@/core/badges';
 import { Button } from '@/components/ui/button';
 import { HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 import { X } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface ToolbarFiltersDisplayProps {
   activeFilters: string[];
@@ -15,6 +16,7 @@ export function ToolbarFiltersDisplay({
   activeFilters,
   onActiveFiltersChange
 }: ToolbarFiltersDisplayProps) {
+  const iconSizes = useIconSizes();
   const handleRemoveFilter = (filterToRemove: string) => {
     onActiveFiltersChange(activeFilters.filter(f => f !== filterToRemove));
   };
@@ -39,7 +41,7 @@ export function ToolbarFiltersDisplay({
                     onClick={() => handleRemoveFilter(filter)}
                     className={`ml-1 ${HOVER_TEXT_EFFECTS.DESTRUCTIVE}`}
                   >
-                    <X className="w-3 h-3" />
+                    <X className={iconSizes.xs} />
                   </button>
                 </div>
               }

@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { MapPin, Share } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface LocationInfoCardProps {
     building: { name: string; address?: string, city?: string };
@@ -12,11 +13,13 @@ interface LocationInfoCardProps {
 }
 
 export function LocationInfoCard({ building, coordinates }: LocationInfoCardProps) {
+    const iconSizes = useIconSizes();
+
     return (
         <Card>
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                    <MapPin className="w-5 h-5" />
+                    <MapPin className={iconSizes.md} />
                     Στοιχεία Τοποθεσίας
                 </CardTitle>
             </CardHeader>
@@ -37,11 +40,11 @@ export function LocationInfoCard({ building, coordinates }: LocationInfoCardProp
                         </div>
                         <div className="flex gap-2">
                             <Button variant="outline" size="sm">
-                                <MapPin className="w-4 h-4 mr-2" />
+                                <MapPin className={`${iconSizes.sm} mr-2`} />
                                 Οδηγίες μετάβασης
                             </Button>
                             <Button variant="outline" size="sm">
-                                <Share className="w-4 h-4 mr-2" />
+                                <Share className={`${iconSizes.sm} mr-2`} />
                                 Κοινοποίηση τοποθεσίας
                             </Button>
                         </div>

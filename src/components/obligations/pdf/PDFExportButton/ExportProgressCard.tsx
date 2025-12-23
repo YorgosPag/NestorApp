@@ -4,6 +4,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Loader2, CheckCircle } from "lucide-react";
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface ExportProgressCardProps {
   progress: number;
@@ -18,6 +19,7 @@ const getProgressMessage = (progress: number): string => {
 };
 
 export function ExportProgressCard({ progress }: ExportProgressCardProps) {
+  const iconSizes = useIconSizes();
   const isComplete = progress === 100;
   
   if (isComplete) {
@@ -25,7 +27,7 @@ export function ExportProgressCard({ progress }: ExportProgressCardProps) {
       <Card className="bg-accent/20 border-accent/40">
         <CardContent className="pt-4">
           <div className="flex items-center gap-3">
-            <CheckCircle className="h-5 w-5 text-accent-foreground" />
+            <CheckCircle className={`${iconSizes.md} text-accent-foreground`} />
             <div>
               <h4 className="font-medium text-foreground">Επιτυχία</h4>
               <p className="text-sm text-muted-foreground">Το PDF δημιουργήθηκε επιτυχώς.</p>
@@ -41,7 +43,7 @@ export function ExportProgressCard({ progress }: ExportProgressCardProps) {
       <CardContent className="pt-6">
         <div className="space-y-4">
           <div className="flex items-center gap-3">
-            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            <Loader2 className={`${iconSizes.md} animate-spin text-primary`} />
             <div>
               <h4 className="font-medium">Δημιουργία PDF...</h4>
               <p className="text-sm text-muted-foreground">{getProgressMessage(progress)}</p>

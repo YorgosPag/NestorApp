@@ -17,6 +17,7 @@ import {
   PHOTO_COMBINED_EFFECTS
 } from '@/components/generic/config/photo-config';
 import { useFocusTrap, announceToScreenReader } from '@/utils/accessibility';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -194,6 +195,7 @@ export function PhotoPreviewModal({
   // ALL HOOKS MUST BE AT TOP LEVEL - BEFORE ANY EARLY RETURNS
   // ============================================================================
 
+  const iconSizes = useIconSizes();
   // State για zoom functionality (μελλοντική επέκταση)
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
@@ -594,7 +596,7 @@ export function PhotoPreviewModal({
           {/* Πρώτη σειρά: Τίτλος και Badge */}
           <header className="flex items-center justify-between" role="banner">
             <DialogTitle id="photo-preview-title" className="flex items-center gap-2 text-lg">
-              <IconComponent className="w-5 h-5" aria-hidden="true" />
+              <IconComponent className={iconSizes.md} aria-hidden="true" />
               {title}
             </DialogTitle>
 
@@ -626,7 +628,7 @@ export function PhotoPreviewModal({
                   className="h-8 w-8 p-0"
                   disabled={currentIndex === 0}
                 >
-                  <ChevronLeft className="w-4 h-4" aria-hidden="true" />
+                  <ChevronLeft className={`${iconSizes.sm}`} aria-hidden="true" />
                 </Button>
 
                 <Button
@@ -638,7 +640,7 @@ export function PhotoPreviewModal({
                   className="h-8 w-8 p-0"
                   disabled={currentIndex === totalPhotos - 1}
                 >
-                  <ChevronRight className="w-4 h-4" aria-hidden="true" />
+                  <ChevronRight className={`${iconSizes.sm}`} aria-hidden="true" />
                 </Button>
 
                 <div className="w-px h-4 bg-border mx-1" />
@@ -653,7 +655,7 @@ export function PhotoPreviewModal({
               title="Μικρότερο"
               className="h-8 w-8 p-0"
             >
-              <ZoomOut className="w-4 h-4" />
+              <ZoomOut className={iconSizes.sm} />
             </Button>
 
             <Button
@@ -664,7 +666,7 @@ export function PhotoPreviewModal({
               title="Μεγαλύτερο"
               className="h-8 w-8 p-0"
             >
-              <ZoomIn className="w-4 h-4" />
+              <ZoomIn className={iconSizes.sm} />
             </Button>
 
             <Button
@@ -674,7 +676,7 @@ export function PhotoPreviewModal({
               title="Περιστροφή"
               className="h-8 w-8 p-0"
             >
-              <RotateCw className="w-4 h-4" />
+              <RotateCw className={iconSizes.sm} />
             </Button>
 
             <Button
@@ -684,7 +686,7 @@ export function PhotoPreviewModal({
               title="Fit to View"
               className="h-8 w-8 p-0"
             >
-              <Maximize2 className="w-4 h-4" />
+              <Maximize2 className={iconSizes.sm} />
             </Button>
 
             <ShareButton
@@ -702,7 +704,7 @@ export function PhotoPreviewModal({
               title="Λήψη"
               className="h-8 w-8 p-0"
             >
-              <Download className="w-4 h-4" />
+              <Download className={iconSizes.sm} />
             </Button>
 
             <Button
@@ -712,7 +714,7 @@ export function PhotoPreviewModal({
               title="Κλείσιμο"
               className="h-8 w-8 p-0"
             >
-              <X className="w-4 h-4" />
+              <X className={iconSizes.sm} />
             </Button>
           </nav>
         </DialogHeader>

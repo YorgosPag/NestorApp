@@ -21,8 +21,10 @@ import {
   HelpCircle,
   LogOut,
 } from "lucide-react"
+import { useIconSizes } from '@/hooks/useIconSizes'
 
 export function UserMenu() {
+  const iconSizes = useIconSizes();
   const router = useRouter()
 
   const handleLogout = async () => {
@@ -39,7 +41,7 @@ export function UserMenu() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="icon">
-          <User className="h-4 w-4" />
+          <User className={iconSizes.sm} />
           <span className="sr-only">Μενού χρήστη</span>
         </Button>
       </DropdownMenuTrigger>
@@ -55,24 +57,24 @@ export function UserMenu() {
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem>
-            <User className="mr-2 h-4 w-4" />
+            <User className={`mr-2 ${iconSizes.sm}`} />
             <span>Προφίλ</span>
             <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
           </DropdownMenuItem>
           <DropdownMenuItem>
-            <Settings className="mr-2 h-4 w-4" />
+            <Settings className={`mr-2 ${iconSizes.sm}`} />
             <span>Ρυθμίσεις</span>
             <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
           </DropdownMenuItem>
           <DropdownMenuItem>
-            <Keyboard className="mr-2 h-4 w-4" />
+            <Keyboard className={`mr-2 ${iconSizes.sm}`} />
             <span>Συντομεύσεις</span>
             <DropdownMenuShortcut>⌘K</DropdownMenuShortcut>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem>
-          <HelpCircle className="mr-2 h-4 w-4" />
+          <HelpCircle className={`mr-2 ${iconSizes.sm}`} />
           <span>Βοήθεια</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
@@ -80,7 +82,7 @@ export function UserMenu() {
           onClick={handleLogout}
           className="text-red-600 dark:text-red-400 cursor-pointer"
         >
-          <LogOut className="mr-2 h-4 w-4" />
+          <LogOut className={`mr-2 ${iconSizes.sm}`} />
           <span>Αποσύνδεση</span>
           <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
         </DropdownMenuItem>

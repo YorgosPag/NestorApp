@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Copy, ExternalLink, Check, AlertCircle } from 'lucide-react';
 import { designSystem } from '@/lib/design-system';
 import { TRANSITION_PRESETS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -75,6 +76,8 @@ export const CopyActionsSection: React.FC<CopyActionsProps> = ({
   config = {},
   className
 }) => {
+  const iconSizes = useIconSizes();
+
   // ============================================================================
   // CONFIGURATION με DEFAULTS
   // ============================================================================
@@ -255,20 +258,20 @@ export const CopyActionsSection: React.FC<CopyActionsProps> = ({
       >
         {isCopied ? (
           <>
-            <Check className="w-4 h-4 mr-2" />
+            <Check className={`${iconSizes.sm} mr-2`} />
             Αντιγράφηκε!
           </>
         ) : hasError ? (
           <>
-            <AlertCircle className="w-4 h-4 mr-2" />
+            <AlertCircle className={`${iconSizes.sm} mr-2`} />
             Σφάλμα
           </>
         ) : (
           <>
             {isUrl ? (
-              <Copy className="w-4 h-4 mr-2" />
+              <Copy className={`${iconSizes.sm} mr-2`} />
             ) : (
-              <ExternalLink className="w-4 h-4 mr-2" />
+              <ExternalLink className={`${iconSizes.sm} mr-2`} />
             )}
             {finalConfig.labels[type]}
           </>

@@ -7,6 +7,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import {
   EventAnalyticsEngine,
   AnalyticsTimeRange,
@@ -66,6 +67,7 @@ const MetricCard: React.FC<{
   status?: 'good' | 'warning' | 'critical';
   description?: string;
 }> = ({ title, value, unit, trend, icon, status = 'good', description }) => {
+  const iconSizes = useIconSizes();
   const getStatusColor = () => {
     switch (status) {
       case 'good': return '#10B981';
@@ -181,8 +183,8 @@ const SimpleChart: React.FC<{
     return (
       <div className="flex flex-col items-center p-5">
         <div
-          className="w-[200px] h-[200px] rounded-full"
           className={useDynamicBackgroundClass(
+            `w-[200px] h-[200px] rounded-full`,
             `conic-gradient(${data.datasets[0].data.map((value, index) => {
               const percentage = (value / total) * 100;
               return `${colors[index % colors.length]} ${percentage}%`;
@@ -193,8 +195,10 @@ const SimpleChart: React.FC<{
           {data.labels.map((label, index) => (
             <div key={index} className="flex items-center gap-1.5">
               <div
-                className="w-3 h-3 rounded-sm"
-                className={useDynamicBackgroundClass(colors[index % colors.length])}
+                className={useDynamicBackgroundClass(
+                  `${iconSizes.xs} rounded-sm`,
+                  colors[index % colors.length]
+                )}
               />
               <span className={`text-xs ${labelTextClass}`}>
                 {label}: {data.datasets[0].data[index]}

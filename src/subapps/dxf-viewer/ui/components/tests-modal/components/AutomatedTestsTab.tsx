@@ -9,6 +9,7 @@ import { CheckCircle2 } from 'lucide-react';
 import { TestButton } from './TestButton';
 import type { TestDefinition, TestState } from '../types/tests.types';
 import { HOVER_BACKGROUND_EFFECTS, GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface AutomatedTestsTabProps {
   runAllTestsGroup: TestDefinition[];
@@ -25,6 +26,8 @@ export const AutomatedTestsTab: React.FC<AutomatedTestsTabProps> = ({
   handleRunAllTests,
   handleRunTest
 }) => {
+  const iconSizes = useIconSizes();
+
   return (
     <>
       <div>
@@ -51,7 +54,7 @@ export const AutomatedTestsTab: React.FC<AutomatedTestsTabProps> = ({
             </span>
           ) : testState.completedTests.has('run-all-tests') ? (
             <span className="flex items-center justify-center gap-2">
-              <CheckCircle2 className="w-6 h-6" />
+              <CheckCircle2 className={iconSizes.lg} />
               All Automated Tests Complete!
             </span>
           ) : (

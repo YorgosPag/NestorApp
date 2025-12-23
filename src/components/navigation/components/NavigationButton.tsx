@@ -9,6 +9,7 @@ import { LucideIcon } from 'lucide-react';
 import { UnifiedBadge } from '../../../core/badges/UnifiedBadgeSystem';
 import { NavigationStatus } from '../../../core/types/BadgeTypes';
 import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS, HOVER_BORDER_EFFECTS } from '../../ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface NavigationButtonProps {
   onClick: () => void;
@@ -40,6 +41,7 @@ export function NavigationButton({
   hasWarning = false,
   warningText
 }: NavigationButtonProps) {
+  const iconSizes = useIconSizes();
   const baseClasses = `w-full text-left rounded-lg border ${TRANSITION_PRESETS.STANDARD_COLORS} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`;
 
   const variantClasses = {
@@ -58,7 +60,7 @@ export function NavigationButton({
       ? `border-orange-300 bg-orange-50 dark:bg-orange-900/20 ${HOVER_BORDER_EFFECTS.ORANGE}`
       : `border-gray-200 dark:border-gray-600 ${HOVER_BORDER_EFFECTS.GRAY}`;
 
-  const iconSize = variant === 'compact' ? 'h-4 w-4' : 'h-5 w-5';
+  const iconSize = variant === 'compact' ? iconSizes.sm : iconSizes.md;
   const spacing = variant === 'compact' ? 'space-x-2' : 'space-x-3';
 
   const renderIcon = () => {

@@ -25,6 +25,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { BarChart3, Plus, LucideIcon } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { cn } from '@/lib/utils';
 import { GRADIENT_HOVER_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
 
@@ -140,6 +141,8 @@ export const EnterpriseHeaderActions: React.FC<EnterpriseHeaderActionsProps> = (
   customCreateText,
   additionalActions
 }) => {
+  const iconSizes = useIconSizes();
+
   // ============================================================================
   // COMPUTED VALUES
   // ============================================================================
@@ -177,7 +180,7 @@ export const EnterpriseHeaderActions: React.FC<EnterpriseHeaderActionsProps> = (
               onClick={handleDashboardToggle}
               aria-label={finalDashboardTooltip}
             >
-              <BarChart3 className="w-4 h-4 mr-2" />
+              <BarChart3 className={`${iconSizes.sm} mr-2`} />
               Dashboard
             </Button>
           </TooltipTrigger>
@@ -197,7 +200,7 @@ export const EnterpriseHeaderActions: React.FC<EnterpriseHeaderActionsProps> = (
               onClick={handleCreateNew}
               aria-label={finalCreateTooltip}
             >
-              <CreateIcon className="w-4 h-4 mr-2" />
+              <CreateIcon className={`${iconSizes.sm} mr-2`} />
               {createButtonText}
             </Button>
           </TooltipTrigger>

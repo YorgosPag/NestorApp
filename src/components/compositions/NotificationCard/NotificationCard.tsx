@@ -5,6 +5,7 @@ import { BaseCard } from '@/components/core/BaseCard/BaseCard';
 import { CommonBadge } from '@/core/badges';
 import { HOVER_SHADOWS, HOVER_BACKGROUND_EFFECTS, GROUP_HOVER_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { Bell, AlertCircle, Info, CheckCircle, XCircle, Calendar, User, Eye, X } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface NotificationData {
   id: string;
@@ -67,8 +68,9 @@ export function NotificationCard({
   onDismiss,
   compact = false 
 }: NotificationCardProps) {
+  const iconSizes = useIconSizes();
   const [isRead, setIsRead] = useState(notification.read);
-  
+
   const TypeIcon = getTypeIcon(notification.type);
 
   const handleToggleRead = () => {
@@ -100,7 +102,7 @@ export function NotificationCard({
         ${isRead ? 'bg-muted/30 opacity-75' : `bg-card border shadow-sm ${HOVER_SHADOWS.ENHANCED}`}
       `}>
         <div className={`
-          w-2 h-2 rounded-full mt-2 shrink-0
+          ${iconSizes.xxs} rounded-full mt-2 shrink-0
           ${isRead ? 'bg-muted-foreground' : 'bg-blue-500 animate-pulse'}
         `} />
         
@@ -126,7 +128,7 @@ export function NotificationCard({
             }}
             className={`p-1 rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} opacity-0 ${GROUP_HOVER_PATTERNS.SHOW_ON_GROUP} ${TRANSITION_PRESETS.OPACITY}`}
           >
-            <X className="w-3 h-3" />
+            <X className={iconSizes.xs} />
           </button>
         )}
       </div>
@@ -144,7 +146,7 @@ export function NotificationCard({
         backgroundGradient: isRead 
           ? "from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800"
           : "from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950 dark:via-indigo-950 dark:to-purple-900",
-        logo: <TypeIcon className={`w-6 h-6 ${isRead ? 'text-muted-foreground' : 'text-blue-600 dark:text-blue-400'}`} />,
+        logo: <TypeIcon className={`${iconSizes.lg} ${isRead ? 'text-muted-foreground' : 'text-blue-600 dark:text-blue-400'}`} />,
         showImageOverlay: false,
         compact: true
       }}
@@ -182,7 +184,7 @@ export function NotificationCard({
           title: 'Αποστολέας',
           content: (
             <div className="flex items-center gap-2">
-              <User className="w-4 h-4 text-muted-foreground" />
+              <User className={`${iconSizes.sm} text-muted-foreground`} />
               <span className="text-sm font-medium">{notification.sender}</span>
             </div>
           )
@@ -203,7 +205,7 @@ export function NotificationCard({
           title: 'Χρόνος',
           content: (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Calendar className="w-4 h-4" />
+              <Calendar className={iconSizes.sm} />
               <span>{notification.time}</span>
             </div>
           )

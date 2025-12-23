@@ -22,6 +22,7 @@ import { MobileDetailsSlideIn } from '@/core/layouts';
 import { useStoragesPageState } from '@/hooks/useStoragesPageState';
 import { useStorageStats } from '@/hooks/useStorageStats';
 import { useFirestoreStorages } from '@/hooks/useFirestoreStorages';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { AdvancedFiltersPanel, storageFiltersConfig } from '@/components/core/AdvancedFilters';
 import { ListContainer } from '@/core/containers';
 
@@ -29,6 +30,9 @@ import { ListContainer } from '@/core/containers';
 export type { Storage } from '@/types/storage/contracts';
 
 function StoragePageContent() {
+  // 🏢 ENTERPRISE: Centralized icon sizes
+  const iconSizes = useIconSizes();
+
   // Firestore data connection - πραγματικά δεδομένα αντί για mock data
   const { storages, loading, error, refetch } = useFirestoreStorages();
 
@@ -95,7 +99,7 @@ function StoragePageContent() {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="text-center">
-          <Warehouse className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
+          <Warehouse className={`${iconSizes.xl} animate-spin mx-auto mb-4 text-muted-foreground`} />
           <p className="text-muted-foreground">Φόρτωση αποθηκών...</p>
         </div>
       </div>
@@ -146,7 +150,7 @@ function StoragePageContent() {
                 <>
                   <div className="bg-card rounded-lg border p-4">
                     <h3 className="font-medium mb-3 flex items-center gap-2">
-                      <BarChart3 className="h-4 w-4" />
+                      <BarChart3 className={iconSizes.sm} />
                       Κατανομή Κατάστασης
                     </h3>
                     <div className="space-y-2">
@@ -162,7 +166,7 @@ function StoragePageContent() {
                   </div>
                   <div className="bg-card rounded-lg border p-4">
                     <h3 className="font-medium mb-3 flex items-center gap-2">
-                      <MapPin className="h-4 w-4" />
+                      <MapPin className={iconSizes.sm} />
                       Κατανομή Τύπων
                     </h3>
                     <div className="space-y-2">

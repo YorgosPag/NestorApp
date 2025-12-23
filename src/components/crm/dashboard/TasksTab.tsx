@@ -28,6 +28,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import CreateTaskModal from './dialogs/CreateTaskModal';
 import type { CrmTask, Opportunity, FirestoreishTimestamp } from '@/types/crm';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { CrmTaskType, CrmTaskPriority, CrmTaskStatus } from '@/types/crm-extra';
 import { HOVER_BACKGROUND_EFFECTS, HOVER_SHADOWS } from '@/components/ui/effects';
 
@@ -90,6 +91,7 @@ const createFormatDueDate = (t: (key: string) => string) => (dueDate?: Firestore
 };
 
 export function TasksTab() {
+  const iconSizes = useIconSizes();
   const { t } = useTranslation('crm');
   const formatDueDate = useMemo(() => createFormatDueDate(t), [t]);
   const [tasks, setTasks] = useState<CrmTask[]>([]);
@@ -211,7 +213,7 @@ export function TasksTab() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className={`animate-spin rounded-full ${iconSizes.xl} border-b-2 border-blue-600`}></div>
       </div>
     );
   }
@@ -228,7 +230,7 @@ export function TasksTab() {
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">{t('tasks.title')}</h2>
           <Button size="sm" onClick={() => setIsModalOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
+            <Plus className={`${iconSizes.sm} mr-2`} />
             {t('tasks.newTask')}
           </Button>
         </div>
@@ -238,7 +240,7 @@ export function TasksTab() {
         {/* Filters */}
         <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
           <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+            <Search className={`${iconSizes.sm} absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground`} />
             <Input
               type="text"
               placeholder={t('tasks.searchPlaceholder')}
@@ -313,8 +315,8 @@ export function TasksTab() {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${task.status === 'completed' ? 'bg-green-100' : 'bg-blue-100'}`}>
-                          <TaskIcon className={`w-4 h-4 ${task.status === 'completed' ? 'text-green-600' : 'text-blue-600'}`} />
+                        <div className={`${iconSizes.xl} rounded-full flex items-center justify-center ${task.status === 'completed' ? 'bg-green-100' : 'bg-blue-100'}`}>
+                          <TaskIcon className={`${iconSizes.sm} ${task.status === 'completed' ? 'text-green-600' : 'text-blue-600'}`} />
                         </div>
                         <h4 className={`font-medium ${task.status === 'completed' ? 'line-through text-gray-500' : 'text-gray-900'}`}>{task.title}</h4>
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${PRIORITY_COLORS[task.priority]}`}>{task.priority}</span>
@@ -322,17 +324,17 @@ export function TasksTab() {
                       </div>
                       <div className="space-y-1 text-sm text-gray-600">
                         <div className="flex items-center gap-4">
-                          <span className={`flex items-center gap-1 ${getDateColor(task.dueDate, task.status)}`}><Clock className="w-3 h-3" />{formatDueDate(task.dueDate)}</span>
-                          {leadName && <span className="flex items-center gap-1"><User className="w-3 h-3" />{leadName}</span>}
-                          {meta.location && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{meta.location}</span>}
+                          <span className={`flex items-center gap-1 ${getDateColor(task.dueDate, task.status)}`}><Clock className={iconSizes.xs} />{formatDueDate(task.dueDate)}</span>
+                          {leadName && <span className="flex items-center gap-1"><User className={iconSizes.xs} />{leadName}</span>}
+                          {meta.location && <span className="flex items-center gap-1"><MapPin className={iconSizes.xs} />{meta.location}</span>}
                         </div>
                         {task.description && <p className="text-gray-700 mt-2">{task.description}</p>}
                       </div>
                     </div>
                     <div className="flex items-center gap-2 ml-4">
-                      {task.status !== 'completed' && <Button size="sm" variant="ghost" className="text-green-600" onClick={() => handleCompleteTask(task.id, task.title)} aria-label={t('tasks.actions.complete')}><CheckCircle className="w-4 h-4 mr-1" />{t('tasks.actions.complete')}</Button>}
-                      <Button size="sm" variant="ghost" aria-label={t('tasks.actions.edit')}><Edit3 className="w-4 h-4 mr-1" />{t('tasks.actions.edit')}</Button>
-                      <Button size="sm" variant="ghost" className="text-red-600" onClick={() => handleDeleteTask(task.id, task.title)} aria-label={t('tasks.actions.delete')}><Trash2 className="w-4 h-4 mr-1" />{t('tasks.actions.delete')}</Button>
+                      {task.status !== 'completed' && <Button size="sm" variant="ghost" className="text-green-600" onClick={() => handleCompleteTask(task.id, task.title)} aria-label={t('tasks.actions.complete')}><CheckCircle className={`${iconSizes.sm} mr-1`} />{t('tasks.actions.complete')}</Button>}
+                      <Button size="sm" variant="ghost" aria-label={t('tasks.actions.edit')}><Edit3 className={`${iconSizes.sm} mr-1`} />{t('tasks.actions.edit')}</Button>
+                      <Button size="sm" variant="ghost" className="text-red-600" onClick={() => handleDeleteTask(task.id, task.title)} aria-label={t('tasks.actions.delete')}><Trash2 className={`${iconSizes.sm} mr-1`} />{t('tasks.actions.delete')}</Button>
                     </div>
                   </div>
                 </div>

@@ -19,6 +19,7 @@ import React, { useState, useRef } from "react";
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { TRANSITION_PRESETS, HOVER_BACKGROUND_EFFECTS } from "@/components/ui/effects";
 import { useKeyboardShortcut } from "@/hooks/useKeyboardShortcuts";
 import { SEARCH_UI } from "./constants"; // 🏢 ENTERPRISE search constants
@@ -42,6 +43,7 @@ export function HeaderSearch({
   showShortcut = true,
   shortcutKey = "k"
 }: HeaderSearchProps) {
+  const iconSizes = useIconSizes();
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -88,7 +90,7 @@ export function HeaderSearch({
         {/* 🔍 Search Icon */}
         <Search
           className={cn(
-            "absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground",
+            `absolute left-3 top-1/2 -translate-y-1/2 ${iconSizes.sm} text-muted-foreground`,
             TRANSITION_PRESETS.STANDARD_COLORS,
             searchFocused && "text-primary"
           )}
@@ -123,7 +125,7 @@ export function HeaderSearch({
               searchFocused && "opacity-100"
             )}
           >
-            <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+            <kbd className={`pointer-events-none inline-flex ${iconSizes.md} select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground`}>
               <span className="text-xs">ESC</span>
             </kbd>
           </div>

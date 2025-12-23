@@ -4,6 +4,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface PlaceholderTabProps {
   title?: string;
@@ -13,19 +14,21 @@ interface PlaceholderTabProps {
 }
 
 const PlaceholderTab = ({ title = 'Περιεχόμενο', icon: Icon, building, ...additionalProps }: PlaceholderTabProps) => {
+  const iconSizes = useIconSizes();
+
   // Default icon fallback
-  const FallbackIcon = () => <div className="w-12 h-12 text-muted-foreground mb-4 text-4xl">📦</div>;
+  const FallbackIcon = () => <div className={`${iconSizes.xl3} text-muted-foreground mb-4 text-4xl`}>📦</div>;
   const IconComponent = Icon || FallbackIcon;
 
   return (
-    <div className="flex flex-col items-center justify-center h-96 border-2 border-dashed border-border rounded-lg bg-muted/50">
-      <IconComponent className="w-12 h-12 text-muted-foreground mb-4" />
+    <div className={`flex flex-col items-center justify-center ${iconSizes.xl12} border-2 border-dashed border-border rounded-lg bg-muted/50`}>
+      <IconComponent className={`${iconSizes.xl3} text-muted-foreground mb-4`} />
     <h2 className="text-xl font-semibold text-muted-foreground mb-2">{title}</h2>
     <p className="text-sm text-muted-foreground text-center max-w-md">
       Αυτή η ενότητα θα αναπτυχθεί σύντομα. Θα περιέχει όλες τις απαραίτητες λειτουργίες για τη διαχείριση {title.toLowerCase()}.
     </p>
     <Button variant="outline" className="mt-4">
-      <Plus className="w-4 h-4 mr-2" />
+      <Plus className={`${iconSizes.sm} mr-2`} />
       Προσθήκη {title}
     </Button>
   </div>

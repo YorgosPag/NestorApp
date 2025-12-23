@@ -16,6 +16,7 @@
 
 import React, { useState, useCallback, useRef } from 'react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import {
   Dialog,
   DialogContent,
@@ -93,6 +94,7 @@ export function FloorPlanUploadModal({
   selectedFile = null,
   isParsing = false
 }: FloorPlanUploadModalProps) {
+  const iconSizes = useIconSizes();
   const { t } = useTranslationLazy('geo-canvas');
 
   // Drag state
@@ -196,7 +198,7 @@ export function FloorPlanUploadModal({
       <DialogContent className="sm:max-w-[600px] bg-gray-900 text-white border-gray-700">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-blue-400 flex items-center gap-2">
-            <CraneIcon className="h-6 w-6" />
+            <CraneIcon className={iconSizes.lg} />
             {t('floorPlan.uploadModal.title')}
           </DialogTitle>
           <DialogDescription className="text-gray-400">

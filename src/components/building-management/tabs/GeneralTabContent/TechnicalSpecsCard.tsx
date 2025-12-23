@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { calculateBuildingRatio, calculateCostPerSqm } from './utils';
 
 interface TechnicalSpecsCardProps {
@@ -22,6 +23,7 @@ interface TechnicalSpecsCardProps {
 }
 
 export function TechnicalSpecsCard({ formData, updateField, isEditing, errors }: TechnicalSpecsCardProps) {
+  const iconSizes = useIconSizes();
   const costPerSqm = calculateCostPerSqm(formData.totalValue, formData.totalArea);
   const buildingRatio = calculateBuildingRatio(formData.builtArea, formData.totalArea);
 
@@ -29,7 +31,7 @@ export function TechnicalSpecsCard({ formData, updateField, isEditing, errors }:
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Settings className="w-5 h-5" />
+          <Settings className={iconSizes.md} />
           Τεχνικά Χαρακτηριστικά
         </CardTitle>
       </CardHeader>

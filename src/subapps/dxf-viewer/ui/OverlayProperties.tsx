@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui/card';
 import { Input } from '../../../components/ui/input';
 import { Label } from '../../../components/ui/label';
@@ -66,6 +67,7 @@ function calculatePolygonPerimeter(polygon: unknown): number {
 }
 
 export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, onUpdate, onClose }) => {
+  const iconSizes = useIconSizes();
   const [label, setLabel] = useState('');
   const [linkedUnitId, setLinkedUnitId] = useState('');
 
@@ -110,7 +112,7 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
           <CardTitle className="text-sm">Ιδιότητες Overlay</CardTitle>
           {onClose && (
             <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="w-4 h-4" />
+              <X className={iconSizes.sm} />
             </Button>
           )}
         </div>
@@ -119,7 +121,7 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
         {/* Basic Info */}
         <div className="flex items-center gap-2">
           <div
-            className="w-4 h-4 rounded border"
+            className={`${iconSizes.sm} rounded border`}
             style={{ backgroundColor: STATUS_COLORS[overlay.status || 'for-sale'] }}
           />
           <CommonBadge
@@ -153,7 +155,7 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
                 <SelectItem key={status} value={status}>
                   <div className="flex items-center gap-2">
                     <div
-                      className="w-3 h-3 rounded"
+                      className={`${iconSizes.xs} rounded`}
                       style={{ backgroundColor: STATUS_COLORS[status] }}
                     />
                     {STATUS_LABELS[status]}

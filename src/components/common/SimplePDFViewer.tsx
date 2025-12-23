@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { FileText, ExternalLink } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { HOVER_TEXT_EFFECTS } from '@/components/ui/effects/hover-effects';
 
 interface SimplePDFViewerProps {
@@ -15,10 +16,11 @@ export function SimplePDFViewer({
   className,
   fallbackMessage = "PDF προεπισκόπηση"
 }: SimplePDFViewerProps) {
+  const iconSizes = useIconSizes();
   return (
     <div className={`bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 p-6 ${className}`}>
       <div className="text-center space-y-3">
-        <FileText className="h-12 w-12 text-gray-400 mx-auto" />
+        <FileText className={`${iconSizes.xl3} text-gray-400 mx-auto`} />
         <div>
           <h3 className="font-medium text-gray-900">PDF Document</h3>
           <p className="text-sm text-gray-500 mt-1">{fallbackMessage}</p>
@@ -28,7 +30,7 @@ export function SimplePDFViewer({
             rel="noopener noreferrer"
             className={`mt-3 inline-flex items-center gap-2 text-sm ${HOVER_TEXT_EFFECTS.BLUE} underline`}
           >
-            <ExternalLink className="h-4 w-4" />
+            <ExternalLink className={iconSizes.sm} />
             Άνοιγμα PDF σε νέα καρτέλα
           </a>
         </div>

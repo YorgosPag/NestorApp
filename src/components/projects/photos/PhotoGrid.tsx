@@ -3,6 +3,7 @@
 import React from 'react';
 import { PhotoItem, type Photo } from '@/components/generic/utils/PhotoItem';
 import { Image as ImageIcon } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import {
   PHOTO_TEXT_COLORS,
   PHOTO_COLORS,
@@ -16,6 +17,7 @@ interface PhotoGridProps {
 }
 
 export function PhotoGrid({ photos }: PhotoGridProps) {
+  const iconSizes = useIconSizes();
   const placeholderCount = Math.max(0, 4 - photos.length);
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -25,7 +27,7 @@ export function PhotoGrid({ photos }: PhotoGridProps) {
       {Array.from({ length: placeholderCount }).map((_, index) => (
          <div key={`placeholder-${index}`} className={`aspect-square ${PHOTO_COLORS.PHOTO_BACKGROUND} ${PHOTO_BORDERS.EMPTY_STATE} rounded-lg flex items-center justify-center text-center cursor-pointer transition-colors ${PHOTO_BORDERS.EMPTY_HOVER} group`}>
             <div className="text-center">
-              <ImageIcon className={`w-8 h-8 ${PHOTO_TEXT_COLORS.MUTED} transition-colors mx-auto mb-2 ${HOVER_TEXT_EFFECTS.PRIMARY}`} />
+              <ImageIcon className={`${iconSizes.xl} ${PHOTO_TEXT_COLORS.MUTED} transition-colors mx-auto mb-2 ${HOVER_TEXT_EFFECTS.PRIMARY}`} />
               <p className={`text-sm ${PHOTO_TEXT_COLORS.FOREGROUND_MUTED}`}>Προσθήκη Φωτογραφίας</p>
             </div>
           </div>

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { CommonBadge } from '@/core/badges';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { formatDateTime } from '@/lib/intl-utils';
 import { truncateText } from '@/lib/obligations-utils'; // ✅ Using centralized function
 import { Button } from '../ui/button';
@@ -28,15 +29,7 @@ import { MESSAGE_TYPES, MESSAGE_STATUSES, MESSAGE_DIRECTIONS } from '../../lib/c
 
 // --- Constants defined outside the component for performance ---
 
-const CHANNEL_ICONS = {
-  [MESSAGE_TYPES.EMAIL]: <Mail className="h-4 w-4" />,
-  [MESSAGE_TYPES.TELEGRAM]: <MessageSquare className="h-4 w-4" />,
-  [MESSAGE_TYPES.WHATSAPP]: <MessageSquare className="h-4 w-4" />,
-  [MESSAGE_TYPES.MESSENGER]: <MessageSquare className="h-4 w-4" />,
-  [MESSAGE_TYPES.SMS]: <MessageSquare className="h-4 w-4" />,
-  [MESSAGE_TYPES.CALL]: <Phone className="h-4 w-4" />,
-  default: <MessageSquare className="h-4 w-4" />,
-};
+// Note: CHANNEL_ICONS will use iconSizes within component context
 
 const CHANNEL_COLORS = {
   [MESSAGE_TYPES.EMAIL]: 'bg-blue-100 text-blue-800',
@@ -48,18 +41,12 @@ const CHANNEL_COLORS = {
   default: 'bg-gray-100 text-gray-800',
 };
 
-const STATUS_ICONS = {
-  [MESSAGE_STATUSES.SENT]: <CheckCircle className="h-4 w-4 text-green-600" />,
-  [MESSAGE_STATUSES.DELIVERED]: <CheckCircle className="h-4 w-4 text-green-600" />,
-  [MESSAGE_STATUSES.COMPLETED]: <CheckCircle className="h-4 w-4 text-green-600" />,
-  [MESSAGE_STATUSES.FAILED]: <AlertCircle className="h-4 w-4 text-red-600" />,
-  [MESSAGE_STATUSES.PENDING]: <Clock className="h-4 w-4 text-orange-600" />,
-  default: <Clock className="h-4 w-4 text-gray-600" />,
-};
+// Note: STATUS_ICONS will use iconSizes within component context
 
 const safeToLowerCase = (value) => (value || '').toLowerCase();
 
 const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) => {
+  const iconSizes = useIconSizes();
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -123,6 +110,30 @@ const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) =
     setFilters(prev => ({ ...prev, [key]: value }));
   };
 
+  // Dynamic icon creation functions
+  const getChannelIcon = (type) => {
+    switch(type) {
+      case MESSAGE_TYPES.EMAIL: return <Mail className={iconSizes.sm} />;
+      case MESSAGE_TYPES.TELEGRAM: return <MessageSquare className={iconSizes.sm} />;
+      case MESSAGE_TYPES.WHATSAPP: return <MessageSquare className={iconSizes.sm} />;
+      case MESSAGE_TYPES.MESSENGER: return <MessageSquare className={iconSizes.sm} />;
+      case MESSAGE_TYPES.SMS: return <MessageSquare className={iconSizes.sm} />;
+      case MESSAGE_TYPES.CALL: return <Phone className={iconSizes.sm} />;
+      default: return <MessageSquare className={iconSizes.sm} />;
+    }
+  };
+
+  const getStatusIcon = (status) => {
+    switch(status) {
+      case MESSAGE_STATUSES.SENT: return <CheckCircle className={`${iconSizes.sm} text-green-600`} />;
+      case MESSAGE_STATUSES.DELIVERED: return <CheckCircle className={`${iconSizes.sm} text-green-600`} />;
+      case MESSAGE_STATUSES.COMPLETED: return <CheckCircle className={`${iconSizes.sm} text-green-600`} />;
+      case MESSAGE_STATUSES.FAILED: return <AlertCircle className={`${iconSizes.sm} text-red-600`} />;
+      case MESSAGE_STATUSES.PENDING: return <Clock className={`${iconSizes.sm} text-orange-600`} />;
+      default: return <Clock className={`${iconSizes.sm} text-gray-600`} />;
+    }
+  };
+
   // ✅ ENTERPRISE MIGRATION: Using centralized formatDateTime for consistent formatting
   const formatDate = (timestamp) => {
     if (!timestamp) return { relative: '', full: '' };
@@ -148,7 +159,7 @@ const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) =
       <Card>
         <CardContent className="p-6">
           <div className="flex items-center justify-center">
-            <RefreshCw className="h-6 w-6 animate-spin mr-2" />
+            <RefreshCw className={`${iconSizes.lg} animate-spin mr-2`} />
             Φόρτωση μηνυμάτων...
           </div>
         </CardContent>
@@ -161,7 +172,7 @@ const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) =
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
-            <MessageSquare className="h-5 w-5" />
+            <MessageSquare className={iconSizes.md} />
             {leadId ? 'Ιστορικό Επικοινωνιών' : 'Unified Inbox'}
           </CardTitle>
           <div className="flex items-center gap-2">
@@ -176,7 +187,7 @@ const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) =
               onClick={handleRefresh}
               disabled={refreshing}
             >
-              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`${iconSizes.sm} ${refreshing ? 'animate-spin' : ''}`} />
             </Button>
           </div>
         </div>
@@ -185,7 +196,7 @@ const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) =
           <div className="flex flex-wrap gap-2 mt-4">
             <div className="flex-1 min-w-[200px]">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${iconSizes.sm} text-gray-400`} />
                 <Input
                   placeholder="Αναζήτηση μηνυμάτων..."
                   value={filters.searchTerm}
@@ -201,7 +212,7 @@ const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) =
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Όλα</SelectItem>
-                {Object.keys(CHANNEL_ICONS).filter(key => key !== 'default').map(channel => (
+                {Object.keys(MESSAGE_TYPES).map(channel => (
                   <SelectItem key={channel} value={channel}>{channel.toUpperCase()}</SelectItem>
                 ))}
               </SelectContent>
@@ -224,7 +235,7 @@ const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) =
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Όλα</SelectItem>
-                {Object.keys(STATUS_ICONS).filter(key => key !== 'default').map(status => (
+                {Object.keys(MESSAGE_STATUSES).filter(key => key !== 'default').map(status => (
                   <SelectItem key={status} value={status}>{status}</SelectItem>
                 ))}
               </SelectContent>
@@ -237,7 +248,7 @@ const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) =
         <div className={`space-y-2 overflow-y-auto`} style={createDynamicHeightConfig(height).containerStyle}>
           {filteredMessages.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              <MessageSquare className="h-12 w-12 mx-auto mb-2 opacity-30" />
+              <MessageSquare className={`${iconSizes.xl} mx-auto mb-2 opacity-30`} />
               <p>Δεν βρέθηκαν μηνύματα</p>
             </div>
           ) : (
@@ -248,7 +259,7 @@ const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) =
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
                     <div className={`p-2 rounded-full ${CHANNEL_COLORS[message.channel] || CHANNEL_COLORS.default}`}>
-                      {CHANNEL_ICONS[message.channel] || CHANNEL_ICONS.default}
+                      {getChannelIcon(message.channel)}
                     </div>
 
                     <div className="flex-1 min-w-0">
@@ -268,13 +279,13 @@ const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) =
                           />
                         </div>
                         <div className="flex items-center gap-2 text-sm text-gray-500" title={fullTime}>
-                          {STATUS_ICONS[message.status] || STATUS_ICONS.default}
+                          {getStatusIcon(message.status)}
                           <span>{relativeTime}</span>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-2 mb-2 text-sm">
-                        <User className="h-3 w-3" />
+                        <User className={iconSizes.xs} />
                         <span className="font-medium">
                           {message.direction === MESSAGE_DIRECTIONS.INBOUND 
                             ? `Από: ${message.from}` 
@@ -307,9 +318,9 @@ const UnifiedInbox = ({ leadId = null, showFilters = true, height = "600px" }) =
 
                     <div className="flex flex-col gap-1">
                       {message.externalId && (
-                        <Button asChild variant="ghost" size="sm" className="h-6 w-6 p-0">
+                        <Button asChild variant="ghost" size="sm" className={`${iconSizes.md} p-0`}>
                            <a href="#" target="_blank" rel="noopener noreferrer" aria-label="Open original message">
-                              <ExternalLink className="h-3 w-3" />
+                              <ExternalLink className={iconSizes.xs} />
                            </a>
                         </Button>
                       )}

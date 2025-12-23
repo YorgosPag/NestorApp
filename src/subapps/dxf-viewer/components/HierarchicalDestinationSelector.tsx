@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import {
   Building,
   Building2,
@@ -32,6 +33,7 @@ export function HierarchicalDestinationSelector({
   onDestinationSelect,
   selectedDestination
 }: HierarchicalDestinationSelectorProps) {
+  const iconSizes = useIconSizes();
   const {
     companies,
     selectedCompany,
@@ -174,7 +176,7 @@ export function HierarchicalDestinationSelector({
   if (loading) {
     return (
       <div className="text-center py-8">
-        <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+        <div className={`animate-spin ${iconSizes.xl} border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4`}></div>
         <p className="text-gray-400">Φόρτωση δεδομένων...</p>
       </div>
     );
@@ -207,7 +209,7 @@ export function HierarchicalDestinationSelector({
               onClick={() => setCurrentStep('company')}
               className={`text-blue-400 ${HOVER_TEXT_EFFECTS.LIGHTER} flex items-center space-x-1`}
             >
-              <Building className="h-4 w-4" />
+              <Building className={iconSizes.sm} />
               <span>{selectedCompany.companyName}</span>
             </button>
             {selectedProject && <span className="text-gray-500">→</span>}
@@ -219,7 +221,7 @@ export function HierarchicalDestinationSelector({
               onClick={() => setCurrentStep('project')}
               className={`text-blue-400 ${HOVER_TEXT_EFFECTS.LIGHTER} flex items-center space-x-1`}
             >
-              <Folder className="h-4 w-4" />
+              <Folder className={iconSizes.sm} />
               <span>{selectedProject.name}</span>
             </button>
             {selectedBuilding && <span className="text-gray-500">→</span>}
@@ -231,7 +233,7 @@ export function HierarchicalDestinationSelector({
               onClick={() => setCurrentStep('building')}
               className={`text-blue-400 ${HOVER_TEXT_EFFECTS.LIGHTER} flex items-center space-x-1`}
             >
-              <Building2 className="h-4 w-4" />
+              <Building2 className={iconSizes.sm} />
               <span>{selectedBuilding.name}</span>
             </button>
             {selectedFloor && <span className="text-gray-500">→</span>}
@@ -239,7 +241,7 @@ export function HierarchicalDestinationSelector({
         )}
         {selectedFloor && (
           <span className="text-gray-300 flex items-center space-x-1">
-            <Home className="h-4 w-4" />
+            <Home className={iconSizes.sm} />
             <span>{selectedFloor.name}</span>
           </span>
         )}
@@ -258,7 +260,7 @@ export function HierarchicalDestinationSelector({
                 <SelectionButton
                   key={company.id}
                   onClick={() => handleCompanySelect(company.id!)}
-                  icon={<Building className="h-5 w-5" />}
+                  icon={<Building className={iconSizes.md} />}
                   title={company.companyName}
                   subtitle={company.industry}
                   extraInfo={company.vatNumber ? `ΑΦΜ: ${company.vatNumber}` : undefined}
@@ -285,7 +287,7 @@ export function HierarchicalDestinationSelector({
                   {projects.map(project => (
                     <SelectItem key={project.id} value={project.id}>
                       <div className="flex items-center space-x-2">
-                        <Folder className="h-4 w-4 text-blue-400" />
+                        <Folder className={`${iconSizes.sm} text-blue-400`} />
                         <span>{project.name}</span>
                         <span className="text-gray-400 text-xs">({project.buildings.length} κτίρια)</span>
                       </div>
@@ -309,7 +311,7 @@ export function HierarchicalDestinationSelector({
                 <SelectionButton
                   key={building.id}
                   onClick={() => handleBuildingSelect(building.id)}
-                  icon={<Building2 className="h-5 w-5" />}
+                  icon={<Building2 className={iconSizes.md} />}
                   title={building.name}
                   subtitle={`${building.floors.length} όροφοι`}
                 />
@@ -333,7 +335,7 @@ export function HierarchicalDestinationSelector({
                   className={`w-full text-left p-4 rounded-lg border border-gray-600 ${HOVER_BORDER_EFFECTS.GRAY} ${HOVER_BACKGROUND_EFFECTS.MUTED} transition-colors`}
                 >
                   <div className="flex items-center space-x-3">
-                    <Home className="h-6 w-6 text-blue-400" />
+                    <Home className={`${iconSizes.lg} text-blue-400`} />
                     <div>
                       <div className="text-white font-medium">{floor.name}</div>
                       <div className="text-gray-400 text-sm">
@@ -362,7 +364,7 @@ export function HierarchicalDestinationSelector({
               >
                 <div className="flex items-center space-x-3">
                   {React.createElement(getDestinationIcon(dest.type), {
-                    className: "h-6 w-6 text-blue-400"
+                    className: `${iconSizes.lg} text-blue-400`
                   })}
                   <div>
                     <div className="text-white font-medium">{dest.label}</div>

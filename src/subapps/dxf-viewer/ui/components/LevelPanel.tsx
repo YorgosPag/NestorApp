@@ -5,6 +5,7 @@ const DEBUG_LEVEL_PANEL = false;
 
 import React, { useState, useMemo, useCallback } from 'react';
 import { Trash2, Plus, Building2, Edit, MousePointer, Pen, Move, Info, Shapes } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { useOverlayStore } from '../../overlays/overlay-store';
 import { PANEL_TOKENS, PanelTokenUtils } from '../../config/panel-tokens';
 import { OverlayList } from '../OverlayList';
@@ -74,6 +75,7 @@ export function LevelPanel({
   onLayersMerge,
   onColorGroupsMerge
 }: LevelPanelProps = {}) {
+  const iconSizes = useIconSizes();
 
   const {
     levels,
@@ -315,7 +317,7 @@ export function LevelPanel({
                         className={PANEL_TOKENS.LEVEL_PANEL.ACTION_BUTTON.EDIT}
                         title="Μετονομασία επιπέδου"
                       >
-                        <Edit className="w-4 h-4" />
+                        <Edit className={iconSizes.sm} />
                     </button>
                     {!isOnlyLevel && (
                       <button
@@ -326,7 +328,7 @@ export function LevelPanel({
                         className={PANEL_TOKENS.LEVEL_PANEL.ACTION_BUTTON.DELETE}
                         title="Διαγραφή επιπέδου"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className={iconSizes.sm} />
                       </button>
                     )}
                   </div>
@@ -362,7 +364,7 @@ export function LevelPanel({
             {isAdding ? (
               <div className={PANEL_TOKENS.LEVEL_PANEL.ADD_BUTTON.LOADING_SPINNER}></div>
             ) : (
-              <Plus className="w-4 h-4" />
+              <Plus className={iconSizes.sm} />
             )}
           </button>
         </div>

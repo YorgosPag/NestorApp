@@ -5,6 +5,7 @@ import { CommonBadge } from '@/core/badges';
 import { ThemeProgressBar } from '@/core/progress/ThemeProgressBar';
 import { CheckCircle, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface MilestoneItemProps {
     milestone: any;
@@ -14,6 +15,7 @@ interface MilestoneItemProps {
 }
 
 export function MilestoneItem({ milestone, getStatusColor, getStatusText, getTypeIcon }: MilestoneItemProps) {
+    const iconSizes = useIconSizes();
     return (
         <div className="relative flex items-start gap-4">
             <div className={cn(
@@ -62,7 +64,7 @@ export function MilestoneItem({ milestone, getStatusColor, getStatusText, getTyp
                 {milestone.status === 'in-progress' && (
                     <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
                         <div className="flex items-center gap-2 text-sm text-blue-800 dark:text-blue-200">
-                            <Clock className="w-4 h-4" />
+                            <Clock className={iconSizes.sm} />
                             <span className="font-medium">Επόμενα βήματα:</span>
                         </div>
                         <ul className="mt-2 text-sm text-blue-700 dark:text-blue-300 space-y-1">
@@ -75,7 +77,7 @@ export function MilestoneItem({ milestone, getStatusColor, getStatusText, getTyp
 
                 {milestone.status === 'completed' && (
                     <div className="mt-4 flex items-center gap-2 text-sm text-green-600">
-                        <CheckCircle className="w-4 h-4" />
+                        <CheckCircle className={iconSizes.sm} />
                         <span>Ολοκληρώθηκε στις {new Date(milestone.date).toLocaleDateString('el-GR')}</span>
                     </div>
                 )}

@@ -15,6 +15,7 @@ import {
 import { useRulersGridContext } from "../systems/rulers-grid/RulersGridSystem";
 import { SimpleColorPicker } from "./color";
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // Force cursor styles for the panel to override canvas cursor settings
 const panelStyles = `
@@ -119,6 +120,7 @@ interface CursorSettingsPanelProps {
 }
 
 export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettingsPanelProps) {
+  const iconSizes = useIconSizes();
   const [settings, setSettings] = useState<CursorSettings>(getCursorSettings());
 
   // Get actual ruler settings from the system
@@ -449,7 +451,7 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
             </div>
             {settings.performance.precision_mode && (
               <div className="mb-3 ml-6 p-2 bg-blue-900/30 border border-blue-600/30 rounded text-xs text-blue-200 flex items-center gap-2">
-                <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                <div className={`${iconSizes.xs} bg-blue-400 rounded-full animate-pulse`}></div>
                 <span>PRECISION MODE ΕΝΕΡΓΟ - 4 δεκαδικά ψηφία</span>
               </div>
             )}

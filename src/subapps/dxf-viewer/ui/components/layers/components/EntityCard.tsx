@@ -5,6 +5,7 @@ import { Eye, EyeOff, Trash2, Edit2 } from 'lucide-react';
 import type { AnySceneEntity, SceneLayer } from '../../../../types/scene';
 import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 import { getDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface EntityCardProps {
   entity: AnySceneEntity;
@@ -51,6 +52,7 @@ export const EntityCard = ({
   onEntityRename,
   layerEntities
 }: EntityCardProps) => {
+  const iconSizes = useIconSizes();
   return (
     <div 
       key={entity.id}
@@ -85,7 +87,7 @@ export const EntityCard = ({
               onSetColorPickerEntity(showEntityColorPicker ? null : entity.id);
             }}
             className={`rounded-full border border-gray-500 ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} ${
-              isSelected ? 'w-3 h-3' : 'w-2 h-2'
+              isSelected ? iconSizes.xs : iconSizes.xs
             }`}
             className={getDynamicBackgroundClass(entity.color || layer.color)}
             title="Αλλαγή χρώματος entity"
@@ -153,9 +155,9 @@ export const EntityCard = ({
           title={entity.visible === false ? "Εμφάνιση" : "Απόκρυψη"}
         >
           {entity.visible === false ? (
-            <EyeOff className={isSelected ? 'w-3.5 h-3.5' : 'w-2.5 h-2.5'} />
+            <EyeOff className={isSelected ? iconSizes.sm : iconSizes.xs} />
           ) : (
-            <Eye className={isSelected ? 'w-3.5 h-3.5' : 'w-2.5 h-2.5'} />
+            <Eye className={isSelected ? iconSizes.sm : iconSizes.xs} />
           )}
         </button>
         
@@ -171,7 +173,7 @@ export const EntityCard = ({
           }`}
           title="Μετονομασία entity"
         >
-          <Edit2 className={isSelected ? 'w-3.5 h-3.5' : 'w-2.5 h-2.5'} />
+          <Edit2 className={isSelected ? iconSizes.sm : iconSizes.xs} />
         </button>
         
         {/* Delete Button */}
@@ -185,7 +187,7 @@ export const EntityCard = ({
           }`}
           title="Διαγραφή"
         >
-          <Trash2 className={isSelected ? 'w-3.5 h-3.5' : 'w-2.5 h-2.5'} />
+          <Trash2 className={isSelected ? iconSizes.sm : iconSizes.xs} />
         </button>
         
         {/* Selection indicator */}

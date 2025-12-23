@@ -15,6 +15,7 @@ import { SidebarBadge } from "@/components/sidebar/sidebar-badge"
 import { cn } from "@/lib/utils"
 import type { MenuItem } from "@/types/sidebar"
 import { TRANSITION_PRESETS } from '@/components/ui/effects'
+import { useIconSizes } from '@/hooks/useIconSizes'
 
 interface SidebarMenuItemProps {
   item: MenuItem
@@ -30,6 +31,7 @@ export function SidebarMenuItem({
   onToggleExpanded,
 }: SidebarMenuItemProps) {
   const { isMobile, setOpenMobile } = useSidebar();
+  const iconSizes = useIconSizes();
 
   // Handle navigation click with mobile sidebar auto-close
   const handleNavigationClick = () => {
@@ -60,7 +62,7 @@ export function SidebarMenuItem({
             {item.badge && <SidebarBadge badge={item.badge} />}
             <ChevronRight
               className={cn(
-                "ml-auto h-4 w-4",
+                `ml-auto ${iconSizes.sm}`,
                 TRANSITION_PRESETS.STANDARD_TRANSFORM,
                 isExpanded && "rotate-90"
               )}
@@ -79,7 +81,7 @@ export function SidebarMenuItem({
                     )}
                   >
                     <Link href={subItem.href} onClick={handleNavigationClick}>
-                      <subItem.icon className="h-4 w-4" />
+                      <subItem.icon className={iconSizes.sm} />
                       <span>{subItem.title}</span>
                     </Link>
                   </SidebarMenuSubButton>

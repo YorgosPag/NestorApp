@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { Building2, Home, Users } from 'lucide-react';
 import { CORE_HOVER_TRANSFORMS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects/hover-effects';
 import { layoutUtilities } from '@/styles/design-tokens';
@@ -19,11 +20,13 @@ interface NearbyProjectMarkerProps {
 }
 
 export function NearbyProjectMarker({ project, position }: NearbyProjectMarkerProps) {
+  const iconSizes = useIconSizes();
+
   const getIcon = (type: string) => {
     switch (type) {
-      case 'commercial': return <Building2 className="w-3 h-3" />;
-      case 'residential': return <Home className="w-3 h-3" />;
-      default: return <Users className="w-3 h-3" />;
+      case 'commercial': return <Building2 className={iconSizes.xs} />;
+      case 'residential': return <Home className={iconSizes.xs} />;
+      default: return <Users className={iconSizes.xs} />;
     }
   };
 
@@ -40,7 +43,7 @@ export function NearbyProjectMarker({ project, position }: NearbyProjectMarkerPr
           project.status === 'completed' ? 'bg-green-500' :
           'bg-yellow-500'
         )}>
-          <div className="w-4 h-4 text-white flex items-center justify-center">
+          <div className={`${iconSizes.sm} text-white flex items-center justify-center`}>
             {getIcon(project.type)}
           </div>
         </div>

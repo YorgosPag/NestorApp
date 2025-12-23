@@ -8,6 +8,7 @@ import React from 'react';
 import { Building, Construction, Home, MapPin, Map } from 'lucide-react';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { cn } from '@/lib/utils';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { useNavigation } from '../core/NavigationContext';
 import { NavigationButton } from './NavigationButton';
 import { NavigationBreadcrumb } from './NavigationBreadcrumb';
@@ -18,6 +19,7 @@ interface NavigationTreeProps {
 }
 
 export function NavigationTree({ className, onNavigateToPage }: NavigationTreeProps) {
+  const iconSizes = useIconSizes();
   const {
     companies,
     selectedCompany,
@@ -67,7 +69,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
   if (loading) {
     return (
       <div className={`text-center py-8 ${className || ''}`}>
-        <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+        <div className={`animate-spin ${iconSizes.xl} border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4`}></div>
         <p className="text-gray-500 dark:text-muted-foreground">Φόρτωση δεδομένων...</p>
       </div>
     );

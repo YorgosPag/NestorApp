@@ -35,6 +35,7 @@
 
 import { useMemo } from 'react';
 import type { ButtonProps } from '@/components/ui/button';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // ============================================================================
 // 🎯 HOOK INTERFACE - TYPE-SAFE RETURNS
@@ -169,6 +170,7 @@ export interface UseButtonPatternsReturn {
  * @returns {UseButtonPatternsReturn} All button patterns με utility methods
  */
 export function useButtonPatterns(): UseButtonPatternsReturn {
+  const iconSizes = useIconSizes();
 
   // ============================================================================
   // 🚀 MEMOIZED BUTTON PATTERNS - PERFORMANCE OPTIMIZED
@@ -253,22 +255,22 @@ export function useButtonPatterns(): UseButtonPatternsReturn {
       iconSmall: {
         variant: 'ghost' as const,
         size: 'sm' as const,
-        className: 'h-6 w-6 p-0',
+        className: `${iconSizes.lg} p-0`,
       },
       iconMedium: {
         variant: 'outline' as const,
         size: 'default' as const,
-        className: 'h-8 w-8 p-0',
+        className: `${iconSizes.xl} p-0`,
       },
       iconGhost: {
         variant: 'ghost' as const,
         size: 'sm' as const,
-        className: 'h-7 w-7 p-1',
+        className: `${iconSizes.lg} p-1`,
       },
       iconOutline: {
         variant: 'outline' as const,
         size: 'sm' as const,
-        className: 'h-7 w-7 p-1',
+        className: `${iconSizes.lg} p-1`,
       },
     },
 
@@ -277,7 +279,7 @@ export function useButtonPatterns(): UseButtonPatternsReturn {
       iconButton: 'p-2 rounded-md border bg-background border-border hover:bg-accent hover:text-accent-foreground transition-colors duration-200',
       tabButton: 'px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 hover:bg-accent hover:text-accent-foreground',
       menuButton: 'w-full px-2 py-1.5 text-sm text-left rounded-sm hover:bg-accent hover:text-accent-foreground transition-colors duration-200',
-      floatingButton: 'fixed bottom-4 right-4 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-shadow duration-300',
+      floatingButton: `fixed bottom-4 right-4 ${iconSizes.xl3} rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-shadow duration-300`,
     },
 
     // 💎 SPECIAL PURPOSE PATTERNS
@@ -351,10 +353,10 @@ export function useButtonPatterns(): UseButtonPatternsReturn {
 
     getIcon: (type) => {
       const iconMap = {
-        iconSmall: { variant: 'ghost' as const, size: 'sm' as const, className: 'h-6 w-6 p-0' },
-        iconMedium: { variant: 'outline' as const, size: 'default' as const, className: 'h-8 w-8 p-0' },
-        iconGhost: { variant: 'ghost' as const, size: 'sm' as const, className: 'h-7 w-7 p-1' },
-        iconOutline: { variant: 'outline' as const, size: 'sm' as const, className: 'h-7 w-7 p-1' },
+        iconSmall: { variant: 'ghost' as const, size: 'sm' as const, className: `${iconSizes.lg} p-0` },
+        iconMedium: { variant: 'outline' as const, size: 'default' as const, className: `${iconSizes.xl} p-0` },
+        iconGhost: { variant: 'ghost' as const, size: 'sm' as const, className: `${iconSizes.lg} p-1` },
+        iconOutline: { variant: 'outline' as const, size: 'sm' as const, className: `${iconSizes.lg} p-1` },
       };
       return iconMap[type];
     },

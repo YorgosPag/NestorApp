@@ -8,6 +8,7 @@ import {
   getSkeletonChartContainerStyles,
   getSkeletonChartBarsStyles
 } from './SkeletonComponents.styles';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // Base skeleton component
 export function Skeleton({ 
@@ -37,7 +38,7 @@ export function SkeletonText({
         <Skeleton
           key={i}
           className={cn(
-            "h-4",
+            iconSizes.sm,
             i === lines - 1 && lines > 1 ? "w-3/4" : "w-full"
           )}
         />
@@ -47,16 +48,17 @@ export function SkeletonText({
 }
 
 // Avatar skeleton
-export function SkeletonAvatar({ 
+export function SkeletonAvatar({
   size = "md",
   className,
-  ...props 
+  ...props
 }: React.HTMLAttributes<HTMLDivElement> & { size?: "sm" | "md" | "lg" | "xl" }) {
+  const iconSizes = useIconSizes();
   const sizeClasses = {
-    sm: "h-8 w-8",
-    md: "h-12 w-12", 
-    lg: "h-16 w-16",
-    xl: "h-24 w-24"
+    sm: iconSizes.xl, // h-8 w-8
+    md: iconSizes.xl2, // h-12 w-12
+    lg: iconSizes.xl4, // h-16 w-16
+    xl: iconSizes.xl6   // h-24 w-24
   };
 
   return (
@@ -72,19 +74,21 @@ export function SkeletonAvatar({
 }
 
 // Card skeleton
-export function SkeletonCard({ 
+export function SkeletonCard({
   showHeader = true,
   showAvatar = false,
   lines = 3,
   showActions = true,
   className,
-  ...props 
+  ...props
 }: React.HTMLAttributes<HTMLDivElement> & {
   showHeader?: boolean;
   showAvatar?: boolean;
   lines?: number;
   showActions?: boolean;
 }) {
+  const iconSizes = useIconSizes();
+
   return (
     <div
       className={cn(
@@ -98,11 +102,11 @@ export function SkeletonCard({
           <div className="flex items-center space-x-3">
             {showAvatar && <SkeletonAvatar size="sm" />}
             <div>
-              <Skeleton className="h-5 w-32 mb-1" />
-              <Skeleton className="h-3 w-24" />
+              <Skeleton className={`${iconSizes.md} w-32 mb-1`} />
+              <Skeleton className={`${iconSizes.xs} w-24`} />
             </div>
           </div>
-          <Skeleton className="h-6 w-16 rounded-full" />
+          <Skeleton className={`${iconSizes.lg} w-16 rounded-full`} />
         </div>
       )}
       
@@ -110,9 +114,9 @@ export function SkeletonCard({
       
       {showActions && (
         <div className="flex space-x-2">
-          <Skeleton className="h-8 w-16" />
-          <Skeleton className="h-8 w-16" />
-          <Skeleton className="h-8 w-8" />
+          <Skeleton className={`${iconSizes.xl} w-16`} />
+          <Skeleton className={`${iconSizes.xl} w-16`} />
+          <Skeleton className={iconSizes.xl} />
         </div>
       )}
     </div>
@@ -146,7 +150,7 @@ export function SkeletonTable({
             style={getSkeletonTableGridStyles(columns)}
           >
             {Array.from({ length: columns }).map((_, i) => (
-              <Skeleton key={i} className="h-4 w-20" />
+              <Skeleton key={i} className={`${iconSizes.sm} w-20`} />
             ))}
           </div>
         </div>
@@ -160,7 +164,7 @@ export function SkeletonTable({
               style={getSkeletonTableGridStyles(columns)}
             >
               {Array.from({ length: columns }).map((_, colIndex) => (
-                <Skeleton key={colIndex} className="h-4 w-full" />
+                <Skeleton key={colIndex} className={`${iconSizes.sm} w-full`} />
               ))}
             </div>
           </div>
@@ -190,7 +194,7 @@ export function SkeletonForm({
       )}
       {...props}
     >
-      {showTitle && <Skeleton className="h-8 w-48" />}
+      {showTitle && <Skeleton className={`${iconSizes.xl} w-48`} />}
       
       <div className={cn(
         "grid gap-4",
@@ -198,30 +202,31 @@ export function SkeletonForm({
       )}>
         {Array.from({ length: fields }).map((_, i) => (
           <div key={i} className="space-y-2">
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-10 w-full" />
+            <Skeleton className={`${iconSizes.sm} w-24`} />
+            <Skeleton className={`${iconSizes.xl2} w-full`} />
           </div>
         ))}
       </div>
       
       <div className="flex justify-end space-x-3">
-        <Skeleton className="h-10 w-20" />
-        <Skeleton className="h-10 w-20" />
+        <Skeleton className={`${iconSizes.xl2} w-20`} />
+        <Skeleton className={`${iconSizes.xl2} w-20`} />
       </div>
     </div>
   );
 }
 
 // Chart skeleton
-export function SkeletonChart({ 
+export function SkeletonChart({
   type = "bar",
   showLegend = true,
   className,
-  ...props 
+  ...props
 }: React.HTMLAttributes<HTMLDivElement> & {
   type?: "bar" | "line" | "pie" | "area";
   showLegend?: boolean;
 }) {
+  const iconSizes = useIconSizes();
   return (
     <div
       className={cn(
@@ -231,16 +236,16 @@ export function SkeletonChart({
       {...props}
     >
       <div className="flex items-center justify-between">
-        <Skeleton className="h-6 w-32" />
+        <Skeleton className={`${iconSizes.lg} w-32`} />
         {showLegend && (
           <div className="flex space-x-4">
             <div className="flex items-center space-x-2">
-              <Skeleton className="h-3 w-3 rounded-full" />
-              <Skeleton className="h-3 w-16" />
+              <Skeleton className={`${iconSizes.xs} rounded-full`} />
+              <Skeleton className={`${iconSizes.xs} w-16`} />
             </div>
             <div className="flex items-center space-x-2">
-              <Skeleton className="h-3 w-3 rounded-full" />
-              <Skeleton className="h-3 w-16" />
+              <Skeleton className={`${iconSizes.xs} rounded-full`} />
+              <Skeleton className={`${iconSizes.xs} w-16`} />
             </div>
           </div>
         )}
@@ -252,7 +257,7 @@ export function SkeletonChart({
             {Array.from({ length: 6 }).map((_, i) => (
               <Skeleton
                 key={i}
-                className="w-8"
+                className={iconSizes.xl}
                 style={getSkeletonBarHeight(20, 100)}
               />
             ))}
@@ -267,7 +272,7 @@ export function SkeletonChart({
         
         {type === "pie" && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <Skeleton className="h-32 w-32 rounded-full" />
+            <Skeleton className={`${iconSizes.xl8} rounded-full`} />
           </div>
         )}
       </div>
@@ -293,12 +298,12 @@ export function SkeletonNavigation({
       )}
       {...props}
     >
-      {showLogo && <Skeleton className="h-8 w-32 mb-6" />}
+      {showLogo && <Skeleton className={`${iconSizes.xl} w-32 mb-6`} />}
       
       {Array.from({ length: items }).map((_, i) => (
         <div key={i} className="flex items-center space-x-3 p-2">
-          <Skeleton className="h-5 w-5 rounded" />
-          <Skeleton className="h-4 flex-1" />
+          <Skeleton className={`${iconSizes.md} rounded`} />
+          <Skeleton className={`${iconSizes.sm} flex-1`} />
         </div>
       ))}
     </div>
@@ -325,11 +330,11 @@ export function SkeletonStatsCard({
     >
       <div className="flex items-center justify-between">
         <div className="space-y-2">
-          <Skeleton className="h-4 w-16" />
-          <Skeleton className="h-8 w-20" />
-          {showTrend && <Skeleton className="h-3 w-24" />}
+          <Skeleton className={`${iconSizes.sm} w-16`} />
+          <Skeleton className={`${iconSizes.xl} w-20`} />
+          {showTrend && <Skeleton className={`${iconSizes.xs} w-24`} />}
         </div>
-        {showIcon && <Skeleton className="h-8 w-8 rounded" />}
+        {showIcon && <Skeleton className={`${iconSizes.xl} rounded`} />}
       </div>
     </div>
   );
@@ -356,7 +361,7 @@ export function SkeletonModal({
       >
         {showHeader && (
           <div className="p-6 border-b">
-            <Skeleton className="h-6 w-48" />
+            <Skeleton className={`${iconSizes.lg} w-48`} />
           </div>
         )}
         
@@ -368,8 +373,8 @@ export function SkeletonModal({
         
         {showFooter && (
           <div className="p-6 border-t flex justify-end space-x-3">
-            <Skeleton className="h-10 w-20" />
-            <Skeleton className="h-10 w-20" />
+            <Skeleton className={`${iconSizes.xl2} w-20`} />
+            <Skeleton className={`${iconSizes.xl2} w-20`} />
           </div>
         )}
       </div>

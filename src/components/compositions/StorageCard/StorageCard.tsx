@@ -5,6 +5,8 @@ import { BaseCard } from '@/components/core/BaseCard/BaseCard';
 import { UnitBadge, CommonBadge } from '@/core/badges';
 import { HOVER_SHADOWS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { Package, MapPin, Ruler, Thermometer, Shield, Edit, Trash2 } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
+import { badgeVariants } from '@/components/ui/badge';
 import type { StorageUnit, StorageType, StorageStatus } from '@/types/storage';
 
 interface StorageCardProps {
@@ -52,19 +54,31 @@ const defaultGetTypeIcon = (type: StorageType) => {
   return typeIcons[type] || Package;
 };
 
-export function StorageCard({ 
-  unit, 
+const getStatusBadgeClass = (status: StorageStatus) => {
+  const statusClasses: Record<StorageStatus, string> = {
+    'available': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+    'occupied': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+    'reserved': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
+    'maintenance': 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300',
+    'unavailable': 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300'
+  };
+  return statusClasses[status] || 'bg-gray-100 text-gray-800';
+};
+
+export function StorageCard({
+  unit,
   isSelected,
   onSelect,
-  onEdit, 
+  onEdit,
   onDelete,
   getStatusColor,
   getStatusLabel = defaultGetStatusLabel,
   getTypeIcon = defaultGetTypeIcon,
   getTypeLabel = defaultGetTypeLabel
 }: StorageCardProps) {
+  const iconSizes = useIconSizes();
   const [isFavorite, setIsFavorite] = useState(false);
-  
+
   const TypeIcon = getTypeIcon(unit.type);
 
   const formatArea = (area?: number) => {
@@ -86,7 +100,7 @@ export function StorageCard({
       // Header configuration
       headerConfig={{
         backgroundGradient: "from-amber-100 via-orange-50 to-yellow-100 dark:from-amber-950 dark:via-orange-950 dark:to-yellow-900",
-        logo: <TypeIcon className="w-8 h-8 text-amber-600 dark:text-amber-400" />,
+        logo: <TypeIcon className={`${iconSizes.xl} text-amber-600 dark:text-amber-400`} />,
         showImageOverlay: false
       }}
       
@@ -119,7 +133,7 @@ export function StorageCard({
             <div className="space-y-1">
               {unit.building && (
                 <div className="flex items-center gap-2 text-sm">
-                  <MapPin className="w-4 h-4 text-muted-foreground" />
+                  <MapPin className={`${iconSizes.sm} text-muted-foreground`} />
                   <span>{unit.building}</span>
                 </div>
               )}
@@ -146,7 +160,7 @@ export function StorageCard({
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Εμβαδόν:</span>
                   <span className="font-medium flex items-center gap-1">
-                    <Ruler className="w-3 h-3" />
+                    <Ruler className={iconSizes.xs} />
                     {formatArea(unit.area)}
                   </span>
                 </div>
@@ -184,13 +198,13 @@ export function StorageCard({
               )}
               {unit.hasSecurity && (
                 <span className={badgeVariants({ variant: 'secondary', size: 'sm' })}>
-                  <Shield className="w-3 h-3 mr-1" />
+                  <Shield className={`${iconSizes.xs} mr-1`} />
                   Ασφάλεια
                 </span>
               )}
               {unit.hasClimateControl && (
                 <span className={badgeVariants({ variant: 'secondary', size: 'sm' })}>
-                  <Thermometer className="w-3 h-3 mr-1" />
+                  <Thermometer className={`${iconSizes.xs} mr-1`} />
                   Κλιματισμός
                 </span>
               )}

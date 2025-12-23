@@ -6,6 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Ruler, ZoomIn, ZoomOut } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface MapControlsProps {
     showNearbyProjects: boolean;
@@ -20,6 +21,7 @@ export function MapControls({
     selectedLayer,
     setSelectedLayer,
 }: MapControlsProps) {
+    const iconSizes = useIconSizes();
     return (
         <div className="mt-4 flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -37,7 +39,7 @@ export function MapControls({
                 <div className="flex items-center gap-2">
                     <Label className="text-sm">Φίλτρο:</Label>
                     <Select value={selectedLayer} onValueChange={(value) => setSelectedLayer(value as any)}>
-                        <SelectTrigger className="w-[180px] h-9 text-sm">
+                        <SelectTrigger className={`w-[180px] ${iconSizes.xl} text-sm`}>
                             <SelectValue placeholder="Επιλογή φίλτρου" />
                         </SelectTrigger>
                         <SelectContent>
@@ -51,13 +53,13 @@ export function MapControls({
 
             <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm">
-                    <ZoomIn className="w-4 h-4 mr-2" /> Zoom In
+                    <ZoomIn className={`${iconSizes.sm} mr-2`} /> Zoom In
                 </Button>
                 <Button variant="outline" size="sm">
-                    <ZoomOut className="w-4 h-4 mr-2" /> Zoom Out
+                    <ZoomOut className={`${iconSizes.sm} mr-2`} /> Zoom Out
                 </Button>
                 <Button variant="outline" size="sm">
-                    <Ruler className="w-4 h-4 mr-2" /> Μέτρηση απόστασης
+                    <Ruler className={`${iconSizes.sm} mr-2`} /> Μέτρηση απόστασης
                 </Button>
             </div>
         </div>

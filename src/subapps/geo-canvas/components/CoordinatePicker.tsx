@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { useGeoTransform } from '../hooks/useGeoTransform';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { DxfCoordinate, GeoCoordinate } from '../types';
 import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
@@ -32,6 +33,7 @@ export function CoordinatePicker({
   onCancel,
   className = ''
 }: CoordinatePickerProps) {
+  const iconSizes = useIconSizes();
   const [transformState, transformActions] = useGeoTransform();
   const [pickingMode, setPickingMode] = useState<PickingMode>('idle');
 
@@ -266,7 +268,7 @@ export function CoordinatePicker({
           🌍 Geographic Coordinates
         </h3>
         <div className="flex items-center space-x-2">
-          <span className={`w-2 h-2 rounded-full ${
+          <span className={`${iconSizes.xs} rounded-full ${
             selectedGeoPoint ? 'bg-green-400' : 'bg-gray-400'
           }`} />
           <span className="text-xs text-gray-400">

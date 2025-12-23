@@ -11,6 +11,7 @@ import {
   type ChartPayloadItem
 } from "./ChartComponents.styles"
 import { layoutUtilities } from '@/styles/design-tokens';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 const ChartLegendContent = React.forwardRef<
   HTMLDivElement,
@@ -21,6 +22,7 @@ const ChartLegendContent = React.forwardRef<
     ref
   ) => {
     const { config } = useChart()
+    const iconSizes = useIconSizes()
 
     if (!payload?.length) {
       return null
@@ -40,7 +42,7 @@ const ChartLegendContent = React.forwardRef<
             <div
               key={item.value}
               className={cn(
-                "[&>svg]:h-3 [&>svg]:w-3 [&>svg]:text-muted-foreground"
+`[&>svg]:${iconSizes.xs} [&>svg]:text-muted-foreground`
               )}
               style={getLegendItemStyles()}
             >

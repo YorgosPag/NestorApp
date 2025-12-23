@@ -46,6 +46,7 @@ import {
 } from 'lucide-react';
 import { ConfigurationHealthCheck } from '@/core/configuration';
 import executeEnterpriseMigration from '@/enterprise-hardcoded-values-elimination';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface SystemStatus {
   isHealthy: boolean;
@@ -65,6 +66,7 @@ interface MigrationState {
 }
 
 export default function EnterpriseMigrationPage() {
+  const iconSizes = useIconSizes();
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
   const [migrationState, setMigrationState] = useState<MigrationState>({
     isRunning: false,
@@ -215,7 +217,7 @@ export default function EnterpriseMigrationPage() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Activity className="h-5 w-5" />
+          <Activity className={iconSizes.md} />
           System Status
         </CardTitle>
       </CardHeader>
@@ -234,7 +236,7 @@ export default function EnterpriseMigrationPage() {
             <div className="grid gap-2">
               {systemStatus.errors.length > 0 && (
                 <Alert variant="destructive">
-                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTriangle className={iconSizes.sm} />
                   <AlertDescription>
                     {systemStatus.errors.length} error(s) detected
                   </AlertDescription>
@@ -243,7 +245,7 @@ export default function EnterpriseMigrationPage() {
 
               {systemStatus.warnings.length > 0 && (
                 <Alert>
-                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTriangle className={iconSizes.sm} />
                   <AlertDescription>
                     {systemStatus.warnings.length} warning(s) detected
                   </AlertDescription>
@@ -252,7 +254,7 @@ export default function EnterpriseMigrationPage() {
 
               {systemStatus.isHealthy && (
                 <Alert>
-                  <CheckCircle className="h-4 w-4" />
+                  <CheckCircle className={iconSizes.sm} />
                   <AlertDescription>
                     System is healthy and ready for migration
                   </AlertDescription>
@@ -271,7 +273,7 @@ export default function EnterpriseMigrationPage() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Database className="h-5 w-5" />
+          <Database className={iconSizes.md} />
           Migration Controls
         </CardTitle>
       </CardHeader>
@@ -286,12 +288,12 @@ export default function EnterpriseMigrationPage() {
             >
               {migrationState.isRunning ? (
                 <>
-                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  <RefreshCw className={`mr-2 ${iconSizes.sm} animate-spin`} />
                   Migration Running...
                 </>
               ) : (
                 <>
-                  <PlayCircle className="mr-2 h-4 w-4" />
+                  <PlayCircle className={`mr-2 ${iconSizes.sm}`} />
                   Start Enterprise Migration
                 </>
               )}
@@ -305,7 +307,7 @@ export default function EnterpriseMigrationPage() {
               className="w-full"
               size="lg"
             >
-              <RefreshCw className="mr-2 h-4 w-4" />
+              <RefreshCw className={`mr-2 ${iconSizes.sm}`} />
               Reset Migration
             </Button>
           )}
@@ -326,9 +328,9 @@ export default function EnterpriseMigrationPage() {
           {migrationState.completed && (
             <Alert variant={migrationState.success ? "default" : "destructive"}>
               {migrationState.success ? (
-                <CheckCircle className="h-4 w-4" />
+                <CheckCircle className={iconSizes.sm} />
               ) : (
-                <AlertTriangle className="h-4 w-4" />
+                <AlertTriangle className={iconSizes.sm} />
               )}
               <AlertDescription>
                 Migration {migrationState.success ? 'completed successfully' : 'failed'}
@@ -345,7 +347,7 @@ export default function EnterpriseMigrationPage() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <FileText className="h-5 w-5" />
+          <FileText className={iconSizes.md} />
           Migration Logs
           <Button
             onClick={clearLogs}
@@ -379,7 +381,7 @@ export default function EnterpriseMigrationPage() {
     <div className="container mx-auto p-6 max-w-6xl">
       <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2 flex items-center gap-3">
-          <Shield className="h-8 w-8 text-blue-600" />
+          <Shield className={`${iconSizes.xl2} text-blue-600`} />
           Enterprise Hardcoded Values Migration
         </h1>
         <p className="text-gray-600">
@@ -398,7 +400,7 @@ export default function EnterpriseMigrationPage() {
 
       <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
         <h3 className="font-semibold mb-2 flex items-center gap-2">
-          <CheckCircle className="h-5 w-5 text-blue-600" />
+          <CheckCircle className={`${iconSizes.md} text-blue-600`} />
           Migration Benefits
         </h3>
         <ul className="text-sm space-y-1 text-blue-800">

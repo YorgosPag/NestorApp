@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ToolDefinition, ActionDefinition } from './types';
 import { ChevronDown } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 
 interface ToolButtonProps {
@@ -15,6 +16,7 @@ interface ToolButtonProps {
 }
 
 export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick, onDropdownSelect, disabled, activeTool }) => {
+  const iconSizes = useIconSizes();
   // Determine which icon to show - if activeTool matches a dropdown option, use that icon
   let IconComponent = tool.icon;
   if (tool.dropdownOptions && activeTool) {
@@ -76,7 +78,7 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
           ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
         `}
       >
-        {IconComponent ? <IconComponent className="w-5 h-5 text-current" /> : <span className="text-xs font-bold">{tool.label?.charAt(0) || '?'}</span>}
+        {IconComponent ? <IconComponent className={`${iconSizes.md} text-current`} /> : <span className="text-xs font-bold">{tool.label?.charAt(0) || '?'}</span>}
       </button>
     );
   }
@@ -99,7 +101,7 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
             ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
           `}
         >
-          {IconComponent ? <IconComponent className="w-5 h-5 text-current" /> : <span className="text-xs font-bold">{tool.label?.charAt(0) || '?'}</span>}
+          {IconComponent ? <IconComponent className={`${iconSizes.md} text-current`} /> : <span className="text-xs font-bold">{tool.label?.charAt(0) || '?'}</span>}
         </button>
         <button
           onClick={handleDropdownToggle}
@@ -116,7 +118,7 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
             ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
           `}
         >
-          <ChevronDown className="w-3 h-3 text-current" />
+          <ChevronDown className={`${iconSizes.xs} text-current`} />
         </button>
       </div>
 
@@ -130,7 +132,7 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
                 onClick={() => handleDropdownItemClick(option.id)}
                 className={`w-full px-3 py-2 text-left text-sm text-gray-200 flex items-center gap-2 first:rounded-t-md last:rounded-b-md ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
               >
-                {OptionIcon && <OptionIcon className="w-4 h-4" />}
+                {OptionIcon && <OptionIcon className={iconSizes.sm} />}
                 {option.label}
               </button>
             );
@@ -146,6 +148,7 @@ interface ActionButtonProps {
 }
 
 export const ActionButton: React.FC<ActionButtonProps> = ({ action }) => {
+  const iconSizes = useIconSizes();
   const IconComponent = action.icon;
   
   return (
@@ -165,7 +168,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({ action }) => {
         }
       `}
     >
-      {IconComponent ? <IconComponent className="w-4 h-4" /> : <span className="text-xs font-bold">{action.label?.charAt(0) || '?'}</span>}
+      {IconComponent ? <IconComponent className={iconSizes.sm} /> : <span className="text-xs font-bold">{action.label?.charAt(0) || '?'}</span>}
     </button>
   );
 };

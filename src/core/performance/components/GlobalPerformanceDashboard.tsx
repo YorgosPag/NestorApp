@@ -41,6 +41,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { useEnterprisePerformance } from '../hooks/useEnterprisePerformance';
 import {
   PerformanceCategory,
@@ -88,6 +89,7 @@ export const GlobalPerformanceDashboard: React.FC<GlobalPerformanceDashboardProp
   className,
   theme = 'auto'
 }) => {
+  const iconSizes = useIconSizes();
   const [mounted, setMounted] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const [showOptimizations, setShowOptimizations] = useState(false);
@@ -190,7 +192,7 @@ export const GlobalPerformanceDashboard: React.FC<GlobalPerformanceDashboardProp
           'fixed top-4 right-4 z-[9999] p-2 bg-background border border-border rounded-lg shadow-lg hover:bg-accent transition-colors'}
         title="Show Performance Dashboard"
       >
-        <Activity className="h-4 w-4" />
+        <Activity className={iconSizes.sm} />
       </button>
     );
   }
@@ -211,7 +213,7 @@ export const GlobalPerformanceDashboard: React.FC<GlobalPerformanceDashboardProp
         onMouseDown={handleMouseDown}
       >
         <div className="flex items-center gap-3 flex-1">
-          <Activity className="h-4 w-4" style={performanceMonitorUtilities.getOverlayIconStyles('primary')} />
+          <Activity className={iconSizes.sm} style={performanceMonitorUtilities.getOverlayIconStyles('primary')} />
           <h3 className="text-sm font-semibold" style={performanceMonitorUtilities.getOverlayTitleStyles()}>Performance Monitor</h3>
           <PerformanceGradeBadge grade={status.grade} />
           {/* 🖱️ DEDICATED DRAG HANDLE για εύκολο dragging */}
@@ -231,7 +233,7 @@ export const GlobalPerformanceDashboard: React.FC<GlobalPerformanceDashboardProp
             style={performanceMonitorUtilities.getOverlayButtonStyles()}
             title="Toggle optimizations"
           >
-            <Settings className="h-3 w-3" />
+            <Settings className={iconSizes.xs} />
           </button>
           <button
             onClick={() => setIsVisible(false)}
@@ -239,7 +241,7 @@ export const GlobalPerformanceDashboard: React.FC<GlobalPerformanceDashboardProp
             style={performanceMonitorUtilities.getOverlayButtonStyles()}
             title="Hide dashboard"
           >
-            <X className="h-3 w-3" />
+            <X className={iconSizes.xs} />
           </button>
         </div>
       </CardHeader>
@@ -296,10 +298,11 @@ const PerformanceGradeBadge: React.FC<{ grade: string }> = ({ grade }) => {
  * 📊 Current Metrics Display - 2x2 Grid Enterprise Layout
  */
 const CurrentMetrics: React.FC<{ metrics: any }> = ({ metrics }) => {
+  const iconSizes = useIconSizes();
   if (!metrics) {
     return (
       <div className={cn(designSystem.presets.text.muted, "text-center p-6")}>
-        <Cpu className="w-8 h-8 mx-auto mb-2 opacity-50" />
+        <Cpu className={`${iconSizes.xl} mx-auto mb-2 opacity-50`} />
         Initializing performance monitoring...
       </div>
     );
@@ -361,6 +364,7 @@ const DxfMetricCard: React.FC<{
   type: 'fps' | 'memory' | 'render' | 'elements';
   trend: 'up' | 'down' | null;
 }> = ({ icon, label, value, unit, type, trend }) => {
+  const iconSizes = useIconSizes();
   const valueColorClass = performanceMonitorUtilities.getMetricValueClasses(type, value);
 
   return (
@@ -372,7 +376,7 @@ const DxfMetricCard: React.FC<{
         <span className={designSystem.presets.text.caption}>
           {label}
         </span>
-        <div className={cn("w-4 h-4", valueColorClass)}>
+        <div className={cn(iconSizes.sm, valueColorClass)}>
           {icon}
         </div>
       </div>
@@ -387,7 +391,7 @@ const DxfMetricCard: React.FC<{
         </span>
         {trend && (
           <div
-            className="w-4 h-4"
+            className={iconSizes.sm}
             style={{
               color: trend === 'up'
                 ? performanceComponents.performanceMonitor.colors.fps.excellent
@@ -409,6 +413,7 @@ const PerformanceAlerts: React.FC<{
   alerts: any[];
   onClearAlerts: () => void;
 }> = ({ alerts, onClearAlerts }) => {
+  const iconSizes = useIconSizes();
   return (
     <div
       className="rounded-lg border p-3"
@@ -420,7 +425,7 @@ const PerformanceAlerts: React.FC<{
     >
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <AlertTriangle className="h-3 w-3" style={{ color: performanceComponents.performanceMonitor.colors.alerts.icon }} />
+          <AlertTriangle className={iconSizes.xs} style={{ color: performanceComponents.performanceMonitor.colors.alerts.icon }} />
           <span className={cn(
             designSystem.presets.text.caption,
             "font-medium"
@@ -482,13 +487,14 @@ const QuickActions: React.FC<{
   controls: any;
   recommendations: any[];
 }> = ({ controls, recommendations }) => {
+  const iconSizes = useIconSizes();
   return (
     <div className="flex flex-col gap-performance-sm">
       <div className="flex items-center justify-between">
         <div className="flex gap-performance-sm">
           <ActionButton
             onClick={controls.measurePerformance}
-            icon={<RefreshCcw className="h-3 w-3" />}
+            icon={<RefreshCcw className={iconSizes.xs} />}
             label="Test"
             variant="blue"
             title="Measure performance"
@@ -496,7 +502,7 @@ const QuickActions: React.FC<{
           {recommendations.length > 0 && (
             <ActionButton
               onClick={controls.applyAllOptimizations}
-              icon={<Zap className="h-3 w-3" />}
+              icon={<Zap className={iconSizes.xs} />}
               label="Optimize"
               variant="green"
               title="Apply all optimizations"
@@ -511,7 +517,7 @@ const QuickActions: React.FC<{
       {/* 📊 DETAILED ANALYTICS BUTTON */}
       <ActionButton
         onClick={() => window.open('/admin/performance', '_blank')}
-        icon={<BarChart3 className="h-3 w-3" />}
+        icon={<BarChart3 className={iconSizes.xs} />}
         label="Detailed Analytics"
         variant="purple"
         title="Open detailed analytics dashboard"
@@ -529,11 +535,12 @@ const OptimizationPanel: React.FC<{
   onApplyOptimization: (id: string) => Promise<boolean>;
   onApplyAll: () => Promise<void>;
 }> = ({ recommendations, onApplyOptimization, onApplyAll }) => {
+  const iconSizes = useIconSizes();
   if (recommendations.length === 0) {
     return (
       <div className="performance-success rounded border p-performance-sm">
         <div className="flex items-center gap-performance-sm">
-          <CheckCircle className="h-4 w-4" style={{ color: performanceComponents.performanceMonitor.colors.fps.excellent }} />
+          <CheckCircle className={iconSizes.sm} style={{ color: performanceComponents.performanceMonitor.colors.fps.excellent }} />
           <span className="text-performance-xs" style={{ color: performanceComponents.performanceMonitor.colors.fps.excellent }}>
             All optimizations applied!
           </span>

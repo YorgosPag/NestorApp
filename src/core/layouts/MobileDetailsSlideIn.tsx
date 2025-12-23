@@ -3,6 +3,7 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import { layoutUtilities, componentSizes, canvasUtilities } from '@/styles/design-tokens';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface MobileDetailsSlideInProps {
   isOpen: boolean;
@@ -37,6 +38,7 @@ export function MobileDetailsSlideIn({
   actionButtons,
   children
 }: MobileDetailsSlideInProps) {
+  const iconSizes = useIconSizes();
   if (!isOpen) return null;
 
   return (
@@ -52,7 +54,7 @@ export function MobileDetailsSlideIn({
           className="p-1 rounded-md"
           className={componentSizes.icon.xl}
         >
-          <X className="h-4 w-4" />
+          <X className={iconSizes.sm} />
         </button>
 
         {/* Title (existing pattern) */}

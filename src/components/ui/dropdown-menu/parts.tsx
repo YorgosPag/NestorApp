@@ -3,6 +3,7 @@ import * as React from "react";
 import { Check, Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TRANSITION_PRESETS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import {
   DropdownMenuPortal,
   PrimitiveSubTrigger,
@@ -86,46 +87,54 @@ DropdownMenuItem.displayName = PrimitiveItem.displayName;
 export const DropdownMenuCheckboxItem = React.forwardRef<
   React.ElementRef<typeof PrimitiveCheckboxItem>,
   React.ComponentPropsWithoutRef<typeof PrimitiveCheckboxItem>
->(({ className, children, checked, ...props }, ref) => (
-  <PrimitiveCheckboxItem
-    ref={ref}
-    className={cn(
-      `relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none ${TRANSITION_PRESETS.STANDARD_COLORS} focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50`,
-      className
-    )}
-    checked={checked}
-    {...props}
-  >
-    <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
-      <PrimitiveItemIndicator>
-        <Check className="h-4 w-4" />
-      </PrimitiveItemIndicator>
-    </span>
-    {children}
-  </PrimitiveCheckboxItem>
-));
+>(({ className, children, checked, ...props }, ref) => {
+  const iconSizes = useIconSizes();
+
+  return (
+    <PrimitiveCheckboxItem
+      ref={ref}
+      className={cn(
+        `relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none ${TRANSITION_PRESETS.STANDARD_COLORS} focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50`,
+        className
+      )}
+      checked={checked}
+      {...props}
+    >
+      <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+        <PrimitiveItemIndicator>
+          <Check className={iconSizes.sm} />
+        </PrimitiveItemIndicator>
+      </span>
+      {children}
+    </PrimitiveCheckboxItem>
+  );
+});
 DropdownMenuCheckboxItem.displayName = PrimitiveCheckboxItem.displayName;
 
 export const DropdownMenuRadioItem = React.forwardRef<
   React.ElementRef<typeof PrimitiveRadioItem>,
   React.ComponentPropsWithoutRef<typeof PrimitiveRadioItem>
->(({ className, children, ...props }, ref) => (
-  <PrimitiveRadioItem
-    ref={ref}
-    className={cn(
-      `relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none ${TRANSITION_PRESETS.STANDARD_COLORS} focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50`,
-      className
-    )}
-    {...props}
-  >
-    <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
-      <PrimitiveItemIndicator>
-        <Circle className="h-2 w-2 fill-current" />
-      </PrimitiveItemIndicator>
-    </span>
-    {children}
-  </PrimitiveRadioItem>
-));
+>(({ className, children, ...props }, ref) => {
+  const iconSizes = useIconSizes();
+
+  return (
+    <PrimitiveRadioItem
+      ref={ref}
+      className={cn(
+        `relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none ${TRANSITION_PRESETS.STANDARD_COLORS} focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50`,
+        className
+      )}
+      {...props}
+    >
+      <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+        <PrimitiveItemIndicator>
+          <Circle className={iconSizes.xs} />
+        </PrimitiveItemIndicator>
+      </span>
+      {children}
+    </PrimitiveRadioItem>
+  );
+});
 DropdownMenuRadioItem.displayName = PrimitiveRadioItem.displayName;
 
 export const DropdownMenuLabel = React.forwardRef<

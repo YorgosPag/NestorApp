@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { BarChart3, Link, Paperclip, FileText, X, CheckCircle, Circle, Chrome, Check } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { layoutUtilities, canvasUtilities } from '@/styles/design-tokens';
 
@@ -36,6 +37,7 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
   className = '',
   fallbackMessage = 'PDF Viewer'
 }) => {
+  const iconSizes = useIconSizes();
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [renderMethod, setRenderMethod] = useState<'data' | 'blob' | 'canvas' | 'link'>('data');
   const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'idle'>('idle');
@@ -102,7 +104,7 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
           renderMethod === 'data' ? 'bg-green-600 text-white' : 'bg-gray-200'
         }`}
       >
-        <BarChart3 className="h-4 w-4 mr-1" />
+        <BarChart3 className={`${iconSizes.sm} mr-1`} />
         Data URL (Chrome-safe)
       </button>
       <button
@@ -111,7 +113,7 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
           renderMethod === 'blob' ? 'bg-blue-600 text-white' : 'bg-gray-200'
         }`}
       >
-        <Link className="h-4 w-4 mr-1" />
+        <Link className={`${iconSizes.sm} mr-1`} />
         Blob URL
       </button>
       <button
@@ -120,7 +122,7 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
           renderMethod === 'link' ? 'bg-purple-600 text-white' : 'bg-gray-200'
         }`}
       >
-        <Paperclip className="h-4 w-4 mr-1" />
+        <Paperclip className={`${iconSizes.sm} mr-1`} />
         Link Only
       </button>
     </div>
@@ -134,7 +136,7 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
         style={canvasUtilities.geoInteractive.pdfFallbackContainer(width, height)}
       >
         <div className="text-center text-gray-500">
-          <FileText className="h-8 w-8 mx-auto mb-2" />
+          <FileText className={`${iconSizes.lg} mx-auto mb-2`} />
           <div className="text-sm">No PDF file</div>
         </div>
       </div>
@@ -155,12 +157,12 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
           <strong>Browser:</strong>
           {navigator.userAgent.includes('Chrome') ? (
             <span className="flex items-center gap-1 text-red-600">
-              <Circle className="h-3 w-3 fill-current" />
+              <Circle className={`${iconSizes.xs} fill-current`} />
               Chrome (needs CSP fix)
             </span>
           ) : (
             <span className="flex items-center gap-1 text-green-600">
-              <CheckCircle className="h-3 w-3" />
+              <CheckCircle className={iconSizes.xs} />
               Non-Chrome
             </span>
           )}
@@ -173,7 +175,7 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
         {status === 'loading' && (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
-              <div className="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-2"></div>
+              <div className={`animate-spin ${iconSizes.lg} border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-2`}></div>
               <p className="text-sm text-blue-600">Processing PDF...</p>
             </div>
           </div>
@@ -182,7 +184,7 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
         {status === 'error' && (
           <div className="flex items-center justify-center h-full bg-red-50">
             <div className="text-center text-red-600">
-              <X className="h-8 w-8 mx-auto mb-2" />
+              <X className={`${iconSizes.lg} mx-auto mb-2`} />
               <p className="text-sm font-medium">PDF Error</p>
               <p className="text-xs">{debugInfo}</p>
             </div>
@@ -218,7 +220,7 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
             {renderMethod === 'link' && (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center">
-                  <FileText className="h-16 w-16 mx-auto mb-4 text-blue-600" />
+                  <FileText className={`${iconSizes['2xl']} mx-auto mb-4 text-blue-600`} />
                   <p className="text-lg font-medium mb-4">PDF Ready</p>
                   <a
                     href={pdfUrl}
@@ -226,7 +228,7 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
                     rel="noopener noreferrer"
                     className={`inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg transition-colors ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
                   >
-                    <FileText className="h-4 w-4 mr-2" />
+                    <FileText className={`${iconSizes.sm} mr-2`} />
                     Open PDF in New Tab
                   </a>
                 </div>
@@ -239,7 +241,7 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
       {/* Success indicator */}
       {status === 'success' && (
         <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded text-xs flex items-center gap-1">
-          <Check className="h-3 w-3" />
+          <Check className={iconSizes.xs} />
           PDF Loaded ({renderMethod})
         </div>
       )}

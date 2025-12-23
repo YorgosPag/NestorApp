@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useTranslation } from 'react-i18next';
 import { Filter, X } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { ToolbarButton } from '@/components/ui/ToolbarButton';
 
 interface Props {
@@ -19,6 +20,7 @@ interface Props {
 }
 
 export function BuildingFiltersMenu({ activeFilters, onActiveFiltersChange }: Props) {
+  const iconSizes = useIconSizes();
   const { t } = useTranslation('building');
   
   const handleFilterChange = (filter: string, checked: boolean) => {
@@ -37,7 +39,7 @@ export function BuildingFiltersMenu({ activeFilters, onActiveFiltersChange }: Pr
             tooltip={t('filters.tooltip')}
             badge={activeFilters.length > 0 ? activeFilters.length : undefined}
           >
-            <Filter className="w-4 h-4" />
+            <Filter className={iconSizes.sm} />
           </ToolbarButton>
         </div>
       </DropdownMenuTrigger>
@@ -74,7 +76,7 @@ export function BuildingFiltersMenu({ activeFilters, onActiveFiltersChange }: Pr
         ))}
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => onActiveFiltersChange([])}>
-          <X className="w-4 h-4 mr-2" />
+          <X className={`${iconSizes.sm} mr-2`} />
           {t('filters.clearAll')}
         </DropdownMenuItem>
       </DropdownMenuContent>

@@ -5,13 +5,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AlertCircle } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 export function LegalInfoCard() {
+  const iconSizes = useIconSizes();
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <AlertCircle className="w-5 h-5" />
+          <AlertCircle className={iconSizes.md} />
           Νομικά Στοιχεία
         </CardTitle>
       </CardHeader>

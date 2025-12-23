@@ -9,6 +9,7 @@ import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { formatFloorLabel } from "@/lib/intl-utils";
 import type { Property } from '@/types/property-viewer';
 import { PROPERTY_STATUS_CONFIG, PROPERTY_TYPE_ICONS } from '@/lib/property-utils';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface PropertyListItemProps { 
   property: Property; 
@@ -21,6 +22,7 @@ const PropertyListItemComponent = ({
   isSelected, 
   onSelect 
 }: PropertyListItemProps) => {
+  const iconSizes = useIconSizes();
   const statusInfo = PROPERTY_STATUS_CONFIG[property.status] || PROPERTY_STATUS_CONFIG.default;
   const IconComponent = PROPERTY_TYPE_ICONS[property.type as keyof typeof PROPERTY_TYPE_ICONS] || Home;
 
@@ -38,7 +40,7 @@ const PropertyListItemComponent = ({
       <CardContent className="p-3 space-y-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <IconComponent className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <IconComponent className={`${iconSizes.sm} text-muted-foreground flex-shrink-0`} />
             <h4 className="font-medium text-sm truncate">{property.name}</h4>
           </div>
           <PropertyBadge
@@ -49,7 +51,7 @@ const PropertyListItemComponent = ({
         </div>
         <p className="text-xs text-muted-foreground">{property.type}</p>
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
-          <MapPin className="h-3 w-3" />
+          <MapPin className={iconSizes.xs} />
           <span className="truncate">{property.building}</span>
           <span>•</span>
           <span>{formatFloorLabel(property.floor)}</span>
@@ -57,7 +59,7 @@ const PropertyListItemComponent = ({
         <div className="flex items-center justify-between text-xs">
           {property.price ? (
             <div className="flex items-center gap-1 text-green-600">
-              <Euro className="h-3 w-3" />
+              <Euro className={iconSizes.xs} />
               <span className="font-medium">
                 {property.price.toLocaleString('el-GR')}€
               </span>
@@ -65,7 +67,7 @@ const PropertyListItemComponent = ({
           ) : <div />}
           {property.area && (
             <div className="flex items-center gap-1 text-muted-foreground">
-              <Ruler className="h-3 w-3" />
+              <Ruler className={iconSizes.xs} />
               <span>{property.area}τμ</span>
             </div>
           )}

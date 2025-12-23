@@ -4,6 +4,7 @@ import React from 'react';
 import type { Project } from '@/types/project';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Building } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { BuildingBadge } from '@/core/badges';
 import { ThemeProgressBar } from '@/core/progress/ThemeProgressBar';
 import { getStatusColor, getStatusLabel } from '@/lib/project-utils';
@@ -15,6 +16,8 @@ const mockBuildings = [
 ]
 
 export function ProjectTimelineTab({ project }: { project: Project }) {
+  const iconSizes = useIconSizes();
+
   return (
     <Card>
       <CardHeader>
@@ -42,7 +45,7 @@ export function ProjectTimelineTab({ project }: { project: Project }) {
                 <div key={building.id} className="p-4 border rounded-lg">
                     <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                            <Building className="w-4 h-4 text-muted-foreground" />
+                            <Building className={`${iconSizes.sm} text-muted-foreground`} />
                             <span className="font-medium">{building.name}</span>
                         </div>
                         <BuildingBadge

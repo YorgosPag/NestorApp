@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ToolbarButton } from '@/components/ui/ToolbarButton';
 import { Plus, Edit, Trash2 } from "lucide-react";
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
 
 interface ToolbarMainActionsProps {
@@ -21,6 +22,7 @@ interface ToolbarMainActionsProps {
 }
 
 export function ToolbarMainActions({ selectedItemsCount }: ToolbarMainActionsProps) {
+  const iconSizes = useIconSizes();
   const handleNew = () => {
     // Debug logging removed
   };
@@ -38,7 +40,7 @@ export function ToolbarMainActions({ selectedItemsCount }: ToolbarMainActionsPro
         onClick={handleNew}
         className={`text-green-600 dark:text-green-500 ${HOVER_TEXT_EFFECTS.GREEN_SUBTLE} ${HOVER_BACKGROUND_EFFECTS.GREEN_SUBTLE} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
       >
-        <Plus className="w-4 h-4" />
+        <Plus className={iconSizes.sm} />
       </ToolbarButton>
 
       <ToolbarButton
@@ -47,7 +49,7 @@ export function ToolbarMainActions({ selectedItemsCount }: ToolbarMainActionsPro
         className={`text-blue-600 dark:text-blue-500 ${HOVER_TEXT_EFFECTS.BLUE_SUBTLE} ${HOVER_BACKGROUND_EFFECTS.BLUE_SUBTLE} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
         disabled={selectedItemsCount === 0}
       >
-        <Edit className="w-4 h-4" />
+        <Edit className={iconSizes.sm} />
       </ToolbarButton>
 
       <AlertDialog>
@@ -58,7 +60,7 @@ export function ToolbarMainActions({ selectedItemsCount }: ToolbarMainActionsPro
               className={`text-red-600 dark:text-red-500 ${HOVER_TEXT_EFFECTS.RED_SUBTLE} ${HOVER_BACKGROUND_EFFECTS.RED_SUBTLE} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
               disabled={selectedItemsCount === 0}
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className={iconSizes.sm} />
             </ToolbarButton>
           </div>
         </AlertDialogTrigger>

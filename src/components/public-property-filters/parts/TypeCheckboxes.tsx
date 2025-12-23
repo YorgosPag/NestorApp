@@ -5,12 +5,15 @@ import { Label } from "@/components/ui/label";
 import { Home } from "lucide-react";
 import type { TypeCheckboxesProps } from "../types";
 import { PROPERTY_TYPES } from "../constants";
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 export function TypeCheckboxes({ selected, onToggle }: TypeCheckboxesProps) {
+  const iconSizes = useIconSizes();
+
   return (
     <div className="space-y-3">
       <Label className="text-sm font-medium flex items-center gap-2">
-        <Home className="w-4 h-4" />
+        <Home className={iconSizes.sm} />
         Τύπος Ακινήτου
       </Label>
       <div className="space-y-2 max-h-32 overflow-y-auto">

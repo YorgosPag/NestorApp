@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { GripVertical, ChevronRight, ChevronDown, Hash, Plus, Edit3, Save, X, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ObligationArticle } from '@/types/obligations';
@@ -40,6 +41,8 @@ export function ArticleItem({
   handlers,
   activeItemId,
 }: ArticleItemProps) {
+  const iconSizes = useIconSizes();
+
   return (
     <div
       draggable={!readOnly}
@@ -53,13 +56,13 @@ export function ArticleItem({
       )}
     >
       <div className="flex items-center gap-2 p-3">
-        {!readOnly && <GripVertical className="h-4 w-4 text-muted-foreground cursor-move opacity-0 group-hover:opacity-100" />}
+        {!readOnly && <GripVertical className={`${iconSizes.sm} text-muted-foreground cursor-move opacity-0 group-hover:opacity-100`} />}
         {hasParagraphs && (
-          <Button variant="ghost" size="sm" onClick={() => handlers.toggleExpanded(article.id)} className="h-6 w-6 p-0">
-            {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+          <Button variant="ghost" size="sm" onClick={() => handlers.toggleExpanded(article.id)} className={`${iconSizes.md} p-0`}>
+            {isExpanded ? <ChevronDown className={iconSizes.xs} /> : <ChevronRight className={iconSizes.xs} />}
           </Button>
         )}
-        <Hash className="h-4 w-4 text-accent-foreground" />
+        <Hash className={`${iconSizes.sm} text-accent-foreground`} />
         <Badge variant="secondary" className="text-xs">{article.number}</Badge>
         <div className="flex-1">
           {isEditing ? (
@@ -89,13 +92,13 @@ export function ArticleItem({
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
             {isEditing ? (
               <>
-                <Button size="sm" onClick={handlers.stopEditing}><Save className="h-3 w-3" /></Button>
-                <Button size="sm" variant="outline" onClick={handlers.stopEditing}><X className="h-3 w-3" /></Button>
+                <Button size="sm" onClick={handlers.stopEditing}><Save className={iconSizes.xs} /></Button>
+                <Button size="sm" variant="outline" onClick={handlers.stopEditing}><X className={iconSizes.xs} /></Button>
               </>
             ) : (
               <>
-                <Button variant="ghost" size="sm" onClick={() => handlers.addParagraph(sectionId, article.id)} className="h-7 px-2" title="Προσθήκη παραγράφου"><Plus className="h-3 w-3" /></Button>
-                <Button variant="ghost" size="sm" onClick={() => handlers.deleteArticle(sectionId, article.id)} className="h-7 px-2 text-destructive hover:text-destructive/80"><Trash2 className="h-3 w-3" /></Button>
+                <Button variant="ghost" size="sm" onClick={() => handlers.addParagraph(sectionId, article.id)} className="h-7 px-2" title="Προσθήκη παραγράφου"><Plus className={iconSizes.xs} /></Button>
+                <Button variant="ghost" size="sm" onClick={() => handlers.deleteArticle(sectionId, article.id)} className="h-7 px-2 text-destructive hover:text-destructive/80"><Trash2 className={iconSizes.xs} /></Button>
               </>
             )}
           </div>
@@ -110,7 +113,7 @@ export function ArticleItem({
               index={pIndex}
               sectionId={sectionId}
               articleId={article.id}
-              isEditing={editingItem === paragraph.id}
+              isEditing={activeItemId === paragraph.id && isEditing}
               isActive={activeItemId === paragraph.id}
               readOnly={readOnly}
               dragState={dragState}

@@ -17,6 +17,7 @@ import {
   AlertTriangle,
   Loader2
 } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // Services
 import {
@@ -156,6 +157,7 @@ const STATUS_ASSIGNMENTS = {
 // ============================================================================
 
 export default function DatabaseUpdatePage() {
+  const iconSizes = useIconSizes();
   const [isLoading, setIsLoading] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
   const [completed, setCompleted] = useState({
@@ -337,7 +339,7 @@ export default function DatabaseUpdatePage() {
       {/* Header */}
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-bold flex items-center justify-center gap-2">
-          <Database className="h-8 w-8 text-blue-600" />
+          <Database className={`${iconSizes.xl} text-blue-600`} />
           Database Update - Πραγματικές Αλλαγές
         </h1>
         <p className="text-muted-foreground">
@@ -351,7 +353,7 @@ export default function DatabaseUpdatePage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="text-center">
-            <Plus className={`h-8 w-8 mx-auto ${completed.contacts ? 'text-green-500' : 'text-blue-500'}`} />
+            <Plus className={`${iconSizes.xl} mx-auto ${completed.contacts ? 'text-green-500' : 'text-blue-500'}`} />
             <CardTitle className="text-sm">Νέες Επαφές</CardTitle>
           </CardHeader>
           <CardContent className="text-center">
@@ -362,7 +364,7 @@ export default function DatabaseUpdatePage() {
 
         <Card>
           <CardHeader className="text-center">
-            <Edit className={`h-8 w-8 mx-auto ${completed.updates ? 'text-green-500' : 'text-orange-500'}`} />
+            <Edit className={`${iconSizes.xl} mx-auto ${completed.updates ? 'text-green-500' : 'text-orange-500'}`} />
             <CardTitle className="text-sm">Ενημερώσεις</CardTitle>
           </CardHeader>
           <CardContent className="text-center">
@@ -373,7 +375,7 @@ export default function DatabaseUpdatePage() {
 
         <Card>
           <CardHeader className="text-center">
-            <Building className={`h-8 w-8 mx-auto ${completed.units ? 'text-green-500' : 'text-purple-500'}`} />
+            <Building className={`${iconSizes.xl} mx-auto ${completed.units ? 'text-green-500' : 'text-purple-500'}`} />
             <CardTitle className="text-sm">Μονάδες</CardTitle>
           </CardHeader>
           <CardContent className="text-center">
@@ -384,7 +386,7 @@ export default function DatabaseUpdatePage() {
 
         <Card>
           <CardHeader className="text-center">
-            <Users className={`h-8 w-8 mx-auto ${completed.relationships ? 'text-green-500' : 'text-red-500'}`} />
+            <Users className={`${iconSizes.xl} mx-auto ${completed.relationships ? 'text-green-500' : 'text-red-500'}`} />
             <CardTitle className="text-sm">Σχέσεις</CardTitle>
           </CardHeader>
           <CardContent className="text-center">
@@ -398,7 +400,7 @@ export default function DatabaseUpdatePage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
+            <Users className={iconSizes.md} />
             Role Assignments Preview
           </CardTitle>
         </CardHeader>
@@ -436,12 +438,12 @@ export default function DatabaseUpdatePage() {
         >
           {isLoading ? (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2 className={`mr-2 ${iconSizes.sm} animate-spin`} />
               Εκτελείται...
             </>
           ) : (
             <>
-              <Database className="mr-2 h-4 w-4" />
+              <Database className={`mr-2 ${iconSizes.sm}`} />
               Εκτέλεση Ενημέρωσης Βάσης
             </>
           )}
@@ -449,7 +451,7 @@ export default function DatabaseUpdatePage() {
 
         {isLoading && (
           <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-            <AlertTriangle className="h-4 w-4" />
+            <AlertTriangle className={iconSizes.sm} />
             Μην κλείσεις τον browser κατά τη διάρκεια της ενημέρωσης
           </div>
         )}
@@ -460,7 +462,7 @@ export default function DatabaseUpdatePage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5" />
+              <CheckCircle className={iconSizes.md} />
               Logs Εκτέλεσης
             </CardTitle>
           </CardHeader>

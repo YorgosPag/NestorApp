@@ -3,6 +3,7 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { layoutUtilities, chartComponents, interactionUtilities } from '@/styles/design-tokens';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface ValidationError {
   type: string;
@@ -14,10 +15,11 @@ interface StatusLegendProps {
   validationErrors?: ValidationError[];
 }
 
-export function StatusLegend({ 
-  className, 
-  validationErrors = [] 
+export function StatusLegend({
+  className,
+  validationErrors = []
 }: StatusLegendProps) {
+  const iconSizes = useIconSizes();
   
   const statusItems = [
     { color: '#10b981', label: 'Προς Πώληση', count: 0 },
@@ -48,7 +50,7 @@ export function StatusLegend({
             style={interactionUtilities.pointerEvents.none}
           >
             <div 
-              className="w-3 h-3 rounded-full border border-gray-300"
+              className={`${iconSizes.xs} rounded-full border border-gray-300`}
               style={chartComponents.legend.indicator.withColor(item.color)}
             />
             <span className="text-gray-700 flex-1">{item.label}</span>

@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { FormField, FormInput } from '@/components/ui/form/FormComponents';
 import { UniversalClickableField } from '@/components/ui/form/UniversalClickableField';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { FieldConfig, SectionConfig } from '@/config/company-gemi-config';
 import { getIconComponent } from './utils/IconMapping';
 
@@ -262,6 +263,8 @@ export function GenericFormRenderer({
   disabled = false,
   customRenderers
 }: GenericFormRendererProps) {
+  const iconSizes = useIconSizes();
+
   if (!sections || sections.length === 0) {
     console.warn('GenericFormRenderer: No sections provided');
     return null;
@@ -276,7 +279,7 @@ export function GenericFormRenderer({
           <div key={section.id} className="space-y-6 md:space-y-4">
             {/* Section Header */}
             <div className="flex items-center gap-2 pb-2 border-b">
-              <IconComponent className="h-4 w-4" />
+              <IconComponent className={iconSizes.sm} />
               <h3 className="font-semibold text-sm">{section.title}</h3>
             </div>
             {section.description && (

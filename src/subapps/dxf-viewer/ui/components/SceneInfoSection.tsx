@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Info, FileText } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { SceneModel } from '../../types/scene';
 
 interface SceneInfoSectionProps {
@@ -10,6 +11,7 @@ interface SceneInfoSectionProps {
 }
 
 export function SceneInfoSection({ scene, selectedEntityIds }: SceneInfoSectionProps) {
+  const iconSizes = useIconSizes();
   const formatSize = (value: number) => {
     if (value < 1) {
       return (value * 1000).toFixed(1);
@@ -22,7 +24,7 @@ export function SceneInfoSection({ scene, selectedEntityIds }: SceneInfoSectionP
       <div className="space-y-3">
         <h3 className="text-sm font-medium text-blue-400">Πληροφορίες Σκηνής</h3>
         <div className="text-center py-4">
-          <FileText className="w-8 h-8 text-gray-600 mx-auto mb-2" />
+          <FileText className={`${iconSizes.xl} text-gray-600 mx-auto mb-2`} />
           <p className="text-sm text-gray-400">Δεν υπάρχει φορτωμένη σκηνή</p>
           <p className="text-xs text-gray-500 mt-1">
             Εισάγετε ένα DXF αρχείο για να δείτε πληροφορίες

@@ -5,6 +5,7 @@
 // PURPOSE: Ruler units settings UI (units type, visibility, font size, color)
 
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 /**
  * ╔════════════════════════════════════════════════════════════════════════════╗
@@ -41,6 +42,8 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
   // ============================================================================
   // HOOKS
   // ============================================================================
+
+  const iconSizes = useIconSizes();
 
   const {
     state: { rulers: rulerSettings },
@@ -202,7 +205,7 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
         </div>
         <div className="flex items-center gap-2">
           <div
-            className="w-6 h-6 rounded border-2"
+            className={`${iconSizes.lg} rounded border-2`}
             style={{
               backgroundColor: getPreviewBackground(
                 rulerSettings.horizontal.unitsColor ||
@@ -224,7 +227,7 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
               '#ffffff'
             )}
             onChange={(e) => handleUnitsColorChange(e.target.value)}
-            className="w-8 h-6 rounded border-0 cursor-pointer"
+            className={`${iconSizes.xl} h-6 rounded border-0 cursor-pointer`}
           />
           <input
             type="text"

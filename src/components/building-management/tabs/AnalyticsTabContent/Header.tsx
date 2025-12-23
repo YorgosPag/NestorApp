@@ -4,6 +4,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BarChart3, DollarSign, TrendingUp, Scale } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface HeaderProps {
     timeRange: '1M' | '3M' | '6M' | '1Y';
@@ -13,6 +14,7 @@ interface HeaderProps {
 }
 
 export default function Header({ timeRange, setTimeRange, analyticsView, setAnalyticsView }: HeaderProps) {
+    const iconSizes = useIconSizes();
     return (
         <div>
             <div className="flex items-center justify-between">
@@ -35,17 +37,17 @@ export default function Header({ timeRange, setTimeRange, analyticsView, setAnal
                         </SelectContent>
                     </Select>
                     <Button variant="outline" size="sm">
-                        <BarChart3 className="w-4 h-4 mr-2" /> Εξαγωγή Αναφοράς
+                        <BarChart3 className={`${iconSizes.sm} mr-2`} /> Εξαγωγή Αναφοράς
                     </Button>
                 </div>
             </div>
 
             <div className="flex gap-2 mt-4">
                 {[
-                    { id: 'overview', label: 'Επισκόπηση', icon: <BarChart3 className="w-4 h-4 mr-2" /> },
-                    { id: 'financial', label: 'Οικονομικά', icon: <DollarSign className="w-4 h-4 mr-2" /> },
-                    { id: 'progress', label: 'Πρόοδος', icon: <TrendingUp className="w-4 h-4 mr-2" /> },
-                    { id: 'comparison', label: 'Σύγκριση', icon: <Scale className="w-4 h-4 mr-2" /> }
+                    { id: 'overview', label: 'Επισκόπηση', icon: <BarChart3 className={`${iconSizes.sm} mr-2`} /> },
+                    { id: 'financial', label: 'Οικονομικά', icon: <DollarSign className={`${iconSizes.sm} mr-2`} /> },
+                    { id: 'progress', label: 'Πρόοδος', icon: <TrendingUp className={`${iconSizes.sm} mr-2`} /> },
+                    { id: 'comparison', label: 'Σύγκριση', icon: <Scale className={`${iconSizes.sm} mr-2`} /> }
                 ].map((view) => (
                     <Button
                         key={view.id}

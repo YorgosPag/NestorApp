@@ -14,6 +14,7 @@ import React from 'react';
 import { Label } from '@/components/ui/label';
 import { designSystem } from '@/lib/design-system';
 import { Palette } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 // Services & Types
@@ -43,6 +44,8 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
   disabled = false,
   show = true
 }) => {
+  const iconSizes = useIconSizes();
+
   // ============================================================================
   // DATA & COMPUTED VALUES
   // ============================================================================
@@ -151,7 +154,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
 
         {/* Selected Indicator */}
         {isSelected && (
-          <aside className="absolute top-2 right-2 w-3 h-3 bg-blue-500 rounded-full flex items-center justify-center" role="status" aria-label="Επιλεγμένο">
+          <aside className={`absolute top-2 right-2 ${iconSizes.xs} bg-blue-500 rounded-full flex items-center justify-center`} role="status" aria-label="Επιλεγμένο">
             <div className="w-1.5 h-1.5 bg-white rounded-full" />
           </aside>
         )}
@@ -172,7 +175,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
         disabled && 'text-gray-400 dark:text-gray-500'
       )}>
         <Palette className={designSystem.cn(
-          "w-4 h-4",
+          iconSizes.sm,
           disabled ? 'text-gray-400' : 'text-blue-600'
         )} />
         Email Template
@@ -211,6 +214,7 @@ export const CompactTemplateSelector: React.FC<TemplateSelectorProps & {
   show = true,
   orientation = 'horizontal'
 }) => {
+  const iconSizes = useIconSizes();
   const availableTemplates = EmailTemplatesService.getAllTemplates();
 
   if (!show) return null;
@@ -221,7 +225,7 @@ export const CompactTemplateSelector: React.FC<TemplateSelectorProps & {
         "flex items-center gap-2",
         designSystem.getTypographyClass('xs', 'medium')
       )}>
-        <Palette className="w-3 h-3" />
+        <Palette className={iconSizes.xs} />
         Template
       </Label>
 

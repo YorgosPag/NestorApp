@@ -13,6 +13,7 @@ import { storage } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { getAuth, signInAnonymously } from 'firebase/auth';
 import { HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface SimplePDFUploaderProps {
   currentFloor: { id: string; name: string; buildingId: string } | null;
@@ -21,6 +22,7 @@ interface SimplePDFUploaderProps {
 }
 
 export function SimplePDFUploader({ currentFloor, onPDFUpdate, className }: SimplePDFUploaderProps) {
+  const iconSizes = useIconSizes();
   const [isOpen, setIsOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -200,7 +202,7 @@ export function SimplePDFUploader({ currentFloor, onPDFUpdate, className }: Simp
   if (!currentFloor) {
     return (
       <Button variant="ghost" size="sm" disabled className={className}>
-        <Upload className="h-4 w-4" />
+        <Upload className={iconSizes.sm} />
       </Button>
     );
   }
@@ -209,14 +211,14 @@ export function SimplePDFUploader({ currentFloor, onPDFUpdate, className }: Simp
     <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
       <DialogTrigger asChild>
         <Button variant="ghost" size="sm" className={className} aria-label="Ανέβασμα PDF κάτοψης">
-          <Upload className="h-4 w-4" />
+          <Upload className={iconSizes.sm} />
         </Button>
       </DialogTrigger>
       
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
+            <FileText className={iconSizes.md} />
             Ανέβασμα PDF Κάτοψης
           </DialogTitle>
         </DialogHeader>
@@ -243,7 +245,7 @@ export function SimplePDFUploader({ currentFloor, onPDFUpdate, className }: Simp
           {/* Error Alert */}
           {error && (
             <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
+              <AlertTriangle className={iconSizes.sm} />
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
@@ -251,7 +253,7 @@ export function SimplePDFUploader({ currentFloor, onPDFUpdate, className }: Simp
           {/* Success Alert */}
           {success && (
             <Alert className="border-green-200 bg-green-50">
-              <Check className="h-4 w-4 text-green-600" />
+              <Check className={`${iconSizes.sm} text-green-600`} />
               <AlertDescription className="text-green-700">
                 Η κάτοψη ανέβηκε επιτυχώς!
               </AlertDescription>
@@ -273,7 +275,7 @@ export function SimplePDFUploader({ currentFloor, onPDFUpdate, className }: Simp
               onClick={triggerFileSelect}
               className={`border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center cursor-pointer ${HOVER_BORDER_EFFECTS.GRAY} transition-colors`}
             >
-              <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+              <Upload className={`${iconSizes.xl2} mx-auto mb-2 text-muted-foreground`} />
               <p className="text-sm font-medium">Κλικ για επιλογή PDF</p>
               <p className="text-xs text-muted-foreground mt-1">
                 Μόνο αρχεία PDF, μέγιστο 50MB
@@ -286,7 +288,7 @@ export function SimplePDFUploader({ currentFloor, onPDFUpdate, className }: Simp
             <Card>
               <CardContent className="pt-4">
                 <div className="flex items-center gap-3">
-                  <FileText className="h-8 w-8 text-red-500" />
+                  <FileText className={`${iconSizes.xl2} text-red-500`} />
                   <div className="flex-1">
                     <p className="font-medium text-sm">{selectedFile.name}</p>
                     <p className="text-xs text-muted-foreground">
@@ -298,7 +300,7 @@ export function SimplePDFUploader({ currentFloor, onPDFUpdate, className }: Simp
                     size="sm" 
                     onClick={() => setSelectedFile(null)}
                   >
-                    <X className="h-4 w-4" />
+                    <X className={iconSizes.sm} />
                   </Button>
                 </div>
               </CardContent>
@@ -310,7 +312,7 @@ export function SimplePDFUploader({ currentFloor, onPDFUpdate, className }: Simp
             <div className="space-y-3">
               <div className="flex items-center justify-between text-sm">
                 <span className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className={`${iconSizes.sm} animate-spin`} />
                   Ανέβασμα PDF...
                 </span>
                 <span className="font-mono">{Math.round(progress)}%</span>
@@ -332,7 +334,7 @@ export function SimplePDFUploader({ currentFloor, onPDFUpdate, className }: Simp
                 Ακύρωση
               </Button>
               <Button onClick={handleUpload}>
-                <Upload className="h-4 w-4 mr-2" />
+                <Upload className={`${iconSizes.sm} mr-2`} />
                 Ανέβασμα
               </Button>
             </>
@@ -346,7 +348,7 @@ export function SimplePDFUploader({ currentFloor, onPDFUpdate, className }: Simp
 
           {success && (
             <Button onClick={() => handleDialogOpenChange(false)}>
-              <Check className="h-4 w-4 mr-2" />
+              <Check className={`${iconSizes.sm} mr-2`} />
               Τέλος
             </Button>
           )}

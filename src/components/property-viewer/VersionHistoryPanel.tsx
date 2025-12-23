@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { X } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { ScrollArea } from '../ui/scroll-area';
 import { Skeleton } from '../ui/skeleton';
 import { VersionList } from './version-history/VersionList';
@@ -50,6 +51,7 @@ const mockVersions = [
 ];
 
 export function VersionHistoryPanel({ buildingId, isOpen, onClose }: { buildingId: string; isOpen: boolean; onClose: () => void; }) {
+    const iconSizes = useIconSizes();
     const notifications = useNotifications();
     const [versions, setVersions] = useState<any[]>([]);
     const [selectedVersion, setSelectedVersion] = useState<any | null>(null);
@@ -92,7 +94,7 @@ export function VersionHistoryPanel({ buildingId, isOpen, onClose }: { buildingI
                     <div className="flex items-center gap-4">
                         <Button onClick={handleCreateMilestone}>Δημιουργία Οροσήμου</Button>
                         <Button variant="ghost" size="icon" onClick={onClose}>
-                            <X className="w-5 h-5" />
+                            <X className={iconSizes.md} />
                         </Button>
                     </div>
                 </div>
@@ -101,7 +103,7 @@ export function VersionHistoryPanel({ buildingId, isOpen, onClose }: { buildingI
                     <ScrollArea className="w-2/3 border-r">
                         {loading ? (
                             <div className="p-4 space-y-2">
-                                {Array.from({length: 5}).map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}
+                                {Array.from({length: 5}).map((_, i) => <Skeleton key={i} className={`${iconSizes.xl6} w-full`} />)}
                             </div>
                         ) : (
                            <VersionList 

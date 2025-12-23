@@ -3,12 +3,14 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Archive } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 export function EmptyList() {
+  const iconSizes = useIconSizes();
   return (
     <Card>
       <CardContent className="p-12 text-center">
-        <Archive className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+        <Archive className={`${iconSizes.xl2} text-muted-foreground mx-auto mb-4`} />
         <h3 className="text-lg font-semibold text-foreground mb-2">
           Δεν βρέθηκαν μονάδες
         </h3>

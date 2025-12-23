@@ -6,6 +6,7 @@ import { PageHeader } from '@/core/headers';
 import type { ViewMode as CoreViewMode } from '@/core/headers';
 import type { ViewMode } from '@/hooks/useContactsState';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 
 interface ContactsHeaderProps {
@@ -35,6 +36,8 @@ export function ContactsHeader({
   setShowFilters,
   contactCount,
 }: ContactsHeaderProps) {
+  const iconSizes = useIconSizes();
+
   return (
     <PageHeader
       variant="sticky-rounded"
@@ -70,7 +73,7 @@ export function ContactsHeader({
                 : `bg-background border-border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
             }`,
             'aria-label': 'Toggle filters',
-            children: React.createElement(Filter, { className: 'h-4 w-4' })
+            children: React.createElement(Filter, { className: iconSizes.sm })
           })
         ] : undefined
       }}

@@ -5,6 +5,7 @@ import React from 'react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { cn } from '@/lib/utils';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { BuildingsList } from './BuildingsList';
 import { BuildingDetails } from './BuildingDetails';
 import { BuildingsHeader } from './BuildingsPage/BuildingsHeader';
@@ -32,6 +33,8 @@ import { ListContainer } from '@/core/containers';
 export type { Building } from '@/types/building/contracts';
 
 export function BuildingsPageContent() {
+  const iconSizes = useIconSizes();
+
   // Load buildings from Firestore
   const { buildings: buildingsData, loading: buildingsLoading, error: buildingsError } = useFirestoreBuildings();
 
@@ -151,7 +154,7 @@ export function BuildingsPageContent() {
         <main className="h-full flex flex-col bg-background" role="main" aria-label="Φόρτωση Κτιρίων">
           <section className="flex-1 flex items-center justify-center" role="status" aria-live="polite">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <div className={`animate-spin rounded-full ${iconSizes.xl} border-b-2 border-primary mx-auto mb-4`}></div>
               <p>Φόρτωση κτιρίων από Firestore...</p>
             </div>
           </section>
@@ -255,7 +258,7 @@ export function BuildingsPageContent() {
                       )}
                       aria-label="Επεξεργασία Κτιρίου"
                     >
-                      <Edit className="h-4 w-4" />
+                      <Edit className={iconSizes.sm} />
                     </button>
                     <button
                       onClick={() => {/* TODO: Delete building handler */}}
@@ -266,7 +269,7 @@ export function BuildingsPageContent() {
                       )}
                       aria-label="Διαγραφή Κτιρίου"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className={iconSizes.sm} />
                     </button>
                   </>
                 }

@@ -13,6 +13,7 @@ import {
   BarChart3,
   MapPin,
 } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // Placeholder stats for Physical Spaces
 const spacesStats: DashboardStat[] = [
@@ -51,6 +52,7 @@ const spacesStats: DashboardStat[] = [
 ];
 
 export default function SpacesPage() {
+  const iconSizes = useIconSizes();
   return (
     <TooltipProvider>
       <div className="flex h-screen bg-background">
@@ -60,7 +62,7 @@ export default function SpacesPage() {
           <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="flex h-14 items-center px-4">
               <div className="flex items-center gap-2">
-                <Layout className="h-5 w-5 text-muted-foreground" />
+                <Layout className={`${iconSizes.md} text-muted-foreground`} />
                 <h1 className="text-lg font-semibold">Χώροι</h1>
               </div>
               <div className="ml-auto text-sm text-muted-foreground">
@@ -83,7 +85,7 @@ export default function SpacesPage() {
               <div className="p-6 bg-card border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="p-2 bg-primary/10 rounded-lg">
-                    <Home className="h-5 w-5 text-primary" />
+                    <Home className={`${iconSizes.md} text-primary`} />
                   </div>
                   <h3 className="font-semibold">Διαμερίσματα</h3>
                 </div>
@@ -100,7 +102,7 @@ export default function SpacesPage() {
               <div className="p-6 bg-card border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="p-2 bg-orange-500/10 rounded-lg">
-                    <Package className="h-5 w-5 text-orange-500" />
+                    <Package className={`${iconSizes.md} text-orange-500`} />
                   </div>
                   <h3 className="font-semibold">Αποθήκες</h3>
                 </div>
@@ -117,7 +119,7 @@ export default function SpacesPage() {
               <div className="p-6 bg-card border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="p-2 bg-blue-500/10 rounded-lg">
-                    <Car className="h-5 w-5 text-blue-500" />
+                    <Car className={`${iconSizes.md} text-blue-500`} />
                   </div>
                   <h3 className="font-semibold">Θέσεις Στάθμευσης</h3>
                 </div>
@@ -134,7 +136,7 @@ export default function SpacesPage() {
               <div className="p-6 bg-card border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="p-2 bg-green-500/10 rounded-lg">
-                    <Users className="h-5 w-5 text-green-500" />
+                    <Users className={`${iconSizes.md} text-green-500`} />
                   </div>
                   <h3 className="font-semibold">Κοινόχρηστοι Χώροι</h3>
                 </div>
@@ -151,7 +153,7 @@ export default function SpacesPage() {
             {/* Info Message */}
             <div className="p-4 bg-muted/50 border border-dashed rounded-lg">
               <div className="flex items-center gap-2 text-sm">
-                <Layout className="h-4 w-4" />
+                <Layout className={iconSizes.sm} />
                 <span className="font-medium">Φυσικοί Χώροι</span>
               </div>
               <p className="text-sm text-muted-foreground mt-1">

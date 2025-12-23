@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Minus, Square, Pen, Hexagon, Ruler, Triangle } from 'lucide-react';
 import { CircleRadiusIcon } from '../../../../toolbar/icons/CircleIcon';
+import { useIconSizes } from '@/hooks/useIconSizes';
 // ✅ ΝΕΑ UNIFIED HOOKS - ΑΝΤΙΚΑΤΑΣΤΑΣΗ ΤΩΝ ΠΑΛΙΩΝ SPECIFIC CONTEXTS
 import {
   useUnifiedLineCompletion,
@@ -73,6 +74,7 @@ interface EntitiesSettingsProps {
 }
 
 export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
+  const iconSizes = useIconSizes();
   // ✅ Replaced multiple useState hooks with unified reducer for better performance
   const { state: tabState, actions: tabActions, computed } = useEntitiesSettingsReducer();
 
@@ -353,7 +355,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
                   `}
                   title="Περισσότερες επιλογές"
                 >
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className={iconSizes.xs} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>

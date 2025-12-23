@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { BookOpen } from 'lucide-react';
 import { useExpandedToc } from './hooks/useExpandedToc';
 import { TocHeader } from './parts/TocHeader';
@@ -9,14 +10,15 @@ import { TocBody } from './parts/TocBody';
 import type { TableOfContentsProps } from './types';
 import { cn } from '@/lib/utils';
 
-export default function TableOfContents({ 
-  items, 
-  onItemClick, 
+export default function TableOfContents({
+  items,
+  onItemClick,
   activeItemId,
   showPageNumbers = false,
   compact = false,
   className
 }: TableOfContentsProps) {
+  const iconSizes = useIconSizes();
   const { expandedIds, toggle, expandAll, collapseAll } = useExpandedToc(items);
 
   if (items.length === 0) {
@@ -24,7 +26,7 @@ export default function TableOfContents({
       <Card className={className}>
         <CardHeader className={cn("pb-4", compact && "pb-2")}>
           <CardTitle className={cn("text-lg flex items-center gap-2", compact && "text-base")}>
-            <BookOpen className="h-5 w-5" />
+            <BookOpen className={iconSizes.md} />
             Πίνακας Περιεχομένων
           </CardTitle>
           {!compact && (
@@ -35,7 +37,7 @@ export default function TableOfContents({
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
-            <BookOpen className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+            <BookOpen className={`${iconSizes.xl} mx-auto mb-4 text-muted-foreground/50`} />
             <p className="text-sm text-muted-foreground">Δεν υπάρχουν ενότητες ακόμα</p>
             <p className="text-xs text-muted-foreground/80 mt-1">
               Προσθέστε ενότητες για να δημιουργηθεί ο πίνακας περιεχομένων

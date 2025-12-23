@@ -10,17 +10,18 @@ import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import { Label } from '../ui/label';
 import { CommonBadge } from '@/core/badges';
-import { 
-  Send, 
-  MessageSquare, 
-  Mail, 
-  Phone, 
+import {
+  Send,
+  MessageSquare,
+  Mail,
+  Phone,
   Loader2,
   CheckCircle,
   AlertCircle,
   User,
   X
 } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Card, CardContent } from '../ui/card';
@@ -33,15 +34,16 @@ import { toast } from 'sonner';
  * Επιτρέπει την αποστολή μηνυμάτων μέσω διαφόρων channels
  */
 
-const SendMessageModal = ({ 
-  trigger, 
-  leadData = null, 
+const SendMessageModal = ({
+  trigger,
+  leadData = null,
   defaultChannel = MESSAGE_TYPES.EMAIL,
   defaultTemplate = null,
   onMessageSent = null,
   open,
-  onOpenChange 
+  onOpenChange
 }) => {
+  const iconSizes = useIconSizes();
   const [isOpen, setIsOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const [selectedChannel, setSelectedChannel] = useState(defaultChannel);
@@ -287,16 +289,16 @@ const SendMessageModal = ({
   const getChannelIcon = (channel) => {
     switch (channel) {
       case MESSAGE_TYPES.EMAIL:
-        return <Mail className="h-4 w-4" />;
+        return <Mail className={iconSizes.sm} />;
       case MESSAGE_TYPES.TELEGRAM:
       case MESSAGE_TYPES.WHATSAPP:
       case MESSAGE_TYPES.MESSENGER:
       case MESSAGE_TYPES.SMS:
-        return <MessageSquare className="h-4 w-4" />;
+        return <MessageSquare className={iconSizes.sm} />;
       case MESSAGE_TYPES.CALL:
-        return <Phone className="h-4 w-4" />;
+        return <Phone className={iconSizes.sm} />;
       default:
-        return <MessageSquare className="h-4 w-4" />;
+        return <MessageSquare className={iconSizes.sm} />;
     }
   };
 
@@ -314,7 +316,7 @@ const SendMessageModal = ({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Send className="h-5 w-5" />
+            <Send className={iconSizes.md} />
             Αποστολή Μηνύματος
             {leadData && (
               <CommonBadge
@@ -444,7 +446,7 @@ const SendMessageModal = ({
                         size="sm"
                         onClick={() => removeCustomVariable(index)}
                       >
-                        <X className="h-4 w-4" />
+                        <X className={iconSizes.sm} />
                       </Button>
                     </div>
                   ))}
@@ -479,12 +481,12 @@ const SendMessageModal = ({
             >
               {sending ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className={`${iconSizes.sm} mr-2 animate-spin`} />
                   Αποστολή...
                 </>
               ) : (
                 <>
-                  <Send className="h-4 w-4 mr-2" />
+                  <Send className={`${iconSizes.sm} mr-2`} />
                   Αποστολή
                 </>
               )}

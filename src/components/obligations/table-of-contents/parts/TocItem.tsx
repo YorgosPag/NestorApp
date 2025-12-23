@@ -8,6 +8,7 @@ import type { TocItemProps } from '../types';
 import { getItemIcon } from '../utils/icons';
 import { getItemBadgeColor } from '../utils/badges';
 import { cn } from '@/lib/utils';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 export function TocItem({
   item,
@@ -19,6 +20,7 @@ export function TocItem({
   onToggle,
   onClick,
 }: TocItemProps) {
+  const iconSizes = useIconSizes();
   const hasChildren = item.children && item.children.length > 0;
   const isExpanded = expandedIds.includes(item.id);
   const isActive = activeItemId === item.id;
@@ -45,10 +47,10 @@ export function TocItem({
               e.stopPropagation();
               onToggle(item.id);
             }}
-            className="h-6 w-6 p-0 opacity-70 hover:opacity-100"
+            className={`${iconSizes.lg} p-0 opacity-70 hover:opacity-100`}
             aria-label={isExpanded ? `Σύμπτυξη ενότητας ${item.title}` : `Επέκταση ενότητας ${item.title}`}
           >
-            {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+            {isExpanded ? <ChevronDown className={iconSizes.xs} /> : <ChevronRight className={iconSizes.xs} />}
           </Button>
         )}
 

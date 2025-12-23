@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { CheckCircle, X } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import {
   PHOTO_SIZES,
   PHOTO_TEXT_COLORS,
@@ -65,6 +66,7 @@ export function PhotoPreview({
   hideRemoveButton = false,
   className = ''
 }: PhotoPreviewProps) {
+  const iconSizes = useIconSizes();
 
   // ========================================================================
   // COMPUTED VALUES
@@ -124,7 +126,7 @@ export function PhotoPreview({
               onClick={handleRemoveClick}
               title={`Αφαίρεση ${displayName}`}
             >
-              <X className="w-4 h-4" />
+              <X className={iconSizes.sm} />
             </button>
           )}
         </div>
@@ -155,14 +157,14 @@ export function PhotoPreview({
             onClick={handleRemoveClick}
             title={`Αφαίρεση ${displayName}`}
           >
-            <X className="w-3 h-3" />
+            <X className={iconSizes.xs} />
           </button>
         )}
       </div>
 
       <div className="text-left">
         <p className="text-sm font-medium text-green-700 flex items-center gap-1">
-          <CheckCircle className="w-4 h-4" />
+          <CheckCircle className={iconSizes.sm} />
           {purpose === 'logo' ? 'Λογότυπο' : 'Φωτογραφία'} φορτώθηκε
         </p>
         <p className="text-xs text-green-600">{fileName}</p>

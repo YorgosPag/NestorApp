@@ -17,6 +17,7 @@
 
 import React from 'react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { getDynamicBackgroundClass } from '@/styles/design-tokens';
 import { interactiveMapStyles } from '../InteractiveMap.styles';
@@ -74,6 +75,7 @@ export const GeoAccuracyLegend: React.FC<GeoAccuracyLegendProps> = ({
   onVisualizationModeChange,
   className = ''
 }) => {
+  const iconSizes = useIconSizes();
   const { t } = useTranslationLazy('geo-canvas');
 
   // Early return if no control points
@@ -109,7 +111,7 @@ export const GeoAccuracyLegend: React.FC<GeoAccuracyLegendProps> = ({
       {ACCURACY_LEVELS.map((level) => (
         <div key={level.level} className="flex items-center space-x-2">
           <div
-            className={`w-3 h-3 rounded-full border ${getDynamicBackgroundClass(`${level.color}40`)}`}
+            className={`${iconSizes.xs} rounded-full border ${getDynamicBackgroundClass(`${level.color}40`)}`}
             style={interactiveMapStyles.labels.legendItem(level.color)}
             aria-hidden="true"
           />

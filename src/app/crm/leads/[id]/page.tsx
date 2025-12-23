@@ -5,6 +5,7 @@ import React, { useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, User, Mail, Phone, Tag, Calendar, Edit3, Send, PhoneCall, Plus, Clock, CheckCircle } from 'lucide-react';
 import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { Toaster } from 'react-hot-toast';
 
 import CommunicationsHistory from '@/components/CommunicationsHistory';
@@ -20,6 +21,7 @@ import { useLead } from './hooks/useLead';
 import { useLeadTasks } from './hooks/useLeadTasks';
 
 export default function LeadProfilePage() {
+  const iconSizes = useIconSizes();
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
@@ -51,7 +53,7 @@ export default function LeadProfilePage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+          <div className={`animate-spin rounded-full ${iconSizes.xl} border-b-2 border-blue-600 mx-auto mb-2`}></div>
           <p className="text-gray-600">Φόρτωση lead...</p>
         </div>
       </div>
@@ -89,10 +91,10 @@ export default function LeadProfilePage() {
                 className={`p-2 rounded-lg ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.FAST_COLORS}`}
                 aria-label="Επιστροφή"
               >
-                <ArrowLeft className="w-5 h-5" />
+                <ArrowLeft className={iconSizes.md} />
               </button>
               <div className="flex items-center gap-3">
-                <User className="w-6 h-6 text-blue-600" />
+                <User className={`${iconSizes.lg} text-blue-600`} />
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900 dark:text-foreground">{lead.fullName}</h1>
                   <p className="text-gray-600 dark:text-muted-foreground">Lead Profile</p>

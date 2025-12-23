@@ -23,6 +23,7 @@ import { useColorArea } from '@react-aria/color';
 import { useColorAreaState } from '@react-stately/color';
 import { parseColor as parseAriaColor } from '@react-stately/color';
 import { useFocusRing } from '@react-aria/focus';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { AriaColorAreaProps } from '@react-aria/color';
 // Enterprise Canvas UI Migration - Phase B
 import { canvasUI } from '@/styles/design-tokens/canvas';
@@ -60,6 +61,7 @@ export function EnterpriseColorArea({
   size = 192,
   className = '',
 }: EnterpriseColorAreaProps) {
+  const iconSizes = useIconSizes();
   const containerRef = useRef<HTMLDivElement>(null);
   const inputXRef = useRef<HTMLInputElement>(null);
   const inputYRef = useRef<HTMLInputElement>(null);
@@ -138,7 +140,7 @@ export function EnterpriseColorArea({
         {...thumbProps}
         {...focusProps}
         className={`
-          absolute w-5 h-5 rounded-full border-2 border-white shadow-lg
+          absolute ${iconSizes.md} rounded-full border-2 border-white shadow-lg
           transform -translate-x-1/2 -translate-y-1/2
           ${isFocusVisible ? 'ring-2 ring-blue-500 ring-offset-2' : ''}
           ${disabled ? 'pointer-events-none' : ''}

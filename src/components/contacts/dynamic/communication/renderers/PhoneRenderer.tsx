@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Trash2 } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { CommonBadge } from '@/core/badges';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -50,6 +51,8 @@ export const PhoneRenderer: React.FC<PhoneRendererProps> = ({
   setPrimary,
   removeItem
 }) => {
+  const iconSizes = useIconSizes();
+
   // 🎯 ΜΟΝΟ ΓΙΑ DESKTOP: Οριζόντιο layout σε γραμμή
   if (isDesktop) {
     return (
@@ -135,7 +138,7 @@ export const PhoneRenderer: React.FC<PhoneRendererProps> = ({
             disabled={disabled}
             className={HOVER_TEXT_EFFECTS.RED}
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className={iconSizes.sm} />
           </Button>
         </div>
       </div>

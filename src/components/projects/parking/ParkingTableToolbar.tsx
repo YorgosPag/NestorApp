@@ -13,6 +13,7 @@ import {
   Download,
   Upload
 } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { ParkingFilters, ParkingStats } from '@/types/parking';
 import { ToolbarButton } from '@/components/ui/ToolbarButton';
 import { ParkingStatsSummary } from './ParkingStatsSummary';
@@ -45,6 +46,7 @@ export function ParkingTableToolbar({
   onRefresh,
   selectedCount = 0
 }: ParkingTableToolbarProps) {
+  const iconSizes = useIconSizes();
 
   return (
     <TooltipProvider>
@@ -58,7 +60,7 @@ export function ParkingTableToolbar({
                 className={`text-green-600 dark:text-green-500 ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`}
                 onClick={onAdd}
               >
-                <Plus className="w-4 h-4" />
+                <Plus className={iconSizes.sm} />
               </ToolbarButton>
               
               <ToolbarButton
@@ -67,7 +69,7 @@ export function ParkingTableToolbar({
                 onClick={onDelete}
                 disabled={selectedCount === 0}
               >
-                <Minus className="w-4 h-4" />
+                <Minus className={iconSizes.sm} />
               </ToolbarButton>
               
               <div className="w-px h-6 bg-border mx-1" />
@@ -76,14 +78,14 @@ export function ParkingTableToolbar({
                 tooltip="Αποθήκευση Αλλαγών"
                 onClick={onSave}
               >
-                <Save className="w-4 h-4" />
+                <Save className={iconSizes.sm} />
               </ToolbarButton>
               
               <ToolbarButton 
                 tooltip="Ανανέωση Δεδομένων"
                 onClick={onRefresh}
               >
-                <RefreshCw className="w-4 h-4" />
+                <RefreshCw className={iconSizes.sm} />
               </ToolbarButton>
               
               <div className="w-px h-6 bg-border mx-1" />
@@ -92,14 +94,14 @@ export function ParkingTableToolbar({
                 tooltip="Εξαγωγή Δεδομένων"
                 onClick={onExport}
               >
-                <Download className="w-4 h-4" />
+                <Download className={iconSizes.sm} />
               </ToolbarButton>
               
               <ToolbarButton 
                 tooltip="Εισαγωγή Δεδομένων"
                 onClick={onImport}
               >
-                <Upload className="w-4 h-4" />
+                <Upload className={iconSizes.sm} />
               </ToolbarButton>
             </div>
             
@@ -117,7 +119,7 @@ export function ParkingTableToolbar({
             <ToolbarButton 
               tooltip="Βοήθεια"
             >
-              <HelpCircle className="w-4 h-4" />
+              <HelpCircle className={iconSizes.sm} />
             </ToolbarButton>
           </div>
         </div>

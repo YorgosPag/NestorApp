@@ -44,6 +44,7 @@
 import React from 'react';
 import { useCursorSettings } from '../../../../../systems/cursor';
 import { DEFAULT_CURSOR_SETTINGS } from '../../../../../systems/cursor/config';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { CursorColors } from '../../../palettes/CursorColorPalette';
 import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
@@ -75,6 +76,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
   cursorColors,
   onCursorColorsChange
 }) => {
+  const iconSizes = useIconSizes();
   // ============================================================================
   // HOOKS
   // ============================================================================
@@ -241,9 +243,9 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
                 : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
             }`}
           >
-            <div className="w-6 h-6 flex items-center justify-center">
+            <div className={`${iconSizes.lg} flex items-center justify-center`}>
               <div
-                className="w-1 h-1 rounded-full"
+                className={`${iconSizes.xxs} rounded-full`}
                 style={layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor)}
               ></div>
             </div>
@@ -257,10 +259,10 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
                 : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
             }`}
           >
-            <div className="w-6 h-6 flex items-center justify-center relative">
+            <div className={`${iconSizes.lg} flex items-center justify-center relative`}>
               {/* Οριζόντια γραμμή */}
               <div
-                className="absolute top-1/2 left-1/2 w-3 transform -translate-x-1/2 -translate-y-1/2"
+                className={`absolute top-1/2 left-1/2 ${iconSizes.xs} transform -translate-x-1/2 -translate-y-1/2`}
                 style={{
                   ...layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor),
                   height: '1px'
@@ -268,7 +270,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
               ></div>
               {/* Κάθετη γραμμή */}
               <div
-                className="absolute top-1/2 left-1/2 h-3 transform -translate-x-1/2 -translate-y-1/2"
+                className={`absolute top-1/2 left-1/2 h-3 transform -translate-x-1/2 -translate-y-1/2`}
                 style={{
                   ...layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor),
                   width: '1px'
@@ -285,10 +287,10 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
                 : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
             }`}
           >
-            <div className="w-6 h-6 flex items-center justify-center relative">
+            <div className={`${iconSizes.lg} flex items-center justify-center relative`}>
               {/* Οριζόντια γραμμή */}
               <div
-                className="absolute top-1/2 left-1/2 w-4 transform -translate-x-1/2 -translate-y-1/2"
+                className={`absolute top-1/2 left-1/2 ${iconSizes.sm} transform -translate-x-1/2 -translate-y-1/2`}
                 style={{
                   ...layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor),
                   height: '1px'
@@ -296,7 +298,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
               ></div>
               {/* Κάθετη γραμμή */}
               <div
-                className="absolute top-1/2 left-1/2 h-4 transform -translate-x-1/2 -translate-y-1/2"
+                className={`absolute top-1/2 left-1/2 h-4 transform -translate-x-1/2 -translate-y-1/2`}
                 style={{
                   ...layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor),
                   width: '1px'
@@ -313,10 +315,10 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
                 : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
             }`}
           >
-            <div className="w-6 h-6 flex items-center justify-center relative">
+            <div className={`${iconSizes.lg} flex items-center justify-center relative`}>
               {/* Οριζόντια γραμμή */}
               <div
-                className="absolute top-1/2 left-1/2 w-5 transform -translate-x-1/2 -translate-y-1/2"
+                className={`absolute top-1/2 left-1/2 ${iconSizes.md} transform -translate-x-1/2 -translate-y-1/2`}
                 style={{
                   ...layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor),
                   height: '1px'
@@ -324,7 +326,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
               ></div>
               {/* Κάθετη γραμμή */}
               <div
-                className="absolute top-1/2 left-1/2 h-5 transform -translate-x-1/2 -translate-y-1/2"
+                className={`absolute top-1/2 left-1/2 h-5 transform -translate-x-1/2 -translate-y-1/2`}
                 style={{
                   ...layoutUtilities.dxf.colors.backgroundColor(cursorColors.crosshairColor),
                   width: '1px'
@@ -341,7 +343,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
                 : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
             }`}
           >
-            <div className="w-6 h-6 flex items-center justify-center relative">
+            <div className={`${iconSizes.lg} flex items-center justify-center relative`}>
               {/* Εξωτερικό πλαίσιο */}
               <div
                 className="absolute inset-0 border"

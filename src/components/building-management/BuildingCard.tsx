@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { Star } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { Building } from './BuildingsPageContent';
 import { COMPLEX_HOVER_EFFECTS } from '@/components/ui/effects';
 
@@ -26,6 +27,7 @@ export function BuildingCard({
   isSelected,
   onClick,
 }: BuildingCardProps) {
+  const iconSizes = useIconSizes();
   const [isFavorite, setIsFavorite] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const CategoryIcon = getCategoryIcon(building.category || 'mixed');
@@ -68,7 +70,7 @@ export function BuildingCard({
             },
             variant: 'ghost',
             className: cn(
-              'w-8 h-8 p-0',
+              `${iconSizes.lg} p-0`,
               isFavorite ? 'text-yellow-500 fill-current' : 'text-gray-400'
             )
           }

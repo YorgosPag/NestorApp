@@ -4,6 +4,7 @@ import React from 'react';
 import { CommonBadge } from '@/core/badges';
 import { Button } from '@/components/ui/button';
 import { useButtonPatterns } from '@/hooks/useButtonPatterns';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { Edit, Save, X, CheckCircle } from 'lucide-react';
 
 interface HeaderProps {
@@ -18,6 +19,7 @@ interface HeaderProps {
 export function Header({ building, isEditing, autoSaving, lastSaved, setIsEditing, handleSave }: HeaderProps) {
   // 🏢 ENTERPRISE: Centralized systems
   const buttonPatterns = useButtonPatterns();
+  const iconSizes = useIconSizes();
 
   return (
     <div className="flex items-center justify-between">
@@ -45,12 +47,12 @@ export function Header({ building, isEditing, autoSaving, lastSaved, setIsEditin
           <div className="flex items-center gap-2 text-xs">
             {autoSaving ? (
               <>
-                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                <div className={`animate-spin rounded-full ${iconSizes.xs} border-b-2 border-blue-600`}></div>
                 <span className="text-blue-600">Αποθήκευση...</span>
               </>
             ) : lastSaved ? (
               <>
-                <CheckCircle className="w-3 h-3 text-green-600" />
+                <CheckCircle className={`${iconSizes.xs} text-green-600`} />
                 <span className="text-green-600">
                   Αποθηκεύτηκε {lastSaved.toLocaleTimeString('el-GR')}
                 </span>
@@ -63,17 +65,17 @@ export function Header({ building, isEditing, autoSaving, lastSaved, setIsEditin
       <div className="flex items-center gap-2">
         {!isEditing ? (
           <Button {...buttonPatterns.actions.edit} onClick={() => setIsEditing(true)}>
-            <Edit className="w-4 h-4 mr-2" />
+            <Edit className={`${iconSizes.sm} mr-2`} />
             Επεξεργασία
           </Button>
         ) : (
           <>
             <Button {...buttonPatterns.actions.cancel} onClick={() => setIsEditing(false)}>
-              <X className="w-4 h-4 mr-2" />
+              <X className={`${iconSizes.sm} mr-2`} />
               Ακύρωση
             </Button>
             <Button size="sm" onClick={handleSave}>
-              <Save className="w-4 h-4 mr-2" />
+              <Save className={`${iconSizes.sm} mr-2`} />
               Αποθήκευση
             </Button>
           </>

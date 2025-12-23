@@ -13,6 +13,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useRulersGridContext } from '../../../../../../systems/rulers-grid/RulersGridSystem';
 import { UnifiedColorPicker } from '../../../../../color';
@@ -41,6 +42,7 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
   // HOOKS
   // ============================================================================
 
+  const iconSizes = useIconSizes();
   const {
     state: { rulers: rulerSettings },
     updateRulerSettings
@@ -99,20 +101,22 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
         </div>
         <div className="flex items-center gap-2">
           <div
-            className="w-6 h-6 rounded border border-gray-500"
+            className={`${iconSizes.lg} rounded border border-gray-500`}
             style={{ backgroundColor: rulerSettings.horizontal.textColor }}
           />
           <input
             type="color"
             value={rulerSettings.horizontal.textColor}
             onChange={(e) => handleRulerTextColorChange(e.target.value)}
-            className="w-8 h-6 rounded border-0 cursor-pointer"
+            className={`${iconSizes.xl} rounded border-0 cursor-pointer`}
+            style={{ width: '2rem', height: '1.5rem' }}
           />
           <input
             type="text"
             value={rulerSettings.horizontal.textColor}
             onChange={(e) => handleRulerTextColorChange(e.target.value)}
-            className="w-20 px-2 py-1 text-xs bg-gray-600 text-white rounded border border-gray-500"
+            className="px-2 py-1 text-xs bg-gray-600 text-white rounded border border-gray-500"
+            style={{ width: '5rem' }}
             placeholder="#ffffff"
           />
         </div>
@@ -134,7 +138,7 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
             onChange={(e) => handleRulerFontSizeChange(parseInt(e.target.value))}
             className="flex-1"
           />
-          <div className="w-12 text-xs bg-gray-600 text-white rounded px-2 py-1 text-center">
+          <div className="text-xs bg-gray-600 text-white rounded px-2 py-1 text-center" style={{ width: '3rem' }}>
             {rulerSettings.horizontal.fontSize}px
           </div>
         </div>

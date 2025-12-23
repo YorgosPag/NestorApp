@@ -4,6 +4,7 @@ import React from 'react';
 import { LabeledSelect } from './LabeledSelect';
 import { LabeledInput } from './LabeledInput';
 import { Home, MapPin, Activity, Building2, Search } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface PropertyPageFiltersProps {
   searchTerm: string;
@@ -67,11 +68,13 @@ export function PropertyPageFilters({
   filterBuilding,
   setFilterBuilding
 }: PropertyPageFiltersProps) {
+  const iconSizes = useIconSizes();
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
       <LabeledInput
         id="search"
-        icon={<Search className="w-4 h-4" />}
+        icon={<Search className={iconSizes.sm} />}
         label="Αναζήτηση"
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
@@ -80,7 +83,7 @@ export function PropertyPageFilters({
       />
       <LabeledSelect
         id="type-filter"
-        icon={<Home className="w-3 h-3" />}
+        icon={<Home className={iconSizes.xs} />}
         label="Τύπος"
         value={filterType}
         onValueChange={setFilterType}
@@ -88,7 +91,7 @@ export function PropertyPageFilters({
       />
       <LabeledSelect
         id="status-filter"
-        icon={<Activity className="w-3 h-3" />}
+        icon={<Activity className={iconSizes.xs} />}
         label="Κατάσταση"
         value={filterStatus}
         onValueChange={setFilterStatus}
@@ -96,7 +99,7 @@ export function PropertyPageFilters({
       />
       <LabeledSelect
         id="floor-filter"
-        icon={<MapPin className="w-3 h-3" />}
+        icon={<MapPin className={iconSizes.xs} />}
         label="Όροφος"
         value={filterFloor}
         onValueChange={setFilterFloor}
@@ -104,7 +107,7 @@ export function PropertyPageFilters({
       />
       <LabeledSelect
         id="building-filter"
-        icon={<Building2 className="w-3 h-3" />}
+        icon={<Building2 className={iconSizes.xs} />}
         label="Κτίριο"
         value={filterBuilding}
         onValueChange={setFilterBuilding}

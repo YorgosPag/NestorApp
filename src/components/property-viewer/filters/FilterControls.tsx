@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search } from "lucide-react";
 import type { FilterState } from '@/types/property-viewer';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface FilterControlsProps {
     filters: FilterState;
@@ -15,13 +16,15 @@ interface FilterControlsProps {
 }
 
 export function FilterControls({ filters, onFilterChange, onRangeChange }: FilterControlsProps) {
+  const iconSizes = useIconSizes();
+
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
         <div className="flex items-center gap-2">
           <Label htmlFor="search" className="text-xs font-medium shrink-0">Αναζήτηση</Label>
           <div className="relative w-full">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Search className={`absolute left-2.5 top-2.5 ${iconSizes.sm} text-muted-foreground`} />
             <Input
               id="search"
               aria-label="Αναζήτηση με όνομα ή περιγραφή"

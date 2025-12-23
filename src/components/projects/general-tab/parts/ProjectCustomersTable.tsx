@@ -4,11 +4,13 @@ import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { CustomerInfoCompact } from '@/components/shared/customer-info';
 import { Users } from "lucide-react";
+import { useIconSizes } from '@/hooks/useIconSizes';
 // import { getProjectCustomers } from "@/services/projects.service"; // Server action - can't use from client
 import type { ProjectCustomersTableProps } from "../types";
 import type { ProjectCustomer } from "@/types/project";
 
 export function ProjectCustomersTable({ projectId }: ProjectCustomersTableProps) {
+  const iconSizes = useIconSizes();
   const [customers, setCustomers] = useState<ProjectCustomer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +46,7 @@ export function ProjectCustomersTable({ projectId }: ProjectCustomersTableProps)
       <Card className="mt-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Users className="w-5 h-5" />
+            <Users className={iconSizes.md} />
             Πελάτες Έργου
           </CardTitle>
         </CardHeader>
@@ -60,7 +62,7 @@ export function ProjectCustomersTable({ projectId }: ProjectCustomersTableProps)
       <Card className="mt-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Users className="w-5 h-5" />
+            <Users className={iconSizes.md} />
             Πελάτες Έργου
           </CardTitle>
         </CardHeader>
@@ -78,13 +80,13 @@ export function ProjectCustomersTable({ projectId }: ProjectCustomersTableProps)
       <Card className="mt-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Users className="w-5 h-5" />
+            <Users className={iconSizes.md} />
             Πελάτες Έργου
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
-            <Users className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+            <Users className={`${iconSizes.xl3} mx-auto text-muted-foreground mb-4`} />
             <p className="text-sm text-muted-foreground">
               Δεν υπάρχουν καταχωρημένοι πελάτες για αυτό το έργο.
             </p>
@@ -98,7 +100,7 @@ export function ProjectCustomersTable({ projectId }: ProjectCustomersTableProps)
     <Card className="mt-6">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Users className="w-5 h-5" />
+          <Users className={iconSizes.md} />
           Πελάτες Έργου
         </CardTitle>
         <CardDescription>

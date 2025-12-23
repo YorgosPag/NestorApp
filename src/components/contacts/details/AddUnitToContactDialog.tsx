@@ -21,6 +21,7 @@ import type { Property } from '@/types/property-viewer';
 import type { Contact } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts';
 import { Loader2 } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface AddUnitToContactDialogProps {
   open: boolean;
@@ -62,6 +63,7 @@ const initialFormData: UnitFormData = {
 };
 
 export function AddUnitToContactDialog({ open, onOpenChange, contactId, onUnitAdded }: AddUnitToContactDialogProps) {
+  const iconSizes = useIconSizes();
   const [formData, setFormData] = useState<UnitFormData>(initialFormData);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(false);
@@ -198,7 +200,7 @@ export function AddUnitToContactDialog({ open, onOpenChange, contactId, onUnitAd
             <Button type="submit" disabled={loading}>
               {loading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className={`mr-2 ${iconSizes.sm} animate-spin`} />
                   Αποθήκευση...
                 </>
               ) : 'Αποθήκευση Ακινήτου'}

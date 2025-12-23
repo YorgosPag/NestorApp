@@ -1,6 +1,7 @@
 import React from 'react';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { layoutUtilities } from '@/styles/design-tokens';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 export interface CursorColors {
   crosshairColor: string;
@@ -28,6 +29,8 @@ interface CursorColorPaletteProps {
 }
 
 export function CursorColorPalette({ colors, onColorsChange }: CursorColorPaletteProps) {
+  const iconSizes = useIconSizes();
+
   const handleColorChange = (key: keyof CursorColors, value: string) => {
     const newColors = { ...colors, [key]: value };
     onColorsChange(newColors);
@@ -51,7 +54,7 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
       </div>
       <div className="flex items-center gap-2">
         <div 
-          className="w-6 h-6 rounded border border-gray-500"
+          className={`${iconSizes.md} rounded border border-gray-500`}
           style={layoutUtilities.dxf.swatch.withOpacity(
             colors[colorKey] as string,
             opacityKey ? colors[opacityKey] as number : 1
@@ -61,13 +64,15 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
           type="color"
           value={colors[colorKey] as string}
           onChange={(e) => handleColorChange(colorKey, e.target.value)}
-          className="w-8 h-6 rounded border-0 cursor-pointer"
+          className={`${iconSizes.xl} rounded border-0 cursor-pointer`}
+          style={{ width: '2rem', height: '1.5rem' }}
         />
         <input
           type="text"
           value={colors[colorKey] as string}
           onChange={(e) => handleColorChange(colorKey, e.target.value)}
-          className="w-20 px-2 py-1 text-xs bg-gray-600 text-white rounded border border-gray-500"
+          className="px-2 py-1 text-xs bg-gray-600 text-white rounded border border-gray-500"
+          style={{ width: '5rem' }}
           placeholder="#ffffff"
         />
         {opacityKey && (
@@ -79,9 +84,10 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
               step="0.1"
               value={colors[opacityKey] as number}
               onChange={(e) => handleColorChange(opacityKey, parseFloat(e.target.value))}
-              className="w-16"
+              className=""
+              style={{ width: '4rem' }}
             />
-            <div className="w-8 text-xs text-gray-300 text-center">
+            <div className="text-xs text-gray-300 text-center" style={{ width: '2rem' }}>
               {Math.round((colors[opacityKey] as number) * 100)}%
             </div>
           </>

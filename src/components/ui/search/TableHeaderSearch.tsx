@@ -19,6 +19,7 @@ import React from 'react';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { SearchInput } from './SearchInput';
 import { SEARCH_UI } from './constants';
 
@@ -46,19 +47,20 @@ export function TableHeaderSearch({
   debounceMs = 300,
   compact = true
 }: TableHeaderSearchProps) {
+  const iconSizes = useIconSizes();
 
   if (compact) {
     // 🎯 Compact mode για table headers - exact same styling as existing
     return (
       <div className={cn("relative flex-1", className)}>
-        <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+        <Search className={`absolute left-2 top-1/2 transform -translate-y-1/2 ${iconSizes.xs} text-muted-foreground`} />
         <Input
           type="text"
           placeholder={placeholder}
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
           disabled={disabled}
-          className={cn("pl-7 h-8 text-sm", SEARCH_UI.INPUT.FOCUS)} // 🏢 Enterprise centralized focus ring
+          className={cn(`pl-7 ${iconSizes.xl} text-sm`, SEARCH_UI.INPUT.FOCUS)} // 🏢 Enterprise centralized focus ring
           autoComplete="off"
         />
       </div>

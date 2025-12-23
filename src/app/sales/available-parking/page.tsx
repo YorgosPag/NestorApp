@@ -13,6 +13,7 @@ import {
   MapPin,
   Calendar,
 } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // Placeholder stats for Available Parking
 const parkingStats: DashboardStat[] = [
@@ -51,6 +52,7 @@ const parkingStats: DashboardStat[] = [
 ];
 
 export default function AvailableParkingPage() {
+  const iconSizes = useIconSizes();
   return (
     <TooltipProvider>
       <div className="flex h-screen bg-background">
@@ -60,7 +62,7 @@ export default function AvailableParkingPage() {
           <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="flex h-14 items-center px-4">
               <div className="flex items-center gap-2">
-                <Car className="h-5 w-5 text-muted-foreground" />
+                <Car className={`${iconSizes.md} text-muted-foreground`} />
                 <h1 className="text-lg font-semibold">Διαθέσιμα Parking</h1>
               </div>
               <div className="ml-auto text-sm text-muted-foreground">
@@ -82,7 +84,7 @@ export default function AvailableParkingPage() {
               {/* Υπόγεια Parking */}
               <div className="space-y-4">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <Building2 className="h-5 w-5" />
+                  <Building2 className={iconSizes.md} />
                   Υπόγεια Parking
                 </h2>
 
@@ -90,7 +92,7 @@ export default function AvailableParkingPage() {
                   <div className="p-4 bg-card border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 bg-blue-500/10 rounded-lg">
-                        <Building2 className="h-4 w-4 text-blue-500" />
+                        <Building2 className={`${iconSizes.sm} text-blue-500`} />
                       </div>
                       <h3 className="font-medium">Κλειστά Υπόγεια</h3>
                       <span className="ml-auto bg-blue-500/20 text-blue-500 px-2 py-1 rounded text-sm font-medium">
@@ -116,7 +118,7 @@ export default function AvailableParkingPage() {
                   <div className="p-4 bg-card border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 bg-purple-500/10 rounded-lg">
-                        <Square className="h-4 w-4 text-purple-500" />
+                        <Square className={`${iconSizes.sm} text-purple-500`} />
                       </div>
                       <h3 className="font-medium">Ημι-υπαίθρια</h3>
                       <span className="ml-auto bg-purple-500/20 text-purple-500 px-2 py-1 rounded text-sm font-medium">
@@ -144,7 +146,7 @@ export default function AvailableParkingPage() {
               {/* Εξωτερικά Parking */}
               <div className="space-y-4">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <Square className="h-5 w-5" />
+                  <Square className={iconSizes.md} />
                   Εξωτερικά Parking
                 </h2>
 
@@ -152,7 +154,7 @@ export default function AvailableParkingPage() {
                   <div className="p-4 bg-card border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 bg-green-500/10 rounded-lg">
-                        <Building2 className="h-4 w-4 text-green-500" />
+                        <Building2 className={`${iconSizes.sm} text-green-500`} />
                       </div>
                       <h3 className="font-medium">Σκεπαστά</h3>
                       <span className="ml-auto bg-green-500/20 text-green-500 px-2 py-1 rounded text-sm font-medium">
@@ -178,7 +180,7 @@ export default function AvailableParkingPage() {
                   <div className="p-4 bg-card border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 bg-orange-500/10 rounded-lg">
-                        <Square className="h-4 w-4 text-orange-500" />
+                        <Square className={`${iconSizes.sm} text-orange-500`} />
                       </div>
                       <h3 className="font-medium">Υπαίθρια</h3>
                       <span className="ml-auto bg-orange-500/20 text-orange-500 px-2 py-1 rounded text-sm font-medium">
@@ -210,7 +212,7 @@ export default function AvailableParkingPage() {
               <div className="p-6 bg-card border rounded-lg">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="p-2 bg-blue-500/10 rounded-lg">
-                    <DollarSign className="h-5 w-5 text-blue-500" />
+                    <DollarSign className={`${iconSizes.md} text-blue-500`} />
                   </div>
                   <h3 className="font-semibold">Τιμές ανά Τύπο</h3>
                 </div>
@@ -234,7 +236,7 @@ export default function AvailableParkingPage() {
               <div className="p-6 bg-card border rounded-lg">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="p-2 bg-green-500/10 rounded-lg">
-                    <Eye className="h-5 w-5 text-green-500" />
+                    <Eye className={`${iconSizes.md} text-green-500`} />
                   </div>
                   <h3 className="font-semibold">Δραστηριότητα</h3>
                 </div>
@@ -258,7 +260,7 @@ export default function AvailableParkingPage() {
               <div className="p-6 bg-card border rounded-lg">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="p-2 bg-purple-500/10 rounded-lg">
-                    <TrendingUp className="h-5 w-5 text-purple-500" />
+                    <TrendingUp className={`${iconSizes.md} text-purple-500`} />
                   </div>
                   <h3 className="font-semibold">Market Trends</h3>
                 </div>
@@ -282,7 +284,7 @@ export default function AvailableParkingPage() {
             {/* Info Message */}
             <div className="p-4 bg-muted/50 border border-dashed rounded-lg">
               <div className="flex items-center gap-2 text-sm">
-                <Car className="h-4 w-4" />
+                <Car className={iconSizes.sm} />
                 <span className="font-medium">Διαθέσιμα Parking</span>
               </div>
               <p className="text-sm text-muted-foreground mt-1">

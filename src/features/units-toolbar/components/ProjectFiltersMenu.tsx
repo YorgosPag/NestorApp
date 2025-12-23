@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Filter, X } from 'lucide-react';
 import { ToolbarButton } from '@/components/ui/ToolbarButton';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface Props {
   activeFilters: string[];
@@ -18,6 +19,7 @@ interface Props {
 }
 
 export function ProjectFiltersMenu({ activeFilters, onActiveFiltersChange }: Props) {
+  const iconSizes = useIconSizes();
   const handleFilterChange = (filter: string, checked: boolean) => {
     onActiveFiltersChange(
       checked ? [...activeFilters, filter] : activeFilters.filter((f) => f !== filter)
@@ -32,7 +34,7 @@ export function ProjectFiltersMenu({ activeFilters, onActiveFiltersChange }: Pro
             tooltip="Φίλτρα και Προβολή"
             badge={activeFilters.length > 0 ? activeFilters.length : undefined}
           >
-            <Filter className="w-4 h-4" />
+            <Filter className={iconSizes.sm} />
           </ToolbarButton>
         </div>
       </DropdownMenuTrigger>
@@ -54,7 +56,7 @@ export function ProjectFiltersMenu({ activeFilters, onActiveFiltersChange }: Pro
         ))}
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => onActiveFiltersChange([])}>
-          <X className="w-4 h-4 mr-2" />
+          <X className={`${iconSizes.sm} mr-2`} />
           Καθαρισμός Φίλτρων
         </DropdownMenuItem>
       </DropdownMenuContent>

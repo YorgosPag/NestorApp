@@ -28,6 +28,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 import type {
   CustomerActionButtonsProps,
@@ -208,6 +209,8 @@ export function CustomerActionButtons({
   direction = 'horizontal',
   iconsOnly = false
 }: CustomerActionButtonsProps) {
+  const iconSizes = useIconSizes();
+
   // ========================================================================
   // COMPUTED ACTIONS
   // ========================================================================
@@ -243,7 +246,7 @@ export function CustomerActionButtons({
     ? 'flex items-center gap-1'
     : 'flex flex-col gap-1';
 
-  const iconSize = size === 'lg' ? 'w-5 h-5' : 'w-4 h-4';
+  const iconSize = size === 'lg' ? iconSizes.md : iconSizes.sm;
 
   // ========================================================================
   // RENDER HELPERS

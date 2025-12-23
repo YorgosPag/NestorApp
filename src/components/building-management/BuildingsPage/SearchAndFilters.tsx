@@ -8,6 +8,7 @@ import {
   Filter,
   X,
 } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { FilterSelect } from './FilterSelect';
 
 interface SearchAndFiltersProps {
@@ -35,6 +36,7 @@ export function SearchAndFilters({
   filterStatus,
   setFilterStatus,
 }: SearchAndFiltersProps) {
+  const iconSizes = useIconSizes();
   const hasActiveFilters =
     filterCompany !== 'all' ||
     filterProject !== 'all' ||
@@ -59,7 +61,7 @@ export function SearchAndFilters({
         />
       </div>
       <div className="flex items-center gap-2">
-        <Filter className="w-4 h-4 text-muted-foreground" />
+        <Filter className={`${iconSizes.sm} text-muted-foreground`} />
         <FilterSelect
           value={filterCompany}
           onChange={setFilterCompany}
@@ -85,7 +87,7 @@ export function SearchAndFilters({
         />
         {hasActiveFilters && (
           <Button variant="ghost" size="sm" onClick={clearFilters} className="text-xs">
-            <X className="w-3 h-3 mr-1" />
+            <X className={`${iconSizes.xs} mr-1`} />
             Καθαρισμός
           </Button>
         )}

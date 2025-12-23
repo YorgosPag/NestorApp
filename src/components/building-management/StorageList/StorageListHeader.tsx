@@ -8,6 +8,7 @@ import {
   Table as TableIcon,
   Trash2
 } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface StorageListHeaderProps {
   totalCount: number;
@@ -24,6 +25,7 @@ export function StorageListHeader({
   viewMode,
   setViewMode,
 }: StorageListHeaderProps) {
+  const iconSizes = useIconSizes();
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-2">
@@ -41,7 +43,7 @@ export function StorageListHeader({
               onClick={onBulkDelete}
               className={`text-destructive ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`}
             >
-              <Trash2 className="w-4 h-4 mr-1" />
+              <Trash2 className={`${iconSizes.sm} mr-1`} />
               Διαγραφή επιλεγμένων
             </Button>
           </>
@@ -54,14 +56,14 @@ export function StorageListHeader({
           size="sm"
           onClick={() => setViewMode('cards')}
         >
-          <Layers className="w-4 h-4 mr-2" /> Κάρτες
+          <Layers className={`${iconSizes.sm} mr-2`} /> Κάρτες
         </Button>
         <Button
           variant={viewMode === 'table' ? 'default' : 'outline'}
           size="sm"
           onClick={() => setViewMode('table')}
         >
-          <TableIcon className="w-4 h-4 mr-2" /> Πίνακας
+          <TableIcon className={`${iconSizes.sm} mr-2`} /> Πίνακας
         </Button>
       </div>
     </div>

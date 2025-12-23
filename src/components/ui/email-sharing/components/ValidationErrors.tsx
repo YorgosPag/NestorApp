@@ -13,6 +13,7 @@
 import React from 'react';
 import { designSystem } from '@/lib/design-system';
 import { AlertCircle, AlertTriangle, XCircle } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // Types
 import type { ValidationErrorsProps } from '../types';
@@ -38,6 +39,7 @@ export const ValidationErrors: React.FC<ValidationErrorsProps> = ({
   backendError,
   show = true
 }) => {
+  const iconSizes = useIconSizes();
   // Early return if hidden or no errors
   if (!show || (!error && !backendError)) return null;
 
@@ -51,7 +53,7 @@ export const ValidationErrors: React.FC<ValidationErrorsProps> = ({
             designSystem.getTypographyClass('sm', 'medium'),
             'text-yellow-800 dark:text-yellow-300'
           )} role="banner">
-            <AlertTriangle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+            <AlertTriangle className={`${iconSizes.md} mt-0.5 flex-shrink-0`} />
             <main>
               <h4 className="font-medium mb-1">Σφάλμα Επικύρωσης</h4>
               <p className={designSystem.cn(
@@ -73,7 +75,7 @@ export const ValidationErrors: React.FC<ValidationErrorsProps> = ({
             designSystem.getTypographyClass('sm', 'medium'),
             'text-red-800 dark:text-red-300'
           )} role="banner">
-            <XCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+            <XCircle className={`${iconSizes.md} mt-0.5 flex-shrink-0`} />
             <main>
               <h4 className="font-medium mb-1">Σφάλμα Συστήματος</h4>
               <p className={designSystem.cn(
@@ -105,6 +107,7 @@ export const CompactValidationErrors: React.FC<ValidationErrorsProps & {
   show = true,
   variant = 'minimal'
 }) => {
+  const iconSizes = useIconSizes();
   if (!show || (!error && !backendError)) return null;
 
   const errorToShow = backendError || error;
@@ -112,7 +115,7 @@ export const CompactValidationErrors: React.FC<ValidationErrorsProps & {
   if (variant === 'inline') {
     return (
       <aside className="flex items-center gap-2 text-red-600 dark:text-red-400 text-xs" role="alert" aria-live="polite" aria-label="Ελλιπής Επικύρωση">
-        <AlertCircle className="w-3 h-3 flex-shrink-0" />
+        <AlertCircle className={`${iconSizes.xs} flex-shrink-0`} />
         <span>{errorToShow}</span>
       </aside>
     );
@@ -121,7 +124,7 @@ export const CompactValidationErrors: React.FC<ValidationErrorsProps & {
   return (
     <aside className="p-2 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800" role="alert" aria-label="Συμπαγής Επικύρωση">
       <p className="flex items-center gap-2 text-red-700 dark:text-red-300 text-xs">
-        <AlertCircle className="w-3 h-3 flex-shrink-0" />
+        <AlertCircle className={`${iconSizes.xs} flex-shrink-0`} />
         <span>{errorToShow}</span>
       </p>
     </aside>
@@ -144,6 +147,7 @@ export const FieldValidationError: React.FC<{
   show = true,
   fieldId
 }) => {
+  const iconSizes = useIconSizes();
   if (!show || !error) return null;
 
   return (
@@ -157,7 +161,7 @@ export const FieldValidationError: React.FC<{
       role="alert"
       aria-label="Σφάλμα Πεδίου"
     >
-      <AlertCircle className="w-3 h-3 flex-shrink-0" />
+      <AlertCircle className={`${iconSizes.xs} flex-shrink-0`} />
       <span>{error}</span>
     </aside>
   );
@@ -194,8 +198,8 @@ export const SuccessMessage: React.FC<{
         designSystem.getTypographyClass('sm', 'medium'),
         'text-green-800 dark:text-green-300'
       )}>
-        <figure className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0" role="img" aria-label="Εικονίδιο Επιτυχίας">
-          <div className="w-2 h-2 bg-white rounded-full" />
+        <figure className={`${iconSizes.md} rounded-full bg-green-500 flex items-center justify-center flex-shrink-0`} role="img" aria-label="Εικονίδιο Επιτυχίας">
+          <div className={`${iconSizes.xs} bg-white rounded-full`} />
         </figure>
         {message}
       </p>

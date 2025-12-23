@@ -8,10 +8,12 @@ import LinkSoldUnitsToCustomers from '@/components/admin/LinkSoldUnitsToCustomer
 import SoldUnitsPreview from '@/components/admin/SoldUnitsPreview';
 // Enterprise Configuration Management - CLAUDE.md Protocol compliance
 import { useEnterpriseConfig } from '@/core/configuration/useEnterpriseConfig';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 export default function LinkUnitsPage() {
   // Enterprise Configuration Hook - replaces hardcoded values
   const { companyConfig, isLoading } = useEnterpriseConfig();
+  const iconSizes = useIconSizes();
 
   // Get current project name from centralized configuration
   const currentProjectName = companyConfig?.currentProject?.name || 'έργου';
@@ -24,7 +26,7 @@ export default function LinkUnitsPage() {
         <div className="flex items-center gap-4">
           <Link href="/admin">
             <Button variant="ghost" size="sm">
-              <ArrowLeft className="w-4 h-4 mr-2" />
+              <ArrowLeft className={`${iconSizes.sm} mr-2`} />
               Πίσω στη Διαχείριση
             </Button>
           </Link>

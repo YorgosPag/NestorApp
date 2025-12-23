@@ -3,6 +3,7 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface StatsCardProps {
     title: string;
@@ -13,6 +14,7 @@ interface StatsCardProps {
 }
 
 export function StatsCard({ title, value, icon: Icon, color, onClick }: StatsCardProps) {
+  const iconSizes = useIconSizes();
     const colorClasses = {
         blue: 'border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400',
         gray: 'border-gray-200 bg-gray-50/50 dark:bg-gray-950/20 text-gray-600 dark:text-gray-400',
@@ -65,7 +67,7 @@ export function StatsCard({ title, value, icon: Icon, color, onClick }: StatsCar
                         <p className={`text-xs font-medium ${colorClasses[colorKey]} truncate leading-tight`}>{title}</p>
                         <p className={`text-lg sm:text-xl lg:text-2xl font-bold ${valueColorClasses[colorKey]} truncate leading-tight`}>{value}</p>
                     </div>
-                    <Icon className={`h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 ${iconColorClasses[colorKey]} flex-shrink-0`} />
+                    <Icon className={`${iconSizes.lg} ${iconColorClasses[colorKey]} flex-shrink-0`} />
                 </div>
             </CardContent>
         </Card>

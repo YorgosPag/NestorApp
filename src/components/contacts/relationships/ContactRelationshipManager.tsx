@@ -20,6 +20,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertCircle, Users, Plus, RefreshCw } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // 🏢 ENTERPRISE: Import centralized types
 import type { ContactType } from '@/types/contacts';
@@ -64,6 +65,8 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
   // ============================================================================
   // HOOK INTEGRATIONS
   // ============================================================================
+
+  const iconSizes = useIconSizes();
 
   // 📋 Relationship list management hook
   const {
@@ -217,7 +220,7 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
             disabled={anyLoading}
             title="Ανανέωση δεδομένων"
           >
-            <RefreshCw className={`h-4 w-4 ${anyLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`${iconSizes.sm} ${anyLoading ? 'animate-spin' : ''}`} />
           </Button>
 
           {!showFormCard && (
@@ -226,7 +229,7 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
               disabled={anyLoading}
               size="sm"
             >
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className={`${iconSizes.sm} mr-2`} />
               Προσθήκη Σχέσης
             </Button>
           )}
@@ -245,7 +248,7 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
       <div className="space-y-3 mb-6">
         {listError && (
           <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
+            <AlertCircle className={iconSizes.sm} />
             <AlertDescription>
               <strong>Σφάλμα λίστας σχέσεων:</strong> {listError}
             </AlertDescription>
@@ -254,7 +257,7 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
 
         {formError && (
           <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
+            <AlertCircle className={iconSizes.sm} />
             <AlertDescription>
               <strong>Σφάλμα φόρμας:</strong> {formError}
             </AlertDescription>
@@ -263,7 +266,7 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
 
         {treeError && (
           <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
+            <AlertCircle className={iconSizes.sm} />
             <AlertDescription>
               <strong>Σφάλμα οργανωσιακού διαγράμματος:</strong> {treeError}
             </AlertDescription>
@@ -281,7 +284,7 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
 
     return (
       <Alert className="mb-6 border-green-200 bg-green-50">
-        <AlertCircle className="h-4 w-4 text-green-600" />
+        <AlertCircle className={`${iconSizes.sm} text-green-600`} />
         <AlertDescription className="text-green-700">
           {successMessage}
         </AlertDescription>

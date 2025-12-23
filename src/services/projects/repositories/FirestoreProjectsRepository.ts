@@ -27,13 +27,12 @@ export class FirestoreProjectsRepository implements IProjectsRepository {
     console.log(`🏗️ FirestoreProjectsRepository: Loading projects for companyId: "${companyId}"`);
 
     return await safeDbOperation(async (database) => {
-      // Import firestore functions at runtime
-      const { collection, query, where, getDocs } = await import('firebase-admin/firestore');
+      // Using Firestore admin SDK methods correctly
+      const projectsCollection = database.collection(PROJECTS_COLLECTION);
 
       // First, let's see ALL projects to understand the data structure
       console.log(`🔍 DEBUG: Fetching ALL projects to see available companyIds...`);
-      const allProjectsQuery = query(collection(database, PROJECTS_COLLECTION));
-      const allSnapshot = await getDocs(allProjectsQuery);
+      const allSnapshot = await projectsCollection.get();
       console.log(`🔍 DEBUG: Total projects in Firestore: ${allSnapshot.docs.length}`);
 
       allSnapshot.docs.forEach(doc => {
@@ -43,12 +42,7 @@ export class FirestoreProjectsRepository implements IProjectsRepository {
       });
 
       // Now do the specific query
-      const projectsQuery = query(
-        collection(database, PROJECTS_COLLECTION),
-        where('companyId', '==', companyId)
-      );
-
-      const snapshot = await getDocs(projectsQuery);
+      const snapshot = await projectsCollection.where('companyId', '==', companyId).get();
       console.log(`🏗️ FirestoreProjectsRepository: Found ${snapshot.docs.length} projects for companyId "${companyId}"`);
 
       const projects: Project[] = snapshot.docs.map(doc => ({
@@ -83,13 +77,9 @@ export class FirestoreProjectsRepository implements IProjectsRepository {
 
   async getBuildingsByProjectId(projectId: string): Promise<Building[]> {
     return await safeDbOperation(async (database) => {
-      const { collection, query, where, getDocs } = await import('firebase-admin/firestore');
-
-      const q = query(
-        collection(database, COLLECTIONS.BUILDINGS),
-        where('projectId', '==', projectId)
-      );
-      const snapshot = await getDocs(q);
+      // Using Firestore admin SDK methods correctly
+      const buildingsCollection = database.collection(COLLECTIONS.BUILDINGS);
+      const snapshot = await buildingsCollection.where('projectId', '==', projectId).get();
 
       return snapshot.docs.map(doc => ({
         id: doc.id,
@@ -100,13 +90,9 @@ export class FirestoreProjectsRepository implements IProjectsRepository {
 
   async getUnitsByBuildingId(buildingId: string): Promise<Property[]> {
     return await safeDbOperation(async (database) => {
-      const { collection, query, where, getDocs } = await import('firebase-admin/firestore');
-
-      const q = query(
-        collection(database, COLLECTIONS.UNITS),
-        where('buildingId', '==', buildingId)
-      );
-      const snapshot = await getDocs(q);
+      // Using Firestore admin SDK methods correctly
+      const unitsCollection = database.collection(COLLECTIONS.UNITS);
+      const snapshot = await unitsCollection.where('buildingId', '==', buildingId).get();
 
       return snapshot.docs.map(doc => ({
         id: doc.id,
@@ -119,17 +105,14 @@ export class FirestoreProjectsRepository implements IProjectsRepository {
     if (ids.length === 0) return [];
 
     return await safeDbOperation(async (database) => {
-      const { collection, query, where, getDocs, documentId } = await import('firebase-admin/firestore');
+      const { FieldPath } = await import('firebase-admin/firestore');
 
       const allContacts: Contact[] = [];
       const idChunks = chunkArray(ids, 10);
+      const contactsCollection = database.collection(COLLECTIONS.CONTACTS);
 
       for (const chunk of idChunks) {
-        const q = query(
-          collection(database, COLLECTIONS.CONTACTS),
-          where(documentId(), 'in', chunk)
-        );
-        const snapshot = await getDocs(q);
+        const snapshot = await contactsCollection.where(FieldPath.documentId(), 'in', chunk).get();
         const contacts = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()

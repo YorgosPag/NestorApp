@@ -7,12 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { CommonBadge } from '@/core/badges';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { 
-  MessageSquare, 
-  Mail, 
-  Phone, 
-  Send, 
-  Settings, 
+import {
+  MessageSquare,
+  Mail,
+  Phone,
+  Send,
+  Settings,
   Activity,
   AlertCircle,
   CheckCircle,
@@ -22,6 +22,7 @@ import {
   Users,
   Clock
 } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import UnifiedInbox from './UnifiedInbox';
 import SendMessageModal from './SendMessageModal';
 import communicationsService, { 
@@ -39,6 +40,7 @@ import { toast } from 'sonner';
  */
 
 const CommunicationsIntegration = ({ leadData = null, defaultTab = "inbox" }) => {
+  const iconSizes = useIconSizes();
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [channelsStatus, setChannelsStatus] = useState({});
   const [stats, setStats] = useState(null);
@@ -171,9 +173,9 @@ const CommunicationsIntegration = ({ leadData = null, defaultTab = "inbox" }) =>
             variant={isEnabled ? "default" : "secondary"}
           />
           {isEnabled ? (
-            <CheckCircle className="h-4 w-4 text-green-600" />
+            <CheckCircle className={`${iconSizes.sm} text-green-600`} />
           ) : (
-            <AlertCircle className="h-4 w-4 text-orange-600" />
+            <AlertCircle className={`${iconSizes.sm} text-orange-600`} />
           )}
         </div>
       </div>
@@ -187,24 +189,24 @@ const CommunicationsIntegration = ({ leadData = null, defaultTab = "inbox" }) =>
     switch (channel) {
       case MESSAGE_TYPES.EMAIL:
       case 'email':
-        return <Mail className="h-4 w-4" />;
+        return <Mail className={iconSizes.sm} />;
       case MESSAGE_TYPES.TELEGRAM:
       case 'telegram':
-        return <MessageSquare className="h-4 w-4 text-cyan-600" />;
+        return <MessageSquare className={`${iconSizes.sm} text-cyan-600`} />;
       case MESSAGE_TYPES.WHATSAPP:
       case 'whatsapp':
-        return <MessageSquare className="h-4 w-4 text-green-600" />;
+        return <MessageSquare className={`${iconSizes.sm} text-green-600`} />;
       case MESSAGE_TYPES.MESSENGER:
       case 'messenger':
-        return <MessageSquare className="h-4 w-4 text-purple-600" />;
+        return <MessageSquare className={`${iconSizes.sm} text-purple-600`} />;
       case MESSAGE_TYPES.SMS:
       case 'sms':
-        return <MessageSquare className="h-4 w-4 text-orange-600" />;
+        return <MessageSquare className={`${iconSizes.sm} text-orange-600`} />;
       case MESSAGE_TYPES.CALL:
       case 'call':
-        return <Phone className="h-4 w-4" />;
+        return <Phone className={iconSizes.sm} />;
       default:
-        return <MessageSquare className="h-4 w-4" />;
+        return <MessageSquare className={iconSizes.sm} />;
     }
   };
 
@@ -213,7 +215,7 @@ const CommunicationsIntegration = ({ leadData = null, defaultTab = "inbox" }) =>
       <Card>
         <CardContent className="p-6">
           <div className="flex items-center justify-center">
-            <RefreshCw className="h-6 w-6 animate-spin mr-2" />
+            <RefreshCw className={`${iconSizes.lg} animate-spin mr-2`} />
             Αρχικοποίηση Communications System...
           </div>
         </CardContent>
@@ -226,13 +228,13 @@ const CommunicationsIntegration = ({ leadData = null, defaultTab = "inbox" }) =>
       <Card>
         <CardContent className="p-6">
           <div className="text-center">
-            <AlertCircle className="h-12 w-12 mx-auto mb-4 text-orange-500" />
+            <AlertCircle className={`${iconSizes.xl3} mx-auto mb-4 text-orange-500`} />
             <h3 className="text-lg font-semibold mb-2">Communications System μη διαθέσιμο</h3>
             <p className="text-gray-600 mb-4">
               Υπήρξε πρόβλημα κατά την αρχικοποίηση του συστήματος επικοινωνιών.
             </p>
             <Button onClick={initializeSystem}>
-              <RefreshCw className="h-4 w-4 mr-2" />
+              <RefreshCw className={`${iconSizes.sm} mr-2`} />
               Δοκιμή ξανά
             </Button>
           </div>
@@ -256,7 +258,7 @@ const CommunicationsIntegration = ({ leadData = null, defaultTab = "inbox" }) =>
             variant="outline"
             onClick={handleRefresh}
           >
-            <RefreshCw className="h-4 w-4 mr-2" />
+            <RefreshCw className={`${iconSizes.sm} mr-2`} />
             Refresh
           </Button>
           <Button
@@ -265,16 +267,16 @@ const CommunicationsIntegration = ({ leadData = null, defaultTab = "inbox" }) =>
             disabled={testing}
           >
             {testing ? (
-              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              <RefreshCw className={`${iconSizes.sm} mr-2 animate-spin`} />
             ) : (
-              <Activity className="h-4 w-4 mr-2" />
+              <Activity className={`${iconSizes.sm} mr-2`} />
             )}
             Test Channels
           </Button>
           <SendMessageModal
             trigger={
               <Button>
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className={`${iconSizes.sm} mr-2`} />
                 Νέο Μήνυμα
               </Button>
             }
@@ -292,7 +294,7 @@ const CommunicationsIntegration = ({ leadData = null, defaultTab = "inbox" }) =>
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-2">
-                <MessageSquare className="h-5 w-5 text-blue-600" />
+                <MessageSquare className={`${iconSizes.md} text-blue-600`} />
                 <div>
                   <p className="text-sm text-gray-600">Συνολικά Μηνύματα</p>
                   <p className="text-2xl font-bold">{stats.totalMessages}</p>
@@ -304,7 +306,7 @@ const CommunicationsIntegration = ({ leadData = null, defaultTab = "inbox" }) =>
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-green-600" />
+                <Users className={`${iconSizes.md} text-green-600`} />
                 <div>
                   <p className="text-sm text-gray-600">Εισερχόμενα</p>
                   <p className="text-2xl font-bold">{stats.byDirection.inbound}</p>
@@ -316,7 +318,7 @@ const CommunicationsIntegration = ({ leadData = null, defaultTab = "inbox" }) =>
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-2">
-                <Send className="h-5 w-5 text-purple-600" />
+                <Send className={`${iconSizes.md} text-purple-600`} />
                 <div>
                   <p className="text-sm text-gray-600">Εξερχόμενα</p>
                   <p className="text-2xl font-bold">{stats.byDirection.outbound}</p>
@@ -328,7 +330,7 @@ const CommunicationsIntegration = ({ leadData = null, defaultTab = "inbox" }) =>
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-orange-600" />
+                <Clock className={`${iconSizes.md} text-orange-600`} />
                 <div>
                   <p className="text-sm text-gray-600">Μέσος Χρόνος Απάντησης</p>
                   <p className="text-2xl font-bold">{stats.responseTime.average}</p>
@@ -343,15 +345,15 @@ const CommunicationsIntegration = ({ leadData = null, defaultTab = "inbox" }) =>
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="inbox">
-            <MessageSquare className="h-4 w-4 mr-2" />
+            <MessageSquare className={`${iconSizes.sm} mr-2`} />
             Inbox
           </TabsTrigger>
           <TabsTrigger value="channels">
-            <Settings className="h-4 w-4 mr-2" />
+            <Settings className={`${iconSizes.sm} mr-2`} />
             Channels
           </TabsTrigger>
           <TabsTrigger value="analytics">
-            <BarChart3 className="h-4 w-4 mr-2" />
+            <BarChart3 className={`${iconSizes.sm} mr-2`} />
             Analytics
           </TabsTrigger>
         </TabsList>

@@ -56,6 +56,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects'
+import { useIconSizes } from '@/hooks/useIconSizes'
 
 // ===== TYPES =====
 
@@ -170,6 +171,7 @@ const AccordionTrigger = React.forwardRef<
   chevronPosition = 'end',
   ...props
 }, ref) => {
+  const iconSizes = useIconSizes();
 
   // 🏢 ENTERPRISE: Custom chevron rendering
   const renderChevron = () => {
@@ -177,11 +179,20 @@ const AccordionTrigger = React.forwardRef<
 
     if (chevron) return chevron;
 
+    // 🏢 ENTERPRISE: Dynamic icon sizes using centralized system
+    const getChevronSize = () => {
+      switch (size) {
+        case 'sm': return iconSizes.xs;
+        case 'lg': return iconSizes.md;
+        default: return iconSizes.sm;
+      }
+    };
+
     return (
       <ChevronDown
         className={cn(
           "shrink-0 transition-transform duration-200",
-          size === 'sm' ? 'h-3 w-3' : size === 'lg' ? 'h-5 w-5' : 'h-4 w-4',
+          getChevronSize(),
           // 🏢 ENTERPRISE: RTL support
           "[dir='rtl']:rotate-180"
         )}

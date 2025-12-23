@@ -1,7 +1,10 @@
 'use client';
 import { Grid, List } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 export function ViewModeToggle({ value, onChange }: { value: 'grid'|'list'; onChange: (v:'grid'|'list')=>void; }) {
+  const iconSizes = useIconSizes();
+
   return (
     <div className="flex bg-gray-100 dark:bg-muted/50 rounded-lg p-1">
       <button
@@ -10,7 +13,7 @@ export function ViewModeToggle({ value, onChange }: { value: 'grid'|'list'; onCh
           value === 'grid' ? 'bg-white dark:bg-card shadow-sm text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300'
         }`}
       >
-        <Grid className="h-4 w-4" />
+        <Grid className={iconSizes.sm} />
         <span className="text-sm font-medium">Πλέγμα</span>
       </button>
       <button
@@ -19,7 +22,7 @@ export function ViewModeToggle({ value, onChange }: { value: 'grid'|'list'; onCh
           value === 'list' ? 'bg-white dark:bg-card shadow-sm text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300'
         }`}
       >
-        <List className="h-4 w-4" />
+        <List className={iconSizes.sm} />
         <span className="text-sm font-medium">Λίστα</span>
       </button>
     </div>

@@ -61,6 +61,7 @@ import {
   Clock,
   User
 } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // Import our enterprise configuration system
 import {
@@ -113,6 +114,7 @@ interface ConfigurationTabState {
  * Production-ready admin dashboard for all configuration management
  */
 export const ConfigurationAdminInterface: React.FC = () => {
+  const iconSizes = useIconSizes();
   const [adminState, setAdminState] = useState<AdminState>({
     isLoading: false,
     error: null,
@@ -340,7 +342,7 @@ export const ConfigurationAdminInterface: React.FC = () => {
       return (
         <div className="flex items-center justify-center p-8">
           <div className="text-center">
-            <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+            <AlertCircle className={`mx-auto ${iconSizes.xl3} text-muted-foreground mb-4`} />
             <p className="text-lg font-medium">Company configuration not available</p>
             <p className="text-sm text-muted-foreground">Please check your database connection</p>
           </div>
@@ -363,7 +365,7 @@ export const ConfigurationAdminInterface: React.FC = () => {
               disabled={!adminState.isDirty || adminState.isLoading}
               className="flex items-center gap-2"
             >
-              <Save className="h-4 w-4" />
+              <Save className={iconSizes.sm} />
               Save Changes
             </Button>
           </div>
@@ -374,7 +376,7 @@ export const ConfigurationAdminInterface: React.FC = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Building className="h-5 w-5" />
+                <Building className={iconSizes.md} />
                 Basic Information
               </CardTitle>
               <CardDescription>
@@ -419,7 +421,7 @@ export const ConfigurationAdminInterface: React.FC = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Mail className="h-5 w-5" />
+                <Mail className={iconSizes.md} />
                 Contact Information
               </CardTitle>
               <CardDescription>
@@ -466,7 +468,7 @@ export const ConfigurationAdminInterface: React.FC = () => {
           <Card className="md:col-span-2">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Globe className="h-5 w-5" />
+                <Globe className={iconSizes.md} />
                 Address Information
               </CardTitle>
               <CardDescription>
@@ -537,7 +539,7 @@ export const ConfigurationAdminInterface: React.FC = () => {
       return (
         <div className="flex items-center justify-center p-8">
           <div className="text-center">
-            <Settings className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+            <Settings className={`mx-auto ${iconSizes.xl3} text-muted-foreground mb-4`} />
             <p className="text-lg font-medium">System configuration not available</p>
           </div>
         </div>
@@ -558,7 +560,7 @@ export const ConfigurationAdminInterface: React.FC = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Activity className="h-5 w-5" />
+                <Activity className={iconSizes.md} />
                 Application Settings
               </CardTitle>
             </CardHeader>
@@ -604,7 +606,7 @@ export const ConfigurationAdminInterface: React.FC = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5" />
+                <Shield className={iconSizes.md} />
                 Security Settings
               </CardTitle>
             </CardHeader>
@@ -613,7 +615,7 @@ export const ConfigurationAdminInterface: React.FC = () => {
                 <div className="grid gap-2">
                   <Label>Session Timeout</Label>
                   <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <Clock className={`${iconSizes.sm} text-muted-foreground`} />
                     <span>{editedSystem.security.sessionTimeoutMinutes} minutes</span>
                   </div>
                 </div>
@@ -635,7 +637,7 @@ export const ConfigurationAdminInterface: React.FC = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Database className="h-5 w-5" />
+                <Database className={iconSizes.md} />
                 Integration Settings
               </CardTitle>
             </CardHeader>
@@ -689,7 +691,7 @@ export const ConfigurationAdminInterface: React.FC = () => {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Upload className="h-5 w-5" />
+              <Upload className={iconSizes.md} />
               Migration Control
             </CardTitle>
             <CardDescription>
@@ -706,7 +708,7 @@ export const ConfigurationAdminInterface: React.FC = () => {
                     onClick={() => setIsDryRun(true)}
                     className="flex items-center gap-2"
                   >
-                    <Eye className="h-4 w-4" />
+                    <Eye className={iconSizes.sm} />
                     Dry Run (Preview)
                   </Button>
                   <Button
@@ -714,7 +716,7 @@ export const ConfigurationAdminInterface: React.FC = () => {
                     onClick={() => setIsDryRun(false)}
                     className="flex items-center gap-2"
                   >
-                    <Database className="h-4 w-4" />
+                    <Database className={iconSizes.sm} />
                     Execute Migration
                   </Button>
                 </div>
@@ -749,11 +751,11 @@ export const ConfigurationAdminInterface: React.FC = () => {
                 className="flex items-center gap-2"
               >
                 {adminState.isLoading ? (
-                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <RefreshCw className={`${iconSizes.sm} animate-spin`} />
                 ) : isDryRun ? (
-                  <Eye className="h-4 w-4" />
+                  <Eye className={iconSizes.sm} />
                 ) : (
-                  <Upload className="h-4 w-4" />
+                  <Upload className={iconSizes.sm} />
                 )}
                 {isDryRun ? 'Preview Migration' : 'Execute Migration'}
               </Button>
@@ -769,15 +771,15 @@ export const ConfigurationAdminInterface: React.FC = () => {
           <CardContent>
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <Building className="h-4 w-4 text-blue-600" />
+                <Building className={`${iconSizes.sm} text-blue-600`} />
                 <span>Company information (email, phone, address)</span>
               </div>
               <div className="flex items-center gap-2">
-                <Globe className="h-4 w-4 text-green-600" />
+                <Globe className={`${iconSizes.sm} text-green-600`} />
                 <span>System URLs and API endpoints</span>
               </div>
               <div className="flex items-center gap-2">
-                <Database className="h-4 w-4 text-orange-600" />
+                <Database className={`${iconSizes.sm} text-orange-600`} />
                 <span>Project templates and defaults</span>
               </div>
               <div className="flex items-center gap-2">

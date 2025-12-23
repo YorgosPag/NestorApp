@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Home, CheckCircle, Ruler } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { BuildingStats as StatsType } from '@/types/building';
 import { getBuildingStats } from '@/services/buildings.service';
 
@@ -12,11 +13,13 @@ interface BuildingStatsProps {
   buildingId: string;
 }
 
-const StatCard = ({ icon: Icon, value, label, loading, colorClass }: { icon: React.ElementType, value: string | number, label: string, loading: boolean, colorClass: string }) => (
+const StatCard = ({ icon: Icon, value, label, loading, colorClass }: { icon: React.ElementType, value: string | number, label: string, loading: boolean, colorClass: string }) => {
+    const iconSizes = useIconSizes();
+    return (
     <Card className={colorClass}>
         <CardContent className="p-4 flex items-center gap-4">
             <div className={`p-3 rounded-lg ${colorClass.replace('bg-', 'bg-opacity-20 ')}`}>
-               <Icon className="w-6 h-6" />
+               <Icon className={iconSizes.lg} />
             </div>
             <div>
                 {loading ? (
@@ -33,7 +36,8 @@ const StatCard = ({ icon: Icon, value, label, loading, colorClass }: { icon: Rea
             </div>
         </CardContent>
     </Card>
-);
+    );
+};
 
 export function BuildingStats({ buildingId }: BuildingStatsProps) {
   const [stats, setStats] = useState<StatsType | null>(null);

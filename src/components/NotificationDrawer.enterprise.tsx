@@ -11,6 +11,7 @@ import { useTranslation } from '@/i18n';
 import type { Notification, Severity, UserPreferences } from '@/types/notification';
 import { NotificationClient } from '@/api/notificationClient';
 import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 type DrawerState = { isOpen: boolean; open: () => void; close: () => void; };
 
@@ -40,6 +41,7 @@ export function NotificationDrawer() {
   const { isOpen, close } = useNotificationDrawer();
   const { items, order, markRead, status, error: storeError, ingest, setStatus, setError, cursor, setCursor } = useNotificationCenter();
   const { t, i18n } = useTranslation('common');
+  const iconSizes = useIconSizes();
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const previousActiveElement = useRef<HTMLElement | null>(null);
 
@@ -236,7 +238,7 @@ export function NotificationDrawer() {
               className={`p-1.5 rounded-md ${HOVER_BACKGROUND_EFFECTS.ACCENT} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
               aria-label={t('buttons.close', { defaultValue: 'Close' })}
             >
-              <X className="w-5 h-5" />
+              <X className={iconSizes.md} />
             </button>
           </div>
         </header>
@@ -245,14 +247,14 @@ export function NotificationDrawer() {
           {/* ✅ ENTERPRISE: Error state UI με Retry */}
           {storeError ? (
             <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground p-4">
-              <AlertCircle className="w-8 h-8 text-red-500" />
+              <AlertCircle className={`${iconSizes.xl} text-red-500`} />
               <p className="text-sm text-center">{storeError}</p>
               <button
                 type="button"
                 onClick={handleRetry}
                 className={`flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
               >
-                <RefreshCw className="w-4 h-4" />
+                <RefreshCw className={iconSizes.sm} />
                 {t('notifications.retry', { defaultValue: 'Retry' })}
               </button>
             </div>
@@ -275,7 +277,7 @@ export function NotificationDrawer() {
                   className={`border-b p-4 ${HOVER_BACKGROUND_EFFECTS.ACCENT_SUBTLE} ${TRANSITION_PRESETS.STANDARD_COLORS} ${n.delivery.state !== 'seen' ? 'bg-accent/20' : ''}`}
                 >
                   <div className="flex items-start gap-3">
-                    <Icon className={`w-5 h-5 mt-0.5 flex-shrink-0 ${colorClass}`} />
+                    <Icon className={`${iconSizes.md} mt-0.5 flex-shrink-0 ${colorClass}`} />
                     <div className="min-w-0 flex-1">
                       <div className="font-medium text-sm mb-1">{n.title}</div>
                       {n.body && (

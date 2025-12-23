@@ -11,6 +11,7 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import type { SectionHeaderProps } from '../types';
 import { HeaderIcon } from './HeaderIcon';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 export const SectionHeader: React.FC<SectionHeaderProps> = ({
   title,
@@ -21,6 +22,8 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
   className,
   variant = 'default'
 }) => {
+  const iconSizes = useIconSizes();
+
   // Combine title with count if provided
   const displayTitle = count !== undefined ? `${title} (${count})` : title;
 
@@ -39,7 +42,7 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
 
   const iconClasses = cn(
     "text-blue-600",
-    variant === 'minimal' ? "h-3 w-3" : "h-4 w-4"
+    variant === 'minimal' ? iconSizes.xs : iconSizes.sm
   );
 
   return (

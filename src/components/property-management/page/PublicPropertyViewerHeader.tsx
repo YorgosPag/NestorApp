@@ -7,6 +7,7 @@ import { LayoutGrid, List, Filter, ArrowLeft, Home, Search } from 'lucide-react'
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import type { FilterState } from '@/types/property-viewer';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects/hover-effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface PublicPropertyViewerHeaderProps {
   viewMode: 'list' | 'grid';
@@ -23,6 +24,7 @@ export function PublicPropertyViewerHeader({
   onFiltersChange,
   availableCount
 }: PublicPropertyViewerHeaderProps) {
+  const iconSizes = useIconSizes();
   const router = useRouter();
   
   return (
@@ -38,7 +40,7 @@ export function PublicPropertyViewerHeader({
                 onClick={() => router.push('/properties')}
                 className={`h-9 px-3 flex items-center gap-2 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} transition-colors`}
               >
-                <ArrowLeft className="w-4 h-4" />
+                <ArrowLeft className={iconSizes.sm} />
                 <span className="hidden sm:inline">Πίσω στην Αναζήτηση</span>
                 <span className="sm:hidden">Πίσω</span>
               </Button>
@@ -51,7 +53,7 @@ export function PublicPropertyViewerHeader({
                 onClick={() => router.push('/')}
                 className={`h-9 px-3 flex items-center gap-2 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
               >
-                <Home className="w-4 h-4" />
+                <Home className={iconSizes.sm} />
                 <span className="hidden sm:inline">Αρχική</span>
               </Button>
             </div>
@@ -75,7 +77,7 @@ export function PublicPropertyViewerHeader({
               onClick={() => router.push('/properties')}
               className="h-8 hidden md:flex items-center gap-2"
             >
-              <Search className="w-4 h-4" />
+              <Search className={iconSizes.sm} />
               Νέα Αναζήτηση
             </Button>
             
@@ -87,7 +89,7 @@ export function PublicPropertyViewerHeader({
                 onClick={() => setViewMode('list')}
                 className="h-8 rounded-r-none border-0"
               >
-                <List className="w-4 h-4 mr-1" />
+                <List className={`${iconSizes.sm} mr-1`} />
                 Λίστα
               </Button>
               <Button
@@ -96,7 +98,7 @@ export function PublicPropertyViewerHeader({
                 onClick={() => setViewMode('grid')}
                 className="h-8 rounded-l-none border-0"
               >
-                <LayoutGrid className="w-4 h-4 mr-1" />
+                <LayoutGrid className={`${iconSizes.sm} mr-1`} />
                 Πλέγμα
               </Button>
             </div>
@@ -107,7 +109,7 @@ export function PublicPropertyViewerHeader({
         <Collapsible>
           <CollapsibleTrigger asChild>
             <Button variant="outline" className="w-full justify-start p-4 text-sm font-semibold">
-              <Filter className="w-4 h-4 mr-2"/>
+              <Filter className={`${iconSizes.sm} mr-2`}/>
               Φίλτρα Αναζήτησης
               {(filters.searchTerm || filters.propertyType.length > 0 || filters.status.length > 0) && (
                 <span className="ml-2 px-2 py-1 bg-primary text-primary-foreground text-xs rounded-full">

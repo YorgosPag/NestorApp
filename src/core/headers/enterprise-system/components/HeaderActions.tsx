@@ -16,6 +16,7 @@ import {
   Plus
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { HeaderActionsProps } from '../types';
 
 // Local interface για compatibility με UnifiedHeaderSystem
@@ -47,6 +48,7 @@ export const HeaderActions: React.FC<UnifiedHeaderActionsProps> = ({
   customActions = [],
   className
 }) => {
+  const iconSizes = useIconSizes();
   const actionsClasses = cn(
     HEADER_THEME.components.actions.default,
     className
@@ -63,7 +65,7 @@ export const HeaderActions: React.FC<UnifiedHeaderActionsProps> = ({
               size="icon"
               onClick={onDashboardToggle}
             >
-              {showDashboard ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              {showDashboard ? <EyeOff className={iconSizes.sm} /> : <Eye className={iconSizes.sm} />}
             </Button>
           </TooltipTrigger>
           <TooltipContent>{showDashboard ? 'Απόκρυψη' : 'Εμφάνιση'} Dashboard</TooltipContent>
@@ -104,9 +106,9 @@ export const HeaderActions: React.FC<UnifiedHeaderActionsProps> = ({
           <TooltipTrigger asChild>
             <Button size="icon" onClick={addButton.onClick} variant="outline">
               {addButton.icon ? (
-                <addButton.icon className="w-4 h-4" />
+                <addButton.icon className={iconSizes.sm} />
               ) : (
-                <Plus className="w-4 h-4" />
+                <Plus className={iconSizes.sm} />
               )}
             </Button>
           </TooltipTrigger>

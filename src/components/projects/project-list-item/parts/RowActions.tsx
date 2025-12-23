@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Eye, Edit, MoreVertical, Star } from 'lucide-react';
 import { GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface RowActionsProps {
     isFavorite: boolean;
@@ -19,6 +20,8 @@ interface RowActionsProps {
 }
 
 export function RowActions({ isFavorite, onToggleFavorite }: RowActionsProps) {
+    const iconSizes = useIconSizes();
+
     return (
         <div className={`absolute bottom-2 right-2 opacity-0 ${GROUP_HOVER_PATTERNS.SHOW_ON_GROUP} transition-opacity`}>
             <DropdownMenu>
@@ -26,19 +29,19 @@ export function RowActions({ isFavorite, onToggleFavorite }: RowActionsProps) {
                     <Button 
                         variant="ghost" 
                         size="sm" 
-                        className="h-6 w-6 p-0" 
+                        className={`${iconSizes.lg} p-0`} 
                         onMouseDown={(e) => e.stopPropagation()}
                         aria-label="Περισσότερες ενέργειες"
                     >
-                        <MoreVertical className="w-3 h-3" />
+                        <MoreVertical className={iconSizes.xs} />
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                    <DropdownMenuItem><Eye className="w-4 h-4 mr-2" />Προβολή</DropdownMenuItem>
-                    <DropdownMenuItem><Edit className="w-4 h-4 mr-2" />Επεξεργασία</DropdownMenuItem>
+                    <DropdownMenuItem><Eye className={`${iconSizes.sm} mr-2`} />Προβολή</DropdownMenuItem>
+                    <DropdownMenuItem><Edit className={`${iconSizes.sm} mr-2`} />Επεξεργασία</DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}>
-                        <Star className="w-4 h-4 mr-2" />
+                        <Star className={`${iconSizes.sm} mr-2`} />
                         {isFavorite ? 'Αφαίρεση από αγαπημένα' : 'Προσθήκη στα αγαπημένα'}
                     </DropdownMenuItem>
                 </DropdownMenuContent>

@@ -13,6 +13,7 @@ import {
   Eye,
   Users,
 } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // Placeholder stats for Available Apartments
 const availableStats: DashboardStat[] = [
@@ -51,6 +52,7 @@ const availableStats: DashboardStat[] = [
 ];
 
 export default function AvailableApartmentsPage() {
+  const iconSizes = useIconSizes();
   return (
     <TooltipProvider>
       <div className="flex h-screen bg-background">
@@ -60,7 +62,7 @@ export default function AvailableApartmentsPage() {
           <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="flex h-14 items-center px-4">
               <div className="flex items-center gap-2">
-                <Home className="h-5 w-5 text-muted-foreground" />
+                <Home className={`${iconSizes.md} text-muted-foreground`} />
                 <h1 className="text-lg font-semibold">Διαθέσιμα Διαμερίσματα</h1>
               </div>
               <div className="ml-auto text-sm text-muted-foreground">
@@ -83,7 +85,7 @@ export default function AvailableApartmentsPage() {
               <div className="p-6 bg-card border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="p-2 bg-blue-500/10 rounded-lg">
-                    <Home className="h-5 w-5 text-blue-500" />
+                    <Home className={`${iconSizes.md} text-blue-500`} />
                   </div>
                   <h3 className="font-semibold">Γκαρσονιέρες</h3>
                 </div>
@@ -111,7 +113,7 @@ export default function AvailableApartmentsPage() {
               <div className="p-6 bg-card border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="p-2 bg-green-500/10 rounded-lg">
-                    <Home className="h-5 w-5 text-green-500" />
+                    <Home className={`${iconSizes.md} text-green-500`} />
                   </div>
                   <h3 className="font-semibold">Δυάρια</h3>
                 </div>
@@ -139,7 +141,7 @@ export default function AvailableApartmentsPage() {
               <div className="p-6 bg-card border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="p-2 bg-purple-500/10 rounded-lg">
-                    <Home className="h-5 w-5 text-purple-500" />
+                    <Home className={`${iconSizes.md} text-purple-500`} />
                   </div>
                   <h3 className="font-semibold">Τριάρια+</h3>
                 </div>
@@ -169,7 +171,7 @@ export default function AvailableApartmentsPage() {
               {/* Κλιμάκια Τιμών */}
               <div className="space-y-4">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <DollarSign className="h-5 w-5" />
+                  <DollarSign className={iconSizes.md} />
                   Κλιμάκια Τιμών
                 </h2>
 
@@ -215,7 +217,7 @@ export default function AvailableApartmentsPage() {
               {/* Ενδιαφέρον & Δραστηριότητα */}
               <div className="space-y-4">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <Eye className="h-5 w-5" />
+                  <Eye className={iconSizes.md} />
                   Ενδιαφέρον & Δραστηριότητα
                 </h2>
 
@@ -223,21 +225,21 @@ export default function AvailableApartmentsPage() {
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground flex items-center gap-2">
-                        <Users className="h-4 w-4" />
+                        <Users className={iconSizes.sm} />
                         Ενεργές επισκέψεις
                       </span>
                       <span className="font-medium text-green-600">127 αιτήματα</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground flex items-center gap-2">
-                        <Calendar className="h-4 w-4" />
+                        <Calendar className={iconSizes.sm} />
                         Προγραμματισμένες επισκέψεις
                       </span>
                       <span className="font-medium text-blue-600">34 ραντεβού</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground flex items-center gap-2">
-                        <DollarSign className="h-4 w-4" />
+                        <DollarSign className={iconSizes.sm} />
                         Προσφορές υπό εξέταση
                       </span>
                       <span className="font-medium text-orange-600">18 προσφορές</span>
@@ -245,7 +247,7 @@ export default function AvailableApartmentsPage() {
                     <div className="border-t pt-3 mt-3">
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-muted-foreground flex items-center gap-2">
-                          <TrendingUp className="h-4 w-4" />
+                          <TrendingUp className={iconSizes.sm} />
                           Hot Properties ({'>'}5 προβολές/εβδομάδα)
                         </span>
                         <span className="font-semibold text-red-600">23 ακίνητα</span>
@@ -259,7 +261,7 @@ export default function AvailableApartmentsPage() {
             {/* Info Message */}
             <div className="p-4 bg-muted/50 border border-dashed rounded-lg">
               <div className="flex items-center gap-2 text-sm">
-                <Home className="h-4 w-4" />
+                <Home className={iconSizes.sm} />
                 <span className="font-medium">Διαθέσιμα Διαμερίσματα</span>
               </div>
               <p className="text-sm text-muted-foreground mt-1">

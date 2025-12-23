@@ -41,6 +41,7 @@ import { PropertyBadge } from '@/core/badges/UnifiedBadgeSystem';
 
 // Icons
 import { Home, Building, Info, Zap, BarChart3, Settings, CheckCircle } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // ============================================================================
 // DEMO PROPERTY DATA
@@ -118,6 +119,7 @@ const DEMO_PROPERTIES: DemoProperty[] = [
 // ============================================================================
 
 export default function PropertyStatusDemoPage() {
+  const iconSizes = useIconSizes();
   const [selectedStatus, setSelectedStatus] = useState<EnhancedPropertyStatus | null>(null);
   const [selectedProperty, setSelectedProperty] = useState<DemoProperty | null>(null);
 
@@ -219,14 +221,14 @@ export default function PropertyStatusDemoPage() {
       {/* Header */}
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-bold flex items-center justify-center gap-2">
-          <Building className="h-8 w-8 text-blue-600" />
+          <Building className={`${iconSizes.xl} text-blue-600`} />
           Enterprise Property Status System
         </h1>
         <p className="text-muted-foreground">
           Live demonstration του νέου κεντρικοποιημένου συστήματος διαχείρισης καταστάσεων ακινήτων
         </p>
         <div className="flex items-center justify-center gap-2 text-sm text-green-600">
-          <CheckCircle className="h-4 w-4" />
+          <CheckCircle className={iconSizes.sm} />
           <span>Enterprise-class • Production Ready • Fully Typed</span>
         </div>
       </div>
@@ -237,7 +239,7 @@ export default function PropertyStatusDemoPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="text-center">
-            <Zap className="h-8 w-8 mx-auto text-green-500" />
+            <Zap className={`${iconSizes.xl} mx-auto text-green-500`} />
             <CardTitle className="text-sm">Διαθέσιμα</CardTitle>
           </CardHeader>
           <CardContent className="text-center">
@@ -248,7 +250,7 @@ export default function PropertyStatusDemoPage() {
 
         <Card>
           <CardHeader className="text-center">
-            <Settings className="h-8 w-8 mx-auto text-orange-500" />
+            <Settings className={`${iconSizes.xl} mx-auto text-orange-500`} />
             <CardTitle className="text-sm">Δεσμευμένα</CardTitle>
           </CardHeader>
           <CardContent className="text-center">
@@ -259,7 +261,7 @@ export default function PropertyStatusDemoPage() {
 
         <Card>
           <CardHeader className="text-center">
-            <Home className="h-8 w-8 mx-auto text-gray-500" />
+            <Home className={`${iconSizes.xl} mx-auto text-gray-500`} />
             <CardTitle className="text-sm">Εκτός Αγοράς</CardTitle>
           </CardHeader>
           <CardContent className="text-center">
@@ -270,7 +272,7 @@ export default function PropertyStatusDemoPage() {
 
         <Card>
           <CardHeader className="text-center">
-            <BarChart3 className="h-8 w-8 mx-auto text-blue-500" />
+            <BarChart3 className={`${iconSizes.xl} mx-auto text-blue-500`} />
             <CardTitle className="text-sm">Συνολικά Status</CardTitle>
           </CardHeader>
           <CardContent className="text-center">
@@ -284,7 +286,7 @@ export default function PropertyStatusDemoPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Info className="h-5 w-5" />
+            <Info className={iconSizes.md} />
             Κατηγορίες Status
           </CardTitle>
         </CardHeader>
@@ -312,7 +314,7 @@ export default function PropertyStatusDemoPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Home className="h-5 w-5" />
+            <Home className={iconSizes.md} />
             Demo Ακίνητα
           </CardTitle>
           <p className="text-sm text-muted-foreground">
@@ -356,7 +358,7 @@ export default function PropertyStatusDemoPage() {
                   status={selectedStatus as PropertyStatus}
                   variant="solid"
                   size="sm"
-                  className="w-6 h-6 rounded border"
+                  className={`${iconSizes.lg} rounded border`}
                 />
               </div>
             </div>

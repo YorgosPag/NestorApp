@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ProjectBadge } from "@/core/badges";
 import { FileText, Settings } from "lucide-react";
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface PermitsAndStatusTabProps {
     data: {
@@ -24,6 +25,7 @@ interface PermitsAndStatusTabProps {
 }
 
 export function PermitsAndStatusTab({ data, setData, isEditing }: PermitsAndStatusTabProps) {
+    const iconSizes = useIconSizes();
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setData((prev: any) => ({...prev, [e.target.name]: e.target.value}));
     };
@@ -40,7 +42,7 @@ export function PermitsAndStatusTab({ data, setData, isEditing }: PermitsAndStat
         <Card>
             <CardHeader className="pb-4">
                 <div className="flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-primary" />
+                    <FileText className={`${iconSizes.md} text-primary`} />
                     <CardTitle className="text-lg">Άδειες & Κατάσταση</CardTitle>
                 </div>
                 <CardDescription>
@@ -105,7 +107,7 @@ export function PermitsAndStatusTab({ data, setData, isEditing }: PermitsAndStat
                     </div>
                     <div className="flex justify-start">
                         <Button variant="outline" className="h-10" disabled={!isEditing}>
-                            <Settings className="w-4 h-4 mr-2" />
+                            <Settings className={`${iconSizes.sm} mr-2`} />
                             Επιλογή Έργου
                         </Button>
                     </div>

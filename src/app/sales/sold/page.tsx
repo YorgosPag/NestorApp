@@ -14,6 +14,7 @@ import {
   BarChart3,
   Users,
 } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // Placeholder stats for Sold Properties
 const soldStats: DashboardStat[] = [
@@ -52,6 +53,7 @@ const soldStats: DashboardStat[] = [
 ];
 
 export default function SoldPropertiesPage() {
+  const iconSizes = useIconSizes();
   return (
     <TooltipProvider>
       <div className="flex h-screen bg-background">
@@ -61,7 +63,7 @@ export default function SoldPropertiesPage() {
           <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="flex h-14 items-center px-4">
               <div className="flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-muted-foreground" />
+                <CheckCircle className={`${iconSizes.md} text-muted-foreground`} />
                 <h1 className="text-lg font-semibold">Πωλημένα Ακίνητα</h1>
               </div>
               <div className="ml-auto text-sm text-muted-foreground">
@@ -84,7 +86,7 @@ export default function SoldPropertiesPage() {
               <div className="p-6 bg-card border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="p-2 bg-green-500/10 rounded-lg">
-                    <Home className="h-5 w-5 text-green-500" />
+                    <Home className={`${iconSizes.md} text-green-500`} />
                   </div>
                   <h3 className="font-semibold">Διαμερίσματα</h3>
                 </div>
@@ -112,7 +114,7 @@ export default function SoldPropertiesPage() {
               <div className="p-6 bg-card border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="p-2 bg-orange-500/10 rounded-lg">
-                    <Package className="h-5 w-5 text-orange-500" />
+                    <Package className={`${iconSizes.md} text-orange-500`} />
                   </div>
                   <h3 className="font-semibold">Αποθήκες</h3>
                 </div>
@@ -140,7 +142,7 @@ export default function SoldPropertiesPage() {
               <div className="p-6 bg-card border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="p-2 bg-blue-500/10 rounded-lg">
-                    <Car className="h-5 w-5 text-blue-500" />
+                    <Car className={`${iconSizes.md} text-blue-500`} />
                   </div>
                   <h3 className="font-semibold">Θέσεις Στάθμευσης</h3>
                 </div>
@@ -170,7 +172,7 @@ export default function SoldPropertiesPage() {
               {/* Απόδοση ανά Έτος */}
               <div className="space-y-4">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5" />
+                  <BarChart3 className={iconSizes.md} />
                   Απόδοση ανά Έτος
                 </h2>
 
@@ -237,7 +239,7 @@ export default function SoldPropertiesPage() {
               {/* Top Buyers & Market Insights */}
               <div className="space-y-4">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <Users className="h-5 w-5" />
+                  <Users className={iconSizes.md} />
                   Market Insights
                 </h2>
 
@@ -295,7 +297,7 @@ export default function SoldPropertiesPage() {
             {/* Info Message */}
             <div className="p-4 bg-muted/50 border border-dashed rounded-lg">
               <div className="flex items-center gap-2 text-sm">
-                <CheckCircle className="h-4 w-4" />
+                <CheckCircle className={iconSizes.sm} />
                 <span className="font-medium">Πωλημένα Ακίνητα</span>
               </div>
               <p className="text-sm text-muted-foreground mt-1">

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Building, AlertTriangle, RefreshCw, ArrowLeft } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface BuildingsErrorProps {
   error: Error & { digest?: string };
@@ -9,6 +10,7 @@ interface BuildingsErrorProps {
 }
 
 export default function BuildingsError({ error, reset }: BuildingsErrorProps) {
+  const iconSizes = useIconSizes();
   React.useEffect(() => {
     console.error('Buildings page error:', error);
   }, [error]);
@@ -17,8 +19,8 @@ export default function BuildingsError({ error, reset }: BuildingsErrorProps) {
     <main className="min-h-screen bg-background p-6">
       <div className="max-w-2xl mx-auto">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Building className="w-8 h-8 text-destructive" />
+          <div className={`${iconSizes.xl4} bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4`}>
+            <Building className={`${iconSizes.xl} text-destructive`} />
           </div>
           <h1 className="text-2xl font-semibold mb-2">Σφάλμα σελίδας κτιρίων</h1>
           <p className="text-muted-foreground mb-6">
@@ -30,7 +32,7 @@ export default function BuildingsError({ error, reset }: BuildingsErrorProps) {
           <div className="bg-muted p-4 rounded-lg mb-6">
             <details>
               <summary className="cursor-pointer font-medium mb-2 flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-500" />
+                <AlertTriangle className={`${iconSizes.sm} text-amber-500`} />
                 Τεχνικές πληροφορίες σφάλματος
               </summary>
               <div className="mt-2 p-3 bg-background rounded border">
@@ -52,7 +54,7 @@ export default function BuildingsError({ error, reset }: BuildingsErrorProps) {
             onClick={reset}
             className="w-full bg-primary text-primary-foreground hover:bg-primary/90 px-6 py-3 rounded-md font-medium flex items-center justify-center gap-2 transition-colors"
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw className={iconSizes.sm} />
             Προσπαθήστε ξανά
           </button>
 
@@ -61,7 +63,7 @@ export default function BuildingsError({ error, reset }: BuildingsErrorProps) {
               onClick={() => window.history.back()}
               className="border border-input bg-background hover:bg-accent hover:text-accent-foreground px-6 py-3 rounded-md font-medium flex items-center justify-center gap-2 transition-colors"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className={iconSizes.sm} />
               Πίσω
             </button>
 

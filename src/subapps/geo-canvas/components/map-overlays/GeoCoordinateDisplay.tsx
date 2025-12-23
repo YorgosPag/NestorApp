@@ -17,6 +17,7 @@
 
 import React from 'react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import type { GeoCoordinate } from '../../types';
 
@@ -70,6 +71,7 @@ export const GeoCoordinateDisplay: React.FC<GeoCoordinateDisplayProps> = ({
   clickMode,
   className = ''
 }) => {
+  const iconSizes = useIconSizes();
   const { t } = useTranslationLazy('geo-canvas');
 
   // ========================================================================
@@ -104,7 +106,7 @@ export const GeoCoordinateDisplay: React.FC<GeoCoordinateDisplayProps> = ({
               <button
                 key={style}
                 onClick={() => onMapStyleChange(style)}
-                className={`w-6 h-6 rounded text-xs transition-colors ${
+                className={`${iconSizes.lg} rounded text-xs transition-colors ${
                   currentMapStyle === style
                     ? 'bg-blue-600 text-white'
                     : `bg-gray-700 text-gray-400 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`

@@ -24,6 +24,7 @@ import {
   LucideIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { HEADER_THEME } from '../constants';
 
 // Local interfaces για compatibility με UnifiedHeaderSystem
@@ -71,6 +72,7 @@ export const HeaderFilters: React.FC<UnifiedHeaderFiltersProps> = ({
   hasActiveFilters = false,
   className
 }) => {
+  const iconSizes = useIconSizes();
   const filtersClasses = cn(
     HEADER_THEME.components.filters.container,
     className
@@ -81,7 +83,7 @@ export const HeaderFilters: React.FC<UnifiedHeaderFiltersProps> = ({
       {/* Select Filters */}
       {filters.map((filter) => (
         <div key={filter.key} className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-muted-foreground" />
+          <Filter className={`${iconSizes.sm} text-muted-foreground`} />
           <Select value={filter.value} onValueChange={filter.onChange}>
             <SelectTrigger className="h-9 text-sm w-[180px]">
               <SelectValue placeholder={filter.placeholder} />
@@ -127,7 +129,7 @@ export const HeaderFilters: React.FC<UnifiedHeaderFiltersProps> = ({
             checked={filter.checked}
             onCheckedChange={filter.onChange}
           />
-          {filter.icon && <filter.icon className="w-4 h-4 text-muted-foreground" />}
+          {filter.icon && <filter.icon className={`${iconSizes.sm} text-muted-foreground`} />}
           <Label htmlFor={filter.key} className="text-sm font-medium whitespace-nowrap">
             {filter.label}
           </Label>
@@ -142,7 +144,7 @@ export const HeaderFilters: React.FC<UnifiedHeaderFiltersProps> = ({
       {/* Clear Filters Button */}
       {hasActiveFilters && onClearFilters && (
         <Button variant="ghost" size="sm" onClick={onClearFilters} className="text-xs h-9">
-          <X className="w-3 h-3 mr-1" />
+          <X className={`${iconSizes.xs} mr-1`} />
           Καθαρισμός
         </Button>
       )}

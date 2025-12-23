@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeletons';
 import { ProgressiveLoader, LoadingPresets, useProgressiveLoader } from '@/components/ui/progress/ProgressiveLoader';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects/hover-effects';
 import { AlertTriangle } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface OptimizedAppProviderProps {
   children: React.ReactNode;
@@ -57,8 +58,8 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="w-full max-w-md px-4">
           <div className="text-center mb-8">
-            <div className="h-16 w-16 bg-primary rounded-full mx-auto mb-4 flex items-center justify-center">
-              <div className="h-8 w-8 bg-primary-foreground rounded-full"></div>
+            <div className={`${iconSizes.xl} ${iconSizes.xl} bg-primary rounded-full mx-auto mb-4 flex items-center justify-center`}>
+              <div className={`${iconSizes.lg} bg-primary-foreground rounded-full`}></div>
             </div>
             <h1 className="text-2xl font-bold text-foreground mb-2">Nextn CRM</h1>
             <p className="text-muted-foreground">Initializing application...</p>
@@ -118,6 +119,7 @@ function MemoryWrapper({ children }: { children: React.ReactNode }) {
 
 // Error boundary with app-specific fallback
 function AppErrorBoundary({ children }: { children: React.ReactNode }) {
+  const iconSizes = useIconSizes();
   return (
     <ErrorBoundary
       componentName="App"
@@ -128,8 +130,8 @@ function AppErrorBoundary({ children }: { children: React.ReactNode }) {
         <div className="min-h-screen bg-background flex items-center justify-center">
           <div className="max-w-lg w-full p-6">
             <div className="text-center">
-              <div className="h-16 w-16 bg-red-100 dark:bg-red-900/20 rounded-full mx-auto mb-4 flex items-center justify-center">
-                <AlertTriangle className="h-8 w-8 text-red-600 dark:text-red-400" />
+              <div className={`${iconSizes.xl} ${iconSizes.xl} bg-red-100 dark:bg-red-900/20 rounded-full mx-auto mb-4 flex items-center justify-center`}>
+                <AlertTriangle className={`${iconSizes.lg} text-red-600 dark:text-red-400`} />
               </div>
               <h1 className="text-2xl font-bold text-foreground mb-2">Application Error</h1>
               <p className="text-muted-foreground mb-6">
@@ -171,6 +173,7 @@ export function OptimizedAppProvider({
   enableDevTools = process.env.NODE_ENV === 'development',
   cacheConfig = {}
 }: OptimizedAppProviderProps) {
+  const iconSizes = useIconSizes();
   useEffect(() => {
     if (enableDevTools) {
       // Enable performance monitoring
@@ -221,9 +224,9 @@ export function OptimizedAppProvider({
                   fallback={
                     <div className="min-h-screen bg-background flex items-center justify-center">
                       <div className="text-center space-y-4">
-                        <Skeleton className="h-16 w-16 rounded-full mx-auto" />
-                        <Skeleton className="h-6 w-48 mx-auto" />
-                        <Skeleton className="h-4 w-32 mx-auto" />
+                        <Skeleton className={`${iconSizes.xl} ${iconSizes.xl} rounded-full mx-auto`} />
+                        <Skeleton className={`${iconSizes.lg} w-48 mx-auto`} />
+                        <Skeleton className={`${iconSizes.sm} w-32 mx-auto`} />
                       </div>
                     </div>
                   }
@@ -264,7 +267,7 @@ export function OptimizationDebugPanel() {
     <div className="fixed bottom-4 right-4 z-50">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`bg-primary text-primary-foreground rounded-full w-12 h-12 flex items-center justify-center shadow-lg ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} transition-colors`}
+        className={`bg-primary text-primary-foreground rounded-full ${iconSizes.xl} ${iconSizes.xl} flex items-center justify-center shadow-lg ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} transition-colors`}
         title="Performance Debug Panel"
       >
         🚀

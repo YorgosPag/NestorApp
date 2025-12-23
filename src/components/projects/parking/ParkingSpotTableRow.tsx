@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 import type { ParkingSpot } from '@/types/parking';
 import { getParkingTypeLabel, getParkingStatusLabel, getParkingStatusColor } from '../utils/parking-utils';
 import { formatNumber } from '@/lib/intl-utils';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import styles from '@/components/ui/table/EnterpriseTable.module.css';
 
 interface ParkingSpotTableRowProps {
@@ -38,6 +39,7 @@ export function ParkingSpotTableRow({
   onView,
   onViewFloorPlan,
 }: ParkingSpotTableRowProps) {
+  const iconSizes = useIconSizes();
 
   const handleSelect = () => {
       onSelectionChange(
@@ -131,27 +133,27 @@ export function ParkingSpotTableRow({
             <Button
               variant="ghost"
               size="icon"
-              className={cn(styles.actionButton, "h-6 w-6")}
+              className={cn(styles.actionButton, iconSizes.md)}
               aria-label={`Actions for parking spot ${spot.code}`}
             >
-              <MoreVertical className="w-3.5 h-3.5" />
+              <MoreVertical className={iconSizes.xs} />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => onView(spot)}>
-              <Eye className="w-4 h-4 mr-2" />
+              <Eye className={`${iconSizes.sm} mr-2`} />
               Προβολή
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onEdit(spot)}>
-              <Pencil className="w-4 h-4 mr-2" />
+              <Pencil className={`${iconSizes.sm} mr-2`} />
               Επεξεργασία
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onViewFloorPlan(spot)}>
-              <Map className="w-4 h-4 mr-2" />
+              <Map className={`${iconSizes.sm} mr-2`} />
               Κάτοψη
             </DropdownMenuItem>
             <DropdownMenuItem className="text-destructive">
-              <Trash2 className="w-4 h-4 mr-2" />
+              <Trash2 className={`${iconSizes.sm} mr-2`} />
               Διαγραφή
             </DropdownMenuItem>
           </DropdownMenuContent>

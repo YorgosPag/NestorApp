@@ -16,6 +16,7 @@ import type { Contact } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts';
 import { Loader2, AlertTriangle, Users, Building, Shield } from 'lucide-react';
 import { CONTACT_TYPES, getContactIcon, getContactLabel, getContactColor } from '@/constants/contacts';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface DeleteContactDialogProps {
   open: boolean;
@@ -32,6 +33,7 @@ export function DeleteContactDialog({
   selectedContactIds = [],
   onContactsDeleted
 }: DeleteContactDialogProps) {
+  const iconSizes = useIconSizes();
   const [loading, setLoading] = useState(false);
 
   const isMultipleDelete = selectedContactIds.length > 1;
@@ -41,7 +43,7 @@ export function DeleteContactDialog({
   const getContactIconComponent = (contact: Contact) => {
     const IconComponent = getContactIcon(contact.type);
     const colorClass = getContactColor(contact.type, 'primary');
-    return <IconComponent className={`h-4 w-4 ${colorClass}`} />;
+    return <IconComponent className={`${iconSizes.sm} ${colorClass}`} />;
   };
 
   const getDialogTitle = () => {
@@ -245,12 +247,12 @@ export function DeleteContactDialog({
           >
             {loading ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className={`mr-2 ${iconSizes.sm} animate-spin`} />
                 Διαγραφή...
               </>
             ) : (
               <>
-                <AlertTriangle className="mr-2 h-4 w-4" />
+                <AlertTriangle className={`mr-2 ${iconSizes.sm}`} />
                 {isMultipleDelete ? `Διαγραφή ${selectedContactIds.length} Επαφών` : 'Διαγραφή Επαφής'}
               </>
             )}

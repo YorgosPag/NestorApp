@@ -13,6 +13,7 @@ import {
   MapPin,
   Calendar,
 } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // Placeholder stats for Available Storage
 const storageStats: DashboardStat[] = [
@@ -51,6 +52,7 @@ const storageStats: DashboardStat[] = [
 ];
 
 export default function AvailableStoragePage() {
+  const iconSizes = useIconSizes();
   return (
     <TooltipProvider>
       <div className="flex h-screen bg-background">
@@ -60,7 +62,7 @@ export default function AvailableStoragePage() {
           <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="flex h-14 items-center px-4">
               <div className="flex items-center gap-2">
-                <Package className="h-5 w-5 text-muted-foreground" />
+                <Package className={`${iconSizes.md} text-muted-foreground`} />
                 <h1 className="text-lg font-semibold">Διαθέσιμες Αποθήκες</h1>
               </div>
               <div className="ml-auto text-sm text-muted-foreground">
@@ -82,7 +84,7 @@ export default function AvailableStoragePage() {
               {/* Μεγάλες Αποθήκες */}
               <div className="space-y-4">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <Warehouse className="h-5 w-5" />
+                  <Warehouse className={iconSizes.md} />
                   Μεγάλες Αποθήκες ({'>'}50 τ.μ.)
                 </h2>
 
@@ -90,7 +92,7 @@ export default function AvailableStoragePage() {
                   <div className="p-4 bg-card border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 bg-orange-500/10 rounded-lg">
-                        <Warehouse className="h-4 w-4 text-orange-500" />
+                        <Warehouse className={`${iconSizes.sm} text-orange-500`} />
                       </div>
                       <h3 className="font-medium">Υπόγειες Μεγάλες</h3>
                       <span className="ml-auto bg-orange-500/20 text-orange-500 px-2 py-1 rounded text-sm font-medium">
@@ -112,7 +114,7 @@ export default function AvailableStoragePage() {
                   <div className="p-4 bg-card border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 bg-blue-500/10 rounded-lg">
-                        <Warehouse className="h-4 w-4 text-blue-500" />
+                        <Warehouse className={`${iconSizes.sm} text-blue-500`} />
                       </div>
                       <h3 className="font-medium">Ισόγειες Μεγάλες</h3>
                       <span className="ml-auto bg-blue-500/20 text-blue-500 px-2 py-1 rounded text-sm font-medium">
@@ -136,7 +138,7 @@ export default function AvailableStoragePage() {
               {/* Μικρές Αποθήκες */}
               <div className="space-y-4">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <Archive className="h-5 w-5" />
+                  <Archive className={iconSizes.md} />
                   Μικρές Αποθήκες (≤50 τ.μ.)
                 </h2>
 
@@ -144,7 +146,7 @@ export default function AvailableStoragePage() {
                   <div className="p-4 bg-card border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 bg-purple-500/10 rounded-lg">
-                        <Archive className="h-4 w-4 text-purple-500" />
+                        <Archive className={`${iconSizes.sm} text-purple-500`} />
                       </div>
                       <h3 className="font-medium">Υπόγειες Μικρές</h3>
                       <span className="ml-auto bg-purple-500/20 text-purple-500 px-2 py-1 rounded text-sm font-medium">
@@ -166,7 +168,7 @@ export default function AvailableStoragePage() {
                   <div className="p-4 bg-card border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 bg-green-500/10 rounded-lg">
-                        <Archive className="h-4 w-4 text-green-500" />
+                        <Archive className={`${iconSizes.sm} text-green-500`} />
                       </div>
                       <h3 className="font-medium">Ισόγειες Μικρές</h3>
                       <span className="ml-auto bg-green-500/20 text-green-500 px-2 py-1 rounded text-sm font-medium">
@@ -193,7 +195,7 @@ export default function AvailableStoragePage() {
               {/* Ανάλυση Τιμών */}
               <div className="space-y-4">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <DollarSign className="h-5 w-5" />
+                  <DollarSign className={iconSizes.md} />
                   Ανάλυση Τιμών
                 </h2>
 
@@ -233,7 +235,7 @@ export default function AvailableStoragePage() {
               {/* Δραστηριότητα Αγοράς */}
               <div className="space-y-4">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <Eye className="h-5 w-5" />
+                  <Eye className={iconSizes.md} />
                   Δραστηριότητα Αγοράς
                 </h2>
 
@@ -271,7 +273,7 @@ export default function AvailableStoragePage() {
             {/* Info Message */}
             <div className="p-4 bg-muted/50 border border-dashed rounded-lg">
               <div className="flex items-center gap-2 text-sm">
-                <Package className="h-4 w-4" />
+                <Package className={iconSizes.sm} />
                 <span className="font-medium">Διαθέσιμες Αποθήκες</span>
               </div>
               <p className="text-sm text-muted-foreground mt-1">

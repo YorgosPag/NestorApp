@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '../../../../../../compo
 import { Palette } from 'lucide-react';
 import { HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
 import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface LineColorControlProps {
   value: string;
@@ -39,6 +40,7 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
   disabled = false,
   showHex = true,
 }) => {
+  const iconSizes = useIconSizes();
   const [isOpen, setIsOpen] = useState(false);
   const [tempColor, setTempColor] = useState(value);
 
@@ -78,12 +80,12 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
               className={`w-full justify-start gap-2 bg-gray-900 border-gray-700 ${HOVER_BACKGROUND_EFFECTS.GRAY_DARK}`}
             >
               <div
-                className={`w-5 h-5 rounded border border-gray-600 ${valueBgClass}`}
+                className={`${iconSizes.md} rounded border border-gray-600 ${valueBgClass}`}
               />
               <span className="text-gray-100 flex-1 text-left">
                 {showHex ? value.toUpperCase() : 'Select Color'}
               </span>
-              <Palette className="w-4 h-4 text-gray-400" />
+              <Palette className={`${iconSizes.sm} text-gray-400`} />
             </Button>
           </PopoverTrigger>
 
@@ -98,7 +100,7 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
                       key={color}
                       onClick={() => handlePresetClick(color)}
                       className={`
-                        w-10 h-10 rounded border-2 transition-all
+                        ${iconSizes.xl2} rounded border-2 transition-all
                         ${tempColor === color
                           ? 'border-blue-500 scale-110'
                           : `border-gray-700 ${HOVER_BORDER_EFFECTS.GRAY}`

@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, RefreshCw, Database, Wifi, Server, AlertCircle } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface ErrorStateProps {
   error: string;
@@ -11,19 +12,21 @@ interface ErrorStateProps {
 }
 
 export function ErrorState({ error, errorType, canRetry = true, onRetry }: ErrorStateProps) {
+  const iconSizes = useIconSizes();
+
   // 🔒 ENTERPRISE: Icon mapping based on error type
   const getErrorIcon = () => {
     switch (errorType) {
       case 'NETWORK_ERROR':
-        return <Wifi className="w-12 h-12 mx-auto mb-2 text-orange-500" />;
+        return <Wifi className={`${iconSizes.xl3} mx-auto mb-2 text-orange-500`} />;
       case 'DATABASE_ERROR':
-        return <Database className="w-12 h-12 mx-auto mb-2 text-red-500" />;
+        return <Database className={`${iconSizes.xl3} mx-auto mb-2 text-red-500`} />;
       case 'API_ERROR':
-        return <Server className="w-12 h-12 mx-auto mb-2 text-red-500" />;
+        return <Server className={`${iconSizes.xl3} mx-auto mb-2 text-red-500`} />;
       case 'VALIDATION_ERROR':
-        return <AlertCircle className="w-12 h-12 mx-auto mb-2 text-yellow-500" />;
+        return <AlertCircle className={`${iconSizes.xl3} mx-auto mb-2 text-yellow-500`} />;
       default:
-        return <AlertTriangle className="w-12 h-12 mx-auto mb-2 text-red-500" />;
+        return <AlertTriangle className={`${iconSizes.xl3} mx-auto mb-2 text-red-500`} />;
     }
   };
 
@@ -89,7 +92,7 @@ export function ErrorState({ error, errorType, canRetry = true, onRetry }: Error
                 size="sm"
                 className="inline-flex items-center"
               >
-                <RefreshCw className="w-4 h-4 mr-2" />
+                <RefreshCw className={`${iconSizes.sm} mr-2`} />
                 Προσπάθεια Ξανά
               </Button>
 

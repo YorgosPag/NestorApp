@@ -69,6 +69,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { layoutUtilities } from '@/styles/design-tokens';
 
@@ -145,6 +146,7 @@ export function ComboBox<T>({
   showCheckmark = true,
   maxHeight = '24rem' // 96 = 24rem
 }: ComboBoxProps<T>) {
+  const iconSizes = useIconSizes();
 
   // ===== STATE =====
 
@@ -252,7 +254,7 @@ export function ComboBox<T>({
           )}
         </div>
         {showCheckmark && isSelected && (
-          <CheckmarkIcon className="w-5 h-5 text-green-400 flex-shrink-0 ml-2" />
+          <CheckmarkIcon className={`${iconSizes.md} text-green-400 flex-shrink-0 ml-2`} />
         )}
       </button>
     );
@@ -287,7 +289,7 @@ export function ComboBox<T>({
 
         {/* Chevron Icon */}
         <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-          <ChevronDownIcon className="w-4 h-4 text-gray-400" isOpen={isOpen} />
+          <ChevronDownIcon className={`${iconSizes.sm} text-gray-400`} isOpen={isOpen} />
         </div>
 
         {/* Dropdown Content */}

@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { BarChart, Users, Phone, Target, ClipboardList, Filter, Users2, Bell, AppWindow, Mail, BarChart3 } from 'lucide-react';
 import Link from 'next/link';
 import { COMPLEX_HOVER_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 const crmSections = [
     { title: 'Dashboard CRM', href: '/crm/dashboard', icon: BarChart, description: 'Συνολική εικόνα των πελατειακών σχέσεων.' },
@@ -18,12 +19,13 @@ const crmSections = [
 ]
 
 export default function CrmPage() {
+  const iconSizes = useIconSizes();
   return (
     <div className="p-8">
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
-            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 shadow-lg">
-                <AppWindow className="h-6 w-6 text-white" />
+            <div className={`flex ${iconSizes.xl2} items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 shadow-lg`}>
+                <AppWindow className={`${iconSizes.lg} text-white`} />
             </div>
             <div>
                 <h1 className="text-3xl font-bold text-foreground">Customer Relationship Management (CRM)</h1>
@@ -40,7 +42,7 @@ export default function CrmPage() {
               <Card className={`h-full cursor-pointer group flex flex-col ${COMPLEX_HOVER_EFFECTS.FEATURE_CARD}`}>
                 <CardHeader className="flex flex-row items-center gap-4 space-y-0">
                     <div className={`p-3 rounded-full bg-muted ${TRANSITION_PRESETS.STANDARD_COLORS}`}>
-                      <section.icon className="w-6 h-6 text-primary" />
+                      <section.icon className={`${iconSizes.lg} text-primary`} />
                     </div>
                     <CardTitle className="text-lg">{section.title}</CardTitle>
                 </CardHeader>

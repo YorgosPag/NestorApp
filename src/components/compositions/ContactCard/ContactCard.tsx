@@ -5,6 +5,7 @@ import { BaseCard } from '@/components/core/BaseCard/BaseCard';
 import { ContactBadge, CommonBadge } from '@/core/badges';
 import { formatDate } from '@/lib/intl-utils';
 import { User, Mail, Phone, Tag, Calendar, MessageSquare, Building } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { Opportunity } from '@/types/crm';
 import { INTERACTIVE_PATTERNS, HOVER_SHADOWS, TRANSITION_PRESETS } from '@/components/ui/effects';
 
@@ -43,6 +44,7 @@ export function ContactCard({
   isSelected = false,
   onSelectionChange 
 }: ContactCardProps) {
+  const iconSizes = useIconSizes();
   const [isFavorite, setIsFavorite] = useState(false);
 
   return (
@@ -54,7 +56,7 @@ export function ContactCard({
       // Header configuration
       headerConfig={{
         backgroundGradient: "from-green-100 via-emerald-50 to-teal-100 dark:from-green-950 dark:via-emerald-950 dark:to-teal-900",
-        logo: <User className="w-8 h-8 text-green-600 dark:text-green-400" />,
+        logo: <User className={`${iconSizes.xl} text-green-600 dark:text-green-400`} />,
         showImageOverlay: false
       }}
       
@@ -91,7 +93,7 @@ export function ContactCard({
             <div className="space-y-3">
               {lead.email && (
                 <div className="flex items-center gap-3">
-                  <Mail className="w-4 h-4 text-muted-foreground" />
+                  <Mail className={`${iconSizes.sm} text-muted-foreground`} />
                   <div className="flex-1">
                     <a
                       href={`https://mail.google.com/mail/?view=cm&to=${lead.email}`}
@@ -109,7 +111,7 @@ export function ContactCard({
               )}
               {lead.phone && (
                 <div className="flex items-center gap-3">
-                  <Phone className="w-4 h-4 text-muted-foreground" />
+                  <Phone className={`${iconSizes.sm} text-muted-foreground`} />
                   <div className="flex-1">
                     <a
                       href={`tel:${lead.phone}`}
@@ -132,7 +134,7 @@ export function ContactCard({
           title: 'Εταιρεία',
           content: (
             <div className="flex items-center gap-3">
-              <Building className="w-4 h-4 text-muted-foreground" />
+              <Building className={`${iconSizes.sm} text-muted-foreground`} />
               <span className="text-sm font-medium">{lead.company}</span>
             </div>
           )

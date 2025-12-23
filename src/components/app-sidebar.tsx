@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useIconSizes } from '@/hooks/useIconSizes'
 import {
     Sidebar,
     SidebarContent,
@@ -19,6 +20,7 @@ import { useSidebar } from "@/components/ui/sidebar"
 import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS, TRANSITION_PRESETS } from "@/components/ui/effects"
 
 export function AppSidebar() {
+  const iconSizes = useIconSizes()
     const { expandedItems, toggleExpanded, isItemActive } = useSidebarState()
     const { t, isLoading } = useTranslationLazy('navigation')
     const { isMobile, setOpenMobile } = useSidebar()
@@ -52,7 +54,7 @@ export function AppSidebar() {
                         onClick={handleNavigationClick}
                         className={`flex items-center gap-2 text-gray-700 dark:text-gray-300 py-2 px-1 w-full text-left rounded-md ${HOVER_TEXT_EFFECTS.GRAY_TO_BLACK} ${HOVER_BACKGROUND_EFFECTS.MUTED} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
                     >
-                        <MapPin className="h-4 w-4" />
+                        <MapPin className={iconSizes.sm} />
                         <span className="font-medium">Πλοήγηση</span>
                     </a>
                 </div>

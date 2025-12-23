@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CommonBadge } from '@/core/badges';
@@ -254,9 +255,10 @@ export function BaseToolbar({
 
 // Search component
 function ToolbarSearchComponent({ search, compact }: { search: ToolbarSearch; compact?: boolean }) {
+  const iconSizes = useIconSizes();
   return (
     <div className="relative">
-      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${iconSizes.sm} text-muted-foreground`} />
       <Input
         placeholder={search.placeholder || 'Αναζήτηση...'}
         value={search.value || ''}
@@ -271,10 +273,10 @@ function ToolbarSearchComponent({ search, compact }: { search: ToolbarSearch; co
         <Button
           variant="ghost"
           size="sm"
-          className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+          className={`absolute right-1 top-1/2 transform -translate-y-1/2 ${iconSizes.lg} p-0`}
           onClick={search.onClear}
         >
-          <X className="h-3 w-3" />
+          <X className={iconSizes.xs} />
         </Button>
       )}
     </div>
@@ -291,6 +293,7 @@ function ToolbarFiltersComponent({
   activeCount: number;
   onClearAll?: () => void;
 }) {
+  const iconSizes = useIconSizes();
   return (
     <div className="flex items-center gap-2">
       {filters.map((filter) => (
@@ -303,14 +306,14 @@ function ToolbarFiltersComponent({
                 size="sm"
                 className="relative"
               >
-                {filter.icon && <filter.icon className="h-4 w-4 mr-1" />}
+                {filter.icon && <filter.icon className={`${iconSizes.sm} mr-1`} />}
                 {filter.label}
                 {filter.count !== undefined && filter.count > 0 && (
                   <CommonBadge
                     status="company"
                     customLabel={filter.count.toString()}
                     variant="secondary"
-                    className="ml-1 h-5 w-5 p-0 text-xs flex items-center justify-center"
+                    className={`ml-1 ${iconSizes.md} p-0 text-xs flex items-center justify-center`}
                   />
                 )}
               </Button>
@@ -326,14 +329,14 @@ function ToolbarFiltersComponent({
             variant={filter.active ? 'default' : 'outline'}
             size="sm"
           >
-            {filter.icon && <filter.icon className="h-4 w-4 mr-1" />}
+            {filter.icon && <filter.icon className={`${iconSizes.sm} mr-1`} />}
             {filter.label}
             {filter.count !== undefined && filter.count > 0 && (
               <CommonBadge
                 status="company"
                 customLabel={filter.count.toString()}
                 variant="secondary"
-                className="ml-1 h-5 w-5 p-0 text-xs flex items-center justify-center"
+                className={`ml-1 ${iconSizes.md} p-0 text-xs flex items-center justify-center`}
               />
             )}
           </Button>
@@ -347,7 +350,7 @@ function ToolbarFiltersComponent({
           size="sm"
           onClick={onClearAll}
         >
-          <X className="h-4 w-4 mr-1" />
+          <X className={`${iconSizes.sm} mr-1`} />
           Καθαρισμός ({activeCount})
         </Button>
       )}
@@ -357,6 +360,7 @@ function ToolbarFiltersComponent({
 
 // Actions component
 function ToolbarActionsComponent({ actions }: { actions: ToolbarAction[] }) {
+  const iconSizes = useIconSizes();
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
@@ -370,14 +374,14 @@ function ToolbarActionsComponent({ actions }: { actions: ToolbarAction[] }) {
           title={action.tooltip}
           className="relative"
         >
-          {action.icon && <action.icon className="h-4 w-4 mr-1" />}
+          {action.icon && <action.icon className={`${iconSizes.sm} mr-1`} />}
           {action.label}
           {action.badge && (
             <CommonBadge
               status="company"
               customLabel={action.badge.toString()}
               variant="secondary"
-              className="ml-1 h-5 w-5 p-0 text-xs flex items-center justify-center"
+              className={`ml-1 ${iconSizes.md} p-0 text-xs flex items-center justify-center`}
             />
           )}
           {action.shortcut && (

@@ -3,6 +3,7 @@
 
 import React from 'react';
 import { Building2, Filter } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { PageHeader } from '@/core/headers';
 import { CompactToolbar, buildingsConfig } from '@/components/core/CompactToolbar';
 import type { ViewMode } from '@/core/headers';
@@ -32,6 +33,7 @@ export function BuildingsHeader({
   showFilters,
   setShowFilters,
 }: BuildingsHeaderProps) {
+  const iconSizes = useIconSizes();
   return (
     <PageHeader
       variant="sticky-rounded"
@@ -69,7 +71,7 @@ export function BuildingsHeader({
             }`}
             aria-label="Toggle filters"
           >
-            <Filter className="h-4 w-4" />
+            <Filter className={iconSizes.sm} />
           </button>
         ] : undefined
       }}
