@@ -7,6 +7,7 @@ import { ProjectsList } from './projects-list';
 import { ProjectDetails } from './project-details';
 import { MobileDetailsSlideIn } from '@/core/layouts';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface ProjectViewSwitchProps {
   projects: Project[];
@@ -15,7 +16,8 @@ interface ProjectViewSwitchProps {
   companies: { id: string; name: string }[];
 }
 
-export function ProjectViewSwitch({ projects, selectedProject, onSelectProject, companies }: ProjectViewSwitchProps) {
+export function ProjectViewSwitch({
+  iconSizes = useIconSizes(), projects, selectedProject, onSelectProject, companies }: ProjectViewSwitchProps) {
 
   const getProjectWithCompanyName = (project: Project) => {
     const company = companies?.find(c => c.id === project.companyId);
@@ -60,14 +62,14 @@ export function ProjectViewSwitch({ projects, selectedProject, onSelectProject, 
               className={`p-2 rounded-md border bg-background border-border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
               aria-label="Επεξεργασία Έργου"
             >
-              <Edit className="h-4 w-4" />
+              <Edit className={iconSizes.sm} />
             </button>
             <button
               onClick={() => {/* TODO: Delete project handler */}}
               className={`p-2 rounded-md border bg-background border-border text-destructive ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
               aria-label="Διαγραφή Έργου"
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className={iconSizes.sm} />
             </button>
           </>
         }

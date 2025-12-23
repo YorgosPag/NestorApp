@@ -2,13 +2,20 @@
  * @fileoverview Enterprise Modal Select Styling System
  * @description Centralized select component styling for 100% consistency
  * @author Claude (Anthropic AI)
- * @date 2025-12-17
- * @version 1.0.0
+ * @date 2025-12-23
+ * @version 2.0.0 - ENTERPRISE REFACTORING
  * @compliance CLAUDE.md Enterprise Standards - 100% CENTRALIZATION
+ * ⚡ MAJOR UPDATE: Eliminated hardcoded duplicates - imports from central source
  */
+
+// ====================================================================
+// 🏢 ENTERPRISE IMPORTS - CENTRALIZED SOURCE OF TRUTH
+// ====================================================================
 
 // Import color systems for consistency
 import { DXF_MODAL_TYPOGRAPHY } from './modal-typography';
+// Import centralized icon sizes - 🔥 NO MORE DUPLICATES!
+import { componentSizes } from '@/hooks/useIconSizes';
 
 // ====================================================================
 // SELECT STYLING CONSTANTS - 100% CENTRALIZED
@@ -68,10 +75,10 @@ export const MODAL_SELECT_STYLES = {
  * Common patterns for SelectItem content
  */
 export const MODAL_SELECT_ITEM_PATTERNS = {
-  // Icon + Text pattern
+  // Icon + Text pattern - 🏢 ENTERPRISE CENTRALIZED
   WITH_ICON: {
     container: 'flex items-center space-x-2',
-    icon: 'h-4 w-4',
+    icon: componentSizes.icon.sm,          // h-4 w-4 - Centralized
     text: '',
     description: 'text-gray-400 text-xs',
   },
@@ -90,34 +97,34 @@ export const MODAL_SELECT_ITEM_PATTERNS = {
     subtitle: 'text-xs text-gray-400',
   },
 
-  // Company/Organization pattern
+  // Company/Organization pattern - 🏢 ENTERPRISE CENTRALIZED
   ORGANIZATION: {
     container: 'flex items-center space-x-2',
-    icon: 'h-4 w-4',
+    icon: componentSizes.icon.sm,          // h-4 w-4 - Centralized
     name: 'font-medium',
     industry: 'text-xs text-gray-400 ml-auto',
   },
 
-  // Project pattern
+  // Project pattern - 🏢 ENTERPRISE CENTRALIZED
   PROJECT: {
     container: 'flex items-center space-x-2',
-    icon: 'h-4 w-4',
+    icon: componentSizes.icon.sm,          // h-4 w-4 - Centralized
     name: '',
     count: 'text-xs text-gray-400 ml-auto',
   },
 
-  // Building pattern
+  // Building pattern - 🏢 ENTERPRISE CENTRALIZED
   BUILDING: {
     container: 'flex items-center space-x-2',
-    icon: 'h-4 w-4',
+    icon: componentSizes.icon.sm,          // h-4 w-4 - Centralized
     name: '',
     floors: 'text-xs text-gray-400 ml-auto',
   },
 
-  // Unit pattern
+  // Unit pattern - 🏢 ENTERPRISE CENTRALIZED
   UNIT: {
     container: 'flex items-center space-x-2',
-    icon: 'h-4 w-4',
+    icon: componentSizes.icon.sm,          // h-4 w-4 - Centralized
     name: '',
     type: 'text-xs text-gray-400',
     floor: 'text-xs text-gray-400',

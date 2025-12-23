@@ -11,6 +11,7 @@ import { useActiveItem } from './hooks/useActiveItem';
 import { NavButton } from './components/NavButton';
 import { CompanyInfo } from './components/CompanyInfo';
 import { QuickStats as QuickStatsComponent } from './components/QuickStats';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface PublicSidebarProps {
   isAuthenticated?: boolean;
@@ -18,6 +19,7 @@ interface PublicSidebarProps {
 }
 
 export function PublicSidebar({ isAuthenticated = false, userEmail }: PublicSidebarProps) {
+  const iconSizes = useIconSizes();
   const { isActive } = useActiveItem();
 
   return (
@@ -25,8 +27,8 @@ export function PublicSidebar({ isAuthenticated = false, userEmail }: PublicSide
       {/* Logo Section */}
       <div className="flex h-16 items-center border-b px-6">
         <Link href="/" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-purple-600">
-            <Home className="h-4 w-4 text-white" />
+          <div className={`flex ${iconSizes.xl} items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-purple-600`}>
+            <Home className={`${iconSizes.sm} text-white`} />
           </div>
           <span className="text-lg font-semibold">Pagonis Properties</span>
         </Link>
@@ -60,8 +62,8 @@ export function PublicSidebar({ isAuthenticated = false, userEmail }: PublicSide
       <div className="border-t p-4">
         {isAuthenticated ? (
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100">
-              <User className="h-4 w-4 text-blue-600" />
+            <div className={`flex ${iconSizes.xl} items-center justify-center rounded-full bg-blue-100`}>
+              <User className={`${iconSizes.sm} text-blue-600`} />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">Επισκέπτης</p>
@@ -71,7 +73,7 @@ export function PublicSidebar({ isAuthenticated = false, userEmail }: PublicSide
         ) : (
           <Button variant="outline" className="w-full" asChild>
             <Link href="/login">
-              <LogIn className="mr-2 h-4 w-4" />
+              <LogIn className={`mr-2 ${iconSizes.sm}`} />
               Σύνδεση
             </Link>
           </Button>

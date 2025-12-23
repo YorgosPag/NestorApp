@@ -7,8 +7,10 @@
 import React from 'react';
 import { AdaptiveMultiColumnNavigation, NavigationBreadcrumb } from '@/components/navigation';
 import { MapPin } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 export default function NavigationPage() {
+  const iconSizes = useIconSizes();
   return (
     <main className="min-h-screen bg-gray-50 dark:bg-background">
       {/* Header */}
@@ -16,7 +18,7 @@ export default function NavigationPage() {
         <div className="max-w-full mx-auto px-2 sm:px-3 lg:px-4">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
-              <MapPin className="h-6 w-6 text-blue-600" />
+              <MapPin className={`${iconSizes.lg} text-blue-600`} />
               <h1 className="text-2xl font-bold text-gray-900 dark:text-foreground">
                 Πλοήγηση Ακινήτων
               </h1>

@@ -115,7 +115,7 @@ export function FloorPlanToolbar({
           onClick={onClick}
           disabled={disabled}
           className={cn(
-            "h-8 w-8 p-0",
+            "${iconSizes.xl} p-0",
             active && `bg-blue-600 text-white ${HOVER_BACKGROUND_EFFECTS.BLUE_BUTTON}`
           )}
         >
@@ -262,7 +262,7 @@ export function FloorPlanToolbar({
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+              <Button variant="outline" size="sm" className="${iconSizes.xl} p-0">
                 <Settings className={iconSizes.sm} />
               </Button>
             </DropdownMenuTrigger>

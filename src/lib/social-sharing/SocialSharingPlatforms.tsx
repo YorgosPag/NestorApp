@@ -12,6 +12,7 @@ import React from 'react';
 import { Mail } from 'lucide-react';
 import { designSystem } from '@/lib/design-system';
 import { HOVER_SHADOWS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -278,12 +279,34 @@ export const generatePlatformButtonStyles = (platform: SharePlatform, variant: '
 
 /**
  * 🌟 Generate Icon Styles για Platform
+ * @deprecated Use createPlatformIconStyles instead which accepts iconSizes
  */
 export const generatePlatformIconStyles = (size: 'sm' | 'md' | 'lg' = 'md') => {
   const sizeMap = {
     sm: 'w-5 h-5',
     md: 'w-8 h-8',
     lg: 'w-12 h-12'
+  };
+
+  return designSystem.cn(
+    sizeMap[size],
+    'transition-transform duration-200',
+    GROUP_HOVER_PATTERNS.SCALE_ON_GROUP
+  );
+};
+
+/**
+ * 🏢 ENTERPRISE: Create Platform Icon Styles με centralized icon sizing
+ * Replaces deprecated generatePlatformIconStyles
+ */
+export const createPlatformIconStyles = (
+  size: 'sm' | 'md' | 'lg' = 'md',
+  iconSizes: { xs: string; sm: string; md: string; lg: string; xl: string }
+) => {
+  const sizeMap = {
+    sm: iconSizes.md,  // w-5 h-5 equivalent
+    md: iconSizes.xl,  // w-8 h-8 equivalent
+    lg: `w-12 h-12`    // Keep w-12 h-12 as it's beyond iconSizes range
   };
 
   return designSystem.cn(

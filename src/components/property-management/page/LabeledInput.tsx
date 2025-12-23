@@ -4,6 +4,7 @@ import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface LabeledInputProps {
   id: string;
@@ -16,6 +17,7 @@ interface LabeledInputProps {
 }
 
 export function LabeledInput({ id, icon, label, value, onChange, placeholder, className }: LabeledInputProps) {
+  const iconSizes = useIconSizes();
   return (
     <div className={cn("space-y-2", className)}>
       <Label htmlFor={id} className="text-xs font-medium flex items-center gap-1">
@@ -23,7 +25,7 @@ export function LabeledInput({ id, icon, label, value, onChange, placeholder, cl
         {label}
       </Label>
       <div className="relative w-full">
-        <div className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground">{icon}</div>
+        <div className={`absolute left-2.5 top-1/2 -translate-y-1/2 ${iconSizes.sm} text-muted-foreground`}>{icon}</div>
         <Input
           id={id}
           value={value}

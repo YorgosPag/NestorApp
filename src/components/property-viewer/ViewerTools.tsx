@@ -17,6 +17,7 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 
 type ViewMode = 'view' | 'create' | 'measure' | 'edit';
@@ -67,6 +68,7 @@ export function ViewerTools({
   isReadOnly = false,
   className
 }: ViewerToolsProps) {
+  const iconSizes = useIconSizes();
   
   // Local state για active tool
   const [activeTool, setActiveTool] = useState<ToolId>('select');
@@ -142,7 +144,7 @@ export function ViewerTools({
       variant={activeTool === tool.id ? 'default' : 'outline'}
       size="sm"
       className={cn(
-        "h-8 w-8 p-0",
+        `${iconSizes.xl} p-0`,
         activeTool === tool.id && cn("bg-blue-600 text-white", HOVER_BACKGROUND_EFFECTS.BLUE)
       )}
       onClick={() => handleToolChange(tool.id)}
@@ -150,7 +152,7 @@ export function ViewerTools({
       aria-label={tool.label}
       title={`${tool.label} ${tool.shortcut ? `(${tool.shortcut})` : ''}`}
     >
-      <tool.icon className="h-4 w-4" />
+      <tool.icon className={iconSizes.sm} />
     </Button>
   );
 
@@ -183,33 +185,33 @@ export function ViewerTools({
         <Button
           variant="outline"
           size="sm"
-          className="h-8 w-8 p-0"
+          className={`${iconSizes.xl} p-0`}
           onClick={handleCopySelected}
           disabled={!selectedPropertyId || isReadOnly}
           title="Αντιγραφή επιλεγμένου"
         >
-          <Copy className="h-4 w-4" />
+          <Copy className={iconSizes.sm} />
         </Button>
         
         <Button
           variant="outline"
           size="sm"
-          className={cn("h-8 w-8 p-0", HOVER_TEXT_EFFECTS.RED)}
+          className={cn(`${iconSizes.xl} p-0`, HOVER_TEXT_EFFECTS.RED)}
           onClick={handleDeleteSelected}
           disabled={!selectedPropertyId || isReadOnly}
           title="Διαγραφή επιλεγμένου"
         >
-          <Trash2 className="h-4 w-4" />
+          <Trash2 className={iconSizes.sm} />
         </Button>
 
         <Button
           variant="outline"
           size="sm"
-          className="h-8 w-8 p-0"
+          className={`${iconSizes.xl} p-0`}
           onClick={handleResetView}
           title="Επαναφορά"
         >
-          <RotateCcw className="h-4 w-4" />
+          <RotateCcw className={iconSizes.sm} />
         </Button>
       </div>
 

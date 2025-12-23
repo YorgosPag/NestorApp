@@ -5,9 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Mail, Eye, MousePointer, TrendingUp, Construction, ArrowLeft, Home, Building2, Star } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 export function EmailAnalyticsDashboard() {
   const router = useRouter();
+  const iconSizes = useIconSizes();
 
   const handleBackToCRM = () => {
     router.push('/crm');
@@ -24,7 +26,7 @@ export function EmailAnalyticsDashboard() {
             size="sm"
             className="flex items-center gap-2"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className={iconSizes.sm} />
             Πίσω στο CRM
           </Button>
           <div>
@@ -41,7 +43,7 @@ export function EmailAnalyticsDashboard() {
             <CardTitle className="text-sm font-medium text-gray-600">
               Σύνολο Emails
             </CardTitle>
-            <Mail className="h-4 w-4 text-blue-600" />
+            <Mail className={`${iconSizes.sm} text-blue-600`} />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">0</div>
@@ -54,7 +56,7 @@ export function EmailAnalyticsDashboard() {
             <CardTitle className="text-sm font-medium text-gray-600">
               Ποσοστό Παράδοσης
             </CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
+            <TrendingUp className={`${iconSizes.sm} text-green-600`} />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">0%</div>
@@ -67,7 +69,7 @@ export function EmailAnalyticsDashboard() {
             <CardTitle className="text-sm font-medium text-gray-600">
               Ποσοστό Ανοίγματος
             </CardTitle>
-            <Eye className="h-4 w-4 text-blue-600" />
+            <Eye className={`${iconSizes.sm} text-blue-600`} />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">0%</div>
@@ -80,7 +82,7 @@ export function EmailAnalyticsDashboard() {
             <CardTitle className="text-sm font-medium text-gray-600">
               Ποσοστό Κλικ
             </CardTitle>
-            <MousePointer className="h-4 w-4 text-purple-600" />
+            <MousePointer className={`${iconSizes.sm} text-purple-600`} />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">0%</div>
@@ -93,7 +95,7 @@ export function EmailAnalyticsDashboard() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Construction className="h-5 w-5 text-orange-500" />
+            <Construction className={`${iconSizes.md} text-orange-500`} />
             Email Analytics - Σύντομα Διαθέσιμο
           </CardTitle>
         </CardHeader>
@@ -115,9 +117,9 @@ export function EmailAnalyticsDashboard() {
                 <li>• Email performance tracking</li>
               </div>
               <div className="text-left space-y-2 text-sm text-gray-600">
-                <li className="flex items-center gap-2">• <Home className="h-4 w-4" /> Residential template analytics</li>
-                <li className="flex items-center gap-2">• <Building2 className="h-4 w-4" /> Commercial template analytics</li>
-                <li className="flex items-center gap-2">• <Star className="h-4 w-4" /> Premium template analytics</li>
+                <li className="flex items-center gap-2">• <Home className={iconSizes.sm} /> Residential template analytics</li>
+                <li className="flex items-center gap-2">• <Building2 className={iconSizes.sm} /> Commercial template analytics</li>
+                <li className="flex items-center gap-2">• <Star className={iconSizes.sm} /> Premium template analytics</li>
                 <li>• Template performance comparison</li>
                 <li>• A/B testing results</li>
               </div>

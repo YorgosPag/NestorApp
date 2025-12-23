@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Download, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { PDFExportButtonProps } from "./types";
 import { usePdfExport } from "./hooks/usePdfExport";
 
@@ -14,6 +15,7 @@ export function QuickPDFExportButton({
   size = "sm",
   className,
 }: Omit<PDFExportButtonProps, 'showPreview'>) {
+    const iconSizes = useIconSizes();
     const { isExporting, handleExport } = usePdfExport(document);
 
     return (
@@ -30,9 +32,9 @@ export function QuickPDFExportButton({
             className={cn("flex items-center gap-2", className)}
         >
             {isExporting ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Loader2 className={`${iconSizes.sm} animate-spin`} />
             ) : (
-            <Download className="h-4 w-4" />
+            <Download className={iconSizes.sm} />
             )}
             {isExporting ? "Εξαγωγή..." : "Εξαγωγή PDF"}
         </Button>

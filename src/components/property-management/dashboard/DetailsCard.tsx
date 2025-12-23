@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { CommonBadge } from '@/core/badges';
 
 interface DetailsCardProps {
@@ -14,13 +15,14 @@ interface DetailsCardProps {
 }
 
 export function DetailsCard({ title, icon: Icon, data, labelFormatter, isFloorData = false, isThreeColumnGrid = false }: DetailsCardProps) {
+    const iconSizes = useIconSizes();
     
     if (isThreeColumnGrid) {
         return (
             <Card className="lg:col-span-2">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">{title}</CardTitle>
-                    <Icon className="h-4 w-4 text-muted-foreground" />
+                    <Icon className={`${iconSizes.sm} text-muted-foreground`} />
                 </CardHeader>
                 <CardContent>
                     <div className="grid grid-cols-3 gap-4 text-center">
@@ -40,7 +42,7 @@ export function DetailsCard({ title, icon: Icon, data, labelFormatter, isFloorDa
         <Card className={isFloorData ? "" : "lg:col-span-2"}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">{title}</CardTitle>
-                <Icon className="h-4 w-4 text-muted-foreground" />
+                <Icon className={`${iconSizes.sm} text-muted-foreground`} />
             </CardHeader>
             <CardContent>
                 <div className={isFloorData ? "space-y-2" : "flex flex-wrap gap-2"}>

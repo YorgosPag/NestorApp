@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search } from "lucide-react";
 import type { FilterFieldConfig } from './types';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface FilterFieldProps {
   config: FilterFieldConfig;
@@ -15,6 +16,7 @@ interface FilterFieldProps {
 }
 
 export function FilterField({ config, value, onValueChange, onRangeChange }: FilterFieldProps) {
+  const iconSizes = useIconSizes();
   const getColumnSpan = (width?: number) => {
     switch (width) {
       case 1: return 'col-span-1';
@@ -30,7 +32,7 @@ export function FilterField({ config, value, onValueChange, onRangeChange }: Fil
       case 'search':
         return (
           <div className="relative w-full">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Search className={`absolute left-2.5 top-2.5 ${iconSizes.sm} text-muted-foreground`} />
             <Input
               id={config.id}
               aria-label={config.ariaLabel}

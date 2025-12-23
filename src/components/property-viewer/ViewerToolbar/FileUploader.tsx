@@ -3,12 +3,14 @@
 
 import { Button } from "@/components/ui/button";
 import { Upload } from "lucide-react";
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface FileUploaderProps {
   onFileUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 export function FileUploader({ onFileUpload }: FileUploaderProps) {
+  const iconSizes = useIconSizes();
   return (
     <div className="flex items-center gap-1">
       <input
@@ -23,7 +25,7 @@ export function FileUploader({ onFileUpload }: FileUploaderProps) {
         size="sm"
         onClick={() => document.getElementById('floor-plan-upload')?.click()}
       >
-        <Upload className="h-4 w-4 mr-2" />
+        <Upload className={`${iconSizes.sm} mr-2`} />
         Φόρτωση
       </Button>
     </div>

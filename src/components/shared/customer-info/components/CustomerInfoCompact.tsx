@@ -77,19 +77,19 @@ export function CustomerInfoCompact({
   // Size-based styling
   const sizeClasses = {
     sm: {
-      avatar: 'h-6 w-6',
+      avatar: iconSizes.lg,
       text: 'text-xs',
       subtext: 'text-xs',
       spacing: 'gap-2'
     },
     md: {
-      avatar: 'h-8 w-8',
+      avatar: iconSizes.xl,
       text: 'text-sm',
       subtext: 'text-xs',
       spacing: 'gap-3'
     },
     lg: {
-      avatar: 'h-10 w-10',
+      avatar: iconSizes['2xl'],
       text: 'text-base',
       subtext: 'text-sm',
       spacing: 'gap-3'
@@ -399,7 +399,7 @@ export function CustomerInfoCompact({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 w-8 p-0"
+                className="${iconSizes.xl} p-0"
                 onClick={() => window.open(`/contacts?contactId=${contactId}`, '_blank')}
                 title="Προβολή πελάτη"
               >
@@ -411,7 +411,7 @@ export function CustomerInfoCompact({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-8 w-8 p-0"
+                  className="${iconSizes.xl} p-0"
                   onClick={() => {
                     const cleanPhone = displayInfo.primaryPhone!.replace(/\s+/g, '');
                     window.open(`tel:${cleanPhone}`, '_self');
@@ -427,7 +427,7 @@ export function CustomerInfoCompact({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-8 w-8 p-0"
+                  className="${iconSizes.xl} p-0"
                   onClick={() => {
                     window.open(`mailto:${displayInfo.primaryEmail}`, '_self');
                   }}

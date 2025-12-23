@@ -4,6 +4,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { X } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { PropertyGroup } from '@/types/connections';
 
 interface GroupManagerProps {
@@ -12,6 +13,7 @@ interface GroupManagerProps {
 }
 
 export function GroupManager({ groups, onDelete }: GroupManagerProps) {
+    const iconSizes = useIconSizes();
     if (groups.length === 0) return null;
 
     return (
@@ -23,14 +25,14 @@ export function GroupManager({ groups, onDelete }: GroupManagerProps) {
                         <span>{group.name}</span>
                         <Tooltip>
                             <TooltipTrigger asChild>
-                                <Button 
-                                    size="sm" 
-                                    variant="ghost" 
-                                    className="h-6 w-6 p-0 text-destructive" 
-                                    onClick={() => onDelete(group.id)} 
+                                <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className={`${iconSizes.lg} p-0 text-destructive`}
+                                    onClick={() => onDelete(group.id)}
                                     aria-label={`Διαγραφή ομάδας ${group.name}`}
                                 >
-                                    <X className="h-3 w-3" />
+                                    <X className={iconSizes.xs} />
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent>

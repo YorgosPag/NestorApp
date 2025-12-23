@@ -3,6 +3,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Eye, Download } from "lucide-react";
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface ActionsBarProps {
   onPreview: () => void;
@@ -11,6 +12,7 @@ interface ActionsBarProps {
 }
 
 export function ActionsBar({ onPreview, onDownload, onCancel }: ActionsBarProps) {
+  const iconSizes = useIconSizes();
   return (
     <div className="flex items-center gap-3 pt-4 border-t">
       <Button
@@ -18,7 +20,7 @@ export function ActionsBar({ onPreview, onDownload, onCancel }: ActionsBarProps)
         variant="outline"
         className="flex items-center gap-2"
       >
-        <Eye className="h-4 w-4" />
+        <Eye className={iconSizes.sm} />
         Προεπισκόπηση
       </Button>
 
@@ -26,7 +28,7 @@ export function ActionsBar({ onPreview, onDownload, onCancel }: ActionsBarProps)
         onClick={onDownload}
         className="flex items-center gap-2 flex-1"
       >
-        <Download className="h-4 w-4" />
+        <Download className={iconSizes.sm} />
         Κατέβασμα PDF
       </Button>
 

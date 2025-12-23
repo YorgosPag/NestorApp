@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Plus, Search } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface WelcomeSectionProps {
   activeToday: number;
 }
 
 export function WelcomeSection({ activeToday }: WelcomeSectionProps) {
+  const iconSizes = useIconSizes();
   const { t } = useTranslation('dashboard');
   
   return (
@@ -25,7 +27,7 @@ export function WelcomeSection({ activeToday }: WelcomeSectionProps) {
             variant="secondary"
             className={`bg-white text-blue-600 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`}
           >
-            <Plus className="mr-2 h-5 w-5" />
+            <Plus className={`mr-2 ${iconSizes.md}`} />
             {t('welcome.actions.newContact')}
           </Button>
           <Button
@@ -33,7 +35,7 @@ export function WelcomeSection({ activeToday }: WelcomeSectionProps) {
             variant="outline"
             className={`border-white text-white ${HOVER_BACKGROUND_EFFECTS.TRANSPARENT}`}
           >
-            <Search className="mr-2 h-5 w-5" />
+            <Search className={`mr-2 ${iconSizes.md}`} />
             {t('welcome.actions.search')}
           </Button>
         </div>

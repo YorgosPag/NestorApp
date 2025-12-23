@@ -4,9 +4,12 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ThemeProgressBar } from '@/core/progress/ThemeProgressBar';
 import { Target, CheckCircle, AlertTriangle } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { Building } from '../../BuildingsPageContent';
 
 export default function AnalyticsProgress({ building }: { building: Building }) {
+    const iconSizes = useIconSizes();
+
     return (
         <Card>
             <CardHeader>
@@ -48,13 +51,13 @@ export default function AnalyticsProgress({ building }: { building: Building }) 
 
                     <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/30 dark:to-purple-950/30 rounded-lg">
                         <h4 className="font-semibold text-foreground mb-4 flex items-center gap-2">
-                            <Target className="h-5 w-5 text-blue-600" />
+                            <Target className={`${iconSizes.md} text-blue-600`} />
                             Προβλέψεις & Συστάσεις
                         </h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                             <div>
                                 <div className="font-medium text-green-700 dark:text-green-400 mb-2 flex items-center gap-2">
-                                    <CheckCircle className="h-4 w-4" />
+                                    <CheckCircle className={iconSizes.sm} />
                                     Θετικά Σημεία:
                                 </div>
                                 <ul className="space-y-1 text-green-600 dark:text-green-500">
@@ -65,7 +68,7 @@ export default function AnalyticsProgress({ building }: { building: Building }) 
                             </div>
                             <div>
                                 <div className="font-medium text-orange-700 dark:text-orange-400 mb-2 flex items-center gap-2">
-                                    <AlertTriangle className="h-4 w-4" />
+                                    <AlertTriangle className={iconSizes.sm} />
                                     Προτεινόμενες Βελτιώσεις:
                                 </div>
                                 <ul className="space-y-1 text-orange-600 dark:text-orange-500">

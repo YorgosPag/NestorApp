@@ -783,7 +783,7 @@ export const ConfigurationAdminInterface: React.FC = () => {
                 <span>Project templates and defaults</span>
               </div>
               <div className="flex items-center gap-2">
-                <Settings className="h-4 w-4 text-purple-600" />
+                <Settings className="${iconSizes.sm} text-purple-600" />
                 <span>Integration settings and webhooks</span>
               </div>
             </div>
@@ -813,7 +813,7 @@ export const ConfigurationAdminInterface: React.FC = () => {
             onClick={toggleSensitiveData}
             className="flex items-center gap-2"
           >
-            {showSensitiveData ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            {showSensitiveData ? <EyeOff className="${iconSizes.sm}" /> : <Eye className="${iconSizes.sm}" />}
             {showSensitiveData ? 'Hide' : 'Show'} Sensitive Data
           </Button>
           <Button
@@ -821,7 +821,7 @@ export const ConfigurationAdminInterface: React.FC = () => {
             disabled={adminState.isLoading}
             className="flex items-center gap-2"
           >
-            <RefreshCw className={`h-4 w-4 ${adminState.isLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`${iconSizes.sm} ${adminState.isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
         </div>
@@ -830,7 +830,7 @@ export const ConfigurationAdminInterface: React.FC = () => {
       {/* Status Messages */}
       {adminState.error && (
         <Alert variant="destructive">
-          <XCircle className="h-4 w-4" />
+          <XCircle className="${iconSizes.sm}" />
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>{adminState.error}</AlertDescription>
         </Alert>
@@ -838,7 +838,7 @@ export const ConfigurationAdminInterface: React.FC = () => {
 
       {adminState.success && (
         <Alert>
-          <CheckCircle className="h-4 w-4" />
+          <CheckCircle className="${iconSizes.sm}" />
           <AlertTitle>Success</AlertTitle>
           <AlertDescription>{adminState.success}</AlertDescription>
         </Alert>
@@ -854,19 +854,19 @@ export const ConfigurationAdminInterface: React.FC = () => {
       >
         <TabsList className="grid grid-cols-4 w-full max-w-2xl">
           <TabsTrigger value="company" className="flex items-center gap-2">
-            <Building className="h-4 w-4" />
+            <Building className="${iconSizes.sm}" />
             Company
           </TabsTrigger>
           <TabsTrigger value="system" className="flex items-center gap-2">
-            <Settings className="h-4 w-4" />
+            <Settings className="${iconSizes.sm}" />
             System
           </TabsTrigger>
           <TabsTrigger value="templates" className="flex items-center gap-2">
-            <Database className="h-4 w-4" />
+            <Database className="${iconSizes.sm}" />
             Templates
           </TabsTrigger>
           <TabsTrigger value="migration" className="flex items-center gap-2">
-            <Upload className="h-4 w-4" />
+            <Upload className="${iconSizes.sm}" />
             Migration
           </TabsTrigger>
         </TabsList>

@@ -237,9 +237,9 @@ export function CustomerActionButtons({
   // ========================================================================
 
   const sizeClasses = {
-    sm: iconsOnly ? 'h-8 w-8 p-0' : 'h-8 text-xs px-2',
+    sm: iconsOnly ? `${iconSizes.xl} p-0` : 'h-8 text-xs px-2',
     md: iconsOnly ? 'h-9 w-9 p-0' : 'h-9 text-sm px-3',
-    lg: iconsOnly ? 'h-10 w-10 p-0' : 'h-10 text-base px-4'
+    lg: iconsOnly ? `${iconSizes['2xl']} p-0` : 'h-10 text-base px-4'
   };
 
   const containerClasses = direction === 'horizontal'

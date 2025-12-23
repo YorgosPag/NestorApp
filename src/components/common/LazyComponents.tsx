@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { ComponentProps } from 'react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // Generic Modal Skeleton
 function ModalSkeleton() {

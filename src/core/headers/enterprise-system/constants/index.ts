@@ -146,9 +146,9 @@ export const HEADER_ANIMATIONS = {
 
 export const HEADER_SIZES = {
   icon: {
-    small: "h-4 w-4",
-    medium: "h-5 w-5",
-    large: "h-6 w-6"
+    small: 'h-4 w-4',          // h-4 w-4 - Synced with componentSizes.icon.sm
+    medium: 'h-5 w-5',         // h-5 w-5 - Synced with componentSizes.icon.md
+    large: 'h-6 w-6'           // h-6 w-6 - Synced with componentSizes.icon.lg
   },
   button: {
     small: "h-8 px-2 text-xs",
@@ -190,7 +190,7 @@ export const ICON_VARIANTS = {
   },
   simple: {
     base: "flex items-center justify-center rounded-lg",
-    styles: "bg-primary text-primary-foreground h-8 w-8"
+    styles: "bg-primary text-primary-foreground h-8 w-8"  // Synced with componentSizes.icon.xl
   }
 } as const;
 

@@ -18,6 +18,7 @@ import {
   Clock,
 } from "lucide-react";
 import { useTranslation } from "@/i18n";
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { QuickStats } from "@/types/dashboard";
 
 interface StatsCardsProps {
@@ -25,6 +26,7 @@ interface StatsCardsProps {
 }
 
 export function StatsCards({ stats }: StatsCardsProps) {
+  const iconSizes = useIconSizes();
   const { t } = useTranslation('dashboard');
   
   return (
@@ -36,14 +38,14 @@ export function StatsCards({ stats }: StatsCardsProps) {
       <Card className="card-hover border-l-4 border-l-blue-600">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">{t('stats.totalContacts')}</CardTitle>
-          <Users className="h-4 w-4 text-muted-foreground" />
+          <Users className={`${iconSizes.sm} text-muted-foreground`} />
         </CardHeader>
         <CardContent>
           <data value={stats.totalContacts} className="text-2xl font-bold">
             {stats.totalContacts.toLocaleString("el-GR")}
           </data>
           <div className="flex items-center text-xs text-muted-foreground mt-2">
-            <TrendingUp className="mr-1 h-3 w-3 text-green-600" />
+            <TrendingUp className={`mr-1 ${iconSizes.xs} text-green-600`} />
             <span className="text-green-600 font-medium">+12.5%</span>
             <span className="ml-1">{t('stats.periods.lastMonth')}</span>
           </div>
@@ -53,7 +55,7 @@ export function StatsCards({ stats }: StatsCardsProps) {
       <Card className="card-hover border-l-4 border-l-green-600">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">{t('stats.newContacts')}</CardTitle>
-          <Plus className="h-4 w-4 text-muted-foreground" />
+          <Plus className={`${iconSizes.sm} text-muted-foreground`} />
         </CardHeader>
         <CardContent>
           <data value={stats.newThisMonth} className="text-2xl font-bold">{stats.newThisMonth}</data>
@@ -74,7 +76,7 @@ export function StatsCards({ stats }: StatsCardsProps) {
       <Card className="card-hover border-l-4 border-l-yellow-600">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">{t('stats.favorites')}</CardTitle>
-          <Star className="h-4 w-4 text-muted-foreground" />
+          <Star className={`${iconSizes.sm} text-muted-foreground`} />
         </CardHeader>
         <CardContent>
           <data value={stats.favorites} className="text-2xl font-bold">{stats.favorites}</data>
@@ -92,12 +94,12 @@ export function StatsCards({ stats }: StatsCardsProps) {
       <Card className="card-hover border-l-4 border-l-purple-600">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">{t('stats.activeToday')}</CardTitle>
-          <Activity className="h-4 w-4 text-muted-foreground" />
+          <Activity className={`${iconSizes.sm} text-muted-foreground`} />
         </CardHeader>
         <CardContent>
           <data value={stats.activeToday} className="text-2xl font-bold">{stats.activeToday}</data>
           <div className="flex items-center text-xs text-muted-foreground mt-2">
-            <Clock className="mr-1 h-3 w-3" />
+            <Clock className={`mr-1 ${iconSizes.xs}`} />
             <span>{t('stats.periods.last24h')}</span>
           </div>
         </CardContent>

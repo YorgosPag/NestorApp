@@ -13,6 +13,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Users, Plus } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // ============================================================================
 // TYPES
@@ -68,11 +69,14 @@ export const NewContactState: React.FC<StateComponentProps> = ({ className }) =>
  *
  * Displayed while relationships are being fetched
  */
-export const LoadingState: React.FC<StateComponentProps> = ({ className }) => (
+export const LoadingState: React.FC<StateComponentProps> = ({ className }) => {
+  const iconSizes = useIconSizes();
+
+  return (
   <Card className={className}>
     <CardHeader>
       <CardTitle className="flex items-center space-x-2">
-        <Users className="h-5 w-5" />
+        <Users className={iconSizes.md} />
         <span>Σχέσεις Επαφής</span>
       </CardTitle>
     </CardHeader>
@@ -83,7 +87,8 @@ export const LoadingState: React.FC<StateComponentProps> = ({ className }) => (
       </div>
     </CardContent>
   </Card>
-);
+  );
+};
 
 // ============================================================================
 // EMPTY STATE
@@ -98,12 +103,15 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   className,
   readonly = false,
   onManageRelationships
-}) => (
+}) => {
+  const iconSizes = useIconSizes();
+
+  return (
   <Card className={className}>
     <CardHeader>
       <CardTitle className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          <Users className="h-5 w-5" />
+          <Users className={iconSizes.md} />
           <span>Σχέσεις Επαφής</span>
         </div>
         {!readonly && onManageRelationships && (
@@ -112,7 +120,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
             size="sm"
             className="ml-auto"
           >
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className={`${iconSizes.sm} mr-2`} />
             Προσθήκη
           </Button>
         )}
@@ -137,7 +145,8 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       </div>
     </CardContent>
   </Card>
-);
+  );
+};
 
 // ============================================================================
 // EXPORTS

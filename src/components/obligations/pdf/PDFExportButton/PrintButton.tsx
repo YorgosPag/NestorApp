@@ -4,6 +4,7 @@
 import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { ObligationDocument } from "@/types/obligations";
 import { exportObligationToPDF } from "@/services/pdf-export.service";
 
@@ -13,6 +14,7 @@ interface PrintButtonProps {
 }
 
 export function PrintButton({ document, className }: PrintButtonProps) {
+  const iconSizes = useIconSizes();
   const handlePrint = async () => {
     try {
       const pdfData = await exportObligationToPDF(document, {
@@ -49,7 +51,7 @@ export function PrintButton({ document, className }: PrintButtonProps) {
       onClick={handlePrint}
       className={cn("flex items-center gap-2", className)}
     >
-      <Printer className="h-4 w-4" />
+      <Printer className={iconSizes.sm} />
       Εκτύπωση
     </Button>
   );

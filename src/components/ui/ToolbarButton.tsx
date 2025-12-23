@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { CommonBadge } from "@/core/badges";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface ToolbarButtonProps {
   tooltip: string;
@@ -16,7 +17,7 @@ interface ToolbarButtonProps {
   badge?: string | number;
 }
 
-export function ToolbarButton({ 
+export function ToolbarButton({
   tooltip, 
   children, 
   onClick, 
@@ -32,7 +33,7 @@ export function ToolbarButton({
           <Button 
             variant={variant} 
             size="sm" 
-            className={cn("h-8 w-8 p-0", className)} 
+            className={cn(iconSizes.xl + " p-0", className)} 
             onClick={onClick}
             disabled={disabled}
           >
@@ -43,7 +44,7 @@ export function ToolbarButton({
               status="company"
               customLabel={badge.toString()}
               variant="destructive"
-              className="absolute -top-1 -right-1 h-4 w-4 p-0 text-xs flex items-center justify-center"
+              className={`absolute -top-1 -right-1 ${useIconSizes().sm} p-0 text-xs flex items-center justify-center`}
             />
           )}
         </div>

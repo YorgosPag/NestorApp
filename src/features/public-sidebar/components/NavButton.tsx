@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { LucideIcon } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 export function NavButton({
   item,
@@ -12,6 +13,7 @@ export function NavButton({
   item: { title: string; href: string; icon: LucideIcon; description: string };
   active: boolean;
 }) {
+  const iconSizes = useIconSizes();
   const Icon = item.icon;
   return (
     <Link href={item.href}>
@@ -19,7 +21,7 @@ export function NavButton({
         variant={active ? 'secondary' : 'ghost'}
         className={cn('w-full justify-start h-12 text-left px-3', active && 'bg-blue-50 text-blue-700 border-blue-200')}
       >
-        <Icon className="mr-3 h-4 w-4" />
+        <Icon className={`mr-3 ${iconSizes.sm}`} />
         <div className="flex flex-col items-start">
           <span className="text-sm font-medium">{item.title}</span>
           <span className="text-xs text-muted-foreground">{item.description}</span>

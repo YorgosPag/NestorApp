@@ -145,7 +145,7 @@ export const RecentRelationshipsSection: React.FC<RecentRelationshipsSectionProp
         className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
       >
         <div className="flex items-center space-x-3">
-          <Icon className="h-5 w-5 text-gray-600" />
+          <Icon className={`${iconSizes.md} text-gray-600`} />
           <div>
             <div className="flex items-center gap-2">
               {contactName ? (

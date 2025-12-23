@@ -7,6 +7,7 @@ import { Download, FileText, Printer, FileDown } from "lucide-react";
 import type { ObligationDocument } from "@/types/obligations";
 import { getContentSummary } from "@/lib/obligations-utils";
 import { cn } from "@/lib/utils";
+import { useIconSizes } from "@/hooks/useIconSizes";
 
 import { usePdfExport } from "./pdf/PDFExportButton/hooks/usePdfExport";
 import type { PDFExportButtonProps, ExportOptions } from "./pdf/PDFExportButton/types";
@@ -25,6 +26,7 @@ export default function PDFExportButton({
   showPreview = true,
   className,
 }: PDFExportButtonProps) {
+  const iconSizes = useIconSizes();
   const [showOptions, setShowOptions] = useState(false);
   const [exportOptions, setExportOptions] = useState<ExportOptions>({
     includeTableOfContents: true,
@@ -51,14 +53,14 @@ export default function PDFExportButton({
     <Dialog open={showOptions} onOpenChange={setShowOptions}>
       <DialogTrigger asChild>
         <Button variant={variant} size={size} className={cn("flex items-center gap-2", className)}>
-          <FileDown className="h-4 w-4" />
+          <FileDown className={iconSizes.sm} />
           Εξαγωγή PDF
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
+            <FileText className={iconSizes.md} />
             Εξαγωγή σε PDF
           </DialogTitle>
           <DialogDescription>

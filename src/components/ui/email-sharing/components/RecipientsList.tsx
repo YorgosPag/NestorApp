@@ -383,7 +383,7 @@ export const CompactRecipientsList: React.FC<RecipientsListProps & {
                 onClick={() => onRecipientsChange(recipients.filter((_, i) => i !== index))}
                 disabled={disabled}
                 className={designSystem.cn(
-                  "h-8 w-8 p-0 text-red-500",
+                  `${iconSizes.xl} p-0 text-red-500`,
                   INTERACTIVE_PATTERNS.BUTTON_DESTRUCTIVE_GHOST
                 )}
               >

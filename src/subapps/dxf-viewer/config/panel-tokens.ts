@@ -334,10 +334,15 @@ export const DXF_SETTINGS_TOKENS = {
 /**
  * 🔧 SPECIFIC SETTINGS PANEL TOKENS
  * Specific tokens για το SpecificSettingsPanel component (Phase 2.1)
+ * 🏢 ENTERPRISE REFACTORED: Centralized button sizes
  */
+
+// 🏢 ENTERPRISE IMPORT: Centralized sizes
+import { componentSizes } from '@/hooks/useIconSizes';
+
 export const SPECIFIC_SETTINGS_TOKENS = {
   CATEGORY_BUTTON: {
-    BASE: 'h-8 w-8 p-0 rounded-md border transition-colors duration-150 flex items-center justify-center relative',
+    BASE: `${componentSizes.icon.xl} p-0 rounded-md border transition-colors duration-150 flex items-center justify-center relative`,
     ACTIVE: `${PANEL_COLORS.ACTIVE_BG} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${PANEL_COLORS.ACTIVE_TEXT} border-${PANEL_COLORS.ACTIVE_BORDER}`,
     COMING_SOON: `${PANEL_COLORS.BG_SECONDARY} ${PANEL_COLORS.TEXT_DISABLED} ${PANEL_COLORS.BORDER_PRIMARY} cursor-not-allowed opacity-50`,
     INACTIVE: `${PANEL_COLORS.BG_SECONDARY} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${PANEL_COLORS.TEXT_SECONDARY} ${PANEL_COLORS.BORDER_PRIMARY} ${HOVER_BORDER_EFFECTS.GRAY}`,

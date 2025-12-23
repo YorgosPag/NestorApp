@@ -200,7 +200,7 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
   const renderHeader = () => (
     <div className="flex items-center justify-between mb-6">
       <div className="flex items-center space-x-3">
-        <Users className="h-6 w-6 text-gray-600" />
+        <Users className={`${iconSizes.lg} text-gray-600`} />
         <div>
           <h3 className="text-lg font-medium">Σχέσεις Επαφής</h3>
           {!isNewContact && (
@@ -328,7 +328,7 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <Users className="h-5 w-5" />
+              <Users className={iconSizes.md} />
               <span>Οργανωτικό Διάγραμμα</span>
             </CardTitle>
           </CardHeader>

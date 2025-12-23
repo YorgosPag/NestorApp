@@ -45,10 +45,10 @@ export function ProjectAttachmentsTab({ data, setData }: ProjectAttachmentsTabPr
                             value={data.mapPath}
                             className="h-10 bg-muted/30"
                         />
-                        <Button variant="outline" size="icon" className="h-10 w-10 shrink-0" onClick={() => handleFileSelect('mapPath')}>
+                        <Button variant="outline" size="icon" className="${iconSizes['2xl']} shrink-0" onClick={() => handleFileSelect('mapPath')}>
                             <Folder className={iconSizes.sm} />
                         </Button>
-                        <Button variant="outline" size="icon" className="h-10 w-10 shrink-0">
+                        <Button variant="outline" size="icon" className="${iconSizes['2xl']} shrink-0">
                             <Eye className={iconSizes.sm} />
                         </Button>
                     </div>
@@ -63,10 +63,10 @@ export function ProjectAttachmentsTab({ data, setData }: ProjectAttachmentsTabPr
                             value={data.floorPlanPath}
                             className="h-10 bg-muted/30"
                         />
-                         <Button variant="outline" size="icon" className="h-10 w-10 shrink-0" onClick={() => handleFileSelect('floorPlanPath')}>
+                         <Button variant="outline" size="icon" className="${iconSizes['2xl']} shrink-0" onClick={() => handleFileSelect('floorPlanPath')}>
                             <Folder className={iconSizes.sm} />
                         </Button>
-                        <Button variant="outline" size="icon" className="h-10 w-10 shrink-0">
+                        <Button variant="outline" size="icon" className="${iconSizes['2xl']} shrink-0">
                             <Eye className={iconSizes.sm} />
                         </Button>
                     </div>
@@ -81,10 +81,10 @@ export function ProjectAttachmentsTab({ data, setData }: ProjectAttachmentsTabPr
                             value={data.percentagesPath}
                             className="h-10 bg-muted/30"
                         />
-                         <Button variant="outline" size="icon" className="h-10 w-10 shrink-0" onClick={() => handleFileSelect('percentagesPath')}>
+                         <Button variant="outline" size="icon" className="${iconSizes['2xl']} shrink-0" onClick={() => handleFileSelect('percentagesPath')}>
                             <Folder className={iconSizes.sm} />
                         </Button>
-                        <Button variant="outline" size="icon" className="h-10 w-10 shrink-0">
+                        <Button variant="outline" size="icon" className="${iconSizes['2xl']} shrink-0">
                             <Eye className={iconSizes.sm} />
                         </Button>
                     </div>

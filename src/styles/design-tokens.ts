@@ -288,12 +288,13 @@ export const componentSizes = {
   
   // Icon sizes
   icon: {
-    xs: 'h-3 w-3',
-    sm: 'h-4 w-4',
-    md: 'h-5 w-5',
-    lg: 'h-6 w-6',
-    xl: 'h-8 w-8',
-    '2xl': 'h-10 w-10',
+    xxs: 'h-2 w-2 text-red-500',
+    xs: 'h-3 w-3 text-red-500',
+    sm: 'h-4 w-4 text-red-500',
+    md: 'h-5 w-5 text-red-500',
+    lg: 'h-6 w-6 text-red-500',
+    xl: 'h-8 w-8 text-red-500',
+    '2xl': 'h-10 w-10 text-red-500',
   },
   
   // Avatar sizes

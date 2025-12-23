@@ -2,12 +2,19 @@ import React from 'react';
 import { User, Building2, Landmark } from 'lucide-react';
 import type { ContactType } from '@/types/contacts';
 
-export const getTypeIcon = (type: ContactType, iconSize: string = 'h-4 w-4') => {
+/**
+ * Get the appropriate icon component for a contact type
+ * @param type Contact type
+ * @param className CSS classes for the icon (defaults to h-4 w-4 for backward compatibility)
+ */
+export const getTypeIcon = (type: ContactType, className: string = "h-4 w-4") => {
+  const props = { className };
+
   switch (type) {
-    case 'individual': return React.createElement(User, { className: iconSize });
-    case 'company': return React.createElement(Building2, { className: iconSize });
-    case 'service': return React.createElement(Landmark, { className: iconSize });
-    default: return React.createElement(User, { className: iconSize });
+    case 'individual': return React.createElement(User, props);
+    case 'company': return React.createElement(Building2, props);
+    case 'service': return React.createElement(Landmark, props);
+    default: return React.createElement(User, props);
   }
 };
 

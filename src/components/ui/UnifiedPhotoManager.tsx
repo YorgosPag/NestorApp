@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Building2, User, Camera, X } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { EnterprisePhotoUpload } from './EnterprisePhotoUpload';
 import { MultiplePhotosUpload } from './MultiplePhotosUpload';
 import type { ContactType } from '@/types/contacts';
@@ -68,12 +69,14 @@ function IndividualPhotoManager({
   formData,
   handlers,
   uploadHandlers,
-  disabled
+  disabled,
+  iconSizes
 }: {
   formData: ContactFormData;
   handlers: UnifiedPhotoManagerProps['handlers'];
   uploadHandlers: UnifiedPhotoManagerProps['uploadHandlers'];
   disabled?: boolean;
+  iconSizes: ReturnType<typeof useIconSizes>;
 }) {
   // 🏢 ENTERPRISE: Global PhotoPreviewModal για gallery functionality
   const photoPreviewModal = useGlobalPhotoPreview();
@@ -107,7 +110,7 @@ function IndividualPhotoManager({
     <Card className="mt-4">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-sm">
-          <Camera className="h-4 w-4" />
+          <Camera className={iconSizes.sm} />
           📸 Φωτογραφίες Προσώπου (6)
         </CardTitle>
       </CardHeader>
@@ -146,12 +149,14 @@ function CompanyPhotoManager({
   formData,
   handlers,
   uploadHandlers,
-  disabled
+  disabled,
+  iconSizes
 }: {
   formData: ContactFormData;
   handlers: UnifiedPhotoManagerProps['handlers'];
   uploadHandlers: UnifiedPhotoManagerProps['uploadHandlers'];
   disabled?: boolean;
+  iconSizes: ReturnType<typeof useIconSizes>;
 }) {
 
   // 🔍 DEBUG: Log formData photo fields
@@ -174,7 +179,7 @@ function CompanyPhotoManager({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm">
-              <Building2 className="h-4 w-4" />
+              <Building2 className={iconSizes.sm} />
               Λογότυπο Εταιρείας
             </CardTitle>
           </CardHeader>
@@ -209,7 +214,7 @@ function CompanyPhotoManager({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm">
-              <User className="h-4 w-4" />
+              <User className={iconSizes.sm} />
               Φωτογραφία Εκπροσώπου
             </CardTitle>
           </CardHeader>
@@ -269,18 +274,20 @@ function ServicePhotoManager({
   formData,
   handlers,
   uploadHandlers,
-  disabled
+  disabled,
+  iconSizes
 }: {
   formData: ContactFormData;
   handlers: UnifiedPhotoManagerProps['handlers'];
   uploadHandlers: UnifiedPhotoManagerProps['uploadHandlers'];
   disabled?: boolean;
+  iconSizes: ReturnType<typeof useIconSizes>;
 }) {
   return (
     <Card className="mt-4">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-sm">
-          <Building2 className="h-4 w-4" />
+          <Building2 className={iconSizes.sm} />
           🏛️ Λογότυπο Δημόσιας Υπηρεσίας
         </CardTitle>
       </CardHeader>
@@ -340,6 +347,9 @@ export function UnifiedPhotoManager({
   disabled = false,
   className
 }: UnifiedPhotoManagerProps) {
+  // 🎯 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ ICON SIZES - ΣΩΣΤΗ ΧΡΗΣΗ
+  const iconSizes = useIconSizes();
+
   // Photo management component for unified contact forms
 
   return (
@@ -351,6 +361,7 @@ export function UnifiedPhotoManager({
           handlers={handlers}
           uploadHandlers={uploadHandlers}
           disabled={disabled}
+          iconSizes={iconSizes}
         />
       )}
 
@@ -360,6 +371,7 @@ export function UnifiedPhotoManager({
           handlers={handlers}
           uploadHandlers={uploadHandlers}
           disabled={disabled}
+          iconSizes={iconSizes}
         />
       )}
 
@@ -369,6 +381,7 @@ export function UnifiedPhotoManager({
           handlers={handlers}
           uploadHandlers={uploadHandlers}
           disabled={disabled}
+          iconSizes={iconSizes}
         />
       )}
 

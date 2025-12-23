@@ -9,8 +9,10 @@ import {
 } from "@/components/ui/card";
 import { ThemeProgressBar } from "@/core/progress/ThemeProgressBar";
 import { User, Building2, Landmark } from "lucide-react";
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 export function ContactDistribution() {
+  const iconSizes = useIconSizes();
   return (
     <Card>
       <CardHeader>
@@ -22,7 +24,7 @@ export function ContactDistribution() {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-blue-600" />
+                <User className={`${iconSizes.sm} text-blue-600`} />
                 <span className="text-sm font-medium">Φυσικά Πρόσωπα</span>
               </div>
               <span className="text-sm text-muted-foreground">
@@ -40,7 +42,7 @@ export function ContactDistribution() {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Building2 className="h-4 w-4 text-purple-600" />
+                <Building2 className={`${iconSizes.sm} text-purple-600`} />
                 <span className="text-sm font-medium">Νομικά Πρόσωπα</span>
               </div>
               <span className="text-sm text-muted-foreground">312 (25%)</span>
@@ -56,7 +58,7 @@ export function ContactDistribution() {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Landmark className="h-4 w-4 text-green-600" />
+                <Landmark className={`${iconSizes.sm} text-green-600`} />
                 <span className="text-sm font-medium">Δημόσιες Υπηρεσίες</span>
               </div>
               <span className="text-sm text-muted-foreground">79 (6.4%)</span>

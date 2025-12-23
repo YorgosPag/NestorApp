@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback, useMemo } from 'react';
 import { Target, ChevronDown, ChevronUp, Settings } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { ExtendedSnapType } from '../../snapping/extended-types';
 import { HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 
@@ -116,6 +117,7 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
   className = '',
   compact = false,
 }) => {
+  const iconSizes = useIconSizes();
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const handleMasterToggle = useCallback(() => {
@@ -172,7 +174,7 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
           <div className="w-px h-6 bg-gray-600" />
           <button
             onClick={handleToggleAdvanced}
-            className={`h-8 w-8 rounded border transition-all duration-150 flex items-center justify-center ${
+            className={`${iconSizes.xl} rounded border transition-all duration-150 flex items-center justify-center ${
               showAdvanced || advancedEnabledCount > 0 ? 'bg-gray-600 border-gray-500 text-white' : `bg-gray-700 border-gray-600 text-gray-400 ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK}`
             }`}
             title={`${showAdvanced ? 'Απόκρυψη' : 'Εμφάνιση'} προχωρημένων λειτουργιών`}
@@ -185,7 +187,7 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
       <div className="w-px h-6 bg-gray-600" />
       <button
         onClick={handleQuickEnable}
-        className={`h-8 w-8 rounded border transition-all duration-150 flex items-center justify-center text-gray-400 ${HOVER_TEXT_EFFECTS.WHITE} bg-gray-700 border-gray-600 ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK}`}
+        className={`${iconSizes.xl} rounded border transition-all duration-150 flex items-center justify-center text-gray-400 ${HOVER_TEXT_EFFECTS.WHITE} bg-gray-700 border-gray-600 ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK}`}
         title="Ενεργοποίηση βασικών λειτουργιών"
       >
         <Settings size={14} />

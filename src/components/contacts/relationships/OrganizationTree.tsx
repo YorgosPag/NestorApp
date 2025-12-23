@@ -13,6 +13,7 @@ import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Building2, Users } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // 🏢 ENTERPRISE: Import centralized types
 import type { OrganizationTree as OrganizationTreeType } from '@/types/contacts/relationships';
@@ -93,41 +94,51 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
   /**
    * ⏳ Render loading state
    */
-  const renderLoadingState = () => (
-    <div className="text-center text-gray-500 py-8">
-      <Building2 className="h-8 w-8 mx-auto mb-2 animate-pulse" />
-      <p>Φόρτωση οργανωτικού διαγράμματος...</p>
-    </div>
-  );
+  const renderLoadingState = () => {
+    const iconSizes = useIconSizes();
+    return (
+      <div className="text-center text-gray-500 py-8">
+        <Building2 className={`${iconSizes.xl} mx-auto mb-2 animate-pulse`} />
+        <p>Φόρτωση οργανωτικού διαγράμματος...</p>
+      </div>
+    );
+  };
 
   /**
    * ❌ Render error state
    */
-  const renderErrorState = () => (
-    <div className="text-center text-red-600 py-8">
-      <Building2 className="h-8 w-8 mx-auto mb-2" />
-      <p className="font-medium">Σφάλμα φόρτωσης</p>
-      <p className="text-sm text-gray-600 mt-1">{error}</p>
-    </div>
-  );
+  const renderErrorState = () => {
+    const iconSizes = useIconSizes();
+    return (
+      <div className="text-center text-red-600 py-8">
+        <Building2 className={`${iconSizes.xl} mx-auto mb-2`} />
+        <p className="font-medium">Σφάλμα φόρτωσης</p>
+        <p className="text-sm text-gray-600 mt-1">{error}</p>
+      </div>
+    );
+  };
 
   /**
    * 📭 Render empty state
    */
-  const renderEmptyState = () => (
-    <div className="text-center text-gray-500 py-8">
-      <Building2 className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-      <p className="font-medium">Κενό οργανωτικό διάγραμμα</p>
-      <p className="text-sm mt-1">
-        Δεν υπάρχουν σχέσεις εργαζομένων για αυτόν τον οργανισμό.
-      </p>
-    </div>
-  );
+  const renderEmptyState = () => {
+    const iconSizes = useIconSizes();
+    return (
+      <div className="text-center text-gray-500 py-8">
+        <Building2 className={`${iconSizes.xl} mx-auto mb-2 text-gray-300`} />
+        <p className="font-medium">Κενό οργανωτικό διάγραμμα</p>
+        <p className="text-sm mt-1">
+          Δεν υπάρχουν σχέσεις εργαζομένων για αυτόν τον οργανισμό.
+        </p>
+      </div>
+    );
+  };
 
   /**
    * 🏗️ Render organization statistics - ADAPTIVE & USER-FRIENDLY
    */
   const renderStatistics = () => {
+    const iconSizes = useIconSizes();
     if (!tree?.statistics) return null;
 
     const { totalEmployees, hierarchyDepth, departmentCount } = tree.statistics;
@@ -166,7 +177,7 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
     if (stats.length === 0) {
       return (
         <div className="text-center p-6 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
-          <Building2 className="h-8 w-8 mx-auto mb-3 text-gray-400" />
+          <Building2 className={`${iconSizes.xl} mx-auto mb-3 text-gray-400`} />
           <h3 className="font-medium text-gray-700 mb-1">Απλό Οργανωτικό Σχήμα</h3>
           <p className="text-sm text-gray-500">
             Αυτή η εταιρεία έχει βασική οργανωσιακή δομή χωρίς πολύπλοκη ιεραρχία.
@@ -180,7 +191,7 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
       <div className={`grid grid-cols-1 ${stats.length > 1 ? 'md:grid-cols-' + Math.min(stats.length, 3) : ''} gap-4 mb-6`}>
         {stats.map(({ value, label, icon: Icon, color }, index) => (
           <div key={index} className={`text-center p-4 bg-${color}-50 rounded-lg`}>
-            <Icon className={`h-6 w-6 mx-auto mb-2 text-${color}-600`} />
+            <Icon className={`${iconSizes.lg} mx-auto mb-2 text-${color}-600`} />
             <p className={`text-2xl font-bold text-${color}-800`}>{value}</p>
             <p className={`text-sm text-${color}-600`}>{label}</p>
           </div>

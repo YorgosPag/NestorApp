@@ -673,7 +673,7 @@ const SidebarMenuBadge = React.forwardRef<
       )}
       {...props}
     />
-  )
+  );
 });
 SidebarMenuBadge.displayName = "SidebarMenuBadge";
 

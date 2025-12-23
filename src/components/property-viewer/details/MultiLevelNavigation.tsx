@@ -5,6 +5,7 @@ import { ChevronsUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { Property } from '@/types/property-viewer';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface MultiLevelNavigationProps {
   property: Property;
@@ -13,12 +14,13 @@ interface MultiLevelNavigationProps {
 }
 
 export function MultiLevelNavigation({ property, onSelectFloor, currentFloorId }: MultiLevelNavigationProps) {
+  const iconSizes = useIconSizes();
   if (!property.levels) return null;
 
   return (
     <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3 space-y-2">
       <h4 className="text-xs font-semibold text-blue-800 dark:text-blue-200 flex items-center gap-2">
-        <ChevronsUpDown className="h-4 w-4" />
+        <ChevronsUpDown className={iconSizes.sm} />
         Επίπεδα Ακινήτου
       </h4>
       {property.levels.map((level) => (

@@ -46,7 +46,7 @@ export function RecentActivities({ activities }: RecentActivitiesProps) {
             >
               <div
                 className={cn(
-                  "h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0",
+                  `${iconSizes['2xl']} rounded-full flex items-center justify-center flex-shrink-0`,
                   activity.color
                 )}
               >

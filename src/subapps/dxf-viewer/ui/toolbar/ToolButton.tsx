@@ -68,7 +68,7 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
         disabled={disabled}
         title={`${tool.label} (${tool.hotkey})`}
         className={`
-          h-8 w-8 p-0 rounded-md border transition-colors duration-150
+          ${iconSizes.xl} p-0 rounded-md border transition-colors duration-150
           flex items-center justify-center
           ${
             isActive 
@@ -157,7 +157,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({ action }) => {
       title={`${action.label} (${action.hotkey})`}
       disabled={action.disabled}
       className={`
-        h-8 w-8 p-0 rounded-md border transition-colors duration-150
+        ${iconSizes.xl} p-0 rounded-md border transition-colors duration-150
         flex items-center justify-center
         ${
           action.active 

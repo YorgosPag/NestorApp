@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Save, Loader2 } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { Opportunity } from '@/types/crm';
 
 interface EditOpportunityModalProps {
@@ -41,6 +42,7 @@ const stageDefinitions: { id: OpportunityStage; label: string }[] = [
 const EMPTY_FORM_DATA: Partial<Opportunity> = {};
 
 export function EditOpportunityModal({ opportunity, isOpen, onClose, onLeadUpdated }: EditOpportunityModalProps) {
+  const iconSizes = useIconSizes();
   const [formData, setFormData] = useState<Partial<Opportunity>>(EMPTY_FORM_DATA);
   const [loading, setLoading] = useState(false);
   const notifications = useNotifications();
@@ -135,12 +137,12 @@ export function EditOpportunityModal({ opportunity, isOpen, onClose, onLeadUpdat
             <Button type="submit" disabled={loading}>
               {loading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className={`mr-2 ${iconSizes.sm} animate-spin`} />
                   Αποθήκευση...
                 </>
               ) : (
                 <>
-                  <Save className="mr-2 h-4 w-4" />
+                  <Save className={`mr-2 ${iconSizes.sm}`} />
                   Αποθήκευση
                 </>
               )}

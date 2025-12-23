@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { designSystem } from '@/lib/design-system';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // 🏢 ENTERPRISE: Import centralized types and utilities
 import type { RelationshipType, ContactType } from '@/types/contacts/relationships';
@@ -81,6 +82,8 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
   className,
   fieldConfig = {}
 }) => {
+  const iconSizes = useIconSizes();
+
   // ============================================================================
   // CONFIGURATION με DEFAULTS
   // ============================================================================
@@ -212,7 +215,7 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
                     <div className="flex items-center gap-2">
                       {Icon && (
                         <Icon className={designSystem.cn(
-                          "h-4 w-4",
+                          iconSizes.sm,
                           designSystem.colorScheme.responsive.muted.split(' ')[1] // text-muted-foreground
                         )} />
                       )}

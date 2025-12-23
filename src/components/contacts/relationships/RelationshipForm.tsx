@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Plus, AlertTriangle } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 // 🏢 ENTERPRISE: Import centralized components and utilities
 import type { ContactSummary } from '@/components/ui/enterprise-contact-dropdown';
@@ -49,6 +50,7 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
   // LOCAL STATE - SIMPLIFIED με κεντρικοποιημένα components
   // ============================================================================
 
+  const iconSizes = useIconSizes();
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   // ============================================================================
@@ -122,7 +124,7 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
           "flex items-center space-x-2",
           designSystem.presets.text.subtitle
         )}>
-          <Plus className="h-5 w-5" />
+          <Plus className={iconSizes.md} />
           <span>{editingId ? 'Επεξεργασία Σχέσης' : 'Προσθήκη Νέας Σχέσης'}</span>
         </CardTitle>
       </CardHeader>
@@ -171,7 +173,7 @@ export const RelationshipForm: React.FC<RelationshipFormProps> = ({
           {/* Backend Validation Error Display */}
           {error && (
             <Alert variant="destructive" className="mt-4">
-              <AlertTriangle className="h-4 w-4" />
+              <AlertTriangle className={iconSizes.sm} />
               <AlertDescription className={designSystem.getTypographyClass('sm', 'medium')}>
                 {error}
               </AlertDescription>

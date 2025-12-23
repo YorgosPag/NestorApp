@@ -111,7 +111,7 @@ export function EditableText({
           size="sm"
           variant="outline"
           onClick={handleSave}
-          className="h-8 w-8 p-0"
+          className={`${iconSizes.xl} p-0`}
           title="Αποθήκευση"
         >
           <Check className={iconSizes.sm} />
@@ -120,7 +120,7 @@ export function EditableText({
           size="sm"
           variant="outline"
           onClick={handleCancel}
-          className="h-8 w-8 p-0"
+          className={`${iconSizes.xl} p-0`}
           title="Ακύρωση"
         >
           <X className={iconSizes.sm} />

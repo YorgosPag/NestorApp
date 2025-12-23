@@ -4,6 +4,7 @@
 
 import { ChevronsUpDown } from 'lucide-react';
 import type { Property } from '@/types/property-viewer';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface PropertyMultiLevelIndicatorProps {
   property: Property;
@@ -12,6 +13,7 @@ interface PropertyMultiLevelIndicatorProps {
 }
 
 export function PropertyMultiLevelIndicator({ property, centroid, onNavigateLevels }: PropertyMultiLevelIndicatorProps) {
+  const iconSizes = useIconSizes();
   return (
     <g 
       className="multi-level-indicator cursor-pointer"
@@ -29,7 +31,7 @@ export function PropertyMultiLevelIndicator({ property, centroid, onNavigateLeve
         fillOpacity={0.8}
         rx={2}
       />
-      <ChevronsUpDown className="h-3 w-3 text-white pointer-events-none" x={centroid.x - 28} y={centroid.y + 24} />
+      <ChevronsUpDown className={`${iconSizes.xs} text-white pointer-events-none`} x={centroid.x - 28} y={centroid.y + 24} />
       <text
         x={centroid.x - 12}
         y={centroid.y + 33}

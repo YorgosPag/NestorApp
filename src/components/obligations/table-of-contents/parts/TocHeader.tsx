@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { BookOpen, ChevronDown, ChevronRight } from 'lucide-react';
 import type { TocHeaderProps } from '../types';
 import { cn } from '@/lib/utils';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 export function TocHeader({
   items,
@@ -15,13 +16,14 @@ export function TocHeader({
   onExpandAll,
   onCollapseAll,
 }: TocHeaderProps) {
+  const iconSizes = useIconSizes();
   const isAllExpanded = expandedIds.length > 0; // Simplified check for toggle icon
 
   return (
     <CardHeader className={cn("pb-4", compact && "pb-2")}>
       <div className="flex items-center justify-between">
         <CardTitle className={cn("text-lg flex items-center gap-2", compact && "text-base")}>
-          <BookOpen className="h-5 w-5" />
+          <BookOpen className={iconSizes.md} />
           Πίνακας Περιεχομένων
           <Badge variant="secondary" className="text-xs">
             {items.length} {items.length === 1 ? 'ενότητα' : 'ενότητες'}
@@ -38,9 +40,9 @@ export function TocHeader({
             aria-label={isAllExpanded ? "Σύμπτυξη όλων" : "Επέκταση όλων"}
           >
             {isAllExpanded ? (
-              <ChevronDown className="h-4 w-4" />
+              <ChevronDown className={iconSizes.sm} />
             ) : (
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className={iconSizes.sm} />
             )}
           </Button>
         </div>

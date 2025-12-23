@@ -38,6 +38,8 @@ import { componentSizes } from '@/styles/design-tokens';
  * Return type για useIconSizes hook - Full type safety
  */
 export interface UseIconSizesReturn {
+  /** Extra extra small icons: h-2 w-2 (8px) */
+  readonly xxs: string;
   /** Extra small icons: h-3 w-3 (12px) */
   readonly xs: string;
   /** Small icons: h-4 w-4 (16px) - Most common */
@@ -52,7 +54,7 @@ export interface UseIconSizesReturn {
   readonly '2xl': string;
 
   // 🔧 Utility method για dynamic access
-  readonly getSize: (size: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl') => string;
+  readonly getSize: (size: 'xxs' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl') => string;
 }
 
 // ============================================================================
@@ -78,6 +80,7 @@ export function useIconSizes(): UseIconSizesReturn {
 
     return {
       // 📐 Icon Sizes - Pre-computed για performance
+      xxs: iconSizes.xxs,        // h-2 w-2 - Extra extra small
       xs: iconSizes.xs,          // h-3 w-3
       sm: iconSizes.sm,          // h-4 w-4 - Most common
       md: iconSizes.md,          // h-5 w-5

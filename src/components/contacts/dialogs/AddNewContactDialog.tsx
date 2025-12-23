@@ -21,11 +21,14 @@ import { useContactForm } from '@/hooks/useContactForm';
 import { getTypeIcon, getTypeLabel } from '@/utils/contactFormUtils';
 import { UnifiedContactTabbedSection } from '@/components/ContactFormSections/UnifiedContactTabbedSection';
 import { CONTACT_TYPES, getContactLabel } from '@/constants/contacts';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 
 export function AddNewContactDialog({ open, onOpenChange, onContactAdded, editContact }: AddNewContactDialogProps) {
+  const iconSizes = useIconSizes();
   const {
     formData,
+    setFormData,
     loading,
     handleSubmit,
     handleChange,
@@ -41,14 +44,16 @@ export function AddNewContactDialog({ open, onOpenChange, onContactAdded, editCo
     handleMultiplePhotoUploadComplete
   } = useContactForm({ onContactAdded, onOpenChange, editContact, isModalOpen: open });
 
+  // 🔧 FIX: TypeScript safety με fallback
+  const contactType = formData.type ?? CONTACT_TYPES.INDIVIDUAL;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            {getTypeIcon(formData.type)}
-            {editContact ? 'Επεξεργασία' : 'Προσθήκη Νέας'} Επαφής - {getTypeLabel(formData.type)}
+            {getTypeIcon(contactType, iconSizes.sm)}
+            {editContact ? 'Επεξεργασία' : 'Προσθήκη Νέας'} Επαφής - {getTypeLabel(contactType)}
           </DialogTitle>
           <DialogDescription>
             {editContact ? 'Επεξεργαστείτε τα στοιχεία της επαφής.' : 'Καταχωρήστε τα βασικά στοιχεία της νέας επαφής.'}
@@ -60,7 +65,7 @@ export function AddNewContactDialog({ open, onOpenChange, onContactAdded, editCo
             {/* Τύπος Επαφής */}
             <FormField label="Τύπος" htmlFor="type" required>
               <FormInput>
-                <Select name="type" value={formData.type} onValueChange={(value) => handleSelectChange('type', value)} disabled={loading || !!editContact}>
+                <Select name="type" value={contactType} onValueChange={(value) => handleSelectChange('type', value)} disabled={loading || !!editContact}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -75,7 +80,7 @@ export function AddNewContactDialog({ open, onOpenChange, onContactAdded, editCo
 
             {/* 🏢 UNIFIED CONTACT SECTION - All contact types centralized */}
             <UnifiedContactTabbedSection
-              contactType={formData.type}
+              contactType={contactType}
               formData={formData}
               handleChange={handleChange}
               handleSelectChange={handleSelectChange}
@@ -90,7 +95,7 @@ export function AddNewContactDialog({ open, onOpenChange, onContactAdded, editCo
             />
 
             {/* Σημειώσεις για φυσικά πρόσωπα */}
-            {formData.type === CONTACT_TYPES.INDIVIDUAL && (
+            {contactType === CONTACT_TYPES.INDIVIDUAL && (
               <div className="col-span-2 border-t pt-4 mt-4">
                 <h4 className="font-semibold mb-3 text-sm">📝 Σημειώσεις</h4>
                 <FormField label="Σημειώσεις" htmlFor="notes">

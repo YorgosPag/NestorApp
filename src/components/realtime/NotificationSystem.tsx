@@ -5,6 +5,7 @@ import { Bell, X, Check, AlertTriangle, Info, CheckCircle } from 'lucide-react';
 import { useWebSocketEvent, useRealTimeNotifications } from '@/contexts/WebSocketContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface NotificationProps {
   id: string;
@@ -22,22 +23,25 @@ interface NotificationProps {
 }
 
 const NotificationIcon = ({ type }: { type: NotificationProps['type'] }) => {
+  const iconSizes = useIconSizes();
   const icons = {
-    info: <Info className="h-5 w-5 text-blue-600" />,
-    success: <CheckCircle className="h-5 w-5 text-green-600" />,
-    warning: <AlertTriangle className="h-5 w-5 text-yellow-600" />,
-    error: <AlertTriangle className="h-5 w-5 text-red-600" />
+    info: <Info className={`${iconSizes.md} text-blue-600`} />,
+    success: <CheckCircle className={`${iconSizes.md} text-green-600`} />,
+    warning: <AlertTriangle className={`${iconSizes.md} text-yellow-600`} />,
+    error: <AlertTriangle className={`${iconSizes.md} text-red-600`} />
   };
   return icons[type];
 };
 
-function NotificationItem({ 
-  notification, 
-  onDismiss 
-}: { 
-  notification: NotificationProps; 
-  onDismiss: () => void; 
+function NotificationItem({
+  notification,
+  onDismiss
+}: {
+  notification: NotificationProps;
+  onDismiss: () => void;
 }) {
+  const iconSizes = useIconSizes();
+
   return (
     <div className={cn(
       "bg-card border rounded-lg shadow-lg p-4 max-w-sm w-full",
@@ -54,9 +58,9 @@ function NotificationItem({
             variant="ghost"
             size="sm"
             onClick={onDismiss}
-            className="h-6 w-6 p-0"
+            className={`${iconSizes.lg} p-0`}
           >
-            <X className="h-4 w-4" />
+            <X className={iconSizes.sm} />
           </Button>
         )}
       </div>
@@ -83,6 +87,7 @@ function NotificationItem({
 }
 
 export function NotificationCenter() {
+  const iconSizes = useIconSizes();
   const { notifications, removeNotification, clearNotifications, unreadCount } = useRealTimeNotifications();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -94,9 +99,9 @@ export function NotificationCenter() {
         onClick={() => setIsOpen(!isOpen)}
         className="relative"
       >
-        <Bell className="h-5 w-5" />
+        <Bell className={iconSizes.md} />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+          <span className={`absolute -top-1 -right-1 ${iconSizes.md} bg-red-500 text-white text-xs rounded-full flex items-center justify-center`}>
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}

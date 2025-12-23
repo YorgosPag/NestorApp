@@ -2,10 +2,17 @@
  * @fileoverview Enterprise Modal Layout Constants System
  * @description Centralized layout patterns for 100% consistency
  * @author Claude (Anthropic AI)
- * @date 2025-12-17
- * @version 1.0.0
+ * @date 2025-12-23
+ * @version 2.0.0 - ENTERPRISE REFACTORING
  * @compliance CLAUDE.md Enterprise Standards - 100% CENTRALIZATION
+ * ⚡ MAJOR UPDATE: Eliminated hardcoded duplicates - imports from central source
  */
+
+// ====================================================================
+// 🏢 ENTERPRISE IMPORTS - CENTRALIZED SOURCE OF TRUTH
+// ====================================================================
+
+import { componentSizes } from '@/hooks/useIconSizes';
 
 // ====================================================================
 // MODAL SPACING CONSTANTS - 100% CENTRALIZED
@@ -57,22 +64,23 @@ export const MODAL_SPACING = {
 
 /**
  * Icon and element size standards
- * Consistent sizing across all modals
+ * ✅ ENTERPRISE REFACTORED: All sizes imported from centralized source
+ * 🚫 NO MORE HARDCODED VALUES - SINGLE SOURCE OF TRUTH
  */
 export const MODAL_DIMENSIONS = {
-  // Icon sizes
+  // Icon sizes - 🏢 ENTERPRISE CENTRALIZED
   ICONS: {
-    small: 'h-4 w-4',         // Small icons (16px)
-    medium: 'h-5 w-5',        // Medium icons (20px)
-    large: 'h-6 w-6',         // Large icons (24px)
-    extraLarge: 'h-8 w-8',    // Extra large icons (32px)
+    small: componentSizes.icon.sm,         // h-4 w-4 (16px) - Centralized
+    medium: componentSizes.icon.md,        // h-5 w-5 (20px) - Centralized
+    large: componentSizes.icon.lg,         // h-6 w-6 (24px) - Centralized
+    extraLarge: componentSizes.icon.xl,    // h-8 w-8 (32px) - Centralized
   },
 
-  // Spinner sizes for loading states
+  // Spinner sizes for loading states - 🏢 ENTERPRISE CENTRALIZED
   SPINNERS: {
-    small: 'h-4 w-4',         // Small spinner
-    medium: 'h-5 w-5',        // Medium spinner
-    large: 'h-6 w-6',         // Large spinner
+    small: componentSizes.icon.sm,         // h-4 w-4 - Centralized
+    medium: componentSizes.icon.md,        // h-5 w-5 - Centralized
+    large: componentSizes.icon.lg,         // h-6 w-6 - Centralized
   },
 
   // Button dimensions
@@ -167,15 +175,16 @@ export const MODAL_ALIGNMENT = {
 
 /**
  * Standardized loading spinner and animation patterns
+ * ✅ ENTERPRISE REFACTORED: Spinner sizes centralized
  */
 export const MODAL_LOADING_PATTERNS = {
-  // Spinner base classes
+  // Spinner base classes - 🏢 ENTERPRISE CENTRALIZED
   SPINNER: {
     base: 'animate-spin rounded-full border-2',
     border: 'border-blue-600 border-t-transparent',
-    small: 'h-4 w-4',
-    medium: 'h-5 w-5',
-    large: 'h-6 w-6',
+    small: componentSizes.icon.sm,         // h-4 w-4 - Centralized
+    medium: componentSizes.icon.md,        // h-5 w-5 - Centralized
+    large: componentSizes.icon.lg,         // h-6 w-6 - Centralized
   },
 
   // Loading container patterns

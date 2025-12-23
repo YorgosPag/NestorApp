@@ -9,10 +9,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { User, Building2, Landmark } from "lucide-react";
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from "@/i18n";
 import { COMPLEX_HOVER_EFFECTS, GROUP_HOVER_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 
 export function QuickActions() {
+  const iconSizes = useIconSizes();
   const { t } = useTranslation('dashboard');
   
   return (
@@ -29,7 +31,7 @@ export function QuickActions() {
             <Card className={`cursor-pointer group ${COMPLEX_HOVER_EFFECTS.FEATURE_CARD}`}>
               <CardContent className="p-6 text-center">
                 <div className={`mx-auto h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center mb-3 ${GROUP_HOVER_PATTERNS.BACKGROUND_SUBTLE} ${TRANSITION_PRESETS.STANDARD_COLORS}`}>
-                  <User className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                  <User className={`${iconSizes.lg} text-blue-600 dark:text-blue-400`} />
                 </div>
                 <h3 className="font-semibold">{t('quickActions.individual.title')}</h3>
                 <p className="text-sm text-muted-foreground mt-1">
@@ -43,7 +45,7 @@ export function QuickActions() {
             <Card className={`cursor-pointer group ${COMPLEX_HOVER_EFFECTS.FEATURE_CARD}`}>
               <CardContent className="p-6 text-center">
                 <div className={`mx-auto h-12 w-12 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center mb-3 ${GROUP_HOVER_PATTERNS.BACKGROUND_SUBTLE} ${TRANSITION_PRESETS.STANDARD_COLORS}`}>
-                  <Building2 className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                  <Building2 className={`${iconSizes.lg} text-purple-600 dark:text-purple-400`} />
                 </div>
                 <h3 className="font-semibold">{t('quickActions.company.title')}</h3>
                 <p className="text-sm text-muted-foreground mt-1">
@@ -57,7 +59,7 @@ export function QuickActions() {
             <Card className={`cursor-pointer group ${COMPLEX_HOVER_EFFECTS.FEATURE_CARD}`}>
               <CardContent className="p-6 text-center">
                 <div className={`mx-auto h-12 w-12 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center mb-3 ${GROUP_HOVER_PATTERNS.BACKGROUND_SUBTLE} ${TRANSITION_PRESETS.STANDARD_COLORS}`}>
-                  <Landmark className="h-6 w-6 text-green-600 dark:text-green-400" />
+                  <Landmark className={`${iconSizes.lg} text-green-600 dark:text-green-400`} />
                 </div>
                 <h3 className="font-semibold">{t('quickActions.service.title')}</h3>
                 <p className="text-sm text-muted-foreground mt-1">

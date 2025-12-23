@@ -142,15 +142,15 @@ export function LayersPanel({
               Edit
             </Button>
             <Button variant="outline" size="sm" className={`${iconSizes.lg} text-xs`}>
-              <Copy className="h-3 w-3 mr-1" />
+              <Copy className={`${iconSizes.xs} mr-1`} />
               Copy
             </Button>
             <Button variant="outline" size="sm" className={`${iconSizes.lg} text-xs`}>
-              <Move className="h-3 w-3 mr-1" />
+              <Move className={`${iconSizes.xs} mr-1`} />
               Move
             </Button>
             <Button variant="outline" size="sm" className="h-6 text-xs text-red-600">
-              <Trash2 className="h-3 w-3 mr-1" />
+              <Trash2 className={`${iconSizes.xs} mr-1`} />
               Delete
             </Button>
           </div>

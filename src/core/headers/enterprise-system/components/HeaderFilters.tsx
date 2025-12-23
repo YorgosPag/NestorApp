@@ -18,13 +18,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import {
   Filter,
   X,
   LucideIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useIconSizes } from '@/hooks/useIconSizes';
 import { HEADER_THEME } from '../constants';
 
 // Local interfaces για compatibility με UnifiedHeaderSystem
@@ -104,7 +104,7 @@ export const HeaderFilters: React.FC<UnifiedHeaderFiltersProps> = ({
         <DropdownMenu key={filter.key}>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="flex items-center gap-2 h-9">
-              {filter.icon && <filter.icon className="h-4 w-4" />}
+              {filter.icon && <filter.icon className={iconSizes.sm} />}
               {filter.label}
             </Button>
           </DropdownMenuTrigger>

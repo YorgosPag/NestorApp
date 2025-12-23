@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n';
 import { preloadCriticalNamespaces } from '@/i18n/lazy-config';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 const languages = [
   { code: 'el', name: 'Ελληνικά', flag: '🇬🇷' },
@@ -19,6 +20,7 @@ const languages = [
 ];
 
 export function LanguageSwitcher() {
+  const iconSizes = useIconSizes();
   const { i18n } = useTranslation();
   const [isChanging, setIsChanging] = useState(false);
   const [currentLanguage, setCurrentLanguage] = useState(languages[0]);
@@ -66,7 +68,7 @@ export function LanguageSwitcher() {
           className="relative"
           disabled={isChanging}
         >
-          <Globe className={`h-4 w-4 ${isChanging ? 'animate-spin' : ''}`} />
+          <Globe className={`${iconSizes.sm} ${isChanging ? 'animate-spin' : ''}`} />
           <span className="absolute -bottom-0.5 -right-0.5 text-xs leading-none">{currentLanguage.flag}</span>
           <span className="sr-only">Αλλαγή γλώσσας - {currentLanguage.name}</span>
         </Button>

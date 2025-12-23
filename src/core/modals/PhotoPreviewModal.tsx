@@ -625,7 +625,7 @@ export function PhotoPreviewModal({
                   onClick={handlePreviousPhoto}
                   title="Προηγούμενη φωτογραφία"
                   aria-label={`Προηγούμενη φωτογραφία (${currentIndex}/${totalPhotos})`}
-                  className="h-8 w-8 p-0"
+                  className="${iconSizes.xl} p-0"
                   disabled={currentIndex === 0}
                 >
                   <ChevronLeft className={`${iconSizes.sm}`} aria-hidden="true" />
@@ -637,7 +637,7 @@ export function PhotoPreviewModal({
                   onClick={handleNextPhoto}
                   title="Επόμενη φωτογραφία"
                   aria-label={`Επόμενη φωτογραφία (${currentIndex + 2}/${totalPhotos})`}
-                  className="h-8 w-8 p-0"
+                  className="${iconSizes.xl} p-0"
                   disabled={currentIndex === totalPhotos - 1}
                 >
                   <ChevronRight className={`${iconSizes.sm}`} aria-hidden="true" />
@@ -653,7 +653,7 @@ export function PhotoPreviewModal({
               onClick={handleZoomOut}
               disabled={zoom <= 0.25}
               title="Μικρότερο"
-              className="h-8 w-8 p-0"
+              className="${iconSizes.xl} p-0"
             >
               <ZoomOut className={iconSizes.sm} />
             </Button>
@@ -664,7 +664,7 @@ export function PhotoPreviewModal({
               onClick={handleZoomIn}
               disabled={zoom >= 8}
               title="Μεγαλύτερο"
-              className="h-8 w-8 p-0"
+              className="${iconSizes.xl} p-0"
             >
               <ZoomIn className={iconSizes.sm} />
             </Button>
@@ -674,7 +674,7 @@ export function PhotoPreviewModal({
               size="sm"
               onClick={handleRotate}
               title="Περιστροφή"
-              className="h-8 w-8 p-0"
+              className="${iconSizes.xl} p-0"
             >
               <RotateCw className={iconSizes.sm} />
             </Button>
@@ -684,7 +684,7 @@ export function PhotoPreviewModal({
               size="sm"
               onClick={handleFitToView}
               title="Fit to View"
-              className="h-8 w-8 p-0"
+              className="${iconSizes.xl} p-0"
             >
               <Maximize2 className={iconSizes.sm} />
             </Button>
@@ -694,7 +694,7 @@ export function PhotoPreviewModal({
               variant="ghost"
               size="sm"
               showLabel={false}
-              className="h-8 w-8 p-0"
+              className="${iconSizes.xl} p-0"
             />
 
             <Button
@@ -702,7 +702,7 @@ export function PhotoPreviewModal({
               size="sm"
               onClick={handleDownload}
               title="Λήψη"
-              className="h-8 w-8 p-0"
+              className="${iconSizes.xl} p-0"
             >
               <Download className={iconSizes.sm} />
             </Button>
@@ -712,7 +712,7 @@ export function PhotoPreviewModal({
               size="sm"
               onClick={() => onOpenChange(false)}
               title="Κλείσιμο"
-              className="h-8 w-8 p-0"
+              className="${iconSizes.xl} p-0"
             >
               <X className={iconSizes.sm} />
             </Button>

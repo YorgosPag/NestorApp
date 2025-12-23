@@ -19,6 +19,7 @@ import {
 import { cn } from '@/lib/utils';
 import type { HeaderViewToggleProps, ViewMode } from '../types';
 import { HEADER_THEME, VIEW_MODE_CONFIG } from '../constants';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 export const MobileHeaderViewToggle: React.FC<HeaderViewToggleProps> = ({
   viewMode,
@@ -26,6 +27,7 @@ export const MobileHeaderViewToggle: React.FC<HeaderViewToggleProps> = ({
   viewModes = ['list', 'grid'],
   className
 }) => {
+  const iconSizes = useIconSizes();
   const getViewIcon = (mode: ViewMode) => {
     const iconMap = {
       list: List,
@@ -71,7 +73,7 @@ export const MobileHeaderViewToggle: React.FC<HeaderViewToggleProps> = ({
           className={buttonClasses}
           aria-label={getViewLabel(nextMode)}
         >
-          <NextIcon className="h-4 w-4" />
+          <NextIcon className={iconSizes.sm} />
         </Button>
       </TooltipTrigger>
       <TooltipContent side="bottom">

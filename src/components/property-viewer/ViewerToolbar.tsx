@@ -18,6 +18,7 @@ import {
   Move
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 type ViewMode = 'view' | 'create' | 'measure' | 'edit';
 
@@ -46,6 +47,7 @@ export function ViewerToolbar({
   currentFloor,
   onFloorChange
 }: ViewerToolbarProps) {
+  const iconSizes = useIconSizes();
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -112,7 +114,7 @@ export function ViewerToolbar({
           variant="outline"
           size="sm"
         >
-          <Upload className="h-4 w-4 mr-2" />
+          <Upload className={`${iconSizes.sm} mr-2`} />
           {isUploading ? 'Loading...' : 'Upload PDF'}
         </Button>
       </div>
@@ -126,7 +128,7 @@ export function ViewerToolbar({
           size="sm"
           onClick={() => onViewModeChange?.('view')}
         >
-          <MousePointer className="h-4 w-4 mr-1" />
+          <MousePointer className={`${iconSizes.sm} mr-1`} />
           View
         </Button>
         <Button
@@ -134,7 +136,7 @@ export function ViewerToolbar({
           size="sm"
           onClick={() => onViewModeChange?.('create')}
         >
-          <Plus className="h-4 w-4 mr-1" />
+          <Plus className={`${iconSizes.sm} mr-1`} />
           Create
         </Button>
         <Button
@@ -142,7 +144,7 @@ export function ViewerToolbar({
           size="sm"
           onClick={() => onViewModeChange?.('measure')}
         >
-          <Ruler className="h-4 w-4 mr-1" />
+          <Ruler className={`${iconSizes.sm} mr-1`} />
           Measure
         </Button>
         <Button
@@ -150,7 +152,7 @@ export function ViewerToolbar({
           size="sm"
           onClick={() => onViewModeChange?.('edit')}
         >
-          <Move className="h-4 w-4 mr-1" />
+          <Move className={`${iconSizes.sm} mr-1`} />
           Edit
         </Button>
       </div>
@@ -159,14 +161,14 @@ export function ViewerToolbar({
 
       {/* ZOOM CONTROLS */}
       <div className="flex gap-1">
-        <Button variant="outline" size="sm" onClick={onZoomIn} className="h-8 w-8 p-0">
-          <ZoomIn className="h-4 w-4" />
+        <Button variant="outline" size="sm" onClick={onZoomIn} className={`${iconSizes.xl} p-0`}>
+          <ZoomIn className={iconSizes.sm} />
         </Button>
-        <Button variant="outline" size="sm" onClick={onZoomOut} className="h-8 w-8 p-0">
-          <ZoomOut className="h-4 w-4" />
+        <Button variant="outline" size="sm" onClick={onZoomOut} className={`${iconSizes.xl} p-0`}>
+          <ZoomOut className={iconSizes.sm} />
         </Button>
-        <Button variant="outline" size="sm" onClick={onResetView} className="h-8 w-8 p-0">
-          <RotateCcw className="h-4 w-4" />
+        <Button variant="outline" size="sm" onClick={onResetView} className={`${iconSizes.xl} p-0`}>
+          <RotateCcw className={iconSizes.sm} />
         </Button>
       </div>
 

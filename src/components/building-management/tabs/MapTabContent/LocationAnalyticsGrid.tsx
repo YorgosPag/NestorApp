@@ -3,8 +3,11 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Train, Bus, Car, Building, GraduationCap, ShoppingCart, TrendingUp, Home, Euro } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 export function LocationAnalyticsGrid() {
+    const iconSizes = useIconSizes();
+
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Card>
@@ -15,21 +18,21 @@ export function LocationAnalyticsGrid() {
                     <div className="space-y-3">
                         <div className="flex items-center justify-between">
                             <span className="text-sm flex items-center gap-2">
-                                <Train className="h-4 w-4" />
+                                <Train className={iconSizes.sm} />
                                 Μετρό Ευαγγελισμός
                             </span>
                             <span className="text-sm font-medium">300m</span>
                         </div>
                         <div className="flex items-center justify-between">
                             <span className="text-sm flex items-center gap-2">
-                                <Bus className="h-4 w-4" />
+                                <Bus className={iconSizes.sm} />
                                 Στάση λεωφορείου
                             </span>
                             <span className="text-sm font-medium">50m</span>
                         </div>
                         <div className="flex items-center justify-between">
                             <span className="text-sm flex items-center gap-2">
-                                <Car className="h-4 w-4" />
+                                <Car className={iconSizes.sm} />
                                 Πάρκινγκ
                             </span>
                             <span className="text-sm font-medium">150m</span>
@@ -46,21 +49,21 @@ export function LocationAnalyticsGrid() {
                     <div className="space-y-3">
                         <div className="flex items-center justify-between">
                             <span className="text-sm flex items-center gap-2">
-                                <Building className="h-4 w-4" />
+                                <Building className={iconSizes.sm} />
                                 Νοσοκομείο
                             </span>
                             <span className="text-sm font-medium">800m</span>
                         </div>
                         <div className="flex items-center justify-between">
                             <span className="text-sm flex items-center gap-2">
-                                <GraduationCap className="h-4 w-4" />
+                                <GraduationCap className={iconSizes.sm} />
                                 Σχολεία
                             </span>
                             <span className="text-sm font-medium">400m</span>
                         </div>
                         <div className="flex items-center justify-between">
                             <span className="text-sm flex items-center gap-2">
-                                <ShoppingCart className="h-4 w-4" />
+                                <ShoppingCart className={iconSizes.sm} />
                                 Σούπερ μάρκετ
                             </span>
                             <span className="text-sm font-medium">200m</span>
@@ -77,21 +80,21 @@ export function LocationAnalyticsGrid() {
                     <div className="space-y-3">
                         <div className="flex items-center justify-between">
                             <span className="text-sm flex items-center gap-2">
-                                <TrendingUp className="h-4 w-4" />
+                                <TrendingUp className={iconSizes.sm} />
                                 Επενδυτικός δείκτης
                             </span>
                             <span className="text-sm font-medium text-green-600">8.5/10</span>
                         </div>
                         <div className="flex items-center justify-between">
                             <span className="text-sm flex items-center gap-2">
-                                <Home className="h-4 w-4" />
+                                <Home className={iconSizes.sm} />
                                 Ποιότητα περιοχής
                             </span>
                             <span className="text-sm font-medium text-green-600">9.2/10</span>
                         </div>
                         <div className="flex items-center justify-between">
                             <span className="text-sm flex items-center gap-2">
-                                <Euro className="h-4 w-4" />
+                                <Euro className={iconSizes.sm} />
                                 Τιμές ακινήτων
                             </span>
                             <span className="text-sm font-medium text-blue-600">€3,200/m²</span>

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Eye, EyeOff } from "lucide-react";
 import { PROPERTY_STATUS_CONFIG } from "@/lib/property-utils";
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface LayerManagerHeaderProps {
   propertyCount: number;
@@ -23,6 +24,7 @@ interface LayerManagerHeaderProps {
 }
 
 export function LayerManagerHeader({
+  iconSizes = useIconSizes(),
   propertyCount,
   searchQuery,
   setSearchQuery,
@@ -77,10 +79,10 @@ export function LayerManagerHeader({
       </div>
       <div className="flex gap-1">
         <Button variant="outline" size="sm" className="h-7 px-2 text-xs flex-1" onClick={onShowAll}>
-          <Eye className="h-3 w-3 mr-1" /> Εμφάνιση Όλων
+          <Eye className={`${iconSizes.xs} mr-1`} /> Εμφάνιση Όλων
         </Button>
         <Button variant="outline" size="sm" className="h-7 px-2 text-xs flex-1" onClick={onHideAll}>
-          <EyeOff className="h-3 w-3 mr-1" /> Απόκρυψη Όλων
+          <EyeOff className={`${iconSizes.xs} mr-1`} /> Απόκρυψη Όλων
         </Button>
       </div>
     </div>

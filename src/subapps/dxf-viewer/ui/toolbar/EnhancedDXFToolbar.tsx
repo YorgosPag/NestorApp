@@ -4,6 +4,7 @@
 const DEBUG_ENHANCED_DXF_TOOLBAR = true;
 
 import React from 'react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { ToolType } from './types';
 import type { Point2D } from '../../rendering/types/Types';
 import { toolGroups, createActionButtons } from './toolDefinitions';
@@ -55,6 +56,7 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarProps> = ({
   mouseCoordinates,
   showCoordinates = false,
 }) => {
+  const iconSizes = useIconSizes();
   const [showSimpleDialog, setShowSimpleDialog] = React.useState(false);
 
   // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Tool shortcuts (inline - local functionality)
@@ -225,14 +227,14 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarProps> = ({
       <div className="flex flex-wrap gap-1 p-2">
         <div className="flex gap-1 flex-1">
           <UploadDxfButton 
-            className={`h-8 w-8 p-0 rounded-md border transition-colors duration-150 flex items-center justify-center bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} text-gray-200 border-gray-500`}
+            className={`${iconSizes.xl} p-0 rounded-md border transition-colors duration-150 flex items-center justify-center bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} text-gray-200 border-gray-500`}
             title="Upload DXF File (Legacy)"
             onFileSelect={onSceneImported}
           />
 
           <button
             onClick={() => setShowSimpleDialog(true)}
-            className={`h-8 w-8 p-0 rounded-md border transition-colors duration-150 flex items-center justify-center bg-blue-700 ${HOVER_BACKGROUND_EFFECTS.PRIMARY} text-white border-blue-500`}
+            className={`${iconSizes.xl} p-0 rounded-md border transition-colors duration-150 flex items-center justify-center bg-blue-700 ${HOVER_BACKGROUND_EFFECTS.PRIMARY} text-white border-blue-500`}
             title="Enhanced DXF Import with Project Management"
           >
             🔺

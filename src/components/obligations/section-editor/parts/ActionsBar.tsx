@@ -3,6 +3,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Save, X, Trash2 } from 'lucide-react';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 interface ActionsBarProps {
   isEditing: boolean;
@@ -21,6 +22,7 @@ export function ActionsBar({
   onDelete,
   onClose,
 }: ActionsBarProps) {
+  const iconSizes = useIconSizes();
   if (isEditing) {
     return (
       <div className="flex items-center gap-3 pt-4 border-t">
@@ -29,7 +31,7 @@ export function ActionsBar({
           disabled={!hasUnsavedChanges}
           className="flex items-center gap-2"
         >
-          <Save className="h-4 w-4" />
+          <Save className={iconSizes.sm} />
           Αποθήκευση
         </Button>
         
@@ -38,7 +40,7 @@ export function ActionsBar({
           onClick={onCancel}
           className="flex items-center gap-2"
         >
-          <X className="h-4 w-4" />
+          <X className={iconSizes.sm} />
           Ακύρωση
         </Button>
         
@@ -48,7 +50,7 @@ export function ActionsBar({
             onClick={onDelete}
             className="flex items-center gap-2 ml-auto"
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className={iconSizes.sm} />
             Διαγραφή
           </Button>
         )}

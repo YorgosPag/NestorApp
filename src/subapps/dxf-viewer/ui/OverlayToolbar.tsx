@@ -242,12 +242,12 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
           onClick={onDuplicate}
           disabled={!selectedOverlayId}
           title="Αντιγραφή (D)"
-          className="
-            h-8 w-8 p-0 rounded-md border transition-colors duration-150
+          className={`
+            ${iconSizes.xl} p-0 rounded-md border transition-colors duration-150
             flex items-center justify-center
             bg-gray-700 text-gray-200 border-gray-500
             disabled:opacity-50 disabled:cursor-not-allowed
-          "
+          `}
         >
           <Copy className={iconSizes.sm} />
         </button>
@@ -256,12 +256,12 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
           onClick={onDelete}
           disabled={!selectedOverlayId}
           title="Διαγραφή (Del)"
-          className="
-            h-8 w-8 p-0 rounded-md border transition-colors duration-150
+          className={`
+            ${iconSizes.xl} p-0 rounded-md border transition-colors duration-150
             flex items-center justify-center
             bg-gray-700 text-red-400 border-gray-500
             disabled:opacity-50 disabled:cursor-not-allowed
-          "
+          `}
         >
           <X className={iconSizes.sm} />
         </button>
@@ -275,12 +275,12 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
           onClick={onUndo}
           disabled={!canUndo}
           title="Αναίρεση (Ctrl+Z)"
-          className="
-            h-8 w-8 p-0 rounded-md border transition-colors duration-150
+          className={`
+            ${iconSizes.xl} p-0 rounded-md border transition-colors duration-150
             flex items-center justify-center
             bg-gray-700 text-gray-200 border-gray-500
             disabled:opacity-50 disabled:cursor-not-allowed
-          "
+          `}
         >
           <RotateCcw className={iconSizes.sm} />
         </button>
@@ -288,12 +288,12 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
           onClick={onRedo}
           disabled={!canRedo}
           title="Επανάληψη (Ctrl+Y)"
-          className="
-            h-8 w-8 p-0 rounded-md border transition-colors duration-150
+          className={`
+            ${iconSizes.xl} p-0 rounded-md border transition-colors duration-150
             flex items-center justify-center
             bg-gray-700 text-gray-200 border-gray-500
             disabled:opacity-50 disabled:cursor-not-allowed
-          "
+          `}
         >
           <RotateCw className={iconSizes.sm} />
         </button>

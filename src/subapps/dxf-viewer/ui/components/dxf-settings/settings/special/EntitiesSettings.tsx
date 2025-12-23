@@ -315,7 +315,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
                   onClick={() => handleToolClick(tool.id)}
                   title={`${tool.label} (${tool.hotkey})`}
                   className={`
-                    h-8 w-8 p-0 rounded-md border transition-colors duration-150
+                    ${iconSizes.xl} p-0 rounded-md border transition-colors duration-150
                     flex items-center justify-center
                     ${isSelected
                       ? 'bg-blue-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} text-white border-blue-500'

@@ -103,7 +103,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
             </Button>
 
             {/* Relationship Icon */}
-            <Icon className="h-5 w-5 text-gray-600" />
+            <Icon className={`${iconSizes.md} text-gray-600`} />
 
             {/* Relationship Info - Contact name and relationship type */}
             <div>
@@ -145,7 +145,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
                     e.stopPropagation();
                     if (onEdit) onEdit();
                   }}
-                  className="h-8 w-8 p-0"
+                  className={`${iconSizes.xl} p-0`}
                   title="Επεξεργασία σχέσης"
                 >
                   <Edit className={iconSizes.sm} />
@@ -160,7 +160,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
                     e.stopPropagation();
                     if (onDelete) onDelete();
                   }}
-                  className={`h-8 w-8 p-0 ${HOVER_TEXT_EFFECTS.RED}`}
+                  className={`${iconSizes.xl} p-0 ${HOVER_TEXT_EFFECTS.RED}`}
                   title="Διαγραφή σχέσης"
                 >
                   <Trash2 className={iconSizes.sm} />

@@ -1,6 +1,7 @@
 'use client';
 import { Euro, Ruler } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useIconSizes } from '@/hooks/useIconSizes';
 
 export function PropertyHoverPriceArea({
   hasPrice, price, priceLabel, isRentLike,
@@ -9,13 +10,15 @@ export function PropertyHoverPriceArea({
   hasPrice: boolean; price?: number; priceLabel: string; isRentLike: boolean;
   hasArea: boolean; area?: number; pricePerSqm?: string;
 }) {
+  const iconSizes = useIconSizes();
+
   return (
     <div className="space-y-2">
       {hasPrice && (
         <div className="space-y-1">
           <p className="text-xs text-muted-foreground">{priceLabel}:</p>
           <div className="flex items-center gap-1">
-            <Euro className="h-4 w-4 text-green-600" />
+            <Euro className={`${iconSizes.sm} text-green-600`} />
             {price && price > 0 ? (
               <span className="font-semibold text-sm text-green-600">
                 {price.toLocaleString('el-GR')}€
@@ -32,7 +35,7 @@ export function PropertyHoverPriceArea({
         <div className="space-y-1">
           <p className="text-xs text-muted-foreground">Εμβαδόν:</p>
           <div className="flex items-center gap-1">
-            <Ruler className="h-3 w-3 text-muted-foreground" />
+            <Ruler className={`${iconSizes.xs} text-muted-foreground`} />
             <span className="text-sm font-medium">{area}τμ</span>
           </div>
         </div>
