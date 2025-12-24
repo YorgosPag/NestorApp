@@ -4,6 +4,7 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import { layoutUtilities, chartComponents, interactionUtilities } from '@/styles/design-tokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface ValidationError {
   type: string;
@@ -32,7 +33,7 @@ export function StatusLegend({
   return (
     <div 
       className={cn(
-        'bg-white/95 backdrop-blur-sm border border-gray-200 rounded-lg p-3 shadow-lg',
+        `bg-white/95 backdrop-blur-sm ${useBorderTokens().quick.card} p-3 shadow-lg`,
         'select-none', // Prevent text selection
         className
       )}

@@ -5,6 +5,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import type { Suggestion } from '@/types/suggestions';
 import { HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 export function SuggestionCard({
   suggestion,
@@ -17,11 +18,12 @@ export function SuggestionCard({
   onSelect: () => void;
   onAccept: () => void;
 }) {
+  const { quick } = useBorderTokens();
   const topRecommendation = suggestion.recommendations[0];
 
   return (
     <div
-      className={`border rounded p-2 cursor-pointer transition-all ${
+      className={`${quick.card} p-2 cursor-pointer transition-all ${
         isSelected ? 'border-primary bg-primary/10' : `border-border ${HOVER_BORDER_EFFECTS.GRAY}`
       }`}
       onClick={onSelect}

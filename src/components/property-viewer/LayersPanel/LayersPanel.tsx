@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 
@@ -114,7 +115,7 @@ export function LayersPanel({
   };
 
   return (
-    <div className={cn("bg-white border border-gray-200 rounded-lg p-3", className)}>
+    <div className={cn(`bg-white ${useBorderTokens().quick.card} p-3`, className)}>
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-medium">Layers</h3>
         <div className="flex items-center gap-1">

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface ZoomControlsProps {
   zoom: number;
@@ -15,8 +16,9 @@ interface ZoomControlsProps {
 
 export function ZoomControls({ zoom, onZoomIn, onZoomOut, onReset }: ZoomControlsProps) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   return (
-    <div className="flex items-center gap-1 border rounded-md p-1">
+    <div className={`flex items-center gap-1 ${quick.card} p-1`}>
       <Button variant="ghost" size="sm" onClick={onZoomOut} className={`${iconSizes.xl} p-0`}>
         <ZoomOut className={iconSizes.sm} />
       </Button>

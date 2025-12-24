@@ -4,6 +4,7 @@
 import { Button } from "@/components/ui/button";
 import { Eye, EyeOff } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface DisplayToggleProps {
   showLabels: boolean;
@@ -12,8 +13,9 @@ interface DisplayToggleProps {
 
 export function DisplayToggle({ showLabels, onToggleLabels }: DisplayToggleProps) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   return (
-    <div className="flex items-center gap-1 border rounded-md p-1">
+    <div className={`flex items-center gap-1 ${quick.card} p-1`}>
       <Button
         variant={showLabels ? "default" : "ghost"}
         size="sm"
