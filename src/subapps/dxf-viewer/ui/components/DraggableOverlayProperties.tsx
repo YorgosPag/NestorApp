@@ -7,7 +7,8 @@ import { usePrecisionPositioning } from '../../utils/precision-positioning';
 import { useDraggable } from '../../../../hooks/useDraggable';
 import { Card, CardHeader, CardContent } from '../../../../components/ui/card';
 import { Activity, X } from 'lucide-react';
-import { performanceMonitorUtilities } from '../../../../styles/design-tokens/components/performance-tokens';
+// Performance monitoring utilities available in main design-tokens
+import { performanceMonitorUtilities } from '@/styles/design-tokens';
 // Enterprise floating panel design tokens integration
 
 interface DraggableOverlayPropertiesProps {

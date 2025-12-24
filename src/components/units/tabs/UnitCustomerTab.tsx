@@ -23,6 +23,7 @@
 
 import React from 'react';
 import { User, Phone, Mail, Calendar, Home, FileText, AlertTriangle, ExternalLink, ArrowRight } from 'lucide-react';
+import { formatDateTime, formatDate, formatCurrency } from '@/lib/intl-utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -206,7 +207,7 @@ function CustomerProfileSection({ customerId, unitPrice }: CustomerProfileSectio
               )}
               <div className="text-xs text-muted-foreground flex items-center gap-2">
                 <Calendar className={iconSizes.xs} />
-                Φόρτωση: {customerInfo ? new Date(customerInfo.fetchedAt).toLocaleTimeString('el-GR') : '—'}
+                Φόρτωση: {customerInfo ? formatDateTime(customerInfo.fetchedAt, { hour: '2-digit', minute: '2-digit' }) : '—'}
               </div>
             </div>
             <div className="flex items-center text-muted-foreground group-hover:text-primary transition-colors">
@@ -236,7 +237,7 @@ function CustomerProfileSection({ customerId, unitPrice }: CustomerProfileSectio
               <div>
                 <p className="text-sm text-muted-foreground">Αξία Συναλλαγής</p>
                 <p className="font-semibold text-green-600">
-                  €{unitPrice.toLocaleString('el-GR')}
+                  {formatCurrency(unitPrice)}
                 </p>
               </div>
             )}
@@ -378,7 +379,7 @@ export function UnitCustomerTab({
             <p className="text-sm text-muted-foreground">
               <strong>Ημερομηνία συναλλαγής:</strong> {
                 selectedUnit.saleDate
-                  ? new Date(selectedUnit.saleDate).toLocaleDateString('el-GR')
+                  ? formatDate(selectedUnit.saleDate)
                   : 'Άγνωστη'
               }
             </p>
@@ -430,7 +431,7 @@ export function UnitCustomerTab({
               <p className="text-sm text-muted-foreground">Ημερομηνία Συναλλαγής</p>
               <p className="font-medium">
                 {selectedUnit.saleDate
-                  ? new Date(selectedUnit.saleDate).toLocaleDateString('el-GR', {
+                  ? formatDate(selectedUnit.saleDate, {
                       year: 'numeric',
                       month: 'long',
                       day: 'numeric'
@@ -444,7 +445,7 @@ export function UnitCustomerTab({
               <p className="text-sm text-muted-foreground">Αξία Συναλλαγής</p>
               <p className="font-medium text-green-600">
                 {selectedUnit.price
-                  ? `€${selectedUnit.price.toLocaleString('el-GR')}`
+                  ? formatCurrency(selectedUnit.price)
                   : 'Μη διαθέσιμη'
                 }
               </p>

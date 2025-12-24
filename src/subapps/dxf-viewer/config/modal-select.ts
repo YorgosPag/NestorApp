@@ -15,7 +15,7 @@
 // Import color systems for consistency
 import { DXF_MODAL_TYPOGRAPHY } from './modal-typography';
 // Import centralized icon sizes - 🔥 NO MORE DUPLICATES!
-import { componentSizes } from '@/hooks/useIconSizes';
+import { componentSizes } from '../../../styles/design-tokens';
 
 // ====================================================================
 // SELECT STYLING CONSTANTS - 100% CENTRALIZED

@@ -1,6 +1,8 @@
 // Design tokens για το unified design system
 // Αυτό το αρχείο περιέχει όλες τις τυποποιημένες τιμές για styling
 
+import React from 'react';
+
 export const spacing = {
   // Base spacing scale (σε rem)
   xs: '0.25rem',    // 4px
@@ -286,15 +288,30 @@ export const componentSizes = {
     lg: 'h-12 text-base',
   },
   
-  // Icon sizes
+  // Icon sizes - ENTERPRISE EXTENDED SYSTEM
   icon: {
-    xxs: 'h-2 w-2 text-red-500',
-    xs: 'h-3 w-3 text-red-500',
-    sm: 'h-4 w-4 text-red-500',
-    md: 'h-5 w-5 text-red-500',
-    lg: 'h-6 w-6 text-red-500',
-    xl: 'h-8 w-8 text-red-500',
-    '2xl': 'h-10 w-10 text-red-500',
+    // ============================================================================
+    // 🎯 CORE ICON SIZES - EXISTING (BACKWARD COMPATIBLE)
+    // ============================================================================
+    xxs: 'h-2 w-2',      // 8px  - Micro icons
+    xs: 'h-3 w-3',       // 12px - Tiny icons
+    sm: 'h-4 w-4',       // 16px - Standard icons (most common)
+    md: 'h-5 w-5',       // 20px - Medium icons
+    lg: 'h-6 w-6',       // 24px - Large icons
+    xl: 'h-8 w-8',       // 32px - Extra large icons
+    '2xl': 'h-10 w-10',  // 40px - Double extra large
+
+    // ============================================================================
+    // 🚀 ENTERPRISE EXTENDED SIZES - PROFESSIONAL GRADE
+    // ============================================================================
+    // Following Tailwind spacing scale for consistency with enterprise standards
+    xl2: 'h-12 w-12',    // 48px - Card headers, feature icons
+    xl3: 'h-14 w-14',    // 56px - Section icons, user avatars
+    xl4: 'h-16 w-16',    // 64px - Hero icons, prominent displays
+    xl5: 'h-20 w-20',    // 80px - Large feature displays
+    xl6: 'h-24 w-24',    // 96px - Loading spinners, thumbnails
+    xl8: 'h-32 w-32',    // 128px - Large avatars, placeholders
+    xl12: 'h-48 w-48',   // 192px - Empty states, splash screens
   },
   
   // Avatar sizes
@@ -1206,21 +1223,150 @@ export const DESIGN_TOKENS_V2_INFO = {
 // ============================================================================
 
 /**
- * 🚨 EMERGENCY RE-EXPORT: canvasUtilities για backward compatibility
- *
- * Reason: MobileDetailsSlideIn component εξαρτάται από canvasUtilities.geoInteractive
- * που μόλις προστέθηκε. Αυτό είναι temporary solution μέχρι να γίνει full migration.
+ * 🎯 CANVAS UTILITIES - ENTERPRISE CANVAS SYSTEM
  */
-export { canvasUtilities } from './design-tokens/utilities/canvas-utilities';
+export const canvasUtilities = {
+  geoInteractive: {
+    viewport: {
+      padding: spacing.md,
+      margin: spacing.lg
+    },
+    positioning: {
+      center: { position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' },
+      topRight: { position: 'absolute', top: spacing.md, right: spacing.md }
+    },
+    mobileSlideHeader: (): React.CSSProperties => ({
+      display: 'flex',
+      alignItems: 'center',
+      gap: spacing.sm,
+      padding: `${spacing.sm} ${spacing.md}`,
+      borderBottom: `1px solid ${colors.border.default}`,
+      backgroundColor: colors.background.default,
+      minHeight: '48px',
+      position: 'sticky',
+      top: 0,
+      zIndex: 10
+    }),
+    mobileSlideContent: (): React.CSSProperties => ({
+      flex: '1 1 auto',
+      overflowY: 'auto',
+      backgroundColor: colors.background.default,
+      padding: spacing.md,
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column'
+    }),
+    canvasFullDisplay: (): React.CSSProperties => ({
+      width: '100%',
+      height: '100%',
+      display: 'block',
+      backgroundColor: colors.background.subtle,
+      border: 'none',
+      outline: 'none'
+    })
+  },
+  drawing: {
+    strokeWidth: '2px',
+    fillOpacity: 0.2
+  }
+};
 
 /**
- * 🚨 EMERGENCY RE-EXPORT: statusIndicatorComponents για backward compatibility
- *
- * Reason: CentralizedAutoSaveStatus.styles.ts εξαρτάται από statusIndicatorComponents
- * που είναι defined στο modular system. Αυτό είναι temporary solution.
+ * 🎯 STATUS INDICATOR COMPONENTS - ENTERPRISE AUTO-SAVE SYSTEM
  */
-import { autoSaveStatusTokens } from './design-tokens/semantic/alert-tokens';
-export const statusIndicatorComponents = autoSaveStatusTokens;
+export const autoSaveStatusTokens = {
+  base: {
+    padding: spacing.sm,
+    borderRadius: borderRadius.sm,
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.medium,
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: spacing.xs
+  },
+  variants: {
+    saving: {
+      backgroundColor: semanticColors.status.warning,
+      color: colors.text.inverse
+    },
+    saved: {
+      backgroundColor: semanticColors.status.success,
+      color: colors.text.inverse
+    },
+    error: {
+      backgroundColor: semanticColors.status.error,
+      color: colors.text.inverse
+    },
+    idle: {
+      backgroundColor: colors.background.secondary,
+      color: colors.text.secondary
+    }
+  }
+} as const;
+
+export const statusIndicatorComponents = {
+  // Main container styles
+  container: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: spacing.xs,
+    padding: spacing.sm,
+    borderRadius: borderRadius.sm,
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.medium
+  },
+
+  // Text styles
+  text: {
+    primary: {
+      color: colors.text.primary,
+      fontSize: typography.fontSize.sm,
+      fontWeight: typography.fontWeight.medium
+    },
+    secondary: {
+      color: colors.text.secondary,
+      fontSize: typography.fontSize.xs,
+      fontWeight: typography.fontWeight.normal
+    }
+  },
+
+  // Status colors
+  statusColors: {
+    saving: {
+      backgroundColor: semanticColors.status.warning,
+      color: colors.text.inverse
+    },
+    success: {
+      backgroundColor: semanticColors.status.success,
+      color: colors.text.inverse
+    },
+    error: {
+      backgroundColor: semanticColors.status.error,
+      color: colors.text.inverse
+    },
+    idle: {
+      backgroundColor: colors.background.secondary,
+      color: colors.text.secondary
+    }
+  },
+
+  // Status dot styles
+  statusDot: {
+    width: spacing.sm,
+    height: spacing.sm,
+    borderRadius: borderRadius.full,
+    flexShrink: 0,
+    transition: 'background-color 150ms ease'
+  },
+
+  // Separator styles
+  separator: {
+    width: '1px',
+    height: '1rem',
+    backgroundColor: colors.border.secondary,
+    opacity: 0.7
+  }
+} as const;
 
 // ============================================================================
 // 🎨 BRAND CONSISTENCY - CSS CLASS MAPPINGS
@@ -1297,3 +1443,641 @@ export const getBrandClass = (category: keyof typeof brandClasses, variant?: str
 
   return typeof categoryClasses === 'string' ? categoryClasses : '';
 };
+
+// ============================================================================
+// PERFORMANCE COMPONENTS - ENTERPRISE PERFORMANCE SYSTEM
+// ============================================================================
+
+interface PerformanceComponentsType {
+  readonly performanceMonitor: {
+    readonly dimensions: {
+      readonly estimatedHeight: number;
+      readonly maxWidth: string;
+      readonly minWidth: string;
+    };
+    readonly colors: {
+      readonly fps: {
+        readonly excellent: string;
+        readonly poor: string;
+      };
+      readonly alerts: {
+        readonly background: string;
+        readonly border: string;
+        readonly text: string;
+        readonly icon: string;
+      };
+    };
+  };
+}
+
+export const performanceComponents: PerformanceComponentsType = {
+  performanceMonitor: {
+    dimensions: {
+      estimatedHeight: 300,
+      maxWidth: '400px',
+      minWidth: '320px'
+    },
+    colors: {
+      fps: {
+        excellent: semanticColors.status.success,
+        poor: semanticColors.status.error
+      },
+      alerts: {
+        background: colors.background.secondary,
+        border: colors.border.primary,
+        text: colors.text.primary,
+        icon: semanticColors.status.warning
+      }
+    }
+  }
+} as const;
+
+// Floating system utilities
+export const FloatingStyleUtils = {
+  getPerformanceDashboardClasses: (isDragging: boolean) => `${isDragging ? 'opacity-70' : ''}`,
+  getCornerButtonClasses: (position: string) => `absolute ${position === 'top-right' ? 'top-2 right-2' : ''}`
+};
+
+export const PerformanceDashboardTokens = {
+  behavior: {
+    autoCenter: true
+  }
+};
+
+// Performance Monitor Utilities
+export const performanceMonitorUtilities = {
+  getOverlayContainerClasses: () => 'fixed bg-white border rounded-lg shadow-lg',
+  getOverlayContainerStyles: () => ({ zIndex: zIndex.modal }),
+  getOverlayHeaderClasses: () => 'flex items-center justify-between p-3 border-b',
+  getOverlayHeaderStyles: () => ({ backgroundColor: colors.background.primary }),
+  getOverlayIconStyles: (type: string) => ({
+    color: type === 'primary' ? colors.primary[500] : colors.text.secondary
+  }),
+  getOverlayTitleStyles: () => ({ color: colors.text.primary }),
+  getOverlayButtonStyles: () => ({
+    color: colors.text.secondary,
+    padding: spacing.xs
+  }),
+  getOverlayContentStyles: () => ({
+    padding: spacing.md,
+    maxHeight: '300px',
+    overflow: 'auto'
+  }),
+  getMetricValueClasses: (type: string, value: number) =>
+    value > 50 ? 'text-green-600' : 'text-red-600',
+  getActionButtonClasses: (variant: string, fullWidth: boolean) =>
+    `${variant === 'primary' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'} ${fullWidth ? 'w-full' : ''}`,
+  getChartBarClasses: (value: number) =>
+    value > 70 ? 'bg-green-500' : value > 40 ? 'bg-yellow-500' : 'bg-red-500'
+};
+
+// Canvas UI Components
+export const canvasUI = {
+  container: {
+    backgroundColor: colors.background.primary,
+    border: `1px solid ${colors.border.primary}`,
+    borderRadius: borderRadius.md
+  },
+  overlay: {
+    backgroundColor: colors.background.overlay,
+    zIndex: zIndex.overlay
+  },
+  controls: {
+    padding: spacing.md,
+    gap: spacing.sm
+  },
+  positioning: {
+    layers: {
+      canvasOverlayWithPointerControl: (activeTool?: string): React.CSSProperties => ({
+        position: 'absolute',
+        inset: 0,
+        width: '100%',
+        height: '100%',
+        zIndex: zIndex.overlay,
+        pointerEvents: activeTool === 'select' || activeTool === 'layering' ? 'auto' : 'none',
+        cursor: activeTool === 'select' ? 'pointer' : activeTool === 'pan' ? 'grab' : 'default'
+      }),
+      layerCanvasWithTools: (activeTool?: string, crosshairEnabled?: boolean): React.CSSProperties => ({
+        position: 'absolute',
+        inset: 0,
+        width: '100%',
+        height: '100%',
+        zIndex: zIndex.base,
+        pointerEvents: 'auto', // Layer canvas always captures events
+        cursor: activeTool === 'pan' ? 'grab' :
+                activeTool === 'zoom' ? 'zoom-in' :
+                activeTool === 'select' ? 'pointer' :
+                crosshairEnabled ? 'crosshair' : 'default',
+        touchAction: 'none', // Prevent browser touch gestures
+        userSelect: 'none' as const
+      }),
+      dxfCanvasWithTools: (activeTool?: string, crosshairEnabled?: boolean): React.CSSProperties => ({
+        position: 'absolute',
+        inset: 0,
+        width: '100%',
+        height: '100%',
+        zIndex: zIndex.docked, // Higher than layer canvas for DXF content
+        pointerEvents: 'auto', // DXF canvas captures events for drawing
+        cursor: activeTool === 'pan' ? 'grab' :
+                activeTool === 'zoom' ? 'zoom-in' :
+                activeTool === 'select' ? 'pointer' :
+                activeTool === 'draw' ? 'crosshair' :
+                crosshairEnabled ? 'crosshair' : 'default',
+        touchAction: 'none', // Prevent browser touch gestures
+        userSelect: 'none' as const,
+        // DXF specific styling
+        backgroundColor: 'transparent' // Allow layers to show through
+      })
+    }
+  }
+};
+
+// Configuration Components
+export const configurationComponents = {
+  layout: {
+    container: {
+      padding: spacing.lg,
+      backgroundColor: colors.background.primary
+    },
+    header: {
+      marginBottom: spacing.lg,
+      paddingBottom: spacing.md,
+      borderBottom: `1px solid ${colors.border.primary}`
+    },
+    title: {
+      fontSize: typography.fontSize['2xl'],
+      fontWeight: typography.fontWeight.bold,
+      color: colors.text.primary,
+      marginBottom: spacing.sm
+    },
+    subtitle: {
+      fontSize: typography.fontSize.base,
+      color: colors.text.secondary,
+      lineHeight: typography.lineHeight.relaxed
+    },
+    contentGrid: {
+      display: 'grid',
+      gridTemplateColumns: '1fr 2fr',
+      gap: spacing.xl,
+      marginTop: spacing.lg
+    },
+    sidebar: {
+      padding: spacing.lg,
+      backgroundColor: colors.background.secondary,
+      borderRadius: borderRadius.md
+    }
+  },
+  configurationCard: {
+    base: {
+      backgroundColor: colors.background.primary,
+      border: `1px solid ${colors.border.primary}`,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      cursor: 'pointer',
+      transition: 'all 200ms ease'
+    },
+    selected: {
+      backgroundColor: colors.background.hover,
+      borderColor: colors.primary[500],
+      transform: 'translateY(-1px)'
+    },
+    statusDot: {
+      width: spacing.xs,
+      height: spacing.xs,
+      borderRadius: borderRadius.full,
+      display: 'inline-block',
+      marginRight: spacing.sm
+    }
+  },
+  buttons: {
+    primary: {
+      backgroundColor: colors.primary[500],
+      color: colors.text.inverse,
+      padding: `${spacing.sm} ${spacing.md}`,
+      borderRadius: borderRadius.md,
+      border: 'none',
+      cursor: 'pointer',
+      fontSize: typography.fontSize.sm,
+      fontWeight: typography.fontWeight.medium
+    },
+    secondary: {
+      backgroundColor: colors.background.secondary,
+      color: colors.text.primary,
+      padding: `${spacing.sm} ${spacing.md}`,
+      borderRadius: borderRadius.md,
+      border: `1px solid ${colors.border.primary}`,
+      cursor: 'pointer',
+      fontSize: typography.fontSize.sm,
+      fontWeight: typography.fontWeight.medium
+    },
+    small: {
+      padding: `${spacing.xs} ${spacing.sm}`,
+      fontSize: typography.fontSize.xs
+    }
+  },
+  ruleEditor: {
+    container: {
+      backgroundColor: colors.background.primary,
+      border: `1px solid ${colors.border.primary}`,
+      borderRadius: borderRadius.md,
+      padding: spacing.lg
+    },
+    header: {
+      fontSize: typography.fontSize.lg,
+      fontWeight: typography.fontWeight.semibold,
+      color: colors.text.primary,
+      marginBottom: spacing.md,
+      paddingBottom: spacing.sm,
+      borderBottom: `1px solid ${colors.border.secondary}`
+    },
+    section: {
+      marginBottom: spacing.lg,
+      paddingBottom: spacing.md,
+      borderBottom: `1px solid ${colors.border.tertiary}`
+    },
+    label: {
+      fontSize: typography.fontSize.sm,
+      fontWeight: typography.fontWeight.medium,
+      color: colors.text.primary,
+      marginBottom: spacing.xs,
+      display: 'block'
+    },
+    input: {
+      width: '100%',
+      padding: spacing.sm,
+      border: `1px solid ${colors.border.primary}`,
+      borderRadius: borderRadius.sm,
+      fontSize: typography.fontSize.sm,
+      backgroundColor: colors.background.primary,
+      color: colors.text.primary
+    },
+    textarea: {
+      width: '100%',
+      padding: spacing.sm,
+      border: `1px solid ${colors.border.primary}`,
+      borderRadius: borderRadius.sm,
+      fontSize: typography.fontSize.sm,
+      backgroundColor: colors.background.primary,
+      color: colors.text.primary,
+      minHeight: '100px',
+      resize: 'vertical'
+    },
+    select: {
+      width: '100%',
+      padding: spacing.sm,
+      border: `1px solid ${colors.border.primary}`,
+      borderRadius: borderRadius.sm,
+      fontSize: typography.fontSize.sm,
+      backgroundColor: colors.background.primary,
+      color: colors.text.primary
+    },
+    gridTwoColumns: {
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr',
+      gap: spacing.md
+    },
+    checkboxContainer: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: spacing.xs,
+      marginTop: spacing.xs
+    },
+    checkboxLabel: {
+      fontSize: typography.fontSize.sm,
+      color: colors.text.secondary,
+      cursor: 'pointer'
+    },
+    mockSection: {
+      backgroundColor: colors.background.secondary,
+      border: `1px solid ${colors.border.secondary}`,
+      borderRadius: borderRadius.sm,
+      padding: spacing.md,
+      marginTop: spacing.md
+    },
+    mockText: {
+      fontSize: typography.fontSize.xs,
+      color: colors.text.tertiary,
+      fontStyle: 'italic'
+    },
+    mockButtonContainer: {
+      display: 'flex',
+      gap: spacing.sm,
+      marginTop: spacing.sm
+    },
+    actionButtons: {
+      display: 'flex',
+      gap: spacing.sm,
+      justifyContent: 'flex-end',
+      marginTop: spacing.lg,
+      paddingTop: spacing.md,
+      borderTop: `1px solid ${colors.border.secondary}`
+    }
+  },
+  notificationSettings: {
+    container: {
+      backgroundColor: colors.background.primary,
+      border: `1px solid ${colors.border.primary}`,
+      borderRadius: borderRadius.md,
+      padding: spacing.lg,
+      marginTop: spacing.md
+    },
+    header: {
+      fontSize: typography.fontSize.lg,
+      fontWeight: typography.fontWeight.semibold,
+      color: colors.text.primary,
+      marginBottom: spacing.md,
+      paddingBottom: spacing.sm,
+      borderBottom: `1px solid ${colors.border.secondary}`
+    },
+    sectionTitle: {
+      fontSize: typography.fontSize.base,
+      fontWeight: typography.fontWeight.medium,
+      color: colors.text.primary,
+      marginBottom: spacing.sm,
+      marginTop: spacing.md
+    },
+    channelsGrid: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+      gap: spacing.md,
+      marginBottom: spacing.lg
+    },
+    channelItem: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: spacing.md,
+      border: `1px solid ${colors.border.secondary}`,
+      borderRadius: borderRadius.sm,
+      backgroundColor: colors.background.secondary
+    },
+    channelLeft: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: spacing.sm
+    },
+    channelCheckbox: {
+      width: '16px',
+      height: '16px',
+      cursor: 'pointer'
+    },
+    channelName: {
+      fontSize: typography.fontSize.sm,
+      fontWeight: typography.fontWeight.medium,
+      color: colors.text.primary
+    },
+    channelRight: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: spacing.xs
+    },
+    priorityLabel: {
+      fontSize: typography.fontSize.xs,
+      color: colors.text.secondary,
+      whiteSpace: 'nowrap' as const
+    },
+    priorityInput: {
+      width: '60px',
+      padding: spacing.xs,
+      border: `1px solid ${colors.border.primary}`,
+      borderRadius: borderRadius.sm,
+      fontSize: typography.fontSize.xs,
+      backgroundColor: colors.background.primary,
+      color: colors.text.primary,
+      textAlign: 'center' as const
+    },
+    advancedGrid: {
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr',
+      gap: spacing.md,
+      marginTop: spacing.md,
+      padding: spacing.md,
+      backgroundColor: colors.background.secondary,
+      borderRadius: borderRadius.sm,
+      border: `1px solid ${colors.border.secondary}`
+    },
+    saveButtonContainer: {
+      display: 'flex',
+      justifyContent: 'flex-end',
+      marginTop: spacing.lg,
+      paddingTop: spacing.md,
+      borderTop: `1px solid ${colors.border.secondary}`
+    }
+  },
+  rulesSection: {
+    headerContainer: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: spacing.lg,
+      paddingBottom: spacing.sm,
+      borderBottom: `1px solid ${colors.border.secondary}`
+    },
+    title: {
+      fontSize: typography.fontSize.lg,
+      fontWeight: typography.fontWeight.semibold,
+      color: colors.text.primary
+    },
+    rulesGrid: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
+      gap: spacing.md,
+      marginTop: spacing.md
+    },
+    ruleCard: {
+      backgroundColor: colors.background.primary,
+      border: `1px solid ${colors.border.primary}`,
+      borderRadius: borderRadius.md,
+      padding: spacing.lg,
+      cursor: 'pointer',
+      transition: 'all 200ms ease',
+      ':hover': {
+        borderColor: colors.primary[500],
+        boxShadow: `0 2px 8px rgba(0,0,0,0.1)`
+      }
+    },
+    ruleHeader: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      marginBottom: spacing.sm
+    },
+    ruleTitle: {
+      fontSize: typography.fontSize.base,
+      fontWeight: typography.fontWeight.semibold,
+      color: colors.text.primary,
+      marginBottom: spacing.xs
+    },
+    ruleMetadata: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: spacing.sm,
+      fontSize: typography.fontSize.xs,
+      color: colors.text.secondary
+    },
+    priorityText: {
+      fontSize: typography.fontSize.xs,
+      fontWeight: typography.fontWeight.medium,
+      padding: `${spacing.xs} ${spacing.sm}`,
+      borderRadius: borderRadius.sm,
+      backgroundColor: colors.background.secondary,
+      color: colors.text.secondary
+    },
+    ruleDescription: {
+      fontSize: typography.fontSize.sm,
+      color: colors.text.secondary,
+      lineHeight: typography.lineHeight.relaxed,
+      marginTop: spacing.sm
+    }
+  },
+  loadingState: {
+    container: {
+      display: 'flex',
+      flexDirection: 'column' as const,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: spacing.xl,
+      backgroundColor: colors.background.secondary,
+      borderRadius: borderRadius.md,
+      border: `1px solid ${colors.border.secondary}`
+    },
+    content: {
+      display: 'flex',
+      flexDirection: 'column' as const,
+      alignItems: 'center',
+      gap: spacing.md
+    },
+    spinner: {
+      width: '32px',
+      height: '32px',
+      border: `3px solid ${colors.border.secondary}`,
+      borderTop: `3px solid ${colors.primary[500]}`,
+      borderRadius: '50%',
+      animation: 'spin 1s linear infinite'
+    },
+    text: {
+      fontSize: typography.fontSize.sm,
+      color: colors.text.secondary,
+      textAlign: 'center' as const
+    }
+  },
+  placeholderSection: {
+    container: {
+      display: 'flex',
+      flexDirection: 'column' as const,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: spacing.xl,
+      backgroundColor: colors.background.secondary,
+      borderRadius: borderRadius.md,
+      border: `1px dashed ${colors.border.secondary}`,
+      marginTop: spacing.lg
+    },
+    title: {
+      fontSize: typography.fontSize.base,
+      fontWeight: typography.fontWeight.medium,
+      color: colors.text.primary,
+      marginBottom: spacing.sm
+    },
+    text: {
+      fontSize: typography.fontSize.sm,
+      color: colors.text.secondary,
+      textAlign: 'center' as const,
+      lineHeight: typography.lineHeight.relaxed
+    }
+  }
+};
+
+// ============================================================================
+// MAP INTERACTION TOKENS - GEO-CANVAS SYSTEM
+// ============================================================================
+
+/**
+ * Map Interaction Tokens για geo-canvas interactive map system
+ * Enterprise-grade styling για geographical interfaces
+ */
+export const mapInteractionTokens = {
+  containers: {
+    fullscreen: {
+      position: 'absolute' as const,
+      inset: 0,
+      width: '100%',
+      height: '100%',
+      backgroundColor: colors.background.primary,
+      overflow: 'hidden'
+    },
+    viewport: {
+      position: 'relative' as const,
+      width: '100%',
+      height: '100%',
+      overflow: 'hidden'
+    }
+  },
+  getMapCursor: (isPickingCoordinates: boolean, systemIsDrawing: boolean): string => {
+    if (isPickingCoordinates) return 'crosshair';
+    if (systemIsDrawing) return 'crosshair';
+    return 'default';
+  }
+} as const;
+
+/**
+ * Map Control Point Tokens για interactive polygon editing
+ * Professional control point styling με state management
+ */
+export const mapControlPointTokens = {
+  base: {
+    width: '12px',
+    height: '12px',
+    borderRadius: '50%',
+    border: `2px solid ${colors.primary[500]}`,
+    backgroundColor: colors.background.primary,
+    cursor: 'pointer',
+    transition: 'all 200ms ease',
+    position: 'absolute' as const
+  },
+  states: {
+    default: {
+      zIndex: zIndex.docked,
+      transform: 'scale(1)',
+      opacity: 0.8
+    },
+    selected: {
+      zIndex: zIndex.docked + 1,
+      transform: 'scale(1.2)',
+      backgroundColor: colors.primary[500],
+      boxShadow: `0 0 8px ${colors.primary[500]}`,
+      opacity: 1
+    },
+    highlight: {
+      zIndex: zIndex.docked + 2,
+      transform: 'scale(1.1)',
+      borderColor: colors.blue[600],
+      backgroundColor: colors.blue[300],
+      opacity: 1
+    },
+    complete: {
+      borderColor: colors.green[500],
+      backgroundColor: colors.green[300]
+    }
+  },
+  getControlPointStyle: (
+    isSelected: boolean,
+    shouldHighlight: boolean,
+    isComplete: boolean
+  ): React.CSSProperties => {
+    const base = mapControlPointTokens.base;
+    let state = mapControlPointTokens.states.default;
+
+    if (isComplete) {
+      state = { ...state, ...mapControlPointTokens.states.complete };
+    }
+    if (shouldHighlight) {
+      state = { ...state, ...mapControlPointTokens.states.highlight };
+    }
+    if (isSelected) {
+      state = { ...state, ...mapControlPointTokens.states.selected };
+    }
+
+    return { ...base, ...state };
+  }
+} as const;

@@ -9,7 +9,8 @@ import { usePrecisionPositioning } from '../../utils/precision-positioning';
 import { useDraggable } from '../../../../hooks/useDraggable';
 import { Card, CardHeader, CardContent } from '../../../../components/ui/card';
 import { Activity, X, Pen, Edit, Copy, RotateCcw, RotateCw, Square, Circle, Triangle, Grid } from 'lucide-react';
-import { performanceMonitorUtilities } from '../../../../styles/design-tokens/components/performance-tokens';
+// Performance monitoring utilities available in main design-tokens
+import { performanceMonitorUtilities } from '@/styles/design-tokens';
 import { STATUS_COLORS, STATUS_LABELS, KIND_LABELS } from '../../overlays/types';
 import { useUnifiedOverlayCreation } from '../../hooks/overlay/useUnifiedOverlayCreation';
 import { toolStyleStore } from '../../stores/ToolStyleStore';
@@ -74,11 +75,11 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
         fillColor: statusColors.fill,      // Status fill color (με διαφάνεια)
         lineWidth: 2,                      // Διακριτή γραμμή
         opacity: 1,
-        lineType: 'solid'                  // Overlay γραμμές solid για καθαρότητα
+        lineType: 'solid' as const         // Overlay γραμμές solid για καθαρότητα
       };
       toolStyleStore.set(toolStyle);
 
-      const polylineControl = startOverlayCreation({
+      const polylineControlPromise = startOverlayCreation({
         status: props.currentStatus,        // Μεταβίβαση επιλεγμένου status
         kind: props.currentKind,           // Μεταβίβαση επιλεγμένου kind
         onComplete: (overlayId) => {
@@ -92,11 +93,15 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
       });
 
       // Αποθήκευση του stop callback για double-click handling
-      if (polylineControl?.stop) {
-        toolStyleStore.setOverlayCompletionCallback(() => {
-          polylineControl.stop();
-        });
-      }
+      polylineControlPromise.then((polylineControl) => {
+        if (polylineControl?.stop) {
+          toolStyleStore.setOverlayCompletionCallback(() => {
+            polylineControl.stop?.stop();
+          });
+        }
+      }).catch((error) => {
+        console.error('Error setting up overlay creation:', error);
+      });
     } else {
       // Για select/edit modes, επιστροφή σε layering mode
       props.onToolChange('layering');
@@ -125,16 +130,9 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
     }
   }, [props.selectedOverlayId, overlayStore, props.currentStatus, props.currentKind, props.onStatusChange, props.onKindChange]);
 
-  // CENTRALIZED PRECISION POSITIONING for initial placement
-  const toolbarRef = React.useRef<HTMLDivElement>(null);
-  const { position: initialPosition, hasInitialized } = usePrecisionPositioning(toolbarRef, {
-    targetPoint: { x: 20, y: 200 }, // Target coordinates: X=20, Y=200 for left side
-    alignment: 'top-left' // Top-left alignment
-  });
-
   // ✅ ENTERPRISE CENTRALIZED DRAGGING SYSTEM
   const draggable = useDraggable(true, {
-    initialPosition: initialPosition || { x: 20, y: 200 },
+    initialPosition: { x: 20, y: 200 },
     autoCenter: false, // Use precision positioning instead
     elementWidth: 300, // Approximate toolbar width
     elementHeight: 100, // Approximate toolbar height
@@ -143,6 +141,12 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
       x: window.innerWidth - 300,
       y: window.innerHeight - 100
     }
+  });
+
+  // CENTRALIZED PRECISION POSITIONING for initial placement
+  const { position: initialPosition, hasInitialized } = usePrecisionPositioning(draggable.elementRef, {
+    targetPoint: { x: 20, y: 200 }, // Target coordinates: X=20, Y=200 for left side
+    alignment: 'top-left' // Top-left alignment
   });
 
   // Update position when precision positioning changes (initial only)
@@ -155,12 +159,8 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
     }
   }, [hasInitialized, hasSetInitialPosition, initialPosition, draggable.setPosition]);
 
-  // Sync refs for precision positioning compatibility
-  React.useEffect(() => {
-    if (draggable.elementRef.current) {
-      toolbarRef.current = draggable.elementRef.current;
-    }
-  }, [draggable.elementRef.current]);
+  // Note: Both toolbarRef and draggable.elementRef point to the same Card element
+  // No sync needed as the Card component receives draggable.elementRef directly
 
   return (
     <Card

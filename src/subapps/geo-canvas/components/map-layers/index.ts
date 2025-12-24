@@ -14,9 +14,18 @@
  */
 
 // ============================================================================
-// 🎯 CORE MAP LAYER COMPONENTS
+// CORE MAP LAYER COMPONENTS
 // ============================================================================
 
+// Import components για local usage
+import { ControlPointLayer as ControlPointLayerImport } from './ControlPointLayer';
+import { PolygonLinesLayer as PolygonLinesLayerImport } from './PolygonLinesLayer';
+import { LiveDrawingPreview as LiveDrawingPreviewImport } from './LiveDrawingPreview';
+import { AccuracyVisualizationLayer as AccuracyVisualizationLayerImport } from './AccuracyVisualizationLayer';
+import { TransformationPreviewLayer as TransformationPreviewLayerImport } from './TransformationPreviewLayer';
+import { PolygonSystemLayers as PolygonSystemLayersImport } from './PolygonSystemLayers';
+
+// Re-export components και types
 export { ControlPointLayer } from './ControlPointLayer';
 export type { ControlPointLayerProps } from './ControlPointLayer';
 
@@ -40,16 +49,19 @@ export { PolygonSystemLayers } from './PolygonSystemLayers';
 export type { PolygonSystemLayersProps } from './PolygonSystemLayers';
 
 // ============================================================================
-// 🎯 CONVENIENCE RE-EXPORTS
+// CONVENIENCE RE-EXPORTS
 // ============================================================================
 
 /**
  * All map layer components για convenience imports
  */
 export const MapLayerComponents = {
-  ControlPointLayer,
-  PolygonLinesLayer,
-  LiveDrawingPreview
+  ControlPointLayer: ControlPointLayerImport,
+  PolygonLinesLayer: PolygonLinesLayerImport,
+  LiveDrawingPreview: LiveDrawingPreviewImport,
+  AccuracyVisualizationLayer: AccuracyVisualizationLayerImport,
+  TransformationPreviewLayer: TransformationPreviewLayerImport,
+  PolygonSystemLayers: PolygonSystemLayersImport
 } as const;
 
 /**

@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
-import { canvasUtilities } from '@/styles/design-tokens/utilities/canvas-utilities';
+import { canvasUtilities } from '@/styles/design-tokens';
 
 export interface ContactSummary {
   id: string;

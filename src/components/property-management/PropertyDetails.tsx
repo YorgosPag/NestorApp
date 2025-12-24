@@ -15,6 +15,7 @@ import {
   Home, Building, MapPin, Euro, Ruler, Users, Phone, Mail, FileText, ExternalLink, Calendar
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatCurrency, formatDate } from '@/lib/intl-utils';
 import type { Property } from '@/types/property';
 import { PROPERTY_STATUS_CONFIG } from '@/lib/property-utils';
 import { PropertyInfoItem } from './details/PropertyInfoItem';
@@ -56,7 +57,7 @@ export function PropertyDetails({ property }: PropertyDetailsProps) {
           <div className={`${layout.gridCols2Gap4} ${typography.body.sm}`}>
             <PropertyInfoItem icon={<Building />} label="Κτίριο" value={property.building} />
             <PropertyInfoItem icon={<MapPin />} label="Όροφος" value={property.floor} />
-            <PropertyInfoItem icon={<Euro />} label="Τιμή" value={`${property.price.toLocaleString('el-GR')} €`} valueClassName={`font-semibold ${colors.text.price}`} iconClassName={colors.text.price} />
+            <PropertyInfoItem icon={<Euro />} label="Τιμή" value={formatCurrency(property.price)} valueClassName={`font-semibold ${colors.text.price}`} iconClassName={colors.text.price} />
             <PropertyInfoItem icon={<Ruler />} label="Εμβαδόν" value={`${property.area} m²`} />
             <PropertyInfoItem icon={<Home />} label="Δωμάτια" value={property.rooms} />
             <PropertyInfoItem icon={<Home />} label="Μπαλκόνι" value={property.balconyArea ? `${property.balconyArea} m²` : '-'} />
@@ -77,7 +78,7 @@ export function PropertyDetails({ property }: PropertyDetailsProps) {
                 {property.saleDate && (
                   <div className={`${layout.flexCenterGap2} ${typography.special.secondary}`}>
                     <Calendar className={iconSizes.sm} />
-                    <span>Ημ/νία Πώλησης: {new Date(property.saleDate).toLocaleDateString('el-GR')}</span>
+                    <span>Ημ/νία Πώλησης: {formatDate(property.saleDate)}</span>
                   </div>
                 )}
             </div>

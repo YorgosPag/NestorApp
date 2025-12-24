@@ -273,6 +273,9 @@ export const INTERACTIVE_PATTERNS = {
   /** Button primary selected state hover */
   BUTTON_PRIMARY_SELECTED_HOVER: 'hover:bg-primary hover:text-primary-foreground',
 
+  /** Button overlay hover για floating/overlay buttons */
+  BUTTON_OVERLAY: 'hover:bg-white/90 hover:shadow-lg transition-all duration-200',
+
   // ========================================================================
   // 🏢 SIDEBAR-SPECIFIC HOVER PATTERNS (New for Batch 10 Migration)
   // ========================================================================

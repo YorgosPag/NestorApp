@@ -4,6 +4,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { PropertyBadge, CommonBadge } from '@/core/badges';
 import { getPropertyImage } from '../utils/images';
 import { COMPLEX_HOVER_EFFECTS, TRANSITION_PRESETS, INTERACTIVE_PATTERNS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
+import { formatCurrency } from '@/lib/intl-utils';
 
 export function PropertyCard({ property, onViewFloorPlan }: { property: any; onViewFloorPlan: (id: string) => void; }) {
   const iconSizes = useIconSizes();
@@ -43,7 +44,7 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: any; onV
         </header>
 
         <aside className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-3" role="region" aria-label="Τιμή Ακινήτου">
-          <span itemProp="price">€{property.price?.toLocaleString() || 'Επικοινωνήστε'}</span>
+          <span itemProp="price">{property.price ? formatCurrency(property.price, 'EUR') : 'Επικοινωνήστε'}</span>
         </aside>
 
         <section className="flex flex-wrap items-center gap-2 sm:gap-4 text-gray-600 dark:text-muted-foreground text-sm mb-4" aria-label="Χαρακτηριστικά Ακινήτου">

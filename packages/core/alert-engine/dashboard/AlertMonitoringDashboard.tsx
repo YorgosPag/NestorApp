@@ -23,6 +23,8 @@ import {
   spacing,
   animation as animations
 } from '../../../../src/styles/design-tokens';
+import { useSemanticColors } from '../../../../src/hooks/useSemanticColors';
+import { formatDateTime, formatTime } from '../../../../src/lib/intl-utils';
 import {
   dashboardStyles,
   metricsCardStyles,
@@ -49,12 +51,15 @@ const MetricsCard: React.FC<{
   subtitle?: string;
   icon?: string;
 }> = ({ title, value, trend, status, subtitle, icon }) => {
+  const colors = useSemanticColors();
+
+  // 🏢 ENTERPRISE: Get status color using centralized useSemanticColors system
   const getStatusColor = () => {
     switch (status) {
-      case 'success': return colors.semantic.success.main;
-      case 'warning': return colors.semantic.warning.main;
-      case 'error': return colors.semantic.error.main;
-      default: return colors.text.secondary;
+      case 'success': return colors.text.success;  // Enterprise green success color
+      case 'warning': return colors.text.warning;  // Enterprise yellow warning color
+      case 'error': return colors.text.error;      // Enterprise red error color
+      default: return colors.text.secondary;       // Enterprise gray secondary color
     }
   };
 
@@ -148,7 +153,7 @@ const AlertsList: React.FC<{
                 {alert.message}
               </p>
               <time style={alertItemStyles.timestamp}>
-                {new Date(alert.timestamp).toLocaleString('el-GR')}
+                {formatDateTime(alert.timestamp)}
               </time>
             </div>
           </article>
@@ -210,7 +215,7 @@ const EventsList: React.FC<{
               <span>{formatEventMessage(event)}</span>
             </div>
             <time style={dashboardComponents.eventsList.timestamp}>
-              {new Date(event.timestamp).toLocaleTimeString('el-GR')}
+              {formatDateTime(event.timestamp, { hour: '2-digit', minute: '2-digit' })}
             </time>
           </article>
         ))}
@@ -416,7 +421,7 @@ export const AlertMonitoringDashboard: React.FC = () => {
             <div style={eventDetailStyles.detailContainer}>
               <p style={eventDetailStyles.detailItem}>Severity: {selectedAlert.severity}</p>
               <p style={eventDetailStyles.detailItem}>Status: {selectedAlert.status}</p>
-              <time style={eventDetailStyles.detailItem}>Created: {new Date(selectedAlert.timestamp).toLocaleString('el-GR')}</time>
+              <time style={eventDetailStyles.detailItem}>Created: {formatDateTime(selectedAlert.timestamp)}</time>
             </div>
             <div style={dashboardStyles.modal.footer}>
               <button

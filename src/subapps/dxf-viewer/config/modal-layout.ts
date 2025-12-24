@@ -12,7 +12,7 @@
 // 🏢 ENTERPRISE IMPORTS - CENTRALIZED SOURCE OF TRUTH
 // ====================================================================
 
-import { componentSizes } from '@/hooks/useIconSizes';
+import { componentSizes } from '../../../styles/design-tokens';
 
 // ====================================================================
 // MODAL SPACING CONSTANTS - 100% CENTRALIZED

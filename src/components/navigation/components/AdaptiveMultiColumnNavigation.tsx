@@ -9,7 +9,7 @@
 import React from 'react';
 import { useNavigation } from '../core/NavigationContext';
 import { useNavigationHandlers } from '../hooks/useNavigationHandlers';
-import { NavigationCompanyManager } from './NavigationCompanyManager';
+import NavigationCompanyManager from './NavigationCompanyManager';
 import { MobileNavigation } from './MobileNavigation';
 import { DesktopMultiColumn } from './DesktopMultiColumn';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';

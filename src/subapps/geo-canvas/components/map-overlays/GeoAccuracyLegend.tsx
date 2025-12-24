@@ -19,7 +19,7 @@ import React from 'react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
-import { getDynamicBackgroundClass } from '@/styles/design-tokens';
+import { getDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 import { interactiveMapStyles } from '../InteractiveMap.styles';
 import type { GeoControlPoint } from '../../types';
 

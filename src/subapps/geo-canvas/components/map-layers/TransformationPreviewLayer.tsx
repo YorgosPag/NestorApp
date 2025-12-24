@@ -154,6 +154,8 @@ export const TransformationPreviewLayer: React.FC<TransformationPreviewLayerProp
 
 TransformationPreviewLayer.displayName = 'TransformationPreviewLayer';
 
+export default TransformationPreviewLayer;
+
 /**
  * ✅ ENTERPRISE TRANSFORMATION PREVIEW LAYER COMPLETE (2025-12-18)
  *

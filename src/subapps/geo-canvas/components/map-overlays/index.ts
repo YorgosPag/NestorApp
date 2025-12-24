@@ -17,6 +17,17 @@
 // 🎯 GEO-SPECIFIC MAP OVERLAYS (NO DUPLICATES)
 // ============================================================================
 
+// Import components και types για local usage
+import { GeoCoordinateDisplay as GeoCoordinateDisplayImport } from './GeoCoordinateDisplay';
+import type { GeoCoordinateDisplayProps as GeoCoordinateDisplayPropsImport } from './GeoCoordinateDisplay';
+import { GeoAccuracyLegend as GeoAccuracyLegendImport } from './GeoAccuracyLegend';
+import type { GeoAccuracyLegendProps as GeoAccuracyLegendPropsImport } from './GeoAccuracyLegend';
+import { GeoMapControls as GeoMapControlsImport } from './GeoMapControls';
+import type { GeoMapControlsProps as GeoMapControlsPropsImport } from './GeoMapControls';
+import { GeoStatusBar as GeoStatusBarImport } from './GeoStatusBar';
+import type { GeoStatusBarProps as GeoStatusBarPropsImport } from './GeoStatusBar';
+
+// Re-export components και types
 export { GeoCoordinateDisplay, default as GeoCoordinateDisplayComponent } from './GeoCoordinateDisplay';
 export type { GeoCoordinateDisplayProps } from './GeoCoordinateDisplay';
 
@@ -37,20 +48,20 @@ export type { GeoStatusBarProps } from './GeoStatusBar';
  * All geo-specific overlay components
  */
 export const MapOverlayComponents = {
-  GeoCoordinateDisplay,
-  GeoAccuracyLegend,
-  GeoMapControls,
-  GeoStatusBar
+  GeoCoordinateDisplay: GeoCoordinateDisplayImport,
+  GeoAccuracyLegend: GeoAccuracyLegendImport,
+  GeoMapControls: GeoMapControlsImport,
+  GeoStatusBar: GeoStatusBarImport
 } as const;
 
 /**
  * All overlay component props types
  */
 export type MapOverlayComponentProps = {
-  GeoCoordinateDisplay: typeof import('./GeoCoordinateDisplay').GeoCoordinateDisplayProps;
-  GeoAccuracyLegend: typeof import('./GeoAccuracyLegend').GeoAccuracyLegendProps;
-  GeoMapControls: typeof import('./GeoMapControls').GeoMapControlsProps;
-  GeoStatusBar: typeof import('./GeoStatusBar').GeoStatusBarProps;
+  GeoCoordinateDisplay: GeoCoordinateDisplayPropsImport;
+  GeoAccuracyLegend: GeoAccuracyLegendPropsImport;
+  GeoMapControls: GeoMapControlsPropsImport;
+  GeoStatusBar: GeoStatusBarPropsImport;
 };
 
 // ============================================================================

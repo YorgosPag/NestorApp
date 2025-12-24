@@ -13,6 +13,7 @@ import {
 import { STATUS_COLORS_MAPPING } from '@/subapps/dxf-viewer/config/color-mapping';
 import { layoutUtilities } from '@/styles/design-tokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 
 interface PropertyStatusManagerProps {
   onStatusChange?: (newStatus: PropertyStatus) => void;
@@ -41,6 +42,7 @@ export function PropertyStatusManager({
 }: PropertyStatusManagerProps) {
   // ✅ ENTERPRISE: All hooks must be declared BEFORE any conditional returns
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const { t, isLoading } = useTranslationLazy('geo-canvas');
   const [selectedStatuses, setSelectedStatuses] = useState<PropertyStatus[]>(getAllStatuses());
   const [colorScheme, setColorScheme] = useState<'status' | 'price' | 'type'>('status');
@@ -69,10 +71,26 @@ export function PropertyStatusManager({
     onLayerVisibilityChange?.(newSelection, true);
   }, [selectedStatuses, onLayerVisibilityChange]);
 
-  // Get status color from centralized mapping
+  // 🏢 ENTERPRISE: Get status color using centralized useSemanticColors system
   const getStatusColor = useCallback((status: PropertyStatus): string => {
-    return STATUS_COLORS_MAPPING[status]?.stroke || '#6b7280';
-  }, []);
+    // Map PropertyStatus to semantic color patterns
+    switch (status) {
+      case 'available':
+      case 'active':
+        return colors.getStatusColor('active', 'text'); // Green active color
+      case 'sold':
+      case 'completed':
+        return colors.getStatusColor('completed', 'text'); // Blue completed color
+      case 'reserved':
+      case 'pending':
+        return colors.getStatusColor('pending', 'text'); // Yellow pending color
+      case 'unavailable':
+      case 'cancelled':
+        return colors.getStatusColor('cancelled', 'text'); // Red cancelled color
+      default:
+        return colors.getStatusColor('inactive', 'text'); // Gray fallback
+    }
+  }, [colors]);
 
   // Check if status is visible
   const isStatusVisible = useCallback((status: PropertyStatus): boolean => {
@@ -82,27 +100,27 @@ export function PropertyStatusManager({
   // ✅ ENTERPRISE: Return loading state while translations load (AFTER all hooks)
   if (isLoading) {
     return (
-      <div className={`bg-white rounded-lg shadow-lg border border-gray-200 p-4 ${className}`}>
+      <div className={`${colors.patterns.card.standard} p-4 ${className}`}>
         <div className="animate-pulse">
-          <div className="h-6 bg-gray-200 rounded mb-4"></div>
-          <div className="h-32 bg-gray-200 rounded"></div>
+          <div className={`h-6 ${colors.bg.secondary} rounded mb-4`}></div>
+          <div className={`h-32 ${colors.bg.secondary} rounded`}></div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={`bg-white rounded-lg shadow-lg border border-gray-200 p-4 ${className}`}>
+    <div className={`${colors.patterns.card.standard} p-4 ${className}`}>
       {/* Header */}
       <div className="mb-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <Building className={`${iconSizes.md} text-blue-600`} />
+          <h3 className={`text-lg font-semibold ${colors.text.primary} flex items-center gap-2`}>
+            <Building className={`${iconSizes.md} ${colors.text.info}`} />
             {t('propertyStatusManager.title')}
           </h3>
           <button
             onClick={() => setShowLegend(!showLegend)}
-            className={`p-2 text-gray-500 ${HOVER_TEXT_EFFECTS.DARKER} transition-colors`}
+            className={`p-2 ${colors.text.secondary} ${HOVER_TEXT_EFFECTS.DARKER} transition-colors`}
             title="Toggle Legend"
           >
             {showLegend ? <Eye className={iconSizes.sm} /> : <EyeOff className={iconSizes.sm} />}

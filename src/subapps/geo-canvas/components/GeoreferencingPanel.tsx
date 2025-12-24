@@ -6,6 +6,7 @@ import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import type { DxfCoordinate, GeoCoordinate } from '../types';
 import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 
 /**
  * GEOREFERENCING PANEL COMPONENT
@@ -13,6 +14,7 @@ import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
  * Phase 2: Core transformation functionality
  */
 export function GeoreferencingPanel() {
+  const colors = useSemanticColors();
   const { t, isLoading } = useTranslationLazy('geo-canvas');
   const [transformState, transformActions] = useGeoTransform();
   const [showAddPoint, setShowAddPoint] = useState(false);
@@ -30,8 +32,8 @@ export function GeoreferencingPanel() {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-400">{t('loadingStates.loading')}</p>
+          <div className={`animate-spin rounded-full h-8 w-8 border-b-2 ${colors.border.info} mx-auto mb-4`}></div>
+          <p className={colors.text.muted}>{t('loadingStates.loading')}</p>
         </div>
       </div>
     );
@@ -85,10 +87,11 @@ export function GeoreferencingPanel() {
     const { validation } = transformState;
     if (!validation) return null;
 
+    // 🏢 ENTERPRISE: Get validation status color using centralized useSemanticColors system
     const getStatusColor = () => {
-      if (validation.errors.length > 0) return 'text-red-400';
-      if (validation.warnings.length > 0) return 'text-yellow-400';
-      return 'text-green-400';
+      if (validation.errors.length > 0) return colors.text.error;     // Enterprise red error color
+      if (validation.warnings.length > 0) return colors.text.warning; // Enterprise yellow warning color
+      return colors.text.success;                                     // Enterprise green success color
     };
 
     const getStatusIcon = () => {

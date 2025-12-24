@@ -337,15 +337,18 @@ export const DXF_SETTINGS_TOKENS = {
  * 🏢 ENTERPRISE REFACTORED: Centralized button sizes
  */
 
-// 🏢 ENTERPRISE IMPORT: Centralized sizes
-import { componentSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: Icon sizes από τα centralized design tokens
+// Note: Το h-8 w-8 αντιστοιχεί στο componentSizes.icon.xl από design-tokens.ts
+const ICON_SIZES = {
+  XL: 'h-8 w-8', // Matches componentSizes.icon.xl
+} as const;
 
 export const SPECIFIC_SETTINGS_TOKENS = {
   CATEGORY_BUTTON: {
-    BASE: `${componentSizes.icon.xl} p-0 rounded-md border transition-colors duration-150 flex items-center justify-center relative`,
-    ACTIVE: `${PANEL_COLORS.ACTIVE_BG} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${PANEL_COLORS.ACTIVE_TEXT} border-${PANEL_COLORS.ACTIVE_BORDER}`,
-    COMING_SOON: `${PANEL_COLORS.BG_SECONDARY} ${PANEL_COLORS.TEXT_DISABLED} ${PANEL_COLORS.BORDER_PRIMARY} cursor-not-allowed opacity-50`,
-    INACTIVE: `${PANEL_COLORS.BG_SECONDARY} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${PANEL_COLORS.TEXT_SECONDARY} ${PANEL_COLORS.BORDER_PRIMARY} ${HOVER_BORDER_EFFECTS.GRAY}`,
+    BASE: 'h-8 w-8 p-0 rounded-md border transition-colors duration-150 flex items-center justify-center relative',
+    ACTIVE: 'bg-blue-600 hover:bg-blue-700 text-white border-blue-500',
+    COMING_SOON: 'bg-gray-700 text-gray-500 border-gray-600 cursor-not-allowed opacity-50',
+    INACTIVE: 'bg-gray-700 hover:bg-gray-600 text-gray-300 border-gray-600',
   },
 
   COMING_SOON_BADGE: {

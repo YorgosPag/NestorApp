@@ -19,8 +19,8 @@ import {
   typography,
   spacing,
   animation as animations,
-  dashboardComponents,
-  borderRadius
+  borderRadius,
+  semanticColors
 } from '../../../../src/styles/design-tokens';
 
 // ============================================================================
@@ -143,7 +143,7 @@ const buttonStyles: ButtonStyleVariant = {
 
   success: {
     ...buttonBaseStyle,
-    backgroundColor: colors.semantic.success.main,
+    backgroundColor: semanticColors.success,
     color: colors.text.inverse
   } as const
 } as const;
@@ -242,7 +242,10 @@ export const alertItemStyles = {
    * Alert item base style με hover interaction
    */
   interactive: {
-    ...dashboardComponents.alertsList.item,
+    padding: spacing.md,
+    border: `1px solid ${colors.border.primary}`,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.background.primary,
     transition: `background-color ${animations.duration.fast}`,
     cursor: 'pointer'
   } as const,
@@ -324,11 +327,11 @@ export const dashboardStyles: DashboardStylesType = {
  */
 export const getSeverityDotStyle = (severity: 'critical' | 'high' | 'medium' | 'low' | 'info'): CSSProperties => {
   const severityColorMap = {
-    critical: colors.severity?.critical?.icon ?? colors.semantic.error.main,
-    high: colors.severity?.high?.icon ?? colors.semantic.warning.main,
-    medium: colors.severity?.medium?.icon ?? colors.semantic.warning.light,
-    low: colors.severity?.low?.icon ?? colors.semantic.info.main,
-    info: colors.severity?.info?.icon ?? colors.semantic.info.light
+    critical: semanticColors.error,
+    high: semanticColors.warning,
+    medium: semanticColors.warning,
+    low: semanticColors.info,
+    info: semanticColors.info
   } as const;
 
   return {
@@ -346,7 +349,7 @@ export const getButtonHoverHandlers = (variant: keyof ButtonStyleVariant) => {
     base: colors.gray[100],
     primary: colors.primary[600],
     secondary: colors.gray[50],
-    success: colors.semantic.success.dark
+    success: semanticColors.success
   } as const;
 
   return {
@@ -388,12 +391,16 @@ export type { DashboardStylesType, ButtonStyleVariant, LayoutStyleCollection, Mo
  * Replaces: style={{ ...dashboardComponents.metricsCard.value, color: getStatusColor() }}
  */
 export const getMetricsCardValueStyle = (status?: 'success' | 'warning' | 'error'): CSSProperties => {
-  const baseStyle = dashboardComponents.metricsCard.value;
+  const baseStyle = {
+    fontSize: typography.fontSize.xl,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.primary
+  };
   const statusColor = (() => {
     switch (status) {
-      case 'success': return colors.semantic.success.main;
-      case 'warning': return colors.semantic.warning.main;
-      case 'error': return colors.semantic.error.main;
+      case 'success': return semanticColors.success;
+      case 'warning': return semanticColors.warning;
+      case 'error': return semanticColors.error;
       default: return colors.text.secondary;
     }
   })();
@@ -405,16 +412,23 @@ export const getMetricsCardValueStyle = (status?: 'success' | 'warning' | 'error
 };
 
 /**
- * Creates dynamic status badge style
- * Replaces: style={{ ...dashboardComponents.statusBadge.base, ...variant }}
+ * Creates dynamic status badge style - ENTERPRISE SEMANTIC APPROACH
  */
 export const getStatusBadgeStyle = (status: string): CSSProperties => {
-  const variants = dashboardComponents.statusBadge.variants as Record<string, CSSProperties>;
-  const variant = variants[status] || variants.suppressed;
+  const statusColorMap = {
+    active: semanticColors.success,
+    suppressed: semanticColors.warning,
+    disabled: semanticColors.error,
+    pending: semanticColors.info
+  } as Record<string, string>;
 
   return {
-    ...dashboardComponents.statusBadge.base,
-    ...variant
+    padding: '0.25rem 0.5rem',
+    borderRadius: '0.25rem',
+    fontSize: '0.75rem',
+    fontWeight: '500',
+    backgroundColor: statusColorMap[status] || semanticColors.info,
+    color: '#ffffff'
   } as const;
 };
 
@@ -424,7 +438,9 @@ export const getStatusBadgeStyle = (status: string): CSSProperties => {
  */
 export const getAlertConfigTitleStyle = (color: string): CSSProperties => {
   return {
-    ...dashboardComponents.alertConfig.title,
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.semibold,
+    lineHeight: typography.lineHeight.relaxed,
     color
   } as const;
 };

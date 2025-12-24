@@ -18,14 +18,16 @@ interface ToolbarButtonProps {
 }
 
 export function ToolbarButton({
-  tooltip, 
-  children, 
-  onClick, 
-  className, 
+  tooltip,
+  children,
+  onClick,
+  className,
   variant = "ghost",
   disabled = false,
   badge
 }: ToolbarButtonProps) {
+  const iconSizes = useIconSizes();
+
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -33,7 +35,7 @@ export function ToolbarButton({
           <Button 
             variant={variant} 
             size="sm" 
-            className={cn(iconSizes.xl + " p-0", className)} 
+            className={cn(`${iconSizes.xl} p-0`, className)} 
             onClick={onClick}
             disabled={disabled}
           >
@@ -44,7 +46,7 @@ export function ToolbarButton({
               status="company"
               customLabel={badge.toString()}
               variant="destructive"
-              className={`absolute -top-1 -right-1 ${useIconSizes().sm} p-0 text-xs flex items-center justify-center`}
+              className={`absolute -top-1 -right-1 ${iconSizes.sm} p-0 text-xs flex items-center justify-center`}
             />
           )}
         </div>
