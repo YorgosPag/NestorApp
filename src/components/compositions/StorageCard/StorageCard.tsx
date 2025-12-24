@@ -7,6 +7,7 @@ import { HOVER_SHADOWS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { Package, MapPin, Ruler, Thermometer, Shield, Edit, Trash2 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { badgeVariants } from '@/components/ui/badge';
+import { formatPriceWithUnit } from '@/lib/intl-utils';
 import type { StorageUnit, StorageType, StorageStatus } from '@/types/storage';
 
 interface StorageCardProps {
@@ -88,7 +89,7 @@ export function StorageCard({
 
   const formatPrice = (price?: number) => {
     if (!price) return 'Δωρεάν';
-    return `€${price.toLocaleString()}/μήνα`;
+    return formatPriceWithUnit(price, 'μήνα');
   };
 
   return (

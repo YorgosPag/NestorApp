@@ -8,6 +8,7 @@ import { Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { calculateBuildingRatio, calculateCostPerSqm } from './utils';
+import { formatCurrency, formatNumber } from '@/lib/intl-utils';
 
 interface TechnicalSpecsCardProps {
     formData: { 
@@ -104,7 +105,7 @@ export function TechnicalSpecsCard({ formData, updateField, isEditing, errors }:
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div>
                 <span className="text-blue-700 dark:text-blue-300">Κόστος/m²:</span>
-                <p className="font-semibold">{costPerSqm.toLocaleString('el-GR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}€</p>
+                <p className="font-semibold">{formatCurrency(costPerSqm, 'EUR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
               </div>
               <div>
                 <span className="text-blue-700 dark:text-blue-300">Συντ. Δόμησης:</span>
@@ -116,7 +117,7 @@ export function TechnicalSpecsCard({ formData, updateField, isEditing, errors }:
               </div>
               <div>
                 <span className="text-blue-700 dark:text-blue-300">Αξία/Μονάδα:</span>
-                <p className="font-semibold">{formData.units > 0 ? (formData.totalValue / formData.units).toLocaleString('el-GR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : 0}€</p>
+                <p className="font-semibold">{formData.units > 0 ? formatCurrency(formData.totalValue / formData.units, 'EUR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : '0€'}</p>
               </div>
             </div>
           </div>

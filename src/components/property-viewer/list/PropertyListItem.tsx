@@ -6,7 +6,7 @@ import { PropertyBadge } from '@/core/badges';
 import { Home, Building, MapPin, Euro, Ruler } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
-import { formatFloorLabel } from "@/lib/intl-utils";
+import { formatFloorLabel, formatCurrency } from "@/lib/intl-utils";
 import type { Property } from '@/types/property-viewer';
 import { PROPERTY_STATUS_CONFIG, PROPERTY_TYPE_ICONS } from '@/lib/property-utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -61,7 +61,7 @@ const PropertyListItemComponent = ({
             <div className="flex items-center gap-1 text-green-600">
               <Euro className={iconSizes.xs} />
               <span className="font-medium">
-                {property.price.toLocaleString('el-GR')}€
+                {formatCurrency(property.price)}
               </span>
             </div>
           ) : <div />}

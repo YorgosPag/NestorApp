@@ -5,6 +5,7 @@ import { CommonBadge } from '@/core/badges';
 import { Button } from '@/components/ui/button';
 import { useButtonPatterns } from '@/hooks/useButtonPatterns';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { formatDateTime } from '@/lib/intl-utils';
 import { Edit, Save, X, CheckCircle } from 'lucide-react';
 
 interface HeaderProps {
@@ -54,7 +55,7 @@ export function Header({ building, isEditing, autoSaving, lastSaved, setIsEditin
               <>
                 <CheckCircle className={`${iconSizes.xs} text-green-600`} />
                 <span className="text-green-600">
-                  Αποθηκεύτηκε {lastSaved.toLocaleTimeString('el-GR')}
+                  Αποθηκεύτηκε {formatDateTime(lastSaved, { timeStyle: 'medium' }).split(' ')[1]}
                 </span>
               </>
             ) : null}

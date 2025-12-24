@@ -8,6 +8,7 @@ import { Home, CheckCircle, Ruler } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import type { BuildingStats as StatsType } from '@/types/building';
 import { getBuildingStats } from '@/services/buildings.service';
+import { formatNumber } from '@/lib/intl-utils';
 
 interface BuildingStatsProps {
   buildingId: string;
@@ -78,7 +79,7 @@ export function BuildingStats({ buildingId }: BuildingStatsProps) {
         />
         <StatCard 
             icon={Ruler}
-            value={loading ? '...' : `${(stats?.totalSoldArea ?? 0).toLocaleString('el-GR')} m²`}
+            value={loading ? '...' : `${formatNumber(stats?.totalSoldArea ?? 0)} m²`}
             label="Συνολικό Εμβαδόν Πωληθέντων"
             loading={loading}
             colorClass="bg-purple-50 text-purple-800 dark:bg-purple-950/50 dark:text-purple-300"

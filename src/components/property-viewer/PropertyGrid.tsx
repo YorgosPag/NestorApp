@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { COMPLEX_HOVER_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import type { Property } from '@/types/property-viewer';
-import { formatFloorLabel } from '@/lib/intl-utils';
+import { formatFloorLabel, formatCurrency } from '@/lib/intl-utils';
 import { brandClasses } from '@/styles/design-tokens';
 
 const statusConfig = {
@@ -91,7 +91,7 @@ function PropertyCard({ property, onSelect, isSelected }: { property: Property, 
             {property.price && (
                 <div className="flex items-center gap-1 font-semibold text-green-600">
                     <Euro className={iconSizes.sm}/>
-                    {property.price.toLocaleString('el-GR')}
+                    {formatCurrency(property.price)}
                 </div>
             )}
             {property.area && (

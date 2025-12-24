@@ -1,0 +1,105 @@
+{
+  "category": "REFACTOR",
+  "shortDescription": "Design Tokens Consolidation & Icon Centralization - Enterprise Standards Implementation",
+  "problem": "Scattered design token files across multiple directories causing inconsistency, duplicate code, and maintenance overhead. Icon sizes were hardcoded throughout components instead of using centralized system.",
+  "cause": "Legacy file structure with multiple design token sources (base/, components/, canvas/, utilities/) created during rapid development. No centralized icon sizing system led to inconsistent UI and maintenance issues.",
+  "filesChanged": [
+    "packages/core/alert-engine/dashboard/AlertMonitoringDashboard.styles.ts",
+    "packages/core/alert-engine/dashboard/AlertMonitoringDashboard.tsx",
+    "src/app/geo/canvas/page.tsx",
+    "src/components/navigation/components/AdaptiveMultiColumnNavigation.tsx",
+    "src/components/navigation/components/NavigationCompanyManager.tsx",
+    "src/components/navigation/dialogs/SelectCompanyContactModal.tsx",
+    "src/components/property-management/PropertyDetails.tsx",
+    "src/components/property/PropertyDetails.tsx",
+    "src/components/ui/ToolbarButton.tsx",
+    "src/components/ui/effects/hover-effects.ts",
+    "src/components/ui/enterprise-contact-dropdown.tsx",
+    "src/components/ui/enterprise-portal/migration-utilities.ts",
+    "src/components/units/tabs/UnitCustomerTab.tsx",
+    "src/core/performance/components/GlobalPerformanceDashboard.tsx",
+    "src/features/property-grid/components/PropertyCard.tsx",
+    "src/hooks/useIconSizes.ts",
+    "src/styles/design-tokens.ts",
+    "src/styles/design-tokens/base/colors.ts",
+    "src/styles/design-tokens/canvas/index.ts",
+    "src/styles/design-tokens/index.ts",
+    "src/subapps/dxf-viewer/config/modal-layout.ts",
+    "src/subapps/dxf-viewer/config/modal-select.ts",
+    "src/subapps/dxf-viewer/config/panel-tokens.ts",
+    "src/subapps/dxf-viewer/ui/components/DraggableOverlayProperties.tsx",
+    "src/subapps/dxf-viewer/ui/components/DraggableOverlayToolbar.tsx",
+    "src/subapps/geo-canvas/components/GeoreferencingPanel.tsx",
+    "src/subapps/geo-canvas/components/PropertyStatusManager.tsx",
+    "src/subapps/geo-canvas/components/map-layers/TransformationPreviewLayer.tsx",
+    "src/subapps/geo-canvas/components/map-layers/index.ts",
+    "src/subapps/geo-canvas/components/map-overlays/GeoAccuracyLegend.tsx",
+    "src/subapps/geo-canvas/components/map-overlays/index.ts"
+  ],
+  "deletedFiles": [
+    "BACKUP_SUMMARY.json",
+    "src/styles/design-tokens/base/spacing.ts",
+    "src/styles/design-tokens/base/typography.ts",
+    "src/styles/design-tokens/canvas/interaction-tokens.ts",
+    "src/styles/design-tokens/canvas/positioning-tokens.ts",
+    "src/styles/design-tokens/components/chart-tokens.ts",
+    "src/styles/design-tokens/components/dashboard-tokens.ts",
+    "src/styles/design-tokens/components/dialog-tokens.ts",
+    "src/styles/design-tokens/components/floating-system-tokens.ts",
+    "src/styles/design-tokens/components/map-tokens.ts",
+    "src/styles/design-tokens/components/performance-tokens.ts",
+    "src/styles/design-tokens/components/portal-tokens.ts",
+    "src/styles/design-tokens/constants/shared-constants.ts",
+    "src/styles/design-tokens/semantic/alert-tokens.ts",
+    "src/styles/design-tokens/utilities/canvas-utilities.ts",
+    "src/styles/design-tokens/utilities/layout-utilities.ts"
+  ],
+  "solution": {
+    "phase1": "Consolidated all design tokens into single source of truth (src/styles/design-tokens.ts) with comprehensive enterprise-grade token system",
+    "phase2": "Created compatibility layer (src/styles/design-tokens/index.ts) to maintain backward compatibility during migration",
+    "phase3": "Migrated all components to use centralized useIconSizes hook for consistent icon sizing across application",
+    "phase4": "Enhanced enterprise components (AlertMonitoringDashboard, GeoreferencingPanel, PropertyDetails) with semantic color system",
+    "phase5": "Removed 16 scattered design token files and created clean, maintainable architecture"
+  },
+  "testing": {
+    "typecheck": "TypeScript compilation verified - no errors",
+    "runtime": "All components loading with centralized design tokens",
+    "iconSizes": "useIconSizes hook working across all migrated components",
+    "compatibility": "Legacy imports still working via compatibility layer"
+  },
+  "notes": [
+    "🏢 ENTERPRISE ARCHITECTURE: Single source of truth for all design tokens",
+    "🎯 ICON CENTRALIZATION: All components now use useIconSizes hook",
+    "🔄 BACKWARD COMPATIBILITY: Legacy imports preserved during transition",
+    "🚀 PERFORMANCE: Reduced bundle size by eliminating duplicate token definitions",
+    "📊 METRICS: 48 files changed, 16 files deleted, 2213 insertions, 8946 deletions",
+    "⚡ HOT RELOAD: Development server restart required to see changes",
+    "🌐 VERCEL DEPLOYMENT: Auto-deployed to production via GitHub push"
+  ],
+  "contributors": {
+    "user": "Γιώργος Παγώνης",
+    "assistant": "Claude (Anthropic AI)",
+    "sessionDate": "2025-12-24"
+  },
+  "relatedBackups": [
+    "Previous Icon Sizes Centralization (2025-12-23)",
+    "Enterprise Messages System (2025-12-23)",
+    "Enhanced Tabs Renderers (2025-12-23)"
+  ],
+  "commits": [
+    {
+      "hash": "a836d5a",
+      "message": "🔒 SAFETY CHECKPOINT: Design Tokens Consolidation & Icon Centralization",
+      "timestamp": "2025-12-24",
+      "filesChanged": 48,
+      "insertions": 2213,
+      "deletions": 8946
+    }
+  ],
+  "deploymentInfo": {
+    "platform": "Vercel",
+    "status": "Auto-deploying",
+    "productionUrl": "https://nestor-app.vercel.app",
+    "buildTime": "~2-3 minutes"
+  }
+}

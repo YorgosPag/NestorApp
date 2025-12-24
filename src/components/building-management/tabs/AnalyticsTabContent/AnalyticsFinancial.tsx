@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Building } from '../../BuildingsPageContent';
 import { monthlyProgress } from './utils';
 import { cn } from '@/lib/utils';
+import { formatCurrency, formatNumber } from '@/lib/intl-utils';
 
 interface AnalyticsFinancialProps {
     building: Building;
@@ -18,7 +19,7 @@ export default function AnalyticsFinancial({ building }: AnalyticsFinancialProps
                 <Card>
                     <CardContent className="p-4 text-center">
                         <div className="text-lg font-bold text-green-600">
-                            {(building.totalValue || 0).toLocaleString('el-GR')}€
+                            {formatCurrency(building.totalValue || 0)}
                         </div>
                         <div className="text-xs text-muted-foreground">Συνολικός Προϋπολογισμός</div>
                     </CardContent>
@@ -27,7 +28,7 @@ export default function AnalyticsFinancial({ building }: AnalyticsFinancialProps
                 <Card>
                     <CardContent className="p-4 text-center">
                         <div className="text-lg font-bold text-blue-600">
-                            {((building.totalValue || 0) * 0.75).toLocaleString('el-GR')}€
+                            {formatCurrency((building.totalValue || 0) * 0.75)}
                         </div>
                         <div className="text-xs text-muted-foreground">Δαπανηθέν Κόστος</div>
                     </CardContent>
@@ -36,7 +37,7 @@ export default function AnalyticsFinancial({ building }: AnalyticsFinancialProps
                 <Card>
                     <CardContent className="p-4 text-center">
                         <div className="text-lg font-bold text-orange-600">
-                            {((building.totalValue || 0) * 0.25).toLocaleString('el-GR')}€
+                            {formatCurrency((building.totalValue || 0) * 0.25)}
                         </div>
                         <div className="text-xs text-muted-foreground">Υπόλοιπο Budget</div>
                     </CardContent>
@@ -45,7 +46,7 @@ export default function AnalyticsFinancial({ building }: AnalyticsFinancialProps
                 <Card>
                     <CardContent className="p-4 text-center">
                         <div className="text-lg font-bold text-purple-600">
-                            {(((building.totalValue || 0) / building.totalArea)).toLocaleString('el-GR')}€/m²
+                            {formatNumber(((building.totalValue || 0) / building.totalArea))}€/m²
                         </div>
                         <div className="text-xs text-muted-foreground">Κόστος ανά m²</div>
                     </CardContent>
@@ -64,12 +65,12 @@ export default function AnalyticsFinancial({ building }: AnalyticsFinancialProps
                                 <div className="flex items-center gap-3">
                                     <div className="text-sm font-medium w-12">{month.month}</div>
                                     <div className="text-sm text-muted-foreground">
-                                        Μηνιαία δαπάνη: {month.cost.toLocaleString('el-GR')}€
+                                        Μηνιαία δαπάνη: {formatCurrency(month.cost)}
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-4">
                                     <div className="text-sm">
-                                        Σωρευτικό: {monthlyProgress.slice(0, index + 1).reduce((sum, m) => sum + m.cost, 0).toLocaleString('el-GR')}€
+                                        Σωρευτικό: {formatCurrency(monthlyProgress.slice(0, index + 1).reduce((sum, m) => sum + m.cost, 0))}
                                     </div>
                                     <div className={cn(`text-sm px-2 py-1 rounded`,
                                         month.cost < 95000 ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'

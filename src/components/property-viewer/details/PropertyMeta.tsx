@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import type { ExtendedPropertyDetails, Property } from '@/types/property-viewer';
 import { PROPERTY_STATUS_CONFIG } from '@/lib/property-utils';
-import { formatFloorLabel } from '@/lib/intl-utils';
+import { formatFloorLabel, formatCurrency } from '@/lib/intl-utils';
 
 interface PropertyMetaProps {
   property: ExtendedPropertyDetails;
@@ -69,7 +69,7 @@ export function PropertyMeta({ property, onUpdateProperty }: PropertyMetaProps) 
           <div className="flex items-center gap-2 text-sm">
             <Euro className={`${iconSizes.sm} text-green-600`} />
             <span className="font-semibold text-green-600">
-              {property.price.toLocaleString('el-GR')}€
+              {formatCurrency(property.price)}
             </span>
           </div>
         )}

@@ -6,6 +6,7 @@ import { ThemeProgressBar } from '@/core/progress/ThemeProgressBar';
 import { CheckCircle, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { formatDate } from '@/lib/intl-utils';
 
 interface MilestoneItemProps {
     milestone: any;
@@ -45,7 +46,7 @@ export function MilestoneItem({ milestone, getStatusColor, getStatusText, getTyp
                           )}
                         />
                         <span className="text-sm text-muted-foreground">
-                            {new Date(milestone.date).toLocaleDateString('el-GR')}
+                            {formatDate(milestone.date)}
                         </span>
                     </div>
                 </div>
@@ -78,7 +79,7 @@ export function MilestoneItem({ milestone, getStatusColor, getStatusText, getTyp
                 {milestone.status === 'completed' && (
                     <div className="mt-4 flex items-center gap-2 text-sm text-green-600">
                         <CheckCircle className={iconSizes.sm} />
-                        <span>Ολοκληρώθηκε στις {new Date(milestone.date).toLocaleDateString('el-GR')}</span>
+                        <span>Ολοκληρώθηκε στις {formatDate(milestone.date)}</span>
                     </div>
                 )}
             </div>

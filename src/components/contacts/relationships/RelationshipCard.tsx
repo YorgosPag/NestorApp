@@ -13,6 +13,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { formatDate } from '@/lib/intl-utils';
 import {
   Edit,
   Trash2,
@@ -189,7 +190,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
               <div className="flex items-center space-x-2">
                 <Calendar className={`${iconSizes.sm} text-gray-500`} />
                 <span className="text-sm">
-                  Από: {new Date(relationship.startDate).toLocaleDateString('el-GR')}
+                  Από: {formatDate(relationship.startDate)}
                 </span>
               </div>
             )}
@@ -234,7 +235,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
               <div className="flex items-center space-x-2">
                 <Calendar className={`${iconSizes.sm} text-red-500`} />
                 <span className="text-sm text-red-600">
-                  Έως: {new Date(relationship.endDate).toLocaleDateString('el-GR')}
+                  Έως: {formatDate(relationship.endDate)}
                 </span>
               </div>
             )}
@@ -253,14 +254,14 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
               <span>
                 Δημιουργήθηκε: {
                   relationship.createdAt
-                    ? new Date(relationship.createdAt.seconds ? relationship.createdAt.seconds * 1000 : relationship.createdAt).toLocaleDateString('el-GR')
+                    ? formatDate(relationship.createdAt.seconds ? relationship.createdAt.seconds * 1000 : relationship.createdAt)
                     : 'Πρόσφατα'
                 }
               </span>
               {relationship.updatedAt && relationship.updatedAt !== relationship.createdAt && (
                 <span className="ml-4">
                   Ενημερώθηκε: {
-                    new Date(relationship.updatedAt.seconds ? relationship.updatedAt.seconds * 1000 : relationship.updatedAt).toLocaleDateString('el-GR')
+                    formatDate(relationship.updatedAt.seconds ? relationship.updatedAt.seconds * 1000 : relationship.updatedAt)
                   }
                 </span>
               )}

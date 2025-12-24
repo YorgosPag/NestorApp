@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { formatCurrency } from '@/lib/intl-utils';
 import { Lightbulb } from 'lucide-react';
 import { layoutUtilities } from '@/styles/design-tokens';
 import { costBreakdown, monthlyProgress } from './utils';
@@ -27,7 +28,7 @@ export default function AnalyticsOverview() {
                                 <div className="flex items-center justify-between mb-2">
                                     <span className="text-sm font-medium">{item.category}</span>
                                     <span className="text-sm text-muted-foreground">
-                                        {item.amount.toLocaleString('el-GR')}€ ({item.percentage}%)
+                                        {formatCurrency(item.amount)} ({item.percentage}%)
                                     </span>
                                 </div>
                                 <div className="w-full bg-muted rounded-full h-3">

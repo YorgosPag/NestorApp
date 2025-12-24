@@ -10,6 +10,7 @@ import {
   Ruler
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { formatNumber } from '@/lib/intl-utils';
 import type { StorageUnit } from '@/types/storage';
 import { formatPrice, formatArea, getPricePerSqm, getFeatureIcon } from './StorageCardUtils';
 
@@ -59,7 +60,7 @@ export function StorageCardContent({ unit, getTypeIcon }: StorageCardContentProp
                     </div>
                     <div className="text-right">
                         <div className="text-xs text-muted-foreground">€/m²</div>
-                        <div className="font-medium text-muted-foreground">{getPricePerSqm(unit).toLocaleString('el-GR')}€</div>
+                        <div className="font-medium text-muted-foreground">{formatNumber(getPricePerSqm(unit))}€</div>
                     </div>
                 </div>
             </div>

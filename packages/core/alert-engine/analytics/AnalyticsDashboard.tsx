@@ -8,6 +8,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { formatDate, formatDateTime } from '../../../../src/lib/intl-utils';
 import {
   EventAnalyticsEngine,
   AnalyticsTimeRange,
@@ -469,7 +470,7 @@ export const AnalyticsDashboard: React.FC = () => {
     // Events over time chart
     const eventsOverTimeChart: ChartData = {
       labels: report.eventMetrics.eventsOverTime.map(point =>
-        point.timestamp.toLocaleTimeString('el-GR', { hour: '2-digit', minute: '2-digit' })
+        formatDateTime(point.timestamp, { hour: '2-digit', minute: '2-digit' })
       ),
       datasets: [{
         label: 'Events',
@@ -698,10 +699,10 @@ export const AnalyticsDashboard: React.FC = () => {
             📊 Event Analytics & Reporting
           </h1>
           <p className={`m-0 ${grayTextClass}`}>
-            {dashboardState.selectedTimeRange.start.toLocaleDateString('el-GR')} - {dashboardState.selectedTimeRange.end.toLocaleDateString('el-GR')}
+            {formatDate(dashboardState.selectedTimeRange.start)} - {formatDate(dashboardState.selectedTimeRange.end)}
             {dashboardState.lastUpdated && (
               <span className="ml-4">
-                Last updated: {dashboardState.lastUpdated.toLocaleTimeString('el-GR')}
+                Last updated: {formatDateTime(dashboardState.lastUpdated, { hour: '2-digit', minute: '2-digit' })}
               </span>
             )}
           </p>

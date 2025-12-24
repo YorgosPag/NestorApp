@@ -1,6 +1,7 @@
 'use client';
 import { Eye, Square, Bed, Building } from 'lucide-react';
 import { CommonBadge } from '@/core/badges';
+import { formatCurrency } from '@/lib/intl-utils';
 import { getPropertyImage } from '../utils/images';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -32,7 +33,7 @@ export function PropertyListItem({ property, onViewFloorPlan }: { property: any;
         </div>
 
         <div className="text-xl font-bold text-blue-600 dark:text-blue-400 mt-2">
-          €{property.price?.toLocaleString() || 'Επικοινωνήστε'}
+          {property.price ? formatCurrency(property.price) : 'Επικοινωνήστε'}
         </div>
 
         <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-gray-600 dark:text-muted-foreground text-sm mt-2">

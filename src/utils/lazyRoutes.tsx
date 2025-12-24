@@ -148,7 +148,7 @@ export const LazyRoutes = {
   
   // Management/List routes
   Buildings: createLazyRoute(
-    () => import('@/components/building-management/BuildingsPageContent').then(mod => ({ default: mod.BuildingsPageContent })),
+    () => import('@/components/building-management/BuildingsPageContent'),
     { loadingType: 'list', ssr: false }
   ),
   

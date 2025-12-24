@@ -4,6 +4,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Building } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { formatNumber } from '@/lib/intl-utils';
 import { FormRowSelect } from './form/FormRowSelect';
 import { FormRowInput } from './form/FormRowInput';
 import { FormRowCoordinates } from './form/FormRowCoordinates';
@@ -64,7 +65,7 @@ export function StorageFormSpecs({
             ) : undefined}
             helper={
               formData.area && formData.price && formData.area > 0
-                ? `${Math.round(formData.price / formData.area).toLocaleString('el-GR')} €/m²`
+                ? `${formatNumber(Math.round(formData.price / formData.area))} €/m²`
                 : undefined
             }
           />

@@ -6,6 +6,7 @@ import { CommonBadge } from '@/core/badges';
 import { Separator } from '@/components/ui/separator';
 import { TrendingUp, Lightbulb } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { formatDate } from '@/lib/intl-utils';
 
 interface CompletionForecastCardProps {
     milestones: any[];
@@ -29,7 +30,7 @@ export function CompletionForecastCard({ milestones }: CompletionForecastCardPro
                     <div>
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-sm text-muted-foreground">Αρχικό χρονοδιάγραμμα</span>
-                            <span className="font-medium">{new Date(lastMilestone.date).toLocaleDateString('el-GR')}</span>
+                            <span className="font-medium">{formatDate(lastMilestone.date)}</span>
                         </div>
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-sm text-muted-foreground">Τρέχουσα πρόβλεψη</span>
@@ -37,7 +38,7 @@ export function CompletionForecastCard({ milestones }: CompletionForecastCardPro
                                 {(() => {
                                     const d = new Date(lastMilestone.date);
                                     d.setDate(d.getDate() + delayDays);
-                                    return d.toLocaleDateString('el-GR');
+                                    return formatDate(d);
                                 })()}
                             </span>
                         </div>
