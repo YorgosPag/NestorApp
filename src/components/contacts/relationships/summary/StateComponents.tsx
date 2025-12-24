@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Users, Plus } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 // ============================================================================
 // TYPES

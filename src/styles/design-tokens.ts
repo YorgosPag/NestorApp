@@ -10,7 +10,15 @@ import {
   colors,
   shadows,
   animation,
-  transitions
+  transitions,
+  borders,
+  borderWidth,
+  borderColors,
+  coreBorderRadius,
+  borderStyle,
+  borderVariants,
+  borderUtils,
+  responsiveBorders
 } from './design-tokens/core';
 
 // Re-export από modular αρχεία
@@ -18,6 +26,7 @@ export { spacing };
 
 export { typography };
 
+// Legacy borderRadius export for backward compatibility
 export const borderRadius = {
   none: '0',
   sm: '0.125rem',    // 2px
@@ -28,6 +37,19 @@ export const borderRadius = {
   '2xl': '1rem',     // 16px
   full: '9999px',
 } as const;
+
+// ============================================================================
+// 🎨 ENTERPRISE BORDER SYSTEM - Main Exports
+// ============================================================================
+
+// Complete border system export
+export { borders };
+
+// Individual border token exports
+export { borderWidth, borderColors, borderStyle, borderVariants, borderUtils, responsiveBorders };
+
+// Enhanced border radius from the new system (more comprehensive)
+export { coreBorderRadius };
 
 export { shadows };
 

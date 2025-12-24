@@ -3,6 +3,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
@@ -12,6 +13,7 @@ import { layoutUtilities } from '@/styles/design-tokens';
 
 export function FilesCard() {
   const iconSizes = useIconSizes();
+  const { createBorder } = useBorderTokens();
 
   const handleFileUpload = (files: FileList | null) => {
     if (!files) return;
@@ -43,7 +45,7 @@ export function FilesCard() {
       </CardHeader>
       <CardContent>
         <section
-          className={`border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer bg-muted/20 ${INTERACTIVE_PATTERNS.DROPZONE_HOVER}`}
+          className={`${createBorder('medium', 'hsl(var(--border))', 'dashed')} rounded-lg p-6 text-center cursor-pointer bg-muted/20 ${INTERACTIVE_PATTERNS.DROPZONE_HOVER}`}
           role="region"
           aria-label="File drop zone"
           onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('border-primary', 'bg-accent/20'); }}

@@ -5,10 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ThemeProgressBar } from '@/core/progress/ThemeProgressBar';
 import { Target, CheckCircle, AlertTriangle } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import type { Building } from '../../BuildingsPageContent';
 
 export default function AnalyticsProgress({ building }: { building: Building }) {
     const iconSizes = useIconSizes();
+    const { quick } = useBorderTokens();
 
     return (
         <Card>
@@ -18,7 +20,7 @@ export default function AnalyticsProgress({ building }: { building: Building }) 
             <CardContent>
                 <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="text-center p-4 border rounded-lg">
+                        <div className={`text-center p-4 ${quick.card}`}>
                             <div className="text-3xl font-bold text-blue-600 mb-2">{building.progress}%</div>
                             <div className="text-sm text-muted-foreground">Συνολική Πρόοδος</div>
                             <ThemeProgressBar
@@ -29,7 +31,7 @@ export default function AnalyticsProgress({ building }: { building: Building }) 
                             />
                         </div>
 
-                        <div className="text-center p-4 border rounded-lg">
+                        <div className={`text-center p-4 ${quick.card}`}>
                             <div className="text-3xl font-bold text-green-600 mb-2">88%</div>
                             <div className="text-sm text-muted-foreground">Αποδοτικότητα</div>
                             <ThemeProgressBar
@@ -40,7 +42,7 @@ export default function AnalyticsProgress({ building }: { building: Building }) 
                             />
                         </div>
 
-                        <div className="text-center p-4 border rounded-lg">
+                        <div className={`text-center p-4 ${quick.card}`}>
                             <div className="text-3xl font-bold text-orange-600 mb-2">12</div>
                             <div className="text-sm text-muted-foreground">Ημέρες Καθυστέρηση</div>
                             <div className="mt-2 text-xs text-orange-600">

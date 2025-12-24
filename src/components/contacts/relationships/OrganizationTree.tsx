@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Building2, Users } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 // 🏢 ENTERPRISE: Import centralized types
 import type { OrganizationTree as OrganizationTreeType } from '@/types/contacts/relationships';
@@ -215,7 +216,7 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
           {Object.entries(tree.departments).map(([department, employees]) => (
             <div
               key={department}
-              className={`p-3 border rounded-lg bg-gray-50 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+              className={`p-3 ${useBorderTokens().quick.card} bg-gray-50 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
             >
               <div className="flex items-center justify-between mb-2">
                 <p className="font-medium text-gray-800">

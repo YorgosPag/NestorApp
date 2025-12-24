@@ -2,9 +2,11 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { cn } from '@/lib/utils';
 
 export default function AnalyticsComparison() {
+    const { quick } = useBorderTokens();
     return (
         <div className="space-y-6">
             <Card>
@@ -19,7 +21,7 @@ export default function AnalyticsComparison() {
                             { metric: 'Ποιότητα εργασιών', current: '9.5/10', average: '8.2/10', status: 'better' },
                             { metric: 'Αποδοτικότητα', current: '88%', average: '82%', status: 'better' }
                         ].map((item) => (
-                            <div key={item.metric} className="flex items-center justify-between p-4 border rounded-lg">
+                            <div key={item.metric} className={`flex items-center justify-between p-4 ${quick.card}`}>
                                 <div className="flex-1">
                                     <div className="font-medium">{item.metric}</div>
                                     <div className="text-sm text-muted-foreground">

@@ -6,12 +6,14 @@ import type { Building } from '../../BuildingsPageContent';
 import { monthlyProgress } from './utils';
 import { cn } from '@/lib/utils';
 import { formatCurrency, formatNumber } from '@/lib/intl-utils';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface AnalyticsFinancialProps {
     building: Building;
 }
 
 export default function AnalyticsFinancial({ building }: AnalyticsFinancialProps) {
+    const { quick } = useBorderTokens();
     return (
         <div className="space-y-6">
             {/* Financial Summary */}
@@ -61,7 +63,7 @@ export default function AnalyticsFinancial({ building }: AnalyticsFinancialProps
                 <CardContent>
                     <div className="space-y-4">
                         {monthlyProgress.map((month, index) => (
-                            <div key={month.month} className="flex items-center justify-between p-3 border rounded">
+                            <div key={month.month} className={`flex items-center justify-between p-3 ${quick.card}`}>
                                 <div className="flex items-center gap-3">
                                     <div className="text-sm font-medium w-12">{month.month}</div>
                                     <div className="text-sm text-muted-foreground">

@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Building2 } from 'lucide-react';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { cn } from '@/lib/utils';
 
 const nearbyProjects = [
@@ -36,6 +37,7 @@ const nearbyProjects = [
 
 export function NearbyProjectsList() {
     const iconSizes = useIconSizes();
+    const { quick } = useBorderTokens();
 
     return (
         <Card>
@@ -48,7 +50,7 @@ export function NearbyProjectsList() {
             <CardContent>
                 <div className="space-y-3">
                     {nearbyProjects.map((project) => (
-                        <div key={project.id} className={`flex items-center justify-between p-4 border rounded-lg ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} transition-colors`}>
+                        <div key={project.id} className={`flex items-center justify-between p-4 ${quick.card} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} transition-colors`}>
                             <div className="flex items-center gap-3">
                                 <div className={cn(
                                     `${iconSizes.xs} rounded-full`,

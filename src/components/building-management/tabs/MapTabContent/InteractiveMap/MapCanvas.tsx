@@ -3,6 +3,7 @@
 import React from 'react';
 import { Building2 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { cn } from '@/lib/utils';
 import { GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 import { nearbyProjects } from './nearbyProjects';
@@ -29,6 +30,7 @@ interface MapCanvasProps {
 
 export function MapCanvas({ buildingName, mapView, showNearbyProjects, selectedLayer }: MapCanvasProps) {
     const iconSizes = useIconSizes();
+    const { createBorder } = useBorderTokens();
     const filteredProjects = nearbyProjects.filter(project => {
         if (selectedLayer === 'all') return true;
         return project.status === selectedLayer;
@@ -73,8 +75,8 @@ export function MapCanvas({ buildingName, mapView, showNearbyProjects, selectedL
 
                     {/* Distance circles */}
                     <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                        <div className={`${iconSizes.xl8} border-2 border-blue-300 border-dashed rounded-full opacity-30`}></div>
-                        <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 ${iconSizes.xl12} border-2 border-blue-200 border-dashed rounded-full opacity-20`}></div>
+                        <div className={`${iconSizes.xl8} ${createBorder('medium', 'rgb(147 197 253)', 'dashed')} rounded-full opacity-30`}></div>
+                        <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 ${iconSizes.xl12} ${createBorder('medium', 'rgb(191 219 254)', 'dashed')} rounded-full opacity-20`}></div>
                     </div>
 
                     {/* Scale indicator */}

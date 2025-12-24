@@ -3,6 +3,7 @@
 
 import React, { useState } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import type { Building } from './BuildingsPageContent';
 
 import { BuildingsListHeader } from './BuildingsList/BuildingsListHeader';
@@ -21,6 +22,7 @@ export function BuildingsList({
   selectedBuilding,
   onSelectBuilding,
 }: BuildingsListProps) {
+  const { quick } = useBorderTokens();
   const [favorites, setFavorites] = useState<string[]>(['1']);
   const [sortBy, setSortBy] = useState<'name' | 'progress' | 'value' | 'area' | 'date'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -93,7 +95,7 @@ export function BuildingsList({
   });
 
   return (
-    <div className="min-w-[300px] max-w-[420px] w-full bg-card border rounded-lg flex flex-col shrink-0 shadow-sm max-h-full overflow-hidden">
+    <div className={`min-w-[300px] max-w-[420px] w-full bg-card ${quick.card} flex flex-col shrink-0 shadow-sm max-h-full overflow-hidden`}>
       <BuildingsListHeader
         buildingCount={buildings.length}
         activeProjectsCount={buildings.filter(b => b.status === 'active' || b.status === 'construction').length}

@@ -7,15 +7,16 @@ import { Search, MapPin, Home, Filter, TrendingUp, Building, ArrowRight, Chevron
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS, GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export function LandingPage() {
   const iconSizes = useIconSizes();
   const { t } = useTranslation('landing');
   const router = useRouter();
-  const [searchType, setSearchType] = useState('');
+  const [searchType, setSearchType] = useState('all');
   const [location, setLocation] = useState('');
-  const [priceRange, setPriceRange] = useState('');
-  const [areaRange, setAreaRange] = useState('');
+  const [priceRange, setPriceRange] = useState('all');
+  const [areaRange, setAreaRange] = useState('all');
 
   // 🏢 ENTERPRISE: Configurable price ranges
   const getPriceRanges = () => {
@@ -40,10 +41,10 @@ export function LandingPage() {
 
   const handleSearch = () => {
     const params = new URLSearchParams();
-    if (searchType) params.set('type', searchType);
+    if (searchType && searchType !== 'all') params.set('type', searchType);
     if (location) params.set('location', location);
-    if (priceRange) params.set('price', priceRange);
-    if (areaRange) params.set('area', areaRange);
+    if (priceRange && priceRange !== 'all') params.set('price', priceRange);
+    if (areaRange && areaRange !== 'all') params.set('area', areaRange);
     router.push(`/properties?${params.toString()}`);
   };
 
@@ -77,24 +78,23 @@ export function LandingPage() {
               <fieldset className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <legend className="sr-only">Κριτήρια Αναζήτησης Ακινήτων</legend>
                 {/* Property Type */}
-                <fieldset className="relative">
-                  <label htmlFor="search-type" className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">
+                <fieldset className="space-y-1">
+                  <label htmlFor="search-type" className="text-xs font-semibold text-gray-500 dark:text-gray-400 block">
                     {t('search.propertyType')}
                   </label>
-                  <select
-                    id="search-type"
-                    value={searchType}
-                    onChange={(e) => setSearchType(e.target.value)}
-                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700/50 dark:text-white border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer"
-                  >
-                    <option value="">{t('search.allTypes')}</option>
-                    <option value="Στούντιο">{t('search.types.studio')}</option>
-                    <option value="Γκαρσονιέρα">{t('search.types.studio2')}</option>
-                    <option value="Διαμέρισμα">{t('search.types.apartment')}</option>
-                    <option value="Μεζονέτα">{t('search.types.maisonette')}</option>
-                    <option value="Αποθήκη">{t('search.types.storage')}</option>
-                  </select>
-                  <ChevronDown aria-hidden="true" className={`absolute right-3 bottom-3.5 ${iconSizes.md} text-gray-400 pointer-events-none`} />
+                  <Select value={searchType} onValueChange={setSearchType}>
+                    <SelectTrigger id="search-type" className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700/50 dark:text-white border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+                      <SelectValue placeholder={t('search.allTypes')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t('search.allTypes')}</SelectItem>
+                      <SelectItem value="Στούντιο">{t('search.types.studio')}</SelectItem>
+                      <SelectItem value="Γκαρσονιέρα">{t('search.types.studio2')}</SelectItem>
+                      <SelectItem value="Διαμέρισμα">{t('search.types.apartment')}</SelectItem>
+                      <SelectItem value="Μεζονέτα">{t('search.types.maisonette')}</SelectItem>
+                      <SelectItem value="Αποθήκη">{t('search.types.storage')}</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </fieldset>
 
                 {/* Location */}
@@ -118,51 +118,41 @@ export function LandingPage() {
                 </fieldset>
 
                 {/* Price Range */}
-                <fieldset className="relative">
-                  <label htmlFor="search-price" className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">
+                <fieldset className="space-y-1">
+                  <label htmlFor="search-price" className="text-xs font-semibold text-gray-500 dark:text-gray-400 block">
                     Εύρος Τιμής
                   </label>
-                  <select
-                    id="search-price"
-                    value={priceRange}
-                    onChange={(e) => setPriceRange(e.target.value)}
-                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700/50 dark:text-white border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer"
-                  >
-                    {getPriceRanges().map((range) => (
-                      <option key={range.value} value={range.value}>
-                        {range.label}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown aria-hidden="true" className={`absolute right-3 bottom-3.5 ${iconSizes.md} text-gray-400 pointer-events-none`} />
+                  <Select value={priceRange} onValueChange={setPriceRange}>
+                    <SelectTrigger id="search-price" className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700/50 dark:text-white border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+                      <SelectValue placeholder="Όλες οι τιμές" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Όλες οι τιμές</SelectItem>
+                      <SelectItem value="0-50000">€0 - €50.000</SelectItem>
+                      <SelectItem value="50000-100000">€50.000 - €100.000</SelectItem>
+                      <SelectItem value="100000-200000">€100.000 - €200.000</SelectItem>
+                      <SelectItem value="200000+">€200.000+</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </fieldset>
 
                 {/* Area Range */}
-                <fieldset className="relative">
-                  <label htmlFor="search-area" className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">
+                <fieldset className="space-y-1">
+                  <label htmlFor="search-area" className="text-xs font-semibold text-gray-500 dark:text-gray-400 block">
                     Εμβαδόν
                   </label>
-                  <select
-                    id="search-area"
-                    value={areaRange}
-                    onChange={(e) => setAreaRange(e.target.value)}
-                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700/50 dark:text-white border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer"
-                  >
-                    <option value="">Όλα τα μεγέθη</option>
-                    <option value={`0-${process.env.NEXT_PUBLIC_AREA_RANGE_1_MAX || '50'}`}>
-                      0-{process.env.NEXT_PUBLIC_AREA_RANGE_1_MAX || '50'} m²
-                    </option>
-                    <option value={`${process.env.NEXT_PUBLIC_AREA_RANGE_1_MAX || '50'}-${process.env.NEXT_PUBLIC_AREA_RANGE_2_MAX || '100'}`}>
-                      {process.env.NEXT_PUBLIC_AREA_RANGE_1_MAX || '50'}-{process.env.NEXT_PUBLIC_AREA_RANGE_2_MAX || '100'} m²
-                    </option>
-                    <option value={`${process.env.NEXT_PUBLIC_AREA_RANGE_2_MAX || '100'}-${process.env.NEXT_PUBLIC_AREA_RANGE_3_MAX || '150'}`}>
-                      {process.env.NEXT_PUBLIC_AREA_RANGE_2_MAX || '100'}-{process.env.NEXT_PUBLIC_AREA_RANGE_3_MAX || '150'} m²
-                    </option>
-                    <option value={`${process.env.NEXT_PUBLIC_AREA_RANGE_3_MAX || '150'}+`}>
-                      {process.env.NEXT_PUBLIC_AREA_RANGE_3_MAX || '150'}+ m²
-                    </option>
-                  </select>
-                  <ChevronDown aria-hidden="true" className={`absolute right-3 bottom-3.5 ${iconSizes.md} text-gray-400 pointer-events-none`} />
+                  <Select value={areaRange} onValueChange={setAreaRange}>
+                    <SelectTrigger id="search-area" className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700/50 dark:text-white border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+                      <SelectValue placeholder="Όλα τα μεγέθη" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Όλα τα μεγέθη</SelectItem>
+                      <SelectItem value="0-50">0-50 m²</SelectItem>
+                      <SelectItem value="50-100">50-100 m²</SelectItem>
+                      <SelectItem value="100-150">100-150 m²</SelectItem>
+                      <SelectItem value="150+">150+ m²</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </fieldset>
               </fieldset>
 

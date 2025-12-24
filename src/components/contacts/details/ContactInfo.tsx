@@ -11,6 +11,7 @@ import { CustomerStats } from './CustomerStats';
 import { CustomerPropertiesTable } from './CustomerPropertiesTable';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface ContactInfoProps {
   contact: Contact;
@@ -20,13 +21,14 @@ interface ContactInfoProps {
 
 export function ContactInfo({ contact, onAddUnit, onRefresh }: ContactInfoProps) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
     const { t } = useTranslation('contacts');
     const email = getPrimaryEmail(contact);
     const phone = getPrimaryPhone(contact);
 
     return (
       <div className="space-y-4">
-        <div className="p-4 border rounded-lg space-y-3">
+        <div className={`p-4 ${quick.card} space-y-3`}>
             <h4 className="font-semibold text-sm">{t('details.contactInfo.title')}</h4>
             {email && (
                 <div className="flex items-center gap-2 text-sm">
@@ -59,7 +61,7 @@ export function ContactInfo({ contact, onAddUnit, onRefresh }: ContactInfoProps)
             {!(email || phone) && <p className="text-sm text-muted-foreground">{t('details.contactInfo.noContactInfo')}</p>}
         </div>
          {(contact.type === CONTACT_TYPES.COMPANY || contact.type === CONTACT_TYPES.INDIVIDUAL) && (
-            <div className="p-4 border rounded-lg">
+            <div className={`p-4 ${quick.card}`}>
                 <h4 className="font-semibold mb-2 text-sm">{t('details.taxInfo.title')}</h4>
                 <div className="text-sm">
                     <strong>{t('details.taxInfo.vatNumber')}</strong> {(contact as any).vatNumber || (contact as any).taxNumber || t('details.taxInfo.notSet')}

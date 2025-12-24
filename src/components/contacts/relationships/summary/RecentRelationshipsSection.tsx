@@ -61,6 +61,7 @@ export const RecentRelationshipsSection: React.FC<RecentRelationshipsSectionProp
   className = "mb-6"
 }) => {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   // ============================================================================
   // STATE
   // ============================================================================
@@ -142,7 +143,7 @@ export const RecentRelationshipsSection: React.FC<RecentRelationshipsSectionProp
       <div
         key={relationship.id}
         onClick={() => onRelationshipClick?.(relationship)}
-        className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+        className={`flex items-center justify-between p-3 ${quick.card} cursor-pointer ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
       >
         <div className="flex items-center space-x-3">
           <Icon className={`${iconSizes.md} text-gray-600`} />

@@ -1,6 +1,7 @@
 'use client';
 import { Archive } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import {
   getTypeIcon, getTypeColor, getStatusIcon, getStatusColor,
   getDirectionLabel, getRelativeTime
@@ -11,6 +12,7 @@ import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
 export default function CommunicationsHistory({ contactId }) {
   const iconSizes = useIconSizes();
+  const { quick, getStatusBorder } = useBorderTokens();
   const { communications, loading, error, fetchCommunications } = useCommunicationsHistory(contactId);
 
   if (loading) return (
@@ -23,7 +25,7 @@ export default function CommunicationsHistory({ contactId }) {
   );
 
   if (error) return (
-    <section className="bg-red-50 border border-red-200 rounded-lg p-4" role="alert" aria-label="Error loading communications">
+    <section className={`bg-red-50 ${getStatusBorder('error')} p-4`} role="alert" aria-label="Error loading communications">
       <p className="text-red-600 text-sm">{error}</p>
       <button onClick={fetchCommunications} className={`mt-2 px-3 py-1 bg-red-600 text-white rounded text-sm ${INTERACTIVE_PATTERNS.BUTTON_DESTRUCTIVE}`}>
         Δοκιμή ξανά
@@ -62,7 +64,7 @@ export default function CommunicationsHistory({ contactId }) {
                 <div className={`flex-shrink-0 ${iconSizes.xl2} rounded-full flex items-center justify-center ${getTypeColor(comm.type)}`}>
                   <TypeIcon className={iconSizes.md} />
                 </div>
-                <div className="flex-1 bg-white border rounded-lg p-4 shadow-sm">
+                <div className={`flex-1 bg-white ${quick.card} p-4 shadow-sm`}>
                   <header className="flex items-start justify-between mb-2">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">

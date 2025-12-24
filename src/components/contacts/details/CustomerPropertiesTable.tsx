@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { getUnitsByOwner } from '@/services/units.service';
 import type { Property } from '@/types/property-viewer';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -17,6 +18,7 @@ interface CustomerPropertiesTableProps {
 
 export function CustomerPropertiesTable({ contactId, onAddUnit }: CustomerPropertiesTableProps) {
     const iconSizes = useIconSizes();
+    const { quick } = useBorderTokens();
     const [properties, setProperties] = useState<Property[]>([]);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
@@ -63,11 +65,11 @@ export function CustomerPropertiesTable({ contactId, onAddUnit }: CustomerProper
                 </Button>
             </div>
             {properties.length === 0 ? (
-                <div className="text-center text-sm text-muted-foreground py-4 border rounded-lg">
+                <div className={`text-center text-sm text-muted-foreground py-4 ${quick.card}`}>
                     Αυτός ο πελάτης δεν έχει καταχωρημένα ακίνητα.
                 </div>
             ) : (
-                <div className="border rounded-lg">
+                <div className={quick.card}>
                     <Table>
                         <TableHeader>
                             <TableRow>

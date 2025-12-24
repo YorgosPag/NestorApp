@@ -5,6 +5,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface PlaceholderTabProps {
   title?: string;
@@ -15,13 +16,14 @@ interface PlaceholderTabProps {
 
 const PlaceholderTab = ({ title = 'Περιεχόμενο', icon: Icon, building, ...additionalProps }: PlaceholderTabProps) => {
   const iconSizes = useIconSizes();
+  const { createBorder } = useBorderTokens();
 
   // Default icon fallback
   const FallbackIcon = () => <div className={`${iconSizes.xl3} text-muted-foreground mb-4 text-4xl`}>📦</div>;
   const IconComponent = Icon || FallbackIcon;
 
   return (
-    <div className={`flex flex-col items-center justify-center ${iconSizes.xl12} border-2 border-dashed border-border rounded-lg bg-muted/50`}>
+    <div className={`flex flex-col items-center justify-center ${iconSizes.xl12} ${createBorder('medium', 'hsl(var(--border))', 'dashed')} rounded-lg bg-muted/50`}>
       <IconComponent className={`${iconSizes.xl3} text-muted-foreground mb-4`} />
     <h2 className="text-xl font-semibold text-muted-foreground mb-2">{title}</h2>
     <p className="text-sm text-muted-foreground text-center max-w-md">

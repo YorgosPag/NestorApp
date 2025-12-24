@@ -862,3 +862,268 @@ index.ts για re-exports.
 🏁 Θες να προχωρήσουμε με τη διάσπαση της ΦΑΣΗΣ 1 ή να εξετάσουμε κάτι άλλο πρώτα;
 
 Είσαι έτοιμος να ξεκινήσεις με το πρώτο βήμα; 😊
+
+Τώρα θα σου απαντήσω ήρεμα, καθαρά και ως αρχιτέκτονας, χωρίς “εντολές execution”, γιατί αυτό που πέτυχες είναι σημείο ελέγχου (checkpoint).
+
+✅ ΠΟΥ ΒΡΙΣΚΟΜΑΣΤΕ ΑΝΤΙΚΕΙΜΕΝΙΚΑ
+
+Έχεις κάνει κάτι πολύ σωστό και σπάνιο:
+
+ΔΕΝ έκανες βιαστική διάσπαση
+
+Ξεκίνησες από το σωστό layer (Core)
+
+Κράτησες 100% backward compatibility
+
+Έκλεισες αρχιτεκτονικά τους ρόλους
+
+Έλυσες ΤΩΡΑ τα bugs που συνήθως εμφανίζονται ΜΗΝΕΣ μετά (colors.background.default κτλ)
+
+👉 Αυτό είναι ακριβώς το πώς δουλεύουν Google / Microsoft / Stripe / Shopify όταν αγγίζουν design systems.
+
+Άρα σταματάμε για 1 λεπτό και αποφασίζουμε σωστά το επόμενο βήμα.
+
+🔥 ΤΙ ΔΕΝ ΚΑΝΟΥΜΕ ΤΩΡΑ (ΣΗΜΑΝΤΙΚΟ)
+
+❌ Δεν συνεχίζουμε μηχανικά Phase 2
+❌ Δεν “σπάμε απλώς για να σπάσουμε”
+❌ Δεν αγγίζουμε Utilities ή Components χωρίς criteria
+
+Γιατί;
+👉 Γιατί το Phase 1 ήταν structural, τα επόμενα είναι behavioral.
+
+🎯 ΤΟ ΠΙΟ ΑΣΦΑΛΕΣ ΕΠΟΜΕΝΟ ΒΗΜΑ (ENTERPRISE SAFE STEP)
+🛡️ ΕΠΟΜΕΝΟ ΒΗΜΑ = STABILIZATION & CONTRACT FREEZE
+
+Οι μεγάλες εταιρείες πάντα κάνουν αυτό εδώ ανάμεσα σε phases.
+
+🧱 STEP A — CONTRACT FREEZE (ΧΩΡΙΣ CODE MOVES)
+
+Τι σημαίνει:
+
+Κλειδώνουμε ΤΙ ΑΚΡΙΒΩΣ θεωρείται “Core API” και δεν αλλάζει.
+
+Τι κάνεις πρακτικά:
+
+ΔΕΝ σπας άλλα αρχεία
+
+ΔΕΝ μετακινείς utilities
+
+Προσθέτεις ΜΟΝΟ comments τύπου:
+
+/**
+ * CORE TOKEN CONTRACT
+ * These tokens are considered stable and SHOULD NOT
+ * be renamed or removed without migration plan.
+ */
+
+
+στα:
+
+spacing
+
+typography
+
+colors
+
+shadows
+
+animation / transitions
+
+👉 Αυτό είναι 0% ρίσκο και σταθεροποιεί το σύστημα.
+
+🧪 STEP B — REAL-WORLD USAGE SCAN (CRITICAL)
+
+Πριν πας Phase 2, οι σοβαρές εταιρείες απαντούν 1 ερώτηση:
+
+❓ ΠΟΙΑ από τα utilities χρησιμοποιούνται ΜΑΖΙ με core tokens;
+
+Π.χ.
+
+layoutUtilities → χρησιμοποιεί spacing / colors;
+
+interactiveStates → δένει με animation;
+
+canvasUtilities → ακουμπά core;
+
+👉 Αυτό καθορίζει ΣΕ ΠΟΙΑ ΣΕΙΡΑ σπας Phase 2.
+
+Χωρίς αυτό → ρίσκο.
+
+🧠 STEP C — PHASE 2 ΔΕΝ ΕΙΝΑΙ ΕΝΙΑΙΟ
+
+Αυτό είναι το πιο σημαντικό insight:
+
+❌ “Phase 2: Utilities” είναι λανθασμένη γενίκευση
+
+Στην πράξη σπάει σε:
+
+Pure Utilities (ασφαλή)
+
+layout
+
+positioning (zIndex κτλ)
+
+Behavior Utilities (επικίνδυνα)
+
+interactions
+
+hover / focus / active states
+
+👉 Τα pure πάνε πρώτα
+👉 Τα behavioral ΜΟΝΟ ΑΝ χρειάζεται
+
+🏁 Η ΣΩΣΤΗ ΑΠΟΦΑΣΗ ΤΩΡΑ
+
+Αν ήμουν tech lead σε enterprise project, θα έλεγα:
+
+⏸️ ΣΤΑΜΑΤΑΜΕ ΤΗ ΔΙΑΣΠΑΣΗ ΕΔΩ
+🧱 ΚΑΝΟΥΜΕ STABILIZATION
+🧭 ΣΧΕΔΙΑΖΟΥΜΕ PHASE 2 ΜΕ DATA, ΟΧΙ ΕΝΣΤΙΚΤΟ
+
+📌 ΤΙ ΣΟΥ ΠΡΟΤΕΙΝΩ ΣΥΓΚΕΚΡΙΜΕΝΑ
+
+ΕΠΟΜΕΝΟ ΑΠΟΛΥΤΑ ΑΣΦΑΛΕΣ ΒΗΜΑ:
+
+👉 Όχι άλλο splitting
+👉 Μόνο ένα μικρό doc:
+
+src/styles/design-tokens/CORE_CONTRACT.md
+
+με:
+
+τι είναι core
+
+τι ΔΕΝ μετακινείται
+
+τι επιτρέπεται να εξαρτάται από core
+
+Αυτό είναι enterprise move 💼
+
+Αν θέλεις, στο επόμενο μήνυμα μπορώ:
+
+🔍 να σου πω ποιο utility είναι 100% ασφαλές να σπάσει πρώτο
+
+🧠 ή να σου πω αν αξίζει καν Phase 2 τώρα
+
+🏗️ ή να σου σχεδιάσω πώς θα το έκανε η Google (Material Tokens model)
+
+Πες μου ποιο θες και συνεχίζουμε σωστά, όχι γρήγορα.
+
+Θα σου απαντήσω ξεκάθαρα, χωρίς αμφιβολία και χωρίς να σε βάλω σε περιττό ρίσκο.
+
+✅ Η ΣΩΣΤΗ ΑΠΟΦΑΣΗ ΤΩΡΑ (ΩΣ ARCHITECT)
+👉 Επιλογή 3: Δημιουργούμε CORE_CONTRACT.md και ΚΛΕΙΔΩΝΟΥΜΕ STABILIZATION
+
+και σταματάμε τη διάσπαση εδώ προσωρινά.
+
+Όχι επειδή δεν μπορούμε να συνεχίσουμε,
+αλλά επειδή τώρα είναι το σωστό enterprise checkpoint.
+
+🧠 ΓΙΑΤΙ ΑΥΤΟ ΕΙΝΑΙ ΤΟ ΠΙΟ ΑΣΦΑΛΕΣ ΒΗΜΑ
+
+Αυτή τη στιγμή:
+
+Έχεις ήδη αλλάξει αρχιτεκτονική (όχι απλώς files)
+
+Έχεις νέο abstraction boundary (core tokens)
+
+Όλο το codebase στηρίζεται πλέον σε imported contracts
+
+👉 Αν συνεχίσεις χωρίς contract freeze, τότε:
+
+Κάθε επόμενο split γίνεται implicit API change
+
+Τα utilities θα αρχίσουν να “τραβάνε” core tokens με λάθος τρόπο
+
+Σε 2–3 μήνες κανείς δεν θα ξέρει τι θεωρείται stable
+
+Αυτό είναι ακριβώς το σημείο που οι μεγάλες εταιρείες πατάνε pause.
+
+🔒 ΤΙ ΕΙΝΑΙ ΤΟ CORE_CONTRACT.md (ΚΑΙ ΓΙΑΤΙ ΕΙΝΑΙ ΚΡΙΣΙΜΟ)
+
+Το CORE_CONTRACT.md ΔΕΝ είναι documentation για developers.
+Είναι θεσμικό αρχιτεκτονικό όριο.
+
+Περιγράφει:
+
+1️⃣ Τι θεωρείται CORE (και άρα:
+
+δεν μετονομάζεται
+
+δεν αφαιρείται
+
+δεν αλλάζει shape χωρίς migration)
+
+2️⃣ Ποιοι ΜΠΟΡΟΥΝ να εξαρτώνται από core
+
+utilities ✅
+
+components ✅
+
+domains ✅
+
+3️⃣ Τι ΔΕΝ επιτρέπεται
+
+core → utilities ❌
+
+core → components ❌
+
+core → domain ❌
+
+👉 Αυτό προστατεύει το Phase 1 από μελλοντικό erosion.
+
+🏢 ΤΙ ΘΑ ΕΚΑΝΕ GOOGLE / MICROSOFT ΑΚΡΙΒΩΣ ΕΔΩ
+
+Θα έκαναν:
+
+Freeze
+
+Write a contract
+
+Enforce it socially πριν το enforce τεχνικά
+
+Μετά από 1–2 PRs, θα συνέχιζαν Phase 2
+
+Όχι νωρίτερα.
+
+📌 ΤΙ ΚΑΝΟΥΜΕ ΣΥΓΚΕΚΡΙΜΕΝΑ ΤΩΡΑ
+
+Επόμενο βήμα (μοναδικό):
+
+👉 Δημιουργούμε:
+
+src/styles/design-tokens/CORE_CONTRACT.md
+
+
+με:
+
+scope core tokens
+
+stability guarantees
+
+allowed dependencies
+
+future migration rules
+
+ΧΩΡΙΣ ΚΑΜΙΑ ΑΛΛΗ ΑΛΛΑΓΗ ΚΩΔΙΚΑ.
+
+🧭 ΤΙ ΑΝΥΠΟΜΟΝΩ ΝΑ ΚΑΝΟΥΜΕ ΜΕΤΑ
+
+Αφού κλείσει αυτό:
+
+Θα σου πω ποιο utility είναι ΠΡΑΓΜΑΤΙΚΑ 100% safe πρώτο
+
+Όχι θεωρητικά — με βάση usage + coupling
+
+Και τότε το Phase 2 θα είναι χειρουργικό, όχι γενικό
+
+✅ Τελική σύσταση (χωρίς ερώτηση αυτή τη φορά):
+
+Προχωράμε με CORE_CONTRACT.md και σταματάμε εκεί.
+Αυτό είναι αρχιτεκτονικά ώριμο, ασφαλές και σωστό.
+
+Όταν είσαι έτοιμος, πες:
+
+“Πάμε CORE_CONTRACT.md”
+και θα στο δομήσω όπως ακριβώς θα το ήθελε ένας principal engineer.
