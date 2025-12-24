@@ -214,7 +214,8 @@
       "Bash(SKIP_ENV_VALIDATION=true TYPESCRIPT_CHECK=false PORT=3333 npm run dev)",
       "Bash(start chrome --new-window --incognito http://localhost:3005/spaces/storage)",
       "Read(//tmp/**)",
-      "Bash(SKIP_ENV_VALIDATION=true npm run build)"
+      "Bash(SKIP_ENV_VALIDATION=true npm run build)",
+      "Bash(git gc:*)"
     ],
     "deny": [],
     "ask": []
