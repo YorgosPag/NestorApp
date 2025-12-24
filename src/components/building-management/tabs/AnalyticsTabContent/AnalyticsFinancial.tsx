@@ -74,7 +74,7 @@ export default function AnalyticsFinancial({ building }: AnalyticsFinancialProps
                                     <div className="text-sm">
                                         Σωρευτικό: {formatCurrency(monthlyProgress.slice(0, index + 1).reduce((sum, m) => sum + m.cost, 0))}
                                     </div>
-                                    <div className={cn(`text-sm px-2 py-1 rounded`,
+                                    <div className={cn(`text-sm px-2 py-1 ${quick.input}`,
                                         month.cost < 95000 ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
                                     )}>
                                         {month.cost < 95000 ? 'Εντός budget' : 'Προσοχή'}

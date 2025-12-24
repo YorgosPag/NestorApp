@@ -154,7 +154,7 @@ const SimpleChart: React.FC<{
     const maxValue = Math.max(...data.datasets[0].data);
 
     return (
-      <div style={analyticsDashboardStyles.barChart.container(height)}>
+      <div className="flex items-end gap-2 p-5 w-full" style={{ height: `${height - 100}px` }}>
         {data.labels.map((label, index) => {
           const value = data.datasets[0].data[index];
           const barHeight = calculateBarHeight(value, maxValue, height, 150);
@@ -162,12 +162,12 @@ const SimpleChart: React.FC<{
           return (
             <div key={index} className="flex flex-col items-center flex-1">
               <div
-                className={`${barBgClass}`}
-                style={analyticsDashboardStyles.barChart.bar(barHeight)}
+                className={`${barBgClass} w-full max-w-[40px] rounded-t-sm flex items-end justify-center text-white text-xs pb-1 transition-all duration-200 ease-in-out`}
+                style={{ height: `${barHeight}px` }}
               >
                 {value}
               </div>
-              <span className={`${labelTextClass}`} style={analyticsDashboardStyles.barChart.label}>
+              <span className={`${labelTextClass} text-xs mt-2 text-center break-words`}>
                 {label}
               </span>
             </div>
@@ -186,22 +186,20 @@ const SimpleChart: React.FC<{
     return (
       <div className="flex flex-col items-center p-5">
         <div
-          className={useDynamicBackgroundClass(
-            `w-[200px] h-[200px] rounded-full`,
-            `conic-gradient(${data.datasets[0].data.map((value, index) => {
+          className="w-[200px] h-[200px] rounded-full"
+          style={{
+            background: `conic-gradient(${data.datasets[0].data.map((value, index) => {
               const percentage = (value / total) * 100;
               return `${colors[index % colors.length]} ${percentage}%`;
             }).join(', ')})`
-          )}
+          }}
         />
         <div className="mt-5 flex flex-wrap gap-3 justify-center">
           {data.labels.map((label, index) => (
             <div key={index} className="flex items-center gap-1.5">
               <div
-                className={useDynamicBackgroundClass(
-                  `${iconSizes.xs} rounded-sm`,
-                  colors[index % colors.length]
-                )}
+                className={`${iconSizes.xs} rounded-sm`}
+                style={{ backgroundColor: colors[index % colors.length] }}
               />
               <span className={`text-xs ${labelTextClass}`}>
                 {label}: {data.datasets[0].data[index]}
@@ -218,7 +216,7 @@ const SimpleChart: React.FC<{
       <h3 className={`m-0 mb-4 text-base font-semibold ${titleTextClass}`}>
         {title}
       </h3>
-      <div style={analyticsDashboardStyles.charts.container(height)}>
+      <div className="w-full relative overflow-hidden" style={{ height: `${height}px` }}>
         {type === 'bar' && renderSimpleBarChart()}
         {type === 'pie' && renderSimplePieChart()}
         {(type === 'line' || type === 'doughnut') && (

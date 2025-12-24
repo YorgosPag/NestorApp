@@ -26,6 +26,7 @@ import {
   MapPin
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 // 🏢 ENTERPRISE: Import centralized utilities
 import { getRelationshipDisplayProps } from './utils/relationship-types';
@@ -59,6 +60,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
   // ============================================================================
 
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
 
   // 🔧 ENTERPRISE FIX: Show the "other" contact in the relationship
   // Determine which contact to show based on which one is NOT the current contact
@@ -124,7 +126,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
                   </>
                 ) : (
                   <>
-                    <div className="animate-pulse bg-gray-200 h-4 w-24 rounded"></div>
+                    <div className={`animate-pulse bg-gray-200 h-4 w-24 ${quick.rounded}`}></div>
                     <Badge className={displayProps.color} variant="outline">
                       {displayProps.label}
                     </Badge>
@@ -243,14 +245,14 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
             {/* Notes */}
             {relationship.notes && (
               <div className="md:col-span-2">
-                <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md">
+                <p className={`text-sm text-gray-600 bg-gray-50 p-3 ${quick.table}`}>
                   <strong>Σημειώσεις:</strong> {relationship.notes}
                 </p>
               </div>
             )}
 
             {/* Relationship Metadata */}
-            <div className="md:col-span-2 text-xs text-gray-400 border-t pt-2">
+            <div className={`md:col-span-2 text-xs text-gray-400 ${quick.borderT} pt-2`}>
               <span>
                 Δημιουργήθηκε: {
                   relationship.createdAt

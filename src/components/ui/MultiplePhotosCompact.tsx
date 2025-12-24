@@ -3,6 +3,7 @@
 import React from 'react';
 import { TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { Image, Plus, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EnterprisePhotoUpload } from './EnterprisePhotoUpload';
@@ -120,6 +121,7 @@ export function MultiplePhotosCompact({
   showPhotosWhenDisabled = false
 }: MultiplePhotosCompactProps) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
 
   // ========================================================================
   // COMPUTED VALUES
@@ -335,7 +337,7 @@ export function MultiplePhotosCompact({
                     <img
                       src={photo.preview || photo.uploadUrl}
                       alt={`Φωτογραφία ${index + 1}`}
-                      className="w-full h-20 object-cover rounded border"
+                      className={`w-full h-20 object-cover ${quick.rounded} ${quick.input}`}
                     />
                     <Button
                       type="button"
@@ -352,7 +354,7 @@ export function MultiplePhotosCompact({
                     </Button>
                   </figure>
                 ) : (
-                  <aside className="w-full h-20 bg-gray-100 rounded border flex items-center justify-center" role="status" aria-label="Κενό σλοτ">
+                  <aside className={`w-full h-20 bg-gray-100 ${quick.rounded} ${quick.input} flex items-center justify-center`} role="status" aria-label="Κενό σλοτ">
                     <span className={`text-xs ${PHOTO_TEXT_COLORS.MUTED}`}>Κενό {index + 1}</span>
                   </aside>
                 )}

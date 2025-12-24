@@ -24,7 +24,7 @@ export function AutoSaveStatus() {
       case 'saving':
         return (
           <div className="flex items-center text-yellow-400">
-            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-yellow-400 mr-1"></div>
+            <div className={`animate-spin ${quick.button} h-3 w-3 border-b-2 border-yellow-400 mr-1`}></div>
             <span className="text-xs">Saving...</span>
           </div>
         );
@@ -71,7 +71,7 @@ export function AutoSaveStatus() {
   };
   
   return (
-    <div className={`flex items-center justify-between p-2 bg-gray-800 border border-gray-700 ${quick.card} text-xs`}>
+    <div className={`flex items-center justify-between p-2 bg-gray-800 ${quick.card} text-xs`}>
       <div className="flex flex-col">
         <div className="flex items-center">
           <span className="text-gray-300 mr-2">📁 {currentFileName}</span>
@@ -92,7 +92,7 @@ export function AutoSaveStatus() {
 
             }
           }}
-          className={`px-2 py-1 text-[10px] bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL} ${quick.button} border border-gray-600`}
+          className={`px-2 py-1 text-[10px] bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL} ${quick.button}`}
           title="Trigger manual save"
         >
           💾 Save

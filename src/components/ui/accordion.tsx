@@ -57,7 +57,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects'
 import { useIconSizes } from '@/hooks/useIconSizes'
-import { borderVariants } from '@/styles/design-tokens'
+import { useBorderTokens } from '@/hooks/useBorderTokens'
 
 // ===== TYPES =====
 
@@ -66,7 +66,13 @@ export type AccordionVariant = 'default' | 'bordered' | 'ghost' | 'card';
 
 // Re-export Radix types for convenience
 export type AccordionProps = React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Root>
-export type AccordionItemProps = React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Item> & VariantProps<typeof accordionItemVariants>
+
+// 🏢 ENTERPRISE: Dynamic variant types
+export type AccordionItemVariantProps = {
+  variant?: 'default' | 'bordered' | 'ghost' | 'card';
+}
+
+export type AccordionItemProps = React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Item> & AccordionItemVariantProps
 export type AccordionTriggerProps = React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Trigger> & VariantProps<typeof accordionTriggerVariants> & {
   showChevron?: boolean;
   chevron?: React.ReactNode;
@@ -76,15 +82,16 @@ export type AccordionContentProps = React.ComponentPropsWithoutRef<typeof Accord
 
 // ===== VARIANTS (class-variance-authority) =====
 
-const accordionItemVariants = cva(
+// 🏢 ENTERPRISE: Dynamic border variants using centralized tokens
+const createAccordionItemVariants = (borderTokens: ReturnType<typeof useBorderTokens>) => cva(
   "border-b", // Base
   {
     variants: {
       variant: {
         default: "border-border",
-        bordered: `border-2 ${borderVariants.card.className} mb-2 overflow-hidden`,
+        bordered: `border-2 ${borderTokens.quick.card} mb-2 overflow-hidden`,
         ghost: "border-0",
-        card: `${borderVariants.card.className} mb-2 bg-card shadow-sm`
+        card: `${borderTokens.quick.card} mb-2 bg-card shadow-sm`
       }
     },
     defaultVariants: {
@@ -148,13 +155,19 @@ const Accordion = AccordionPrimitive.Root
 const AccordionItem = React.forwardRef<
   React.ElementRef<typeof AccordionPrimitive.Item>,
   AccordionItemProps
->(({ className, variant, ...props }, ref) => (
-  <AccordionPrimitive.Item
-    ref={ref}
-    className={cn(accordionItemVariants({ variant }), className)}
-    {...props}
-  />
-))
+>(({ className, variant, ...props }, ref) => {
+  // 🏢 ENTERPRISE: Use centralized border tokens
+  const borderTokens = useBorderTokens();
+  const accordionItemVariants = createAccordionItemVariants(borderTokens);
+
+  return (
+    <AccordionPrimitive.Item
+      ref={ref}
+      className={cn(accordionItemVariants({ variant }), className)}
+      {...props}
+    />
+  );
+})
 AccordionItem.displayName = "AccordionItem"
 
 // ===== TRIGGER =====
@@ -273,7 +286,7 @@ export {
   AccordionTrigger,
   AccordionContent,
   // Export variants for external use
-  accordionItemVariants,
+  createAccordionItemVariants,
   accordionTriggerVariants,
   accordionContentVariants
 }

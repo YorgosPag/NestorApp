@@ -11,6 +11,7 @@ import { ProgressiveLoader, LoadingPresets, useProgressiveLoader } from '@/compo
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects/hover-effects';
 import { AlertTriangle } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface OptimizedAppProviderProps {
   children: React.ReactNode;
@@ -140,20 +141,20 @@ function AppErrorBoundary({ children }: { children: React.ReactNode }) {
               <div className="space-y-3">
                 <button
                   onClick={retry}
-                  className={`w-full px-4 py-2 bg-primary text-primary-foreground rounded-md ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} transition-colors`}
+                  className={`w-full px-4 py-2 bg-primary text-primary-foreground ${quick.input} ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} transition-colors`}
                 >
                   Restart Application
                 </button>
                 <button
                   onClick={() => window.location.reload()}
-                  className={`w-full px-4 py-2 border border-border rounded-md ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} transition-colors`}
+                  className={`w-full px-4 py-2 border border-border ${quick.input} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} transition-colors`}
                 >
                   Reload Page
                 </button>
               </div>
               <details className="mt-6 text-left">
                 <summary className="cursor-pointer text-sm text-muted-foreground">Error Details</summary>
-                <pre className="mt-2 text-xs bg-muted p-2 rounded overflow-auto">
+                <pre className={`mt-2 text-xs bg-muted p-2 ${quick.input} overflow-auto`}>
                   {error.message}
                 </pre>
               </details>
@@ -174,6 +175,7 @@ export function OptimizedAppProvider({
   cacheConfig = {}
 }: OptimizedAppProviderProps) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   useEffect(() => {
     if (enableDevTools) {
       // Enable performance monitoring
@@ -274,7 +276,7 @@ export function OptimizationDebugPanel() {
       </button>
       
       {isOpen && (
-        <div className="absolute bottom-14 right-0 w-80 bg-card border rounded-lg shadow-xl p-4 space-y-4">
+        <div className={`absolute bottom-14 right-0 w-80 bg-card border ${quick.card} shadow-xl p-4 space-y-4`}>
           <div className="flex items-center justify-between">
             <h3 className="font-bold">Performance Stats</h3>
             <button onClick={() => setIsOpen(false)}>×</button>

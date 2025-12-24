@@ -82,7 +82,7 @@ function SliderRow({
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
         disabled={disabled}
-        className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+        className={`w-full h-2 bg-gray-700 ${quick.input} appearance-none cursor-pointer slider`}
       />
     </div>
   );
@@ -122,7 +122,7 @@ interface CursorSettingsPanelProps {
 
 export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettingsPanelProps) {
   const iconSizes = useIconSizes();
-  const { getStatusBorder } = useBorderTokens();
+  const { getStatusBorder, quick } = useBorderTokens();
   const [settings, setSettings] = useState<CursorSettings>(getCursorSettings());
 
   // Get actual ruler settings from the system
@@ -343,7 +343,7 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
   const panelContent = (
     <div
       ref={panelRef}
-      className={`cursor-settings-panel fixed z-[2147483647] bg-gray-900 text-white rounded-lg shadow-2xl ${getStatusBorder('default')} select-none pointer-events-auto`}
+      className={`cursor-settings-panel fixed z-[2147483647] bg-gray-900 text-white ${quick.card} shadow-2xl ${getStatusBorder('default')} select-none pointer-events-auto`}
       style={{
         left: position.x,
         top: position.y,
@@ -453,7 +453,7 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
             </div>
             {settings.performance.precision_mode && (
               <div className={`mb-3 ml-6 p-2 bg-blue-900/30 ${getStatusBorder('info')} rounded text-xs text-blue-200 flex items-center gap-2`}>
-                <div className={`${iconSizes.xs} bg-blue-400 rounded-full animate-pulse`}></div>
+                <div className={`${iconSizes.xs} bg-blue-400 ${quick.button} animate-pulse`}></div>
                 <span>PRECISION MODE ΕΝΕΡΓΟ - 4 δεκαδικά ψηφία</span>
               </div>
             )}

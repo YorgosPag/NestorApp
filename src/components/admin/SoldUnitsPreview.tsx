@@ -8,6 +8,7 @@ import { Eye, EyeOff, RefreshCw, Home } from 'lucide-react';
 import { ContactsService } from '@/services/contacts.service';
 import { UNIT_SALE_STATUS_LABELS, UNIT_SALE_STATUS } from '@/core/status/StatusConstants';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface Unit {
   id: string;
@@ -32,6 +33,7 @@ interface ContactLookup {
 
 export function SoldUnitsPreview() {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const [units, setUnits] = useState<Unit[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -234,7 +236,7 @@ export function SoldUnitsPreview() {
           {loading ? (
             <div className="text-center py-8">Φόρτωση units...</div>
           ) : (
-            <div className="rounded-md border max-h-96 overflow-auto">
+            <div className={`${quick.table} border max-h-96 overflow-auto`}>
               <Table>
                 <TableHeader>
                   <TableRow>

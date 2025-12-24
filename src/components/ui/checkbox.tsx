@@ -6,18 +6,20 @@ import { Check } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { useIconSizes } from "@/hooks/useIconSizes"
+import { useBorderTokens } from "@/hooks/useBorderTokens"
 
 const Checkbox = React.forwardRef<
   React.ElementRef<typeof CheckboxPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof CheckboxPrimitive.Root>
 >(({ className, ...props }, ref) => {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
 
   return (
   <CheckboxPrimitive.Root
     ref={ref}
     className={cn(
-      `peer ${iconSizes.sm} shrink-0 rounded-sm border border-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground`,
+      `peer ${iconSizes.sm} shrink-0 ${quick.rounded} border-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground`,
       className
     )}
     {...props}

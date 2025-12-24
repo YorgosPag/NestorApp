@@ -7,6 +7,7 @@ import type { ViewMode as CoreViewMode } from '@/core/headers';
 import type { ViewMode } from '@/hooks/useContactsState';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 
 interface ContactsHeaderProps {
@@ -37,6 +38,7 @@ export function ContactsHeader({
   contactCount,
 }: ContactsHeaderProps) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
 
   return (
     <PageHeader
@@ -67,7 +69,7 @@ export function ContactsHeader({
           React.createElement('button', {
             key: 'mobile-filter',
             onClick: () => setShowFilters(!showFilters),
-            className: `md:hidden p-2 rounded-md border ${TRANSITION_PRESETS.STANDARD_COLORS} ${
+            className: `md:hidden p-2 ${quick.input} border ${TRANSITION_PRESETS.STANDARD_COLORS} ${
               showFilters
                 ? 'bg-primary text-primary-foreground border-primary'
                 : `bg-background border-border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`

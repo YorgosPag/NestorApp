@@ -101,7 +101,7 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
   // Don't render panels until translations are ready
   if (isLoading) {
     return (
-      <div className={`fixed right-4 top-4 bg-gray-900/90 backdrop-blur-sm rounded-lg ${getStatusBorder('default')} shadow-xl w-80`}>
+      <div className={`fixed right-4 top-4 bg-gray-900/90 backdrop-blur-sm ${quick.card} ${getStatusBorder('default')} shadow-xl w-80`}>
         <div className="p-4 text-center text-gray-400">
           Loading translations...
         </div>
@@ -120,8 +120,8 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
   }
 
   return (
-    <div style={{ width: '384px', height: '100%', overflow: 'hidden', backgroundColor: '#111827', borderRadius: '0.5rem', position: 'relative' }}>
-      <div className={`bg-gray-800 rounded-t-lg ${getStatusBorder('default')} border-b`}>
+    <div className={`w-96 h-full overflow-hidden bg-gray-800 ${quick.card} relative`}>
+      <div className={`bg-gray-800 ${quick.card} ${getStatusBorder('default')}`}>
         <PanelTabs
           activePanel={activePanel}
           onTabClick={panelNavigation.handleTabClick}
@@ -130,8 +130,8 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
         />
       </div>
 
-      <div style={{ width: '384px', maxHeight: 'calc(100vh - 240px)', overflow: 'hidden auto', backgroundColor: '#111827', color: '#f3f4f6', padding: '1rem 0.5rem' }}>
-        <div style={{ width: '368px', overflow: 'hidden' }}>
+      <div className="w-96 overflow-hidden overflow-y-auto bg-gray-800 text-gray-100 py-4 px-2" style={{ maxHeight: 'calc(100vh - 240px)' }}>
+        <div className="w-[368px] overflow-hidden">
           {renderPanelContent()}
         </div>
       </div>

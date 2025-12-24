@@ -59,6 +59,7 @@ export function SkeletonAvatar({
   ...props
 }: React.HTMLAttributes<HTMLDivElement> & { size?: "sm" | "md" | "lg" | "xl" }) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const sizeClasses = {
     sm: iconSizes.xl, // h-8 w-8
     md: iconSizes.xl2, // h-12 w-12
@@ -153,7 +154,7 @@ export function SkeletonTable({
       {...props}
     >
       {showHeader && (
-        <div className="border-b bg-muted/50 p-4">
+        <div className={`${quick.borderB} bg-muted/50 p-4`}>
           <div
             className="grid gap-4"
             style={getSkeletonTableGridStyles(columns)}
@@ -314,7 +315,7 @@ export function SkeletonNavigation({
       
       {Array.from({ length: items }).map((_, i) => (
         <div key={i} className="flex items-center space-x-3 p-2">
-          <Skeleton className={`${iconSizes.md} rounded`} />
+          <Skeleton className={`${iconSizes.md} ${quick.rounded}`} />
           <Skeleton className={`${iconSizes.sm} flex-1`} />
         </div>
       ))}
@@ -376,19 +377,19 @@ export function SkeletonModal({
         {...props}
       >
         {showHeader && (
-          <div className="p-6 border-b">
+          <div className={`p-6 ${quick.borderB}`}>
             <Skeleton className={`${iconSizes.lg} w-48`} />
           </div>
         )}
         
         <div className="p-6 space-y-4">
           <SkeletonText lines={2} />
-          <Skeleton className="h-32 w-full rounded" />
+          <Skeleton className={`h-32 w-full ${quick.rounded}`} />
           <SkeletonText lines={1} />
         </div>
         
         {showFooter && (
-          <div className="p-6 border-t flex justify-end space-x-3">
+          <div className={`p-6 ${quick.borderT} flex justify-end space-x-3`}>
             <Skeleton className={`${iconSizes.xl2} w-20`} />
             <Skeleton className={`${iconSizes.xl2} w-20`} />
           </div>

@@ -98,11 +98,10 @@ export function StorageStatus({ showDetails = false, className }: StorageStatusP
             {/* Progress bar */}
             <div className="mt-2">
               <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
+                <div
                   className={`h-2 rounded-full transition-all duration-300 ${
                     isCritical ? 'bg-red-500' : isWarning ? 'bg-amber-500' : 'bg-blue-500'
-                  }`}
-                  style={{ width: layoutUtilities.percentage(Math.min(usagePercentage, 100)) }}
+                  } w-[${Math.min(usagePercentage, 100)}%]`}
                 />
               </div>
               <div className="text-xs text-gray-500 mt-1">

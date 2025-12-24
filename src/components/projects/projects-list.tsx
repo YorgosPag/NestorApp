@@ -42,7 +42,7 @@ export function ProjectsList({
 
 
   return (
-    <div className="min-w-[300px] max-w-[420px] w-full bg-card ${quick.card} flex flex-col shrink-0 shadow-sm h-fit overflow-hidden">
+    <div className={`min-w-[300px] max-w-[420px] w-full bg-card ${quick.card} flex flex-col shrink-0 shadow-sm h-fit overflow-hidden`}>
       <GenericListHeader
         icon={Briefcase}
         entityName="Έργα"

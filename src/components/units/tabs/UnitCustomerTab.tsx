@@ -32,6 +32,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 import { UnifiedCustomerCard } from '@/components/shared/customer-info';
 import { useOptimizedCustomerInfo } from './hooks/useOptimizedCustomerInfo';
@@ -61,6 +62,7 @@ interface CustomerProfileSectionProps {
 
 function CustomerProfileSection({ customerId, unitPrice }: CustomerProfileSectionProps) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const {
     customerInfo,
     loading,
@@ -78,7 +80,7 @@ function CustomerProfileSection({ customerId, unitPrice }: CustomerProfileSectio
             Πληροφορίες Πελάτη
             <div className="ml-auto">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <div className={`${iconSizes.sm} border-2 border-blue-600 border-t-transparent rounded-full animate-spin`} />
+                <div className={`${iconSizes.sm} border-2 border-blue-600 border-t-transparent ${quick.button} animate-spin`} />
                 <span>Φόρτωση...</span>
               </div>
             </div>
@@ -173,7 +175,7 @@ function CustomerProfileSection({ customerId, unitPrice }: CustomerProfileSectio
 
           {/* ENTERPRISE: Clickable Customer Profile Header */}
           <div
-            className="flex items-start gap-4 p-3 rounded-lg border border-transparent hover:border-primary/20 hover:bg-primary/5 cursor-pointer transition-all duration-200 group"
+            className={`flex items-start gap-4 p-3 ${quick.card} border border-transparent hover:border-primary/20 hover:bg-primary/5 cursor-pointer transition-all duration-200 group`}
             onClick={() => {
               // ENTERPRISE: Deep-link navigation με URL parameters
               const contactsUrl = `/contacts?filter=customer&contactId=${customerId}&source=unit`;
@@ -216,7 +218,7 @@ function CustomerProfileSection({ customerId, unitPrice }: CustomerProfileSectio
           </div>
 
           {/* ENTERPRISE: Navigation Hint */}
-          <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+          <div className={`bg-blue-50 dark:bg-blue-950/20 ${quick.info} p-3`}>
             <p className="text-sm text-blue-700 dark:text-blue-300 flex items-center gap-2">
               <ExternalLink className={iconSizes.sm} />
               <strong>Tip:</strong> Κάνε κλικ στα στοιχεία του πελάτη για να τον δεις στη λίστα επαφών
@@ -229,7 +231,7 @@ function CustomerProfileSection({ customerId, unitPrice }: CustomerProfileSectio
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-muted-foreground">Customer ID</p>
-              <p className="font-mono text-xs bg-muted px-2 py-1 rounded">
+              <p className={`font-mono text-xs bg-muted px-2 py-1 ${quick.input}`}>
                 {customerId}
               </p>
             </div>
@@ -299,6 +301,7 @@ export function UnitCustomerTab({
   globalProps
 }: UnitCustomerTabProps) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
 
   // ========================================================================
   // ENTERPRISE VALIDATION: Unit Customer Checks

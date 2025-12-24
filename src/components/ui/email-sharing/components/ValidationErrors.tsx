@@ -127,7 +127,7 @@ export const CompactValidationErrors: React.FC<ValidationErrorsProps & {
   }
 
   return (
-    <aside className={`p-2 bg-red-50 dark:bg-red-900/20 ${quick.rounded} ${quick.input} border-red-200 dark:border-red-800`} role="alert" aria-label="Συμπαγής Επικύρωση">
+    <aside className={`p-2 bg-red-50 dark:bg-red-900/20 ${quick.card} ${quick.input} border-red-200 dark:border-red-800`} role="alert" aria-label="Συμπαγής Επικύρωση">
       <p className="flex items-center gap-2 text-red-700 dark:text-red-300 text-xs">
         <AlertCircle className={`${iconSizes.xs} flex-shrink-0`} />
         <span>{errorToShow}</span>

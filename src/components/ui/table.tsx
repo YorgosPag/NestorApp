@@ -33,26 +33,30 @@ TableHeader.displayName = "TableHeader"
 const TableBody = React.forwardRef<
   HTMLTableSectionElement,
   React.HTMLAttributes<HTMLTableSectionElement>
->(({ className, ...props }, ref) => (
-  <tbody
-    ref={ref}
-    className={cn("[&_tr:last-child]:border-0", className)}
-    {...props}
-  />
-))
+>(({ className, ...props }, ref) => {
+  const { style } = useBorderTokens();
+
+  return (
+    <tbody
+      ref={ref}
+      className={cn(`[&_tr:last-child]:${style.none}`, className)}
+      {...props}
+    />
+  );
+})
 TableBody.displayName = "TableBody"
 
 const TableFooter = React.forwardRef<
   HTMLTableSectionElement,
   React.HTMLAttributes<HTMLTableSectionElement>
 >(({ className, ...props }, ref) => {
-  const { quick } = useBorderTokens();
+  const { quick, style } = useBorderTokens();
 
   return (
     <tfoot
       ref={ref}
       className={cn(
-        `${quick.borderT} bg-muted/50 font-medium [&>tr]:last:border-b-0`,
+        `${quick.borderT} bg-muted/50 font-medium [&>tr]:last:${style.none}`,
         className
       )}
       {...props}

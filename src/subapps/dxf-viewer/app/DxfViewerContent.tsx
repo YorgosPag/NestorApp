@@ -985,7 +985,7 @@ Check console for detailed metrics`;
       </React.Suspense>
 
       {/* 🚀 LCP OPTIMIZATION: Lazy-loaded Tests Modal for reduced initial bundle */}
-      <React.Suspense fallback={<div style={{ display: 'none' }} />}>
+      <React.Suspense fallback={<div className="hidden" />}>
         <TestsModal
           isOpen={testsModalOpen}
           onClose={() => setTestsModalOpen(false)}

@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { BarChart3, Link, Paperclip, FileText, X, CheckCircle, Circle, Chrome, Check } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { layoutUtilities, canvasUtilities } from '@/styles/design-tokens';
 
@@ -38,6 +39,7 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
   fallbackMessage = 'PDF Viewer'
 }) => {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [renderMethod, setRenderMethod] = useState<'data' | 'blob' | 'canvas' | 'link'>('data');
   const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'idle'>('idle');
@@ -149,7 +151,7 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
       <MethodSelector />
       
       {/* Debug info */}
-      <div className="bg-blue-100 border border-blue-300 rounded p-2 mb-4 text-xs">
+      <div className={`bg-blue-100 border border-blue-300 ${quick.input} p-2 mb-4 text-xs`}>
         <div><strong>Status:</strong> {status}</div>
         <div><strong>Method:</strong> {renderMethod}</div>
         <div><strong>Debug:</strong> {debugInfo}</div>

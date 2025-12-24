@@ -108,15 +108,13 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
             type="color"
             value={rulerSettings.horizontal.textColor}
             onChange={(e) => handleRulerTextColorChange(e.target.value)}
-            className={`${iconSizes.xl} rounded border-0 cursor-pointer`}
-            style={{ width: '2rem', height: '1.5rem' }}
+            className={`${iconSizes.xl} rounded border-0 cursor-pointer w-8 h-6`}
           />
           <input
             type="text"
             value={rulerSettings.horizontal.textColor}
             onChange={(e) => handleRulerTextColorChange(e.target.value)}
-            className="px-2 py-1 text-xs bg-gray-600 text-white rounded border border-gray-500"
-            style={{ width: '5rem' }}
+            className="px-2 py-1 text-xs bg-gray-600 text-white rounded border border-gray-500 w-20"
             placeholder="#ffffff"
           />
         </div>
@@ -138,7 +136,7 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
             onChange={(e) => handleRulerFontSizeChange(parseInt(e.target.value))}
             className="flex-1"
           />
-          <div className="text-xs bg-gray-600 text-white rounded px-2 py-1 text-center" style={{ width: '3rem' }}>
+          <div className="text-xs bg-gray-600 text-white rounded px-2 py-1 text-center w-12">
             {rulerSettings.horizontal.fontSize}px
           </div>
         </div>

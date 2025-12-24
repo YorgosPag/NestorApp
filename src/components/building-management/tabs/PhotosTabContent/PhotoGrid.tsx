@@ -11,6 +11,7 @@ import {
 } from '@/components/generic/config/photo-config';
 import { TRANSITION_PRESETS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface PhotoGridProps {
   photos: Photo[];
@@ -18,6 +19,7 @@ interface PhotoGridProps {
 
 export function PhotoGrid({ photos }: PhotoGridProps) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const placeholderCount = Math.max(0, 4 - photos.length);
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -25,7 +27,7 @@ export function PhotoGrid({ photos }: PhotoGridProps) {
         <PhotoItem key={photo.id} photo={photo} />
       ))}
       {Array.from({ length: placeholderCount }).map((_, index) => (
-         <div key={`placeholder-${index}`} className={`aspect-square ${PHOTO_COLORS.PHOTO_BACKGROUND} ${PHOTO_BORDERS.EMPTY_STATE} rounded-lg flex items-center justify-center text-center cursor-pointer ${TRANSITION_PRESETS.STANDARD_COLORS} ${PHOTO_BORDERS.EMPTY_HOVER} group`}>
+         <div key={`placeholder-${index}`} className={`aspect-square ${PHOTO_COLORS.PHOTO_BACKGROUND} ${PHOTO_BORDERS.EMPTY_STATE} ${quick.card} flex items-center justify-center text-center cursor-pointer ${TRANSITION_PRESETS.STANDARD_COLORS} ${PHOTO_BORDERS.EMPTY_HOVER} group`}>
             <div className="text-center">
               <ImageIcon className={`${iconSizes.xl} ${PHOTO_TEXT_COLORS.MUTED} mx-auto mb-2 ${HOVER_TEXT_EFFECTS.TO_PRIMARY} ${TRANSITION_PRESETS.STANDARD_COLORS}`} />
               <p className={`text-sm ${PHOTO_TEXT_COLORS.FOREGROUND_MUTED}`}>Προσθήκη Φωτογραφίας</p>

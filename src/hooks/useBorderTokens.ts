@@ -129,8 +129,12 @@ export function useBorderTokens() {
      * Get border class for status/semantic states
      * @param status - The semantic status (success, warning, error, info)
      */
-    getStatusBorder: (status: 'success' | 'warning' | 'error' | 'info'): string => {
-      return borderVariants.status[status].className;
+    getStatusBorder: (status: 'default' | 'success' | 'warning' | 'error' | 'info'): string => {
+      // Handle default case
+      if (status === 'default') {
+        return 'border border-gray-600'; // Default border styling
+      }
+      return borderVariants.status[status]?.className || 'border border-gray-600';
     },
 
     /**

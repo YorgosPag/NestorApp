@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { formatCurrency } from '@/lib/intl-utils';
 import { Lightbulb } from 'lucide-react';
 import { layoutUtilities } from '@/styles/design-tokens';
@@ -13,6 +14,7 @@ import { analyticsOverviewStyles } from './AnalyticsOverview.styles';
 
 export default function AnalyticsOverview() {
     const iconSizes = useIconSizes();
+    const { quick } = useBorderTokens();
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -41,7 +43,7 @@ export default function AnalyticsOverview() {
                         ))}
                     </div>
 
-                    <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
+                    <div className={`mt-6 p-4 bg-blue-50 dark:bg-blue-950/30 ${quick.card}`}>
                         <div className="text-sm font-medium text-blue-900 dark:text-blue-200 mb-2 flex items-center gap-2">
                             <Lightbulb className={iconSizes.sm} />
                             Ανάλυση

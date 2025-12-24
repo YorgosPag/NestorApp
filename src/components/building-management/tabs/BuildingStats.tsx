@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Home, CheckCircle, Ruler } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import type { BuildingStats as StatsType } from '@/types/building';
 import { getBuildingStats } from '@/services/buildings.service';
 import { formatNumber } from '@/lib/intl-utils';
@@ -16,10 +17,11 @@ interface BuildingStatsProps {
 
 const StatCard = ({ icon: Icon, value, label, loading, colorClass }: { icon: React.ElementType, value: string | number, label: string, loading: boolean, colorClass: string }) => {
     const iconSizes = useIconSizes();
+    const { quick } = useBorderTokens();
     return (
     <Card className={colorClass}>
         <CardContent className="p-4 flex items-center gap-4">
-            <div className={`p-3 rounded-lg ${colorClass.replace('bg-', 'bg-opacity-20 ')}`}>
+            <div className={`p-3 ${quick.card} ${colorClass.replace('bg-', 'bg-opacity-20 ')}`}>
                <Icon className={iconSizes.lg} />
             </div>
             <div>

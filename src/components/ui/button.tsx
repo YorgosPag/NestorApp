@@ -4,10 +4,11 @@ import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
 import { INTERACTIVE_PATTERNS } from "@/components/ui/effects"
-import { borderVariants } from "@/styles/design-tokens"
+import { useBorderTokens } from '@/hooks/useBorderTokens'
 
-const buttonVariants = cva(
-  `inline-flex items-center justify-center gap-2 whitespace-nowrap ${borderVariants.input.className} text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50`,
+// 🏢 ENTERPRISE: Dynamic button variants using centralized border tokens
+const createButtonVariants = (borderTokens: ReturnType<typeof useBorderTokens>) => cva(
+  `inline-flex items-center justify-center gap-2 whitespace-nowrap ${borderTokens.quick.input} text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50`,
   {
     variants: {
       variant: {
@@ -15,7 +16,7 @@ const buttonVariants = cva(
         destructive:
           `bg-destructive text-destructive-foreground ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`,
         outline:
-          `${borderVariants.input.className} bg-background ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`,
+          `${borderTokens.quick.input} bg-background ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`,
         secondary:
           `bg-secondary text-secondary-foreground ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`,
         ghost: `${INTERACTIVE_PATTERNS.ACCENT_HOVER}`,
@@ -23,8 +24,8 @@ const buttonVariants = cva(
       },
       size: {
         default: "h-10 px-4 py-2",
-        sm: `h-9 ${borderVariants.input.className} px-3`,
-        lg: `h-11 ${borderVariants.input.className} px-8`,
+        sm: `h-9 ${borderTokens.quick.input} px-3`,
+        lg: `h-11 ${borderTokens.quick.input} px-8`,
         icon: "h-10 w-10",
       },
     },
@@ -35,18 +36,28 @@ const buttonVariants = cva(
   }
 )
 
+// 🏢 ENTERPRISE: Button variant type definition
+export type ButtonVariantProps = {
+  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
+  size?: 'default' | 'sm' | 'lg' | 'icon';
+}
+
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
+    ButtonVariantProps {
   asChild?: boolean
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
+    // 🏢 ENTERPRISE: Use centralized border tokens
+    const borderTokens = useBorderTokens();
+    const buttonVariants = createButtonVariants(borderTokens);
+
     const Comp = asChild ? Slot : "button"
     return (
       <Comp
-        className={cn(buttonVariants({ variant, size, className }))}
+        className={cn(buttonVariants({ variant, size }), className)}
         ref={ref}
         {...props}
       />
@@ -55,4 +66,4 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 )
 Button.displayName = "Button"
 
-export { Button, buttonVariants }
+export { Button, createButtonVariants, type ButtonVariantProps }

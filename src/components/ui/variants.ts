@@ -2,10 +2,11 @@
 import { cva, type VariantProps } from 'class-variance-authority';
 import { designTokens } from '@/styles/design-tokens';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { borderVariants } from '@/styles/design-tokens';
 
 // Button variants (enhanced από shadcn/ui)
 export const buttonVariants = cva(
-  'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
+  `inline-flex items-center justify-center whitespace-nowrap ${borderVariants.table.className} text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50`,
   {
     variants: {
       variant: {
@@ -25,9 +26,9 @@ export const buttonVariants = cva(
       size: {
         default: 'h-10 px-4 py-2',
         xs: 'h-6 px-2 text-xs',
-        sm: 'h-9 rounded-md px-3',
-        lg: 'h-11 rounded-md px-8',
-        xl: 'h-12 rounded-md px-10 text-base',
+        sm: `h-9 ${borderVariants.table.className} px-3`,
+        lg: `h-11 ${borderVariants.table.className} px-8`,
+        xl: `h-12 ${borderVariants.table.className} px-10 text-base`,
         icon: 'h-10 w-10',
       },
     },
@@ -40,7 +41,7 @@ export const buttonVariants = cva(
 
 // Card variants
 export const cardVariants = cva(
-  'rounded-lg border text-card-foreground shadow-sm transition-all duration-200',
+  `${borderVariants.card.className} border text-card-foreground shadow-sm transition-all duration-200`,
   {
     variants: {
       variant: {
@@ -104,7 +105,7 @@ export const badgeVariants = cva(
 
 // Input/Form field variants
 export const inputVariants = cva(
-  'flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+  `flex w-full ${borderVariants.input.className} bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50`,
   {
     variants: {
       size: {
@@ -203,7 +204,7 @@ export const containerVariants = cva('mx-auto w-full', {
 
 // Toolbar variants
 export const toolbarVariants = cva(
-  'flex items-center bg-background border-b',
+  `flex items-center bg-background ${borderVariants.borderB.className}`,
   {
     variants: {
       variant: {

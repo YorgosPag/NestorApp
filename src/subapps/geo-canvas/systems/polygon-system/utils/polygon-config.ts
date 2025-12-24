@@ -12,6 +12,9 @@ import type {
   DEFAULT_NOTIFICATION_CONFIG
 } from '../types/polygon-system.types';
 
+// 🏢 ENTERPRISE INTEGRATION: Import existing centralized notification service
+import { enterpriseNotificationService } from '@/services/notification/EnterpriseNotificationService';
+
 // ============================================================================
 // ROLE-BASED CONFIGURATIONS
 // ============================================================================

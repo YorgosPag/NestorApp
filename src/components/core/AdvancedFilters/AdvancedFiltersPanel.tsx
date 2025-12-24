@@ -11,6 +11,7 @@ import { FilterField } from './FilterField';
 import { useGenericFilters } from './useGenericFilters';
 import type { FilterPanelConfig, GenericFilterState } from './types';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface AdvancedFiltersPanelProps<T extends GenericFilterState> {
   config: FilterPanelConfig;
@@ -26,6 +27,7 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
   defaultOpen = false
 }: AdvancedFiltersPanelProps<T>) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isPanelOpen, setIsPanelOpen] = useState(defaultOpen);
 
@@ -68,7 +70,7 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
 
   return (
     <div className="px-1 pt-4 sm:px-4 sm:pt-4 shrink-0 w-full overflow-hidden">
-      <Collapsible open={isPanelOpen} onOpenChange={setIsPanelOpen} className="border bg-card rounded-lg">
+      <Collapsible open={isPanelOpen} onOpenChange={setIsPanelOpen} className={`${quick.card} bg-card`}>
         <CollapsibleTrigger asChild>
           <Button variant="ghost" className="w-full justify-start p-4 text-sm font-semibold">
             <Filter className={`${iconSizes.sm} mr-2`} />
@@ -102,7 +104,7 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
                       {showAdvanced ? 'Απόκρυψη προηγμένων φίλτρων' : 'Εμφάνιση προηγμένων φίλτρων'}
                     </Button>
                   </CollapsibleTrigger>
-                  <CollapsibleContent className="mt-4 p-4 border rounded-lg bg-background animate-in fade-in-0 zoom-in-95">
+                  <CollapsibleContent className={`mt-4 p-4 ${quick.card} bg-background animate-in fade-in-0 zoom-in-95`}>
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-1 sm:gap-4 w-full min-w-0 overflow-hidden">
                       {config.advancedFilters.options.map(option => (
                         <div key={option.id} className="flex items-center space-x-2">

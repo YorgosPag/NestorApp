@@ -215,7 +215,8 @@
       "Bash(start chrome --new-window --incognito http://localhost:3005/spaces/storage)",
       "Read(//tmp/**)",
       "Bash(SKIP_ENV_VALIDATION=true npm run build)",
-      "Bash(git gc:*)"
+      "Bash(git gc:*)",
+      "Bash(robocopy:*)"
     ],
     "deny": [],
     "ask": []

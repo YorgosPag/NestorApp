@@ -303,12 +303,12 @@ export function ContactListItem({
 
                                     {/* Section 4: Additional Info */}
                                     {isIndividualContact(contact) && extendedContact.profession && (
-                                        <div className="shrink-0 text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full whitespace-nowrap">
+                                        <div className={`shrink-0 text-xs text-muted-foreground bg-muted px-2 py-1 ${quick.card} whitespace-nowrap`}>
                                             {extendedContact.profession}
                                         </div>
                                     )}
                                     {(isCompanyContact(contact) || isServiceContact(contact)) && extendedContact.vatNumber && (
-                                        <div className="shrink-0 text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full whitespace-nowrap">
+                                        <div className={`shrink-0 text-xs text-muted-foreground bg-muted px-2 py-1 ${quick.card} whitespace-nowrap`}>
                                             ΑΦΜ: {extendedContact.vatNumber}
                                         </div>
                                     )}
@@ -333,7 +333,7 @@ export function ContactListItem({
                             <div className="flex gap-2 mt-2 mb-2">
                                 <ContactBadge status={contact.type} variant="outline" size="sm" />
                                 {isArchived && (
-                                    <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-muted text-muted-foreground rounded-full">
+                                    <span className={`inline-flex items-center px-2 py-1 text-xs font-medium bg-muted text-muted-foreground ${quick.card}`}>
                                         <Archive className={`${iconSizes.xs} mr-1`} />
                                         Αρχειοθετημένο
                                     </span>

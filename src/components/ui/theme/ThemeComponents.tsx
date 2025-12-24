@@ -13,15 +13,15 @@ export function getThemeSystem() {
   return {
     // 🎨 CONTAINER BACKGROUNDS - Independent from component states
     containers: {
-      // Toolbar containers (bottom toolbars, action panels)
+      // Toolbar containers (bottom toolbars, action panels) - Enterprise centralized
       toolbar: `${quick.borderT} bg-card/50 backdrop-blur-sm p-2`,
-      toolbarDark: `${quick.borderT} bg-slate-800/90 backdrop-blur-sm p-2 border-slate-600`,
-      toolbarLight: `${quick.borderT} bg-slate-50/90 backdrop-blur-sm p-2 border-slate-200`,
+      toolbarDark: `${quick.borderT} ${quick.input} bg-slate-800/90 backdrop-blur-sm p-2`,
+      toolbarLight: `${quick.borderT} ${quick.input} bg-slate-50/90 backdrop-blur-sm p-2`,
 
-      // Card containers (dialogs, panels, widgets)
+      // Card containers (dialogs, panels, widgets) - Enterprise centralized
       card: `${quick.card} bg-card p-4`,
-      cardDark: `${quick.card} bg-slate-800 p-4 border-slate-700`,
-      cardLight: `${quick.card} bg-white p-4 border-slate-200`,
+      cardDark: `${quick.card} bg-slate-800 p-4`,
+      cardLight: `${quick.card} bg-white p-4`,
 
     // Contact card backgrounds (list items)
     contactCard: `bg-card ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`,
@@ -58,12 +58,12 @@ export function getThemeSystem() {
     default: "mt-3",
     wrapper: "flex flex-wrap gap-2",
 
-    // Themed content backgrounds
+    // Themed content backgrounds - Enterprise semantic with reduced opacity
     neutral: `bg-slate-50/30 ${quick.rounded} p-3`,
-    info: `bg-blue-50/50 ${quick.rounded} p-3 ${quick.input} border-blue-200`,
-    success: `bg-green-50/50 ${quick.rounded} p-3 ${quick.input} border-green-200`,
-    warning: `bg-orange-50/50 ${quick.rounded} p-3 ${quick.input} border-orange-200`,
-    danger: `bg-red-50/50 ${quick.rounded} p-3 ${quick.input} border-red-200`
+    info: `bg-blue-50/50 ${quick.rounded} p-3 ${quick.input} border-blue-200/60`,
+    success: `bg-green-50/50 ${quick.rounded} p-3 ${quick.input} border-green-200/60`,
+    warning: `bg-orange-50/50 ${quick.rounded} p-3 ${quick.input} border-orange-200/60`,
+    danger: `bg-red-50/50 ${quick.rounded} p-3 ${quick.input} border-red-200/60`
   },
 
   // 🔤 TYPOGRAPHY HIERARCHY - Enterprise text roles (Material Design + IBM Carbon inspired)

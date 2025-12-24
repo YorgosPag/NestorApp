@@ -37,10 +37,10 @@ export const StandaloneTestsTab: React.FC<StandaloneTestsTabProps> = ({
             disabled={testState.runningTests.has('coordinate-reversibility')}
             className={`flex items-start gap-3 p-3.5 ${quick.card} transition-all text-left ${
               testState.runningTests.has('coordinate-reversibility')
-                ? 'bg-yellow-500/10 border-yellow-500/30 cursor-wait'
+                ? 'bg-yellow-500/10 cursor-wait'
                 : testState.completedTests.has('coordinate-reversibility')
-                ? `bg-green-500/10 border-green-500/30 ${HOVER_BACKGROUND_EFFECTS.SUCCESS_HOVER}`
-                : `bg-gray-700/50 border-gray-600/50 ${HOVER_BACKGROUND_EFFECTS.GRAY_BUTTON} ${HOVER_BORDER_EFFECTS.GRAY}`
+                ? `bg-green-500/10 ${HOVER_BACKGROUND_EFFECTS.SUCCESS_HOVER}`
+                : `bg-gray-700/50 ${HOVER_BACKGROUND_EFFECTS.GRAY_BUTTON} ${HOVER_BORDER_EFFECTS.GRAY}`
             }`}
           >
             <div className="flex-shrink-0 mt-0.5">
@@ -64,10 +64,10 @@ export const StandaloneTestsTab: React.FC<StandaloneTestsTabProps> = ({
             disabled={testState.runningTests.has('grid-workflow')}
             className={`flex items-start gap-3 p-3.5 ${quick.card} transition-all text-left ${
               testState.runningTests.has('grid-workflow')
-                ? 'bg-yellow-500/10 border-yellow-500/30 cursor-wait'
+                ? 'bg-yellow-500/10 cursor-wait'
                 : testState.completedTests.has('grid-workflow')
-                ? `bg-green-500/10 border-green-500/30 ${HOVER_BACKGROUND_EFFECTS.SUCCESS_HOVER}`
-                : `bg-gray-700/50 border-gray-600/50 ${HOVER_BACKGROUND_EFFECTS.GRAY_BUTTON} ${HOVER_BORDER_EFFECTS.GRAY}`
+                ? `bg-green-500/10 ${HOVER_BACKGROUND_EFFECTS.SUCCESS_HOVER}`
+                : `bg-gray-700/50 ${HOVER_BACKGROUND_EFFECTS.GRAY_BUTTON} ${HOVER_BORDER_EFFECTS.GRAY}`
             }`}
           >
             <div className="flex-shrink-0 mt-0.5">
@@ -87,7 +87,7 @@ export const StandaloneTestsTab: React.FC<StandaloneTestsTabProps> = ({
         </div>
       </div>
 
-      <div className={`bg-yellow-500/10 border border-yellow-500/30 ${quick.card} p-4`}>
+      <div className={`bg-yellow-500/10 ${quick.info} p-4`}>
         <div className="text-xs text-yellow-300">
           <strong>⚠️ Work in Progress:</strong> Some standalone tests need refactoring to export runnable functions. Check console for status.
         </div>

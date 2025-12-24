@@ -3,6 +3,7 @@
 import React from 'react';
 import { FileText, ExternalLink } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { HOVER_TEXT_EFFECTS } from '@/components/ui/effects/hover-effects';
 
 interface SimplePDFViewerProps {
@@ -17,8 +18,9 @@ export function SimplePDFViewer({
   fallbackMessage = "PDF προεπισκόπηση"
 }: SimplePDFViewerProps) {
   const iconSizes = useIconSizes();
+  const { createBorder, quick } = useBorderTokens();
   return (
-    <div className={`bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 p-6 ${className}`}>
+    <div className={`bg-gray-50 ${quick.card} ${createBorder('medium', 'rgb(209 213 219)', 'dashed')} p-6 ${className}`}>
       <div className="text-center space-y-3">
         <FileText className={`${iconSizes.xl3} text-gray-400 mx-auto`} />
         <div>

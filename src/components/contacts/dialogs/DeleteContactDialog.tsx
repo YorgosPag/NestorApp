@@ -17,6 +17,7 @@ import { getContactDisplayName } from '@/types/contacts';
 import { Loader2, AlertTriangle, Users, Building, Shield } from 'lucide-react';
 import { CONTACT_TYPES, getContactIcon, getContactLabel, getContactColor } from '@/constants/contacts';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface DeleteContactDialogProps {
   open: boolean;
@@ -34,6 +35,7 @@ export function DeleteContactDialog({
   onContactsDeleted
 }: DeleteContactDialogProps) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const [loading, setLoading] = useState(false);
 
   const isMultipleDelete = selectedContactIds.length > 1;
@@ -208,13 +210,13 @@ export function DeleteContactDialog({
         {/* Λεπτομέρειες επαφής/επαφών */}
         <div className="py-4">
           {isMultipleDelete ? (
-            <div className="bg-muted p-3 rounded-lg">
+            <div className={`bg-muted p-3 ${quick.card}`}>
               <p className="text-sm font-medium text-muted-foreground">
                 Επιλεγμένες επαφές για διαγραφή: {selectedContactIds.length}
               </p>
             </div>
           ) : contact ? (
-            <div className="bg-muted p-3 rounded-lg flex items-center gap-3">
+            <div className={`bg-muted p-3 ${quick.card} flex items-center gap-3`}>
               {getContactIconComponent(contact)}
               <div>
                 <p className="font-medium">{getContactDisplayName(contact)}</p>
@@ -224,7 +226,7 @@ export function DeleteContactDialog({
               </div>
             </div>
           ) : (
-            <div className="bg-muted p-3 rounded-lg">
+            <div className={`bg-muted p-3 ${quick.card}`}>
               <p className="text-sm text-muted-foreground">Δεν υπάρχει επιλεγμένη επαφή.</p>
             </div>
           )}

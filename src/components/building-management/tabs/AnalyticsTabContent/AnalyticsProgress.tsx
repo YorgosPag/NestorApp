@@ -51,7 +51,7 @@ export default function AnalyticsProgress({ building }: { building: Building }) 
                         </div>
                     </div>
 
-                    <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/30 dark:to-purple-950/30 rounded-lg">
+                    <div className={`mt-8 p-6 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/30 dark:to-purple-950/30 ${quick.card}`}>
                         <h4 className="font-semibold text-foreground mb-4 flex items-center gap-2">
                             <Target className={`${iconSizes.md} text-blue-600`} />
                             Προβλέψεις & Συστάσεις

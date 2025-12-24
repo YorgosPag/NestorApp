@@ -37,7 +37,7 @@ const ContactBadge: React.FC<ContactBadgeProps> = ({ contactId, position, relati
 
   if (loading) {
     return (
-      <Badge variant="outline" className="text-xs bg-gray-50 border-gray-200 text-gray-500">
+      <Badge variant="outline" className={`text-xs bg-gray-50 ${quick.table} text-gray-500`}>
         Φόρτωση...
       </Badge>
     );
@@ -177,7 +177,7 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
     // If no meaningful stats, show user-friendly message
     if (stats.length === 0) {
       return (
-        <div className="text-center p-6 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+        <div className={`text-center p-6 bg-gray-50 ${quick.card} border-2 border-dashed ${quick.table}`}>
           <Building2 className={`${iconSizes.xl} mx-auto mb-3 text-gray-400`} />
           <h3 className="font-medium text-gray-700 mb-1">Απλό Οργανωτικό Σχήμα</h3>
           <p className="text-sm text-gray-500">
@@ -191,7 +191,7 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
     return (
       <div className={`grid grid-cols-1 ${stats.length > 1 ? 'md:grid-cols-' + Math.min(stats.length, 3) : ''} gap-4 mb-6`}>
         {stats.map(({ value, label, icon: Icon, color }, index) => (
-          <div key={index} className={`text-center p-4 bg-${color}-50 rounded-lg`}>
+          <div key={index} className={`text-center p-4 bg-${color}-50 ${quick.card}`}>
             <Icon className={`${iconSizes.lg} mx-auto mb-2 text-${color}-600`} />
             <p className={`text-2xl font-bold text-${color}-800`}>{value}</p>
             <p className={`text-sm text-${color}-600`}>{label}</p>
@@ -315,7 +315,7 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
 
       {/* Additional Info */}
       {tree.statistics && (
-        <Card className="bg-gray-50 border-gray-200">
+        <Card className={`bg-gray-50 ${quick.table}`}>
           <CardContent className="pt-4">
             <div className="text-xs text-gray-600 space-y-1">
               <p>

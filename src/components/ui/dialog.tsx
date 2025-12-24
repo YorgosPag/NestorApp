@@ -20,11 +20,13 @@ const DialogClose = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Close>
 >(({ className, ...props }, ref) => {
   const iconSizes = useIconSizes();
+  const { radius } = useBorderTokens();
+
   return (
     <DialogPrimitive.Close
       ref={ref}
       className={cn(
-        `absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity ${HOVER_COLOR_EFFECTS.FADE_IN} focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground`,
+        `absolute right-4 top-4 ${radius.sm} opacity-70 ring-offset-background transition-opacity ${HOVER_COLOR_EFFECTS.FADE_IN} focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground`,
         className
       )}
       {...props}

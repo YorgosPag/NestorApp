@@ -18,7 +18,7 @@ interface UnitTestsTabProps {
 
 export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests }) => {
   const iconSizes = useIconSizes();
-  const { getStatusBorder } = useBorderTokens();
+  const { getStatusBorder, quick } = useBorderTokens();
 
   // Enterprise helper για test button states
   const getTestButtonBorder = (testId: string) => {
@@ -43,7 +43,7 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
           <button
             onClick={apiTests.handleRunVitest}
             disabled={testState.runningTests.has('run-vitest')}
-            className={`flex items-start gap-3 p-3.5 rounded-lg transition-all text-left ${
+            className={`flex items-start gap-3 p-3.5 ${quick.card} transition-all text-left ${
               testState.runningTests.has('run-vitest')
                 ? `bg-yellow-500/10 ${getTestButtonBorder('run-vitest')} cursor-wait`
                 : testState.completedTests.has('run-vitest')
@@ -70,7 +70,7 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
           <button
             onClick={apiTests.handleRunJest}
             disabled={testState.runningTests.has('run-jest')}
-            className={`flex items-start gap-3 p-3.5 rounded-lg transition-all text-left ${
+            className={`flex items-start gap-3 p-3.5 ${quick.card} transition-all text-left ${
               testState.runningTests.has('run-jest')
                 ? `bg-yellow-500/10 ${getTestButtonBorder('run-jest')} cursor-wait`
                 : testState.completedTests.has('run-jest')
@@ -127,7 +127,7 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
         </button>
       </div>
 
-      <div className={`bg-blue-500/10 rounded-lg p-4 ${getStatusBorder('info')}`}>
+      <div className={`bg-blue-500/10 ${quick.info} p-4 ${getStatusBorder('info')}`}>
         <div className="text-xs text-blue-300">
           <strong>Note:</strong> Unit & E2E tests run server-side via API endpoints. Check server logs for detailed output.
         </div>

@@ -10,6 +10,7 @@ import {
   Ruler
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { formatNumber } from '@/lib/intl-utils';
 import type { StorageUnit } from '@/types/storage';
 import { formatPrice, formatArea, getPricePerSqm, getFeatureIcon } from './StorageCardUtils';
@@ -21,6 +22,7 @@ interface StorageCardContentProps {
 
 export function StorageCardContent({ unit, getTypeIcon }: StorageCardContentProps) {
     const iconSizes = useIconSizes();
+    const { quick } = useBorderTokens();
     const TypeIcon = getTypeIcon(unit.type);
     return (
         <CardContent className="p-4 space-y-4">
@@ -52,7 +54,7 @@ export function StorageCardContent({ unit, getTypeIcon }: StorageCardContentProp
                 </div>
             </div>
 
-            <div className="pt-3 border-t">
+            <div className={`pt-3 ${quick.borderT}`}>
                 <div className="flex items-center justify-between">
                     <div>
                         <div className="text-xs text-muted-foreground">Τιμή</div>
@@ -66,7 +68,7 @@ export function StorageCardContent({ unit, getTypeIcon }: StorageCardContentProp
             </div>
 
             {unit.linkedProperty && (
-                <div className="pt-3 border-t">
+                <div className={`pt-3 ${quick.borderT}`}>
                     <div className="flex items-center gap-1.5 text-sm">
                         <Link className={`${iconSizes.sm} text-primary`} />
                         <span className="text-muted-foreground">Συνδεδεμένο:</span>
@@ -76,7 +78,7 @@ export function StorageCardContent({ unit, getTypeIcon }: StorageCardContentProp
             )}
 
             {unit.features && unit.features.length > 0 && (
-                <div className="pt-3 border-t">
+                <div className={`pt-3 ${quick.borderT}`}>
                     <div className="flex flex-wrap gap-2">
                         {unit.features.slice(0, 3).map((feature, index) => {
                             const FeatureIcon = getFeatureIcon(feature);

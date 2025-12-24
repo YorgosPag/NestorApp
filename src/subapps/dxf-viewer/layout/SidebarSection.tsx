@@ -16,6 +16,7 @@ import type { SceneModel } from '../types/scene';
 import { FloatingPanelContainer, type FloatingPanelHandle } from '../ui/FloatingPanelContainer';
 import { AutoSaveStatus } from '../ui/components/AutoSaveStatus';
 import { CentralizedAutoSaveStatus } from '../ui/components/CentralizedAutoSaveStatus';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 // ✅ ENTERPRISE: Type-safe props interface
 interface SidebarSectionProps {
@@ -41,11 +42,13 @@ export const SidebarSection = React.memo<SidebarSectionProps>(({
   currentZoom,
   activeTool,
 }) => {
+  const { quick } = useBorderTokens();
+
   return (
-    <div style={{ width: '384px', minWidth: '384px', maxWidth: '384px', height: '100%', flexShrink: 0, position: 'relative', overflow: 'hidden', pointerEvents: 'auto' }}>
-      <div style={{ position: 'absolute', top: 0, left: 0, width: '384px', height: '100%', overflow: 'hidden', backgroundColor: '#111827', borderRadius: '0.5rem', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', border: '1px solid #6B7280' }}>
+    <div className="w-96 min-w-[384px] max-w-[384px] h-full flex-shrink-0 relative overflow-hidden pointer-events-auto">
+      <div className={`absolute inset-0 w-96 h-full overflow-hidden bg-gray-800 ${quick.card} shadow-xl border-gray-500`}>
         {/* FLOATING PANEL CONTENT AREA */}
-        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: '120px', overflow: 'hidden' }}>
+        <div className="absolute inset-x-0 top-0 bottom-[120px] overflow-hidden">
           <FloatingPanelContainer
             ref={floatingRef}
             sceneModel={currentScene}
@@ -57,10 +60,7 @@ export const SidebarSection = React.memo<SidebarSectionProps>(({
         </div>
 
         {/* STATUS BAR AT BOTTOM */}
-        <div
-          className="space-y-2"
-          style={{ position: 'absolute', bottom: 0, left: 0, right: 0, borderBottomLeftRadius: '0.5rem', borderBottomRightRadius: '0.5rem', backgroundColor: '#1F2937', borderTop: '1px solid #6B7280', padding: '1rem' }}
-        >
+        <div className="absolute bottom-0 inset-x-0 space-y-2 rounded-b-lg bg-gray-800 border-t border-gray-500 p-4">
           {/* Scene Auto-Save Status */}
           <AutoSaveStatus />
 

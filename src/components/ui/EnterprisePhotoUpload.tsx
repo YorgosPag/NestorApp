@@ -4,6 +4,7 @@ import React, { useEffect } from 'react';
 import { Camera, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import { useEnterpriseFileUpload } from '@/hooks/useEnterpriseFileUpload';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import type { UseEnterpriseFileUploadConfig, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 import { UI_COLORS } from '@/subapps/dxf-viewer/config/color-config';
 import { PhotoPreview } from './utils/PhotoPreview';
@@ -101,6 +102,7 @@ export function EnterprisePhotoUpload({
   // ========================================================================
 
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
 
   const upload = useEnterpriseFileUpload({
     fileType: 'image',
@@ -221,12 +223,17 @@ export function EnterprisePhotoUpload({
 
   // Compact mode
   if (compact) {
+    // Enterprise compact upload area styling - centralized pattern
+    const compactUploadClasses = currentPreview
+      ? 'border-2 border-dashed border-green-300 bg-green-50'
+      : `${PHOTO_COLORS.PHOTO_BACKGROUND} ${quick.card} flex items-center justify-center text-center cursor-pointer transition-colors ${PHOTO_BORDERS.EMPTY_HOVER} p-6 flex-col`;
+
     return (
       <div className={`relative ${className}`}>
         <div
           className={`
-            relative rounded-lg h-full w-full text-center cursor-pointer ${PHOTO_HOVER_EFFECTS.COLOR_TRANSITION} overflow-hidden
-            ${currentPreview ? 'border-2 border-dashed border-green-300 bg-green-50' : `${PHOTO_COLORS.PHOTO_BACKGROUND} ${PHOTO_BORDERS.EMPTY_STATE} rounded-lg flex items-center justify-center text-center cursor-pointer transition-colors ${PHOTO_BORDERS.EMPTY_HOVER} p-6 flex-col`}
+            relative h-full w-full text-center cursor-pointer ${PHOTO_HOVER_EFFECTS.COLOR_TRANSITION} overflow-hidden
+            ${compactUploadClasses}
             ${disabled && !currentPreview ? 'opacity-50 cursor-not-allowed' : disabled ? 'cursor-default' : ''}
             ${hasError ? 'border-red-300 bg-red-50' : ''}
             ${!currentPreview ? getDynamicBackgroundClass(PHOTO_COLORS.EMPTY_STATE_BACKGROUND) : ''}
@@ -269,6 +276,11 @@ export function EnterprisePhotoUpload({
   }
 
   // Full mode
+  // Enterprise full upload area styling - centralized pattern
+  const fullUploadClasses = currentPreview
+    ? 'border-2 border-dashed border-green-300 bg-green-50'
+    : `${PHOTO_COLORS.PHOTO_BACKGROUND} ${quick.card} flex items-center justify-center text-center cursor-pointer transition-colors ${PHOTO_BORDERS.EMPTY_HOVER}`;
+
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Header αφαιρέθηκε - δεν θέλουμε το "Φωτογραφία" text και Camera icon πάνω από κάθε slot */}
@@ -276,8 +288,8 @@ export function EnterprisePhotoUpload({
       {/* Upload Area */}
       <div
         className={`
-          relative rounded-lg p-6 text-center cursor-pointer ${PHOTO_HOVER_EFFECTS.COLOR_TRANSITION} ${PHOTO_HEIGHTS.STANDARD} flex flex-col items-center justify-center
-          ${currentPreview ? 'border-2 border-dashed border-green-300 bg-green-50' : `${PHOTO_COLORS.PHOTO_BACKGROUND} ${PHOTO_BORDERS.EMPTY_STATE} rounded-lg flex items-center justify-center text-center cursor-pointer transition-colors ${PHOTO_BORDERS.EMPTY_HOVER}`}
+          relative p-6 text-center cursor-pointer ${PHOTO_HOVER_EFFECTS.COLOR_TRANSITION} ${PHOTO_HEIGHTS.STANDARD} flex flex-col items-center justify-center
+          ${fullUploadClasses}
           ${disabled && !currentPreview ? 'opacity-50 cursor-not-allowed' : disabled ? 'cursor-default' : ''}
           ${hasError ? 'border-red-300 bg-red-50' : ''}
           ${isLoading ? 'pointer-events-none' : ''}

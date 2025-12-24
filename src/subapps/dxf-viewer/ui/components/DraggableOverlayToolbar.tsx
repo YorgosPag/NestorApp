@@ -170,23 +170,21 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
       className={performanceMonitorUtilities.getOverlayContainerClasses()}
       style={{
         left: draggable.position?.x || 20,
-        top: draggable.position?.y || 200,
-        ...performanceMonitorUtilities.getOverlayContainerStyles()
+        top: draggable.position?.y || 200
       }}
     >
       <CardHeader
         className={performanceMonitorUtilities.getOverlayHeaderClasses()}
-        style={performanceMonitorUtilities.getOverlayHeaderStyles()}
         onMouseDown={draggable.handleMouseDown}
       >
         {/* 🎯 HEADER ROW: Title, Drag Handle, Close */}
         <div className="flex items-center gap-3 flex-1">
-          <Activity className={iconSizes.sm} style={performanceMonitorUtilities.getOverlayIconStyles('primary')} />
-          <h3 className="text-sm font-semibold" style={performanceMonitorUtilities.getOverlayTitleStyles()}>Drawing Tools</h3>
+          <Activity className={`${iconSizes.sm} text-blue-500`} />
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Drawing Tools</h3>
 
           <div
             className="ml-auto cursor-grab transition-colors text-xs select-none"
-            style={performanceMonitorUtilities.getOverlayIconStyles('secondary')}
+            className="ml-auto cursor-grab transition-colors text-xs select-none text-gray-500 hover:text-gray-700"
             title="Drag to move"
             onMouseDown={draggable.handleMouseDown}
           >
@@ -194,8 +192,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
           </div>
 
           <button
-            className="p-1 rounded transition-colors"
-            style={performanceMonitorUtilities.getOverlayButtonStyles()}
+            className="p-1 rounded transition-colors text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800"
             title="Hide toolbar"
           >
             <X className={iconSizes.xs} />
@@ -205,7 +202,6 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
 
       <CardContent
         className="space-y-4"
-        style={performanceMonitorUtilities.getOverlayContentStyles()}
       >
         {/* 🎯 TOOLBAR CONTROLS - ΣΚΟΥΡΟ BACKGROUND ΟΠΩΣ ΤΑ ΑΛΛΑ PANELS */}
         <div className="flex items-center gap-2 flex-wrap">

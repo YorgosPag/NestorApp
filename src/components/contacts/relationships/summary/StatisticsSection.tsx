@@ -68,7 +68,7 @@ export const StatisticsSection: React.FC<StatisticsSectionProps> = ({
       <UnifiedDashboard
         stats={dashboardStats}
         columns={4}
-        className={`p-4 ${quick.borderB} bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 ${quick.card.replace('border', 'rounded-lg')}`}
+        className={`p-4 ${quick.borderB} bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 ${quick.card}`}
         onCardClick={onCardClick}
       />
     </div>

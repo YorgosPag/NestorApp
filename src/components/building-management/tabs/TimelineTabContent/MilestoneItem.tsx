@@ -43,9 +43,9 @@ export function MilestoneItem({ milestone, getStatusColor, getStatusText, getTyp
                           size="sm"
                           className={cn(
                             "text-xs",
-                            milestone.status === 'completed' ? 'bg-green-50 text-green-700 border-green-300' :
-                            milestone.status === 'in-progress' ? 'bg-blue-50 text-blue-700 border-blue-300' :
-                            'bg-gray-50 text-gray-700 border-gray-300'
+                            milestone.status === 'completed' ? `bg-green-50 text-green-700 ${quick.table}` :
+                            milestone.status === 'in-progress' ? `bg-blue-50 text-blue-700 ${quick.table}` :
+                            `bg-gray-50 text-gray-700 ${quick.table}`
                           )}
                         />
                         <span className="text-sm text-muted-foreground">

@@ -581,3 +581,48 @@ npm run test:visual:report
 **Μέχρι την ολοκλήρωση των security fixes, η εφαρμογή παραμένει σε DEVELOPMENT MODE.**
 
 Όλες οι νέες εργασίες πρέπει να λαμβάνουν υπόψη τα security requirements από το audit report.
+
+---
+
+## 📦 **ENTERPRISE BACKUP SYSTEM**
+
+### 🚀 **AUTOMATIC RELIABLE BACKUP - ΕΝΤΟΛΗ ΓΙΑ ΟΠΟΙΟΝΔΗΠΟΤΕ CLAUDE AGENT:**
+
+**Όταν ο Γιώργος ή οποιοσδήποτε πράκτορας ζητήσει "κάνε backup zip", χρησιμοποίησε ΠΑΝΤΑ την παρακάτω εντολή:**
+
+```bash
+powershell.exe -ExecutionPolicy Bypass -File "C:\Nestor_Pagonis\enterprise-backup.ps1"
+```
+
+### ✅ **ΤΙ ΚΑΝΕΙ ΤΟ ENTERPRISE-BACKUP.PS1:**
+
+1. **📋 Διαβάζει BACKUP_SUMMARY.json** - Παίρνει category και description
+2. **📁 Αντιγράφει ΟΛΟΚΛΗΡΟ το project** - Όλο το δέντρο εκτός από node_modules
+3. **🗜️ Δημιουργεί ZIP** - Με αυτόματο timestamp και smart naming
+4. **📍 Αποθηκεύει στο:** `C:\Users\user\Downloads\BuckUps\Zip_BuckUps-2\`
+5. **✅ Επαληθεύει** - Έλεγχος ότι περιλαμβάνει src/, packages/, public/
+6. **📄 Ενσωματώνει BACKUP_SUMMARY.json** - Μέσα στο ZIP
+
+### 📁 **ΤΙ ΠΕΡΙΛΑΜΒΑΝΕΙ (FULL PROJECT TREE):**
+
+✅ **src/** - Όλος ο source code
+✅ **packages/** - Core packages
+✅ **public/** - Static assets
+✅ **scripts/** - Build scripts
+✅ **Configuration files** - .env, package.json, configs
+✅ **Documentation** - *.md files
+✅ **BACKUP_SUMMARY.json** - Metadata
+
+### 🚫 **ΤΙ ΕΞΑΙΡΕΙ:**
+
+❌ **node_modules/** (όπως ζήτησε ο Γιώργος)
+❌ **.next/**, **.git/**, **dist/**, **build/**
+❌ ***.log files** και temp files
+
+### 🎯 **ΑΠΟΤΕΛΕΣΜΑ:**
+
+- **Reliable 11-15MB ZIP** με όλο το project
+- **Smart filename**: `YYYYMMDD_HHMM - [CATEGORY] - Complete Project Backup.zip`
+- **Ready για οποιονδήποτε Claude agent!**
+
+**ΜΗΝ χρησιμοποιείς ποτέ το παλιό auto-backup.ps1 - χρησιμοποίησε ΜΟΝΟ το enterprise-backup.ps1!**
