@@ -17,6 +17,7 @@ import { getContactDisplayName } from '@/types/contacts';
 import { Building, Loader2, Factory, CheckCircle2 } from 'lucide-react';
 import { SearchInput } from '@/components/ui/search';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '../../ui/effects';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface SelectCompanyContactModalProps {
   open: boolean;
@@ -192,7 +193,7 @@ export function SelectCompanyContactModal({
                     <div
                       key={contact.id}
                       onClick={() => handleSelectCompany(contact)}
-                      className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+                      className={`flex items-center gap-3 p-3 ${useBorderTokens().quick.card} cursor-pointer ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
                     >
                       <Factory className="h-5 w-5 text-blue-600 flex-shrink-0" />
                       <div className="flex-1 min-w-0">

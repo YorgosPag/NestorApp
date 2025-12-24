@@ -13,6 +13,7 @@ import { SelectItemModal } from '../dialogs/SelectItemModal';
 import { Building, Home, Construction, Users, MapPin, Map, Car, Package, Layers, Factory } from 'lucide-react';
 import { useNavigation } from '../core/NavigationContext';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -45,6 +46,7 @@ export function DesktopMultiColumn({
   navigationCompanyIds
 }: DesktopMultiColumnProps) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const {
     companies,
     projects,
@@ -331,7 +333,7 @@ export function DesktopMultiColumn({
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 gap-4">
 
         {/* Column 1: Companies */}
-        <section className="bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+        <section className={`bg-white dark:bg-card ${quick.card} p-3`}
                  role="region" aria-label="Εταιρείες">
           <header className="flex items-center gap-2 mb-2">
             <Building className={`${iconSizes.md} text-blue-600`} />
@@ -402,7 +404,7 @@ export function DesktopMultiColumn({
 
         {/* Column 2: Projects */}
         {selectedCompany && (
-          <section className="bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+          <section className={`bg-white dark:bg-card ${quick.card} p-3`}
                    role="region" aria-label="Έργα">
             <header className="flex items-center gap-2 mb-2">
               <Home className={`${iconSizes.md} text-green-600`} />
@@ -455,7 +457,7 @@ export function DesktopMultiColumn({
 
         {/* Column 3: Buildings */}
         {selectedProject && (
-          <section className="bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+          <section className={`bg-white dark:bg-card ${quick.card} p-3`}
                    role="region" aria-label="Κτίρια">
             <header className="flex items-center gap-2 mb-2">
               <Building className={`${iconSizes.md} text-purple-600`} />
@@ -507,7 +509,7 @@ export function DesktopMultiColumn({
 
         {/* Column 4: Floors */}
         {selectedBuilding && (
-          <section className="bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+          <section className={`bg-white dark:bg-card ${quick.card} p-3`}
                    role="region" aria-label="Όροφοι">
             <header className="flex items-center gap-2 mb-2">
               <Users className={`${iconSizes.md} text-orange-600`} />
@@ -559,7 +561,7 @@ export function DesktopMultiColumn({
 
         {/* Column 5: Units */}
         {selectedFloor && (
-          <section className="bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+          <section className={`bg-white dark:bg-card ${quick.card} p-3`}
                    role="region" aria-label="Μονάδες">
             <header className="flex items-center gap-2 mb-2">
               <Home className={`${iconSizes.md} text-teal-600`} />
@@ -606,7 +608,7 @@ export function DesktopMultiColumn({
 
         {/* Column 6: Actions & Extras */}
         {selectedFloor && (
-          <section className="bg-white dark:bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+          <section className={`bg-white dark:bg-card ${quick.card} p-3`}
                    role="region" aria-label="Ενέργειες">
             <header className="flex items-center gap-2 mb-4">
               <MapPin className={`${iconSizes.md} text-red-600`} />

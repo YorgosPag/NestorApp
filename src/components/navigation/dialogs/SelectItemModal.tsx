@@ -14,6 +14,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search, Loader2, Home, Building, Layers, MapPin } from 'lucide-react';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '../../ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface Item {
   id: string;
@@ -161,7 +162,7 @@ export function SelectItemModal({
                     <div
                       key={item.id}
                       onClick={() => handleSelectItem(item)}
-                      className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+                      className={`flex items-center gap-3 p-3 ${useBorderTokens().quick.card} cursor-pointer ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
                     >
                       <Icon className={`${iconSizes.md} ${iconColor} flex-shrink-0`} />
                       <div className="flex-1 min-w-0">
