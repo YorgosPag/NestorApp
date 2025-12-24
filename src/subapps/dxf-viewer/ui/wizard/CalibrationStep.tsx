@@ -6,9 +6,11 @@ import { useLevels } from '../../systems/levels';
 import { createDefaultCalibration } from './utils/calibration-utils';
 import { HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 export function CalibrationStep() {
   const iconSizes = useIconSizes();
+  const { quick, getStatusBorder } = useBorderTokens();
   const { setCalibration } = useLevels();
   const [units, setUnits] = useState<'mm' | 'cm' | 'm' | 'in' | 'ft'>('mm');
   const [skipCalibration, setSkipCalibration] = useState(true);
@@ -60,10 +62,10 @@ export function CalibrationStep() {
             <button
               key={unit.value}
               onClick={() => handleUnitsChange(unit.value as typeof units)}
-              className={`p-2 text-sm rounded border transition-colors ${
+              className={`p-2 text-sm transition-colors ${
                 units === unit.value
-                  ? 'border-blue-500 bg-blue-500 bg-opacity-20 text-blue-300'
-                  : `border-gray-600 text-gray-300 ${HOVER_BORDER_EFFECTS.MUTED}`
+                  ? `${getStatusBorder('active')} bg-blue-500 bg-opacity-20 text-blue-300`
+                  : `${quick.button} text-gray-300 ${HOVER_BORDER_EFFECTS.MUTED}`
               }`}
             >
               {unit.label}
@@ -77,7 +79,7 @@ export function CalibrationStep() {
         <h4 className="text-sm font-medium text-gray-300">Βαθμονόμηση</h4>
         
         {/* Skip Calibration Option */}
-        <label className={`flex items-start p-3 border rounded-lg cursor-pointer border-gray-600 ${HOVER_BORDER_EFFECTS.MUTED} transition-colors`}>
+        <label className={`flex items-start p-3 ${quick.card} cursor-pointer ${HOVER_BORDER_EFFECTS.MUTED} transition-colors`}>
           <input
             type="radio"
             name="calibration"
@@ -98,7 +100,7 @@ export function CalibrationStep() {
         </label>
 
         {/* Manual Calibration Option */}
-        <label className={`flex items-start p-3 border rounded-lg cursor-pointer border-gray-600 ${HOVER_BORDER_EFFECTS.MUTED} transition-colors`}>
+        <label className={`flex items-start p-3 ${quick.card} cursor-pointer ${HOVER_BORDER_EFFECTS.MUTED} transition-colors`}>
           <input
             type="radio"
             name="calibration"
@@ -130,7 +132,7 @@ export function CalibrationStep() {
                   value={realDistance}
                   onChange={(e) => setRealDistance(e.target.value)}
                   placeholder="π.χ. 100"
-                  className="mt-1 w-full bg-gray-600 border border-gray-500 rounded px-3 py-2 text-white placeholder-gray-400 focus:border-blue-500 focus:outline-none"
+                  className={`mt-1 w-full bg-gray-600 ${quick.input} px-3 py-2 text-white placeholder-gray-400 focus:outline-none`}
                 />
               </label>
               <p className="text-xs text-gray-400">

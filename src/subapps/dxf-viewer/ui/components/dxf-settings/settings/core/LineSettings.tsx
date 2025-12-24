@@ -82,6 +82,7 @@ import type { LineType, LineCapStyle, LineJoinStyle } from '../../../../../setti
 import type { TemplateCategory } from '../../../../../contexts/LineSettingsContext';
 import { AccordionSection, useAccordion } from '../shared/AccordionSection';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 // Simple SVG icons
 const SettingsIcon = ({ className }: { className?: string }) => (
@@ -117,6 +118,7 @@ const SwatchIcon = ({ className }: { className?: string }) => (
 
 export function LineSettings({ contextType }: { contextType?: 'preview' | 'completion' }) {
   const iconSizes = useIconSizes();
+  const { quick, getStatusBorder } = useBorderTokens();
   // 🔺 ΔΙΟΡΘΩΣΗ: Χρήση unified hooks όπως σε TextSettings και GripSettings
   const generalLineSettings = useLineSettingsFromProvider();
   const notifications = useNotifications();
@@ -371,13 +373,13 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
 
       {/* Enable/Disable Line Display - ΠΆΝΤΑ ΕΜΦΑΝΈΣ για όλα τα contexts */}
       <div className="space-y-2">
-        <div className="flex items-center gap-3 p-3 bg-gray-800 rounded-md border-l-4 border-green-500">
+        <div className={`flex items-center gap-3 p-3 bg-gray-800 rounded-md ${getStatusBorder('success')}`}>
           <input
             type="checkbox"
             id="line-enabled"
             checked={settings.enabled}
             onChange={settingsUpdater.createCheckboxHandler('enabled')}
-            className={`${iconSizes.sm} text-green-600 bg-gray-700 border-gray-600 rounded focus:ring-green-500 focus:ring-2`}
+            className={`${iconSizes.sm} text-green-600 bg-gray-700 border-gray-600 ${quick.input} focus:ring-green-500 focus:ring-2`}
           />
           <label
             htmlFor="line-enabled"
@@ -387,7 +389,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           </label>
         </div>
         {!settings.enabled && (
-          <div className="text-xs text-yellow-400 bg-yellow-900 bg-opacity-20 p-2 rounded border border-yellow-700">
+          <div className={`text-xs text-yellow-400 bg-yellow-900 bg-opacity-20 p-2 rounded ${getStatusBorder('warning')}`}>
             ⚠️ Οι γραμμές είναι απενεργοποιημένες και δεν θα εμφανίζονται στην προσχεδίαση
           </div>
         )}
@@ -458,7 +460,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={LINE_WIDTH_RANGE.step}
               value={settings.lineWidth}
               onChange={settingsUpdater.createNumberInputHandler('lineWidth', { parseType: 'float' })}
-              className="w-16 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm"
+              className={`w-16 px-2 py-1 bg-gray-700 ${quick.input} text-white text-sm`}
             />
           </div>
         </div>
@@ -501,7 +503,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={OPACITY_RANGE.step}
               value={settings.opacity}
               onChange={settingsUpdater.createNumberInputHandler('opacity', { parseType: 'float' })}
-              className="w-16 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm"
+              className={`w-16 px-2 py-1 bg-gray-700 ${quick.input} text-white text-sm`}
             />
           </div>
         </div>
@@ -513,7 +515,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               type="checkbox"
               checked={settings.breakAtCenter || false}
               onChange={settingsUpdater.createCheckboxHandler('breakAtCenter')}
-              className="rounded border-gray-600 text-blue-600 focus:ring-blue-500 focus:ring-2"
+              className={`${quick.input} border-gray-600 text-blue-600 focus:ring-blue-500 focus:ring-2`}
             />
             <span className="text-sm text-gray-200">Σπάσιμο γραμμής για κείμενο</span>
           </label>
@@ -573,7 +575,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={LINE_WIDTH_RANGE.step}
               value={settings.hoverWidth}
               onChange={settingsUpdater.createNumberInputHandler('hoverWidth', { parseType: 'float' })}
-              className="w-16 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm"
+              className={`w-16 px-2 py-1 bg-gray-700 ${quick.input} text-white text-sm`}
             />
           </div>
         </div>
@@ -600,7 +602,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={OPACITY_RANGE.step}
               value={settings.hoverOpacity}
               onChange={settingsUpdater.createNumberInputHandler('hoverOpacity', { parseType: 'float' })}
-              className="w-16 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm"
+              className={`w-16 px-2 py-1 bg-gray-700 ${quick.input} text-white text-sm`}
             />
           </div>
         </div>
@@ -656,7 +658,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={LINE_WIDTH_RANGE.step}
               value={settings.finalWidth}
               onChange={settingsUpdater.createNumberInputHandler('finalWidth', { parseType: 'float' })}
-              className="w-16 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm"
+              className={`w-16 px-2 py-1 bg-gray-700 ${quick.input} text-white text-sm`}
             />
           </div>
         </div>
@@ -683,7 +685,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               step={OPACITY_RANGE.step}
               value={settings.finalOpacity}
               onChange={settingsUpdater.createNumberInputHandler('finalOpacity', { parseType: 'float' })}
-              className="w-16 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm"
+              className={`w-16 px-2 py-1 bg-gray-700 ${quick.input} text-white text-sm`}
             />
           </div>
         </div>
@@ -722,7 +724,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
                   step={DASH_SCALE_RANGE.step}
                   value={settings.dashScale}
                   onChange={settingsUpdater.createNumberInputHandler('dashScale', { parseType: 'float' })}
-                  className="w-16 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm"
+                  className={`w-16 px-2 py-1 bg-gray-700 ${quick.input} text-white text-sm`}
                 />
               </div>
             </div>
@@ -767,7 +769,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
                   step={DASH_OFFSET_RANGE.step}
                   value={settings.dashOffset}
                   onChange={settingsUpdater.createNumberInputHandler('dashOffset', { parseType: 'float' })}
-                  className="w-16 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm"
+                  className={`w-16 px-2 py-1 bg-gray-700 ${quick.input} text-white text-sm`}
                 />
               </div>
             </div>
@@ -788,7 +790,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
       >
         <div className="space-y-4">
           {/* Warning Message */}
-          <div className="bg-red-900 bg-opacity-20 border-l-4 border-red-500 p-4 rounded">
+          <div className={`bg-red-900 bg-opacity-20 ${getStatusBorder('error')} p-4 rounded`}>
             <p className="text-red-200 font-semibold mb-2">
               ⚠️ ΠΡΟΕΙΔΟΠΟΙΗΣΗ: Θα χάσετε ΟΛΑ τα δεδομένα σας!
             </p>
@@ -805,7 +807,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           </div>
 
           {/* Reset Info */}
-          <div className="bg-blue-900 bg-opacity-20 border-l-4 border-blue-500 p-4 rounded">
+          <div className={`bg-blue-900 bg-opacity-20 ${getStatusBorder('info')} p-4 rounded`}>
             <p className="text-blue-200 text-sm">
               <strong>Επαναφορά:</strong> Οι ρυθμίσεις θα επανέλθουν στα πρότυπα ISO 128 & AutoCAD 2024
             </p>
@@ -817,7 +819,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
           </p>
 
           {/* Action Buttons */}
-          <div className="flex gap-3 justify-end pt-4 border-t border-gray-700">
+          <div className={`flex gap-3 justify-end pt-4 ${quick.separator}`}>
             <button
               onClick={handleFactoryResetCancel}
               className={`px-4 py-2 text-sm bg-gray-600 ${HOVER_BACKGROUND_EFFECTS.LIGHTER} text-white rounded transition-colors`}

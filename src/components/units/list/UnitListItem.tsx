@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
 import type { Property } from '@/types/property-viewer';
 import { brandClasses } from '@/styles/design-tokens';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 import { UnitListItemHeader } from './ListItem/UnitListItemHeader';
 import { UnitListItemStats } from './ListItem/UnitListItemStats';
@@ -30,8 +31,9 @@ export function UnitListItem({
     onSelect,
     onToggleFavorite
 }: UnitListItemProps) {
-    const fakeProgress = unit.status === 'sold' ? 100 : 
-                        unit.status === 'reserved' ? 85 : 
+    const { quick } = useBorderTokens();
+    const fakeProgress = unit.status === 'sold' ? 100 :
+                        unit.status === 'reserved' ? 85 :
                         unit.status === 'rented' ? 100 :
                         ((unit.area || 0) * 1.5) % 100;
 
@@ -39,7 +41,7 @@ export function UnitListItem({
         <TooltipProvider>
             <div
                 className={cn(
-                    "relative p-3 rounded-lg border cursor-pointer group",
+                    `relative p-3 ${quick.card} cursor-pointer group`,
                     INTERACTIVE_PATTERNS.CARD_STANDARD,
                     isSelected
                     ? `${brandClasses.primary.border} ${brandClasses.primary.bg} dark:bg-blue-950/20 shadow-sm`

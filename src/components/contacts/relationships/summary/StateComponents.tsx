@@ -41,7 +41,10 @@ interface EmptyStateProps extends StateComponentProps {
  *
  * Displayed when contact hasn't been saved yet
  */
-export const NewContactState: React.FC<StateComponentProps> = ({ className }) => (
+export const NewContactState: React.FC<StateComponentProps> = ({ className }) => {
+  const { quick } = useBorderTokens();
+
+  return (
   <Card className={className}>
     <CardContent className="pt-6">
       <div className="text-center text-gray-500">
@@ -50,7 +53,7 @@ export const NewContactState: React.FC<StateComponentProps> = ({ className }) =>
         <p className="text-sm mb-4">
           Οι σχέσεις θα είναι διαθέσιμες μετά την αποθήκευση της επαφής.
         </p>
-        <div className="bg-blue-50 rounded-lg p-3">
+        <div className={`bg-blue-50 ${quick.card} p-3`}>
           <p className="text-xs text-blue-600">
             💡 <strong>Συμβουλή:</strong> Αποθηκεύστε την επαφή για να προσθέσετε
             επαγγελματικές σχέσεις, εργαζόμενους και μετόχους.
@@ -59,7 +62,8 @@ export const NewContactState: React.FC<StateComponentProps> = ({ className }) =>
       </div>
     </CardContent>
   </Card>
-);
+  );
+};
 
 // ============================================================================
 // LOADING STATE
@@ -72,6 +76,7 @@ export const NewContactState: React.FC<StateComponentProps> = ({ className }) =>
  */
 export const LoadingState: React.FC<StateComponentProps> = ({ className }) => {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
 
   return (
   <Card className={className}>
@@ -83,7 +88,7 @@ export const LoadingState: React.FC<StateComponentProps> = ({ className }) => {
     </CardHeader>
     <CardContent>
       <div className="text-center py-8">
-        <div className="animate-spin h-8 w-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+        <div className={`animate-spin h-8 w-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-4`}></div>
         <p className="text-gray-500">Φόρτωση σχέσεων...</p>
       </div>
     </CardContent>

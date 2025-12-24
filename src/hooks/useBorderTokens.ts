@@ -16,12 +16,7 @@ import {
   borderStyle,
   borderVariants,
   borderUtils,
-  responsiveBorders,
-  type BorderWidth,
-  type BorderColor,
-  type BorderRadius,
-  type BorderStyle,
-  type BorderVariant
+  responsiveBorders
 } from '@/styles/design-tokens';
 
 /**

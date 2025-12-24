@@ -11,6 +11,7 @@ import {
   X
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useProjectHierarchy } from '../contexts/ProjectHierarchyContext';
 import { useDxfPipeline } from '../pipeline/useDxfPipeline';
 import { HierarchicalDestinationSelector } from './HierarchicalDestinationSelector';
@@ -28,6 +29,7 @@ type WizardStep = 'destination' | 'options' | 'processing' | 'complete';
 
 export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }: DestinationWizardProps) {
   const iconSizes = useIconSizes();
+  const { quick, getStatusBorder } = useBorderTokens();
   const [currentStep, setCurrentStep] = useState<WizardStep>('destination');
   const [selectedDestination, setSelectedDestination] = useState<DxfDestination | null>(null);
   const [processingOptions, setProcessingOptions] = useState<Omit<DxfProcessingOptions, 'destination'> & { destination: DxfDestination | null }>({
@@ -144,7 +146,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
       <div className="bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         
         {/* Header */}
-        <div className="flex justify-between items-center p-6 border-b border-gray-600">
+        <div className={`flex justify-between items-center p-6 ${getStatusBorder('default')} border-b`}>
           <div>
             <h2 className="text-xl font-semibold text-white">DXF Import Wizard</h2>
             <p className="text-gray-400 text-sm mt-1">
@@ -160,7 +162,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
         </div>
 
         {/* Progress */}
-        <div className="p-6 border-b border-gray-600">
+        <div className={`p-6 ${getStatusBorder('default')} border-b`}>
           <div className="flex items-center space-x-4">
             {['destination', 'options', 'processing', 'complete'].map((step, index) => (
               <div key={step} className="flex items-center">
@@ -220,7 +222,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
                     type="checkbox"
                     checked={processingOptions.processLayers}
                     onChange={(e) => setProcessingOptions(prev => ({ ...prev, processLayers: e.target.checked }))}
-                    className={`${iconSizes.md} text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500`}
+                    className={`${iconSizes.md} text-blue-600 bg-gray-700 ${quick.checkbox} focus:ring-blue-500`}
                   />
                 </div>
 
@@ -233,7 +235,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
                     type="checkbox"
                     checked={processingOptions.preserveGrid}
                     onChange={(e) => setProcessingOptions(prev => ({ ...prev, preserveGrid: e.target.checked }))}
-                    className={`${iconSizes.md} text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500`}
+                    className={`${iconSizes.md} text-blue-600 bg-gray-700 ${quick.checkbox} focus:ring-blue-500`}
                   />
                 </div>
 
@@ -246,7 +248,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
                     type="checkbox"
                     checked={processingOptions.preserveRulers}
                     onChange={(e) => setProcessingOptions(prev => ({ ...prev, preserveRulers: e.target.checked }))}
-                    className={`${iconSizes.md} text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500`}
+                    className={`${iconSizes.md} text-blue-600 bg-gray-700 ${quick.checkbox} focus:ring-blue-500`}
                   />
                 </div>
 
@@ -259,7 +261,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
                     type="checkbox"
                     checked={processingOptions.autoScale}
                     onChange={(e) => setProcessingOptions(prev => ({ ...prev, autoScale: e.target.checked }))}
-                    className={`${iconSizes.md} text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500`}
+                    className={`${iconSizes.md} text-blue-600 bg-gray-700 ${quick.checkbox} focus:ring-blue-500`}
                   />
                 </div>
               </div>
@@ -308,7 +310,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
         </div>
 
         {/* Footer */}
-        <div className="flex justify-between items-center p-6 border-t border-gray-600">
+        <div className={`flex justify-between items-center p-6 ${getStatusBorder('default')} border-t`}>
           <button
             onClick={handlePrevStep}
             disabled={currentStep === 'destination' || currentStep === 'processing'}

@@ -30,6 +30,7 @@ import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { canvasUtilities } from '@/styles/design-tokens';
 import { layoutUtilities } from '@/styles/design-tokens';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 /**
  * Component props
@@ -55,6 +56,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
   // ===================================================================
 
   const { t } = useTranslationLazy('geo-canvas');
+  const { quick } = useBorderTokens();
 
   // ❗ CRITICAL: Use the passed instance, NOT a new hook call
   const {
@@ -442,7 +444,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
             </div>
 
             {/* Instructions */}
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded">
+            <div className={`mb-4 p-3 bg-blue-50 ${quick.card} border-blue-200`}>
               <p className="text-sm text-blue-800">
                 ℹ️ {getInstructions()}
               </p>
@@ -492,7 +494,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
               </p>
 
               {/* DXF Coordinates */}
-              <div className="mb-4 p-3 border border-gray-200 rounded">
+              <div className={`mb-4 p-3 ${quick.card} border-gray-200`}>
                 <h4 className="text-sm font-semibold mb-2 text-gray-700">📐 {t('floorPlanControlPoints.manualInput.dxfCoordinates')}</h4>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
@@ -502,7 +504,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
                       step="any"
                       value={manualInput.dxfX}
                       onChange={(e) => setManualInput(prev => ({ ...prev, dxfX: e.target.value }))}
-                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:border-blue-500 focus:outline-none"
+                      className={`w-full px-2 py-1 text-sm ${quick.input} border-gray-300 focus:border-blue-500 focus:outline-none`}
                       placeholder="0.00"
                     />
                   </div>
@@ -513,7 +515,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
                       step="any"
                       value={manualInput.dxfY}
                       onChange={(e) => setManualInput(prev => ({ ...prev, dxfY: e.target.value }))}
-                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:border-blue-500 focus:outline-none"
+                      className={`w-full px-2 py-1 text-sm ${quick.input} border-gray-300 focus:border-blue-500 focus:outline-none`}
                       placeholder="0.00"
                     />
                   </div>
@@ -521,7 +523,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
               </div>
 
               {/* Geo Coordinates */}
-              <div className="mb-4 p-3 border border-gray-200 rounded">
+              <div className={`mb-4 p-3 ${quick.card} border-gray-200`}>
                 <h4 className="text-sm font-semibold mb-2 text-gray-700">🌍 {t('floorPlanControlPoints.manualInput.geoCoordinates')}</h4>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
@@ -531,7 +533,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
                       step="any"
                       value={manualInput.geoLng}
                       onChange={(e) => setManualInput(prev => ({ ...prev, geoLng: e.target.value }))}
-                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:border-blue-500 focus:outline-none"
+                      className={`w-full px-2 py-1 text-sm ${quick.input} border-gray-300 focus:border-blue-500 focus:outline-none`}
                       placeholder={GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE.toString()}
                     />
                   </div>
@@ -542,7 +544,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
                       step="any"
                       value={manualInput.geoLat}
                       onChange={(e) => setManualInput(prev => ({ ...prev, geoLat: e.target.value }))}
-                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:border-blue-500 focus:outline-none"
+                      className={`w-full px-2 py-1 text-sm ${quick.input} border-gray-300 focus:border-blue-500 focus:outline-none`}
                       placeholder={GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE.toString()}
                     />
                   </div>
@@ -558,7 +560,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
                     step="0.1"
                     value={manualInput.accuracy}
                     onChange={(e) => setManualInput(prev => ({ ...prev, accuracy: e.target.value }))}
-                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:border-blue-500 focus:outline-none"
+                    className={`w-full px-2 py-1 text-sm ${quick.input} border-gray-300 focus:border-blue-500 focus:outline-none`}
                     placeholder="1.0"
                   />
                 </div>
@@ -568,7 +570,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
                     type="text"
                     value={manualInput.description}
                     onChange={(e) => setManualInput(prev => ({ ...prev, description: e.target.value }))}
-                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:border-blue-500 focus:outline-none"
+                    className={`w-full px-2 py-1 text-sm ${quick.input} border-gray-300 focus:border-blue-500 focus:outline-none`}
                     placeholder="Optional description"
                   />
                 </div>
@@ -671,7 +673,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
 
         {/* Transformation Quality Indicator (STEP 2.3) */}
         {transformation.isValid && transformation.quality && (
-          <div className="mb-4 p-3 border rounded">
+          <div className={`mb-4 p-3 ${quick.card}`}>
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium">{t('floorPlanControlPoints.status.transformationQuality')}</span>
               <span
@@ -718,7 +720,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
 
         {/* Control Points List */}
         {points.length > 0 && (
-          <div className="border border-gray-300 rounded max-h-80 overflow-y-auto">
+          <div className={`${quick.table} border-gray-300 max-h-80 overflow-y-auto`}>
             <div className="bg-gray-50 px-3 py-2 border-b border-gray-300 font-semibold text-sm">
               {t('floorPlanControlPoints.list.title')}
             </div>
@@ -735,7 +737,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
                       type="text"
                       value={editLabel}
                       onChange={(e) => setEditLabel(e.target.value)}
-                      className="flex-1 px-2 py-1 border border-blue-300 rounded text-sm"
+                      className={`flex-1 px-2 py-1 ${quick.input} border-blue-300 text-sm`}
                       placeholder="Enter label..."
                       autoFocus
                       onKeyDown={(e) => {

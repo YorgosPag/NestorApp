@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import type { Status, OverlayKind, OverlayEditorMode } from '../overlays/types';
 
 interface OverlayToolbarProps {
@@ -22,9 +23,11 @@ interface OverlayToolbarProps {
 }
 
 export const OverlayToolbar: React.FC<OverlayToolbarProps> = (props) => {
+  const { quick } = useBorderTokens();
+
   // Απλή έκδοση για debugging
   return (
-    <div className="flex items-center gap-2 p-2 bg-gray-800 border border-gray-500 rounded-lg">
+    <div className={`flex items-center gap-2 p-2 bg-gray-800 ${quick.card}`}>
       <div className="text-white">Overlay Toolbar (Simple Version)</div>
       <button
         onClick={() => props.onModeChange('select')}

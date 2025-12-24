@@ -75,6 +75,7 @@
 import React, { useState, useCallback, useId, useRef, useEffect, useMemo, memo } from 'react';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 // ===== TYPES =====
 
@@ -210,9 +211,9 @@ const getSizeStyles = (iconSizes: ReturnType<typeof useIconSizes>): Record<Accor
   }
 });
 
-const variantStyles: Record<AccordionVariant, { container: string; header: string }> = {
+const getVariantStyles = (getBorder: ReturnType<typeof useBorderTokens>['getElementBorder']): Record<AccordionVariant, { container: string; header: string }> => ({
   default: {
-    container: 'border border-gray-600 rounded-lg',
+    container: `${getBorder('card', 'default')} rounded-lg`,
     header: `bg-gray-800 ${HOVER_BACKGROUND_EFFECTS.GRAY_DARKER}`
   },
   ghost: {
@@ -220,10 +221,10 @@ const variantStyles: Record<AccordionVariant, { container: string; header: strin
     header: `bg-transparent ${HOVER_BACKGROUND_EFFECTS.GRAY_DARK_ALPHA}`
   },
   bordered: {
-    container: 'border-2 border-gray-500 rounded-lg shadow-lg',
+    container: `${getBorder('card', 'focus')} rounded-lg shadow-lg`,
     header: `bg-gray-800 ${HOVER_BACKGROUND_EFFECTS.GRAY_DARKER}`
   }
-};
+});
 
 const densityStyles: Record<AccordionDensity, { gap: string }> = {
   comfortable: { gap: 'gap-3' },
@@ -264,6 +265,7 @@ export const AccordionSection = memo(function AccordionSection({
   reducedMotion = false
 }: AccordionSectionProps) {
   const iconSizes = useIconSizes();
+  const { getElementBorder, getStatusBorder } = useBorderTokens();
 
   // ===== STATE (Controlled/Uncontrolled Hybrid) =====
 
@@ -408,9 +410,9 @@ export const AccordionSection = memo(function AccordionSection({
 
   const styles = useMemo(() => ({
     size: getSizeStyles(iconSizes)[size],
-    variant: variantStyles[variant],
+    variant: getVariantStyles(getElementBorder)[variant],
     density: densityStyles[density]
-  }), [size, variant, density, iconSizes]);
+  }), [size, variant, density, iconSizes, getElementBorder]);
 
   // ===== RENDER CHEVRON =====
 
@@ -528,11 +530,11 @@ export const AccordionSection = memo(function AccordionSection({
           }}
         >
           <div
-            className={`${styles.size.content} bg-gray-700 border-t border-gray-600 overflow-visible ${contentClassName}`}
+            className={`${styles.size.content} bg-gray-700 ${getStatusBorder('default')} border-t overflow-visible ${contentClassName}`}
           >
             {/* Error Message */}
             {error && typeof error === 'string' && (
-              <div className="mb-4 p-3 bg-red-900/20 border border-red-500 rounded text-red-200 text-sm">
+              <div className={`mb-4 p-3 bg-red-900/20 ${getStatusBorder('error')} rounded text-red-200 text-sm`}>
                 {error}
               </div>
             )}

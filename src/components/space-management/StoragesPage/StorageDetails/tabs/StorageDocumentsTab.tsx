@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import type { Storage } from '@/types/storage/contracts';
 import { formatDate, formatCurrency } from '@/lib/intl-utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import {
   FileText,
   Download,
@@ -80,6 +81,7 @@ function getStatusLabel(status: Document['status']) {
 
 export function StorageDocumentsTab({ storage }: StorageDocumentsTabProps) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
 
   // Γεννάμε πραγματικά έγγραφα βάση των στοιχείων της αποθήκης
   const [documents] = useState<Document[]>([
@@ -148,19 +150,19 @@ export function StorageDocumentsTab({ storage }: StorageDocumentsTabProps) {
           Επισκόπηση Εγγράφων
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-card border rounded-lg p-4 text-center">
+          <div className={`bg-card ${quick.card} p-4 text-center`}>
             <div className="text-2xl font-bold text-blue-600">{documents.length}</div>
             <div className="text-sm text-muted-foreground">Συνολικά Έγγραφα</div>
           </div>
-          <div className="bg-card border rounded-lg p-4 text-center">
+          <div className={`bg-card ${quick.card} p-4 text-center`}>
             <div className="text-2xl font-bold text-green-600">{activeDocuments.length}</div>
             <div className="text-sm text-muted-foreground">Ενεργά</div>
           </div>
-          <div className="bg-card border rounded-lg p-4 text-center">
+          <div className={`bg-card ${quick.card} p-4 text-center`}>
             <div className="text-2xl font-bold text-yellow-600">{pendingDocuments.length}</div>
             <div className="text-sm text-muted-foreground">Εκκρεμή</div>
           </div>
-          <div className="bg-card border rounded-lg p-4 text-center">
+          <div className={`bg-card ${quick.card} p-4 text-center`}>
             <div className="text-2xl font-bold text-red-600">{expiredDocuments.length}</div>
             <div className="text-sm text-muted-foreground">Ληγμένα</div>
           </div>
@@ -191,7 +193,7 @@ export function StorageDocumentsTab({ storage }: StorageDocumentsTabProps) {
           {documents.map((doc) => {
             const IconComponent = getDocumentIcon(doc.type);
             return (
-              <div key={doc.id} className="border rounded-lg p-4 hover:bg-accent/50 transition-colors">
+              <div key={doc.id} className={`${quick.card} p-4 hover:bg-accent/50 transition-colors`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3 flex-1">
                     <div className="p-2 bg-primary/10 rounded-md">
@@ -246,7 +248,7 @@ export function StorageDocumentsTab({ storage }: StorageDocumentsTabProps) {
       {/* Σχετικές Πληροφορίες */}
       <section>
         <h3 className="font-semibold mb-4">Σχετικές Πληροφορίες</h3>
-        <div className="bg-card border rounded-lg p-4">
+        <div className={`bg-card ${quick.card} p-4`}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             <div>
               <label className="font-medium text-muted-foreground">Αποθήκη:</label>

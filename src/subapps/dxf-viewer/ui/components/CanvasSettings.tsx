@@ -1,17 +1,20 @@
 'use client';
 
 import React from 'react';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface CanvasSettingsProps {
   className?: string;
 }
 
 export const CanvasSettings: React.FC<CanvasSettingsProps> = ({ className }) => {
+  const { getStatusBorder } = useBorderTokens();
+
   return (
     <div className={`bg-gray-800 text-white ${className}`}>
       <div className="p-4">
         {/* Header */}
-        <div className="border-b border-gray-600 pb-3 mb-4">
+        <div className={`${getStatusBorder('default')} border-b pb-3 mb-4`}>
           <h2 className="text-lg font-semibold text-white flex items-center gap-2">
             🖼️ Ρυθμίσεις Καμβά
           </h2>

@@ -14,6 +14,7 @@ import {
   Calendar,
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 // Placeholder stats for Available Parking
 const parkingStats: DashboardStat[] = [
@@ -53,6 +54,7 @@ const parkingStats: DashboardStat[] = [
 
 export default function AvailableParkingPage() {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   return (
     <TooltipProvider>
       <div className="flex h-screen bg-background">
@@ -89,7 +91,7 @@ export default function AvailableParkingPage() {
                 </h2>
 
                 <div className="space-y-3">
-                  <div className="p-4 bg-card border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
+                  <div className={`p-4 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 bg-blue-500/10 rounded-lg">
                         <Building2 className={`${iconSizes.sm} text-blue-500`} />
@@ -115,7 +117,7 @@ export default function AvailableParkingPage() {
                     </div>
                   </div>
 
-                  <div className="p-4 bg-card border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
+                  <div className={`p-4 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 bg-purple-500/10 rounded-lg">
                         <Square className={`${iconSizes.sm} text-purple-500`} />
@@ -151,7 +153,7 @@ export default function AvailableParkingPage() {
                 </h2>
 
                 <div className="space-y-3">
-                  <div className="p-4 bg-card border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
+                  <div className={`p-4 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 bg-green-500/10 rounded-lg">
                         <Building2 className={`${iconSizes.sm} text-green-500`} />
@@ -177,7 +179,7 @@ export default function AvailableParkingPage() {
                     </div>
                   </div>
 
-                  <div className="p-4 bg-card border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
+                  <div className={`p-4 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 bg-orange-500/10 rounded-lg">
                         <Square className={`${iconSizes.sm} text-orange-500`} />
@@ -209,7 +211,7 @@ export default function AvailableParkingPage() {
             {/* Market Analysis */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Τιμές ανά Τύπο */}
-              <div className="p-6 bg-card border rounded-lg">
+              <div className={`p-6 bg-card ${quick.card}`}>
                 <div className="flex items-center gap-3 mb-4">
                   <div className="p-2 bg-blue-500/10 rounded-lg">
                     <DollarSign className={`${iconSizes.md} text-blue-500`} />
@@ -233,7 +235,7 @@ export default function AvailableParkingPage() {
               </div>
 
               {/* Δραστηριότητα */}
-              <div className="p-6 bg-card border rounded-lg">
+              <div className={`p-6 bg-card ${quick.card}`}>
                 <div className="flex items-center gap-3 mb-4">
                   <div className="p-2 bg-green-500/10 rounded-lg">
                     <Eye className={`${iconSizes.md} text-green-500`} />
@@ -257,7 +259,7 @@ export default function AvailableParkingPage() {
               </div>
 
               {/* Trends */}
-              <div className="p-6 bg-card border rounded-lg">
+              <div className={`p-6 bg-card ${quick.card}`}>
                 <div className="flex items-center gap-3 mb-4">
                   <div className="p-2 bg-purple-500/10 rounded-lg">
                     <TrendingUp className={`${iconSizes.md} text-purple-500`} />
@@ -282,7 +284,7 @@ export default function AvailableParkingPage() {
             </div>
 
             {/* Info Message */}
-            <div className="p-4 bg-muted/50 border border-dashed rounded-lg">
+            <div className={`p-4 bg-muted/50 ${quick.card}`}>
               <div className="flex items-center gap-2 text-sm">
                 <Car className={iconSizes.sm} />
                 <span className="font-medium">Διαθέσιμα Parking</span>

@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { ChevronDown, Check } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useEnterprisePortal, createPortalConfig } from '@/components/ui/enterprise-portal';
 import { portalComponents, layoutUtilities } from '@/styles/design-tokens';
 
@@ -30,6 +32,7 @@ export const CustomRelationshipSelect: React.FC<CustomRelationshipSelectProps> =
   placeholder = "Επιλέξτε τύπο σχέσης"
 }) => {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const [isOpen, setIsOpen] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number; width: number } | null>(null);
 
@@ -143,7 +146,7 @@ export const CustomRelationshipSelect: React.FC<CustomRelationshipSelectProps> =
         variant="outline"
         onClick={handleToggle}
         disabled={disabled}
-        className="w-full justify-between h-10 px-3 py-2 text-sm border border-input bg-background"
+        className={`w-full justify-between h-10 px-3 py-2 text-sm bg-background ${quick.input}`}
         type="button"
       >
         <div className="flex items-center space-x-2 flex-1 text-left">
@@ -169,7 +172,7 @@ export const CustomRelationshipSelect: React.FC<CustomRelationshipSelectProps> =
         >
           <Card
             ref={dropdownRef}
-            className="shadow-xl border bg-background border-border rounded-lg"
+            className={`shadow-xl bg-background ${quick.card}`}
             data-custom-relationship-select="true"
             data-custom-dropdown-portal="true"
             style={{
@@ -199,7 +202,7 @@ export const CustomRelationshipSelect: React.FC<CustomRelationshipSelectProps> =
                     key={type}
                     onClick={() => handleSelect(type)}
                     className={`
-                      flex items-center space-x-3 px-4 py-3 cursor-pointer border-b border-border last:border-b-0
+                      flex items-center space-x-3 px-4 py-3 cursor-pointer ${quick.borderB} last:border-b-0
                       ${TRANSITION_PRESETS.STANDARD_COLORS} ${INTERACTIVE_PATTERNS.ACCENT_HOVER}
                       ${isSelected ? 'bg-accent text-accent-foreground' : 'text-foreground'}
                     `}

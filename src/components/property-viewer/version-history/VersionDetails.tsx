@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { formatSize } from './version-utils';
 import { formatDateTime as formatDate } from '@/lib/intl-utils';
 
@@ -12,6 +13,7 @@ export function VersionDetails({
   version: any;
   onRestore: (id: string) => void;
 }) {
+  const { quick } = useBorderTokens();
   if (!version) {
     return (
       <div className="text-center text-muted-foreground pt-20">
@@ -43,7 +45,7 @@ export function VersionDetails({
       </div>
 
       {version.diff && (
-        <div className="bg-muted/50 p-3 rounded-lg border">
+        <div className={`bg-muted/50 p-3 ${quick.card} border`}>
           <h4 className="font-medium mb-2 text-sm">Αλλαγές:</h4>
           <div className="text-sm space-y-1">
             <div className="text-green-600">+ {version.diff.added.length} προσθήκες</div>
@@ -56,7 +58,7 @@ export function VersionDetails({
       {version.thumbnail && (
         <div>
           <h4 className="font-medium mb-2 text-sm">Προεπισκόπηση:</h4>
-          <img src={version.thumbnail} alt="Version preview" className="w-full rounded border" />
+          <img src={version.thumbnail} alt="Version preview" className={`w-full ${quick.input} border`} />
         </div>
       )}
 

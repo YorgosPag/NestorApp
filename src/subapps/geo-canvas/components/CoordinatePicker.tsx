@@ -6,6 +6,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import type { DxfCoordinate, GeoCoordinate } from '../types';
 import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 // ============================================================================
 // COORDINATE PICKER COMPONENT TYPES
@@ -34,6 +35,7 @@ export function CoordinatePicker({
   className = ''
 }: CoordinatePickerProps) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const [transformState, transformActions] = useGeoTransform();
   const [pickingMode, setPickingMode] = useState<PickingMode>('idle');
 
@@ -207,7 +209,7 @@ export function CoordinatePicker({
   // ========================================================================
 
   const renderDxfInputSection = () => (
-    <div className="bg-gray-800 rounded-lg p-4 mb-4">
+    <div className={`bg-gray-800 ${quick.card} p-4 mb-4`}>
       <h3 className="text-lg font-semibold mb-3 text-blue-400">
         📐 DXF Coordinates
       </h3>
@@ -219,7 +221,7 @@ export function CoordinatePicker({
             type="number"
             value={dxfInput.x}
             onChange={(e) => handleDxfInputChange('x', e.target.value)}
-            className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm"
+            className={`w-full bg-gray-700 ${quick.input} border-gray-600 px-3 py-2 text-sm`}
             placeholder="0.00"
             step="0.01"
           />
@@ -230,7 +232,7 @@ export function CoordinatePicker({
             type="number"
             value={dxfInput.y}
             onChange={(e) => handleDxfInputChange('y', e.target.value)}
-            className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm"
+            className={`w-full bg-gray-700 ${quick.input} border-gray-600 px-3 py-2 text-sm`}
             placeholder="0.00"
             step="0.01"
           />
@@ -241,7 +243,7 @@ export function CoordinatePicker({
             type="number"
             value={dxfInput.z}
             onChange={(e) => handleDxfInputChange('z', e.target.value)}
-            className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm"
+            className={`w-full bg-gray-700 ${quick.input} border-gray-600 px-3 py-2 text-sm`}
             placeholder="0.00"
             step="0.01"
           />
@@ -262,7 +264,7 @@ export function CoordinatePicker({
   );
 
   const renderGeoInputSection = () => (
-    <div className="bg-gray-800 rounded-lg p-4 mb-4">
+    <div className={`bg-gray-800 ${quick.card} p-4 mb-4`}>
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-lg font-semibold text-blue-400">
           🌍 Geographic Coordinates
@@ -284,7 +286,7 @@ export function CoordinatePicker({
             type="number"
             value={geoInput.lng}
             onChange={(e) => handleGeoInputChange('lng', e.target.value)}
-            className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm"
+            className={`w-full bg-gray-700 ${quick.input} border-gray-600 px-3 py-2 text-sm`}
             placeholder={GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE.toString()}
             step="0.000001"
           />
@@ -295,7 +297,7 @@ export function CoordinatePicker({
             type="number"
             value={geoInput.lat}
             onChange={(e) => handleGeoInputChange('lat', e.target.value)}
-            className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm"
+            className={`w-full bg-gray-700 ${quick.input} border-gray-600 px-3 py-2 text-sm`}
             placeholder={GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE.toString()}
             step="0.000001"
           />
@@ -306,14 +308,14 @@ export function CoordinatePicker({
             type="number"
             value={geoInput.alt}
             onChange={(e) => handleGeoInputChange('alt', e.target.value)}
-            className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm"
+            className={`w-full bg-gray-700 ${quick.input} border-gray-600 px-3 py-2 text-sm`}
             placeholder="0.00"
             step="0.01"
           />
         </div>
       </div>
 
-      <div className="mt-3 p-3 bg-blue-900/20 border border-blue-600 rounded">
+      <div className={`mt-3 p-3 bg-blue-900/20 ${quick.card} border-blue-600`}>
         <div className="text-sm text-blue-300">
           💡 <strong>Tip:</strong> Click on the map για automatic coordinate selection
         </div>
@@ -322,7 +324,7 @@ export function CoordinatePicker({
   );
 
   const renderMetadataSection = () => (
-    <div className="bg-gray-800 rounded-lg p-4 mb-4">
+    <div className={`bg-gray-800 ${quick.card} p-4 mb-4`}>
       <h3 className="text-lg font-semibold mb-3 text-blue-400">
         📊 Point Metadata
       </h3>
@@ -334,7 +336,7 @@ export function CoordinatePicker({
             type="number"
             value={accuracy}
             onChange={(e) => setAccuracy(e.target.value)}
-            className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm"
+            className={`w-full bg-gray-700 ${quick.input} border-gray-600 px-3 py-2 text-sm`}
             placeholder="1.0"
             step="0.1"
             min="0.1"
@@ -346,7 +348,7 @@ export function CoordinatePicker({
             type="text"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm"
+            className={`w-full bg-gray-700 ${quick.input} border-gray-600 px-3 py-2 text-sm`}
             placeholder="Optional description"
             maxLength={100}
           />
@@ -360,7 +362,7 @@ export function CoordinatePicker({
   // ========================================================================
 
   const renderStatusSection = () => (
-    <div className="bg-gray-800 rounded-lg p-4 mb-4">
+    <div className={`bg-gray-800 ${quick.card} p-4 mb-4`}>
       <h3 className="text-lg font-semibold mb-3 text-blue-400">
         📋 Status
       </h3>
@@ -391,7 +393,7 @@ export function CoordinatePicker({
   );
 
   const renderActionButtons = () => (
-    <div className="bg-gray-800 rounded-lg p-4">
+    <div className={`bg-gray-800 ${quick.card} p-4`}>
       <div className="flex space-x-3">
         <button
           onClick={handleSubmitCoordinates}
@@ -425,7 +427,7 @@ export function CoordinatePicker({
   return (
     <div className={`w-full max-w-md space-y-4 ${className}`}>
       {/* Header */}
-      <div className="bg-gray-800 rounded-lg p-4">
+      <div className={`bg-gray-800 ${quick.card} p-4`}>
         <h2 className="text-xl font-bold text-blue-400 mb-2">
           📍 Add Control Point
         </h2>
@@ -436,7 +438,7 @@ export function CoordinatePicker({
 
       {/* Error Display */}
       {transformState.error && (
-        <div className="bg-red-900 border border-red-600 rounded-lg p-4">
+        <div className={`bg-red-900 ${quick.card} border-red-600 p-4`}>
           <div className="flex items-center justify-between">
             <span className="text-red-300">❌ {transformState.error}</span>
             <button
@@ -461,7 +463,7 @@ export function CoordinatePicker({
       {renderActionButtons()}
 
       {/* Instructions */}
-      <div className="bg-blue-900/20 border border-blue-600 rounded-lg p-4">
+      <div className={`bg-blue-900/20 ${quick.card} border-blue-600 p-4`}>
         <h4 className="font-semibold text-blue-400 mb-2">📋 Instructions:</h4>
         <ol className="text-sm text-blue-300 space-y-1">
           <li>1. Enter DXF coordinates (X, Y, optional Z)</li>

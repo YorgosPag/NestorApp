@@ -5,6 +5,7 @@ const DEBUG_FLOATING_PANEL_CONTAINER = false;
 
 import React, { useImperativeHandle, forwardRef } from 'react';
 import { useTranslationLazy } from '../../../i18n/hooks/useTranslationLazy';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { PanelTabs } from './components/PanelTabs';
 // REMOVED: PropertiesPanel - καρτέλα πλέον αφαιρέθηκε εντελώς
 import { useOverlayManager } from '../state/overlay-manager';
@@ -40,6 +41,8 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
   zoomLevel,
   currentTool
 }, ref) {
+  const { quick, getStatusBorder } = useBorderTokens();
+
   // Debug logging removed for performance - was causing excessive console output on every render
   const { t, ready, isLoading } = useTranslationLazy('dxf-viewer');
 
@@ -98,7 +101,7 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
   // Don't render panels until translations are ready
   if (isLoading) {
     return (
-      <div className="fixed right-4 top-4 bg-gray-900/90 backdrop-blur-sm rounded-lg border border-gray-700 shadow-xl w-80">
+      <div className={`fixed right-4 top-4 bg-gray-900/90 backdrop-blur-sm rounded-lg ${getStatusBorder('default')} shadow-xl w-80`}>
         <div className="p-4 text-center text-gray-400">
           Loading translations...
         </div>
@@ -118,7 +121,7 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
 
   return (
     <div style={{ width: '384px', height: '100%', overflow: 'hidden', backgroundColor: '#111827', borderRadius: '0.5rem', position: 'relative' }}>
-      <div className="bg-gray-800 rounded-t-lg border-b border-gray-500">
+      <div className={`bg-gray-800 rounded-t-lg ${getStatusBorder('default')} border-b`}>
         <PanelTabs
           activePanel={activePanel}
           onTabClick={panelNavigation.handleTabClick}

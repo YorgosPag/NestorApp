@@ -21,6 +21,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { EnterpriseColorArea } from './EnterpriseColorArea';
 import { HueSlider, AlphaSlider } from './EnterpriseColorSlider';
 import { EnterpriseColorField } from './EnterpriseColorField';
@@ -63,6 +64,7 @@ export function EnterpriseColorPicker({
 }: EnterpriseColorPickerProps) {
   const [currentMode, setCurrentMode] = useState<ColorMode>(modes[0] || 'hex');
   const { addColor } = useRecentColors();
+  const { quick } = useBorderTokens();
 
   // Handle color change
   const handleChange = useCallback(
@@ -96,7 +98,7 @@ export function EnterpriseColorPicker({
 
   return (
     <div
-      className={`space-y-4 p-4 bg-gray-900 border border-gray-700 rounded-lg ${disabled ? 'opacity-50 pointer-events-none' : ''} ${className}`}
+      className={`space-y-4 p-4 bg-gray-900 border border-gray-700 ${quick.card} ${disabled ? 'opacity-50 pointer-events-none' : ''} ${className}`}
     >
       {/* === COLOR AREA + HUE SLIDER === */}
       <div className="space-y-3">

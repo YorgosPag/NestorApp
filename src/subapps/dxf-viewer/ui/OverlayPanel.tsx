@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { Square, Eye, EyeOff, Palette, MousePointer2 } from 'lucide-react';
 import { useOverlayManager } from '../state/overlay-manager';
 import type { RegionStatus } from '../types/overlay';
@@ -23,6 +24,7 @@ interface OverlayPanelProps {
 
 export function OverlayPanel({ isDrawingMode, drawingStatus, onStartDrawing, onStopDrawing }: OverlayPanelProps) {
   const iconSizes = useIconSizes();
+  const { getStatusBorder } = useBorderTokens();
   const {
     visibleRegions, 
     selectedRegionIds,
@@ -38,7 +40,7 @@ export function OverlayPanel({ isDrawingMode, drawingStatus, onStartDrawing, onS
   }, {} as Record<RegionStatus, typeof visibleRegions>);
 
   return (
-    <div className="space-y-4 p-4 border-t border-gray-700">
+    <div className={`space-y-4 p-4 ${getStatusBorder('default')} border-t`}>
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium text-white flex items-center gap-2">
           <Square className={iconSizes.sm} />

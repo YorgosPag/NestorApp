@@ -26,6 +26,7 @@ import { EnterpriseColorPicker } from './EnterpriseColorPicker';
 import type { EnterpriseColorDialogProps } from './types';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 /**
  * Enterprise Color Dialog Component
@@ -54,6 +55,7 @@ export function EnterpriseColorDialog({
 }: EnterpriseColorDialogProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const [tempValue, setTempValue] = React.useState(value);
+  const { quick } = useBorderTokens();
 
   // Update temp value when external value changes
   React.useEffect(() => {
@@ -110,7 +112,7 @@ export function EnterpriseColorDialog({
               {...overlayProps}
               {...dialogProps}
               ref={overlayRef}
-              className="relative z-[9999] bg-gray-900 border-2 border-gray-600 rounded-lg shadow-2xl max-h-[90vh] overflow-y-auto max-w-[400px]"
+              className={`relative z-[9999] bg-gray-900 border-2 border-gray-600 ${quick.card} shadow-2xl max-h-[90vh] overflow-y-auto max-w-[400px]`}
             >
               {/* Header */}
               <div className="flex items-center justify-between p-4 border-b border-gray-700">
@@ -200,7 +202,7 @@ export function ColorDialogTrigger({
         disabled={disabled}
         className={`
           flex items-center gap-3 px-4 py-2 bg-gray-800 ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER}
-          border border-gray-600 rounded transition-colors
+${quick.button} border-gray-600 transition-colors
           disabled:opacity-50 disabled:cursor-not-allowed
         `}
       >

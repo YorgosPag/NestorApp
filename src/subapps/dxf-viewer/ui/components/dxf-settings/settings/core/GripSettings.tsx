@@ -7,6 +7,7 @@ import type { GripSettings } from '../../../../types/gripSettings';
 import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
 import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 // SVG Icons για τα accordion sections
 const CogIcon = ({ className }: { className?: string }) => (
@@ -36,6 +37,7 @@ const AdjustmentsIcon = ({ className }: { className?: string }) => (
 
 export function GripSettings() {
   const iconSizes = useIconSizes();
+  const { quick, getStatusBorder } = useBorderTokens();
   // 🎯 ΔΙΟΡΘΩΣΗ: Χρήση unified hook αντί για γενικό για override λειτουργικότητα
   const { settings: { gripSettings }, updateGripSettings, resetToDefaults } = useUnifiedGripPreview();
 
@@ -66,13 +68,13 @@ export function GripSettings() {
 
       {/* Enable/Disable Grips */}
       <div className="space-y-2">
-        <div className="flex items-center gap-3 p-3 bg-gray-800 rounded-md border-l-4 border-blue-500">
+        <div className={`flex items-center gap-3 p-3 bg-gray-800 rounded-md ${getStatusBorder('info')}`}>
           <input
             type="checkbox"
             id="grips-enabled"
             checked={gripSettings.enabled}
             onChange={(e) => updateSettings({ enabled: e.target.checked })}
-            className={`${iconSizes.sm} text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2`}
+            className={`${iconSizes.sm} text-blue-600 bg-gray-700 ${quick.input} focus:ring-blue-500 focus:ring-2`}
           />
           <label
             htmlFor="grips-enabled"
@@ -82,7 +84,7 @@ export function GripSettings() {
           </label>
         </div>
         {!gripSettings.enabled && (
-          <div className="text-xs text-yellow-400 bg-yellow-900 bg-opacity-20 p-2 rounded border border-yellow-700">
+          <div className={`text-xs text-yellow-400 bg-yellow-900 bg-opacity-20 p-2 rounded ${getStatusBorder('warning')}`}>
             ⚠️ Τα grips είναι απενεργοποιημένα και δεν θα εμφανίζονται
           </div>
         )}
@@ -123,7 +125,7 @@ export function GripSettings() {
                 step="1"
                 value={gripSettings.gripSize || 8}
                 onChange={(e) => updateSettings({ gripSize: parseInt(e.target.value) })}
-                className="w-16 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm"
+                className={`w-16 px-2 py-1 bg-gray-700 ${quick.input} text-white text-sm`}
               />
             </div>
           </div>
@@ -150,7 +152,7 @@ export function GripSettings() {
                 step="0.1"
                 value={gripSettings.opacity}
                 onChange={(e) => updateSettings({ opacity: parseFloat(e.target.value) })}
-                className="w-16 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm"
+                className={`w-16 px-2 py-1 bg-gray-700 ${quick.input} text-white text-sm`}
               />
             </div>
           </div>
@@ -250,7 +252,7 @@ export function GripSettings() {
                 type="checkbox"
                 checked={gripSettings.showMidpoints}
                 onChange={(e) => updateSettings({ showMidpoints: e.target.checked })}
-                className="rounded border-gray-600 text-blue-600 focus:ring-blue-500 focus:ring-2"
+                className={`${quick.checkbox} text-blue-600 focus:ring-blue-500 focus:ring-2`}
               />
               <span className="text-sm text-gray-200">Εμφάνιση Midpoints</span>
             </label>
@@ -260,7 +262,7 @@ export function GripSettings() {
                 type="checkbox"
                 checked={gripSettings.showCenters}
                 onChange={(e) => updateSettings({ showCenters: e.target.checked })}
-                className="rounded border-gray-600 text-blue-600 focus:ring-blue-500 focus:ring-2"
+                className={`${quick.checkbox} text-blue-600 focus:ring-blue-500 focus:ring-2`}
               />
               <span className="text-sm text-gray-200">Εμφάνιση Centers</span>
             </label>
@@ -270,7 +272,7 @@ export function GripSettings() {
                 type="checkbox"
                 checked={gripSettings.showQuadrants}
                 onChange={(e) => updateSettings({ showQuadrants: e.target.checked })}
-                className="rounded border-gray-600 text-blue-600 focus:ring-blue-500 focus:ring-2"
+                className={`${quick.checkbox} text-blue-600 focus:ring-blue-500 focus:ring-2`}
               />
               <span className="text-sm text-gray-200">Εμφάνιση Quadrants</span>
             </label>
@@ -310,7 +312,7 @@ export function GripSettings() {
                   step="1"
                   value={gripSettings.pickBoxSize || 3}
                   onChange={(e) => updateSettings({ pickBoxSize: parseInt(e.target.value) })}
-                  className="w-16 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm"
+                  className={`w-16 px-2 py-1 bg-gray-700 ${quick.input} text-white text-sm`}
                 />
               </div>
             </div>
@@ -337,7 +339,7 @@ export function GripSettings() {
                   step="2"
                   value={gripSettings.apertureSize || 16}
                   onChange={(e) => updateSettings({ apertureSize: parseInt(e.target.value) })}
-                  className="w-16 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm"
+                  className={`w-16 px-2 py-1 bg-gray-700 ${quick.input} text-white text-sm`}
                 />
               </div>
             </div>
@@ -364,7 +366,7 @@ export function GripSettings() {
                   step="10"
                   value={gripSettings.maxGripsPerEntity || 50}
                   onChange={(e) => updateSettings({ maxGripsPerEntity: parseInt(e.target.value) })}
-                  className="w-16 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm"
+                  className={`w-16 px-2 py-1 bg-gray-700 ${quick.input} text-white text-sm`}
                 />
               </div>
             </div>
@@ -376,7 +378,7 @@ export function GripSettings() {
                   type="checkbox"
                   checked={gripSettings.showAperture}
                   onChange={(e) => updateSettings({ showAperture: e.target.checked })}
-                  className="rounded border-gray-600 text-blue-600 focus:ring-blue-500 focus:ring-2"
+                  className={`${quick.checkbox} text-blue-600 focus:ring-blue-500 focus:ring-2`}
                 />
                 <span className="text-sm text-gray-200">Εμφάνιση Aperture</span>
               </label>
@@ -386,7 +388,7 @@ export function GripSettings() {
                   type="checkbox"
                   checked={gripSettings.multiGripEdit}
                   onChange={(e) => updateSettings({ multiGripEdit: e.target.checked })}
-                  className="rounded border-gray-600 text-blue-600 focus:ring-blue-500 focus:ring-2"
+                  className={`${quick.checkbox} text-blue-600 focus:ring-blue-500 focus:ring-2`}
                 />
                 <span className="text-sm text-gray-200">Multi-Grip Επεξεργασία</span>
               </label>
@@ -396,14 +398,14 @@ export function GripSettings() {
                   type="checkbox"
                   checked={gripSettings.snapToGrips}
                   onChange={(e) => updateSettings({ snapToGrips: e.target.checked })}
-                  className="rounded border-gray-600 text-blue-600 focus:ring-blue-500 focus:ring-2"
+                  className={`${quick.checkbox} text-blue-600 focus:ring-blue-500 focus:ring-2`}
                 />
                 <span className="text-sm text-gray-200">Snap σε Grips</span>
               </label>
             </div>
 
             {/* Quick Presets */}
-            <div className="space-y-2 pt-4 border-t border-gray-600">
+            <div className={`space-y-2 pt-4 ${quick.separator}`}>
               <h5 className="text-sm font-medium text-gray-300">Γρήγορα Presets</h5>
               <div className="flex space-x-2">
             <button

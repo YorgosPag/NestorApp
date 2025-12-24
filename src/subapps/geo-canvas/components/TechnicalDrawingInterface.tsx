@@ -9,6 +9,7 @@ import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS, HOVER_SHADOWS } from '@/components/ui/effects';
 import type { RealEstatePolygon } from '@geo-alert/core';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface TechnicalDrawingInterfaceProps {
   mapRef: React.RefObject<any>;
@@ -40,6 +41,7 @@ export function TechnicalDrawingInterface({
   onRealEstateAlertCreated
 }: TechnicalDrawingInterfaceProps) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const { t } = useTranslationLazy('geo-canvas');
   const [selectedTool, setSelectedTool] = useState<'dxf-viewer' | 'precision' | 'settings' | 'automated-alerts' | null>(null);
   // ✅ ENTERPRISE: Combine local and centralized drawing state
@@ -175,7 +177,7 @@ export function TechnicalDrawingInterface({
   }, [cancelDrawing]);
 
   return (
-    <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-4">
+    <div className={`bg-white ${quick.card} shadow-lg border-gray-200 p-4`}>
       {/* Header */}
       <div className="mb-4">
         <h3 className="text-lg font-semibold text-gray-900">
@@ -193,7 +195,7 @@ export function TechnicalDrawingInterface({
           onClick={() => handleToolSelect('dxf-viewer')}
           disabled={actualIsDrawing}
           className={`
-            flex flex-col items-center justify-center p-4 rounded-lg border-2
+            flex flex-col items-center justify-center p-4 ${quick.card} border-2
             transition-all duration-200 min-h-[100px]
             ${selectedTool === 'dxf-viewer'
               ? 'border-purple-500 bg-purple-50'
@@ -212,7 +214,7 @@ export function TechnicalDrawingInterface({
           onClick={() => handleToolSelect('precision')}
           disabled={actualIsDrawing && selectedTool !== 'precision'}
           className={`
-            flex flex-col items-center justify-center p-4 rounded-lg border-2
+            flex flex-col items-center justify-center p-4 ${quick.card} border-2
             transition-all duration-200 min-h-[100px]
             ${selectedTool === 'precision'
               ? 'border-purple-500 bg-purple-50'
@@ -231,7 +233,7 @@ export function TechnicalDrawingInterface({
           onClick={() => handleToolSelect('settings')}
           disabled={actualIsDrawing}
           className={`
-            flex flex-col items-center justify-center p-4 rounded-lg border-2
+            flex flex-col items-center justify-center p-4 ${quick.card} border-2
             transition-all duration-200 min-h-[100px]
             ${selectedTool === 'settings'
               ? 'border-purple-500 bg-purple-50'
@@ -250,7 +252,7 @@ export function TechnicalDrawingInterface({
           onClick={() => handleToolSelect('automated-alerts')}
           disabled={actualIsDrawing}
           className={`
-            flex flex-col items-center justify-center p-4 rounded-lg border-2
+            flex flex-col items-center justify-center p-4 ${quick.card} border-2
             transition-all duration-200 min-h-[100px]
             ${selectedTool === 'automated-alerts'
               ? 'border-red-500 bg-red-50'
@@ -270,7 +272,7 @@ export function TechnicalDrawingInterface({
         <div className="flex gap-2 mb-4">
           <button
             onClick={handleComplete}
-            className={`flex-1 flex items-center justify-center gap-2 bg-purple-500 text-white py-3 px-4 rounded-lg transition-colors ${HOVER_BACKGROUND_EFFECTS.PURPLE_DARKER}`}
+            className={`flex-1 flex items-center justify-center gap-2 bg-purple-500 text-white py-3 px-4 ${quick.card} transition-colors ${HOVER_BACKGROUND_EFFECTS.PURPLE_DARKER}`}
           >
             <Ruler className={iconSizes.md} />
             <span className="font-medium">{t('drawingInterfaces.technical.actions.complete')}</span>
@@ -278,7 +280,7 @@ export function TechnicalDrawingInterface({
 
           <button
             onClick={handleCancel}
-            className={`flex-1 flex items-center justify-center gap-2 bg-red-500 text-white py-3 px-4 rounded-lg transition-colors ${HOVER_BACKGROUND_EFFECTS.RED_DARKER}`}
+            className={`flex-1 flex items-center justify-center gap-2 bg-red-500 text-white py-3 px-4 ${quick.card} transition-colors ${HOVER_BACKGROUND_EFFECTS.RED_DARKER}`}
           >
             <span className="font-medium">{t('drawingInterfaces.technical.actions.cancel')}</span>
           </button>
@@ -286,7 +288,7 @@ export function TechnicalDrawingInterface({
       )}
 
       {/* Technical Specs Panel */}
-      <div className="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-md">
+      <div className={`mb-4 p-3 bg-purple-50 ${quick.card} border-purple-200`}>
         <h4 className="text-sm font-medium text-purple-800 mb-2">
           🔬 {t('drawingInterfaces.technical.specifications.title')}
         </h4>
@@ -308,7 +310,7 @@ export function TechnicalDrawingInterface({
 
       {/* Instructions */}
       {selectedTool && (
-        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+        <div className={`mt-4 p-3 bg-blue-50 ${quick.card} border-blue-200`}>
           <p className="text-sm text-blue-700">
             {selectedTool === 'dxf-viewer' && t('drawingInterfaces.technical.fullDxfViewer')}
             {selectedTool === 'precision' && t('drawingInterfaces.technical.instructions.precision')}
@@ -371,7 +373,7 @@ export function TechnicalDrawingInterface({
 
       {/* 🚨 Phase 2.5.3: Automated Alerts Configuration Panel */}
       {showAutomatedAlerts && (
-        <div className="mt-4 bg-white rounded-lg shadow-lg border border-red-200 p-4">
+        <div className={`mt-4 bg-white ${quick.card} shadow-lg border-red-200 p-4`}>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <AlertTriangle className={`${iconSizes.md} text-red-600`} />
@@ -404,7 +406,7 @@ export function TechnicalDrawingInterface({
                     ...prev,
                     sensitivity: e.target.value as 'low' | 'medium' | 'high'
                   }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  className={`w-full px-3 py-2 ${quick.input} border-gray-300 text-sm`}
                 >
                   <option value="high">{t('drawingInterfaces.technical.automatedAlerts.sensitivity.high')}</option>
                   <option value="medium">{t('drawingInterfaces.technical.automatedAlerts.sensitivity.medium')}</option>
@@ -422,7 +424,7 @@ export function TechnicalDrawingInterface({
                     ...prev,
                     monitoringInterval: Number(e.target.value)
                   }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  className={`w-full px-3 py-2 ${quick.input} border-gray-300 text-sm`}
                 >
                   <option value={5}>{t('drawingInterfaces.technical.automatedAlerts.intervals.realtime')}</option>
                   <option value={15}>{t('drawingInterfaces.technical.automatedAlerts.intervals.frequent')}</option>
@@ -510,7 +512,7 @@ export function TechnicalDrawingInterface({
           </div>
 
           {/* Technical Specifications */}
-          <div className="bg-red-50 border border-red-200 rounded-md p-3">
+          <div className={`bg-red-50 ${quick.error} p-3`}>
             <h4 className="text-sm font-semibold text-red-900 mb-2">{t('drawingInterfaces.technical.automatedAlerts.technicalSpecifications')}</h4>
             <div className="grid grid-cols-2 gap-2 text-xs text-red-700">
               <div>

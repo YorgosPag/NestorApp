@@ -3,10 +3,12 @@
 import dynamic from 'next/dynamic';
 import { ComponentType } from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 // Generic loading components for different types of pages
 export const PageLoadingSpinner = () => {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   return (
   <main className="min-h-screen bg-background flex items-center justify-center" role="status" aria-label="Φόρτωση σελίδας">
     <section className="text-center">
@@ -19,6 +21,7 @@ export const PageLoadingSpinner = () => {
 
 export const DashboardLoadingSkeleton = () => {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   return (
   <main className="min-h-screen bg-background" role="status" aria-label="Φόρτωση dashboard">
     <header className="border-b bg-card">
@@ -35,7 +38,7 @@ export const DashboardLoadingSkeleton = () => {
         </div>
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" aria-label="Φόρτωση στατιστικών">
           {Array.from({ length: 4 }).map((_, i) => (
-            <article key={i} className="bg-background border rounded-lg p-4">
+            <article key={i} className={`bg-background ${quick.card} p-4`}>
               <div className="space-y-2">
                 <div className={`${iconSizes.sm} bg-muted rounded ${iconSizes.xl6} animate-pulse`} aria-hidden="true"></div>
                 <div className={`${iconSizes.lg} bg-muted rounded w-20 animate-pulse`} aria-hidden="true"></div>
@@ -55,10 +58,11 @@ export const DashboardLoadingSkeleton = () => {
 
 export const FormLoadingSkeleton = () => {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   return (
   <main className="min-h-screen bg-background p-6" role="status" aria-label="Φόρτωση φόρμας">
     <section className="max-w-4xl mx-auto">
-      <form className="bg-card border rounded-lg p-6">
+      <form className={`bg-card ${quick.card} p-6`}>
         <fieldset className="space-y-6">
           <div className={`${iconSizes.lg} bg-muted rounded w-48 animate-pulse`} aria-hidden="true"></div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -86,6 +90,7 @@ export const FormLoadingSkeleton = () => {
 
 export const ListLoadingSkeleton = () => {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   return (
   <main className="min-h-screen bg-background" role="status" aria-label="Φόρτωση λίστας">
     <header className="border-b bg-card p-6">
@@ -98,7 +103,7 @@ export const ListLoadingSkeleton = () => {
       <ul role="list" className="space-y-4">
         {Array.from({ length: 8 }).map((_, i) => (
           <li key={i}>
-            <article className="bg-card border rounded-lg p-4">
+            <article className={`bg-card ${quick.card} p-4`}>
               <div className="flex items-center justify-between">
                 <div className="space-y-2">
                   <div className={`${iconSizes.md} bg-muted rounded w-32 animate-pulse`} aria-hidden="true"></div>

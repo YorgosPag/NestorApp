@@ -14,6 +14,7 @@ import {
   BarChart3,
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 // Placeholder stats for Sales
 const salesStats: DashboardStat[] = [
@@ -53,6 +54,7 @@ const salesStats: DashboardStat[] = [
 
 export default function SalesPage() {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   return (
     <TooltipProvider>
       <div className="flex h-screen bg-background">
@@ -90,7 +92,7 @@ export default function SalesPage() {
 
                 <div className="space-y-3">
                   {/* Available Apartments */}
-                  <div className="p-4 bg-card border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
+                  <div className={`p-4 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 bg-primary/10 rounded-lg">
                         <Home className={`${iconSizes.sm} text-primary`} />
@@ -106,7 +108,7 @@ export default function SalesPage() {
                   </div>
 
                   {/* Available Storage */}
-                  <div className="p-4 bg-card border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
+                  <div className={`p-4 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 bg-orange-500/10 rounded-lg">
                         <Package className={`${iconSizes.sm} text-orange-500`} />
@@ -122,7 +124,7 @@ export default function SalesPage() {
                   </div>
 
                   {/* Available Parking */}
-                  <div className="p-4 bg-card border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
+                  <div className={`p-4 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 bg-blue-500/10 rounded-lg">
                         <Car className={`${iconSizes.sm} text-blue-500`} />
@@ -146,7 +148,7 @@ export default function SalesPage() {
                   Πωλημένα Ακίνητα
                 </h2>
 
-                <div className="p-6 bg-card border rounded-lg">
+                <div className={`p-6 bg-card ${quick.card}`}>
                   <div className="flex items-center gap-3 mb-4">
                     <div className="p-2 bg-green-500/10 rounded-lg">
                       <CheckCircle className={`${iconSizes.md} text-green-500`} />
@@ -183,7 +185,7 @@ export default function SalesPage() {
             </div>
 
             {/* Info Message */}
-            <div className="p-4 bg-muted/50 border border-dashed rounded-lg">
+            <div className={`p-4 bg-muted/50 ${quick.card}`}>
               <div className="flex items-center gap-2 text-sm">
                 <DollarSign className={iconSizes.sm} />
                 <span className="font-medium">Πωλήσιμα Ακίνητα</span>

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import type { OverlayEditorMode, Status, OverlayKind } from '../../overlays/types';
 import type { ToolType } from '../toolbar/types';
 import type { PropertyStatus } from '../../../../constants/property-statuses-enterprise';
@@ -45,6 +46,7 @@ interface DraggableOverlayToolbarProps {
 
 export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (props) => {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   // 🎯 OVERLAY CREATION & STORE HOOKS
   const { startOverlayCreation } = useUnifiedOverlayCreation();
   const overlayStore = useOverlayStore();
@@ -215,7 +217,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
                 onClick={() => handleModeChange(btnMode)}
                 title={`${label} (${key})`}
                 className={`
-                  h-8 px-2 rounded-md border transition-colors duration-150
+                  h-8 px-2 ${quick.button} transition-colors duration-150
                   flex items-center justify-center gap-1
                   ${props.mode === btnMode
                     ? `bg-blue-600 text-white border-blue-500 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
@@ -240,7 +242,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
                   key={status}
                   onClick={() => props.onStatusChange(status)}
                   title={STATUS_LABELS[status]}
-                  className={`${iconSizes.lg} rounded-md border-2 transition-all duration-150`}
+                  className={`${iconSizes.lg} ${quick.button} border-2 transition-all duration-150`}
                   style={getStatusColorButtonStyles(
                     status as PropertyStatus,
                     props.currentStatus === status
@@ -264,7 +266,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
                     onClick={() => props.onKindChange(kind)}
                     title={KIND_LABELS[kind]}
                     className={`
-                      ${iconSizes.xl} p-0 rounded-md border transition-colors duration-150
+                      ${iconSizes.xl} p-0 ${quick.button} transition-colors duration-150
                       flex items-center justify-center
                       ${props.currentKind === kind
                         ? `bg-blue-600 text-white border-blue-500 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
@@ -288,7 +290,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
               disabled={!props.selectedOverlayId}
               title="Αντιγραφή (D)"
               className={`
-                ${iconSizes.xl} p-0 rounded-md border transition-colors duration-150
+                ${iconSizes.xl} p-0 ${quick.button} transition-colors duration-150
                 flex items-center justify-center
                 bg-gray-700 text-gray-200 border-gray-500
                 disabled:opacity-50 disabled:cursor-not-allowed
@@ -302,7 +304,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
               disabled={!props.selectedOverlayId}
               title="Διαγραφή (Del)"
               className={`
-                ${iconSizes.xl} p-0 rounded-md border transition-colors duration-150
+                ${iconSizes.xl} p-0 ${quick.button} transition-colors duration-150
                 flex items-center justify-center
                 bg-gray-700 text-red-400 border-gray-500
                 disabled:opacity-50 disabled:cursor-not-allowed
@@ -321,7 +323,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
               disabled={!props.canUndo}
               title="Αναίρεση (Ctrl+Z)"
               className={`
-                ${iconSizes.xl} p-0 rounded-md border transition-colors duration-150
+                ${iconSizes.xl} p-0 ${quick.button} transition-colors duration-150
                 flex items-center justify-center
                 bg-gray-700 text-gray-200 border-gray-500
                 disabled:opacity-50 disabled:cursor-not-allowed
@@ -334,7 +336,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
               disabled={!props.canRedo}
               title="Επανάληψη (Ctrl+Y)"
               className={`
-                ${iconSizes.xl} p-0 rounded-md border transition-colors duration-150
+                ${iconSizes.xl} p-0 ${quick.button} transition-colors duration-150
                 flex items-center justify-center
                 bg-gray-700 text-gray-200 border-gray-500
                 disabled:opacity-50 disabled:cursor-not-allowed

@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { layoutUtilities } from '@/styles/design-tokens';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import {
   Search,
   X,
@@ -202,6 +203,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
   maxResults = 50
 }) => {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
 
   // ============================================================================
   // 🏢 ENTERPRISE: STATE MANAGEMENT
@@ -508,7 +510,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
     const Icon = getContactIcon(selectedContact.type);
 
     return (
-      <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-md">
+      <div className={`flex items-center justify-between p-3 bg-blue-50 ${quick.selected}`}>
         <div className="flex items-center space-x-3 flex-1 min-w-0">
           <Icon className={`${iconSizes.md} text-blue-600 flex-shrink-0`} />
 
@@ -618,7 +620,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
           {showDropdown && dropdownPosition && typeof document !== 'undefined' && createPortal(
             <Card
               ref={dropdownRef}
-              className="shadow-xl border bg-background border-border"
+              className={`shadow-xl bg-background ${quick.card}`}
               style={layoutUtilities.dropdown.portal(dropdownPosition)}
             >
               <CardContent className={getEmployeeSelectorCardStyle()}>
@@ -662,24 +664,4 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
 };
 
 export default EmployeeSelector;
-
-// Custom CSS για force background colors με !important
-const customStyles = `
-  [data-dropdown-contact-item="true"] {
-    background-color: #f3f4f6 !important;
-  }
-  [data-dropdown-contact-item="true"]:hover {
-    background-color: #e5e7eb !important;
-  }
-  [data-dropdown-contact-item="true"].bg-blue-100 {
-    background-color: #dbeafe !important;
-  }
-`;
-
-// Inject custom CSS στο head
-if (typeof document !== 'undefined') {
-  const styleElement = document.createElement('style');
-  styleElement.textContent = customStyles;
-  document.head.appendChild(styleElement);
-}
 

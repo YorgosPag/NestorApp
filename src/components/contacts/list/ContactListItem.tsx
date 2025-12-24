@@ -37,6 +37,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getContactCardBackgrounds, getTypography } from '@/components/ui/theme/ThemeComponents';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 
 interface ContactListItemProps {
@@ -63,6 +64,7 @@ export function ContactListItem({
     isTogglingFavorite = false
 }: ContactListItemProps) {
     const iconSizes = useIconSizes();
+    const { quick } = useBorderTokens();
     const photoModal = useGlobalPhotoPreview();
     const { icon: Icon } = typeInfoMap[contact.type];
 
@@ -192,7 +194,7 @@ export function ContactListItem({
             <article
                 className={cn(
                     // Base layout
-                    "relative rounded-lg border cursor-pointer group",
+                    `relative ${quick.card} cursor-pointer group`,
                     INTERACTIVE_PATTERNS.CARD_STANDARD,
                     // 🎯 RESPONSIVE PADDING: Compact on mobile, normal on desktop
                     "p-2 sm:p-3",

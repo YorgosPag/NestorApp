@@ -7,6 +7,7 @@ import { ThemeProgressBar } from '@/core/progress/ThemeProgressBar';
 import { Briefcase } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import type { Project } from '@/types/project';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { cn } from '@/lib/utils';
 import { getProjectLabel } from '@/lib/project-utils';
 import { useCompanyRelationships } from '@/services/relationships/hooks/useEnterpriseRelationships';
@@ -14,6 +15,7 @@ import { useCompanyRelationships } from '@/services/relationships/hooks/useEnter
 
 function CompanyProjectsTable({ companyId }: { companyId: string }) {
     const iconSizes = useIconSizes();
+    const { quick } = useBorderTokens();
     const [projects, setProjects] = useState<Project[]>([]);
 
     // 🚀 ENTERPRISE RELATIONSHIP ENGINE: Hook για centralized company-projects relationship
@@ -56,7 +58,7 @@ function CompanyProjectsTable({ companyId }: { companyId: string }) {
                 <Briefcase className={`${iconSizes.sm} text-muted-foreground`}/>
                 Σχετικά Έργα
             </h4>
-            <div className="border rounded-lg">
+            <div className={quick.card}>
                 <Table>
                     <TableHeader>
                         <TableRow>

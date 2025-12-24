@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/tooltip';
 import { HelpCircle, Eye, EyeOff } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 // Types για το unified form field system
 export interface SelectOption {
@@ -160,6 +161,7 @@ export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>((
   ...props
 }, ref) => {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const { t } = useTranslation('forms');
   const [showPassword, setShowPassword] = React.useState(false);
   
@@ -317,7 +319,7 @@ export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>((
         return (
           <div className="relative flex">
             {unit && unitPosition === 'left' && (
-              <span className="inline-flex items-center px-3 text-sm text-muted-foreground bg-muted border border-r-0 rounded-l-md">
+              <span className={`inline-flex items-center px-3 text-sm text-muted-foreground bg-muted ${quick.input} border-r-0 rounded-l-md`}>
                 {unit}
               </span>
             )}
@@ -335,7 +337,7 @@ export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>((
               ref={ref as React.RefObject<HTMLInputElement>}
             />
             {unit && unitPosition === 'right' && (
-              <span className="inline-flex items-center px-3 text-sm text-muted-foreground bg-muted border border-l-0 rounded-r-md">
+              <span className={`inline-flex items-center px-3 text-sm text-muted-foreground bg-muted ${quick.input} border-l-0 rounded-r-md`}>
                 {unit}
               </span>
             )}
@@ -388,7 +390,7 @@ export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>((
         )}
         
         {loading && (
-          <div className={`${iconSizes.sm} animate-spin rounded-full border-2 border-gray-300 border-t-blue-600`} />
+          <div className={`${iconSizes.sm} animate-spin rounded-full ${quick.input} border-gray-300 border-t-blue-600`} />
         )}
       </div>
     );

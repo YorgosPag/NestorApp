@@ -3,6 +3,7 @@ import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS, CORE_HOVER_TRANSFORMS, 
 import { useDynamicBackgroundClass, useDynamicBorderClass } from '@/components/ui/utils/dynamic-styles';
 import { ENHANCED_STATUS_LABELS as PROPERTY_STATUS_LABELS, ENHANCED_STATUS_COLORS as PROPERTY_STATUS_COLORS } from '@/constants/property-statuses-enterprise';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface LayersSettingsProps {
   // Για μελλοντική επέκταση μπορούμε να προσθέσουμε props
@@ -10,6 +11,7 @@ interface LayersSettingsProps {
 
 export const LayersSettings: React.FC<LayersSettingsProps> = () => {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const [activeTab, setActiveTab] = useState<'outlines' | 'fills'>('outlines');
   const [selectedPreset, setSelectedPreset] = useState<number>(0);
 
@@ -49,13 +51,13 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
           <div className="font-medium">Προεπισκόπηση Layer</div>
           <div className="font-normal text-gray-400">Δείτε πώς θα φαίνονται τα layers</div>
         </div>
-        <div className="p-2 bg-gray-800 rounded border border-gray-600 flex justify-center">
+        <div className={`p-2 bg-gray-800 ${quick.card} border-gray-600 flex justify-center`}>
           <div className="flex gap-1">
             {presetClasses.map((preset, index) => (
               <div
                 key={preset.name}
                 className={`
-                  border-2 rounded cursor-pointer transition-transform ${iconSizes.lg}
+                  border-2 ${quick.card} cursor-pointer transition-transform ${iconSizes.lg}
                   ${CORE_HOVER_TRANSFORMS.SCALE_UP}
                   ${preset.borderClass}
                   ${activeTab === 'fills' ? preset.bgWithOpacityClass : ''}
@@ -105,14 +107,14 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
                   <button
                     key={preset.name}
                     onClick={() => setSelectedPreset(index)}
-                    className={`p-2 rounded border transition-colors ${
+                    className={`p-2 ${quick.button} transition-colors ${
                       selectedPreset === index
                         ? 'bg-blue-600 border-blue-500'
                         : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500`
                     }`}
                   >
                     <div
-                      className={`w-full ${iconSizes.lg} rounded border border-gray-400 ${preset.bgClass}`}
+                      className={`w-full ${iconSizes.lg} ${quick.card} border-gray-400 ${preset.bgClass}`}
                     />
                     <div className="text-xs text-white mt-1 truncate">{preset.name}</div>
                   </button>
@@ -145,14 +147,14 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
                   <button
                     key={preset.name}
                     onClick={() => setSelectedPreset(index)}
-                    className={`p-2 rounded border transition-colors ${
+                    className={`p-2 ${quick.button} transition-colors ${
                       selectedPreset === index
                         ? 'bg-blue-600 border-blue-500'
                         : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500`
                     }`}
                   >
                     <div
-                      className={`w-full ${iconSizes.lg} rounded border border-gray-400 ${preset.bgClass}`}
+                      className={`w-full ${iconSizes.lg} ${quick.card} border-gray-400 ${preset.bgClass}`}
                     />
                     <div className="text-xs text-white mt-1 truncate">{preset.name}</div>
                   </button>
@@ -208,7 +210,7 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
         </div>
 
         {/* Coming Soon Features */}
-        <div className="p-2 bg-gray-800 rounded border border-gray-600">
+        <div className={`p-2 bg-gray-800 ${quick.card} border-gray-600`}>
           <div className="text-sm text-white font-medium mb-2">🚧 Σύντομα Διαθέσιμο</div>
           <ul className="text-xs text-gray-400 space-y-1">
             <li>• Χρώματα γεμίσματος layers</li>

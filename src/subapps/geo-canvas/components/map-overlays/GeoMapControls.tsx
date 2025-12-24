@@ -18,6 +18,7 @@
 
 import React from 'react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 
@@ -81,6 +82,7 @@ export const GeoMapControls: React.FC<GeoMapControlsProps> = ({
 }) => {
   const { t } = useTranslationLazy('geo-canvas');
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
 
   // ========================================================================
   // 🎨 RENDER COORDINATE PICKING CONTROLS
@@ -141,7 +143,7 @@ export const GeoMapControls: React.FC<GeoMapControlsProps> = ({
         <select
           value={currentMapStyle}
           onChange={(e) => onMapStyleChange(e.target.value as typeof currentMapStyle)}
-          className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white"
+          className={`w-full bg-gray-700 ${quick.input} border-gray-600 px-2 py-1 text-sm text-white`}
           disabled={!mapLoaded}
           aria-label={t('map.controls.selectMapStyle')}
         >

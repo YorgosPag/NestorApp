@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface WizardProgressProps {
   currentStep: number;
@@ -13,10 +14,11 @@ export function WizardProgress({
   totalSteps, 
   stepLabels = [] 
 }: WizardProgressProps) {
+  const { getStatusBorder } = useBorderTokens();
   const steps = Array.from({ length: totalSteps }, (_, i) => i + 1);
 
   return (
-    <div className="px-4 py-3 border-b border-gray-700">
+    <div className={`px-4 py-3 ${getStatusBorder('default')} border-b`}>
       <div className="flex items-center">
         {steps.map((stepNum) => (
           <React.Fragment key={stepNum}>

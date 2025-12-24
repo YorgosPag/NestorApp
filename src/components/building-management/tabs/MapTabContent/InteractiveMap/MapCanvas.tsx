@@ -30,14 +30,14 @@ interface MapCanvasProps {
 
 export function MapCanvas({ buildingName, mapView, showNearbyProjects, selectedLayer }: MapCanvasProps) {
     const iconSizes = useIconSizes();
-    const { createBorder } = useBorderTokens();
+    const { createBorder, quick } = useBorderTokens();
     const filteredProjects = nearbyProjects.filter(project => {
         if (selectedLayer === 'all') return true;
         return project.status === selectedLayer;
     });
 
     return (
-        <div className="relative h-96 bg-gradient-to-br from-green-100 via-blue-50 to-green-100 rounded-lg border-2 border-dashed border-border overflow-hidden">
+        <div className={`relative h-96 bg-gradient-to-br from-green-100 via-blue-50 to-green-100 ${quick.card} border-2 border-dashed border-border overflow-hidden`}>
             {/* Simulated Map Background */}
             <div className="absolute inset-0">
                 <div className="w-full h-full relative">
@@ -54,11 +54,11 @@ export function MapCanvas({ buildingName, mapView, showNearbyProjects, selectedL
                     <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20">
                         <div className="relative group">
                             <div className="animate-bounce">
-                                <div className="bg-red-500 p-3 rounded-full shadow-lg border-4 border-white">
+                                <div className={`bg-red-500 p-3 shadow-lg rounded-full border-4 border-white`}>
                                     <Building2 className={`${iconSizes.lg} text-white`} />
                                 </div>
                             </div>
-                            <div className={`absolute top-14 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-75 text-white px-3 py-1 rounded text-sm whitespace-nowrap opacity-0 ${GROUP_HOVER_PATTERNS.SHOW_ON_GROUP} transition-opacity`}>
+                            <div className={`absolute top-14 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-75 text-white px-3 py-1 ${quick.input} text-sm whitespace-nowrap opacity-0 ${GROUP_HOVER_PATTERNS.SHOW_ON_GROUP} transition-opacity`}>
                                 {buildingName}
                             </div>
                         </div>
@@ -80,7 +80,7 @@ export function MapCanvas({ buildingName, mapView, showNearbyProjects, selectedL
                     </div>
 
                     {/* Scale indicator */}
-                    <div className="absolute bottom-4 left-4 bg-white bg-opacity-90 px-3 py-2 rounded text-sm">
+                    <div className={`absolute bottom-4 left-4 bg-white bg-opacity-90 px-3 py-2 ${quick.input} text-sm`}>
                         <div className="flex items-center gap-2">
                             <div className={`${iconSizes.xl4} h-1 bg-black`}></div>
                             <span>100m</span>
@@ -88,7 +88,7 @@ export function MapCanvas({ buildingName, mapView, showNearbyProjects, selectedL
                     </div>
 
                     {/* Map type indicator */}
-                    <div className="absolute top-4 right-4 bg-white bg-opacity-90 px-3 py-2 rounded text-sm font-medium">
+                    <div className={`absolute top-4 right-4 bg-white bg-opacity-90 px-3 py-2 ${quick.input} text-sm font-medium`}>
                         {mapView === 'street' ? 'Χάρτης δρόμων' :
                             mapView === 'satellite' ? 'Δορυφορική όψη' :
                                 'Υβριδική όψη'}

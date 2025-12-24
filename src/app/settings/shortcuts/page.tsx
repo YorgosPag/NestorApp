@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 const shortcutsList = {
     file: [
@@ -60,6 +61,7 @@ const formatKey = (key: string) => {
 export default function ShortcutsPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('all');
+    const { quick } = useBorderTokens();
 
     const filteredShortcuts = Object.entries(shortcutsList)
         .filter(([category]) => selectedCategory === 'all' || category === selectedCategory)
@@ -109,7 +111,7 @@ export default function ShortcutsPage() {
                                     {group.shortcuts.map(shortcut => (
                                         <div key={shortcut.key} className={`flex items-center justify-between p-2 rounded-md ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}>
                                             <span className="text-sm text-foreground">{shortcut.description}</span>
-                                            <kbd className="px-2 py-1 bg-muted border rounded text-xs font-mono text-muted-foreground">
+                                            <kbd className={`px-2 py-1 bg-muted ${quick.card} text-xs font-mono text-muted-foreground`}>
                                                 {formatKey(shortcut.key)}
                                             </kbd>
                                         </div>

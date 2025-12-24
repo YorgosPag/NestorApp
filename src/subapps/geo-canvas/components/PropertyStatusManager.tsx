@@ -14,6 +14,7 @@ import { STATUS_COLORS_MAPPING } from '@/subapps/dxf-viewer/config/color-mapping
 import { layoutUtilities } from '@/styles/design-tokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface PropertyStatusManagerProps {
   onStatusChange?: (newStatus: PropertyStatus) => void;
@@ -42,6 +43,7 @@ export function PropertyStatusManager({
 }: PropertyStatusManagerProps) {
   // ✅ ENTERPRISE: All hooks must be declared BEFORE any conditional returns
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const colors = useSemanticColors();
   const { t, isLoading } = useTranslationLazy('geo-canvas');
   const [selectedStatuses, setSelectedStatuses] = useState<PropertyStatus[]>(getAllStatuses());
@@ -234,7 +236,7 @@ export function PropertyStatusManager({
       )}
 
       {/* Statistics */}
-      <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+      <div className={`bg-blue-50 ${quick.card} border-blue-200 p-3`}>
         <div className="flex items-center gap-2 mb-2">
           <Info className={`${iconSizes.sm} text-blue-600`} />
           <span className="text-sm font-medium text-blue-900">{t('propertyStatusManager.statistics.title')}</span>

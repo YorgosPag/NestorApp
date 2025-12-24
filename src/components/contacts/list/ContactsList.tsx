@@ -12,6 +12,7 @@ import { Users } from 'lucide-react';
 import { getContactDisplayName } from '@/types/contacts';
 import { ContactsService } from '@/services/contacts.service';
 import toast from 'react-hot-toast';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 
 interface ContactsListProps {
@@ -37,6 +38,7 @@ export function ContactsList({
   onArchiveContact,
   onContactUpdated
 }: ContactsListProps) {
+  const { quick } = useBorderTokens();
   const [sortBy, setSortBy] = useState<string>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [togglingFavorites, setTogglingFavorites] = useState<Set<string>>(new Set());
@@ -105,7 +107,7 @@ export function ContactsList({
   });
 
   return (
-    <div className="min-w-[300px] max-w-[420px] w-full bg-card border rounded-lg flex flex-col shrink-0 shadow-sm max-h-full overflow-hidden">
+    <div className={`min-w-[300px] max-w-[420px] w-full bg-card ${quick.card} flex flex-col shrink-0 shadow-sm max-h-full overflow-hidden`}>
 
 
       {/* Header with conditional CompactToolbar */}
@@ -203,7 +205,7 @@ export function ContactsList({
           {isLoading ? (
             // Loading skeletons
             Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="p-3 border rounded-lg">
+              <div key={i} className={`p-3 ${quick.card}`}>
                 <Skeleton className="h-4 w-3/4 mb-2" />
                 <Skeleton className="h-3 w-1/2" />
               </div>

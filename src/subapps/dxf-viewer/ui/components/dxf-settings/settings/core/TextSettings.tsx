@@ -44,6 +44,7 @@
 
 import React, { useState } from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useTextSettingsFromProvider } from '../../../../../settings-provider';
 import { AccordionSection, useAccordion } from '../shared/AccordionSection';
 import type { TextSettings } from '../../../../contexts/TextSettingsContext';
@@ -142,6 +143,7 @@ interface TextStyleButtonsProps {
 
 function TextStyleButtons({ settings, onToggle }: TextStyleButtonsProps) {
   const iconSizes = useIconSizes();
+  const { quick, getStatusBorder } = useBorderTokens();
 
   return (
     <div className="flex flex-wrap gap-1">
@@ -150,10 +152,10 @@ function TextStyleButtons({ settings, onToggle }: TextStyleButtonsProps) {
           key={style.key}
           onClick={() => onToggle(style.key)}
           title={style.title}
-          className={`${iconSizes.xl} text-sm font-bold rounded border transition-colors ${
+          className={`${iconSizes.xl} text-sm font-bold ${quick.button} transition-colors ${
             settings[style.key]
               ? 'bg-green-600 border-green-500 text-white'
-              : 'bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} border-gray-600 text-gray-300'
+              : `bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${quick.button} text-gray-300`
           }`}
           style={layoutUtilities.cssVars.textStyle.forButton(style.key)}
         >
@@ -171,11 +173,12 @@ interface ScriptStyleButtonsProps {
 }
 
 function ScriptStyleButtons({ settings, onSuperscriptChange, onSubscriptChange }: ScriptStyleButtonsProps) {
+  const { quick, getStatusBorder } = useBorderTokens();
   return (
     <div className="flex gap-1">
       <button
         onClick={onSuperscriptChange}
-        className={`px-3 py-1 text-sm rounded border transition-colors ${
+        className={`px-3 py-1 text-sm ${quick.button} transition-colors ${
           settings.isSuperscript
             ? 'bg-green-600 border-green-500 text-white'
             : 'bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} border-gray-600 text-gray-300'
@@ -185,7 +188,7 @@ function ScriptStyleButtons({ settings, onSuperscriptChange, onSubscriptChange }
       </button>
       <button
         onClick={onSubscriptChange}
-        className={`px-3 py-1 text-sm rounded border transition-colors ${
+        className={`px-3 py-1 text-sm ${quick.button} transition-colors ${
           settings.isSubscript
             ? 'bg-green-600 border-green-500 text-white'
             : 'bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} border-gray-600 text-gray-300'
@@ -198,6 +201,7 @@ function ScriptStyleButtons({ settings, onSuperscriptChange, onSubscriptChange }
 }
 
 export function TextSettings() {
+  const { quick, getStatusBorder } = useBorderTokens();
   // 🔥 FIX: Use Global Text Settings από provider, ΟΧΙ Preview-specific settings!
   // Το useUnifiedTextPreview() ενημερώνει localStorage 'dxf-text-preview-settings' (WRONG!)
   // Θέλουμε να ενημερώσουμε το 'dxf-text-general-settings' (CORRECT!)
@@ -330,13 +334,13 @@ export function TextSettings() {
 
       {/* Enable/Disable Text Display */}
       <div className="space-y-2">
-        <div className="flex items-center gap-3 p-3 bg-gray-800 rounded-md border-l-4 border-blue-500">
+        <div className={`flex items-center gap-3 p-3 bg-gray-800 ${quick.card} border-l-4 border-blue-500`}>
           <input
             type="checkbox"
             id="text-enabled"
             checked={textSettings.enabled}
             onChange={(e) => updateTextSettings({ enabled: e.target.checked })}
-            className={`${iconSizes.sm} text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2`}
+            className={`${iconSizes.sm} text-blue-600 bg-gray-700 ${quick.input} focus:ring-blue-500 focus:ring-2`}
           />
           <label
             htmlFor="text-enabled"
@@ -346,7 +350,7 @@ export function TextSettings() {
           </label>
         </div>
         {!textSettings.enabled && (
-          <div className="text-xs text-yellow-400 bg-yellow-900 bg-opacity-20 p-2 rounded border border-yellow-700">
+          <div className={`text-xs text-yellow-400 bg-yellow-900 bg-opacity-20 p-2 ${quick.card} border-yellow-700`}>
             ⚠️ Το κείμενο απόστασης είναι απενεργοποιημένο και δεν θα εμφανίζεται στην προσχεδίαση
           </div>
         )}
@@ -398,7 +402,7 @@ export function TextSettings() {
                   {/* Increase Font Size - Big A with up arrow */}
                   <button
                     onClick={increaseFontSize}
-                    className={`w-10 h-9 bg-gray-700 border border-gray-500 rounded text-white ${HOVER_BACKGROUND_EFFECTS.DARKER} transition-colors flex items-center justify-center`}
+                    className={`w-10 h-9 bg-gray-700 ${quick.button} text-white ${HOVER_BACKGROUND_EFFECTS.DARKER} transition-colors flex items-center justify-center`}
                     title="Αύξηση μεγέθους γραμματοσειράς"
                   >
                     <div className="flex items-center">
@@ -412,7 +416,7 @@ export function TextSettings() {
                   {/* Decrease Font Size - Small A with down arrow */}
                   <button
                     onClick={decreaseFontSize}
-                    className={`w-10 h-9 bg-gray-700 border border-gray-500 rounded text-white ${HOVER_BACKGROUND_EFFECTS.DARKER} transition-colors flex items-center justify-center`}
+                    className={`w-10 h-9 bg-gray-700 ${quick.button} text-white ${HOVER_BACKGROUND_EFFECTS.DARKER} transition-colors flex items-center justify-center`}
                     title="Μείωση μεγέθους γραμματοσειράς"
                   >
                     <div className="flex items-center">
@@ -503,7 +507,7 @@ export function TextSettings() {
               <label className="block text-sm font-medium text-gray-300">
                 {TEXT_LABELS.PREVIEW}
               </label>
-              <div className="p-4 bg-white border border-gray-600 rounded-md">
+              <div className={`p-4 bg-white ${quick.card}`}>
                 <div style={getPreviewStyle()}>
                   {TEXT_LABELS.PREVIEW_TEXT}
                 </div>
@@ -511,7 +515,7 @@ export function TextSettings() {
             </div>
 
             {/* Settings Summary */}
-            <div className="p-2 bg-gray-700 rounded border-l-4 border-green-500 mt-4">
+            <div className={`p-2 bg-gray-700 ${quick.card} border-l-4 border-green-500 mt-4`}>
               <div className="text-xs text-gray-400 space-y-1">
                 <div><strong>{FREE_FONTS.find(f => f.value === textSettings.fontFamily)?.label}</strong>, {textSettings.fontSize}pt</div>
                 <div>{[
@@ -540,7 +544,7 @@ export function TextSettings() {
       >
         <div className="space-y-4">
           {/* Warning Message */}
-          <div className="bg-red-900 bg-opacity-20 border-l-4 border-red-500 p-4 rounded">
+          <div className={`bg-red-900 bg-opacity-20 border-l-4 border-red-500 p-4 ${quick.card}`}>
             <p className="text-red-200 font-semibold mb-2">
               ⚠️ ΠΡΟΕΙΔΟΠΟΙΗΣΗ: Θα χάσετε ΟΛΑ τα δεδομένα σας!
             </p>
@@ -557,7 +561,7 @@ export function TextSettings() {
           </div>
 
           {/* Reset Info */}
-          <div className="bg-blue-900 bg-opacity-20 border-l-4 border-blue-500 p-4 rounded">
+          <div className={`bg-blue-900 bg-opacity-20 border-l-4 border-blue-500 p-4 ${quick.card}`}>
             <p className="text-blue-200 text-sm">
               <strong>Επαναφορά:</strong> Οι ρυθμίσεις θα επανέλθουν στα πρότυπα ISO 3098
             </p>
@@ -569,7 +573,7 @@ export function TextSettings() {
           </p>
 
           {/* Action Buttons */}
-          <div className="flex gap-3 justify-end pt-4 border-t border-gray-700">
+          <div className={`flex gap-3 justify-end pt-4 ${quick.separator}`}>
             <button
               onClick={handleFactoryResetCancel}
               className="px-4 py-2 text-sm bg-gray-600 ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-white rounded transition-colors"

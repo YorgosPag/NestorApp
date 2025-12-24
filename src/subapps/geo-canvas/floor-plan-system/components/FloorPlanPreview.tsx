@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import type { ParserResult } from '../types';
 import { layoutUtilities } from '@/styles/design-tokens';
 
@@ -31,6 +32,7 @@ export interface FloorPlanPreviewProps {
 
 export function FloorPlanPreview({ result, file, className = '' }: FloorPlanPreviewProps) {
   const { t } = useTranslationLazy('geo-canvas');
+  const { quick } = useBorderTokens();
 
   // Format file size
   const formatFileSize = (bytes: number): string => {
@@ -43,11 +45,11 @@ export function FloorPlanPreview({ result, file, className = '' }: FloorPlanPrev
     <article className={`flex flex-col gap-4 ${className}`} aria-labelledby="floor-plan-preview-title">
       {/* Thumbnail Preview */}
       {result.thumbnail && (
-        <section className="bg-gray-50 rounded-lg p-4 border-2 border-gray-200" aria-labelledby="thumbnail-title">
+        <section className={`bg-gray-50 ${quick.card} p-4 border-2 border-gray-200`} aria-labelledby="thumbnail-title">
           <h3 id="thumbnail-title" className="text-sm font-semibold text-gray-700 mb-3">
             {t('floorPlan.preview.thumbnailTitle')}
           </h3>
-          <figure className="flex justify-center items-center bg-white rounded border border-gray-300">
+          <figure className={`flex justify-center items-center bg-white ${quick.input} border-gray-300`}>
             <img
               src={result.thumbnail}
               alt="Floor plan preview"
@@ -59,7 +61,7 @@ export function FloorPlanPreview({ result, file, className = '' }: FloorPlanPrev
       )}
 
       {/* File Information */}
-      <section className="bg-blue-50 rounded-lg p-4 border-2 border-blue-200" aria-labelledby="file-info-title">
+      <section className={`bg-blue-50 ${quick.card} p-4 border-2 border-blue-200`} aria-labelledby="file-info-title">
         <h3 id="file-info-title" className="text-sm font-semibold text-blue-700 mb-3">
           {t('floorPlan.preview.fileInfoTitle')}
         </h3>
@@ -79,7 +81,7 @@ export function FloorPlanPreview({ result, file, className = '' }: FloorPlanPrev
 
       {/* DXF-specific metadata */}
       {result.format === 'DXF' && result.geoJSON && result.bounds && (
-        <section className="bg-green-50 rounded-lg p-4 border-2 border-green-200">
+        <section className={`bg-green-50 ${quick.card} p-4 border-2 border-green-200`}>
           <h3 className="text-sm font-semibold text-green-700 mb-3">
             {t('floorPlan.preview.dxfDataTitle')}
           </h3>
@@ -109,7 +111,7 @@ export function FloorPlanPreview({ result, file, className = '' }: FloorPlanPrev
                 {result.layers.slice(0, 10).map((layer, index) => (
                   <span
                     key={index}
-                    className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded border border-green-300"
+                    className={`px-2 py-1 bg-green-100 text-green-800 text-xs ${quick.input} border-green-300`}
                   >
                     {layer}
                   </span>
@@ -128,7 +130,7 @@ export function FloorPlanPreview({ result, file, className = '' }: FloorPlanPrev
       {/* Image-specific metadata */}
       {(result.format === 'PNG' || result.format === 'JPG' || result.format === 'TIFF') &&
        'metadata' in result && result.metadata && (
-        <section className="bg-purple-50 rounded-lg p-4 border-2 border-purple-200">
+        <section className={`bg-purple-50 ${quick.card} p-4 border-2 border-purple-200`}>
           <h3 className="text-sm font-semibold text-purple-700 mb-3">
             {t('floorPlan.preview.imageDataTitle')}
           </h3>
@@ -154,7 +156,7 @@ export function FloorPlanPreview({ result, file, className = '' }: FloorPlanPrev
       )}
 
       {/* Next steps hint */}
-      <section className="bg-yellow-50 rounded-lg p-4 border-2 border-yellow-200">
+      <section className={`bg-yellow-50 ${quick.card} p-4 border-2 border-yellow-200`}>
         <div className="flex items-start gap-2">
           <span className="text-xl">💡</span>
           <div className="flex-1">

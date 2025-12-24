@@ -13,6 +13,7 @@
 import * as React from 'react';
 import type { UnifiedTestReport } from './unified-test-runner';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 // Enterprise Canvas UI Migration - Phase B
 import { canvasUI } from '@/styles/design-tokens/canvas';
@@ -43,8 +44,26 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
   formattedReport
 }) => {
   const iconSizes = useIconSizes();
+  const { getStatusBorder } = useBorderTokens();
   const [copied, setCopied] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState<'summary' | 'details' | 'raw'>('summary');
+
+  // Enterprise helper για tab borders
+  const getTabBorder = (tabName: string) => {
+    return activeTab === tabName
+      ? `bg-gray-800 text-white ${getStatusBorder('active')} border-t border-l border-r`
+      : `bg-gray-700 text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} ${HOVER_BACKGROUND_EFFECTS.GRAY_750}`;
+  };
+
+  // Enterprise helper για status borders
+  const getTestStatusBorder = (status: 'passed' | 'failed' | 'warning' | 'info') => {
+    switch (status) {
+      case 'passed': return `bg-green-900 ${getStatusBorder('success')}`;
+      case 'failed': return `bg-red-900 ${getStatusBorder('error')}`;
+      case 'warning': return `bg-yellow-900 ${getStatusBorder('warning')}`;
+      case 'info': return `bg-blue-900 ${getStatusBorder('info')}`;
+    }
+  };
 
   // Reset copied state when modal opens
   React.useEffect(() => {
@@ -129,12 +148,12 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="relative bg-gray-900 rounded-lg shadow-2xl border border-gray-600 flex flex-col"
+        className={`relative bg-gray-900 rounded-lg shadow-2xl flex flex-col ${getStatusBorder('default')}`}
         style={canvasUI.positioning.floatingPanel.testModal.content}
         onClick={(e) => e.stopPropagation()}
       >
         {/* HEADER */}
-        <div className="flex items-center justify-between px-6 py-4 bg-gray-800 border-b border-gray-700 rounded-t-lg">
+        <div className={`flex items-center justify-between px-6 py-4 bg-gray-800 rounded-t-lg ${getStatusBorder('default')} border-b`}>
           <div className="flex items-center gap-3">
             <span className="text-2xl">🧪</span>
             <div>
@@ -153,7 +172,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
         </div>
 
         {/* STATS BAR */}
-        <div className="flex items-center justify-between px-6 py-3 bg-gray-850 border-b border-gray-700">
+        <div className={`flex items-center justify-between px-6 py-3 bg-gray-850 ${getStatusBorder('default')} border-b`}>
           <div className="flex gap-6">
             <div className="flex items-center gap-2">
               <span className="text-green-400 text-lg font-bold">{report.passed}</span>
@@ -202,11 +221,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
               console.log('🔘 Summary tab clicked');
               setActiveTab('summary');
             }}
-            className={`px-4 py-2 text-sm font-medium rounded-t transition-all ${
-              activeTab === 'summary'
-                ? 'bg-gray-800 text-white border-t border-l border-r border-gray-600'
-                : `bg-gray-700 text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} ${HOVER_BACKGROUND_EFFECTS.GRAY_750}`
-            }`}
+            className={`px-4 py-2 text-sm font-medium rounded-t transition-all ${getTabBorder('summary')}`}
             style={getTestResultsInteractiveAutoStyles()}
           >
             📊 Περίληψη
@@ -216,11 +231,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
               console.log('🔘 Details tab clicked');
               setActiveTab('details');
             }}
-            className={`px-4 py-2 text-sm font-medium rounded-t transition-all ${
-              activeTab === 'details'
-                ? 'bg-gray-800 text-white border-t border-l border-r border-gray-600'
-                : `bg-gray-700 text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} ${HOVER_BACKGROUND_EFFECTS.GRAY_750}`
-            }`}
+            className={`px-4 py-2 text-sm font-medium rounded-t transition-all ${getTabBorder('details')}`}
             style={getTestResultsInteractiveAutoStyles()}
           >
             🔍 Λεπτομέρειες
@@ -230,11 +241,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
               console.log('🔘 Raw tab clicked');
               setActiveTab('raw');
             }}
-            className={`px-4 py-2 text-sm font-medium rounded-t transition-all ${
-              activeTab === 'raw'
-                ? 'bg-gray-800 text-white border-t border-l border-r border-gray-600'
-                : `bg-gray-700 text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} ${HOVER_BACKGROUND_EFFECTS.GRAY_750}`
-            }`}
+            className={`px-4 py-2 text-sm font-medium rounded-t transition-all ${getTabBorder('raw')}`}
             style={getTestResultsInteractiveAutoStyles()}
           >
             📝 Ακατέργαστη Έξοδος
@@ -249,7 +256,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
         </div>
 
         {/* FOOTER */}
-        <div className="flex items-center justify-between px-6 py-3 bg-gray-850 border-t border-gray-700 rounded-b-lg">
+        <div className={`flex items-center justify-between px-6 py-3 bg-gray-850 rounded-b-lg ${getStatusBorder('default')} border-t`}>
           <div className="text-xs text-gray-500">
             🖥️ Viewport: {report.systemInfo.viewport.width}×{report.systemInfo.viewport.height}
           </div>
@@ -270,18 +277,23 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
 // ============================================================================
 
 const SummaryTab: React.FC<{ report: UnifiedTestReport }> = ({ report }) => {
+  const { getStatusBorder } = useBorderTokens();
+
+  // Enterprise helper για test status borders
+  const getTestStatusBorder = (status: 'success' | 'error' | 'warning' | 'info') => {
+    switch (status) {
+      case 'success': return `bg-green-900 ${getStatusBorder('success')}`;
+      case 'error': return `bg-red-900 ${getStatusBorder('error')}`;
+      case 'warning': return `bg-yellow-900 ${getStatusBorder('warning')}`;
+      default: return `bg-blue-900 ${getStatusBorder('info')}`;
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         {report.tests.map((test, index) => {
-          const statusColor =
-            test.status === 'success'
-              ? 'bg-green-900 border-green-600'
-              : test.status === 'error'
-              ? 'bg-red-900 border-red-600'
-              : test.status === 'warning'
-              ? 'bg-yellow-900 border-yellow-600'
-              : 'bg-blue-900 border-blue-600';
+          const statusColor = getTestStatusBorder(test.status as 'success' | 'error' | 'warning' | 'info');
 
           const icon =
             test.status === 'success'
@@ -355,7 +367,7 @@ const DetailsTab: React.FC<{ report: UnifiedTestReport }> = ({ report }) => {
             : 'ℹ️';
 
         return (
-          <div key={index} className="border border-gray-700 rounded bg-gray-850" style={getTestResultsInteractiveAutoStyles()}>
+          <div key={index} className={`rounded bg-gray-850 ${getStatusBorder('default')}`} style={getTestResultsInteractiveAutoStyles()}>
             <button
               onClick={() => {
                 console.log(`🔽 Toggling test ${index}: ${test.name}`);
@@ -373,7 +385,7 @@ const DetailsTab: React.FC<{ report: UnifiedTestReport }> = ({ report }) => {
             </button>
 
             {isExpanded && (
-              <div className="px-4 pb-4 pt-2 border-t border-gray-700">
+              <div className={`px-4 pb-4 pt-2 ${getStatusBorder('default')} border-t`}>
                 <div className="space-y-2">
                   <div>
                     <span className="text-xs text-gray-500">Περίληψη:</span>

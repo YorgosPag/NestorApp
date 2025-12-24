@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useCursorSettings } from '../../../../../systems/cursor';
 import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 export function SelectionSettings() {
@@ -8,6 +9,7 @@ export function SelectionSettings() {
 
   // 🔺 REAL CURSOR SYSTEM INTEGRATION - Αντικατάσταση mock state με πραγματικές ρυθμίσεις
   const { settings, updateSettings } = useCursorSettings();
+  const { getStatusBorder, getElementBorder } = useBorderTokens();
 
   // Real handlers που συνδέονται με το CursorSystem
   const handleWindowSelectionChange = (field: string, value: any) => {
@@ -54,13 +56,13 @@ export function SelectionSettings() {
   return (
     <div className="p-4">
       {/* Sub-navigation tabs */}
-      <div className="flex gap-1 mb-4 border-b border-gray-600 pb-2">
+      <div className={`flex gap-1 mb-4 pb-2 ${getStatusBorder('default')} border-b`}>
         <button
           onClick={() => setActiveSelectionTab('window')}
           className={`px-3 py-2 text-xs rounded-t transition-colors ${
             activeSelectionTab === 'window'
-              ? 'bg-blue-600 text-white border-b-2 border-blue-400'
-              : 'bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-gray-200'
+              ? `bg-blue-600 text-white ${getStatusBorder('active')} border-b-2`
+              : `bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-gray-200`
           }`}
         >
           🔵 Window Selection
@@ -69,8 +71,8 @@ export function SelectionSettings() {
           onClick={() => setActiveSelectionTab('crossing')}
           className={`px-3 py-2 text-xs rounded-t transition-colors ${
             activeSelectionTab === 'crossing'
-              ? 'bg-blue-600 text-white border-b-2 border-blue-400'
-              : 'bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-gray-200'
+              ? `bg-blue-600 text-white ${getStatusBorder('active')} border-b-2`
+              : `bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-gray-200`
           }`}
         >
           🟢 Crossing Selection
@@ -230,10 +232,10 @@ export function SelectionSettings() {
                   <button
                     key={style}
                     onClick={() => handleWindowSelectionChange('borderStyle', style)}
-                    className={`p-2 rounded text-xs border transition-colors ${
+                    className={`p-2 rounded text-xs transition-colors ${
                       isSelected
-                        ? 'bg-blue-600 border-blue-500'
-                        : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
+                        ? `bg-blue-600 ${getStatusBorder('active')}`
+                        : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getElementBorder('button', 'default')}`
                     }`}
                   >
                     <div
@@ -389,10 +391,10 @@ export function SelectionSettings() {
                   <button
                     key={style}
                     onClick={() => handleCrossingSelectionChange('borderStyle', style)}
-                    className={`p-2 rounded text-xs border transition-colors ${
+                    className={`p-2 rounded text-xs transition-colors ${
                       isSelected
-                        ? 'bg-blue-600 border-blue-500'
-                        : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
+                        ? `bg-blue-600 ${getStatusBorder('active')}`
+                        : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getElementBorder('button', 'default')}`
                     }`}
                   >
                     <div

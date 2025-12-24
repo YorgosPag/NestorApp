@@ -14,6 +14,7 @@ import React from 'react';
 import { designSystem } from '@/lib/design-system';
 import { MessageCircle, Eye } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 // Types
 import type { MessagePreviewProps } from '../types';
@@ -39,6 +40,8 @@ export const MessagePreview: React.FC<MessagePreviewProps> = ({
   show = true
 }) => {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
+
   // Early return if hidden or no message
   if (!show || !message.trim()) return null;
 
@@ -60,7 +63,7 @@ export const MessagePreview: React.FC<MessagePreviewProps> = ({
       </header>
 
       {/* Preview Content */}
-      <main className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800" role="main">
+      <main className={`p-4 bg-blue-50 dark:bg-blue-900/20 ${quick.card} ${quick.input} border-blue-200 dark:border-blue-800`} role="main">
         <blockquote className={designSystem.cn(
           designSystem.getTypographyClass('sm'),
           'text-blue-700 dark:text-blue-200 italic leading-relaxed'
@@ -87,6 +90,9 @@ export const CompactMessagePreview: React.FC<MessagePreviewProps & {
   show = true,
   maxLength = 100
 }) => {
+  const { quick } = useBorderTokens();
+  const iconSizes = useIconSizes();
+
   if (!show || !message.trim()) return null;
 
   const truncatedMessage = message.length > maxLength
@@ -94,7 +100,7 @@ export const CompactMessagePreview: React.FC<MessagePreviewProps & {
     : message;
 
   return (
-    <aside className="p-2 bg-gray-50 dark:bg-gray-800 rounded border text-xs" role="region" aria-label="Compact Message Preview">
+    <aside className={`p-2 bg-gray-50 dark:bg-gray-800 ${quick.rounded} ${quick.input} text-xs`} role="region" aria-label="Compact Message Preview">
       <header className="flex items-center gap-1 text-muted-foreground mb-1" role="banner">
         <MessageCircle className={iconSizes.xs} />
         <span>Preview</span>

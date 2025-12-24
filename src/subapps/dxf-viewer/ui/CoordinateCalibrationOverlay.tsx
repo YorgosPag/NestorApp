@@ -12,6 +12,7 @@ import type { SceneModel } from '../types/scene';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { portalComponents, layoutUtilities } from '@/styles/design-tokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import {
   getCalibrationOverlayContainerStyles,
   getCalibrationDebugPanelStyles,
@@ -45,6 +46,7 @@ export default function CoordinateCalibrationOverlay({
   onToggle
 }: CoordinateCalibrationOverlayProps) {
   const iconSizes = useIconSizes();
+  const { getElementBorder } = useBorderTokens();
   const [clickTests, setClickTests] = useState<ClickTest[]>([]);
   const [showDetails, setShowDetails] = useState(true);
   const clickIdRef = useRef(0);
@@ -152,14 +154,14 @@ export default function CoordinateCalibrationOverlay({
               <span className="text-cyan-300 font-semibold">🎯 Τεστ Κλικ:</span>
               <button onClick={() => setClickTests([])} className={`text-xs bg-red-600 ${INTERACTIVE_PATTERNS.BUTTON_DESTRUCTIVE_HOVER} px-2 py-1 rounded`}>Καθαρισμός</button>
             </div>
-            <div className="border-2 border-dashed border-cyan-600 p-2 rounded cursor-crosshair pointer-events-auto" onClick={handleCalibrationClick}>
+            <div className={`p-2 rounded cursor-crosshair pointer-events-auto ${getElementBorder('input', 'focus')} border-2 border-dashed`} onClick={handleCalibrationClick}>
               <div className="text-center text-xs text-cyan-300 mb-2">Κλικ εδώ για τεστ ακρίβειας</div>
               <div className="max-h-24 overflow-y-auto space-y-1">
                 {clickTests.length === 0 ? (
                   <div className="text-gray-500 text-xs text-center">Δεν υπάρχουν δοκιμές</div>
                 ) : (
                   clickTests.slice(-2).map(test => (
-                    <div key={test.id} className="text-xs border-l-2 border-cyan-500 pl-2">
+                    <div key={test.id} className={`text-xs ${getElementBorder('card', 'active')} border-l-2 pl-2`}>
                       <div className="text-white">#{test.id} @ {test.timestamp}</div>
                       <div className="text-green-300">CSS: ({test.cssPoint.x.toFixed(1)}, {test.cssPoint.y.toFixed(1)})</div>
                       <div className="text-yellow-300">Κόσμος: ({test.worldPoint.x.toFixed(2)}, {test.worldPoint.y.toFixed(2)})</div>

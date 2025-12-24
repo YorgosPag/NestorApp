@@ -23,6 +23,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 // Props interface for all tab contents
 interface ContactsTabContentProps {
@@ -142,6 +143,8 @@ export function ActionsTabContent({
 export function CommunicationTabContent({
   selectedItems = []
 }: ContactsTabContentProps) {
+  const { quick } = useBorderTokens();
+
   return (
     <>
       <TooltipProvider>
@@ -199,7 +202,7 @@ export function CommunicationTabContent({
       </TooltipProvider>
 
       {selectedItems.length === 0 && (
-        <div className="text-center text-sm text-muted-foreground mt-4 p-4 border rounded-lg bg-muted/20 w-full">
+        <div className={`text-center text-sm text-muted-foreground mt-4 p-4 ${quick.card} bg-muted/20 w-full`}>
           Επιλέξτε επαφές για επικοινωνία
         </div>
       )}
@@ -309,6 +312,8 @@ export function FiltersTabContent({
   onToggleArchivedFilter,
   onToggleSort
 }: ContactsTabContentProps) {
+  const { quick } = useBorderTokens();
+
   return (
     <>
       <TooltipProvider>
@@ -357,7 +362,7 @@ export function FiltersTabContent({
         </Tooltip>
       </TooltipProvider>
 
-      <div className="text-center text-sm text-muted-foreground mt-4 p-4 border rounded-lg bg-blue-50/50 w-full">
+      <div className={`text-center text-sm text-muted-foreground mt-4 p-4 ${quick.card} bg-blue-50/50 w-full`}>
         💡 Χρησιμοποιήστε τα φίλτρα στο header για περισσότερες επιλογές
       </div>
     </>

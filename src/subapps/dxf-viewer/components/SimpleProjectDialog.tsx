@@ -26,6 +26,7 @@ import { useNotifications } from '../../../providers/NotificationProvider';
 import DxfImportModal from './DxfImportModal';
 import type { SceneModel } from '../types/scene';
 import { HOVER_TEXT_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { MODAL_CONFIGURATIONS, getModalConfig, getModalZIndex } from '../config/modal-config';
 import {
   ProjectModalContainer,
@@ -62,6 +63,21 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
     loadProjectsForCompany,
     selectProject
   } = useProjectHierarchy();
+
+  const { getStatusBorder } = useBorderTokens();
+
+  // Enterprise helper για modal container borders
+  const getModalContainerBorder = (variant: 'default' | 'info' | 'success' | 'warning' | 'error') => {
+    const baseClasses = {
+      default: 'bg-gray-700',
+      info: 'bg-blue-50 dark:bg-blue-950/30',
+      success: 'bg-green-50 dark:bg-green-950/30',
+      warning: 'bg-yellow-50 dark:bg-yellow-950/30',
+      error: 'bg-red-50 dark:bg-red-950/30'
+    };
+
+    return `${baseClasses[variant]} ${getStatusBorder(variant)}`;
+  };
 
   const { setProjectFloorplan, setParkingFloorplan } = useFloorplan();
 
@@ -457,7 +473,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
             )}
             
               {(!companies || companies.length === 0) && !loading && !error && (
-                <ProjectModalContainer title="" className="bg-gray-700 border-gray-600">
+                <ProjectModalContainer title="" className={getModalContainerBorder('default')}>
                   <p className={`${DXF_MODAL_TYPOGRAPHY.DESCRIPTION.default}`}>Δεν βρέθηκαν εταιρείες στο σύστημα.</p>
                 </ProjectModalContainer>
               )}
@@ -473,7 +489,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
 
               {/* Selected Company Info */}
               {selectedCompany && (
-                <ProjectModalContainer title="" className="${MODAL_SPACING.SECTIONS.betweenItems} bg-blue-50 dark:bg-blue-950/30 border-blue-500/20">
+                <ProjectModalContainer title="" className={`${MODAL_SPACING.SECTIONS.betweenItems} ${getModalContainerBorder('info')}`}>
                   <div className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>
                     <BuildingIcon className={`${getIconSize('title')} ${getModalIconColor('info')}`} />
                     <div>
@@ -510,7 +526,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
               )}
 
               {(!projects || projects.length === 0) && !loading && !error && selectedCompany && (
-                <ProjectModalContainer title="" className="bg-gray-800 border-gray-600">
+                <ProjectModalContainer title="" className={getModalContainerBorder('default')}>
                   <p className={`${DXF_MODAL_TYPOGRAPHY.DESCRIPTION.default}`}>Δεν βρέθηκαν έργα για την επιλεγμένη εταιρεία.</p>
                 </ProjectModalContainer>
               )}
@@ -529,7 +545,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                 <div className={`${MODAL_SPACING.SECTIONS.betweenSections} ${MODAL_FLEX_PATTERNS.COLUMN.stretchWithGap}`}>
                   <ProjectModalContainer
                     title=""
-                    className="bg-blue-50 dark:bg-blue-950/30 border-blue-500/20"
+                    className={getModalContainerBorder('info')}
                   >
                     <div className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>
                       <BuildingIcon className={`${getIconSize('title')} ${getModalIconColor('info')}`} />
@@ -541,7 +557,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                   </ProjectModalContainer>
                   <ProjectModalContainer
                     title=""
-                    className="bg-green-50 dark:bg-green-950/30 border-green-500/20"
+                    className={getModalContainerBorder('success')}
                   >
                     <div className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>
                       <Building2 className={`${getIconSize('title')} ${getModalIconColor('success')}`} />
@@ -574,7 +590,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                   </SelectContent>
                 </Select>
               ) : (
-                <ProjectModalContainer title="" className="bg-gray-800 border-gray-600">
+                <ProjectModalContainer title="" className={getModalContainerBorder('default')}>
                   <p className={`${DXF_MODAL_TYPOGRAPHY.DESCRIPTION.default}`}>Δεν βρέθηκαν κτίρια για το επιλεγμένο έργο.</p>
                 </ProjectModalContainer>
               )}
@@ -599,7 +615,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
 
           {/* Floorplan Options - Only shown when project is selected */}
           {currentStep === 'project' && selectedProjectId && (
-            <ProjectModalContainer title="Επιλέξτε Κάτοψη για Φόρτωση" className="${MODAL_SPACING.SECTIONS.betweenBlocks} bg-gray-700 border-gray-600">
+            <ProjectModalContainer title="Επιλέξτε Κάτοψη για Φόρτωση" className={`${MODAL_SPACING.SECTIONS.betweenBlocks} ${getModalContainerBorder('default')}`}>
               <ModalActions alignment="center">
                 <Button
                   onClick={() => handleLoadFloorplan('project')}
@@ -626,7 +642,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
 
           {/* Building Floorplan Options - Only shown when building is selected */}
           {currentStep === 'building' && selectedBuildingId && (
-            <ProjectModalContainer title="Επιλέξτε Κάτοψη Κτιρίου για Φόρτωση" className="${MODAL_SPACING.SECTIONS.betweenBlocks} bg-gray-700 border-gray-600">
+            <ProjectModalContainer title="Επιλέξτε Κάτοψη Κτιρίου για Φόρτωση" className={`${MODAL_SPACING.SECTIONS.betweenBlocks} ${getModalContainerBorder('default')}`}>
               <ModalActions alignment="center">
                 <Button
                   onClick={() => handleLoadFloorplan('building')}
@@ -696,7 +712,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                   </SelectContent>
                 </Select>
               ) : (
-                <ProjectModalContainer title="" className="bg-gray-800 border-gray-600">
+                <ProjectModalContainer title="" className={getModalContainerBorder('default')}>
                   <p className={`${DXF_MODAL_TYPOGRAPHY.DESCRIPTION.default}`}>Δεν βρέθηκαν μονάδες για το επιλεγμένο κτίριο.</p>
                 </ProjectModalContainer>
               )}
@@ -705,7 +721,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
 
           {/* Unit Floorplan Options - Only shown when unit is selected */}
           {currentStep === 'unit' && selectedUnitId && (
-            <ProjectModalContainer title="Επιλέξτε Κάτοψη Μονάδας για Φόρτωση" className="${MODAL_SPACING.SECTIONS.betweenBlocks} bg-gray-700 border-gray-600">
+            <ProjectModalContainer title="Επιλέξτε Κάτοψη Μονάδας για Φόρτωση" className={`${MODAL_SPACING.SECTIONS.betweenBlocks} ${getModalContainerBorder('default')}`}>
               <ModalActions alignment="center">
                 <Button
                   onClick={() => handleLoadFloorplan('unit')}

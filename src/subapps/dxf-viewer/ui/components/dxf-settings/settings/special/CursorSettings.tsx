@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useCursorSettings } from '../../../../../systems/cursor';
 import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import {
   getCursorPreviewBorderStyles,
@@ -19,6 +20,7 @@ type LineStyle = 'solid' | 'dashed' | 'dotted' | 'dash-dot';
 
 export function CursorSettings() {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   // Αφαιρείται το tab state - όλες οι ρυθμίσεις θα εμφανίζονται μαζί
 
   // 🔺 REAL CURSOR SYSTEM INTEGRATION - Αντικατάσταση mock state
@@ -86,7 +88,7 @@ export function CursorSettings() {
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => handleCursorShapeChange('circle')}
-                className={`p-2 rounded text-xs border transition-colors ${
+                className={`p-2 ${quick.button} text-xs transition-colors ${
                   settings.cursor.shape === 'circle'
                     ? 'bg-blue-600 border-blue-500'
                     : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
@@ -100,7 +102,7 @@ export function CursorSettings() {
               </button>
               <button
                 onClick={() => handleCursorShapeChange('square')}
-                className={`p-2 rounded text-xs border transition-colors ${
+                className={`p-2 ${quick.button} text-xs transition-colors ${
                   settings.cursor.shape === 'square'
                     ? 'bg-blue-600 border-blue-500'
                     : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
@@ -141,7 +143,7 @@ export function CursorSettings() {
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => handleCursorLineStyleChange('solid')}
-                className={`p-2 rounded text-xs border transition-colors ${
+                className={`p-2 ${quick.button} text-xs transition-colors ${
                   settings.cursor.line_style === 'solid'
                     ? 'bg-blue-600 border-blue-500'
                     : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
@@ -155,7 +157,7 @@ export function CursorSettings() {
               </button>
               <button
                 onClick={() => handleCursorLineStyleChange('dashed')}
-                className={`p-2 rounded text-xs border transition-colors ${
+                className={`p-2 ${quick.button} text-xs transition-colors ${
                   settings.cursor.line_style === 'dashed'
                     ? 'bg-blue-600 border-blue-500'
                     : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
@@ -171,7 +173,7 @@ export function CursorSettings() {
             <div className="grid grid-cols-2 gap-2 mt-2">
               <button
                 onClick={() => handleCursorLineStyleChange('dotted')}
-                className={`p-2 rounded text-xs border transition-colors ${
+                className={`p-2 ${quick.button} text-xs transition-colors ${
                   settings.cursor.line_style === 'dotted'
                     ? 'bg-blue-600 border-blue-500'
                     : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
@@ -185,7 +187,7 @@ export function CursorSettings() {
               </button>
               <button
                 onClick={() => handleCursorLineStyleChange('dash-dot')}
-                className={`p-2 rounded text-xs border transition-colors ${
+                className={`p-2 ${quick.button} text-xs transition-colors ${
                   settings.cursor.line_style === 'dash-dot'
                     ? 'bg-blue-600 border-blue-500'
                     : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
@@ -262,7 +264,7 @@ export function CursorSettings() {
                 <button
                   key={size}
                   onClick={() => handleCursorSizeChange(size)}
-                  className={`flex-1 p-2 rounded text-xs transition-colors border ${
+                  className={`flex-1 p-2 ${quick.button} text-xs transition-colors ${
                     settings.cursor.size === size
                       ? 'border-blue-500 bg-blue-600'
                       : `border-gray-500 bg-gray-600 ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`
@@ -307,7 +309,7 @@ export function CursorSettings() {
             <div className="flex gap-2">
               <button
                 onClick={() => handleCursorEnabledChange(true)}
-                className={`flex-1 p-2 rounded text-xs border transition-colors ${
+                className={`flex-1 p-2 ${quick.button} text-xs transition-colors ${
                   settings.cursor.enabled
                     ? 'bg-blue-600 border-blue-500'
                     : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
@@ -317,7 +319,7 @@ export function CursorSettings() {
               </button>
               <button
                 onClick={() => handleCursorEnabledChange(false)}
-                className={`flex-1 p-2 rounded text-xs border transition-colors ${
+                className={`flex-1 p-2 ${quick.button} text-xs transition-colors ${
                   !settings.cursor.enabled
                     ? 'bg-blue-600 border-blue-500'
                     : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'

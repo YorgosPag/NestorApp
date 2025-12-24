@@ -4,6 +4,7 @@ import React, { useState, useCallback } from 'react';
 import { Upload, FileImage, FileText, Layers, Building, Check, X, Bell, BarChart, Settings } from 'lucide-react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useCentralizedPolygonSystem } from '../systems/polygon-system';
 import { FloorPlanUploadModal } from '../floor-plan-system/components/FloorPlanUploadModal';
 import { PropertyStatusManager } from './PropertyStatusManager';
@@ -45,6 +46,7 @@ export function ProfessionalDrawingInterface({
   onRealEstateAlertCreated
 }: ProfessionalDrawingInterfaceProps) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const { t, isLoading } = useTranslationLazy('geo-canvas');
   const [selectedTool, setSelectedTool] = useState<'upload' | 'polygon' | 'auto-detect' | 'property-manager' | 'monitoring-dashboard' | null>(null);
   // ✅ ENTERPRISE: Combine local and centralized drawing state
@@ -282,7 +284,7 @@ export function ProfessionalDrawingInterface({
 
   return (
     <>
-      <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-4">
+      <div className={`bg-white ${quick.card} shadow-lg border-gray-200 p-4`}>
         {/* Header */}
         <div className="mb-4">
           <h3 className="text-lg font-semibold text-gray-900">
@@ -300,7 +302,7 @@ export function ProfessionalDrawingInterface({
             onClick={() => handleToolSelect('upload')}
             disabled={actualIsDrawing}
             className={`
-              flex flex-col items-center justify-center p-4 rounded-lg border-2
+              flex flex-col items-center justify-center p-4 ${quick.card} border-2
               transition-all duration-200 min-h-[100px]
               ${selectedTool === 'upload'
                 ? 'border-green-500 bg-green-50'
@@ -319,7 +321,7 @@ export function ProfessionalDrawingInterface({
             onClick={() => handleToolSelect('polygon')}
             disabled={actualIsDrawing && selectedTool !== 'polygon'}
             className={`
-              flex flex-col items-center justify-center p-4 rounded-lg border-2
+              flex flex-col items-center justify-center p-4 ${quick.card} border-2
               transition-all duration-200 min-h-[100px]
               ${selectedTool === 'polygon'
                 ? 'border-green-500 bg-green-50'
@@ -338,7 +340,7 @@ export function ProfessionalDrawingInterface({
             onClick={() => handleToolSelect('auto-detect')}
             disabled={actualIsDrawing || !parserResult}
             className={`
-              flex flex-col items-center justify-center p-4 rounded-lg border-2
+              flex flex-col items-center justify-center p-4 ${quick.card} border-2
               transition-all duration-200 min-h-[100px]
               ${selectedTool === 'auto-detect'
                 ? 'border-green-500 bg-green-50'
@@ -357,7 +359,7 @@ export function ProfessionalDrawingInterface({
             onClick={() => handleToolSelect('property-manager')}
             disabled={actualIsDrawing}
             className={`
-              flex flex-col items-center justify-center p-4 rounded-lg border-2
+              flex flex-col items-center justify-center p-4 ${quick.card} border-2
               transition-all duration-200 min-h-[100px]
               ${selectedTool === 'property-manager'
                 ? 'border-orange-500 bg-orange-50'
@@ -376,7 +378,7 @@ export function ProfessionalDrawingInterface({
             onClick={() => handleToolSelect('monitoring-dashboard')}
             disabled={actualIsDrawing}
             className={`
-              flex flex-col items-center justify-center p-4 rounded-lg border-2
+              flex flex-col items-center justify-center p-4 ${quick.card} border-2
               transition-all duration-200 min-h-[100px]
               ${selectedTool === 'monitoring-dashboard'
                 ? 'border-blue-500 bg-blue-50'
@@ -396,7 +398,7 @@ export function ProfessionalDrawingInterface({
           <div className="flex gap-2 mb-4">
             <button
               onClick={handleComplete}
-              className="flex-1 flex items-center justify-center gap-2 bg-green-500 text-white py-3 px-4 rounded-lg ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} transition-colors"
+              className={`flex-1 flex items-center justify-center gap-2 bg-green-500 text-white py-3 px-4 ${quick.card} ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} transition-colors`}
             >
               <Check className={iconSizes.md} />
               <span className="font-medium">Ολοκλήρωση</span>
@@ -404,7 +406,7 @@ export function ProfessionalDrawingInterface({
 
             <button
               onClick={handleCancel}
-              className="flex-1 flex items-center justify-center gap-2 bg-red-500 text-white py-3 px-4 rounded-lg ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} transition-colors"
+              className={`flex-1 flex items-center justify-center gap-2 bg-red-500 text-white py-3 px-4 ${quick.card} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} transition-colors`}
             >
               <X className={iconSizes.md} />
               <span className="font-medium">Ακύρωση</span>
@@ -417,7 +419,7 @@ export function ProfessionalDrawingInterface({
           <div className="mb-4">
             <button
               onClick={handleAutoDetect}
-              className="w-full flex items-center justify-center gap-2 bg-purple-500 text-white py-3 px-4 rounded-lg ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} transition-colors"
+              className={`w-full flex items-center justify-center gap-2 bg-purple-500 text-white py-3 px-4 ${quick.card} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} transition-colors`}
             >
               <Layers className={iconSizes.md} />
               <span className="font-medium">Ανίχνευση Δωματίων</span>
@@ -427,7 +429,7 @@ export function ProfessionalDrawingInterface({
 
         {/* Floor Plan Status */}
         {parserResult && (
-          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md">
+          <div className={`mb-4 p-3 bg-green-50 ${quick.card} border-green-200`}>
             <p className="text-sm text-green-700">
               <span className="font-medium">Κάτοψη:</span> {parserResult.metadata?.fileName || 'Uploaded'} ✅
             </p>
@@ -441,7 +443,7 @@ export function ProfessionalDrawingInterface({
 
         {/* Instructions */}
         {selectedTool && (
-          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+          <div className={`mt-4 p-3 bg-blue-50 ${quick.card} border-blue-200`}>
             <p className="text-sm text-blue-700">
               {selectedTool === 'upload' && t('drawingInterfaces.professional.uploadFloorPlan')}
               {selectedTool === 'polygon' && t('drawingInterfaces.professional.addPropertyPoints')}
@@ -594,7 +596,7 @@ export function ProfessionalDrawingInterface({
           </div>
 
           {/* Professional Tips */}
-          <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+          <div className={`bg-blue-50 ${quick.info} p-3`}>
             <h4 className="text-sm font-semibold text-blue-900 mb-2">{t('realEstateMonitoring.tips.title')}</h4>
             <ul className="text-xs text-blue-700 space-y-1">
               <li>{t('realEstateMonitoring.tips.batchMode')}</li>

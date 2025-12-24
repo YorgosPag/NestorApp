@@ -16,6 +16,7 @@ import { useRulersGridContext } from "../systems/rulers-grid/RulersGridSystem";
 import { SimpleColorPicker } from "./color";
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 // Force cursor styles for the panel to override canvas cursor settings
 const panelStyles = `
@@ -121,6 +122,7 @@ interface CursorSettingsPanelProps {
 
 export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettingsPanelProps) {
   const iconSizes = useIconSizes();
+  const { getStatusBorder } = useBorderTokens();
   const [settings, setSettings] = useState<CursorSettings>(getCursorSettings());
 
   // Get actual ruler settings from the system
@@ -341,7 +343,7 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
   const panelContent = (
     <div
       ref={panelRef}
-      className="cursor-settings-panel fixed z-[2147483647] bg-gray-900 text-white rounded-lg shadow-2xl border border-gray-500 select-none pointer-events-auto"
+      className={`cursor-settings-panel fixed z-[2147483647] bg-gray-900 text-white rounded-lg shadow-2xl ${getStatusBorder('default')} select-none pointer-events-auto`}
       style={{
         left: position.x,
         top: position.y,
@@ -379,7 +381,7 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
               onChange={(enabled) => updateCrosshairSettings({ enabled })}
             />
 
-            <div className="mt-2 p-2 bg-blue-900/30 border border-blue-600/30 rounded text-xs text-blue-200">
+            <div className={`mt-2 p-2 bg-blue-900/30 ${getStatusBorder('info')} rounded text-xs text-blue-200`}>
               💡 Μέγεθος, χρώμα και πάχος ρυθμίζονται από τις Ρυθμίσεις DXF
             </div>
           </div>
@@ -387,7 +389,7 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
           {/* Behavior Settings */}
           <div className="mb-6">
             <h4 className="text-md font-semibold text-gray-200 mb-3">Συμπεριφορά AutoCAD</h4>
-            <div className="mb-3 p-2 bg-yellow-900/30 border border-yellow-600/30 rounded text-xs text-yellow-200">
+            <div className={`mb-3 p-2 bg-yellow-900/30 ${getStatusBorder('warning')} rounded text-xs text-yellow-200`}>
               ⚠️ Σημείωση: Μερικές λειτουργίες είναι σε ανάπτυξη και μπορεί να μην είναι πλήρως ενεργές
             </div>
             
@@ -450,7 +452,7 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
               🔗 Ενεργό: Sub-pixel ακρίβεια για crosshair και snap indicators
             </div>
             {settings.performance.precision_mode && (
-              <div className="mb-3 ml-6 p-2 bg-blue-900/30 border border-blue-600/30 rounded text-xs text-blue-200 flex items-center gap-2">
+              <div className={`mb-3 ml-6 p-2 bg-blue-900/30 ${getStatusBorder('info')} rounded text-xs text-blue-200 flex items-center gap-2`}>
                 <div className={`${iconSizes.xs} bg-blue-400 rounded-full animate-pulse`}></div>
                 <span>PRECISION MODE ΕΝΕΡΓΟ - 4 δεκαδικά ψηφία</span>
               </div>

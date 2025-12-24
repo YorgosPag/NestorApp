@@ -6,6 +6,7 @@ import { ThemeProgressBar } from '@/core/progress/ThemeProgressBar';
 import { CheckCircle, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { formatDate } from '@/lib/intl-utils';
 
 interface MilestoneItemProps {
@@ -17,10 +18,12 @@ interface MilestoneItemProps {
 
 export function MilestoneItem({ milestone, getStatusColor, getStatusText, getTypeIcon }: MilestoneItemProps) {
     const iconSizes = useIconSizes();
+    const { quick } = useBorderTokens();
     return (
         <div className="relative flex items-start gap-4">
             <div className={cn(
-                "relative z-10 flex h-12 w-12 items-center justify-center rounded-full border-4 shadow-sm",
+                "relative z-10 flex h-12 w-12 items-center justify-center shadow-sm rounded-full",
+                quick.interactive.selected,
                 getStatusColor(milestone.status),
                 milestone.status === 'completed' ? 'text-white' : 'text-gray-600'
             )}>
@@ -63,7 +66,7 @@ export function MilestoneItem({ milestone, getStatusColor, getStatusText, getTyp
                 />
 
                 {milestone.status === 'in-progress' && (
-                    <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <div className={`mt-4 p-3 bg-blue-50 dark:bg-blue-950/30 ${quick.card} border border-blue-200 dark:border-blue-800`}>
                         <div className="flex items-center gap-2 text-sm text-blue-800 dark:text-blue-200">
                             <Clock className={iconSizes.sm} />
                             <span className="font-medium">Επόμενα βήματα:</span>

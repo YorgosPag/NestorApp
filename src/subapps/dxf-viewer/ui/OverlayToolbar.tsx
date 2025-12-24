@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useRef } from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useDraggable } from '../../../hooks/useDraggable';
 // import { Separator } from '../../../components/ui/separator';
 // Προσωρινή λύση - αντικατάσταση με div
@@ -46,6 +47,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
   canUndo, canRedo, onUndo, onRedo, onToolChange, disableFloating = false,
 }) => {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const { startOverlayCreation } = useUnifiedOverlayCreation();
   const overlayStore = useOverlayStore();
 
@@ -147,7 +149,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
     <div
       ref={elementRef}
       style={draggableStyles}
-      className={`${disableFloating ? 'relative' : 'fixed z-[80]'} flex items-center gap-2 p-2 bg-gray-800 border border-gray-500 rounded-lg flex-wrap shadow-xl select-none pointer-events-auto`}
+      className={`${disableFloating ? 'relative' : 'fixed z-[80]'} flex items-center gap-2 p-2 bg-gray-800 border border-gray-500 ${quick.card} flex-wrap shadow-xl select-none pointer-events-auto`}
       onMouseEnter={(e) => e.stopPropagation()}
       onMouseMove={(e) => e.stopPropagation()}
       onMouseLeave={(e) => e.stopPropagation()}
@@ -159,7 +161,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
           className="cursor-grab active:cursor-grabbing p-1 hover:bg-gray-700 rounded"
           title="Drag to move toolbar"
         >
-          <div className={`${iconSizes.xs} ${iconSizes.sm} bg-gray-500 rounded-sm`}></div>
+          <div className={`${iconSizes.xs} ${iconSizes.sm} bg-gray-500 ${quick.button}`}></div>
         </div>
       )}
       {/* Drawing Modes */}
@@ -170,7 +172,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
             onClick={() => handleModeChange(btnMode)}
             title={`${label} (${key})`}
             className={`
-              h-8 px-2 rounded-md border transition-colors duration-150
+              h-8 px-2 ${quick.button} transition-colors duration-150
               flex items-center justify-center gap-1
               ${mode === btnMode
                 ? `bg-blue-600 text-white border-blue-500 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
@@ -195,7 +197,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
               key={status}
               onClick={() => onStatusChange(status)}
               title={STATUS_LABELS[status]}
-              className={`${iconSizes.lg} rounded-md border-2 transition-all duration-150`}
+              className={`${iconSizes.lg} ${quick.button} border-2 transition-all duration-150`}
               style={getStatusColorButtonStyles(
                 status as PropertyStatus,
                 currentStatus === status
@@ -219,7 +221,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
                 onClick={() => onKindChange(kind)}
                 title={KIND_LABELS[kind]}
                 className={`
-                  ${iconSizes.xl} p-0 rounded-md border transition-colors duration-150
+                  ${iconSizes.xl} p-0 ${quick.button} transition-colors duration-150
                   flex items-center justify-center
                   ${currentKind === kind 
                     ? `bg-blue-600 text-white border-blue-500 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}` 
@@ -243,7 +245,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
           disabled={!selectedOverlayId}
           title="Αντιγραφή (D)"
           className={`
-            ${iconSizes.xl} p-0 rounded-md border transition-colors duration-150
+            ${iconSizes.xl} p-0 ${quick.button} transition-colors duration-150
             flex items-center justify-center
             bg-gray-700 text-gray-200 border-gray-500
             disabled:opacity-50 disabled:cursor-not-allowed
@@ -257,7 +259,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
           disabled={!selectedOverlayId}
           title="Διαγραφή (Del)"
           className={`
-            ${iconSizes.xl} p-0 rounded-md border transition-colors duration-150
+            ${iconSizes.xl} p-0 ${quick.button} transition-colors duration-150
             flex items-center justify-center
             bg-gray-700 text-red-400 border-gray-500
             disabled:opacity-50 disabled:cursor-not-allowed
@@ -276,7 +278,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
           disabled={!canUndo}
           title="Αναίρεση (Ctrl+Z)"
           className={`
-            ${iconSizes.xl} p-0 rounded-md border transition-colors duration-150
+            ${iconSizes.xl} p-0 ${quick.button} transition-colors duration-150
             flex items-center justify-center
             bg-gray-700 text-gray-200 border-gray-500
             disabled:opacity-50 disabled:cursor-not-allowed
@@ -289,7 +291,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
           disabled={!canRedo}
           title="Επανάληψη (Ctrl+Y)"
           className={`
-            ${iconSizes.xl} p-0 rounded-md border transition-colors duration-150
+            ${iconSizes.xl} p-0 ${quick.button} transition-colors duration-150
             flex items-center justify-center
             bg-gray-700 text-gray-200 border-gray-500
             disabled:opacity-50 disabled:cursor-not-allowed

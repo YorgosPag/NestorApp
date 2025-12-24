@@ -50,9 +50,12 @@ export function StatusLegend({
             className="flex items-center gap-2 text-xs"
             style={interactionUtilities.pointerEvents.none}
           >
-            <div 
-              className={`${iconSizes.xs} rounded-full border border-gray-300`}
-              style={chartComponents.legend.indicator.withColor(item.color)}
+            <div
+              className={`${iconSizes.xs} border border-gray-300`}
+              style={{
+                ...chartComponents.legend.indicator.withColor(item.color),
+                borderRadius: '50%'
+              }}
             />
             <span className="text-gray-700 flex-1">{item.label}</span>
             <span className="text-gray-500 font-mono">{item.count}</span>

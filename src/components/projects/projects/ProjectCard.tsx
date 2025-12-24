@@ -13,6 +13,7 @@ import { Briefcase } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { PROJECT_STATUS_LABELS } from '@/types/project';
 import { COMPLEX_HOVER_EFFECTS } from '@/components/ui/effects';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface ProjectCardProps {
   project: Project;
@@ -28,6 +29,7 @@ export function ProjectCard({
   companyName,
 }: ProjectCardProps) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const [isFavorite, setIsFavorite] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -41,7 +43,9 @@ export function ProjectCard({
         aria-label={`Επιλογή ${project.name}`}
         tabIndex={0}
         className={cn(
-          "relative overflow-hidden cursor-pointer group border-2",
+          `relative overflow-hidden cursor-pointer group ${quick.card}`,
+          // Override default border with thicker one
+          "border-2",
           COMPLEX_HOVER_EFFECTS.FEATURE_CARD,
           isSelected
             ? "border-blue-500 shadow-lg ring-2 ring-blue-200 dark:ring-blue-800"
@@ -86,7 +90,7 @@ export function ProjectCard({
             }
           ]}
           variant="compact"
-          className="border-b"
+          className={quick.borderB}
         />
         
         <ProjectCardContent

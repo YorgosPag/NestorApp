@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import { CommonBadge } from '@/core/badges';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { 
   Layers, 
   Eye, 

@@ -17,6 +17,7 @@ import React from 'react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { INTERACTIVE_PATTERNS, HOVER_SHADOWS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { CraneIcon } from '@/subapps/dxf-viewer/components/icons';
 
 export interface FloorPlanUploadButtonProps {
@@ -62,6 +63,7 @@ export function FloorPlanUploadButton({
   className = ''
 }: FloorPlanUploadButtonProps) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const { t } = useTranslationLazy('geo-canvas');
 
   return (
@@ -71,7 +73,7 @@ export function FloorPlanUploadButton({
       className={`
         px-4 py-2
         bg-blue-600 text-white font-medium text-sm
-        rounded-lg
+        ${quick.card}
         transition-all duration-200
         transform active:scale-95
         disabled:opacity-50 disabled:cursor-not-allowed

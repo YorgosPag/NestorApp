@@ -9,6 +9,7 @@ import { Star } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import type { Building } from './BuildingsPageContent';
 import { COMPLEX_HOVER_EFFECTS } from '@/components/ui/effects';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 import { EntityDetailsHeader } from '@/core/entity-headers';
 import { BuildingCardContent } from './BuildingCard/BuildingCardContent';
@@ -28,6 +29,7 @@ export function BuildingCard({
   onClick,
 }: BuildingCardProps) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const [isFavorite, setIsFavorite] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const CategoryIcon = getCategoryIcon(building.category || 'mixed');
@@ -35,7 +37,9 @@ export function BuildingCard({
   return (
     <Card
       className={cn(
-        "relative overflow-hidden cursor-pointer group border-2",
+        `relative overflow-hidden cursor-pointer group ${quick.card}`,
+        // Override default border with thicker one
+        "border-2",
         COMPLEX_HOVER_EFFECTS.FEATURE_CARD,
         isSelected
           ? "border-blue-500 shadow-lg ring-2 ring-blue-200 dark:ring-blue-800"
@@ -76,7 +80,7 @@ export function BuildingCard({
           }
         ]}
         variant="compact"
-        className="border-b"
+        className={quick.borderB}
       />
       
       <BuildingCardContent

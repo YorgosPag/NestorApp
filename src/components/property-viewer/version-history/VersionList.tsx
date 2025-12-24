@@ -62,7 +62,7 @@ export function VersionList({
               </div>
             </div>
             {version.thumbnail && (
-              <img src={version.thumbnail} alt="Thumbnail" className={`${iconSizes.xl4} object-cover rounded ml-4 border`} />
+              <img src={version.thumbnail} alt="Thumbnail" className={`${iconSizes.xl4} object-cover ${quick.input} ml-4 border`} />
             )}
           </div>
         </div>

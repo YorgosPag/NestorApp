@@ -71,7 +71,7 @@ export function LayersPanel({
     return (
       <div
         className={cn(
-          `flex items-center gap-2 p-2 rounded cursor-pointer ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`,
+          `flex items-center gap-2 p-2 ${useBorderTokens().quick.input} cursor-pointer ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`,
           selectedLayerId === layer.id && "bg-blue-50 border border-blue-200"
         )}
         onClick={() => setSelectedLayerId(layer.id)}
@@ -95,7 +95,7 @@ export function LayersPanel({
 
       {/* Color Indicator */}
       <div
-        className={`${iconSizes.sm} rounded border border-gray-300 ${layerBgClass}`}
+        className={`${iconSizes.sm} ${useBorderTokens().quick.input} border border-gray-300 ${layerBgClass}`}
       />
 
       {/* Layer Name */}

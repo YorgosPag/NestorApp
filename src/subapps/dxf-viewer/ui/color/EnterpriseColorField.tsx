@@ -20,6 +20,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import type { EnterpriseColorFieldProps, ColorMode, RGBColor, HSLColor } from './types';
 import { parseColor, rgbToHex, formatRgb, formatHsl, parseHex, parseRgb, parseHsl, hslToRgb } from './utils';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 /**
  * Enterprise Color Field Component
@@ -44,6 +45,7 @@ export function EnterpriseColorField({
   labels = {},
   className = '',
 }: EnterpriseColorFieldProps) {
+  const { quick, getStatusBorder } = useBorderTokens();
   const [inputValue, setInputValue] = useState(value);
   const [error, setError] = useState<string | null>(null);
 
@@ -125,11 +127,11 @@ export function EnterpriseColorField({
         readOnly={readOnly}
         placeholder="#000000"
         className={`
-          flex-1 px-3 py-2 bg-gray-800 border rounded
+          flex-1 px-3 py-2 bg-gray-800 ${quick.input}
           text-sm text-white font-mono
           focus:outline-none focus:ring-2 focus:ring-blue-500
           disabled:opacity-50 disabled:cursor-not-allowed
-          ${error ? 'border-red-500' : 'border-gray-600'}
+          ${error ? getStatusBorder('error').replace('border ', '') : ''}
         `}
       />
     </div>
@@ -160,7 +162,7 @@ export function EnterpriseColorField({
             onChange={(e) => handleComponentChange('r', parseInt(e.target.value) || 0)}
             disabled={disabled}
             readOnly={readOnly}
-            className="w-full px-2 py-1 bg-gray-800 border border-gray-600 rounded text-sm text-white"
+            className={`w-full px-2 py-1 bg-gray-800 ${quick.input} text-sm text-white`}
           />
         </div>
 
@@ -175,7 +177,7 @@ export function EnterpriseColorField({
             onChange={(e) => handleComponentChange('g', parseInt(e.target.value) || 0)}
             disabled={disabled}
             readOnly={readOnly}
-            className="w-full px-2 py-1 bg-gray-800 border border-gray-600 rounded text-sm text-white"
+            className={`w-full px-2 py-1 bg-gray-800 ${quick.input} text-sm text-white`}
           />
         </div>
 
@@ -190,7 +192,7 @@ export function EnterpriseColorField({
             onChange={(e) => handleComponentChange('b', parseInt(e.target.value) || 0)}
             disabled={disabled}
             readOnly={readOnly}
-            className="w-full px-2 py-1 bg-gray-800 border border-gray-600 rounded text-sm text-white"
+            className={`w-full px-2 py-1 bg-gray-800 ${quick.input} text-sm text-white`}
           />
         </div>
 
@@ -207,7 +209,7 @@ export function EnterpriseColorField({
               onChange={(e) => handleComponentChange('a', parseFloat(e.target.value) || 0)}
               disabled={disabled}
               readOnly={readOnly}
-              className="w-full px-2 py-1 bg-gray-800 border border-gray-600 rounded text-sm text-white"
+              className={`w-full px-2 py-1 bg-gray-800 ${quick.input} text-sm text-white`}
             />
           </div>
         )}
@@ -242,7 +244,7 @@ export function EnterpriseColorField({
             onChange={(e) => handleComponentChange('h', parseInt(e.target.value) || 0)}
             disabled={disabled}
             readOnly={readOnly}
-            className="w-full px-2 py-1 bg-gray-800 border border-gray-600 rounded text-sm text-white"
+            className={`w-full px-2 py-1 bg-gray-800 ${quick.input} text-sm text-white`}
           />
         </div>
 
@@ -257,7 +259,7 @@ export function EnterpriseColorField({
             onChange={(e) => handleComponentChange('s', parseInt(e.target.value) || 0)}
             disabled={disabled}
             readOnly={readOnly}
-            className="w-full px-2 py-1 bg-gray-800 border border-gray-600 rounded text-sm text-white"
+            className={`w-full px-2 py-1 bg-gray-800 ${quick.input} text-sm text-white`}
           />
         </div>
 
@@ -272,7 +274,7 @@ export function EnterpriseColorField({
             onChange={(e) => handleComponentChange('l', parseInt(e.target.value) || 0)}
             disabled={disabled}
             readOnly={readOnly}
-            className="w-full px-2 py-1 bg-gray-800 border border-gray-600 rounded text-sm text-white"
+            className={`w-full px-2 py-1 bg-gray-800 ${quick.input} text-sm text-white`}
           />
         </div>
 
@@ -289,7 +291,7 @@ export function EnterpriseColorField({
               onChange={(e) => handleComponentChange('a', parseFloat(e.target.value) || 0)}
               disabled={disabled}
               readOnly={readOnly}
-              className="w-full px-2 py-1 bg-gray-800 border border-gray-600 rounded text-sm text-white"
+              className={`w-full px-2 py-1 bg-gray-800 ${quick.input} text-sm text-white`}
             />
           </div>
         )}

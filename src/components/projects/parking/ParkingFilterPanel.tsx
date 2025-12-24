@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, Filter } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import type { ParkingFilters } from '@/types/parking';
 import { PARKING_TYPE_LABELS, PARKING_STATUS_LABELS } from '@/types/parking';
 
@@ -16,8 +17,9 @@ interface ParkingFilterPanelProps {
 
 export function ParkingFilterPanel({ filters, onFiltersChange }: ParkingFilterPanelProps) {
     const iconSizes = useIconSizes();
+    const { quick } = useBorderTokens();
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 p-4 bg-card border rounded-lg">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 p-4 bg-card ${quick.card}">
           <div className="lg:col-span-2 space-y-2">
             <Label htmlFor="search" className="text-xs font-medium flex items-center gap-1">
               <Search className={iconSizes.xs} />

@@ -18,6 +18,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { CommonBadge } from '@/core/badges';
 import { designSystem } from '@/lib/design-system';
 import { INTERACTIVE_PATTERNS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 // Icons
 import { Mail, Users, MessageCircle, Plus, Trash2, ArrowLeft, Palette } from 'lucide-react';
@@ -91,6 +92,8 @@ export const EmailShareForm: React.FC<EmailShareFormProps> = ({
   config = {}
 }) => {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
+
   // ============================================================================
   // CONFIGURATION με DEFAULTS
   // ============================================================================
@@ -289,7 +292,7 @@ export const EmailShareForm: React.FC<EmailShareFormProps> = ({
                   type="button"
                   onClick={() => setSelectedTemplate(template.id)}
                   className={designSystem.cn(
-                    'p-3 rounded-lg border-2 transition-all text-center',
+                    `p-3 ${quick.card} border-2 transition-all text-center`,
                     selectedTemplate === template.id
                       ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
                       : `border-gray-200 ${HOVER_BORDER_EFFECTS.GRAY}`
@@ -421,7 +424,7 @@ export const EmailShareForm: React.FC<EmailShareFormProps> = ({
 
         {/* MESSAGE PREVIEW */}
         {personalMessage.trim() && (
-          <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200">
+          <div className={`p-3 bg-blue-50 dark:bg-blue-900/20 ${quick.card} ${quick.input} border-blue-200`}>
             <div className={designSystem.cn(
               designSystem.getTypographyClass('xs', 'medium'),
               "text-blue-800 dark:text-blue-300 mb-1"
@@ -439,7 +442,7 @@ export const EmailShareForm: React.FC<EmailShareFormProps> = ({
 
         {/* VALIDATION ERROR */}
         {validationError && (
-          <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200">
+          <div className={`p-3 bg-red-50 dark:bg-red-900/20 ${quick.card} ${quick.input} border-red-200`}>
             <div className={designSystem.cn(
               designSystem.getTypographyClass('sm', 'medium'),
               "text-red-800 dark:text-red-300"
@@ -451,7 +454,7 @@ export const EmailShareForm: React.FC<EmailShareFormProps> = ({
 
         {/* BACKEND ERROR */}
         {error && (
-          <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200">
+          <div className={`p-3 bg-red-50 dark:bg-red-900/20 ${quick.card} ${quick.input} border-red-200`}>
             <div className={designSystem.cn(
               designSystem.getTypographyClass('sm', 'medium'),
               "text-red-800 dark:text-red-300"
@@ -462,7 +465,7 @@ export const EmailShareForm: React.FC<EmailShareFormProps> = ({
         )}
 
         {/* ACTION BUTTONS */}
-        <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <div className={`flex gap-3 pt-4 ${quick.borderT} border-gray-200 dark:border-gray-700`}>
           <Button
             type="button"
             onClick={onBack}

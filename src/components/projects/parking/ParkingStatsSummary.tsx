@@ -11,6 +11,7 @@ import {
 import type { ParkingStats } from '@/types/parking';
 import { formatCurrency } from '@/lib/intl-utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface ParkingStatsSummaryProps {
     stats: ParkingStats;
@@ -18,10 +19,11 @@ interface ParkingStatsSummaryProps {
 
 export function ParkingStatsSummary({ stats }: ParkingStatsSummaryProps) {
     const iconSizes = useIconSizes();
+    const { quick } = useBorderTokens();
 
     return (
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          <div className="flex items-center gap-2 p-3 bg-card border rounded-lg">
+          <div className="flex items-center gap-2 p-3 bg-card ${quick.card}">
             <Car className={`${iconSizes.sm} text-blue-600`} />
             <div>
               <div className="text-sm font-medium">{stats.totalSpots}</div>
@@ -29,7 +31,7 @@ export function ParkingStatsSummary({ stats }: ParkingStatsSummaryProps) {
             </div>
           </div>
           
-          <div className="flex items-center gap-2 p-3 bg-card border rounded-lg">
+          <div className="flex items-center gap-2 p-3 bg-card ${quick.card}">
             <div className={`${iconSizes.xs} rounded-full bg-green-500`} />
             <div>
               <div className="text-sm font-medium">{stats.soldSpots}</div>
@@ -37,7 +39,7 @@ export function ParkingStatsSummary({ stats }: ParkingStatsSummaryProps) {
             </div>
           </div>
           
-          <div className="flex items-center gap-2 p-3 bg-card border rounded-lg">
+          <div className="flex items-center gap-2 p-3 bg-card ${quick.card}">
             <div className={`${iconSizes.xs} rounded-full bg-blue-500`} />
             <div>
               <div className="text-sm font-medium">{stats.ownerSpots}</div>
@@ -45,7 +47,7 @@ export function ParkingStatsSummary({ stats }: ParkingStatsSummaryProps) {
             </div>
           </div>
           
-          <div className="flex items-center gap-2 p-3 bg-card border rounded-lg">
+          <div className="flex items-center gap-2 p-3 bg-card ${quick.card}">
             <div className={`${iconSizes.xs} rounded-full bg-gray-500`} />
             <div>
               <div className="text-sm font-medium">{stats.availableSpots}</div>
@@ -53,7 +55,7 @@ export function ParkingStatsSummary({ stats }: ParkingStatsSummaryProps) {
             </div>
           </div>
           
-          <div className="flex items-center gap-2 p-3 bg-card border rounded-lg">
+          <div className="flex items-center gap-2 p-3 bg-card ${quick.card}">
             <BarChart3 className={`${iconSizes.sm} text-green-600`} />
             <div>
               <div className="text-sm font-medium">{formatCurrency(stats.totalValue)}</div>
@@ -61,7 +63,7 @@ export function ParkingStatsSummary({ stats }: ParkingStatsSummaryProps) {
             </div>
           </div>
           
-          <div className="flex items-center gap-2 p-3 bg-card border rounded-lg">
+          <div className="flex items-center gap-2 p-3 bg-card ${quick.card}">
             <Ruler className={`${iconSizes.sm} text-purple-600`} />
             <div>
               <div className="text-sm font-medium">{stats.totalArea.toFixed(1)} m²</div>

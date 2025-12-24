@@ -3,6 +3,7 @@
  * Enterprise-class centralized styling για DXF Viewer components
  *
  * ✅ ENTERPRISE REFACTORED: Inline styles → Centralized tokens
+ * ✅ BORDERS CENTRALIZED: Using useBorderTokens hook
  * ✅ TypeScript strict typing - NO 'any' types
  * ✅ Dynamic color management με property status awareness
  * ✅ Fortune 500 grade CAD interface patterns
@@ -12,6 +13,13 @@
 
 import type { PropertyStatus } from '../../../constants/property-statuses-enterprise';
 import { BUTTON_STATUS_COLORS } from '../config/color-mapping';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
+
+// 🎯 ENTERPRISE BORDER TOKENS INTEGRATION
+const getBorderTokens = () => {
+  const tokens = useBorderTokens();
+  return tokens.quick;
+};
 
 // ============================================================================
 // DXF VIEWER STYLING UTILITIES
@@ -54,7 +62,7 @@ export const getStatusButtonStyles = (
   boxShadow: isActive
     ? '0 0 0 2px rgba(59, 130, 246, 0.5)'
     : 'none',
-  borderRadius: '0.375rem' // rounded-md
+  borderRadius: 'var(--radius)' // Enterprise border radius from design tokens
 });
 
 // ============================================================================
@@ -83,7 +91,7 @@ export const getTestResultsModalBackdropStyles = () => ({
 export const getTestResultsModalContentStyles = () => ({
   position: 'relative' as const,
   backgroundColor: 'rgb(17 24 39)', // bg-gray-900
-  borderRadius: '0.5rem', // rounded-lg
+  borderRadius: 'calc(var(--radius) + 2px)', // Enterprise lg border radius
   boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', // shadow-2xl
   border: '1px solid rgb(75 85 99)', // border-gray-600
   display: 'flex',
@@ -139,7 +147,7 @@ export const getSafePDFLoaderContainerStyles = (width: number, height: number) =
   height: `${height}px`,
   position: 'relative' as const,
   overflow: 'hidden' as const,
-  borderRadius: '0.375rem', // rounded
+  borderRadius: 'var(--radius)', // Enterprise border radius
   backgroundColor: 'rgb(243 244 246)' // bg-gray-100
 });
 
@@ -182,7 +190,7 @@ export const getEnterpriseContactDropdownStyles = (buttonRect: DOMRect) => ({
   backgroundColor: 'hsl(var(--popover))',
   color: 'hsl(var(--popover-foreground))',
   border: '1px solid hsl(var(--border))',
-  borderRadius: '0.5rem', // rounded-lg
+  borderRadius: 'calc(var(--radius) + 2px)', // Enterprise lg border radius
   boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' // shadow-lg
 });
 
@@ -258,7 +266,7 @@ export const getProgressBarTransformStyles = (value: number) => {
 export const getPhotoUploadProgressContainerStyles = () => ({
   width: '8rem', // w-32
   backgroundColor: 'rgb(229 231 235)', // bg-gray-200
-  borderRadius: '9999px', // rounded-full
+  borderRadius: '9999px', // rounded-full - keep as is
   height: '0.5rem', // h-2
   marginTop: '0.5rem', // mt-2
   marginLeft: 'auto',
@@ -277,7 +285,7 @@ export const getPhotoUploadProgressContainerStyles = () => ({
 export const getToolbarButtonBaseStyles = () => ({
   height: '2rem', // h-8
   padding: '0',
-  borderRadius: '0.375rem', // rounded-md
+  borderRadius: 'var(--radius)', // Enterprise border radius-md
   border: '1px solid rgb(107 114 128)', // border-gray-500
   transition: 'colors 0.15s ease-in-out',
   display: 'flex',
@@ -335,7 +343,7 @@ export const getModeButtonStyles = (isActive: boolean = false) => ({
   height: '2rem', // h-8
   paddingLeft: '0.5rem', // px-2
   paddingRight: '0.5rem',
-  borderRadius: '0.375rem', // rounded-md
+  borderRadius: 'var(--radius)', // Enterprise border radius-md
   border: '1px solid',
   transition: 'colors 0.15s ease-in-out',
   display: 'flex',
@@ -364,7 +372,7 @@ export const getKindButtonStyles = (isActive: boolean = false) => ({
   height: '2rem', // h-8
   width: '2rem', // w-8
   padding: '0',
-  borderRadius: '0.375rem', // rounded-md
+  borderRadius: 'var(--radius)', // Enterprise border radius-md
   border: '1px solid',
   transition: 'colors 0.15s ease-in-out',
   display: 'flex',
@@ -395,7 +403,7 @@ export const getOverlayToolbarStyles = () => ({
   padding: '0.5rem',
   backgroundColor: 'rgb(31 41 55)', // bg-gray-800
   border: '1px solid rgb(107 114 128)', // border-gray-500
-  borderRadius: '0.5rem', // rounded-lg
+  borderRadius: 'calc(var(--radius) + 2px)', // Enterprise lg border radius
   flexWrap: 'wrap' as const
 });
 
@@ -456,7 +464,7 @@ export const getStatusColorButtonStyles = (
 ) => ({
   width: '1.5rem', // w-6
   height: '1.5rem', // h-6
-  borderRadius: '0.375rem', // rounded-md
+  borderRadius: 'var(--radius)', // Enterprise border radius-md
   border: '2px solid',
   transition: 'all 0.15s ease-in-out',
   cursor: 'pointer',
@@ -519,7 +527,7 @@ export const getCursorShapeButtonStyles = (
   cursorColor?: string
 ) => ({
   padding: '0.5rem',
-  borderRadius: '0.375rem', // rounded-md
+  borderRadius: 'var(--radius)', // Enterprise border radius-md
   fontSize: '0.75rem', // text-xs
   border: '1px solid',
   transition: 'colors 0.15s ease-in-out',
@@ -541,7 +549,7 @@ export const getCursorPreviewContainerStyles = () => ({
   width: '1rem', // w-4
   height: '1rem', // h-4
   margin: '0 auto',
-  borderRadius: '50%', // για circle cursor
+  borderRadius: '50%', // για circle cursor - keep as is
   borderWidth: '2px',
   borderStyle: 'solid',
   transition: 'all 0.15s ease-in-out'
@@ -679,7 +687,7 @@ export const getCalibrationDebugPanelStyles = () => ({
   backgroundColor: 'rgb(17 24 39)', // bg-gray-900
   color: 'white',
   padding: '1rem', // p-4
-  borderRadius: '0.5rem', // rounded-lg
+  borderRadius: 'calc(var(--radius) + 2px)', // Enterprise lg border radius
   boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)', // shadow-lg
   pointerEvents: 'auto' as const,
   minWidth: '320px',
@@ -730,7 +738,7 @@ export const getCalibrationTooltipStyles = () => ({
 export const getCursorSettingsPanelStyles = () => ({
   padding: '0.5rem',
   backgroundColor: 'rgb(55 65 81)', // bg-gray-700
-  borderRadius: '0.375rem', // rounded-md
+  borderRadius: 'var(--radius)', // Enterprise border radius-md
   display: 'flex',
   flexDirection: 'column' as const,
   gap: '0.5rem'
@@ -742,7 +750,7 @@ export const getCursorSettingsPanelStyles = () => ({
 export const getCursorColorPreviewStyles = (cursorColor: string) => ({
   width: '1.5rem', // w-6
   height: '1.5rem', // h-6
-  borderRadius: '0.375rem', // rounded-md
+  borderRadius: 'var(--radius)', // Enterprise border radius-md
   backgroundColor: cursorColor,
   border: '2px solid rgb(75 85 99)', // border-gray-600
   transition: 'all 0.15s ease-in-out',

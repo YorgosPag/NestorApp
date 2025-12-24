@@ -57,6 +57,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects'
 import { useIconSizes } from '@/hooks/useIconSizes'
+import { borderVariants } from '@/styles/design-tokens'
 
 // ===== TYPES =====
 
@@ -81,9 +82,9 @@ const accordionItemVariants = cva(
     variants: {
       variant: {
         default: "border-border",
-        bordered: "border-2 border-border rounded-lg mb-2 overflow-hidden",
+        bordered: `border-2 ${borderVariants.card.className} mb-2 overflow-hidden`,
         ghost: "border-0",
-        card: "border border-border rounded-lg mb-2 bg-card shadow-sm"
+        card: `${borderVariants.card.className} mb-2 bg-card shadow-sm`
       }
     },
     defaultVariants: {

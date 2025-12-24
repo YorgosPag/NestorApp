@@ -3,6 +3,7 @@
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { HOVER_TEXT_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 // ============================================================================
 // 🏢 ENTERPRISE UNIVERSAL CLICKABLE FIELD RENDERER
@@ -106,10 +107,14 @@ export function UniversalClickableField({
  * 🔗 Render clickable link based on field type
  */
 function renderClickableLink(type: string, value: string, fieldId: string): React.ReactNode {
+  const { quick } = useBorderTokens();
+
+  // 🎨 ENTERPRISE DISABLED INPUT STYLING - Centralized pattern
+  const disabledInputClasses = `min-h-10 flex items-center px-3 py-2 ${quick.input} bg-background text-sm`;
   // 📧 EMAIL LINK - Always use Gmail web interface
   if (type === 'email') {
     return (
-      <div className="min-h-10 flex items-center px-3 py-2 border border-input bg-background rounded-md text-sm">
+      <div className={disabledInputClasses}>
         <a
           href={`https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(value)}`}
           target="_blank"
@@ -129,7 +134,7 @@ function renderClickableLink(type: string, value: string, fieldId: string): Reac
   // 📞 PHONE LINK - Use tel: protocol
   if (type === 'tel') {
     return (
-      <div className="min-h-10 flex items-center px-3 py-2 border border-input bg-background rounded-md text-sm">
+      <div className={disabledInputClasses}>
         <a
           href={`tel:${value}`}
           className={`cursor-pointer ${HOVER_TEXT_EFFECTS.BLUE_WITH_UNDERLINE} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
@@ -148,7 +153,7 @@ function renderClickableLink(type: string, value: string, fieldId: string): Reac
   if (type === 'url' || type === 'website') {
     const websiteUrl = value.startsWith('http') ? value : `https://${value}`;
     return (
-      <div className="min-h-10 flex items-center px-3 py-2 border border-input bg-background rounded-md text-sm">
+      <div className={disabledInputClasses}>
         <a
           href={websiteUrl}
           target="_blank"
@@ -167,7 +172,7 @@ function renderClickableLink(type: string, value: string, fieldId: string): Reac
 
   // 📝 FALLBACK - Other field types as disabled input
   return (
-    <div className="min-h-10 flex items-center px-3 py-2 border border-input bg-background rounded-md text-sm text-muted-foreground">
+    <div className={`${disabledInputClasses} text-muted-foreground`}>
       {value}
     </div>
   );

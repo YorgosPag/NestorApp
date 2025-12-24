@@ -17,6 +17,7 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import {
   Dialog,
   DialogContent,
@@ -95,6 +96,7 @@ export function FloorPlanUploadModal({
   isParsing = false
 }: FloorPlanUploadModalProps) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const { t } = useTranslationLazy('geo-canvas');
 
   // Drag state
@@ -229,7 +231,7 @@ export function FloorPlanUploadModal({
             <div
           className={`
             relative
-            border-2 border-dashed rounded-lg
+            border-2 border-dashed ${quick.card}
             p-12
             text-center
             transition-all duration-200
@@ -311,7 +313,7 @@ export function FloorPlanUploadModal({
 
         {/* Error Message */}
         {error && (
-          <div className="bg-red-900/20 border border-red-600 rounded-lg p-4">
+          <div className={`bg-red-900/20 ${quick.card} border-red-600 p-4`}>
             <p className="text-sm text-red-400">
               ❌ {error}
             </p>

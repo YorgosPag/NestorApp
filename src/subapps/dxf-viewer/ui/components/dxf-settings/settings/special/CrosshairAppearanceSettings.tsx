@@ -45,6 +45,7 @@ import React from 'react';
 import { useCursorSettings } from '../../../../../systems/cursor';
 import { DEFAULT_CURSOR_SETTINGS } from '../../../../../systems/cursor/config';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import type { CursorColors } from '../../../palettes/CursorColorPalette';
 import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
@@ -77,6 +78,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
   onCursorColorsChange
 }) => {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   // ============================================================================
   // HOOKS
   // ============================================================================
@@ -130,7 +132,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             onClick={() => {
               updateSettings({ crosshair: { ...settings.crosshair, line_style: 'solid' } });
             }}
-            className={`p-2 rounded text-xs border transition-colors ${
+            className={`p-2 ${quick.button} text-xs transition-colors ${
               (settings.crosshair.line_style || 'solid') === 'solid'
                 ? 'bg-blue-600 border-blue-500'
                 : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
@@ -144,7 +146,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
           </button>
           <button
             onClick={() => updateSettings({ crosshair: { ...settings.crosshair, line_style: 'dashed' } })}
-            className={`p-2 rounded text-xs border transition-colors ${
+            className={`p-2 ${quick.button} text-xs transition-colors ${
               (settings.crosshair.line_style || 'solid') === 'dashed'
                 ? 'bg-blue-600 border-blue-500'
                 : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
@@ -158,7 +160,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
           </button>
           <button
             onClick={() => updateSettings({ crosshair: { ...settings.crosshair, line_style: 'dotted' } })}
-            className={`p-2 rounded text-xs border transition-colors ${
+            className={`p-2 ${quick.button} text-xs transition-colors ${
               (settings.crosshair.line_style || 'solid') === 'dotted'
                 ? 'bg-blue-600 border-blue-500'
                 : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
@@ -172,7 +174,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
           </button>
           <button
             onClick={() => updateSettings({ crosshair: { ...settings.crosshair, line_style: 'dash-dot' } })}
-            className={`p-2 rounded text-xs border transition-colors ${
+            className={`p-2 ${quick.button} text-xs transition-colors ${
               (settings.crosshair.line_style || 'solid') === 'dash-dot'
                 ? 'bg-blue-600 border-blue-500'
                 : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
@@ -237,7 +239,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
             onClick={() => {
               updateSettings({ crosshair: { ...settings.crosshair, size_percent: 0 } });
             }}
-            className={`p-2 rounded text-xs border transition-colors relative flex flex-col items-center ${
+            className={`p-2 ${quick.button} text-xs transition-colors relative flex flex-col items-center ${
               (settings.crosshair.size_percent ?? 8) === 0
                 ? 'bg-blue-600 border-blue-500'
                 : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
@@ -253,7 +255,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
           </button>
           <button
             onClick={() => updateSettings({ crosshair: { ...settings.crosshair, size_percent: 5 } })}
-            className={`p-2 rounded text-xs border transition-colors relative flex flex-col items-center ${
+            className={`p-2 ${quick.button} text-xs transition-colors relative flex flex-col items-center ${
               (settings.crosshair.size_percent ?? 8) === 5
                 ? 'bg-blue-600 border-blue-500'
                 : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
@@ -281,7 +283,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
           </button>
           <button
             onClick={() => updateSettings({ crosshair: { ...settings.crosshair, size_percent: 8 } })}
-            className={`p-2 rounded text-xs border transition-colors relative flex flex-col items-center ${
+            className={`p-2 ${quick.button} text-xs transition-colors relative flex flex-col items-center ${
               (settings.crosshair.size_percent ?? 8) === 8
                 ? 'bg-blue-600 border-blue-500'
                 : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
@@ -309,7 +311,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
           </button>
           <button
             onClick={() => updateSettings({ crosshair: { ...settings.crosshair, size_percent: 15 } })}
-            className={`p-2 rounded text-xs border transition-colors relative flex flex-col items-center ${
+            className={`p-2 ${quick.button} text-xs transition-colors relative flex flex-col items-center ${
               (settings.crosshair.size_percent ?? 8) === 15
                 ? 'bg-blue-600 border-blue-500'
                 : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
@@ -337,7 +339,7 @@ export const CrosshairAppearanceSettings: React.FC<CrosshairAppearanceSettingsPr
           </button>
           <button
             onClick={() => updateSettings({ crosshair: { ...settings.crosshair, size_percent: 100 } })}
-            className={`p-2 rounded text-xs border transition-colors relative flex flex-col items-center ${
+            className={`p-2 ${quick.button} text-xs transition-colors relative flex flex-col items-center ${
               (settings.crosshair.size_percent ?? 8) === 100
                 ? 'bg-blue-600 border-blue-500'
                 : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'

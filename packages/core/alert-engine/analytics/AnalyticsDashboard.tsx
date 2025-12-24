@@ -8,6 +8,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { formatDate, formatDateTime } from '../../../../src/lib/intl-utils';
 import {
   EventAnalyticsEngine,
@@ -69,6 +70,7 @@ const MetricCard: React.FC<{
   description?: string;
 }> = ({ title, value, unit, trend, icon, status = 'good', description }) => {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const getStatusColor = () => {
     switch (status) {
       case 'good': return '#10B981';
@@ -98,7 +100,7 @@ const MetricCard: React.FC<{
   };
 
   return (
-    <div className={`${cardBgClass} border border-gray-200 rounded-lg p-5 min-h-[140px] flex flex-col justify-between ${HOVER_BACKGROUND_EFFECTS.GRAY_LIGHT}`}>
+    <div className={`${cardBgClass} ${quick.card} p-5 min-h-[140px] flex flex-col justify-between ${HOVER_BACKGROUND_EFFECTS.GRAY_LIGHT}`}>
       <div className="flex justify-between items-center">
         <h4 className={`m-0 text-sm font-medium ${titleTextClass}`}>
           {title}
@@ -212,7 +214,7 @@ const SimpleChart: React.FC<{
   };
 
   return (
-    <div className={`${chartBgClass} border border-gray-200 rounded-lg p-4`}>
+    <div className={`${chartBgClass} ${quick.card} p-4`}>
       <h3 className={`m-0 mb-4 text-base font-semibold ${titleTextClass}`}>
         {title}
       </h3>
@@ -259,7 +261,7 @@ const InsightCard: React.FC<{
   const metaTextClass = useDynamicTextClass('#9CA3AF');
 
   return (
-    <div className={`${cardBgClass} border border-gray-200 rounded-lg p-4 ${borderLeftClass}`}>
+    <div className={`${cardBgClass} ${quick.card} p-4 ${borderLeftClass}`}>
       <div className="flex items-start gap-3">
         <span className="text-xl">{getSeverityIcon()}</span>
         <div className="flex-1">
@@ -277,7 +279,7 @@ const InsightCard: React.FC<{
             {insight.actionRequired && onAction && (
               <button
                 onClick={() => onAction(insight.id)}
-                className={`px-3 py-1 border border-gray-300 rounded text-xs text-gray-700 cursor-pointer ${cardBgClass} ${HOVER_BACKGROUND_EFFECTS.GRAY_LIGHT}`}
+                className={`px-3 py-1 ${quick.card} text-xs text-gray-700 cursor-pointer ${cardBgClass} ${HOVER_BACKGROUND_EFFECTS.GRAY_LIGHT}`}
               >
                 Take Action
               </button>
@@ -314,7 +316,7 @@ const RecommendationCard: React.FC<{
   const buttonBgClass = useDynamicBackgroundClass('#3B82F6');
 
   return (
-    <div className={`${cardBgClass} border border-gray-200 rounded-lg p-4`}>
+    <div className={`${cardBgClass} ${quick.card} p-4`}>
       <div className="flex justify-between items-start mb-3">
         <h4 className={`m-0 text-sm font-semibold ${titleTextClass}`}>
           {recommendation.title}
@@ -675,7 +677,7 @@ export const AnalyticsDashboard: React.FC = () => {
           <div className={`text-sm ${grayTextClass}`}>{dashboardState.error}</div>
           <button
             onClick={handleRefresh}
-            className={`mt-4 px-4 py-2 border border-gray-300 rounded-md cursor-pointer ${refreshButtonBgClass} ${HOVER_BACKGROUND_EFFECTS.GRAY_LIGHT}`}
+            className={`mt-4 px-4 py-2 ${quick.card} cursor-pointer ${refreshButtonBgClass} ${HOVER_BACKGROUND_EFFECTS.GRAY_LIGHT}`}
           >
             Retry
           </button>
@@ -709,7 +711,7 @@ export const AnalyticsDashboard: React.FC = () => {
         </div>
         <button
           onClick={handleRefresh}
-          className={`px-4 py-2 border border-gray-300 rounded-md text-sm text-gray-700 cursor-pointer ${refreshButtonBgClass} ${HOVER_BACKGROUND_EFFECTS.GRAY_LIGHT}`}
+          className={`px-4 py-2 ${quick.card} text-sm text-gray-700 cursor-pointer ${refreshButtonBgClass} ${HOVER_BACKGROUND_EFFECTS.GRAY_LIGHT}`}
         >
           🔄 Refresh
         </button>
@@ -750,7 +752,7 @@ export const AnalyticsDashboard: React.FC = () => {
         {activeTab === 'overview' && renderOverviewTab(report)}
         {activeTab === 'insights' && renderInsightsTab(report)}
         {(activeTab === 'events' || activeTab === 'alerts' || activeTab === 'rules' || activeTab === 'notifications') && (
-          <div className={`${refreshButtonBgClass} border border-gray-200 rounded-lg p-6 text-center`}>
+          <div className={`${refreshButtonBgClass} ${quick.card} p-6 text-center`}>
             <h3 className={`m-0 mb-4 text-lg font-semibold ${titleTextClass}`}>
               {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Tab
             </h3>

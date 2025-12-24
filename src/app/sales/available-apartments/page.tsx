@@ -14,6 +14,7 @@ import {
   Users,
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 // Placeholder stats for Available Apartments
 const availableStats: DashboardStat[] = [
@@ -53,6 +54,7 @@ const availableStats: DashboardStat[] = [
 
 export default function AvailableApartmentsPage() {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   return (
     <TooltipProvider>
       <div className="flex h-screen bg-background">
@@ -82,7 +84,7 @@ export default function AvailableApartmentsPage() {
             {/* Available Types */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Γκαρσονιέρες */}
-              <div className="p-6 bg-card border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
+              <div className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                 <div className="flex items-center gap-3 mb-3">
                   <div className="p-2 bg-blue-500/10 rounded-lg">
                     <Home className={`${iconSizes.md} text-blue-500`} />
@@ -110,7 +112,7 @@ export default function AvailableApartmentsPage() {
               </div>
 
               {/* Δυάρια */}
-              <div className="p-6 bg-card border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
+              <div className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                 <div className="flex items-center gap-3 mb-3">
                   <div className="p-2 bg-green-500/10 rounded-lg">
                     <Home className={`${iconSizes.md} text-green-500`} />
@@ -138,7 +140,7 @@ export default function AvailableApartmentsPage() {
               </div>
 
               {/* Τριάρια+ */}
-              <div className="p-6 bg-card border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
+              <div className={`p-6 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                 <div className="flex items-center gap-3 mb-3">
                   <div className="p-2 bg-purple-500/10 rounded-lg">
                     <Home className={`${iconSizes.md} text-purple-500`} />
@@ -176,7 +178,7 @@ export default function AvailableApartmentsPage() {
                 </h2>
 
                 <div className="space-y-3">
-                  <div className="p-4 bg-card border rounded-lg">
+                  <div className={`p-4 bg-card ${quick.card}`}>
                     <div className="flex justify-between items-center mb-2">
                       <span className="font-medium">€100K - €250K</span>
                       <span className="bg-green-500/20 text-green-500 px-2 py-1 rounded text-sm font-medium">
@@ -188,7 +190,7 @@ export default function AvailableApartmentsPage() {
                     </p>
                   </div>
 
-                  <div className="p-4 bg-card border rounded-lg">
+                  <div className={`p-4 bg-card ${quick.card}`}>
                     <div className="flex justify-between items-center mb-2">
                       <span className="font-medium">€250K - €400K</span>
                       <span className="bg-blue-500/20 text-blue-500 px-2 py-1 rounded text-sm font-medium">
@@ -200,7 +202,7 @@ export default function AvailableApartmentsPage() {
                     </p>
                   </div>
 
-                  <div className="p-4 bg-card border rounded-lg">
+                  <div className={`p-4 bg-card ${quick.card}`}>
                     <div className="flex justify-between items-center mb-2">
                       <span className="font-medium">€400K+</span>
                       <span className="bg-purple-500/20 text-purple-500 px-2 py-1 rounded text-sm font-medium">
@@ -221,7 +223,7 @@ export default function AvailableApartmentsPage() {
                   Ενδιαφέρον & Δραστηριότητα
                 </h2>
 
-                <div className="p-6 bg-card border rounded-lg">
+                <div className={`p-6 bg-card ${quick.card}`}>
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground flex items-center gap-2">
@@ -259,7 +261,7 @@ export default function AvailableApartmentsPage() {
             </div>
 
             {/* Info Message */}
-            <div className="p-4 bg-muted/50 border border-dashed rounded-lg">
+            <div className={`p-4 bg-muted/50 ${quick.card}`}>
               <div className="flex items-center gap-2 text-sm">
                 <Home className={iconSizes.sm} />
                 <span className="font-medium">Διαθέσιμα Διαμερίσματα</span>

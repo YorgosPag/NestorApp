@@ -7,13 +7,15 @@ import { getStatusColor } from '../utils/status';
 import { getStatusLabel } from '@/constants/property-statuses-enterprise';
 import { formatCurrency } from '@/lib/intl-utils';
 import { HOVER_SHADOWS } from '@/components/ui/effects';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 export const UnitNode = ({ unit }: { unit: UnitModel }) => {
+  const { quick } = useBorderTokens();
   const showCustomerInfo = unit.status === 'sold' || unit.status === 'reserved' || unit.status === 'rented';
 
   return (
     <div className="border-l-2 border-gray-200 dark:border-gray-700 pl-4">
-      <div className={`p-4 bg-white dark:bg-gray-800/50 border rounded-lg ${HOVER_SHADOWS.MEDIUM} transition-all`}>
+      <div className={`p-4 bg-white dark:bg-gray-800/50 ${quick.card} ${HOVER_SHADOWS.MEDIUM} transition-all`}>
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-3">
             <Home size={18} className="text-gray-500 mt-1" />

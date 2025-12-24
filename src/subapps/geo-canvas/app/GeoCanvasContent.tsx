@@ -12,6 +12,7 @@ import { CitizenDrawingInterface } from '../components/CitizenDrawingInterface';
 import { ProfessionalDrawingInterface } from '../components/ProfessionalDrawingInterface';
 import { TechnicalDrawingInterface } from '../components/TechnicalDrawingInterface';
 import { AlertManagementPanel } from '../components/AlertManagementPanel';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 // ✅ NEW: Enterprise Centralized Polygon System Provider
 import { PolygonSystemProvider } from '../systems/polygon-system';
@@ -42,6 +43,7 @@ import type { GeoCoordinate, DxfCoordinate } from '../types';
  */
 export function GeoCanvasContent(props: GeoCanvasAppProps) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const { t, isLoading } = useTranslationLazy('geo-canvas');
   const { user, setUserType, isCitizen, isProfessional, isTechnical } = useOptimizedUserRole();
   const [activeView, setActiveView] = useState<'foundation' | 'georeferencing' | 'map'>('georeferencing');
@@ -629,7 +631,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                       setActiveView(value);
                     }
                   }}
-                  className="bg-gray-700 border border-gray-600 rounded px-3 py-1 text-sm"
+                  className={`bg-gray-700 ${quick.input} border-gray-600 px-3 py-1 text-sm`}
                 >
                   <option value="georeferencing">{t('views.georeferencing')}</option>
                   <option value="foundation">{t('views.foundation')}</option>
@@ -640,7 +642,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
 
               <li className="flex items-center space-x-2">
                 <span className="text-gray-400">{t('toolbar.crs')}</span>
-                <select className="bg-gray-700 border border-gray-600 rounded px-3 py-1 text-sm">
+                <select className={`bg-gray-700 ${quick.input} border-gray-600 px-3 py-1 text-sm`}>
                   <option>{t('coordinateSystems.epsg4326')}</option>
                   <option>{t('coordinateSystems.epsg2100')}</option>
                   <option>UTM 34N (EPSG:32634)</option>
@@ -892,11 +894,11 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                 {t('sidebar.phaseProgress.title')}
               </h3>
               <div className="space-y-3">
-                <div className="p-3 bg-green-900 border border-green-600 rounded">
+                <div className={`p-3 bg-green-900 ${quick.card} border-green-600`}>
                   <div className="text-sm font-medium text-green-300">{t('sidebar.phaseProgress.phase1Title')}</div>
                   <div className="text-xs text-green-400">{t('sidebar.phaseProgress.phase1Description')}</div>
                 </div>
-                <div className="p-3 bg-green-900 border border-green-600 rounded">
+                <div className={`p-3 bg-green-900 ${quick.card} border-green-600`}>
                   <div className="text-sm font-medium text-green-300">{t('sidebar.phaseProgress.phase2Title')}</div>
                   <div className="text-xs text-green-400">{t('sidebar.phaseProgress.phase2Description')}</div>
                 </div>

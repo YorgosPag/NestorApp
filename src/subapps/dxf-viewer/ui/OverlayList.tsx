@@ -10,6 +10,7 @@ import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS } fr
 import { STATUS_COLORS, STATUS_LABELS, KIND_LABELS, type Overlay } from '../overlays/types';
 import { layoutUtilities } from '@/styles/design-tokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface OverlayListProps {
   overlays: Overlay[];
@@ -29,6 +30,7 @@ export const OverlayList: React.FC<OverlayListProps> = ({
   onToggleLayers,
 }) => {
   const iconSizes = useIconSizes();
+  const { quick, getStatusBorder } = useBorderTokens();
   const [searchQuery, setSearchQuery] = useState('');
   const [hiddenOverlays, setHiddenOverlays] = useState<Set<string>>(new Set());
   const selectedCardRef = React.useRef<HTMLDivElement>(null);
@@ -77,7 +79,7 @@ export const OverlayList: React.FC<OverlayListProps> = ({
   };
 
   return (
-    <Card className="w-full h-full flex flex-col bg-gray-800 border-gray-700 text-white">
+    <Card className={`w-full h-full flex flex-col bg-gray-800 ${getStatusBorder('default')} text-white`}>
       <CardHeader className="pb-2 pt-3 px-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm">Overlays</CardTitle>
@@ -95,7 +97,7 @@ export const OverlayList: React.FC<OverlayListProps> = ({
             placeholder="Αναζήτηση..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className={`pl-8 ${iconSizes.xl} text-sm bg-gray-900 border-gray-600 text-white placeholder-gray-400`}
+            className={`pl-8 ${iconSizes.xl} text-sm bg-gray-900 ${quick.input} text-white placeholder-gray-400`}
           />
         </div>
       </CardHeader>
@@ -118,8 +120,8 @@ export const OverlayList: React.FC<OverlayListProps> = ({
                   <div
                     key={overlay.id}
                     ref={isSelected ? selectedCardRef : null}
-                    className={`flex items-center gap-1 px-2 py-2 rounded border transition-colors cursor-pointer w-full overflow-hidden ${
-                      isSelected ? 'bg-blue-900/50 border-blue-500' : `bg-gray-900/50 border-gray-600 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
+                    className={`flex items-center gap-1 px-2 py-2 rounded transition-colors cursor-pointer w-full overflow-hidden ${
+                      isSelected ? `bg-blue-900/50 ${getStatusBorder('active')}` : `bg-gray-900/50 ${quick.card} ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
                     }`}
                     onClick={() => onSelect(overlay.id === selectedOverlayId ? null : overlay.id)}
                   >
@@ -133,7 +135,7 @@ export const OverlayList: React.FC<OverlayListProps> = ({
                     </Button>
 
                     <div
-                      className={`${iconSizes.xs} rounded border flex-shrink-0`}
+                      className={`${iconSizes.xs} rounded ${quick.button} flex-shrink-0`}
                       style={layoutUtilities.dxf.colors.backgroundColor(
                         STATUS_COLORS[overlay.status || 'for-sale']
                       )}

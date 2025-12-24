@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Minus, Square, Pen, Hexagon, Ruler, Triangle } from 'lucide-react';
 import { CircleRadiusIcon } from '../../../../toolbar/icons/CircleIcon';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 // ✅ ΝΕΑ UNIFIED HOOKS - ΑΝΤΙΚΑΤΑΣΤΑΣΗ ΤΩΝ ΠΑΛΙΩΝ SPECIFIC CONTEXTS
 import {
   useUnifiedLineCompletion,
@@ -75,6 +76,7 @@ interface EntitiesSettingsProps {
 
 export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   // ✅ Replaced multiple useState hooks with unified reducer for better performance
   const { state: tabState, actions: tabActions, computed } = useEntitiesSettingsReducer();
 
@@ -315,7 +317,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
                   onClick={() => handleToolClick(tool.id)}
                   title={`${tool.label} (${tool.hotkey})`}
                   className={`
-                    ${iconSizes.xl} p-0 rounded-md border transition-colors duration-150
+                    ${iconSizes.xl} p-0 ${quick.button} transition-colors duration-150
                     flex items-center justify-center
                     ${isSelected
                       ? 'bg-blue-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} text-white border-blue-500'
@@ -334,7 +336,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
                   onClick={() => handleToolClick(tool.id)}
                   title={`${tool.label} (${tool.hotkey})`}
                   className={`
-                    h-8 w-7 p-0 rounded-l-md border-r-0 border transition-colors duration-150
+                    h-8 w-7 p-0 ${quick.button} border-r-0 transition-colors duration-150
                     flex items-center justify-center
                     ${isSelected
                       ? 'bg-blue-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} text-white border-blue-500'
@@ -346,7 +348,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
                 </button>
                 <button
                   className={`
-                    h-8 w-4 p-0 rounded-r-md border transition-colors duration-150
+                    h-8 w-4 p-0 ${quick.button} transition-colors duration-150
                     flex items-center justify-center
                     ${isSelected
                       ? 'bg-blue-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} text-white border-blue-500'
@@ -373,7 +375,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
     // Ειδική λογική για το line tool (πλήρης από dxf-viewer-kalo)
     if (selectedTool === 'line') {
       return (
-        <div className="mb-6 p-4 bg-gray-800 rounded-lg">
+        <div className={`mb-6 p-4 bg-gray-800 ${quick.card}`}>
           {/* Καρτέλες για Line Tool σε δύο σειρές */}
           <div className="grid grid-cols-2 gap-2 mb-4">
             {[
@@ -385,7 +387,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveLineTab(activeLineTab === tab.id ? null : tab.id)}
-                className={`py-2 px-3 text-sm font-medium rounded-md transition-colors ${
+                className={`py-2 px-3 text-sm font-medium ${quick.button} transition-colors ${
                   activeLineTab === tab.id
                     ? 'bg-blue-600 text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}'
                     : 'bg-gray-600 text-white ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}'
@@ -541,7 +543,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
 
     // Για όλα τα άλλα εργαλεία - κενό container
     return (
-      <div className="mb-6 p-4 bg-gray-800 rounded-lg border border-gray-600">
+      <div className={`mb-6 p-4 bg-gray-800 ${quick.card} border-gray-600`}>
         <h3 className="text-lg font-semibold text-white mb-4">
           Ρυθμίσεις {selectedTool}
         </h3>
@@ -565,7 +567,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
       {/* Entity-Specific Settings - Tools and specialized functions */}
       <div>
           {/* Tabs για Ειδικές Ρυθμίσεις */}
-          <div className="flex space-x-1 bg-gray-700 rounded-lg p-1 mb-4">
+          <div className={`flex space-x-1 bg-gray-700 ${quick.card} p-1 mb-4`}>
             {[
               { id: 'drawing', label: 'Σχεδίαση' },
               { id: 'measurements', label: 'Μετρήσεις' }

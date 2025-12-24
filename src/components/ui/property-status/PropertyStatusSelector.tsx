@@ -14,6 +14,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import {
   Select,
   SelectContent,
@@ -135,6 +136,7 @@ export function PropertyStatusSelector({
   onValidate
 }: PropertyStatusSelectorProps) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
 
   // ========================================================================
   // STATE
@@ -397,7 +399,7 @@ export function PropertyStatusSelector({
 
       {/* Validation Message */}
       {validationMessage && (
-        <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+        <div className={`flex items-center gap-2 p-3 bg-destructive/10 ${quick.error}`}>
           <AlertTriangle className={`${iconSizes.sm} text-destructive flex-shrink-0`} />
           <span className="text-sm text-destructive">{validationMessage}</span>
         </div>
@@ -405,7 +407,7 @@ export function PropertyStatusSelector({
 
       {/* Reason Field */}
       {showReasonField && selectedStatus && (
-        <div className="space-y-3 p-4 bg-muted/50 border rounded-md">
+        <div className={`space-y-3 p-4 bg-muted/50 ${quick.card}`}>
           <div className="flex items-center gap-2">
             <Info className={`${iconSizes.sm} text-blue-500`} />
             <Label className="text-sm font-medium">

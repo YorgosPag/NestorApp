@@ -8,6 +8,7 @@ import { GenericListHeader } from '@/components/shared/GenericListHeader';
 import { ProjectListItem } from './project-list-item'; // Updated import path
 import { CompactToolbar, projectsConfig } from '@/components/core/CompactToolbar';
 import { Briefcase } from 'lucide-react';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface ProjectsListProps {
   projects: Project[];
@@ -22,6 +23,7 @@ export function ProjectsList({
   onSelectProject,
   companies,
 }: ProjectsListProps) {
+  const { quick } = useBorderTokens();
 
   const [favorites, setFavorites] = useState<number[]>([1]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -40,7 +42,7 @@ export function ProjectsList({
 
 
   return (
-    <div className="min-w-[300px] max-w-[420px] w-full bg-card border rounded-lg flex flex-col shrink-0 shadow-sm h-fit overflow-hidden">
+    <div className="min-w-[300px] max-w-[420px] w-full bg-card ${quick.card} flex flex-col shrink-0 shadow-sm h-fit overflow-hidden">
       <GenericListHeader
         icon={Briefcase}
         entityName="Έργα"

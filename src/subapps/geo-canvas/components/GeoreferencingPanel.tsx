@@ -7,6 +7,7 @@ import type { DxfCoordinate, GeoCoordinate } from '../types';
 import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 /**
  * GEOREFERENCING PANEL COMPONENT
@@ -15,6 +16,7 @@ import { useSemanticColors } from '@/hooks/useSemanticColors';
  */
 export function GeoreferencingPanel() {
   const colors = useSemanticColors();
+  const { quick } = useBorderTokens();
   const { t, isLoading } = useTranslationLazy('geo-canvas');
   const [transformState, transformActions] = useGeoTransform();
   const [showAddPoint, setShowAddPoint] = useState(false);
@@ -101,7 +103,7 @@ export function GeoreferencingPanel() {
     };
 
     return (
-      <div className="bg-gray-800 rounded-lg p-4 mb-4">
+      <div className={`bg-gray-800 ${quick.card} p-4 mb-4`}>
         <h3 className="text-lg font-semibold mb-3 text-blue-400">
           {t('validation.status')}
         </h3>
@@ -183,14 +185,14 @@ export function GeoreferencingPanel() {
   // ========================================================================
 
   const renderControlPointsList = () => (
-    <div className="bg-gray-800 rounded-lg p-4 mb-4">
+    <div className={`bg-gray-800 ${quick.card} p-4 mb-4`}>
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-blue-400">
           {t('panelTitle')} ({transformState.controlPoints.length})
         </h3>
         <button
           onClick={() => setShowAddPoint(!showAddPoint)}
-          className="bg-blue-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} text-white px-3 py-1 rounded text-sm transition-colors"
+          className={`bg-blue-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} text-white px-3 py-1 ${quick.input} text-sm transition-colors`}
         >
           {showAddPoint ? t('buttons.cancel') : t('actions.addPoint')}
         </button>
@@ -207,7 +209,7 @@ export function GeoreferencingPanel() {
                 type="number"
                 value={newPointData.dxfX}
                 onChange={(e) => setNewPointData(prev => ({ ...prev, dxfX: e.target.value }))}
-                className="w-full bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm"
+                className={`w-full bg-gray-600 ${quick.input} border-gray-500 px-2 py-1 text-sm`}
                 placeholder="0.00"
               />
             </div>
@@ -217,7 +219,7 @@ export function GeoreferencingPanel() {
                 type="number"
                 value={newPointData.dxfY}
                 onChange={(e) => setNewPointData(prev => ({ ...prev, dxfY: e.target.value }))}
-                className="w-full bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm"
+                className={`w-full bg-gray-600 ${quick.input} border-gray-500 px-2 py-1 text-sm`}
                 placeholder="0.00"
               />
             </div>
@@ -227,7 +229,7 @@ export function GeoreferencingPanel() {
                 type="number"
                 value={newPointData.geoLng}
                 onChange={(e) => setNewPointData(prev => ({ ...prev, geoLng: e.target.value }))}
-                className="w-full bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm"
+                className={`w-full bg-gray-600 ${quick.input} border-gray-500 px-2 py-1 text-sm`}
                 placeholder={GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE.toString()}
                 step="0.000001"
               />
@@ -238,7 +240,7 @@ export function GeoreferencingPanel() {
                 type="number"
                 value={newPointData.geoLat}
                 onChange={(e) => setNewPointData(prev => ({ ...prev, geoLat: e.target.value }))}
-                className="w-full bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm"
+                className={`w-full bg-gray-600 ${quick.input} border-gray-500 px-2 py-1 text-sm`}
                 placeholder={GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE.toString()}
                 step="0.000001"
               />
@@ -249,7 +251,7 @@ export function GeoreferencingPanel() {
                 type="number"
                 value={newPointData.accuracy}
                 onChange={(e) => setNewPointData(prev => ({ ...prev, accuracy: e.target.value }))}
-                className="w-full bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm"
+                className={`w-full bg-gray-600 ${quick.input} border-gray-500 px-2 py-1 text-sm`}
                 placeholder="1.0"
                 step="0.1"
               />
@@ -260,7 +262,7 @@ export function GeoreferencingPanel() {
                 type="text"
                 value={newPointData.description}
                 onChange={(e) => setNewPointData(prev => ({ ...prev, description: e.target.value }))}
-                className="w-full bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm"
+                className={`w-full bg-gray-600 ${quick.input} border-gray-500 px-2 py-1 text-sm`}
                 placeholder={t('hardcodedTexts.placeholders.optionalDescription')}
               />
             </div>
@@ -268,7 +270,7 @@ export function GeoreferencingPanel() {
           <div className="flex justify-end space-x-2 mt-4">
             <button
               onClick={() => setShowAddPoint(false)}
-              className="bg-gray-600 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-white px-3 py-1 rounded text-sm transition-colors"
+              className={`bg-gray-600 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-white px-3 py-1 ${quick.input} text-sm transition-colors`}
             >
               {t('controlPoints.cancel')}
             </button>
@@ -288,7 +290,7 @@ export function GeoreferencingPanel() {
         {transformState.controlPoints.map((point) => (
           <div
             key={point.id}
-            className={`p-3 rounded border transition-colors ${
+            className={`p-3 ${quick.button} transition-colors ${
               transformState.selectedPointId === point.id
                 ? 'bg-blue-900 border-blue-600'
                 : 'bg-gray-700 border-gray-600 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}'
@@ -344,7 +346,7 @@ export function GeoreferencingPanel() {
   // ========================================================================
 
   const renderTransformationControls = () => (
-    <div className="bg-gray-800 rounded-lg p-4 mb-4">
+    <div className={`bg-gray-800 ${quick.card} p-4 mb-4`}>
       <h3 className="text-lg font-semibold mb-4 text-blue-400">
         {t('transformation.controls')}
       </h3>
@@ -420,7 +422,7 @@ export function GeoreferencingPanel() {
     if (!transformState.error) return null;
 
     return (
-      <div className="bg-red-900 border border-red-600 rounded-lg p-4 mb-4">
+      <div className={`bg-red-900 ${quick.card} border-red-600 p-4 mb-4`}>
         <div className="flex items-center justify-between">
           <span className="text-red-300">❌ Error: {transformState.error}</span>
           <button
@@ -441,7 +443,7 @@ export function GeoreferencingPanel() {
   return (
     <div className="w-full max-w-md space-y-4">
       {/* Header */}
-      <div className="bg-gray-800 rounded-lg p-4">
+      <div className={`bg-gray-800 ${quick.card} p-4`}>
         <h2 className="text-xl font-bold text-blue-400 mb-2">
           {t('panelHeader.title')}
         </h2>

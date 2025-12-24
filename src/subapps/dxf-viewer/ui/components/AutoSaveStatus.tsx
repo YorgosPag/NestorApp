@@ -2,9 +2,11 @@ import React from 'react';
 import { useLevels } from '../../systems/levels/useLevels';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 export function AutoSaveStatus() {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const levelsSystem = useLevels();
   
   const currentFileName = levelsSystem.getCurrentFileName?.() || null;
@@ -69,7 +71,7 @@ export function AutoSaveStatus() {
   };
   
   return (
-    <div className="flex items-center justify-between p-2 bg-gray-800 border border-gray-700 rounded text-xs">
+    <div className={`flex items-center justify-between p-2 bg-gray-800 border border-gray-700 ${quick.card} text-xs`}>
       <div className="flex flex-col">
         <div className="flex items-center">
           <span className="text-gray-300 mr-2">📁 {currentFileName}</span>
@@ -90,7 +92,7 @@ export function AutoSaveStatus() {
 
             }
           }}
-          className={`px-2 py-1 text-[10px] bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL} rounded border border-gray-600`}
+          className={`px-2 py-1 text-[10px] bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL} ${quick.button} border border-gray-600`}
           title="Trigger manual save"
         >
           💾 Save

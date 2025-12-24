@@ -13,7 +13,7 @@ import { layoutUtilities } from '@/styles/design-tokens';
 
 export function FilesCard() {
   const iconSizes = useIconSizes();
-  const { createBorder } = useBorderTokens();
+  const { createBorder, quick } = useBorderTokens();
 
   const handleFileUpload = (files: FileList | null) => {
     if (!files) return;
@@ -45,7 +45,7 @@ export function FilesCard() {
       </CardHeader>
       <CardContent>
         <section
-          className={`${createBorder('medium', 'hsl(var(--border))', 'dashed')} rounded-lg p-6 text-center cursor-pointer bg-muted/20 ${INTERACTIVE_PATTERNS.DROPZONE_HOVER}`}
+          className={`${createBorder('medium', 'hsl(var(--border))', 'dashed')} ${quick.card} p-6 text-center cursor-pointer bg-muted/20 ${INTERACTIVE_PATTERNS.DROPZONE_HOVER}`}
           role="region"
           aria-label="File drop zone"
           onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('border-primary', 'bg-accent/20'); }}
@@ -74,9 +74,9 @@ export function FilesCard() {
         <section className="mt-6 space-y-3" role="region" aria-labelledby="existing-files-heading">
           <h4 id="existing-files-heading" className="text-sm font-medium text-foreground">Υπάρχοντα Αρχεία</h4>
 
-          <article className={`flex items-center justify-between p-3 bg-card rounded-lg border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`} aria-label="File: Συγγραφή Υποχρεώσεων.pdf">
+          <article className={`flex items-center justify-between p-3 bg-card ${quick.card} border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`} aria-label="File: Συγγραφή Υποχρεώσεων.pdf">
             <div className="flex items-center space-x-3">
-              <div className={`flex-shrink-0 ${iconSizes.xl2} bg-red-100 dark:bg-red-950/20 rounded-lg flex items-center justify-center`}>
+              <div className={`flex-shrink-0 ${iconSizes.xl2} bg-red-100 dark:bg-red-950/20 ${quick.card} flex items-center justify-center`}>
                 <FileText className={`${iconSizes.md} text-red-600`} />
               </div>
               <div className="min-w-0 flex-1">
@@ -91,9 +91,9 @@ export function FilesCard() {
             </div>
           </article>
 
-          <article className={`flex items-center justify-between p-3 bg-card rounded-lg border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`} aria-label="File: Πρόοδος Κατασκευής Φεβ 2025.jpg">
+          <article className={`flex items-center justify-between p-3 bg-card ${quick.card} border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`} aria-label="File: Πρόοδος Κατασκευής Φεβ 2025.jpg">
             <div className="flex items-center space-x-3">
-              <div className={`flex-shrink-0 ${iconSizes.xl2} bg-green-100 dark:bg-green-950/20 rounded-lg flex items-center justify-center`}>
+              <div className={`flex-shrink-0 ${iconSizes.xl2} bg-green-100 dark:bg-green-950/20 ${quick.card} flex items-center justify-center`}>
                  <FileImage className={`${iconSizes.md} text-green-600`} />
               </div>
               <div className="min-w-0 flex-1">
@@ -109,7 +109,7 @@ export function FilesCard() {
           </article>
         </section>
 
-        <aside className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800 hidden" id="upload-progress" role="status" aria-label="Upload progress">
+        <aside className={`mt-4 p-3 bg-blue-50 dark:bg-blue-950/30 ${quick.info} dark:border-blue-800 hidden`} id="upload-progress" role="status" aria-label="Upload progress">
           <div className="flex items-center space-x-3">
             <div className="flex-shrink-0"><div className={`animate-spin rounded-full ${iconSizes.md} border-b-2 border-blue-600`}></div></div>
             <div className="flex-1">

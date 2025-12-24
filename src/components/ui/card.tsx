@@ -1,20 +1,25 @@
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
+import { useBorderTokens } from "@/hooks/useBorderTokens"
 
 const Card = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      "rounded-lg border bg-card text-card-foreground shadow-sm",
-      className
-    )}
-    {...props}
-  />
-))
+>(({ className, ...props }, ref) => {
+  const { quick } = useBorderTokens();
+
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        `${quick.card} bg-card text-card-foreground shadow-sm`,
+        className
+      )}
+      {...props}
+    />
+  );
+})
 Card.displayName = "Card"
 
 const CardHeader = React.forwardRef<

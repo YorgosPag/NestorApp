@@ -34,6 +34,7 @@
 
 import { useMemo } from 'react';
 import { semanticColors, colors } from '@/styles/design-tokens/base/colors';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 // ============================================================================
 // 🎯 HOOK INTERFACE - TYPE-SAFE RETURNS
@@ -233,6 +234,10 @@ export interface UseSemanticColorsReturn {
  * @returns {UseSemanticColorsReturn} All semantic color patterns με utility methods
  */
 export function useSemanticColors(): UseSemanticColorsReturn {
+  // ============================================================================
+  // 🎨 ENTERPRISE BORDER INTEGRATION - CENTRALIZED TOKENS
+  // ============================================================================
+  const { quick } = useBorderTokens();
 
   // ============================================================================
   // 🚀 MEMOIZED COLOR PATTERNS - PERFORMANCE OPTIMIZED
@@ -326,21 +331,21 @@ export function useSemanticColors(): UseSemanticColorsReturn {
     // 🎯 COMMON UI PATTERNS - Ready-to-use combinations
     patterns: {
       card: {
-        standard: 'bg-white border border-slate-200 rounded-lg',
-        hover: 'bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors',
-        selected: 'bg-blue-50 border border-blue-300 rounded-lg',
+        standard: `bg-white ${quick.card}`,
+        hover: `bg-white ${quick.card} hover:bg-slate-50 transition-colors`,
+        selected: `bg-blue-50 ${quick.card} border-blue-300`,
       },
       alert: {
-        success: 'bg-green-50 border border-green-200 text-green-800 rounded-md p-4',
-        error: 'bg-red-50 border border-red-200 text-red-800 rounded-md p-4',
-        warning: 'bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-md p-4',
-        info: 'bg-blue-50 border border-blue-200 text-blue-800 rounded-md p-4',
+        success: `bg-green-50 ${quick.table} border-green-200 text-green-800 p-4`,
+        error: `bg-red-50 ${quick.table} border-red-200 text-red-800 p-4`,
+        warning: `bg-yellow-50 ${quick.table} border-yellow-200 text-yellow-800 p-4`,
+        info: `bg-blue-50 ${quick.table} border-blue-200 text-blue-800 p-4`,
       },
       badge: {
-        success: 'bg-green-100 text-green-800 border border-green-300 px-2 py-1 rounded text-sm',
-        error: 'bg-red-100 text-red-800 border border-red-300 px-2 py-1 rounded text-sm',
-        warning: 'bg-yellow-100 text-yellow-800 border border-yellow-300 px-2 py-1 rounded text-sm',
-        info: 'bg-blue-100 text-blue-800 border border-blue-300 px-2 py-1 rounded text-sm',
+        success: `bg-green-100 text-green-800 ${quick.input} border-green-300 px-2 py-1 text-sm`,
+        error: `bg-red-100 text-red-800 ${quick.input} border-red-300 px-2 py-1 text-sm`,
+        warning: `bg-yellow-100 text-yellow-800 ${quick.input} border-yellow-300 px-2 py-1 text-sm`,
+        info: `bg-blue-100 text-blue-800 ${quick.input} border-blue-300 px-2 py-1 text-sm`,
       },
     },
 
@@ -400,7 +405,7 @@ export function useSemanticColors(): UseSemanticColorsReturn {
 
     createCustomPattern: (classes) => classes.join(' '),
 
-  } as const), []); // Empty dependency - colors είναι σταθερές
+  } as const), [quick]); // Include border tokens dependency για reactivity
 }
 
 // ============================================================================

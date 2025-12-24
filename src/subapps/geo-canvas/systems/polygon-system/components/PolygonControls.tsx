@@ -10,6 +10,7 @@
 import React from 'react';
 import { MapPin, Hexagon, Hand, Trash2, Check, X, Home } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import type { PolygonType } from '@geo-alert/core';
 import { usePolygonSystemContext } from '../hooks/usePolygonSystemContext';
 import type { PolygonControlsProps } from '../types/polygon-system.types';
@@ -34,6 +35,7 @@ export function PolygonControls({
   className = ''
 }: PolygonControlsProps) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const { state, actions, config } = usePolygonSystemContext();
 
   // ============================================================================
@@ -81,7 +83,7 @@ export function PolygonControls({
     switch (config.role) {
       case 'citizen':
         return {
-          container: 'bg-white rounded-lg shadow-lg border border-gray-200',
+          container: `bg-white ${quick.card} shadow-lg border-gray-200`,
           button: `flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-medium ${TRANSITION_PRESETS.STANDARD_COLORS}`,
           primary: `bg-blue-500 text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`,
           secondary: `bg-gray-100 text-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`,
@@ -91,7 +93,7 @@ export function PolygonControls({
 
       case 'professional':
         return {
-          container: 'bg-white rounded-xl shadow-xl border border-amber-200',
+          container: `bg-white ${quick.card} shadow-xl border-amber-200`,
           button: `flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-semibold ${TRANSITION_PRESETS.STANDARD_COLORS}`,
           primary: `bg-amber-500 text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`,
           secondary: `bg-amber-50 text-amber-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`,
@@ -101,7 +103,7 @@ export function PolygonControls({
 
       case 'technical':
         return {
-          container: 'bg-slate-900 rounded-md shadow-2xl border border-violet-500',
+          container: `bg-slate-900 ${quick.input} shadow-2xl border-violet-500`,
           button: `flex items-center justify-center gap-1 py-1 px-2 rounded text-xs font-mono ${TRANSITION_PRESETS.STANDARD_COLORS}`,
           primary: `bg-violet-600 text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`,
           secondary: `bg-slate-700 text-slate-300 ${HOVER_BACKGROUND_EFFECTS.MUTED}`,
@@ -111,7 +113,7 @@ export function PolygonControls({
 
       default:
         return {
-          container: 'bg-white rounded-lg shadow-lg border border-gray-200',
+          container: `bg-white ${quick.card} shadow-lg border-gray-200`,
           button: `flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-medium ${TRANSITION_PRESETS.STANDARD_COLORS}`,
           primary: `bg-blue-500 text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`,
           secondary: `bg-gray-100 text-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`,

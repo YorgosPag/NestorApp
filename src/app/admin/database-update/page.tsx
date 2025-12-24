@@ -18,6 +18,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 // Services
 import {
@@ -158,6 +159,7 @@ const STATUS_ASSIGNMENTS = {
 
 export default function DatabaseUpdatePage() {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const [isLoading, setIsLoading] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
   const [completed, setCompleted] = useState({
@@ -407,7 +409,7 @@ export default function DatabaseUpdatePage() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {Object.entries(CONTACT_ASSIGNMENTS).slice(0, 9).map(([id, assignment]) => (
-              <div key={id} className="p-3 border rounded-lg">
+              <div key={id} className={`p-3 ${quick.card}`}>
                 <div className="font-mono text-xs text-muted-foreground">{id.slice(0, 8)}...</div>
                 <div className="flex flex-wrap gap-1 mt-1">
                   <Badge variant="outline" className="text-xs">
@@ -419,7 +421,7 @@ export default function DatabaseUpdatePage() {
                 </div>
               </div>
             ))}
-            <div className="p-3 border rounded-lg bg-muted/50 flex items-center justify-center">
+            <div className={`p-3 ${quick.card} bg-muted/50 flex items-center justify-center`}>
               <span className="text-sm text-muted-foreground">
                 +{Object.keys(CONTACT_ASSIGNMENTS).length - 9} περισσότερα
               </span>

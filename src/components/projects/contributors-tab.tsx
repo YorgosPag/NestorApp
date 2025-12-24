@@ -9,6 +9,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { ConfigurationAPI } from '@/core/configuration';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 /**
  * 🏢 ENTERPRISE: Database-driven contributor data (NO MORE HARDCODED VALUES)
@@ -57,6 +58,7 @@ const useContributors = () => {
 
 export function ContributorsTab() {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const { contributors, isLoading, error } = useContributors();
 
   if (error) {
@@ -88,7 +90,7 @@ export function ContributorsTab() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="border rounded-md">
+          <div className="${quick.table}">
             <Table>
               <TableHeader>
                 <TableRow>

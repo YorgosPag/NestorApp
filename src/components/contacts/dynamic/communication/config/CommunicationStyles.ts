@@ -9,15 +9,16 @@
 // ============================================================================
 
 import { HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 // ============================================================================
 // STYLE CONFIGURATION OBJECTS
 // ============================================================================
 
 /**
- * 🎨 COMMUNICATION STYLES CONFIGURATION
+ * 🎨 COMMUNICATION STYLES FACTORY
  *
- * Centralized styling classes που χρησιμοποιούνται σε όλο το communication system
+ * Returns centralized styling classes που χρησιμοποιούνται σε όλο το communication system
  * για consistent look & feel across all components.
  *
  * Includes:
@@ -26,6 +27,25 @@ import { HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS, INTERACTIVE_PATTERNS } fr
  * - Input field styling με focus states
  * - Empty state presentation
  * - Header styling για grouped layouts
+ */
+export function getCommunicationStyles() {
+  const { quick } = useBorderTokens();
+
+  return {
+    groupedTable: {
+      header: `bg-muted ${quick.borderB} font-medium text-sm text-muted-foreground`,
+      container: `${quick.card} bg-card p-4 w-full max-w-none`,
+      row: `grid gap-3 p-4 ${quick.borderB} last:border-b-0 bg-card transition-colors ${HOVER_BACKGROUND_EFFECTS.ACCENT}`,
+      emptyState: `text-center text-muted-foreground py-8 ${quick.card} bg-muted/30`,
+      input: `bg-background ${quick.input} focus:bg-background focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20`
+    }
+  } as const;
+}
+
+/**
+ * 🎨 LEGACY COMMUNICATION STYLES (Deprecated)
+ *
+ * @deprecated Use getCommunicationStyles() instead for enterprise border tokens
  */
 export const COMMUNICATION_STYLES = {
   groupedTable: {
@@ -42,11 +62,12 @@ export const COMMUNICATION_STYLES = {
 // ============================================================================
 
 /**
- * 🎛️ Style Configuration Type
+ * 🎛️ Style Configuration Types
  *
- * Type definition για το COMMUNICATION_STYLES object
+ * Type definitions για communication styles
  */
 export type CommunicationStylesType = typeof COMMUNICATION_STYLES;
+export type CommunicationStylesFactory = ReturnType<typeof getCommunicationStyles>;
 
 /**
  * 📱 Responsive Grid Classes

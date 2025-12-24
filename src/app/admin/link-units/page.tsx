@@ -9,11 +9,13 @@ import SoldUnitsPreview from '@/components/admin/SoldUnitsPreview';
 // Enterprise Configuration Management - CLAUDE.md Protocol compliance
 import { useEnterpriseConfig } from '@/core/configuration/useEnterpriseConfig';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 export default function LinkUnitsPage() {
   // Enterprise Configuration Hook - replaces hardcoded values
   const { companyConfig, isLoading } = useEnterpriseConfig();
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
 
   // Get current project name from centralized configuration
   const currentProjectName = companyConfig?.currentProject?.name || 'έργου';
@@ -57,7 +59,7 @@ export default function LinkUnitsPage() {
         {/* Additional Info */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-          <div className="p-6 bg-card border rounded-lg">
+          <div className={`p-6 bg-card ${quick.card}`}>
             <h3 className="font-semibold mb-3">🎯 Στόχος</h3>
             <p className="text-sm text-muted-foreground">
               Να συνδέσουμε τα units που έχουν status "sold" με τους αντίστοιχους πελάτες
@@ -65,7 +67,7 @@ export default function LinkUnitsPage() {
             </p>
           </div>
 
-          <div className="p-6 bg-card border rounded-lg">
+          <div className={`p-6 bg-card ${quick.card}`}>
             <h3 className="font-semibold mb-3">⚙️ Τι θα γίνει</h3>
             <ul className="text-sm text-muted-foreground space-y-1">
               <li>• Εύρεση sold units χωρίς soldTo field</li>

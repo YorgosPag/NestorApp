@@ -4,6 +4,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { Search, MapPin, Navigation, X, Clock, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 // ✅ Enterprise Address Resolver Integration
 import { useAddressResolver, type GreekAddress, type GeocodingResult } from '@/services/real-estate-monitor/AddressResolver';
@@ -45,6 +46,7 @@ export function AddressSearchPanel({
   className = ''
 }: AddressSearchPanelProps) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
 
   // ✅ Enterprise AddressResolver Hook
   const { resolve, getCacheStats } = useAddressResolver();
@@ -277,7 +279,7 @@ export function AddressSearchPanel({
     <div
       key={`search-${index}`}
       onClick={() => handleLocationSelect(result)}
-      className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer ${HOVER_BACKGROUND_EFFECTS.LIGHT}"
+      className={`flex items-center gap-3 p-3 ${quick.card} border-gray-200 cursor-pointer ${HOVER_BACKGROUND_EFFECTS.LIGHT}`}
     >
       <MapPin className={`${iconSizes.md} text-blue-600 flex-shrink-0`} />
       <div className="flex-1 min-w-0">
@@ -330,7 +332,7 @@ export function AddressSearchPanel({
     <div
       key={`boundary-${result.id}-${index}`}
       onClick={() => handleBoundarySelect(result)}
-      className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${HOVER_BORDER_EFFECTS.BLUE} transition-all"
+      className={`flex items-center gap-3 p-3 ${quick.card} border-gray-200 cursor-pointer ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${HOVER_BORDER_EFFECTS.BLUE} transition-all`}
     >
       <div className={`w-5 h-5 rounded flex-shrink-0 flex items-center justify-center text-xs font-medium ${
         result.adminLevel === 4 ? 'bg-purple-100 text-purple-600' :
@@ -431,7 +433,7 @@ export function AddressSearchPanel({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyPress={handleKeyPress}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className={`w-full px-3 py-2 ${quick.input} border-gray-300 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
               disabled={isSearching || isLoadingBoundaries}
             />
             {(isSearching || isLoadingBoundaries) && (
@@ -475,7 +477,7 @@ export function AddressSearchPanel({
 
         {/* GPS Status */}
         {lastGpsLocation && (
-          <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-lg">
+          <div className={`mt-2 p-2 bg-green-50 ${quick.card} border-green-200`}>
             <div className="flex items-center gap-2 text-sm text-green-700">
               <CheckCircle className={iconSizes.sm} />
               <span>
@@ -488,7 +490,7 @@ export function AddressSearchPanel({
 
       {/* Errors */}
       {(searchError || gpsError || boundariesError) && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+        <div className={`mb-4 p-3 bg-red-50 ${quick.card} border-red-200`}>
           <div className="flex items-center gap-2 text-sm text-red-700">
             <AlertCircle className={`${iconSizes.sm} flex-shrink-0`} />
             <span>{searchError || gpsError || boundariesError}</span>

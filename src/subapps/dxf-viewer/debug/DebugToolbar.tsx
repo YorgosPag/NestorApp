@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import type { SceneModel } from '../types/scene';
 import type { ToolType } from '../ui/toolbar/types';
 import { runAllTests, formatReportForCopy, type UnifiedTestReport } from './unified-test-runner';
@@ -47,6 +48,7 @@ export const DebugToolbar: React.FC<DebugToolbarProps> = ({
   showCalibration,
   handleCalibrationToggle
 }) => {
+  const { quick } = useBorderTokens();
   // Keyboard shortcuts for testing (F2, F3, F12)
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -145,7 +147,7 @@ Check console for detailed metrics`;
   }, [showCopyableNotification]);
 
   return (
-    <div className="flex gap-2 p-2 bg-gray-800 border-b border-gray-700">
+    <div className={`flex gap-2 p-2 bg-gray-800 ${quick.card} border-gray-700`}>
       {/* Run All Tests Button */}
       <button
         onClick={async () => {
@@ -177,7 +179,7 @@ Check console for detailed metrics`;
             showCopyableNotification('Failed to run all tests', 'error');
           }
         }}
-        className={`px-3 py-1 text-xs font-bold rounded shadow-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white transition-all ${HOVER_BACKGROUND_EFFECTS.GRADIENT_PURPLE_PINK}`}
+        className={`px-3 py-1 text-xs font-bold ${quick.button} bg-gradient-to-r from-purple-600 to-pink-600 text-white transition-all ${HOVER_BACKGROUND_EFFECTS.GRADIENT_PURPLE_PINK}`}
       >
         🧪 Run All Tests
       </button>
@@ -222,7 +224,7 @@ Check console for detailed metrics`;
             showCopyableNotification('Failed to load test module', 'error');
           });
         }}
-        className={`px-3 py-1 text-xs font-bold rounded shadow-lg bg-yellow-500 text-black transition-all ${HOVER_BACKGROUND_EFFECTS.WARNING_BUTTON}`}
+        className={`px-3 py-1 text-xs font-bold ${quick.button} bg-yellow-500 text-black transition-all ${HOVER_BACKGROUND_EFFECTS.WARNING_BUTTON}`}
       >
         🎯 Canvas Test
       </button>
@@ -249,7 +251,7 @@ Check console for detailed metrics`;
             showCopyableNotification('Failed to load workflow test module', 'error');
           });
         }}
-        className={`px-3 py-1 text-xs font-bold rounded shadow-lg bg-green-500 text-white transition-all ${HOVER_BACKGROUND_EFFECTS.SUCCESS_BUTTON}`}
+        className={`px-3 py-1 text-xs font-bold ${quick.button} bg-green-500 text-white transition-all ${HOVER_BACKGROUND_EFFECTS.SUCCESS_BUTTON}`}
       >
         🔄 Layering Test (Ctrl+F2)
       </button>
@@ -284,7 +286,7 @@ Check console for detailed metrics`;
             showCopyableNotification('Failed to load DOM inspector', 'error');
           });
         }}
-        className={`px-3 py-1 text-xs font-bold rounded shadow-lg bg-blue-500 text-white transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY_BUTTON}`}
+        className={`px-3 py-1 text-xs font-bold ${quick.button} bg-blue-500 text-white transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY_BUTTON}`}
       >
         🔍 DOM Inspector
       </button>
@@ -316,7 +318,7 @@ Check console for detailed metrics`;
             showCopyableNotification('Failed to load enterprise cursor-crosshair test module', 'error');
           });
         }}
-        className={`px-3 py-1 text-xs font-bold rounded shadow-lg bg-purple-500 text-white transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY_BUTTON}`}
+        className={`px-3 py-1 text-xs font-bold ${quick.button} bg-purple-500 text-white transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY_BUTTON}`}
       >
         🏢 Enterprise Test (F3)
       </button>
@@ -345,7 +347,7 @@ Check console for detailed metrics`;
             showCopyableNotification('Failed to load origin markers debug module', 'error');
           });
         }}
-        className={`px-3 py-1 text-xs font-bold rounded shadow-lg bg-orange-500 text-white transition-all ${HOVER_BACKGROUND_EFFECTS.WARNING_BUTTON}`}
+        className={`px-3 py-1 text-xs font-bold ${quick.button} bg-orange-500 text-white transition-all ${HOVER_BACKGROUND_EFFECTS.WARNING_BUTTON}`}
       >
         🎯 Origin (0,0)
       </button>
@@ -374,7 +376,7 @@ Check console for detailed metrics`;
             console.log(diagnostics);
           });
         }}
-        className={`px-3 py-1 text-xs font-bold rounded shadow-lg bg-blue-500 text-white transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY_BUTTON}`}
+        className={`px-3 py-1 text-xs font-bold ${quick.button} bg-blue-500 text-white transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY_BUTTON}`}
       >
         📏 Rulers
       </button>
@@ -387,7 +389,7 @@ Check console for detailed metrics`;
           const status = showCalibration ? 'DISABLED' : 'ENABLED';
           showCopyableNotification(`Calibration panel ${status} ✅`, 'info');
         }}
-        className={`px-3 py-1 text-xs font-bold rounded shadow-lg transition-all ${
+        className={`px-3 py-1 text-xs font-bold ${quick.button} transition-all ${
           showCalibration
             ? `bg-cyan-500 text-white ${HOVER_BACKGROUND_EFFECTS.CYAN}`
             : `bg-gray-500 text-white ${HOVER_BACKGROUND_EFFECTS.MUTED}`
@@ -417,7 +419,7 @@ Check console for detailed metrics`;
             showCopyableNotification('Failed to load alignment debug module', 'error');
           });
         }}
-        className={`px-3 py-1 text-xs font-bold rounded shadow-lg bg-indigo-500 text-white transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY_BUTTON}`}
+        className={`px-3 py-1 text-xs font-bold ${quick.button} bg-indigo-500 text-white transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY_BUTTON}`}
       >
         🎯 Alignment
       </button>
@@ -454,7 +456,7 @@ Check console for detailed metrics`;
             showCopyableNotification('Failed to load grid test module', 'error');
           });
         }}
-        className={`px-3 py-1 text-xs font-bold rounded shadow-lg transition-all ${
+        className={`px-3 py-1 text-xs font-bold ${quick.button} transition-all ${
           showGrid
             ? `bg-green-500 text-white ${HOVER_BACKGROUND_EFFECTS.SUCCESS}`
             : `bg-gray-500 text-white ${HOVER_BACKGROUND_EFFECTS.MUTED}`
@@ -469,7 +471,7 @@ Check console for detailed metrics`;
           setDxfCanvasVisible(!dxfCanvasVisible);
           console.log('🎯 DxfCanvas visibility toggled:', !dxfCanvasVisible);
         }}
-        className={`px-3 py-1 text-xs font-bold rounded shadow-lg transition-all ${
+        className={`px-3 py-1 text-xs font-bold ${quick.button} transition-all ${
           dxfCanvasVisible
             ? `bg-green-500 text-white ${HOVER_BACKGROUND_EFFECTS.SUCCESS}`
             : `bg-red-500 text-white ${HOVER_BACKGROUND_EFFECTS.DESTRUCTIVE}`
@@ -483,7 +485,7 @@ Check console for detailed metrics`;
           setLayerCanvasVisible(!layerCanvasVisible);
           console.log('🎯 LayerCanvas visibility toggled:', !layerCanvasVisible);
         }}
-        className={`px-3 py-1 text-xs font-bold rounded shadow-lg transition-all ${
+        className={`px-3 py-1 text-xs font-bold ${quick.button} transition-all ${
           layerCanvasVisible
             ? `bg-blue-500 text-white ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`
             : `bg-red-500 text-white ${HOVER_BACKGROUND_EFFECTS.DESTRUCTIVE}`
@@ -495,12 +497,12 @@ Check console for detailed metrics`;
       {/* Pan to Origin (0,0) Button */}
       <button
         onClick={panToWorldOrigin}
-        className={`px-3 py-1 text-xs font-bold rounded shadow-lg bg-purple-500 text-white transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY_BUTTON}`}
+        className={`px-3 py-1 text-xs font-bold ${quick.button} bg-purple-500 text-white transition-all ${HOVER_BACKGROUND_EFFECTS.PRIMARY_BUTTON}`}
       >
         🏠 Pan to (0,0)
       </button>
 
-      <div className="text-xs bg-gray-700 text-white px-2 py-1 rounded">
+      <div className={`text-xs bg-gray-700 text-white px-2 py-1 ${quick.button}`}>
         Debug Tools (Development Only)
       </div>
     </div>

@@ -5,6 +5,7 @@ const DEBUG_ENHANCED_DXF_TOOLBAR = true;
 
 import React from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import type { ToolType } from './types';
 import type { Point2D } from '../../rendering/types/Types';
 import { toolGroups, createActionButtons } from './toolDefinitions';
@@ -57,6 +58,7 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarProps> = ({
   showCoordinates = false,
 }) => {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const [showSimpleDialog, setShowSimpleDialog] = React.useState(false);
 
   // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Tool shortcuts (inline - local functionality)
@@ -223,7 +225,7 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarProps> = ({
   };
 
   return (
-    <div className={`border border-gray-600 rounded-lg bg-gray-800 shadow-lg ${className}`}>
+    <div className={`border border-gray-600 ${quick.card} bg-gray-800 shadow-lg ${className}`}>
       <div className="flex flex-wrap gap-1 p-2">
         <div className="flex gap-1 flex-1">
           <UploadDxfButton 

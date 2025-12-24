@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import { CommonBadge } from '@/core/badges';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { 
   Layers, 
   Eye, 
@@ -122,8 +123,11 @@ function ReadOnlyLayerItem({
                 <Tooltip>
                   <TooltipTrigger>
                     <div
-                      className={`${iconSizes.xs} rounded-full flex-shrink-0`}
-                      style={layoutUtilities.dxf.colors.backgroundColor(categoryInfo.color)}
+                      className={`${iconSizes.xs} flex-shrink-0`}
+                      style={{
+                        ...layoutUtilities.dxf.colors.backgroundColor(categoryInfo.color),
+                        borderRadius: '50%'
+                      }}
                     />
                   </TooltipTrigger>
                   <TooltipContent>
@@ -483,8 +487,11 @@ export function ReadOnlyLayerViewer({
                     <SelectItem key={category} value={category}>
                       <div className="flex items-center gap-2">
                         <div
-                          className={`${iconSizes.xs} rounded-full`}
-                          style={layoutUtilities.dxf.colors.backgroundColor(getCategoryInfo(category).color)}
+                          className={`${iconSizes.xs}`}
+                          style={{
+                            ...layoutUtilities.dxf.colors.backgroundColor(getCategoryInfo(category).color),
+                            borderRadius: '50%'
+                          }}
                         />
                         {getCategoryInfo(category).name}
                       </div>
@@ -534,8 +541,11 @@ export function ReadOnlyLayerViewer({
                     {category !== 'other' && getCategoryInfo(category) && (
                       <>
                         <div
-                          className={`${iconSizes.xs} rounded-full`}
-                          style={layoutUtilities.dxf.colors.backgroundColor(getCategoryInfo(category).color)}
+                          className={`${iconSizes.xs}`}
+                          style={{
+                            ...layoutUtilities.dxf.colors.backgroundColor(getCategoryInfo(category).color),
+                            borderRadius: '50%'
+                          }}
                         />
                         {getCategoryInfo(category).name}
                       </>

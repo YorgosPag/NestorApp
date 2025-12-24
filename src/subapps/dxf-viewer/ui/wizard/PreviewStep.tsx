@@ -3,10 +3,12 @@
 import React from 'react';
 import { FileText, Building2, Ruler, CheckCircle, Scissors, AlertTriangle } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useLevels } from '../../systems/levels';
 
 export function PreviewStep() {
   const iconSizes = useIconSizes();
+  const { getStatusBorder } = useBorderTokens();
   const { levels, importWizard } = useLevels();
   
   const selectedLevel = importWizard.selectedLevelId 
@@ -106,7 +108,7 @@ export function PreviewStep() {
       </div>
 
       {/* DXF Processing Info */}
-      <div className="bg-orange-900 bg-opacity-30 border border-orange-700 rounded-lg p-4">
+      <div className={`bg-orange-900 bg-opacity-30 ${getStatusBorder('warning')} rounded-lg p-4`}>
         <h4 className="text-sm font-medium text-orange-400 mb-3 flex items-center">
           <Scissors className={`${iconSizes.sm} mr-2`} />
           Επεξεργασία DXF
@@ -120,7 +122,7 @@ export function PreviewStep() {
       </div>
 
       {/* What Happens Next */}
-      <div className="bg-blue-900 bg-opacity-30 border border-blue-700 rounded-lg p-4">
+      <div className={`bg-blue-900 bg-opacity-30 ${getStatusBorder('info')} rounded-lg p-4`}>
         <h4 className="text-sm font-medium text-blue-400 mb-3">Τι συμβαίνει στη συνέχεια;</h4>
         <div className="space-y-2 text-sm text-blue-200">
           <div className="flex items-center">
@@ -132,7 +134,7 @@ export function PreviewStep() {
 
       {/* Warning if creating new level */}
       {importWizard.newLevelName && (
-        <div className="bg-yellow-900 bg-opacity-30 border border-yellow-700 rounded-lg p-3">
+        <div className={`bg-yellow-900 bg-opacity-30 ${getStatusBorder('warning')} rounded-lg p-3`}>
           <div className="flex items-center">
             <AlertTriangle className={`${iconSizes.sm} mr-2 text-yellow-400`} />
             <p className="text-sm text-yellow-200">

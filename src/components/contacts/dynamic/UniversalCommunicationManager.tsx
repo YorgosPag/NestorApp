@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 // ============================================================================
 // 🏢 ENTERPRISE IMPORTS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ SYSTEMS
@@ -63,6 +64,7 @@ export function UniversalCommunicationManager({
   onChange
 }: UniversalCommunicationManagerProps) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
 
   // 🎯 RESPONSIVE STATE για desktop detection
   const [isDesktop, setIsDesktop] = useState(false);
@@ -303,7 +305,7 @@ export function UniversalCommunicationManager({
 
       {/* 🎯 ΕΙΔΙΚΟ GROUPED LAYOUT ΓΙΑ ΤΗΛΕΦΩΝΑ ΣΤΟ DESKTOP */}
       {config.type === 'phone' && isDesktop && items.length > 0 ? (
-        <section className="w-full max-w-none min-w-full border rounded-lg" aria-label="Phone communications table">
+        <section className="w-full max-w-none min-w-full ${quick.card}" aria-label="Phone communications table">
           {/* Header Row με τίτλους στηλών για τηλέφωνα */}
           <header className="grid grid-cols-5 gap-3 p-4 bg-muted border-b font-medium text-sm text-muted-foreground" role="columnheader">
             <div>Τύπος</div>
@@ -331,7 +333,7 @@ export function UniversalCommunicationManager({
           </main>
         </section>
       ) : config.type === 'email' && isDesktop && items.length > 0 ? (
-        <section className="w-full max-w-none min-w-full border rounded-lg" aria-label="Email communications table">
+        <section className="w-full max-w-none min-w-full ${quick.card}" aria-label="Email communications table">
           {/* Header Row με τίτλους στηλών για emails */}
           <header className="grid grid-cols-4 gap-3 p-4 bg-muted border-b font-medium text-sm text-muted-foreground" role="columnheader">
             <div>Τύπος</div>
@@ -358,7 +360,7 @@ export function UniversalCommunicationManager({
           </main>
         </section>
       ) : config.type === 'website' && isDesktop ? (
-        <section className="w-full max-w-none min-w-full border rounded-lg" aria-label="Website communications table">
+        <section className="w-full max-w-none min-w-full ${quick.card}" aria-label="Website communications table">
           {/* Header Row με τίτλους στηλών για websites */}
           <header className="grid grid-cols-4 gap-3 p-4 bg-muted border-b font-medium text-sm text-muted-foreground" role="columnheader">
             <div>Τύπος</div>
@@ -384,7 +386,7 @@ export function UniversalCommunicationManager({
           </main>
         </section>
       ) : config.type === 'social' && isDesktop ? (
-        <section className="w-full max-w-none min-w-full border rounded-lg" aria-label="Social media communications table">
+        <section className="w-full max-w-none min-w-full ${quick.card}" aria-label="Social media communications table">
           {/* Header Row με τίτλους στηλών για social media */}
           <header className="grid grid-cols-6 gap-3 p-4 bg-muted border-b font-medium text-sm text-muted-foreground" role="columnheader">
             <div>Τύπος</div>
@@ -414,7 +416,7 @@ export function UniversalCommunicationManager({
       ) : (
         /* ΚΑΝΟΝΙΚΟ LAYOUT για όλα τα άλλα (emails, websites, social) και phones σε mobile */
         items.map((item, index) => (
-          <article key={index} className="w-full max-w-none min-w-full p-4 border rounded-lg" aria-label={`${config.title} item ${index + 1}`}>
+          <article key={index} className="w-full max-w-none min-w-full p-4 ${quick.card}" aria-label={`${config.title} item ${index + 1}`}>
             {renderItemFields(item, index)}
 
             {/* Action buttons row - Μόνο για mobile layout (όταν ΔΕΝ είναι desktop) */}

@@ -7,6 +7,7 @@ import type { RealEstatePolygon } from '@geo-alert/core';
 import { useRealEstateMatching } from '@/services/real-estate-monitor/useRealEstateMatching';
 import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS, HOVER_SHADOWS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 // ✅ NEW: Enterprise Centralized Polygon System
 import { useCentralizedPolygonSystem } from '../systems/polygon-system';
@@ -63,6 +64,7 @@ export function CitizenDrawingInterface({
 }: CitizenDrawingInterfaceProps) {
   const { t } = useTranslationLazy('geo-canvas');
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const [selectedTool, setSelectedTool] = useState<'point' | 'polygon' | 'freehand' | 'real-estate' | null>(null);
   const [pointRadius, setPointRadius] = useState<number>(100); // Default 100m radius
   const [lastPointPolygonId, setLastPointPolygonId] = useState<string | null>(null);
@@ -252,7 +254,7 @@ export function CitizenDrawingInterface({
   }, [onLocationSelected]);
 
   return (
-    <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-4">
+    <div className={`bg-white ${quick.card} shadow-lg border-gray-200 p-4`}>
       {/* Header */}
       <div className="mb-4">
         <div className="flex items-center justify-between">
@@ -269,7 +271,7 @@ export function CitizenDrawingInterface({
           <button
             onClick={() => setShowAddressSearch(!showAddressSearch)}
             className={`
-              flex items-center gap-2 px-3 py-2 rounded-lg border transition-all
+              flex items-center gap-2 px-3 py-2 ${quick.card} border transition-all
               ${showAddressSearch
                 ? 'border-blue-500 bg-blue-50 text-blue-700'
                 : 'border-gray-300 bg-white text-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT}'
@@ -301,7 +303,7 @@ export function CitizenDrawingInterface({
           onClick={() => handleToolSelect('point')}
           disabled={isDrawing}
           className={`
-            flex flex-col items-center justify-center p-4 rounded-lg border-2
+            flex flex-col items-center justify-center p-4 ${quick.card} border-2
             transition-all duration-200 min-h-[100px]
             ${selectedTool === 'point'
               ? 'border-blue-500 bg-blue-50'
@@ -320,7 +322,7 @@ export function CitizenDrawingInterface({
           onClick={() => handleToolSelect('polygon')}
           disabled={isDrawing && selectedTool !== 'polygon'}
           className={`
-            flex flex-col items-center justify-center p-4 rounded-lg border-2
+            flex flex-col items-center justify-center p-4 ${quick.card} border-2
             transition-all duration-200 min-h-[100px]
             ${selectedTool === 'polygon'
               ? 'border-blue-500 bg-blue-50'
@@ -342,7 +344,7 @@ export function CitizenDrawingInterface({
           onClick={() => handleToolSelect('freehand')}
           disabled={isDrawing && selectedTool !== 'freehand'}
           className={`
-            flex flex-col items-center justify-center p-4 rounded-lg border-2
+            flex flex-col items-center justify-center p-4 ${quick.card} border-2
             transition-all duration-200 min-h-[100px]
             ${selectedTool === 'freehand'
               ? 'border-blue-500 bg-blue-50'
@@ -361,7 +363,7 @@ export function CitizenDrawingInterface({
           onClick={() => handleToolSelect('real-estate')}
           disabled={isDrawing}
           className={`
-            flex flex-col items-center justify-center p-4 rounded-lg border-2
+            flex flex-col items-center justify-center p-4 ${quick.card} border-2
             transition-all duration-200 min-h-[100px]
             ${selectedTool === 'real-estate'
               ? 'border-orange-500 bg-orange-50'
@@ -382,7 +384,7 @@ export function CitizenDrawingInterface({
         <button
           onClick={() => setShowAddressSearch(!showAddressSearch)}
           className={`
-            flex flex-col items-center justify-center p-4 rounded-lg border-2
+            flex flex-col items-center justify-center p-4 ${quick.card} border-2
             transition-all duration-200 min-h-[100px]
             ${showAddressSearch
               ? 'border-indigo-500 bg-indigo-50'
@@ -400,7 +402,7 @@ export function CitizenDrawingInterface({
         <button
           onClick={() => setShowAdminDemo(!showAdminDemo)}
           className={`
-            flex flex-col items-center justify-center p-4 rounded-lg border-2
+            flex flex-col items-center justify-center p-4 ${quick.card} border-2
             transition-all duration-200 min-h-[100px]
             ${showAdminDemo
               ? 'border-violet-500 bg-violet-50'
@@ -418,7 +420,7 @@ export function CitizenDrawingInterface({
         <button
           onClick={() => setShowBoundaryControl(!showBoundaryControl)}
           className={`
-            flex flex-col items-center justify-center p-4 rounded-lg border-2
+            flex flex-col items-center justify-center p-4 ${quick.card} border-2
             transition-all duration-200 min-h-[100px]
             ${showBoundaryControl
               ? 'border-emerald-500 bg-emerald-50'
@@ -437,7 +439,7 @@ export function CitizenDrawingInterface({
 
       {/* Point Radius Selector - Shows only when point tool is selected */}
       {selectedTool === 'point' && (
-        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className={`mb-4 p-3 bg-blue-50 ${quick.card} border-blue-200`}>
           <h4 className="text-sm font-medium text-blue-900 mb-3">Ακτίνα Πινέζας</h4>
           <div className="grid grid-cols-3 gap-2 mb-3">
             {[50, 100, 250].map((radius) => (
@@ -502,7 +504,7 @@ export function CitizenDrawingInterface({
 
       {/* Real Estate Setup Dialog */}
       {showRealEstateSetup && (
-        <div className="mb-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+        <div className={`mb-4 p-4 bg-orange-50 ${quick.card} border-orange-200`}>
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-lg font-semibold text-orange-900 flex items-center gap-2">
               <Bell className={iconSizes.md} />
@@ -530,7 +532,7 @@ export function CitizenDrawingInterface({
                   ...prev,
                   priceRange: { ...prev.priceRange, min: Number(e.target.value) || undefined }
                 }))}
-                className="px-3 py-2 border border-orange-300 rounded-md text-sm"
+                className={`px-3 py-2 ${quick.input} border-orange-300 text-sm`}
               />
               <input
                 type="number"
@@ -540,7 +542,7 @@ export function CitizenDrawingInterface({
                   ...prev,
                   priceRange: { ...prev.priceRange, max: Number(e.target.value) || undefined }
                 }))}
-                className="px-3 py-2 border border-orange-300 rounded-md text-sm"
+                className={`px-3 py-2 ${quick.input} border-orange-300 text-sm`}
               />
             </div>
           </div>
@@ -556,7 +558,7 @@ export function CitizenDrawingInterface({
                 ...prev,
                 propertyTypes: [e.target.value]
               }))}
-              className="w-full px-3 py-2 border border-orange-300 rounded-md text-sm"
+              className={`w-full px-3 py-2 ${quick.input} border-orange-300 text-sm`}
             >
               <option value="apartment">{t('drawingInterfaces.citizen.realEstateSetup.propertyTypes.apartment')}</option>
               <option value="house">{t('drawingInterfaces.citizen.realEstateSetup.propertyTypes.house')}</option>
@@ -609,7 +611,7 @@ export function CitizenDrawingInterface({
 
       {/* Instructions */}
       {selectedTool && (
-        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+        <div className={`mt-4 p-3 bg-blue-50 ${quick.card} border-blue-200`}>
           <p className="text-sm text-blue-700">
             {selectedTool === 'point' && t('instructions.citizen.placePoint')}
             {selectedTool === 'polygon' && t('instructions.citizen.addPolygonPoints')}

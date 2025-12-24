@@ -13,10 +13,12 @@ import React, { useState } from 'react';
 import { useAdministrativeBoundaries } from '../hooks/useAdministrativeBoundaries';
 import type { AdminSearchResult } from '../types/administrative-types';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 export function AdminBoundaryDemo() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedResult, setSelectedResult] = useState<AdminSearchResult | null>(null);
+  const { quick } = useBorderTokens();
 
   const {
     isLoading,
@@ -60,7 +62,7 @@ export function AdminBoundaryDemo() {
   const cacheStats = getCacheStats();
 
   return (
-    <div className="p-6 max-w-4xl mx-auto bg-white rounded-lg shadow-lg">
+    <div className={`p-6 max-w-4xl mx-auto bg-white ${quick.card} shadow-lg`}>
       <h2 className="text-2xl font-bold mb-6 text-gray-800">
         🏛️ Administrative Boundaries Demo
       </h2>
@@ -73,7 +75,7 @@ export function AdminBoundaryDemo() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="π.χ. Δήμος Αθηναίων, Αττική, Θεσσαλονίκη..."
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className={`flex-1 px-4 py-2 ${quick.input} border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
             onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
           />
           <button
@@ -115,7 +117,7 @@ export function AdminBoundaryDemo() {
       </div>
 
       {/* Status Section */}
-      <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+      <div className={`mb-6 p-4 bg-gray-50 ${quick.card}`}>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
           <div>
             <strong>Status:</strong>{' '}
@@ -180,7 +182,7 @@ export function AdminBoundaryDemo() {
                 <div
                   key={`${result.id}-${index}`}
                   onClick={() => handleResultSelect(result)}
-                  className={`p-3 border rounded-lg cursor-pointer transition-all ${
+                  className={`p-3 ${quick.card} cursor-pointer transition-all ${
                     selectedResult?.id === result.id
                       ? 'border-blue-500 bg-blue-50'
                       : `border-gray-200 ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
@@ -225,7 +227,7 @@ export function AdminBoundaryDemo() {
           {currentBoundary ? (
             <div className="space-y-4">
               {/* Boundary Type */}
-              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+              <div className={`p-4 bg-green-50 ${quick.card} border-green-200`}>
                 <div className="font-medium text-green-800 mb-2">
                   ✅ Boundary Loaded
                 </div>

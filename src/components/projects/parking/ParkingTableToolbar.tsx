@@ -14,6 +14,7 @@ import {
   Upload
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import type { ParkingFilters, ParkingStats } from '@/types/parking';
 import { ToolbarButton } from '@/components/ui/ToolbarButton';
 import { ParkingStatsSummary } from './ParkingStatsSummary';
@@ -47,12 +48,13 @@ export function ParkingTableToolbar({
   selectedCount = 0
 }: ParkingTableToolbarProps) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
 
   return (
     <TooltipProvider>
       <div className="space-y-4">
         {/* Action Toolbar */}
-        <div className="flex items-center justify-between p-3 bg-muted/30 border rounded-lg">
+        <div className="flex items-center justify-between p-3 bg-muted/30 ${quick.card}">
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1">
               <ToolbarButton

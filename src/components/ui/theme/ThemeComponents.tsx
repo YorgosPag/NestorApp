@@ -4,19 +4,24 @@
 // Separates concerns: Container backgrounds vs Component states vs Content themes
 
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
-export const THEME_SYSTEM = {
-  // 🎨 CONTAINER BACKGROUNDS - Independent from component states
-  containers: {
-    // Toolbar containers (bottom toolbars, action panels)
-    toolbar: "border-t bg-card/50 backdrop-blur-sm p-2",
-    toolbarDark: "border-t bg-slate-800/90 backdrop-blur-sm p-2 border-slate-600",
-    toolbarLight: "border-t bg-slate-50/90 backdrop-blur-sm p-2 border-slate-200",
+// 🏭 THEME SYSTEM FACTORY - Enterprise Dynamic Theming
+export function getThemeSystem() {
+  const { quick } = useBorderTokens();
 
-    // Card containers (dialogs, panels, widgets)
-    card: "border rounded-lg bg-card p-4",
-    cardDark: "border rounded-lg bg-slate-800 p-4 border-slate-700",
-    cardLight: "border rounded-lg bg-white p-4 border-slate-200",
+  return {
+    // 🎨 CONTAINER BACKGROUNDS - Independent from component states
+    containers: {
+      // Toolbar containers (bottom toolbars, action panels)
+      toolbar: `${quick.borderT} bg-card/50 backdrop-blur-sm p-2`,
+      toolbarDark: `${quick.borderT} bg-slate-800/90 backdrop-blur-sm p-2 border-slate-600`,
+      toolbarLight: `${quick.borderT} bg-slate-50/90 backdrop-blur-sm p-2 border-slate-200`,
+
+      // Card containers (dialogs, panels, widgets)
+      card: `${quick.card} bg-card p-4`,
+      cardDark: `${quick.card} bg-slate-800 p-4 border-slate-700`,
+      cardLight: `${quick.card} bg-white p-4 border-slate-200`,
 
     // Contact card backgrounds (list items)
     contactCard: `bg-card ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`,
@@ -54,11 +59,11 @@ export const THEME_SYSTEM = {
     wrapper: "flex flex-wrap gap-2",
 
     // Themed content backgrounds
-    neutral: "bg-slate-50/30 rounded-lg p-3",
-    info: "bg-blue-50/50 rounded-lg p-3 border border-blue-200",
-    success: "bg-green-50/50 rounded-lg p-3 border border-green-200",
-    warning: "bg-orange-50/50 rounded-lg p-3 border border-orange-200",
-    danger: "bg-red-50/50 rounded-lg p-3 border border-red-200"
+    neutral: `bg-slate-50/30 ${quick.rounded} p-3`,
+    info: `bg-blue-50/50 ${quick.rounded} p-3 ${quick.input} border-blue-200`,
+    success: `bg-green-50/50 ${quick.rounded} p-3 ${quick.input} border-green-200`,
+    warning: `bg-orange-50/50 ${quick.rounded} p-3 ${quick.input} border-orange-200`,
+    danger: `bg-red-50/50 ${quick.rounded} p-3 ${quick.input} border-red-200`
   },
 
   // 🔤 TYPOGRAPHY HIERARCHY - Enterprise text roles (Material Design + IBM Carbon inspired)
@@ -87,78 +92,83 @@ export const THEME_SYSTEM = {
     labelLarge: "text-sm font-medium text-muted-foreground", // 14px
     labelMedium: "text-xs font-medium text-muted-foreground", // 12px
     labelSmall: "text-xs font-medium text-muted-foreground/80" // 11px
-  }
-} as const;
+    }
+  } as const;
+}
 
-// 🎨 THEME VARIANTS - Pre-configured combinations
-export const THEME_VARIANTS = {
-  // Default enterprise theme
-  default: {
-    container: THEME_SYSTEM.containers.toolbar,
-    tabTrigger: `${THEME_SYSTEM.tabs.trigger} ${THEME_SYSTEM.tabs.activeDefault} ${THEME_SYSTEM.tabs.hoverDefault}`,
-    content: THEME_SYSTEM.content.default
-  },
+// 🎨 THEME VARIANTS FACTORY - Pre-configured combinations
+export function getThemeVariants() {
+  const THEME_SYSTEM = getThemeSystem();
 
-  // Success/positive theme
-  success: {
-    container: THEME_SYSTEM.containers.toolbar,
-    tabTrigger: `${THEME_SYSTEM.tabs.trigger} ${THEME_SYSTEM.tabs.activeSuccess} ${THEME_SYSTEM.tabs.hoverSuccess}`,
-    content: THEME_SYSTEM.content.default
-  },
+  return {
+    // Default enterprise theme
+    default: {
+      container: THEME_SYSTEM.containers.toolbar,
+      tabTrigger: `${THEME_SYSTEM.tabs.trigger} ${THEME_SYSTEM.tabs.activeDefault} ${THEME_SYSTEM.tabs.hoverDefault}`,
+      content: THEME_SYSTEM.content.default
+    },
 
-  // Warning/caution theme
-  warning: {
-    container: THEME_SYSTEM.containers.toolbar,
-    tabTrigger: `${THEME_SYSTEM.tabs.trigger} ${THEME_SYSTEM.tabs.activeWarning} ${THEME_SYSTEM.tabs.hoverWarning}`,
-    content: THEME_SYSTEM.content.default
-  },
+    // Success/positive theme
+    success: {
+      container: THEME_SYSTEM.containers.toolbar,
+      tabTrigger: `${THEME_SYSTEM.tabs.trigger} ${THEME_SYSTEM.tabs.activeSuccess} ${THEME_SYSTEM.tabs.hoverSuccess}`,
+      content: THEME_SYSTEM.content.default
+    },
 
-  // Danger/error theme
-  danger: {
-    container: THEME_SYSTEM.containers.toolbar,
-    tabTrigger: `${THEME_SYSTEM.tabs.trigger} ${THEME_SYSTEM.tabs.activeDanger} ${THEME_SYSTEM.tabs.hoverDanger}`,
-    content: THEME_SYSTEM.content.default
-  },
+    // Warning/caution theme
+    warning: {
+      container: THEME_SYSTEM.containers.toolbar,
+      tabTrigger: `${THEME_SYSTEM.tabs.trigger} ${THEME_SYSTEM.tabs.activeWarning} ${THEME_SYSTEM.tabs.hoverWarning}`,
+      content: THEME_SYSTEM.content.default
+    },
 
-  // Dark theme variant
-  dark: {
-    container: THEME_SYSTEM.containers.toolbarDark,
-    tabTrigger: `${THEME_SYSTEM.tabs.trigger} ${THEME_SYSTEM.tabs.activeDefault} ${THEME_SYSTEM.tabs.hoverDefault}`,
-    content: THEME_SYSTEM.content.default
-  },
+    // Danger/error theme
+    danger: {
+      container: THEME_SYSTEM.containers.toolbar,
+      tabTrigger: `${THEME_SYSTEM.tabs.trigger} ${THEME_SYSTEM.tabs.activeDanger} ${THEME_SYSTEM.tabs.hoverDanger}`,
+      content: THEME_SYSTEM.content.default
+    },
 
-  // Light theme variant
-  light: {
-    container: THEME_SYSTEM.containers.toolbarLight,
-    tabTrigger: `${THEME_SYSTEM.tabs.trigger} ${THEME_SYSTEM.tabs.activeDefault} ${THEME_SYSTEM.tabs.hoverDefault}`,
-    content: THEME_SYSTEM.content.default
-  },
+    // Dark theme variant
+    dark: {
+      container: THEME_SYSTEM.containers.toolbarDark,
+      tabTrigger: `${THEME_SYSTEM.tabs.trigger} ${THEME_SYSTEM.tabs.activeDefault} ${THEME_SYSTEM.tabs.hoverDefault}`,
+      content: THEME_SYSTEM.content.default
+    },
 
-  // Clean theme variant - No container styling, just clean tabs
-  clean: {
-    container: "",
-    tabTrigger: `${THEME_SYSTEM.tabs.trigger} ${THEME_SYSTEM.tabs.activeDefault} ${THEME_SYSTEM.tabs.hoverDefault}`,
-    content: THEME_SYSTEM.content.default
-  }
-} as const;
+    // Light theme variant
+    light: {
+      container: THEME_SYSTEM.containers.toolbarLight,
+      tabTrigger: `${THEME_SYSTEM.tabs.trigger} ${THEME_SYSTEM.tabs.activeDefault} ${THEME_SYSTEM.tabs.hoverDefault}`,
+      content: THEME_SYSTEM.content.default
+    },
+
+    // Clean theme variant - No container styling, just clean tabs
+    clean: {
+      container: "",
+      tabTrigger: `${THEME_SYSTEM.tabs.trigger} ${THEME_SYSTEM.tabs.activeDefault} ${THEME_SYSTEM.tabs.hoverDefault}`,
+      content: THEME_SYSTEM.content.default
+    }
+  } as const;
+}
 
 // 🏗️ THEME UTILITIES
-export type ThemeVariant = keyof typeof THEME_VARIANTS;
-export type ContainerType = keyof typeof THEME_SYSTEM.containers;
-export type TabTheme = keyof typeof THEME_SYSTEM.tabs;
+export type ThemeVariant = keyof ReturnType<typeof getThemeVariants>;
+export type ContainerType = keyof ReturnType<typeof getThemeSystem>['containers'];
+export type TabTheme = keyof ReturnType<typeof getThemeSystem>['tabs'];
 
 /**
  * Get complete theme configuration for a specific variant
  */
 export function getThemeVariant(variant: ThemeVariant = 'default') {
-  return THEME_VARIANTS[variant];
+  return getThemeVariants()[variant];
 }
 
 /**
  * Get specific container styling
  */
 export function getContainerTheme(containerType: ContainerType) {
-  return THEME_SYSTEM.containers[containerType];
+  return getThemeSystem().containers[containerType];
 }
 
 /**
@@ -168,10 +178,13 @@ export function createCustomTheme(
   container: ContainerType,
   tabTheme: ThemeVariant = 'default'
 ) {
+  const themeSystem = getThemeSystem();
+  const themeVariants = getThemeVariants();
+
   return {
-    container: THEME_SYSTEM.containers[container],
-    tabTrigger: THEME_VARIANTS[tabTheme].tabTrigger,
-    content: THEME_SYSTEM.content.default
+    container: themeSystem.containers[container],
+    tabTrigger: themeVariants[tabTheme].tabTrigger,
+    content: themeSystem.content.default
   };
 }
 
@@ -179,10 +192,12 @@ export function createCustomTheme(
  * Get contact card backgrounds
  */
 export function getContactCardBackgrounds() {
+  const themeSystem = getThemeSystem();
+
   return {
-    default: THEME_SYSTEM.containers.contactCard,
-    selected: THEME_SYSTEM.containers.contactCardSelected,
-    archived: THEME_SYSTEM.containers.contactCardArchived
+    default: themeSystem.containers.contactCard,
+    selected: themeSystem.containers.contactCardSelected,
+    archived: themeSystem.containers.contactCardArchived
   };
 }
 
@@ -190,12 +205,12 @@ export function getContactCardBackgrounds() {
  * Get enterprise typography styles
  */
 export function getTypographyStyles() {
-  return THEME_SYSTEM.typography;
+  return getThemeSystem().typography;
 }
 
 /**
  * Get specific typography role
  */
-export function getTypography(role: keyof typeof THEME_SYSTEM.typography) {
-  return THEME_SYSTEM.typography[role];
+export function getTypography(role: keyof ReturnType<typeof getThemeSystem>['typography']) {
+  return getThemeSystem().typography[role];
 }

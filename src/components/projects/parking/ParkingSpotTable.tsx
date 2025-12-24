@@ -14,6 +14,7 @@ import { SelectAllRow } from '@/components/parking/parking-spot-table/parts/Sele
 import { FooterBar } from '@/components/parking/parking-spot-table/parts/FooterBar';
 
 import type { ParkingSpotTableProps } from '@/components/parking/parking-spot-table/types';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 export function ParkingSpotTable({
   spots,
@@ -23,6 +24,7 @@ export function ParkingSpotTable({
   onView,
   onViewFloorPlan,
 }: ParkingSpotTableProps) {
+  const { quick } = useBorderTokens();
   const { columnWidths, handleColumnResize } = useColumnWidths();
   const { activeFilters, handleFilterChange, filteredSpots: spotsAfterLocalFilter } = useParkingFilters(spots);
   const { sortConfig, handleSort, sortedSpots } = useParkingSort(spotsAfterLocalFilter);
@@ -41,7 +43,7 @@ export function ParkingSpotTable({
   const tableColumns = useMemo(() => COLUMNS.filter(c => c.key !== 'select'), []);
 
   return (
-    <div className="border rounded-md flex flex-col h-[600px] text-sm w-max">
+    <div className="${quick.table} flex flex-col h-[600px] text-sm w-max">
       <ParkingTableHeader
         columns={tableColumns}
         columnWidths={columnWidths.slice(1)}

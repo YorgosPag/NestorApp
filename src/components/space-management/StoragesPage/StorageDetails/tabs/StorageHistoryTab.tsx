@@ -3,6 +3,7 @@
 import React from 'react';
 import type { Storage } from '@/types/storage/contracts';
 import { formatDate, formatCurrency } from '@/lib/intl-utils';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import {
   Clock,
   User,
@@ -74,6 +75,7 @@ function getStatusIcon(status: HistoryEvent['status']) {
 
 export function StorageHistoryTab({ storage }: StorageHistoryTabProps) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   // Γεννάμε πραγματικό ιστορικό βάση των στοιχείων της αποθήκης
   const historyEvents: HistoryEvent[] = [
     {
@@ -180,23 +182,23 @@ export function StorageHistoryTab({ storage }: StorageHistoryTabProps) {
           Επισκόπηση Ιστορικού
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <div className="bg-card border rounded-lg p-4 text-center">
+          <div className={`bg-card ${quick.card} p-4 text-center`}>
             <div className="text-2xl font-bold text-gray-600">{eventsByType.total}</div>
             <div className="text-sm text-muted-foreground">Συνολικά Γεγονότα</div>
           </div>
-          <div className="bg-card border rounded-lg p-4 text-center">
+          <div className={`bg-card ${quick.card} p-4 text-center`}>
             <div className="text-2xl font-bold text-blue-600">{eventsByType.lease}</div>
             <div className="text-sm text-muted-foreground">Μισθώσεις</div>
           </div>
-          <div className="bg-card border rounded-lg p-4 text-center">
+          <div className={`bg-card ${quick.card} p-4 text-center`}>
             <div className="text-2xl font-bold text-orange-600">{eventsByType.maintenance}</div>
             <div className="text-sm text-muted-foreground">Συντηρήσεις</div>
           </div>
-          <div className="bg-card border rounded-lg p-4 text-center">
+          <div className={`bg-card ${quick.card} p-4 text-center`}>
             <div className="text-2xl font-bold text-green-600">{eventsByType.inspection}</div>
             <div className="text-sm text-muted-foreground">Επιθεωρήσεις</div>
           </div>
-          <div className="bg-card border rounded-lg p-4 text-center">
+          <div className={`bg-card ${quick.card} p-4 text-center`}>
             <div className="text-2xl font-bold text-purple-600">{eventsByType.changes}</div>
             <div className="text-sm text-muted-foreground">Αλλαγές</div>
           </div>
@@ -230,7 +232,7 @@ export function StorageHistoryTab({ storage }: StorageHistoryTabProps) {
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">
-                    <div className="bg-card border rounded-lg p-4">
+                    <div className={`bg-card ${quick.card} p-4`}>
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex-1">
                           <h4 className="font-medium text-sm">{event.title}</h4>
@@ -289,7 +291,7 @@ export function StorageHistoryTab({ storage }: StorageHistoryTabProps) {
       {/* Περίληψη Κατάστασης */}
       <section>
         <h3 className="font-semibold mb-4">Τρέχουσα Κατάσταση</h3>
-        <div className="bg-card border rounded-lg p-4">
+        <div className={`bg-card ${quick.card} p-4`}>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
             <div>
               <label className="font-medium text-muted-foreground">Αποθήκη:</label>

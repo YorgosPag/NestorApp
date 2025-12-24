@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import type { StorageUnit, StorageType, StorageStatus } from '@/types/storage';
 import { cn } from '@/lib/utils';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { StorageCardHeader } from './StorageCard/StorageCardHeader';
 import { StorageCardContent } from './StorageCard/StorageCardContent';
 import { StorageCardOverlay } from './StorageCard/StorageCardOverlay';
@@ -32,14 +33,15 @@ export function StorageCard({
   getTypeIcon,
   getTypeLabel
 }: StorageCardProps) {
+  const { quick } = useBorderTokens();
   const [isFavorite, setIsFavorite] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
   return (
     <Card 
       className={cn(
-        `relative overflow-hidden cursor-pointer ${TRANSITION_PRESETS.SMOOTH_ALL} group border`,
-        isSelected ? "ring-2 ring-primary shadow-lg border-primary" : "border-border",
+        `relative overflow-hidden cursor-pointer ${TRANSITION_PRESETS.SMOOTH_ALL} group`,
+        isSelected ? `ring-2 ring-primary shadow-lg ${quick.selected}` : quick.card,
         CORE_HOVER_TRANSFORMS.SCALE_UP_TINY,
         HOVER_SHADOWS.ENHANCED
       )}

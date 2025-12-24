@@ -5,6 +5,7 @@ import { Plus, Building2 } from 'lucide-react';
 import { useLevels } from '../../systems/levels';
 import { HOVER_BORDER_EFFECTS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface LevelSelectionStepProps {
     onNext: () => void;
@@ -13,6 +14,7 @@ interface LevelSelectionStepProps {
 
 export function LevelSelectionStep({ onNext, onClose }: LevelSelectionStepProps) {
   const iconSizes = useIconSizes();
+  const { quick, getStatusBorder } = useBorderTokens();
   const {
     levels,
     importWizard,
@@ -56,10 +58,10 @@ export function LevelSelectionStep({ onNext, onClose }: LevelSelectionStepProps)
         {levels.map((level) => (
           <label
             key={level.id}
-            className={`flex items-center p-3 border rounded-lg cursor-pointer transition-colors ${
+            className={`flex items-center p-3 cursor-pointer transition-colors ${
               importWizard.selectedLevelId === level.id
-                ? 'border-blue-500 bg-blue-500 bg-opacity-10'
-                : `border-gray-600 ${HOVER_BORDER_EFFECTS.MUTED}`
+                ? `${getStatusBorder('active')} bg-blue-500 bg-opacity-10`
+                : `${quick.card} ${HOVER_BORDER_EFFECTS.MUTED}`
             }`}
           >
             <input
@@ -89,17 +91,17 @@ export function LevelSelectionStep({ onNext, onClose }: LevelSelectionStepProps)
         {!showNewLevelForm ? (
           <button
             onClick={handleCreateNewLevel}
-            className={`flex items-center p-3 border-2 border-dashed rounded-lg w-full text-left transition-colors ${
+            className={`flex items-center p-3 w-full text-left transition-colors ${
               !importWizard.selectedLevelId && importWizard.newLevelName
-                ? 'border-blue-500 bg-blue-500 bg-opacity-10'
-                : `border-gray-600 ${HOVER_BORDER_EFFECTS.MUTED}`
+                ? `${getStatusBorder('active')} bg-blue-500 bg-opacity-10`
+                : `${quick.dashed} ${HOVER_BORDER_EFFECTS.MUTED}`
             }`}
           >
             <Plus className={`${iconSizes.sm} text-gray-400 mr-2`} />
             <span className="text-gray-300">Δημιουργία Νέου Επιπέδου</span>
           </button>
         ) : (
-          <div className="border border-gray-600 rounded-lg p-3">
+          <div className={`${quick.card} p-3`}>
             <label className="flex items-center">
               <input
                 type="radio"
@@ -114,7 +116,7 @@ export function LevelSelectionStep({ onNext, onClose }: LevelSelectionStepProps)
                   placeholder="Εισάγετε όνομα επιπέδου (π.χ. Υπόγειο, 2ος Όροφος)"
                   value={newLevelName}
                   onChange={(e) => handleNewLevelNameChange(e.target.value)}
-                  className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white placeholder-gray-400 focus:border-blue-500 focus:outline-none"
+                  className={`w-full bg-gray-700 px-3 py-2 text-white placeholder-gray-400 focus:outline-none ${quick.input}`}
                   autoFocus
                 />
               </div>

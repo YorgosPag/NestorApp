@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 import { canvasUtilities } from '@/styles/design-tokens';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 export interface ContactSummary {
   id: string;
@@ -52,6 +53,7 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
   readonly = false
 }) => {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
@@ -416,7 +418,7 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
       {isOpen && buttonRect && typeof document !== 'undefined' && createPortal(
         <div
           ref={dropdownRef}
-          className="fixed bg-popover text-popover-foreground border border-border rounded-lg shadow-lg z-[99999]"
+          className={`fixed bg-popover text-popover-foreground ${quick.card} shadow-lg z-[99999]`}
           style={canvasUtilities.geoInteractive.portalDropdownContainer(buttonRect)}
         >
           {/* Search Input */}

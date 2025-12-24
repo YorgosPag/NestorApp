@@ -14,6 +14,7 @@ import {
   Calendar,
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 // Placeholder stats for Available Storage
 const storageStats: DashboardStat[] = [
@@ -53,6 +54,7 @@ const storageStats: DashboardStat[] = [
 
 export default function AvailableStoragePage() {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   return (
     <TooltipProvider>
       <div className="flex h-screen bg-background">
@@ -89,7 +91,7 @@ export default function AvailableStoragePage() {
                 </h2>
 
                 <div className="space-y-3">
-                  <div className="p-4 bg-card border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
+                  <div className={`p-4 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 bg-orange-500/10 rounded-lg">
                         <Warehouse className={`${iconSizes.sm} text-orange-500`} />
@@ -111,7 +113,7 @@ export default function AvailableStoragePage() {
                     </div>
                   </div>
 
-                  <div className="p-4 bg-card border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
+                  <div className={`p-4 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 bg-blue-500/10 rounded-lg">
                         <Warehouse className={`${iconSizes.sm} text-blue-500`} />
@@ -143,7 +145,7 @@ export default function AvailableStoragePage() {
                 </h2>
 
                 <div className="space-y-3">
-                  <div className="p-4 bg-card border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
+                  <div className={`p-4 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 bg-purple-500/10 rounded-lg">
                         <Archive className={`${iconSizes.sm} text-purple-500`} />
@@ -165,7 +167,7 @@ export default function AvailableStoragePage() {
                     </div>
                   </div>
 
-                  <div className="p-4 bg-card border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
+                  <div className={`p-4 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 bg-green-500/10 rounded-lg">
                         <Archive className={`${iconSizes.sm} text-green-500`} />
@@ -199,7 +201,7 @@ export default function AvailableStoragePage() {
                   Ανάλυση Τιμών
                 </h2>
 
-                <div className="p-6 bg-card border rounded-lg">
+                <div className={`p-6 bg-card ${quick.card}`}>
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">Οικονομικές ({'<'}€30K)</span>
@@ -239,7 +241,7 @@ export default function AvailableStoragePage() {
                   Δραστηριότητα Αγοράς
                 </h2>
 
-                <div className="p-6 bg-card border rounded-lg">
+                <div className={`p-6 bg-card ${quick.card}`}>
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">Ενεργές προβολές</span>
@@ -271,7 +273,7 @@ export default function AvailableStoragePage() {
             </div>
 
             {/* Info Message */}
-            <div className="p-4 bg-muted/50 border border-dashed rounded-lg">
+            <div className={`p-4 bg-muted/50 ${quick.card}`}>
               <div className="flex items-center gap-2 text-sm">
                 <Package className={iconSizes.sm} />
                 <span className="font-medium">Διαθέσιμες Αποθήκες</span>

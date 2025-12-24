@@ -2,6 +2,7 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 import { INTERACTIVE_PATTERNS } from "@/components/ui/effects"
+import { useBorderTokens } from "@/hooks/useBorderTokens"
 
 const Table = React.forwardRef<
   HTMLTableElement,
@@ -20,9 +21,13 @@ Table.displayName = "Table"
 const TableHeader = React.forwardRef<
   HTMLTableSectionElement,
   React.HTMLAttributes<HTMLTableSectionElement>
->(({ className, ...props }, ref) => (
-  <thead ref={ref} className={cn("[&_tr]:border-b", className)} {...props} />
-))
+>(({ className, ...props }, ref) => {
+  const { quick } = useBorderTokens();
+
+  return (
+    <thead ref={ref} className={cn(`[&_tr]:${quick.borderB}`, className)} {...props} />
+  );
+})
 TableHeader.displayName = "TableHeader"
 
 const TableBody = React.forwardRef<
@@ -40,31 +45,39 @@ TableBody.displayName = "TableBody"
 const TableFooter = React.forwardRef<
   HTMLTableSectionElement,
   React.HTMLAttributes<HTMLTableSectionElement>
->(({ className, ...props }, ref) => (
-  <tfoot
-    ref={ref}
-    className={cn(
-      "border-t bg-muted/50 font-medium [&>tr]:last:border-b-0",
-      className
-    )}
-    {...props}
-  />
-))
+>(({ className, ...props }, ref) => {
+  const { quick } = useBorderTokens();
+
+  return (
+    <tfoot
+      ref={ref}
+      className={cn(
+        `${quick.borderT} bg-muted/50 font-medium [&>tr]:last:border-b-0`,
+        className
+      )}
+      {...props}
+    />
+  );
+})
 TableFooter.displayName = "TableFooter"
 
 const TableRow = React.forwardRef<
   HTMLTableRowElement,
   React.HTMLAttributes<HTMLTableRowElement>
->(({ className, ...props }, ref) => (
-  <tr
-    ref={ref}
-    className={cn(
-      `border-b transition-colors ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} data-[state=selected]:bg-muted`,
-      className
-    )}
-    {...props}
-  />
-))
+>(({ className, ...props }, ref) => {
+  const { quick } = useBorderTokens();
+
+  return (
+    <tr
+      ref={ref}
+      className={cn(
+        `${quick.borderB} transition-colors ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} data-[state=selected]:bg-muted`,
+        className
+      )}
+      {...props}
+    />
+  );
+})
 TableRow.displayName = "TableRow"
 
 const TableHead = React.forwardRef<

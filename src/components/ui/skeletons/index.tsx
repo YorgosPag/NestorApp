@@ -9,16 +9,19 @@ import {
   getSkeletonChartBarsStyles
 } from './SkeletonComponents.styles';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 // Base skeleton component
-export function Skeleton({ 
-  className, 
-  ...props 
+export function Skeleton({
+  className,
+  ...props
 }: React.HTMLAttributes<HTMLDivElement>) {
+  const { quick } = useBorderTokens();
+
   return (
     <div
       className={cn(
-        "animate-pulse rounded-md bg-muted",
+        `animate-pulse ${quick.rounded} bg-muted`,
         className
       )}
       {...props}
@@ -27,11 +30,13 @@ export function Skeleton({
 }
 
 // Text skeleton variations
-export function SkeletonText({ 
-  lines = 1, 
+export function SkeletonText({
+  lines = 1,
   className,
-  ...props 
+  ...props
 }: React.HTMLAttributes<HTMLDivElement> & { lines?: number }) {
+  const iconSizes = useIconSizes();
+
   return (
     <div className={cn("space-y-2", className)} {...props}>
       {Array.from({ length: lines }).map((_, i) => (
@@ -88,11 +93,12 @@ export function SkeletonCard({
   showActions?: boolean;
 }) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
 
   return (
     <div
       className={cn(
-        "rounded-lg border bg-card p-6 shadow-sm",
+        `${quick.card} bg-card p-6 shadow-sm`,
         className
       )}
       {...props}
@@ -124,21 +130,24 @@ export function SkeletonCard({
 }
 
 // Table skeleton
-export function SkeletonTable({ 
+export function SkeletonTable({
   rows = 5,
   columns = 4,
   showHeader = true,
   className,
-  ...props 
+  ...props
 }: React.HTMLAttributes<HTMLDivElement> & {
   rows?: number;
   columns?: number;
   showHeader?: boolean;
 }) {
+  const { quick } = useBorderTokens();
+  const iconSizes = useIconSizes();
+
   return (
     <div
       className={cn(
-        "rounded-md border",
+        quick.table,
         className
       )}
       {...props}
@@ -175,17 +184,18 @@ export function SkeletonTable({
 }
 
 // Form skeleton
-export function SkeletonForm({ 
+export function SkeletonForm({
   fields = 4,
   showTitle = true,
   columns = 1,
   className,
-  ...props 
+  ...props
 }: React.HTMLAttributes<HTMLDivElement> & {
   fields?: number;
   showTitle?: boolean;
   columns?: 1 | 2;
 }) {
+  const iconSizes = useIconSizes();
   return (
     <div
       className={cn(
@@ -227,6 +237,7 @@ export function SkeletonChart({
   showLegend?: boolean;
 }) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   return (
     <div
       className={cn(
@@ -251,7 +262,7 @@ export function SkeletonChart({
         )}
       </div>
       
-      <div className="relative h-64 rounded border bg-muted/30">
+      <div className={`relative h-64 ${quick.table} bg-muted/30`}>
         {type === "bar" && (
           <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between space-x-2">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -281,15 +292,16 @@ export function SkeletonChart({
 }
 
 // Navigation skeleton
-export function SkeletonNavigation({ 
+export function SkeletonNavigation({
   items = 6,
   showLogo = true,
   className,
-  ...props 
+  ...props
 }: React.HTMLAttributes<HTMLDivElement> & {
   items?: number;
   showLogo?: boolean;
 }) {
+  const iconSizes = useIconSizes();
   return (
     <div
       className={cn(
@@ -311,19 +323,21 @@ export function SkeletonNavigation({
 }
 
 // Stats card skeleton
-export function SkeletonStatsCard({ 
+export function SkeletonStatsCard({
   showIcon = true,
   showTrend = true,
   className,
-  ...props 
+  ...props
 }: React.HTMLAttributes<HTMLDivElement> & {
   showIcon?: boolean;
   showTrend?: boolean;
 }) {
+  const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   return (
     <div
       className={cn(
-        "rounded-lg border bg-card p-6 shadow-sm",
+        `${quick.card} bg-card p-6 shadow-sm`,
         className
       )}
       {...props}
@@ -341,20 +355,22 @@ export function SkeletonStatsCard({
 }
 
 // Modal skeleton
-export function SkeletonModal({ 
+export function SkeletonModal({
   showHeader = true,
   showFooter = true,
   className,
-  ...props 
+  ...props
 }: React.HTMLAttributes<HTMLDivElement> & {
   showHeader?: boolean;
   showFooter?: boolean;
 }) {
+  const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div
         className={cn(
-          "bg-card rounded-lg shadow-xl w-full max-w-2xl mx-4",
+          `bg-card ${quick.card} shadow-xl w-full max-w-2xl mx-4`,
           className
         )}
         {...props}

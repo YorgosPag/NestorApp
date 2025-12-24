@@ -7,6 +7,7 @@ import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { errorTracker } from '@/services/ErrorTracker';
 import { notificationConfig } from '@/config/error-reporting';
 import { componentSizes } from '@/styles/design-tokens';
+import { borderVariants } from '@/styles/design-tokens';
 
 interface CustomErrorInfo {
   componentStack: string;
@@ -394,7 +395,7 @@ ${errorDetails.stack || 'Stack trace not available'}
       return (
         <div className="min-h-screen bg-background flex items-center justify-center p-4">
           <div className="max-w-2xl w-full">
-            <div className="bg-card border border-red-200 dark:border-red-800 rounded-lg p-8 shadow-lg">
+            <div className={`bg-card ${borderVariants.status.error.className} p-8 shadow-lg`}>
               {/* Error Header */}
               <div className="flex items-center space-x-3 mb-6">
                 <div className="p-3 bg-red-100 dark:bg-red-900/20 rounded-full">
@@ -411,7 +412,7 @@ ${errorDetails.stack || 'Stack trace not available'}
               </div>
 
               {/* Error Message */}
-              <div className="mb-6 p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md">
+              <div className={`mb-6 p-4 bg-red-50 dark:bg-red-950/20 ${borderVariants.status.error.className}`}>
                 <p className="text-red-800 dark:text-red-200 font-medium">
                   {error.message}
                 </p>
@@ -697,7 +698,7 @@ export function ComponentErrorBoundary({ children, ...props }: Omit<ErrorBoundar
       maxRetries={1}
       showErrorDetails={false}
       fallback={(error, _, retry) => (
-        <div className="p-4 border border-red-200 dark:border-red-800 rounded-md bg-red-50 dark:bg-red-950/20">
+        <div className={`p-4 ${borderVariants.status.error.className} bg-red-50 dark:bg-red-950/20`}>
           <div className="flex items-center justify-between">
             <div>
               <p className="font-medium text-red-900 dark:text-red-100">Component Error</p>

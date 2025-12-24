@@ -9,6 +9,7 @@ import { Play, CheckCircle2 } from 'lucide-react';
 import type { TestState, StandaloneTestHandlers } from '../types/tests.types';
 import { HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface StandaloneTestsTabProps {
   testState: TestState;
@@ -20,6 +21,7 @@ export const StandaloneTestsTab: React.FC<StandaloneTestsTabProps> = ({
   standaloneTests
 }) => {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
 
   return (
     <>
@@ -33,7 +35,7 @@ export const StandaloneTestsTab: React.FC<StandaloneTestsTabProps> = ({
           <button
             onClick={standaloneTests.handleRunCoordinateReversibility}
             disabled={testState.runningTests.has('coordinate-reversibility')}
-            className={`flex items-start gap-3 p-3.5 rounded-lg border transition-all text-left ${
+            className={`flex items-start gap-3 p-3.5 ${quick.card} transition-all text-left ${
               testState.runningTests.has('coordinate-reversibility')
                 ? 'bg-yellow-500/10 border-yellow-500/30 cursor-wait'
                 : testState.completedTests.has('coordinate-reversibility')
@@ -60,7 +62,7 @@ export const StandaloneTestsTab: React.FC<StandaloneTestsTabProps> = ({
           <button
             onClick={standaloneTests.handleRunGridWorkflow}
             disabled={testState.runningTests.has('grid-workflow')}
-            className={`flex items-start gap-3 p-3.5 rounded-lg border transition-all text-left ${
+            className={`flex items-start gap-3 p-3.5 ${quick.card} transition-all text-left ${
               testState.runningTests.has('grid-workflow')
                 ? 'bg-yellow-500/10 border-yellow-500/30 cursor-wait'
                 : testState.completedTests.has('grid-workflow')
@@ -85,7 +87,7 @@ export const StandaloneTestsTab: React.FC<StandaloneTestsTabProps> = ({
         </div>
       </div>
 
-      <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+      <div className={`bg-yellow-500/10 border border-yellow-500/30 ${quick.card} p-4`}>
         <div className="text-xs text-yellow-300">
           <strong>⚠️ Work in Progress:</strong> Some standalone tests need refactoring to export runnable functions. Check console for status.
         </div>

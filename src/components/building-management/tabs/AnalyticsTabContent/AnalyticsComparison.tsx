@@ -28,7 +28,7 @@ export default function AnalyticsComparison() {
                                         Τρέχον: {item.current} | Μέσος όρος: {item.average}
                                     </div>
                                 </div>
-                                <div className={cn(`px-3 py-1 rounded text-sm`,
+                                <div className={cn(`px-3 py-1 ${quick.input} text-sm`,
                                     item.status === 'better'
                                         ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
                                         : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'

@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ToolDefinition, ActionDefinition } from './types';
 import { ChevronDown } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 
 interface ToolButtonProps {
@@ -17,6 +18,7 @@ interface ToolButtonProps {
 
 export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick, onDropdownSelect, disabled, activeTool }) => {
   const iconSizes = useIconSizes();
+  const { getStatusBorder, getElementBorder } = useBorderTokens();
   // Determine which icon to show - if activeTool matches a dropdown option, use that icon
   let IconComponent = tool.icon;
   if (tool.dropdownOptions && activeTool) {
@@ -68,12 +70,12 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
         disabled={disabled}
         title={`${tool.label} (${tool.hotkey})`}
         className={`
-          ${iconSizes.xl} p-0 rounded-md border transition-colors duration-150
+          ${iconSizes.xl} p-0 rounded-md transition-colors duration-150
           flex items-center justify-center
           ${
-            isActive 
-              ? 'bg-blue-600 text-white border-blue-500 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}' 
-              : 'bg-gray-700 text-gray-200 border-gray-500 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}'
+            isActive
+              ? `bg-blue-600 text-white ${getStatusBorder('active')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
+              : `bg-gray-700 text-gray-200 ${getElementBorder('button', 'default')} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
           }
           ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
         `}
@@ -91,12 +93,12 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
           disabled={disabled}
           title={`${tool.label} (${tool.hotkey})`}
           className={`
-            h-8 w-7 p-0 rounded-l-md border-r-0 border transition-colors duration-150
+            h-8 w-7 p-0 rounded-l-md border-r-0 transition-colors duration-150
             flex items-center justify-center
             ${
-              isActive 
-                ? 'bg-blue-600 text-white border-blue-500 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}' 
-                : 'bg-gray-700 text-gray-200 border-gray-500 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}'
+              isActive
+                ? `bg-blue-600 text-white ${getStatusBorder('active')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
+                : `bg-gray-700 text-gray-200 ${getElementBorder('button', 'default')} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
             }
             ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
           `}
@@ -108,12 +110,12 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
           disabled={disabled}
           title="Περισσότερες επιλογές"
           className={`
-            h-8 w-5 p-0 rounded-r-md border transition-colors duration-150
+            h-8 w-5 p-0 rounded-r-md transition-colors duration-150
             flex items-center justify-center
             ${
-              isActive 
-                ? 'bg-blue-600 text-white border-blue-500 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}' 
-                : 'bg-gray-700 text-gray-200 border-gray-500 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}'
+              isActive
+                ? `bg-blue-600 text-white ${getStatusBorder('active')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
+                : `bg-gray-700 text-gray-200 ${getElementBorder('button', 'default')} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
             }
             ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
           `}
@@ -123,7 +125,7 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
       </div>
 
       {showDropdown && (
-        <div className="absolute top-full left-0 mt-1 bg-gray-800 border border-gray-600 rounded-md shadow-lg z-50 min-w-[150px]">
+        <div className={`absolute top-full left-0 mt-1 bg-gray-800 rounded-md shadow-lg z-50 min-w-[150px] ${getStatusBorder('default')}`}>
           {tool.dropdownOptions!.map((option) => {
             const OptionIcon = option.icon;
             return (
@@ -149,6 +151,7 @@ interface ActionButtonProps {
 
 export const ActionButton: React.FC<ActionButtonProps> = ({ action }) => {
   const iconSizes = useIconSizes();
+  const { getStatusBorder, getElementBorder } = useBorderTokens();
   const IconComponent = action.icon;
   
   return (
@@ -157,14 +160,14 @@ export const ActionButton: React.FC<ActionButtonProps> = ({ action }) => {
       title={`${action.label} (${action.hotkey})`}
       disabled={action.disabled}
       className={`
-        ${iconSizes.xl} p-0 rounded-md border transition-colors duration-150
+        ${iconSizes.xl} p-0 rounded-md transition-colors duration-150
         flex items-center justify-center
         ${
-          action.active 
-            ? 'bg-blue-600 text-white border-blue-500 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}'
+          action.active
+            ? `bg-blue-600 text-white ${getStatusBorder('active')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
             : action.disabled
-            ? 'bg-gray-800 text-gray-500 border-gray-700 cursor-not-allowed'
-            : 'bg-gray-700 text-gray-200 border-gray-500 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}'
+            ? `bg-gray-800 text-gray-500 ${getElementBorder('button', 'disabled')} cursor-not-allowed`
+            : `bg-gray-700 text-gray-200 ${getElementBorder('button', 'default')} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
         }
       `}
     >

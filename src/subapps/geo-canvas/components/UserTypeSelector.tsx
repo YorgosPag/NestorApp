@@ -6,6 +6,7 @@ import { Users, Briefcase, HardHat } from 'lucide-react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { HOVER_BORDER_EFFECTS, HOVER_SHADOWS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface UserTypeSelectorProps {
   currentType?: UserType;
@@ -25,6 +26,7 @@ interface UserTypeSelectorProps {
  */
 export function UserTypeSelector({ currentType, onSelect, disabled }: UserTypeSelectorProps) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const { t, isLoading } = useTranslationLazy('geo-canvas');
 
   // ✅ ENTERPRISE: Return loading state while translations load
@@ -124,7 +126,7 @@ export function UserTypeSelector({ currentType, onSelect, disabled }: UserTypeSe
 
       {/* Info message */}
       {currentType && (
-        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+        <div className={`mt-4 p-3 bg-blue-50 ${quick.card} border-blue-200`}>
           <p className="text-sm text-blue-700">
             <span className="font-medium">{t('userTypeSelector.currentType')}</span>{' '}
             {userTypes.find(ut => ut.type === currentType)?.label}

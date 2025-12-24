@@ -13,6 +13,7 @@ import React from 'react';
 import type { ContactRelationship } from '@/types/contacts/relationships';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useRelationshipStatistics } from '../hooks/summary/useRelationshipStatistics';
 
 // ============================================================================
@@ -55,6 +56,7 @@ export const StatisticsSection: React.FC<StatisticsSectionProps> = ({
   // HOOKS
   // ============================================================================
 
+  const { quick } = useBorderTokens();
   const { stats, dashboardStats } = useRelationshipStatistics(relationships, contactId);
 
   // ============================================================================
@@ -66,7 +68,7 @@ export const StatisticsSection: React.FC<StatisticsSectionProps> = ({
       <UnifiedDashboard
         stats={dashboardStats}
         columns={4}
-        className="p-4 border-b bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 rounded-lg"
+        className={`p-4 ${quick.borderB} bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 ${quick.card.replace('border', 'rounded-lg')}`}
         onCardClick={onCardClick}
       />
     </div>

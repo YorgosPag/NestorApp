@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui/card';
 import { Input } from '../../../components/ui/input';
 import { Label } from '../../../components/ui/label';
@@ -68,6 +69,7 @@ function calculatePolygonPerimeter(polygon: unknown): number {
 
 export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, onUpdate, onClose }) => {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const [label, setLabel] = useState('');
   const [linkedUnitId, setLinkedUnitId] = useState('');
 
@@ -121,7 +123,7 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
         {/* Basic Info */}
         <div className="flex items-center gap-2">
           <div
-            className={`${iconSizes.sm} rounded border`}
+            className={`${iconSizes.sm} rounded ${quick.button}`}
             style={{ backgroundColor: STATUS_COLORS[overlay.status || 'for-sale'] }}
           />
           <CommonBadge
