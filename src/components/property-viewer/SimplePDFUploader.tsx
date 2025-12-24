@@ -14,6 +14,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { getAuth, signInAnonymously } from 'firebase/auth';
 import { HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface SimplePDFUploaderProps {
   currentFloor: { id: string; name: string; buildingId: string } | null;
@@ -273,7 +274,7 @@ export function SimplePDFUploader({ currentFloor, onPDFUpdate, className }: Simp
           {!selectedFile && !isUploading && !success && (
             <div
               onClick={triggerFileSelect}
-              className={`border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center cursor-pointer ${HOVER_BORDER_EFFECTS.GRAY} transition-colors`}
+              className={`${useBorderTokens().createBorder('medium', 'hsl(var(--muted-foreground))', 'dashed')} rounded-lg p-8 text-center cursor-pointer ${HOVER_BORDER_EFFECTS.GRAY} transition-colors`}
             >
               <Upload className={`${iconSizes.xl2} mx-auto mb-2 text-muted-foreground`} />
               <p className="text-sm font-medium">Κλικ για επιλογή PDF</p>

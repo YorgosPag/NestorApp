@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { Property } from '@/types/property-viewer';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface MultiLevelNavigationProps {
   property: Property;
@@ -15,10 +16,11 @@ interface MultiLevelNavigationProps {
 
 export function MultiLevelNavigation({ property, onSelectFloor, currentFloorId }: MultiLevelNavigationProps) {
   const iconSizes = useIconSizes();
+  const { getStatusBorder } = useBorderTokens();
   if (!property.levels) return null;
 
   return (
-    <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3 space-y-2">
+    <div className={`bg-blue-50 dark:bg-blue-950/30 ${getStatusBorder('info')} p-3 space-y-2`}>
       <h4 className="text-xs font-semibold text-blue-800 dark:text-blue-200 flex items-center gap-2">
         <ChevronsUpDown className={iconSizes.sm} />
         Επίπεδα Ακινήτου

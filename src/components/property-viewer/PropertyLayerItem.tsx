@@ -5,6 +5,7 @@ import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import type { Property } from '@/types/property-viewer';
 import type { LayerState } from './useLayerStates';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { PropertyLayerHeader } from './PropertyLayerItem/PropertyLayerHeader';
 import { PropertyLayerDetails } from './PropertyLayerItem/PropertyLayerDetails';
 
@@ -42,7 +43,7 @@ export function PropertyLayerItem({
 
   return (
     <div className={cn(
-      "border rounded-lg p-3 space-y-2 transition-all",
+      `${useBorderTokens().quick.card} p-3 space-y-2 transition-all`,
       isSelected ? "border-primary/50 bg-primary/10" : "border-border"
     )}>
       <PropertyLayerHeader

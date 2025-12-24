@@ -6,6 +6,7 @@ import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effect
 import { cn } from '@/lib/utils';
 import { formatSize } from './version-utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { formatDateTime as formatDate } from '@/lib/intl-utils';
 
 export function VersionList({
@@ -18,6 +19,7 @@ export function VersionList({
   onSelect: (v: any) => void;
 }) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   return (
     <div className="p-4 space-y-2">
       {versions.map(version => (
@@ -25,7 +27,7 @@ export function VersionList({
           key={version.id}
           onClick={() => onSelect(version)}
           className={cn(
-            "p-4 border rounded-lg cursor-pointer",
+            `p-4 ${quick.card} cursor-pointer`,
             TRANSITION_PRESETS.STANDARD_ALL,
             selectedVersionId === version.id
               ? 'border-primary bg-primary/10'

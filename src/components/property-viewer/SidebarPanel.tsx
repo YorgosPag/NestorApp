@@ -4,6 +4,7 @@ import React from 'react';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CommonBadge } from '@/core/badges';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import type { Property } from '@/types/property-viewer';
 import type { Connection, PropertyGroup } from '@/types/connections';
 
@@ -72,7 +73,7 @@ export function SidebarPanel({
           {selectedProperties.length > 0 ? (
             <div className="space-y-2">
               {selectedProperties.map((property) => (
-                <div key={property.id} className="p-3 border rounded-lg">
+                <div key={property.id} className={`p-3 ${useBorderTokens().quick.card}`}>
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="font-medium">{property.name}</h4>
                     <CommonBadge
