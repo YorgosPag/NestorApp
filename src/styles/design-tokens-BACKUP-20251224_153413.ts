@@ -3,20 +3,78 @@
 
 import React from 'react';
 
-// Import core design tokens από τα modular files
-import {
-  spacing,
-  typography,
-  colors,
-  shadows,
-  animation,
-  transitions
-} from './design-tokens/core';
+export const spacing = {
+  // Base spacing scale (σε rem)
+  xs: '0.25rem',    // 4px
+  sm: '0.5rem',     // 8px
+  md: '1rem',       // 16px
+  lg: '1.5rem',     // 24px
+  xl: '2rem',       // 32px
+  '2xl': '3rem',    // 48px
+  '3xl': '4rem',    // 64px
+  
+  // Component-specific spacing
+  component: {
+    padding: {
+      xs: '0.5rem',     // 8px - tight padding
+      sm: '0.75rem',    // 12px - small padding
+      md: '1rem',       // 16px - default padding
+      lg: '1.5rem',     // 24px - large padding
+      xl: '2rem',       // 32px - extra large padding
+    },
+    gap: {
+      xs: '0.25rem',    // 4px - tight gap
+      sm: '0.5rem',     // 8px - small gap
+      md: '1rem',       // 16px - default gap
+      lg: '1.5rem',     // 24px - large gap
+    },
+    margin: {
+      xs: '0.25rem',    // 4px
+      sm: '0.5rem',     // 8px
+      md: '1rem',       // 16px
+      lg: '1.5rem',     // 24px
+      xl: '2rem',       // 32px
+    }
+  }
+} as const;
 
-// Re-export από modular αρχεία
-export { spacing };
-
-export { typography };
+export const typography = {
+  // Font sizes (σε rem)
+  fontSize: {
+    xs: '0.75rem',     // 12px
+    sm: '0.875rem',    // 14px
+    base: '1rem',      // 16px
+    lg: '1.125rem',    // 18px
+    xl: '1.25rem',     // 20px
+    '2xl': '1.5rem',   // 24px
+    '3xl': '1.875rem', // 30px
+    '4xl': '2.25rem',  // 36px
+  },
+  
+  // Line heights
+  lineHeight: {
+    tight: '1.25',
+    snug: '1.375',
+    normal: '1.5',
+    relaxed: '1.625',
+    loose: '2',
+  },
+  
+  // Font weights
+  fontWeight: {
+    normal: '400',
+    medium: '500',
+    semibold: '600',
+    bold: '700',
+  },
+  
+  // Letter spacing
+  letterSpacing: {
+    tight: '-0.025em',
+    normal: '0',
+    wide: '0.025em',
+  }
+} as const;
 
 export const borderRadius = {
   none: '0',
@@ -29,13 +87,103 @@ export const borderRadius = {
   full: '9999px',
 } as const;
 
-export { shadows };
+export const shadows = {
+  // Box shadows για elevation
+  none: 'none',
+  sm: '0 1px 2px 0 rgb(0 0 0 / 0.05)',
+  default: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
+  md: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+  lg: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
+  xl: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
+  '2xl': '0 25px 50px -12px rgb(0 0 0 / 0.25)',
+  
+  // Drop shadows για επιφάνειες
+  inner: 'inset 0 2px 4px 0 rgb(0 0 0 / 0.05)',
+} as const;
 
-export { animation };
+export const animation = {
+  // Animation durations
+  duration: {
+    fast: '150ms',
+    normal: '200ms',
+    slow: '300ms',
+    slower: '500ms',
+  },
+  
+  // Easing functions
+  easing: {
+    linear: 'linear',
+    ease: 'ease',
+    easeIn: 'ease-in',
+    easeOut: 'ease-out',
+    easeInOut: 'ease-in-out',
+    custom: 'cubic-bezier(0.4, 0, 0.2, 1)',
+  },
+} as const;
 
-export { transitions };
+// Transition system για animations
+export const transitions = {
+  duration: {
+    fast: '150ms',
+    base: '300ms',
+    slow: '500ms'
+  },
 
-export { colors };
+  easing: {
+    easeIn: 'ease-in',
+    easeOut: 'ease-out',
+    easeInOut: 'ease-in-out'
+  }
+} as const;
+
+// Color system - Base colors για το design system
+export const colors = {
+  // Basic color palette
+  background: {
+    primary: '#ffffff',
+    secondary: '#f8fafc',
+    tertiary: '#f1f5f9',
+    hover: '#f1f5f9',
+    overlay: 'rgba(0, 0, 0, 0.5)'
+  },
+
+  text: {
+    primary: '#1e293b',
+    secondary: '#64748b',
+    tertiary: '#94a3b8',
+    inverse: '#ffffff'
+  },
+
+  border: {
+    primary: '#e2e8f0',
+    secondary: '#cbd5e1',
+    tertiary: '#f1f5f9'
+  },
+
+  surface: {
+    primary: '#ffffff',
+    secondary: '#f8fafc'
+  },
+
+  // Semantic colors
+  primary: {
+    500: '#3b82f6'
+  },
+
+  // Accent colors
+  accent: {
+    primary: '#3b82f6'
+  },
+
+  // Status colors
+  blue: { 300: '#93c5fd', 500: '#3b82f6', 600: '#2563eb' },
+  green: { 300: '#86efac', 500: '#22c55e', 600: '#16a34a' },
+  purple: { 300: '#c4b5fd', 500: '#8b5cf6', 600: '#7c3aed' },
+  orange: { 300: '#fdba74', 500: '#f97316', 600: '#ea580c' },
+  red: { 300: '#fca5a5', 500: '#ef4444', 600: '#dc2626' },
+  teal: { 300: '#5eead4', 500: '#14b8a6', 600: '#0d9488' },
+  gray: { 50: '#f9fafb', 100: '#f3f4f6', 500: '#6b7280' }
+} as const;
 
 // Semantic color mapping για application-specific χρώματα
 export const semanticColors = {
@@ -1075,21 +1223,7 @@ export const DESIGN_TOKENS_V2_INFO = {
 // ============================================================================
 
 /**
- * ROLE: LOW-LEVEL CANVAS ENGINE
- *
- * This module provides generic, reusable primitives for
- * canvas-based interactions (geo, DXF, generic shapes).
- *
- * ⚠️ DO NOT:
- * - Add domain-specific (map-only) logic here
- * - Rename APIs for UX clarity
- *
- * ✅ Allowed:
- * - Math
- * - Geometry
- * - Hit-testing
- *
- * Higher-level map logic MUST live in InteractiveMap.styles.ts
+ * 🎯 CANVAS UTILITIES - ENTERPRISE CANVAS SYSTEM
  */
 export const canvasUtilities = {
   geoInteractive: {
@@ -1106,8 +1240,8 @@ export const canvasUtilities = {
       alignItems: 'center',
       gap: spacing.sm,
       padding: `${spacing.sm} ${spacing.md}`,
-      borderBottom: `1px solid ${colors.border.primary}`,
-      backgroundColor: colors.background.primary,
+      borderBottom: `1px solid ${colors.border.default}`,
+      backgroundColor: colors.background.default,
       minHeight: '48px',
       position: 'sticky',
       top: 0,
@@ -1116,7 +1250,7 @@ export const canvasUtilities = {
     mobileSlideContent: (): React.CSSProperties => ({
       flex: '1 1 auto',
       overflowY: 'auto',
-      backgroundColor: colors.background.primary,
+      backgroundColor: colors.background.default,
       padding: spacing.md,
       height: '100%',
       display: 'flex',
@@ -1126,21 +1260,10 @@ export const canvasUtilities = {
       width: '100%',
       height: '100%',
       display: 'block',
-      backgroundColor: colors.background.secondary,
+      backgroundColor: colors.background.subtle,
       border: 'none',
       outline: 'none'
     })
-
-    /**
-     * NOTE:
-     * Map-specific interaction utilities previously exposed here
-     * have been intentionally removed.
-     *
-     * All map-related styling and interaction logic now lives in:
-     * src/subapps/geo-canvas/components/InteractiveMap.styles.ts
-     *
-     * This engine module MUST remain map-agnostic.
-     */
   },
   drawing: {
     strokeWidth: '2px',

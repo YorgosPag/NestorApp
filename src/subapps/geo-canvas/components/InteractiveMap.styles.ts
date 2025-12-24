@@ -1,8 +1,16 @@
 /**
- * 🗺️ INTERACTIVE MAP ENTERPRISE STYLING MODULE
+ * ROLE: DOMAIN-SPECIFIC MAP STYLING LAYER
  *
- * Centralized styling solution για InteractiveMap component.
- * Eliminates ALL inline styles και provides single source of truth.
+ * Canonical styling and interaction definitions for
+ * interactive geo maps.
+ *
+ * This file MAY:
+ * - Replace usage of canvasUtilities.geoInteractive in map UI
+ * - Provide clearer naming and composition
+ *
+ * This file MUST NOT:
+ * - Reimplement low-level geometry or math
+ * - Be imported by canvasUtilities (one-way dependency)
  *
  * ✅ Enterprise Standards:
  * - TypeScript strict typing
