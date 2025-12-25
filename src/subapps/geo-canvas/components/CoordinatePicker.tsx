@@ -221,7 +221,7 @@ export function CoordinatePicker({
             type="number"
             value={dxfInput.x}
             onChange={(e) => handleDxfInputChange('x', e.target.value)}
-            className={`w-full bg-gray-700 ${quick.input} border-gray-600 px-3 py-2 text-sm`}
+            className={`w-full bg-gray-700 ${quick.input} px-3 py-2 text-sm`}
             placeholder="0.00"
             step="0.01"
           />
@@ -232,7 +232,7 @@ export function CoordinatePicker({
             type="number"
             value={dxfInput.y}
             onChange={(e) => handleDxfInputChange('y', e.target.value)}
-            className={`w-full bg-gray-700 ${quick.input} border-gray-600 px-3 py-2 text-sm`}
+            className={`w-full bg-gray-700 ${quick.input} px-3 py-2 text-sm`}
             placeholder="0.00"
             step="0.01"
           />
@@ -243,7 +243,7 @@ export function CoordinatePicker({
             type="number"
             value={dxfInput.z}
             onChange={(e) => handleDxfInputChange('z', e.target.value)}
-            className={`w-full bg-gray-700 ${quick.input} border-gray-600 px-3 py-2 text-sm`}
+            className={`w-full bg-gray-700 ${quick.input} px-3 py-2 text-sm`}
             placeholder="0.00"
             step="0.01"
           />
@@ -286,7 +286,7 @@ export function CoordinatePicker({
             type="number"
             value={geoInput.lng}
             onChange={(e) => handleGeoInputChange('lng', e.target.value)}
-            className={`w-full bg-gray-700 ${quick.input} border-gray-600 px-3 py-2 text-sm`}
+            className={`w-full bg-gray-700 ${quick.input} px-3 py-2 text-sm`}
             placeholder={GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE.toString()}
             step="0.000001"
           />
@@ -297,7 +297,7 @@ export function CoordinatePicker({
             type="number"
             value={geoInput.lat}
             onChange={(e) => handleGeoInputChange('lat', e.target.value)}
-            className={`w-full bg-gray-700 ${quick.input} border-gray-600 px-3 py-2 text-sm`}
+            className={`w-full bg-gray-700 ${quick.input} px-3 py-2 text-sm`}
             placeholder={GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE.toString()}
             step="0.000001"
           />
@@ -308,7 +308,7 @@ export function CoordinatePicker({
             type="number"
             value={geoInput.alt}
             onChange={(e) => handleGeoInputChange('alt', e.target.value)}
-            className={`w-full bg-gray-700 ${quick.input} border-gray-600 px-3 py-2 text-sm`}
+            className={`w-full bg-gray-700 ${quick.input} px-3 py-2 text-sm`}
             placeholder="0.00"
             step="0.01"
           />
@@ -336,7 +336,7 @@ export function CoordinatePicker({
             type="number"
             value={accuracy}
             onChange={(e) => setAccuracy(e.target.value)}
-            className={`w-full bg-gray-700 ${quick.input} border-gray-600 px-3 py-2 text-sm`}
+            className={`w-full bg-gray-700 ${quick.input} px-3 py-2 text-sm`}
             placeholder="1.0"
             step="0.1"
             min="0.1"
@@ -348,7 +348,7 @@ export function CoordinatePicker({
             type="text"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className={`w-full bg-gray-700 ${quick.input} border-gray-600 px-3 py-2 text-sm`}
+            className={`w-full bg-gray-700 ${quick.input} px-3 py-2 text-sm`}
             placeholder="Optional description"
             maxLength={100}
           />

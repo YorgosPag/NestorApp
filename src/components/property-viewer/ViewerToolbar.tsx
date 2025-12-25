@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 type ViewMode = 'view' | 'create' | 'measure' | 'edit';
 
@@ -48,7 +49,8 @@ export function ViewerToolbar({
   onFloorChange
 }: ViewerToolbarProps) {
   const iconSizes = useIconSizes();
-  
+  const { quick } = useBorderTokens();
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -97,7 +99,7 @@ export function ViewerToolbar({
   };
 
   return (
-    <div className="flex items-center gap-3 p-3 bg-white border-b border-gray-200">
+    <div className={`flex items-center gap-3 p-3 bg-white ${quick.separatorH}`}>
       
       {/* PDF UPLOAD */}
       <div>

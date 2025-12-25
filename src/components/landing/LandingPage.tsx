@@ -73,7 +73,7 @@ export function LandingPage() {
           <section className="max-w-4xl mx-auto" aria-label="Φόρμα Αναζήτησης Ακινήτων">
             <form
               onSubmit={(e) => { e.preventDefault(); handleSearch(); }}
-              className={`bg-white dark:bg-gray-800/50 dark:backdrop-blur-sm ${quick.card} shadow-xl p-6 dark:border dark:border-gray-700`}
+              className={`bg-white dark:bg-gray-800/50 dark:backdrop-blur-sm ${quick.card} shadow-xl p-6`}
               role="search"
               aria-label="Αναζήτηση Ακινήτων"
             >
@@ -85,7 +85,7 @@ export function LandingPage() {
                     {t('search.propertyType')}
                   </label>
                   <Select value={searchType} onValueChange={setSearchType}>
-                    <SelectTrigger id="search-type" className={`w-full px-4 py-3 bg-gray-50 dark:bg-gray-700/50 dark:text-white ${quick.input} border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer`}>
+                    <SelectTrigger id="search-type" className={`w-full px-4 py-3 bg-gray-50 dark:bg-gray-700/50 dark:text-white ${quick.input} focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer`}>
                       <SelectValue placeholder={t('search.allTypes')} />
                     </SelectTrigger>
                     <SelectContent>
@@ -114,7 +114,7 @@ export function LandingPage() {
                       placeholder={t('search.locationPlaceholder')}
                       value={location}
                       onChange={(e) => setLocation(e.target.value)}
-                      className={`w-full pl-10 pr-4 py-3 bg-gray-50 dark:bg-gray-700/50 dark:text-white ${quick.input} border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                      className={`w-full pl-10 pr-4 py-3 bg-gray-50 dark:bg-gray-700/50 dark:text-white ${quick.input} focus:outline-none focus:ring-2 focus:ring-blue-500`}
                     />
                   </div>
                 </fieldset>
@@ -125,7 +125,7 @@ export function LandingPage() {
                     Εύρος Τιμής
                   </label>
                   <Select value={priceRange} onValueChange={setPriceRange}>
-                    <SelectTrigger id="search-price" className={`w-full px-4 py-3 bg-gray-50 dark:bg-gray-700/50 dark:text-white ${quick.input} border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer`}>
+                    <SelectTrigger id="search-price" className={`w-full px-4 py-3 bg-gray-50 dark:bg-gray-700/50 dark:text-white ${quick.input} focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer`}>
                       <SelectValue placeholder="Όλες οι τιμές" />
                     </SelectTrigger>
                     <SelectContent>
@@ -144,7 +144,7 @@ export function LandingPage() {
                     Εμβαδόν
                   </label>
                   <Select value={areaRange} onValueChange={setAreaRange}>
-                    <SelectTrigger id="search-area" className={`w-full px-4 py-3 bg-gray-50 dark:bg-gray-700/50 dark:text-white ${quick.input} border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer`}>
+                    <SelectTrigger id="search-area" className={`w-full px-4 py-3 bg-gray-50 dark:bg-gray-700/50 dark:text-white ${quick.input} focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer`}>
                       <SelectValue placeholder="Όλα τα μεγέθη" />
                     </SelectTrigger>
                     <SelectContent>
@@ -169,16 +169,16 @@ export function LandingPage() {
 
             {/* Quick Search Links */}
             <nav className="flex flex-wrap justify-center gap-3 mt-6" role="navigation" aria-label="Γρήγορες Συνδέσεις Αναζήτησης">
-              <Link href="/properties?type=Στούντιο" className={`px-4 py-2 bg-white/80 dark:bg-gray-800/50 dark:border dark:border-gray-700 dark:text-gray-200 backdrop-blur text-sm font-medium text-gray-700 ${quick.pill} ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`}>
+              <Link href="/properties?type=Στούντιο" className={`px-4 py-2 bg-white/80 dark:bg-gray-800/50 dark:text-gray-200 backdrop-blur text-sm font-medium text-gray-700 ${quick.pill} ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`}>
                 Στούντιο
               </Link>
-              <Link href="/properties?type=Διαμέρισμα" className={`px-4 py-2 bg-white/80 dark:bg-gray-800/50 dark:border dark:border-gray-700 dark:text-gray-200 backdrop-blur text-sm font-medium text-gray-700 ${quick.pill} ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`}>
+              <Link href="/properties?type=Διαμέρισμα" className={`px-4 py-2 bg-white/80 dark:bg-gray-800/50 dark:text-gray-200 backdrop-blur text-sm font-medium text-gray-700 ${quick.pill} ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`}>
                 2 Υπνοδωμάτια
               </Link>
-              <Link href="/properties?type=Μεζονέτα" className={`px-4 py-2 bg-white/80 dark:bg-gray-800/50 dark:border dark:border-gray-700 dark:text-gray-200 backdrop-blur text-sm font-medium text-gray-700 ${quick.pill} ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`}>
+              <Link href="/properties?type=Μεζονέτα" className={`px-4 py-2 bg-white/80 dark:bg-gray-800/50 dark:text-gray-200 backdrop-blur text-sm font-medium text-gray-700 ${quick.pill} ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`}>
                 Μεζονέτες
               </Link>
-              <Link href="/properties?view=floorplan" className={`px-4 py-2 bg-white/80 dark:bg-gray-800/50 dark:border dark:border-gray-700 backdrop-blur text-sm font-medium text-blue-600 dark:text-blue-400 ${quick.pill} flex items-center gap-1 ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`}>
+              <Link href="/properties?view=floorplan" className={`px-4 py-2 bg-white/80 dark:bg-gray-800/50 backdrop-blur text-sm font-medium text-blue-600 dark:text-blue-400 ${quick.pill} flex items-center gap-1 ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`}>
                 <MapPin className={iconSizes.sm} />
                 Δείτε σε Κάτοψη
               </Link>

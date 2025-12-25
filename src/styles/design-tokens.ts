@@ -735,7 +735,7 @@ export const layoutUtilities = {
         height: '16px',
         borderRadius: '50%',
         background: isSuccess ? 'rgba(0,255,0,0.8)' : 'rgba(255,165,0,0.8)',
-        border: '2px solid white',
+        border: '2px solid var(--color-background-primary)',
         boxShadow: `0 0 10px ${isSuccess ? 'rgba(0,255,0,0.8)' : 'rgba(255,165,0,0.8)'}`,
         pointerEvents: 'none' as const,
         animation: 'pulse 2s infinite',
@@ -760,8 +760,8 @@ export const layoutUtilities = {
       content: {
         zIndex: 9999,
         position: 'absolute' as const,
-        backgroundColor: '#374151', // gray-700
-        border: '1px solid #4B5563', // gray-600
+        backgroundColor: 'var(--color-background-tertiary)',
+        border: '1px solid var(--color-border-secondary)',
         backdropFilter: 'none' as const,
         WebkitBackdropFilter: 'none' as const,
       },

@@ -46,7 +46,7 @@ export function ProfessionalDrawingInterface({
   onRealEstateAlertCreated
 }: ProfessionalDrawingInterfaceProps) {
   const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
+  const { quick, getStatusBorder } = useBorderTokens();
   const { t, isLoading } = useTranslationLazy('geo-canvas');
   const [selectedTool, setSelectedTool] = useState<'upload' | 'polygon' | 'auto-detect' | 'property-manager' | 'monitoring-dashboard' | null>(null);
   // ✅ ENTERPRISE: Combine local and centralized drawing state
@@ -284,7 +284,7 @@ export function ProfessionalDrawingInterface({
 
   return (
     <>
-      <div className={`bg-white ${quick.card} shadow-lg border-gray-200 p-4`}>
+      <div className={`bg-white ${quick.card} shadow-lg p-4`}>
         {/* Header */}
         <div className="mb-4">
           <h3 className="text-lg font-semibold text-gray-900">
@@ -305,8 +305,8 @@ export function ProfessionalDrawingInterface({
               flex flex-col items-center justify-center p-4 ${quick.card} border-2
               transition-all duration-200 min-h-[100px]
               ${selectedTool === 'upload'
-                ? 'border-green-500 bg-green-50'
-                : 'border-gray-300 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} bg-white'
+                ? `${getStatusBorder('success')} bg-green-50`
+                : `border-border \${INTERACTIVE_PATTERNS.SUBTLE_HOVER} bg-white`
               }
               ${isDrawing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.ENHANCED}'}
             `}
@@ -324,8 +324,8 @@ export function ProfessionalDrawingInterface({
               flex flex-col items-center justify-center p-4 ${quick.card} border-2
               transition-all duration-200 min-h-[100px]
               ${selectedTool === 'polygon'
-                ? 'border-green-500 bg-green-50'
-                : 'border-gray-300 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} bg-white'
+                ? `${getStatusBorder('success')} bg-green-50`
+                : `border-border \${INTERACTIVE_PATTERNS.SUBTLE_HOVER} bg-white`
               }
               ${actualIsDrawing && selectedTool !== 'polygon' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.ENHANCED}'}
             `}
@@ -343,8 +343,8 @@ export function ProfessionalDrawingInterface({
               flex flex-col items-center justify-center p-4 ${quick.card} border-2
               transition-all duration-200 min-h-[100px]
               ${selectedTool === 'auto-detect'
-                ? 'border-green-500 bg-green-50'
-                : 'border-gray-300 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} bg-white'
+                ? `${getStatusBorder('success')} bg-green-50`
+                : `border-border \${INTERACTIVE_PATTERNS.SUBTLE_HOVER} bg-white`
               }
               ${(actualIsDrawing || !parserResult) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.ENHANCED}'}
             `}
@@ -362,8 +362,8 @@ export function ProfessionalDrawingInterface({
               flex flex-col items-center justify-center p-4 ${quick.card} border-2
               transition-all duration-200 min-h-[100px]
               ${selectedTool === 'property-manager'
-                ? 'border-orange-500 bg-orange-50'
-                : 'border-gray-300 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} bg-white'
+                ? `${getStatusBorder('warning')} bg-orange-50`
+                : `border-border \${INTERACTIVE_PATTERNS.SUBTLE_HOVER} bg-white`
               }
               ${isDrawing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.ENHANCED}'}
             `}
@@ -381,8 +381,8 @@ export function ProfessionalDrawingInterface({
               flex flex-col items-center justify-center p-4 ${quick.card} border-2
               transition-all duration-200 min-h-[100px]
               ${selectedTool === 'monitoring-dashboard'
-                ? 'border-blue-500 bg-blue-50'
-                : 'border-gray-300 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} bg-white'
+                ? `${getStatusBorder('info')} bg-blue-50`
+                : `border-border \${INTERACTIVE_PATTERNS.SUBTLE_HOVER} bg-white`
               }
               ${isDrawing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.ENHANCED}'}
             `}
@@ -429,7 +429,7 @@ export function ProfessionalDrawingInterface({
 
         {/* Floor Plan Status */}
         {parserResult && (
-          <div className={`mb-4 p-3 bg-green-50 ${quick.card} border-green-200`}>
+          <div className={`mb-4 p-3 bg-green-50 ${quick.card} ${getStatusBorder('success')}`}>
             <p className="text-sm text-green-700">
               <span className="font-medium">Κάτοψη:</span> {parserResult.metadata?.fileName || 'Uploaded'} ✅
             </p>
@@ -443,7 +443,7 @@ export function ProfessionalDrawingInterface({
 
         {/* Instructions */}
         {selectedTool && (
-          <div className={`mt-4 p-3 bg-blue-50 ${quick.card} border-blue-200`}>
+          <div className={`mt-4 p-3 bg-blue-50 ${quick.card} ${getStatusBorder('info')}`}>
             <p className="text-sm text-blue-700">
               {selectedTool === 'upload' && t('drawingInterfaces.professional.uploadFloorPlan')}
               {selectedTool === 'polygon' && t('drawingInterfaces.professional.addPropertyPoints')}
@@ -514,7 +514,7 @@ export function ProfessionalDrawingInterface({
 
       {/* 🏠 Phase 2.5.3: Real Estate Monitoring Dashboard */}
       {showMonitoringDashboard && (
-        <div className="mt-4 bg-white rounded-lg shadow-lg border border-gray-200 p-4">
+        <div className={`mt-4 bg-white rounded-lg shadow-lg ${quick.card} p-4`}>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <BarChart className={`${iconSizes.md} text-blue-600`} />
@@ -561,8 +561,8 @@ export function ProfessionalDrawingInterface({
               onClick={() => setBatchMonitoringMode(!batchMonitoringMode)}
               className={`flex items-center justify-center gap-2 py-2 px-4 rounded-lg border transition-colors ${
                 batchMonitoringMode
-                  ? 'bg-blue-100 border-blue-300 text-blue-700'
-                  : 'bg-gray-50 border-gray-300 text-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT}'
+                  ? `bg-blue-100 ${getStatusBorder('info')} text-blue-700`
+                  : `bg-gray-50 border-border text-gray-700 \${HOVER_BACKGROUND_EFFECTS.LIGHT}`
               }`}
             >
               <Settings className={iconSizes.sm} />

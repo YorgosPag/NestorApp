@@ -14,7 +14,7 @@ export const UnitNode = ({ unit }: { unit: UnitModel }) => {
   const showCustomerInfo = unit.status === 'sold' || unit.status === 'reserved' || unit.status === 'rented';
 
   return (
-    <div className="border-l-2 border-gray-200 dark:border-gray-700 pl-4">
+    <div className={`border-l-2 ${quick.table} pl-4`}>
       <div className={`p-4 bg-white dark:bg-gray-800/50 ${quick.card} ${HOVER_SHADOWS.MEDIUM} transition-all`}>
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-3">
@@ -43,9 +43,9 @@ export const UnitNode = ({ unit }: { unit: UnitModel }) => {
         </div>
 
         {showCustomerInfo && (
-          <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+          <div className={`mt-3 pt-3 border-t ${quick.table}`}>
             {unit.customerName ? (
-              <div className="bg-green-50 dark:bg-green-900/10 p-3 rounded-lg">
+              <div className={`bg-green-50 dark:bg-green-900/10 p-3 ${quick.card}`}>
                 <div className="flex items-center gap-2 mb-2">
                   <User size={16} className="text-green-600" />
                   <span className="font-medium text-green-800 dark:text-green-400">Πελάτης</span>
@@ -62,7 +62,7 @@ export const UnitNode = ({ unit }: { unit: UnitModel }) => {
                 </div>
               </div>
             ) : (
-              <div className="bg-orange-50 dark:bg-orange-900/10 p-3 rounded-lg">
+              <div className={`bg-orange-50 dark:bg-orange-900/10 p-3 ${quick.card}`}>
                 <div className="flex items-center gap-2">
                   <User size={16} className="text-orange-600" />
                   <span className="text-orange-800 dark:text-orange-400">

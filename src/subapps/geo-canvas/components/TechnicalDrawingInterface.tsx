@@ -41,7 +41,7 @@ export function TechnicalDrawingInterface({
   onRealEstateAlertCreated
 }: TechnicalDrawingInterfaceProps) {
   const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
+  const { quick, getStatusBorder } = useBorderTokens();
   const { t } = useTranslationLazy('geo-canvas');
   const [selectedTool, setSelectedTool] = useState<'dxf-viewer' | 'precision' | 'settings' | 'automated-alerts' | null>(null);
   // ✅ ENTERPRISE: Combine local and centralized drawing state
@@ -177,7 +177,7 @@ export function TechnicalDrawingInterface({
   }, [cancelDrawing]);
 
   return (
-    <div className={`bg-white ${quick.card} shadow-lg border-gray-200 p-4`}>
+    <div className={`bg-white ${quick.card} shadow-lg p-4`}>
       {/* Header */}
       <div className="mb-4">
         <h3 className="text-lg font-semibold text-gray-900">
@@ -198,8 +198,8 @@ export function TechnicalDrawingInterface({
             flex flex-col items-center justify-center p-4 ${quick.card} border-2
             transition-all duration-200 min-h-[100px]
             ${selectedTool === 'dxf-viewer'
-              ? 'border-purple-500 bg-purple-50'
-              : `border-gray-300 bg-white ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
+              ? `${getStatusBorder('info')} bg-purple-50`
+              : `border-border bg-white ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
             }
             ${isDrawing ? 'opacity-50 cursor-not-allowed' : `cursor-pointer ${HOVER_SHADOWS.MEDIUM}`}
           `}
@@ -217,8 +217,8 @@ export function TechnicalDrawingInterface({
             flex flex-col items-center justify-center p-4 ${quick.card} border-2
             transition-all duration-200 min-h-[100px]
             ${selectedTool === 'precision'
-              ? 'border-purple-500 bg-purple-50'
-              : `border-gray-300 bg-white ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
+              ? `${getStatusBorder('info')} bg-purple-50`
+              : `border-border bg-white ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
             }
             ${actualIsDrawing && selectedTool !== 'precision' ? 'opacity-50 cursor-not-allowed' : `cursor-pointer ${HOVER_SHADOWS.MEDIUM}`}
           `}
@@ -236,8 +236,8 @@ export function TechnicalDrawingInterface({
             flex flex-col items-center justify-center p-4 ${quick.card} border-2
             transition-all duration-200 min-h-[100px]
             ${selectedTool === 'settings'
-              ? 'border-purple-500 bg-purple-50'
-              : `border-gray-300 bg-white ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
+              ? `${getStatusBorder('info')} bg-purple-50`
+              : `border-border bg-white ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
             }
             ${isDrawing ? 'opacity-50 cursor-not-allowed' : `cursor-pointer ${HOVER_SHADOWS.MEDIUM}`}
           `}
@@ -255,8 +255,8 @@ export function TechnicalDrawingInterface({
             flex flex-col items-center justify-center p-4 ${quick.card} border-2
             transition-all duration-200 min-h-[100px]
             ${selectedTool === 'automated-alerts'
-              ? 'border-red-500 bg-red-50'
-              : `border-gray-300 bg-white ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
+              ? `${getStatusBorder('error')} bg-red-50`
+              : `border-border bg-white ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
             }
             ${isDrawing ? 'opacity-50 cursor-not-allowed' : `cursor-pointer ${HOVER_SHADOWS.MEDIUM}`}
           `}
@@ -288,7 +288,7 @@ export function TechnicalDrawingInterface({
       )}
 
       {/* Technical Specs Panel */}
-      <div className={`mb-4 p-3 bg-purple-50 ${quick.card} border-purple-200`}>
+      <div className={`mb-4 p-3 bg-purple-50 ${quick.card} ${getStatusBorder('muted')}`}>
         <h4 className="text-sm font-medium text-purple-800 mb-2">
           🔬 {t('drawingInterfaces.technical.specifications.title')}
         </h4>
@@ -310,7 +310,7 @@ export function TechnicalDrawingInterface({
 
       {/* Instructions */}
       {selectedTool && (
-        <div className={`mt-4 p-3 bg-blue-50 ${quick.card} border-blue-200`}>
+        <div className={`mt-4 p-3 bg-blue-50 ${quick.card} ${getStatusBorder('info')}`}>
           <p className="text-sm text-blue-700">
             {selectedTool === 'dxf-viewer' && t('drawingInterfaces.technical.fullDxfViewer')}
             {selectedTool === 'precision' && t('drawingInterfaces.technical.instructions.precision')}
@@ -373,7 +373,7 @@ export function TechnicalDrawingInterface({
 
       {/* 🚨 Phase 2.5.3: Automated Alerts Configuration Panel */}
       {showAutomatedAlerts && (
-        <div className={`mt-4 bg-white ${quick.card} shadow-lg border-red-200 p-4`}>
+        <div className={`mt-4 bg-white ${quick.card} shadow-lg ${getStatusBorder('error')} p-4`}>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <AlertTriangle className={`${iconSizes.md} text-red-600`} />
@@ -406,7 +406,7 @@ export function TechnicalDrawingInterface({
                     ...prev,
                     sensitivity: e.target.value as 'low' | 'medium' | 'high'
                   }))}
-                  className={`w-full px-3 py-2 ${quick.input} border-gray-300 text-sm`}
+                  className={`w-full px-3 py-2 ${quick.input} text-sm`}
                 >
                   <option value="high">{t('drawingInterfaces.technical.automatedAlerts.sensitivity.high')}</option>
                   <option value="medium">{t('drawingInterfaces.technical.automatedAlerts.sensitivity.medium')}</option>
@@ -424,7 +424,7 @@ export function TechnicalDrawingInterface({
                     ...prev,
                     monitoringInterval: Number(e.target.value)
                   }))}
-                  className={`w-full px-3 py-2 ${quick.input} border-gray-300 text-sm`}
+                  className={`w-full px-3 py-2 ${quick.input} text-sm`}
                 >
                   <option value={5}>{t('drawingInterfaces.technical.automatedAlerts.intervals.realtime')}</option>
                   <option value={15}>{t('drawingInterfaces.technical.automatedAlerts.intervals.frequent')}</option>
@@ -458,7 +458,7 @@ export function TechnicalDrawingInterface({
                             : prev.enabledPlatforms.filter(p => p !== platform.id)
                         }));
                       }}
-                      className="rounded border-gray-300 text-red-600 focus:ring-red-500"
+                      className="rounded border-border text-red-600 focus:ring-red-500"
                     />
                     <span className="text-sm text-gray-700 flex items-center gap-1">
                       <platform.icon className={iconSizes.sm} />

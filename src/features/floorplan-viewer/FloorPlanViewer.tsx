@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { SidebarPanel } from '@/components/property-viewer/SidebarPanel';
 import { FloorPlanCanvas } from '@/components/property-viewer/FloorPlanCanvas';
 import { ViewerToolbar } from '@/components/property-viewer/ViewerToolbar';
@@ -13,6 +14,8 @@ import { useSafePanZoom } from './hooks/useSafePanZoom';
 import { asArray, ensureFloor, isNodeEditMode, safeGetProperty } from './utils/safeProps';
 
 export function FloorPlanViewer(props: FloorPlanViewerLayoutProps) {
+  const { quick } = useBorderTokens();
+
   const {
     currentFloor,
     onFloorChange,
@@ -224,7 +227,7 @@ export function FloorPlanViewer(props: FloorPlanViewerLayoutProps) {
         </div>
 
         {/* STATUS BAR */}
-        <div className="flex items-center justify-between px-4 py-2 bg-white border-t border-gray-200 text-sm text-gray-600">
+        <div className={`flex items-center justify-between px-4 py-2 bg-white ${quick.separatorH} text-sm text-gray-600`}>
           <div className="flex items-center gap-4">
             <span>Properties: {properties.length}</span>
             <span>Selected: {selectedPropertyId || 'None'}</span>

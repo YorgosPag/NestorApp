@@ -32,7 +32,7 @@ export function UserTypeSelector({ currentType, onSelect, disabled }: UserTypeSe
   // ✅ ENTERPRISE: Return loading state while translations load
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div className={`bg-white rounded-lg shadow-sm ${quick.card} p-6`}>
         <div className="animate-pulse">
           <div className={`${iconSizes.lg} bg-gray-200 rounded mb-4`}></div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -76,7 +76,7 @@ export function UserTypeSelector({ currentType, onSelect, disabled }: UserTypeSe
   ];
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div className={`bg-white rounded-lg shadow-sm ${quick.card} p-6`}>
       <h3 className="text-lg font-semibold text-gray-900 mb-4">
         {t('userTypeSelector.title')}
       </h3>
@@ -91,7 +91,7 @@ export function UserTypeSelector({ currentType, onSelect, disabled }: UserTypeSe
               relative p-4 rounded-lg border-2 transition-all duration-200
               ${currentType === userType.type
                 ? `border-${userType.color.replace('bg-', '')} bg-${userType.color.replace('bg-', '')}/10`
-                : `border-gray-300 ${HOVER_BORDER_EFFECTS.PURPLE}`
+                : `border-border ${HOVER_BORDER_EFFECTS.PURPLE}`
               }
               ${disabled ? 'opacity-50 cursor-not-allowed' : `cursor-pointer ${HOVER_SHADOWS.SUBTLE}`}
             `}
@@ -126,7 +126,7 @@ export function UserTypeSelector({ currentType, onSelect, disabled }: UserTypeSe
 
       {/* Info message */}
       {currentType && (
-        <div className={`mt-4 p-3 bg-blue-50 ${quick.card} border-blue-200`}>
+        <div className={`mt-4 p-3 bg-blue-50 ${quick.card}`}>
           <p className="text-sm text-blue-700">
             <span className="font-medium">{t('userTypeSelector.currentType')}</span>{' '}
             {userTypes.find(ut => ut.type === currentType)?.label}

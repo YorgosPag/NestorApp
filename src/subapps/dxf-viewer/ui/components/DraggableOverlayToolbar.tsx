@@ -46,7 +46,7 @@ interface DraggableOverlayToolbarProps {
 
 export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (props) => {
   const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
+  const { quick, getStatusBorder, radius } = useBorderTokens();
   // 🎯 OVERLAY CREATION & STORE HOOKS
   const { startOverlayCreation } = useUnifiedOverlayCreation();
   const overlayStore = useOverlayStore();
@@ -183,7 +183,6 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
           <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Drawing Tools</h3>
 
           <div
-            className="ml-auto cursor-grab transition-colors text-xs select-none"
             className="ml-auto cursor-grab transition-colors text-xs select-none text-gray-500 hover:text-gray-700"
             title="Drag to move"
             onMouseDown={draggable.handleMouseDown}
@@ -192,7 +191,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
           </div>
 
           <button
-            className="p-1 rounded transition-colors text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800"
+            className={`p-1 ${radius.md} transition-colors text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800`}
             title="Hide toolbar"
           >
             <X className={iconSizes.xs} />
@@ -216,8 +215,8 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
                   h-8 px-2 ${quick.button} transition-colors duration-150
                   flex items-center justify-center gap-1
                   ${props.mode === btnMode
-                    ? `bg-blue-600 text-white border-blue-500 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
-                    : `bg-gray-700 text-gray-200 border-gray-500 ${HOVER_BACKGROUND_EFFECTS.MUTED}`
+                    ? `bg-blue-600 text-white ${getStatusBorder('info')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
+                    : `bg-gray-700 text-gray-200 ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
                   }
                 `}
               >
@@ -227,7 +226,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
             ))}
           </div>
 
-          <Separator orientation="vertical" className="h-6 bg-gray-500" />
+          <Separator orientation="vertical" className={`h-6 ${quick.separatorV}`} />
 
           {/* Status Palette */}
           <div className="flex items-center gap-2">
@@ -248,7 +247,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
             </div>
           </div>
 
-          <Separator orientation="vertical" className="h-6 bg-gray-500" />
+          <Separator orientation="vertical" className={`h-6 ${quick.separatorV}`} />
 
           {/* Kind Selection */}
           <div className="flex items-center gap-2">
@@ -265,8 +264,8 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
                       ${iconSizes.xl} p-0 ${quick.button} transition-colors duration-150
                       flex items-center justify-center
                       ${props.currentKind === kind
-                        ? `bg-blue-600 text-white border-blue-500 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
-                        : `bg-gray-700 text-gray-200 border-gray-500 ${HOVER_BACKGROUND_EFFECTS.MUTED}`
+                        ? `bg-blue-600 text-white ${getStatusBorder('info')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
+                        : `bg-gray-700 text-gray-200 ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
                       }
                     `}
                   >
@@ -277,7 +276,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
             </div>
           </div>
 
-          <Separator orientation="vertical" className="h-6 bg-gray-500" />
+          <Separator orientation="vertical" className={`h-6 ${quick.separatorV}`} />
 
           {/* Actions */}
           <div className="flex items-center gap-1">
@@ -288,7 +287,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
               className={`
                 ${iconSizes.xl} p-0 ${quick.button} transition-colors duration-150
                 flex items-center justify-center
-                bg-gray-700 text-gray-200 border-gray-500
+                bg-gray-700 text-gray-200 ${getStatusBorder('default')}
                 disabled:opacity-50 disabled:cursor-not-allowed
               `}
             >
@@ -302,7 +301,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
               className={`
                 ${iconSizes.xl} p-0 ${quick.button} transition-colors duration-150
                 flex items-center justify-center
-                bg-gray-700 text-red-400 border-gray-500
+                bg-gray-700 text-red-400 ${getStatusBorder('default')}
                 disabled:opacity-50 disabled:cursor-not-allowed
               `}
             >
@@ -310,7 +309,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
             </button>
           </div>
 
-          <Separator orientation="vertical" className="h-6 bg-gray-500" />
+          <Separator orientation="vertical" className={`h-6 ${quick.separatorV}`} />
 
           {/* Undo/Redo */}
           <div className="flex items-center gap-1">
@@ -321,7 +320,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
               className={`
                 ${iconSizes.xl} p-0 ${quick.button} transition-colors duration-150
                 flex items-center justify-center
-                bg-gray-700 text-gray-200 border-gray-500
+                bg-gray-700 text-gray-200 ${getStatusBorder('default')}
                 disabled:opacity-50 disabled:cursor-not-allowed
               `}
             >
@@ -334,7 +333,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
               className={`
                 ${iconSizes.xl} p-0 ${quick.button} transition-colors duration-150
                 flex items-center justify-center
-                bg-gray-700 text-gray-200 border-gray-500
+                bg-gray-700 text-gray-200 ${getStatusBorder('default')}
                 disabled:opacity-50 disabled:cursor-not-allowed
               `}
             >

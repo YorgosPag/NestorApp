@@ -3,7 +3,9 @@
 import React, { useState } from 'react';
 import type { Photo } from './photos/types';
 import { EnterprisePhotoUpload } from '@/components/ui/EnterprisePhotoUpload';
-import { PhotoGrid } from './photos/PhotoGrid';
+// ✅ ENTERPRISE FIX: Using centralized PhotosPreview instead of duplicate PhotoGrid
+import { PhotosPreview } from '@/components/generic/utils/PhotosPreview';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import type { FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 
 const initialPhotos: Photo[] = [
@@ -24,6 +26,7 @@ const initialPhotos: Photo[] = [
 ];
 
 export function PhotosTab() {
+  const { quick } = useBorderTokens();
   const [photos, setPhotos] = useState<Photo[]>(initialPhotos);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
@@ -86,7 +89,18 @@ export function PhotosTab() {
           showProgress={true}
         />
       </div>
-      <PhotoGrid photos={photos} />
+      {/* ✅ ENTERPRISE FIX: Simple photo grid using centralized border tokens */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {photos.map((photo) => (
+          <div key={photo.id} className={`aspect-square bg-muted ${quick.card} overflow-hidden`}>
+            <img
+              src={photo.src}
+              alt={photo.alt}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

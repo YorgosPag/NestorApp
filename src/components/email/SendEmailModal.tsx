@@ -1,6 +1,7 @@
 "use client";
 import { Mail, Send, X } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSendEmailModal } from "./hooks/useSendEmailModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +10,7 @@ import { HOVER_TEXT_EFFECTS, HOVER_BORDER_EFFECTS, TRANSITION_PRESETS } from "@/
 
 export default function SendEmailModal({ lead, isOpen, onClose, onEmailSent }: any) {
   const iconSizes = useIconSizes();
+  const { quick, radius, getStatusBorder } = useBorderTokens();
   const {
     formData, templates, loading,
     handleTemplateChange, handleChange, handleSubmit
@@ -18,8 +20,8 @@ export default function SendEmailModal({ lead, isOpen, onClose, onEmailSent }: a
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-card rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-6 border-b">
+      <div className="bg-white dark:bg-card ${radius.lg} shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-6 ${getStatusBorder('muted')} border-b">
           <div className="flex items-center gap-3">
             <Mail className={`${iconSizes.lg} text-blue-600`} />
             <div>
@@ -41,8 +43,8 @@ export default function SendEmailModal({ lead, isOpen, onClose, onEmailSent }: a
                   key={template.id}
                   type="button"
                   onClick={() => handleTemplateChange(template.id)}
-                  className={`p-3 border rounded-lg text-left ${TRANSITION_PRESETS.STANDARD_COLORS} ${
-                    formData.templateType === template.id ? 'border-blue-500 bg-blue-50' : `border-gray-300 ${HOVER_BORDER_EFFECTS.GRAY_400}`
+                  className={`p-3 border ${radius.lg} text-left ${TRANSITION_PRESETS.STANDARD_COLORS} ${
+                    formData.templateType === template.id ? `${getStatusBorder('info')} bg-blue-50` : `${quick.card} ${HOVER_BORDER_EFFECTS.GRAY_400}`
                   }`}
                 >
                   <div className="flex items-center gap-2 mb-1">
@@ -81,7 +83,7 @@ export default function SendEmailModal({ lead, isOpen, onClose, onEmailSent }: a
             />
           </div>
 
-          <div className="flex gap-3 pt-4 border-t">
+          <div className="flex gap-3 pt-4 ${getStatusBorder('muted')} border-t">
             <Button
               type="submit"
               disabled={loading}

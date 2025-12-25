@@ -16,6 +16,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { errorTracker } from '@/services/ErrorTracker';
 import type { ErrorReport } from '@/services/ErrorTracker';
 import { HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
@@ -30,6 +31,7 @@ export function ErrorReportingDashboard({
   minimized = true
 }: ErrorReportingDashboardProps) {
   const iconSizes = useIconSizes();
+  const { quick, radius, getStatusBorder } = useBorderTokens();
   const [isMinimized, setIsMinimized] = useState(minimized);
   const [stats, setStats] = useState(errorTracker.getStats());
   const [errors, setErrors] = useState<ErrorReport[]>([]);
@@ -88,11 +90,11 @@ export function ErrorReportingDashboard({
       {/* Minimized View */}
       {isMinimized && (
         <div
-          className={`bg-gray-900 text-white rounded-lg p-3 cursor-pointer shadow-lg border border-gray-700 ${HOVER_BACKGROUND_EFFECTS.GRAY_800} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+          className={`bg-gray-900 text-white ${radius.lg} p-3 cursor-pointer shadow-lg ${quick.card} ${HOVER_BACKGROUND_EFFECTS.GRAY_800} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
           onClick={() => setIsMinimized(false)}
         >
           <div className="flex items-center space-x-2">
-            <div className={`${iconSizes.xs} bg-green-500 rounded-full animate-pulse`}></div>
+            <div className={`${iconSizes.xs} bg-green-500 ${radius.full} animate-pulse`}></div>
             <span className="text-sm font-mono">
               🛡️ Errors: {stats.totalErrors}
             </span>
@@ -113,17 +115,17 @@ export function ErrorReportingDashboard({
 
       {/* Expanded View */}
       {!isMinimized && (
-        <div className="bg-gray-900 text-white rounded-lg shadow-2xl border border-gray-700 w-96 max-h-[80vh] flex flex-col">
+        <div className="bg-gray-900 text-white ${radius.lg} shadow-2xl ${quick.card} w-96 max-h-[80vh] flex flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-700">
+          <div className="flex items-center justify-between p-4 border-b ${getStatusBorder('muted')}">
             <div className="flex items-center space-x-2">
-              <div className={`${iconSizes.xs} bg-green-500 rounded-full animate-pulse`}></div>
+              <div className={`${iconSizes.xs} bg-green-500 ${radius.full} animate-pulse`}></div>
               <h3 className="font-semibold">🛡️ Error Tracking</h3>
             </div>
             <div className="flex items-center space-x-2">
               <button
                 onClick={clearAllErrors}
-                className={`text-xs bg-red-600 px-2 py-1 rounded ${HOVER_BACKGROUND_EFFECTS.RED_DARKER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+                className={`text-xs bg-red-600 px-2 py-1 ${radius.md} ${HOVER_BACKGROUND_EFFECTS.RED_DARKER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
                 title="Clear All Errors"
               >
                 Clear
@@ -138,7 +140,7 @@ export function ErrorReportingDashboard({
           </div>
 
           {/* Stats */}
-          <div className="p-4 border-b border-gray-700">
+          <div className="p-4 border-b ${getStatusBorder('muted')}">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <div className="text-gray-400">Session</div>
@@ -171,13 +173,13 @@ export function ErrorReportingDashboard({
           </div>
 
           {/* Search Filter */}
-          <div className="p-3 border-b border-gray-700">
+          <div className="p-3 border-b ${getStatusBorder('muted')}">
             <input
               type="text"
               placeholder="Filter errors..."
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-1 text-sm focus:outline-none focus:border-blue-500"
+              className={`w-full bg-gray-800 ${quick.input} ${radius.md} px-3 py-1 text-sm focus:outline-none focus:${getStatusBorder('info')}`}
             />
           </div>
 
@@ -205,7 +207,7 @@ export function ErrorReportingDashboard({
                             {error.category}
                           </span>
                           {error.count > 1 && (
-                            <span className="text-xs bg-gray-700 px-1 rounded">
+                            <span className="text-xs bg-gray-700 px-1 ${radius.md}">
                               {error.count}x
                             </span>
                           )}
@@ -229,8 +231,8 @@ export function ErrorReportingDashboard({
       {/* Error Detail Modal */}
       {selectedError && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[10000] p-4">
-          <div className="bg-gray-900 text-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-4 border-b border-gray-700">
+          <div className="bg-gray-900 text-white ${radius.lg} max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-4 border-b ${getStatusBorder('muted')}">
               <h3 className="font-semibold">Error Details</h3>
               <button
                 onClick={() => setSelectedError(null)}
@@ -244,7 +246,7 @@ export function ErrorReportingDashboard({
               {/* Error Summary */}
               <div>
                 <h4 className="font-medium mb-2">Summary</h4>
-                <div className="bg-gray-800 p-3 rounded text-sm">
+                <div className="bg-gray-800 p-3 ${radius.md} text-sm">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <div className="text-gray-400">Error ID</div>
@@ -271,7 +273,7 @@ export function ErrorReportingDashboard({
               {/* Error Message */}
               <div>
                 <h4 className="font-medium mb-2">Message</h4>
-                <div className="bg-gray-800 p-3 rounded text-sm">
+                <div className="bg-gray-800 p-3 ${radius.md} text-sm">
                   {selectedError.message}
                 </div>
               </div>
@@ -279,7 +281,7 @@ export function ErrorReportingDashboard({
               {/* Context */}
               <div>
                 <h4 className="font-medium mb-2">Context</h4>
-                <div className="bg-gray-800 p-3 rounded text-sm">
+                <div className="bg-gray-800 p-3 ${radius.md} text-sm">
                   <pre className="whitespace-pre-wrap">
                     {JSON.stringify(selectedError.context, null, 2)}
                   </pre>
@@ -290,7 +292,7 @@ export function ErrorReportingDashboard({
               {selectedError.stack && (
                 <div>
                   <h4 className="font-medium mb-2">Stack Trace</h4>
-                  <div className="bg-gray-800 p-3 rounded text-xs overflow-x-auto">
+                  <div className="bg-gray-800 p-3 ${radius.md} text-xs overflow-x-auto">
                     <pre className="whitespace-pre-wrap">
                       {selectedError.stack}
                     </pre>

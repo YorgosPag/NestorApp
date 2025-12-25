@@ -10,6 +10,7 @@ import { UnifiedBadge } from '../../../core/badges/UnifiedBadgeSystem';
 import { NavigationStatus } from '../../../core/types/BadgeTypes';
 import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS, HOVER_BORDER_EFFECTS } from '../../ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface NavigationButtonProps {
   onClick: () => void;
@@ -42,23 +43,24 @@ export function NavigationButton({
   warningText
 }: NavigationButtonProps) {
   const iconSizes = useIconSizes();
-  const baseClasses = `w-full text-left rounded-lg border ${TRANSITION_PRESETS.STANDARD_COLORS} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`;
+  const { quick, getStatusBorder } = useBorderTokens();
+  const baseClasses = `w-full text-left ${quick.button} ${TRANSITION_PRESETS.STANDARD_COLORS} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`;
 
   const variantClasses = {
-    default: "p-4 border-gray-200 dark:border-gray-600",
-    compact: "p-2 border-gray-200 dark:border-gray-600"
+    default: `p-4 ${quick.card}`,
+    compact: `p-2 ${quick.card}`
   };
 
   // Backward compatibility: χρήση hasWarning για badgeStatus
   const effectiveBadgeStatus = badgeStatus || (hasWarning ? 'no_projects' : undefined);
   const effectiveBadgeText = badgeText || warningText;
 
-  // Χρωματική διαφοροποίηση βάσει κατάστασης
+  // 🏢 ENTERPRISE: χρωματική διαφοροποίηση με centralized status borders
   const selectedClasses = isSelected
-    ? "border-blue-500 bg-blue-50 dark:bg-blue-900/30"
+    ? `${getStatusBorder('info')} bg-blue-50 dark:bg-blue-900/30`
     : effectiveBadgeStatus
-      ? `border-orange-300 bg-orange-50 dark:bg-orange-900/20 ${HOVER_BORDER_EFFECTS.ORANGE}`
-      : `border-gray-200 dark:border-gray-600 ${HOVER_BORDER_EFFECTS.GRAY}`;
+      ? `${getStatusBorder('warning')} bg-orange-50 dark:bg-orange-900/20 ${HOVER_BORDER_EFFECTS.ORANGE}`
+      : `${quick.card} ${HOVER_BORDER_EFFECTS.GRAY}`;
 
   const iconSize = variant === 'compact' ? iconSizes.sm : iconSizes.md;
   const spacing = variant === 'compact' ? 'space-x-2' : 'space-x-3';

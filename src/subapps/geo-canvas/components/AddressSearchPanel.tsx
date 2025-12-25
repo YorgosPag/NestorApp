@@ -279,7 +279,7 @@ export function AddressSearchPanel({
     <div
       key={`search-${index}`}
       onClick={() => handleLocationSelect(result)}
-      className={`flex items-center gap-3 p-3 ${quick.card} border-gray-200 cursor-pointer ${HOVER_BACKGROUND_EFFECTS.LIGHT}`}
+      className={`flex items-center gap-3 p-3 ${quick.card} cursor-pointer ${HOVER_BACKGROUND_EFFECTS.LIGHT}`}
     >
       <MapPin className={`${iconSizes.md} text-blue-600 flex-shrink-0`} />
       <div className="flex-1 min-w-0">
@@ -332,7 +332,7 @@ export function AddressSearchPanel({
     <div
       key={`boundary-${result.id}-${index}`}
       onClick={() => handleBoundarySelect(result)}
-      className={`flex items-center gap-3 p-3 ${quick.card} border-gray-200 cursor-pointer ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${HOVER_BORDER_EFFECTS.BLUE} transition-all`}
+      className={`flex items-center gap-3 p-3 ${quick.card} cursor-pointer ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${HOVER_BORDER_EFFECTS.BLUE} transition-all`}
     >
       <div className={`w-5 h-5 rounded flex-shrink-0 flex items-center justify-center text-xs font-medium ${
         result.adminLevel === 4 ? 'bg-purple-100 text-purple-600' :
@@ -378,7 +378,7 @@ export function AddressSearchPanel({
   // ============================================================================
 
   return (
-    <div className={`bg-white rounded-lg shadow-lg border border-gray-200 p-4 ${className}`}>
+    <div className={`bg-white rounded-lg shadow-lg ${quick.card} p-4 ${className}`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
@@ -396,7 +396,7 @@ export function AddressSearchPanel({
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200 mb-4">
+      <div className={`flex ${quick.separatorH} mb-4`}>
         <button
           onClick={() => setActiveTab('address')}
           className={`flex-1 py-2 px-1 text-sm font-medium border-b-2 transition-colors ${
@@ -433,7 +433,7 @@ export function AddressSearchPanel({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyPress={handleKeyPress}
-              className={`w-full px-3 py-2 ${quick.input} border-gray-300 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+              className={`w-full px-3 py-2 ${quick.input} text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
               disabled={isSearching || isLoadingBoundaries}
             />
             {(isSearching || isLoadingBoundaries) && (
@@ -526,7 +526,7 @@ export function AddressSearchPanel({
 
           {/* Suggestions */}
           {suggestions.length > 0 && (
-            <div className="mt-3 pt-3 border-t border-gray-100">
+            <div className={`mt-3 pt-3 ${quick.separatorH}`}>
               <h5 className="text-xs font-medium text-gray-600 mb-2">Προτάσεις:</h5>
               <div className="flex gap-1 flex-wrap">
                 {suggestions.map((suggestion, index) => (

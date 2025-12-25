@@ -42,11 +42,11 @@ export const SidebarSection = React.memo<SidebarSectionProps>(({
   currentZoom,
   activeTool,
 }) => {
-  const { quick } = useBorderTokens();
+  const { quick, getStatusBorder } = useBorderTokens();
 
   return (
     <div className="w-96 min-w-[384px] max-w-[384px] h-full flex-shrink-0 relative overflow-hidden pointer-events-auto">
-      <div className={`absolute inset-0 w-96 h-full overflow-hidden bg-gray-800 ${quick.card} shadow-xl border-gray-500`}>
+      <div className={`absolute inset-0 w-96 h-full overflow-hidden bg-gray-800 ${quick.card} shadow-xl ${getStatusBorder('default')}`}>
         {/* FLOATING PANEL CONTENT AREA */}
         <div className="absolute inset-x-0 top-0 bottom-[120px] overflow-hidden">
           <FloatingPanelContainer
@@ -60,7 +60,7 @@ export const SidebarSection = React.memo<SidebarSectionProps>(({
         </div>
 
         {/* STATUS BAR AT BOTTOM */}
-        <div className="absolute bottom-0 inset-x-0 space-y-2 rounded-b-lg bg-gray-800 border-t border-gray-500 p-4">
+        <div className={`absolute bottom-0 inset-x-0 space-y-2 rounded-b-lg bg-gray-800 ${quick.separatorH} p-4`}>
           {/* Scene Auto-Save Status */}
           <AutoSaveStatus />
 

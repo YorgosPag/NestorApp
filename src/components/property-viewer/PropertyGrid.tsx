@@ -7,38 +7,12 @@ import { PropertyBadge } from '@/core/badges';
 import { Home, Building, MapPin, Euro, Ruler } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { COMPLEX_HOVER_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import type { Property } from '@/types/property-viewer';
 import { formatFloorLabel, formatCurrency } from '@/lib/intl-utils';
 import { brandClasses } from '@/styles/design-tokens';
 
-const statusConfig = {
-  'for-sale': {
-    label: 'Προς Πώληση',
-    color: 'border-green-500 bg-green-50 dark:bg-green-950/20',
-    textColor: 'text-green-700 dark:text-green-300'
-  },
-  'for-rent': {
-    label: 'Προς Ενοικίαση',
-    color: `${brandClasses.primary.border} ${brandClasses.primary.bg} dark:bg-blue-950/20`,
-    textColor: brandClasses.primary.text
-  },
-  'sold': {
-    label: 'Πουλημένο',
-    color: 'border-red-500 bg-red-50 dark:bg-red-950/20',
-    textColor: 'text-red-700 dark:text-red-300'
-  },
-  'rented': {
-    label: 'Ενοικιασμένο',
-    color: 'border-orange-500 bg-orange-50 dark:bg-orange-950/20',
-    textColor: 'text-orange-700 dark:text-orange-300'
-  },
-  'reserved': {
-    label: 'Δεσμευμένο',
-    color: 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20',
-    textColor: 'text-yellow-700 dark:text-yellow-300'
-  },
-};
 
 const propertyTypeIcons: { [key: string]: React.ElementType } = {
   'Στούντιο': Home,
@@ -52,7 +26,38 @@ const propertyTypeIcons: { [key: string]: React.ElementType } = {
 
 function PropertyCard({ property, onSelect, isSelected }: { property: Property, onSelect: () => void, isSelected: boolean }) {
   const iconSizes = useIconSizes();
-  const statusInfo = statusConfig[property.status as keyof typeof statusConfig] || { color: 'border-gray-500', label: 'Άγνωστο', textColor: 'text-gray-700' };
+  const { quick, getStatusBorder } = useBorderTokens();
+
+  // 🎨 ENTERPRISE BORDER TOKENS - Centralized status configuration
+  const statusConfig = {
+    'for-sale': {
+      label: 'Προς Πώληση',
+      color: `${getStatusBorder('success')} bg-green-50 dark:bg-green-950/20`,
+      textColor: 'text-green-700 dark:text-green-300'
+    },
+    'for-rent': {
+      label: 'Προς Ενοικίαση',
+      color: `${brandClasses.primary.border} ${brandClasses.primary.bg} dark:bg-blue-950/20`,
+      textColor: brandClasses.primary.text
+    },
+    'sold': {
+      label: 'Πουλημένο',
+      color: `${getStatusBorder('error')} bg-red-50 dark:bg-red-950/20`,
+      textColor: 'text-red-700 dark:text-red-300'
+    },
+    'rented': {
+      label: 'Ενοικιασμένο',
+      color: `${getStatusBorder('warning')} bg-orange-50 dark:bg-orange-950/20`,
+      textColor: 'text-orange-700 dark:text-orange-300'
+    },
+    'reserved': {
+      label: 'Δεσμευμένο',
+      color: `${getStatusBorder('warning')} bg-yellow-50 dark:bg-yellow-950/20`,
+      textColor: 'text-yellow-700 dark:text-yellow-300'
+    },
+  };
+
+  const statusInfo = statusConfig[property.status as keyof typeof statusConfig] || { color: `border-border`, label: 'Άγνωστο', textColor: 'text-gray-700' };
   const IconComponent = propertyTypeIcons[property.type] || Home;
 
   return (

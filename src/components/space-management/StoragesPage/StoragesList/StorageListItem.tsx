@@ -4,6 +4,7 @@ import React from 'react';
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import type { Storage } from '@/types/storage/contracts';
 
 import { StorageListItemHeader } from './ListItem/StorageListItemHeader';
@@ -26,15 +27,16 @@ export function StorageListItem({
     onSelect,
     onToggleFavorite
 }: StorageListItemProps) {
+    const { quick } = useBorderTokens();
 
     return (
         <TooltipProvider>
             <div
                 className={cn(
-                    "relative p-3 rounded-lg border cursor-pointer group",
+                    `relative p-3 ${quick.card} border cursor-pointer group`,
                     INTERACTIVE_PATTERNS.CARD_STANDARD,
                     isSelected
-                    ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20 shadow-sm"
+                    ? `${borderTokens.getStatusBorder('info')} bg-blue-50 dark:bg-blue-950/20 shadow-sm`
                     : cn("border-border bg-card", INTERACTIVE_PATTERNS.BORDER_BLUE, INTERACTIVE_PATTERNS.ACCENT_HOVER_SUBTLE)
                 )}
                 onClick={onSelect}

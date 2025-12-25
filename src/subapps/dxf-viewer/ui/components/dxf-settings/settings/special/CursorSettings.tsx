@@ -20,7 +20,7 @@ type LineStyle = 'solid' | 'dashed' | 'dotted' | 'dash-dot';
 
 export function CursorSettings() {
   const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
+  const { quick, getStatusBorder, radius } = useBorderTokens();
   // Αφαιρείται το tab state - όλες οι ρυθμίσεις θα εμφανίζονται μαζί
 
   // 🔺 REAL CURSOR SYSTEM INTEGRATION - Αντικατάσταση mock state
@@ -75,7 +75,7 @@ export function CursorSettings() {
 
       {/* CURSOR SETTINGS SECTION */}
       <div className="space-y-4">
-        <div className="text-lg font-medium text-white border-b border-gray-600 pb-2">
+        <div className={`text-lg font-medium text-white border-b ${getStatusBorder('muted')} pb-2`}>
           Ρυθμίσεις Κέρσορα
         </div>
         <div className="space-y-4">
@@ -90,12 +90,12 @@ export function CursorSettings() {
                 onClick={() => handleCursorShapeChange('circle')}
                 className={`p-2 ${quick.button} text-xs transition-colors ${
                   settings.cursor.shape === 'circle'
-                    ? 'bg-blue-600 border-blue-500'
-                    : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
+                    ? `bg-blue-600 ${getStatusBorder('info')}`
+                    : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
                 }`}
               >
                 <div
-                  className={`${iconSizes.sm} mx-auto rounded-full border-2`}
+                  className={`${iconSizes.sm} mx-auto ${radius.full} border-2`}
                   style={getCursorPreviewBorderStyles(settings.cursor.color)}
                 ></div>
                 <span className="block mt-1">Κύκλος</span>
@@ -104,8 +104,8 @@ export function CursorSettings() {
                 onClick={() => handleCursorShapeChange('square')}
                 className={`p-2 ${quick.button} text-xs transition-colors ${
                   settings.cursor.shape === 'square'
-                    ? 'bg-blue-600 border-blue-500'
-                    : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
+                    ? `bg-blue-600 ${getStatusBorder('info')}`
+                    : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
                 }`}
               >
                 <div
@@ -145,8 +145,8 @@ export function CursorSettings() {
                 onClick={() => handleCursorLineStyleChange('solid')}
                 className={`p-2 ${quick.button} text-xs transition-colors ${
                   settings.cursor.line_style === 'solid'
-                    ? 'bg-blue-600 border-blue-500'
-                    : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
+                    ? `bg-blue-600 ${getStatusBorder('info')}`
+                    : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
                 }`}
               >
                 <div
@@ -159,8 +159,8 @@ export function CursorSettings() {
                 onClick={() => handleCursorLineStyleChange('dashed')}
                 className={`p-2 ${quick.button} text-xs transition-colors ${
                   settings.cursor.line_style === 'dashed'
-                    ? 'bg-blue-600 border-blue-500'
-                    : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
+                    ? `bg-blue-600 ${getStatusBorder('info')}`
+                    : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
                 }`}
               >
                 <div
@@ -175,8 +175,8 @@ export function CursorSettings() {
                 onClick={() => handleCursorLineStyleChange('dotted')}
                 className={`p-2 ${quick.button} text-xs transition-colors ${
                   settings.cursor.line_style === 'dotted'
-                    ? 'bg-blue-600 border-blue-500'
-                    : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
+                    ? `bg-blue-600 ${getStatusBorder('info')}`
+                    : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
                 }`}
               >
                 <div
@@ -189,8 +189,8 @@ export function CursorSettings() {
                 onClick={() => handleCursorLineStyleChange('dash-dot')}
                 className={`p-2 ${quick.button} text-xs transition-colors ${
                   settings.cursor.line_style === 'dash-dot'
-                    ? 'bg-blue-600 border-blue-500'
-                    : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
+                    ? `bg-blue-600 ${getStatusBorder('info')}`
+                    : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
                 }`}
               >
                 <div
@@ -227,8 +227,8 @@ export function CursorSettings() {
                   onClick={() => handleCursorLineWidthChange(width)}
                   className={`flex-1 p-1 rounded text-xs transition-colors ${
                     (settings.cursor.line_width || 1) === width
-                      ? 'bg-blue-600 border border-blue-500'
-                      : `bg-gray-600 border border-gray-500 ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`
+                      ? `bg-blue-600 border ${getStatusBorder('info')}`
+                      : `bg-gray-600 border ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`
                   }`}
                 >
                   <div
@@ -266,8 +266,8 @@ export function CursorSettings() {
                   onClick={() => handleCursorSizeChange(size)}
                   className={`flex-1 p-2 ${quick.button} text-xs transition-colors ${
                     settings.cursor.size === size
-                      ? 'border-blue-500 bg-blue-600'
-                      : `border-gray-500 bg-gray-600 ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`
+                      ? `${getStatusBorder('info')} bg-blue-600`
+                      : `${getStatusBorder('default')} bg-gray-600 ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`
                   }`}
                 >
                   <div
@@ -311,8 +311,8 @@ export function CursorSettings() {
                 onClick={() => handleCursorEnabledChange(true)}
                 className={`flex-1 p-2 ${quick.button} text-xs transition-colors ${
                   settings.cursor.enabled
-                    ? 'bg-blue-600 border-blue-500'
-                    : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
+                    ? `bg-blue-600 ${getStatusBorder('info')}`
+                    : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
                 }`}
               >
                 Ενεργό
@@ -321,8 +321,8 @@ export function CursorSettings() {
                 onClick={() => handleCursorEnabledChange(false)}
                 className={`flex-1 p-2 ${quick.button} text-xs transition-colors ${
                   !settings.cursor.enabled
-                    ? 'bg-blue-600 border-blue-500'
-                    : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
+                    ? `bg-blue-600 ${getStatusBorder('info')}`
+                    : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
                 }`}
               >
                 Απενεργοποιημένο

@@ -14,6 +14,37 @@ import type {
 
 // 🏢 ENTERPRISE INTEGRATION: Import existing centralized notification service
 import { enterpriseNotificationService } from '@/services/notification/EnterpriseNotificationService';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
+
+// ============================================================================
+// ENTERPRISE CENTRALIZED COLOR SYSTEM
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: Get semantic colors for polygon system
+ * Centralized color management - ΜΟΝΗ ΠΗΓΗ ΑΛΗΘΕΙΑΣ
+ */
+export function getPolygonSemanticColors() {
+  // Note: This function should be called within React components that have access to hooks
+  // For static exports, we'll use fallback values and provide a runtime replacement
+  return {
+    danger: {
+      normal: { color: 'var(--color-destructive)', borderColor: 'var(--color-destructive-muted)' },
+      highlighted: { color: 'var(--color-success)', borderColor: 'var(--color-success-muted)' },
+      completed: { color: 'var(--color-success)', borderColor: 'var(--color-success-border)' }
+    },
+    warning: {
+      normal: { color: 'var(--color-warning)', borderColor: 'var(--color-warning-muted)' },
+      highlighted: { color: 'var(--color-success)', borderColor: 'var(--color-success-muted)' },
+      completed: { color: 'var(--color-success-dark)', borderColor: 'var(--color-success-border)' }
+    },
+    technical: {
+      normal: { color: 'var(--color-primary)', borderColor: 'var(--color-primary-muted)' },
+      highlighted: { color: 'var(--color-info)', borderColor: 'var(--color-info-muted)' },
+      completed: { color: 'var(--color-info-dark)', borderColor: 'var(--color-info-border)' }
+    }
+  };
+}
 
 // ============================================================================
 // ROLE-BASED CONFIGURATIONS
@@ -268,12 +299,49 @@ export function validateConfig(config: RoleBasedConfig): boolean {
 }
 
 /**
+ * 🏢 ENTERPRISE: Get configuration with centralized colors
+ * ΜΟΝΗ ΠΗΓΗ ΑΛΗΘΕΙΑΣ για polygon colors
+ *
+ * Usage: Use this instead of static exports for runtime color updates
+ */
+export function getEnterprisePolygonConfig(role: UserRole): RoleBasedConfig {
+  const semanticColors = getPolygonSemanticColors();
+  const baseConfig = getRoleConfig(role);
+
+  // Replace hardcoded colors with semantic colors
+  return {
+    ...baseConfig,
+    visualFeedback: {
+      ...baseConfig.visualFeedback,
+      controlPoints: {
+        normal: {
+          ...baseConfig.visualFeedback.controlPoints.normal,
+          color: semanticColors[role === 'citizen' ? 'danger' : role === 'professional' ? 'warning' : 'technical'].normal.color,
+          borderColor: semanticColors[role === 'citizen' ? 'danger' : role === 'professional' ? 'warning' : 'technical'].normal.borderColor
+        },
+        highlighted: {
+          ...baseConfig.visualFeedback.controlPoints.highlighted,
+          color: semanticColors[role === 'citizen' ? 'danger' : role === 'professional' ? 'warning' : 'technical'].highlighted.color,
+          borderColor: semanticColors[role === 'citizen' ? 'danger' : role === 'professional' ? 'warning' : 'technical'].highlighted.borderColor
+        },
+        completed: {
+          ...baseConfig.visualFeedback.controlPoints.completed,
+          color: semanticColors[role === 'citizen' ? 'danger' : role === 'professional' ? 'warning' : 'technical'].completed.color,
+          borderColor: semanticColors[role === 'citizen' ? 'danger' : role === 'professional' ? 'warning' : 'technical'].completed.borderColor
+        }
+      }
+    }
+  };
+}
+
+/**
  * Default polygon system configuration
  */
 export const polygonSystemConfig = {
   getRoleConfig,
   createCustomConfig,
   validateConfig,
+  getEnterprisePolygonConfig, // 🏢 ENTERPRISE: New centralized function
   roles: {
     citizen: CITIZEN_CONFIG,
     professional: PROFESSIONAL_CONFIG,

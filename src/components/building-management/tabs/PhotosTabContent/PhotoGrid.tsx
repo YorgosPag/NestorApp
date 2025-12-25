@@ -1,3 +1,9 @@
+// ⚠️ ENTERPRISE CENTRALIZATION - DUPLICATE REMOVED
+// 🏢 This PhotoGrid bypasses existing centralized photo-config system
+// 📍 Backup saved at: C:\Nestor_Pagonis\BACKUP_PhotoGrid_BuildingManagement.tsx
+// 🎯 Migrating to: PhotosPreview from @/components/generic/utils/PhotosPreview
+
+/*
 'use client';
 
 import React from 'react';
@@ -36,4 +42,10 @@ export function PhotoGrid({ photos }: PhotoGridProps) {
       ))}
     </div>
   );
+}
+*/
+
+// 🚧 TEMPORARY ERROR TO FORCE MIGRATION
+export function PhotoGrid() {
+  throw new Error('PhotoGrid duplicate disabled - migrate to enterprise PhotosPreview system');
 }

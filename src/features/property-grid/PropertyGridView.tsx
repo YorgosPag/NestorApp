@@ -7,6 +7,7 @@ import { usePublicPropertyViewer } from '@/hooks/usePublicPropertyViewer';
 import { PageHeader } from '@/core/headers';
 import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 import { usePropertyGridFilters } from './hooks/usePropertyGridFilters';
 import { PropertyCard } from './components/PropertyCard';
@@ -18,6 +19,7 @@ import { AdvancedFiltersPanel } from './components/AdvancedFiltersPanel';
 
 export function PropertyGridView() {
   const iconSizes = useIconSizes();
+  const { quick, radius } = useBorderTokens();
   const router = useRouter();
   const { properties, filters, setFilters } = usePublicPropertyViewer();
 
@@ -77,8 +79,8 @@ export function PropertyGridView() {
               <button
                 key="advfilters"
                 onClick={() => setShowFilters(!showFilters)}
-                className={`px-4 py-2.5 border rounded-lg flex items-center gap-2 transition-colors h-9 ${
-                  showFilters ? 'bg-blue-50 dark:bg-blue-900/50 border-blue-300 text-blue-600' : `border-gray-200 dark:border-border ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
+                className={`px-4 py-2.5 border ${radius.lg} flex items-center gap-2 transition-colors h-9 ${
+                  showFilters ? 'bg-blue-50 dark:bg-blue-900/50 border-blue-300 text-blue-600' : `${quick.card} ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
                 }`}
               >
                 <SlidersHorizontal className={iconSizes.sm} />
@@ -92,7 +94,7 @@ export function PropertyGridView() {
               <button
                 key="floorplan"
                 onClick={handleViewAllFloorPlan}
-                className={`px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg transition-all flex items-center gap-2 font-medium h-8 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
+                className={`px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white ${radius.lg} transition-all flex items-center gap-2 font-medium h-8 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
               >
                 <MapPin className={iconSizes.sm} />
                 Προβολή σε Κάτοψη
@@ -149,7 +151,7 @@ export function PropertyGridView() {
           </p>
           <button
             onClick={handleViewAllFloorPlan}
-            className={`px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg transition-all font-medium inline-flex items-center gap-2 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
+            className={`px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white ${radius.lg} transition-all font-medium inline-flex items-center gap-2 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
           >
             <MapPin className={iconSizes.md} />
             Προβολή Κάτοψης Ορόφου

@@ -127,12 +127,18 @@ export function useBorderTokens() {
 
     /**
      * Get border class for status/semantic states
-     * @param status - The semantic status (success, warning, error, info)
+     * @param status - The semantic status (success, warning, error, info, muted, subtle)
      */
-    getStatusBorder: (status: 'default' | 'success' | 'warning' | 'error' | 'info'): string => {
-      // Handle default case
+    getStatusBorder: (status: 'default' | 'success' | 'warning' | 'error' | 'info' | 'muted' | 'subtle'): string => {
+      // Handle special cases
       if (status === 'default') {
         return 'border border-gray-600'; // Default border styling
+      }
+      if (status === 'muted') {
+        return 'border border-gray-500'; // Muted/subdued border
+      }
+      if (status === 'subtle') {
+        return 'border border-gray-400'; // Subtle border
       }
       return borderVariants.status[status]?.className || 'border border-gray-600';
     },
@@ -201,7 +207,13 @@ export function useBorderTokens() {
       focus: borderVariants.interactive.focus.className,
 
       /** Selected state border */
-      selected: borderVariants.interactive.selected.className
+      selected: borderVariants.interactive.selected.className,
+
+      /** Table border (for dropdown/table items) */
+      table: borderVariants.card.className,
+
+      /** Rounded border shortcut */
+      rounded: borderVariants.card.className
     }
   };
 }
@@ -210,13 +222,11 @@ export function useBorderTokens() {
  * 🎨 TYPE EXPORTS
  * Re-export types for external usage
  */
-export type {
-  BorderWidth,
-  BorderColor,
-  BorderRadius,
-  BorderStyle,
-  BorderVariant
-};
+export type BorderWidth = keyof typeof borderWidth;
+export type BorderColor = keyof typeof borderColors;
+export type BorderRadius = keyof typeof coreBorderRadius;
+export type BorderStyle = keyof typeof borderStyle;
+export type BorderVariant = keyof typeof borderVariants;
 
 /**
  * 🏢 ENTERPRISE INTEGRATION

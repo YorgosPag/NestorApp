@@ -46,7 +46,7 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
   // HOOKS
   // ============================================================================
 
-  const { quick } = useBorderTokens();
+  const { quick, getStatusBorder } = useBorderTokens();
 
   // Grid & Rulers context (connected to real system)
   const {
@@ -129,8 +129,8 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
             onClick={() => handleGridVisibilityChange(true)}
             className={`flex-1 p-2 ${quick.button} text-xs transition-colors ${
               gridSettings.visual.enabled
-                ? 'bg-blue-600 border-blue-500'
-                : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
+                ? `bg-blue-600 ${getStatusBorder('info')}`
+                : `bg-gray-600 \${INTERACTIVE_PATTERNS.PRIMARY_HOVER} \${getStatusBorder('default')}`
             }`}
           >
             Ενεργό
@@ -139,8 +139,8 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
             onClick={() => handleGridVisibilityChange(false)}
             className={`flex-1 p-2 ${quick.button} text-xs transition-colors ${
               !gridSettings.visual.enabled
-                ? 'bg-blue-600 border-blue-500'
-                : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
+                ? `bg-blue-600 ${getStatusBorder('info')}`
+                : `bg-gray-600 \${INTERACTIVE_PATTERNS.PRIMARY_HOVER} \${getStatusBorder('default')}`
             }`}
           >
             Ανενεργό
@@ -181,8 +181,8 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
             onClick={() => handleGridStyleChange('lines')}
             className={`flex-1 p-2 ${quick.button} text-xs transition-colors ${
               gridSettings.visual.style === 'lines'
-                ? 'bg-blue-600 border-blue-500'
-                : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
+                ? `bg-blue-600 ${getStatusBorder('info')}`
+                : `bg-gray-600 \${INTERACTIVE_PATTERNS.PRIMARY_HOVER} \${getStatusBorder('default')}`
             }`}
           >
             ─ Γραμμές
@@ -191,8 +191,8 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
             onClick={() => handleGridStyleChange('dots')}
             className={`flex-1 p-2 ${quick.button} text-xs transition-colors ${
               gridSettings.visual.style === 'dots'
-                ? 'bg-blue-600 border-blue-500'
-                : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
+                ? `bg-blue-600 ${getStatusBorder('info')}`
+                : `bg-gray-600 \${INTERACTIVE_PATTERNS.PRIMARY_HOVER} \${getStatusBorder('default')}`
             }`}
           >
             • Τελείες
@@ -201,8 +201,8 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
             onClick={() => handleGridStyleChange('crosses')}
             className={`flex-1 p-2 ${quick.button} text-xs transition-colors ${
               gridSettings.visual.style === 'crosses'
-                ? 'bg-blue-600 border-blue-500'
-                : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
+                ? `bg-blue-600 ${getStatusBorder('info')}`
+                : `bg-gray-600 \${INTERACTIVE_PATTERNS.PRIMARY_HOVER} \${getStatusBorder('default')}`
             }`}
           >
             + Σταυροί
@@ -211,7 +211,7 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
       </div>
 
       {/* Grid Lines Sub-tabs (Κύριες/Δευτερεύουσες) */}
-      <div className="border-t border-gray-600 pt-4">
+      <div className={`${quick.separatorH} pt-4`}>
         <TabNavigation
           tabs={gridLinesTabs}
           activeTab={activeGridLinesTab}

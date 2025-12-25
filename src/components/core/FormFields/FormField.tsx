@@ -161,7 +161,7 @@ export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>((
   ...props
 }, ref) => {
   const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
+  const { quick, getStatusBorder, radius } = useBorderTokens();
   const { t } = useTranslation('forms');
   const [showPassword, setShowPassword] = React.useState(false);
   
@@ -232,8 +232,8 @@ export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>((
       className: cn(
         sizeVariants[size],
         {
-          'border-red-500 focus:border-red-500 focus:ring-red-500': hasError,
-          'border-green-500 focus:border-green-500 focus:ring-green-500': isValid,
+          [`${getStatusBorder('error')} focus:border-red-500 focus:ring-red-500`]: hasError,
+          [`${getStatusBorder('success')} focus:border-green-500 focus:ring-green-500`]: isValid,
           'cursor-not-allowed opacity-50': disabled,
           'bg-muted': readOnly,
         },
@@ -319,7 +319,7 @@ export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>((
         return (
           <div className="relative flex">
             {unit && unitPosition === 'left' && (
-              <span className={`inline-flex items-center px-3 text-sm text-muted-foreground bg-muted ${quick.input} border-r-0 rounded-l-md`}>
+              <span className={`inline-flex items-center px-3 text-sm text-muted-foreground bg-muted ${quick.input} border-r-0 ${radius.md} rounded-r-none`}>
                 {unit}
               </span>
             )}
@@ -337,7 +337,7 @@ export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>((
               ref={ref as React.RefObject<HTMLInputElement>}
             />
             {unit && unitPosition === 'right' && (
-              <span className={`inline-flex items-center px-3 text-sm text-muted-foreground bg-muted ${quick.input} border-l-0 rounded-r-md`}>
+              <span className={`inline-flex items-center px-3 text-sm text-muted-foreground bg-muted ${quick.input} border-l-0 ${radius.md} rounded-l-none`}>
                 {unit}
               </span>
             )}
@@ -390,7 +390,7 @@ export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>((
         )}
         
         {loading && (
-          <div className={`${iconSizes.sm} animate-spin rounded-full ${quick.input} border-gray-300 border-t-blue-600`} />
+          <div className={`${iconSizes.sm} animate-spin ${radius.full} ${quick.input} border-border border-t-blue-600`} />
         )}
       </div>
     );

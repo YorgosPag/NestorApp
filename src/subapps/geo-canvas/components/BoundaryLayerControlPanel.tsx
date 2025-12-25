@@ -110,7 +110,7 @@ export function BoundaryLayerControlPanel({
   };
 
   const renderLayerItem = (layer: BoundaryLayer) => (
-    <div key={layer.id} className={`${quick.card} border-gray-200 p-3 bg-white`}>
+    <div key={layer.id} className={`${quick.card} p-3 bg-white`}>
       {/* Layer Header */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -188,7 +188,7 @@ export function BoundaryLayerControlPanel({
                   type="color"
                   value={layer.style.strokeColor}
                   onChange={(e) => handleStyleChange(layer.id, 'strokeColor', e.target.value)}
-                  className={`w-8 h-6 ${quick.input} border-gray-300`}
+                  className={`w-8 h-6 ${quick.input}`}
                 />
                 <span className="text-xs text-gray-500 font-mono">
                   {layer.style.strokeColor}
@@ -219,7 +219,7 @@ export function BoundaryLayerControlPanel({
                   type="color"
                   value={layer.style.fillColor}
                   onChange={(e) => handleStyleChange(layer.id, 'fillColor', e.target.value)}
-                  className={`w-8 h-6 ${quick.input} border-gray-300`}
+                  className={`w-8 h-6 ${quick.input}`}
                 />
                 <input
                   type="range"
@@ -246,9 +246,9 @@ export function BoundaryLayerControlPanel({
   // ============================================================================
 
   return (
-    <div className={`bg-white ${quick.card} shadow-lg border-gray-200 ${className}`}>
+    <div className={`bg-white ${quick.card} shadow-lg ${className}`}>
       {/* Header */}
-      <div className="p-4 border-b border-gray-200">
+      <div className={`p-4 ${quick.separatorH}`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Layers className={`${iconSizes.md} text-blue-600`} />
@@ -278,7 +278,7 @@ export function BoundaryLayerControlPanel({
           {/* Add New Boundary Button */}
           <button
             onClick={onAddNewBoundary}
-            className={`w-full mb-4 flex items-center justify-center gap-2 p-3 border-2 border-dashed border-gray-300 ${quick.card} text-gray-600 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} transition-colors`}
+            className={`w-full mb-4 flex items-center justify-center gap-2 p-3 border-2 border-dashed border-border ${quick.card} text-gray-600 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} transition-colors`}
           >
             <span className="text-lg">+</span>
             <span className="text-sm font-medium">Προσθήκη Boundary</span>
@@ -299,7 +299,7 @@ export function BoundaryLayerControlPanel({
 
           {/* Global Controls */}
           {layers.length > 1 && (
-            <div className="mt-4 pt-4 border-t border-gray-200">
+            <div className={`mt-4 pt-4 ${quick.separatorH}`}>
               <div className="flex gap-2">
                 <button
                   onClick={() => layers.forEach(layer => handleVisibilityToggle(layer.id, true))}

@@ -14,6 +14,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useRulersGridContext } from '../../../../../../systems/rulers-grid/RulersGridSystem';
 import { UnifiedColorPicker } from '../../../../../color';
@@ -43,6 +44,7 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
   // ============================================================================
 
   const iconSizes = useIconSizes();
+  const { quick, getStatusBorder, radius } = useBorderTokens();
   const {
     state: { rulers: rulerSettings },
     updateRulerSettings
@@ -94,34 +96,34 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Ruler Text Color */}
-      <div className="p-2 bg-gray-700 rounded space-y-2">
+      <div className={`p-2 bg-gray-700 ${radius.md} space-y-2`}>
         <div className="text-sm text-white">
           <div className="font-medium">Χρώμα Κειμένων</div>
           <div className="font-normal text-gray-400">Χρώμα αριθμών και κειμένων χαράκων</div>
         </div>
         <div className="flex items-center gap-2">
           <div
-            className={`${iconSizes.lg} rounded border border-gray-500`}
+            className={`${iconSizes.lg} ${radius.md} ${getStatusBorder('default')}`}
             style={{ backgroundColor: rulerSettings.horizontal.textColor }}
           />
           <input
             type="color"
             value={rulerSettings.horizontal.textColor}
             onChange={(e) => handleRulerTextColorChange(e.target.value)}
-            className={`${iconSizes.xl} rounded border-0 cursor-pointer w-8 h-6`}
+            className={`${iconSizes.xl} ${radius.md} border-0 cursor-pointer w-8 h-6`}
           />
           <input
             type="text"
             value={rulerSettings.horizontal.textColor}
             onChange={(e) => handleRulerTextColorChange(e.target.value)}
-            className="px-2 py-1 text-xs bg-gray-600 text-white rounded border border-gray-500 w-20"
+            className={`px-2 py-1 text-xs bg-gray-600 text-white ${radius.md} ${getStatusBorder('default')} w-20`}
             placeholder="#ffffff"
           />
         </div>
       </div>
 
       {/* Font Size */}
-      <div className="p-2 bg-gray-700 rounded space-y-2">
+      <div className={`p-2 bg-gray-700 ${radius.md} space-y-2`}>
         <div className="text-sm text-white">
           <div className="font-medium">Μέγεθος Κειμένου</div>
           <div className="font-normal text-gray-400">Μέγεθος των αριθμών στους χάρακες</div>
@@ -136,14 +138,14 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
             onChange={(e) => handleRulerFontSizeChange(parseInt(e.target.value))}
             className="flex-1"
           />
-          <div className="text-xs bg-gray-600 text-white rounded px-2 py-1 text-center w-12">
+          <div className={`text-xs bg-gray-600 text-white ${radius.md} px-2 py-1 text-center w-12`}>
             {rulerSettings.horizontal.fontSize}px
           </div>
         </div>
       </div>
 
       {/* Text Visibility Toggle */}
-      <div className="p-2 bg-gray-700 rounded space-y-2">
+      <div className={`p-2 bg-gray-700 ${radius.md} space-y-2`}>
         <div className="text-sm text-white">
           <div className="font-medium">Εμφάνιση Κειμένων</div>
           <div className="font-normal text-gray-400">Εμφάνιση/απόκρυψη αριθμών και κειμένων στους χάρακες</div>
@@ -151,20 +153,20 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
         <div className="flex gap-2">
           <button
             onClick={() => handleTextVisibilityChange(true)}
-            className={`flex-1 p-2 rounded text-xs border transition-colors ${
+            className={`flex-1 p-2 ${radius.md} text-xs border transition-colors ${
               textVisible
-                ? 'bg-blue-600 border-blue-500'
-                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500`
+                ? `bg-blue-600 ${getStatusBorder('info')}`
+                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
             }`}
           >
             Ενεργό
           </button>
           <button
             onClick={() => handleTextVisibilityChange(false)}
-            className={`flex-1 p-2 rounded text-xs border transition-colors ${
+            className={`flex-1 p-2 ${radius.md} text-xs border transition-colors ${
               !textVisible
-                ? 'bg-blue-600 border-blue-500'
-                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500`
+                ? `bg-blue-600 ${getStatusBorder('info')}`
+                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
             }`}
           >
             Ανενεργό

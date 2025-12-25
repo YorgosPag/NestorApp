@@ -75,7 +75,7 @@ export function AdminBoundaryDemo() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="π.χ. Δήμος Αθηναίων, Αττική, Θεσσαλονίκη..."
-            className={`flex-1 px-4 py-2 ${quick.input} border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+            className={`flex-1 px-4 py-2 ${quick.input} focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
             onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
           />
           <button
@@ -185,7 +185,7 @@ export function AdminBoundaryDemo() {
                   className={`p-3 ${quick.card} cursor-pointer transition-all ${
                     selectedResult?.id === result.id
                       ? 'border-blue-500 bg-blue-50'
-                      : `border-gray-200 ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
+                      : `border-border ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
                   }`}
                 >
                   <div className="flex items-center justify-between">

@@ -6,7 +6,10 @@
 // Single source of truth για όλα τα UI hover effects
 // Based on analysis από 374 αρχεία με διάσπαρτα hover patterns
 //
+// 🏢 ENTERPRISE: Integrated με centralized border token system
 // ============================================================================
+
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 /**
  * 🔄 CORE HOVER TRANSFORMATIONS
@@ -96,27 +99,47 @@ export const HOVER_COLOR_EFFECTS = {
 } as const;
 
 /**
- * 🎨 HOVER BORDER EFFECTS
- * Dynamic border colors για interactive elements
+ * 🏢 ENTERPRISE: Dynamic HOVER BORDER EFFECTS Factory
+ * Creates hover border patterns using centralized border tokens
  */
-export const HOVER_BORDER_EFFECTS = {
+export const createHoverBorderEffects = (borderTokens: ReturnType<typeof useBorderTokens>) => ({
   /** Primary blue border hover */
-  BLUE: 'hover:border-blue-500 dark:hover:border-blue-400',
+  BLUE: `hover:${borderTokens.getStatusBorder('info')}`,
 
   /** Purple accent border hover */
-  PURPLE: 'hover:border-purple-500 dark:hover:border-purple-400',
+  PURPLE: `hover:${borderTokens.getStatusBorder('info')}`,
 
   /** Success green border hover */
-  GREEN: 'hover:border-green-500 dark:hover:border-green-400',
+  GREEN: `hover:${borderTokens.getStatusBorder('success')}`,
 
   /** Warning orange border hover */
-  ORANGE: 'hover:border-orange-500 dark:hover:border-orange-400',
+  ORANGE: `hover:${borderTokens.getStatusBorder('warning')}`,
 
   /** Danger red border hover */
-  RED: 'hover:border-red-500 dark:hover:border-red-400',
+  RED: `hover:${borderTokens.getStatusBorder('error')}`,
 
   /** Neutral gray border hover */
-  GRAY: 'hover:border-gray-300 dark:hover:border-gray-600'
+  GRAY: 'hover:border-border'
+});
+
+/**
+ * 🔄 LEGACY: Static HOVER BORDER EFFECTS (Deprecated)
+ * @deprecated Use createHoverBorderEffects(borderTokens) instead
+ * Kept for backward compatibility - will be removed in v2.0
+ */
+export const HOVER_BORDER_EFFECTS = {
+  /** @deprecated */
+  BLUE: 'hover:border-blue-500 dark:hover:border-blue-400',
+  /** @deprecated */
+  PURPLE: 'hover:border-purple-500 dark:hover:border-purple-400',
+  /** @deprecated */
+  GREEN: 'hover:border-green-500 dark:hover:border-green-400',
+  /** @deprecated */
+  ORANGE: 'hover:border-orange-500 dark:hover:border-orange-400',
+  /** @deprecated */
+  RED: 'hover:border-red-500 dark:hover:border-red-400',
+  /** @deprecated */
+  GRAY: 'hover:border-border'
 } as const;
 
 /**
@@ -218,13 +241,13 @@ export const INTERACTIVE_PATTERNS = {
   // 🆕 MISSING PATTERNS - Added for Batch 3 Migration
   // ========================================================================
 
-  /** Success action hover (green theme) */
+  /** Success action hover (green theme) - MIGRATED TO FUNCTION */
   SUCCESS_HOVER: 'transition-all duration-200 hover:bg-green-50 hover:text-green-700 hover:border-green-300 dark:hover:bg-green-900/20 dark:hover:text-green-300',
 
-  /** Primary action hover (blue theme) */
+  /** Primary action hover (blue theme) - MIGRATED TO FUNCTION */
   PRIMARY_HOVER: 'transition-all duration-200 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 dark:hover:bg-blue-900/20 dark:hover:text-blue-300',
 
-  /** Destructive action hover (red theme) */
+  /** Destructive action hover (red theme) - MIGRATED TO FUNCTION */
   DESTRUCTIVE_HOVER: 'transition-all duration-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300 dark:hover:bg-red-900/20 dark:hover:text-red-300',
 
   /** Enhanced button με scale και shadow */
@@ -371,16 +394,16 @@ export const HOVER_BACKGROUND_EFFECTS = {
   FILE_INPUT: 'hover:file:bg-sky-500',
 
   /** DXF Toolbar button hover (dark background) */
-  TOOLBAR_DEFAULT: 'hover:bg-[#262626] hover:border-[#3a3a3a]',
+  TOOLBAR_DEFAULT: 'hover:bg-zinc-800 hover:border-zinc-600',
 
   /** DXF Toolbar primary button hover */
-  TOOLBAR_PRIMARY: 'hover:bg-[#364157] hover:border-[#4a5a7a]',
+  TOOLBAR_PRIMARY: 'hover:bg-slate-700 hover:border-slate-500',
 
   /** DXF Toolbar success button hover */
-  TOOLBAR_SUCCESS: 'hover:bg-[#255233] hover:border-[#36a555]',
+  TOOLBAR_SUCCESS: 'hover:bg-green-800 hover:border-green-600',
 
   /** DXF Toolbar danger button hover */
-  TOOLBAR_DANGER: 'hover:bg-[#352626] hover:border-[#6a3535]',
+  TOOLBAR_DANGER: 'hover:bg-red-800 hover:border-red-600',
 
   /** Success button hover (green) */
   SUCCESS_BUTTON: 'hover:bg-green-500'
@@ -509,6 +532,58 @@ export const createCustomHoverEffect = (
 
   return parts.join(' ');
 };
+
+// ============================================================================
+// 🏢 ENTERPRISE FACTORY FUNCTIONS
+// ============================================================================
+
+/**
+ * 🎯 Enterprise Interactive Patterns Factory
+ * Creates centralized hover patterns using border tokens
+ */
+export const createEnterpriseInteractivePatterns = (borderTokens: ReturnType<typeof useBorderTokens>) => ({
+  /** Success action hover (green theme) */
+  SUCCESS_HOVER: `transition-all duration-200 hover:bg-green-50 hover:text-green-700 hover:${borderTokens.getStatusBorder('success')} dark:hover:bg-green-900/20 dark:hover:text-green-300`,
+
+  /** Primary action hover (blue theme) */
+  PRIMARY_HOVER: `transition-all duration-200 hover:bg-blue-50 hover:text-blue-700 hover:${borderTokens.getStatusBorder('info')} dark:hover:bg-blue-900/20 dark:hover:text-blue-300`,
+
+  /** Destructive action hover (red theme) */
+  DESTRUCTIVE_HOVER: `transition-all duration-200 hover:bg-red-50 hover:text-red-700 hover:${borderTokens.getStatusBorder('error')} dark:hover:bg-red-900/20 dark:hover:text-red-300`,
+
+  /** Navigation item hover με centralized radius */
+  NAV_ITEM: `transition-all duration-200 hover:bg-accent hover:text-accent-foreground ${borderTokens.radius.md}`,
+
+  /** Dashboard stat card με centralized border */
+  STAT_CARD: `transition-all duration-200 ${CORE_HOVER_TRANSFORMS.SCALE_UP_TINY} ${HOVER_SHADOWS.SUBTLE} hover:${borderTokens.getStatusBorder('info')}/50`,
+
+  /** Notification hover με centralized border */
+  NOTIFICATION: `transition-all duration-200 hover:bg-accent hover:${borderTokens.getStatusBorder('muted')}/20`,
+});
+
+/**
+ * 🎯 Enterprise Complex Hover Effects Factory
+ * Creates advanced hover patterns με rounded corners
+ */
+export const createEnterpriseComplexEffects = (borderTokens: ReturnType<typeof useBorderTokens>) => ({
+  /** Primary button gradient με centralized radius */
+  PRIMARY_BUTTON: `bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold ${borderTokens.radius.lg} hover:from-blue-700 hover:to-purple-700`,
+
+  /** Success button gradient με centralized radius */
+  SUCCESS_BUTTON: `bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold ${borderTokens.radius.lg} hover:from-green-600 hover:to-emerald-700`,
+
+  /** Warning button gradient με centralized radius */
+  WARNING_BUTTON: `bg-gradient-to-r from-orange-500 to-red-600 text-white font-semibold ${borderTokens.radius.lg} hover:from-orange-600 hover:to-red-700`,
+
+  /** Neutral button gradient με centralized radius */
+  NEUTRAL_BUTTON: `bg-gradient-to-r from-gray-600 to-slate-700 text-white font-semibold ${borderTokens.radius.lg} hover:from-gray-700 hover:to-slate-800`,
+
+  /** Toolbar hover με centralized borders */
+  TOOLBAR_DEFAULT: `hover:bg-[#262626] hover:${borderTokens.getStatusBorder('muted')}`,
+  TOOLBAR_PRIMARY: `hover:bg-[#364157] hover:${borderTokens.getStatusBorder('info')}`,
+  TOOLBAR_SUCCESS: `hover:bg-[#255233] hover:${borderTokens.getStatusBorder('success')}`,
+  TOOLBAR_DANGER: `hover:bg-[#352626] hover:${borderTokens.getStatusBorder('error')}`,
+});
 
 /**
  * 🎨 Export everything για clean imports

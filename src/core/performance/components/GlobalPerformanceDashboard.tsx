@@ -42,6 +42,7 @@ import {
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useEnterprisePerformance } from '../hooks/useEnterprisePerformance';
 import {
   PerformanceCategory,
@@ -90,6 +91,7 @@ export const GlobalPerformanceDashboard: React.FC<GlobalPerformanceDashboardProp
   theme = 'auto'
 }) => {
   const iconSizes = useIconSizes();
+  const { quick, getStatusBorder, radius } = useBorderTokens();
   const [mounted, setMounted] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const [showOptimizations, setShowOptimizations] = useState(false);
@@ -169,7 +171,7 @@ export const GlobalPerformanceDashboard: React.FC<GlobalPerformanceDashboardProp
   // 📍 ENTERPRISE POSITIONING - Centralized Floating System
   const tokens = performanceComponents.performanceMonitor;
   const draggableClasses = FloatingStyleUtils?.getPerformanceDashboardClasses?.(isDragging) ??
-    `fixed z-[9999] max-w-[${tokens.dimensions.maxWidth}] min-w-[${tokens.dimensions.minWidth}] bg-card border border-border rounded-lg shadow-lg ${isDragging ? 'cursor-grabbing select-none' : 'cursor-auto'}`;
+    `fixed z-[9999] max-w-[${tokens.dimensions.maxWidth}] min-w-[${tokens.dimensions.minWidth}] bg-card ${getStatusBorder('default')} ${radius.md} shadow-lg ${isDragging ? 'cursor-grabbing select-none' : 'cursor-auto'}`;
 
   const draggableStyles = mounted ? {
     transform: `translate(${dragPosition.x}px, ${dragPosition.y}px)`,
@@ -189,7 +191,7 @@ export const GlobalPerformanceDashboard: React.FC<GlobalPerformanceDashboardProp
       <button
         onClick={() => setIsVisible(true)}
         className={FloatingStyleUtils?.getCornerButtonClasses?.('top-right') ??
-          'fixed top-4 right-4 z-[9999] p-2 bg-background border border-border rounded-lg shadow-lg hover:bg-accent transition-colors'}
+          `fixed top-4 right-4 z-[9999] p-2 bg-background ${getStatusBorder('default')} ${radius.md} shadow-lg hover:bg-accent transition-colors`}
         title="Show Performance Dashboard"
       >
         <Activity className={iconSizes.sm} />
@@ -229,7 +231,7 @@ export const GlobalPerformanceDashboard: React.FC<GlobalPerformanceDashboardProp
         <div className="flex items-center gap-1">
           <button
             onClick={() => setShowOptimizations(!showOptimizations)}
-            className="p-1 rounded transition-colors"
+            className={`p-1 ${radius.default} transition-colors`}
             style={performanceMonitorUtilities.getOverlayButtonStyles()}
             title="Toggle optimizations"
           >
@@ -237,7 +239,7 @@ export const GlobalPerformanceDashboard: React.FC<GlobalPerformanceDashboardProp
           </button>
           <button
             onClick={() => setIsVisible(false)}
-            className="p-1 rounded transition-colors"
+            className={`p-1 ${radius.default} transition-colors`}
             style={performanceMonitorUtilities.getOverlayButtonStyles()}
             title="Hide dashboard"
           >
@@ -414,9 +416,10 @@ const PerformanceAlerts: React.FC<{
   onClearAlerts: () => void;
 }> = ({ alerts, onClearAlerts }) => {
   const iconSizes = useIconSizes();
+  const { radius } = useBorderTokens();
   return (
     <div
-      className="rounded-lg border p-3"
+      className={`${radius.md} border p-3`}
       style={{
         backgroundColor: performanceComponents.performanceMonitor.colors.alerts.background,
         borderColor: performanceComponents.performanceMonitor.colors.alerts.border,
@@ -536,9 +539,10 @@ const OptimizationPanel: React.FC<{
   onApplyAll: () => Promise<void>;
 }> = ({ recommendations, onApplyOptimization, onApplyAll }) => {
   const iconSizes = useIconSizes();
+  const { quick, radius } = useBorderTokens();
   if (recommendations.length === 0) {
     return (
-      <div className="performance-success rounded border p-performance-sm">
+      <div className={`performance-success ${radius.default} border p-performance-sm`}>
         <div className="flex items-center gap-performance-sm">
           <CheckCircle className={iconSizes.sm} style={{ color: performanceComponents.performanceMonitor.colors.fps.excellent }} />
           <span className="text-performance-xs" style={{ color: performanceComponents.performanceMonitor.colors.fps.excellent }}>
@@ -550,7 +554,7 @@ const OptimizationPanel: React.FC<{
   }
 
   return (
-    <div className="rounded border bg-muted/30 border-border p-performance-sm">
+    <div className={`${radius.default} ${quick.input} bg-muted/30 p-performance-sm`}>
       <div className="text-performance-xs font-medium text-foreground mb-performance-sm">
         Optimization Recommendations:
       </div>
@@ -582,11 +586,12 @@ const OptimizationPanel: React.FC<{
  * 📈 Performance History Chart - Enterprise CSS Classes
  */
 const PerformanceChart: React.FC<{ history: any[] }> = ({ history }) => {
+  const { radius } = useBorderTokens();
   const maxFPS = Math.max(...history.map(m => m.fps || 60), 60);
   const chartData = history.slice(-20); // Last 20 measurements
 
   return (
-    <div className="rounded bg-muted/30 p-performance-sm">
+    <div className={`${radius.default} bg-muted/30 p-performance-sm`}>
       <div className="text-performance-xs font-medium text-foreground mb-performance-sm">
         FPS History (Last 20s)
       </div>

@@ -147,7 +147,7 @@ Check console for detailed metrics`;
   }, [showCopyableNotification]);
 
   return (
-    <div className={`flex gap-2 p-2 bg-gray-800 ${quick.card} border-gray-700`}>
+    <div className={`flex gap-2 p-2 bg-gray-800 ${quick.card}`}>
       {/* Run All Tests Button */}
       <button
         onClick={async () => {

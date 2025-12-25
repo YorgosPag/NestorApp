@@ -55,7 +55,7 @@ export function EnterpriseColorDialog({
 }: EnterpriseColorDialogProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const [tempValue, setTempValue] = React.useState(value);
-  const { quick } = useBorderTokens();
+  const { quick, getStatusBorder, radius } = useBorderTokens();
 
   // Update temp value when external value changes
   React.useEffect(() => {
@@ -112,10 +112,10 @@ export function EnterpriseColorDialog({
               {...overlayProps}
               {...dialogProps}
               ref={overlayRef}
-              className={`relative z-[9999] bg-gray-900 border-2 border-gray-600 ${quick.card} shadow-2xl max-h-[90vh] overflow-y-auto max-w-[400px]`}
+              className={`relative z-[9999] bg-gray-900 border-2 ${getStatusBorder('default')} ${quick.card} shadow-2xl max-h-[90vh] overflow-y-auto max-w-[400px]`}
             >
               {/* Header */}
-              <div className="flex items-center justify-between p-4 border-b border-gray-700">
+              <div className={`flex items-center justify-between p-4 border-b ${getStatusBorder('muted')}`}>
                 <h2
                   {...titleProps}
                   className="text-lg font-medium text-white"
@@ -157,7 +157,7 @@ export function EnterpriseColorDialog({
 
               {/* Footer */}
               {showFooter && (
-                <div className="flex gap-2 p-4 border-t border-gray-700">
+                <div className={`flex gap-2 p-4 border-t ${getStatusBorder('muted')}`}>
                   <button
                     onClick={handleCancel}
                     className={`flex-1 px-4 py-2 bg-gray-800 ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} text-white rounded transition-colors`}
@@ -202,12 +202,12 @@ export function ColorDialogTrigger({
         disabled={disabled}
         className={`
           flex items-center gap-3 px-4 py-2 bg-gray-800 ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER}
-${quick.button} border-gray-600 transition-colors
+${quick.button} ${getStatusBorder('default')} transition-colors
           disabled:opacity-50 disabled:cursor-not-allowed
         `}
       >
         <div
-          className={`w-6 h-6 rounded border-2 border-gray-600 ${useDynamicBackgroundClass(value)}`}
+          className={`w-6 h-6 ${radius.md} border-2 ${getStatusBorder('default')} ${useDynamicBackgroundClass(value)}`}
         />
         <span className="text-sm text-gray-300">{label}</span>
       </button>

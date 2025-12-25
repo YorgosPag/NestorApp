@@ -660,7 +660,7 @@ export function DesktopMultiColumn({
               )}
 
               {/* Parking & Storage */}
-              <li className="pt-3 border-t border-gray-200 dark:border-gray-700">
+              <li className={`pt-3 ${quick.separatorH}`}>
                 <section>
                   <h4 className="text-xs font-medium text-gray-500 dark:text-muted-foreground mb-2 uppercase tracking-wide">
                     Παρκινγκ & Αποθήκες

@@ -8,6 +8,7 @@ import type { ProjectStats as StatsType } from '@/types/project';
 import { getProjectStats } from '@/services/projects.service';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface ProjectStatsProps {
   projectId: number;
@@ -15,11 +16,12 @@ interface ProjectStatsProps {
 
 const StatCard = ({ icon: Icon, value, label, loading, colorClass }: { icon: React.ElementType, value: string | number, label: string, loading: boolean, colorClass: string }) => {
     const iconSizes = useIconSizes();
+    const { quick } = useBorderTokens();
 
     return (
     <Card className={cn("p-4", colorClass)}>
         <div className="flex items-center gap-4">
-            <div className="p-3 rounded-lg bg-white/20">
+            <div className={`p-3 ${quick.card} bg-white/20`}>
                <Icon className={iconSizes.md} />
             </div>
             <div>

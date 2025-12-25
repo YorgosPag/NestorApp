@@ -5,6 +5,7 @@ import { db } from '@/lib/firebase';
 import { collection, query, where, orderBy, onSnapshot, limit } from 'firebase/firestore';
 import { Bell, MessageCircle, User, Clock } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
@@ -19,6 +20,7 @@ interface TelegramMessage {
 
 export function TelegramNotifications() {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const [newMessages, setNewMessages] = useState<TelegramMessage[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -103,8 +105,8 @@ export function TelegramNotifications() {
 
       {/* Notifications Panel */}
       {showNotifications && (
-        <div className="absolute right-0 top-12 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
-          <div className="p-4 border-b border-gray-200">
+        <div className={`absolute right-0 top-12 w-80 bg-white rounded-lg shadow-lg ${quick.card} z-50`}>
+          <div className={`p-4 ${quick.borderB}`}>
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-gray-900 flex items-center">
                 <MessageCircle className={`${iconSizes.sm} mr-2`} />
@@ -130,7 +132,7 @@ export function TelegramNotifications() {
               newMessages.map((message) => (
                 <div 
                   key={message.id}
-                  className={`p-3 border-b border-gray-100 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} cursor-pointer transition-colors ${
+                  className={`p-3 ${quick.borderB} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} cursor-pointer transition-colors ${
                     message.status === 'received' ? 'bg-blue-50' : ''
                   }`}
                 >
@@ -163,7 +165,7 @@ export function TelegramNotifications() {
             )}
           </div>
 
-          <div className="p-3 border-t border-gray-200">
+          <div className={`p-3 ${quick.borderT}`}>
             <a 
               href="/crm/communications"
               className={`block w-full text-center text-sm text-blue-600 ${HOVER_TEXT_EFFECTS.BLUE_DARK} font-medium`}

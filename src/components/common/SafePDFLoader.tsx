@@ -134,7 +134,7 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
   if (!file) {
     return (
       <div
-        className={`flex items-center justify-center bg-gray-100 border-2 border-dashed border-gray-300 ${className}`}
+        className={`flex items-center justify-center bg-gray-100 border-2 border-dashed border-border ${className}`}
         style={canvasUtilities.geoInteractive.pdfFallbackContainer(width, height)}
       >
         <div className="text-center text-gray-500">

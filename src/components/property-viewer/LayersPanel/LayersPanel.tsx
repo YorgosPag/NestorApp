@@ -48,6 +48,7 @@ export function LayersPanel({
   className
 }: LayersPanelProps) {
   const iconSizes = useIconSizes();
+  const { quick, getStatusBorder } = useBorderTokens();
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
 
   const updateLayer = (layerId: string, updates: Partial<Layer>) => {
@@ -71,8 +72,8 @@ export function LayersPanel({
     return (
       <div
         className={cn(
-          `flex items-center gap-2 p-2 ${useBorderTokens().quick.input} cursor-pointer ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`,
-          selectedLayerId === layer.id && "bg-blue-50 border border-blue-200"
+          `flex items-center gap-2 p-2 ${quick.input} cursor-pointer ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`,
+          selectedLayerId === layer.id && `bg-blue-50 border ${getStatusBorder('info')}`
         )}
         onClick={() => setSelectedLayerId(layer.id)}
       >
@@ -95,7 +96,7 @@ export function LayersPanel({
 
       {/* Color Indicator */}
       <div
-        className={`${iconSizes.sm} ${useBorderTokens().quick.input} border border-gray-300 ${layerBgClass}`}
+        className={`${iconSizes.sm} ${quick.input} ${layerBgClass}`}
       />
 
       {/* Layer Name */}
@@ -115,7 +116,7 @@ export function LayersPanel({
   };
 
   return (
-    <div className={cn(`bg-white ${useBorderTokens().quick.card} p-3`, className)}>
+    <div className={cn(`bg-white ${quick.card} p-3`, className)}>
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-medium">Layers</h3>
         <div className="flex items-center gap-1">
@@ -135,7 +136,7 @@ export function LayersPanel({
       </div>
 
       {selectedLayerId && (
-        <div className="mt-3 pt-3 border-t border-gray-200">
+        <div className={`mt-3 pt-3 ${quick.borderT}`}>
           <div className="text-xs text-gray-600 mb-2">Layer Controls</div>
           <div className="flex items-center gap-1">
             <Button variant="outline" size="sm" className={`${iconSizes.lg} text-xs`}>

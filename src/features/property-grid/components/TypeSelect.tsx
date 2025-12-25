@@ -7,6 +7,7 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { TYPE_OPTIONS } from '../constants';
 
 // ============================================================================
@@ -32,9 +33,11 @@ export function TypeSelect({
   selected: string | undefined;
   onChange: (v: string) => void;
 }) {
+  const { quick, radius } = useBorderTokens();
+
   return (
     <Select value={selected || 'all'} onValueChange={onChange}>
-      <SelectTrigger className="px-4 py-2.5 border border-gray-200 dark:border-border dark:bg-muted/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-ring bg-white">
+      <SelectTrigger className={`px-4 py-2.5 ${quick.input} dark:bg-muted/30 ${radius.lg} focus:outline-none focus:ring-2 focus:ring-ring bg-white`}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

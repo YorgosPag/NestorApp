@@ -10,6 +10,7 @@ import { HOVER_TEXT_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects'
 import { cn } from '@/lib/utils';
 import { NavigationTree } from './NavigationTree';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface NavigationSidebarProps {
   isExpanded?: boolean;
@@ -21,6 +22,7 @@ export function NavigationSidebar({
   onToggleExpanded
 }: NavigationSidebarProps) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
 
   return (
     <div className="space-y-2">
@@ -46,7 +48,7 @@ export function NavigationSidebar({
 
       {/* Navigation Tree (Collapsible) */}
       {isExpanded && (
-        <div className="pl-4 border-l border-gray-200 dark:border-gray-700">
+        <div className={`pl-4 border-l ${quick.separatorV}`}>
           <NavigationTree />
         </div>
       )}

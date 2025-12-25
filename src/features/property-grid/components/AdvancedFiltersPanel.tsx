@@ -21,7 +21,7 @@ export function AdvancedFiltersPanel({
   return (
     <>
       {show && (
-        <div className={`mt-4 p-4 bg-gray-50 dark:bg-muted/30 ${quick.card} ${quick.input} border-gray-200 dark:border-border`}>
+        <div className={`mt-4 p-4 bg-gray-50 dark:bg-muted/30 ${quick.card}`}>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium text-gray-700 dark:text-muted-foreground mb-1 block">Εύρος Τιμής (€)</label>

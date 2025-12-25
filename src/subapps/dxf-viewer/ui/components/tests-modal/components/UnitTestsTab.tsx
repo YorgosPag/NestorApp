@@ -18,7 +18,7 @@ interface UnitTestsTabProps {
 
 export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests }) => {
   const iconSizes = useIconSizes();
-  const { getStatusBorder, quick } = useBorderTokens();
+  const { getStatusBorder, quick, radius } = useBorderTokens();
 
   // Enterprise helper για test button states
   const getTestButtonBorder = (testId: string) => {
@@ -103,7 +103,7 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
         <button
           onClick={apiTests.handleRunPlaywright}
           disabled={testState.runningTests.has('run-playwright')}
-          className={`flex items-start gap-3 p-3.5 rounded-lg transition-all text-left w-full ${
+          className={`flex items-start gap-3 p-3.5 ${radius.lg} transition-all text-left w-full ${
             testState.runningTests.has('run-playwright')
               ? `bg-yellow-500/10 ${getTestButtonBorder('run-playwright')} cursor-wait`
               : testState.completedTests.has('run-playwright')

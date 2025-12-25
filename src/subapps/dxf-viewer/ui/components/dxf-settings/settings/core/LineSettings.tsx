@@ -379,7 +379,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
             id="line-enabled"
             checked={settings.enabled}
             onChange={settingsUpdater.createCheckboxHandler('enabled')}
-            className={`${iconSizes.sm} text-green-600 bg-gray-700 border-gray-600 ${quick.input} focus:ring-green-500 focus:ring-2`}
+            className={`${iconSizes.sm} text-green-600 bg-gray-700 ${quick.input} focus:ring-green-500 focus:ring-2`}
           />
           <label
             htmlFor="line-enabled"
@@ -515,7 +515,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
               type="checkbox"
               checked={settings.breakAtCenter || false}
               onChange={settingsUpdater.createCheckboxHandler('breakAtCenter')}
-              className={`${quick.input} border-gray-600 text-blue-600 focus:ring-blue-500 focus:ring-2`}
+              className={`${quick.input} text-blue-600 focus:ring-blue-500 focus:ring-2`}
             />
             <span className="text-sm text-gray-200">Σπάσιμο γραμμής για κείμενο</span>
           </label>

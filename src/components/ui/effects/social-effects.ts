@@ -6,7 +6,10 @@
 // Brand-consistent colors και animations
 // Based on official platform design guidelines
 //
+// 🏢 ENTERPRISE: Integrated με centralized border token system
 // ============================================================================
+
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 /**
  * 🎨 SOCIAL PLATFORM BRAND COLORS
@@ -69,8 +72,10 @@ export const SOCIAL_BRAND_COLORS = {
 } as const;
 
 /**
- * 🏷️ SOCIAL PLATFORM HOVER EFFECTS
+ * 🔄 LEGACY: SOCIAL PLATFORM HOVER EFFECTS (Deprecated)
+ * @deprecated Use createEnterpriseSocialHoverEffects(borderTokens) instead
  * Platform-specific hover patterns με brand colors
+ * Kept for backward compatibility - will be removed in v2.0
  */
 export const SOCIAL_HOVER_EFFECTS = {
   FACEBOOK: {
@@ -118,7 +123,7 @@ export const SOCIAL_HOVER_EFFECTS = {
   GITHUB: {
     BUTTON: 'hover:shadow-lg hover:shadow-gray-500/30 hover:scale-105 transition-all duration-200',
     ICON: 'hover:text-gray-900 hover:scale-110 transition-all duration-200 dark:hover:text-gray-100',
-    CARD: 'hover:border-gray-500/50 hover:shadow-lg hover:shadow-gray-500/20 transition-all duration-300'
+    CARD: 'hover:border-border/50 hover:shadow-lg hover:shadow-gray-500/20 transition-all duration-300'
   },
 
   EMAIL: {
@@ -247,6 +252,70 @@ export const createCustomSocialEffect = (
 ): string => {
   return `hover:shadow-lg hover:shadow-${color}/${Math.round(shadowOpacity * 100)} hover:scale-${Math.round(scale * 100)} transition-all duration-200`;
 };
+
+// ============================================================================
+// 🏢 ENTERPRISE FACTORY FUNCTIONS
+// ============================================================================
+
+/**
+ * 🎯 Enterprise Social Hover Effects Factory
+ * Creates social platform effects using centralized border tokens
+ */
+export const createEnterpriseSocialHoverEffects = (borderTokens: ReturnType<typeof useBorderTokens>) => ({
+  FACEBOOK: {
+    BUTTON: 'hover:shadow-lg hover:shadow-blue-500/30 hover:scale-105 transition-all duration-200',
+    ICON: 'hover:text-blue-600 hover:scale-110 transition-all duration-200',
+    CARD: `hover:${borderTokens.getStatusBorder('info')}/50 hover:shadow-lg hover:shadow-blue-500/20 transition-all duration-300`
+  },
+
+  TWITTER: {
+    BUTTON: 'hover:shadow-lg hover:shadow-sky-500/30 hover:scale-105 transition-all duration-200',
+    ICON: 'hover:text-sky-500 hover:scale-110 transition-all duration-200',
+    CARD: `hover:${borderTokens.getStatusBorder('info')}/50 hover:shadow-lg hover:shadow-sky-500/20 transition-all duration-300`
+  },
+
+  LINKEDIN: {
+    BUTTON: 'hover:shadow-lg hover:shadow-blue-700/30 hover:scale-105 transition-all duration-200',
+    ICON: 'hover:text-blue-700 hover:scale-110 transition-all duration-200',
+    CARD: `hover:${borderTokens.getStatusBorder('info')}/50 hover:shadow-lg hover:shadow-blue-700/20 transition-all duration-300`
+  },
+
+  INSTAGRAM: {
+    BUTTON: 'hover:shadow-lg hover:shadow-pink-500/30 hover:scale-105 transition-all duration-200',
+    ICON: 'hover:text-pink-500 hover:scale-110 transition-all duration-200',
+    CARD: `hover:${borderTokens.getStatusBorder('warning')}/50 hover:shadow-lg hover:shadow-pink-500/20 transition-all duration-300`
+  },
+
+  YOUTUBE: {
+    BUTTON: 'hover:shadow-lg hover:shadow-red-500/30 hover:scale-105 transition-all duration-200',
+    ICON: 'hover:text-red-500 hover:scale-110 transition-all duration-200',
+    CARD: `hover:${borderTokens.getStatusBorder('error')}/50 hover:shadow-lg hover:shadow-red-500/20 transition-all duration-300`
+  },
+
+  WHATSAPP: {
+    BUTTON: 'hover:shadow-lg hover:shadow-green-500/30 hover:scale-105 transition-all duration-200',
+    ICON: 'hover:text-green-500 hover:scale-110 transition-all duration-200',
+    CARD: `hover:${borderTokens.getStatusBorder('success')}/50 hover:shadow-lg hover:shadow-green-500/20 transition-all duration-300`
+  },
+
+  TELEGRAM: {
+    BUTTON: 'hover:shadow-lg hover:shadow-blue-500/30 hover:scale-105 transition-all duration-200',
+    ICON: 'hover:text-blue-500 hover:scale-110 transition-all duration-200',
+    CARD: `hover:${borderTokens.getStatusBorder('info')}/50 hover:shadow-lg hover:shadow-blue-500/20 transition-all duration-300`
+  },
+
+  GITHUB: {
+    BUTTON: 'hover:shadow-lg hover:shadow-gray-500/30 hover:scale-105 transition-all duration-200',
+    ICON: 'hover:text-gray-700 hover:scale-110 transition-all duration-200',
+    CARD: `hover:${borderTokens.getStatusBorder('muted')}/50 hover:shadow-lg hover:shadow-gray-500/20 transition-all duration-300`
+  },
+
+  PINTEREST: {
+    BUTTON: 'hover:shadow-lg hover:shadow-red-500/30 hover:scale-105 transition-all duration-200',
+    ICON: 'hover:text-red-500 hover:scale-110 transition-all duration-200',
+    CARD: `hover:${borderTokens.getStatusBorder('error')}/50 hover:shadow-lg hover:shadow-red-500/20 transition-all duration-300`
+  }
+});
 
 /**
  * 🎯 EXPORT EVERYTHING

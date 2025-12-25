@@ -92,7 +92,7 @@ export const EmailShareForm: React.FC<EmailShareFormProps> = ({
   config = {}
 }) => {
   const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
+  const { quick, radius, getStatusBorder } = useBorderTokens();
 
   // ============================================================================
   // CONFIGURATION με DEFAULTS
@@ -258,7 +258,7 @@ export const EmailShareForm: React.FC<EmailShareFormProps> = ({
       {/* HEADER */}
       <div className="text-center">
         <div className={designSystem.cn(
-          "mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-3",
+          `mx-auto w-12 h-12 ${radius.full} flex items-center justify-center mb-3`,
           designSystem.getStatusColor('info', 'bg')
         )}>
           <Mail className={`${iconSizes.lg} text-white`} />
@@ -295,7 +295,7 @@ export const EmailShareForm: React.FC<EmailShareFormProps> = ({
                     `p-3 ${quick.card} border-2 transition-all text-center`,
                     selectedTemplate === template.id
                       ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                      : `border-gray-200 ${HOVER_BORDER_EFFECTS.GRAY}`
+                      : `${quick.card} ${HOVER_BORDER_EFFECTS.GRAY}`
                   )}
                 >
                   <div className={designSystem.getTypographyClass('lg')}>
@@ -358,7 +358,7 @@ export const EmailShareForm: React.FC<EmailShareFormProps> = ({
                   className={designSystem.cn(
                     "flex-1",
                     email && !isValidEmail(email) && email.trim() !== ''
-                      ? "border-red-500 focus:ring-red-500"
+                      ? `${getStatusBorder('error')} focus:ring-red-500`
                       : ""
                   )}
                 />
@@ -442,7 +442,7 @@ export const EmailShareForm: React.FC<EmailShareFormProps> = ({
 
         {/* VALIDATION ERROR */}
         {validationError && (
-          <div className={`p-3 bg-red-50 dark:bg-red-900/20 ${quick.card} ${quick.input} border-red-200`}>
+          <div className={`p-3 bg-red-50 dark:bg-red-900/20 ${quick.card} ${quick.input} ${getStatusBorder('error')}`}>
             <div className={designSystem.cn(
               designSystem.getTypographyClass('sm', 'medium'),
               "text-red-800 dark:text-red-300"
@@ -454,7 +454,7 @@ export const EmailShareForm: React.FC<EmailShareFormProps> = ({
 
         {/* BACKEND ERROR */}
         {error && (
-          <div className={`p-3 bg-red-50 dark:bg-red-900/20 ${quick.card} ${quick.input} border-red-200`}>
+          <div className={`p-3 bg-red-50 dark:bg-red-900/20 ${quick.card} ${quick.input} ${getStatusBorder('error')}`}>
             <div className={designSystem.cn(
               designSystem.getTypographyClass('sm', 'medium'),
               "text-red-800 dark:text-red-300"
@@ -465,7 +465,7 @@ export const EmailShareForm: React.FC<EmailShareFormProps> = ({
         )}
 
         {/* ACTION BUTTONS */}
-        <div className={`flex gap-3 pt-4 ${quick.borderT} border-gray-200 dark:border-gray-700`}>
+        <div className={`flex gap-3 pt-4 ${quick.borderT}`}>
           <Button
             type="button"
             onClick={onBack}

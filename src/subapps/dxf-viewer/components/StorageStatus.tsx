@@ -7,6 +7,7 @@ import { Card, CardContent } from '../../../components/ui/card';
 import { HardDrive, Trash2, AlertTriangle } from 'lucide-react';
 import { useNotifications } from '../../../providers/NotificationProvider';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { layoutUtilities } from '@/styles/design-tokens';
 
 interface StorageStatusProps {
@@ -16,6 +17,7 @@ interface StorageStatusProps {
 
 export function StorageStatus({ showDetails = false, className }: StorageStatusProps) {
   const iconSizes = useIconSizes();
+  const { radius, getStatusBorder } = useBorderTokens();
   const { storageInfo, checkStorage } = useStorageMonitor();
   const notifications = useNotifications();
   const [isClearing, setIsClearing] = React.useState(false);
@@ -58,7 +60,7 @@ export function StorageStatus({ showDetails = false, className }: StorageStatusP
   }
 
   return (
-    <Card className={`${className} ${isCritical ? 'border-red-500' : isWarning ? 'border-amber-500' : ''}`}>
+    <Card className={`${className} ${isCritical ? getStatusBorder('error') : isWarning ? getStatusBorder('warning') : ''}`}>
       <CardContent className="p-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -97,9 +99,9 @@ export function StorageStatus({ showDetails = false, className }: StorageStatusP
           <>
             {/* Progress bar */}
             <div className="mt-2">
-              <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className={`w-full bg-gray-200 ${radius.full} h-2`}>
                 <div
-                  className={`h-2 rounded-full transition-all duration-300 ${
+                  className={`h-2 ${radius.full} transition-all duration-300 ${
                     isCritical ? 'bg-red-500' : isWarning ? 'bg-amber-500' : 'bg-blue-500'
                   } w-[${Math.min(usagePercentage, 100)}%]`}
                 />
@@ -111,12 +113,12 @@ export function StorageStatus({ showDetails = false, className }: StorageStatusP
             
             {/* Warnings */}
             {isCritical && (
-              <div className="mt-2 text-xs text-red-600 bg-red-50 p-2 rounded">
+              <div className={`mt-2 text-xs text-red-600 bg-red-50 p-2 ${radius.md}`}>
                 ⚠️ Storage σχεδόν γεμάτο! Καθαρίστε το για να αποφύγετε errors.
               </div>
             )}
             {isWarning && !isCritical && (
-              <div className="mt-2 text-xs text-amber-600 bg-amber-50 p-2 rounded">
+              <div className={`mt-2 text-xs text-amber-600 bg-amber-50 p-2 ${radius.md}`}>
                 ⚠️ Storage σε χαμηλά επίπεδα. Σκεφτείτε καθαρισμό.
               </div>
             )}

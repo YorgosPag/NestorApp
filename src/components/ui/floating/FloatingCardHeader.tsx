@@ -3,6 +3,7 @@
 import React from 'react';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { X, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -65,11 +66,13 @@ export const FloatingCardHeader: React.FC<FloatingCardHeaderProps> = ({
   variant = 'default'
 }) => {
   const iconSizes = useIconSizes();
-  const styles = headerVariants[variant];
+  const borderTokens = useBorderTokens();
+  const { quick, radius } = borderTokens;
+  const styles = getHeaderVariantStyles(variant, borderTokens);
   return (
     <Card
       className={cn(
-        "fixed z-[9999] max-w-[25rem] min-w-[20rem] rounded-lg shadow-lg",
+        `fixed z-[9999] max-w-[25rem] min-w-[20rem] ${radius.lg} shadow-lg`,
         styles.cardClass,
         isDragging ? 'cursor-grabbing select-none' : 'cursor-auto',
         cardClassName
@@ -198,38 +201,53 @@ export const ToolbarCardHeader: React.FC<Omit<FloatingCardHeaderProps, 'title' |
  * 🎨 Header Style Variants
  * Different color schemes for specialized panels
  */
-export const headerVariants = {
+// 🏢 ENTERPRISE: Header variant styles με centralized border tokens
+export const getHeaderVariantStyles = (variant: HeaderVariant, borderTokens: ReturnType<typeof useBorderTokens>) => {
+  const variants = {
+    default: {
+      cardClass: `${borderTokens.quick.card} bg-gray-800 text-white`,
+      headerClass: `${borderTokens.quick.card} hover:bg-gray-700/50`,
+      iconClass: "text-blue-400",
+      titleClass: "text-white"
+    },
+    success: {
+      cardClass: `${borderTokens.quick.success} bg-green-900 text-white`,
+      headerClass: `${borderTokens.quick.success} hover:bg-green-800/50`,
+      iconClass: "text-green-400",
+      titleClass: "text-white"
+    },
+    warning: {
+      cardClass: `${borderTokens.quick.warning} bg-orange-900 text-white`,
+      headerClass: `${borderTokens.quick.warning} hover:bg-orange-800/50`,
+      iconClass: "text-orange-400",
+      titleClass: "text-white"
+    },
+    error: {
+      cardClass: `${borderTokens.quick.error} bg-red-900 text-white`,
+      headerClass: `${borderTokens.quick.error} hover:bg-red-800/50`,
+      iconClass: "text-red-400",
+      titleClass: "text-white"
+    }
+  };
+
+  return variants[variant] || variants.default;
+};
+
+// 🏢 ENTERPRISE: Legacy compatibility με centralized tokens
+export const createLegacyHeaderVariants = (borderTokens: ReturnType<typeof useBorderTokens>) => ({
   default: {
-    cardClass: "border-gray-600 bg-gray-800 text-white",
-    headerClass: "border-gray-600 hover:bg-gray-700/50",
+    cardClass: `${borderTokens.quick.card} bg-gray-800 text-white`,
+    headerClass: `${borderTokens.quick.card} hover:bg-gray-700/50`,
     iconClass: "text-blue-400",
     titleClass: "text-white"
-  },
-  success: {
-    cardClass: "border-green-600 bg-green-900 text-white",
-    headerClass: "border-green-600 hover:bg-green-800/50",
-    iconClass: "text-green-400",
-    titleClass: "text-white"
-  },
-  warning: {
-    cardClass: "border-orange-600 bg-orange-900 text-white",
-    headerClass: "border-orange-600 hover:bg-orange-800/50",
-    iconClass: "text-orange-400",
-    titleClass: "text-white"
-  },
-  error: {
-    cardClass: "border-red-600 bg-red-900 text-white",
-    headerClass: "border-red-600 hover:bg-red-800/50",
-    iconClass: "text-red-400",
-    titleClass: "text-white"
   }
-};
+});
 
 // ============================================================================
 // TYPE EXPORTS
 // ============================================================================
 
-export type HeaderVariant = keyof typeof headerVariants;
+export type HeaderVariant = 'default' | 'success' | 'warning' | 'error';
 
 // ============================================================================
 // ENTERPRISE STANDARDS COMPLIANCE

@@ -9,6 +9,7 @@ import React, { forwardRef } from 'react';
 import { LucideIcon } from 'lucide-react';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 // Button variants for consistent styling
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'outline' | 'tool' | 'tab' | 'action';
@@ -26,26 +27,27 @@ interface BaseButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> 
   fullWidth?: boolean;
 }
 
-// Variant style mappings
-const variantStyles: Record<ButtonVariant, string> = {
-  primary: `bg-blue-600 ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} text-white border-blue-500`,
-  secondary: `bg-gray-700 ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} text-gray-200 border-gray-500`,
+// 🏢 ENTERPRISE: Dynamic variant style mappings με centralized border tokens
+const getVariantStyles = (borderTokens: ReturnType<typeof useBorderTokens>): Record<ButtonVariant, string> => ({
+  primary: `bg-blue-600 ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} text-white ${borderTokens.getStatusBorder('info')}`,
+  secondary: `bg-gray-700 ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} text-gray-200 ${borderTokens.quick.card}`,
   ghost: `bg-transparent ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-gray-200 border-transparent`,
-  outline: `bg-transparent ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-gray-300 border-gray-500`,
-  tool: `bg-gray-700 ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} text-gray-200 border-gray-500`,
-  tab: `bg-gray-800 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-gray-300 border-gray-500`,
-  action: `bg-gray-700 ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} text-gray-200 border-gray-500`
-};
+  outline: `bg-transparent ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-gray-300 ${borderTokens.quick.card}`,
+  tool: `bg-gray-700 ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} text-gray-200 ${borderTokens.quick.card}`,
+  tab: `bg-gray-800 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-gray-300 ${borderTokens.quick.card}`,
+  action: `bg-gray-700 ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} text-gray-200 ${borderTokens.quick.card}`
+});
 
-const activeVariantStyles: Record<ButtonVariant, string> = {
-  primary: 'bg-blue-700 text-white border-blue-400',
-  secondary: 'bg-gray-600 text-white border-gray-400',
-  ghost: 'bg-gray-700 text-white border-gray-600',
-  outline: 'bg-gray-700 text-white border-gray-400',
-  tool: `bg-blue-600 ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} text-white border-blue-500`,
-  tab: 'bg-blue-600 text-white border-blue-400',
-  action: `bg-blue-600 ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} text-white border-blue-500`
-};
+// 🏢 ENTERPRISE: Dynamic active variant styles με centralized border tokens
+const getActiveVariantStyles = (borderTokens: ReturnType<typeof useBorderTokens>): Record<ButtonVariant, string> => ({
+  primary: `bg-blue-700 text-white ${borderTokens.getStatusBorder('info')}`,
+  secondary: `bg-gray-600 text-white ${borderTokens.quick.card}`,
+  ghost: `bg-gray-700 text-white ${borderTokens.quick.card}`,
+  outline: `bg-gray-700 text-white ${borderTokens.quick.card}`,
+  tool: `bg-blue-600 ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} text-white ${borderTokens.getStatusBorder('info')}`,
+  tab: `bg-blue-600 text-white ${borderTokens.getStatusBorder('info')}`,
+  action: `bg-blue-600 ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} text-white ${borderTokens.getStatusBorder('info')}`
+});
 
 const sizeStyles: Record<ButtonSize, string> = {
   xs: 'h-6 px-2 text-xs',
@@ -81,8 +83,11 @@ export const BaseButton = forwardRef<HTMLButtonElement, BaseButtonProps>(
     ref
   ) => {
     const iconSizes = useIconSizes();
-    const baseClasses = 'inline-flex items-center justify-center rounded-md border transition-colors duration-150 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2';
+    const borderTokens = useBorderTokens();
+    const baseClasses = `inline-flex items-center justify-center ${borderTokens.radius.md} border transition-colors duration-150 font-medium focus:outline-none focus:ring-2 focus:${borderTokens.getStatusBorder('info')} focus:ring-offset-2`;
 
+    const variantStyles = getVariantStyles(borderTokens);
+    const activeVariantStyles = getActiveVariantStyles(borderTokens);
     const variantClass = isActive ? activeVariantStyles[variant] : variantStyles[variant];
     const sizeClass = sizeStyles[size];
     const iconSizeClass = getIconSizeStyles(iconSizes)[size];
@@ -113,7 +118,7 @@ export const BaseButton = forwardRef<HTMLButtonElement, BaseButtonProps>(
           <Icon className={`${iconSizeClass} ${children ? 'mr-2' : ''}`} />
         )}
         {isLoading && (
-          <div className={`animate-spin rounded-full border-2 border-current border-t-transparent ${iconSizeClass} ${children ? 'mr-2' : ''}`} />
+          <div className={`animate-spin ${borderTokens.radius.full} border-2 border-current border-t-transparent ${iconSizeClass} ${children ? 'mr-2' : ''}`} />
         )}
         {children}
         {Icon && iconPosition === 'right' && (

@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 
 type ViewMode = 'view' | 'create' | 'measure' | 'edit';
@@ -69,7 +70,8 @@ export function ViewerTools({
   className
 }: ViewerToolsProps) {
   const iconSizes = useIconSizes();
-  
+  const { quick } = useBorderTokens();
+
   // Local state για active tool
   const [activeTool, setActiveTool] = useState<ToolId>('select');
 
@@ -158,7 +160,7 @@ export function ViewerTools({
 
   return (
     <div className={cn(
-      "flex items-center gap-2 p-2 bg-white border-b border-gray-200",
+      `flex items-center gap-2 p-2 bg-white ${quick.separatorH}`,
       className
     )}>
       

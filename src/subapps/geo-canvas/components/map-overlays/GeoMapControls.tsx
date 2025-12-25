@@ -143,7 +143,7 @@ export const GeoMapControls: React.FC<GeoMapControlsProps> = ({
         <select
           value={currentMapStyle}
           onChange={(e) => onMapStyleChange(e.target.value as typeof currentMapStyle)}
-          className={`w-full bg-gray-700 ${quick.input} border-gray-600 px-2 py-1 text-sm text-white`}
+          className={`w-full bg-gray-700 ${quick.input} px-2 py-1 text-sm text-white`}
           disabled={!mapLoaded}
           aria-label={t('map.controls.selectMapStyle')}
         >

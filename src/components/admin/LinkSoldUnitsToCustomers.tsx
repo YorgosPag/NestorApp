@@ -5,6 +5,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Users, Link, CheckCircle, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface LinkingResult {
   success: boolean;
@@ -19,6 +20,7 @@ interface LinkingResult {
 
 export function LinkSoldUnitsToCustomers() {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<LinkingResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -133,7 +135,7 @@ export function LinkSoldUnitsToCustomers() {
                 {result.updates.map((update, index) => (
                   <div
                     key={index}
-                    className="flex items-center justify-between p-3 bg-muted rounded-md"
+                    className={`flex items-center justify-between p-3 bg-muted ${quick.input}`}
                   >
                     <div className="flex items-center gap-2">
                       <CheckCircle className={`${iconSizes.sm} text-green-600`} />

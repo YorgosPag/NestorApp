@@ -18,7 +18,7 @@ const SnappingView = memo(() => {
     snapEnabled,
     toggleSnap
   } = useProSnapIntegration();
-  const { quick } = useBorderTokens();
+  const { quick, getStatusBorder } = useBorderTokens();
   
   return (
     <div className="p-2 bg-gray-900">
@@ -70,21 +70,21 @@ LayersView.displayName = 'LayersView';
 
 // 🔧 PROPERTIES PANEL
 const PropertiesView = memo(() => {
-  const { quick } = useBorderTokens();
+  const { quick, getStatusBorder } = useBorderTokens();
   return (
   <div className="p-3 bg-gray-900 text-white">
     <h3 className="text-sm font-semibold mb-2 text-gray-300">Properties</h3>
     <div className="space-y-2 text-sm">
       <div>
         <label className="block text-gray-400">Layer:</label>
-        <select className={`w-full bg-gray-800 border border-gray-600 ${quick.input} px-2 py-1`}>
+        <select className={`w-full bg-gray-800 ${getStatusBorder('muted')} ${quick.input} px-2 py-1`}>
           <option>0 - Default</option>
           <option>Geometry</option>
         </select>
       </div>
       <div>
         <label className="block text-gray-400">Color:</label>
-        <input type="color" className={`w-full h-8 bg-gray-800 border border-gray-600 ${quick.input}`} />
+        <input type="color" className={`w-full h-8 bg-gray-800 ${getStatusBorder('muted')} ${quick.input}`} />
       </div>
     </div>
   </div>

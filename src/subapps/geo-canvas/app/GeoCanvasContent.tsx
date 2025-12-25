@@ -572,7 +572,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
     <PolygonSystemProvider initialRole="citizen">
       <div className="w-full h-full flex flex-col bg-gray-900 text-white">
       {/* 📊 HEADER SECTION */}
-      <header className="bg-gray-800 border-b border-gray-700 p-4">
+      <header className="bg-gray-800 ${quick.separatorH} p-4">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-blue-400">
@@ -618,7 +618,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
         {/* 🎯 CENTER AREA - Map/Canvas */}
         <div className="flex-1 flex flex-col">
           {/* 🔧 TOP TOOLBAR */}
-          <nav className="bg-gray-800 border-b border-gray-700 p-3" role="toolbar">
+          <nav className="bg-gray-800 ${quick.separatorH} p-3" role="toolbar">
             <ul className="flex items-center space-x-4 list-none">
               <li className="flex items-center space-x-2">
                 <span className="text-gray-400">{t('toolbar.view')}</span>
@@ -631,7 +631,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                       setActiveView(value);
                     }
                   }}
-                  className={`bg-gray-700 ${quick.input} border-gray-600 px-3 py-1 text-sm`}
+                  className={`bg-gray-700 ${quick.input} px-3 py-1 text-sm`}
                 >
                   <option value="georeferencing">{t('views.georeferencing')}</option>
                   <option value="foundation">{t('views.foundation')}</option>
@@ -642,7 +642,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
 
               <li className="flex items-center space-x-2">
                 <span className="text-gray-400">{t('toolbar.crs')}</span>
-                <select className={`bg-gray-700 ${quick.input} border-gray-600 px-3 py-1 text-sm`}>
+                <select className={`bg-gray-700 ${quick.input} px-3 py-1 text-sm`}>
                   <option>{t('coordinateSystems.epsg4326')}</option>
                   <option>{t('coordinateSystems.epsg2100')}</option>
                   <option>UTM 34N (EPSG:32634)</option>
@@ -886,7 +886,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
         </div>
 
         {/* 📊 RIGHT SIDEBAR - System Status */}
-        <aside className="w-80 bg-gray-800 border-l border-gray-700 p-4">
+        <aside className="w-80 bg-gray-800 ${quick.separatorV} p-4">
           <div className="space-y-6">
             {/* Phase Progress */}
             <section>
@@ -997,7 +997,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
       </main>
 
       {/* 📋 FOOTER STATUS */}
-      <footer className="bg-gray-800 border-t border-gray-700 p-3">
+      <footer className="bg-gray-800 ${quick.separatorH} p-3">
         <nav className="flex items-center justify-between text-sm">
           <ul className="flex items-center space-x-4 list-none">
             <li className="text-green-400">● {t('footer.status.active')}</li>

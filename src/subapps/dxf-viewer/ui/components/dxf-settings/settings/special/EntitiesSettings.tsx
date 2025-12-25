@@ -76,7 +76,7 @@ interface EntitiesSettingsProps {
 
 export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
   const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
+  const { quick, getStatusBorder } = useBorderTokens();
   // ✅ Replaced multiple useState hooks with unified reducer for better performance
   const { state: tabState, actions: tabActions, computed } = useEntitiesSettingsReducer();
 
@@ -320,8 +320,8 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
                     ${iconSizes.xl} p-0 ${quick.button} transition-colors duration-150
                     flex items-center justify-center
                     ${isSelected
-                      ? 'bg-blue-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} text-white border-blue-500'
-                      : 'bg-gray-700 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-gray-200 border-gray-500'
+                      ? `bg-blue-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} text-white ${getStatusBorder('info')}`
+                      : `bg-gray-700 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-gray-200 ${getStatusBorder('default')}`
                     }
                   `}
                 >
@@ -339,8 +339,8 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
                     h-8 w-7 p-0 ${quick.button} border-r-0 transition-colors duration-150
                     flex items-center justify-center
                     ${isSelected
-                      ? 'bg-blue-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} text-white border-blue-500'
-                      : 'bg-gray-700 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-gray-200 border-gray-500'
+                      ? `bg-blue-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} text-white ${getStatusBorder('info')}`
+                      : `bg-gray-700 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-gray-200 ${getStatusBorder('default')}`
                     }
                   `}
                 >
@@ -351,8 +351,8 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
                     h-8 w-4 p-0 ${quick.button} transition-colors duration-150
                     flex items-center justify-center
                     ${isSelected
-                      ? 'bg-blue-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} text-white border-blue-500'
-                      : 'bg-gray-700 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-gray-200 border-gray-500'
+                      ? `bg-blue-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} text-white ${getStatusBorder('info')}`
+                      : `bg-gray-700 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-gray-200 ${getStatusBorder('default')}`
                     }
                   `}
                   title="Περισσότερες επιλογές"
@@ -389,8 +389,8 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
                 onClick={() => setActiveLineTab(activeLineTab === tab.id ? null : tab.id)}
                 className={`py-2 px-3 text-sm font-medium ${quick.button} transition-colors ${
                   activeLineTab === tab.id
-                    ? 'bg-blue-600 text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}'
-                    : 'bg-gray-600 text-white ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}'
+                    ? `bg-blue-600 text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
+                    : `bg-gray-600 text-white ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
                 }`}
               >
                 {tab.label}
@@ -543,7 +543,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
 
     // Για όλα τα άλλα εργαλεία - κενό container
     return (
-      <div className={`mb-6 p-4 bg-gray-800 ${quick.card} border-gray-600`}>
+      <div className={`mb-6 p-4 bg-gray-800 ${quick.card}`}>
         <h3 className="text-lg font-semibold text-white mb-4">
           Ρυθμίσεις {selectedTool}
         </h3>
@@ -580,8 +580,8 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
                 }}
                 className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
                   activeSpecificTab === subTab.id
-                    ? 'bg-blue-600 text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}'
-                    : 'bg-gray-600 text-white ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}'
+                    ? `bg-blue-600 text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
+                    : `bg-gray-600 text-white ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
                 }`}
               >
                 {subTab.label}

@@ -16,7 +16,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
  */
 export function GeoreferencingPanel() {
   const colors = useSemanticColors();
-  const { quick } = useBorderTokens();
+  const { quick, getStatusBorder } = useBorderTokens();
   const { t, isLoading } = useTranslationLazy('geo-canvas');
   const [transformState, transformActions] = useGeoTransform();
   const [showAddPoint, setShowAddPoint] = useState(false);
@@ -209,7 +209,7 @@ export function GeoreferencingPanel() {
                 type="number"
                 value={newPointData.dxfX}
                 onChange={(e) => setNewPointData(prev => ({ ...prev, dxfX: e.target.value }))}
-                className={`w-full bg-gray-600 ${quick.input} border-gray-500 px-2 py-1 text-sm`}
+                className={`w-full bg-gray-600 ${quick.input} px-2 py-1 text-sm`}
                 placeholder="0.00"
               />
             </div>
@@ -219,7 +219,7 @@ export function GeoreferencingPanel() {
                 type="number"
                 value={newPointData.dxfY}
                 onChange={(e) => setNewPointData(prev => ({ ...prev, dxfY: e.target.value }))}
-                className={`w-full bg-gray-600 ${quick.input} border-gray-500 px-2 py-1 text-sm`}
+                className={`w-full bg-gray-600 ${quick.input} px-2 py-1 text-sm`}
                 placeholder="0.00"
               />
             </div>
@@ -229,7 +229,7 @@ export function GeoreferencingPanel() {
                 type="number"
                 value={newPointData.geoLng}
                 onChange={(e) => setNewPointData(prev => ({ ...prev, geoLng: e.target.value }))}
-                className={`w-full bg-gray-600 ${quick.input} border-gray-500 px-2 py-1 text-sm`}
+                className={`w-full bg-gray-600 ${quick.input} px-2 py-1 text-sm`}
                 placeholder={GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE.toString()}
                 step="0.000001"
               />
@@ -240,7 +240,7 @@ export function GeoreferencingPanel() {
                 type="number"
                 value={newPointData.geoLat}
                 onChange={(e) => setNewPointData(prev => ({ ...prev, geoLat: e.target.value }))}
-                className={`w-full bg-gray-600 ${quick.input} border-gray-500 px-2 py-1 text-sm`}
+                className={`w-full bg-gray-600 ${quick.input} px-2 py-1 text-sm`}
                 placeholder={GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE.toString()}
                 step="0.000001"
               />
@@ -251,7 +251,7 @@ export function GeoreferencingPanel() {
                 type="number"
                 value={newPointData.accuracy}
                 onChange={(e) => setNewPointData(prev => ({ ...prev, accuracy: e.target.value }))}
-                className={`w-full bg-gray-600 ${quick.input} border-gray-500 px-2 py-1 text-sm`}
+                className={`w-full bg-gray-600 ${quick.input} px-2 py-1 text-sm`}
                 placeholder="1.0"
                 step="0.1"
               />
@@ -262,7 +262,7 @@ export function GeoreferencingPanel() {
                 type="text"
                 value={newPointData.description}
                 onChange={(e) => setNewPointData(prev => ({ ...prev, description: e.target.value }))}
-                className={`w-full bg-gray-600 ${quick.input} border-gray-500 px-2 py-1 text-sm`}
+                className={`w-full bg-gray-600 ${quick.input} px-2 py-1 text-sm`}
                 placeholder={t('hardcodedTexts.placeholders.optionalDescription')}
               />
             </div>
@@ -293,7 +293,7 @@ export function GeoreferencingPanel() {
             className={`p-3 ${quick.button} transition-colors ${
               transformState.selectedPointId === point.id
                 ? 'bg-blue-900 border-blue-600'
-                : 'bg-gray-700 border-gray-600 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}'
+                : `bg-gray-700 \${getStatusBorder('default')} \${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
             }`}
             onClick={() => transformActions.selectControlPoint(
               transformState.selectedPointId === point.id ? null : point.id

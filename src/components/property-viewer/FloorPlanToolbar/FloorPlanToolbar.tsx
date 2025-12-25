@@ -35,6 +35,7 @@ import {
 import { cn } from '@/lib/utils';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 type ViewMode = 'view' | 'create' | 'measure' | 'edit';
 
@@ -74,6 +75,7 @@ export function FloorPlanToolbar({
   className
 }: FloorPlanToolbarProps) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const [isUploading, setIsUploading] = useState(false);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -131,7 +133,7 @@ export function FloorPlanToolbar({
   return (
     <TooltipProvider>
       <div className={cn(
-        "flex items-center gap-2 p-3 bg-white border-b border-gray-200 shadow-sm",
+        `flex items-center gap-2 p-3 bg-white ${quick.separatorH} shadow-sm`,
         className
       )}>
         

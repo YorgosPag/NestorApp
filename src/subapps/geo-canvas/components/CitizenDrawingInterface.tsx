@@ -254,7 +254,7 @@ export function CitizenDrawingInterface({
   }, [onLocationSelected]);
 
   return (
-    <div className={`bg-white ${quick.card} shadow-lg border-gray-200 p-4`}>
+    <div className={`bg-white ${quick.card} shadow-lg p-4`}>
       {/* Header */}
       <div className="mb-4">
         <div className="flex items-center justify-between">
@@ -271,10 +271,10 @@ export function CitizenDrawingInterface({
           <button
             onClick={() => setShowAddressSearch(!showAddressSearch)}
             className={`
-              flex items-center gap-2 px-3 py-2 ${quick.card} border transition-all
+              flex items-center gap-2 px-3 py-2 ${quick.card} transition-all
               ${showAddressSearch
                 ? 'border-blue-500 bg-blue-50 text-blue-700'
-                : 'border-gray-300 bg-white text-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT}'
+                : 'bg-white text-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT}'
               }
             `}
             title="Αναζήτηση διεύθυνσης ή GPS"
@@ -307,7 +307,7 @@ export function CitizenDrawingInterface({
             transition-all duration-200 min-h-[100px]
             ${selectedTool === 'point'
               ? 'border-blue-500 bg-blue-50'
-              : 'border-gray-300 ${HOVER_BACKGROUND_EFFECTS.LIGHT} bg-white'
+              : '${HOVER_BACKGROUND_EFFECTS.LIGHT} bg-white'
             }
             ${isDrawing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.MEDIUM}'}
           `}
@@ -326,7 +326,7 @@ export function CitizenDrawingInterface({
             transition-all duration-200 min-h-[100px]
             ${selectedTool === 'polygon'
               ? 'border-blue-500 bg-blue-50'
-              : 'border-gray-300 ${HOVER_BACKGROUND_EFFECTS.LIGHT} bg-white'
+              : '${HOVER_BACKGROUND_EFFECTS.LIGHT} bg-white'
             }
             ${isDrawing && selectedTool !== 'polygon' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.MEDIUM}'}
           `}
@@ -348,7 +348,7 @@ export function CitizenDrawingInterface({
             transition-all duration-200 min-h-[100px]
             ${selectedTool === 'freehand'
               ? 'border-blue-500 bg-blue-50'
-              : 'border-gray-300 ${HOVER_BACKGROUND_EFFECTS.LIGHT} bg-white'
+              : '${HOVER_BACKGROUND_EFFECTS.LIGHT} bg-white'
             }
             ${isDrawing && selectedTool !== 'freehand' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.MEDIUM}'}
           `}
@@ -367,7 +367,7 @@ export function CitizenDrawingInterface({
             transition-all duration-200 min-h-[100px]
             ${selectedTool === 'real-estate'
               ? 'border-orange-500 bg-orange-50'
-              : 'border-gray-300 ${HOVER_BACKGROUND_EFFECTS.LIGHT} bg-white'
+              : '${HOVER_BACKGROUND_EFFECTS.LIGHT} bg-white'
             }
             ${isDrawing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.MEDIUM}'}
           `}
@@ -388,7 +388,7 @@ export function CitizenDrawingInterface({
             transition-all duration-200 min-h-[100px]
             ${showAddressSearch
               ? 'border-indigo-500 bg-indigo-50'
-              : 'border-gray-300 ${HOVER_BACKGROUND_EFFECTS.LIGHT} bg-white'
+              : '${HOVER_BACKGROUND_EFFECTS.LIGHT} bg-white'
             }
             cursor-pointer ${HOVER_SHADOWS.MEDIUM}
           `}
@@ -406,7 +406,7 @@ export function CitizenDrawingInterface({
             transition-all duration-200 min-h-[100px]
             ${showAdminDemo
               ? 'border-violet-500 bg-violet-50'
-              : 'border-gray-300 ${HOVER_BACKGROUND_EFFECTS.LIGHT} bg-white'
+              : '${HOVER_BACKGROUND_EFFECTS.LIGHT} bg-white'
             }
             cursor-pointer ${HOVER_SHADOWS.MEDIUM}
           `}
@@ -424,7 +424,7 @@ export function CitizenDrawingInterface({
             transition-all duration-200 min-h-[100px]
             ${showBoundaryControl
               ? 'border-emerald-500 bg-emerald-50'
-              : 'border-gray-300 ${HOVER_BACKGROUND_EFFECTS.LIGHT} bg-white'
+              : '${HOVER_BACKGROUND_EFFECTS.LIGHT} bg-white'
             }
             cursor-pointer ${HOVER_SHADOWS.MEDIUM}
           `}
@@ -439,7 +439,7 @@ export function CitizenDrawingInterface({
 
       {/* Point Radius Selector - Shows only when point tool is selected */}
       {selectedTool === 'point' && (
-        <div className={`mb-4 p-3 bg-blue-50 ${quick.card} border-blue-200`}>
+        <div className={`mb-4 p-3 bg-blue-50 ${quick.card}`}>
           <h4 className="text-sm font-medium text-blue-900 mb-3">Ακτίνα Πινέζας</h4>
           <div className="grid grid-cols-3 gap-2 mb-3">
             {[50, 100, 250].map((radius) => (
@@ -450,7 +450,7 @@ export function CitizenDrawingInterface({
                   py-2 px-3 text-sm font-medium rounded-md transition-all
                   ${pointRadius === radius
                     ? 'bg-blue-500 text-white shadow-md'
-                    : `bg-white text-blue-700 border border-blue-300 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
+                    : `bg-white text-blue-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
                   }
                 `}
               >
@@ -467,7 +467,7 @@ export function CitizenDrawingInterface({
                   py-2 px-3 text-sm font-medium rounded-md transition-all
                   ${pointRadius === radius
                     ? 'bg-blue-500 text-white shadow-md'
-                    : `bg-white text-blue-700 border border-blue-300 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
+                    : `bg-white text-blue-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
                   }
                 `}
               >
@@ -504,7 +504,7 @@ export function CitizenDrawingInterface({
 
       {/* Real Estate Setup Dialog */}
       {showRealEstateSetup && (
-        <div className={`mb-4 p-4 bg-orange-50 ${quick.card} border-orange-200`}>
+        <div className={`mb-4 p-4 bg-orange-50 ${quick.card}`}>
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-lg font-semibold text-orange-900 flex items-center gap-2">
               <Bell className={iconSizes.md} />
@@ -532,7 +532,7 @@ export function CitizenDrawingInterface({
                   ...prev,
                   priceRange: { ...prev.priceRange, min: Number(e.target.value) || undefined }
                 }))}
-                className={`px-3 py-2 ${quick.input} border-orange-300 text-sm`}
+                className={`px-3 py-2 ${quick.input} text-sm`}
               />
               <input
                 type="number"
@@ -542,7 +542,7 @@ export function CitizenDrawingInterface({
                   ...prev,
                   priceRange: { ...prev.priceRange, max: Number(e.target.value) || undefined }
                 }))}
-                className={`px-3 py-2 ${quick.input} border-orange-300 text-sm`}
+                className={`px-3 py-2 ${quick.input} text-sm`}
               />
             </div>
           </div>
@@ -558,7 +558,7 @@ export function CitizenDrawingInterface({
                 ...prev,
                 propertyTypes: [e.target.value]
               }))}
-              className={`w-full px-3 py-2 ${quick.input} border-orange-300 text-sm`}
+              className={`w-full px-3 py-2 ${quick.input} text-sm`}
             >
               <option value="apartment">{t('drawingInterfaces.citizen.realEstateSetup.propertyTypes.apartment')}</option>
               <option value="house">{t('drawingInterfaces.citizen.realEstateSetup.propertyTypes.house')}</option>
@@ -611,7 +611,7 @@ export function CitizenDrawingInterface({
 
       {/* Instructions */}
       {selectedTool && (
-        <div className={`mt-4 p-3 bg-blue-50 ${quick.card} border-blue-200`}>
+        <div className={`mt-4 p-3 bg-blue-50 ${quick.card}`}>
           <p className="text-sm text-blue-700">
             {selectedTool === 'point' && t('instructions.citizen.placePoint')}
             {selectedTool === 'polygon' && t('instructions.citizen.addPolygonPoints')}

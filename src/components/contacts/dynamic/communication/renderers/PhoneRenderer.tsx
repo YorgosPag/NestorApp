@@ -3,6 +3,7 @@
 import React from 'react';
 import { Trash2 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { CommonBadge } from '@/core/badges';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -52,11 +53,12 @@ export const PhoneRenderer: React.FC<PhoneRendererProps> = ({
   removeItem
 }) => {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
 
   // 🎯 ΜΟΝΟ ΓΙΑ DESKTOP: Οριζόντιο layout σε γραμμή
   if (isDesktop) {
     return (
-      <div key={index} className="grid grid-cols-5 gap-3 items-center py-2 border-b border-gray-100 last:border-b-0">
+      <div key={index} className={`grid grid-cols-5 gap-3 items-center py-2 ${quick.separatorH} last:border-b-0`}>
         {/* 1. Τύπος (Κινητό, Σπίτι, κτλ.) */}
         <div>
           <Select

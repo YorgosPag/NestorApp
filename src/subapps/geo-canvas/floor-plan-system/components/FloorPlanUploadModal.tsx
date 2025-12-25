@@ -197,7 +197,7 @@ export function FloorPlanUploadModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[600px] bg-gray-900 text-white border-gray-700">
+      <DialogContent className={`sm:max-w-[600px] bg-gray-900 text-white ${quick.card}`}>
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-blue-400 flex items-center gap-2">
             <CraneIcon className={iconSizes.lg} />
@@ -237,7 +237,7 @@ export function FloorPlanUploadModal({
             transition-all duration-200
             ${isDragging
               ? 'border-blue-500 bg-blue-500/10 scale-105'
-              : `border-gray-600 ${HOVER_BACKGROUND_EFFECTS.MUTED}`
+              : `${quick.card} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
             }
           `}
           onDragEnter={handleDragEnter}

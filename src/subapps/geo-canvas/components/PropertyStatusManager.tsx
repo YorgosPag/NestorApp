@@ -199,10 +199,10 @@ export function PropertyStatusManager({
               return (
                 <div
                   key={status}
-                  className={`flex items-center gap-3 p-2 rounded-md border transition-all ${
+                  className={`flex items-center gap-3 p-2 rounded-md ${quick.card} transition-all ${
                     isVisible
-                      ? 'bg-gray-50 border-gray-300'
-                      : 'bg-gray-25 border-gray-200 opacity-60'
+                      ? 'bg-gray-50'
+                      : 'bg-gray-25 opacity-60'
                   }`}
                 >
                   {/* Color Indicator */}

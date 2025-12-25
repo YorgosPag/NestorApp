@@ -21,6 +21,7 @@ export function StatusLegend({
   validationErrors = []
 }: StatusLegendProps) {
   const iconSizes = useIconSizes();
+  const { quick, getStatusBorder } = useBorderTokens();
   
   const statusItems = [
     { color: '#10b981', label: 'Προς Πώληση', count: 0 },
@@ -33,7 +34,7 @@ export function StatusLegend({
   return (
     <div 
       className={cn(
-        `bg-white/95 backdrop-blur-sm ${useBorderTokens().quick.card} p-3 shadow-lg`,
+        `bg-white/95 backdrop-blur-sm ${quick.card} p-3 shadow-lg`,
         'select-none', // Prevent text selection
         className
       )}
@@ -51,7 +52,7 @@ export function StatusLegend({
             style={interactionUtilities.pointerEvents.none}
           >
             <div
-              className={`${iconSizes.xs} border border-gray-300`}
+              className={`${iconSizes.xs} border border-border`}
               style={{
                 ...chartComponents.legend.indicator.withColor(item.color),
                 borderRadius: '50%'
@@ -63,12 +64,12 @@ export function StatusLegend({
         ))}
       </div>
 
-      <div className="mt-2 pt-2 border-t border-gray-200 text-xs text-gray-600">
+      <div className={`mt-2 pt-2 ${quick.separatorH} text-xs text-gray-600`}>
         ακίνητα στον όροφο
       </div>
 
       {validationErrors.length > 0 && (
-        <div className="mt-2 pt-2 border-t border-red-200">
+        <div className="mt-2 pt-2 border-t ${getStatusBorder('error')}">
           <div className="text-xs font-medium text-red-700 mb-1">Errors:</div>
           {validationErrors.slice(0, 3).map((error, index) => (
             <div key={index} className="text-xs text-red-600">

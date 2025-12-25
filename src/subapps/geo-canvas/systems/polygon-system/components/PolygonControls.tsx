@@ -83,7 +83,7 @@ export function PolygonControls({
     switch (config.role) {
       case 'citizen':
         return {
-          container: `bg-white ${quick.card} shadow-lg border-gray-200`,
+          container: `bg-white ${quick.card} shadow-lg`,
           button: `flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-medium ${TRANSITION_PRESETS.STANDARD_COLORS}`,
           primary: `bg-blue-500 text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`,
           secondary: `bg-gray-100 text-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`,
@@ -113,7 +113,7 @@ export function PolygonControls({
 
       default:
         return {
-          container: `bg-white ${quick.card} shadow-lg border-gray-200`,
+          container: `bg-white ${quick.card} shadow-lg`,
           button: `flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-medium ${TRANSITION_PRESETS.STANDARD_COLORS}`,
           primary: `bg-blue-500 text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`,
           secondary: `bg-gray-100 text-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`,

@@ -11,7 +11,7 @@ interface LayersSettingsProps {
 
 export const LayersSettings: React.FC<LayersSettingsProps> = () => {
   const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
+  const { quick, getStatusBorder, radius } = useBorderTokens();
   const [activeTab, setActiveTab] = useState<'outlines' | 'fills'>('outlines');
   const [selectedPreset, setSelectedPreset] = useState<number>(0);
 
@@ -36,7 +36,7 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
   return (
     <div className="p-4">
       {/* Header */}
-      <div className="border-b border-gray-600 pb-3 mb-4">
+      <div className={`border-b ${getStatusBorder('muted')} pb-3 mb-4`}>
         <h2 className="text-lg font-semibold text-white flex items-center gap-2">
           🎨 Ρυθμίσεις Layers
         </h2>
@@ -51,7 +51,7 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
           <div className="font-medium">Προεπισκόπηση Layer</div>
           <div className="font-normal text-gray-400">Δείτε πώς θα φαίνονται τα layers</div>
         </div>
-        <div className={`p-2 bg-gray-800 ${quick.card} border-gray-600 flex justify-center`}>
+        <div className={`p-2 bg-gray-800 ${quick.card} ${getStatusBorder('muted')} flex justify-center`}>
           <div className="flex gap-1">
             {presetClasses.map((preset, index) => (
               <div
@@ -71,10 +71,10 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
 
       {/* Tabs Navigation */}
       <div className="mb-4">
-        <div className="flex gap-1 bg-gray-700 p-1 rounded-lg">
+        <div className={`flex gap-1 bg-gray-700 p-1 ${radius.lg}`}>
           <button
             onClick={() => setActiveTab('outlines')}
-            className={`flex-1 px-3 py-2 text-xs font-medium rounded-md transition-colors duration-150 ${
+            className={`flex-1 px-3 py-2 text-xs font-medium ${radius.md} transition-colors duration-150 ${
               activeTab === 'outlines'
                 ? 'bg-blue-600 text-white'
                 : `text-gray-300 ${HOVER_TEXT_EFFECTS.WHITE} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
@@ -84,7 +84,7 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
           </button>
           <button
             onClick={() => setActiveTab('fills')}
-            className={`flex-1 px-3 py-2 text-xs font-medium rounded-md transition-colors duration-150 ${
+            className={`flex-1 px-3 py-2 text-xs font-medium ${radius.md} transition-colors duration-150 ${
               activeTab === 'fills'
                 ? 'bg-blue-600 text-white'
                 : `text-gray-300 ${HOVER_TEXT_EFFECTS.WHITE} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
@@ -109,12 +109,12 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
                     onClick={() => setSelectedPreset(index)}
                     className={`p-2 ${quick.button} transition-colors ${
                       selectedPreset === index
-                        ? 'bg-blue-600 border-blue-500'
-                        : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500`
+                        ? `bg-blue-600 ${getStatusBorder('info')}`
+                        : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
                     }`}
                   >
                     <div
-                      className={`w-full ${iconSizes.lg} ${quick.card} border-gray-400 ${preset.bgClass}`}
+                      className={`w-full ${iconSizes.lg} ${quick.card} ${getStatusBorder('subtle')} ${preset.bgClass}`}
                     />
                     <div className="text-xs text-white mt-1 truncate">{preset.name}</div>
                   </button>
@@ -129,8 +129,8 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
                   <div className="font-medium">Εμφάνιση Περιγραμμάτων</div>
                   <div className="font-normal text-gray-400">Ενεργοποίηση/Απενεργοποίηση των περιγραμμάτων</div>
                 </div>
-                <div className={`relative inline-flex ${iconSizes.lg} ${iconSizes.xl3} flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-green-600`}>
-                  <span className={`pointer-events-none inline-block ${iconSizes.sm} rounded-full bg-white shadow transition duration-200 ease-in-out transform translate-x-5`} />
+                <div className={`relative inline-flex ${iconSizes.lg} ${iconSizes.xl3} flex-shrink-0 cursor-pointer ${radius.full} border-2 border-transparent bg-green-600`}>
+                  <span className={`pointer-events-none inline-block ${iconSizes.sm} ${radius.full} bg-white shadow transition duration-200 ease-in-out transform translate-x-5`} />
                 </div>
               </div>
             </div>
@@ -149,12 +149,12 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
                     onClick={() => setSelectedPreset(index)}
                     className={`p-2 ${quick.button} transition-colors ${
                       selectedPreset === index
-                        ? 'bg-blue-600 border-blue-500'
-                        : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500`
+                        ? `bg-blue-600 ${getStatusBorder('info')}`
+                        : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
                     }`}
                   >
                     <div
-                      className={`w-full ${iconSizes.lg} ${quick.card} border-gray-400 ${preset.bgClass}`}
+                      className={`w-full ${iconSizes.lg} ${quick.card} ${getStatusBorder('subtle')} ${preset.bgClass}`}
                     />
                     <div className="text-xs text-white mt-1 truncate">{preset.name}</div>
                   </button>
@@ -190,8 +190,8 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
                   <div className="font-medium">Εμφάνιση Γεμισμάτων</div>
                   <div className="font-normal text-gray-400">Ενεργοποίηση/Απενεργοποίηση των γεμισμάτων</div>
                 </div>
-                <div className={`relative inline-flex ${iconSizes.lg} ${iconSizes.xl3} flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-green-600`}>
-                  <span className={`pointer-events-none inline-block ${iconSizes.sm} rounded-full bg-white shadow transition duration-200 ease-in-out transform translate-x-5`} />
+                <div className={`relative inline-flex ${iconSizes.lg} ${iconSizes.xl3} flex-shrink-0 cursor-pointer ${radius.full} border-2 border-transparent bg-green-600`}>
+                  <span className={`pointer-events-none inline-block ${iconSizes.sm} ${radius.full} bg-white shadow transition duration-200 ease-in-out transform translate-x-5`} />
                 </div>
               </div>
             </div>
@@ -210,7 +210,7 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
         </div>
 
         {/* Coming Soon Features */}
-        <div className={`p-2 bg-gray-800 ${quick.card} border-gray-600`}>
+        <div className={`p-2 bg-gray-800 ${quick.card} ${getStatusBorder('muted')}`}>
           <div className="text-sm text-white font-medium mb-2">🚧 Σύντομα Διαθέσιμο</div>
           <ul className="text-xs text-gray-400 space-y-1">
             <li>• Χρώματα γεμίσματος layers</li>

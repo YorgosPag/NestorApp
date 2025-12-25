@@ -18,6 +18,7 @@
 import React from 'react';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { getDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 import { interactiveMapStyles } from '../InteractiveMap.styles';
@@ -76,6 +77,7 @@ export const GeoAccuracyLegend: React.FC<GeoAccuracyLegendProps> = ({
   className = ''
 }) => {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const { t } = useTranslationLazy('geo-canvas');
 
   // Early return if no control points
@@ -163,7 +165,7 @@ export const GeoAccuracyLegend: React.FC<GeoAccuracyLegendProps> = ({
 
   const renderAccuracyStatistics = () => (
     accuracyStats && (
-      <div className="mt-3 pt-2 border-t border-gray-700" role="region" aria-label={t('accuracy.statistics')}>
+      <div className={`mt-3 pt-2 ${quick.separatorH}`} role="region" aria-label={t('accuracy.statistics')}>
         <div className="text-xs space-y-1">
           <div className="text-gray-400">
             {t('accuracy.stats.avgAccuracy')}: {t('accuracy.stats.format', { value: accuracyStats.avg })}
@@ -204,7 +206,7 @@ export const GeoAccuracyLegend: React.FC<GeoAccuracyLegendProps> = ({
         {renderAccuracyStatistics()}
 
         {/* Toggle Button */}
-        <div className="mt-3 pt-2 border-t border-gray-700">
+        <div className={`mt-3 pt-2 ${quick.separatorH}`}>
           <button
             onClick={onToggleAccuracyCircles}
             className={`w-full px-2 py-1 text-xs rounded transition-colors ${

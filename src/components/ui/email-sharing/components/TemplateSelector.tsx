@@ -12,6 +12,7 @@
 
 import React from 'react';
 import { Label } from '@/components/ui/label';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { designSystem } from '@/lib/design-system';
 import { Palette } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -45,6 +46,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
   show = true
 }) => {
   const iconSizes = useIconSizes();
+  const { quick, radius } = useBorderTokens();
 
   // ============================================================================
   // DATA & COMPUTED VALUES
@@ -105,14 +107,14 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
         disabled={disabled}
         className={designSystem.cn(
           // Base styles
-          'p-3 rounded-lg border-2 text-center',
+          'p-3 ${radius.lg} border-2 text-center',
           TRANSITION_PRESETS.STANDARD_ALL,
           'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
 
           // Selection states
           isSelected
             ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-md'
-            : `border-gray-200 dark:border-gray-700 ${INTERACTIVE_PATTERNS.BORDER_SUBTLE}`,
+            : `${quick.card} ${INTERACTIVE_PATTERNS.BORDER_SUBTLE}`,
 
           // Disabled state
           disabled && 'opacity-50 cursor-not-allowed',
@@ -154,8 +156,8 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
 
         {/* Selected Indicator */}
         {isSelected && (
-          <aside className={`absolute top-2 right-2 ${iconSizes.xs} bg-blue-500 rounded-full flex items-center justify-center`} role="status" aria-label="Επιλεγμένο">
-            <div className="w-1.5 h-1.5 bg-white rounded-full" />
+          <aside className={`absolute top-2 right-2 ${iconSizes.xs} bg-blue-500 ${radius.full} flex items-center justify-center`} role="status" aria-label="Επιλεγμένο">
+            <div className="w-1.5 h-1.5 bg-white ${radius.full}" />
           </aside>
         )}
       </button>
@@ -243,13 +245,13 @@ export const CompactTemplateSelector: React.FC<TemplateSelectorProps & {
               onClick={() => !disabled && onTemplateChange(template.id)}
               disabled={disabled}
               className={designSystem.cn(
-                'px-3 py-1.5 text-xs rounded-md border',
+                'px-3 py-1.5 text-xs ${radius.md} border',
                 TRANSITION_PRESETS.STANDARD_COLORS,
                 'flex items-center gap-1.5',
                 isSelected
                   ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300'
                   : designSystem.cn(
-                      'border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-300',
+                      `${quick.card} text-gray-700 dark:text-gray-300`,
                       INTERACTIVE_PATTERNS.SUBTLE_HOVER
                     ),
                 disabled && 'opacity-50 cursor-not-allowed'

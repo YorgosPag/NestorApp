@@ -216,7 +216,9 @@
       "Read(//tmp/**)",
       "Bash(SKIP_ENV_VALIDATION=true npm run build)",
       "Bash(git gc:*)",
-      "Bash(robocopy:*)"
+      "Bash(robocopy:*)",
+      "Bash(do echo \"=== Checking $file ===\")",
+      "Bash(xargs:*)"
     ],
     "deny": [],
     "ask": []

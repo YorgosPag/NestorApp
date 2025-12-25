@@ -1,23 +1,17 @@
-// ⚠️ ENTERPRISE CENTRALIZATION - DUPLICATE REMOVED
-// 🏢 This PhotoGrid bypasses existing centralized photo-config system
-// 📍 Backup saved at: C:\Nestor_Pagonis\BACKUP_PhotoGrid_Projects.tsx
-// 🎯 Migrating to: PhotosPreview from @/components/generic/utils/PhotosPreview
-
-/*
 'use client';
 
 import React from 'react';
 import { PhotoItem, type Photo } from '@/components/generic/utils/PhotoItem';
 import { Image as ImageIcon } from 'lucide-react';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
 import {
   PHOTO_TEXT_COLORS,
   PHOTO_COLORS,
   PHOTO_BORDERS,
   PHOTO_COMBINED_EFFECTS
 } from '@/components/generic/config/photo-config';
-import { HOVER_TEXT_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
+import { TRANSITION_PRESETS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
+import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface PhotoGridProps {
   photos: Photo[];
@@ -42,10 +36,4 @@ export function PhotoGrid({ photos }: PhotoGridProps) {
       ))}
     </div>
   );
-}
-*/
-
-// 🚧 TEMPORARY ERROR TO FORCE MIGRATION
-export function PhotoGrid() {
-  throw new Error('PhotoGrid duplicate disabled - migrate to enterprise PhotosPreview system');
 }

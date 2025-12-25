@@ -7,7 +7,7 @@ import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { errorTracker } from '@/services/ErrorTracker';
 import { notificationConfig } from '@/config/error-reporting';
 import { componentSizes } from '@/styles/design-tokens';
-import { borderVariants } from '@/styles/design-tokens';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface CustomErrorInfo {
   componentStack: string;
@@ -38,6 +38,7 @@ interface ErrorBoundaryProps {
   componentName?: string;
   showErrorDetails?: boolean;
   isolateError?: boolean; // Prevent error from bubbling up
+  borderTokens?: ReturnType<typeof useBorderTokens>; // 🏢 ENTERPRISE: Border tokens injection
 }
 
 class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
@@ -395,7 +396,7 @@ ${errorDetails.stack || 'Stack trace not available'}
       return (
         <div className="min-h-screen bg-background flex items-center justify-center p-4">
           <div className="max-w-2xl w-full">
-            <div className={`bg-card ${borderVariants.status.error.className} p-8 shadow-lg`}>
+            <div className={`bg-card ${this.props.borderTokens?.quick.error || 'border-red-500 border'} p-8 shadow-lg`}>
               {/* Error Header */}
               <div className="flex items-center space-x-3 mb-6">
                 <div className="p-3 bg-red-100 dark:bg-red-900/20 rounded-full">
@@ -412,7 +413,7 @@ ${errorDetails.stack || 'Stack trace not available'}
               </div>
 
               {/* Error Message */}
-              <div className={`mb-6 p-4 bg-red-50 dark:bg-red-950/20 ${borderVariants.status.error.className}`}>
+              <div className={`mb-6 p-4 bg-red-50 dark:bg-red-950/20 ${this.props.borderTokens?.quick.error || 'border-red-500 border'}`}>
                 <p className="text-red-800 dark:text-red-200 font-medium">
                   {error.message}
                 </p>
@@ -675,14 +676,26 @@ export function useErrorReporting() {
   };
 }
 
-// Specialized error boundaries for different contexts
-export function PageErrorBoundary({ children, ...props }: Omit<ErrorBoundaryProps, 'componentName'>) {
+// OLD specialized error boundaries removed - replaced with Enterprise versions below
+
+// 🏢 ENTERPRISE: Wrapper component που inject τα border tokens
+export function EnterpriseErrorBoundary(props: Omit<ErrorBoundaryProps, 'borderTokens'>) {
+  const borderTokens = useBorderTokens();
+
+  return <ErrorBoundary {...props} borderTokens={borderTokens} />;
+}
+
+// 🏢 ENTERPRISE: Enhanced specialized error boundaries
+export function PageErrorBoundary({ children, ...props }: Omit<ErrorBoundaryProps, 'componentName' | 'borderTokens'>) {
+  const borderTokens = useBorderTokens();
+
   return (
-    <ErrorBoundary 
+    <ErrorBoundary
       componentName="Page"
       enableRetry={true}
       maxRetries={2}
       enableReporting={true}
+      borderTokens={borderTokens}
       {...props}
     >
       {children}
@@ -690,15 +703,18 @@ export function PageErrorBoundary({ children, ...props }: Omit<ErrorBoundaryProp
   );
 }
 
-export function ComponentErrorBoundary({ children, ...props }: Omit<ErrorBoundaryProps, 'isolateError'>) {
+export function ComponentErrorBoundary({ children, ...props }: Omit<ErrorBoundaryProps, 'isolateError' | 'borderTokens'>) {
+  const borderTokens = useBorderTokens();
+
   return (
-    <ErrorBoundary 
+    <ErrorBoundary
       isolateError={true}
       enableRetry={true}
       maxRetries={1}
       showErrorDetails={false}
+      borderTokens={borderTokens}
       fallback={(error, _, retry) => (
-        <div className={`p-4 ${borderVariants.status.error.className} bg-red-50 dark:bg-red-950/20`}>
+        <div className={`p-4 ${borderTokens.quick.error} bg-red-50 dark:bg-red-950/20`}>
           <div className="flex items-center justify-between">
             <div>
               <p className="font-medium text-red-900 dark:text-red-100">Component Error</p>
@@ -717,4 +733,5 @@ export function ComponentErrorBoundary({ children, ...props }: Omit<ErrorBoundar
   );
 }
 
-export default ErrorBoundary;
+// Export both raw class και enterprise wrapper
+export default EnterpriseErrorBoundary;

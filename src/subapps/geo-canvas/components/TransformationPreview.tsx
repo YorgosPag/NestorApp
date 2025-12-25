@@ -376,7 +376,7 @@ export function TransformationPreview({
       </div>
 
       {transformState.isCalibrated && transformState.accuracy && (
-        <div className="mt-3 pt-3 border-t border-gray-700">
+        <div className={`mt-3 pt-3 ${quick.separatorH}`}>
           <div className="flex justify-between text-sm">
             <span className="text-gray-400">{t('hardcodedTexts.labels.rmsAccuracy')}</span>
             <span className="text-yellow-400">±{transformState.accuracy.toFixed(3)}m</span>

@@ -181,7 +181,7 @@ function ScriptStyleButtons({ settings, onSuperscriptChange, onSubscriptChange }
         className={`px-3 py-1 text-sm ${quick.button} transition-colors ${
           settings.isSuperscript
             ? 'bg-green-600 border-green-500 text-white'
-            : 'bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} border-gray-600 text-gray-300'
+            : `bg-gray-700 \${HOVER_BACKGROUND_EFFECTS.LIGHT} \${getStatusBorder('default')} text-gray-300`
         }`}
       >
         X<sup>2</sup>
@@ -191,7 +191,7 @@ function ScriptStyleButtons({ settings, onSuperscriptChange, onSubscriptChange }
         className={`px-3 py-1 text-sm ${quick.button} transition-colors ${
           settings.isSubscript
             ? 'bg-green-600 border-green-500 text-white'
-            : 'bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} border-gray-600 text-gray-300'
+            : `bg-gray-700 \${HOVER_BACKGROUND_EFFECTS.LIGHT} \${getStatusBorder('default')} text-gray-300`
         }`}
       >
         X<sub>2</sub>

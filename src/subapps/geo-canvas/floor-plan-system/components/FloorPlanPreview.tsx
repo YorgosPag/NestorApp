@@ -45,11 +45,11 @@ export function FloorPlanPreview({ result, file, className = '' }: FloorPlanPrev
     <article className={`flex flex-col gap-4 ${className}`} aria-labelledby="floor-plan-preview-title">
       {/* Thumbnail Preview */}
       {result.thumbnail && (
-        <section className={`bg-gray-50 ${quick.card} p-4 border-2 border-gray-200`} aria-labelledby="thumbnail-title">
+        <section className={`bg-gray-50 ${quick.card} p-4 border-2`} aria-labelledby="thumbnail-title">
           <h3 id="thumbnail-title" className="text-sm font-semibold text-gray-700 mb-3">
             {t('floorPlan.preview.thumbnailTitle')}
           </h3>
-          <figure className={`flex justify-center items-center bg-white ${quick.input} border-gray-300`}>
+          <figure className={`flex justify-center items-center bg-white ${quick.input}`}>
             <img
               src={result.thumbnail}
               alt="Floor plan preview"
@@ -103,7 +103,7 @@ export function FloorPlanPreview({ result, file, className = '' }: FloorPlanPrev
 
           {/* Layer list */}
           {result.layers && result.layers.length > 0 && (
-            <div className="mt-3 pt-3 border-t border-green-300">
+            <div className="mt-3 pt-3 border-t">
               <div className="text-xs font-semibold text-green-700 mb-2">
                 {t('floorPlan.preview.layerList')}:
               </div>
@@ -111,7 +111,7 @@ export function FloorPlanPreview({ result, file, className = '' }: FloorPlanPrev
                 {result.layers.slice(0, 10).map((layer, index) => (
                   <span
                     key={index}
-                    className={`px-2 py-1 bg-green-100 text-green-800 text-xs ${quick.input} border-green-300`}
+                    className={`px-2 py-1 bg-green-100 text-green-800 text-xs ${quick.input}`}
                   >
                     {layer}
                   </span>

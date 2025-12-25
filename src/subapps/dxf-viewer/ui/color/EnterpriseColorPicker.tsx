@@ -64,7 +64,7 @@ export function EnterpriseColorPicker({
 }: EnterpriseColorPickerProps) {
   const [currentMode, setCurrentMode] = useState<ColorMode>(modes[0] || 'hex');
   const { addColor } = useRecentColors();
-  const { quick } = useBorderTokens();
+  const { quick, getStatusBorder, radius } = useBorderTokens();
 
   // Handle color change
   const handleChange = useCallback(
@@ -98,7 +98,7 @@ export function EnterpriseColorPicker({
 
   return (
     <div
-      className={`space-y-4 p-4 bg-gray-900 border border-gray-700 ${quick.card} ${disabled ? 'opacity-50 pointer-events-none' : ''} ${className}`}
+      className={`space-y-4 p-4 bg-gray-900 border ${getStatusBorder('muted')} ${quick.card} ${disabled ? 'opacity-50 pointer-events-none' : ''} ${className}`}
     >
       {/* === COLOR AREA + HUE SLIDER === */}
       <div className="space-y-3">
@@ -133,7 +133,7 @@ export function EnterpriseColorPicker({
       <div className="space-y-2">
         {/* Mode tabs */}
         {modes.length > 1 && (
-          <div className="flex gap-1 border-b border-gray-700">
+          <div className="flex gap-1 border-b ${getStatusBorder('muted')}">
             {modes.map((mode) => (
               <button
                 key={mode}
@@ -142,7 +142,7 @@ export function EnterpriseColorPicker({
                 className={`
                   px-3 py-1 text-xs font-medium transition-colors
                   ${currentMode === mode
-                    ? 'text-blue-400 border-b-2 border-blue-400'
+                    ? `text-blue-400 border-b-2 ${getStatusBorder('info')}`
                     : `text-gray-400 ${HOVER_TEXT_EFFECTS.GRAY_LIGHT}`
                   }
                 `}
@@ -278,7 +278,7 @@ interface ContrastPanelPlaceholderProps {
 
 function ContrastPanelPlaceholder({ foreground, background }: ContrastPanelPlaceholderProps) {
   return (
-    <div className="p-3 bg-gray-800 rounded border border-gray-700">
+    <div className="p-3 bg-gray-800 ${radius.md} border ${getStatusBorder('muted')}">
       <h4 className="text-sm font-medium text-gray-300 mb-2">Contrast Checker</h4>
       <div className="text-xs text-gray-400">
         <div>Foreground: {foreground}</div>

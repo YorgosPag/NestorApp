@@ -1,6 +1,7 @@
 'use client';
 import { Eye, ArrowRight, Heart, Square, Bed, Bath, Building } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { PropertyBadge, CommonBadge } from '@/core/badges';
 import { getPropertyImage } from '../utils/images';
 import { COMPLEX_HOVER_EFFECTS, TRANSITION_PRESETS, INTERACTIVE_PATTERNS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
@@ -8,8 +9,9 @@ import { formatCurrency } from '@/lib/intl-utils';
 
 export function PropertyCard({ property, onViewFloorPlan }: { property: any; onViewFloorPlan: (id: string) => void; }) {
   const iconSizes = useIconSizes();
+  const { quick, radius } = useBorderTokens();
   return (
-    <article className={`w-full flex flex-col bg-white dark:bg-card rounded-xl shadow-md ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden group cursor-pointer ${COMPLEX_HOVER_EFFECTS.FEATURE_CARD}`} itemScope itemType="https://schema.org/RealEstateProperty">
+    <article className={`w-full flex flex-col bg-white dark:bg-card ${radius.xl} shadow-md ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden group cursor-pointer ${COMPLEX_HOVER_EFFECTS.FEATURE_CARD}`} itemScope itemType="https://schema.org/RealEstateProperty">
       <header className="relative h-48 overflow-hidden bg-gray-100 dark:bg-muted/30">
         <img
           src={getPropertyImage(property)}
@@ -22,7 +24,7 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: any; onV
             customLabel="Διαθέσιμο"
           />
         </aside>
-        <button className={`absolute top-3 right-3 p-2 bg-white/90 dark:bg-gray-800/80 backdrop-blur rounded-full ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}>
+        <button className={`absolute top-3 right-3 p-2 bg-white/90 dark:bg-gray-800/80 backdrop-blur ${radius.full} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}>
           <Heart className={`${iconSizes.sm} text-gray-600 dark:text-gray-300`} />
         </button>
       </header>
@@ -81,12 +83,12 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: any; onV
         <footer className="flex gap-2" role="contentinfo" aria-label="Ενέργειες Ακινήτου">
           <button
             onClick={() => onViewFloorPlan(property.id)}
-            className={`flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg flex items-center justify-center gap-2 text-sm font-medium ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+            className={`flex-1 px-4 py-2 bg-blue-600 text-white ${radius.lg} flex items-center justify-center gap-2 text-sm font-medium ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
           >
             <Eye className={iconSizes.sm} />
             Δείτε στην κάτοψη
           </button>
-          <button className={`px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}>
+          <button className={`px-4 py-2 ${quick.button} ${radius.lg} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}>
             <ArrowRight className={`${iconSizes.sm} text-gray-600 dark:text-gray-300`} />
           </button>
         </footer>
