@@ -75,6 +75,22 @@ export const PANEL_COLORS = {
   BORDER_SECONDARY: '#6b7280',  // Secondary borders
   BORDER_MUTED: '#374151',      // getStatusBorder('muted') equivalent - Subtle borders
 
+  // CSS-in-JS border colors (hex equivalents) - 🏢 ENTERPRISE: For styled components
+  BORDER_HEX_PRIMARY: '#4b5563',     // rgb(75 85 99) - border-gray-600
+  BORDER_HEX_SECONDARY: '#6b7280',   // rgb(107 114 128) - border-gray-500
+  BORDER_HEX_LIGHT: '#d1d5db',       // rgb(209 213 219) - border-gray-300
+  BORDER_HEX_ACCENT: '#3b82f6',      // rgb(59 130 246) - border-blue-500
+
+  // Semantic border colors - 🏢 ENTERPRISE: For modal themes
+  BORDER_INFO_PRIMARY: 'border-blue-200 dark:border-blue-800',      // Info modal borders
+  BORDER_INFO_SECONDARY: 'border-blue-300 dark:border-blue-700',    // Info secondary borders
+  BORDER_SUCCESS_PRIMARY: 'border-green-200 dark:border-green-800', // Success modal borders
+  BORDER_SUCCESS_SECONDARY: 'border-green-300 dark:border-green-700', // Success secondary borders
+  BORDER_WARNING_PRIMARY: 'border-orange-200 dark:border-orange-800', // Warning modal borders
+  BORDER_WARNING_SECONDARY: 'border-orange-300 dark:border-orange-700', // Warning secondary borders
+  BORDER_ERROR_PRIMARY: 'border-red-200 dark:border-red-800',       // Error modal borders
+  BORDER_ERROR_SECONDARY: 'border-red-300 dark:border-red-700',     // Error secondary borders
+
   // Interactive states
   ACTIVE_BG: '#2563eb',         // bg-blue-600 - Active tab background
   ACTIVE_BORDER: '#3b82f6',     // border-blue-500 - Active borders
@@ -368,7 +384,7 @@ const ICON_SIZES = {
 export const SPECIFIC_SETTINGS_TOKENS = {
   CATEGORY_BUTTON: {
     BASE: 'h-8 w-8 p-0 rounded-md border transition-colors duration-150 flex items-center justify-center relative',
-    ACTIVE: 'bg-blue-600 hover:bg-blue-700 text-white border-blue-500',
+    ACTIVE: 'bg-blue-600 hover:bg-blue-700 text-white border border-blue-500', // ✅ ENTERPRISE: Consistent with ACTIVE_BORDER color
     COMING_SOON: `bg-gray-700 text-gray-500 ${borderTokens.default} cursor-not-allowed opacity-50`,
     INACTIVE: `bg-gray-700 hover:bg-gray-600 text-gray-300 ${borderTokens.default}`,
   },
@@ -416,7 +432,7 @@ export const OVERLAY_PANEL_TOKENS = {
  */
 export const MERGE_PANEL_TOKENS = {
   CONTAINER: {
-    BASE: 'bg-blue-900 bg-opacity-20 border border-blue-400 rounded-lg p-3 mb-3 space-y-2',
+    BASE: 'bg-blue-900 bg-opacity-20 border border-blue-400 rounded-lg p-3 mb-3 space-y-2', // ✅ ENTERPRISE: Info border pattern (consistent)
   },
 
   TITLE: {

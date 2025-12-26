@@ -16,6 +16,8 @@
 import { DXF_MODAL_TYPOGRAPHY } from './modal-typography';
 // Import centralized icon sizes - 🔥 NO MORE DUPLICATES!
 import { componentSizes } from '../../../styles/design-tokens';
+// 🏢 ENTERPRISE: Import centralized panel tokens
+import { PANEL_COLORS } from './panel-tokens';
 
 // ====================================================================
 // SELECT STYLING CONSTANTS - 100% CENTRALIZED
@@ -28,8 +30,8 @@ import { componentSizes } from '../../../styles/design-tokens';
 export const MODAL_SELECT_STYLES = {
   // DXF Technical Interface Select (Dark Theme)
   DXF_TECHNICAL: {
-    trigger: 'w-full bg-gray-700 border-gray-600 text-white focus:border-orange-500 focus:ring-orange-500/20',
-    content: 'bg-gray-700 border-gray-600',
+    trigger: `w-full bg-gray-700 border ${PANEL_COLORS.BORDER_PRIMARY} text-white focus:border-orange-500 focus:ring-orange-500/20`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
+    content: `bg-gray-700 border ${PANEL_COLORS.BORDER_PRIMARY}`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
     item: 'text-white hover:bg-gray-600 focus:bg-gray-600',
     placeholder: 'text-gray-300',
   },
@@ -44,24 +46,24 @@ export const MODAL_SELECT_STYLES = {
 
   // Success State Select
   SUCCESS: {
-    trigger: 'w-full bg-green-50 border-green-300 text-green-900 focus:border-green-500',
-    content: 'bg-green-50 border-green-300',
+    trigger: `w-full bg-green-50 border ${PANEL_COLORS.BORDER_SUCCESS_SECONDARY} text-green-900 focus:border-green-500`, // ✅ ENTERPRISE: Centralized success border
+    content: `bg-green-50 border ${PANEL_COLORS.BORDER_SUCCESS_SECONDARY}`, // ✅ ENTERPRISE: Centralized success border
     item: 'text-green-900 hover:bg-green-100 focus:bg-green-100',
     placeholder: 'text-green-600',
   },
 
   // Error State Select
   ERROR: {
-    trigger: 'w-full bg-red-50 border-red-300 text-red-900 focus:border-red-500',
-    content: 'bg-red-50 border-red-300',
+    trigger: `w-full bg-red-50 border ${PANEL_COLORS.BORDER_ERROR_SECONDARY} text-red-900 focus:border-red-500`, // ✅ ENTERPRISE: Centralized error border
+    content: `bg-red-50 border ${PANEL_COLORS.BORDER_ERROR_SECONDARY}`, // ✅ ENTERPRISE: Centralized error border
     item: 'text-red-900 hover:bg-red-100 focus:bg-red-100',
     placeholder: 'text-red-600',
   },
 
   // Warning State Select
   WARNING: {
-    trigger: 'w-full bg-orange-50 border-orange-300 text-orange-900 focus:border-orange-500',
-    content: 'bg-orange-50 border-orange-300',
+    trigger: `w-full bg-orange-50 border ${PANEL_COLORS.BORDER_WARNING_SECONDARY} text-orange-900 focus:border-orange-500`, // ✅ ENTERPRISE: Centralized warning border
+    content: `bg-orange-50 border ${PANEL_COLORS.BORDER_WARNING_SECONDARY}`, // ✅ ENTERPRISE: Centralized warning border
     item: 'text-orange-900 hover:bg-orange-100 focus:bg-orange-100',
     placeholder: 'text-orange-600',
   },

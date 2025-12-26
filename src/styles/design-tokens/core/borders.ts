@@ -170,7 +170,7 @@ export const borderVariants = {
     color: borderColors.default.css,
     radius: borderRadius.lg,
     style: borderStyle.solid,
-    className: 'border border-border rounded-lg'
+    className: `border-[${borderWidth.default}] border-[${borderColors.default.light}] rounded-lg`
   },
 
   /** Input field border - interactive, accessible */
@@ -180,7 +180,7 @@ export const borderVariants = {
       color: borderColors.default.css,
       radius: borderRadius.md,
       style: borderStyle.solid,
-      className: 'border border-input rounded-md'
+      className: `border-[${borderWidth.default}] border-[${borderColors.default.light}] rounded-md`
     },
     focus: {
       width: borderWidth.medium,
@@ -205,7 +205,7 @@ export const borderVariants = {
       color: borderColors.default.css,
       radius: borderRadius.md,
       style: borderStyle.solid,
-      className: 'border border-border rounded-md'
+      className: `border-[${borderWidth.default}] border-[${borderColors.default.light}] rounded-md`
     },
     primary: {
       width: borderWidth.default,

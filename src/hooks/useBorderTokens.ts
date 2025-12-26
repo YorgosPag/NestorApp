@@ -132,30 +132,30 @@ export function useBorderTokens() {
     getStatusBorder: (status: 'default' | 'success' | 'warning' | 'error' | 'info' | 'muted' | 'subtle' | 'critical' | 'high' | 'medium' | 'low'): string => {
       // Handle special cases
       if (status === 'default') {
-        return 'border border-gray-600'; // Default border styling
+        return `border-[${borderWidth.default}] border-[${borderColors.default.light}]`; // CENTRALIZED από design tokens!
       }
       if (status === 'muted') {
-        return 'border border-gray-500'; // Muted/subdued border
+        return `border-[${borderWidth.default}] border-[${borderColors.muted.light}]`; // CENTRALIZED από design tokens!
       }
       if (status === 'subtle') {
-        return 'border border-gray-400'; // Subtle border
+        return `border-[${borderWidth.hairline}] border-[${borderColors.muted.light}]`; // CENTRALIZED από design tokens!
       }
 
       // Handle severity levels (for Geo Canvas compatibility)
       if (status === 'critical') {
-        return 'border border-red-600'; // Critical severity
+        return `border-[${borderWidth.thick}] border-[${borderColors.error.light}]`; // CENTRALIZED από design tokens!
       }
       if (status === 'high') {
-        return 'border border-amber-600'; // High severity
+        return `border-[${borderWidth.medium}] border-[${borderColors.warning.light}]`; // CENTRALIZED από design tokens!
       }
       if (status === 'medium') {
-        return 'border border-blue-600'; // Medium severity
+        return `border-[${borderWidth.default}] border-[${borderColors.info.light}]`; // CENTRALIZED από design tokens!
       }
       if (status === 'low') {
-        return 'border border-green-600'; // Low severity
+        return `border-[${borderWidth.default}] border-[${borderColors.success.light}]`; // CENTRALIZED από design tokens!
       }
 
-      return borderVariants.status[status]?.className || 'border border-gray-600';
+      return borderVariants.status[status]?.className || `border-[${borderWidth.default}] border-[${borderColors.default.light}]`;
     },
 
     /**

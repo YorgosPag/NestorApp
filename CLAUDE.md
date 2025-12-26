@@ -1,6 +1,10 @@
 Κείμενο οδηγίας
 
 Θα μου μιλάς πάντοτε στα ελληνικά.
+SOS. SOS. N.0 ΔΙΑΒΑΖΕΙΣ ΤΑ 2 ΑΥΤΑ ΑΡΧΕΙΑ
+   C:\Nestor_Pagonis\src\subapps\dxf-viewer\docs\centralized_systems.md
+   C:\Nestor_Pagonis\src\subapps\dxf-viewer\docs\centralized_systems_TABLE.md
+ΩΣΤΕ ΝΑ ΓΝΩΡΙΖΕΙΣ ΠΟΙΑ ΕΙΝΑΙ ΤΑ ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ ΣΥΣΤΗΜΑΤΑ ΠΟΥ ΥΠΑΡΧΟΥΝ ΣΤΗΝ ΕΦΑΡΜΟΓΗ ΚΑΙ ΝΑ ΚΑΝΕΙΣ ΧΡΗΣΗ ΑΥΤΩΝ ΤΩΝ ΣΥΣΤΗΜΑΤΩΝ
 SOS. SOS. Ν.1 ΚΑΘΕ ΛΥΣΗ ΠΟΥ ΘΑ ΔΙΝΕΙΣ ΟΤΑΝ ΓΡΑΦΕΙΣ ΚΩΔΙΚΑ ΠΡΕΠΕΙ ΥΠΟΧΡΕΩΤΙΚΑ ΝΑ ΕΙΝΑΙ ΕΠΑΓΓΕΛΜΑΤΙΚΗ ΚΑΙ ΟΧΙ ΜΠΑΚΑΛΙΚΟ ΓΕΙΤΟΜΙΑΣ
 SOS. SOS. Ν.2 ΑΠΑΓΟΡΕΥΕΤΑΙ Η ΧΡΗΣΗ any
 SOS. SOS. Ν.3 ΑΠΑΓΟΡΕΥΕΤΑΙ Η ΧΡΗΣΗ ΤΩΝ INLINE STYLES

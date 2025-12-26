@@ -19,7 +19,15 @@
       "Bash(npm run typecheck:*)",
       "Bash(npm start)",
       "Read(//c/Users/user/Downloads/**)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git push:*)",
+      "Bash(powershell.exe:*)",
+      "Bash(rg:*)",
+      "Bash(npm run build:tokens:*)",
+      "Bash(for file in \"config\\modal-colors.ts\" \"config\\modal-config.ts\" \"config\\modal-layout.ts\" \"config\\modal-select.ts\" \"config\\panel-tokens.ts\")",
+      "Bash(do echo \"=== $file ===\")",
+      "Bash(done)",
+      "Bash(for file in \"config/modal-colors.ts\" \"config/modal-layout.ts\" \"config/modal-select.ts\" \"config/panel-tokens.ts\" \"ui/effects/index.ts\")"
     ],
     "deny": [],
     "ask": []

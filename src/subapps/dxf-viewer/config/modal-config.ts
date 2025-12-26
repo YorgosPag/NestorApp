@@ -7,11 +7,8 @@
  * @compliance CLAUDE.md Enterprise Standards
  */
 
-// 🏢 ENTERPRISE: Centralized border tokens for consistency
-const MODAL_CONFIG_BORDERS = {
-  dark: 'border-gray-600',      // Dark theme borders
-  light: 'border-gray-200',     // Light theme borders
-} as const;
+// 🏢 ENTERPRISE: Import centralized panel tokens instead of local duplicates
+import { PANEL_COLORS } from './panel-tokens';
 
 // ====================================================================
 // ENTERPRISE MODAL SIZING STANDARDS
@@ -80,34 +77,34 @@ export const MODAL_THEMES = {
 
   // Dark theme for DXF viewer and technical interfaces
   DARK_TECHNICAL: {
-    content: `bg-gray-800 text-white ${MODAL_CONFIG_BORDERS.dark}`,
+    content: `bg-gray-800 text-white border ${PANEL_COLORS.BORDER_PRIMARY}`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
     overlay: 'bg-black/75 backdrop-blur-sm',
-    header: `border-b ${MODAL_CONFIG_BORDERS.dark}`,
-    footer: `border-t ${MODAL_CONFIG_BORDERS.dark}`,
+    header: `border-b ${PANEL_COLORS.BORDER_PRIMARY}`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
+    footer: `border-t ${PANEL_COLORS.BORDER_PRIMARY}`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
   },
 
   // Light theme for admin and business interfaces
   LIGHT_BUSINESS: {
-    content: `bg-white text-gray-900 ${MODAL_CONFIG_BORDERS.light}`,
+    content: `bg-white text-gray-900 border ${PANEL_COLORS.BORDER_SECONDARY}`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
     overlay: 'bg-black/50',
-    header: `border-b ${MODAL_CONFIG_BORDERS.light}`,
-    footer: `border-t ${MODAL_CONFIG_BORDERS.light}`,
+    header: `border-b ${PANEL_COLORS.BORDER_SECONDARY}`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
+    footer: `border-t ${PANEL_COLORS.BORDER_SECONDARY}`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
   },
 
   // Success theme for confirmations
   SUCCESS: {
-    content: 'bg-green-50 text-green-900 border-green-200',
+    content: `bg-green-50 text-green-900 border ${PANEL_COLORS.BORDER_SUCCESS_SECONDARY}`, // ✅ ENTERPRISE: Centralized success border
     overlay: 'bg-black/60',
-    header: 'border-b border-green-200',
-    footer: 'border-t border-green-200',
+    header: `border-b ${PANEL_COLORS.BORDER_SUCCESS_SECONDARY}`, // ✅ ENTERPRISE: Centralized success border
+    footer: `border-t ${PANEL_COLORS.BORDER_SUCCESS_SECONDARY}`, // ✅ ENTERPRISE: Centralized success border
   },
 
   // Warning theme for destructive actions
   WARNING: {
-    content: 'bg-red-50 text-red-900 border-red-200',
+    content: `bg-red-50 text-red-900 border ${PANEL_COLORS.BORDER_ERROR_PRIMARY}`, // ✅ ENTERPRISE: Centralized error border
     overlay: 'bg-black/70',
-    header: 'border-b border-red-200',
-    footer: 'border-t border-red-200',
+    header: `border-b ${PANEL_COLORS.BORDER_ERROR_PRIMARY}`, // ✅ ENTERPRISE: Centralized error border
+    footer: `border-t ${PANEL_COLORS.BORDER_ERROR_PRIMARY}`, // ✅ ENTERPRISE: Centralized error border
   },
 } as const;
 

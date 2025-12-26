@@ -13,6 +13,7 @@
 
 import type { PropertyStatus } from '../../../constants/property-statuses-enterprise';
 import { BUTTON_STATUS_COLORS } from '../config/color-mapping';
+import { PANEL_COLORS } from '../config/panel-tokens'; // 🏢 ENTERPRISE: Centralized border colors
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 // 🎯 ENTERPRISE BORDER TOKENS INTEGRATION
@@ -93,7 +94,7 @@ export const getTestResultsModalContentStyles = () => ({
   backgroundColor: 'rgb(17 24 39)', // bg-gray-900
   borderRadius: 'calc(var(--radius) + 2px)', // Enterprise lg border radius
   boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', // shadow-2xl
-  border: '1px solid rgb(75 85 99)', // border-gray-600
+  border: `1px solid ${PANEL_COLORS.BORDER_HEX_PRIMARY}`, // ✅ ENTERPRISE: Centralized border color
   display: 'flex',
   flexDirection: 'column' as const,
   width: '90%',
@@ -160,7 +161,7 @@ export const getSafePDFLoaderPlaceholderStyles = (width: number, height: number)
   alignItems: 'center',
   justifyContent: 'center',
   backgroundColor: 'rgb(243 244 246)', // bg-gray-100
-  border: '2px dashed rgb(209 213 219)', // border-gray-300
+  border: `2px dashed ${PANEL_COLORS.BORDER_HEX_LIGHT}`, // ✅ ENTERPRISE: Centralized border color
   borderRadius: '0.375rem',
   width: `${width}px`,
   height: `${height}px`,
@@ -286,7 +287,7 @@ export const getToolbarButtonBaseStyles = () => ({
   height: '2rem', // h-8
   padding: '0',
   borderRadius: 'var(--radius)', // Enterprise border radius-md
-  border: '1px solid rgb(107 114 128)', // border-gray-500
+  border: `1px solid ${PANEL_COLORS.BORDER_HEX_SECONDARY}`, // ✅ ENTERPRISE: Centralized border color
   transition: 'colors 0.15s ease-in-out',
   display: 'flex',
   alignItems: 'center',
@@ -306,17 +307,17 @@ export const getToolbarButtonStyles = (
     default: {
       backgroundColor: 'rgb(55 65 81)', // bg-gray-700
       color: 'rgb(229 231 235)', // text-gray-200
-      borderColor: 'rgb(107 114 128)' // border-gray-500
+      borderColor: PANEL_COLORS.BORDER_HEX_SECONDARY // ✅ ENTERPRISE: Centralized border color
     },
     primary: {
       backgroundColor: 'rgb(37 99 235)', // bg-blue-600
       color: 'white',
-      borderColor: 'rgb(59 130 246)' // border-blue-500
+      borderColor: PANEL_COLORS.BORDER_HEX_ACCENT // ✅ ENTERPRISE: Centralized border color
     },
     danger: {
       backgroundColor: 'rgb(55 65 81)', // bg-gray-700
       color: 'rgb(248 113 113)', // text-red-400
-      borderColor: 'rgb(107 114 128)' // border-gray-500
+      borderColor: PANEL_COLORS.BORDER_HEX_SECONDARY // ✅ ENTERPRISE: Centralized border color
     }
   };
 
@@ -353,11 +354,11 @@ export const getModeButtonStyles = (isActive: boolean = false) => ({
   ...(isActive ? {
     backgroundColor: 'rgb(37 99 235)', // bg-blue-600
     color: 'white',
-    borderColor: 'rgb(59 130 246)' // border-blue-500
+    borderColor: PANEL_COLORS.BORDER_HEX_ACCENT // ✅ ENTERPRISE: Centralized border color
   } : {
     backgroundColor: 'rgb(55 65 81)', // bg-gray-700
     color: 'rgb(229 231 235)', // text-gray-200
-    borderColor: 'rgb(107 114 128)' // border-gray-500
+    borderColor: PANEL_COLORS.BORDER_HEX_SECONDARY // ✅ ENTERPRISE: Centralized border color
   })
 });
 
@@ -381,11 +382,11 @@ export const getKindButtonStyles = (isActive: boolean = false) => ({
   ...(isActive ? {
     backgroundColor: 'rgb(37 99 235)', // bg-blue-600
     color: 'white',
-    borderColor: 'rgb(59 130 246)' // border-blue-500
+    borderColor: PANEL_COLORS.BORDER_HEX_ACCENT // ✅ ENTERPRISE: Centralized border color
   } : {
     backgroundColor: 'rgb(55 65 81)', // bg-gray-700
     color: 'rgb(229 231 235)', // text-gray-200
-    borderColor: 'rgb(107 114 128)' // border-gray-500
+    borderColor: PANEL_COLORS.BORDER_HEX_SECONDARY // ✅ ENTERPRISE: Centralized border color
   })
 });
 
@@ -402,7 +403,7 @@ export const getOverlayToolbarStyles = () => ({
   gap: '0.5rem',
   padding: '0.5rem',
   backgroundColor: 'rgb(31 41 55)', // bg-gray-800
-  border: '1px solid rgb(107 114 128)', // border-gray-500
+  border: `1px solid ${PANEL_COLORS.BORDER_HEX_SECONDARY}`, // ✅ ENTERPRISE: Centralized border color
   borderRadius: 'calc(var(--radius) + 2px)', // Enterprise lg border radius
   flexWrap: 'wrap' as const
 });
@@ -533,11 +534,11 @@ export const getCursorShapeButtonStyles = (
   transition: 'colors 0.15s ease-in-out',
   ...(isActive ? {
     backgroundColor: 'rgb(37 99 235)', // bg-blue-600
-    borderColor: 'rgb(59 130 246)', // border-blue-500
+    borderColor: PANEL_COLORS.BORDER_HEX_ACCENT, // ✅ ENTERPRISE: Centralized border color
     color: 'white'
   } : {
     backgroundColor: 'rgb(55 65 81)', // bg-gray-600
-    borderColor: 'rgb(107 114 128)', // border-gray-500
+    borderColor: PANEL_COLORS.BORDER_HEX_SECONDARY, // ✅ ENTERPRISE: Centralized border color
     color: 'rgb(229 231 235)' // text-gray-200
   })
 });
@@ -752,7 +753,7 @@ export const getCursorColorPreviewStyles = (cursorColor: string) => ({
   height: '1.5rem', // h-6
   borderRadius: 'var(--radius)', // Enterprise border radius-md
   backgroundColor: cursorColor,
-  border: '2px solid rgb(75 85 99)', // border-gray-600
+  border: `2px solid ${PANEL_COLORS.BORDER_HEX_PRIMARY}`, // ✅ ENTERPRISE: Centralized border color
   transition: 'all 0.15s ease-in-out',
   cursor: 'pointer' as const,
   '&:hover': {

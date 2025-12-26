@@ -10,14 +10,8 @@
 // Import existing color systems from centralized design tokens
 import { colors, semanticColors } from '@/styles/design-tokens';
 
-// 🏢 ENTERPRISE: Import centralized border tokens system
-// Note: Imported as a constant to avoid React hooks rules in config files
-const MODAL_BORDER_TOKENS = {
-  muted: 'border-gray-700',      // getStatusBorder('muted')
-  default: 'border-gray-600',    // getStatusBorder('default')
-  secondary: 'border-gray-500',  // getStatusBorder('secondary')
-  light: 'border-gray-300',      // For light themes
-} as const;
+// 🏢 ENTERPRISE: Import centralized panel tokens instead of duplicates
+import { PANEL_COLORS } from './panel-tokens';
 
 // ====================================================================
 // MODAL COLOR VARIANTS - EXTENDS EXISTING DESIGN TOKENS
@@ -63,9 +57,9 @@ export const MODAL_COLOR_SCHEMES = {
       description: 'text-gray-400',
     },
     border: {
-      primary: MODAL_BORDER_TOKENS.default,
-      secondary: MODAL_BORDER_TOKENS.secondary,
-      accent: 'border-orange-500/20',
+      primary: `border ${PANEL_COLORS.BORDER_PRIMARY}`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
+      secondary: `border ${PANEL_COLORS.BORDER_SECONDARY}`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
+      accent: 'border-orange-500/20', // ✅ ENTERPRISE: Accent border (semantic)
     },
   },
 
@@ -82,9 +76,9 @@ export const MODAL_COLOR_SCHEMES = {
       accent: 'text-blue-600 dark:text-blue-400',
     },
     border: {
-      primary: 'border-blue-200 dark:border-blue-800',
-      secondary: 'border-blue-300 dark:border-blue-700',
-      accent: 'border-blue-500/20',
+      primary: `border ${PANEL_COLORS.BORDER_INFO_PRIMARY}`, // ✅ ENTERPRISE: Using centralized info border
+      secondary: `border ${PANEL_COLORS.BORDER_INFO_SECONDARY}`, // ✅ ENTERPRISE: Using centralized info border
+      accent: 'border-blue-500/20', // ✅ ENTERPRISE: Accent border (semantic)
     },
   },
 
@@ -101,9 +95,9 @@ export const MODAL_COLOR_SCHEMES = {
       accent: 'text-green-600 dark:text-green-400',
     },
     border: {
-      primary: 'border-green-200 dark:border-green-800',
-      secondary: 'border-green-300 dark:border-green-700',
-      accent: 'border-green-500/20',
+      primary: `border ${PANEL_COLORS.BORDER_SUCCESS_PRIMARY}`, // ✅ ENTERPRISE: Using centralized success border
+      secondary: `border ${PANEL_COLORS.BORDER_SUCCESS_SECONDARY}`, // ✅ ENTERPRISE: Using centralized success border
+      accent: 'border-green-500/20', // ✅ ENTERPRISE: Accent border (semantic)
     },
   },
 
@@ -120,9 +114,9 @@ export const MODAL_COLOR_SCHEMES = {
       accent: 'text-orange-600 dark:text-orange-400',
     },
     border: {
-      primary: 'border-orange-200 dark:border-orange-800',
-      secondary: 'border-orange-300 dark:border-orange-700',
-      accent: 'border-orange-500/20',
+      primary: `border ${PANEL_COLORS.BORDER_WARNING_PRIMARY}`, // ✅ ENTERPRISE: Using centralized warning border
+      secondary: `border ${PANEL_COLORS.BORDER_WARNING_SECONDARY}`, // ✅ ENTERPRISE: Using centralized warning border
+      accent: 'border-orange-500/20', // ✅ ENTERPRISE: Accent border (semantic)
     },
   },
 
@@ -139,9 +133,9 @@ export const MODAL_COLOR_SCHEMES = {
       accent: 'text-red-600 dark:text-red-400',
     },
     border: {
-      primary: 'border-red-200 dark:border-red-800',
-      secondary: 'border-red-300 dark:border-red-700',
-      accent: 'border-red-500/20',
+      primary: `border ${PANEL_COLORS.BORDER_ERROR_PRIMARY}`, // ✅ ENTERPRISE: Using centralized error border
+      secondary: `border ${PANEL_COLORS.BORDER_ERROR_SECONDARY}`, // ✅ ENTERPRISE: Using centralized error border
+      accent: 'border-red-500/20', // ✅ ENTERPRISE: Accent border (semantic)
     },
   },
 } as const;
@@ -191,8 +185,8 @@ export const MODAL_BUTTON_COLORS = {
   // DXF Technical interface buttons
   DXF_TECHNICAL: {
     primary: 'bg-orange-600 text-white hover:bg-orange-700',
-    secondary: `bg-gray-700 ${MODAL_BORDER_TOKENS.default} text-white hover:bg-gray-600`,
-    outline: `border ${MODAL_BORDER_TOKENS.default} text-gray-300 hover:bg-gray-700 hover:text-white`,
+    secondary: `bg-gray-700 border ${PANEL_COLORS.BORDER_PRIMARY} text-white hover:bg-gray-600`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
+    outline: `border ${PANEL_COLORS.BORDER_PRIMARY} text-gray-300 hover:bg-gray-700 hover:text-white`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
   },
 } as const;
 
@@ -214,7 +208,7 @@ export const MODAL_FORM_COLORS = {
 
   // DXF Technical interface forms
   DXF_TECHNICAL: {
-    input: `bg-gray-700 ${MODAL_BORDER_TOKENS.default} text-white focus:border-orange-500 focus:ring-orange-500/20`,
+    input: `bg-gray-700 border ${PANEL_COLORS.BORDER_PRIMARY} text-white focus:border-orange-500 focus:ring-orange-500/20`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
     label: 'text-gray-300',
     description: 'text-gray-400',
     error: 'text-red-400',
@@ -222,7 +216,7 @@ export const MODAL_FORM_COLORS = {
 
   // Light business interface forms
   LIGHT_BUSINESS: {
-    input: `bg-white ${MODAL_BORDER_TOKENS.light} text-gray-900 focus:border-blue-500`,
+    input: `bg-white border ${PANEL_COLORS.BORDER_SECONDARY} text-gray-900 focus:border-blue-500`, // ✅ ENTERPRISE: Using centralized PANEL_COLORS
     label: 'text-gray-700',
     description: 'text-gray-500',
     error: 'text-red-600',
@@ -241,10 +235,10 @@ export const MODAL_INTERACTIVE_COLORS = {
   // Card hover states
   CARD_HOVER: {
     default: 'hover:bg-accent/50 hover:border-accent',
-    info: 'hover:bg-blue-50 hover:border-blue-300 dark:hover:bg-blue-900/30',
-    success: 'hover:bg-green-50 hover:border-green-300 dark:hover:bg-green-900/30',
-    warning: 'hover:bg-orange-50 hover:border-orange-300 dark:hover:bg-orange-900/30',
-    error: 'hover:bg-red-50 hover:border-red-300 dark:hover:bg-red-900/30',
+    info: `hover:bg-blue-50 hover:${PANEL_COLORS.BORDER_INFO_SECONDARY} dark:hover:bg-blue-900/30`, // ✅ ENTERPRISE: Centralized hover border
+    success: `hover:bg-green-50 hover:${PANEL_COLORS.BORDER_SUCCESS_SECONDARY} dark:hover:bg-green-900/30`, // ✅ ENTERPRISE: Centralized hover border
+    warning: `hover:bg-orange-50 hover:${PANEL_COLORS.BORDER_WARNING_SECONDARY} dark:hover:bg-orange-900/30`, // ✅ ENTERPRISE: Centralized hover border
+    error: `hover:bg-red-50 hover:${PANEL_COLORS.BORDER_ERROR_SECONDARY} dark:hover:bg-red-900/30`, // ✅ ENTERPRISE: Centralized hover border
   },
 
   // Button focus states
