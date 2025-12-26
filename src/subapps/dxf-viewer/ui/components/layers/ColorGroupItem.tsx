@@ -8,9 +8,10 @@ import { Eye, EyeOff, Trash2, Edit2, ChevronRight, ChevronDown } from 'lucide-re
 import { LayerItem } from './LayerItem';
 import { createColorGroupKey, type ColorGroupCommonProps } from './utils';
 import { DEFAULT_LAYER_COLOR } from '../../../config/color-config';
-import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
+import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS, createHoverBorderEffects } from '@/components/ui/effects';
 import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface ColorGroupItemProps extends Pick<ColorGroupCommonProps, 
   'setExpandedColorGroups' | 'setColorPickerColorGroup' | 'setEditingColorGroup' | 
@@ -51,6 +52,9 @@ export function ColorGroupItem({
   layerItemProps
 }: ColorGroupItemProps) {
   const iconSizes = useIconSizes();
+  const borderTokens = useBorderTokens();
+  const { getStatusBorder } = borderTokens;
+  const hoverBorderEffects = createHoverBorderEffects(borderTokens);
 
   const representativeColor = scene.layers[layerNames[0]]?.color || DEFAULT_LAYER_COLOR;
 
@@ -130,7 +134,7 @@ export function ColorGroupItem({
     <div className="space-y-1">
       {/* Color Group Header */}
       <div 
-        className={`flex items-center justify-between p-2 bg-purple-900 bg-opacity-20 border border-purple-500 rounded cursor-pointer ${INTERACTIVE_PATTERNS.PURPLE_HOVER} transition-colors ${
+        className={`flex items-center justify-between p-2 bg-purple-900 bg-opacity-20 ${getStatusBorder('focus')} rounded cursor-pointer ${INTERACTIVE_PATTERNS.PURPLE_HOVER} transition-colors ${
           selectedColorGroupsForMerge.has(colorName) ? 'ring-2 ring-blue-400 bg-blue-900 bg-opacity-30' : ''
         }`}
         onClick={handleGroupClick}
@@ -154,7 +158,7 @@ export function ColorGroupItem({
           <div className="relative">
             <button
               onClick={handleColorPickerToggle}
-              className={`${iconSizes.sm} rounded border border-gray-500 ${HOVER_BORDER_EFFECTS.BLUE} ${colorBgClass}`}
+              className={`${iconSizes.sm} rounded ${getStatusBorder('secondary')} ${hoverBorderEffects.BLUE} ${colorBgClass}`}
               title="Αλλαγή χρώματος Color Group"
             />
           </div>
@@ -167,7 +171,7 @@ export function ColorGroupItem({
               onChange={(e) => setEditingColorGroupName(e.target.value)}
               onKeyDown={handleNameKeyDown}
               onBlur={handleNameBlur}
-              className="bg-gray-700 text-purple-200 text-sm font-medium px-1 rounded border border-purple-400 focus:outline-none focus:ring-1 focus:ring-purple-400 min-w-0 flex-1"
+              className="bg-gray-700 text-purple-200 text-sm font-medium px-1 rounded ${getStatusBorder('focus')} focus:outline-none focus:ring-1 focus:ring-purple-400 min-w-0 flex-1"
               autoFocus
             />
           ) : (

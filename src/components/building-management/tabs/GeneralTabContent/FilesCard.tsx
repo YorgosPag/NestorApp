@@ -8,12 +8,13 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { FileText, Upload, Camera, FileUp, FileImage, Eye, Download, Trash2 } from 'lucide-react';
+import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 import { INTERACTIVE_PATTERNS, FORM_BUTTON_EFFECTS } from '@/components/ui/effects';
 import { layoutUtilities } from '@/styles/design-tokens';
 
 export function FilesCard() {
   const iconSizes = useIconSizes();
-  const { createBorder, quick } = useBorderTokens();
+  const { createBorder, quick, getStatusBorder } = useBorderTokens();
 
   const handleFileUpload = (files: FileList | null) => {
     if (!files) return;
@@ -48,11 +49,11 @@ export function FilesCard() {
           className={`${createBorder('medium', 'hsl(var(--border))', 'dashed')} ${quick.card} p-6 text-center cursor-pointer bg-muted/20 ${INTERACTIVE_PATTERNS.DROPZONE_HOVER}`}
           role="region"
           aria-label="File drop zone"
-          onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('border-primary', 'bg-accent/20'); }}
-          onDragLeave={(e) => { e.currentTarget.classList.remove('border-primary', 'bg-accent/20'); }}
+          onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add(getStatusBorder('info').split(' ')[1], 'bg-accent/20'); }}
+          onDragLeave={(e) => { e.currentTarget.classList.remove(getStatusBorder('info').split(' ')[1], 'bg-accent/20'); }}
           onDrop={(e) => {
             e.preventDefault();
-            e.currentTarget.classList.remove('border-primary', 'bg-accent/20');
+            e.currentTarget.classList.remove(getStatusBorder('info').split(' ')[1], 'bg-accent/20');
             handleFileUpload(e.dataTransfer.files);
           }}
         >
@@ -109,9 +110,9 @@ export function FilesCard() {
           </article>
         </section>
 
-        <aside className={`mt-4 p-3 bg-blue-50 dark:bg-blue-950/30 ${quick.info} dark:border-blue-800 hidden`} id="upload-progress" role="status" aria-label="Upload progress">
+        <aside className={`mt-4 p-3 bg-blue-50 dark:bg-blue-950/30 ${quick.info} dark:${getStatusBorder('info')} hidden`} id="upload-progress" role="status" aria-label="Upload progress">
           <div className="flex items-center space-x-3">
-            <div className="flex-shrink-0"><div className={`animate-spin rounded-full ${iconSizes.md} border-b-2 border-blue-600`}></div></div>
+            <div className="flex-shrink-0"><AnimatedSpinner size="medium" /></div>
             <div className="flex-1">
               <p className="text-sm font-medium text-blue-900 dark:text-blue-200">Ανέβασμα σε εξέλιξη...</p>
               <Progress value={45} className="h-2 mt-1" />

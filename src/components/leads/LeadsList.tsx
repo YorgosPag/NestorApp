@@ -2,6 +2,8 @@
 "use client";
 import { User } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 import { EditOpportunityModal } from "@/components/crm/dashboard/EditOpportunityModal";
 import SendEmailModal from "@/components/email/SendEmailModal";
 import { useLeadsList } from "./hooks/useLeadsList";
@@ -13,6 +15,7 @@ import { HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS } from '@/components/ui/ef
 
 export default function LeadsList({ refreshTrigger }: { refreshTrigger?: any }) {
   const iconSizes = useIconSizes();
+  const { getStatusBorder } = useBorderTokens();
   const {
     leads, loading, error, fetchLeads,
     editingLead, showEditModal, emailingLead, showEmailModal,
@@ -24,7 +27,7 @@ export default function LeadsList({ refreshTrigger }: { refreshTrigger?: any }) 
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
-          <div className={`animate-spin rounded-full ${iconSizes.xl} border-b-2 border-blue-600 mx-auto mb-2`}></div>
+          <AnimatedSpinner size="large" className="mx-auto mb-2" />
           <p className="text-gray-600">Φόρτωση leads...</p>
         </div>
       </div>
@@ -33,7 +36,7 @@ export default function LeadsList({ refreshTrigger }: { refreshTrigger?: any }) 
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+      <div className={`bg-red-50 ${getStatusBorder('error')} rounded-lg p-4`}>
         <p className="text-red-600">{error}</p>
         <button onClick={fetchLeads} className={`mt-2 px-3 py-1 bg-red-600 text-white rounded text-sm transition-colors ${HOVER_BACKGROUND_EFFECTS.RED_BUTTON}`}>
           Δοκιμή ξανά

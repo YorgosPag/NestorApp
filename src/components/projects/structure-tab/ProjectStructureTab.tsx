@@ -4,6 +4,7 @@ import React from 'react';
 import type { ProjectStructureTabProps } from './types';
 import { useProjectStructure } from './hooks/useProjectStructure';
 import { getTotals } from './utils/selectors';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 import { LoadingSkeleton } from './parts/LoadingSkeleton';
 import { EmptyState } from './parts/EmptyState';
@@ -13,6 +14,7 @@ import { BuildingNode } from './parts/BuildingNode';
 
 export function ProjectStructureTab({ projectId }: ProjectStructureTabProps) {
   const { structure, loading, error } = useProjectStructure(projectId);
+  const { quick } = useBorderTokens();
 
   if (loading) {
     return <LoadingSkeleton />;
@@ -34,7 +36,7 @@ export function ProjectStructureTab({ projectId }: ProjectStructureTabProps) {
     <div className="p-4">
       <StatsOverview {...totals} />
       
-      <div className="border-l-4 border-primary pl-4 my-6">
+      <div className={`border-l-4 ${quick.info} pl-4 my-6`}>
         <ProjectHeader 
           name={structure.project.name}
           buildingsCount={structure.buildings.length}

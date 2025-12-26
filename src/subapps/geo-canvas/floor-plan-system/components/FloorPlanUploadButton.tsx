@@ -18,6 +18,7 @@ import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { INTERACTIVE_PATTERNS, HOVER_SHADOWS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 import { CraneIcon } from '@/subapps/dxf-viewer/components/icons';
 
 export interface FloorPlanUploadButtonProps {
@@ -63,7 +64,7 @@ export function FloorPlanUploadButton({
   className = ''
 }: FloorPlanUploadButtonProps) {
   const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
+  const { quick, radius } = useBorderTokens();
   const { t } = useTranslationLazy('geo-canvas');
 
   return (
@@ -86,7 +87,7 @@ export function FloorPlanUploadButton({
     >
       {loading ? (
         <>
-          <div className={`animate-spin rounded-full ${iconSizes.sm} border-2 border-white border-t-transparent`}></div>
+          <AnimatedSpinner size="small" className="text-white" />
           <span>{t('floorPlan.uploadButton.loading')}</span>
         </>
       ) : (

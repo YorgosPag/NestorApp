@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * ============================================================================
  * 🎨 ENTERPRISE SEMANTIC COLORS HOOK - PROFESSIONAL INTEGRATION
@@ -33,12 +35,23 @@
  */
 
 import { useMemo } from 'react';
-import { semanticColors, colors } from '@/styles/design-tokens/base/colors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+
+// Note: Hover effects imports removed to avoid circular dependencies
+// Using hardcoded values for enterprise stability
 
 // ============================================================================
 // 🎯 HOOK INTERFACE - TYPE-SAFE RETURNS
 // ============================================================================
+
+/**
+ * Semantic Color Names - Union type για all supported colors
+ */
+export type SemanticColorName =
+  | 'success' | 'error' | 'warning' | 'info'
+  | 'price' | 'primary' | 'secondary' | 'muted'
+  | 'accent' | 'foreground' | 'background'
+  | 'hover' | 'focus';
 
 /**
  * Text color patterns - Semantic text coloring
@@ -144,6 +157,7 @@ export interface StatusColorPatterns {
 
 /**
  * Interactive color patterns - Hover, focus, active states
+ * 🚀 ENTERPRISE ENHANCEMENT: Added hover effects integration
  */
 export interface InteractiveColorPatterns {
   /** Button hover patterns */
@@ -162,6 +176,18 @@ export interface InteractiveColorPatterns {
   readonly inputFocus: {
     readonly border: string;
     readonly ring: string;
+  };
+  /** 🎯 ENTERPRISE: Hover effects για visual interactions */
+  readonly hoverEffects: {
+    /** Scale effects για cards, buttons */
+    readonly scaleUp: string;
+    readonly scaleDown: string;
+    /** Shadow effects για depth */
+    readonly shadowSubtle: string;
+    readonly shadowEnhanced: string;
+    /** Background effects για states */
+    readonly bgLight: string;
+    readonly bgBlue: string;
   };
 }
 
@@ -311,6 +337,7 @@ export function useSemanticColors(): UseSemanticColorsReturn {
     },
 
     // ⚡ INTERACTIVE COLOR PATTERNS - Hover, focus, active states
+    // 🚀 ENTERPRISE ENHANCEMENT: Integrated hover effects
     interactive: {
       buttonHover: {
         primary: 'hover:bg-blue-600',
@@ -325,6 +352,15 @@ export function useSemanticColors(): UseSemanticColorsReturn {
       inputFocus: {
         border: 'focus:border-blue-500',
         ring: 'focus:ring-2 focus:ring-blue-200',
+      },
+      /** 🎯 ENTERPRISE HOVER EFFECTS - Hardcoded για stability */
+      hoverEffects: {
+        scaleUp: 'hover:scale-105',
+        scaleDown: 'hover:scale-95',
+        shadowSubtle: 'hover:shadow-md',
+        shadowEnhanced: 'hover:shadow-lg',
+        bgLight: 'hover:bg-white',
+        bgBlue: 'hover:bg-blue-50',
       },
     },
 
@@ -405,7 +441,7 @@ export function useSemanticColors(): UseSemanticColorsReturn {
 
     createCustomPattern: (classes) => classes.join(' '),
 
-  } as const), [quick]); // Include border tokens dependency για reactivity
+  } as const), []); // Empty dependency array για stability
 }
 
 // ============================================================================
@@ -456,6 +492,10 @@ export function useUIPatterns() {
  * Default export για main hook
  */
 export default useSemanticColors;
+
+/**
+ * Type exports για other modules - SemanticColorName εξάγεται ήδη στη γραμμή 46
+ */
 
 /**
  * Quick access pattern

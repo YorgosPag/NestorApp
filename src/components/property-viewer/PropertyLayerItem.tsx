@@ -41,10 +41,12 @@ export function PropertyLayerItem({
     setIsExpanded(isSelected);
   }, [isSelected]);
 
+  const { quick, getStatusBorder } = useBorderTokens();
+
   return (
     <div className={cn(
-      `${useBorderTokens().quick.card} p-3 space-y-2 transition-all`,
-      isSelected ? "border-primary/50 bg-primary/10" : "border-border"
+      `${quick.card} p-3 space-y-2 transition-all`,
+      isSelected ? `${getStatusBorder('info')} bg-primary/10` : quick.card
     )}>
       <PropertyLayerHeader
         property={property}

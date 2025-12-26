@@ -52,7 +52,7 @@ export function StatusLegend({
             style={interactionUtilities.pointerEvents.none}
           >
             <div
-              className={`${iconSizes.xs} border border-border`}
+              className={`${iconSizes.xs} ${quick.input}`}
               style={{
                 ...chartComponents.legend.indicator.withColor(item.color),
                 borderRadius: '50%'

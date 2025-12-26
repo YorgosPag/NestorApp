@@ -4,18 +4,20 @@ import React, { useState } from 'react';
 import { ChevronDown, ChevronRight, Building2 } from 'lucide-react';
 import { UnitNode } from './UnitNode';
 import { HOVER_BACKGROUND_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import type { BuildingModel } from '../types';
 
 export const BuildingNode = ({ building }: { building: BuildingModel }) => {
   const [isExpanded, setIsExpanded] = useState(true);
-  
+  const { quick } = useBorderTokens();
+
   const soldUnits = building.units.filter((u: any) => u.status === 'sold').length;
   const totalUnits = building.units.length;
   const totalArea = building.units.reduce((sum: number, u: any) => sum + (u.area || 0), 0);
   const soldArea = building.units.filter((u: any) => u.status === 'sold').reduce((sum: number, u: any) => sum + (u.area || 0), 0);
 
   return (
-    <div className="ml-4 pl-4 border-l-2 border-gray-200 dark:border-gray-700">
+    <div className={`ml-4 pl-4 border-l-2 ${quick.muted}`}>
       <div
         className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer border bg-white dark:bg-gray-800/50 ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
         onClick={() => setIsExpanded(!isExpanded)}

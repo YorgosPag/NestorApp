@@ -57,7 +57,7 @@ function PropertyCard({ property, onSelect, isSelected }: { property: Property, 
     },
   };
 
-  const statusInfo = statusConfig[property.status as keyof typeof statusConfig] || { color: `border-border`, label: 'Άγνωστο', textColor: 'text-gray-700' };
+  const statusInfo = statusConfig[property.status as keyof typeof statusConfig] || { color: `${quick.card}`, label: 'Άγνωστο', textColor: 'text-gray-700' };
   const IconComponent = propertyTypeIcons[property.type] || Home;
 
   return (
@@ -65,7 +65,7 @@ function PropertyCard({ property, onSelect, isSelected }: { property: Property, 
         className={cn(
             "cursor-pointer group border",
             COMPLEX_HOVER_EFFECTS.FEATURE_CARD,
-            isSelected ? "ring-2 ring-primary shadow-lg border-primary" : INTERACTIVE_PATTERNS.BORDER_PRIMARY
+            isSelected ? `ring-2 ring-primary shadow-lg ${getStatusBorder('info')}` : getStatusBorder('muted')
         )}
         onClick={onSelect}
     >

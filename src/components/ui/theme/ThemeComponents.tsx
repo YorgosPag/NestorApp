@@ -8,7 +8,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 // 🏭 THEME SYSTEM FACTORY - Enterprise Dynamic Theming
 export function getThemeSystem() {
-  const { quick } = useBorderTokens();
+  const { quick, getStatusBorder } = useBorderTokens();
 
   return {
     // 🎨 CONTAINER BACKGROUNDS - Independent from component states
@@ -60,10 +60,10 @@ export function getThemeSystem() {
 
     // Themed content backgrounds - Enterprise semantic with reduced opacity
     neutral: `bg-slate-50/30 ${quick.rounded} p-3`,
-    info: `bg-blue-50/50 ${quick.rounded} p-3 ${quick.input} border-blue-200/60`,
-    success: `bg-green-50/50 ${quick.rounded} p-3 ${quick.input} border-green-200/60`,
-    warning: `bg-orange-50/50 ${quick.rounded} p-3 ${quick.input} border-orange-200/60`,
-    danger: `bg-red-50/50 ${quick.rounded} p-3 ${quick.input} border-red-200/60`
+    info: `bg-blue-50/50 ${quick.rounded} p-3 ${quick.input} ${getStatusBorder('info')}/60`,
+    success: `bg-green-50/50 ${quick.rounded} p-3 ${quick.input} ${getStatusBorder('success')}/60`,
+    warning: `bg-orange-50/50 ${quick.rounded} p-3 ${quick.input} ${getStatusBorder('warning')}/60`,
+    danger: `bg-red-50/50 ${quick.rounded} p-3 ${quick.input} ${getStatusBorder('error')}/60`
   },
 
   // 🔤 TYPOGRAPHY HIERARCHY - Enterprise text roles (Material Design + IBM Carbon inspired)

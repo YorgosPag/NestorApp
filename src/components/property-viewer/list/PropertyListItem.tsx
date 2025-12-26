@@ -10,6 +10,7 @@ import { formatFloorLabel, formatCurrency } from "@/lib/intl-utils";
 import type { Property } from '@/types/property-viewer';
 import { PROPERTY_STATUS_CONFIG, PROPERTY_TYPE_ICONS } from '@/lib/property-utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface PropertyListItemProps { 
   property: Property; 
@@ -23,6 +24,7 @@ const PropertyListItemComponent = ({
   onSelect 
 }: PropertyListItemProps) => {
   const iconSizes = useIconSizes();
+  const { quick, getStatusBorder } = useBorderTokens();
   const statusInfo = PROPERTY_STATUS_CONFIG[property.status] || PROPERTY_STATUS_CONFIG.default;
   const IconComponent = PROPERTY_TYPE_ICONS[property.type as keyof typeof PROPERTY_TYPE_ICONS] || Home;
 
@@ -31,9 +33,9 @@ const PropertyListItemComponent = ({
       className={cn(
         "cursor-pointer border",
         INTERACTIVE_PATTERNS.CARD_STANDARD,
-        isSelected 
-          ? "ring-2 ring-primary border-primary shadow-md" 
-          : INTERACTIVE_PATTERNS.BORDER_PRIMARY
+        isSelected
+          ? `ring-2 ring-primary ${quick.selected} shadow-md`
+          : getStatusBorder('muted')
       )}
       onClick={(e) => onSelect(e.shiftKey || e.metaKey)}
     >
@@ -72,7 +74,7 @@ const PropertyListItemComponent = ({
             </div>
           )}
         </div>
-        <div className="pt-1 border-t">
+        <div className={`pt-1 ${quick.separatorH}`}>
           <span className="text-xs text-muted-foreground">{property.project}</span>
         </div>
       </CardContent>

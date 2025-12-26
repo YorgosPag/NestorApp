@@ -1,7 +1,42 @@
+/**
+ * 🏢 ENTERPRISE TOOLBAR BUTTON
+ *
+ * @description
+ * Centralized toolbar button component using BaseButton foundation.
+ * Eliminates inline styles and ensures enterprise consistency.
+ *
+ * @features
+ * - ✅ Zero inline styles (CLAUDE.md compliant)
+ * - ✅ Centralized border tokens
+ * - ✅ Enterprise button variants
+ * - ✅ Proper TypeScript types
+ * - ✅ Icon support with proper spacing
+ *
+ * @migration_from
+ * Legacy ToolbarButton with 100+ lines of inline styles
+ * → Modern enterprise component with centralized styling
+ */
+
 'use client';
 import React from 'react';
+import { BaseButton, type ButtonVariant } from '../../components/shared/BaseButton';
 import { withIconProps } from '../../icons/iconRegistry';
-import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
+
+// Legacy → Enterprise variant mapping
+const VARIANT_MAP: Record<string, ButtonVariant> = {
+  'default': 'secondary',
+  'primary': 'primary',
+  'success': 'secondary', // Map to secondary with success styling via className
+  'danger': 'secondary'   // Map to secondary with danger styling via className
+} as const;
+
+// Legacy → Enterprise size mapping
+const SIZE_MAP: Record<string, 'xs' | 'sm' | 'md' | 'lg'> = {
+  'small': 'xs',
+  'medium': 'sm',
+  'large': 'md'
+} as const;
 
 interface ToolbarButtonProps {
   label: string;
@@ -22,137 +57,31 @@ export default function ToolbarButton({
   disabled = false,
   size = 'medium'
 }: ToolbarButtonProps) {
-  
-  const baseClasses = [
-    'dv-btn',
-    `dv-btn--${variant}`,
-    `dv-btn--${size}`,
-    active ? 'dv-btn--active' : '',
-    disabled ? 'dv-btn--disabled' : ''
-  ].filter(Boolean).join(' ');
+  const { getStatusBorder } = useBorderTokens();
+
+  // 🏢 ENTERPRISE: Map legacy props to BaseButton props
+  const buttonVariant = VARIANT_MAP[variant];
+  const buttonSize = SIZE_MAP[size];
+
+  // 🎨 ENTERPRISE: Custom styling for success/danger variants
+  const customVariantClass = variant === 'success'
+    ? `bg-green-700 ${getStatusBorder('success')} text-green-100 hover:bg-green-600`
+    : variant === 'danger'
+    ? `bg-red-700 ${getStatusBorder('error')} text-red-100 hover:bg-red-600`
+    : '';
 
   return (
-    <>
-      <button
-        className={baseClasses}
-        onClick={onClick}
-        disabled={disabled}
-        title={label}
-        type="button"
-      >
-        {icon && (
-          <span className="dv-btn__icon">
-            {withIconProps(icon)}
-          </span>
-        )}
-        <span className="dv-btn__label">{label}</span>
-      </button>
-
-      <style jsx>{`
-        .dv-btn {
-          display: inline-flex;
-          align-items: center;
-          gap: 0.5rem;
-          border-radius: 8px;
-          border: 1px solid #2a2a2a;
-          background: #1f1f1f;
-          color: #eaeaea;
-          cursor: pointer;
-          transition: all 0.15s ease;
-          font-weight: 500;
-          white-space: nowrap;
-          box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset;
-        }
-
-        .dv-btn:hover:not(.dv-btn--disabled) {
-          background: #262626;
-          border-color: #3a3a3a;
-          transform: translateY(-1px);
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .dv-btn:active:not(.dv-btn--disabled) {
-          transform: translateY(0);
-          box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-        }
-
-        /* Sizes */
-        .dv-btn--small {
-          padding: 0.25rem 0.5rem;
-          font-size: 0.75rem;
-        }
-
-        .dv-btn--medium {
-          padding: 0.5rem 0.75rem;
-          font-size: 0.8rem;
-        }
-
-        .dv-btn--large {
-          padding: 0.75rem 1rem;
-          font-size: 0.875rem;
-        }
-
-        /* Variants */
-        .dv-btn--primary {
-          background: #2b3345;
-          border-color: #3e4a68;
-          color: #dfe8ff;
-        }
-
-        .dv-btn--primary:hover:not(.dv-btn--disabled) {
-          background: #364157;
-          border-color: #4a5a7a;
-        }
-
-        .dv-btn--success {
-          background: #1e3f2b;
-          border-color: #2a7f43;
-          color: #a9f5c3;
-        }
-
-        .dv-btn--success:hover:not(.dv-btn--disabled) {
-          background: #255233;
-          border-color: #36a555;
-        }
-
-        .dv-btn--danger {
-          background: #2a1f1f;
-          border-color: #5a2a2a;
-          color: #ffdede;
-        }
-
-        .dv-btn--danger:hover:not(.dv-btn--disabled) {
-          background: #352626;
-          border-color: #6a3535;
-        }
-
-        /* States */
-        .dv-btn--active {
-          background: #2b3345;
-          border-color: #3e4a68;
-          color: #dfe8ff;
-          box-shadow: 0 0 8px rgba(58, 122, 254, 0.3);
-        }
-
-        .dv-btn--disabled {
-          background: #1a1a1a;
-          border-color: #1a1a1a;
-          color: #666;
-          cursor: not-allowed;
-          opacity: 0.6;
-        }
-
-        .dv-btn__icon {
-          display: inline-flex;
-          align-items: center;
-          flex-shrink: 0;
-        }
-
-        .dv-btn__label {
-          line-height: 1.2;
-          letter-spacing: 0.01em;
-        }
-      `}</style>
-    </>
+    <BaseButton
+      variant={buttonVariant}
+      size={buttonSize}
+      isActive={active}
+      disabled={disabled}
+      onClick={onClick}
+      title={label}
+      className={customVariantClass}
+    >
+      {icon && withIconProps(icon)}
+      {label}
+    </BaseButton>
   );
 }

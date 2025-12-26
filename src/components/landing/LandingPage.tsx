@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 export function LandingPage() {
   const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
+  const { quick, getStatusBorder } = useBorderTokens();
   const { t } = useTranslation('landing');
   const router = useRouter();
   const [searchType, setSearchType] = useState('all');
@@ -394,7 +394,7 @@ export function LandingPage() {
             </Link>
             <Link 
               href="/properties?view=floorplan"
-              className={`px-8 py-3 bg-transparent border-2 border-white text-white font-semibold ${quick.card} flex items-center justify-center gap-2 ${INTERACTIVE_PATTERNS.BUTTON_OUTLINE}`}
+              className={`px-8 py-3 bg-transparent ${getStatusBorder('secondary')} text-white font-semibold ${quick.card} flex items-center justify-center gap-2 ${INTERACTIVE_PATTERNS.BUTTON_OUTLINE}`}
             >
               <MapPin className={iconSizes.md} />
               Προβολή σε Κάτοψη

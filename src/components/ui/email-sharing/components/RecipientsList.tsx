@@ -18,6 +18,7 @@ import { designSystem } from '@/lib/design-system';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { Users, Plus, Trash2, AlertCircle, CheckCircle } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 // Types
 import type { RecipientsListProps } from '../types';
@@ -49,6 +50,7 @@ export const RecipientsList: React.FC<RecipientsListProps> = ({
   showValidation = true
 }) => {
   const iconSizes = useIconSizes();
+  const { getStatusBorder } = useBorderTokens();
 
   // ============================================================================
   // COMPUTED VALUES
@@ -138,8 +140,8 @@ export const RecipientsList: React.FC<RecipientsListProps> = ({
     }
 
     return validation.isValid
-      ? 'border-green-500 focus:ring-green-500'
-      : 'border-red-500 focus:ring-red-500';
+      ? `${getStatusBorder('success')} focus:ring-green-500`
+      : `${getStatusBorder('error')} focus:ring-red-500`;
   };
 
   // ============================================================================
@@ -306,7 +308,7 @@ export const RecipientsList: React.FC<RecipientsListProps> = ({
 
       {/* Custom Validation Error */}
       {customValidationError && showValidation && (
-        <aside className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200" role="alert">
+        <aside className={`p-3 bg-red-50 dark:bg-red-900/20 rounded-lg ${getStatusBorder('error')}`} role="alert">
           <p className={designSystem.cn(
             designSystem.getTypographyClass('sm', 'medium'),
             'text-red-800 dark:text-red-300 flex items-center gap-2'

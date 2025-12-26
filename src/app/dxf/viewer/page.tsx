@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { Suspense } from 'react';
 import { UnifiedProviders } from '@/subapps/dxf-viewer/providers/UnifiedProviders';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 
 // Dynamic import to avoid SSR issues with localStorage
 // 🔧 FIXED: Import DxfViewerApp (with all providers) instead of DxfViewerContent directly
@@ -16,7 +17,7 @@ const DxfViewerApp = dynamic(
       return (
         <main className="w-full h-full flex items-center justify-center" role="main" aria-label="Φόρτωση DXF Viewer">
           <section className="text-center" role="status" aria-live="polite">
-            <div className={`animate-spin rounded-full ${iconSizes.xl2} border-b-2 border-blue-600 mx-auto mb-4`}></div>
+            <AnimatedSpinner size="extra-large" variant="info" className="mx-auto mb-4" />
           <p className="text-gray-600">Φόρτωση DXF Viewer...</p>
           </section>
         </main>
@@ -40,7 +41,7 @@ function AdminGuard({ children }: { children: React.ReactNode }) {
     return (
       <main className="w-full h-full flex items-center justify-center" role="main" aria-label="Έλεγχος Δικαιωμάτων">
         <section className="text-center" role="status" aria-live="polite">
-          <div className={`animate-spin rounded-full ${iconSizes.xl} border-b-2 border-blue-600 mx-auto mb-4`}></div>
+          <AnimatedSpinner size="medium" className="mx-auto mb-4" />
           <p className="text-gray-600">Έλεγχος δικαιωμάτων...</p>
         </section>
       </main>
@@ -79,7 +80,7 @@ export default function DxfViewerPage() {
           <Suspense fallback={
             <section className="w-full h-full flex items-center justify-center" role="status" aria-live="polite">
               <div className="text-center">
-                <div className={`animate-spin rounded-full ${iconSizes.xl2} border-b-2 border-blue-600 mx-auto mb-4`}></div>
+                <AnimatedSpinner size="extra-large" variant="info" className="mx-auto mb-4" />
                 <p className="text-gray-600">Φόρτωση DXF Viewer...</p>
               </div>
             </section>

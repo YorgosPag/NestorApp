@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import type { Storage } from '@/types/storage/contracts';
 import { type Photo } from '@/components/generic/utils/PhotoItem';
 import { EnterprisePhotoUpload } from '@/components/ui/EnterprisePhotoUpload';
-import { PhotoGrid } from '@/components/building-management/tabs/PhotosTabContent/PhotoGrid';
+import { PhotoItem } from '@/components/generic/utils/PhotoItem';
 import { Camera, Image, Upload, Calendar } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 
@@ -162,7 +162,11 @@ export function StoragePhotosTab({ storage }: StoragePhotosTabProps) {
             <Image className={iconSizes.md} />
             Όλες οι Φωτογραφίες ({photos.length})
           </h3>
-          <PhotoGrid photos={photos} />
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {photos.map((photo) => (
+              <PhotoItem key={photo.id} photo={photo} />
+            ))}
+          </div>
         </section>
 
         {/* Εξωτερικές Φωτογραφίες */}
@@ -172,7 +176,11 @@ export function StoragePhotosTab({ storage }: StoragePhotosTabProps) {
               <Image className={`${iconSizes.md} text-blue-600`} />
               Εξωτερικές Φωτογραφίες ({photosByCategory.exterior.length})
             </h3>
-            <PhotoGrid photos={photosByCategory.exterior} />
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {photosByCategory.exterior.map((photo) => (
+                <PhotoItem key={photo.id} photo={photo} />
+              ))}
+            </div>
           </section>
         )}
 
@@ -183,7 +191,11 @@ export function StoragePhotosTab({ storage }: StoragePhotosTabProps) {
               <Image className={`${iconSizes.md} text-green-600`} />
               Εσωτερικές Φωτογραφίες ({photosByCategory.interior.length})
             </h3>
-            <PhotoGrid photos={photosByCategory.interior} />
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {photosByCategory.interior.map((photo) => (
+                <PhotoItem key={photo.id} photo={photo} />
+              ))}
+            </div>
           </section>
         )}
 
@@ -194,7 +206,11 @@ export function StoragePhotosTab({ storage }: StoragePhotosTabProps) {
               <Image className={`${iconSizes.md} text-orange-600`} />
               Συντήρηση & Εργασίες ({photosByCategory.maintenance.length})
             </h3>
-            <PhotoGrid photos={photosByCategory.maintenance} />
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {photosByCategory.maintenance.map((photo) => (
+                <PhotoItem key={photo.id} photo={photo} />
+              ))}
+            </div>
           </section>
         )}
       </div>

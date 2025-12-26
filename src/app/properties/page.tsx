@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { PropertyGridView } from '@/features/property-grid/PropertyGridView';
 import { PropertyManagementPageContent } from '@/components/property-management/PropertyManagementPageContent';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 
 function PropertiesPageContent() {
   const searchParams = useSearchParams();
@@ -31,11 +32,10 @@ function PropertiesPageContent() {
 }
 
 function PropertiesPageFallback() {
-  const iconSizes = useIconSizes();
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-background flex items-center justify-center">
       <div className="text-center">
-        <div className={`animate-spin rounded-full ${iconSizes.xl} border-b-2 border-blue-600 mx-auto mb-4`}></div>
+        <AnimatedSpinner size="large" className="mx-auto mb-4" />
         <p className="text-gray-600 dark:text-muted-foreground">Φόρτωση ακινήτων...</p>
       </div>
     </div>

@@ -18,13 +18,13 @@ export function SuggestionCard({
   onSelect: () => void;
   onAccept: () => void;
 }) {
-  const { quick } = useBorderTokens();
+  const { quick, getStatusBorder, radius } = useBorderTokens();
   const topRecommendation = suggestion.recommendations[0];
 
   return (
     <div
       className={`${quick.card} p-2 cursor-pointer transition-all ${
-        isSelected ? 'border-primary bg-primary/10' : `border-border ${HOVER_BORDER_EFFECTS.GRAY}`
+        isSelected ? `${getStatusBorder('info')} bg-primary/10` : `${quick.card} ${HOVER_BORDER_EFFECTS.GRAY}`
       }`}
       onClick={onSelect}
     >
@@ -34,7 +34,7 @@ export function SuggestionCard({
           <div className="mt-1 space-y-1">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <span
-                className={`w-1.5 h-1.5 rounded-full ${
+                className={`w-1.5 h-1.5 ${radius.full} ${
                   topRecommendation.priority === 'high'
                     ? 'bg-red-400'
                     : topRecommendation.priority === 'medium'

@@ -11,7 +11,7 @@ interface LayersSettingsProps {
 
 export const LayersSettings: React.FC<LayersSettingsProps> = () => {
   const iconSizes = useIconSizes();
-  const { quick, getStatusBorder, radius } = useBorderTokens();
+  const { quick, getStatusBorder, getDirectionalBorder, radius } = useBorderTokens();
   const [activeTab, setActiveTab] = useState<'outlines' | 'fills'>('outlines');
   const [selectedPreset, setSelectedPreset] = useState<number>(0);
 
@@ -36,7 +36,7 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
   return (
     <div className="p-4">
       {/* Header */}
-      <div className={`border-b ${getStatusBorder('muted')} pb-3 mb-4`}>
+      <div className={`${getDirectionalBorder('muted', 'bottom')} pb-3 mb-4`}>
         <h2 className="text-lg font-semibold text-white flex items-center gap-2">
           🎨 Ρυθμίσεις Layers
         </h2>
@@ -57,7 +57,7 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
               <div
                 key={preset.name}
                 className={`
-                  border-2 ${quick.card} cursor-pointer transition-transform ${iconSizes.lg}
+                  border ${quick.card} cursor-pointer transition-transform ${iconSizes.lg}
                   ${CORE_HOVER_TRANSFORMS.SCALE_UP}
                   ${preset.borderClass}
                   ${activeTab === 'fills' ? preset.bgWithOpacityClass : ''}
@@ -129,7 +129,7 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
                   <div className="font-medium">Εμφάνιση Περιγραμμάτων</div>
                   <div className="font-normal text-gray-400">Ενεργοποίηση/Απενεργοποίηση των περιγραμμάτων</div>
                 </div>
-                <div className={`relative inline-flex ${iconSizes.lg} ${iconSizes.xl3} flex-shrink-0 cursor-pointer ${radius.full} border-2 border-transparent bg-green-600`}>
+                <div className={`relative inline-flex ${iconSizes.lg} ${iconSizes.xl3} flex-shrink-0 cursor-pointer ${radius.full} border border-transparent bg-green-600`}>
                   <span className={`pointer-events-none inline-block ${iconSizes.sm} ${radius.full} bg-white shadow transition duration-200 ease-in-out transform translate-x-5`} />
                 </div>
               </div>
@@ -190,7 +190,7 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
                   <div className="font-medium">Εμφάνιση Γεμισμάτων</div>
                   <div className="font-normal text-gray-400">Ενεργοποίηση/Απενεργοποίηση των γεμισμάτων</div>
                 </div>
-                <div className={`relative inline-flex ${iconSizes.lg} ${iconSizes.xl3} flex-shrink-0 cursor-pointer ${radius.full} border-2 border-transparent bg-green-600`}>
+                <div className={`relative inline-flex ${iconSizes.lg} ${iconSizes.xl3} flex-shrink-0 cursor-pointer ${radius.full} border border-transparent bg-green-600`}>
                   <span className={`pointer-events-none inline-block ${iconSizes.sm} ${radius.full} bg-white shadow transition duration-200 ease-in-out transform translate-x-5`} />
                 </div>
               </div>

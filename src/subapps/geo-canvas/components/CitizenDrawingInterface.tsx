@@ -64,7 +64,7 @@ export function CitizenDrawingInterface({
 }: CitizenDrawingInterfaceProps) {
   const { t } = useTranslationLazy('geo-canvas');
   const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
+  const { quick, getStatusBorder } = useBorderTokens();
   const [selectedTool, setSelectedTool] = useState<'point' | 'polygon' | 'freehand' | 'real-estate' | null>(null);
   const [pointRadius, setPointRadius] = useState<number>(100); // Default 100m radius
   const [lastPointPolygonId, setLastPointPolygonId] = useState<string | null>(null);
@@ -273,7 +273,7 @@ export function CitizenDrawingInterface({
             className={`
               flex items-center gap-2 px-3 py-2 ${quick.card} transition-all
               ${showAddressSearch
-                ? 'border-blue-500 bg-blue-50 text-blue-700'
+                ? `${getStatusBorder('info')} bg-blue-50 text-blue-700`
                 : 'bg-white text-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT}'
               }
             `}
@@ -303,10 +303,10 @@ export function CitizenDrawingInterface({
           onClick={() => handleToolSelect('point')}
           disabled={isDrawing}
           className={`
-            flex flex-col items-center justify-center p-4 ${quick.card} border-2
+            flex flex-col items-center justify-center p-4 ${quick.card}
             transition-all duration-200 min-h-[100px]
             ${selectedTool === 'point'
-              ? 'border-blue-500 bg-blue-50'
+              ? `${getStatusBorder('info')} bg-blue-50`
               : '${HOVER_BACKGROUND_EFFECTS.LIGHT} bg-white'
             }
             ${isDrawing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.MEDIUM}'}
@@ -322,10 +322,10 @@ export function CitizenDrawingInterface({
           onClick={() => handleToolSelect('polygon')}
           disabled={isDrawing && selectedTool !== 'polygon'}
           className={`
-            flex flex-col items-center justify-center p-4 ${quick.card} border-2
+            flex flex-col items-center justify-center p-4 ${quick.card}
             transition-all duration-200 min-h-[100px]
             ${selectedTool === 'polygon'
-              ? 'border-blue-500 bg-blue-50'
+              ? `${getStatusBorder('info')} bg-blue-50`
               : '${HOVER_BACKGROUND_EFFECTS.LIGHT} bg-white'
             }
             ${isDrawing && selectedTool !== 'polygon' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.MEDIUM}'}
@@ -344,10 +344,10 @@ export function CitizenDrawingInterface({
           onClick={() => handleToolSelect('freehand')}
           disabled={isDrawing && selectedTool !== 'freehand'}
           className={`
-            flex flex-col items-center justify-center p-4 ${quick.card} border-2
+            flex flex-col items-center justify-center p-4 ${quick.card}
             transition-all duration-200 min-h-[100px]
             ${selectedTool === 'freehand'
-              ? 'border-blue-500 bg-blue-50'
+              ? `${getStatusBorder('info')} bg-blue-50`
               : '${HOVER_BACKGROUND_EFFECTS.LIGHT} bg-white'
             }
             ${isDrawing && selectedTool !== 'freehand' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.MEDIUM}'}
@@ -363,10 +363,10 @@ export function CitizenDrawingInterface({
           onClick={() => handleToolSelect('real-estate')}
           disabled={isDrawing}
           className={`
-            flex flex-col items-center justify-center p-4 ${quick.card} border-2
+            flex flex-col items-center justify-center p-4 ${quick.card}
             transition-all duration-200 min-h-[100px]
             ${selectedTool === 'real-estate'
-              ? 'border-orange-500 bg-orange-50'
+              ? `${getStatusBorder('warning')} bg-orange-50`
               : '${HOVER_BACKGROUND_EFFECTS.LIGHT} bg-white'
             }
             ${isDrawing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.MEDIUM}'}
@@ -384,10 +384,10 @@ export function CitizenDrawingInterface({
         <button
           onClick={() => setShowAddressSearch(!showAddressSearch)}
           className={`
-            flex flex-col items-center justify-center p-4 ${quick.card} border-2
+            flex flex-col items-center justify-center p-4 ${quick.card}
             transition-all duration-200 min-h-[100px]
             ${showAddressSearch
-              ? 'border-indigo-500 bg-indigo-50'
+              ? `${getStatusBorder('info')} bg-indigo-50`
               : '${HOVER_BACKGROUND_EFFECTS.LIGHT} bg-white'
             }
             cursor-pointer ${HOVER_SHADOWS.MEDIUM}
@@ -402,10 +402,10 @@ export function CitizenDrawingInterface({
         <button
           onClick={() => setShowAdminDemo(!showAdminDemo)}
           className={`
-            flex flex-col items-center justify-center p-4 ${quick.card} border-2
+            flex flex-col items-center justify-center p-4 ${quick.card}
             transition-all duration-200 min-h-[100px]
             ${showAdminDemo
-              ? 'border-violet-500 bg-violet-50'
+              ? `${getStatusBorder('info')} bg-violet-50`
               : '${HOVER_BACKGROUND_EFFECTS.LIGHT} bg-white'
             }
             cursor-pointer ${HOVER_SHADOWS.MEDIUM}
@@ -420,10 +420,10 @@ export function CitizenDrawingInterface({
         <button
           onClick={() => setShowBoundaryControl(!showBoundaryControl)}
           className={`
-            flex flex-col items-center justify-center p-4 ${quick.card} border-2
+            flex flex-col items-center justify-center p-4 ${quick.card}
             transition-all duration-200 min-h-[100px]
             ${showBoundaryControl
-              ? 'border-emerald-500 bg-emerald-50'
+              ? `${getStatusBorder('success')} bg-emerald-50`
               : '${HOVER_BACKGROUND_EFFECTS.LIGHT} bg-white'
             }
             cursor-pointer ${HOVER_SHADOWS.MEDIUM}

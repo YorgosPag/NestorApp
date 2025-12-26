@@ -24,6 +24,7 @@ import {
 import { HelpCircle, Eye, EyeOff } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 
 // Types για το unified form field system
 export interface SelectOption {
@@ -232,8 +233,8 @@ export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>((
       className: cn(
         sizeVariants[size],
         {
-          [`${getStatusBorder('error')} focus:border-red-500 focus:ring-red-500`]: hasError,
-          [`${getStatusBorder('success')} focus:border-green-500 focus:ring-green-500`]: isValid,
+          [`${getStatusBorder('error')} focus:${getStatusBorder('error').replace('border-', 'border-')} focus:ring-red-500`]: hasError,
+          [`${getStatusBorder('success')} focus:${getStatusBorder('success').replace('border-', 'border-')} focus:ring-green-500`]: isValid,
           'cursor-not-allowed opacity-50': disabled,
           'bg-muted': readOnly,
         },
@@ -390,7 +391,7 @@ export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>((
         )}
         
         {loading && (
-          <div className={`${iconSizes.sm} animate-spin ${radius.full} ${quick.input} border-border border-t-blue-600`} />
+          <AnimatedSpinner size="small" />
         )}
       </div>
     );

@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { Building, Building2, FolderIcon, Home, Package, ParkingCircle, Target } from 'lucide-react';
 import { CraneIcon } from '../../components/icons';
 import { useProjectHierarchy } from '../../contexts/ProjectHierarchyContext';
@@ -9,6 +10,7 @@ import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 export function HierarchyDebugPanel() {
   const iconSizes = useIconSizes();
+  const { getStatusBorder, getDirectionalBorder } = useBorderTokens();
   const { t } = useTranslation('dxf-viewer');
   const {
     companies,
@@ -32,7 +34,7 @@ export function HierarchyDebugPanel() {
 
   if (loading) {
     return (
-      <div className="bg-gray-800 p-4 rounded-lg border border-gray-600">
+      <div className={`bg-gray-800 p-4 rounded-lg ${getStatusBorder('muted')}`}>
         <h3 className="text-white text-lg font-semibold mb-2 flex items-center space-x-2">
           <CraneIcon className={`${iconSizes.md} text-orange-500`} />
           <span>{t('panels.hierarchy.projectHierarchy')}</span>
@@ -44,7 +46,7 @@ export function HierarchyDebugPanel() {
 
   if (error) {
     return (
-      <div className="bg-gray-800 p-4 rounded-lg border border-red-600">
+      <div className={`bg-gray-800 p-4 rounded-lg ${getStatusBorder('error')}`}>
         <h3 className="text-white text-lg font-semibold mb-2">{t('panels.hierarchy.error')}</h3>
         <p className="text-red-400">{error}</p>
         <button 
@@ -58,7 +60,7 @@ export function HierarchyDebugPanel() {
   }
 
   return (
-    <div className="bg-gray-800 p-4 rounded-lg border border-gray-600">
+    <div className={`bg-gray-800 p-4 rounded-lg ${getStatusBorder('muted')}`}>
       <h3 className="text-white text-lg font-semibold mb-4 flex items-center space-x-2">
         <CraneIcon className={`${iconSizes.md} text-orange-500`} />
         <span>{t('panels.hierarchy.projectHierarchy')}</span>
@@ -93,7 +95,7 @@ export function HierarchyDebugPanel() {
 
       {/* Selected Company Info */}
       {selectedCompany && (
-        <div className="mb-4 pl-4 border-l-2 border-orange-500">
+        <div className={`mb-4 pl-4 ${getDirectionalBorder('warning', 'left')}`}>
           <h4 className="text-orange-300 font-medium mb-2">
             <div className="flex items-center space-x-2">
               <Building className={iconSizes.sm} />
@@ -136,7 +138,7 @@ export function HierarchyDebugPanel() {
 
       {/* Selected Project Info */}
       {selectedProject && (
-        <div className="mb-4 pl-4 border-l-2 border-blue-500">
+        <div className={`mb-4 pl-4 ${getDirectionalBorder('info', 'left')}`}>
           <h4 className="text-blue-300 font-medium mb-2">
             <div className="flex items-center space-x-2">
               <Building2 className={iconSizes.sm} />
@@ -181,7 +183,7 @@ export function HierarchyDebugPanel() {
 
       {/* Selected Building Info */}
       {selectedBuilding && (
-        <div className="mb-4 pl-8 border-l-2 border-green-500">
+        <div className={`mb-4 pl-8 ${getDirectionalBorder('success', 'left')}`}>
           <h4 className="text-green-300 font-medium mb-2">
             <div className="flex items-center space-x-2">
               <Building2 className={iconSizes.sm} />
@@ -226,7 +228,7 @@ export function HierarchyDebugPanel() {
 
       {/* Selected Floor Info */}
       {selectedFloor && (
-        <div className="mb-4 pl-12 border-l-2 border-purple-500">
+        <div className={`mb-4 pl-12 ${getDirectionalBorder('info', 'left')}`}>
           <h4 className="text-purple-300 font-medium mb-2">
             <div className="flex items-center space-x-2">
               <Home className={iconSizes.sm} />
@@ -258,7 +260,7 @@ export function HierarchyDebugPanel() {
       )}
 
       {/* Available Destinations */}
-      <div className="mt-6 pt-4 border-t border-gray-600">
+      <div className={`mt-6 pt-4 ${getDirectionalBorder('muted', 'top')}`}>
         <h4 className="text-gray-300 font-medium mb-2 flex items-center space-x-2">
           <Target className={`${iconSizes.sm} text-blue-400`} />
           <span>{t('panels.hierarchy.availableDestinations')} ({destinations.length})</span>

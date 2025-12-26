@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface DynamicInputFieldProps {
   label: string;
@@ -28,7 +29,8 @@ export function DynamicInputField({
   onKeyDown,
   fieldType = 'coordinate'
 }: DynamicInputFieldProps) {
-  
+  const { quick } = useBorderTokens();
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
     
@@ -89,10 +91,10 @@ export function DynamicInputField({
         onFocus={onFocus}
         disabled={disabled}
         placeholder={placeholder}
-        className={`flex-1 text-white px-2 py-1 text-sm rounded border focus:border-cyan-400 focus:outline-none
-          ${isAnchored ? 'bg-yellow-600 font-bold border-yellow-400' : 'bg-gray-700 border-transparent'}
-          ${disabled ? 'bg-gray-600 opacity-50 cursor-not-allowed border-gray-500' : ''}
-          ${isActive ? 'border-cyan-400' : ''}`}
+        className={`flex-1 text-white px-2 py-1 text-sm rounded border ${quick.focus} focus:outline-none
+          ${isAnchored ? `bg-yellow-600 font-bold ${quick.warning}` : `bg-gray-700 ${quick.none}`}
+          ${disabled ? `bg-gray-600 opacity-50 cursor-not-allowed ${quick.muted}` : ''}
+          ${isActive ? quick.focus : ''}`}
       />
     </div>
   );

@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 // Removed: useToast import (migrated to useNotifications)
 import type { Opportunity } from '@/types/crm';
 
@@ -18,6 +20,7 @@ import LeadsList from '@/components/leads/LeadsList';
 
 export function PipelineTab() {
   const iconSizes = useIconSizes();
+  const { getStatusBorder } = useBorderTokens();
   const {
     opportunities,
     loading,
@@ -62,12 +65,12 @@ export function PipelineTab() {
           {loading ? (
               <div className="flex items-center justify-center py-12">
                   <div className="text-center">
-                      <div className={`animate-spin rounded-full ${iconSizes.xl} border-b-2 border-blue-600 mx-auto mb-2`}></div>
+                      <AnimatedSpinner size="large" className="mx-auto mb-2" />
                       <p className="text-gray-600">Φόρτωση pipeline...</p>
                   </div>
               </div>
           ) : error ? (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className={`bg-red-50 ${getStatusBorder('error')} rounded-lg p-4`}>
                   <p className="text-red-600">{error}</p>
                   <button 
                   onClick={fetchOpportunities}

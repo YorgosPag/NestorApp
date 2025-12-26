@@ -144,15 +144,20 @@ export {
 } from './performance/PerformanceComponents';
 
 // ============================================================================
-// UNIFIED DESIGN SYSTEM CLASS
+// ⚠️ DEPRECATED: MIGRATING TO CENTRALIZED useBorderTokens SYSTEM
 // ============================================================================
+
+// 🚨 ENTERPRISE MIGRATION NOTICE:
+// The GeoAlertDesignSystem is being deprecated in favor of the centralized
+// useBorderTokens system to eliminate duplicates and ensure consistency
+// across the entire application.
 
 import { colors, typography, spacing, shadows, borderRadius } from './tokens/design-tokens';
 import { ThemeProvider } from './theme/ThemeProvider';
 
 /**
- * Unified Design System - Master Class για ολόκληρο το design system
- * Provides centralized access to all design tokens και utilities
+ * @deprecated Use useBorderTokens from @/hooks/useBorderTokens instead
+ * This class is being phased out for enterprise consistency
  */
 export class GeoAlertDesignSystem {
   private static instance: GeoAlertDesignSystem | null = null;
@@ -396,36 +401,44 @@ export const geoAlertDesignSystem = GeoAlertDesignSystem.getInstance();
 export default geoAlertDesignSystem;
 
 // ============================================================================
-// INITIALIZATION UTILITIES
+// 🔄 MIGRATION BRIDGE TO CENTRALIZED SYSTEM
 // ============================================================================
 
+import { useBorderTokens } from '@/hooks/useBorderTokens';
+
 /**
- * Initialize complete design system
+ * @deprecated Use useBorderTokens() hook directly
+ * This is a compatibility bridge during migration
  */
 export const initializeDesignSystem = () => {
+  console.warn('⚠️ initializeDesignSystem is deprecated. Use useBorderTokens() hook instead.');
   return geoAlertDesignSystem;
 };
 
 /**
- * Quick theme application utility
+ * @deprecated Use useBorderTokens() with theme context instead
  */
 export const applyTheme = (theme: 'light' | 'dark' = 'light') => {
+  console.warn('⚠️ applyTheme is deprecated. Use theme context from useBorderTokens().');
   const variables = geoAlertDesignSystem.generateCSSVariables(theme);
   geoAlertDesignSystem.applyTheme(variables);
   return variables;
 };
 
 /**
- * Quick color utility
+ * @deprecated Use getStatusBorder() from useBorderTokens() instead
+ * Migration guide: getDesignColor('primary') → getStatusBorder('info')
  */
 export const getDesignColor = (color: string, shade?: number) => {
+  console.warn('⚠️ getDesignColor is deprecated. Use getStatusBorder() from useBorderTokens() instead.');
   return geoAlertDesignSystem.getColor(color, shade);
 };
 
 /**
- * Quick spacing utility
+ * @deprecated Use design tokens directly from useBorderTokens() instead
  */
 export const getDesignSpacing = (size: number) => {
+  console.warn('⚠️ getDesignSpacing is deprecated. Use design tokens from useBorderTokens() instead.');
   return geoAlertDesignSystem.getSpacing(size);
 };
 

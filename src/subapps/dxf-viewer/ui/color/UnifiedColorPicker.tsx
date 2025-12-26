@@ -15,6 +15,7 @@
 
 import React, { useState, useCallback, useMemo } from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { EnterpriseColorPicker } from './EnterpriseColorPicker';
 import { EnterpriseColorDialog, ColorDialogTrigger } from './EnterpriseColorDialog';
 import { EnterpriseColorField } from './EnterpriseColorField';
@@ -102,6 +103,7 @@ function InlineColorPicker({
   colorInputSize = 'medium'
 }: UnifiedColorPickerProps) {
   const iconSizes = useIconSizes();
+  const { quick, getStatusBorder } = useBorderTokens();
 
   const handleColorChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     onChange(e.target.value);
@@ -144,7 +146,7 @@ function InlineColorPicker({
       {/* Color Preview */}
       {showPreview && (
         <div
-          className={`${previewSizeClasses} rounded border border-gray-600`}
+          className={`${previewSizeClasses} rounded ${quick.muted}`}
           className={getDynamicBackgroundClass(value)}
         />
       )}
@@ -155,7 +157,7 @@ function InlineColorPicker({
         value={value}
         onChange={handleColorChange}
         disabled={disabled}
-        className={`${colorInputSizeClasses} bg-gray-700 border border-gray-600 rounded cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed`}
+        className={`${colorInputSizeClasses} bg-gray-700 ${quick.muted} rounded cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed`}
       />
 
       {/* Text Input */}
@@ -166,7 +168,7 @@ function InlineColorPicker({
           onChange={handleTextChange}
           disabled={disabled}
           placeholder="#ffffff"
-          className="px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          className={`px-2 py-1 bg-gray-700 ${quick.muted} rounded text-white text-sm disabled:opacity-50 disabled:cursor-not-allowed`}
           style={{ width: '6rem' }}
         />
       )}
@@ -205,6 +207,7 @@ function ModalColorPicker({
   size = 'standard'
 }: UnifiedColorPickerProps) {
   const iconSizes = useIconSizes();
+  const { getStatusBorder } = useBorderTokens();
   const [isOpen, setIsOpen] = useState(false);
 
   const handleClose = useCallback(() => {
@@ -219,7 +222,7 @@ function ModalColorPicker({
       className="inline-flex items-center space-x-2"
     >
       <div
-        className={`${iconSizes.md} rounded border border-gray-600`}
+        className={`${iconSizes.md} rounded ${getStatusBorder('muted')}`}
         style={layoutUtilities.dxf.colors.backgroundColor(value)}
       />
       {triggerText && (

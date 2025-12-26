@@ -6,6 +6,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 import { BuildingsList } from './BuildingsList';
 import { BuildingDetails } from './BuildingDetails';
 import { BuildingsHeader } from './BuildingsPage/BuildingsHeader';
@@ -154,7 +155,7 @@ export function BuildingsPageContent() {
         <main className="h-full flex flex-col bg-background" role="main" aria-label="Φόρτωση Κτιρίων">
           <section className="flex-1 flex items-center justify-center" role="status" aria-live="polite">
             <div className="text-center">
-              <div className={`animate-spin rounded-full ${iconSizes.xl} border-b-2 border-primary mx-auto mb-4`}></div>
+              <AnimatedSpinner size="large" className="mx-auto mb-4" />
               <p>Φόρτωση κτιρίων από Firestore...</p>
             </div>
           </section>

@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { ProjectViewSwitch } from './ProjectViewSwitch';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 
 export function ProjectsPageContent() {
   const iconSizes = useIconSizes();
@@ -128,7 +129,7 @@ export function ProjectsPageContent() {
     return (
       <main className="h-full flex items-center justify-center" role="main" aria-label="Φόρτωση Έργων">
         <section className="text-center" role="status" aria-live="polite">
-          <div className={`animate-spin rounded-full ${iconSizes.xl} border-b-2 border-primary mx-auto mb-4`}></div>
+          <AnimatedSpinner size="large" className="mx-auto mb-4" />
           <p>Φόρτωση έργων από βάση δεδομένων...</p>
         </section>
       </main>

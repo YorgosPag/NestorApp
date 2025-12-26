@@ -12,6 +12,7 @@
 
 import type { HeaderTheme, ViewMode, HeaderVariant, HeaderLayout, HeaderSpacing } from '../types';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { borderVariants } from '@/styles/design-tokens';
 
 // ============================================================================
 // 🎨 HEADER THEMES - ENTERPRISE STYLING
@@ -57,7 +58,7 @@ export const HEADER_THEME: HeaderTheme = {
     filters: {
       container: "flex flex-wrap items-center gap-2",
       button: "px-3 py-1.5 text-xs border rounded-full transition-colors",
-      active: "bg-primary text-primary-foreground border-primary",
+      active: `bg-primary text-primary-foreground ${borderVariants.status.info.className}`,
       inactive: `bg-background border-border ${INTERACTIVE_PATTERNS.BORDER_SUBTLE}`
     },
     actions: {

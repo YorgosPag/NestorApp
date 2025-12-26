@@ -27,7 +27,7 @@ export function StorageListItem({
     onSelect,
     onToggleFavorite
 }: StorageListItemProps) {
-    const { quick } = useBorderTokens();
+    const { quick, getStatusBorder } = useBorderTokens();
 
     return (
         <TooltipProvider>
@@ -36,7 +36,7 @@ export function StorageListItem({
                     `relative p-3 ${quick.card} border cursor-pointer group`,
                     INTERACTIVE_PATTERNS.CARD_STANDARD,
                     isSelected
-                    ? `${borderTokens.getStatusBorder('info')} bg-blue-50 dark:bg-blue-950/20 shadow-sm`
+                    ? `${getStatusBorder('info')} bg-blue-50 dark:bg-blue-950/20 shadow-sm`
                     : cn("border-border bg-card", INTERACTIVE_PATTERNS.BORDER_BLUE, INTERACTIVE_PATTERNS.ACCENT_HOVER_SUBTLE)
                 )}
                 onClick={onSelect}

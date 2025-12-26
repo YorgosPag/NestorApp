@@ -48,16 +48,25 @@ export interface ButtonProps
   asChild?: boolean
 }
 
+// 🏢 ENTERPRISE: Create default buttonVariants for export (using default border tokens)
+const borderTokens = {
+  quick: {
+    input: "rounded-md border",
+    card: "rounded-lg border"
+  }
+};
+const buttonVariants = createButtonVariants(borderTokens);
+
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
     // 🏢 ENTERPRISE: Use centralized border tokens
-    const borderTokens = useBorderTokens();
-    const buttonVariants = createButtonVariants(borderTokens);
+    const dynamicBorderTokens = useBorderTokens();
+    const dynamicButtonVariants = createButtonVariants(dynamicBorderTokens);
 
     const Comp = asChild ? Slot : "button"
     return (
       <Comp
-        className={cn(buttonVariants({ variant, size }), className)}
+        className={cn(dynamicButtonVariants({ variant, size }), className)}
         ref={ref}
         {...props}
       />
@@ -66,4 +75,4 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 )
 Button.displayName = "Button"
 
-export { Button, createButtonVariants, type ButtonVariantProps }
+export { Button, buttonVariants, createButtonVariants, type ButtonVariantProps }

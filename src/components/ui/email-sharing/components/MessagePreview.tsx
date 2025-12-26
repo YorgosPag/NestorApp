@@ -40,7 +40,7 @@ export const MessagePreview: React.FC<MessagePreviewProps> = ({
   show = true
 }) => {
   const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
+  const { quick, getStatusBorder } = useBorderTokens();
 
   // Early return if hidden or no message
   if (!show || !message.trim()) return null;
@@ -63,7 +63,7 @@ export const MessagePreview: React.FC<MessagePreviewProps> = ({
       </header>
 
       {/* Preview Content */}
-      <main className={`p-4 bg-blue-50 dark:bg-blue-900/20 ${quick.card} ${quick.input} border-blue-200 dark:border-blue-800`} role="main">
+      <main className={`p-4 bg-blue-50 dark:bg-blue-900/20 ${quick.card} ${quick.input} ${getStatusBorder('info')} dark:${getStatusBorder('info')}`} role="main">
         <blockquote className={designSystem.cn(
           designSystem.getTypographyClass('sm'),
           'text-blue-700 dark:text-blue-200 italic leading-relaxed'

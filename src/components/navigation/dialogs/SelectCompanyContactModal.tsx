@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ContactsService } from '@/services/contacts.service';
 import type { Contact } from '@/types/contacts';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { getContactDisplayName } from '@/types/contacts';
 import { Building, Loader2, Factory, CheckCircle2 } from 'lucide-react';
 import { SearchInput } from '@/components/ui/search';
@@ -33,6 +34,7 @@ export function SelectCompanyContactModal({
   onCompanySelected,
   existingCompanyIds = [],
 }: SelectCompanyContactModalProps) {
+  const iconSizes = useIconSizes();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [filteredContacts, setFilteredContacts] = useState<Contact[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -143,7 +145,7 @@ export function SelectCompanyContactModal({
           {/* Loading State */}
           {isLoading && (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+              <Loader2 className={`${iconSizes.lg} animate-spin text-blue-600`} />
               <span className="ml-2 text-sm text-gray-600">Φόρτωση εταιρειών...</span>
             </div>
           )}

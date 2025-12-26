@@ -8,13 +8,13 @@ interface CanvasSettingsProps {
 }
 
 export const CanvasSettings: React.FC<CanvasSettingsProps> = ({ className }) => {
-  const { getStatusBorder } = useBorderTokens();
+  const { getStatusBorder, getDirectionalBorder } = useBorderTokens();
 
   return (
     <div className={`bg-gray-800 text-white ${className}`}>
       <div className="p-4">
         {/* Header */}
-        <div className={`${getStatusBorder('default')} border-b pb-3 mb-4`}>
+        <div className={`${getDirectionalBorder('default', 'bottom')} pb-3 mb-4`}>
           <h2 className="text-lg font-semibold text-white flex items-center gap-2">
             🖼️ Ρυθμίσεις Καμβά
           </h2>

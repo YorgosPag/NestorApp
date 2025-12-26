@@ -19,7 +19,7 @@ import { AdvancedFiltersPanel } from './components/AdvancedFiltersPanel';
 
 export function PropertyGridView() {
   const iconSizes = useIconSizes();
-  const { quick, radius } = useBorderTokens();
+  const { quick, radius, getStatusBorder } = useBorderTokens();
   const router = useRouter();
   const { properties, filters, setFilters } = usePublicPropertyViewer();
 
@@ -80,7 +80,7 @@ export function PropertyGridView() {
                 key="advfilters"
                 onClick={() => setShowFilters(!showFilters)}
                 className={`px-4 py-2.5 border ${radius.lg} flex items-center gap-2 transition-colors h-9 ${
-                  showFilters ? 'bg-blue-50 dark:bg-blue-900/50 border-blue-300 text-blue-600' : `${quick.card} ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
+                  showFilters ? `bg-blue-50 dark:bg-blue-900/50 ${getStatusBorder('info')} text-blue-600` : `${quick.card} ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
                 }`}
               >
                 <SlidersHorizontal className={iconSizes.sm} />

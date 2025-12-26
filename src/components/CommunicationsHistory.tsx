@@ -9,6 +9,7 @@ import {
 import { formatDateTime as formatDate } from '@/lib/intl-utils';
 import { useCommunicationsHistory } from './communications/hooks/useCommunicationsHistory';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 
 export default function CommunicationsHistory({ contactId }) {
   const iconSizes = useIconSizes();
@@ -18,7 +19,7 @@ export default function CommunicationsHistory({ contactId }) {
   if (loading) return (
     <section className="flex items-center justify-center py-8" aria-label="Loading communications">
       <div className="text-center">
-        <div className={`animate-spin rounded-full ${iconSizes.md} border-b-2 border-blue-600 mx-auto mb-2`}></div>
+        <AnimatedSpinner size="medium" className="mx-auto mb-2" />
         <p className="text-sm text-gray-600">Φόρτωση επικοινωνιών...</p>
       </div>
     </section>

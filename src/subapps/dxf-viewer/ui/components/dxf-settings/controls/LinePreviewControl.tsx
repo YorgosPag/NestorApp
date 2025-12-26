@@ -7,6 +7,7 @@
 import React, { useMemo } from 'react';
 import type { LineSettings } from '../../../../settings-core/types';
 import { getDashArray } from '../../../../settings-core/defaults';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface LinePreviewControlProps {
   settings: Partial<LineSettings>;
@@ -19,6 +20,7 @@ const LinePreviewControlComponent: React.FC<LinePreviewControlProps> = ({
   height = 40,
   label = 'Preview',
 }) => {
+  const { getStatusBorder } = useBorderTokens();
   const getDashArrayForSvg = useMemo(() => (type?: string, scale: number = 1): string => {
     const result = getDashArray(type || 'solid', scale);
     return result.length > 0 ? result.join(',') : '';
@@ -45,7 +47,7 @@ const LinePreviewControlComponent: React.FC<LinePreviewControlProps> = ({
       )}
 
       <div
-        className="bg-gray-900 rounded border border-gray-700 p-4 flex items-center justify-center"
+        className={`bg-gray-900 rounded ${getStatusBorder('muted')} p-4 flex items-center justify-center`}
         style={{ height }}
       >
         {settings.enabled !== false ? (

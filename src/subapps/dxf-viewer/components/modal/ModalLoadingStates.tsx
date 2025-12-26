@@ -9,6 +9,7 @@
 
 import React from 'react';
 import { Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { Button } from '@/components/ui/button';
 import { DXF_MODAL_TYPOGRAPHY } from '../../config/modal-typography';
 import { getModalIconColor } from '../../config/modal-colors';
@@ -73,9 +74,11 @@ export const InlineLoading: React.FC<LoadingContainerProps> = ({
   type = 'inline',
   className = ''
 }) => {
+  const { getStatusBorder } = useBorderTokens();
+
   if (type === 'card') {
     return (
-      <ProjectModalContainer title="" className={`bg-gray-700 border-gray-600 ${className}`}>
+      <ProjectModalContainer title="" className={`bg-gray-700 ${getStatusBorder('muted')} ${className}`}>
         <div className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>
           <LoadingSpinner size={size} />
           <span className={DXF_MODAL_TYPOGRAPHY.DESCRIPTION.default}>{message}</span>
@@ -186,8 +189,10 @@ export const ModalEmptyState: React.FC<EmptyStateProps> = ({
   icon,
   className = ''
 }) => {
+  const { getStatusBorder } = useBorderTokens();
+
   return (
-    <ProjectModalContainer title="" className={`bg-gray-800 border-gray-600 ${className}`}>
+    <ProjectModalContainer title="" className={`bg-gray-800 ${getStatusBorder('muted')} ${className}`}>
       <div className={MODAL_FLEX_PATTERNS.COLUMN.centerWithGap}>
         {icon && (
           <div className={`${MODAL_DIMENSIONS.ICONS.large} text-gray-500`}>

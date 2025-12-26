@@ -18,6 +18,7 @@ import {
   Layout
 } from "lucide-react";
 import { PageLayout } from "@/components/app/page-layout";
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { 
   Owner, 
   ProjectDetails, 
@@ -47,7 +48,7 @@ import { useCompanyRelationships } from "@/services/relationships/hooks/useEnter
 import type { Contact } from "@/types/contacts";
 import type { ProjectStructure } from "@/services/projects/contracts";
 
-interface FormData {
+interface ObligationFormData {
   title: string;
   projectName: string;
   contractorCompany: string; // 🔄 BACKWARD COMPATIBILITY: Κρατάμε για legacy data
@@ -81,7 +82,7 @@ const autoResize = (textarea: HTMLTextAreaElement) => {
 export default function NewObligationPage() {
   const iconSizes = useIconSizes();
   const router = useRouter();
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState<ObligationFormData>({
     title: "",
     projectName: "",
     contractorCompany: "Ν.Χ.Γ. ΠΑΓΩΝΗΣ & ΣΙΑ Ο.Ε.", // 🔧 ΔΙΟΡΘΩΣΗ: Σωστή εταιρική ονομασία
@@ -357,7 +358,7 @@ export default function NewObligationPage() {
     [projects]
   );
 
-  const handleInputChange = useCallback((field: keyof FormData, value: any) => {
+  const handleInputChange = useCallback((field: keyof ObligationFormData, value: any) => {
     setFormData(prev => ({
       ...prev,
       [field]: value

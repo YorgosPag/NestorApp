@@ -211,7 +211,7 @@ export const CopyActionsSection: React.FC<CopyActionsProps> = ({
       ),
 
       !isCopied && !hasError && designSystem.cn(
-        'border-2',
+        'border',
         type === 'url'
           ? HOVER_BORDER_EFFECTS.BLUE
           : HOVER_BORDER_EFFECTS.PURPLE

@@ -265,7 +265,7 @@ export const AccordionSection = memo(function AccordionSection({
   reducedMotion = false
 }: AccordionSectionProps) {
   const iconSizes = useIconSizes();
-  const { getElementBorder, getStatusBorder } = useBorderTokens();
+  const { getElementBorder, getStatusBorder, getDirectionalBorder } = useBorderTokens();
 
   // ===== STATE (Controlled/Uncontrolled Hybrid) =====
 
@@ -530,7 +530,7 @@ export const AccordionSection = memo(function AccordionSection({
           }}
         >
           <div
-            className={`${styles.size.content} bg-gray-700 ${getStatusBorder('default')} border-t overflow-visible ${contentClassName}`}
+            className={`${styles.size.content} bg-gray-700 ${getDirectionalBorder('default', 'top')} overflow-visible ${contentClassName}`}
           >
             {/* Error Message */}
             {error && typeof error === 'string' && (

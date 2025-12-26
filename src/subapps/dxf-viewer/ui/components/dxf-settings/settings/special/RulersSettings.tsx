@@ -18,6 +18,7 @@
 import React from 'react';
 import { useTabNavigation } from '../../hooks/useTabNavigation';
 import { TabNavigation } from '../../shared/TabNavigation';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { RulerBackgroundSettings } from './rulers/RulerBackgroundSettings';
 import { RulerLinesSettings } from './rulers/RulerLinesSettings';
 import { RulerTextSettings } from './rulers/RulerTextSettings';
@@ -88,6 +89,7 @@ export const RulersSettings: React.FC<RulersSettingsProps> = ({
 
   // Tab navigation state (ADR-005)
   const { activeTab, setActiveTab } = useTabNavigation<RulerSubTab>(defaultTab);
+  const { getStatusBorder, getDirectionalBorder } = useBorderTokens();
 
   // ============================================================================
   // TAB CONFIGURATION
@@ -126,7 +128,7 @@ export const RulersSettings: React.FC<RulersSettingsProps> = ({
   return (
     <div className={className}>
       {/* Tab Navigation */}
-      <div className="border-b border-gray-600 mb-4">
+      <div className={`${getDirectionalBorder('muted', 'bottom')} mb-4`}>
         <TabNavigation
           tabs={tabs}
           activeTab={activeTab}

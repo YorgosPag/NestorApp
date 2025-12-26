@@ -8,6 +8,7 @@ import { errorTracker } from '@/services/ErrorTracker';
 import { notificationConfig } from '@/config/error-reporting';
 import { componentSizes } from '@/styles/design-tokens';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 
 interface CustomErrorInfo {
   componentStack: string;
@@ -396,7 +397,7 @@ ${errorDetails.stack || 'Stack trace not available'}
       return (
         <div className="min-h-screen bg-background flex items-center justify-center p-4">
           <div className="max-w-2xl w-full">
-            <div className={`bg-card ${this.props.borderTokens?.quick.error || 'border-red-500 border'} p-8 shadow-lg`}>
+            <div className={`bg-card ${borderTokens?.quick.error || borderTokens?.getStatusBorder?.('error') || 'border'} p-8 shadow-lg`}>
               {/* Error Header */}
               <div className="flex items-center space-x-3 mb-6">
                 <div className="p-3 bg-red-100 dark:bg-red-900/20 rounded-full">
@@ -413,7 +414,7 @@ ${errorDetails.stack || 'Stack trace not available'}
               </div>
 
               {/* Error Message */}
-              <div className={`mb-6 p-4 bg-red-50 dark:bg-red-950/20 ${this.props.borderTokens?.quick.error || 'border-red-500 border'}`}>
+              <div className={`mb-6 p-4 bg-red-50 dark:bg-red-950/20 ${borderTokens?.quick.error || borderTokens?.getStatusBorder?.('error') || 'border'}`}>
                 <p className="text-red-800 dark:text-red-200 font-medium">
                   {error.message}
                 </p>

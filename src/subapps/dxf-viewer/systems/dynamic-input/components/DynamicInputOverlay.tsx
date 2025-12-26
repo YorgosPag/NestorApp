@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useCallback } from 'react';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useCursor } from '../../cursor';
 import { CADFeedback } from '../../../utils/feedback-utils';
 import { DynamicInputField } from './DynamicInputField';
@@ -184,6 +185,9 @@ export default function DynamicInputOverlay({
     firstClickPoint,
     setFirstClickPoint,
   });
+
+  // Border tokens hook
+  const { quick, getDirectionalBorder } = useBorderTokens();
 
   // Layout/positioning hook
   const { getFieldsToShow, getInputPosition } = useDynamicInputLayout({
@@ -495,7 +499,7 @@ export default function DynamicInputOverlay({
 
         {/* Multi-point information για polyline/polygon */}
         {multiPointInfo.shouldShowMultiPoint && (
-          <div className="mt-2 pt-2 border-t border-gray-300 text-xs text-gray-600">
+          <div className={`mt-2 pt-2 ${getDirectionalBorder('light', 'top')} text-xs text-gray-600`}>
             {multiPointInfo.lastPointDistance !== null && (
               <div>Distance: {multiPointInfo.lastPointDistance.toFixed(3)}</div>
             )}

@@ -9,19 +9,22 @@ import { AdaptiveMultiColumnNavigation, NavigationBreadcrumb } from '@/component
 import { MapPin } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 
 export default function NavigationPage() {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
+
   return (
-    <main className="min-h-screen bg-gray-50 dark:bg-background">
+    <main className={`min-h-screen ${colors.bg.primary} dark:bg-background`}>
       {/* Header */}
       <header className={`${quick.separatorH} bg-white dark:bg-card`}>
         <div className="max-w-full mx-auto px-2 sm:px-3 lg:px-4">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
-              <MapPin className={`${iconSizes.lg} text-blue-600`} />
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-foreground">
+              <MapPin className={`${iconSizes.lg} ${colors.text.primary}`} />
+              <h1 className={`text-2xl font-bold ${colors.text.primary} dark:text-foreground`}>
                 Πλοήγηση Ακινήτων
               </h1>
             </div>

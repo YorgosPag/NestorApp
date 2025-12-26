@@ -6,6 +6,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { layoutUtilities, canvasUtilities } from '@/styles/design-tokens';
+import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 
 interface SafePDFLoaderProps {
   file: string | File | null;
@@ -134,7 +135,7 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
   if (!file) {
     return (
       <div
-        className={`flex items-center justify-center bg-gray-100 border-2 border-dashed border-border ${className}`}
+        className={`flex items-center justify-center bg-gray-100 border border-dashed ${className}`}
         style={canvasUtilities.geoInteractive.pdfFallbackContainer(width, height)}
       >
         <div className="text-center text-gray-500">
@@ -151,7 +152,7 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
       <MethodSelector />
       
       {/* Debug info */}
-      <div className={`bg-blue-100 border border-blue-300 ${quick.input} p-2 mb-4 text-xs`}>
+      <div className={`bg-blue-100 ${quick.info} p-2 mb-4 text-xs`}>
         <div><strong>Status:</strong> {status}</div>
         <div><strong>Method:</strong> {renderMethod}</div>
         <div><strong>Debug:</strong> {debugInfo}</div>
@@ -177,7 +178,7 @@ export const SafePDFLoader: React.FC<SafePDFLoaderProps> = ({
         {status === 'loading' && (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
-              <div className={`animate-spin ${iconSizes.lg} border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-2`}></div>
+              <AnimatedSpinner size="large" className="mx-auto mb-2" />
               <p className="text-sm text-blue-600">Processing PDF...</p>
             </div>
           </div>

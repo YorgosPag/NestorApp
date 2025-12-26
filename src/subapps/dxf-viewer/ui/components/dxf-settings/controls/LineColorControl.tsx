@@ -8,9 +8,10 @@ import { Button } from '../../../../../../components/ui/button';
 import { Input } from '../../../../../../components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '../../../../../../components/ui/popover';
 import { Palette } from 'lucide-react';
-import { HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
+import { HOVER_BACKGROUND_EFFECTS, createHoverBorderEffects } from '@/components/ui/effects';
 import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface LineColorControlProps {
   value: string;
@@ -41,6 +42,9 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
   showHex = true,
 }) => {
   const iconSizes = useIconSizes();
+  const borderTokens = useBorderTokens();
+  const { getStatusBorder } = borderTokens;
+  const hoverBorderEffects = createHoverBorderEffects(borderTokens);
   const [isOpen, setIsOpen] = useState(false);
   const [tempColor, setTempColor] = useState(value);
 
@@ -77,10 +81,10 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
             <Button
               variant="outline"
               disabled={disabled}
-              className={`w-full justify-start gap-2 bg-gray-900 border-gray-700 ${HOVER_BACKGROUND_EFFECTS.GRAY_DARK}`}
+              className={`w-full justify-start gap-2 bg-gray-900 ${getStatusBorder('muted')} ${HOVER_BACKGROUND_EFFECTS.GRAY_DARK}`}
             >
               <div
-                className={`${iconSizes.md} rounded border border-gray-600 ${valueBgClass}`}
+                className={`${iconSizes.md} rounded ${getStatusBorder('muted')} ${valueBgClass}`}
               />
               <span className="text-gray-100 flex-1 text-left">
                 {showHex ? value.toUpperCase() : 'Select Color'}
@@ -89,7 +93,7 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
             </Button>
           </PopoverTrigger>
 
-          <PopoverContent className="w-64 bg-gray-900 border-gray-700 p-3">
+          <PopoverContent className={`w-64 bg-gray-900 ${getStatusBorder('muted')} p-3`}>
             <div className="space-y-3">
               {/* Preset colors grid */}
               <div>
@@ -100,10 +104,10 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
                       key={color}
                       onClick={() => handlePresetClick(color)}
                       className={`
-                        ${iconSizes.xl2} rounded border-2 transition-all
+                        ${iconSizes.xl2} rounded border transition-all
                         ${tempColor === color
-                          ? 'border-blue-500 scale-110'
-                          : `border-gray-700 ${HOVER_BORDER_EFFECTS.GRAY}`
+                          ? `${getStatusBorder('info').replace('border ', '')} scale-110`
+                          : `${getStatusBorder('muted').replace('border ', '')} ${hoverBorderEffects.GRAY}`
                         }
                         ${bgClass}
                       `}
@@ -121,7 +125,7 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
                     type="color"
                     value={tempColor}
                     onChange={(e) => handleColorChange(e.target.value)}
-                    className="w-16 h-9 p-1 bg-gray-800 border-gray-700"
+                    className={`w-16 h-9 p-1 bg-gray-800 ${getStatusBorder('muted').replace('border ', '')}`}
                   />
                   <Input
                     type="text"
@@ -136,7 +140,7 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
                       }
                     }}
                     placeholder="#FFFFFF"
-                    className="flex-1 bg-gray-800 border-gray-700 text-gray-100 font-mono text-sm"
+                    className={`flex-1 bg-gray-800 ${getStatusBorder('muted').replace('border ', '')} text-gray-100 font-mono text-sm`}
                   />
                 </div>
               </div>

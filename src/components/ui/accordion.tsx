@@ -89,7 +89,7 @@ const createAccordionItemVariants = (borderTokens: ReturnType<typeof useBorderTo
     variants: {
       variant: {
         default: "border-border",
-        bordered: `border-2 ${borderTokens.quick.card} mb-2 overflow-hidden`,
+        bordered: `${borderTokens.quick.card} mb-2 overflow-hidden`,
         ghost: "border-0",
         card: `${borderTokens.quick.card} mb-2 bg-card shadow-sm`
       }

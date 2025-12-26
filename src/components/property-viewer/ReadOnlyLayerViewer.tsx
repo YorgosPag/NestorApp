@@ -9,6 +9,7 @@ import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { CommonBadge } from '@/core/badges';
+import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -249,6 +250,7 @@ export function ReadOnlyLayerViewer({
   maxHeight = "400px"
 }: ReadOnlyLayerViewerProps) {
   const iconSizes = useIconSizes();
+  const { radius } = useBorderTokens();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [expandedLayers, setExpandedLayers] = useState<Set<string>>(new Set());
@@ -525,7 +527,7 @@ export function ReadOnlyLayerViewer({
         {layerState.isLoading && (
           <div className="text-center py-4 text-muted-foreground">
             <div className="flex items-center justify-center gap-2">
-              <div className={`${iconSizes.sm} border-2 border-muted-foreground border-t-transparent rounded-full animate-spin`} />
+              <AnimatedSpinner size="small" />
               <span className="text-sm">Φόρτωση layers...</span>
             </div>
           </div>

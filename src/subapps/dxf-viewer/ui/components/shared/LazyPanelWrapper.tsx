@@ -5,6 +5,8 @@
  */
 
 import React from 'react';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { AnimatedSpinner } from '../../../components/modal/ModalLoadingStates';
 
 /**
  * Props for the LazyPanelWrapper component
@@ -49,7 +51,7 @@ export const LazyPanelWrapper = React.memo<LazyPanelWrapperProps>(function LazyP
   const loadingSpinner = React.useMemo(() => (
     <div className={`flex items-center justify-center p-8 ${className}`}>
       <div className="flex flex-col items-center space-y-3">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        <AnimatedSpinner size="medium" />
         <span className="text-sm text-gray-400">{loadingText}</span>
       </div>
     </div>

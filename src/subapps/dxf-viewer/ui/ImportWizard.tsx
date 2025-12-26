@@ -9,6 +9,7 @@ import { X } from 'lucide-react';
 import { useWizardNavigation } from '../hooks/useWizardNavigation';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface ImportWizardProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ interface ImportWizardProps {
 
 export function ImportWizard({ isOpen, onClose, onComplete }: ImportWizardProps) {
   const iconSizes = useIconSizes();
+  const { quick, getDirectionalBorder } = useBorderTokens();
   const { importWizard } = useLevels();
   const navigation = useWizardNavigation({ onComplete, onClose });
   const stepInfo = navigation.getStepInfo();
@@ -50,10 +52,10 @@ export function ImportWizard({ isOpen, onClose, onComplete }: ImportWizardProps)
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-gray-800 rounded-lg shadow-xl border border-gray-600 w-full max-w-2xl max-h-[90vh] flex flex-col">
+      <div className={`bg-gray-800 rounded-lg shadow-xl ${quick.muted} w-full max-w-2xl max-h-[90vh] flex flex-col`}>
         
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-600">
+        <div className={`flex items-center justify-between p-4 ${getDirectionalBorder('muted', 'bottom')}`}>
           <div>
             <h2 className="text-xl font-semibold text-white">Εισαγωγή DXF</h2>
             <p className="text-sm text-gray-400">
@@ -80,7 +82,7 @@ export function ImportWizard({ isOpen, onClose, onComplete }: ImportWizardProps)
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-600 flex justify-between">
+        <div className={`p-4 ${getDirectionalBorder('muted', 'top')} flex justify-between`}>
           <button
             onClick={navigation.handleBack}
             disabled={stepInfo.number === 1}

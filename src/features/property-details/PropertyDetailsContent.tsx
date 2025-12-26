@@ -13,6 +13,7 @@ import { BuyerMismatchAlert } from './components/BuyerMismatchAlert';
 import { UnifiedCustomerCard } from '@/components/shared/customer-info';
 import { LimitedInfoNotice } from './components/LimitedInfoNotice';
 import { AttachmentsBlock } from './components/AttachmentsBlock';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { ContactsBlock } from './components/ContactsBlock';
 import { DocumentsBlock } from './components/DocumentsBlock';
 import { DatesBlock } from './components/DatesBlock';
@@ -37,6 +38,7 @@ export function PropertyDetailsContent({
   isReadOnly?: boolean;
 }) {
   const notifications = useNotifications();
+  const { quick } = useBorderTokens();
 
   // Resolve the actual property from all possible sources (enterprise pattern)
   const resolvedProperty = property || unit || data;
@@ -115,7 +117,7 @@ export function PropertyDetailsContent({
           variant="compact"
           size="md"
           showUnitsCount={false}
-          className="border-primary/20"
+          className={quick.input}
         />
       )}
 

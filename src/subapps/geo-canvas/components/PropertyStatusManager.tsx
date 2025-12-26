@@ -144,7 +144,7 @@ export function PropertyStatusManager({
             onClick={() => handleColorSchemeChange('status')}
             className={`px-3 py-2 text-sm rounded-md font-medium transition-colors ${
               colorScheme === 'status'
-                ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                ? `bg-blue-100 text-blue-700 ${quick.info}`
                 : `bg-gray-100 text-gray-600 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
             }`}
           >
@@ -154,7 +154,7 @@ export function PropertyStatusManager({
             onClick={() => handleColorSchemeChange('price')}
             className={`px-3 py-2 text-sm rounded-md font-medium transition-colors ${
               colorScheme === 'price'
-                ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                ? `bg-blue-100 text-blue-700 ${quick.info}`
                 : `bg-gray-100 text-gray-600 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
             }`}
           >
@@ -164,7 +164,7 @@ export function PropertyStatusManager({
             onClick={() => handleColorSchemeChange('type')}
             className={`px-3 py-2 text-sm rounded-md font-medium transition-colors ${
               colorScheme === 'type'
-                ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                ? `bg-blue-100 text-blue-700 ${quick.info}`
                 : `bg-gray-100 text-gray-600 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
             }`}
           >
@@ -207,7 +207,7 @@ export function PropertyStatusManager({
                 >
                   {/* Color Indicator */}
                   <div
-                    className={`${iconSizes.sm} rounded border-2 border-white shadow-sm`}
+                    className={`${iconSizes.sm} rounded border border-white shadow-sm`}
                     style={layoutUtilities.dxf.colors.backgroundColor(statusColor)}
                   />
 
@@ -236,7 +236,7 @@ export function PropertyStatusManager({
       )}
 
       {/* Statistics */}
-      <div className={`bg-blue-50 ${quick.card} border-blue-200 p-3`}>
+      <div className={`bg-blue-50 ${quick.card} ${colors.border.info} p-3`}>
         <div className="flex items-center gap-2 mb-2">
           <Info className={`${iconSizes.sm} text-blue-600`} />
           <span className="text-sm font-medium text-blue-900">{t('propertyStatusManager.statistics.title')}</span>

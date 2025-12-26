@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { X } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import type { PropertyGroup } from '@/types/connections';
 
 interface GroupManagerProps {
@@ -14,6 +15,7 @@ interface GroupManagerProps {
 
 export function GroupManager({ groups, onDelete }: GroupManagerProps) {
     const iconSizes = useIconSizes();
+    const { radius } = useBorderTokens();
     if (groups.length === 0) return null;
 
     return (
@@ -21,7 +23,7 @@ export function GroupManager({ groups, onDelete }: GroupManagerProps) {
             <h5 className="text-xs font-medium">Ομάδες</h5>
             <div className="space-y-1">
                 {groups.map(group => (
-                    <div key={group.id} className="flex justify-between items-center text-xs p-2 bg-muted rounded-md">
+                    <div key={group.id} className={`flex justify-between items-center text-xs p-2 bg-muted ${radius.md}`}>
                         <span>{group.name}</span>
                         <Tooltip>
                             <TooltipTrigger asChild>

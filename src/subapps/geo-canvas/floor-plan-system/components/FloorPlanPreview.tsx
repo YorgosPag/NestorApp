@@ -32,7 +32,7 @@ export interface FloorPlanPreviewProps {
 
 export function FloorPlanPreview({ result, file, className = '' }: FloorPlanPreviewProps) {
   const { t } = useTranslationLazy('geo-canvas');
-  const { quick } = useBorderTokens();
+  const { quick, getStatusBorder, getDirectionalBorder } = useBorderTokens();
 
   // Format file size
   const formatFileSize = (bytes: number): string => {
@@ -45,7 +45,7 @@ export function FloorPlanPreview({ result, file, className = '' }: FloorPlanPrev
     <article className={`flex flex-col gap-4 ${className}`} aria-labelledby="floor-plan-preview-title">
       {/* Thumbnail Preview */}
       {result.thumbnail && (
-        <section className={`bg-gray-50 ${quick.card} p-4 border-2`} aria-labelledby="thumbnail-title">
+        <section className={`bg-gray-50 ${quick.card} p-4`} aria-labelledby="thumbnail-title">
           <h3 id="thumbnail-title" className="text-sm font-semibold text-gray-700 mb-3">
             {t('floorPlan.preview.thumbnailTitle')}
           </h3>
@@ -61,7 +61,7 @@ export function FloorPlanPreview({ result, file, className = '' }: FloorPlanPrev
       )}
 
       {/* File Information */}
-      <section className={`bg-blue-50 ${quick.card} p-4 border-2 border-blue-200`} aria-labelledby="file-info-title">
+      <section className={`bg-blue-50 ${quick.card} p-4 ${getStatusBorder('info')}`} aria-labelledby="file-info-title">
         <h3 id="file-info-title" className="text-sm font-semibold text-blue-700 mb-3">
           {t('floorPlan.preview.fileInfoTitle')}
         </h3>
@@ -81,7 +81,7 @@ export function FloorPlanPreview({ result, file, className = '' }: FloorPlanPrev
 
       {/* DXF-specific metadata */}
       {result.format === 'DXF' && result.geoJSON && result.bounds && (
-        <section className={`bg-green-50 ${quick.card} p-4 border-2 border-green-200`}>
+        <section className={`bg-green-50 ${quick.card} p-4 ${getStatusBorder('success')}`}>
           <h3 className="text-sm font-semibold text-green-700 mb-3">
             {t('floorPlan.preview.dxfDataTitle')}
           </h3>
@@ -103,7 +103,7 @@ export function FloorPlanPreview({ result, file, className = '' }: FloorPlanPrev
 
           {/* Layer list */}
           {result.layers && result.layers.length > 0 && (
-            <div className="mt-3 pt-3 border-t">
+            <div className={`mt-3 pt-3 ${getDirectionalBorder('muted', 'top')}`}>
               <div className="text-xs font-semibold text-green-700 mb-2">
                 {t('floorPlan.preview.layerList')}:
               </div>
@@ -130,7 +130,7 @@ export function FloorPlanPreview({ result, file, className = '' }: FloorPlanPrev
       {/* Image-specific metadata */}
       {(result.format === 'PNG' || result.format === 'JPG' || result.format === 'TIFF') &&
        'metadata' in result && result.metadata && (
-        <section className={`bg-purple-50 ${quick.card} p-4 border-2 border-purple-200`}>
+        <section className={`bg-purple-50 ${quick.card} p-4 ${getStatusBorder('info')}`}>
           <h3 className="text-sm font-semibold text-purple-700 mb-3">
             {t('floorPlan.preview.imageDataTitle')}
           </h3>
@@ -156,7 +156,7 @@ export function FloorPlanPreview({ result, file, className = '' }: FloorPlanPrev
       )}
 
       {/* Next steps hint */}
-      <section className={`bg-yellow-50 ${quick.card} p-4 border-2 border-yellow-200`}>
+      <section className={`bg-yellow-50 ${quick.card} p-4 ${getStatusBorder('warning')}`}>
         <div className="flex items-start gap-2">
           <span className="text-xl">💡</span>
           <div className="flex-1">

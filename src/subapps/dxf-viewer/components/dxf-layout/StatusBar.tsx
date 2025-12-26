@@ -7,6 +7,7 @@ import { Eye, Maximize, RotateCcw } from "lucide-react";
 import type { DXFViewerLayoutProps } from '../../integration/types';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 type StatusBarProps = Pick<
   DXFViewerLayoutProps,
@@ -29,12 +30,13 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   onClear
 }) => {
   const iconSizes = useIconSizes();
+  const { getStatusBorder, getDirectionalBorder } = useBorderTokens();
   return (
-  <div className="flex gap-2 p-2 items-center bg-gray-800 border-b border-gray-600">
+  <div className={`flex gap-2 p-2 items-center bg-gray-800 ${getDirectionalBorder('muted', 'bottom')}`}>
     <Button
       variant="outline"
       size="sm"
-      className={`bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-white border-gray-600`}
+      className={`bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-white ${getStatusBorder('muted')}`}
       onClick={() => onViewModeChange('normal')}
     >
       <Eye className={`${iconSizes.sm} mr-2`} />
@@ -43,7 +45,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
     <Button
       variant="outline"
       size="sm"
-      className={`bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-white border-gray-600`}
+      className={`bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-white ${getStatusBorder('muted')}`}
       onClick={() => onViewModeChange('fullscreen')}
     >
       <Maximize className={`${iconSizes.sm} mr-2`} />
@@ -52,7 +54,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
     <Button 
       variant="outline" 
       size="sm" 
-      className={`bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-white border-gray-600`}
+      className={`bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-white ${getStatusBorder('muted')}`}
       onClick={onClear}
     >
       <RotateCcw className={`${iconSizes.sm} mr-2`} />

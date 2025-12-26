@@ -4,11 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Zap, Sparkles, Target, MessageSquare } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 export function AIAssistantCard() {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   return (
-    <Card className="bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-950 dark:to-blue-950 border-purple-200 dark:border-purple-800">
+    <Card className={`bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-950 dark:to-blue-950 ${quick.info}`}>
       <CardHeader>
         <div className="flex items-center gap-2">
           <div className={`${iconSizes.xl} rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center`}>

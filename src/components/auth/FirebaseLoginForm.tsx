@@ -18,6 +18,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useFirebaseAuth } from '@/contexts/FirebaseAuthContext';
 import { Loader2, Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 // =============================================================================
 // INTERFACES
@@ -213,7 +214,7 @@ export function FirebaseLoginForm({
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Success Message */}
           {successMessage && (
-            <Alert className="border-green-200 bg-green-50 text-green-700">
+            <Alert className={`${useBorderTokens().getStatusBorder('success')} bg-green-50 text-green-700`}>
               <AlertDescription>{successMessage}</AlertDescription>
             </Alert>
           )}

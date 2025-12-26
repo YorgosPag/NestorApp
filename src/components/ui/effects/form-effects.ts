@@ -8,19 +8,21 @@
 //
 // ============================================================================
 
+import { borders } from '@/styles/design-tokens';
+
 /**
  * 🎯 FORM INPUT FOCUS EFFECTS
  * Professional focus states για form inputs
  */
 export const FORM_FOCUS_EFFECTS = {
   /** Standard input focus */
-  STANDARD: 'focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:border-primary transition-all duration-200',
+  STANDARD: `focus:ring-2 focus:ring-primary focus:ring-offset-2 ${borders.variants.input.focus.className} transition-all duration-200`,
 
   /** Subtle focus για minimal designs */
-  SUBTLE: 'focus:ring-1 focus:ring-primary/50 focus:border-primary/70 transition-all duration-150',
+  SUBTLE: `focus:ring-1 focus:ring-primary/50 ${borders.variants.input.default.className} transition-all duration-150`,
 
   /** Enhanced focus για important fields */
-  ENHANCED: 'focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:border-primary focus:shadow-lg transition-all duration-300',
+  ENHANCED: `focus:ring-2 focus:ring-primary focus:ring-offset-2 ${borders.variants.input.focus.className} focus:shadow-lg transition-all duration-300`,
 
   /** High contrast accessibility focus */
   HIGH_CONTRAST: 'focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 focus:border-yellow-400 transition-all duration-200',
@@ -29,10 +31,10 @@ export const FORM_FOCUS_EFFECTS = {
   ERROR: 'focus:ring-2 focus:ring-destructive focus:ring-offset-2 focus:border-destructive transition-all duration-200',
 
   /** Success state focus */
-  SUCCESS: 'focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:border-green-500 transition-all duration-200',
+  SUCCESS: 'focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:border-hsl(var(--border-success)) transition-all duration-200',
 
   /** Warning state focus */
-  WARNING: 'focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 focus:border-yellow-500 transition-all duration-200'
+  WARNING: 'focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 focus:border-hsl(var(--border-warning)) transition-all duration-200'
 } as const;
 
 /**
@@ -41,13 +43,13 @@ export const FORM_FOCUS_EFFECTS = {
  */
 export const FORM_HOVER_EFFECTS = {
   /** Standard input hover */
-  STANDARD: 'hover:border-primary/70 hover:shadow-sm transition-all duration-200',
+  STANDARD: `${borders.variants.input.default.className} hover:shadow-sm transition-all duration-200`,
 
   /** Subtle hover για readonly fields */
   SUBTLE: 'hover:border-border/80 transition-colors duration-150',
 
   /** Enhanced hover για interactive fields */
-  ENHANCED: 'hover:border-primary hover:shadow-md hover:scale-[1.01] transition-all duration-200',
+  ENHANCED: `${borders.variants.input.focus.className} hover:shadow-md hover:scale-[1.01] transition-all duration-200`,
 
   /** Disabled hover (no effect) */
   DISABLED: 'cursor-not-allowed opacity-50',
@@ -56,7 +58,7 @@ export const FORM_HOVER_EFFECTS = {
   ERROR: 'hover:border-destructive/70 transition-colors duration-200',
 
   /** Success state hover */
-  SUCCESS: 'hover:border-green-500/70 transition-colors duration-200'
+  SUCCESS: 'hover:border-hsl(var(--border-success)/70) transition-colors duration-200'
 } as const;
 
 /**
@@ -68,16 +70,16 @@ export const FORM_STATE_EFFECTS = {
   DEFAULT: 'border-border bg-background text-foreground',
 
   /** Active/focused state */
-  ACTIVE: 'border-primary bg-background text-foreground shadow-sm',
+  ACTIVE: `${borders.variants.input.focus.className} bg-background text-foreground shadow-sm`,
 
   /** Error state */
   ERROR: 'border-destructive bg-destructive/5 text-foreground',
 
   /** Success state */
-  SUCCESS: 'border-green-500 bg-green-50 text-foreground dark:bg-green-900/10',
+  SUCCESS: 'border-hsl(var(--border-success)) bg-green-50 text-foreground dark:bg-green-900/10',
 
   /** Warning state */
-  WARNING: 'border-yellow-500 bg-yellow-50 text-foreground dark:bg-yellow-900/10',
+  WARNING: 'border-hsl(var(--border-warning)) bg-yellow-50 text-foreground dark:bg-yellow-900/10',
 
   /** Disabled state */
   DISABLED: 'border-border/50 bg-muted text-muted-foreground cursor-not-allowed opacity-50',
@@ -155,13 +157,13 @@ export const FORM_GROUP_EFFECTS = {
   COLLAPSIBLE: 'transition-all duration-300 hover:bg-accent/30 hover:shadow-sm',
 
   /** Form step/wizard section */
-  STEP: 'transition-all duration-300 hover:shadow-md hover:border-primary/50',
+  STEP: `transition-all duration-300 hover:shadow-md ${borders.variants.input.default.className}`,
 
   /** Form card/container */
   CARD: 'transition-all duration-200 hover:shadow-lg hover:scale-[1.01]',
 
   /** Highlighted form group */
-  HIGHLIGHTED: 'transition-all duration-300 hover:bg-primary/5 hover:border-primary/30'
+  HIGHLIGHTED: `transition-all duration-300 hover:bg-primary/5 ${borders.variants.input.default.className}`
 } as const;
 
 /**
@@ -206,10 +208,10 @@ export const COMPLEX_FORM_EFFECTS = {
 
   /** File upload area */
   FILE_UPLOAD: {
-    DEFAULT: 'border-2 border-dashed border-border transition-all duration-200 hover:border-primary/50 hover:bg-accent/30',
-    DRAGOVER: 'border-primary bg-primary/10 scale-105 transition-all duration-200',
+    DEFAULT: `border border-dashed ${borders.variants.input.default.className} transition-all duration-200 hover:bg-accent/30`,
+    DRAGOVER: `${borders.variants.input.focus.className} bg-primary/10 scale-105 transition-all duration-200`,
     ERROR: 'border-destructive bg-destructive/10',
-    SUCCESS: 'border-green-500 bg-green-50 dark:bg-green-900/10'
+    SUCCESS: 'border-hsl(var(--border-success)) bg-green-50 dark:bg-green-900/10'
   },
 
   /** Search input with suggestions */

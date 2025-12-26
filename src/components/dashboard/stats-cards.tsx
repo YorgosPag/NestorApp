@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import type { QuickStats } from "@/types/dashboard";
 
 interface StatsCardsProps {
@@ -27,6 +28,7 @@ interface StatsCardsProps {
 
 export function StatsCards({ stats }: StatsCardsProps) {
   const iconSizes = useIconSizes();
+  const { getDirectionalBorder } = useBorderTokens();
   const { t } = useTranslation('dashboard');
   
   return (
@@ -35,7 +37,7 @@ export function StatsCards({ stats }: StatsCardsProps) {
       role="region"
       aria-label="Στατιστικά Dashboard"
     >
-      <Card className="card-hover border-l-4 border-l-blue-600">
+      <Card className={`card-hover ${getDirectionalBorder('info', 'left')}`}>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">{t('stats.totalContacts')}</CardTitle>
           <Users className={`${iconSizes.sm} text-muted-foreground`} />
@@ -52,7 +54,7 @@ export function StatsCards({ stats }: StatsCardsProps) {
         </CardContent>
       </Card>
 
-      <Card className="card-hover border-l-4 border-l-green-600">
+      <Card className={`card-hover ${getDirectionalBorder('success', 'left')}`}>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">{t('stats.newContacts')}</CardTitle>
           <Plus className={`${iconSizes.sm} text-muted-foreground`} />
@@ -73,7 +75,7 @@ export function StatsCards({ stats }: StatsCardsProps) {
         </CardContent>
       </Card>
 
-      <Card className="card-hover border-l-4 border-l-yellow-600">
+      <Card className={`card-hover ${getDirectionalBorder('warning', 'left')}`}>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">{t('stats.favorites')}</CardTitle>
           <Star className={`${iconSizes.sm} text-muted-foreground`} />
@@ -91,7 +93,7 @@ export function StatsCards({ stats }: StatsCardsProps) {
         </CardContent>
       </Card>
 
-      <Card className="card-hover border-l-4 border-l-purple-600">
+      <Card className={`card-hover ${getDirectionalBorder('default', 'left')}`}>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">{t('stats.activeToday')}</CardTitle>
           <Activity className={`${iconSizes.sm} text-muted-foreground`} />

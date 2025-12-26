@@ -302,7 +302,7 @@ export function ProfessionalDrawingInterface({
             onClick={() => handleToolSelect('upload')}
             disabled={actualIsDrawing}
             className={`
-              flex flex-col items-center justify-center p-4 ${quick.card} border-2
+              flex flex-col items-center justify-center p-4 ${quick.card}
               transition-all duration-200 min-h-[100px]
               ${selectedTool === 'upload'
                 ? `${getStatusBorder('success')} bg-green-50`
@@ -321,7 +321,7 @@ export function ProfessionalDrawingInterface({
             onClick={() => handleToolSelect('polygon')}
             disabled={actualIsDrawing && selectedTool !== 'polygon'}
             className={`
-              flex flex-col items-center justify-center p-4 ${quick.card} border-2
+              flex flex-col items-center justify-center p-4 ${quick.card}
               transition-all duration-200 min-h-[100px]
               ${selectedTool === 'polygon'
                 ? `${getStatusBorder('success')} bg-green-50`
@@ -340,7 +340,7 @@ export function ProfessionalDrawingInterface({
             onClick={() => handleToolSelect('auto-detect')}
             disabled={actualIsDrawing || !parserResult}
             className={`
-              flex flex-col items-center justify-center p-4 ${quick.card} border-2
+              flex flex-col items-center justify-center p-4 ${quick.card}
               transition-all duration-200 min-h-[100px]
               ${selectedTool === 'auto-detect'
                 ? `${getStatusBorder('success')} bg-green-50`
@@ -359,7 +359,7 @@ export function ProfessionalDrawingInterface({
             onClick={() => handleToolSelect('property-manager')}
             disabled={actualIsDrawing}
             className={`
-              flex flex-col items-center justify-center p-4 ${quick.card} border-2
+              flex flex-col items-center justify-center p-4 ${quick.card}
               transition-all duration-200 min-h-[100px]
               ${selectedTool === 'property-manager'
                 ? `${getStatusBorder('warning')} bg-orange-50`
@@ -378,7 +378,7 @@ export function ProfessionalDrawingInterface({
             onClick={() => handleToolSelect('monitoring-dashboard')}
             disabled={actualIsDrawing}
             className={`
-              flex flex-col items-center justify-center p-4 ${quick.card} border-2
+              flex flex-col items-center justify-center p-4 ${quick.card}
               transition-all duration-200 min-h-[100px]
               ${selectedTool === 'monitoring-dashboard'
                 ? `${getStatusBorder('info')} bg-blue-50`

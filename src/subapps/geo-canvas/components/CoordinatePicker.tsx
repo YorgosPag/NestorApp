@@ -35,7 +35,7 @@ export function CoordinatePicker({
   className = ''
 }: CoordinatePickerProps) {
   const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
+  const { quick, radius } = useBorderTokens();
   const [transformState, transformActions] = useGeoTransform();
   const [pickingMode, setPickingMode] = useState<PickingMode>('idle');
 
@@ -270,7 +270,7 @@ export function CoordinatePicker({
           🌍 Geographic Coordinates
         </h3>
         <div className="flex items-center space-x-2">
-          <span className={`${iconSizes.xs} rounded-full ${
+          <span className={`${iconSizes.xs} ${radius.full} ${
             selectedGeoPoint ? 'bg-green-400' : 'bg-gray-400'
           }`} />
           <span className="text-xs text-gray-400">
@@ -315,7 +315,7 @@ export function CoordinatePicker({
         </div>
       </div>
 
-      <div className={`mt-3 p-3 bg-blue-900/20 ${quick.card} border-blue-600`}>
+      <div className={`mt-3 p-3 bg-blue-900/20 ${quick.info}`}>
         <div className="text-sm text-blue-300">
           💡 <strong>Tip:</strong> Click on the map για automatic coordinate selection
         </div>
@@ -398,21 +398,21 @@ export function CoordinatePicker({
         <button
           onClick={handleSubmitCoordinates}
           disabled={!isFormValid()}
-          className={`flex-1 bg-green-600 ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-3 px-4 rounded-lg font-medium transition-colors`}
+          className={`flex-1 bg-green-600 ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-3 px-4 ${radius.lg} font-medium transition-colors`}
         >
           ✅ Add Control Point
         </button>
 
         <button
           onClick={resetForm}
-          className={`bg-yellow-600 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-white py-3 px-4 rounded-lg transition-colors`}
+          className={`bg-yellow-600 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-white py-3 px-4 ${radius.lg} transition-colors`}
         >
           🔄 Reset
         </button>
 
         <button
           onClick={handleCancel}
-          className={`bg-red-600 ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} text-white py-3 px-4 rounded-lg transition-colors`}
+          className={`bg-red-600 ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} text-white py-3 px-4 ${radius.lg} transition-colors`}
         >
           ✕ Cancel
         </button>
@@ -438,7 +438,7 @@ export function CoordinatePicker({
 
       {/* Error Display */}
       {transformState.error && (
-        <div className={`bg-red-900 ${quick.card} border-red-600 p-4`}>
+        <div className={`bg-red-900 ${quick.error} p-4`}>
           <div className="flex items-center justify-between">
             <span className="text-red-300">❌ {transformState.error}</span>
             <button
@@ -463,7 +463,7 @@ export function CoordinatePicker({
       {renderActionButtons()}
 
       {/* Instructions */}
-      <div className={`bg-blue-900/20 ${quick.card} border-blue-600 p-4`}>
+      <div className={`bg-blue-900/20 ${quick.info} p-4`}>
         <h4 className="font-semibold text-blue-400 mb-2">📋 Instructions:</h4>
         <ol className="text-sm text-blue-300 space-y-1">
           <li>1. Enter DXF coordinates (X, Y, optional Z)</li>

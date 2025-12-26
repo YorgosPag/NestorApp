@@ -7,6 +7,7 @@ import React from 'react';
 import { BaseCard, BaseCardProps } from './BaseCard';
 import { useAdvancedDesignSystemValidation } from '@/lib/validation/component-validation-hooks';
 import { cn } from '@/lib/design-system';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface ValidatedBaseCardProps extends BaseCardProps {
   // Additional validation options
@@ -23,6 +24,8 @@ export function BaseCardValidated({
   validationOptions = {},
   ...props
 }: ValidatedBaseCardProps) {
+  const { quick, getStatusBorder } = useBorderTokens();
+
   // Apply validation hooks
   const validation = useAdvancedDesignSystemValidation(
     { className, ...props },
@@ -43,7 +46,7 @@ export function BaseCardValidated({
 
     // Add visual indicators for validation status in development
     const validationClasses = validation.analytics && validation.analytics.validationErrors > 0
-      ? 'ring-2 ring-orange-200 dark:ring-orange-800' // Visual warning for validation errors
+      ? `ring-2 ring-hsl(var(--border-warning)) dark:ring-hsl(var(--border-warning))` // ✅ ENTERPRISE: Centralized warning ring
       : '';
 
     return cn(className, validationClasses);
@@ -61,7 +64,7 @@ export function BaseCardValidated({
 
     return (
       <div className="absolute top-2 right-2 z-50">
-        <div className="bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 text-xs px-2 py-1 rounded-md border border-orange-200 dark:border-orange-700">
+        <div className={`bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 text-xs px-2 py-1 rounded-md ${quick.warning}`}>
           <span className="font-medium">⚠️ Design System Issues</span>
           <div className="text-xs mt-1">
             {validation.analytics?.validationErrors} validation warnings

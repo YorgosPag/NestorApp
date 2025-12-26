@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { type Photo } from '@/components/generic/utils/PhotoItem';
 import { EnterprisePhotoUpload } from '@/components/ui/EnterprisePhotoUpload';
-import { PhotoGrid } from './PhotoGrid';
+import { PhotoItem } from '@/components/generic/utils/PhotoItem';
 
 const initialPhotos: Photo[] = [
   {
@@ -50,7 +50,11 @@ const PhotosTabContent = () => {
           onUploadComplete={handleUploadComplete}
         />
       </div>
-      <PhotoGrid photos={photos} />
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {photos.map((photo) => (
+          <PhotoItem key={photo.id} photo={photo} />
+        ))}
+      </div>
     </div>
   );
 };

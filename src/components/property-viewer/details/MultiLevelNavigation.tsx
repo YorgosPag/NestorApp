@@ -16,7 +16,7 @@ interface MultiLevelNavigationProps {
 
 export function MultiLevelNavigation({ property, onSelectFloor, currentFloorId }: MultiLevelNavigationProps) {
   const iconSizes = useIconSizes();
-  const { getStatusBorder } = useBorderTokens();
+  const { getStatusBorder, radius } = useBorderTokens();
   if (!property.levels) return null;
 
   return (
@@ -29,7 +29,7 @@ export function MultiLevelNavigation({ property, onSelectFloor, currentFloorId }
         <div 
           key={level.floorId}
           className={cn(
-            "p-2 rounded-md flex items-center justify-between transition-colors",
+            `p-2 ${radius.md} flex items-center justify-between transition-colors`,
             currentFloorId === level.floorId ? "bg-blue-100 dark:bg-blue-900" : "bg-white/50 dark:bg-black/20"
           )}
         >

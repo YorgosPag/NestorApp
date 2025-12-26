@@ -5,6 +5,7 @@ import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effect
 import { Home, Filter } from 'lucide-react';
 import { PageHeader } from '@/core/headers';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import type { ViewMode as CoreViewMode } from '@/core/headers';
 
 export type UnitsViewMode = 'list' | 'grid';
@@ -34,6 +35,7 @@ export function UnitsHeader({
   setShowFilters,
 }: UnitsHeaderProps) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   return (
     <PageHeader
         variant="sticky-rounded"
@@ -64,10 +66,10 @@ export function UnitsHeader({
             <button
               key="mobile-filter"
               onClick={() => setShowFilters(!showFilters)}
-              className={`md:hidden p-2 rounded-md border ${TRANSITION_PRESETS.STANDARD_COLORS} ${
+              className={`md:hidden p-2 rounded-md ${TRANSITION_PRESETS.STANDARD_COLORS} ${
                 showFilters
-                  ? 'bg-primary text-primary-foreground border-primary'
-                  : `bg-background border-border ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`
+                  ? `bg-primary text-primary-foreground ${quick.focus}`
+                  : `bg-background ${quick.input} ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`
               }`}
               aria-label="Toggle filters"
             >

@@ -65,7 +65,7 @@ export const getDistanceCircleStyles = () => ({
   innerCircle: {
     width: '8rem', // w-32
     height: '8rem', // h-32
-    border: '2px dashed rgb(147 197 253)', // border-blue-300
+    border: '2px dashed hsl(var(--border-info))', // Κεντρικοποιημένο info border
     borderRadius: '50%',
     opacity: 0.3
   },
@@ -76,7 +76,7 @@ export const getDistanceCircleStyles = () => ({
     transform: 'translate(-50%, -50%)',
     width: '12rem', // w-48
     height: '12rem', // h-48
-    border: '2px dashed rgb(191 219 254)', // border-blue-200
+    border: '2px dashed hsl(var(--border-info) / 0.7)', // Κεντρικοποιημένο info border με opacity
     borderRadius: '50%',
     opacity: 0.2
   }
@@ -136,8 +136,9 @@ export const getMapCanvasStyles = () => ({
 
 /**
  * Get main building marker styles
+ * @param borderColor - Border color override (default: white)
  */
-export const getMainBuildingMarkerStyles = () => ({
+export const getMainBuildingMarkerStyles = (borderColor: string = 'white') => ({
   container: {
     position: 'absolute' as const,
     top: '50%',
@@ -157,7 +158,7 @@ export const getMainBuildingMarkerStyles = () => ({
     padding: '0.75rem',
     borderRadius: '50%',
     boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.05)',
-    border: '4px solid white'
+    border: `4px solid ${borderColor}`
   },
   tooltip: {
     position: 'absolute' as const,

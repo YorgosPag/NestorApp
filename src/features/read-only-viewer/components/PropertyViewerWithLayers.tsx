@@ -19,6 +19,7 @@ import {
   Info
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 // Import components
 import { ReadOnlyLayerViewer } from '@/components/property-viewer/ReadOnlyLayerViewer';
@@ -63,6 +64,7 @@ export function PropertyViewerWithLayers({
   onLayerVisibilityChange
 }: PropertyViewerWithLayersProps) {
   const iconSizes = useIconSizes();
+  const { getDirectionalBorder } = useBorderTokens();
   const [zoomLevel, setZoomLevel] = useState(100);
   const [showLayers, setShowLayers] = useState(showLayerPanel);
   const [isLayersCollapsed, setIsLayersCollapsed] = useState(false);
@@ -332,7 +334,7 @@ export function PropertyViewerWithLayers({
       </section>
 
       {/* Status bar */}
-      <footer className="px-4 py-2 bg-muted/30 border-t">
+      <footer className={`px-4 py-2 bg-muted/30 ${getDirectionalBorder('muted', 'top')}`}>
         <div className="flex justify-between items-center text-xs text-muted-foreground">
           <div className="flex items-center gap-4">
             <span>Όροφος: {currentFloor.name}</span>

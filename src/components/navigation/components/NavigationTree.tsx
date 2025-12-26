@@ -9,6 +9,8 @@ import { Building, Construction, Home, MapPin, Map } from 'lucide-react';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 import { useNavigation } from '../core/NavigationContext';
 import { NavigationButton } from './NavigationButton';
 import { NavigationBreadcrumb } from './NavigationBreadcrumb';
@@ -20,6 +22,7 @@ interface NavigationTreeProps {
 
 export function NavigationTree({ className, onNavigateToPage }: NavigationTreeProps) {
   const iconSizes = useIconSizes();
+  const { quick, radius } = useBorderTokens();
   const {
     companies,
     selectedCompany,
@@ -69,7 +72,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
   if (loading) {
     return (
       <div className={`text-center py-8 ${className || ''}`}>
-        <div className={`animate-spin ${iconSizes.xl} border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4`}></div>
+        <AnimatedSpinner size="large" className="mx-auto mb-4" />
         <p className="text-gray-500 dark:text-muted-foreground">Φόρτωση δεδομένων...</p>
       </div>
     );
@@ -82,7 +85,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
         <button
           onClick={loadCompanies}
           className={cn(
-            "px-4 py-2 bg-blue-600 text-white rounded-lg",
+            `px-4 py-2 bg-blue-600 text-white ${radius.lg}`,
             HOVER_BACKGROUND_EFFECTS.BLUE
           )}
         >

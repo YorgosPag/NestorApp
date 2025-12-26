@@ -4,6 +4,7 @@
 import React from 'react';
 import { Building2, Filter } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { PageHeader } from '@/core/headers';
 import { CompactToolbar, buildingsConfig } from '@/components/core/CompactToolbar';
 import type { ViewMode } from '@/core/headers';
@@ -34,6 +35,7 @@ export function BuildingsHeader({
   setShowFilters,
 }: BuildingsHeaderProps) {
   const iconSizes = useIconSizes();
+  const { quick, radius } = useBorderTokens();
   return (
     <PageHeader
       variant="sticky-rounded"
@@ -64,10 +66,10 @@ export function BuildingsHeader({
           <button
             key="mobile-filter"
             onClick={() => setShowFilters(!showFilters)}
-            className={`md:hidden p-2 rounded-md border ${TRANSITION_PRESETS.STANDARD_COLORS} ${
+            className={`md:hidden p-2 ${radius.md} ${TRANSITION_PRESETS.STANDARD_COLORS} ${
               showFilters
-                ? 'bg-primary text-primary-foreground border-primary'
-                : `bg-background border-border ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`
+                ? `bg-primary text-primary-foreground ${quick.focus}`
+                : `bg-background ${quick.input} ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`
             }`}
             aria-label="Toggle filters"
           >

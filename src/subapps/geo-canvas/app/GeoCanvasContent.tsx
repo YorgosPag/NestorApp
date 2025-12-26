@@ -13,6 +13,7 @@ import { ProfessionalDrawingInterface } from '../components/ProfessionalDrawingI
 import { TechnicalDrawingInterface } from '../components/TechnicalDrawingInterface';
 import { AlertManagementPanel } from '../components/AlertManagementPanel';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { AnimatedSpinner } from '../../dxf-viewer/components/modal/ModalLoadingStates';
 
 // ✅ NEW: Enterprise Centralized Polygon System Provider
 import { PolygonSystemProvider } from '../systems/polygon-system';
@@ -43,7 +44,7 @@ import type { GeoCoordinate, DxfCoordinate } from '../types';
  */
 export function GeoCanvasContent(props: GeoCanvasAppProps) {
   const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
+  const { quick, getStatusBorder } = useBorderTokens();
   const { t, isLoading } = useTranslationLazy('geo-canvas');
   const { user, setUserType, isCitizen, isProfessional, isTechnical } = useOptimizedUserRole();
   const [activeView, setActiveView] = useState<'foundation' | 'georeferencing' | 'map'>('georeferencing');
@@ -562,7 +563,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-gray-900 text-white">
         <div className="text-center">
-          <div className={`animate-spin rounded-full ${iconSizes['2xl']} border-b-2 border-blue-600 mx-auto mb-4`}></div>
+          <AnimatedSpinner size="large" className="mx-auto mb-4" />
           <p className="text-white">{t('loadingStates.loadingTranslations')}</p>
         </div>
       </div>
@@ -894,11 +895,11 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                 {t('sidebar.phaseProgress.title')}
               </h3>
               <div className="space-y-3">
-                <div className={`p-3 bg-green-900 ${quick.card} border-green-600`}>
+                <div className={`p-3 bg-green-900 ${quick.card} ${getStatusBorder('success')}`}>
                   <div className="text-sm font-medium text-green-300">{t('sidebar.phaseProgress.phase1Title')}</div>
                   <div className="text-xs text-green-400">{t('sidebar.phaseProgress.phase1Description')}</div>
                 </div>
-                <div className={`p-3 bg-green-900 ${quick.card} border-green-600`}>
+                <div className={`p-3 bg-green-900 ${quick.card} ${getStatusBorder('success')}`}>
                   <div className="text-sm font-medium text-green-300">{t('sidebar.phaseProgress.phase2Title')}</div>
                   <div className="text-xs text-green-400">{t('sidebar.phaseProgress.phase2Description')}</div>
                 </div>

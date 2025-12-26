@@ -3,6 +3,7 @@
 
 import { cn } from '@/lib/utils';
 import { Rocket, Building2, Zap, Palette, Target, ClipboardList } from 'lucide-react';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 
 export const milestones = [
     {
@@ -71,12 +72,14 @@ export const milestones = [
 ];
 
 export const getStatusColor = (status: string) => {
+    const colors = useSemanticColors();
+
     switch (status) {
-        case 'completed': return 'bg-green-500 border-green-500';
-        case 'in-progress': return 'bg-blue-500 border-blue-500';
-        case 'pending': return 'bg-gray-300 border-gray-300';
-        case 'delayed': return 'bg-red-500 border-red-500';
-        default: return 'bg-gray-300 border-gray-300';
+        case 'completed': return `${colors.status.success.bg} ${colors.status.success.border}`;
+        case 'in-progress': return `${colors.status.info.bg} ${colors.status.info.border}`;
+        case 'pending': return `${colors.status.muted.bg} ${colors.status.muted.border}`;
+        case 'delayed': return `${colors.status.error.bg} ${colors.status.error.border}`;
+        default: return `${colors.status.muted.bg} ${colors.status.muted.border}`;
     }
 };
 

@@ -6,6 +6,7 @@ import { normalizeNumericInput, validateNumericInput } from './shared/input-vali
 import { ZOOM_FACTORS } from '../../config/transform-config';
 import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface ZoomControlsProps {
   currentZoom: number;
@@ -21,6 +22,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
   onSetZoom
 }) => {
   const iconSizes = useIconSizes();
+  const { getFocusBorder, getStatusBorder } = useBorderTokens();
   const [inputValue, setInputValue] = useState<string>('');
   const [isEditing, setIsEditing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -148,7 +150,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
         onKeyPress={handleKeyPress}
         onFocus={handleInputFocus}
         onBlur={handleInputBlur}
-        className="w-16 px-1 py-0 bg-gray-800 border border-gray-600 rounded text-white text-xs text-center focus:border-blue-500 focus:outline-none transition-colors select-all"
+        className={`w-16 px-1 py-0 bg-gray-800 ${getStatusBorder('muted')} rounded text-white text-xs text-center ${getFocusBorder('input')} focus:outline-none transition-colors select-all`}
         title="Zoom percentage (1-99999%, δεκαδικά με . ή ,) - Press Enter or click away to apply"
         placeholder="100"
       />

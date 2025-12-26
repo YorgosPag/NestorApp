@@ -3,6 +3,7 @@
 import React from 'react';
 import { SearchInput as UnifiedSearchInput } from '@/components/ui/search';
 import { cn } from '@/lib/utils';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface DxfSearchInputProps {
   searchTerm: string;
@@ -11,6 +12,7 @@ interface DxfSearchInputProps {
 }
 
 export const SearchInput = ({ searchTerm, onSearchChange, className }: DxfSearchInputProps) => {
+  const { getFocusBorder, quick } = useBorderTokens();
   return (
     <UnifiedSearchInput
       value={searchTerm}
@@ -18,8 +20,8 @@ export const SearchInput = ({ searchTerm, onSearchChange, className }: DxfSearch
       placeholder="Αναζήτηση layers και entities..."
       debounceMs={200}
       className={cn(
-        "border-gray-600 bg-gray-800 text-gray-100 placeholder-gray-400",
-        "focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
+        `${quick.muted} bg-gray-800 text-gray-100 placeholder-gray-400`,
+        `focus:ring-2 focus:ring-blue-500 ${getFocusBorder('input')}`,
         "text-sm",
         className
       )}

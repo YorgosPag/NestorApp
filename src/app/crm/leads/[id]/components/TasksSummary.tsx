@@ -4,6 +4,7 @@
 import React, { useMemo } from 'react';
 import { Clock, CheckCircle } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 import type { CrmTask } from '@/types/crm';
 
 interface TasksSummaryProps {
@@ -26,7 +27,7 @@ export function TasksSummary({ tasks, loading }: TasksSummaryProps) {
       <h4 className="font-medium mb-3">Εργασίες</h4>
       {loading ? (
         <div className="text-center py-4">
-          <div className={`animate-spin rounded-full ${iconSizes.lg} border-b-2 border-blue-600 mx-auto`}></div>
+          <AnimatedSpinner size="large" variant="info" className="mx-auto" />
         </div>
       ) : (
         <div className="space-y-2">

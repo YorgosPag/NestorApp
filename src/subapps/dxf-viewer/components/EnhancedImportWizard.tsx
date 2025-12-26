@@ -6,6 +6,9 @@
 // import { useLevels } from '../systems/levels';
 // import { useTranslation } from '@/i18n';
 
+// DEPRECATED - Use SimpleProjectDialog instead
+import { useBorderTokens } from '@/hooks/useBorderTokens';
+
 // interface EnhancedImportWizardProps {
 //   isOpen: boolean;
 //   onClose: () => void;
@@ -22,6 +25,7 @@ interface EnhancedImportWizardProps {
 }
 
 export function EnhancedImportWizard({ isOpen, onClose, onComplete }: EnhancedImportWizardProps) {
+  const { getStatusBorder, getDirectionalBorder } = useBorderTokens();
   // const { t } = useTranslation('dxf-viewer');
   // const [importMode, setImportMode] = useState<ImportMode>('enhanced');
   // const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -66,8 +70,8 @@ export function EnhancedImportWizard({ isOpen, onClose, onComplete }: EnhancedIm
   if (showModeSelector && selectedFile) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-75 backdrop-blur-sm flex items-center justify-center z-50">
-        <div className="bg-gray-800 border border-gray-600 rounded-lg shadow-2xl max-w-md w-full mx-4">
-          <div className="p-6 border-b border-gray-600">
+        <div className={`bg-gray-800 ${getStatusBorder('muted')} rounded-lg shadow-2xl max-w-md w-full mx-4`}>
+          <div className={`p-6 ${getDirectionalBorder('muted', 'bottom')}`}>
             <h2 className="text-xl font-semibold text-white">{t('import.mode.title')}</h2>
             <p className="text-gray-300 text-sm mt-2">
               {t('import.mode.file', { filename: selectedFile?.name })}
@@ -78,7 +82,7 @@ export function EnhancedImportWizard({ isOpen, onClose, onComplete }: EnhancedIm
             {/* Enhanced Mode */}
             <button
               onClick={() => handleModeSelect('enhanced')}
-              className="w-full p-4 border border-gray-600 rounded-lg hover:border-blue-500 hover:bg-blue-900/20 transition-colors text-left"
+              className={`w-full p-4 ${getStatusBorder('muted')} rounded-lg ${getStatusBorder('info', 'hover:')} hover:bg-blue-900/20 transition-colors text-left`}
               disabled={destinations.length === 0}
             >
               <div className="flex items-center space-x-3">
@@ -100,7 +104,7 @@ export function EnhancedImportWizard({ isOpen, onClose, onComplete }: EnhancedIm
             {/* Legacy Mode */}
             <button
               onClick={() => handleModeSelect('legacy')}
-              className="w-full p-4 border border-gray-600 rounded-lg hover:border-gray-500 hover:bg-gray-700/30 transition-colors text-left"
+              className={`w-full p-4 ${getStatusBorder('muted')} rounded-lg ${getStatusBorder('muted', 'hover:')} hover:bg-gray-700/30 transition-colors text-left`}
             >
               <div className="flex items-center space-x-3">
                 <span className="text-2xl">📊</span>
@@ -114,7 +118,7 @@ export function EnhancedImportWizard({ isOpen, onClose, onComplete }: EnhancedIm
             </button>
           </div>
 
-          <div className="p-6 border-t border-gray-600 flex justify-between">
+          <div className={`p-6 ${getDirectionalBorder('muted', 'top')} flex justify-between`}>
             <button
               onClick={handleWizardClose}
               className="px-4 py-2 text-gray-200 hover:text-white bg-gray-700 hover:bg-gray-600 rounded"
@@ -134,8 +138,8 @@ export function EnhancedImportWizard({ isOpen, onClose, onComplete }: EnhancedIm
   if (!selectedFile) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-75 backdrop-blur-sm flex items-center justify-center z-50">
-        <div className="bg-gray-800 border border-gray-600 rounded-lg shadow-2xl max-w-md w-full mx-4">
-          <div className="p-6 border-b border-gray-600">
+        <div className={`bg-gray-800 ${getStatusBorder('muted')} rounded-lg shadow-2xl max-w-md w-full mx-4`}>
+          <div className={`p-6 ${getDirectionalBorder('muted', 'bottom')}`}>
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold text-white">{t('import.fileDialog.title')}</h2>
               <button 
@@ -148,7 +152,7 @@ export function EnhancedImportWizard({ isOpen, onClose, onComplete }: EnhancedIm
           </div>
 
           <div className="p-6">
-            <div className="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center hover:border-gray-500 transition-colors">
+            <div className={`border border-dashed ${getStatusBorder('muted')} rounded-lg p-8 text-center ${getStatusBorder('muted', 'hover:')} transition-colors`}>
               <input
                 type="file"
                 accept=".dxf"
@@ -167,7 +171,7 @@ export function EnhancedImportWizard({ isOpen, onClose, onComplete }: EnhancedIm
             </div>
           </div>
 
-          <div className="p-6 border-t border-gray-600">
+          <div className={`p-6 ${getDirectionalBorder('muted', 'top')}`}>
             <div className="text-sm text-gray-200">
               {t('import.fileDialog.supported')}
             </div>

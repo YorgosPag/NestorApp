@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { SafePDFLoader } from '@/components/common/SafePDFLoader';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import {
   floorPlanStyles,
   createPdfLayerStyle,
@@ -43,7 +44,8 @@ export function FloorPlanCanvas({
   onModeChange,
   validationErrors = []
 }: FloorPlanCanvasProps) {
-  
+  const { getStatusBorder } = useBorderTokens();
+
   // PDF state
   const [numPages, setNumPages] = useState<number>(0);
   const [pdfLoadError, setPdfLoadError] = useState<string | null>(null);
@@ -143,7 +145,8 @@ export function FloorPlanCanvas({
           style={createPdfLayerStyle(testMode)}
           aria-label={`PDF display in ${testMode} mode`}
         >
-          <div className="w-full h-full bg-white border-4 border-purple-500">
+          <div className={`w-full h-full bg-white border-4 ${getStatusBorder('info')}`}>
+            {/* Enterprise Note: border-4 is legitimate thick frame για PDF background layer visual separation */}
             <SafePDFLoader
               file={pdfBackgroundUrl}
               {...createPdfLoaderDimensions(testMode)}

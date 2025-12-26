@@ -752,7 +752,7 @@ export function DesktopMultiColumn({
                 <strong>"{pendingDeletionCompany?.companyName}"</strong> από την πλοήγηση;
               </p>
 
-              <div className="bg-muted p-3 rounded-md text-sm space-y-2 border border-border">
+              <div className={`bg-muted p-3 text-sm space-y-2 ${quick.card}`}>
                 <p className="font-medium text-foreground">Αυτή η ενέργεια:</p>
                 <ul className="text-muted-foreground space-y-1">
                   <li>• Θα αφαιρέσει την εταιρεία από τη λίστα πλοήγησης</li>

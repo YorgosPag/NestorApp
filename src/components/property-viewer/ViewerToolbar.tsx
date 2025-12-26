@@ -20,6 +20,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 
 type ViewMode = 'view' | 'create' | 'measure' | 'edit';
 
@@ -50,6 +51,7 @@ export function ViewerToolbar({
 }: ViewerToolbarProps) {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -99,7 +101,7 @@ export function ViewerToolbar({
   };
 
   return (
-    <div className={`flex items-center gap-3 p-3 bg-white ${quick.separatorH}`}>
+    <div className={`flex items-center gap-3 p-3 ${colors.bg.primary} ${quick.separatorH}`}>
       
       {/* PDF UPLOAD */}
       <div>
@@ -175,7 +177,7 @@ export function ViewerToolbar({
       </div>
 
       {/* STATUS */}
-      <div className="ml-auto text-sm text-gray-600">
+      <div className={`ml-auto text-sm ${colors.text.secondary}`}>
         Zoom: {Math.round(scale * 100)}% | Mode: {viewMode}
       </div>
     </div>

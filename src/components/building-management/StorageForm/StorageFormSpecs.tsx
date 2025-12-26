@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Building } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { formatNumber } from '@/lib/intl-utils';
+import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 import { FormRowSelect } from './form/FormRowSelect';
 import { FormRowInput } from './form/FormRowInput';
 import { FormRowCoordinates } from './form/FormRowCoordinates';
@@ -61,7 +62,7 @@ export function StorageFormSpecs({
             error={errors.price}
             required
             trailingElement={isCalculatingPrice ? (
-              <div className={`animate-spin rounded-full ${iconSizes.sm} border-b-2 border-primary`} />
+              <AnimatedSpinner size="small" />
             ) : undefined}
             helper={
               formData.area && formData.price && formData.area > 0

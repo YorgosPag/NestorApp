@@ -30,14 +30,17 @@ interface MapCanvasProps {
 
 export function MapCanvas({ buildingName, mapView, showNearbyProjects, selectedLayer }: MapCanvasProps) {
     const iconSizes = useIconSizes();
-    const { createBorder, quick } = useBorderTokens();
+    const { createBorder, quick, getStatusBorder } = useBorderTokens();
+
+    // Enterprise: Get centralized marker styles με semantic secondary border
+    const markerStyles = getMainBuildingMarkerStyles('hsl(var(--border))'); // Secondary border semantic color
     const filteredProjects = nearbyProjects.filter(project => {
         if (selectedLayer === 'all') return true;
         return project.status === selectedLayer;
     });
 
     return (
-        <div className={`relative h-96 bg-gradient-to-br from-green-100 via-blue-50 to-green-100 ${quick.card} border-2 border-dashed border-border overflow-hidden`}>
+        <div className={`relative h-96 bg-gradient-to-br from-green-100 via-blue-50 to-green-100 ${quick.card} border border-dashed overflow-hidden`}>
             {/* Simulated Map Background */}
             <div className="absolute inset-0">
                 <div className="w-full h-full relative">
@@ -50,15 +53,15 @@ export function MapCanvas({ buildingName, mapView, showNearbyProjects, selectedL
                         </div>
                     </div>
 
-                    {/* Main Building Marker */}
-                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20">
-                        <div className="relative group">
-                            <div className="animate-bounce">
-                                <div className={`bg-red-500 p-3 shadow-lg rounded-full border-4 border-white`}>
+                    {/* Main Building Marker - Enterprise Centralized */}
+                    <div style={markerStyles.container}>
+                        <div style={markerStyles.wrapper} className="group">
+                            <div style={markerStyles.bounceContainer}>
+                                <div style={markerStyles.marker}>
                                     <Building2 className={`${iconSizes.lg} text-white`} />
                                 </div>
                             </div>
-                            <div className={`absolute top-14 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-75 text-white px-3 py-1 ${quick.input} text-sm whitespace-nowrap opacity-0 ${GROUP_HOVER_PATTERNS.SHOW_ON_GROUP} transition-opacity`}>
+                            <div style={markerStyles.tooltip} className={GROUP_HOVER_PATTERNS.SHOW_ON_GROUP}>
                                 {buildingName}
                             </div>
                         </div>

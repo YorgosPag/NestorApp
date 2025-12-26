@@ -2,6 +2,7 @@
 
 import React, { useRef, useMemo } from 'react';
 import { useCursor } from '../../systems/cursor';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import type { ToolType } from './types';
 import type { Point2D } from '../../rendering/types/Types';
 
@@ -23,6 +24,7 @@ export const ToolbarStatusBar: React.FC<ToolbarStatusBarProps> = ({
   showCoordinates = false
 }) => {
   const { settings } = useCursor();
+  const { getStatusBorder, getDirectionalBorder } = useBorderTokens();
 
   // Λειτουργία ακρίβειας: περισσότερα δεκαδικά ψηφία
   const precision = settings.performance.precision_mode ? 4 : 2;
@@ -45,7 +47,7 @@ export const ToolbarStatusBar: React.FC<ToolbarStatusBarProps> = ({
   }, [mouseCoordinates]);
   
   return (
-    <div className="border-t border-gray-600 bg-gray-900 px-3 py-1 text-xs text-gray-300 flex justify-between items-center">
+    <div className={`${getDirectionalBorder('muted', 'top')} bg-gray-900 px-3 py-1 text-xs text-gray-300 flex justify-between items-center`}>
       <div className="flex items-center gap-4">
         <span>
           Tool: <strong className="text-blue-400">

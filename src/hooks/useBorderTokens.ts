@@ -127,9 +127,9 @@ export function useBorderTokens() {
 
     /**
      * Get border class for status/semantic states
-     * @param status - The semantic status (success, warning, error, info, muted, subtle)
+     * @param status - The semantic status (success, warning, error, info, muted, subtle, critical, high, medium, low)
      */
-    getStatusBorder: (status: 'default' | 'success' | 'warning' | 'error' | 'info' | 'muted' | 'subtle'): string => {
+    getStatusBorder: (status: 'default' | 'success' | 'warning' | 'error' | 'info' | 'muted' | 'subtle' | 'critical' | 'high' | 'medium' | 'low'): string => {
       // Handle special cases
       if (status === 'default') {
         return 'border border-gray-600'; // Default border styling
@@ -140,6 +140,21 @@ export function useBorderTokens() {
       if (status === 'subtle') {
         return 'border border-gray-400'; // Subtle border
       }
+
+      // Handle severity levels (for Geo Canvas compatibility)
+      if (status === 'critical') {
+        return 'border border-red-600'; // Critical severity
+      }
+      if (status === 'high') {
+        return 'border border-amber-600'; // High severity
+      }
+      if (status === 'medium') {
+        return 'border border-blue-600'; // Medium severity
+      }
+      if (status === 'low') {
+        return 'border border-green-600'; // Low severity
+      }
+
       return borderVariants.status[status]?.className || 'border border-gray-600';
     },
 
@@ -214,6 +229,139 @@ export function useBorderTokens() {
 
       /** Rounded border shortcut */
       rounded: borderVariants.card.className
+    },
+
+    // ========================================================================
+    // 🎯 DIRECTIONAL BORDERS - 100% Centralization Support
+    // ========================================================================
+
+    /**
+     * Get directional border class with status
+     * @param status - The semantic status
+     * @param direction - Border direction (top, bottom, left, right)
+     */
+    getDirectionalBorder: (
+      status: 'default' | 'success' | 'warning' | 'error' | 'info' | 'muted' | 'subtle',
+      direction: 'top' | 'bottom' | 'left' | 'right'
+    ): string => {
+      const colorMap = {
+        default: 'gray-600',
+        success: 'green-500',
+        warning: 'yellow-500',
+        error: 'red-500',
+        info: 'blue-500',
+        muted: 'gray-500',
+        subtle: 'gray-400'
+      };
+
+      const directionMap = {
+        top: 'border-t',
+        bottom: 'border-b',
+        left: 'border-l',
+        right: 'border-r'
+      };
+
+      return `${directionMap[direction]} border-${colorMap[status]}`;
+    },
+
+    /**
+     * Get multiple directional borders with status
+     * @param status - The semantic status
+     * @param directions - Array of directions to apply border
+     */
+    getMultiDirectionalBorder: (
+      status: 'default' | 'success' | 'warning' | 'error' | 'info' | 'muted' | 'subtle',
+      directions: ('top' | 'bottom' | 'left' | 'right')[]
+    ): string => {
+      const colorMap = {
+        default: 'gray-600',
+        success: 'green-500',
+        warning: 'yellow-500',
+        error: 'red-500',
+        info: 'blue-500',
+        muted: 'gray-500',
+        subtle: 'gray-400'
+      };
+
+      const directionMap = {
+        top: 'border-t',
+        bottom: 'border-b',
+        left: 'border-l',
+        right: 'border-r'
+      };
+
+      const directionClasses = directions.map(dir => directionMap[dir]).join(' ');
+      return `${directionClasses} border-${colorMap[status]}`;
+    },
+
+    /**
+     * Combine centralized border with directional borders (replaces mixed patterns)
+     * @param status - The semantic status
+     * @param additionalDirections - Additional directional borders
+     */
+    getCombinedBorder: (
+      status: 'default' | 'success' | 'warning' | 'error' | 'info' | 'muted' | 'subtle',
+      additionalDirections?: ('top' | 'bottom' | 'left' | 'right')[]
+    ): string => {
+      // Get base border
+      const statusBorderMap = {
+        default: 'border border-gray-600',
+        success: 'border border-green-500',
+        warning: 'border border-yellow-500',
+        error: 'border border-red-500',
+        info: 'border border-blue-500',
+        muted: 'border border-gray-500',
+        subtle: 'border border-gray-400'
+      };
+
+      const baseBorder = statusBorderMap[status];
+
+      if (!additionalDirections || additionalDirections.length === 0) {
+        return baseBorder;
+      }
+
+      // Get directional borders
+      const colorMap = {
+        default: 'gray-600',
+        success: 'green-500',
+        warning: 'yellow-500',
+        error: 'red-500',
+        info: 'blue-500',
+        muted: 'gray-500',
+        subtle: 'gray-400'
+      };
+
+      const directionMap = {
+        top: 'border-t',
+        bottom: 'border-b',
+        left: 'border-l',
+        right: 'border-r'
+      };
+
+      const directionClasses = additionalDirections.map(dir => directionMap[dir]).join(' ');
+      const additionalBorder = `${directionClasses} border-${colorMap[status]}`;
+
+      return `${baseBorder} ${additionalBorder}`;
+    },
+
+    /**
+     * Get focus border classes for interactive elements
+     * @param element - The element type ('input', 'button', 'card', 'select')
+     * @returns Focus border classes
+     */
+    getFocusBorder: (element: 'input' | 'button' | 'card' | 'select'): string => {
+      switch (element) {
+        case 'input':
+          return 'focus:border-2 focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20';
+        case 'button':
+          return 'focus:ring-2 focus:ring-primary focus:ring-opacity-30';
+        case 'select':
+          return 'focus:border-2 focus:border-primary focus:ring-1 focus:ring-primary';
+        case 'card':
+          return 'focus:border-primary focus:ring-1 focus:ring-primary focus:ring-opacity-20';
+        default:
+          return 'focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20';
+      }
     }
   };
 }

@@ -3,6 +3,7 @@
 import React from 'react';
 import { Camera, Building2, User } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   PHOTO_SIZES,
@@ -74,6 +75,7 @@ export function PhotoPreviewCard({
   showHeader = true
 }: PhotoPreviewCardProps) {
   const iconSizes = useIconSizes();
+  const { getStatusBorder } = useBorderTokens();
 
   // ========================================================================
   // COMPUTED VALUES
@@ -133,7 +135,7 @@ export function PhotoPreviewCard({
 
       <CardContent className={showHeader ? '' : 'p-0'}>
         <div
-          className={`relative rounded-lg p-6 ${height} w-full flex flex-col items-center justify-center text-center cursor-pointer transition-colors overflow-hidden border-2 border-dashed`}
+          className={`relative rounded-lg p-6 ${height} w-full flex flex-col items-center justify-center text-center cursor-pointer transition-colors overflow-hidden ${getStatusBorder('muted')} border-dashed`}
           style={usePhotoPreviewStyles(hasPhoto).dynamicColors}
           onClick={handleClick}
         >

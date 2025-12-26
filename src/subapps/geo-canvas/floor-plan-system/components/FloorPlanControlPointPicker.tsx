@@ -56,7 +56,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
   // ===================================================================
 
   const { t } = useTranslationLazy('geo-canvas');
-  const { quick, getStatusBorder } = useBorderTokens();
+  const { quick, getStatusBorder, getDirectionalBorder } = useBorderTokens();
 
   // ❗ CRITICAL: Use the passed instance, NOT a new hook call
   const {
@@ -589,7 +589,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
         )}
 
         {/* MANAGEMENT BUTTONS */}
-        <div className="mb-4 border-t pt-4">
+        <div className={`mb-4 ${getDirectionalBorder('muted', 'top')} pt-4`}>
           <div className="flex flex-wrap gap-2 mb-3">
             {/* Calibration Button */}
             <button

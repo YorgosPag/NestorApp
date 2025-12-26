@@ -2,6 +2,7 @@
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { designTokens } from '@/styles/design-tokens';
+import { borders } from '@/styles/design-tokens';
 
 // Enhanced cn function με design system support
 export function cn(...inputs: ClassValue[]) {
@@ -197,15 +198,18 @@ export const presets = {
   // Card presets
   card: {
     default: cn(
-      'rounded-lg border bg-card text-card-foreground shadow-sm',
+      'rounded-lg bg-card text-card-foreground shadow-sm',
+      borders.variants.card.className,
       getInteractiveStateClass('card')
     ),
     interactive: cn(
-      'rounded-lg border bg-card text-card-foreground shadow-sm cursor-pointer',
+      'rounded-lg bg-card text-card-foreground shadow-sm cursor-pointer',
+      borders.variants.card.className,
       getInteractiveStateClass('card')
     ),
     elevated: cn(
-      'rounded-lg border-0 bg-card text-card-foreground shadow-lg',
+      'rounded-lg bg-card text-card-foreground shadow-lg',
+      borders.variants.modal.className,
       getInteractiveStateClass('card')
     ),
   },
@@ -226,7 +230,8 @@ export const presets = {
     ),
     outline: cn(
       'inline-flex items-center justify-center rounded-md text-sm font-medium',
-      'border border-input bg-background',
+      'bg-background',
+      borders.variants.button.default.className,
       getComponentSizeClass('button', 'md'),
       getInteractiveStateClass('button')
     ),
@@ -237,7 +242,7 @@ export const presets = {
     container: 'container mx-auto px-4',
     section: 'py-8 px-4',
     grid: getGridClass('cards'),
-    toolbar: 'flex items-center justify-between p-4 bg-background border-b',
+    toolbar: cn('flex items-center justify-between p-4 bg-background', borders.variants.separator.horizontal.className),
   },
 
   // Text presets
@@ -259,7 +264,7 @@ export const getStatusBadgeClass = (status: string, variant: 'default' | 'outlin
   if (variant === 'outline') {
     return cn(
       baseClass,
-      'border',
+      borders.variants.status[status as keyof typeof borders.variants.status]?.className || borders.variants.card.className,
       getStatusColor(status, 'border'),
       getStatusColor(status, 'text'),
       'bg-transparent'
@@ -272,13 +277,15 @@ export const getStatusBadgeClass = (status: string, variant: 'default' | 'outlin
 // Form field utilities
 export const getFormFieldClass = (hasError: boolean = false, disabled: boolean = false) => {
   return cn(
-    'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm',
+    'flex h-10 w-full rounded-md bg-background px-3 py-2 text-sm',
+    borders.variants.input.default.className,
     'ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium',
     'placeholder:text-muted-foreground',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
     'disabled:cursor-not-allowed disabled:opacity-50',
     {
-      'border-red-500 focus-visible:ring-red-500': hasError,
+      [borders.variants.status.error.className]: hasError,
+      'focus-visible:ring-red-500': hasError,
       'cursor-not-allowed opacity-50': disabled,
     }
   );

@@ -129,15 +129,15 @@ export const createHoverBorderEffects = (borderTokens: ReturnType<typeof useBord
  */
 export const HOVER_BORDER_EFFECTS = {
   /** @deprecated */
-  BLUE: 'hover:border-blue-500 dark:hover:border-blue-400',
+  BLUE: 'hover:border-hsl(var(--border-info)) dark:hover:border-hsl(var(--border-info)),',
   /** @deprecated */
   PURPLE: 'hover:border-purple-500 dark:hover:border-purple-400',
   /** @deprecated */
-  GREEN: 'hover:border-green-500 dark:hover:border-green-400',
+  GREEN: 'hover:border-hsl(var(--border-success)) dark:hover:border-hsl(var(--border-success)),',
   /** @deprecated */
   ORANGE: 'hover:border-orange-500 dark:hover:border-orange-400',
   /** @deprecated */
-  RED: 'hover:border-red-500 dark:hover:border-red-400',
+  RED: 'hover:border-hsl(var(--border-error)) dark:hover:border-hsl(var(--border-error)),',
   /** @deprecated */
   GRAY: 'hover:border-border'
 } as const;
@@ -242,13 +242,13 @@ export const INTERACTIVE_PATTERNS = {
   // ========================================================================
 
   /** Success action hover (green theme) - MIGRATED TO FUNCTION */
-  SUCCESS_HOVER: 'transition-all duration-200 hover:bg-green-50 hover:text-green-700 hover:border-green-300 dark:hover:bg-green-900/20 dark:hover:text-green-300',
+  SUCCESS_HOVER: 'transition-all duration-200 hover:bg-green-50 hover:text-green-700 hover:border-hsl(var(--border-success)) dark:hover:bg-green-900/20 dark:hover:text-green-300',
 
   /** Primary action hover (blue theme) - MIGRATED TO FUNCTION */
-  PRIMARY_HOVER: 'transition-all duration-200 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 dark:hover:bg-blue-900/20 dark:hover:text-blue-300',
+  PRIMARY_HOVER: 'transition-all duration-200 hover:bg-blue-50 hover:text-blue-700 hover:border-hsl(var(--border-info)) dark:hover:bg-blue-900/20 dark:hover:text-blue-300',
 
   /** Destructive action hover (red theme) - MIGRATED TO FUNCTION */
-  DESTRUCTIVE_HOVER: 'transition-all duration-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300 dark:hover:bg-red-900/20 dark:hover:text-red-300',
+  DESTRUCTIVE_HOVER: 'transition-all duration-200 hover:bg-red-50 hover:text-red-700 hover:border-hsl(var(--border-error)) dark:hover:bg-red-900/20 dark:hover:text-red-300',
 
   /** Enhanced button με scale και shadow */
   BUTTON_ENHANCED: `transition-all duration-200 ${CORE_HOVER_TRANSFORMS.SCALE_UP_TINY} hover:shadow-md hover:bg-primary/10`,
@@ -394,16 +394,16 @@ export const HOVER_BACKGROUND_EFFECTS = {
   FILE_INPUT: 'hover:file:bg-sky-500',
 
   /** DXF Toolbar button hover (dark background) */
-  TOOLBAR_DEFAULT: 'hover:bg-zinc-800 hover:border-zinc-600',
+  TOOLBAR_DEFAULT: 'hover:bg-zinc-800 hover:border-muted-foreground',
 
   /** DXF Toolbar primary button hover */
-  TOOLBAR_PRIMARY: 'hover:bg-slate-700 hover:border-slate-500',
+  TOOLBAR_PRIMARY: 'hover:bg-slate-700 hover:border-muted',
 
   /** DXF Toolbar success button hover */
-  TOOLBAR_SUCCESS: 'hover:bg-green-800 hover:border-green-600',
+  TOOLBAR_SUCCESS: 'hover:bg-green-800 hover:border-hsl(var(--border-success))',
 
   /** DXF Toolbar danger button hover */
-  TOOLBAR_DANGER: 'hover:bg-red-800 hover:border-red-600',
+  TOOLBAR_DANGER: 'hover:bg-red-800 hover:border-hsl(var(--border-error))',
 
   /** Success button hover (green) */
   SUCCESS_BUTTON: 'hover:bg-green-500'
@@ -483,8 +483,7 @@ export const COMPLEX_HOVER_EFFECTS = {
   /** Notification hover */
   NOTIFICATION: `transition-all duration-200 hover:bg-accent hover:border-accent-foreground/20`,
 
-  /** Dashboard stat card */
-  STAT_CARD: `transition-all duration-200 ${CORE_HOVER_TRANSFORMS.SCALE_UP_TINY} ${HOVER_SHADOWS.SUBTLE} hover:border-primary/50`
+  /** Dashboard stat card - USE createEnterpriseInteractivePatterns().STAT_CARD για centralized version */
 } as const;
 
 /**

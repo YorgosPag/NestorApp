@@ -35,7 +35,7 @@ export function PolygonControls({
   className = ''
 }: PolygonControlsProps) {
   const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
+  const { quick, getStatusBorder } = useBorderTokens();
   const { state, actions, config } = usePolygonSystemContext();
 
   // ============================================================================
@@ -93,7 +93,7 @@ export function PolygonControls({
 
       case 'professional':
         return {
-          container: `bg-white ${quick.card} shadow-xl border-amber-200`,
+          container: `bg-white ${quick.card} shadow-xl ${getStatusBorder('warning')}`,  // Professional = Warning semantic
           button: `flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-semibold ${TRANSITION_PRESETS.STANDARD_COLORS}`,
           primary: `bg-amber-500 text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`,
           secondary: `bg-amber-50 text-amber-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`,
@@ -103,7 +103,7 @@ export function PolygonControls({
 
       case 'technical':
         return {
-          container: `bg-slate-900 ${quick.input} shadow-2xl border-violet-500`,
+          container: `bg-slate-900 ${quick.input} shadow-2xl ${getStatusBorder('info')}`,    // Technical = Info semantic
           button: `flex items-center justify-center gap-1 py-1 px-2 rounded text-xs font-mono ${TRANSITION_PRESETS.STANDARD_COLORS}`,
           primary: `bg-violet-600 text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`,
           secondary: `bg-slate-700 text-slate-300 ${HOVER_BACKGROUND_EFFECTS.MUTED}`,

@@ -8,6 +8,7 @@ import React from 'react';
 import { Play, CheckCircle2 } from 'lucide-react';
 import { INTERACTIVE_PATTERNS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface TestButtonProps {
   test: {
@@ -28,6 +29,7 @@ export const TestButton: React.FC<TestButtonProps> = ({
   onRun
 }) => {
   const iconSizes = useIconSizes();
+  const { getStatusBorder } = useBorderTokens();
 
   return (
     <button
@@ -35,10 +37,10 @@ export const TestButton: React.FC<TestButtonProps> = ({
       disabled={isRunning}
       className={`flex items-start gap-3 p-3.5 rounded-lg border transition-all text-left w-full ${
         isRunning
-          ? 'bg-yellow-500/10 border-yellow-500/30 cursor-wait'
+          ? `bg-yellow-500/10 ${useBorderTokens().getStatusBorder('warning')} cursor-wait`
           : isCompleted
-          ? `bg-green-500/10 border-green-500/30 ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`
-          : `bg-gray-700/50 border-gray-600/50 ${HOVER_BORDER_EFFECTS.GRAY} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
+          ? `bg-green-500/10 ${useBorderTokens().getStatusBorder('success')} ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`
+          : `bg-gray-700/50 ${getStatusBorder('muted')} ${HOVER_BORDER_EFFECTS.GRAY} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
       }`}
     >
       <div className="flex-shrink-0 mt-0.5">

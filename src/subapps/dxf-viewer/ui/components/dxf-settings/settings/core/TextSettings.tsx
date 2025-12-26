@@ -143,7 +143,7 @@ interface TextStyleButtonsProps {
 
 function TextStyleButtons({ settings, onToggle }: TextStyleButtonsProps) {
   const iconSizes = useIconSizes();
-  const { quick, getStatusBorder } = useBorderTokens();
+  const { quick, getStatusBorder, getDirectionalBorder } = useBorderTokens();
 
   return (
     <div className="flex flex-wrap gap-1">
@@ -154,7 +154,7 @@ function TextStyleButtons({ settings, onToggle }: TextStyleButtonsProps) {
           title={style.title}
           className={`${iconSizes.xl} text-sm font-bold ${quick.button} transition-colors ${
             settings[style.key]
-              ? 'bg-green-600 border-green-500 text-white'
+              ? `bg-green-600 ${getStatusBorder('success')} text-white`
               : `bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${quick.button} text-gray-300`
           }`}
           style={layoutUtilities.cssVars.textStyle.forButton(style.key)}
@@ -173,15 +173,15 @@ interface ScriptStyleButtonsProps {
 }
 
 function ScriptStyleButtons({ settings, onSuperscriptChange, onSubscriptChange }: ScriptStyleButtonsProps) {
-  const { quick, getStatusBorder } = useBorderTokens();
+  const { quick, getStatusBorder, getDirectionalBorder } = useBorderTokens();
   return (
     <div className="flex gap-1">
       <button
         onClick={onSuperscriptChange}
         className={`px-3 py-1 text-sm ${quick.button} transition-colors ${
           settings.isSuperscript
-            ? 'bg-green-600 border-green-500 text-white'
-            : `bg-gray-700 \${HOVER_BACKGROUND_EFFECTS.LIGHT} \${getStatusBorder('default')} text-gray-300`
+            ? `bg-green-600 ${getStatusBorder('success')} text-white`
+            : `bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${getStatusBorder('muted')} text-gray-300`
         }`}
       >
         X<sup>2</sup>
@@ -190,8 +190,8 @@ function ScriptStyleButtons({ settings, onSuperscriptChange, onSubscriptChange }
         onClick={onSubscriptChange}
         className={`px-3 py-1 text-sm ${quick.button} transition-colors ${
           settings.isSubscript
-            ? 'bg-green-600 border-green-500 text-white'
-            : `bg-gray-700 \${HOVER_BACKGROUND_EFFECTS.LIGHT} \${getStatusBorder('default')} text-gray-300`
+            ? `bg-green-600 ${getStatusBorder('success')} text-white`
+            : `bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${getStatusBorder('muted')} text-gray-300`
         }`}
       >
         X<sub>2</sub>
@@ -201,7 +201,7 @@ function ScriptStyleButtons({ settings, onSuperscriptChange, onSubscriptChange }
 }
 
 export function TextSettings() {
-  const { quick, getStatusBorder } = useBorderTokens();
+  const { quick, getStatusBorder, getDirectionalBorder } = useBorderTokens();
   // 🔥 FIX: Use Global Text Settings από provider, ΟΧΙ Preview-specific settings!
   // Το useUnifiedTextPreview() ενημερώνει localStorage 'dxf-text-preview-settings' (WRONG!)
   // Θέλουμε να ενημερώσουμε το 'dxf-text-general-settings' (CORRECT!)
@@ -334,7 +334,7 @@ export function TextSettings() {
 
       {/* Enable/Disable Text Display */}
       <div className="space-y-2">
-        <div className={`flex items-center gap-3 p-3 bg-gray-800 ${quick.card} border-l-4 border-blue-500`}>
+        <div className={`flex items-center gap-3 p-3 bg-gray-800 ${quick.card} ${getDirectionalBorder('info', 'left')}`}>
           <input
             type="checkbox"
             id="text-enabled"
@@ -350,7 +350,7 @@ export function TextSettings() {
           </label>
         </div>
         {!textSettings.enabled && (
-          <div className={`text-xs text-yellow-400 bg-yellow-900 bg-opacity-20 p-2 ${quick.card} border-yellow-700`}>
+          <div className={`text-xs text-yellow-400 bg-yellow-900 bg-opacity-20 p-2 ${quick.card} ${getStatusBorder('warning')}`}>
             ⚠️ Το κείμενο απόστασης είναι απενεργοποιημένο και δεν θα εμφανίζεται στην προσχεδίαση
           </div>
         )}
@@ -515,7 +515,7 @@ export function TextSettings() {
             </div>
 
             {/* Settings Summary */}
-            <div className={`p-2 bg-gray-700 ${quick.card} border-l-4 border-green-500 mt-4`}>
+            <div className={`p-2 bg-gray-700 ${quick.card} ${getDirectionalBorder('success', 'left')} mt-4`}>
               <div className="text-xs text-gray-400 space-y-1">
                 <div><strong>{FREE_FONTS.find(f => f.value === textSettings.fontFamily)?.label}</strong>, {textSettings.fontSize}pt</div>
                 <div>{[
@@ -544,7 +544,7 @@ export function TextSettings() {
       >
         <div className="space-y-4">
           {/* Warning Message */}
-          <div className={`bg-red-900 bg-opacity-20 border-l-4 border-red-500 p-4 ${quick.card}`}>
+          <div className={`bg-red-900 bg-opacity-20 ${getDirectionalBorder('error', 'left')} p-4 ${quick.card}`}>
             <p className="text-red-200 font-semibold mb-2">
               ⚠️ ΠΡΟΕΙΔΟΠΟΙΗΣΗ: Θα χάσετε ΟΛΑ τα δεδομένα σας!
             </p>
@@ -561,7 +561,7 @@ export function TextSettings() {
           </div>
 
           {/* Reset Info */}
-          <div className={`bg-blue-900 bg-opacity-20 border-l-4 border-blue-500 p-4 ${quick.card}`}>
+          <div className={`bg-blue-900 bg-opacity-20 ${getDirectionalBorder('info', 'left')} p-4 ${quick.card}`}>
             <p className="text-blue-200 text-sm">
               <strong>Επαναφορά:</strong> Οι ρυθμίσεις θα επανέλθουν στα πρότυπα ISO 3098
             </p>

@@ -11,6 +11,7 @@ import React from 'react';
 import { EnterpriseComboBox } from '../settings/shared/EnterpriseComboBox';
 import type { LineType } from '../../../../settings-core/types';
 import { getDashArray } from '../../../../settings-core/defaults';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface LineStyleControlProps {
   value: LineType;
@@ -48,6 +49,8 @@ export const LineStyleControl: React.FC<LineStyleControlProps> = ({
     </div>
   );
 
+  const { getStatusBorder } = useBorderTokens();
+
   return (
     <div className="space-y-2">
       {/* 🏢 ENTERPRISE: EnterpriseComboBox with custom rendering */}
@@ -59,8 +62,8 @@ export const LineStyleControl: React.FC<LineStyleControlProps> = ({
         disabled={disabled}
         enableTypeahead={false}
         renderOption={renderOption}
-        buttonClassName="bg-gray-900 border-gray-700 text-gray-100"
-        listboxClassName="bg-gray-900 border-gray-700"
+        buttonClassName={`bg-gray-900 ${getStatusBorder('muted').replace('border ', '')} text-gray-100`}
+        listboxClassName={`bg-gray-900 ${getStatusBorder('muted').replace('border ', '')}`}
       />
 
       {/* 🏢 ENTERPRISE: Visual SVG preview (unchanged from original) */}

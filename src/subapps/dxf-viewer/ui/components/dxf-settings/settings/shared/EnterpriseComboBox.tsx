@@ -65,6 +65,7 @@
 import React, { useState, useRef, useEffect, useId, useMemo, useCallback } from 'react';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { createPortal } from 'react-dom';
 import { useFloating, autoUpdate, offset, flip, shift, size } from '@floating-ui/react';
 // 🏢 ENTERPRISE: Import FixedSizeList from react-window
@@ -257,6 +258,7 @@ export function EnterpriseComboBox<T>({
   name
 }: EnterpriseComboBoxProps<T>) {
   const iconSizes = useIconSizes();
+  const { getStatusBorder, getFocusBorder, getDirectionalBorder } = useBorderTokens();
 
   // ===== UNIQUE IDs (ARIA) =====
 
@@ -548,7 +550,7 @@ export function EnterpriseComboBox<T>({
           }
         }}
         onMouseEnter={() => setHighlightedIndex(index)}
-        className={`px-3 py-2 text-left text-sm border-b border-gray-700 last:border-b-0 transition-colors flex items-start justify-between cursor-pointer ${
+        className={`px-3 py-2 text-left text-sm ${getDirectionalBorder('muted', 'bottom')} last:border-none transition-colors flex items-start justify-between cursor-pointer ${
           option.disabled
             ? 'opacity-50 cursor-not-allowed'
             : isHighlighted
@@ -633,7 +635,7 @@ export function EnterpriseComboBox<T>({
                 });
 
                 return (
-                  <div key={group.category} className="border-b border-gray-600 last:border-b-0">
+                  <div key={group.category} className={`${getDirectionalBorder('default', 'bottom')} last:border-none`}>
                     {/* Category Header */}
                     <div
                       role="group"
@@ -709,7 +711,7 @@ export function EnterpriseComboBox<T>({
             }
           }}
           onKeyDown={handleKeyDown}
-          className={`w-full px-3 py-2 pr-8 bg-gray-700 border border-gray-600 rounded-md text-white text-left ${HOVER_BACKGROUND_EFFECTS.DARKER} focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+          className={`w-full px-3 py-2 pr-8 bg-gray-700 ${getStatusBorder('default')} rounded-md text-white text-left ${HOVER_BACKGROUND_EFFECTS.DARKER} focus:ring-2 focus:ring-blue-500 ${getFocusBorder('input')} ${
             disabled ? 'opacity-50 cursor-not-allowed' : ''
           } ${buttonClassName}`}
         >

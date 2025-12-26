@@ -197,7 +197,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
               key={status}
               onClick={() => onStatusChange(status)}
               title={STATUS_LABELS[status]}
-              className={`${iconSizes.lg} ${quick.button} border-2 transition-all duration-150`}
+              className={`${iconSizes.lg} ${quick.button} ${quick.card} transition-all duration-150`}
               style={getStatusColorButtonStyles(
                 status as PropertyStatus,
                 currentStatus === status

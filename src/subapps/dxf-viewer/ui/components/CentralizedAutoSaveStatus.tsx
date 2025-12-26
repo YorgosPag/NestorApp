@@ -13,6 +13,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { AnimatedSpinner } from '../../components/modal/ModalLoadingStates';
 // 🔄 MIGRATED (2025-10-09): Phase 3.2 - Direct Enterprise (no adapter)
 import { useDxfSettings } from '../../settings-provider';
 import {
@@ -46,6 +48,7 @@ function useDxfSettingsSafe() {
 
 export function CentralizedAutoSaveStatus() {
   const iconSizes = useIconSizes();
+  const { radius, getStatusBorder } = useBorderTokens();
   const dxfSettings = useDxfSettingsSafe();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -83,9 +86,7 @@ export function CentralizedAutoSaveStatus() {
 
   const getStatusIcon = () => {
     if (isAutoSaving) {
-      return (
-        <div className={`animate-spin rounded-full ${iconSizes.xs} border-b-2 border-blue-500`}></div>
-      );
+      return <AnimatedSpinner size="small" className={iconSizes.xs} />;
     }
 
     if (settings.saveStatus === 'saved') {
@@ -131,18 +132,18 @@ export function CentralizedAutoSaveStatus() {
 
   const getStatusColor = () => {
     if (isAutoSaving) {
-      return 'text-blue-400 border-blue-500/30';
+      return `text-blue-400 ${useBorderTokens().getStatusBorder('info')}`;
     }
 
     if (settings.saveStatus === 'saved') {
-      return 'text-green-400 border-green-500/30';
+      return `text-green-400 ${useBorderTokens().getStatusBorder('success')}`;
     }
 
     if (settings.saveStatus === 'error') {
-      return 'text-red-400 border-red-500/30';
+      return `text-red-400 ${useBorderTokens().getStatusBorder('error')}`;
     }
 
-    return 'text-gray-400 border-gray-500/30';
+    return `text-gray-400 ${getStatusBorder('muted')}`;
   };
 
   // Dynamic z-index: Lower when modal is open, high when no modal
@@ -248,14 +249,14 @@ export function CentralizedAutoSaveStatusCompact() {
 
   const getIcon = () => {
     if (isAutoSaving) {
-      return <div className={`animate-spin rounded-full ${iconSizes.xxs} border border-blue-500 border-t-transparent`}></div>;
+      return <AnimatedSpinner size="small" className={iconSizes.xxs} />;
     }
 
     if (settings.saveStatus === 'error') {
-      return <div className={`${iconSizes.xxs} rounded-full bg-red-500`}></div>;
+      return <div className={`${iconSizes.xxs} ${radius.full} bg-red-500`}></div>;
     }
 
-    return <div className={`${iconSizes.xxs} rounded-full bg-green-500`}></div>;
+    return <div className={`${iconSizes.xxs} ${radius.full} bg-green-500`}></div>;
   };
 
   const getTooltip = () => {

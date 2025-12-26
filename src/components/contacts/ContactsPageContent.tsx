@@ -42,12 +42,14 @@ import { CompactToolbar, contactsConfig } from '@/components/core/CompactToolbar
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 // 🚫 MOCK DATA ΕΝΤΕΛΩΣ ΑΦΑΙΡΕΜΕΝΑ - Καθαρή εφαρμογή χωρίς seed functionality
 
 export function ContactsPageContent() {
   // 🏢 ENTERPRISE: Centralized icon sizes
   const iconSizes = useIconSizes();
+  const { getDirectionalBorder, getStatusBorder } = useBorderTokens();
 
   // URL parameters
   const searchParams = useSearchParams();
@@ -533,7 +535,7 @@ export function ContactsPageContent() {
     if (contactIdParam && selectedContact) {
       const contactName = getContactDisplayName(selectedContact);
       return (
-        <div className="px-4 py-2 bg-green-50 border-b border-green-200">
+        <div className={`px-4 py-2 bg-green-50 ${getDirectionalBorder('success', 'bottom')}`}>
           <div className="flex items-center justify-between max-w-full">
             <div className="flex items-center space-x-2">
               <Filter className={`${iconSizes.sm} text-green-600`} />
@@ -561,7 +563,7 @@ export function ContactsPageContent() {
     if (filterParam) {
       const filterValue = decodeURIComponent(filterParam);
       return (
-        <div className="px-4 py-2 bg-blue-50 border-b border-blue-200">
+        <div className={`px-4 py-2 bg-blue-50 ${getDirectionalBorder('info', 'bottom')}`}>
           <div className="flex items-center justify-between max-w-full">
             <div className="flex items-center space-x-2">
               <Filter className={`${iconSizes.sm} text-blue-600`} />
@@ -644,7 +646,7 @@ export function ContactsPageContent() {
 
         <ListContainer>
           {error ? (
-            <section className="w-full text-center p-8 bg-card rounded-lg border border-destructive/20" role="alert" aria-label="Σφάλμα Φόρτωσης">
+            <section className={`w-full text-center p-8 bg-card rounded-lg ${getStatusBorder('error')}`} role="alert" aria-label="Σφάλμα Φόρτωσης">
               <p className="text-destructive font-medium">⚠️ {error}</p>
               <button
                 onClick={refreshContacts}

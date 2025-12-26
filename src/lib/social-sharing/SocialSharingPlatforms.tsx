@@ -13,6 +13,7 @@ import { Mail } from 'lucide-react';
 import { designSystem } from '@/lib/design-system';
 import { HOVER_SHADOWS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { borders } from '@/styles/design-tokens';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -251,7 +252,7 @@ export const getEmailRequiredPlatforms = (): SharePlatform[] => {
 export const generatePlatformButtonStyles = (platform: SharePlatform, variant: 'default' | 'compact' | 'minimal' = 'default') => {
   const baseStyles = designSystem.cn(
     'group relative overflow-hidden transition-all duration-300 transform',
-    'border border-white/20',
+    borders.variants.button.default.className,
     platform.colors.hover
   );
 
@@ -268,7 +269,7 @@ export const generatePlatformButtonStyles = (platform: SharePlatform, variant: '
     ),
     minimal: designSystem.cn(
       'rounded-lg p-2',
-      'bg-transparent border-2',
+      'bg-transparent border',
       designSystem.getStatusColor('info', 'border'),
       HOVER_BACKGROUND_EFFECTS.LIGHT
     )

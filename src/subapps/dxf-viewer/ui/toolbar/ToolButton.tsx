@@ -18,7 +18,7 @@ interface ToolButtonProps {
 
 export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick, onDropdownSelect, disabled, activeTool }) => {
   const iconSizes = useIconSizes();
-  const { getStatusBorder, getElementBorder } = useBorderTokens();
+  const { getStatusBorder, getElementBorder, getDirectionalBorder } = useBorderTokens();
   // Determine which icon to show - if activeTool matches a dropdown option, use that icon
   let IconComponent = tool.icon;
   if (tool.dropdownOptions && activeTool) {
@@ -93,7 +93,7 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
           disabled={disabled}
           title={`${tool.label} (${tool.hotkey})`}
           className={`
-            h-8 w-7 p-0 rounded-l-md border-r-0 transition-colors duration-150
+            h-8 w-7 p-0 rounded-l-md transition-colors duration-150
             flex items-center justify-center
             ${
               isActive

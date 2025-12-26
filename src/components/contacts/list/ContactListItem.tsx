@@ -64,7 +64,7 @@ export function ContactListItem({
     isTogglingFavorite = false
 }: ContactListItemProps) {
     const iconSizes = useIconSizes();
-    const { quick } = useBorderTokens();
+    const { quick, getStatusBorder } = useBorderTokens();
     const photoModal = useGlobalPhotoPreview();
     const { icon: Icon } = typeInfoMap[contact.type];
 
@@ -201,7 +201,7 @@ export function ContactListItem({
                     // Color states
                     isArchived && `opacity-60 ${cardBackgrounds.archived}`,
                     isSelected
-                    ? `border-blue-500 ${cardBackgrounds.selected} shadow-sm`
+                    ? `${getStatusBorder('active')} ${cardBackgrounds.selected} shadow-sm`
                     : `border-border ${cardBackgrounds.default}`
                 )}
                 onClick={onSelect}

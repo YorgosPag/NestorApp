@@ -6,6 +6,7 @@ import { Home, Settings } from 'lucide-react';
 import { formatCurrency } from '@/lib/intl-utils';
 import { GenericListHeader } from '@/components/shared/GenericListHeader';
 import { Button } from '@/components/ui/button';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface UnitsListHeaderProps {
     unitCount: number;
@@ -26,6 +27,8 @@ export function UnitsListHeader({
     showToolbar = false,
     onToolbarToggle
 }: UnitsListHeaderProps) {
+    const { getDirectionalBorder } = useBorderTokens();
+
     return (
         <div>
             {/* 🏢 ENTERPRISE CENTRALIZED GenericListHeader - ΜΙΑ ΠΗΓΗ ΑΛΗΘΕΙΑΣ */}
@@ -41,7 +44,7 @@ export function UnitsListHeader({
             />
 
             {/* Custom Statistics with Badges */}
-            <div className="px-4 pb-4 border-b bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20">
+            <div className={`px-4 pb-4 ${getDirectionalBorder('info', 'bottom')} bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20`}>
                 <div className="flex items-center justify-between text-xs">
                     <CommonBadge
                         status="units"

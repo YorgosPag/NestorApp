@@ -6,6 +6,7 @@ import type { AnySceneEntity, SceneLayer } from '../../../../types/scene';
 import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 import { getDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface EntityCardProps {
   entity: AnySceneEntity;
@@ -53,6 +54,7 @@ export const EntityCard = ({
   layerEntities
 }: EntityCardProps) => {
   const iconSizes = useIconSizes();
+  const { getStatusBorder, getDirectionalBorder } = useBorderTokens();
   return (
     <div 
       key={entity.id}
@@ -60,7 +62,7 @@ export const EntityCard = ({
       data-entity-id={entity.id}
       data-entity-selected={isSelected || undefined}
       className={`ml-12 flex items-center justify-between rounded cursor-pointer transition-all ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} focus:outline-none focus:ring-2 focus:ring-green-400 ${
-        isSelected ? 'p-2.5 bg-blue-600/20 border-l-2 border-blue-400 rounded' : 'p-1.5'
+        isSelected ? `p-2.5 bg-blue-600/20 ${getDirectionalBorder('info', 'left')} rounded` : 'p-1.5'
       } ${selectedEntitiesForMerge.has(entity.id) ? 'ring-2 ring-blue-400 bg-blue-900 bg-opacity-30' : ''} ${
         isFocused ? 'ring-2 ring-green-400' : ''
       }`}
@@ -86,7 +88,7 @@ export const EntityCard = ({
               e.stopPropagation();
               onSetColorPickerEntity(showEntityColorPicker ? null : entity.id);
             }}
-            className={`rounded-full border border-gray-500 ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} ${
+            className={`rounded-full ${getStatusBorder('secondary')} ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} ${
               isSelected ? iconSizes.xs : iconSizes.xs
             }`}
             className={getDynamicBackgroundClass(entity.color || layer.color)}
@@ -119,7 +121,7 @@ export const EntityCard = ({
               onSetEditingEntity(null);
               onSetEditingEntityName('');
             }}
-            className={`bg-gray-700 text-white rounded border border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 ${
+            className={`bg-gray-700 text-white rounded ${getStatusBorder('info')} focus:outline-none focus:ring-1 focus:ring-blue-400 ${
               isSelected ? 'text-sm px-1' : 'text-xs px-0.5'
             }`}
             autoFocus

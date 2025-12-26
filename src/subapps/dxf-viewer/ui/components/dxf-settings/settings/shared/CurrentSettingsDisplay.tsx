@@ -3,6 +3,7 @@ import { useUnifiedTextPreview } from '../../../../hooks/useUnifiedSpecificSetti
 import type { LineType } from '../../../../../settings-core/types';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface LineSettings {
   lineType: LineType;
@@ -53,6 +54,7 @@ export function CurrentSettingsDisplay({
   gripSettings,
   className = ''
 }: CurrentSettingsDisplayProps) {
+  const { getStatusBorder } = useBorderTokens();
   const [showSettingsDetails, setShowSettingsDetails] = useState(false);
   const [forceUpdate, setForceUpdate] = useState(0);
 
@@ -82,7 +84,7 @@ export function CurrentSettingsDisplay({
           type="checkbox"
           checked={showSettingsDetails}
           onChange={(e) => setShowSettingsDetails(e.target.checked)}
-          className="rounded border-gray-600 text-blue-600 focus:ring-blue-500 focus:ring-2"
+          className={`rounded ${getStatusBorder('default')} text-blue-600 focus:ring-blue-500 focus:ring-2`}
         />
         <div className="flex items-center gap-2">
           <span>📋</span>
@@ -91,7 +93,7 @@ export function CurrentSettingsDisplay({
       </label>
 
       {showSettingsDetails && (
-        <div className="bg-gray-800 rounded-lg border border-gray-600 p-3">
+        <div className={`bg-gray-800 rounded-lg ${getStatusBorder('default')} p-3`}>
           {activeTab === 'lines' && (
             <div>
               <div className="px-3 py-2 bg-gray-700 font-medium text-blue-400 text-sm rounded-t-lg mb-3">
@@ -107,7 +109,7 @@ export function CurrentSettingsDisplay({
                   <span className="text-white font-mono flex items-center gap-2">
                     {lineSettings.color}
                     <div
-                      className={`w-3 h-3 rounded border border-gray-500 ${lineColorBgClass}`}
+                      className={`w-3 h-3 rounded ${getStatusBorder('secondary')} ${lineColorBgClass}`}
                     ></div>
                   </span>
                 </div>
@@ -150,7 +152,7 @@ export function CurrentSettingsDisplay({
                   <span className="text-white font-mono flex items-center gap-2">
                     {effectiveTextSettings.color}
                     <div
-                      className={`w-3 h-3 rounded border border-gray-500 ${textColorBgClass}`}
+                      className={`w-3 h-3 rounded ${getStatusBorder('secondary')} ${textColorBgClass}`}
                     ></div>
                   </span>
                 </div>
@@ -208,7 +210,7 @@ export function CurrentSettingsDisplay({
                   <span className="text-white font-mono flex items-center gap-2">
                     {gripSettings.colors.cold}
                     <div
-                      className={`w-3 h-3 rounded border border-gray-500 ${gripColdColorBgClass}`}
+                      className={`w-3 h-3 rounded ${getStatusBorder('secondary')} ${gripColdColorBgClass}`}
                     ></div>
                   </span>
                 </div>
@@ -217,7 +219,7 @@ export function CurrentSettingsDisplay({
                   <span className="text-white font-mono flex items-center gap-2">
                     {gripSettings.colors.warm}
                     <div
-                      className={`w-3 h-3 rounded border border-gray-500 ${gripWarmColorBgClass}`}
+                      className={`w-3 h-3 rounded ${getStatusBorder('secondary')} ${gripWarmColorBgClass}`}
                     ></div>
                   </span>
                 </div>

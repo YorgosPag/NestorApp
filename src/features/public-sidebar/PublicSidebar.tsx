@@ -12,6 +12,7 @@ import { NavButton } from './components/NavButton';
 import { CompanyInfo } from './components/CompanyInfo';
 import { QuickStats as QuickStatsComponent } from './components/QuickStats';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface PublicSidebarProps {
   isAuthenticated?: boolean;
@@ -20,12 +21,13 @@ interface PublicSidebarProps {
 
 export function PublicSidebar({ isAuthenticated = false, userEmail }: PublicSidebarProps) {
   const iconSizes = useIconSizes();
+  const { getDirectionalBorder } = useBorderTokens();
   const { isActive } = useActiveItem();
 
   return (
-    <div className="flex h-screen w-64 flex-col bg-card border-r">
+    <div className={`flex h-screen w-64 flex-col bg-card ${getDirectionalBorder('muted', 'right')}`}>
       {/* Logo Section */}
-      <div className="flex h-16 items-center border-b px-6">
+      <div className={`flex h-16 items-center ${getDirectionalBorder('muted', 'bottom')} px-6`}>
         <Link href="/" className="flex items-center gap-2">
           <div className={`flex ${iconSizes.xl} items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-purple-600`}>
             <Home className={`${iconSizes.sm} text-white`} />
@@ -59,7 +61,7 @@ export function PublicSidebar({ isAuthenticated = false, userEmail }: PublicSide
       </div>
 
       {/* User Section */}
-      <div className="border-t p-4">
+      <div className={`${getDirectionalBorder('muted', 'top')} p-4`}>
         {isAuthenticated ? (
           <div className="flex items-center gap-3">
             <div className={`flex ${iconSizes.xl} items-center justify-center rounded-full bg-blue-100`}>

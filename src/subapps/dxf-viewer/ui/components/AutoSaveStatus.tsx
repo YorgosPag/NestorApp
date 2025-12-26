@@ -3,6 +3,7 @@ import { useLevels } from '../../systems/levels/useLevels';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { AnimatedSpinner } from '../../components/modal/ModalLoadingStates';
 
 export function AutoSaveStatus() {
   const iconSizes = useIconSizes();
@@ -24,7 +25,7 @@ export function AutoSaveStatus() {
       case 'saving':
         return (
           <div className="flex items-center text-yellow-400">
-            <div className={`animate-spin ${quick.button} h-3 w-3 border-b-2 border-yellow-400 mr-1`}></div>
+            <AnimatedSpinner size="small" className="mr-1" />
             <span className="text-xs">Saving...</span>
           </div>
         );

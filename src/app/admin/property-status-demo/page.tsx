@@ -42,6 +42,7 @@ import { PropertyBadge } from '@/core/badges/UnifiedBadgeSystem';
 // Icons
 import { Home, Building, Info, Zap, BarChart3, Settings, CheckCircle } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 // ============================================================================
 // DEMO PROPERTY DATA
@@ -120,6 +121,7 @@ const DEMO_PROPERTIES: DemoProperty[] = [
 
 export default function PropertyStatusDemoPage() {
   const iconSizes = useIconSizes();
+  const { getStatusBorder } = useBorderTokens();
   const [selectedStatus, setSelectedStatus] = useState<EnhancedPropertyStatus | null>(null);
   const [selectedProperty, setSelectedProperty] = useState<DemoProperty | null>(null);
 
@@ -332,7 +334,7 @@ export default function PropertyStatusDemoPage() {
 
       {/* Selected Status Details */}
       {selectedStatus && (
-        <Card className="border-blue-200">
+        <Card className={getStatusBorder('info')}>
           <CardHeader>
             <CardTitle className="text-blue-800">
               Status Details: {getEnhancedStatusLabel(selectedStatus)}
@@ -375,7 +377,7 @@ export default function PropertyStatusDemoPage() {
 
       {/* Selected Property Details */}
       {selectedProperty && (
-        <Card className="border-green-200">
+        <Card className={getStatusBorder('success')}>
           <CardHeader>
             <CardTitle className="text-green-800">
               Property Details: {selectedProperty.name}

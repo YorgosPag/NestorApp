@@ -16,11 +16,13 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { TestsModal } from '../TestsModal'; // Adjust path to: './components/tests-modal/TestsModal'
+import { useBorderTokens } from '@/hooks/useBorderTokens'; // Enterprise border system
 
 // Example: Using react-hot-toast for notifications
 // npm install react-hot-toast
 import toast, { Toaster } from 'react-hot-toast';
 import { INTERACTIVE_PATTERNS, GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface TestResult {
   testId: string;
@@ -31,6 +33,8 @@ interface TestResult {
 }
 
 export function AdvancedUsageExample() {
+  const { getStatusBorder, getDirectionalBorder } = useBorderTokens();
+
   // 1. Modal state
   const [isTestsOpen, setIsTestsOpen] = useState(false);
 
@@ -189,7 +193,7 @@ export function AdvancedUsageExample() {
 
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="border-b border-gray-700">
+                <thead className={`${getDirectionalBorder('muted', 'bottom')}`}>
                   <tr className="text-left">
                     <th className="pb-2">Test</th>
                     <th className="pb-2">Status</th>
@@ -198,7 +202,7 @@ export function AdvancedUsageExample() {
                 </thead>
                 <tbody>
                   {testHistory.slice(-10).reverse().map((result, idx) => (
-                    <tr key={idx} className="border-b border-gray-700">
+                    <tr key={idx} className={`${getDirectionalBorder('muted', 'bottom')}`}>
                       <td className="py-2">{result.testName}</td>
                       <td className="py-2">
                         {result.status === 'success' ? (
@@ -220,7 +224,7 @@ export function AdvancedUsageExample() {
 
         {/* Info Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
+          <div className={`bg-blue-900/20 ${getStatusBorder('info')} rounded-lg p-4`}>
             <div className="text-blue-400 font-bold mb-2">💡 Pro Tip</div>
             <div className="text-sm">
               Use Ctrl+T keyboard shortcut to quickly open/close the tests modal.
@@ -228,7 +232,7 @@ export function AdvancedUsageExample() {
             </div>
           </div>
 
-          <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4">
+          <div className={`bg-green-900/20 ${getStatusBorder('success')} rounded-lg p-4`}>
             <div className="text-green-400 font-bold mb-2">🚀 Auto-Run</div>
             <div className="text-sm">
               Add <code className="px-1 bg-gray-700 rounded">?autorun=true</code> to URL

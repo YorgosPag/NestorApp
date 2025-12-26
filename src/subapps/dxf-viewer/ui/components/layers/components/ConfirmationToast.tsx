@@ -4,6 +4,7 @@ import React from 'react';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { AlertTriangle, Trash2, GitMerge } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface ConfirmationToastProps {
   title: string;
@@ -27,9 +28,10 @@ export function ConfirmationToast({
   onCancel
 }: ConfirmationToastProps) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
 
   return (
-    <div className="flex flex-col gap-3 p-4 max-w-md bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+    <div className={`flex flex-col gap-3 p-4 max-w-md bg-white dark:bg-gray-800 rounded-lg shadow-lg ${quick.card}`}>
       <div className="flex items-start gap-3">
         {/* Icon */}
         <div className="flex-shrink-0 mt-1">
@@ -55,7 +57,7 @@ export function ConfirmationToast({
           
           {/* Irreversible Warning */}
           {irreversible && (
-            <div className="flex items-center gap-2 mt-3 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-200 dark:border-yellow-700">
+            <div className={`flex items-center gap-2 mt-3 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded ${quick.warning}`}>
               <AlertTriangle className={`${iconSizes.sm} text-yellow-600 dark:text-yellow-400 flex-shrink-0`} />
               <span className="text-xs text-yellow-700 dark:text-yellow-300 font-medium">
                 ⚠️ Αυτή η ενέργεια δεν μπορεί να αναιρεθεί!
@@ -66,7 +68,7 @@ export function ConfirmationToast({
       </div>
       
       {/* Actions */}
-      <div className="flex gap-2 justify-end pt-2 border-t border-gray-100 dark:border-gray-700">
+      <div className={`flex gap-2 justify-end pt-2 ${quick.separatorH}`}>
         <button
           onClick={onCancel}
           className={`px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.GRAY_LIGHT} dark:${HOVER_BACKGROUND_EFFECTS.GRAY} rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500`}

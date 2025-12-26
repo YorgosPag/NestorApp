@@ -105,7 +105,7 @@ const BaseCard = forwardRef<HTMLDivElement, BaseCardProps>(({
   // Styling variants
   const cardVariants = {
     default: 'border bg-card text-card-foreground shadow-sm',
-    bordered: 'border-2 bg-card text-card-foreground',
+    bordered: 'border bg-card text-card-foreground',
     elevated: 'border-0 bg-card text-card-foreground shadow-md ring-1 ring-gray-200 dark:ring-gray-700',
     minimal: 'border-0 bg-transparent text-foreground shadow-none',
   };

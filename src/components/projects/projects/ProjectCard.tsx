@@ -29,7 +29,7 @@ export function ProjectCard({
   companyName,
 }: ProjectCardProps) {
   const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
+  const { quick, getStatusBorder } = useBorderTokens();
   const [isFavorite, setIsFavorite] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -44,11 +44,11 @@ export function ProjectCard({
         tabIndex={0}
         className={cn(
           `relative overflow-hidden cursor-pointer group ${quick.card}`,
-          // Override default border with thicker one
-          "border-2",
+          // Use centralized border token
+          "",
           COMPLEX_HOVER_EFFECTS.FEATURE_CARD,
           isSelected
-            ? "border-blue-500 shadow-lg ring-2 ring-blue-200 dark:ring-blue-800"
+            ? `${getStatusBorder('info')} shadow-lg ring-2 ring-blue-200 dark:ring-blue-800`
             : "border-border"
         )}
         onClick={onClick}

@@ -20,7 +20,7 @@ type LineStyle = 'solid' | 'dashed' | 'dotted' | 'dash-dot';
 
 export function CursorSettings() {
   const iconSizes = useIconSizes();
-  const { quick, getStatusBorder, radius } = useBorderTokens();
+  const { quick, getStatusBorder, getDirectionalBorder, radius } = useBorderTokens();
   // Αφαιρείται το tab state - όλες οι ρυθμίσεις θα εμφανίζονται μαζί
 
   // 🔺 REAL CURSOR SYSTEM INTEGRATION - Αντικατάσταση mock state
@@ -75,7 +75,7 @@ export function CursorSettings() {
 
       {/* CURSOR SETTINGS SECTION */}
       <div className="space-y-4">
-        <div className={`text-lg font-medium text-white border-b ${getStatusBorder('muted')} pb-2`}>
+        <div className={`text-lg font-medium text-white ${getDirectionalBorder('muted', 'bottom')} pb-2`}>
           Ρυθμίσεις Κέρσορα
         </div>
         <div className="space-y-4">
@@ -95,7 +95,7 @@ export function CursorSettings() {
                 }`}
               >
                 <div
-                  className={`${iconSizes.sm} mx-auto ${radius.full} border-2`}
+                  className={`${iconSizes.sm} mx-auto ${radius.full} border`}
                   style={getCursorPreviewBorderStyles(settings.cursor.color)}
                 ></div>
                 <span className="block mt-1">Κύκλος</span>
@@ -109,7 +109,7 @@ export function CursorSettings() {
                 }`}
               >
                 <div
-                  className={`${iconSizes.sm} mx-auto border-2`}
+                  className={`${iconSizes.sm} mx-auto border`}
                   style={getCursorPreviewBorderStyles(settings.cursor.color)}
                 ></div>
                 <span className="block mt-1">Τετράγωνο</span>
@@ -227,12 +227,12 @@ export function CursorSettings() {
                   onClick={() => handleCursorLineWidthChange(width)}
                   className={`flex-1 p-1 rounded text-xs transition-colors ${
                     (settings.cursor.line_width || 1) === width
-                      ? `bg-blue-600 border ${getStatusBorder('info')}`
-                      : `bg-gray-600 border ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`
+                      ? `bg-blue-600 ${getStatusBorder('info')}`
+                      : `bg-gray-600 ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`
                   }`}
                 >
                   <div
-                    className="w-full mx-auto border-2"
+                    className="w-full mx-auto border"
                     style={getCursorSizePreviewStyles(settings.cursor.color, settings.cursor.shape, width)}
                   ></div>
                   <span className="block mt-1 text-xs">{width}px</span>
@@ -271,7 +271,7 @@ export function CursorSettings() {
                   }`}
                 >
                   <div
-                    className="mx-auto border-2"
+                    className="mx-auto border"
                     style={getCursorDimensionPreviewStyles(settings.cursor.color, settings.cursor.shape, size)}
                   ></div>
                   <span className="block mt-1 text-xs">{size}px</span>

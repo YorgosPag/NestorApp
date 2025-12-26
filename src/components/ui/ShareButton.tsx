@@ -5,6 +5,7 @@ import { Share2, Copy, Check, Home, MapPin, Euro, Ruler } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { ShareModal, useShareModal } from '@/components/ui/ShareModal';
 import { type ShareData } from '@/lib/share-utils';
 
@@ -38,6 +39,7 @@ export function ShareButton({
   onShareError,
 }: ShareButtonProps) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const [justCopied, setJustCopied] = useState(false);
   const { isOpen, openModal, closeModal } = useShareModal();
 
@@ -71,7 +73,7 @@ export function ShareButton({
         size={size}
         className={cn(
           'transition-all duration-200',
-          justCopied && 'text-green-600 border-green-300',
+          justCopied && `text-green-600 ${quick.success}`,
           className
         )}
         onClick={handleButtonClick}

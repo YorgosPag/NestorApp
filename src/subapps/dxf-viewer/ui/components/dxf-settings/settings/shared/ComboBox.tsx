@@ -70,6 +70,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { layoutUtilities } from '@/styles/design-tokens';
 
@@ -147,6 +148,7 @@ export function ComboBox<T>({
   maxHeight = '24rem' // 96 = 24rem
 }: ComboBoxProps<T>) {
   const iconSizes = useIconSizes();
+  const { getFocusBorder, getStatusBorder, getDirectionalBorder } = useBorderTokens();
 
   // ===== STATE =====
 
@@ -239,7 +241,7 @@ export function ComboBox<T>({
       <button
         key={String(option.value)}
         onClick={() => handleSelect(option.value)}
-        className={`w-full px-3 py-2 text-left text-sm border-b border-gray-700 last:border-b-0 transition-colors flex items-start justify-between ${
+        className={`w-full px-3 py-2 text-left text-sm ${getDirectionalBorder('muted', 'bottom')} last:border-none transition-colors flex items-start justify-between ${
           isHighlighted
             ? 'bg-blue-600 text-white'
             : `text-white ${HOVER_BACKGROUND_EFFECTS.GRAY}`
@@ -280,7 +282,7 @@ export function ComboBox<T>({
           }}
           onKeyDown={handleKeyDown}
           disabled={disabled}
-          className={`w-full px-3 py-2 pr-8 bg-gray-700 border border-gray-600 rounded-md text-white text-left ${HOVER_BACKGROUND_EFFECTS.GRAY} focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+          className={`w-full px-3 py-2 pr-8 bg-gray-700 ${getStatusBorder('default')} rounded-md text-white text-left ${HOVER_BACKGROUND_EFFECTS.GRAY} focus:ring-2 focus:ring-blue-500 ${getFocusBorder('input')} ${
             disabled ? 'opacity-50 cursor-not-allowed' : ''
           } ${buttonClassName}`}
         >
@@ -317,7 +319,7 @@ export function ComboBox<T>({
                 });
 
                 return (
-                  <div key={group.category} className="border-b border-gray-600 last:border-b-0">
+                  <div key={group.category} className={`${getDirectionalBorder('default', 'bottom')} last:border-none`}>
                     {/* Category Header */}
                     <div className="px-3 py-2 text-xs font-medium text-gray-400 bg-gray-800">
                       {group.categoryLabel || group.category}

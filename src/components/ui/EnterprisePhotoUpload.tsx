@@ -225,7 +225,7 @@ export function EnterprisePhotoUpload({
   if (compact) {
     // Enterprise compact upload area styling - centralized pattern
     const compactUploadClasses = currentPreview
-      ? 'border-2 border-dashed border-green-300 bg-green-50'
+      ? `border border-dashed ${quick.success} bg-green-50`
       : `${PHOTO_COLORS.PHOTO_BACKGROUND} ${quick.card} flex items-center justify-center text-center cursor-pointer transition-colors ${PHOTO_BORDERS.EMPTY_HOVER} p-6 flex-col`;
 
     return (
@@ -235,7 +235,7 @@ export function EnterprisePhotoUpload({
             relative h-full w-full text-center cursor-pointer ${PHOTO_HOVER_EFFECTS.COLOR_TRANSITION} overflow-hidden
             ${compactUploadClasses}
             ${disabled && !currentPreview ? 'opacity-50 cursor-not-allowed' : disabled ? 'cursor-default' : ''}
-            ${hasError ? 'border-red-300 bg-red-50' : ''}
+            ${hasError ? `${quick.error} bg-red-50` : ''}
             ${!currentPreview ? getDynamicBackgroundClass(PHOTO_COLORS.EMPTY_STATE_BACKGROUND) : ''}
           `}
           onDrop={disabled ? undefined : handleDropWithValidation}
@@ -278,7 +278,7 @@ export function EnterprisePhotoUpload({
   // Full mode
   // Enterprise full upload area styling - centralized pattern
   const fullUploadClasses = currentPreview
-    ? 'border-2 border-dashed border-green-300 bg-green-50'
+    ? `border border-dashed ${quick.success} bg-green-50`
     : `${PHOTO_COLORS.PHOTO_BACKGROUND} ${quick.card} flex items-center justify-center text-center cursor-pointer transition-colors ${PHOTO_BORDERS.EMPTY_HOVER}`;
 
   return (
@@ -291,7 +291,7 @@ export function EnterprisePhotoUpload({
           relative p-6 text-center cursor-pointer ${PHOTO_HOVER_EFFECTS.COLOR_TRANSITION} ${PHOTO_HEIGHTS.STANDARD} flex flex-col items-center justify-center
           ${fullUploadClasses}
           ${disabled && !currentPreview ? 'opacity-50 cursor-not-allowed' : disabled ? 'cursor-default' : ''}
-          ${hasError ? 'border-red-300 bg-red-50' : ''}
+          ${hasError ? `${quick.error} bg-red-50` : ''}
           ${isLoading ? 'pointer-events-none' : ''}
           ${!currentPreview ? getDynamicBackgroundClass(PHOTO_COLORS.EMPTY_STATE_BACKGROUND) : ''}
         `}

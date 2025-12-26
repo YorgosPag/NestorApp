@@ -9,6 +9,7 @@ import { getItemIcon } from '../utils/icons';
 import { getItemBadgeColor } from '../utils/badges';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 export function TocItem({
   item,
@@ -21,6 +22,7 @@ export function TocItem({
   onClick,
 }: TocItemProps) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const hasChildren = item.children && item.children.length > 0;
   const isExpanded = expandedIds.includes(item.id);
   const isActive = activeItemId === item.id;
@@ -33,7 +35,7 @@ export function TocItem({
         className={cn(
           "group flex items-center gap-2 py-2 px-3 rounded-md cursor-pointer transition-colors",
           "hover:bg-accent/10",
-          isActive && "bg-primary/10 text-primary border border-primary/20",
+          isActive && `bg-primary/10 text-primary ${quick.info}`,
           indentClass
         )}
         onClick={() => onClick?.(item)}

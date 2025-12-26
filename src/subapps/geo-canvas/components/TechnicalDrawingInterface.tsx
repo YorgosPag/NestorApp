@@ -195,7 +195,7 @@ export function TechnicalDrawingInterface({
           onClick={() => handleToolSelect('dxf-viewer')}
           disabled={actualIsDrawing}
           className={`
-            flex flex-col items-center justify-center p-4 ${quick.card} border-2
+            flex flex-col items-center justify-center p-4 ${quick.card}
             transition-all duration-200 min-h-[100px]
             ${selectedTool === 'dxf-viewer'
               ? `${getStatusBorder('info')} bg-purple-50`
@@ -214,7 +214,7 @@ export function TechnicalDrawingInterface({
           onClick={() => handleToolSelect('precision')}
           disabled={actualIsDrawing && selectedTool !== 'precision'}
           className={`
-            flex flex-col items-center justify-center p-4 ${quick.card} border-2
+            flex flex-col items-center justify-center p-4 ${quick.card}
             transition-all duration-200 min-h-[100px]
             ${selectedTool === 'precision'
               ? `${getStatusBorder('info')} bg-purple-50`
@@ -233,7 +233,7 @@ export function TechnicalDrawingInterface({
           onClick={() => handleToolSelect('settings')}
           disabled={actualIsDrawing}
           className={`
-            flex flex-col items-center justify-center p-4 ${quick.card} border-2
+            flex flex-col items-center justify-center p-4 ${quick.card}
             transition-all duration-200 min-h-[100px]
             ${selectedTool === 'settings'
               ? `${getStatusBorder('info')} bg-purple-50`
@@ -252,7 +252,7 @@ export function TechnicalDrawingInterface({
           onClick={() => handleToolSelect('automated-alerts')}
           disabled={actualIsDrawing}
           className={`
-            flex flex-col items-center justify-center p-4 ${quick.card} border-2
+            flex flex-col items-center justify-center p-4 ${quick.card}
             transition-all duration-200 min-h-[100px]
             ${selectedTool === 'automated-alerts'
               ? `${getStatusBorder('error')} bg-red-50`

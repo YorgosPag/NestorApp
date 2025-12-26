@@ -7,6 +7,7 @@
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 /**
  * ╔════════════════════════════════════════════════════════════════════════════╗
@@ -45,6 +46,7 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
   // HOOKS
   // ============================================================================
   const iconSizes = useIconSizes();
+  const { quick, getStatusBorder } = useBorderTokens();
 
   const {
     state: { rulers: rulerSettings },
@@ -163,20 +165,20 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
         <div className="flex gap-2">
           <button
             onClick={() => handleBackgroundVisibilityChange(true)}
-            className={`flex-1 p-2 rounded text-xs border transition-colors ${
+            className={`flex-1 p-2 rounded text-xs transition-colors ${
               backgroundVisible
-                ? 'bg-blue-600 border-blue-500'
-                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500`
+                ? `bg-blue-600 ${getStatusBorder('info')}`
+                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('muted')}`
             }`}
           >
             Ενεργό
           </button>
           <button
             onClick={() => handleBackgroundVisibilityChange(false)}
-            className={`flex-1 p-2 rounded text-xs border transition-colors ${
+            className={`flex-1 p-2 rounded text-xs transition-colors ${
               !backgroundVisible
-                ? 'bg-blue-600 border-blue-500'
-                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500`
+                ? `bg-blue-600 ${getStatusBorder('info')}`
+                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('muted')}`
             }`}
           >
             Ανενεργό
@@ -192,7 +194,7 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
         </div>
         <div className="flex items-center gap-2">
           <div
-            className={`${iconSizes.md} rounded border border-gray-500 ${rulerBgClass}`}
+            className={`${iconSizes.md} rounded ${getStatusBorder('default')} ${rulerBgClass}`}
           />
           <input
             type="color"
@@ -204,7 +206,7 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
             type="text"
             value={rulerBackgroundColor}
             onChange={(e) => handleRulerBackgroundColorChange(e.target.value)}
-            className="w-20 px-2 py-1 text-xs bg-gray-600 text-white rounded border border-gray-500"
+            className={`w-20 px-2 py-1 text-xs bg-gray-600 text-white rounded ${quick.input}`}
             placeholder="#ffffff"
           />
         </div>
@@ -277,20 +279,20 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
         <div className="flex gap-2">
           <button
             onClick={() => handleRulerUnitsEnabledChange(true)}
-            className={`flex-1 p-2 rounded text-xs border transition-colors ${
+            className={`flex-1 p-2 rounded text-xs transition-colors ${
               rulerSettings.horizontal.showMinorTicks
-                ? 'bg-blue-600 border-blue-500'
-                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500`
+                ? `bg-blue-600 ${getStatusBorder('info')}`
+                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('muted')}`
             }`}
           >
             Ενεργό
           </button>
           <button
             onClick={() => handleRulerUnitsEnabledChange(false)}
-            className={`flex-1 p-2 rounded text-xs border transition-colors ${
+            className={`flex-1 p-2 rounded text-xs transition-colors ${
               !rulerSettings.horizontal.showMinorTicks
-                ? 'bg-blue-600 border-blue-500'
-                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500`
+                ? `bg-blue-600 ${getStatusBorder('info')}`
+                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('muted')}`
             }`}
           >
             Ανενεργό

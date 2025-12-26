@@ -6,6 +6,7 @@ import { PageHeader } from '@/core/headers';
 import type { ViewMode } from '@/core/headers';
 import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface StoragesHeaderProps {
   viewMode: 'list' | 'grid' | 'byType' | 'byStatus';
@@ -32,6 +33,7 @@ export function StoragesHeader({
   setShowFilters,
 }: StoragesHeaderProps) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
 
   return (
     <PageHeader
@@ -63,10 +65,10 @@ export function StoragesHeader({
           <button
             key="mobile-filter"
             onClick={() => setShowFilters(!showFilters)}
-            className={`md:hidden p-2 rounded-md border ${TRANSITION_PRESETS.STANDARD_COLORS} ${
+            className={`md:hidden p-2 rounded-md ${TRANSITION_PRESETS.STANDARD_COLORS} ${
               showFilters
-                ? 'bg-primary text-primary-foreground border-primary'
-                : `bg-background border-border ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`
+                ? `bg-primary text-primary-foreground ${quick.focus}`
+                : `bg-background ${quick.input} ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`
             }`}
             aria-label="Toggle filters"
           >

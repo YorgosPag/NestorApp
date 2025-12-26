@@ -86,6 +86,7 @@ interface CreateLayerDialogProps {
 
 function CreateLayerDialog({ open, onOpenChange, onCreateLayer }: CreateLayerDialogProps) {
   const iconSizes = useIconSizes();
+  const { radius } = useBorderTokens();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<LayerCategory>('annotations');
@@ -149,7 +150,7 @@ function CreateLayerDialog({ open, onOpenChange, onCreateLayer }: CreateLayerDia
                   <SelectItem key={key} value={key}>
                     <div className="flex items-center gap-2">
                       <div
-                        className={`${iconSizes.xs} rounded-full ${getDynamicBackgroundClass(info.color)}`}
+                        className={`${iconSizes.xs} ${radius.full} ${getDynamicBackgroundClass(info.color)}`}
                       />
                       {info.name}
                     </div>
@@ -260,7 +261,7 @@ function LayerItem({
             
             {categoryInfo && (
               <div
-                className={`${iconSizes.xs} rounded-full flex-shrink-0 ${getDynamicBackgroundClass(categoryInfo.color)}`}
+                className={`${iconSizes.xs} ${radius.full} flex-shrink-0 ${getDynamicBackgroundClass(categoryInfo.color)}`}
                 title={categoryInfo.name}
               />
             )}
@@ -437,6 +438,7 @@ export function AdminLayerManager({
   showSyncStatus = true
 }: AdminLayerManagerProps) {
   const iconSizes = useIconSizes();
+  const { radius } = useBorderTokens();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [expandedLayers, setExpandedLayers] = useState<Set<string>>(new Set());
@@ -618,9 +620,9 @@ export function AdminLayerManager({
               {showSyncStatus && (
                 <div className="flex items-center gap-1">
                   {syncState.isConnected ? (
-                    <div className={`${iconSizes.xs} bg-green-500 rounded-full`} title="Συνδεδεμένο - Real-time sync ενεργό" />
+                    <div className={`${iconSizes.xs} bg-green-500 ${radius.full}`} title="Συνδεδεμένο - Real-time sync ενεργό" />
                   ) : (
-                    <div className={`${iconSizes.xs} bg-red-500 rounded-full`} title="Αποσυνδεδεμένο" />
+                    <div className={`${iconSizes.xs} bg-red-500 ${radius.full}`} title="Αποσυνδεδεμένο" />
                   )}
                   {syncState.pendingOperations > 0 && (
                     <CommonBadge
@@ -692,7 +694,7 @@ export function AdminLayerManager({
                   <SelectItem key={category} value={category}>
                     <div className="flex items-center gap-2">
                       <div
-                        className={`${iconSizes.xs} rounded-full ${getDynamicBackgroundClass(getCategoryInfo(category).color)}`}
+                        className={`${iconSizes.xs} ${radius.full} ${getDynamicBackgroundClass(getCategoryInfo(category).color)}`}
                       />
                       {getCategoryInfo(category).name}
                     </div>
@@ -750,7 +752,7 @@ export function AdminLayerManager({
                     {category !== 'other' && getCategoryInfo(category) && (
                       <>
                         <div
-                          className={`${iconSizes.xs} rounded-full ${getDynamicBackgroundClass(getCategoryInfo(category).color)}`}
+                          className={`${iconSizes.xs} ${radius.full} ${getDynamicBackgroundClass(getCategoryInfo(category).color)}`}
                         />
                         {getCategoryInfo(category).name}
                       </>

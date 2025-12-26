@@ -60,7 +60,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
   // ============================================================================
 
   const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
+  const { quick, getDirectionalBorder } = useBorderTokens();
 
   // 🔧 ENTERPRISE FIX: Show the "other" contact in the relationship
   // Determine which contact to show based on which one is NOT the current contact
@@ -83,7 +83,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
   // ============================================================================
 
   return (
-    <Card className="mb-4 border-l-4 border-l-blue-500">
+    <Card className={`mb-4 ${getDirectionalBorder('info', 'left', 'bold')}`}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">

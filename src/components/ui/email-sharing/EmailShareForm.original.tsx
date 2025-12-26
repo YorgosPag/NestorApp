@@ -292,9 +292,9 @@ export const EmailShareForm: React.FC<EmailShareFormProps> = ({
                   type="button"
                   onClick={() => setSelectedTemplate(template.id)}
                   className={designSystem.cn(
-                    `p-3 ${quick.card} border-2 transition-all text-center`,
+                    `p-3 ${quick.card} border transition-all text-center`,
                     selectedTemplate === template.id
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                      ? `${getStatusBorder('info')} bg-blue-50 dark:bg-blue-900/20`
                       : `${quick.card} ${HOVER_BORDER_EFFECTS.GRAY}`
                   )}
                 >
@@ -424,7 +424,7 @@ export const EmailShareForm: React.FC<EmailShareFormProps> = ({
 
         {/* MESSAGE PREVIEW */}
         {personalMessage.trim() && (
-          <div className={`p-3 bg-blue-50 dark:bg-blue-900/20 ${quick.card} ${quick.input} border-blue-200`}>
+          <div className={`p-3 bg-blue-50 dark:bg-blue-900/20 ${quick.card} ${quick.input} ${getStatusBorder('info')}`}>
             <div className={designSystem.cn(
               designSystem.getTypographyClass('xs', 'medium'),
               "text-blue-800 dark:text-blue-300 mb-1"

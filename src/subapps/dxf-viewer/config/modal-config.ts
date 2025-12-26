@@ -7,6 +7,12 @@
  * @compliance CLAUDE.md Enterprise Standards
  */
 
+// 🏢 ENTERPRISE: Centralized border tokens for consistency
+const MODAL_CONFIG_BORDERS = {
+  dark: 'border-gray-600',      // Dark theme borders
+  light: 'border-gray-200',     // Light theme borders
+} as const;
+
 // ====================================================================
 // ENTERPRISE MODAL SIZING STANDARDS
 // ====================================================================
@@ -74,18 +80,18 @@ export const MODAL_THEMES = {
 
   // Dark theme for DXF viewer and technical interfaces
   DARK_TECHNICAL: {
-    content: 'bg-gray-800 text-white border-gray-600',
+    content: `bg-gray-800 text-white ${MODAL_CONFIG_BORDERS.dark}`,
     overlay: 'bg-black/75 backdrop-blur-sm',
-    header: 'border-b border-gray-600',
-    footer: 'border-t border-gray-600',
+    header: `border-b ${MODAL_CONFIG_BORDERS.dark}`,
+    footer: `border-t ${MODAL_CONFIG_BORDERS.dark}`,
   },
 
   // Light theme for admin and business interfaces
   LIGHT_BUSINESS: {
-    content: 'bg-white text-gray-900 border-gray-200',
+    content: `bg-white text-gray-900 ${MODAL_CONFIG_BORDERS.light}`,
     overlay: 'bg-black/50',
-    header: 'border-b border-gray-200',
-    footer: 'border-t border-gray-200',
+    header: `border-b ${MODAL_CONFIG_BORDERS.light}`,
+    footer: `border-t ${MODAL_CONFIG_BORDERS.light}`,
   },
 
   // Success theme for confirmations

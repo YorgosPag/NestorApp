@@ -30,6 +30,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
+import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -62,7 +63,7 @@ interface CustomerProfileSectionProps {
 
 function CustomerProfileSection({ customerId, unitPrice }: CustomerProfileSectionProps) {
   const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
+  const { quick, getStatusBorder, getDirectionalBorder } = useBorderTokens();
   const {
     customerInfo,
     loading,
@@ -80,7 +81,7 @@ function CustomerProfileSection({ customerId, unitPrice }: CustomerProfileSectio
             Πληροφορίες Πελάτη
             <div className="ml-auto">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <div className={`${iconSizes.sm} border-2 border-blue-600 border-t-transparent ${quick.button} animate-spin`} />
+                <AnimatedSpinner size="small" variant="info" />
                 <span>Φόρτωση...</span>
               </div>
             </div>
@@ -175,7 +176,7 @@ function CustomerProfileSection({ customerId, unitPrice }: CustomerProfileSectio
 
           {/* ENTERPRISE: Clickable Customer Profile Header */}
           <div
-            className={`flex items-start gap-4 p-3 ${quick.card} border border-transparent hover:border-primary/20 hover:bg-primary/5 cursor-pointer transition-all duration-200 group`}
+            className={`flex items-start gap-4 p-3 ${quick.card} border border-transparent ${getStatusBorder('info', 'hover:')} hover:bg-primary/5 cursor-pointer transition-all duration-200 group`}
             onClick={() => {
               // ENTERPRISE: Deep-link navigation με URL parameters
               const contactsUrl = `/contacts?filter=customer&contactId=${customerId}&source=unit`;
@@ -246,7 +247,7 @@ function CustomerProfileSection({ customerId, unitPrice }: CustomerProfileSectio
           </div>
 
           {/* Quick Actions */}
-          <div className="flex flex-wrap gap-2 pt-4 border-t">
+          <div className={`flex flex-wrap gap-2 pt-4 ${getDirectionalBorder('muted', 'top')}`}>
             <Button
               variant="default"
               size="sm"

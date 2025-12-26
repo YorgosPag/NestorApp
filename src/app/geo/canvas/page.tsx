@@ -5,17 +5,17 @@ import dynamic from 'next/dynamic';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { Suspense } from 'react';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
+import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 
 // RESTORED: Real GeoCanvasApp (working interface)
 const GeoCanvasApp = dynamic(
   () => import('@/subapps/geo-canvas/GeoCanvasApp'),
   {
     loading: () => {
-      const iconSizes = useIconSizes();
       return (
       <div className="w-full h-full flex items-center justify-center bg-gray-900">
         <div className="text-center">
-          <div className={`animate-spin rounded-full ${iconSizes.xl2} border-b-2 border-blue-600 mx-auto mb-4`}></div>
+          <AnimatedSpinner size="large" className="mx-auto mb-4" />
           <p className="text-white">Loading Geo-Canvas...</p>
         </div>
       </div>
@@ -39,7 +39,7 @@ function AdminGuard({ children }: { children: React.ReactNode }) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-gray-900">
         <div className="text-center">
-          <div className={`animate-spin rounded-full ${iconSizes.xl} border-b-2 border-blue-600 mx-auto mb-4`}></div>
+          <AnimatedSpinner size="medium" className="mx-auto mb-4" />
           <p className="text-white">Έλεγχος δικαιωμάτων...</p>
         </div>
       </div>
@@ -81,12 +81,11 @@ export default function GeoCanvasPage() {
     <AdminGuard>
       <div className="w-full h-full">
         <Suspense fallback={(() => {
-          const iconSizes = useIconSizes();
           return (
           <div className="w-full h-full flex items-center justify-center bg-gray-900">
             <div className="text-center">
               <div className="text-6xl mb-4">🌍</div>
-              <div className={`animate-spin rounded-full ${iconSizes['2xl']} border-b-2 border-blue-600 mx-auto mb-4`}></div>
+              <AnimatedSpinner size="large" className="mx-auto mb-4" />
               <p className="text-white text-lg">Αρχικοποίηση Geo-Canvas...</p>
               <p className="text-gray-400 text-sm mt-2">Enterprise Geo-Alert Platform</p>
             </div>

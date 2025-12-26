@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { BaseCard } from '@/components/core/BaseCard/BaseCard';
 import { CommonBadge } from '@/core/badges';
 import { HOVER_SHADOWS, TRANSITION_PRESETS } from '@/components/ui/effects';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { formatDate as formatIntlDate } from '@/lib/intl-utils';
 import { 
   User, 
@@ -123,6 +124,7 @@ export function UserCard({
   compact = false
 }: UserCardProps) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const [isFavorite, setIsFavorite] = useState(false);
   
   const RoleIcon = getRoleIcon(user.role || 'user');
@@ -144,7 +146,7 @@ export function UserCard({
           <img 
             src={user.avatar} 
             alt={user.name}
-            className={`${iconSizes.xl3} rounded-full object-cover border-2 border-white dark:border-gray-800`}
+            className={`${iconSizes.xl3} rounded-full object-cover border ${quick.avatar}`}
           />
         ) : (
           <RoleIcon className={`${iconSizes.xl2} ${

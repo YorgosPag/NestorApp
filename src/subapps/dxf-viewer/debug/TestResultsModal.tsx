@@ -44,14 +44,14 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
   formattedReport
 }) => {
   const iconSizes = useIconSizes();
-  const { getStatusBorder } = useBorderTokens();
+  const { getStatusBorder, getDirectionalBorder, getMultiDirectionalBorder } = useBorderTokens();
   const [copied, setCopied] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState<'summary' | 'details' | 'raw'>('summary');
 
   // Enterprise helper για tab borders
   const getTabBorder = (tabName: string) => {
     return activeTab === tabName
-      ? `bg-gray-800 text-white ${getStatusBorder('active')} border-t border-l border-r`
+      ? `bg-gray-800 text-white ${getStatusBorder('active')} ${getMultiDirectionalBorder('active', ['top', 'left', 'right'])}`
       : `bg-gray-700 text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} ${HOVER_BACKGROUND_EFFECTS.GRAY_750}`;
   };
 
@@ -153,7 +153,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         {/* HEADER */}
-        <div className={`flex items-center justify-between px-6 py-4 bg-gray-800 rounded-t-lg ${getStatusBorder('default')} border-b`}>
+        <div className={`flex items-center justify-between px-6 py-4 bg-gray-800 rounded-t-lg ${getStatusBorder('default')} ${getDirectionalBorder('default', 'bottom')}`}>
           <div className="flex items-center gap-3">
             <span className="text-2xl">🧪</span>
             <div>
@@ -172,7 +172,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
         </div>
 
         {/* STATS BAR */}
-        <div className={`flex items-center justify-between px-6 py-3 bg-gray-850 ${getStatusBorder('default')} border-b`}>
+        <div className={`flex items-center justify-between px-6 py-3 bg-gray-850 ${getStatusBorder('default')} ${getDirectionalBorder('default', 'bottom')}`}>
           <div className="flex gap-6">
             <div className="flex items-center gap-2">
               <span className="text-green-400 text-lg font-bold">{report.passed}</span>
@@ -256,7 +256,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
         </div>
 
         {/* FOOTER */}
-        <div className={`flex items-center justify-between px-6 py-3 bg-gray-850 rounded-b-lg ${getStatusBorder('default')} border-t`}>
+        <div className={`flex items-center justify-between px-6 py-3 bg-gray-850 rounded-b-lg ${getStatusBorder('default')} ${getDirectionalBorder('default', 'top')}`}>
           <div className="text-xs text-gray-500">
             🖥️ Viewport: {report.systemInfo.viewport.width}×{report.systemInfo.viewport.height}
           </div>
@@ -385,7 +385,7 @@ const DetailsTab: React.FC<{ report: UnifiedTestReport }> = ({ report }) => {
             </button>
 
             {isExpanded && (
-              <div className={`px-4 pb-4 pt-2 ${getStatusBorder('default')} border-t`}>
+              <div className={`px-4 pb-4 pt-2 ${getStatusBorder('default')} ${getDirectionalBorder('default', 'top')}`}>
                 <div className="space-y-2">
                   <div>
                     <span className="text-xs text-gray-500">Περίληψη:</span>

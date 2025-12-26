@@ -4,7 +4,8 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { Home, MousePointer } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { statusConfig } from '@/features/property-hover/constants';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { getPropertyStatusConfig } from '@/features/property-hover/constants';
 import { PropertyHoverHeader } from '@/features/property-hover/components/PropertyHoverHeader';
 import { PropertyHoverLocation } from '@/features/property-hover/components/PropertyHoverLocation';
 import { PropertyHoverPriceArea } from '@/features/property-hover/components/PropertyHoverPriceArea';
@@ -22,6 +23,8 @@ interface PropertyHoverInfoProps {
 }
 
 function PropertyHoverContent({ property }: { property: Property }) {
+  const colors = useSemanticColors();
+  const statusConfig = getPropertyStatusConfig(colors);
   const statusInfo = statusConfig[property.status as keyof typeof statusConfig] || statusConfig['Άγνωστο'];
 
   return (

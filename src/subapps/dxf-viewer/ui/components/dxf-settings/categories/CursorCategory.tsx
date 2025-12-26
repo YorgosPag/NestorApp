@@ -18,6 +18,7 @@ import { useTabNavigation } from '../hooks/useTabNavigation';
 import { TabNavigation } from '../shared/TabNavigation';
 import { CrosshairSettings } from '../settings/special/CrosshairSettings';
 import { CursorSettings } from '../settings/special/CursorSettings';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 /**
  * CursorCategory - Cursor settings category with sub-tabs
@@ -76,6 +77,7 @@ export const CursorCategory: React.FC<CursorCategoryProps> = ({
   className = '',
   defaultTab = 'crosshair'
 }) => {
+  const { getStatusBorder, getDirectionalBorder } = useBorderTokens();
   // ============================================================================
   // HOOKS
   // ============================================================================
@@ -114,7 +116,7 @@ export const CursorCategory: React.FC<CursorCategoryProps> = ({
   return (
     <div className={className}>
       {/* Tab Navigation */}
-      <div className="border-b border-gray-600 mb-4">
+      <div className={`${getDirectionalBorder('default', 'bottom')} mb-4`}>
         <TabNavigation
           tabs={tabs}
           activeTab={activeTab}
@@ -146,7 +148,7 @@ export default CursorCategory;
  *   return (
  *     <div className="p-4">
  *       {/* Sub-navigation tabs *\/}
- *       <div className="flex gap-1 mb-4 border-b border-gray-600 pb-2">
+ *       <div className="flex gap-1 mb-4 border-b {getStatusBorder('default')} pb-2">
  *         <button onClick={() => setActiveCursorTab('crosshair')}>Ρυθμίσεις Σταυρονήματος</button>
  *         <button onClick={() => setActiveCursorTab('cursor')}>Ρυθμίσεις Κέρσορα</button>
  *       </div>

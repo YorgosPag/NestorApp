@@ -49,12 +49,12 @@ export default function RootLayout({
     const proto = CanvasRenderingContext2D.prototype;
     const origArc = proto.arc;
 
-    proto.arc = function patchedArc(x: number, y: number, r: number, s: number, e: number, ccw?: boolean) {
+    proto.arc = function patchedArc(x: number, y: number, r: number, s: number, e: number, ccw?: boolean): void {
       // ✅ ΚΑΘΑΡΟ: Χωρίς console noise
 
       // Kill-switch: σχολίασέ το για να ΞΑΝΑΦΑΝΕΙ ο κύκλος
       // Ενεργό => ΔΕΝ ζωγραφίζονται καθόλου κύκλοι
-      return; // ⬅️ προσωρινό hard stop
+      return; // ⬅️ προσωρινό hard stop (now with explicit void return type)
 
       // Αν θέλεις να επαναφέρεις το default συμπεριφορά:
       // return origArc.apply(this, arguments as any);

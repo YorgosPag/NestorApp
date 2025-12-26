@@ -70,7 +70,7 @@ const MetricCard: React.FC<{
   description?: string;
 }> = ({ title, value, unit, trend, icon, status = 'good', description }) => {
   const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
+  const { quick, getStatusBorder } = useBorderTokens();
   const getStatusColor = () => {
     switch (status) {
       case 'good': return '#10B981';
@@ -736,7 +736,7 @@ export const AnalyticsDashboard: React.FC = () => {
             }}
             className={`px-4 py-3 border-none border-b-2 bg-transparent cursor-pointer text-sm font-medium ${
               activeTab === tab.id
-                ? 'border-blue-500 text-blue-500'
+                ? `${getStatusBorder('info')} text-blue-500`
                 : 'border-transparent text-gray-500'
             } ${HOVER_BACKGROUND_EFFECTS.GRAY_LIGHT}`}
           >

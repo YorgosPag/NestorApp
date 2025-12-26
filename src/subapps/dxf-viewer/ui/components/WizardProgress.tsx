@@ -14,11 +14,11 @@ export function WizardProgress({
   totalSteps, 
   stepLabels = [] 
 }: WizardProgressProps) {
-  const { getStatusBorder } = useBorderTokens();
+  const { getStatusBorder, getDirectionalBorder } = useBorderTokens();
   const steps = Array.from({ length: totalSteps }, (_, i) => i + 1);
 
   return (
-    <div className={`px-4 py-3 ${getStatusBorder('default')} border-b`}>
+    <div className={`px-4 py-3 ${getDirectionalBorder('default', 'bottom')}`}>
       <div className="flex items-center">
         {steps.map((stepNum) => (
           <React.Fragment key={stepNum}>

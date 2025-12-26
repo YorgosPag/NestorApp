@@ -47,6 +47,7 @@ import {
 import { ConfigurationHealthCheck } from '@/core/configuration';
 import executeEnterpriseMigration from '@/enterprise-hardcoded-values-elimination';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface SystemStatus {
   isHealthy: boolean;
@@ -67,6 +68,7 @@ interface MigrationState {
 
 export default function EnterpriseMigrationPage() {
   const iconSizes = useIconSizes();
+  const { getStatusBorder } = useBorderTokens();
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
   const [migrationState, setMigrationState] = useState<MigrationState>({
     isRunning: false,
@@ -398,7 +400,7 @@ export default function EnterpriseMigrationPage() {
         {renderLogs()}
       </div>
 
-      <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+      <div className={`mt-6 p-4 bg-blue-50 rounded-lg ${getStatusBorder('info')}`}>
         <h3 className="font-semibold mb-2 flex items-center gap-2">
           <CheckCircle className={`${iconSizes.md} text-blue-600`} />
           Migration Benefits

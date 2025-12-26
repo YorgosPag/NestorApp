@@ -24,6 +24,7 @@ import type { AdminBoundariesMetrics, AdminBoundariesAlert } from '../../../serv
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { layoutUtilities } from '@/styles/design-tokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { getDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 import styles from './PerformanceComponents.module.css';
 import {
@@ -741,6 +742,7 @@ export const AdminBoundariesPerformancePanel = memo(({
 }: AdminBoundariesPerformancePanelProps) => {
   const { theme } = useTheme();
   const iconSizes = useIconSizes();
+  const { getDirectionalBorder } = useBorderTokens();
   const [metrics, setMetrics] = useState<AdminBoundariesMetrics | null>(null);
   const [alerts, setAlerts] = useState<AdminBoundariesAlert[]>([]);
   const [isMonitoring, setIsMonitoring] = useState(false);
@@ -826,7 +828,7 @@ export const AdminBoundariesPerformancePanel = memo(({
     >
       {/* Header */}
       <div
-        className="flex items-center justify-between p-4 border-b"
+        className={`flex items-center justify-between p-4 ${getDirectionalBorder('muted', 'bottom')}`}
         style={getSectionBorderStyles(theme.colors.border)}
       >
         <h3 className="font-semibold text-lg flex items-center gap-2">
@@ -926,7 +928,7 @@ export const AdminBoundariesPerformancePanel = memo(({
 
         {/* Alerts */}
         {alerts.length > 0 && (
-          <div className="border-t" style={getSectionBorderStyles(theme.colors.border)}>
+          <div className={`${getDirectionalBorder('muted', 'top')}`} style={getSectionBorderStyles(theme.colors.border)}>
             <div className="p-4">
               <h4 className="font-medium text-sm mb-3" style={getSectionTitleStyles(theme.colors.primary)}>
                 🚨 Active Alerts ({alerts.length})
@@ -966,7 +968,7 @@ export const AdminBoundariesPerformancePanel = memo(({
 
         {/* Status */}
         <div
-          className="p-3 border-t text-center text-xs"
+          className={`p-3 ${getDirectionalBorder('muted', 'top')} text-center text-xs`}
           style={getPerformanceMetricsContainerStyles()}
         >
           {isMonitoring ? (

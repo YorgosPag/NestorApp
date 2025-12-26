@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Scale } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { normalizeNumericInput, validateNumericInput } from './shared/input-validation';
 
 interface ScaleControlsProps {
@@ -15,6 +16,7 @@ export const ScaleControls: React.FC<ScaleControlsProps> = ({
   onSetScale
 }) => {
   const iconSizes = useIconSizes();
+  const { getFocusBorder, getStatusBorder } = useBorderTokens();
   const [inputValue, setInputValue] = useState<string>('');
   const [isEditing, setIsEditing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -103,7 +105,7 @@ export const ScaleControls: React.FC<ScaleControlsProps> = ({
         onKeyPress={handleKeyPress}
         onFocus={handleInputFocus}
         onBlur={handleInputBlur}
-        className="w-16 px-1 py-0 bg-gray-800 border border-gray-600 rounded text-white text-xs text-center focus:border-blue-500 focus:outline-none transition-colors select-all"
+        className={`w-16 px-1 py-0 bg-gray-800 ${getStatusBorder('muted')} rounded text-white text-xs text-center ${getFocusBorder('input')} focus:outline-none transition-colors select-all`}
         title="Drawing scale (1:100 means 1 unit = 100 real units) - Press Enter or click away to apply"
         placeholder="100"
       />

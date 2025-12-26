@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import { ComponentType } from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 
 // Generic loading components for different types of pages
 export const PageLoadingSpinner = () => {
@@ -12,7 +13,7 @@ export const PageLoadingSpinner = () => {
   return (
   <main className="min-h-screen bg-background flex items-center justify-center" role="status" aria-label="Φόρτωση σελίδας">
     <section className="text-center">
-      <div className={`animate-spin ${radius.full} ${iconSizes.xl6} border-b-2 border-primary mx-auto mb-6`} aria-hidden="true"></div>
+      <AnimatedSpinner size="large" className="mx-auto mb-6" aria-hidden="true" />
       <p className="text-muted-foreground">Φόρτωση σελίδας...</p>
     </section>
   </main>
@@ -21,10 +22,10 @@ export const PageLoadingSpinner = () => {
 
 export const DashboardLoadingSkeleton = () => {
   const iconSizes = useIconSizes();
-  const { quick, radius } = useBorderTokens();
+  const { quick, radius, getDirectionalBorder } = useBorderTokens();
   return (
   <main className="min-h-screen bg-background" role="status" aria-label="Φόρτωση dashboard">
-    <header className="border-b bg-card">
+    <header className={`${getDirectionalBorder('muted', 'bottom')} bg-card`}>
       <section className="p-6">
         <div className="flex items-center justify-between mb-6">
           <div className="space-y-2">
@@ -90,10 +91,10 @@ export const FormLoadingSkeleton = () => {
 
 export const ListLoadingSkeleton = () => {
   const iconSizes = useIconSizes();
-  const { quick, radius } = useBorderTokens();
+  const { quick, radius, getDirectionalBorder } = useBorderTokens();
   return (
   <main className="min-h-screen bg-background" role="status" aria-label="Φόρτωση λίστας">
-    <header className="border-b bg-card p-6">
+    <header className={`${getDirectionalBorder('muted', 'bottom')} bg-card p-6`}>
       <div className="flex items-center justify-between">
         <div className={`${iconSizes.lg} bg-muted ${radius.md}w-32 animate-pulse`} aria-hidden="true"></div>
         <div className={`${iconSizes.xl} w-32 bg-muted ${radius.md}animate-pulse`} aria-hidden="true"></div>

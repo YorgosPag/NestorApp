@@ -18,6 +18,7 @@ import { useTabNavigation } from '../hooks/useTabNavigation';
 import { TabNavigation } from '../shared/TabNavigation';
 import { GridSettings } from '../settings/special/GridSettings';
 import { RulersSettings } from '../settings/special/RulersSettings';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 /**
  * GridCategory - Grid & Rulers settings category with 2 main tabs
@@ -76,6 +77,7 @@ export const GridCategory: React.FC<GridCategoryProps> = ({
   className = '',
   defaultTab = 'grid'
 }) => {
+  const { getStatusBorder, getDirectionalBorder } = useBorderTokens();
   // ============================================================================
   // HOOKS
   // ============================================================================
@@ -114,7 +116,7 @@ export const GridCategory: React.FC<GridCategoryProps> = ({
   return (
     <div className={className}>
       {/* Tab Navigation */}
-      <div className="border-b border-gray-600 mb-4">
+      <div className={`${getDirectionalBorder('default', 'bottom')} mb-4`}>
         <TabNavigation
           tabs={tabs}
           activeTab={activeTab}
@@ -146,7 +148,7 @@ export default GridCategory;
  *   return (
  *     <div className="p-4">
  *       {/* Sub-navigation tabs *\/}
- *       <div className="flex gap-1 mb-4 border-b border-gray-600 pb-2">
+ *       <div className="flex gap-1 mb-4 border-b {getStatusBorder('default')} pb-2">
  *         <button onClick={() => setActiveGridTab('grid')}>📋 Πλέγμα (Grid)</button>
  *         <button onClick={() => setActiveGridTab('rulers')}>📏 Χάρακες (Rulers)</button>
  *       </div>

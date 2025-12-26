@@ -29,6 +29,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import CreateTaskModal from './dialogs/CreateTaskModal';
 import type { CrmTask, Opportunity, FirestoreishTimestamp } from '@/types/crm';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 import type { CrmTaskType, CrmTaskPriority, CrmTaskStatus } from '@/types/crm-extra';
 import { HOVER_BACKGROUND_EFFECTS, HOVER_SHADOWS } from '@/components/ui/effects';
 
@@ -213,7 +214,7 @@ export function TasksTab() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className={`animate-spin rounded-full ${iconSizes.xl} border-b-2 border-blue-600`}></div>
+        <AnimatedSpinner size="large" />
       </div>
     );
   }

@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Building2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface BasicInfoCardProps {
     formData: { name: string; description: string };
@@ -18,6 +19,7 @@ interface BasicInfoCardProps {
 
 export function BasicInfoCard({ formData, updateField, isEditing, errors }: BasicInfoCardProps) {
   const iconSizes = useIconSizes();
+  const { getStatusBorder } = useBorderTokens();
   return (
     <Card>
       <CardHeader>
@@ -33,7 +35,7 @@ export function BasicInfoCard({ formData, updateField, isEditing, errors }: Basi
             value={formData.name}
             onChange={(e) => updateField('name', e.target.value)}
             disabled={!isEditing}
-            className={cn(!isEditing && "bg-muted", errors.name && "border-red-500")}
+            className={cn(!isEditing && "bg-muted", errors.name && getStatusBorder('error'))}
           />
           {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
         </div>

@@ -33,14 +33,14 @@ export const CONTACT_COLORS = {
     primary: 'text-purple-500',
     hover: HOVER_TEXT_EFFECTS.PURPLE,
     bg: 'bg-purple-50',
-    border: 'border-purple-200',
+    border: 'border-blue-300', // ✅ ENTERPRISE: Aligned με semantic info border
     ring: 'ring-purple-100',
   },
   [CONTACT_TYPES.SERVICE]: {
     primary: 'text-green-500',
     hover: HOVER_TEXT_EFFECTS.GREEN,
     bg: 'bg-green-50',
-    border: 'border-green-200',
+    border: 'border-green-300', // ✅ ENTERPRISE: Aligned με semantic success border
     ring: 'ring-green-100',
   },
 } as const;

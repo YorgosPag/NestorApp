@@ -12,6 +12,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 import { Users, Plus } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -76,7 +77,7 @@ export const NewContactState: React.FC<StateComponentProps> = ({ className }) =>
  */
 export const LoadingState: React.FC<StateComponentProps> = ({ className }) => {
   const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
+  const { quick, radius } = useBorderTokens();
 
   return (
   <Card className={className}>
@@ -88,7 +89,7 @@ export const LoadingState: React.FC<StateComponentProps> = ({ className }) => {
     </CardHeader>
     <CardContent>
       <div className="text-center py-8">
-        <div className={`animate-spin h-8 w-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-4`}></div>
+        <AnimatedSpinner size="large" variant="info" className="mx-auto mb-4" />
         <p className="text-gray-500">Φόρτωση σχέσεων...</p>
       </div>
     </CardContent>

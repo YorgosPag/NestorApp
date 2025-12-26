@@ -5,6 +5,7 @@ import { Edit, Trash2, Home } from 'lucide-react';
 import { useEmptyStateMessages } from '@/hooks/useEnterpriseMessages';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 import { UnitsList } from '@/components/units/UnitsList';
 import { UniversalTabsRenderer, UNITS_COMPONENT_MAPPING, convertToUniversalConfig } from '@/components/generic';
@@ -28,6 +29,7 @@ export function UnitsSidebar({
   onAssignmentSuccess,
 }: UnitsSidebarProps) {
   // 🗨️ ENTERPRISE: Centralized systems
+  const { quick } = useBorderTokens();
   const emptyStateMessages = useEmptyStateMessages();
   const iconSizes = useIconSizes();
   const layout = useLayoutClasses();
@@ -106,14 +108,14 @@ export function UnitsSidebar({
           <>
             <button
               onClick={() => {/* TODO: Edit unit handler */}}
-              className={`p-2 rounded-md border bg-background border-border ${INTERACTIVE_PATTERNS.ACCENT_HOVER} ${TRANSITION_PRESETS.FAST_COLORS}`}
+              className={`p-2 rounded-md ${quick.input} bg-background ${INTERACTIVE_PATTERNS.ACCENT_HOVER} ${TRANSITION_PRESETS.FAST_COLORS}`}
               aria-label="Επεξεργασία Μονάδας"
             >
               <Edit className={iconSizes.sm} />
             </button>
             <button
               onClick={() => {/* TODO: Delete unit handler */}}
-              className={`p-2 rounded-md border bg-background border-border text-destructive ${INTERACTIVE_PATTERNS.ACCENT_HOVER} ${TRANSITION_PRESETS.FAST_COLORS}`}
+              className={`p-2 rounded-md ${quick.error} bg-background text-destructive ${INTERACTIVE_PATTERNS.ACCENT_HOVER} ${TRANSITION_PRESETS.FAST_COLORS}`}
               aria-label="Διαγραφή Μονάδας"
             >
               <Trash2 className={iconSizes.sm} />

@@ -519,7 +519,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
               <h4 className="text-sm font-medium text-blue-900 truncate">
                 {selectedContact.name}
               </h4>
-              <Badge className="bg-blue-100 text-blue-800 border-blue-300 text-xs">
+              <Badge className={`bg-blue-100 text-blue-800 ${quick.info} text-xs`}>
                 {getContactTypeLabel(selectedContact.type)}
               </Badge>
             </div>
@@ -598,7 +598,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
               onChange={handleInputChange}
               onFocus={handleInputFocus}
               placeholder={placeholder}
-              className={`pl-10 pr-10 ${error ? 'border-red-500' : ''}`}
+              className={`pl-10 pr-10 ${error ? quick.error : ''}`}
               disabled={readonly}
             />
             {isSearching && (

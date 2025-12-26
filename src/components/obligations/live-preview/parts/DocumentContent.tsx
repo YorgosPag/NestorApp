@@ -5,6 +5,7 @@ import { FileText } from "lucide-react";
 import type { ObligationDocument } from '@/types/obligations';
 import { cn } from "@/lib/utils";
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface DocumentContentProps {
     doc: Partial<ObligationDocument>;
@@ -13,6 +14,7 @@ interface DocumentContentProps {
 
 export function DocumentContent({ doc, activeItemId }: DocumentContentProps) {
   const iconSizes = useIconSizes();
+  const { getStatusBorder } = useBorderTokens();
   const sections = doc.sections || [];
 
   if (sections.length === 0) {
@@ -33,7 +35,7 @@ export function DocumentContent({ doc, activeItemId }: DocumentContentProps) {
           id={`preview-${section.id}`}
           className={cn("space-y-4", activeItemId === section.id && "ring-2 ring-primary ring-opacity-50 rounded-lg p-4 -m-4")}
         >
-          <div className="border-b-2 border-primary pb-2">
+          <div className={`border-b-2 ${getStatusBorder('info')} pb-2`}>
             <div className="flex items-center gap-3 mb-2">
               <Badge variant="outline" className="font-mono">Άρθρο {section.number}°</Badge>
               {section.category && <Badge variant="secondary" className="text-xs">{String(section.category).toUpperCase()}</Badge>}

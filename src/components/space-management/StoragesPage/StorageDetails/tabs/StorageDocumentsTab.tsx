@@ -175,7 +175,7 @@ export function StorageDocumentsTab({ storage }: StorageDocumentsTabProps) {
           <Upload className={iconSizes.md} />
           Μεταφόρτωση Εγγράφων
         </h3>
-        <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
+        <div className="border border-dashed border-border rounded-lg p-6 text-center">
           <Upload className={`${iconSizes.xl} mx-auto mb-2 text-muted-foreground`} />
           <p className="text-sm text-muted-foreground mb-2">
             Σύρετε και αφήστε εδώ τα έγγραφά σας ή κάντε κλικ για επιλογή

@@ -9,6 +9,7 @@ import WebSocketService, {
 import { useOptimizedUserRole } from './OptimizedUserRoleContext';
 import { useCache } from './CacheProvider';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface WebSocketContextType {
   connectionState: WebSocketConnectionState;
@@ -43,6 +44,7 @@ export function WebSocketProvider({
   const { user, isAuthenticated } = useOptimizedUserRole();
   const cache = useCache();
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const wsRef = useRef<WebSocketService | null>(null);
   const [connectionState, setConnectionState] = useState<WebSocketConnectionState>('disconnected');
   const [connectionAttempts, setConnectionAttempts] = useState(0);
@@ -382,7 +384,7 @@ export function WebSocketDebugPanel() {
       </button>
       
       {isOpen && (
-        <div className="absolute top-6 right-0 w-80 bg-card border rounded-lg shadow-xl p-4 text-sm">
+        <div className={`absolute top-6 right-0 w-80 bg-card ${quick.card} rounded-lg shadow-xl p-4 text-sm`}>
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-bold">WebSocket Status</h3>
             <button onClick={() => setIsOpen(false)}>×</button>

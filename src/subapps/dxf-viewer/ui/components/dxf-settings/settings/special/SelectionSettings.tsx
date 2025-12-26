@@ -9,7 +9,7 @@ export function SelectionSettings() {
 
   // 🔺 REAL CURSOR SYSTEM INTEGRATION - Αντικατάσταση mock state με πραγματικές ρυθμίσεις
   const { settings, updateSettings } = useCursorSettings();
-  const { getStatusBorder, getElementBorder } = useBorderTokens();
+  const { getStatusBorder, getElementBorder, getDirectionalBorder } = useBorderTokens();
 
   // Real handlers που συνδέονται με το CursorSystem
   const handleWindowSelectionChange = (field: string, value: any) => {
@@ -56,12 +56,12 @@ export function SelectionSettings() {
   return (
     <div className="p-4">
       {/* Sub-navigation tabs */}
-      <div className={`flex gap-1 mb-4 pb-2 ${getStatusBorder('default')} border-b`}>
+      <div className={`flex gap-1 mb-4 pb-2 ${getDirectionalBorder('default', 'bottom')}`}>
         <button
           onClick={() => setActiveSelectionTab('window')}
           className={`px-3 py-2 text-xs rounded-t transition-colors ${
             activeSelectionTab === 'window'
-              ? `bg-blue-600 text-white ${getStatusBorder('active')} border-b-2`
+              ? `bg-blue-600 text-white ${getDirectionalBorder('active', 'bottom')}`
               : `bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-gray-200`
           }`}
         >
@@ -71,7 +71,7 @@ export function SelectionSettings() {
           onClick={() => setActiveSelectionTab('crossing')}
           className={`px-3 py-2 text-xs rounded-t transition-colors ${
             activeSelectionTab === 'crossing'
-              ? `bg-blue-600 text-white ${getStatusBorder('active')} border-b-2`
+              ? `bg-blue-600 text-white ${getDirectionalBorder('active', 'bottom')}`
               : `bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-gray-200`
           }`}
         >

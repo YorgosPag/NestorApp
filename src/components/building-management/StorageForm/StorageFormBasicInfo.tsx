@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Info } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import type { StorageUnit, StorageType } from '@/types/storage';
 import { cn } from '@/lib/utils';
 
@@ -29,6 +30,7 @@ export function StorageFormBasicInfo({
 }: StorageFormBasicInfoProps) {
   const { t } = useTranslation('properties');
   const iconSizes = useIconSizes();
+  const { getStatusBorder } = useBorderTokens();
   
   return (
     <Card>
@@ -46,7 +48,7 @@ export function StorageFormBasicInfo({
               <Input
                 value={formData.code || ''}
                 onChange={(e) => updateField('code', e.target.value)}
-                className={cn(errors.code && "border-red-500")}
+                className={cn(errors.code && getStatusBorder('error'))}
                 placeholder={formType === 'storage' ? t('storage.form.placeholders.codeStorage') : t('storage.form.placeholders.codeParking')}
               />
               <Button
@@ -81,7 +83,7 @@ export function StorageFormBasicInfo({
           <Textarea
             value={formData.description || ''}
             onChange={(e) => updateField('description', e.target.value)}
-            className={cn(errors.description && "border-red-500")}
+            className={cn(errors.description && getStatusBorder('error'))}
             placeholder={formType === 'storage' ? t('storage.form.placeholders.descriptionStorage') : t('storage.form.placeholders.descriptionParking')}
             rows={2}
           />

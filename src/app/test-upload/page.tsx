@@ -5,8 +5,10 @@ import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { ThemeProgressBar } from '@/core/progress/ThemeProgressBar';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 export default function TestUploadPage() {
+  const { getStatusBorder } = useBorderTokens();
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -120,13 +122,13 @@ export default function TestUploadPage() {
         )}
 
         {error && (
-          <div className="p-4 bg-red-50 border border-red-200 rounded text-red-700">
+          <div className={`p-4 bg-red-50 ${getStatusBorder('error')} rounded text-red-700`}>
             ❌ {error}
           </div>
         )}
 
         {result && (
-          <div className="p-4 bg-green-50 border border-green-200 rounded text-green-700">
+          <div className={`p-4 bg-green-50 ${getStatusBorder('success')} rounded text-green-700`}>
             {result}
           </div>
         )}

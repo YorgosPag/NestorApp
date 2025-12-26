@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { FileText } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import type { ObligationDocument } from "@/types/obligations";
 
 interface DocumentInfoCardProps {
@@ -13,8 +14,9 @@ interface DocumentInfoCardProps {
 
 export function DocumentInfoCard({ document }: DocumentInfoCardProps) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   return (
-    <Card className="bg-primary/10 border-primary/20">
+    <Card className={`bg-primary/10 ${quick.info}`}>
       <CardContent className="pt-4">
         <div className="flex items-start gap-3">
           <FileText className={`${iconSizes.md} text-primary mt-0.5`} />
@@ -27,7 +29,7 @@ export function DocumentInfoCard({ document }: DocumentInfoCardProps) {
               {document.contractorCompany}
             </p>
           </div>
-          <Badge variant="outline" className="text-primary border-primary/30">
+          <Badge variant="outline" className={`text-primary ${quick.info}`}>
             {document.status === "draft" && "📝 Προσχέδιο"}
             {document.status === "completed" && "✅ Ολοκληρωμένο"}
             {document.status === "approved" && "🔐 Εγκεκριμένο"}

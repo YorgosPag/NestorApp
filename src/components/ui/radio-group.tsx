@@ -6,6 +6,7 @@ import { Circle } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { useIconSizes } from "@/hooks/useIconSizes"
+import { useBorderTokens } from "@/hooks/useBorderTokens"
 
 const RadioGroup = React.forwardRef<
   React.ElementRef<typeof RadioGroupPrimitive.Root>,
@@ -26,12 +27,13 @@ const RadioGroupItem = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof RadioGroupPrimitive.Item>
 >(({ className, ...props }, ref) => {
   const iconSizes = useIconSizes();
+  const { getElementBorder, radius } = useBorderTokens();
 
   return (
     <RadioGroupPrimitive.Item
       ref={ref}
       className={cn(
-        `aspect-square ${iconSizes.sm} rounded-full border border-primary text-primary ring-offset-background focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50`,
+        `aspect-square ${iconSizes.sm} ${radius.full} ${getElementBorder('input')} text-primary ring-offset-background focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50`,
         className
       )}
       {...props}

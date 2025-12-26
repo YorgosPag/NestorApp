@@ -9,6 +9,8 @@ import ErrorBoundary from '@/components/ui/ErrorBoundary/ErrorBoundary';
 import { GlobalPerformanceDashboard } from '../../core/performance/components/GlobalPerformanceDashboard';
 import { PerformanceCategory } from '../../core/performance/types/performance.types';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { AnimatedSpinner } from '../dxf-viewer/components/modal/ModalLoadingStates';
 import type { GeoCanvasAppProps } from './types';
 
 /**
@@ -23,6 +25,7 @@ import type { GeoCanvasAppProps } from './types';
  */
 export function GeoCanvasApp(props: GeoCanvasAppProps) {
   const iconSizes = useIconSizes();
+  const { getStatusBorder } = useBorderTokens();
   return (
     <NotificationProvider>
       <CacheProvider>
@@ -44,7 +47,7 @@ export function GeoCanvasApp(props: GeoCanvasAppProps) {
             <Suspense fallback={
               <div className="w-full h-full flex items-center justify-center bg-gray-900 text-white">
                 <div className="text-center">
-                  <div className={`animate-spin rounded-full ${iconSizes.xl2} border-b-2 border-blue-600 mx-auto mb-4`}></div>
+                  <AnimatedSpinner size="large" className="mx-auto mb-4" />
                   <p className="text-white">Loading Geo-Canvas...</p>
                 </div>
               </div>

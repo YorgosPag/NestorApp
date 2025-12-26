@@ -6,6 +6,7 @@
 
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 /**
  * ╔════════════════════════════════════════════════════════════════════════════╗
@@ -44,6 +45,7 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
   // ============================================================================
 
   const iconSizes = useIconSizes();
+  const { getStatusBorder } = useBorderTokens();
 
   const {
     state: { rulers: rulerSettings },
@@ -135,8 +137,8 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
               onClick={() => handleRulerUnitsChange(unit)}
               className={`p-2 rounded text-xs border transition-colors ${
                 rulerSettings.units === unit
-                  ? 'bg-blue-600 border-blue-500'
-                  : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500`
+                  ? `bg-blue-600 ${getStatusBorder('info')}`
+                  : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('secondary')}`
               }`}
             >
               {unit}
@@ -156,8 +158,8 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
             onClick={() => handleUnitsVisibilityChange(true)}
             className={`flex-1 p-2 rounded text-xs border transition-colors ${
               unitsVisible
-                ? 'bg-blue-600 border-blue-500'
-                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500`
+                ? `bg-blue-600 ${getStatusBorder('info')}`
+                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('secondary')}`
             }`}
           >
             Ενεργό
@@ -166,8 +168,8 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
             onClick={() => handleUnitsVisibilityChange(false)}
             className={`flex-1 p-2 rounded text-xs border transition-colors ${
               !unitsVisible
-                ? 'bg-blue-600 border-blue-500'
-                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500`
+                ? `bg-blue-600 ${getStatusBorder('info')}`
+                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('secondary')}`
             }`}
           >
             Ανενεργό
@@ -205,7 +207,7 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
         </div>
         <div className="flex items-center gap-2">
           <div
-            className={`${iconSizes.lg} rounded border-2`}
+            className={`${iconSizes.lg} rounded border`}
             style={{
               backgroundColor: getPreviewBackground(
                 rulerSettings.horizontal.unitsColor ||
@@ -237,7 +239,7 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
               '#ffffff'
             }
             onChange={(e) => handleUnitsColorChange(e.target.value)}
-            className="w-20 px-2 py-1 text-xs bg-gray-600 text-white rounded border border-gray-500"
+            className={`w-20 px-2 py-1 text-xs bg-gray-600 text-white rounded ${getStatusBorder('secondary')}`}
             placeholder="#ffffff"
           />
         </div>

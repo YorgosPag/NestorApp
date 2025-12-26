@@ -12,6 +12,7 @@
 
 import React, { useState } from 'react';
 import { TestsModal } from '../TestsModal'; // Adjust path to: './components/tests-modal/TestsModal'
+import { useBorderTokens } from '@/hooks/useBorderTokens'; // Enterprise border system
 import type { TestDefinition, NotificationFn } from '../types/tests.types'; // Adjust path accordingly
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
@@ -277,7 +278,7 @@ export function CustomTestsExample() {
       />
 
       {/* Info Panel */}
-      <div className="mt-8 bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
+      <div className={`mt-8 bg-blue-900/20 ${useBorderTokens().getStatusBorder('info')} rounded-lg p-4`}>
         <div className="text-blue-400 font-bold mb-2">💡 How to Add Custom Tests</div>
         <div className="text-sm space-y-2">
           <p>1. Create a factory function that returns a TestDefinition</p>

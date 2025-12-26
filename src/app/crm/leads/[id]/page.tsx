@@ -6,6 +6,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, User, Mail, Phone, Tag, Calendar, Edit3, Send, PhoneCall, Plus, Clock, CheckCircle } from 'lucide-react';
 import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 import { Toaster } from 'react-hot-toast';
 
 import CommunicationsHistory from '@/components/CommunicationsHistory';
@@ -22,6 +23,7 @@ import { useLeadTasks } from './hooks/useLeadTasks';
 
 export default function LeadProfilePage() {
   const iconSizes = useIconSizes();
+  const { getStatusBorder } = useBorderTokens();
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
@@ -53,7 +55,7 @@ export default function LeadProfilePage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className={`animate-spin rounded-full ${iconSizes.xl} border-b-2 border-blue-600 mx-auto mb-2`}></div>
+          <AnimatedSpinner size="large" variant="info" className="mx-auto mb-2" />
           <p className="text-gray-600">Φόρτωση lead...</p>
         </div>
       </div>
@@ -64,7 +66,7 @@ export default function LeadProfilePage() {
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="container mx-auto px-6 py-8">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-8 text-center">
+          <div className={`bg-red-50 ${getStatusBorder('error')} rounded-lg p-8 text-center`}>
             <h2 className="text-xl font-semibold text-red-800 mb-2">Σφάλμα</h2>
             <p className="text-red-600 mb-4">{leadError || 'Το lead δεν βρέθηκε'}</p>
             <button

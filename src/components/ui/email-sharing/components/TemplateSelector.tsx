@@ -46,7 +46,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
   show = true
 }) => {
   const iconSizes = useIconSizes();
-  const { quick, radius } = useBorderTokens();
+  const { quick, radius, getStatusBorder } = useBorderTokens();
 
   // ============================================================================
   // DATA & COMPUTED VALUES
@@ -107,13 +107,13 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
         disabled={disabled}
         className={designSystem.cn(
           // Base styles
-          'p-3 ${radius.lg} border-2 text-center',
+          'p-3 ${radius.lg} border text-center',
           TRANSITION_PRESETS.STANDARD_ALL,
           'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
 
           // Selection states
           isSelected
-            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-md'
+            ? `${getStatusBorder('info')} bg-blue-50 dark:bg-blue-900/20 shadow-md`
             : `${quick.card} ${INTERACTIVE_PATTERNS.BORDER_SUBTLE}`,
 
           // Disabled state
@@ -249,7 +249,7 @@ export const CompactTemplateSelector: React.FC<TemplateSelectorProps & {
                 TRANSITION_PRESETS.STANDARD_COLORS,
                 'flex items-center gap-1.5',
                 isSelected
-                  ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300'
+                  ? `${getStatusBorder('info')} bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300`
                   : designSystem.cn(
                       `${quick.card} text-gray-700 dark:text-gray-300`,
                       INTERACTIVE_PATTERNS.SUBTLE_HOVER

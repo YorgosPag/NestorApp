@@ -64,7 +64,7 @@ export function EnterpriseColorPicker({
 }: EnterpriseColorPickerProps) {
   const [currentMode, setCurrentMode] = useState<ColorMode>(modes[0] || 'hex');
   const { addColor } = useRecentColors();
-  const { quick, getStatusBorder, radius } = useBorderTokens();
+  const { quick, getStatusBorder, radius, getDirectionalBorder } = useBorderTokens();
 
   // Handle color change
   const handleChange = useCallback(
@@ -133,7 +133,7 @@ export function EnterpriseColorPicker({
       <div className="space-y-2">
         {/* Mode tabs */}
         {modes.length > 1 && (
-          <div className="flex gap-1 border-b ${getStatusBorder('muted')}">
+          <div className={`flex gap-1 ${getDirectionalBorder('muted', 'bottom')}`}>
             {modes.map((mode) => (
               <button
                 key={mode}
@@ -142,7 +142,7 @@ export function EnterpriseColorPicker({
                 className={`
                   px-3 py-1 text-xs font-medium transition-colors
                   ${currentMode === mode
-                    ? `text-blue-400 border-b-2 ${getStatusBorder('info')}`
+                    ? `text-blue-400 ${getDirectionalBorder('info', 'bottom')}`
                     : `text-gray-400 ${HOVER_TEXT_EFFECTS.GRAY_LIGHT}`
                   }
                 `}

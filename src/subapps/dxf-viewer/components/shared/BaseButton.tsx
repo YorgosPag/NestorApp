@@ -10,6 +10,7 @@ import { LucideIcon } from 'lucide-react';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { AnimatedSpinner } from '../modal/ModalLoadingStates';
 
 // Button variants for consistent styling
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'outline' | 'tool' | 'tab' | 'action';
@@ -118,7 +119,10 @@ export const BaseButton = forwardRef<HTMLButtonElement, BaseButtonProps>(
           <Icon className={`${iconSizeClass} ${children ? 'mr-2' : ''}`} />
         )}
         {isLoading && (
-          <div className={`animate-spin ${borderTokens.radius.full} border-2 border-current border-t-transparent ${iconSizeClass} ${children ? 'mr-2' : ''}`} />
+          <AnimatedSpinner
+            size={size === 'xs' ? 'small' : size === 'sm' ? 'small' : 'medium'}
+            className={children ? 'mr-2' : ''}
+          />
         )}
         {children}
         {Icon && iconPosition === 'right' && (

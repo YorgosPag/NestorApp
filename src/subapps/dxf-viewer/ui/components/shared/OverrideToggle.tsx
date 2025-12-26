@@ -5,6 +5,7 @@
  */
 
 import React from 'react';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 /**
  * Props for the OverrideToggle component
@@ -63,6 +64,7 @@ export const OverrideToggle = React.memo<OverrideToggleProps>(function OverrideT
   showStatusBadge = false,
   statusText
 }) {
+  const { getStatusBorder, quick } = useBorderTokens();
 
   const handleChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     onChange(e.target.checked);
@@ -77,7 +79,7 @@ export const OverrideToggle = React.memo<OverrideToggleProps>(function OverrideT
             checked={checked}
             onChange={handleChange}
             disabled={disabled}
-            className="rounded border-gray-600 text-blue-600 focus:ring-blue-500 focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`rounded ${getStatusBorder('secondary')} text-blue-600 focus:ring-blue-500 focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed`}
           />
           <div className="flex flex-col">
             <span className="text-sm text-gray-300 font-medium">
@@ -96,8 +98,8 @@ export const OverrideToggle = React.memo<OverrideToggleProps>(function OverrideT
         <div className="ml-3">
           <span className={`px-2 py-1 rounded text-xs font-medium ${
             checked
-              ? 'bg-orange-900/50 text-orange-300 border border-orange-600'
-              : 'bg-gray-700 text-gray-400 border border-gray-600'
+              ? `bg-orange-900/50 text-orange-300 ${quick.warning}`
+              : `bg-gray-700 text-gray-400 ${getStatusBorder('secondary')}`
           }`}>
             {statusText || (checked ? 'Ενεργό' : 'Ανενεργό')}
           </span>

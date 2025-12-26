@@ -41,7 +41,7 @@ export const ValidationErrors: React.FC<ValidationErrorsProps> = ({
   show = true
 }) => {
   const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
+  const { quick, getStatusBorder } = useBorderTokens();
 
   // Early return if hidden or no errors
   if (!show || (!error && !backendError)) return null;
@@ -50,7 +50,7 @@ export const ValidationErrors: React.FC<ValidationErrorsProps> = ({
     <section className="space-y-3" role="alert" aria-live="polite" aria-label="Σφάλματα Επικύρωσης">
       {/* Validation Error */}
       {error && (
-        <article className={`p-3 bg-yellow-50 dark:bg-yellow-900/20 ${quick.card} ${quick.input} border-yellow-200 dark:border-yellow-800`} role="alert" aria-label="Σφάλμα Επικύρωσης">
+        <article className={`p-3 bg-yellow-50 dark:bg-yellow-900/20 ${quick.card} ${quick.input} ${getStatusBorder('warning')}`} role="alert" aria-label="Σφάλμα Επικύρωσης">
           <header className={designSystem.cn(
             'flex items-start gap-3',
             designSystem.getTypographyClass('sm', 'medium'),
@@ -72,7 +72,7 @@ export const ValidationErrors: React.FC<ValidationErrorsProps> = ({
 
       {/* Backend Error */}
       {backendError && (
-        <article className={`p-3 bg-red-50 dark:bg-red-900/20 ${quick.card} ${quick.input} border-red-200 dark:border-red-800`} role="alert" aria-label="Σφάλμα Συστήματος">
+        <article className={`p-3 bg-red-50 dark:bg-red-900/20 ${quick.card} ${quick.input} ${getStatusBorder('error')}`} role="alert" aria-label="Σφάλμα Συστήματος">
           <header className={designSystem.cn(
             'flex items-start gap-3',
             designSystem.getTypographyClass('sm', 'medium'),
@@ -111,7 +111,7 @@ export const CompactValidationErrors: React.FC<ValidationErrorsProps & {
   variant = 'minimal'
 }) => {
   const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
+  const { quick, getStatusBorder } = useBorderTokens();
 
   if (!show || (!error && !backendError)) return null;
 
@@ -127,7 +127,7 @@ export const CompactValidationErrors: React.FC<ValidationErrorsProps & {
   }
 
   return (
-    <aside className={`p-2 bg-red-50 dark:bg-red-900/20 ${quick.card} ${quick.input} border-red-200 dark:border-red-800`} role="alert" aria-label="Συμπαγής Επικύρωση">
+    <aside className={`p-2 bg-red-50 dark:bg-red-900/20 ${quick.card} ${quick.input} ${getStatusBorder('error')}`} role="alert" aria-label="Συμπαγής Επικύρωση">
       <p className="flex items-center gap-2 text-red-700 dark:text-red-300 text-xs">
         <AlertCircle className={`${iconSizes.xs} flex-shrink-0`} />
         <span>{errorToShow}</span>
@@ -184,7 +184,7 @@ export const SuccessMessage: React.FC<{
   show = true,
   autoHide = false
 }) => {
-  const { quick } = useBorderTokens();
+  const { quick, getStatusBorder } = useBorderTokens();
   const iconSizes = useIconSizes();
   const [isVisible, setIsVisible] = React.useState(show);
 
@@ -199,7 +199,7 @@ export const SuccessMessage: React.FC<{
   if (!isVisible || !message) return null;
 
   return (
-    <aside className={`p-3 bg-green-50 dark:bg-green-900/20 ${quick.card} ${quick.input} border-green-200 dark:border-green-800`} role="status" aria-live="polite" aria-label="Μήνυμα Επιτυχίας">
+    <aside className={`p-3 bg-green-50 dark:bg-green-900/20 ${quick.card} ${quick.input} ${getStatusBorder('success')}`} role="status" aria-live="polite" aria-label="Μήνυμα Επιτυχίας">
       <p className={designSystem.cn(
         'flex items-center gap-2',
         designSystem.getTypographyClass('sm', 'medium'),

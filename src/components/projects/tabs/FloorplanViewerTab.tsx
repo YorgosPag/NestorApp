@@ -5,7 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Map, Plus, Edit } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { canvasUtilities } from '@/styles/design-tokens';
+import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 
 interface FloorplanViewerTabProps {
   title: string;
@@ -21,6 +23,7 @@ export function FloorplanViewerTab({
   onEditFloorplan 
 }: FloorplanViewerTabProps) {
   const iconSizes = useIconSizes();
+  const { getStatusBorder } = useBorderTokens();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -216,11 +219,11 @@ export function FloorplanViewerTab({
       <CardContent className="p-2 flex-1 min-h-[500px]">
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
-            <div className={`animate-spin rounded-full ${iconSizes.lg} border-b-2 border-primary`}></div>
+            <AnimatedSpinner size="large" />
             <span className="ml-3">Φόρτωση κάτοψης...</span>
           </div>
         ) : floorplanData ? (
-          <div className="w-full h-full bg-gray-50 dark:bg-gray-900 border-2 border-blue-500 dark:border-blue-400 overflow-hidden relative min-h-[450px]">
+          <div className={`w-full h-full bg-gray-50 dark:bg-gray-900 ${getStatusBorder('info')} overflow-hidden relative min-h-[450px]`}>
             <canvas
               ref={canvasRef}
               className="w-full h-full"

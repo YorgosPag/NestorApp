@@ -7,6 +7,7 @@ import { ObligationsHeader } from './components/ObligationsHeader';
 import { ObligationsStats } from './components/ObligationsStats';
 import { ObligationListItem } from './components/ObligationListItem';
 import { FileText } from 'lucide-react';
+import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 
 export default function ObligationsPage() {
   const {
@@ -41,7 +42,7 @@ export default function ObligationsPage() {
         <section className="space-y-4" aria-label="Λίστα υποχρεώσεων">
           {loading ? (
              <div className="text-center py-8 text-muted-foreground">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                <AnimatedSpinner size="large" className="mx-auto mb-4" />
                 <p>Φόρτωση...</p>
              </div>
           ) : error ? (

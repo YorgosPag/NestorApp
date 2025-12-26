@@ -19,7 +19,7 @@ export function VersionList({
   onSelect: (v: any) => void;
 }) {
   const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
+  const { quick, getStatusBorder } = useBorderTokens();
   return (
     <div className="p-4 space-y-2">
       {versions.map(version => (
@@ -30,8 +30,8 @@ export function VersionList({
             `p-4 ${quick.card} cursor-pointer`,
             TRANSITION_PRESETS.STANDARD_ALL,
             selectedVersionId === version.id
-              ? 'border-primary bg-primary/10'
-              : cn('border-border', INTERACTIVE_PATTERNS.SUBTLE_HOVER)
+              ? `${getStatusBorder('info')} bg-primary/10`
+              : cn(quick.card, INTERACTIVE_PATTERNS.SUBTLE_HOVER)
           )}
         >
           <div className="flex items-start justify-between">
@@ -43,7 +43,7 @@ export function VersionList({
                     status="company"
                     customLabel="Ορόσημο"
                     variant="outline"
-                    className="border-yellow-400 bg-yellow-50 text-yellow-700"
+                    className={`${getStatusBorder('warning')} bg-yellow-50 text-yellow-700`}
                   />
                 )}
                 {version.type === 'auto' && (

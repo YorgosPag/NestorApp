@@ -8,6 +8,8 @@
 //
 // ============================================================================
 
+import { borderVariants } from '@/styles/design-tokens';
+
 /**
  * Standard photo background colors για consistent UI
  */
@@ -45,10 +47,10 @@ export const PHOTO_COLORS = {
  */
 export const PHOTO_BORDERS = {
   /** Dashed borders για empty states */
-  EMPTY_STATE: 'border-2 border-dashed border-gray-300',
+  EMPTY_STATE: `border-2 border-dashed ${borderVariants.input.default.className.split(' ')[1]}`,
 
   /** Hover border για empty states */
-  EMPTY_HOVER: 'hover:border-blue-500',
+  EMPTY_HOVER: `hover:${borderVariants.input.focus.className}`,
 
   /** Primary border για active states */
   PRIMARY: 'border-primary',

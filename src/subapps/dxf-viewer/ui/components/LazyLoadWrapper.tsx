@@ -9,6 +9,7 @@
 import React, { Suspense, lazy, ComponentType } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import ErrorBoundary from '@/components/ui/ErrorBoundary/ErrorBoundary';
 
 interface LazyLoadWrapperProps {
@@ -34,8 +35,11 @@ const DefaultFallback = () => {
 /**
  * Custom fallback για lazy loading errors
  */
-const LazyLoadErrorFallback = (error: Error, errorInfo: any, retry: () => void) => (
-  <div className="p-4 border border-destructive bg-destructive/10 rounded-lg">
+const LazyLoadErrorFallback = (error: Error, errorInfo: any, retry: () => void) => {
+  const { getStatusBorder } = useBorderTokens();
+
+  return (
+    <div className={`p-4 ${getStatusBorder('error')} bg-destructive/10 rounded-lg`}>
     <h3 className="text-sm font-semibold text-destructive mb-2">
       Component Loading Error
     </h3>
@@ -49,7 +53,8 @@ const LazyLoadErrorFallback = (error: Error, errorInfo: any, retry: () => void) 
       Retry
     </button>
   </div>
-);
+  );
+};
 
 /**
  * HOC για lazy loading με error handling

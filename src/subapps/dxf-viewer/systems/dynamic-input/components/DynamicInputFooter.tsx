@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import type { Phase } from './hooks/useDynamicInputState';
 
 interface DynamicInputFooterProps {
@@ -9,8 +10,9 @@ interface DynamicInputFooterProps {
 }
 
 export function DynamicInputFooter({ activeTool, drawingPhase }: DynamicInputFooterProps) {
+  const { quick } = useBorderTokens();
   return (
-    <div className="text-xs text-gray-400 mt-2 border-t border-gray-600 pt-2">
+    <div className={`text-xs text-gray-400 mt-2 border-t ${quick.muted} pt-2`}>
       <div className="text-blue-400 font-semibold mb-1">
         {activeTool === 'line' 
           ? drawingPhase === 'first-point'

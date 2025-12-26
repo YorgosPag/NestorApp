@@ -3,6 +3,7 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { Building2, Home, Users } from 'lucide-react';
 import { CORE_HOVER_TRANSFORMS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects/hover-effects';
 import { layoutUtilities } from '@/styles/design-tokens';
@@ -21,6 +22,7 @@ interface NearbyProjectMarkerProps {
 
 export function NearbyProjectMarker({ project, position }: NearbyProjectMarkerProps) {
   const iconSizes = useIconSizes();
+  const { getStatusBorder } = useBorderTokens();
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -37,7 +39,7 @@ export function NearbyProjectMarker({ project, position }: NearbyProjectMarkerPr
     >
       <div className="group relative">
         <div className={cn(
-          "p-2 rounded-full shadow-md border-2 border-white cursor-pointer transition-transform",
+          `p-2 rounded-full shadow-md ${getStatusBorder('secondary')} cursor-pointer transition-transform`,
           CORE_HOVER_TRANSFORMS.SCALE_UP_MEDIUM,
           project.status === 'active' ? 'bg-blue-500' :
           project.status === 'completed' ? 'bg-green-500' :

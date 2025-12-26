@@ -50,9 +50,11 @@ export {
 // PHASE 6: ADVANCED UI/UX & DASHBOARD
 // ============================================================================
 
+// ⚠️ ENTERPRISE MIGRATION: Design System Deprecation Notice
+// The GeoAlertDesignSystem is being deprecated in favor of useBorderTokens
 export * from './ui/design-system/index';
 export {
-  GeoAlertDesignSystem,
+  GeoAlertDesignSystem, // @deprecated Use useBorderTokens from @/hooks/useBorderTokens instead
   ThemeProvider,
   ResponsiveDashboard,
   AdvancedCharts,

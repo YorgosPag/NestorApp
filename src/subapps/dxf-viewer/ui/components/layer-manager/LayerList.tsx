@@ -2,10 +2,12 @@ import React from 'react';
 import { Layers, Eye, EyeOff, MoreVertical } from 'lucide-react';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import type { LayerListProps } from './types';
 
 export function LayerList({ layers, onToggleVisibility, onLayerAction }: LayerListProps) {
   const iconSizes = useIconSizes();
+  const { getStatusBorder } = useBorderTokens();
 
   const getCategoryColor = (category: string) => {
     switch (category) {
@@ -33,7 +35,7 @@ export function LayerList({ layers, onToggleVisibility, onLayerAction }: LayerLi
   return (
     <div className="space-y-2 max-h-64 overflow-y-auto">
       {layers.map(layer => (
-        <div key={layer.id} className="p-2 bg-gray-700 rounded border border-gray-600">
+        <div key={layer.id} className={`p-2 bg-gray-700 rounded ${getStatusBorder('muted')}`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 flex-1">
               <div className={`w-3 h-3 rounded-full ${getCategoryColor(layer.category)}`} />

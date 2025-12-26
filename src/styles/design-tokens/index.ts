@@ -5,7 +5,7 @@
  */
 
 // Essential re-exports only
-export { colors, semanticColors, spacing, typography, borderRadius } from '../design-tokens';
+export { colors, semanticColors, spacing, typography, borderRadius, borders } from '../design-tokens';
 export { canvasUtilities, performanceComponents, configurationComponents } from '../design-tokens';
 
 // Default fallback export

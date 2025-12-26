@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { calculateBuildingRatio, calculateCostPerSqm } from './utils';
 import { formatCurrency, formatNumber } from '@/lib/intl-utils';
 
@@ -25,6 +26,7 @@ interface TechnicalSpecsCardProps {
 
 export function TechnicalSpecsCard({ formData, updateField, isEditing, errors }: TechnicalSpecsCardProps) {
   const iconSizes = useIconSizes();
+  const { getStatusBorder } = useBorderTokens();
   const costPerSqm = calculateCostPerSqm(formData.totalValue, formData.totalArea);
   const buildingRatio = calculateBuildingRatio(formData.builtArea, formData.totalArea);
 
@@ -45,7 +47,7 @@ export function TechnicalSpecsCard({ formData, updateField, isEditing, errors }:
               value={formData.totalArea}
               onChange={(e) => updateField('totalArea', parseFloat(e.target.value) || 0)}
               disabled={!isEditing}
-              className={cn(!isEditing && "bg-muted", errors.totalArea && "border-red-500")}
+              className={cn(!isEditing && "bg-muted", errors.totalArea && getStatusBorder('error'))}
             />
             {errors.totalArea && <p className="text-sm text-red-500">{errors.totalArea}</p>}
           </div>
@@ -57,7 +59,7 @@ export function TechnicalSpecsCard({ formData, updateField, isEditing, errors }:
               value={formData.builtArea}
               onChange={(e) => updateField('builtArea', parseFloat(e.target.value) || 0)}
               disabled={!isEditing}
-              className={cn(!isEditing && "bg-muted", errors.builtArea && "border-red-500")}
+              className={cn(!isEditing && "bg-muted", errors.builtArea && getStatusBorder('error'))}
             />
             {errors.builtArea && <p className="text-sm text-red-500">{errors.builtArea}</p>}
             {formData.totalArea > 0 && (
@@ -74,7 +76,7 @@ export function TechnicalSpecsCard({ formData, updateField, isEditing, errors }:
               value={formData.floors}
               onChange={(e) => updateField('floors', parseInt(e.target.value) || 0)}
               disabled={!isEditing}
-              className={cn(!isEditing && "bg-muted", errors.floors && "border-red-500")}
+              className={cn(!isEditing && "bg-muted", errors.floors && getStatusBorder('error'))}
             />
             {errors.floors && <p className="text-sm text-red-500">{errors.floors}</p>}
           </div>
@@ -86,7 +88,7 @@ export function TechnicalSpecsCard({ formData, updateField, isEditing, errors }:
               value={formData.units}
               onChange={(e) => updateField('units', parseInt(e.target.value) || 0)}
               disabled={!isEditing}
-              className={cn(!isEditing && "bg-muted", errors.units && "border-red-500")}
+              className={cn(!isEditing && "bg-muted", errors.units && getStatusBorder('error'))}
             />
             {errors.units && <p className="text-sm text-red-500">{errors.units}</p>}
             {formData.floors > 0 && (

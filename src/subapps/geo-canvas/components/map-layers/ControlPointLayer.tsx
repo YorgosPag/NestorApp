@@ -74,7 +74,7 @@ export const ControlPointLayer: React.FC<ControlPointLayerProps> = memo(({
             latitude={cp.geo.lat}
           >
             <div
-              className={`rounded-full border-2 transition-all relative z-50 ${
+              className={`rounded-full border transition-all relative z-50 ${
                 mapControlPointTokens.getControlPointStyle(
                   selectedPointId === cp.id, // isActive
                   shouldHighlightFirst,       // shouldHighlight

@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import {
   Building,
   Building2,
@@ -16,6 +17,7 @@ import type { DxfDestination } from '../pipeline/types';
 import type { CompanyContact } from '../../../types/contacts';
 import type { Project, Building, Floor } from '../contexts/ProjectHierarchyContext';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS, HOVER_TEXT_EFFECTS } from '../ui/effects';
+import { AnimatedSpinner } from '../components/modal/ModalLoadingStates';
 import {
   Select,
   SelectContent,
@@ -34,6 +36,7 @@ export function HierarchicalDestinationSelector({
   selectedDestination
 }: HierarchicalDestinationSelectorProps) {
   const iconSizes = useIconSizes();
+  const { quick, radius, getStatusBorder } = useBorderTokens();
   const {
     companies,
     selectedCompany,
@@ -176,7 +179,7 @@ export function HierarchicalDestinationSelector({
   if (loading) {
     return (
       <div className="text-center py-8">
-        <div className={`animate-spin ${iconSizes.xl} border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4`}></div>
+        <AnimatedSpinner size="large" className="mx-auto mb-4" />
         <p className="text-gray-400">Φόρτωση δεδομένων...</p>
       </div>
     );
@@ -275,12 +278,12 @@ export function HierarchicalDestinationSelector({
           <div className="space-y-3">
             <label className="text-sm font-medium text-white">Επιλέξτε Έργο</label>
             {projects.length === 0 ? (
-              <div className="text-gray-500 text-center py-8 bg-gray-800 rounded-lg border border-gray-600">
+              <div className={`text-gray-500 text-center py-8 bg-gray-800 rounded-lg ${getStatusBorder('muted')}`}>
                 Δεν βρέθηκαν έργα για την επιλεγμένη εταιρεία.
               </div>
             ) : (
               <Select onValueChange={handleProjectSelect}>
-                <SelectTrigger className="w-full bg-gray-700 border-gray-600 text-white">
+                <SelectTrigger className={`w-full bg-gray-700 ${getStatusBorder('muted')} text-white`}>
                   <SelectValue placeholder="-- Επιλέξτε Έργο --" />
                 </SelectTrigger>
                 <SelectContent>
@@ -332,7 +335,7 @@ export function HierarchicalDestinationSelector({
                 <button
                   key={floor.id}
                   onClick={() => handleFloorSelect(floor.id)}
-                  className={`w-full text-left p-4 rounded-lg border border-gray-600 ${HOVER_BORDER_EFFECTS.GRAY} ${HOVER_BACKGROUND_EFFECTS.MUTED} transition-colors`}
+                  className={`w-full text-left p-4 rounded-lg ${getStatusBorder('muted')} ${HOVER_BORDER_EFFECTS.GRAY} ${HOVER_BACKGROUND_EFFECTS.MUTED} transition-colors`}
                 >
                   <div className="flex items-center space-x-3">
                     <Home className={`${iconSizes.lg} text-blue-400`} />
@@ -358,8 +361,8 @@ export function HierarchicalDestinationSelector({
                 onClick={() => handleFinalDestinationSelect(dest)}
                 className={`w-full text-left p-4 rounded-lg border transition-colors ${
                   selectedDestination?.id === dest.id
-                    ? 'border-blue-500 bg-blue-900/30'
-                    : `border-gray-600 ${HOVER_BORDER_EFFECTS.GRAY} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
+                    ? `${useBorderTokens().getStatusBorder('info')} bg-blue-900/30`
+                    : `${getStatusBorder('muted')} ${HOVER_BORDER_EFFECTS.GRAY} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
                 }`}
               >
                 <div className="flex items-center space-x-3">

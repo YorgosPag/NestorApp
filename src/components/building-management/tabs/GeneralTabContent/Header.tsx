@@ -7,6 +7,7 @@ import { useButtonPatterns } from '@/hooks/useButtonPatterns';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { formatDateTime } from '@/lib/intl-utils';
 import { Edit, Save, X, CheckCircle } from 'lucide-react';
+import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 
 interface HeaderProps {
     building: { id: string; category: string };
@@ -48,7 +49,7 @@ export function Header({ building, isEditing, autoSaving, lastSaved, setIsEditin
           <div className="flex items-center gap-2 text-xs">
             {autoSaving ? (
               <>
-                <div className={`animate-spin rounded-full ${iconSizes.xs} border-b-2 border-blue-600`}></div>
+                <AnimatedSpinner size="small" />
                 <span className="text-blue-600">Αποθήκευση...</span>
               </>
             ) : lastSaved ? (

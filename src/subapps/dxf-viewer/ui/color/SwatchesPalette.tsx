@@ -19,6 +19,7 @@
 
 import React, { useCallback } from 'react';
 import { COMPLEX_HOVER_EFFECTS } from '@/components/ui/effects';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { getPalettesByIds } from './BrandPalettes';
 import { useRecentColors } from './RecentColorsStore';
 import type { ColorSwatch } from './types';
@@ -160,6 +161,8 @@ function ColorSwatchButton({
   onChange,
   size,
 }: ColorSwatchButtonProps) {
+  const { getStatusBorder } = useBorderTokens();
+
   const handleClick = useCallback(() => {
     onChange(color);
   }, [color, onChange]);
@@ -180,10 +183,10 @@ function ColorSwatchButton({
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       className={`
-        rounded border-2 transition-all
+        rounded border transition-all
         ${COMPLEX_HOVER_EFFECTS.SCALE_AND_SHADOW}
         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900
-        ${isSelected ? 'border-blue-500 ring-2 ring-blue-500' : 'border-gray-600'}
+        ${isSelected ? `${getStatusBorder('info')} ring-2 ring-blue-500` : getStatusBorder('muted')}
       `}
       style={layoutUtilities.dxf.swatch.square(size, color)}
       title={name}

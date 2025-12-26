@@ -10,6 +10,7 @@ import type { SceneModel } from '../../../types/scene';
 import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { layoutUtilities } from '@/styles/design-tokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface LayerItemProps {
   layerName: string;
@@ -106,6 +107,7 @@ export function LayerItem({
   onEntityColorChange,
   onEntityRename
 }: LayerItemProps) {
+  const { quick, getStatusBorder, getDirectionalBorder } = useBorderTokens();
   const iconSizes = useIconSizes();
   const layer = scene.layers[layerName];
   const isEditing = editingLayer === layerName;
@@ -197,7 +199,7 @@ export function LayerItem({
   return (
     <>
       <div 
-        className={`flex items-center justify-between p-2 rounded cursor-pointer transition-all border-l-2 border-gray-600 ${
+        className={`flex items-center justify-between p-2 rounded cursor-pointer transition-all ${getDirectionalBorder('muted', 'left')} ${
           layer.visible ? `bg-gray-800 ${HOVER_BACKGROUND_EFFECTS.LIGHT}` : 'bg-gray-900 opacity-60'
         } ${selectedLayersForMerge.has(layerName) ? 'ring-2 ring-blue-400 bg-blue-900 bg-opacity-30' : ''}`}
         onClick={handleLayerClick}
@@ -222,7 +224,7 @@ export function LayerItem({
           <div className="relative">
             <button
               onClick={handleColorPickerToggle}
-              className={`${iconSizes.xs} rounded border border-gray-500 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
+              className={`${iconSizes.xs} rounded ${getStatusBorder('secondary')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
               style={layoutUtilities.dxf.colors.backgroundColor(layer.color)}
               title="Αλλαγή χρώματος"
             />
@@ -236,7 +238,7 @@ export function LayerItem({
               onChange={(e) => setEditingName(e.target.value)}
               onKeyDown={handleNameKeyDown}
               onBlur={handleNameBlur}
-              className="bg-gray-700 text-white text-sm px-1 rounded border border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
+              className={`bg-gray-700 text-white text-sm px-1 rounded border ${useBorderTokens().getStatusBorder('info')} focus:outline-none focus:ring-1 focus:ring-blue-400`}
               autoFocus
             />
           ) : (

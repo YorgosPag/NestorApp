@@ -278,7 +278,7 @@ export function BoundaryLayerControlPanel({
           {/* Add New Boundary Button */}
           <button
             onClick={onAddNewBoundary}
-            className={`w-full mb-4 flex items-center justify-center gap-2 p-3 border-2 border-dashed border-border ${quick.card} text-gray-600 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} transition-colors`}
+            className={`w-full mb-4 flex items-center justify-center gap-2 p-3 border border-dashed border-border ${quick.card} text-gray-600 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} transition-colors`}
           >
             <span className="text-lg">+</span>
             <span className="text-sm font-medium">Προσθήκη Boundary</span>

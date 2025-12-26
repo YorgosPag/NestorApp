@@ -38,7 +38,7 @@ export function ContactsHeader({
   contactCount,
 }: ContactsHeaderProps) {
   const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
+  const { quick, getStatusBorder } = useBorderTokens();
 
   return (
     <PageHeader
@@ -69,10 +69,10 @@ export function ContactsHeader({
           React.createElement('button', {
             key: 'mobile-filter',
             onClick: () => setShowFilters(!showFilters),
-            className: `md:hidden p-2 ${quick.input} border ${TRANSITION_PRESETS.STANDARD_COLORS} ${
+            className: `md:hidden p-2 ${quick.input} ${TRANSITION_PRESETS.STANDARD_COLORS} ${
               showFilters
-                ? 'bg-primary text-primary-foreground border-primary'
-                : `bg-background border-border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
+                ? `bg-primary text-primary-foreground ${getStatusBorder('default')}`
+                : `bg-background ${quick.card} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
             }`,
             'aria-label': 'Toggle filters',
             children: React.createElement(Filter, { className: iconSizes.sm })

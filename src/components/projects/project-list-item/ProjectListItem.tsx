@@ -11,6 +11,7 @@ import { ProjectBadge } from '@/core/badges';
 import { Briefcase } from 'lucide-react';
 import { PROJECT_STATUS_LABELS } from '@/types/project';
 import { HOVER_SHADOWS, TRANSITION_PRESETS, HOVER_BORDER_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 // Removed duplicate imports - now using EntityDetailsHeader
 import { LocationRow } from './parts/LocationRow';
@@ -29,13 +30,15 @@ export function ProjectListItem({
     onToggleFavorite,
     companyName,
 }: ProjectListItemProps) {
+    const { quick } = useBorderTokens();
+
     return (
         <TooltipProvider>
             <Card
                 className={cn(
                     `relative p-4 rounded-lg border cursor-pointer ${TRANSITION_PRESETS.STANDARD_ALL} group ${HOVER_SHADOWS.ENHANCED}`,
                     isSelected
-                    ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20 shadow-sm"
+                    ? `${quick.selected} bg-blue-50 dark:bg-blue-950/20 shadow-sm`
                     : `border-border ${HOVER_BORDER_EFFECTS.BLUE} bg-card ${HOVER_BACKGROUND_EFFECTS.ACCENT}`
                 )}
                 onClick={onSelect}

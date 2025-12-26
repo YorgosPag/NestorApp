@@ -2,6 +2,7 @@ import React from 'react';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { layoutUtilities } from '@/styles/design-tokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 export interface CursorColors {
   crosshairColor: string;
@@ -30,6 +31,7 @@ interface CursorColorPaletteProps {
 
 export function CursorColorPalette({ colors, onColorsChange }: CursorColorPaletteProps) {
   const iconSizes = useIconSizes();
+  const { getStatusBorder, getDirectionalBorder } = useBorderTokens();
 
   const handleColorChange = (key: keyof CursorColors, value: string) => {
     const newColors = { ...colors, [key]: value };
@@ -54,7 +56,7 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
       </div>
       <div className="flex items-center gap-2">
         <div 
-          className={`${iconSizes.md} rounded border border-gray-500`}
+          className={`${iconSizes.md} rounded ${getStatusBorder('secondary')}`}
           style={layoutUtilities.dxf.swatch.withOpacity(
             colors[colorKey] as string,
             opacityKey ? colors[opacityKey] as number : 1
@@ -71,7 +73,7 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
           type="text"
           value={colors[colorKey] as string}
           onChange={(e) => handleColorChange(colorKey, e.target.value)}
-          className="px-2 py-1 text-xs bg-gray-600 text-white rounded border border-gray-500"
+          className={`px-2 py-1 text-xs bg-gray-600 text-white rounded ${getStatusBorder('secondary')}`}
           style={{ width: '5rem' }}
           placeholder="#ffffff"
         />
@@ -141,8 +143,8 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
               onClick={() => handleColorChange(styleKey, style)}
               className={`p-2 rounded text-xs border transition-colors ${
                 isSelected
-                  ? 'bg-blue-600 border-blue-500' 
-                  : `bg-gray-600 ${HOVER_BACKGROUND_EFFECTS.BLUE_LIGHT} border-gray-500`
+                  ? `bg-blue-600 ${getStatusBorder('info')}`
+                  : `bg-gray-600 ${HOVER_BACKGROUND_EFFECTS.BLUE_LIGHT} ${getStatusBorder('secondary').replace('border ', '')}`
               }`}
             >
               <div 
@@ -185,7 +187,7 @@ export function CursorColorPalette({ colors, onColorsChange }: CursorColorPalett
       </div>
 
       {/* Crossing Selection */}
-      <div className="border-t border-gray-600 pt-3">
+      <div className={`${getDirectionalBorder('muted', 'top')} pt-3`}>
         <h4 className="text-xs font-medium text-gray-300 mb-2">🟢 Crossing Selection</h4>
         <div className="space-y-2">
           <ColorRow

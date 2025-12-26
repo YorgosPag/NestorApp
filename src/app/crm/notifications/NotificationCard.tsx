@@ -1,12 +1,15 @@
 import { CommonBadge } from '@/core/badges';
 import { cn } from '@/lib/utils';
 import { getTypeStyles, getTypeLabel } from './notification-utils';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 export const NotificationCard = ({ notification }: { notification: any }) => {
+  const { quick } = useBorderTokens();
+
   return (
     <div className={cn(
       "p-4 rounded-lg flex items-start gap-4 transition-colors",
-      notification.read ? "bg-muted/50" : "bg-card border"
+      notification.read ? "bg-muted/50" : `bg-card ${quick.card}`
     )}>
       <div className={cn(
         "w-2 h-2 rounded-full mt-1.5 shrink-0",

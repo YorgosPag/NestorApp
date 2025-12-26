@@ -13,6 +13,7 @@
 import React from 'react';
 import { X, FlaskConical } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
 // Custom hooks (extracted)
@@ -41,6 +42,7 @@ export const TestsModal: React.FC<TestsModalProps> = ({
   showCopyableNotification
 }) => {
   const iconSizes = useIconSizes();
+  const { getStatusBorder, getDirectionalBorder } = useBorderTokens();
 
   // ============================================================================
   // STATE MANAGEMENT (using custom hooks)
@@ -76,7 +78,7 @@ export const TestsModal: React.FC<TestsModalProps> = ({
       >
         {/* Header - Draggable */}
         <div
-          className="flex items-center justify-between p-4 border-b border-gray-700 cursor-grab active:cursor-grabbing"
+          className={`flex items-center justify-between p-4 ${getDirectionalBorder('muted', 'bottom')} cursor-grab active:cursor-grabbing`}
           onMouseDown={draggable.handleMouseDown}
         >
           <div className="flex items-center gap-2">
@@ -129,7 +131,7 @@ export const TestsModal: React.FC<TestsModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-700 bg-gray-800/50">
+        <div className={`p-4 ${getDirectionalBorder('muted', 'top')} bg-gray-800/50`}>
           <div className="text-xs text-gray-400 text-center">
             💡 Tip: Τα tests εκτελούνται ασύγχρονα. Έλεγξε το console για λεπτομέρειες.
           </div>

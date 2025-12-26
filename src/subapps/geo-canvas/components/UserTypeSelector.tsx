@@ -88,7 +88,7 @@ export function UserTypeSelector({ currentType, onSelect, disabled }: UserTypeSe
             onClick={() => onSelect(userType.type)}
             disabled={disabled}
             className={`
-              relative p-4 rounded-lg border-2 transition-all duration-200
+              relative p-4 rounded-lg transition-all duration-200
               ${currentType === userType.type
                 ? `border-${userType.color.replace('bg-', '')} bg-${userType.color.replace('bg-', '')}/10`
                 : `border-border ${HOVER_BORDER_EFFECTS.PURPLE}`

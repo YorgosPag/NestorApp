@@ -54,6 +54,7 @@ export function SidebarPanel({
   isConnecting = false,
   setIsConnecting,
 }: SidebarPanelProps) {
+  const { radius } = useBorderTokens();
   
   const safeFloorData = floorData || { id: '', name: '', level: 0, buildingId: '', properties: [] };
   const safeSelectedPolygonIds = Array.isArray(selectedPolygonIds) ? selectedPolygonIds : [];
@@ -117,7 +118,7 @@ export function SidebarPanel({
 
           {/* Connection Controls */}
           {isConnecting && (
-            <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
+            <div className={`p-3 bg-blue-50 dark:bg-blue-950 ${radius.lg}`}>
               <p className="text-sm">Επιλέξτε δύο ακίνητα για να τα συνδέσετε</p>
               <Button
                 size="sm"

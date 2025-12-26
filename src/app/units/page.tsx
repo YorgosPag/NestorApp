@@ -19,6 +19,7 @@ import { AdvancedFiltersPanel, unitFiltersConfig, defaultUnitFilters, type UnitF
 import { ListContainer } from '@/core/containers';
 import { UnitsSidebar } from '@/components/units/UnitsSidebar';
 import { PropertyGridView } from '@/features/property-grid/PropertyGridView';
+import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 
 // Helper functions for labels (from original PropertyDashboard)
 const getStatusLabel = (status: string) => {
@@ -345,11 +346,10 @@ function UnitsPageContent() {
 }
 
 function UnitsPageFallback() {
-  const iconSizes = useIconSizes();
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-background flex items-center justify-center">
       <div className="text-center">
-        <div className={`animate-spin rounded-full ${iconSizes.xl} border-b-2 border-blue-600 mx-auto mb-4`}></div>
+        <AnimatedSpinner size="large" className="mx-auto mb-4" />
         <p className="text-gray-600 dark:text-muted-foreground">Φόρτωση μονάδων...</p>
       </div>
     </div>

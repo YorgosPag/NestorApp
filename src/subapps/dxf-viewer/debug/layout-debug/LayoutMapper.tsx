@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 import { portalComponents } from '@/styles/design-tokens';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface ElementMetrics {
   name: string;
@@ -14,6 +15,7 @@ export default function LayoutMapper() {
   const [metrics, setMetrics] = useState<ElementMetrics[]>([]);
   const [isVisible, setIsVisible] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout>();
+  const { getStatusBorder, getDirectionalBorder } = useBorderTokens();
 
   const measureElements = () => {
     const elementsToMeasure = [
@@ -119,7 +121,7 @@ export default function LayoutMapper() {
             rect && (
               <div
                 key={name}
-                className={`absolute border-2 border-dashed opacity-60 ${className}`}
+                className={`absolute border border-dashed opacity-60 ${className}`}
                 style={{
                   left: rect.left,
                   top: rect.top,
@@ -177,7 +179,7 @@ export default function LayoutMapper() {
           </div>
         ))}
 
-        <div className="mt-4 pt-2 border-t border-gray-600 text-yellow-400">
+        <div className={`mt-4 pt-2 ${getDirectionalBorder('muted', 'top')} text-yellow-400`}>
           Ctrl+Shift+L: Toggle | Auto-refresh: 1s
         </div>
       </div>

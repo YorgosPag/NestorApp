@@ -4,6 +4,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { HelpCircle, Zap } from 'lucide-react';
 import { QuickSearch } from '@/components/ui/QuickSearch';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { ToolbarButton } from '@/components/ui/ToolbarButton';
 import { ToolbarFiltersMenu } from './components/ToolbarFiltersMenu';
 import { ToolbarExportMenu } from './components/ToolbarExportMenu';
@@ -27,6 +28,7 @@ export function UnitsToolbar({
   totalUnits: number;
 }) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const {
     isAdvancedMode,
     sortDirection,
@@ -42,7 +44,7 @@ export function UnitsToolbar({
 
   return (
     <TooltipProvider>
-      <div className="border-b bg-muted/30 backdrop-blur-sm">
+      <div className={`${quick.separatorH} bg-muted/30 backdrop-blur-sm`}>
         <div className="p-2 flex items-center gap-1">
           <div className="flex items-center gap-2 pl-2">
             <Checkbox
@@ -57,11 +59,11 @@ export function UnitsToolbar({
             </Label>
           </div>
 
-          <div className="w-px h-6 bg-border mx-1" />
+          <div className={`w-px h-6 ${quick.separatorV} mx-1`} />
 
           <ToolbarMainActions selectedItemsCount={selectedUnitIds.length} />
 
-          <div className="w-px h-6 bg-border mx-1" />
+          <div className={`w-px h-6 ${quick.separatorV} mx-1`} />
 
           <QuickSearch
             searchTerm={searchTerm}
@@ -69,7 +71,7 @@ export function UnitsToolbar({
             placeholder="Γρήγορη αναζήτηση μονάδων..."
           />
 
-          <div className="w-px h-6 bg-border mx-1" />
+          <div className={`w-px h-6 ${quick.separatorV} mx-1`} />
 
           <ToolbarFiltersMenu
             sortDirection={sortDirection}
@@ -78,7 +80,7 @@ export function UnitsToolbar({
             onActiveFiltersChange={setActiveFilters}
           />
 
-          <div className="w-px h-6 bg-border mx-1" />
+          <div className={`w-px h-6 ${quick.separatorV} mx-1`} />
 
           <ToolbarExportMenu onExport={handleExport} />
 

@@ -180,7 +180,7 @@ export const MODAL_ALIGNMENT = {
 export const MODAL_LOADING_PATTERNS = {
   // Spinner base classes - 🏢 ENTERPRISE CENTRALIZED
   SPINNER: {
-    base: 'animate-spin rounded-full border-2',
+    base: 'animate-spin rounded-full border',
     border: 'border-blue-600 border-t-transparent',
     small: componentSizes.icon.sm,         // h-4 w-4 - Centralized
     medium: componentSizes.icon.md,        // h-5 w-5 - Centralized

@@ -4,6 +4,7 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface StatsCardProps {
     title: string;
@@ -15,17 +16,18 @@ interface StatsCardProps {
 
 export function StatsCard({ title, value, icon: Icon, color, onClick }: StatsCardProps) {
   const iconSizes = useIconSizes();
+  const { getStatusBorder } = useBorderTokens();
     const colorClasses = {
-        blue: 'border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400',
-        gray: 'border-gray-200 bg-gray-50/50 dark:bg-gray-950/20 text-gray-600 dark:text-gray-400',
-        green: 'border-green-200 bg-green-50/50 dark:bg-green-950/20 text-green-600 dark:text-green-400',
-        purple: 'border-purple-200 bg-purple-50/50 dark:bg-purple-950/20 text-purple-600 dark:text-purple-400',
-        red: 'border-red-200 bg-red-50/50 dark:bg-red-950/20 text-red-600 dark:text-red-400',
-        orange: 'border-orange-200 bg-orange-50/50 dark:bg-orange-950/20 text-orange-600 dark:text-orange-400',
-        cyan: 'border-cyan-200 bg-cyan-50/50 dark:bg-cyan-950/20 text-cyan-600 dark:text-cyan-400',
-        pink: 'border-pink-200 bg-pink-50/50 dark:bg-pink-950/20 text-pink-600 dark:text-pink-400',
-        yellow: 'border-yellow-200 bg-yellow-50/50 dark:bg-yellow-950/20 text-yellow-600 dark:text-yellow-400',
-        indigo: 'border-indigo-200 bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400'
+        blue: `${getStatusBorder('info')} bg-blue-50/50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400`,
+        gray: `${getStatusBorder('muted')} bg-gray-50/50 dark:bg-gray-950/20 text-gray-600 dark:text-gray-400`,
+        green: `${getStatusBorder('success')} bg-green-50/50 dark:bg-green-950/20 text-green-600 dark:text-green-400`,
+        purple: `${getStatusBorder('subtle')} bg-purple-50/50 dark:bg-purple-950/20 text-purple-600 dark:text-purple-400`,
+        red: `${getStatusBorder('error')} bg-red-50/50 dark:bg-red-950/20 text-red-600 dark:text-red-400`,
+        orange: `${getStatusBorder('warning')} bg-orange-50/50 dark:bg-orange-950/20 text-orange-600 dark:text-orange-400`,
+        cyan: `${getStatusBorder('info')} bg-cyan-50/50 dark:bg-cyan-950/20 text-cyan-600 dark:text-cyan-400`,
+        pink: `${getStatusBorder('subtle')} bg-pink-50/50 dark:bg-pink-950/20 text-pink-600 dark:text-pink-400`,
+        yellow: `${getStatusBorder('warning')} bg-yellow-50/50 dark:bg-yellow-950/20 text-yellow-600 dark:text-yellow-400`,
+        indigo: `${getStatusBorder('info')} bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400`
     };
 
     const valueColorClasses = {

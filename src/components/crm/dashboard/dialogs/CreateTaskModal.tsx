@@ -18,6 +18,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import type { Opportunity, CrmTask } from '@/types/crm';
 import type { CrmTaskType, CrmTaskPriority } from '@/types/crm-extra';
 import { Button } from '@/components/ui/button';
@@ -76,6 +77,7 @@ const initialFormData: FormState = {
 
 export default function CreateTaskModal({ isOpen, onClose, onTaskCreated, preselectedLead = null }: CreateTaskModalProps) {
   const iconSizes = useIconSizes();
+  const { getStatusBorder } = useBorderTokens();
   const [formData, setFormData] = useState<FormState>(initialFormData);
   const [leads, setLeads] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(false);
@@ -197,7 +199,7 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated, presel
                   type="button"
                   onClick={() => handleTypeChange(type.id)}
                   className={`p-2 border rounded-lg text-left text-xs ${TRANSITION_PRESETS.STANDARD_COLORS} ${
-                    formData.type === type.id ? 'border-primary bg-primary/10' : HOVER_BORDER_EFFECTS.PRIMARY_SUBTLE
+                    formData.type === type.id ? `${getStatusBorder('info')} bg-primary/10` : HOVER_BORDER_EFFECTS.PRIMARY_SUBTLE
                   }`}
                   disabled={loading}
                 >

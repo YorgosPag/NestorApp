@@ -48,7 +48,7 @@ export function TransformationPreview({
   onTransformedDataChange,
   className = ''
 }: TransformationPreviewProps) {
-  const { quick } = useBorderTokens();
+  const { quick, getStatusBorder } = useBorderTokens();
   const { t } = useTranslationLazy('geo-canvas');
   const [transformState] = useGeoTransform();
   const [previewSettings, setPreviewSettings] = useState<PreviewSettings>({
@@ -500,7 +500,7 @@ export function TransformationPreview({
       {renderActionButtons()}
 
       {/* Status */}
-      <div className={`bg-blue-900/20 ${quick.card} border-blue-600 p-4`}>
+      <div className={`bg-blue-900/20 ${quick.card} ${getStatusBorder('info')} p-4`}>  {/* Preview data = Info semantic */}
         <h4 className="font-semibold text-blue-400 mb-2">📋 Preview Data:</h4>
         <div className="text-sm text-blue-300 space-y-1">
           <div>• Transformed GeoJSON: {transformedGeoJSON ? 'Available' : 'None'}</div>

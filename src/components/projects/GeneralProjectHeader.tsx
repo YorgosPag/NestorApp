@@ -5,6 +5,7 @@ import { CommonBadge } from '@/core/badges';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { Button } from '@/components/ui/button';
 import { Edit, Save, X, CheckCircle } from 'lucide-react';
+import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 
 interface GeneralProjectHeaderProps {
     isEditing: boolean;
@@ -42,7 +43,7 @@ export function GeneralProjectHeader({ isEditing, autoSaving, lastSaved, setIsEd
                 <div className="flex items-center gap-2 text-xs">
                     {autoSaving ? (
                     <>
-                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                        <AnimatedSpinner size="small" />
                         <span className="text-blue-600">Αποθήκευση...</span>
                     </>
                     ) : lastSaved ? (

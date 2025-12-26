@@ -44,6 +44,7 @@ import React from 'react';
 import { useRulersGridContext } from '../../../../../../systems/rulers-grid/RulersGridSystem';
 import { ColorDialogTrigger } from '../../../../../color/EnterpriseColorDialog';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 export interface RulerMajorLinesSettingsProps {
   className?: string;
@@ -66,6 +67,7 @@ export interface RulerMajorLinesSettingsProps {
  * Extracted from: RulerLinesSettings.tsx lines 200-319
  */
 export const RulerMajorLinesSettings: React.FC<RulerMajorLinesSettingsProps> = ({ className = '' }) => {
+  const { getStatusBorder } = useBorderTokens();
   // ============================================================================
   // HOOKS
   // ============================================================================
@@ -166,8 +168,8 @@ export const RulerMajorLinesSettings: React.FC<RulerMajorLinesSettingsProps> = (
             onClick={() => handleMajorTicksVisibilityChange(true)}
             className={`flex-1 p-2 rounded text-xs border transition-colors ${
               rulerSettings.horizontal.showMajorTicks
-                ? 'bg-blue-600 border-blue-500'
-                : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
+                ? `bg-blue-600 ${getStatusBorder('info')}`
+                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('secondary')}`
             }`}
           >
             Ενεργό
@@ -176,8 +178,8 @@ export const RulerMajorLinesSettings: React.FC<RulerMajorLinesSettingsProps> = (
             onClick={() => handleMajorTicksVisibilityChange(false)}
             className={`flex-1 p-2 rounded text-xs border transition-colors ${
               !rulerSettings.horizontal.showMajorTicks
-                ? 'bg-blue-600 border-blue-500'
-                : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
+                ? `bg-blue-600 ${getStatusBorder('info')}`
+                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('secondary')}`
             }`}
           >
             Ανενεργό

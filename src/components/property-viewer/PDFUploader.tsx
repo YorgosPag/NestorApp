@@ -23,6 +23,7 @@ interface SimplePDFUploaderProps {
 
 export function SimplePDFUploader({ currentFloor, onPDFUpdate, className }: SimplePDFUploaderProps) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   const [isOpen, setIsOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -220,7 +221,7 @@ export function SimplePDFUploader({ currentFloor, onPDFUpdate, className }: Simp
 
           {/* Success Alert */}
           {success && (
-            <Alert className="border-green-200 bg-green-50">
+            <Alert className={`${quick.success} bg-green-50`}>
               <Check className={`${iconSizes.sm} text-green-600`} />
               <AlertDescription className="text-green-700">
                 Η κάτοψη ανέβηκε επιτυχώς!

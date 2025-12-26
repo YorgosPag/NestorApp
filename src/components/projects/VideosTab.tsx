@@ -3,11 +3,14 @@
 import React from 'react';
 import { Video, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { HOVER_BORDER_EFFECTS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
+import { createHoverBorderEffects, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 export function VideosTab() {
     const iconSizes = useIconSizes();
+    const borderTokens = useBorderTokens();
+    const hoverBorderEffects = createHoverBorderEffects(borderTokens);
 
     return (
         <div className="space-y-6">
@@ -23,7 +26,7 @@ export function VideosTab() {
                 {[1, 2, 3].map((index) => (
                     <div
                         key={index}
-                        className={`aspect-video bg-muted rounded-lg flex items-center justify-center border-2 border-dashed border-border ${HOVER_BORDER_EFFECTS.BLUE} transition-colors cursor-pointer group`}
+                        className={`aspect-video bg-muted rounded-lg flex items-center justify-center border border-dashed border-border ${hoverBorderEffects.BLUE} transition-colors cursor-pointer group`}
                     >
                         <div className="text-center">
                             <Video className={`${iconSizes.xl} text-muted-foreground ${GROUP_HOVER_PATTERNS.BLUE_ICON_ON_GROUP} mx-auto mb-2`} />

@@ -48,14 +48,17 @@ const ContactBadge: React.FC<ContactBadgeProps> = ({ contactId, position, relati
     ? (position ? `${contactName} (${position})` : contactName)
     : (position || relationshipType || 'Εργαζόμενος');
 
+  const { getStatusBorder } = useBorderTokens();
+
   return (
     <Badge
       variant="outline"
-      className="text-xs bg-blue-50 border-blue-200 text-blue-700"
+      className={`text-xs bg-blue-50 ${getStatusBorder('info')} text-blue-700`}
     >
       {displayText}
     </Badge>
   );
+
 };
 
 // 🏢 ENTERPRISE: Component props interface
@@ -88,6 +91,11 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
   error,
   readonly = false
 }) => {
+  // ============================================================================
+  // HOOKS
+  // ============================================================================
+  const { quick } = useBorderTokens();
+
   // ============================================================================
   // RENDER HELPERS
   // ============================================================================
@@ -177,7 +185,7 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
     // If no meaningful stats, show user-friendly message
     if (stats.length === 0) {
       return (
-        <div className={`text-center p-6 bg-gray-50 ${quick.card} border-2 border-dashed ${quick.table}`}>
+        <div className={`text-center p-6 bg-gray-50 ${quick.card} border border-dashed ${quick.table}`}>
           <Building2 className={`${iconSizes.xl} mx-auto mb-3 text-gray-400`} />
           <h3 className="font-medium text-gray-700 mb-1">Απλό Οργανωτικό Σχήμα</h3>
           <p className="text-sm text-gray-500">

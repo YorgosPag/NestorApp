@@ -18,13 +18,17 @@ interface MilestoneItemProps {
 
 export function MilestoneItem({ milestone, getStatusColor, getStatusText, getTypeIcon }: MilestoneItemProps) {
     const iconSizes = useIconSizes();
-    const { quick } = useBorderTokens();
+    const { quick, getStatusBorder } = useBorderTokens();
     return (
         <div className="relative flex items-start gap-4">
             <div className={cn(
                 "relative z-10 flex h-12 w-12 items-center justify-center shadow-sm rounded-full",
-                quick.interactive.selected,
-                getStatusColor(milestone.status),
+                quick.card, // Using centralized border system
+                milestone.status === 'completed' ? getStatusBorder('success') :
+                milestone.status === 'in-progress' ? getStatusBorder('info') :
+                milestone.status === 'pending' ? getStatusBorder('muted') :
+                milestone.status === 'delayed' ? getStatusBorder('error') :
+                getStatusBorder('muted'), // Default fallback
                 milestone.status === 'completed' ? 'text-white' : 'text-gray-600'
             )}>
                 {React.createElement(getTypeIcon(milestone.type), { className: "text-lg" })}
@@ -66,7 +70,7 @@ export function MilestoneItem({ milestone, getStatusColor, getStatusText, getTyp
                 />
 
                 {milestone.status === 'in-progress' && (
-                    <div className={`mt-4 p-3 bg-blue-50 dark:bg-blue-950/30 ${quick.card} border border-blue-200 dark:border-blue-800`}>
+                    <div className={`mt-4 p-3 bg-blue-50 dark:bg-blue-950/30 ${quick.card} ${getStatusBorder('info')}`}>
                         <div className="flex items-center gap-2 text-sm text-blue-800 dark:text-blue-200">
                             <Clock className={iconSizes.sm} />
                             <span className="font-medium">Επόμενα βήματα:</span>

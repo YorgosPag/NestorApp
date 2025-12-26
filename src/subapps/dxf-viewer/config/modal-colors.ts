@@ -10,6 +10,15 @@
 // Import existing color systems from centralized design tokens
 import { colors, semanticColors } from '@/styles/design-tokens';
 
+// 🏢 ENTERPRISE: Import centralized border tokens system
+// Note: Imported as a constant to avoid React hooks rules in config files
+const MODAL_BORDER_TOKENS = {
+  muted: 'border-gray-700',      // getStatusBorder('muted')
+  default: 'border-gray-600',    // getStatusBorder('default')
+  secondary: 'border-gray-500',  // getStatusBorder('secondary')
+  light: 'border-gray-300',      // For light themes
+} as const;
+
 // ====================================================================
 // MODAL COLOR VARIANTS - EXTENDS EXISTING DESIGN TOKENS
 // ====================================================================
@@ -54,8 +63,8 @@ export const MODAL_COLOR_SCHEMES = {
       description: 'text-gray-400',
     },
     border: {
-      primary: 'border-gray-600',
-      secondary: 'border-gray-500',
+      primary: MODAL_BORDER_TOKENS.default,
+      secondary: MODAL_BORDER_TOKENS.secondary,
       accent: 'border-orange-500/20',
     },
   },
@@ -182,8 +191,8 @@ export const MODAL_BUTTON_COLORS = {
   // DXF Technical interface buttons
   DXF_TECHNICAL: {
     primary: 'bg-orange-600 text-white hover:bg-orange-700',
-    secondary: 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600',
-    outline: 'border border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white',
+    secondary: `bg-gray-700 ${MODAL_BORDER_TOKENS.default} text-white hover:bg-gray-600`,
+    outline: `border ${MODAL_BORDER_TOKENS.default} text-gray-300 hover:bg-gray-700 hover:text-white`,
   },
 } as const;
 
@@ -205,7 +214,7 @@ export const MODAL_FORM_COLORS = {
 
   // DXF Technical interface forms
   DXF_TECHNICAL: {
-    input: 'bg-gray-700 border-gray-600 text-white focus:border-orange-500 focus:ring-orange-500/20',
+    input: `bg-gray-700 ${MODAL_BORDER_TOKENS.default} text-white focus:border-orange-500 focus:ring-orange-500/20`,
     label: 'text-gray-300',
     description: 'text-gray-400',
     error: 'text-red-400',
@@ -213,7 +222,7 @@ export const MODAL_FORM_COLORS = {
 
   // Light business interface forms
   LIGHT_BUSINESS: {
-    input: 'bg-white border-gray-300 text-gray-900 focus:border-blue-500',
+    input: `bg-white ${MODAL_BORDER_TOKENS.light} text-gray-900 focus:border-blue-500`,
     label: 'text-gray-700',
     description: 'text-gray-500',
     error: 'text-red-600',

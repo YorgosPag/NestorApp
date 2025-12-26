@@ -13,6 +13,8 @@ import NavigationCompanyManager from './NavigationCompanyManager';
 import { MobileNavigation } from './MobileNavigation';
 import { DesktopMultiColumn } from './DesktopMultiColumn';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface AdaptiveMultiColumnNavigationProps {
   className?: string;
@@ -20,6 +22,7 @@ interface AdaptiveMultiColumnNavigationProps {
 
 export function AdaptiveMultiColumnNavigation({ className }: AdaptiveMultiColumnNavigationProps) {
   const { loading, error, companies } = useNavigation();
+  const { radius } = useBorderTokens();
 
   // Navigation handlers hook
   const {
@@ -38,7 +41,7 @@ export function AdaptiveMultiColumnNavigation({ className }: AdaptiveMultiColumn
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full"></div>
+        <AnimatedSpinner size="large" variant="info" />
       </div>
     );
   }
@@ -49,7 +52,7 @@ export function AdaptiveMultiColumnNavigation({ className }: AdaptiveMultiColumn
         <p className="text-red-500 dark:text-red-400 mb-4">Σφάλμα: {error}</p>
         <button
           onClick={() => window.location.reload()}
-          className={`px-4 py-2 text-white rounded-lg ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
+          className={`px-4 py-2 text-white ${radius.lg} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
         >
           Ξαναδοκιμή
         </button>

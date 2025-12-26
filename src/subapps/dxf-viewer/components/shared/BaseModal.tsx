@@ -11,6 +11,8 @@ import { X } from 'lucide-react';
 import { BaseButton } from './BaseButton';
 import { portalComponents } from '@/styles/design-tokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { AnimatedSpinner } from '../modal/ModalLoadingStates';
 
 interface BaseModalProps {
   isOpen: boolean;
@@ -57,6 +59,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
   overlayClassName = '',
   zIndex = 9998
 }) => {
+  const { getStatusBorder, getDirectionalBorder } = useBorderTokens();
   const modalRef = useRef<HTMLDivElement>(null);
 
   // Handle escape key
@@ -136,7 +139,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
               relative inline-block w-full 
               ${sizeClasses[size]}
               bg-gray-900 
-              border border-gray-600 
+              ${getStatusBorder('muted')} 
               rounded-lg 
               shadow-2xl 
               text-left 
@@ -152,7 +155,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
           >
             {/* Header */}
             {(title || showCloseButton) && (
-              <div className="flex items-center justify-between p-4 border-b border-gray-600">
+              <div className={`flex items-center justify-between p-4 ${getDirectionalBorder('muted', 'bottom')}`}>
                 {title && (
                   <h3 
                     id="modal-title" 
@@ -181,7 +184,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
 
             {/* Footer */}
             {footer && (
-              <div className="px-4 py-3 border-t border-gray-600 bg-gray-800 rounded-b-lg">
+              <div className={`px-4 py-3 ${getDirectionalBorder('muted', 'top')} bg-gray-800 rounded-b-lg`}>
                 {footer}
               </div>
             )}
@@ -259,7 +262,7 @@ export const LoadingModal: React.FC<{
       showCloseButton={false}
     >
       <div className="flex items-center space-x-3">
-        <div className={`animate-spin rounded-full ${iconSizes.lg} border-b-2 border-blue-500`}></div>
+        <AnimatedSpinner size="medium" />
         <span className="text-gray-200">{message}</span>
       </div>
     </BaseModal>

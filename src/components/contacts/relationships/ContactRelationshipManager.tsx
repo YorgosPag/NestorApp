@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertCircle, Users, Plus, RefreshCw } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 // 🏢 ENTERPRISE: Import centralized types
 import type { ContactType } from '@/types/contacts';
@@ -67,6 +68,7 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
   // ============================================================================
 
   const iconSizes = useIconSizes();
+  const { getStatusBorder } = useBorderTokens();
 
   // 📋 Relationship list management hook
   const {
@@ -283,7 +285,7 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
     if (!successMessage) return null;
 
     return (
-      <Alert className="mb-6 border-green-200 bg-green-50">
+      <Alert className={`mb-6 ${getStatusBorder('success')} bg-green-50`}>
         <AlertCircle className={`${iconSizes.sm} text-green-600`} />
         <AlertDescription className="text-green-700">
           {successMessage}
@@ -358,7 +360,7 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
 
       {/* Footer note for new contacts */}
       {isNewContact && (
-        <Card className="border-blue-200 bg-blue-50">
+        <Card className={`${getStatusBorder('info')} bg-blue-50`}>
           <CardContent className="pt-6">
             <div className="text-center text-blue-700">
               <p className="font-medium">💡 Σημείωση</p>

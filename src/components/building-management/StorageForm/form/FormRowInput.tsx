@@ -4,6 +4,7 @@ import React from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface Props {
   label: string;
@@ -28,6 +29,7 @@ export function FormRowInput({
   helper,
   trailingElement
 }: Props) {
+  const { getStatusBorder } = useBorderTokens();
   return (
     <div className="space-y-2">
       <Label>{label}{required && ' *'}</Label>
@@ -37,7 +39,7 @@ export function FormRowInput({
           value={value}
           onChange={(e) => onChange(type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value)}
           placeholder={placeholder}
-          className={cn(error && 'border-red-500')}
+          className={cn(error && getStatusBorder('error'))}
         />
         {trailingElement && (
           <div className="absolute right-3 top-1/2 transform -translate-y-1/2">

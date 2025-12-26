@@ -18,6 +18,7 @@ import type {
   NavigationStatus
 } from '../types/BadgeTypes';
 import { brandClasses } from '@/styles/design-tokens';
+import type { UseSemanticColorsReturn } from '@/hooks/useSemanticColors';
 
 // ============================================================================
 // PROJECT STATUS DEFINITIONS
@@ -638,20 +639,24 @@ export const getObligationStatusLabel = (status: ObligationStatus): string => {
   return OBLIGATION_STATUSES[status]?.label || status;
 };
 
-export const getObligationStatusColor = (status: ObligationStatus): string => {
+/**
+ * ✅ ENTERPRISE PATTERN: Dependency Injection
+ * Αντί να καλώ useSemanticColors() hook εδώ (violation των Rules of Hooks),
+ * περνώ τα colors ως παράμετρο από το component που καλεί τη function.
+ */
+export const getObligationStatusColor = (status: ObligationStatus, colors: UseSemanticColorsReturn): string => {
   const config = OBLIGATION_STATUSES[status];
-  if (!config) return 'bg-gray-100 text-gray-800 border-gray-200';
 
-  // Generate Tailwind classes από τα centralized colors
-  const isYellow = config.color === '#D97706';
-  const isGreen = config.color === '#059669';
-  const isBlue = config.color === '#3B82F6';
+  if (!config) return `${colors.status.muted.bg} ${colors.status.muted.text} ${colors.status.muted.border}`;
 
-  if (isYellow) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-  if (isGreen) return 'bg-green-100 text-green-800 border-green-200';
-  if (isBlue) return brandClasses.primary.badge;
+  // Map status colors to semantic color patterns
+  const colorMap: Record<string, string> = {
+    '#D97706': `${colors.status.warning.bg} ${colors.status.warning.text} ${colors.status.warning.border}`, // Yellow
+    '#059669': `${colors.status.success.bg} ${colors.status.success.text} ${colors.status.success.border}`, // Green
+    '#3B82F6': `${colors.status.info.bg} ${colors.status.info.text} ${colors.status.info.border}`,       // Blue
+  };
 
-  return 'bg-gray-100 text-gray-800 border-gray-200';
+  return colorMap[config.color] || `${colors.status.muted.bg} ${colors.status.muted.text} ${colors.status.muted.border}`;
 };
 
 export const getObligationStatusIcon = (status: ObligationStatus): string => {

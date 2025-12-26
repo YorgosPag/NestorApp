@@ -47,6 +47,7 @@ import { DEFAULT_CURSOR_SETTINGS } from '../../../../../systems/cursor/config';
 import type { CursorColors } from '../../../palettes/CursorColorPalette';
 import { ColorDialogTrigger } from '../../../../color/EnterpriseColorDialog';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 export interface CrosshairBehaviorSettingsProps {
   className?: string;
@@ -78,6 +79,7 @@ export const CrosshairBehaviorSettings: React.FC<CrosshairBehaviorSettingsProps>
   // HOOKS
   // ============================================================================
 
+  const { getStatusBorder } = useBorderTokens();
   let cursorHookResult;
   try {
     cursorHookResult = useCursorSettings();
@@ -149,8 +151,8 @@ export const CrosshairBehaviorSettings: React.FC<CrosshairBehaviorSettingsProps>
             onClick={() => updateSettings({ crosshair: { ...settings.crosshair, use_cursor_gap: false } })}
             className={`flex-1 p-2 rounded text-xs border transition-colors ${
               !settings.crosshair.use_cursor_gap
-                ? 'bg-blue-600 border-blue-500'
-                : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
+                ? `bg-blue-600 ${getStatusBorder('info')}`
+                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('secondary')}`
             }`}
           >
             Ανενεργό
@@ -159,8 +161,8 @@ export const CrosshairBehaviorSettings: React.FC<CrosshairBehaviorSettingsProps>
             onClick={() => updateSettings({ crosshair: { ...settings.crosshair, use_cursor_gap: true } })}
             className={`flex-1 p-2 rounded text-xs border transition-colors ${
               settings.crosshair.use_cursor_gap
-                ? 'bg-blue-600 border-blue-500'
-                : 'bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} border-gray-500'
+                ? `bg-blue-600 ${getStatusBorder('info')}`
+                : `bg-gray-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('secondary')}`
             }`}
           >
             Ενεργό

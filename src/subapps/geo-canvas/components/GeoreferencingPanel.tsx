@@ -8,6 +8,7 @@ import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS } from '@/components/ui/effect
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { useSemanticColors } from '@/hooks/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 
 /**
  * GEOREFERENCING PANEL COMPONENT
@@ -34,7 +35,7 @@ export function GeoreferencingPanel() {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="text-center">
-          <div className={`animate-spin rounded-full h-8 w-8 border-b-2 ${colors.border.info} mx-auto mb-4`}></div>
+          <AnimatedSpinner size="medium" className="mx-auto mb-4" />
           <p className={colors.text.muted}>{t('loadingStates.loading')}</p>
         </div>
       </div>
@@ -292,8 +293,8 @@ export function GeoreferencingPanel() {
             key={point.id}
             className={`p-3 ${quick.button} transition-colors ${
               transformState.selectedPointId === point.id
-                ? 'bg-blue-900 border-blue-600'
-                : `bg-gray-700 \${getStatusBorder('default')} \${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
+                ? `bg-blue-900 ${getStatusBorder('info')}`
+                : `bg-gray-700 ${getStatusBorder('default')} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
             }`}
             onClick={() => transformActions.selectControlPoint(
               transformState.selectedPointId === point.id ? null : point.id
@@ -422,7 +423,7 @@ export function GeoreferencingPanel() {
     if (!transformState.error) return null;
 
     return (
-      <div className={`bg-red-900 ${quick.card} border-red-600 p-4 mb-4`}>
+      <div className={`bg-red-900 ${quick.card} ${getStatusBorder('error')} p-4 mb-4`}>
         <div className="flex items-center justify-between">
           <span className="text-red-300">❌ Error: {transformState.error}</span>
           <button

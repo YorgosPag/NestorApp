@@ -18,7 +18,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 export function AdminBoundaryDemo() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedResult, setSelectedResult] = useState<AdminSearchResult | null>(null);
-  const { quick } = useBorderTokens();
+  const { quick, radius } = useBorderTokens();
 
   const {
     isLoading,
@@ -75,19 +75,19 @@ export function AdminBoundaryDemo() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="π.χ. Δήμος Αθηναίων, Αττική, Θεσσαλονίκη..."
-            className={`flex-1 px-4 py-2 ${quick.input} focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+            className={`flex-1 px-4 py-2 ${quick.input} focus:ring-2 focus:ring-blue-500 ${quick.focus}`}
             onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
           />
           <button
             onClick={handleSearch}
             disabled={isLoading || !searchQuery.trim()}
-            className="px-6 py-2 bg-blue-500 text-white rounded-lg ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`px-6 py-2 bg-blue-500 text-white ${radius.lg} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             {isLoading ? '🔍 Αναζήτηση...' : 'Αναζήτηση'}
           </button>
           <button
             onClick={clearResults}
-            className="px-4 py-2 bg-gray-500 text-white rounded-lg ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}"
+            className={`px-4 py-2 bg-gray-500 text-white ${radius.lg} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
           >
             Καθαρισμός
           </button>
@@ -107,7 +107,7 @@ export function AdminBoundaryDemo() {
             <button
               key={query}
               onClick={() => handleQuickSearch(query)}
-              className={`px-3 py-1 text-sm bg-gray-100 ${HOVER_BACKGROUND_EFFECTS.LIGHT} rounded-full transition-colors`}
+              className={`px-3 py-1 text-sm bg-gray-100 ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${radius.full} transition-colors`}
               disabled={isLoading}
             >
               {query}
@@ -182,10 +182,10 @@ export function AdminBoundaryDemo() {
                 <div
                   key={`${result.id}-${index}`}
                   onClick={() => handleResultSelect(result)}
-                  className={`p-3 ${quick.card} cursor-pointer transition-all ${
+                  className={`p-3 cursor-pointer transition-all ${
                     selectedResult?.id === result.id
-                      ? 'border-blue-500 bg-blue-50'
-                      : `border-border ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
+                      ? `${quick.selected} bg-blue-50`
+                      : `${quick.card} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
                   }`}
                 >
                   <div className="flex items-center justify-between">
@@ -227,7 +227,7 @@ export function AdminBoundaryDemo() {
           {currentBoundary ? (
             <div className="space-y-4">
               {/* Boundary Type */}
-              <div className={`p-4 bg-green-50 ${quick.card} border-green-200`}>
+              <div className={`p-4 bg-green-50 ${quick.success}`}>
                 <div className="font-medium text-green-800 mb-2">
                   ✅ Boundary Loaded
                 </div>
@@ -246,7 +246,7 @@ export function AdminBoundaryDemo() {
               </div>
 
               {/* Geometry Preview */}
-              <div className="p-4 bg-gray-50 rounded-lg">
+              <div className={`p-4 bg-gray-50 ${radius.lg}`}>
                 <h4 className="font-medium text-gray-800 mb-2">Geometry Preview</h4>
                 <div className="text-xs font-mono text-gray-600 max-h-32 overflow-y-auto">
                   <pre>{JSON.stringify(currentBoundary, null, 2).slice(0, 500)}...</pre>
@@ -260,7 +260,7 @@ export function AdminBoundaryDemo() {
           )}
 
           {/* Cache Stats */}
-          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className={`mt-6 p-4 bg-blue-50 ${quick.info}`}>
             <h4 className="font-medium text-blue-800 mb-2">Cache Statistics</h4>
             <div className="text-sm text-blue-700 space-y-1">
               <div>Total Entries: {cacheStats.totalCacheEntries}</div>
@@ -274,7 +274,7 @@ export function AdminBoundaryDemo() {
 
       {/* Debug Section */}
       {process.env.NODE_ENV === 'development' && (
-        <div className="mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+        <div className={`mt-8 p-4 bg-yellow-50 ${quick.warning}`}>
           <h3 className="font-medium text-yellow-800 mb-2">🐛 Debug Information</h3>
           <div className="text-xs font-mono text-yellow-700">
             <div>Search Query: "{searchQuery}"</div>

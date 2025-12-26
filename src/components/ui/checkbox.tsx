@@ -13,13 +13,13 @@ const Checkbox = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof CheckboxPrimitive.Root>
 >(({ className, ...props }, ref) => {
   const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
+  const { quick, getElementBorder } = useBorderTokens();
 
   return (
   <CheckboxPrimitive.Root
     ref={ref}
     className={cn(
-      `peer ${iconSizes.sm} shrink-0 ${quick.rounded} border-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground`,
+      `peer ${iconSizes.sm} shrink-0 ${quick.rounded} ${getElementBorder('input')} ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground`,
       className
     )}
     {...props}

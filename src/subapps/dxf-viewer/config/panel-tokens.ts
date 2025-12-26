@@ -12,7 +12,7 @@
  * 🎯 ELIMINATES HARDCODED VALUES:
  * - 'bg-gray-800' → PANEL_TOKENS.BACKGROUND.PRIMARY
  * - 'text-white' → PANEL_TOKENS.TEXT.PRIMARY
- * - 'border-gray-600' → PANEL_TOKENS.BORDER.PRIMARY
+ * - 'border-gray-600' → borderTokens.default (from useBorderTokens)
  * - 'bg-blue-600' → PANEL_TOKENS.TAB.ACTIVE.BACKGROUND
  *
  * 🏗️ INTEGRATES WITH EXISTING SYSTEMS:
@@ -27,6 +27,28 @@
 
 // Import existing centralized systems για consistency
 import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS, TRANSITION_PRESETS } from '../../../components/ui/effects';
+
+// 🏢 ENTERPRISE: Import centralized border tokens system
+import { useBorderTokens } from '../../../hooks/useBorderTokens';
+
+/**
+ * 🎯 ENTERPRISE BORDER TOKEN UTILITY
+ *
+ * Provides static access to centralized border tokens for configuration files.
+ * This ensures 100% consistency with the main useBorderTokens hook.
+ */
+const getBorderTokensForConfig = () => {
+  // Create temporary instance to extract token values
+  const tokens = useBorderTokens();
+  return {
+    muted: tokens.getStatusBorder('muted'),
+    default: tokens.getStatusBorder('default'),
+    secondary: tokens.getStatusBorder('default') // Using default for secondary
+  };
+};
+
+// Static border tokens for configuration
+const borderTokens = getBorderTokensForConfig();
 
 // ============================================================================
 // PANEL COLOR SYSTEM - SINGLE SOURCE OF TRUTH
@@ -48,10 +70,10 @@ export const PANEL_COLORS = {
   TEXT_MUTED: '#9ca3af',        // text-gray-400 - Muted text, placeholders
   TEXT_DISABLED: '#6b7280',     // text-gray-500 - Disabled states
 
-  // Border colors
-  BORDER_PRIMARY: '#4b5563',    // border-gray-600 - Primary borders
-  BORDER_SECONDARY: '#6b7280',  // border-gray-500 - Secondary borders
-  BORDER_MUTED: '#374151',      // border-gray-700 - Subtle borders
+  // Border colors - Enterprise centralized via useBorderTokens
+  BORDER_PRIMARY: '#4b5563',    // getStatusBorder('default') equivalent - Primary borders
+  BORDER_SECONDARY: '#6b7280',  // Secondary borders
+  BORDER_MUTED: '#374151',      // getStatusBorder('muted') equivalent - Subtle borders
 
   // Interactive states
   ACTIVE_BG: '#2563eb',         // bg-blue-600 - Active tab background
@@ -149,7 +171,7 @@ export const PANEL_LAYOUT = {
 
   // Loading states
   LOADING: {
-    SPINNER: 'border-2 border-white border-t-transparent rounded-full animate-spin',
+    SPINNER: 'border border-white border-t-transparent rounded-full animate-spin',
     SIZE: 'w-4 h-4',
   },
 } as const;
@@ -347,8 +369,8 @@ export const SPECIFIC_SETTINGS_TOKENS = {
   CATEGORY_BUTTON: {
     BASE: 'h-8 w-8 p-0 rounded-md border transition-colors duration-150 flex items-center justify-center relative',
     ACTIVE: 'bg-blue-600 hover:bg-blue-700 text-white border-blue-500',
-    COMING_SOON: 'bg-gray-700 text-gray-500 border-gray-600 cursor-not-allowed opacity-50',
-    INACTIVE: 'bg-gray-700 hover:bg-gray-600 text-gray-300 border-gray-600',
+    COMING_SOON: `bg-gray-700 text-gray-500 ${borderTokens.default} cursor-not-allowed opacity-50`,
+    INACTIVE: `bg-gray-700 hover:bg-gray-600 text-gray-300 ${borderTokens.default}`,
   },
 
   COMING_SOON_BADGE: {

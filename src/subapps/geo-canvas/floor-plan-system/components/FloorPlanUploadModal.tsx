@@ -96,7 +96,7 @@ export function FloorPlanUploadModal({
   isParsing = false
 }: FloorPlanUploadModalProps) {
   const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
+  const { quick, getStatusBorder } = useBorderTokens();
   const { t } = useTranslationLazy('geo-canvas');
 
   // Drag state
@@ -231,12 +231,12 @@ export function FloorPlanUploadModal({
             <div
           className={`
             relative
-            border-2 border-dashed ${quick.card}
+            border border-dashed ${quick.card}
             p-12
             text-center
             transition-all duration-200
             ${isDragging
-              ? 'border-blue-500 bg-blue-500/10 scale-105'
+              ? `${getStatusBorder('info')} bg-blue-500/10 scale-105`  // Drag state = Info semantic
               : `${quick.card} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
             }
           `}
@@ -313,7 +313,7 @@ export function FloorPlanUploadModal({
 
         {/* Error Message */}
         {error && (
-          <div className={`bg-red-900/20 ${quick.card} border-red-600 p-4`}>
+          <div className={`bg-red-900/20 ${quick.card} ${getStatusBorder('error')} p-4`}>  {/* Error state = Error semantic */}
             <p className="text-sm text-red-400">
               ❌ {error}
             </p>

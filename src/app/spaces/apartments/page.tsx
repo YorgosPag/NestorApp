@@ -3,6 +3,7 @@
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 
 /**
  * ENTERPRISE ROUTE REDIRECT
@@ -30,7 +31,7 @@ export default function SpacesApartmentsRedirectPage() {
   return (
     <div className="flex h-screen items-center justify-center bg-background">
       <div className="text-center space-y-4">
-        <div className={`animate-spin rounded-full ${iconSizes.xl} border-b-2 border-primary mx-auto`}></div>
+        <AnimatedSpinner size="large" className="mx-auto" />
         <p className="text-sm text-muted-foreground">
           Ανακατεύθυνση στα Διαμερίσματα...
         </p>

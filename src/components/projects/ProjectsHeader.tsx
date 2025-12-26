@@ -3,6 +3,7 @@
 import React from 'react';
 import { Building2, Filter } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { PageHeader } from '@/core/headers';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import type { ViewMode } from '@/core/headers';
@@ -35,6 +36,7 @@ export function ProjectsHeader({
   projectCount,
 }: ProjectsHeaderProps) {
   const iconSizes = useIconSizes();
+  const { quick, getStatusBorder } = useBorderTokens();
   return (
     <PageHeader
       variant="sticky-rounded"
@@ -65,10 +67,10 @@ export function ProjectsHeader({
           <button
             key="mobile-filter"
             onClick={() => setShowFilters(!showFilters)}
-            className={`md:hidden p-2 rounded-md border transition-colors ${
+            className={`md:hidden p-2 ${quick.button} transition-colors ${
               showFilters
-                ? 'bg-primary text-primary-foreground border-primary'
-                : `bg-background border-border ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`
+                ? `bg-primary text-primary-foreground ${getStatusBorder('default')}`
+                : `bg-background ${quick.card} ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`
             }`}
             aria-label="Toggle filters"
           >

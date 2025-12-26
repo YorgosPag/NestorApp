@@ -8,6 +8,7 @@ import { RotateCcw, Minimize } from "lucide-react";
 import type { DXFViewerLayoutProps } from '../../integration/types';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { ToolbarSection } from './ToolbarSection';
 import { CanvasSection } from './CanvasSection';
 
@@ -16,15 +17,16 @@ import { CanvasSection } from './CanvasSection';
  */
 export const FullscreenView: React.FC<DXFViewerLayoutProps> = (props) => {
   const iconSizes = useIconSizes();
+  const { quick, getDirectionalBorder } = useBorderTokens();
   return (
   <div className="fixed inset-0 z-50 bg-gray-900 flex flex-col">
     <ToolbarSection {...props} />
-    <div className="flex justify-between items-center p-2 bg-gray-800 border-b border-gray-600">
+    <div className={`flex justify-between items-center p-2 bg-gray-800 ${getDirectionalBorder('muted', 'bottom')}`}>
       <div className="flex gap-2 items-center">
         <Button
           variant="outline"
           size="sm"
-          className={`bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-white border-gray-600`}
+          className={`bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-white ${quick.muted}`}
           onClick={() => props.handleAction('setViewMode', 'normal')}
         >
           <Minimize className={`${iconSizes.sm} mr-2`} />
@@ -33,7 +35,7 @@ export const FullscreenView: React.FC<DXFViewerLayoutProps> = (props) => {
         <Button 
           variant="outline" 
           size="sm" 
-          className={`bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-white border-gray-600`}
+          className={`bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT} text-white ${quick.muted}`}
           onClick={() => props.handleAction('clear')}
         >
           <RotateCcw className={`${iconSizes.sm} mr-2`} />

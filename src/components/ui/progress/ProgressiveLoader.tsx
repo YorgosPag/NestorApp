@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
+import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 
 interface LoadingStep {
   id: string;
@@ -104,7 +105,7 @@ export function ProgressiveLoader({
       {/* Current step info */}
       {currentStepData && (
         <div className="flex items-center space-x-3">
-          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+          <AnimatedSpinner size="small" />
           <div>
             <p className="font-medium text-sm">{currentStepData.label}</p>
             {currentStepData.description && (
