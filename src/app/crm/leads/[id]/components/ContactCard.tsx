@@ -4,6 +4,8 @@
 import React from 'react';
 import { User, Mail, Phone, Tag, Calendar } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import type { Opportunity } from '@/types/crm';
 import { formatDate } from '../utils/dates';
 import { getStatusColor } from '../utils/status';
@@ -14,9 +16,11 @@ interface ContactCardProps {
 
 export function ContactCard({ lead }: ContactCardProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
+  const { quick } = useBorderTokens();
 
   return (
-    <div className="bg-white dark:bg-card rounded-lg shadow p-6">
+    <div className={`${colors.bg.primary} ${quick.card} shadow p-6`}>
       <h3 className="text-lg font-semibold mb-4">Στοιχεία Επαφής</h3>
       <div className="space-y-3">
         <div className="flex items-center gap-3">

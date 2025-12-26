@@ -400,22 +400,22 @@ ${errorDetails.stack || 'Stack trace not available'}
             <div className={`bg-card ${borderTokens?.quick.error || borderTokens?.getStatusBorder?.('error') || 'border'} p-8 shadow-lg`}>
               {/* Error Header */}
               <div className="flex items-center space-x-3 mb-6">
-                <div className="p-3 bg-red-100 dark:bg-red-900/20 rounded-full">
-                  <AlertTriangle className={`${componentSizes.icon.xl} text-red-600 dark:text-red-400`} />
+                <div className={`p-3 ${colors.bg.error} rounded-full`}>
+                  <AlertTriangle className={`${componentSizes.icon.xl} ${colors.text.error}`} />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-red-900 dark:text-red-100">
+                  <h1 className={`text-2xl font-bold ${colors.text.error}`}>
                     Something went wrong
                   </h1>
-                  <p className="text-red-700 dark:text-red-300">
+                  <p className={`${colors.text.error}`}>
                     {componentName ? `Error in ${componentName}` : 'An unexpected error occurred'}
                   </p>
                 </div>
               </div>
 
               {/* Error Message */}
-              <div className={`mb-6 p-4 bg-red-50 dark:bg-red-950/20 ${borderTokens?.quick.error || borderTokens?.getStatusBorder?.('error') || 'border'}`}>
-                <p className="text-red-800 dark:text-red-200 font-medium">
+              <div className={`mb-6 p-4 ${colors.bg.error} ${borderTokens?.quick.error || borderTokens?.getStatusBorder?.('error') || 'border'}`}>
+                <p className={`${colors.text.error} font-medium`}>
                   {error.message}
                 </p>
               </div>
@@ -476,7 +476,7 @@ ${errorDetails.stack || 'Stack trace not available'}
                       >
                         {copySuccess ? (
                           <>
-                            <Check className={`${componentSizes.icon.sm} text-green-600`} />
+                            <Check className={`${componentSizes.icon.sm} ${colors.text.success}`} />
                             <span>Copied!</span>
                           </>
                         ) : (
@@ -500,7 +500,7 @@ ${errorDetails.stack || 'Stack trace not available'}
                           </>
                         ) : emailSent ? (
                           <>
-                            <Check className={`${componentSizes.icon.sm} text-green-600`} />
+                            <Check className={`${componentSizes.icon.sm} ${colors.text.success}`} />
                             <span>Sent to Admin</span>
                           </>
                         ) : (
@@ -537,7 +537,7 @@ ${errorDetails.stack || 'Stack trace not available'}
                         </>
                       ) : reportSent ? (
                         <>
-                          <Check className={`${componentSizes.icon.sm} mr-2 text-green-600`} />
+                          <Check className={`${componentSizes.icon.sm} mr-2 ${colors.text.success}`} />
                           Sent
                         </>
                       ) : (
@@ -565,7 +565,7 @@ ${errorDetails.stack || 'Stack trace not available'}
                           disabled={copySuccess}
                         >
                           {copySuccess ? (
-                            <Check className={`${componentSizes.icon.sm} text-green-600`} />
+                            <Check className={`${componentSizes.icon.sm} ${colors.text.success}`} />
                           ) : (
                             <Copy className={componentSizes.icon.sm} />
                           )}
@@ -706,6 +706,7 @@ export function PageErrorBoundary({ children, ...props }: Omit<ErrorBoundaryProp
 
 export function ComponentErrorBoundary({ children, ...props }: Omit<ErrorBoundaryProps, 'isolateError' | 'borderTokens'>) {
   const borderTokens = useBorderTokens();
+  const colors = useSemanticColors();
 
   return (
     <ErrorBoundary
@@ -715,11 +716,11 @@ export function ComponentErrorBoundary({ children, ...props }: Omit<ErrorBoundar
       showErrorDetails={false}
       borderTokens={borderTokens}
       fallback={(error, _, retry) => (
-        <div className={`p-4 ${borderTokens.quick.error} bg-red-50 dark:bg-red-950/20`}>
+        <div className={`p-4 ${borderTokens.quick.error} ${colors.bg.error}`}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium text-red-900 dark:text-red-100">Component Error</p>
-              <p className="text-sm text-red-700 dark:text-red-300">{error.message}</p>
+              <p className={`font-medium ${colors.text.error}`}>Component Error</p>
+              <p className={`text-sm ${colors.text.error}`}>{error.message}</p>
             </div>
             <Button onClick={retry} variant="outline" size="sm">
               <RefreshCw className={componentSizes.icon.sm} />

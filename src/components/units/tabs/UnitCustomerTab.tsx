@@ -34,6 +34,7 @@ import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoad
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 
 import { UnifiedCustomerCard } from '@/components/shared/customer-info';
 import { useOptimizedCustomerInfo } from './hooks/useOptimizedCustomerInfo';
@@ -64,6 +65,7 @@ interface CustomerProfileSectionProps {
 function CustomerProfileSection({ customerId, unitPrice }: CustomerProfileSectionProps) {
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder, getDirectionalBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   const {
     customerInfo,
     loading,
@@ -219,7 +221,7 @@ function CustomerProfileSection({ customerId, unitPrice }: CustomerProfileSectio
           </div>
 
           {/* ENTERPRISE: Navigation Hint */}
-          <div className={`bg-blue-50 dark:bg-blue-950/20 ${quick.info} p-3`}>
+          <div className={`${colors.bg.info} ${quick.info} p-3`}>
             <p className="text-sm text-blue-700 dark:text-blue-300 flex items-center gap-2">
               <ExternalLink className={iconSizes.sm} />
               <strong>Tip:</strong> Κάνε κλικ στα στοιχεία του πελάτη για να τον δεις στη λίστα επαφών
@@ -303,6 +305,7 @@ export function UnitCustomerTab({
 }: UnitCustomerTabProps) {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
 
   // ========================================================================
   // ENTERPRISE VALIDATION: Unit Customer Checks
@@ -337,7 +340,7 @@ export function UnitCustomerTab({
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
-            <div className={`bg-blue-50 dark:bg-blue-950/20 rounded-full ${iconSizes.xl4} flex items-center justify-center mx-auto mb-4`}>
+            <div className={`${colors.bg.info} rounded-full ${iconSizes.xl4} flex items-center justify-center mx-auto mb-4`}>
               <Home className={`${iconSizes.xl} text-blue-600`} />
             </div>
             <h3 className="font-semibold text-lg mb-2">

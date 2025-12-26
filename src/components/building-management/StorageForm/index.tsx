@@ -3,6 +3,8 @@
 
 import React from 'react';
 import type { StorageUnit, StorageType } from '@/types/storage';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useStorageForm } from './useStorageForm';
 
 import { StorageFormHeader } from './StorageFormHeader';
@@ -25,6 +27,9 @@ interface StorageFormProps {
 }
 
 export function StorageForm({ unit, building, onSave, onCancel, formType }: StorageFormProps) {
+  const colors = useSemanticColors();
+  const { quick } = useBorderTokens();
+
   const {
     formData,
     errors,
@@ -50,7 +55,7 @@ export function StorageForm({ unit, building, onSave, onCancel, formType }: Stor
   
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+      <div className={`${colors.bg.primary} ${quick.card} shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col`}>
         <StorageFormHeader
           formType={formType}
           building={{ name: building.name, project: building.project }}

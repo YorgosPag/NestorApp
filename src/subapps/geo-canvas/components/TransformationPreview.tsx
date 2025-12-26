@@ -5,6 +5,7 @@ import { useGeoTransform } from '../hooks/useGeoTransform';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 import { dxfGeoTransformService } from '../services/geo-transform/DxfGeoTransform';
 import type { DxfCoordinate, GeoCoordinate, SpatialEntity } from '../types';
 
@@ -49,6 +50,7 @@ export function TransformationPreview({
   className = ''
 }: TransformationPreviewProps) {
   const { quick, getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   const { t } = useTranslationLazy('geo-canvas');
   const [transformState] = useGeoTransform();
   const [previewSettings, setPreviewSettings] = useState<PreviewSettings>({
@@ -255,8 +257,8 @@ export function TransformationPreview({
   // ========================================================================
 
   const renderSettingsControls = () => (
-    <div className="bg-gray-800 rounded-lg p-4 mb-4">
-      <h3 className="text-lg font-semibold mb-3 text-blue-400">
+    <div className={`${colors.bg.primary} rounded-lg p-4 mb-4`}>
+      <h3 className={`text-lg font-semibold mb-3 ${colors.text.accent}`}>
         ⚙️ Preview Settings
       </h3>
 
@@ -306,7 +308,7 @@ export function TransformationPreview({
 
         {/* Opacity slider */}
         <div>
-          <label className="block text-sm text-gray-400 mb-1">
+          <label className={`block text-sm ${colors.text.muted} mb-1`}>
             Entity Opacity: {Math.round(previewSettings.entityOpacity * 100)}%
           </label>
           <input
@@ -323,7 +325,7 @@ export function TransformationPreview({
         {/* Grid spacing */}
         {previewSettings.showTransformationGrid && (
           <div>
-            <label className="block text-sm text-gray-400 mb-1">
+            <label className={`block text-sm ${colors.text.muted} mb-1`}>
               Grid Spacing: {previewSettings.gridSpacing}m
             </label>
             <input
@@ -346,40 +348,40 @@ export function TransformationPreview({
   // ========================================================================
 
   const renderStatistics = () => (
-    <div className="bg-gray-800 rounded-lg p-4 mb-4">
-      <h3 className="text-lg font-semibold mb-3 text-blue-400">
+    <div className={`${colors.bg.primary} rounded-lg p-4 mb-4`}>
+      <h3 className={`text-lg font-semibold mb-3 ${colors.text.accent}`}>
         📊 Transformation Statistics
       </h3>
 
       <div className="grid grid-cols-2 gap-4 text-sm">
         <div className="flex justify-between">
-          <span className="text-gray-400">{t('hardcodedTexts.labels.dxfEntities')}</span>
-          <span className="text-white">{previewStats.entityCount}</span>
+          <span className={colors.text.muted}>{t('hardcodedTexts.labels.dxfEntities')}</span>
+          <span className={colors.text.foreground}>{previewStats.entityCount}</span>
         </div>
 
         <div className="flex justify-between">
-          <span className="text-gray-400">{t('hardcodedTexts.labels.transformed')}</span>
-          <span className="text-green-400">{previewStats.transformedCount}</span>
+          <span className={colors.text.muted}>{t('hardcodedTexts.labels.transformed')}</span>
+          <span className={colors.text.success}>{previewStats.transformedCount}</span>
         </div>
 
         <div className="flex justify-between">
-          <span className="text-gray-400">{t('hardcodedTexts.labels.errors')}</span>
-          <span className={previewStats.errorCount > 0 ? 'text-red-400' : 'text-gray-400'}>
+          <span className={colors.text.muted}>{t('hardcodedTexts.labels.errors')}</span>
+          <span className={previewStats.errorCount > 0 ? colors.text.error : colors.text.muted}>
             {previewStats.errorCount}
           </span>
         </div>
 
         <div className="flex justify-between">
-          <span className="text-gray-400">{t('hardcodedTexts.labels.processingLabel')}</span>
-          <span className="text-blue-400">{previewStats.processingTime.toFixed(1)}ms</span>
+          <span className={colors.text.muted}>{t('hardcodedTexts.labels.processingLabel')}</span>
+          <span className={colors.text.accent}>{previewStats.processingTime.toFixed(1)}ms</span>
         </div>
       </div>
 
       {transformState.isCalibrated && transformState.accuracy && (
         <div className={`mt-3 pt-3 ${quick.separatorH}`}>
           <div className="flex justify-between text-sm">
-            <span className="text-gray-400">{t('hardcodedTexts.labels.rmsAccuracy')}</span>
-            <span className="text-yellow-400">±{transformState.accuracy.toFixed(3)}m</span>
+            <span className={colors.text.muted}>{t('hardcodedTexts.labels.rmsAccuracy')}</span>
+            <span className={colors.text.warning}>±{transformState.accuracy.toFixed(3)}m</span>
           </div>
         </div>
       )}
@@ -401,16 +403,16 @@ export function TransformationPreview({
     }, {} as Record<string, number>);
 
     return (
-      <div className="bg-gray-800 rounded-lg p-4 mb-4">
-        <h3 className="text-lg font-semibold mb-3 text-blue-400">
+      <div className={`${colors.bg.primary} rounded-lg p-4 mb-4`}>
+        <h3 className={`text-lg font-semibold mb-3 ${colors.text.accent}`}>
           📐 Layer Information
         </h3>
 
         <div className="space-y-2 text-sm">
           {Object.entries(layerStats).map(([layer, count]) => (
             <div key={layer} className="flex justify-between">
-              <span className="text-gray-400">{layer}:</span>
-              <span className="text-white">{count} entities</span>
+              <span className={colors.text.muted}>{layer}:</span>
+              <span className={colors.text.foreground}>{count} entities</span>
             </div>
           ))}
         </div>
@@ -423,12 +425,12 @@ export function TransformationPreview({
   // ========================================================================
 
   const renderActionButtons = () => (
-    <div className="bg-gray-800 rounded-lg p-4">
+    <div className={`${colors.bg.primary} rounded-lg p-4`}>
       <div className="space-y-2">
         <button
           onClick={processTransformation}
           disabled={!transformState.isCalibrated || !dxfScene}
-          className={`w-full bg-blue-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-2 px-4 rounded transition-colors`}
+          className={`w-full ${colors.bg.info} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} disabled:${colors.bg.hover} disabled:cursor-not-allowed ${colors.text.foreground} py-2 px-4 rounded transition-colors`}
         >
           🔄 Refresh Preview
         </button>
@@ -446,7 +448,7 @@ export function TransformationPreview({
               link.click();
               URL.revokeObjectURL(url);
             }}
-            className={`w-full bg-green-600 ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} text-white py-2 px-4 rounded transition-colors`}
+            className={`w-full ${colors.bg.success} ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} ${colors.text.foreground} py-2 px-4 rounded transition-colors`}
           >
             💾 Export GeoJSON
           </button>
@@ -462,12 +464,12 @@ export function TransformationPreview({
   if (!transformState.isCalibrated) {
     return (
       <div className={`w-full max-w-md space-y-4 ${className}`}>
-        <div className="bg-gray-800 rounded-lg p-6 text-center">
+        <div className={`${colors.bg.primary} rounded-lg p-6 text-center`}>
           <div className="text-4xl mb-4">📐</div>
-          <h3 className="text-lg font-semibold text-yellow-400 mb-2">
+          <h3 className={`text-lg font-semibold ${colors.text.warning} mb-2`}>
             Transformation Required
           </h3>
-          <p className="text-sm text-gray-400">
+          <p className={`text-sm ${colors.text.muted}`}>
             Calibrate the transformation system με control points για preview
           </p>
         </div>
@@ -478,11 +480,11 @@ export function TransformationPreview({
   return (
     <div className={`w-full max-w-md space-y-4 ${className}`}>
       {/* Header */}
-      <div className="bg-gray-800 rounded-lg p-4">
-        <h2 className="text-xl font-bold text-blue-400 mb-2">
+      <div className={`${colors.bg.primary} rounded-lg p-4`}>
+        <h2 className={`text-xl font-bold ${colors.text.accent} mb-2`}>
           🔄 Transformation Preview
         </h2>
-        <p className="text-sm text-gray-400">
+        <p className={`text-sm ${colors.text.muted}`}>
           Real-time DXF → Geographic visualization
         </p>
       </div>
@@ -500,9 +502,9 @@ export function TransformationPreview({
       {renderActionButtons()}
 
       {/* Status */}
-      <div className={`bg-blue-900/20 ${quick.card} ${getStatusBorder('info')} p-4`}>  {/* Preview data = Info semantic */}
-        <h4 className="font-semibold text-blue-400 mb-2">📋 Preview Data:</h4>
-        <div className="text-sm text-blue-300 space-y-1">
+      <div className={`${colors.bg.info}/20 ${quick.card} ${getStatusBorder('info')} p-4`}>  {/* Preview data = Info semantic */}
+        <h4 className={`font-semibold ${colors.text.accent} mb-2`}>📋 Preview Data:</h4>
+        <div className={`text-sm ${colors.text.info} space-y-1`}>
           <div>• Transformed GeoJSON: {transformedGeoJSON ? 'Available' : 'None'}</div>
           <div>• Preview Grid: {generatePreviewGrid ? 'Generated' : 'Disabled'}</div>
           <div>• Accuracy Indicators: {generateAccuracyIndicators ? 'Generated' : 'Disabled'}</div>

@@ -15,6 +15,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Building2, Users } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 
 // 🏢 ENTERPRISE: Import centralized types
 import type { OrganizationTree as OrganizationTreeType } from '@/types/contacts/relationships';
@@ -33,11 +34,13 @@ interface ContactBadgeProps {
 const ContactBadge: React.FC<ContactBadgeProps> = ({ contactId, position, relationshipType }) => {
   console.log('🎫 CONTACT BADGE: Rendering for contactId:', contactId, 'position:', position, 'type:', relationshipType);
   const { contactName, loading } = useContactName(contactId);
+  const { getStatusBorder, quick } = useBorderTokens();
+  const colors = useSemanticColors();
   console.log('🎫 CONTACT BADGE: Hook result - name:', contactName, 'loading:', loading);
 
   if (loading) {
     return (
-      <Badge variant="outline" className={`text-xs bg-gray-50 ${quick.table} text-gray-500`}>
+      <Badge variant="outline" className={`text-xs ${colors.bg.secondary} ${quick.table} text-gray-500`}>
         Φόρτωση...
       </Badge>
     );
@@ -48,12 +51,10 @@ const ContactBadge: React.FC<ContactBadgeProps> = ({ contactId, position, relati
     ? (position ? `${contactName} (${position})` : contactName)
     : (position || relationshipType || 'Εργαζόμενος');
 
-  const { getStatusBorder } = useBorderTokens();
-
   return (
     <Badge
       variant="outline"
-      className={`text-xs bg-blue-50 ${getStatusBorder('info')} text-blue-700`}
+      className={`text-xs ${colors.bg.info} ${getStatusBorder('info')} text-blue-700`}
     >
       {displayText}
     </Badge>
@@ -95,6 +96,7 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
   // HOOKS
   // ============================================================================
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
 
   // ============================================================================
   // RENDER HELPERS
@@ -185,7 +187,7 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
     // If no meaningful stats, show user-friendly message
     if (stats.length === 0) {
       return (
-        <div className={`text-center p-6 bg-gray-50 ${quick.card} border border-dashed ${quick.table}`}>
+        <div className={`text-center p-6 ${colors.bg.secondary} ${quick.card} border border-dashed ${quick.table}`}>
           <Building2 className={`${iconSizes.xl} mx-auto mb-3 text-gray-400`} />
           <h3 className="font-medium text-gray-700 mb-1">Απλό Οργανωτικό Σχήμα</h3>
           <p className="text-sm text-gray-500">
@@ -198,13 +200,25 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
     // Render only meaningful statistics
     return (
       <div className={`grid grid-cols-1 ${stats.length > 1 ? 'md:grid-cols-' + Math.min(stats.length, 3) : ''} gap-4 mb-6`}>
-        {stats.map(({ value, label, icon: Icon, color }, index) => (
-          <div key={index} className={`text-center p-4 bg-${color}-50 ${quick.card}`}>
-            <Icon className={`${iconSizes.lg} mx-auto mb-2 text-${color}-600`} />
-            <p className={`text-2xl font-bold text-${color}-800`}>{value}</p>
-            <p className={`text-sm text-${color}-600`}>{label}</p>
-          </div>
-        ))}
+        {stats.map(({ value, label, icon: Icon, color }, index) => {
+          // 🏢 ENTERPRISE: Safe centralized color mapping
+          const getStatBackground = (colorName: string) => {
+            switch(colorName) {
+              case 'blue': return colors.bg.info;
+              case 'green': return colors.bg.success;
+              case 'purple': return colors.bg.secondary; // No purple in system, use secondary
+              default: return colors.bg.secondary;
+            }
+          };
+
+          return (
+            <div key={index} className={`text-center p-4 ${getStatBackground(color)} ${quick.card}`}>
+              <Icon className={`${iconSizes.lg} mx-auto mb-2 text-${color}-600`} />
+              <p className={`text-2xl font-bold text-${color}-800`}>{value}</p>
+              <p className={`text-sm text-${color}-600`}>{label}</p>
+            </div>
+          );
+        })}
       </div>
     );
   };
@@ -224,7 +238,7 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
           {Object.entries(tree.departments).map(([department, employees]) => (
             <div
               key={department}
-              className={`p-3 ${useBorderTokens().quick.card} bg-gray-50 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+              className={`p-3 ${quick.card} ${colors.bg.secondary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
             >
               <div className="flex items-center justify-between mb-2">
                 <p className="font-medium text-gray-800">
@@ -323,7 +337,7 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
 
       {/* Additional Info */}
       {tree.statistics && (
-        <Card className={`bg-gray-50 ${quick.table}`}>
+        <Card className={`${colors.bg.secondary} ${quick.table}`}>
           <CardContent className="pt-4">
             <div className="text-xs text-gray-600 space-y-1">
               <p>

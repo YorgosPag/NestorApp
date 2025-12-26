@@ -62,6 +62,22 @@ export interface ParkingSpot {
     reserved: 'Κρατημένο'
   };
   
+  /**
+   * ✅ ENTERPRISE: DEPRECATED - Use useSemanticColors().getParkingStatusClass() instead
+   *
+   * Migration path:
+   * ```typescript
+   * // OLD (DEPRECATED):
+   * className={PARKING_STATUS_COLORS[status]}
+   *
+   * // NEW (CENTRALIZED):
+   * import { useSemanticColors } from '@/hooks/useSemanticColors';
+   * const colors = useSemanticColors();
+   * className={colors.getParkingStatusClass(status)}
+   * ```
+   *
+   * @deprecated Use colors.getParkingStatusClass(status) from useSemanticColors hook
+   */
   export const PARKING_STATUS_COLORS: Record<ParkingSpotStatus, string> = {
     sold: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
     owner: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',

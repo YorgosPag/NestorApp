@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 import type { Storage } from '@/types/storage/contracts';
 
 import { StorageListItemHeader } from './ListItem/StorageListItemHeader';
@@ -28,6 +29,7 @@ export function StorageListItem({
     onToggleFavorite
 }: StorageListItemProps) {
     const { quick, getStatusBorder } = useBorderTokens();
+    const colors = useSemanticColors();
 
     return (
         <TooltipProvider>
@@ -36,7 +38,7 @@ export function StorageListItem({
                     `relative p-3 ${quick.card} border cursor-pointer group`,
                     INTERACTIVE_PATTERNS.CARD_STANDARD,
                     isSelected
-                    ? `${getStatusBorder('info')} bg-blue-50 dark:bg-blue-950/20 shadow-sm`
+                    ? `${getStatusBorder('info')} ${colors.bg.info} shadow-sm`
                     : cn("border-border bg-card", INTERACTIVE_PATTERNS.BORDER_BLUE, INTERACTIVE_PATTERNS.ACCENT_HOVER_SUBTLE)
                 )}
                 onClick={onSelect}

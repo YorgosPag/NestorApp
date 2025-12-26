@@ -4,6 +4,7 @@ import React from 'react';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 import { X, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -146,10 +147,13 @@ export const PerformanceCardHeader: React.FC<Omit<FloatingCardHeaderProps, 'titl
   title = "Performance Monitor",
   ...props
 }) => {
+  const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
+
   return (
     <FloatingCardHeader
       title={title}
-      icon={<div className={`${iconSizes.sm} bg-blue-500 rounded`} />}
+      icon={<div className={`${iconSizes.sm} ${colors.bg.info} rounded`} />}
       {...props}
     />
   );
@@ -203,28 +207,29 @@ export const ToolbarCardHeader: React.FC<Omit<FloatingCardHeaderProps, 'title' |
  */
 // 🏢 ENTERPRISE: Header variant styles με centralized border tokens
 export const getHeaderVariantStyles = (variant: HeaderVariant, borderTokens: ReturnType<typeof useBorderTokens>) => {
+  const colors = useSemanticColors();
   const variants = {
     default: {
-      cardClass: `${borderTokens.quick.card} bg-gray-800 text-white`,
-      headerClass: `${borderTokens.quick.card} hover:bg-gray-700/50`,
+      cardClass: `${borderTokens.quick.card} ${colors.bg.elevated} text-white`,
+      headerClass: `${borderTokens.quick.card} hover:${colors.bg.hover}/50`,
       iconClass: "text-blue-400",
       titleClass: "text-white"
     },
     success: {
-      cardClass: `${borderTokens.quick.success} bg-green-900 text-white`,
-      headerClass: `${borderTokens.quick.success} hover:bg-green-800/50`,
+      cardClass: `${borderTokens.quick.success} ${colors.bg.success} text-white`,
+      headerClass: `${borderTokens.quick.success} hover:${colors.bg.success}/80`,
       iconClass: "text-green-400",
       titleClass: "text-white"
     },
     warning: {
-      cardClass: `${borderTokens.quick.warning} bg-orange-900 text-white`,
-      headerClass: `${borderTokens.quick.warning} hover:bg-orange-800/50`,
+      cardClass: `${borderTokens.quick.warning} ${colors.bg.warning} text-white`,
+      headerClass: `${borderTokens.quick.warning} hover:${colors.bg.warning}/80`,
       iconClass: "text-orange-400",
       titleClass: "text-white"
     },
     error: {
-      cardClass: `${borderTokens.quick.error} bg-red-900 text-white`,
-      headerClass: `${borderTokens.quick.error} hover:bg-red-800/50`,
+      cardClass: `${borderTokens.quick.error} ${colors.bg.error} text-white`,
+      headerClass: `${borderTokens.quick.error} hover:${colors.bg.error}/80`,
       iconClass: "text-red-400",
       titleClass: "text-white"
     }
@@ -234,14 +239,17 @@ export const getHeaderVariantStyles = (variant: HeaderVariant, borderTokens: Ret
 };
 
 // 🏢 ENTERPRISE: Legacy compatibility με centralized tokens
-export const createLegacyHeaderVariants = (borderTokens: ReturnType<typeof useBorderTokens>) => ({
-  default: {
-    cardClass: `${borderTokens.quick.card} bg-gray-800 text-white`,
-    headerClass: `${borderTokens.quick.card} hover:bg-gray-700/50`,
-    iconClass: "text-blue-400",
-    titleClass: "text-white"
-  }
-});
+export const createLegacyHeaderVariants = (borderTokens: ReturnType<typeof useBorderTokens>) => {
+  const colors = useSemanticColors();
+  return {
+    default: {
+      cardClass: `${borderTokens.quick.card} ${colors.bg.elevated} text-white`,
+      headerClass: `${borderTokens.quick.card} hover:${colors.bg.hover}/50`,
+      iconClass: "text-blue-400",
+      titleClass: "text-white"
+    }
+  };
+};
 
 // ============================================================================
 // TYPE EXPORTS

@@ -1,6 +1,7 @@
 'use client';
 
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 
 export function AdvancedFiltersPanel({
   show,
@@ -14,6 +15,7 @@ export function AdvancedFiltersPanel({
   setAreaRange: (r: { min: string; max: string }) => void;
 }) {
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
 
   // Enterprise input styling - centralized pattern
   const inputClasses = `flex-1 px-3 py-2 ${quick.input} dark:border-border dark:bg-background focus:outline-none focus:ring-2 focus:ring-blue-500`;
@@ -21,7 +23,7 @@ export function AdvancedFiltersPanel({
   return (
     <>
       {show && (
-        <div className={`mt-4 p-4 bg-gray-50 dark:bg-muted/30 ${quick.card}`}>
+        <div className={`mt-4 p-4 ${colors.bg.secondary} dark:bg-muted/30 ${quick.card}`}>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium text-gray-700 dark:text-muted-foreground mb-1 block">Εύρος Τιμής (€)</label>

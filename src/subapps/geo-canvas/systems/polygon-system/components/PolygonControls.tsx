@@ -11,6 +11,7 @@ import React from 'react';
 import { MapPin, Hexagon, Hand, Trash2, Check, X, Home } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 import type { PolygonType } from '@geo-alert/core';
 import { usePolygonSystemContext } from '../hooks/usePolygonSystemContext';
 import type { PolygonControlsProps } from '../types/polygon-system.types';
@@ -36,6 +37,7 @@ export function PolygonControls({
 }: PolygonControlsProps) {
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   const { state, actions, config } = usePolygonSystemContext();
 
   // ============================================================================
@@ -83,42 +85,42 @@ export function PolygonControls({
     switch (config.role) {
       case 'citizen':
         return {
-          container: `bg-white ${quick.card} shadow-lg`,
+          container: `${colors.bg.primary} ${quick.card} shadow-lg`,
           button: `flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-medium ${TRANSITION_PRESETS.STANDARD_COLORS}`,
-          primary: `bg-blue-500 text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`,
-          secondary: `bg-gray-100 text-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`,
-          success: `bg-green-500 text-white ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`,
-          danger: `bg-red-500 text-white ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`
+          primary: `${colors.bg.info} text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`,
+          secondary: `${colors.bg.secondary} ${colors.text.muted} ${HOVER_BACKGROUND_EFFECTS.LIGHT}`,
+          success: `${colors.bg.success} text-white ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`,
+          danger: `${colors.bg.error} text-white ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`
         };
 
       case 'professional':
         return {
-          container: `bg-white ${quick.card} shadow-xl ${getStatusBorder('warning')}`,  // Professional = Warning semantic
+          container: `${colors.bg.primary} ${quick.card} shadow-xl ${getStatusBorder('warning')}`,  // Professional = Warning semantic
           button: `flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-semibold ${TRANSITION_PRESETS.STANDARD_COLORS}`,
-          primary: `bg-amber-500 text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`,
-          secondary: `bg-amber-50 text-amber-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`,
-          success: `bg-emerald-500 text-white ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`,
-          danger: `bg-red-500 text-white ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`
+          primary: `${colors.bg.warning} text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`,
+          secondary: `${colors.bg.secondary} ${colors.text.warning} ${HOVER_BACKGROUND_EFFECTS.LIGHT}`,
+          success: `${colors.bg.success} text-white ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`,
+          danger: `${colors.bg.error} text-white ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`
         };
 
       case 'technical':
         return {
-          container: `bg-slate-900 ${quick.input} shadow-2xl ${getStatusBorder('info')}`,    // Technical = Info semantic
+          container: `${colors.bg.elevated} ${quick.input} shadow-2xl ${getStatusBorder('info')}`,    // Technical = Info semantic
           button: `flex items-center justify-center gap-1 py-1 px-2 rounded text-xs font-mono ${TRANSITION_PRESETS.STANDARD_COLORS}`,
-          primary: `bg-violet-600 text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`,
-          secondary: `bg-slate-700 text-slate-300 ${HOVER_BACKGROUND_EFFECTS.MUTED}`,
-          success: `bg-cyan-600 text-white ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`,
-          danger: `bg-red-600 text-white ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`
+          primary: `${colors.bg.info} text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`,
+          secondary: `${colors.bg.secondary} ${colors.text.muted} ${HOVER_BACKGROUND_EFFECTS.MUTED}`,
+          success: `${colors.bg.success} text-white ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`,
+          danger: `${colors.bg.error} text-white ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`
         };
 
       default:
         return {
-          container: `bg-white ${quick.card} shadow-lg`,
+          container: `${colors.bg.primary} ${quick.card} shadow-lg`,
           button: `flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-medium ${TRANSITION_PRESETS.STANDARD_COLORS}`,
-          primary: `bg-blue-500 text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`,
-          secondary: `bg-gray-100 text-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`,
-          success: `bg-green-500 text-white ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`,
-          danger: `bg-red-500 text-white ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`
+          primary: `${colors.bg.info} text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`,
+          secondary: `${colors.bg.secondary} ${colors.text.muted} ${HOVER_BACKGROUND_EFFECTS.LIGHT}`,
+          success: `${colors.bg.success} text-white ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`,
+          danger: `${colors.bg.error} text-white ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`
         };
     }
   };
@@ -133,12 +135,12 @@ export function PolygonControls({
     <div className={`${styles.container} p-4 ${className}`}>
       {/* Header */}
       <div className="mb-4">
-        <h3 className={`text-lg font-semibold ${config.role === 'technical' ? 'text-white' : 'text-gray-900'}`}>
+        <h3 className={`text-lg font-semibold ${config.role === 'technical' ? colors.text.foreground : colors.text.foreground}`}>
           {config.role === 'citizen' && 'Εργαλεία Πολίτη'}
           {config.role === 'professional' && 'Professional Tools'}
           {config.role === 'technical' && 'TECH_POLYGON_SYS'}
         </h3>
-        <p className={`text-sm ${config.role === 'technical' ? 'text-slate-400' : 'text-gray-600'}`}>
+        <p className={`text-sm ${config.role === 'technical' ? colors.text.muted : colors.text.muted}`}>
           Role: {config.role.toUpperCase()} | Tolerance: {config.snapTolerance}px
         </p>
       </div>
@@ -230,8 +232,8 @@ export function PolygonControls({
       {(state.polygons.length > 0 || state.isDrawing) && (
         <div className={`mt-4 p-2 rounded text-xs ${
           config.role === 'technical'
-            ? 'bg-slate-800 text-slate-300 font-mono'
-            : 'bg-gray-50 text-gray-600'
+            ? `${colors.bg.elevated} ${colors.text.muted} font-mono`
+            : `${colors.bg.secondary} ${colors.text.muted}`
         }`}>
           <div className="space-y-1">
             <div>

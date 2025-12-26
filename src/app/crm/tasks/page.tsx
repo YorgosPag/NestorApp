@@ -16,9 +16,11 @@ import { TasksTab } from '@/components/crm/dashboard/TasksTab'; // Reusing Tasks
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 
 export default function CrmTasksPage() {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [stats, setStats] = useState<any>(null);
@@ -54,15 +56,15 @@ export default function CrmTasksPage() {
   ];
 
   const getColorClasses = (color: string) => {
-    const colors: Record<string, string> = {
-      blue: 'text-blue-600 bg-blue-100 dark:bg-blue-900/30',
-      yellow: 'text-yellow-600 bg-yellow-100 dark:bg-yellow-900/30',
-      red: 'text-red-600 bg-red-100 dark:bg-red-900/30',
-      green: 'text-green-600 bg-green-100 dark:bg-green-900/30',
-      purple: 'text-purple-600 bg-purple-100 dark:bg-purple-900/30',
-      indigo: 'text-indigo-600 bg-indigo-100 dark:bg-indigo-900/30'
+    const colorMappings: Record<string, string> = {
+      blue: `${colors.text.info} ${colors.bg.info}`,
+      yellow: `${colors.text.warning} ${colors.bg.warning}`,
+      red: `${colors.text.error} ${colors.bg.error}`,
+      green: `${colors.text.success} ${colors.bg.success}`,
+      purple: `${colors.text.warning} ${colors.bg.warning}`,
+      indigo: `${colors.text.info} ${colors.bg.info}`
     };
-    return colors[color] || 'text-gray-600 bg-gray-100';
+    return colorMappings[color] || `${colors.text.muted} ${colors.bg.hover}`;
   };
 
   return (
@@ -74,7 +76,7 @@ export default function CrmTasksPage() {
           <div className="px-6 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Clock className={`${iconSizes.lg} text-blue-600`} />
+                <Clock className={`${iconSizes.lg} ${colors.text.info}`} />
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900 dark:text-foreground">Εργασίες</h1>
                   <p className="text-gray-600 dark:text-muted-foreground mt-1">Διαχείριση εργασιών και υπενθυμίσεων</p>

@@ -1,9 +1,10 @@
 'use client';
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { PropertyGridView } from '@/features/property-grid/PropertyGridView';
+import { PropertyGridViewCompatible as PropertyGridView } from '@/components/property-viewer/PropertyGrid';
 import { PropertyManagementPageContent } from '@/components/property-management/PropertyManagementPageContent';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 
 function PropertiesPageContent() {
@@ -32,8 +33,10 @@ function PropertiesPageContent() {
 }
 
 function PropertiesPageFallback() {
+  const colors = useSemanticColors();
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-background flex items-center justify-center">
+    <div className={`min-h-screen ${colors.bg.secondary} dark:bg-background flex items-center justify-center`}>
       <div className="text-center">
         <AnimatedSpinner size="large" className="mx-auto mb-4" />
         <p className="text-gray-600 dark:text-muted-foreground">Φόρτωση ακινήτων...</p>

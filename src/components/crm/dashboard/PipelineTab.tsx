@@ -7,6 +7,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 // Removed: useToast import (migrated to useNotifications)
 import type { Opportunity } from '@/types/crm';
@@ -21,6 +22,7 @@ import LeadsList from '@/components/leads/LeadsList';
 export function PipelineTab() {
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   const {
     opportunities,
     loading,
@@ -41,7 +43,7 @@ export function PipelineTab() {
 
   return (
     <TooltipProvider>
-      <div className="bg-white dark:bg-card rounded-lg shadow">
+      <div className={`${colors.bg.primary} rounded-lg shadow`}>
         <div className="p-6 border-b">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">Sales Pipeline</h2>
@@ -66,11 +68,11 @@ export function PipelineTab() {
               <div className="flex items-center justify-center py-12">
                   <div className="text-center">
                       <AnimatedSpinner size="large" className="mx-auto mb-2" />
-                      <p className="text-gray-600">Φόρτωση pipeline...</p>
+                      <p className={colors.text.secondary}>Φόρτωση pipeline...</p>
                   </div>
               </div>
           ) : error ? (
-              <div className={`bg-red-50 ${getStatusBorder('error')} rounded-lg p-4`}>
+              <div className={`${colors.bg.error} ${getStatusBorder('error')} rounded-lg p-4`}>
                   <p className="text-red-600">{error}</p>
                   <button 
                   onClick={fetchOpportunities}
@@ -81,9 +83,9 @@ export function PipelineTab() {
               </div>
           ) : opportunities.length === 0 ? (
               <div className="text-center py-12">
-                  <User className={`${iconSizes.xl2} text-gray-400 mx-auto mb-4`} />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Δεν υπάρχουν ευκαιρίες</h3>
-                  <p className="text-gray-600">Προσθέστε την πρώτη σας ευκαιρία για να ξεκινήσετε!</p>
+                  <User className={`${iconSizes.xl2} ${colors.text.muted} mx-auto mb-4`} />
+                  <h3 className={`text-lg font-medium ${colors.text.primary} mb-2`}>Δεν υπάρχουν ευκαιρίες</h3>
+                  <p className={colors.text.secondary}>Προσθέστε την πρώτη σας ευκαιρία για να ξεκινήσετε!</p>
               </div>
           ) : (
             viewMode === 'pipeline' ? (

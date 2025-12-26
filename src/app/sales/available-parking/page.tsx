@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 
 // Placeholder stats for Available Parking
 const parkingStats: DashboardStat[] = [
@@ -55,6 +56,7 @@ const parkingStats: DashboardStat[] = [
 export default function AvailableParkingPage() {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
   return (
     <TooltipProvider>
       <div className="flex h-screen bg-background">
@@ -93,11 +95,11 @@ export default function AvailableParkingPage() {
                 <div className="space-y-3">
                   <div className={`p-4 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                     <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2 bg-blue-500/10 rounded-lg">
+                      <div className={`p-2 ${colors.bg.info}/10 rounded-lg`}>
                         <Building2 className={`${iconSizes.sm} text-blue-500`} />
                       </div>
                       <h3 className="font-medium">Κλειστά Υπόγεια</h3>
-                      <span className="ml-auto bg-blue-500/20 text-blue-500 px-2 py-1 rounded text-sm font-medium">
+                      <span className={`ml-auto ${colors.bg.info}/20 ${colors.text.info} px-2 py-1 rounded text-sm font-medium`}>
                         56 διαθέσιμα
                       </span>
                     </div>
@@ -119,11 +121,11 @@ export default function AvailableParkingPage() {
 
                   <div className={`p-4 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                     <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2 bg-purple-500/10 rounded-lg">
+                      <div className={`p-2 ${colors.bg.warning}/10 rounded-lg`}>
                         <Square className={`${iconSizes.sm} text-purple-500`} />
                       </div>
                       <h3 className="font-medium">Ημι-υπαίθρια</h3>
-                      <span className="ml-auto bg-purple-500/20 text-purple-500 px-2 py-1 rounded text-sm font-medium">
+                      <span className={`ml-auto ${colors.bg.warning}/20 ${colors.text.warning} px-2 py-1 rounded text-sm font-medium`}>
                         19 διαθέσιμα
                       </span>
                     </div>
@@ -155,11 +157,11 @@ export default function AvailableParkingPage() {
                 <div className="space-y-3">
                   <div className={`p-4 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                     <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2 bg-green-500/10 rounded-lg">
+                      <div className={`p-2 ${colors.bg.success}/10 rounded-lg`}>
                         <Building2 className={`${iconSizes.sm} text-green-500`} />
                       </div>
                       <h3 className="font-medium">Σκεπαστά</h3>
-                      <span className="ml-auto bg-green-500/20 text-green-500 px-2 py-1 rounded text-sm font-medium">
+                      <span className={`ml-auto ${colors.bg.success}/20 ${colors.text.success} px-2 py-1 rounded text-sm font-medium`}>
                         12 διαθέσιμα
                       </span>
                     </div>
@@ -181,11 +183,11 @@ export default function AvailableParkingPage() {
 
                   <div className={`p-4 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                     <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2 bg-orange-500/10 rounded-lg">
+                      <div className={`p-2 ${colors.bg.warning}/10 rounded-lg`}>
                         <Square className={`${iconSizes.sm} text-orange-500`} />
                       </div>
                       <h3 className="font-medium">Υπαίθρια</h3>
-                      <span className="ml-auto bg-orange-500/20 text-orange-500 px-2 py-1 rounded text-sm font-medium">
+                      <span className={`ml-auto ${colors.bg.warning}/20 ${colors.text.warning} px-2 py-1 rounded text-sm font-medium`}>
                         6 διαθέσιμα
                       </span>
                     </div>
@@ -213,7 +215,7 @@ export default function AvailableParkingPage() {
               {/* Τιμές ανά Τύπο */}
               <div className={`p-6 bg-card ${quick.card}`}>
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-blue-500/10 rounded-lg">
+                  <div className={`p-2 ${colors.bg.info}/10 rounded-lg`}>
                     <DollarSign className={`${iconSizes.md} text-blue-500`} />
                   </div>
                   <h3 className="font-semibold">Τιμές ανά Τύπο</h3>
@@ -237,7 +239,7 @@ export default function AvailableParkingPage() {
               {/* Δραστηριότητα */}
               <div className={`p-6 bg-card ${quick.card}`}>
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-green-500/10 rounded-lg">
+                  <div className={`p-2 ${colors.bg.success}/10 rounded-lg`}>
                     <Eye className={`${iconSizes.md} text-green-500`} />
                   </div>
                   <h3 className="font-semibold">Δραστηριότητα</h3>
@@ -261,7 +263,7 @@ export default function AvailableParkingPage() {
               {/* Trends */}
               <div className={`p-6 bg-card ${quick.card}`}>
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-purple-500/10 rounded-lg">
+                  <div className={`p-2 ${colors.bg.warning}/10 rounded-lg`}>
                     <TrendingUp className={`${iconSizes.md} text-purple-500`} />
                   </div>
                   <h3 className="font-semibold">Market Trends</h3>

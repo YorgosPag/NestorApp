@@ -10,6 +10,7 @@ import { useWizardNavigation } from '../hooks/useWizardNavigation';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/hooks/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
 
 interface ImportWizardProps {
   isOpen: boolean;
@@ -20,6 +21,7 @@ interface ImportWizardProps {
 export function ImportWizard({ isOpen, onClose, onComplete }: ImportWizardProps) {
   const iconSizes = useIconSizes();
   const { quick, getDirectionalBorder } = useBorderTokens();
+  const colors = useSemanticColors();  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
   const { importWizard } = useLevels();
   const navigation = useWizardNavigation({ onComplete, onClose });
   const stepInfo = navigation.getStepInfo();
@@ -41,7 +43,7 @@ export function ImportWizard({ isOpen, onClose, onComplete }: ImportWizardProps)
             <p className="text-gray-300 mb-6">Άγνωστο βήμα εισαγωγής</p>
             <button
               onClick={onClose}
-              className={`px-4 py-2 bg-gray-600 ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} text-white rounded`}
+              className={`px-4 py-2 ${colors.bg.hover} ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} text-white rounded`}
             >
               Κλείσιμο
             </button>
@@ -52,7 +54,7 @@ export function ImportWizard({ isOpen, onClose, onComplete }: ImportWizardProps)
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className={`bg-gray-800 rounded-lg shadow-xl ${quick.muted} w-full max-w-2xl max-h-[90vh] flex flex-col`}>
+      <div className={`${colors.bg.secondary} rounded-lg shadow-xl ${quick.muted} w-full max-w-2xl max-h-[90vh] flex flex-col`}>
         
         {/* Header */}
         <div className={`flex items-center justify-between p-4 ${getDirectionalBorder('muted', 'bottom')}`}>
@@ -72,7 +74,7 @@ export function ImportWizard({ isOpen, onClose, onComplete }: ImportWizardProps)
         </div>
 
         {/* Progress */}
-        <div className="px-4 py-2 bg-gray-750">
+        <div className={`px-4 py-2 ${colors.bg.hover}`}>
           <WizardProgress currentStep={stepInfo.number} totalSteps={stepInfo.totalSteps} />
         </div>
 
@@ -86,14 +88,14 @@ export function ImportWizard({ isOpen, onClose, onComplete }: ImportWizardProps)
           <button
             onClick={navigation.handleBack}
             disabled={stepInfo.number === 1}
-            className={`px-4 py-2 bg-gray-600 ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} text-white rounded disabled:opacity-50`}
+            className={`px-4 py-2 ${colors.bg.hover} ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} text-white rounded disabled:opacity-50`}
           >
             Πίσω
           </button>
           <button
             onClick={navigation.handleNext}
             disabled={!navigation.canProceed()}
-            className={`px-6 py-2 bg-blue-600 ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} text-white rounded disabled:opacity-50`}
+            className={`px-6 py-2 ${colors.bg.info} ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} text-white rounded disabled:opacity-50`}
           >
             {stepInfo.number === stepInfo.totalSteps ? 'Εισαγωγή' : 'Επόμενο'}
           </button>

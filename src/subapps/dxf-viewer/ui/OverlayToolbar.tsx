@@ -2,6 +2,7 @@
 import React, { useState, useRef } from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 import { useDraggable } from '../../../hooks/useDraggable';
 // import { Separator } from '../../../components/ui/separator';
 // Προσωρινή λύση - αντικατάσταση με div
@@ -48,6 +49,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
 }) => {
   const iconSizes = useIconSizes();
   const { quick, radius, getStatusBorder } = useBorderTokens();
+  const { bg } = useSemanticColors();
   const { startOverlayCreation } = useUnifiedOverlayCreation();
   const overlayStore = useOverlayStore();
 
@@ -149,7 +151,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
     <div
       ref={elementRef}
       style={draggableStyles}
-      className={`${disableFloating ? 'relative' : 'fixed z-[80]'} flex items-center gap-2 p-2 bg-gray-800 ${quick.card} flex-wrap shadow-xl select-none pointer-events-auto`}
+      className={`${disableFloating ? 'relative' : 'fixed z-[80]'} flex items-center gap-2 p-2 ${bg.secondary} dark:bg-gray-800 ${quick.card} flex-wrap shadow-xl select-none pointer-events-auto`}
       onMouseEnter={(e) => e.stopPropagation()}
       onMouseMove={(e) => e.stopPropagation()}
       onMouseLeave={(e) => e.stopPropagation()}
@@ -158,10 +160,10 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
       {!disableFloating && (
         <div
           onMouseDown={handleMouseDown}
-          className={`cursor-grab active:cursor-grabbing p-1 hover:bg-gray-700 ${radius.md}`}
+          className={`cursor-grab active:cursor-grabbing p-1 ${bg.hover} dark:hover:bg-gray-700 ${radius.md}`}
           title="Drag to move toolbar"
         >
-          <div className={`${iconSizes.xs} ${iconSizes.sm} bg-gray-500 ${quick.button}`}></div>
+          <div className={`${iconSizes.xs} ${iconSizes.sm} ${bg.active} dark:bg-gray-500 ${quick.button}`}></div>
         </div>
       )}
       {/* Drawing Modes */}
@@ -175,8 +177,8 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
               h-8 px-2 ${quick.button} transition-colors duration-150
               flex items-center justify-center gap-1
               ${mode === btnMode
-                ? `bg-blue-600 text-white ${getStatusBorder('info')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
-                : `bg-gray-700 text-gray-200 ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
+                ? `${bg.info} text-white ${getStatusBorder('info')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
+                : `${bg.secondary} dark:bg-gray-700 text-gray-800 dark:text-gray-200 ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
               }
             `}
           >
@@ -224,8 +226,8 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
                   ${iconSizes.xl} p-0 ${quick.button} transition-colors duration-150
                   flex items-center justify-center
                   ${currentKind === kind
-                    ? `bg-blue-600 text-white ${getStatusBorder('info')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
-                    : `bg-gray-700 text-gray-200 ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
+                    ? `${bg.info} text-white ${getStatusBorder('info')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
+                    : `${bg.secondary} dark:bg-gray-700 text-gray-800 dark:text-gray-200 ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
                   }
                 `}
               >
@@ -247,7 +249,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
           className={`
             ${iconSizes.xl} p-0 ${quick.button} transition-colors duration-150
             flex items-center justify-center
-            bg-gray-700 text-gray-200 ${getStatusBorder('default')}
+            ${bg.secondary} dark:bg-gray-700 text-gray-800 dark:text-gray-200 ${getStatusBorder('default')}
             disabled:opacity-50 disabled:cursor-not-allowed
           `}
         >
@@ -261,7 +263,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
           className={`
             ${iconSizes.xl} p-0 ${quick.button} transition-colors duration-150
             flex items-center justify-center
-            bg-gray-700 text-red-400 ${getStatusBorder('default')}
+            ${bg.secondary} dark:bg-gray-700 text-red-600 dark:text-red-400 ${getStatusBorder('default')}
             disabled:opacity-50 disabled:cursor-not-allowed
           `}
         >
@@ -280,7 +282,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
           className={`
             ${iconSizes.xl} p-0 ${quick.button} transition-colors duration-150
             flex items-center justify-center
-            bg-gray-700 text-gray-200 ${getStatusBorder('default')}
+            ${bg.secondary} dark:bg-gray-700 text-gray-800 dark:text-gray-200 ${getStatusBorder('default')}
             disabled:opacity-50 disabled:cursor-not-allowed
           `}
         >
@@ -293,7 +295,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
           className={`
             ${iconSizes.xl} p-0 ${quick.button} transition-colors duration-150
             flex items-center justify-center
-            bg-gray-700 text-gray-200 ${getStatusBorder('default')}
+            ${bg.secondary} dark:bg-gray-700 text-gray-800 dark:text-gray-200 ${getStatusBorder('default')}
             disabled:opacity-50 disabled:cursor-not-allowed
           `}
         >

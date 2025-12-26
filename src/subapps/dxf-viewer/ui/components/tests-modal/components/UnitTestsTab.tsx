@@ -10,6 +10,7 @@ import type { TestState, ApiTestHandlers } from '../types/tests.types';
 import { HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 
 interface UnitTestsTabProps {
   testState: TestState;
@@ -19,6 +20,7 @@ interface UnitTestsTabProps {
 export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests }) => {
   const iconSizes = useIconSizes();
   const { getStatusBorder, quick, radius } = useBorderTokens();
+  const { bg } = useSemanticColors();
 
   // Enterprise helper για test button states
   const getTestButtonBorder = (testId: string) => {
@@ -45,10 +47,10 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
             disabled={testState.runningTests.has('run-vitest')}
             className={`flex items-start gap-3 p-3.5 ${quick.card} transition-all text-left ${
               testState.runningTests.has('run-vitest')
-                ? `bg-yellow-500/10 ${getTestButtonBorder('run-vitest')} cursor-wait`
+                ? `${bg.warning} dark:bg-yellow-500/10 ${getTestButtonBorder('run-vitest')} cursor-wait`
                 : testState.completedTests.has('run-vitest')
-                ? `bg-green-500/10 ${getTestButtonBorder('run-vitest')} ${HOVER_BACKGROUND_EFFECTS.SUCCESS_SUBTLE}`
-                : `bg-gray-700/50 ${getTestButtonBorder('run-vitest')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} ${HOVER_BORDER_EFFECTS.MUTED}`
+                ? `${bg.success} dark:bg-green-500/10 ${getTestButtonBorder('run-vitest')} ${HOVER_BACKGROUND_EFFECTS.SUCCESS_SUBTLE}`
+                : `${bg.secondary} dark:bg-gray-700/50 ${getTestButtonBorder('run-vitest')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} ${HOVER_BORDER_EFFECTS.MUTED}`
             }`}
           >
             <div className="flex-shrink-0 mt-0.5">
@@ -72,10 +74,10 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
             disabled={testState.runningTests.has('run-jest')}
             className={`flex items-start gap-3 p-3.5 ${quick.card} transition-all text-left ${
               testState.runningTests.has('run-jest')
-                ? `bg-yellow-500/10 ${getTestButtonBorder('run-jest')} cursor-wait`
+                ? `${bg.warning} dark:bg-yellow-500/10 ${getTestButtonBorder('run-jest')} cursor-wait`
                 : testState.completedTests.has('run-jest')
-                ? `bg-green-500/10 ${getTestButtonBorder('run-jest')} ${HOVER_BACKGROUND_EFFECTS.SUCCESS_SUBTLE}`
-                : `bg-gray-700/50 ${getTestButtonBorder('run-jest')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} ${HOVER_BORDER_EFFECTS.MUTED}`
+                ? `${bg.success} dark:bg-green-500/10 ${getTestButtonBorder('run-jest')} ${HOVER_BACKGROUND_EFFECTS.SUCCESS_SUBTLE}`
+                : `${bg.secondary} dark:bg-gray-700/50 ${getTestButtonBorder('run-jest')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} ${HOVER_BORDER_EFFECTS.MUTED}`
             }`}
           >
             <div className="flex-shrink-0 mt-0.5">
@@ -105,10 +107,10 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
           disabled={testState.runningTests.has('run-playwright')}
           className={`flex items-start gap-3 p-3.5 ${radius.lg} transition-all text-left w-full ${
             testState.runningTests.has('run-playwright')
-              ? `bg-yellow-500/10 ${getTestButtonBorder('run-playwright')} cursor-wait`
+              ? `${bg.warning} dark:bg-yellow-500/10 ${getTestButtonBorder('run-playwright')} cursor-wait`
               : testState.completedTests.has('run-playwright')
-              ? `bg-green-500/10 ${getTestButtonBorder('run-playwright')} ${HOVER_BACKGROUND_EFFECTS.SUCCESS_SUBTLE}`
-              : `bg-gray-700/50 ${getTestButtonBorder('run-playwright')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} ${HOVER_BORDER_EFFECTS.MUTED}`
+              ? `${bg.success} dark:bg-green-500/10 ${getTestButtonBorder('run-playwright')} ${HOVER_BACKGROUND_EFFECTS.SUCCESS_SUBTLE}`
+              : `${bg.secondary} dark:bg-gray-700/50 ${getTestButtonBorder('run-playwright')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} ${HOVER_BORDER_EFFECTS.MUTED}`
           }`}
         >
           <div className="flex-shrink-0 mt-0.5">
@@ -127,7 +129,7 @@ export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests 
         </button>
       </div>
 
-      <div className={`bg-blue-500/10 ${quick.info} p-4 ${getStatusBorder('info')}`}>
+      <div className={`${bg.info} ${quick.info} p-4 ${getStatusBorder('info')}`}>
         <div className="text-xs text-blue-300">
           <strong>Note:</strong> Unit & E2E tests run server-side via API endpoints. Check server logs for detailed output.
         </div>

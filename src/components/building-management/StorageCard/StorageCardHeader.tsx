@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 import type { StorageUnit, StorageType, StorageStatus } from '@/types/storage';
 import { StorageCardBackground } from './StorageCardBackground';
 import { StorageCardActions } from './StorageCardActions';
@@ -32,13 +33,15 @@ export function StorageCardHeader({
     getStatusLabel,
     getTypeLabel
 }: StorageCardHeaderProps) {
+    const colors = useSemanticColors();
+
     return (
         <>
             <div className="absolute top-3 left-3 z-20">
                 <Checkbox
                     checked={isSelected}
                     onCheckedChange={onSelect}
-                    className="bg-white/80 backdrop-blur-sm"
+                    className={`${colors.bg.primary}/80 backdrop-blur-sm`}
                 />
             </div>
 

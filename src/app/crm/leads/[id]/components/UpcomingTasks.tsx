@@ -6,6 +6,8 @@ import { Clock } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import type { CrmTask } from '@/types/crm';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { getTaskDateColor, formatTaskDate } from '../utils/dates';
 
 interface UpcomingTasksProps {
@@ -15,6 +17,8 @@ interface UpcomingTasksProps {
 
 export function UpcomingTasks({ tasks, router }: UpcomingTasksProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
+  const { quick, radius } = useBorderTokens();
   const pendingTasks = useMemo(() => {
     return tasks
       .filter(task => task.status === 'pending' || task.status === 'in_progress')
@@ -26,11 +30,11 @@ export function UpcomingTasks({ tasks, router }: UpcomingTasksProps) {
   }
 
   return (
-    <div className="bg-white dark:bg-card rounded-lg shadow p-6">
+    <div className={`${colors.bg.primary} ${quick.card} shadow p-6`}>
       <h3 className="text-lg font-semibold mb-4">Επερχόμενες Εργασίες</h3>
       <div className="space-y-3">
         {pendingTasks.slice(0, 5).map((task) => (
-          <div key={task.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-muted/50 rounded-lg">
+          <div key={task.id} className={`flex items-center justify-between p-3 ${colors.bg.secondary} ${radius.lg}`}>
             <div className="flex-1">
               <h5 className="font-medium text-gray-900 dark:text-foreground">{task.title}</h5>
               <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-muted-foreground mt-1">
@@ -38,7 +42,12 @@ export function UpcomingTasks({ tasks, router }: UpcomingTasksProps) {
                   <Clock className={`${iconSizes.xs} inline mr-1`} />
                   {formatTaskDate(task.dueDate)}
                 </span>
-                <span className={`px-2 py-1 rounded-full text-xs ${task.priority === 'urgent' ? 'bg-red-100 text-red-700' : task.priority === 'high' ? 'bg-orange-100 text-orange-700' : task.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}>
+                <span className={`px-2 py-1 ${radius.full} text-xs ${
+                  task.priority === 'urgent' ? `${colors.bg.error}/50 text-red-700` :
+                  task.priority === 'high' ? `${colors.bg.warning}/50 text-orange-700` :
+                  task.priority === 'medium' ? `${colors.bg.warning}/30 text-yellow-700` :
+                  `${colors.bg.success}/50 text-green-700`
+                }`}>
                   {task.priority === 'urgent' ? 'Επείγουσα' : task.priority === 'high' ? 'Υψηλή' : task.priority === 'medium' ? 'Μεσαία' : 'Χαμηλή'}
                 </span>
               </div>

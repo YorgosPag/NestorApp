@@ -14,6 +14,7 @@ import * as React from 'react';
 import type { UnifiedTestReport } from './unified-test-runner';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/hooks/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 // Enterprise Canvas UI Migration - Phase B
 import { canvasUI } from '@/styles/design-tokens/canvas';
@@ -45,23 +46,24 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
 }) => {
   const iconSizes = useIconSizes();
   const { getStatusBorder, getDirectionalBorder, getMultiDirectionalBorder } = useBorderTokens();
+  const colors = useSemanticColors();  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
   const [copied, setCopied] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState<'summary' | 'details' | 'raw'>('summary');
 
-  // Enterprise helper για tab borders
+  // ✅ ENTERPRISE: Tab borders με CSS variables
   const getTabBorder = (tabName: string) => {
     return activeTab === tabName
-      ? `bg-gray-800 text-white ${getStatusBorder('active')} ${getMultiDirectionalBorder('active', ['top', 'left', 'right'])}`
-      : `bg-gray-700 text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} ${HOVER_BACKGROUND_EFFECTS.GRAY_750}`;
+      ? `${colors.bg.secondary} text-white ${getStatusBorder('active')} ${getMultiDirectionalBorder('active', ['top', 'left', 'right'])}`
+      : `${colors.bg.hover} text-gray-400 ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} ${HOVER_BACKGROUND_EFFECTS.GRAY_750}`;
   };
 
-  // Enterprise helper για status borders
+  // ✅ ENTERPRISE: Status borders με CSS variables
   const getTestStatusBorder = (status: 'passed' | 'failed' | 'warning' | 'info') => {
     switch (status) {
-      case 'passed': return `bg-green-900 ${getStatusBorder('success')}`;
-      case 'failed': return `bg-red-900 ${getStatusBorder('error')}`;
-      case 'warning': return `bg-yellow-900 ${getStatusBorder('warning')}`;
-      case 'info': return `bg-blue-900 ${getStatusBorder('info')}`;
+      case 'passed': return `${colors.bg.success} ${getStatusBorder('success')}`;
+      case 'failed': return `${colors.bg.error} ${getStatusBorder('error')}`;
+      case 'warning': return `${colors.bg.warning} ${getStatusBorder('warning')}`;
+      case 'info': return `${colors.bg.info} ${getStatusBorder('info')}`;
     }
   };
 
@@ -148,12 +150,12 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
       onClick={onClose}
     >
       <div
-        className={`relative bg-gray-900 rounded-lg shadow-2xl flex flex-col ${getStatusBorder('default')}`}
+        className={`relative ${colors.bg.secondary} rounded-lg shadow-2xl flex flex-col ${getStatusBorder('default')}`}
         style={canvasUI.positioning.floatingPanel.testModal.content}
         onClick={(e) => e.stopPropagation()}
       >
         {/* HEADER */}
-        <div className={`flex items-center justify-between px-6 py-4 bg-gray-800 rounded-t-lg ${getStatusBorder('default')} ${getDirectionalBorder('default', 'bottom')}`}>
+        <div className={`flex items-center justify-between px-6 py-4 ${colors.bg.secondary} rounded-t-lg ${getStatusBorder('default')} ${getDirectionalBorder('default', 'bottom')}`}>
           <div className="flex items-center gap-3">
             <span className="text-2xl">🧪</span>
             <div>
@@ -172,7 +174,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
         </div>
 
         {/* STATS BAR */}
-        <div className={`flex items-center justify-between px-6 py-3 bg-gray-850 ${getStatusBorder('default')} ${getDirectionalBorder('default', 'bottom')}`}>
+        <div className={`flex items-center justify-between px-6 py-3 ${colors.bg.secondary} ${getStatusBorder('default')} ${getDirectionalBorder('default', 'bottom')}`}>
           <div className="flex gap-6">
             <div className="flex items-center gap-2">
               <span className="text-green-400 text-lg font-bold">{report.passed}</span>
@@ -197,8 +199,8 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
               onClick={handleCopy}
               className={`px-4 py-2 text-sm font-medium rounded transition-all ${
                 copied
-                  ? 'bg-green-500 text-white'
-                  : `bg-blue-600 text-white ${HOVER_BACKGROUND_EFFECTS.BLUE_LIGHT}`
+                  ? `${colors.bg.success} text-white`
+                  : `${colors.bg.info} text-white ${HOVER_BACKGROUND_EFFECTS.BLUE_LIGHT}`
               }`}
               style={getTestResultsInteractiveAutoStyles()}
             >
@@ -206,7 +208,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
             </button>
             <button
               onClick={handleDownload}
-              className={`px-4 py-2 text-sm font-medium rounded bg-purple-600 text-white ${HOVER_BACKGROUND_EFFECTS.PURPLE_LIGHT} transition-all`}
+              className={`px-4 py-2 text-sm font-medium rounded ${colors.bg.info} text-white ${HOVER_BACKGROUND_EFFECTS.PURPLE_LIGHT} transition-all`}
               style={getTestResultsInteractiveAutoStyles()}
             >
               💾 Λήψη JSON
@@ -215,7 +217,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
         </div>
 
         {/* TABS */}
-        <div className="flex gap-1 px-6 pt-4 bg-gray-900" style={getTestResultsInteractiveAutoStyles()}>
+        <div className={`flex gap-1 px-6 pt-4 ${colors.bg.secondary}`} style={getTestResultsInteractiveAutoStyles()}>
           <button
             onClick={() => {
               console.log('🔘 Summary tab clicked');
@@ -249,20 +251,20 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
         </div>
 
         {/* CONTENT */}
-        <div className="flex-1 overflow-y-auto bg-gray-800 px-6 py-4">
+        <div className={`flex-1 overflow-y-auto ${colors.bg.secondary} px-6 py-4`}>
           {activeTab === 'summary' && <SummaryTab report={report} />}
           {activeTab === 'details' && <DetailsTab report={report} />}
           {activeTab === 'raw' && <RawTab formattedReport={formattedReport} />}
         </div>
 
         {/* FOOTER */}
-        <div className={`flex items-center justify-between px-6 py-3 bg-gray-850 rounded-b-lg ${getStatusBorder('default')} ${getDirectionalBorder('default', 'top')}`}>
+        <div className={`flex items-center justify-between px-6 py-3 ${colors.bg.secondary} rounded-b-lg ${getStatusBorder('default')} ${getDirectionalBorder('default', 'top')}`}>
           <div className="text-xs text-gray-500">
             🖥️ Viewport: {report.systemInfo.viewport.width}×{report.systemInfo.viewport.height}
           </div>
           <button
             onClick={onClose}
-            className={`px-4 py-2 text-sm font-medium rounded bg-gray-700 text-white ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL} transition-all`}
+            className={`px-4 py-2 text-sm font-medium rounded ${colors.bg.hover} text-white ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL} transition-all`}
           >
             Κλείσιμο
           </button>
@@ -278,14 +280,15 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
 
 const SummaryTab: React.FC<{ report: UnifiedTestReport }> = ({ report }) => {
   const { getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
 
-  // Enterprise helper για test status borders
+  // ✅ ENTERPRISE: Test status borders με CSS variables
   const getTestStatusBorder = (status: 'success' | 'error' | 'warning' | 'info') => {
     switch (status) {
-      case 'success': return `bg-green-900 ${getStatusBorder('success')}`;
-      case 'error': return `bg-red-900 ${getStatusBorder('error')}`;
-      case 'warning': return `bg-yellow-900 ${getStatusBorder('warning')}`;
-      default: return `bg-blue-900 ${getStatusBorder('info')}`;
+      case 'success': return `${colors.bg.success} ${getStatusBorder('success')}`;
+      case 'error': return `${colors.bg.error} ${getStatusBorder('error')}`;
+      case 'warning': return `${colors.bg.warning} ${getStatusBorder('warning')}`;
+      default: return `${colors.bg.info} ${getStatusBorder('info')}`;
     }
   };
 
@@ -330,6 +333,7 @@ const SummaryTab: React.FC<{ report: UnifiedTestReport }> = ({ report }) => {
 // ============================================================================
 
 const DetailsTab: React.FC<{ report: UnifiedTestReport }> = ({ report }) => {
+  const colors = useSemanticColors();  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
   const [expandedTests, setExpandedTests] = React.useState<Set<number>>(new Set());
 
   const toggleExpand = (index: number) => {
@@ -367,7 +371,7 @@ const DetailsTab: React.FC<{ report: UnifiedTestReport }> = ({ report }) => {
             : 'ℹ️';
 
         return (
-          <div key={index} className={`rounded bg-gray-850 ${getStatusBorder('default')}`} style={getTestResultsInteractiveAutoStyles()}>
+          <div key={index} className={`rounded ${colors.bg.secondary} ${getStatusBorder('default')}`} style={getTestResultsInteractiveAutoStyles()}>
             <button
               onClick={() => {
                 console.log(`🔽 Toggling test ${index}: ${test.name}`);
@@ -394,7 +398,7 @@ const DetailsTab: React.FC<{ report: UnifiedTestReport }> = ({ report }) => {
                   {test.details && (
                     <div>
                       <span className="text-xs text-gray-500">Λεπτομέρειες:</span>
-                      <pre className="text-xs text-gray-300 mt-1 p-3 bg-gray-900 rounded overflow-x-auto">
+                      <pre className={`text-xs text-gray-300 mt-1 p-3 ${colors.bg.secondary} rounded overflow-x-auto`}>
                         {JSON.stringify(test.details, null, 2)}
                       </pre>
                     </div>
@@ -418,9 +422,11 @@ const DetailsTab: React.FC<{ report: UnifiedTestReport }> = ({ report }) => {
 // ============================================================================
 
 const RawTab: React.FC<{ formattedReport: string }> = ({ formattedReport }) => {
+  const colors = useSemanticColors();  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
+
   return (
     <div className="h-full">
-      <pre className="text-xs text-gray-300 font-mono whitespace-pre-wrap break-words p-4 bg-gray-900 rounded h-full overflow-y-auto">
+      <pre className={`text-xs text-gray-300 font-mono whitespace-pre-wrap break-words p-4 ${colors.bg.secondary} rounded h-full overflow-y-auto`}>
         {formattedReport}
       </pre>
     </div>

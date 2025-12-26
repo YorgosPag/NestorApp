@@ -12,6 +12,7 @@ import {
 import { User, Check, X } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { getContactDisplayName } from '@/types/contacts';
 import { useBulkAssign } from './hooks/useBulkAssign';
@@ -27,6 +28,7 @@ export function BulkAssignToolbar({
 }) {
   const iconSizes = useIconSizes();
   const { getDirectionalBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   const notifications = useNotifications();
   const {
     contacts,
@@ -39,7 +41,7 @@ export function BulkAssignToolbar({
   const handleAssign = () => assignToContact(selectedIds);
 
   return (
-    <div className={`p-2 ${getDirectionalBorder('info', 'top')} bg-blue-50 dark:bg-blue-950/20`}>
+    <div className={`p-2 ${getDirectionalBorder('info', 'top')} ${colors.bg.info}`}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">

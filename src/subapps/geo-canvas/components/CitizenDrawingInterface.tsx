@@ -8,6 +8,7 @@ import { useRealEstateMatching } from '@/services/real-estate-monitor/useRealEst
 import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS, HOVER_SHADOWS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 
 // ✅ NEW: Enterprise Centralized Polygon System
 import { useCentralizedPolygonSystem } from '../systems/polygon-system';
@@ -65,6 +66,7 @@ export function CitizenDrawingInterface({
   const { t } = useTranslationLazy('geo-canvas');
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   const [selectedTool, setSelectedTool] = useState<'point' | 'polygon' | 'freehand' | 'real-estate' | null>(null);
   const [pointRadius, setPointRadius] = useState<number>(100); // Default 100m radius
   const [lastPointPolygonId, setLastPointPolygonId] = useState<string | null>(null);
@@ -254,15 +256,15 @@ export function CitizenDrawingInterface({
   }, [onLocationSelected]);
 
   return (
-    <div className={`bg-white ${quick.card} shadow-lg p-4`}>
+    <div className={`${colors.bg.primary} ${quick.card} shadow-lg p-4`}>
       {/* Header */}
       <div className="mb-4">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">
+            <h3 className={`text-lg font-semibold ${colors.text.foreground}`}>
               {t('drawingInterfaces.citizen.title')}
             </h3>
-            <p className="text-sm text-gray-600">
+            <p className={`text-sm ${colors.text.muted}`}>
               {t('drawingInterfaces.citizen.subtitle')}
             </p>
           </div>
@@ -273,8 +275,8 @@ export function CitizenDrawingInterface({
             className={`
               flex items-center gap-2 px-3 py-2 ${quick.card} transition-all
               ${showAddressSearch
-                ? `${getStatusBorder('info')} bg-blue-50 text-blue-700`
-                : 'bg-white text-gray-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT}'
+                ? `${getStatusBorder('info')} ${colors.bg.info} ${colors.text.info}`
+                : `${colors.bg.primary} ${colors.text.muted} \${HOVER_BACKGROUND_EFFECTS.LIGHT}`
               }
             `}
             title="Αναζήτηση διεύθυνσης ή GPS"
@@ -306,15 +308,15 @@ export function CitizenDrawingInterface({
             flex flex-col items-center justify-center p-4 ${quick.card}
             transition-all duration-200 min-h-[100px]
             ${selectedTool === 'point'
-              ? `${getStatusBorder('info')} bg-blue-50`
-              : '${HOVER_BACKGROUND_EFFECTS.LIGHT} bg-white'
+              ? `${getStatusBorder('info')} ${colors.bg.info}`
+              : `\${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.bg.primary}`
             }
             ${isDrawing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.MEDIUM}'}
           `}
         >
-          <MapPin className={`${iconSizes.xl} mb-2 text-blue-600`} />
+          <MapPin className={`${iconSizes.xl} mb-2 ${colors.text.info}`} />
           <span className="text-sm font-medium">{t('drawingInterfaces.citizen.tools.point')}</span>
-          <span className="text-xs text-gray-500">{t('drawingInterfaces.citizen.tools.pointDescription')}</span>
+          <span className={`text-xs ${colors.text.muted}`}>{t('drawingInterfaces.citizen.tools.pointDescription')}</span>
         </button>
 
         {/* Polygon Tool */}
@@ -325,15 +327,15 @@ export function CitizenDrawingInterface({
             flex flex-col items-center justify-center p-4 ${quick.card}
             transition-all duration-200 min-h-[100px]
             ${selectedTool === 'polygon'
-              ? `${getStatusBorder('info')} bg-blue-50`
-              : '${HOVER_BACKGROUND_EFFECTS.LIGHT} bg-white'
+              ? `${getStatusBorder('info')} ${colors.bg.info}`
+              : `\${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.bg.primary}`
             }
             ${isDrawing && selectedTool !== 'polygon' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.MEDIUM}'}
           `}
         >
-          <Hexagon className={`${iconSizes.xl} mb-2 text-green-600`} />
+          <Hexagon className={`${iconSizes.xl} mb-2 ${colors.text.success}`} />
           <span className="text-sm font-medium">{t('drawingInterfaces.citizen.tools.polygon')}</span>
-          <span className="text-xs text-gray-500">{t('drawingInterfaces.citizen.tools.polygonDescription')}</span>
+          <span className={`text-xs ${colors.text.muted}`}>{t('drawingInterfaces.citizen.tools.polygonDescription')}</span>
         </button>
       </div>
 
@@ -347,15 +349,15 @@ export function CitizenDrawingInterface({
             flex flex-col items-center justify-center p-4 ${quick.card}
             transition-all duration-200 min-h-[100px]
             ${selectedTool === 'freehand'
-              ? `${getStatusBorder('info')} bg-blue-50`
-              : '${HOVER_BACKGROUND_EFFECTS.LIGHT} bg-white'
+              ? `${getStatusBorder('info')} ${colors.bg.info}`
+              : `\${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.bg.primary}`
             }
             ${isDrawing && selectedTool !== 'freehand' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.MEDIUM}'}
           `}
         >
           <Hand className={`${iconSizes.xl} mb-2 text-purple-600`} />
           <span className="text-sm font-medium">{t('drawingInterfaces.citizen.tools.freehand')}</span>
-          <span className="text-xs text-gray-500">{t('drawingInterfaces.citizen.tools.freehandDrawing')}</span>
+          <span className={`text-xs ${colors.text.muted}`}>{t('drawingInterfaces.citizen.tools.freehandDrawing')}</span>
         </button>
 
         {/* Real Estate Alert Tool */}
@@ -366,15 +368,15 @@ export function CitizenDrawingInterface({
             flex flex-col items-center justify-center p-4 ${quick.card}
             transition-all duration-200 min-h-[100px]
             ${selectedTool === 'real-estate'
-              ? `${getStatusBorder('warning')} bg-orange-50`
-              : '${HOVER_BACKGROUND_EFFECTS.LIGHT} bg-white'
+              ? `${getStatusBorder('warning')} ${colors.bg.warning}`
+              : `\${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.bg.primary}`
             }
             ${isDrawing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.MEDIUM}'}
           `}
         >
-          <Home className={`${iconSizes.xl} mb-2 text-orange-600`} />
+          <Home className={`${iconSizes.xl} mb-2 ${colors.text.warning}`} />
           <span className="text-sm font-medium">{t('drawingInterfaces.citizen.tools.realEstate')}</span>
-          <span className="text-xs text-gray-500">{t('drawingInterfaces.citizen.tools.realEstateDescription')}</span>
+          <span className={`text-xs ${colors.text.muted}`}>{t('drawingInterfaces.citizen.tools.realEstateDescription')}</span>
         </button>
       </div>
 
@@ -388,14 +390,14 @@ export function CitizenDrawingInterface({
             transition-all duration-200 min-h-[100px]
             ${showAddressSearch
               ? `${getStatusBorder('info')} bg-indigo-50`
-              : '${HOVER_BACKGROUND_EFFECTS.LIGHT} bg-white'
+              : `\${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.bg.primary}`
             }
             cursor-pointer ${HOVER_SHADOWS.MEDIUM}
           `}
         >
           <Search className={`${iconSizes.xl} mb-2 text-indigo-600`} />
           <span className="text-sm font-medium">Address Search</span>
-          <span className="text-xs text-gray-500">Διευθύνσεις & Όρια</span>
+          <span className={`text-xs ${colors.text.muted}`}>Διευθύνσεις & Όρια</span>
         </button>
 
         {/* Admin Boundaries Demo Button */}
@@ -406,14 +408,14 @@ export function CitizenDrawingInterface({
             transition-all duration-200 min-h-[100px]
             ${showAdminDemo
               ? `${getStatusBorder('info')} bg-violet-50`
-              : '${HOVER_BACKGROUND_EFFECTS.LIGHT} bg-white'
+              : `\${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.bg.primary}`
             }
             cursor-pointer ${HOVER_SHADOWS.MEDIUM}
           `}
         >
           <div className={`${iconSizes.xl} mb-2 text-violet-600 font-bold text-lg`}>🏛️</div>
           <span className="text-sm font-medium">Boundaries Demo</span>
-          <span className="text-xs text-gray-500">Test Interface</span>
+          <span className={`text-xs ${colors.text.muted}`}>Test Interface</span>
         </button>
 
         {/* Boundary Layer Control Button */}
@@ -424,7 +426,7 @@ export function CitizenDrawingInterface({
             transition-all duration-200 min-h-[100px]
             ${showBoundaryControl
               ? `${getStatusBorder('success')} bg-emerald-50`
-              : '${HOVER_BACKGROUND_EFFECTS.LIGHT} bg-white'
+              : `\${HOVER_BACKGROUND_EFFECTS.LIGHT} ${colors.bg.primary}`
             }
             cursor-pointer ${HOVER_SHADOWS.MEDIUM}
           `}
@@ -439,8 +441,8 @@ export function CitizenDrawingInterface({
 
       {/* Point Radius Selector - Shows only when point tool is selected */}
       {selectedTool === 'point' && (
-        <div className={`mb-4 p-3 bg-blue-50 ${quick.card}`}>
-          <h4 className="text-sm font-medium text-blue-900 mb-3">Ακτίνα Πινέζας</h4>
+        <div className={`mb-4 p-3 ${colors.bg.info} ${quick.card}`}>
+          <h4 className={`text-sm font-medium ${colors.text.info} mb-3`}>Ακτίνα Πινέζας</h4>
           <div className="grid grid-cols-3 gap-2 mb-3">
             {[50, 100, 250].map((radius) => (
               <button
@@ -449,8 +451,8 @@ export function CitizenDrawingInterface({
                 className={`
                   py-2 px-3 text-sm font-medium rounded-md transition-all
                   ${pointRadius === radius
-                    ? 'bg-blue-500 text-white shadow-md'
-                    : `bg-white text-blue-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
+                    ? `${colors.bg.info} ${colors.text.foreground} shadow-md`
+                    : `${colors.bg.primary} ${colors.text.info} \${HOVER_BACKGROUND_EFFECTS.LIGHT}`
                   }
                 `}
               >
@@ -466,8 +468,8 @@ export function CitizenDrawingInterface({
                 className={`
                   py-2 px-3 text-sm font-medium rounded-md transition-all
                   ${pointRadius === radius
-                    ? 'bg-blue-500 text-white shadow-md'
-                    : `bg-white text-blue-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
+                    ? `${colors.bg.info} ${colors.text.foreground} shadow-md`
+                    : `${colors.bg.primary} ${colors.text.info} \${HOVER_BACKGROUND_EFFECTS.LIGHT}`
                   }
                 `}
               >
@@ -475,7 +477,7 @@ export function CitizenDrawingInterface({
               </button>
             ))}
           </div>
-          <div className="mt-3 text-xs text-blue-600 text-center">
+          <div className={`mt-3 text-xs ${colors.text.info} text-center`}>
             Επιλεγμένη ακτίνα: <span className="font-semibold">{pointRadius >= 1000 ? `${pointRadius/1000}km` : `${pointRadius}m`}</span>
           </div>
         </div>
@@ -486,7 +488,7 @@ export function CitizenDrawingInterface({
         <div className="flex gap-2 mb-4">
           <button
             onClick={handleComplete}
-            className={`flex-1 flex items-center justify-center gap-2 bg-green-500 text-white py-3 px-4 rounded-lg ${HOVER_BACKGROUND_EFFECTS.SUCCESS} ${TRANSITION_PRESETS.COLORS}`}
+            className={`flex-1 flex items-center justify-center gap-2 ${colors.bg.success} ${colors.text.foreground} py-3 px-4 rounded-lg ${HOVER_BACKGROUND_EFFECTS.SUCCESS} ${TRANSITION_PRESETS.COLORS}`}
           >
             <Check className={iconSizes.md} />
             <span className="font-medium">{t('drawingInterfaces.citizen.actions.complete')}</span>
@@ -494,7 +496,7 @@ export function CitizenDrawingInterface({
 
           <button
             onClick={handleCancel}
-            className={`flex-1 flex items-center justify-center gap-2 bg-red-500 text-white py-3 px-4 rounded-lg ${HOVER_BACKGROUND_EFFECTS.DESTRUCTIVE} ${TRANSITION_PRESETS.COLORS}`}
+            className={`flex-1 flex items-center justify-center gap-2 ${colors.bg.error} ${colors.text.foreground} py-3 px-4 rounded-lg ${HOVER_BACKGROUND_EFFECTS.DESTRUCTIVE} ${TRANSITION_PRESETS.COLORS}`}
           >
             <X className={iconSizes.md} />
             <span className="font-medium">{t('drawingInterfaces.citizen.actions.cancel')}</span>
@@ -504,15 +506,15 @@ export function CitizenDrawingInterface({
 
       {/* Real Estate Setup Dialog */}
       {showRealEstateSetup && (
-        <div className={`mb-4 p-4 bg-orange-50 ${quick.card}`}>
+        <div className={`mb-4 p-4 ${colors.bg.warning} ${quick.card}`}>
           <div className="flex items-center justify-between mb-3">
-            <h4 className="text-lg font-semibold text-orange-900 flex items-center gap-2">
+            <h4 className={`text-lg font-semibold ${colors.text.warning} flex items-center gap-2`}>
               <Bell className={iconSizes.md} />
               {t('drawingInterfaces.citizen.realEstateSetup.title')}
             </h4>
             <button
               onClick={() => setShowRealEstateSetup(false)}
-              className={`text-orange-600 ${HOVER_BACKGROUND_EFFECTS.WARNING}`}
+              className={`${colors.text.warning} ${HOVER_BACKGROUND_EFFECTS.WARNING}`}
             >
               <X className={iconSizes.md} />
             </button>
@@ -520,7 +522,7 @@ export function CitizenDrawingInterface({
 
           {/* Price Range */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-orange-900 mb-2">
+            <label className={`block text-sm font-medium ${colors.text.warning} mb-2`}>
               {t('citizenDrawingInterface.priceRange.label')}
             </label>
             <div className="grid grid-cols-2 gap-2">
@@ -549,7 +551,7 @@ export function CitizenDrawingInterface({
 
           {/* Property Type */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-orange-900 mb-2">
+            <label className={`block text-sm font-medium ${colors.text.warning} mb-2`}>
               {t('drawingInterfaces.citizen.realEstateSetup.propertyType')}
             </label>
             <select
@@ -581,7 +583,7 @@ export function CitizenDrawingInterface({
                 setShowRealEstateSetup(false);
                 console.log('🏠 Citizen: Real estate polygon drawing started');
               }}
-              className={`flex-1 flex items-center justify-center gap-2 bg-orange-500 text-white py-2 px-4 rounded-lg ${HOVER_BACKGROUND_EFFECTS.WARNING} ${TRANSITION_PRESETS.COLORS}`}
+              className={`flex-1 flex items-center justify-center gap-2 ${colors.bg.warning} ${colors.text.foreground} py-2 px-4 rounded-lg ${HOVER_BACKGROUND_EFFECTS.WARNING} ${TRANSITION_PRESETS.COLORS}`}
             >
               <MapPin className={iconSizes.sm} />
               <span className="text-sm font-medium">{t('drawingInterfaces.citizen.actions.drawArea')}</span>
@@ -589,7 +591,7 @@ export function CitizenDrawingInterface({
 
             <button
               onClick={() => setShowRealEstateSetup(false)}
-              className={`flex-1 flex items-center justify-center gap-2 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg ${HOVER_BACKGROUND_EFFECTS.MUTED} ${TRANSITION_PRESETS.COLORS}`}
+              className={`flex-1 flex items-center justify-center gap-2 ${colors.bg.muted} ${colors.text.muted} py-2 px-4 rounded-lg ${HOVER_BACKGROUND_EFFECTS.MUTED} ${TRANSITION_PRESETS.COLORS}`}
             >
               <X className={iconSizes.sm} />
               <span className="text-sm font-medium">{t('drawingInterfaces.citizen.actions.cancel')}</span>
@@ -602,7 +604,7 @@ export function CitizenDrawingInterface({
       {polygons.length > 0 && !isDrawing && (
         <button
           onClick={handleClearAll}
-          className={`w-full flex items-center justify-center gap-2 bg-gray-100 text-gray-700 py-2 px-4 rounded-lg ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${TRANSITION_PRESETS.COLORS}`}
+          className={`w-full flex items-center justify-center gap-2 ${colors.bg.hover} ${colors.text.muted} py-2 px-4 rounded-lg ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${TRANSITION_PRESETS.COLORS}`}
         >
           <Trash2 className={iconSizes.sm} />
           <span className="text-sm">{t('drawingInterfaces.citizen.actions.clearAll')} ({polygons.length})</span>
@@ -611,8 +613,8 @@ export function CitizenDrawingInterface({
 
       {/* Instructions */}
       {selectedTool && (
-        <div className={`mt-4 p-3 bg-blue-50 ${quick.card}`}>
-          <p className="text-sm text-blue-700">
+        <div className={`mt-4 p-3 ${colors.bg.info} ${quick.card}`}>
+          <p className={`text-sm ${colors.text.info}`}>
             {selectedTool === 'point' && t('instructions.citizen.placePoint')}
             {selectedTool === 'polygon' && t('instructions.citizen.addPolygonPoints')}
             {selectedTool === 'freehand' && t('instructions.citizen.drawFreehand')}
@@ -623,15 +625,15 @@ export function CitizenDrawingInterface({
 
       {/* Statistics */}
       {(stats.totalPolygons > 0 || realEstateStats.totalAlerts > 0) && (
-        <div className="mt-4 p-3 bg-gray-50 rounded-md space-y-1">
+        <div className={`mt-4 p-3 ${colors.bg.secondary} rounded-md space-y-1`}>
           {stats.totalPolygons > 0 && (
-            <p className="text-xs text-gray-600">
+            <p className={`text-xs ${colors.text.muted}`}>
               <span className="font-medium">Περιοχές:</span> {stats.totalPolygons}
             </p>
           )}
 
           {realEstateStats.totalAlerts > 0 && (
-            <div className="text-xs text-orange-700">
+            <div className={`text-xs ${colors.text.warning}`}>
               <p>
                 <span className="font-medium">🏠 Ειδοποιήσεις Ακινήτων:</span> {realEstateStats.totalAlerts}
               </p>

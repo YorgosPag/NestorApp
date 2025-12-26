@@ -4,9 +4,10 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 import { INTERACTIVE_PATTERNS } from "@/components/ui/effects"
 import { useBorderTokens } from '@/hooks/useBorderTokens'
+import { useSemanticColors } from '@/hooks/useSemanticColors'
 
-// 🏢 ENTERPRISE: Dynamic badge variants using centralized border tokens
-const createBadgeVariants = (borderTokens: ReturnType<typeof useBorderTokens>) => cva(
+// 🏢 ENTERPRISE: Dynamic badge variants using centralized border tokens and semantic colors
+const createBadgeVariants = (borderTokens: ReturnType<typeof useBorderTokens>, colors: ReturnType<typeof useSemanticColors>) => cva(
   `inline-flex items-center ${borderTokens.radius.full} border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2`,
   {
     variants: {
@@ -19,15 +20,15 @@ const createBadgeVariants = (borderTokens: ReturnType<typeof useBorderTokens>) =
           `${borderTokens.style.none} bg-destructive text-destructive-foreground ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`,
         outline: "text-foreground",
         success:
-          `${borderTokens.style.none} bg-green-100 text-green-700 ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`,
+          `${borderTokens.style.none} ${colors.bg.success}/50 text-green-700 ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`,
         warning:
-          `${borderTokens.style.none} bg-yellow-100 text-yellow-700 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`,
+          `${borderTokens.style.none} ${colors.bg.warning}/50 text-yellow-700 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`,
         info:
-          `${borderTokens.style.none} bg-blue-100 text-blue-700 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`,
+          `${borderTokens.style.none} ${colors.bg.info}/50 text-blue-700 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`,
         error:
-          `${borderTokens.style.none} bg-red-100 text-red-700 ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`,
+          `${borderTokens.style.none} ${colors.bg.error}/50 text-red-700 ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`,
         purple:
-          `${borderTokens.style.none} bg-purple-100 text-purple-700 ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`,
+          `${borderTokens.style.none} ${colors.bg.info}/50 text-purple-700 ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`,
       },
     },
     defaultVariants: {
@@ -46,9 +47,10 @@ export interface BadgeProps
     BadgeVariantProps {}
 
 function Badge({ className, variant, ...props }: BadgeProps) {
-  // 🏢 ENTERPRISE: Use centralized border tokens
+  // 🏢 ENTERPRISE: Use centralized tokens
   const borderTokens = useBorderTokens();
-  const badgeVariants = createBadgeVariants(borderTokens);
+  const colors = useSemanticColors();
+  const badgeVariants = createBadgeVariants(borderTokens, colors);
 
   return (
     <div className={cn(badgeVariants({ variant }), className)} {...props} />
@@ -56,6 +58,6 @@ function Badge({ className, variant, ...props }: BadgeProps) {
 }
 
 // Export badgeVariants function για backward compatibility
-const badgeVariants = (borderTokens: ReturnType<typeof useBorderTokens>) => createBadgeVariants(borderTokens);
+const badgeVariants = (borderTokens: ReturnType<typeof useBorderTokens>, colors: ReturnType<typeof useSemanticColors>) => createBadgeVariants(borderTokens, colors);
 
 export { Badge, badgeVariants, createBadgeVariants, type BadgeVariantProps }

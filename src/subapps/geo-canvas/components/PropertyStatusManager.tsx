@@ -128,14 +128,14 @@ export function PropertyStatusManager({
             {showLegend ? <Eye className={iconSizes.sm} /> : <EyeOff className={iconSizes.sm} />}
           </button>
         </div>
-        <p className="text-sm text-gray-600 mt-1">
+        <p className={`text-sm ${colors.text.secondary} mt-1`}>
           {t('propertyStatusManager.subtitle')}
         </p>
       </div>
 
       {/* Color Scheme Selector */}
       <div className="mb-4">
-        <label className="text-sm font-medium text-gray-700 mb-2 block flex items-center gap-2">
+        <label className={`text-sm font-medium ${colors.text.primary} mb-2 block flex items-center gap-2`}>
           <Palette className={iconSizes.sm} />
           {t('propertyStatusManager.colorScheme.title')}
         </label>
@@ -144,8 +144,8 @@ export function PropertyStatusManager({
             onClick={() => handleColorSchemeChange('status')}
             className={`px-3 py-2 text-sm rounded-md font-medium transition-colors ${
               colorScheme === 'status'
-                ? `bg-blue-100 text-blue-700 ${quick.info}`
-                : `bg-gray-100 text-gray-600 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
+                ? `${colors.bg.blue['100']} text-blue-700 ${quick.info}`
+                : `${colors.bg.gray['100']} ${colors.text.secondary} ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
             }`}
           >
             {t('propertyStatusManager.colorScheme.status')}
@@ -154,8 +154,8 @@ export function PropertyStatusManager({
             onClick={() => handleColorSchemeChange('price')}
             className={`px-3 py-2 text-sm rounded-md font-medium transition-colors ${
               colorScheme === 'price'
-                ? `bg-blue-100 text-blue-700 ${quick.info}`
-                : `bg-gray-100 text-gray-600 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
+                ? `${colors.bg.blue['100']} text-blue-700 ${quick.info}`
+                : `${colors.bg.gray['100']} ${colors.text.secondary} ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
             }`}
           >
             {t('propertyStatusManager.colorScheme.price')}
@@ -164,8 +164,8 @@ export function PropertyStatusManager({
             onClick={() => handleColorSchemeChange('type')}
             className={`px-3 py-2 text-sm rounded-md font-medium transition-colors ${
               colorScheme === 'type'
-                ? `bg-blue-100 text-blue-700 ${quick.info}`
-                : `bg-gray-100 text-gray-600 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
+                ? `${colors.bg.blue['100']} text-blue-700 ${quick.info}`
+                : `${colors.bg.gray['100']} ${colors.text.secondary} ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
             }`}
           >
             {t('propertyStatusManager.colorScheme.type')}
@@ -177,7 +177,7 @@ export function PropertyStatusManager({
       {showLegend && (
         <div className="mb-4">
           <div className="flex items-center justify-between mb-3">
-            <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+            <label className={`text-sm font-medium ${colors.text.primary} flex items-center gap-2`}>
               <Tag className={iconSizes.sm} />
               {t('propertyStatusManager.statusCategories')}
             </label>
@@ -201,8 +201,8 @@ export function PropertyStatusManager({
                   key={status}
                   className={`flex items-center gap-3 p-2 rounded-md ${quick.card} transition-all ${
                     isVisible
-                      ? 'bg-gray-50'
-                      : 'bg-gray-25 opacity-60'
+                      ? colors.bg.secondary
+                      : `${colors.bg.secondary} opacity-60`
                   }`}
                 >
                   {/* Color Indicator */}
@@ -212,7 +212,7 @@ export function PropertyStatusManager({
                   />
 
                   {/* Status Label */}
-                  <span className={`flex-1 text-sm font-medium ${isVisible ? 'text-gray-900' : 'text-gray-500'}`}>
+                  <span className={`flex-1 text-sm font-medium ${isVisible ? colors.text.primary : colors.text.secondary}`}>
                     {PROPERTY_STATUS_LABELS[status]}
                   </span>
 
@@ -236,7 +236,7 @@ export function PropertyStatusManager({
       )}
 
       {/* Statistics */}
-      <div className={`bg-blue-50 ${quick.card} ${colors.border.info} p-3`}>
+      <div className={`${colors.bg.info} ${quick.card} ${colors.border.info} p-3`}>
         <div className="flex items-center gap-2 mb-2">
           <Info className={`${iconSizes.sm} text-blue-600`} />
           <span className="text-sm font-medium text-blue-900">{t('propertyStatusManager.statistics.title')}</span>
@@ -254,8 +254,8 @@ export function PropertyStatusManager({
       </div>
 
       {/* Usage Instructions */}
-      <div className="mt-4 p-3 bg-gray-50 rounded-md">
-        <p className="text-xs text-gray-600">
+      <div className={`mt-4 p-3 ${colors.bg.secondary} rounded-md`}>
+        <p className={`text-xs ${colors.text.secondary}`}>
           <strong>{t('propertyStatusManager.tips.title')}</strong> {t('propertyStatusManager.tips.description')}
         </p>
       </div>

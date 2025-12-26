@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Eye, Edit, Trash2, Star, MoreVertical } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 import { cn } from '@/lib/utils';
 import { TRANSITION_PRESETS, HOVER_BACKGROUND_EFFECTS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 
@@ -17,11 +18,12 @@ interface Props {
 
 export function StorageCardActions({ onEdit, onDelete, onToggleFavorite, isFavorite }: Props) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   return (
     <div className={`absolute top-3 right-3 z-10 opacity-0 ${GROUP_HOVER_PATTERNS.SHOW_ON_GROUP} ${TRANSITION_PRESETS.OPACITY}`}>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className={`${iconSizes.lg} p-1 bg-white/80 backdrop-blur-sm shadow-sm ${HOVER_BACKGROUND_EFFECTS.LIGHT}`}>
+          <Button variant="ghost" size="icon" className={`${iconSizes.lg} p-1 ${colors.bg.primary}/80 backdrop-blur-sm shadow-sm ${HOVER_BACKGROUND_EFFECTS.LIGHT}`}>
             <MoreVertical className={iconSizes.sm} />
           </Button>
         </DropdownMenuTrigger>

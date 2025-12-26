@@ -5,6 +5,7 @@ import { ToolDefinition, ActionDefinition } from './types';
 import { ChevronDown } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/hooks/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 
 interface ToolButtonProps {
@@ -17,8 +18,10 @@ interface ToolButtonProps {
 }
 
 export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick, onDropdownSelect, disabled, activeTool }) => {
+  // 🏢 ENTERPRISE HOOKS: Zero duplicates - using existing centralized systems
   const iconSizes = useIconSizes();
   const { getStatusBorder, getElementBorder, getDirectionalBorder } = useBorderTokens();
+  const colors = useSemanticColors();  // ✅ ENTERPRISE: Centralized backgrounds - NO HARDCODED VALUES
   // Determine which icon to show - if activeTool matches a dropdown option, use that icon
   let IconComponent = tool.icon;
   if (tool.dropdownOptions && activeTool) {
@@ -74,8 +77,8 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
           flex items-center justify-center
           ${
             isActive
-              ? `bg-blue-600 text-white ${getStatusBorder('active')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
-              : `bg-gray-700 text-gray-200 ${getElementBorder('button', 'default')} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
+              ? `${colors.bg.info} text-white ${getStatusBorder('active')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
+              : `${colors.bg.hover} text-gray-200 ${getElementBorder('button', 'default')} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
           }
           ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
         `}
@@ -97,8 +100,8 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
             flex items-center justify-center
             ${
               isActive
-                ? `bg-blue-600 text-white ${getStatusBorder('active')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
-                : `bg-gray-700 text-gray-200 ${getElementBorder('button', 'default')} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
+                ? `${colors.bg.info} text-white ${getStatusBorder('active')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
+                : `${colors.bg.hover} text-gray-200 ${getElementBorder('button', 'default')} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
             }
             ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
           `}
@@ -114,8 +117,8 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
             flex items-center justify-center
             ${
               isActive
-                ? `bg-blue-600 text-white ${getStatusBorder('active')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
-                : `bg-gray-700 text-gray-200 ${getElementBorder('button', 'default')} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
+                ? `${colors.bg.info} text-white ${getStatusBorder('active')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
+                : `${colors.bg.hover} text-gray-200 ${getElementBorder('button', 'default')} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
             }
             ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
           `}
@@ -125,7 +128,7 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
       </div>
 
       {showDropdown && (
-        <div className={`absolute top-full left-0 mt-1 bg-gray-800 rounded-md shadow-lg z-50 min-w-[150px] ${getStatusBorder('default')}`}>
+        <div className={`absolute top-full left-0 mt-1 ${colors.bg.secondary} rounded-md shadow-lg z-50 min-w-[150px] ${getStatusBorder('default')}`}>
           {tool.dropdownOptions!.map((option) => {
             const OptionIcon = option.icon;
             return (
@@ -164,10 +167,10 @@ export const ActionButton: React.FC<ActionButtonProps> = ({ action }) => {
         flex items-center justify-center
         ${
           action.active
-            ? `bg-blue-600 text-white ${getStatusBorder('active')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
+            ? `${colors.bg.info} text-white ${getStatusBorder('active')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
             : action.disabled
-            ? `bg-gray-800 text-gray-500 ${getElementBorder('button', 'disabled')} cursor-not-allowed`
-            : `bg-gray-700 text-gray-200 ${getElementBorder('button', 'default')} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
+            ? `${colors.bg.secondary} text-gray-500 ${getElementBorder('button', 'disabled')} cursor-not-allowed`
+            : `${colors.bg.hover} text-gray-200 ${getElementBorder('button', 'default')} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
         }
       `}
     >

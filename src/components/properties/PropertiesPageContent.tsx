@@ -4,21 +4,28 @@ import React from 'react';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
-import { PropertyGridView } from '@/features/property-grid/PropertyGridView';
+import { PropertyGridViewCompatible as PropertyGridView } from '@/components/property-viewer/PropertyGrid';
+
+// Loading component for dynamic import
+const LoadingComponent = () => {
+  const colors = useSemanticColors();
+  return (
+    <div className={`min-h-screen ${colors.bg.secondary} dark:bg-background flex items-center justify-center`}>
+      <div className="text-center">
+        <AnimatedSpinner size="large" className="mx-auto mb-4" />
+        <p className="text-gray-600 dark:text-muted-foreground">Φόρτωση μονάδων...</p>
+      </div>
+    </div>
+  );
+};
 
 // Dynamically import the Units page content
 const UnitsPageContent = dynamic(
   () => import('@/app/units/page').then(mod => ({ default: mod.default })),
   {
-    loading: () => (
-      <div className="min-h-screen bg-gray-50 dark:bg-background flex items-center justify-center">
-        <div className="text-center">
-          <AnimatedSpinner size="large" className="mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-muted-foreground">Φόρτωση μονάδων...</p>
-        </div>
-      </div>
-    ),
+    loading: () => <LoadingComponent />,
     ssr: false
   }
 );

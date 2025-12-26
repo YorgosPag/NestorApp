@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import type { Opportunity } from '@/types/crm';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface QuickActionsProps {
   lead: Opportunity;
@@ -17,6 +19,8 @@ interface QuickActionsProps {
 
 export function QuickActions({ lead, onEdit, onNewTask, onSendEmail }: QuickActionsProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
+  const { quick } = useBorderTokens();
   const handleCall = () => {
     if (!lead.phone) {
       toast.error('Αυτό το lead δεν έχει τηλέφωνο');
@@ -36,7 +40,7 @@ export function QuickActions({ lead, onEdit, onNewTask, onSendEmail }: QuickActi
   };
 
   return (
-    <div className="bg-white dark:bg-card rounded-lg shadow p-6">
+    <div className={`${colors.bg.primary} ${quick.card} shadow p-6`}>
       <h4 className="font-medium mb-3">Γρήγορες Ενέργειες</h4>
       <div className="space-y-2">
         <Button

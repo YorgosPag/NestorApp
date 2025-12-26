@@ -5,6 +5,7 @@ import { Search, MapPin, Navigation, X, Clock, CheckCircle, AlertCircle, Loader2
 import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 
 // ✅ Enterprise Address Resolver Integration
 import { useAddressResolver, type GreekAddress, type GeocodingResult } from '@/services/real-estate-monitor/AddressResolver';
@@ -47,6 +48,7 @@ export function AddressSearchPanel({
 }: AddressSearchPanelProps) {
   const iconSizes = useIconSizes();
   const { quick, getFocusBorder, getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
 
   // ✅ Enterprise AddressResolver Hook
   const { resolve, getCacheStats } = useAddressResolver();
@@ -378,7 +380,7 @@ export function AddressSearchPanel({
   // ============================================================================
 
   return (
-    <div className={`bg-white rounded-lg shadow-lg ${quick.card} p-4 ${className}`}>
+    <div className={`${colors.bg.primary} rounded-lg shadow-lg ${quick.card} p-4 ${className}`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
@@ -477,7 +479,7 @@ export function AddressSearchPanel({
 
         {/* GPS Status */}
         {lastGpsLocation && (
-          <div className={`mt-2 p-2 bg-green-50 ${quick.card} ${getStatusBorder('success')}`}>
+          <div className={`mt-2 p-2 ${colors.bg.success} ${quick.card} ${getStatusBorder('success')}`}>
             <div className="flex items-center gap-2 text-sm text-green-700">
               <CheckCircle className={iconSizes.sm} />
               <span>
@@ -490,7 +492,7 @@ export function AddressSearchPanel({
 
       {/* Errors */}
       {(searchError || gpsError || boundariesError) && (
-        <div className={`mb-4 p-3 bg-red-50 ${quick.card} ${getStatusBorder('error')}`}>
+        <div className={`mb-4 p-3 ${colors.bg.error} ${quick.card} ${getStatusBorder('error')}`}>
           <div className="flex items-center gap-2 text-sm text-red-700">
             <AlertCircle className={`${iconSizes.sm} flex-shrink-0`} />
             <span>{searchError || gpsError || boundariesError}</span>
@@ -559,7 +561,7 @@ export function AddressSearchPanel({
 
       {/* Cache Stats (Development Info) */}
       {process.env.NODE_ENV === 'development' && (
-        <div className="mt-4 p-2 bg-gray-50 rounded-lg">
+        <div className={`mt-4 p-2 ${colors.bg.secondary} rounded-lg`}>
           <div className="text-xs text-gray-500">
             {activeTab === 'address' ? (
               <>Cache: {getCacheStats().size} διευθύνσεις | Recent: {recentSearches.length} αναζητήσεις</>

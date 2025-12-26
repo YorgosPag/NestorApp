@@ -6,6 +6,7 @@ import type { AdminSearchResult } from '../types/administrative-types';
 import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 
 // ============================================================================
 // TYPES
@@ -64,6 +65,7 @@ export function BoundaryLayerControlPanel({
 }: BoundaryLayerControlPanelProps) {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
 
   // State
   const [isExpanded, setIsExpanded] = useState(true);
@@ -110,16 +112,16 @@ export function BoundaryLayerControlPanel({
   };
 
   const renderLayerItem = (layer: BoundaryLayer) => (
-    <div key={layer.id} className={`${quick.card} p-3 bg-white`}>
+    <div key={layer.id} className={`${quick.card} p-3 ${colors.bg.primary}`}>
       {/* Layer Header */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <span className="text-lg">{getBoundaryTypeIcon(layer.type)}</span>
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium text-gray-900 truncate">
+            <div className={`text-sm font-medium ${colors.text.foreground} truncate`}>
               {layer.name}
             </div>
-            <div className="text-xs text-gray-500">
+            <div className={`text-xs ${colors.text.muted}`}>
               {getBoundaryTypeLabel(layer.type)}
             </div>
           </div>
@@ -130,8 +132,8 @@ export function BoundaryLayerControlPanel({
           onClick={() => handleVisibilityToggle(layer.id, !layer.visible)}
           className={`p-1 rounded transition-colors ${
             layer.visible
-              ? 'text-blue-600 ${HOVER_BACKGROUND_EFFECTS.LIGHT}'
-              : 'text-gray-400 ${HOVER_BACKGROUND_EFFECTS.LIGHT}'
+              ? `${colors.text.info} \${HOVER_BACKGROUND_EFFECTS.LIGHT}`
+              : `${colors.text.muted} \${HOVER_BACKGROUND_EFFECTS.LIGHT}`
           }`}
           title={layer.visible ? 'Απόκρυψη' : 'Εμφάνιση'}
         >
@@ -141,7 +143,7 @@ export function BoundaryLayerControlPanel({
         {/* Remove Button */}
         <button
           onClick={() => onLayerRemove(layer.id)}
-          className="p-1 rounded text-red-500 ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ml-1"
+          className={`p-1 rounded ${colors.text.error} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ml-1`}
           title="Αφαίρεση layer"
         >
           ×
@@ -151,7 +153,7 @@ export function BoundaryLayerControlPanel({
       {/* Opacity Slider */}
       {layer.visible && (
         <div className="mb-3">
-          <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
+          <div className={`flex items-center justify-between text-xs ${colors.text.muted} mb-1`}>
             <span>Διαφάνεια</span>
             <span>{Math.round(layer.opacity * 100)}%</span>
           </div>
@@ -172,7 +174,7 @@ export function BoundaryLayerControlPanel({
         <div className="space-y-2">
           <button
             onClick={() => setActiveStyleLayer(activeStyleLayer === layer.id ? null : layer.id)}
-            className="flex items-center gap-2 text-xs text-gray-600 ${HOVER_TEXT_EFFECTS.DARKER} transition-colors"
+            className={`flex items-center gap-2 text-xs ${colors.text.muted} ${HOVER_TEXT_EFFECTS.DARKER} transition-colors`}
           >
             <Palette className={iconSizes.xs} />
             <span>Προσαρμογή στυλ</span>
@@ -180,24 +182,24 @@ export function BoundaryLayerControlPanel({
 
           {/* Style Panel */}
           {activeStyleLayer === layer.id && (
-            <div className="bg-gray-50 rounded p-3 space-y-2">
+            <div className={`${colors.bg.secondary} rounded p-3 space-y-2`}>
               {/* Stroke Color */}
               <div className="flex items-center gap-2">
-                <label className="text-xs text-gray-600 w-16">Χρώμα:</label>
+                <label className={`text-xs ${colors.text.muted} w-16`}>Χρώμα:</label>
                 <input
                   type="color"
                   value={layer.style.strokeColor}
                   onChange={(e) => handleStyleChange(layer.id, 'strokeColor', e.target.value)}
                   className={`w-8 h-6 ${quick.input}`}
                 />
-                <span className="text-xs text-gray-500 font-mono">
+                <span className={`text-xs ${colors.text.muted} font-mono`}>
                   {layer.style.strokeColor}
                 </span>
               </div>
 
               {/* Stroke Width */}
               <div className="flex items-center gap-2">
-                <label className="text-xs text-gray-600 w-16">Πάχος:</label>
+                <label className={`text-xs ${colors.text.muted} w-16`}>Πάχος:</label>
                 <input
                   type="range"
                   min="1"
@@ -207,14 +209,14 @@ export function BoundaryLayerControlPanel({
                   onChange={(e) => handleStyleChange(layer.id, 'strokeWidth', parseFloat(e.target.value))}
                   className="flex-1"
                 />
-                <span className="text-xs text-gray-500 w-8">
+                <span className={`text-xs ${colors.text.muted} w-8`}>
                   {layer.style.strokeWidth}px
                 </span>
               </div>
 
               {/* Fill Color */}
               <div className="flex items-center gap-2">
-                <label className="text-xs text-gray-600 w-16">Γέμισμα:</label>
+                <label className={`text-xs ${colors.text.muted} w-16`}>Γέμισμα:</label>
                 <input
                   type="color"
                   value={layer.style.fillColor}
@@ -230,7 +232,7 @@ export function BoundaryLayerControlPanel({
                   onChange={(e) => handleStyleChange(layer.id, 'fillOpacity', parseFloat(e.target.value))}
                   className="flex-1"
                 />
-                <span className="text-xs text-gray-500 w-8">
+                <span className={`text-xs ${colors.text.muted} w-8`}>
                   {Math.round(layer.style.fillOpacity * 100)}%
                 </span>
               </div>
@@ -246,17 +248,17 @@ export function BoundaryLayerControlPanel({
   // ============================================================================
 
   return (
-    <div className={`bg-white ${quick.card} shadow-lg ${className}`}>
+    <div className={`${colors.bg.primary} ${quick.card} shadow-lg ${className}`}>
       {/* Header */}
       <div className={`p-4 ${quick.separatorH}`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Layers className={`${iconSizes.md} text-blue-600`} />
-            <h3 className="text-lg font-semibold text-gray-900">
+            <Layers className={`${iconSizes.md} ${colors.text.info}`} />
+            <h3 className={`text-lg font-semibold ${colors.text.foreground}`}>
               Boundary Layers
             </h3>
             {layers.length > 0 && (
-              <span className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full">
+              <span className={`px-2 py-1 text-xs ${colors.bg.info} ${colors.text.info} rounded-full`}>
                 {layers.length}
               </span>
             )}
@@ -264,7 +266,7 @@ export function BoundaryLayerControlPanel({
 
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="text-gray-400 ${HOVER_TEXT_EFFECTS.DARKER} transition-colors"
+            className={`${colors.text.muted} ${HOVER_TEXT_EFFECTS.DARKER} transition-colors`}
             title={isExpanded ? 'Σύμπτυξη' : 'Επέκταση'}
           >
             {isExpanded ? '−' : '+'}
@@ -278,7 +280,7 @@ export function BoundaryLayerControlPanel({
           {/* Add New Boundary Button */}
           <button
             onClick={onAddNewBoundary}
-            className={`w-full mb-4 flex items-center justify-center gap-2 p-3 border border-dashed border-border ${quick.card} text-gray-600 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} transition-colors`}
+            className={`w-full mb-4 flex items-center justify-center gap-2 p-3 border border-dashed border-border ${quick.card} ${colors.text.muted} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} transition-colors`}
           >
             <span className="text-lg">+</span>
             <span className="text-sm font-medium">Προσθήκη Boundary</span>
@@ -287,8 +289,8 @@ export function BoundaryLayerControlPanel({
           {/* Layers List */}
           <div className="space-y-3">
             {layers.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <Layers className={`${iconSizes.xl3} mx-auto mb-2 text-gray-300`} />
+              <div className={`text-center py-8 ${colors.text.muted}`}>
+                <Layers className={`${iconSizes.xl3} mx-auto mb-2 ${colors.text.muted}`} />
                 <p className="text-sm">Δεν υπάρχουν boundary layers</p>
                 <p className="text-xs">Κάντε κλικ "Προσθήκη Boundary" για να ξεκινήσετε</p>
               </div>
@@ -303,13 +305,13 @@ export function BoundaryLayerControlPanel({
               <div className="flex gap-2">
                 <button
                   onClick={() => layers.forEach(layer => handleVisibilityToggle(layer.id, true))}
-                  className={`flex-1 px-3 py-2 text-xs bg-green-50 text-green-700 ${quick.input} ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} transition-colors`}
+                  className={`flex-1 px-3 py-2 text-xs ${colors.bg.success} ${colors.text.success} ${quick.input} ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} transition-colors`}
                 >
                   Εμφάνιση Όλων
                 </button>
                 <button
                   onClick={() => layers.forEach(layer => handleVisibilityToggle(layer.id, false))}
-                  className={`flex-1 px-3 py-2 text-xs bg-gray-50 text-gray-700 ${quick.input} ${HOVER_BACKGROUND_EFFECTS.LIGHT} transition-colors`}
+                  className={`flex-1 px-3 py-2 text-xs ${colors.bg.secondary} ${colors.text.muted} ${quick.input} ${HOVER_BACKGROUND_EFFECTS.LIGHT} transition-colors`}
                 >
                   Απόκρυψη Όλων
                 </button>

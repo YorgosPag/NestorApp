@@ -4,6 +4,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
@@ -15,6 +16,7 @@ import { layoutUtilities } from '@/styles/design-tokens';
 export function FilesCard() {
   const iconSizes = useIconSizes();
   const { createBorder, quick, getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
 
   const handleFileUpload = (files: FileList | null) => {
     if (!files) return;
@@ -77,7 +79,7 @@ export function FilesCard() {
 
           <article className={`flex items-center justify-between p-3 bg-card ${quick.card} border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`} aria-label="File: Συγγραφή Υποχρεώσεων.pdf">
             <div className="flex items-center space-x-3">
-              <div className={`flex-shrink-0 ${iconSizes.xl2} bg-red-100 dark:bg-red-950/20 ${quick.card} flex items-center justify-center`}>
+              <div className={`flex-shrink-0 ${iconSizes.xl2} ${colors.bg.red['100']} dark:${colors.bg.red['950']} ${quick.card} flex items-center justify-center`}>
                 <FileText className={`${iconSizes.md} text-red-600`} />
               </div>
               <div className="min-w-0 flex-1">
@@ -94,7 +96,7 @@ export function FilesCard() {
 
           <article className={`flex items-center justify-between p-3 bg-card ${quick.card} border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`} aria-label="File: Πρόοδος Κατασκευής Φεβ 2025.jpg">
             <div className="flex items-center space-x-3">
-              <div className={`flex-shrink-0 ${iconSizes.xl2} bg-green-100 dark:bg-green-950/20 ${quick.card} flex items-center justify-center`}>
+              <div className={`flex-shrink-0 ${iconSizes.xl2} ${colors.bg.green['100']} dark:${colors.bg.green['950']} ${quick.card} flex items-center justify-center`}>
                  <FileImage className={`${iconSizes.md} text-green-600`} />
               </div>
               <div className="min-w-0 flex-1">
@@ -110,7 +112,7 @@ export function FilesCard() {
           </article>
         </section>
 
-        <aside className={`mt-4 p-3 bg-blue-50 dark:bg-blue-950/30 ${quick.info} dark:${getStatusBorder('info')} hidden`} id="upload-progress" role="status" aria-label="Upload progress">
+        <aside className={`mt-4 p-3 ${colors.bg.info} ${quick.info} dark:${getStatusBorder('info')} hidden`} id="upload-progress" role="status" aria-label="Upload progress">
           <div className="flex items-center space-x-3">
             <div className="flex-shrink-0"><AnimatedSpinner size="medium" /></div>
             <div className="flex-1">

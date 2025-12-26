@@ -6,6 +6,8 @@ import type { Building } from '@/types/building/contracts';
 import { type Photo } from '@/components/generic/utils/PhotoItem';
 import { EnterprisePhotoUpload } from '@/components/ui/EnterprisePhotoUpload';
 import { PhotoItem } from '@/components/generic/utils/PhotoItem';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 
 interface PhotosTabContentProps {
   building?: Building;
@@ -22,6 +24,8 @@ const initialPhotos: Photo[] = [
 ];
 
 const PhotosTabContent = ({ building }: PhotosTabContentProps) => {
+  const colors = useSemanticColors();
+  const { quick } = useBorderTokens();
   const [photos, setPhotos] = useState<Photo[]>(initialPhotos);
   const [currentFile, setCurrentFile] = useState<File | null>(null);
 
@@ -46,7 +50,7 @@ const PhotosTabContent = ({ building }: PhotosTabContentProps) => {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-lg border p-6">
+      <div className={`${colors.bg.primary} ${quick.card} p-6`}>
         <h3 className="text-lg font-semibold mb-4">Φωτογραφίες Κτιρίου</h3>
         <EnterprisePhotoUpload
           purpose="photo"

@@ -18,8 +18,9 @@ import { DetailsCard } from '@/components/property-management/dashboard/DetailsC
 import { AdvancedFiltersPanel, unitFiltersConfig, defaultUnitFilters, type UnitFilterState } from '@/components/core/AdvancedFilters';
 import { ListContainer } from '@/core/containers';
 import { UnitsSidebar } from '@/components/units/UnitsSidebar';
-import { PropertyGridView } from '@/features/property-grid/PropertyGridView';
+import { PropertyGridViewCompatible as PropertyGridView } from '@/components/property-viewer/PropertyGrid';
 import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 
 // Helper functions for labels (from original PropertyDashboard)
 const getStatusLabel = (status: string) => {
@@ -346,8 +347,10 @@ function UnitsPageContent() {
 }
 
 function UnitsPageFallback() {
+  const colors = useSemanticColors();
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-background flex items-center justify-center">
+    <div className={`min-h-screen ${colors.bg.secondary} dark:bg-background flex items-center justify-center`}>
       <div className="text-center">
         <AnimatedSpinner size="large" className="mx-auto mb-4" />
         <p className="text-gray-600 dark:text-muted-foreground">Φόρτωση μονάδων...</p>

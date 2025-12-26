@@ -31,6 +31,7 @@ import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { canvasUtilities } from '@/styles/design-tokens';
 import { layoutUtilities } from '@/styles/design-tokens';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/hooks/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
 
 /**
  * Component props
@@ -57,6 +58,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
 
   const { t } = useTranslationLazy('geo-canvas');
   const { quick, getStatusBorder, getDirectionalBorder } = useBorderTokens();
+  const colors = useSemanticColors();  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
 
   // ❗ CRITICAL: Use the passed instance, NOT a new hook call
   const {
@@ -347,13 +349,13 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
   const getStateBadgeColor = (): string => {
     switch (pickingState) {
       case 'idle':
-        return 'bg-gray-100 text-gray-700';
+        return `${colors.bg.hover} ${colors.text.muted}`;
       case 'picking-floor':
-        return 'bg-blue-100 text-blue-700';
+        return `${colors.bg.info} ${colors.text.info}`;
       case 'picking-geo':
-        return 'bg-green-100 text-green-700';
+        return `${colors.bg.success} ${colors.text.success}`;
       default:
-        return 'bg-gray-100 text-gray-700';
+        return `${colors.bg.hover} ${colors.text.muted}`;
     }
   };
 
@@ -431,7 +433,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
           <>
             {/* Description */}
             <div className="mb-4">
-              <p className="text-sm text-gray-700">
+              <p className={`text-sm ${colors.text.muted}`}>
                 {t('floorPlanControlPoints.description')}
               </p>
             </div>
@@ -444,12 +446,12 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
             </div>
 
             {/* Instructions */}
-            <div className={`mb-4 p-3 bg-blue-50 ${quick.card} ${getStatusBorder('info')}`}>
-              <p className="text-sm text-blue-800">
+            <div className={`mb-4 p-3 ${colors.bg.info} ${quick.card} ${getStatusBorder('info')}`}>
+              <p className={`text-sm ${colors.text.info}`}>
                 ℹ️ {getInstructions()}
               </p>
               {tempFloorPlan && (
-                <p className="text-xs text-blue-600 mt-2">
+                <p className={`text-xs ${colors.text.info} mt-2`}>
                   ✅ Floor plan point selected: ({tempFloorPlan.x.toFixed(2)}, {tempFloorPlan.y.toFixed(2)})
                 </p>
               )}
@@ -460,14 +462,14 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
           {pickingState === 'idle' ? (
             <button
               onClick={handleStartPicking}
-              className={`px-4 py-2 bg-blue-600 text-white rounded ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} transition-colors`}
+              className={`px-4 py-2 ${colors.bg.info} text-white rounded ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} transition-colors`}
             >
               ➕ {t('floorPlanControlPoints.buttons.addControlPoint')}
             </button>
           ) : (
             <button
               onClick={handleCancelPicking}
-              className={`px-4 py-2 bg-red-600 text-white rounded ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} transition-colors`}
+              className={`px-4 py-2 ${colors.bg.error} text-white rounded ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} transition-colors`}
             >
               ❌ {t('floorPlanControlPoints.buttons.cancel')}
             </button>
@@ -476,7 +478,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
           {points.length > 0 && pickingState === 'idle' && (
             <button
               onClick={handleClearAll}
-              className={`px-4 py-2 bg-gray-300 text-gray-700 rounded ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} transition-colors`}
+              className={`px-4 py-2 ${colors.bg.hover} ${colors.text.muted} rounded ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} transition-colors`}
             >
               🗑️ {t('floorPlanControlPoints.buttons.clearAll')}
             </button>
@@ -489,16 +491,16 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
         {activeTab === 'manual' && (
           <>
             <div className="mb-4">
-              <p className="text-sm text-gray-700 mb-4">
+              <p className={`text-sm ${colors.text.muted} mb-4`}>
                 {t('floorPlanControlPoints.manualInput.description')}
               </p>
 
               {/* DXF Coordinates */}
               <div className={`mb-4 p-3 ${quick.card} ${getStatusBorder('default')}`}>
-                <h4 className="text-sm font-semibold mb-2 text-gray-700">📐 {t('floorPlanControlPoints.manualInput.dxfCoordinates')}</h4>
+                <h4 className={`text-sm font-semibold mb-2 ${colors.text.muted}`}>📐 {t('floorPlanControlPoints.manualInput.dxfCoordinates')}</h4>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-xs text-gray-600 mb-1">DXF X:</label>
+                    <label className={`block text-xs ${colors.text.muted} mb-1`}>DXF X:</label>
                     <input
                       type="number"
                       step="any"
@@ -509,7 +511,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-600 mb-1">DXF Y:</label>
+                    <label className={`block text-xs ${colors.text.muted} mb-1`}>DXF Y:</label>
                     <input
                       type="number"
                       step="any"
@@ -524,10 +526,10 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
 
               {/* Geo Coordinates */}
               <div className={`mb-4 p-3 ${quick.card} ${getStatusBorder('default')}`}>
-                <h4 className="text-sm font-semibold mb-2 text-gray-700">🌍 {t('floorPlanControlPoints.manualInput.geoCoordinates')}</h4>
+                <h4 className={`text-sm font-semibold mb-2 ${colors.text.muted}`}>🌍 {t('floorPlanControlPoints.manualInput.geoCoordinates')}</h4>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-xs text-gray-600 mb-1">{t('floorPlanControlPoints.manualInput.longitude')}:</label>
+                    <label className={`block text-xs ${colors.text.muted} mb-1`}>{t('floorPlanControlPoints.manualInput.longitude')}:</label>
                     <input
                       type="number"
                       step="any"
@@ -538,7 +540,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-600 mb-1">{t('floorPlanControlPoints.manualInput.latitude')}:</label>
+                    <label className={`block text-xs ${colors.text.muted} mb-1`}>{t('floorPlanControlPoints.manualInput.latitude')}:</label>
                     <input
                       type="number"
                       step="any"
@@ -554,7 +556,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
               {/* Accuracy & Description */}
               <div className="mb-4 grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Accuracy (m):</label>
+                  <label className={`block text-xs ${colors.text.muted} mb-1`}>Accuracy (m):</label>
                   <input
                     type="number"
                     step="0.1"
@@ -565,7 +567,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Description:</label>
+                  <label className={`block text-xs ${colors.text.muted} mb-1`}>Description:</label>
                   <input
                     type="text"
                     value={manualInput.description}
@@ -579,7 +581,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
               {/* Manual Add Button */}
               <button
                 onClick={handleAddManualPoint}
-                className={`w-full px-4 py-2 bg-green-600 text-white rounded ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} transition-colors text-sm font-medium`}
+                className={`w-full px-4 py-2 ${colors.bg.success} text-white rounded ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} transition-colors text-sm font-medium`}
                 disabled={!manualInput.dxfX || !manualInput.dxfY || !manualInput.geoLng || !manualInput.geoLat}
               >
                 ✅ {t('floorPlanControlPoints.manualInput.addPoint')}
@@ -597,8 +599,8 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
               disabled={!transformation.isValid}
               className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
                 transformation.isValid
-                  ? `bg-green-600 text-white ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  ? `${colors.bg.success} text-white ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`
+                  : `${colors.bg.hover} ${colors.text.muted} cursor-not-allowed`
               }`}
             >
               ⚡ {t('floorPlanControlPoints.actions.calibrate')}
@@ -610,15 +612,15 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
               disabled={points.length === 0}
               className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
                 points.length > 0
-                  ? `bg-blue-600 text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  ? `${colors.bg.info} text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
+                  : `${colors.bg.hover} ${colors.text.muted} cursor-not-allowed`
               }`}
             >
               💾 {t('floorPlanControlPoints.actions.save')}
             </button>
 
             {/* Load Points */}
-            <label className={`px-3 py-2 bg-purple-600 text-white rounded text-sm font-medium ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} transition-colors cursor-pointer`}>
+            <label className={`px-3 py-2 ${colors.bg.info} text-white rounded text-sm font-medium ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} transition-colors cursor-pointer`}>
               📁 {t('floorPlanControlPoints.actions.load')}
               <input
                 type="file"
@@ -632,7 +634,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
             {points.length > 0 && (
               <button
                 onClick={handleClearAll}
-                className={`px-3 py-2 bg-red-600 text-white rounded text-sm font-medium ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} transition-colors`}
+                className={`px-3 py-2 ${colors.bg.error} text-white rounded text-sm font-medium ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} transition-colors`}
               >
                 🗑️ {t('floorPlanControlPoints.buttons.clearAll')}
               </button>
@@ -647,11 +649,11 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
               {t('floorPlanControlPoints.status.points')} {points.length}
             </span>
             {hasMinPoints ? (
-              <span className="text-sm text-green-600 font-medium">
+              <span className={`text-sm ${colors.text.success} font-medium`}>
                 ✅ {t('floorPlanControlPoints.status.readyForGeoreferencing')}
               </span>
             ) : (
-              <span className="text-sm text-orange-600 font-medium">
+              <span className={`text-sm ${colors.text.warning} font-medium`}>
                 ⚠️ {t('floorPlanControlPoints.status.needMorePoints', {
                   count: 3 - points.length,
                   plural: 3 - points.length !== 1 ? 's' : ''
@@ -661,10 +663,10 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
           </div>
 
           {/* Progress bar */}
-          <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+          <div className={`mt-2 w-full ${colors.bg.hover} rounded-full h-2`}>
             <div
               className={`h-2 rounded-full transition-all ${
-                hasMinPoints ? 'bg-green-500' : 'bg-orange-500'
+                hasMinPoints ? colors.bg.success : colors.bg.warning
               }`}
               style={canvasUtilities.geoInteractive.draggablePanelProgressBar((points.length / 3) * 100)}
             />
@@ -679,19 +681,19 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
               <span
                 className={`px-2 py-1 rounded text-xs font-semibold ${
                   transformation.quality === 'excellent'
-                    ? 'bg-green-100 text-green-800'
+                    ? `${colors.bg.success} ${colors.text.success}`
                     : transformation.quality === 'good'
-                    ? 'bg-blue-100 text-blue-800'
+                    ? `${colors.bg.info} ${colors.text.info}`
                     : transformation.quality === 'fair'
-                    ? 'bg-yellow-100 text-yellow-800'
-                    : 'bg-red-100 text-red-800'
+                    ? `${colors.bg.warning} ${colors.text.warning}`
+                    : `${colors.bg.error} ${colors.text.error}`
                 }`}
               >
                 {transformation.quality.toUpperCase()}
               </span>
             </div>
 
-            <div className="space-y-1 text-xs text-gray-800">
+            <div className={`space-y-1 text-xs ${colors.text.foreground}`}>
               <div className="flex justify-between">
                 <span>RMS Error:</span>
                 <span className="font-mono font-semibold">{transformation.rmsError?.toFixed(2)}m</span>
@@ -711,7 +713,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
             </div>
 
             {transformation.quality === 'poor' && (
-              <div className="mt-2 text-xs text-red-600">
+              <div className={`mt-2 text-xs ${colors.text.error}`}>
                 ⚠️ Low accuracy - consider adding more control points or checking existing ones
               </div>
             )}
@@ -721,7 +723,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
         {/* Control Points List */}
         {points.length > 0 && (
           <div className={`${quick.table} max-h-80 overflow-y-auto`}>
-            <div className={`bg-gray-50 px-3 py-2 ${quick.separatorH} font-semibold text-sm`}>
+            <div className={`${colors.bg.hover} px-3 py-2 ${quick.separatorH} font-semibold text-sm`}>
               {t('floorPlanControlPoints.list.title')}
             </div>
 
@@ -756,13 +758,13 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
                       <>
                         <button
                           onClick={() => handleSaveEdit(point.id)}
-                          className={`px-2 py-1 text-xs bg-green-600 text-white rounded ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`}
+                          className={`px-2 py-1 text-xs ${colors.bg.success} text-white rounded ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}`}
                         >
                           ✓
                         </button>
                         <button
                           onClick={handleCancelEdit}
-                          className={`px-2 py-1 text-xs bg-gray-400 text-white rounded ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
+                          className={`px-2 py-1 text-xs ${colors.bg.hover} text-white rounded ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
                         >
                           ✗
                         </button>
@@ -771,13 +773,13 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
                       <>
                         <button
                           onClick={() => handleStartEdit(point)}
-                          className={`px-2 py-1 text-xs bg-blue-600 text-white rounded ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
+                          className={`px-2 py-1 text-xs ${colors.bg.info} text-white rounded ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
                         >
                           ✏️
                         </button>
                         <button
                           onClick={() => handleDelete(point.id)}
-                          className={`px-2 py-1 text-xs bg-red-600 text-white rounded ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`}
+                          className={`px-2 py-1 text-xs ${colors.bg.error} text-white rounded ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`}
                         >
                           🗑️
                         </button>
@@ -787,7 +789,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
                 </div>
 
                 {/* Point Coordinates */}
-                <div className="text-xs text-gray-600 space-y-1">
+                <div className={`text-xs ${colors.text.muted} space-y-1`}>
                   <div>
                     <span className="font-medium">Floor Plan:</span>{' '}
                     ({point.floorPlan.x.toFixed(2)}, {point.floorPlan.y.toFixed(2)})
@@ -796,7 +798,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
                     <span className="font-medium">Map:</span>{' '}
                     ({point.geo.lng.toFixed(6)}, {point.geo.lat.toFixed(6)})
                   </div>
-                  <div className="text-gray-400">
+                  <div className={colors.text.subtle}>
                     {new Date(point.createdAt).toLocaleString()}
                   </div>
                 </div>
@@ -807,7 +809,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
 
         {/* Empty State */}
         {points.length === 0 && (
-          <div className="text-center py-8 text-gray-400">
+          <div className={`text-center py-8 ${colors.text.subtle}`}>
             <div className="text-4xl mb-2">📍</div>
             <p className="text-sm">{t('floorPlanControlPoints.list.noPoints')}</p>
             <p className="text-xs mt-1">{t('floorPlanControlPoints.instructions.idle')}</p>
@@ -816,7 +818,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
 
         {/* Debug Info (Development only) */}
         {process.env.NODE_ENV === 'development' && (
-          <div className="mt-4 p-2 bg-gray-100 rounded text-xs">
+          <div className={`mt-4 p-2 ${colors.bg.hover} rounded text-xs`}>
             <div className="font-mono">
               <div>State: {pickingState}</div>
               <div>Points: {points.length}</div>

@@ -10,6 +10,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS, HOVER_SHADOWS } from '@/components/ui/effects';
 import type { RealEstatePolygon } from '@geo-alert/core';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 
 interface TechnicalDrawingInterfaceProps {
   mapRef: React.RefObject<any>;
@@ -42,6 +43,7 @@ export function TechnicalDrawingInterface({
 }: TechnicalDrawingInterfaceProps) {
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   const { t } = useTranslationLazy('geo-canvas');
   const [selectedTool, setSelectedTool] = useState<'dxf-viewer' | 'precision' | 'settings' | 'automated-alerts' | null>(null);
   // ✅ ENTERPRISE: Combine local and centralized drawing state
@@ -177,13 +179,13 @@ export function TechnicalDrawingInterface({
   }, [cancelDrawing]);
 
   return (
-    <div className={`bg-white ${quick.card} shadow-lg p-4`}>
+    <div className={`${colors.bg.primary} ${quick.card} shadow-lg p-4`}>
       {/* Header */}
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">
+        <h3 className={`text-lg font-semibold ${colors.text.foreground}`}>
           {t('drawingInterfaces.technical.title')}
         </h3>
-        <p className="text-sm text-gray-600">
+        <p className={`text-sm ${colors.text.muted}`}>
           {t('drawingInterfaces.technical.subtitle')}
         </p>
       </div>
@@ -198,15 +200,15 @@ export function TechnicalDrawingInterface({
             flex flex-col items-center justify-center p-4 ${quick.card}
             transition-all duration-200 min-h-[100px]
             ${selectedTool === 'dxf-viewer'
-              ? `${getStatusBorder('info')} bg-purple-50`
-              : `border-border bg-white ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
+              ? `${getStatusBorder('info')} ${colors.bg.info}`
+              : `border-border ${colors.bg.primary} \${HOVER_BACKGROUND_EFFECTS.LIGHT}`
             }
             ${isDrawing ? 'opacity-50 cursor-not-allowed' : `cursor-pointer ${HOVER_SHADOWS.MEDIUM}`}
           `}
         >
           <ExternalLink className={`${iconSizes.xl} mb-2 text-purple-600`} />
           <span className="text-sm font-medium">{t('hardcodedTexts.ui.dxfViewer')}</span>
-          <span className="text-xs text-gray-500">{t('hardcodedTexts.ui.fullCad')}</span>
+          <span className={`text-xs ${colors.text.muted}`}>{t('hardcodedTexts.ui.fullCad')}</span>
         </button>
 
         {/* Ultra-Precision Polygon */}
@@ -217,15 +219,15 @@ export function TechnicalDrawingInterface({
             flex flex-col items-center justify-center p-4 ${quick.card}
             transition-all duration-200 min-h-[100px]
             ${selectedTool === 'precision'
-              ? `${getStatusBorder('info')} bg-purple-50`
-              : `border-border bg-white ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
+              ? `${getStatusBorder('info')} ${colors.bg.info}`
+              : `border-border ${colors.bg.primary} \${HOVER_BACKGROUND_EFFECTS.LIGHT}`
             }
             ${actualIsDrawing && selectedTool !== 'precision' ? 'opacity-50 cursor-not-allowed' : `cursor-pointer ${HOVER_SHADOWS.MEDIUM}`}
           `}
         >
           <Ruler className={`${iconSizes.xl} mb-2 text-blue-600`} />
           <span className="text-sm font-medium">{t('drawingInterfaces.technical.tools.precision')}</span>
-          <span className="text-xs text-gray-500">mm-level</span>
+          <span className={`text-xs ${colors.text.muted}`}>mm-level</span>
         </button>
 
         {/* Technical Settings */}
@@ -236,15 +238,15 @@ export function TechnicalDrawingInterface({
             flex flex-col items-center justify-center p-4 ${quick.card}
             transition-all duration-200 min-h-[100px]
             ${selectedTool === 'settings'
-              ? `${getStatusBorder('info')} bg-purple-50`
-              : `border-border bg-white ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
+              ? `${getStatusBorder('info')} ${colors.bg.info}`
+              : `border-border ${colors.bg.primary} \${HOVER_BACKGROUND_EFFECTS.LIGHT}`
             }
             ${isDrawing ? 'opacity-50 cursor-not-allowed' : `cursor-pointer ${HOVER_SHADOWS.MEDIUM}`}
           `}
         >
           <Settings className={`${iconSizes.xl} mb-2 text-gray-600`} />
           <span className="text-sm font-medium">{t('drawingInterfaces.technical.tools.settings')}</span>
-          <span className="text-xs text-gray-500">{t('drawingInterfaces.technical.tools.settingsAdvanced')}</span>
+          <span className={`text-xs ${colors.text.muted}`}>{t('drawingInterfaces.technical.tools.settingsAdvanced')}</span>
         </button>
 
         {/* 🚨 Phase 2.5.3: Automated Alerts */}
@@ -255,15 +257,15 @@ export function TechnicalDrawingInterface({
             flex flex-col items-center justify-center p-4 ${quick.card}
             transition-all duration-200 min-h-[100px]
             ${selectedTool === 'automated-alerts'
-              ? `${getStatusBorder('error')} bg-red-50`
-              : `border-border bg-white ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
+              ? `${getStatusBorder('error')} ${colors.bg.error}`
+              : `border-border ${colors.bg.primary} \${HOVER_BACKGROUND_EFFECTS.LIGHT}`
             }
             ${isDrawing ? 'opacity-50 cursor-not-allowed' : `cursor-pointer ${HOVER_SHADOWS.MEDIUM}`}
           `}
         >
           <AlertTriangle className={`${iconSizes.xl} mb-2 text-red-600`} />
           <span className="text-sm font-medium">{t('hardcodedTexts.ui.alerts')}</span>
-          <span className="text-xs text-gray-500">{t('drawingInterfaces.technical.tools.alertsAuto')}</span>
+          <span className={`text-xs ${colors.text.muted}`}>{t('drawingInterfaces.technical.tools.alertsAuto')}</span>
         </button>
       </div>
 
@@ -288,7 +290,7 @@ export function TechnicalDrawingInterface({
       )}
 
       {/* Technical Specs Panel */}
-      <div className={`mb-4 p-3 bg-purple-50 ${quick.card} ${getStatusBorder('muted')}`}>
+      <div className={`mb-4 p-3 ${colors.bg.info} ${quick.card} ${getStatusBorder('muted')}`}>
         <h4 className="text-sm font-medium text-purple-800 mb-2">
           🔬 {t('drawingInterfaces.technical.specifications.title')}
         </h4>
@@ -310,7 +312,7 @@ export function TechnicalDrawingInterface({
 
       {/* Instructions */}
       {selectedTool && (
-        <div className={`mt-4 p-3 bg-blue-50 ${quick.card} ${getStatusBorder('info')}`}>
+        <div className={`mt-4 p-3 ${colors.bg.info} ${quick.card} ${getStatusBorder('info')}`}>
           <p className="text-sm text-blue-700">
             {selectedTool === 'dxf-viewer' && t('drawingInterfaces.technical.fullDxfViewer')}
             {selectedTool === 'precision' && t('drawingInterfaces.technical.instructions.precision')}
@@ -321,7 +323,7 @@ export function TechnicalDrawingInterface({
       )}
 
       {/* DXF Viewer Quick Access */}
-      <div className="mt-4 p-3 bg-gray-50 rounded-md">
+      <div className={`mt-4 p-3 ${colors.bg.secondary} rounded-md`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Database className={`${iconSizes.sm} text-gray-600`} />
@@ -344,7 +346,7 @@ export function TechnicalDrawingInterface({
 
       {/* Statistics */}
       {(stats.totalPolygons > 0 || realEstateStats.totalAlerts > 0) && (
-        <div className="mt-4 p-3 bg-gray-50 rounded-md space-y-1">
+        <div className={`mt-4 p-3 ${colors.bg.secondary} rounded-md space-y-1`}>
           {stats.totalPolygons > 0 && (
             <p className="text-xs text-gray-600">
               <span className="font-medium">{t('drawingInterfaces.technical.stats.technicalDrawings')}:</span> {stats.totalPolygons}
@@ -373,7 +375,7 @@ export function TechnicalDrawingInterface({
 
       {/* 🚨 Phase 2.5.3: Automated Alerts Configuration Panel */}
       {showAutomatedAlerts && (
-        <div className={`mt-4 bg-white ${quick.card} shadow-lg ${getStatusBorder('error')} p-4`}>
+        <div className={`mt-4 ${colors.bg.primary} ${quick.card} shadow-lg ${getStatusBorder('error')} p-4`}>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <AlertTriangle className={`${iconSizes.md} text-red-600`} />
@@ -512,7 +514,7 @@ export function TechnicalDrawingInterface({
           </div>
 
           {/* Technical Specifications */}
-          <div className={`bg-red-50 ${quick.error} p-3`}>
+          <div className={`${colors.bg.error} ${quick.error} p-3`}>
             <h4 className="text-sm font-semibold text-red-900 mb-2">{t('drawingInterfaces.technical.automatedAlerts.technicalSpecifications')}</h4>
             <div className="grid grid-cols-2 gap-2 text-xs text-red-700">
               <div>

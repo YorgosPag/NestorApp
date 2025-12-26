@@ -4,6 +4,8 @@
 import React, { useMemo } from 'react';
 import { Clock, CheckCircle } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 import type { CrmTask } from '@/types/crm';
 
@@ -14,6 +16,8 @@ interface TasksSummaryProps {
 
 export function TasksSummary({ tasks, loading }: TasksSummaryProps) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
+  const { quick } = useBorderTokens();
   const { pendingTasks, completedTasks } = useMemo(() => {
     if (!tasks) return { pendingTasks: [], completedTasks: [] };
     return {
@@ -23,7 +27,7 @@ export function TasksSummary({ tasks, loading }: TasksSummaryProps) {
   }, [tasks]);
 
   return (
-    <div className="bg-white dark:bg-card rounded-lg shadow p-6">
+    <div className={`${colors.bg.primary} ${quick.card} shadow p-6`}>
       <h4 className="font-medium mb-3">Εργασίες</h4>
       {loading ? (
         <div className="text-center py-4">

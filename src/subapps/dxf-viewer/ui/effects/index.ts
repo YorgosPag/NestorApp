@@ -70,16 +70,17 @@ export const DXF_HOVER_PATTERNS = {
 } as const;
 
 /**
- * 🔧 MIGRATION HELPERS
+ * 🏢 ENTERPRISE BACKGROUND MIGRATION HELPERS
  *
- * Helper functions για εύκολη migration από old hover patterns.
+ * Migration από hardcoded patterns σε Enterprise CSS Variables.
+ * AGENT_C PHASE 3: Background Centralization Integration
  */
 export const MIGRATION_MAP = {
-  // Common migrations
-  'hover:bg-gray-50': HOVER_BACKGROUND_EFFECTS.LIGHT,
-  'hover:bg-blue-50': INTERACTIVE_PATTERNS.PRIMARY_HOVER,
-  'hover:bg-green-50': INTERACTIVE_PATTERNS.SUCCESS_HOVER,
-  'hover:bg-red-50': INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER,
+  // ✅ ENTERPRISE: CSS Variables Integration (AGENT_A + AGENT_B Foundation)
+  'hover:bg-gray-50': 'hover:bg-[hsl(var(--bg-hover))]',        // CSS Variable
+  'hover:bg-blue-50': 'hover:bg-[hsl(var(--bg-info))]',         // CSS Variable
+  'hover:bg-green-50': 'hover:bg-[hsl(var(--bg-success))]',     // CSS Variable
+  'hover:bg-red-50': 'hover:bg-[hsl(var(--bg-error))]',         // CSS Variable
 
   'hover:border-gray-300': HOVER_BORDER_EFFECTS.GRAY,
   'hover:border-blue-500': HOVER_BORDER_EFFECTS.BLUE,
@@ -87,8 +88,8 @@ export const MIGRATION_MAP = {
   'hover:text-gray-900': HOVER_TEXT_EFFECTS.DARKER,
   'hover:text-blue-600': HOVER_TEXT_EFFECTS.BLUE,
 
-  // DXF specific common patterns
-  'hover:bg-white': 'hover:bg-white', // Keep as is (special case)
+  // Background centralization (AGENT_C Priority)
+  'hover:bg-white': 'hover:bg-[hsl(var(--bg-primary))]',        // CSS Variable
   'hover:shadow-md': HOVER_SHADOWS.SUBTLE,
   'hover:scale-105': CORE_HOVER_TRANSFORMS.SCALE_UP_SMALL,
 } as const;

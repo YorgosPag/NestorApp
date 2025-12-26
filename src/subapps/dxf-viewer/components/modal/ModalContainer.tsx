@@ -12,6 +12,7 @@ import { BaseCard } from '@/components/core/BaseCard/BaseCard';
 import { AlertCircle, CheckCircle2, Info, AlertTriangle, Upload } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 import { spacing, typography } from '@/styles/design-tokens';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 
@@ -39,11 +40,12 @@ export const ModalContainer: React.FC<ModalContainerProps> = ({
 }) => {
   const iconSizes = useIconSizes();
   const { quick, getDirectionalBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   const getVariantStyles = () => {
     switch (variant) {
       case 'info':
         return {
-          containerClass: `${quick.info} bg-blue-50 dark:bg-blue-950/30`,
+          containerClass: `${quick.info} ${colors.bg.info}`,
           iconColor: 'text-blue-500',
           titleColor: 'text-blue-700 dark:text-blue-300',
           defaultIcon: <Info className={iconSizes.md} />,

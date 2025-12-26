@@ -6,6 +6,7 @@ import { Building2 } from 'lucide-react';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 import { cn } from '@/lib/utils';
 
 const nearbyProjects = [
@@ -38,6 +39,7 @@ const nearbyProjects = [
 export function NearbyProjectsList() {
     const iconSizes = useIconSizes();
     const { quick } = useBorderTokens();
+    const { bg } = useSemanticColors();
 
     return (
         <Card>
@@ -54,9 +56,9 @@ export function NearbyProjectsList() {
                             <div className="flex items-center gap-3">
                                 <div className={cn(
                                     `${iconSizes.xs} rounded-full`,
-                                    project.status === 'active' ? 'bg-blue-500' :
-                                        project.status === 'completed' ? 'bg-green-500' :
-                                            'bg-yellow-500'
+                                    project.status === 'active' ? bg.info :
+                                        project.status === 'completed' ? bg.success :
+                                            bg.warning
                                 )}></div>
                                 <div>
                                     <p className="font-medium">{project.name}</p>

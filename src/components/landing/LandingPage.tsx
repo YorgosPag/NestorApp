@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Search, MapPin, Home, Filter, TrendingUp, Building, ArrowRight, ChevronDown, Star, Users, Shield } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 import { useTranslation } from '@/i18n';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS, GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -13,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 export function LandingPage() {
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   const { t } = useTranslation('landing');
   const router = useRouter();
   const [searchType, setSearchType] = useState('all');
@@ -58,13 +60,13 @@ export function LandingPage() {
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32">
           <header className="text-center mb-12">
-            <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 dark:text-gray-100 mb-6">
+            <h1 className={`text-5xl lg:text-6xl font-bold ${colors.text.foreground} mb-6`}>
               {t('hero.findIdeal')}{' '}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
                 {t('hero.property')}
               </span>
             </h1>
-            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+            <p className={`text-xl ${colors.text.muted} max-w-2xl mx-auto`}>
               {t('hero.subtitle')}
             </p>
           </header>
@@ -73,7 +75,7 @@ export function LandingPage() {
           <section className="max-w-4xl mx-auto" aria-label="Φόρμα Αναζήτησης Ακινήτων">
             <form
               onSubmit={(e) => { e.preventDefault(); handleSearch(); }}
-              className={`bg-white dark:bg-gray-800/50 dark:backdrop-blur-sm ${quick.card} shadow-xl p-6`}
+              className={`${colors.bg.primary} ${quick.card} shadow-xl p-6`}
               role="search"
               aria-label="Αναζήτηση Ακινήτων"
             >
@@ -81,11 +83,11 @@ export function LandingPage() {
                 <legend className="sr-only">Κριτήρια Αναζήτησης Ακινήτων</legend>
                 {/* Property Type */}
                 <fieldset className="space-y-1">
-                  <label htmlFor="search-type" className="text-xs font-semibold text-gray-500 dark:text-gray-400 block">
+                  <label htmlFor="search-type" className={`text-xs font-semibold ${colors.text.muted} block`}>
                     {t('search.propertyType')}
                   </label>
                   <Select value={searchType} onValueChange={setSearchType}>
-                    <SelectTrigger id="search-type" className={`w-full px-4 py-3 bg-gray-50 dark:bg-gray-700/50 dark:text-white ${quick.input} focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer`}>
+                    <SelectTrigger id="search-type" className={`w-full px-4 py-3 ${colors.bg.secondary} ${colors.text.foreground} ${quick.input} focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer`}>
                       <SelectValue placeholder={t('search.allTypes')} />
                     </SelectTrigger>
                     <SelectContent>
@@ -101,11 +103,11 @@ export function LandingPage() {
 
                 {/* Location */}
                 <fieldset className="relative">
-                  <label htmlFor="search-location" className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 block">
+                  <label htmlFor="search-location" className={`text-xs font-semibold ${colors.text.muted} mb-1 block`}>
                     {t('search.location')}
                   </label>
                   <div className="relative">
-                    <MapPin className={`absolute left-3 top-3.5 ${iconSizes.md} text-gray-400`} />
+                    <MapPin className={`absolute left-3 top-3.5 ${iconSizes.md} ${colors.text.muted}`} />
                     <input
                       id="search-location"
                       aria-label={t('search.location')}
@@ -114,18 +116,18 @@ export function LandingPage() {
                       placeholder={t('search.locationPlaceholder')}
                       value={location}
                       onChange={(e) => setLocation(e.target.value)}
-                      className={`w-full pl-10 pr-4 py-3 bg-gray-50 dark:bg-gray-700/50 dark:text-white ${quick.input} focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                      className={`w-full pl-10 pr-4 py-3 ${colors.bg.secondary} ${colors.text.foreground} ${quick.input} focus:outline-none focus:ring-2 focus:ring-blue-500`}
                     />
                   </div>
                 </fieldset>
 
                 {/* Price Range */}
                 <fieldset className="space-y-1">
-                  <label htmlFor="search-price" className="text-xs font-semibold text-gray-500 dark:text-gray-400 block">
+                  <label htmlFor="search-price" className={`text-xs font-semibold ${colors.text.muted} block`}>
                     Εύρος Τιμής
                   </label>
                   <Select value={priceRange} onValueChange={setPriceRange}>
-                    <SelectTrigger id="search-price" className={`w-full px-4 py-3 bg-gray-50 dark:bg-gray-700/50 dark:text-white ${quick.input} focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer`}>
+                    <SelectTrigger id="search-price" className={`w-full px-4 py-3 ${colors.bg.secondary} ${colors.text.foreground} ${quick.input} focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer`}>
                       <SelectValue placeholder="Όλες οι τιμές" />
                     </SelectTrigger>
                     <SelectContent>
@@ -140,11 +142,11 @@ export function LandingPage() {
 
                 {/* Area Range */}
                 <fieldset className="space-y-1">
-                  <label htmlFor="search-area" className="text-xs font-semibold text-gray-500 dark:text-gray-400 block">
+                  <label htmlFor="search-area" className={`text-xs font-semibold ${colors.text.muted} block`}>
                     Εμβαδόν
                   </label>
                   <Select value={areaRange} onValueChange={setAreaRange}>
-                    <SelectTrigger id="search-area" className={`w-full px-4 py-3 bg-gray-50 dark:bg-gray-700/50 dark:text-white ${quick.input} focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer`}>
+                    <SelectTrigger id="search-area" className={`w-full px-4 py-3 ${colors.bg.secondary} ${colors.text.foreground} ${quick.input} focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer`}>
                       <SelectValue placeholder="Όλα τα μεγέθη" />
                     </SelectTrigger>
                     <SelectContent>
@@ -169,16 +171,16 @@ export function LandingPage() {
 
             {/* Quick Search Links */}
             <nav className="flex flex-wrap justify-center gap-3 mt-6" role="navigation" aria-label="Γρήγορες Συνδέσεις Αναζήτησης">
-              <Link href="/properties?type=Στούντιο" className={`px-4 py-2 bg-white/80 dark:bg-gray-800/50 dark:text-gray-200 backdrop-blur text-sm font-medium text-gray-700 ${quick.pill} ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`}>
+              <Link href="/properties?type=Στούντιο" className={`px-4 py-2 ${colors.bg.primary}/80 backdrop-blur text-sm font-medium ${colors.text.muted} ${quick.pill} ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`}>
                 Στούντιο
               </Link>
-              <Link href="/properties?type=Διαμέρισμα" className={`px-4 py-2 bg-white/80 dark:bg-gray-800/50 dark:text-gray-200 backdrop-blur text-sm font-medium text-gray-700 ${quick.pill} ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`}>
+              <Link href="/properties?type=Διαμέρισμα" className={`px-4 py-2 ${colors.bg.primary}/80 backdrop-blur text-sm font-medium ${colors.text.muted} ${quick.pill} ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`}>
                 2 Υπνοδωμάτια
               </Link>
-              <Link href="/properties?type=Μεζονέτα" className={`px-4 py-2 bg-white/80 dark:bg-gray-800/50 dark:text-gray-200 backdrop-blur text-sm font-medium text-gray-700 ${quick.pill} ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`}>
+              <Link href="/properties?type=Μεζονέτα" className={`px-4 py-2 ${colors.bg.primary}/80 backdrop-blur text-sm font-medium ${colors.text.muted} ${quick.pill} ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`}>
                 Μεζονέτες
               </Link>
-              <Link href="/properties?view=floorplan" className={`px-4 py-2 bg-white/80 dark:bg-gray-800/50 backdrop-blur text-sm font-medium text-blue-600 dark:text-blue-400 ${quick.pill} flex items-center gap-1 ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`}>
+              <Link href="/properties?view=floorplan" className={`px-4 py-2 ${colors.bg.primary}/80 backdrop-blur text-sm font-medium ${colors.text.info} ${quick.pill} flex items-center gap-1 ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`}>
                 <MapPin className={iconSizes.sm} />
                 Δείτε σε Κάτοψη
               </Link>
@@ -188,79 +190,79 @@ export function LandingPage() {
       </section>
 
       {/* Stats Section */}
-      <section className="py-16 bg-white dark:bg-gray-900" role="region" aria-label="Στατιστικά Εταιρείας">
+      <section className={`py-16 ${colors.bg.primary}`} role="region" aria-label="Στατιστικά Εταιρείας">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8" role="list">
             <article className="text-center" role="listitem">
-              <data value="5" className="text-3xl font-bold text-blue-600 mb-2">5+</data>
-              <p className="text-gray-600 dark:text-gray-300">Διαθέσιμα Ακίνητα</p>
+              <data value="5" className={`text-3xl font-bold ${colors.text.info} mb-2`}>5+</data>
+              <p className={colors.text.muted}>Διαθέσιμα Ακίνητα</p>
             </article>
             <article className="text-center" role="listitem">
-              <data value="3" className="text-3xl font-bold text-purple-600 mb-2">3</data>
-              <p className="text-gray-600 dark:text-gray-300">Premium Τοποθεσίες</p>
+              <data value="3" className={`text-3xl font-bold ${colors.text.accent} mb-2`}>3</data>
+              <p className={colors.text.muted}>Premium Τοποθεσίες</p>
             </article>
             <article className="text-center" role="listitem">
-              <data value="100" className="text-3xl font-bold text-green-600 mb-2">100%</data>
-              <p className="text-gray-600 dark:text-gray-300">Εγγύηση Ποιότητας</p>
+              <data value="100" className={`text-3xl font-bold ${colors.text.success} mb-2`}>100%</data>
+              <p className={colors.text.muted}>Εγγύηση Ποιότητας</p>
             </article>
             <article className="text-center" role="listitem">
               <data value="24" className="text-3xl font-bold text-orange-600 mb-2">24/7</data>
-              <p className="text-gray-600 dark:text-gray-300">Υποστήριξη</p>
+              <p className={colors.text.muted}>Υποστήριξη</p>
             </article>
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className="py-20 bg-gray-50 dark:bg-gray-900/50" role="region" aria-label="Χαρακτηριστικά Υπηρεσιών">
+      <section className={`py-20 ${colors.bg.secondary}`} role="region" aria-label="Χαρακτηριστικά Υπηρεσιών">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <header className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+            <h2 className={`text-3xl font-bold ${colors.text.foreground} mb-4`}>
               Γιατί να Επιλέξετε τα Ακίνητά μας;
             </h2>
-            <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+            <p className={`text-lg ${colors.text.muted} max-w-2xl mx-auto`}>
               Προσφέρουμε την καλύτερη εμπειρία αναζήτησης ακινήτων με σύγχρονα εργαλεία
             </p>
           </header>
 
           <ul className="grid md:grid-cols-3 gap-8">
             <li>
-              <article className={`bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm ${INTERACTIVE_PATTERNS.CARD_STANDARD}`}>
-                <figure className={`${iconSizes.xl2} bg-blue-100 dark:bg-blue-900/50 rounded-lg flex items-center justify-center mb-4`}>
-                  <MapPin className={`${iconSizes.lg} text-blue-600`} />
+              <article className={`${colors.bg.primary} rounded-xl p-6 shadow-sm ${INTERACTIVE_PATTERNS.CARD_STANDARD}`}>
+                <figure className={`${iconSizes.xl2} ${colors.bg.info} rounded-lg flex items-center justify-center mb-4`}>
+                  <MapPin className={`${iconSizes.lg} ${colors.text.info}`} />
                 </figure>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+              <h3 className={`text-lg font-semibold ${colors.text.foreground} mb-2`}>
                 Διαδραστική Κάτοψη
               </h3>
-              <p className="text-gray-600 dark:text-gray-300">
+              <p className={colors.text.muted}>
                 Εξερευνήστε τα ακίνητα σε διαδραστική κάτοψη ορόφου και δείτε τη θέση τους
               </p>
               </article>
             </li>
 
             <li>
-              <article className={`bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm ${INTERACTIVE_PATTERNS.CARD_STANDARD}`}>
-                <figure className={`${iconSizes.xl2} bg-purple-100 dark:bg-purple-900/50 rounded-lg flex items-center justify-center mb-4`}>
-                  <Shield className={`${iconSizes.lg} text-purple-600`} />
+              <article className={`${colors.bg.primary} rounded-xl p-6 shadow-sm ${INTERACTIVE_PATTERNS.CARD_STANDARD}`}>
+                <figure className={`${iconSizes.xl2} ${colors.bg.accent} rounded-lg flex items-center justify-center mb-4`}>
+                  <Shield className={`${iconSizes.lg} ${colors.text.accent}`} />
                 </figure>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+              <h3 className={`text-lg font-semibold ${colors.text.foreground} mb-2`}>
                 Εγγυημένη Ποιότητα
               </h3>
-              <p className="text-gray-600 dark:text-gray-300">
+              <p className={colors.text.muted}>
                 Όλα τα ακίνητα είναι ελεγμένα και πληρούν τις υψηλότερες προδιαγραφές
               </p>
               </article>
             </li>
 
             <li>
-              <article className={`bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm ${INTERACTIVE_PATTERNS.CARD_STANDARD}`}>
-                <figure className={`${iconSizes.xl2} bg-green-100 dark:bg-green-900/50 rounded-lg flex items-center justify-center mb-4`}>
-                  <Users className={`${iconSizes.lg} text-green-600`} />
+              <article className={`${colors.bg.primary} rounded-xl p-6 shadow-sm ${INTERACTIVE_PATTERNS.CARD_STANDARD}`}>
+                <figure className={`${iconSizes.xl2} ${colors.bg.success} rounded-lg flex items-center justify-center mb-4`}>
+                  <Users className={`${iconSizes.lg} ${colors.text.success}`} />
                 </figure>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+              <h3 className={`text-lg font-semibold ${colors.text.foreground} mb-2`}>
                 Προσωπική Εξυπηρέτηση
               </h3>
-              <p className="text-gray-600 dark:text-gray-300">
+              <p className={colors.text.muted}>
                 Η ομάδα μας είναι εδώ για να σας βοηθήσει σε κάθε βήμα της διαδικασίας
               </p>
               </article>
@@ -273,7 +275,7 @@ export function LandingPage() {
       <section className="py-20" role="region" aria-label="Προτεινόμενα Ακίνητα">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <header className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+            <h2 className={`text-3xl font-bold ${colors.text.foreground} mb-4`}>
               Προτεινόμενα Ακίνητα
             </h2>
             <p className="text-lg text-gray-600 dark:text-gray-300">

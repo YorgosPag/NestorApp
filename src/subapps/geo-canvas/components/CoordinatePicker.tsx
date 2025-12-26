@@ -7,6 +7,7 @@ import type { DxfCoordinate, GeoCoordinate } from '../types';
 import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 
 // ============================================================================
 // COORDINATE PICKER COMPONENT TYPES
@@ -36,6 +37,7 @@ export function CoordinatePicker({
 }: CoordinatePickerProps) {
   const iconSizes = useIconSizes();
   const { quick, radius } = useBorderTokens();
+  const colors = useSemanticColors();
   const [transformState, transformActions] = useGeoTransform();
   const [pickingMode, setPickingMode] = useState<PickingMode>('idle');
 
@@ -209,41 +211,41 @@ export function CoordinatePicker({
   // ========================================================================
 
   const renderDxfInputSection = () => (
-    <div className={`bg-gray-800 ${quick.card} p-4 mb-4`}>
-      <h3 className="text-lg font-semibold mb-3 text-blue-400">
+    <div className={`${colors.bg.primary} ${quick.card} p-4 mb-4`}>
+      <h3 className={`text-lg font-semibold mb-3 ${colors.text.accent}`}>
         📐 DXF Coordinates
       </h3>
 
       <div className="grid grid-cols-3 gap-3">
         <div>
-          <label className="block text-sm text-gray-400 mb-1">X:</label>
+          <label className={`block text-sm ${colors.text.muted} mb-1`}>X:</label>
           <input
             type="number"
             value={dxfInput.x}
             onChange={(e) => handleDxfInputChange('x', e.target.value)}
-            className={`w-full bg-gray-700 ${quick.input} px-3 py-2 text-sm`}
+            className={`w-full ${colors.bg.secondary} ${quick.input} px-3 py-2 text-sm`}
             placeholder="0.00"
             step="0.01"
           />
         </div>
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Y:</label>
+          <label className={`block text-sm ${colors.text.muted} mb-1`}>Y:</label>
           <input
             type="number"
             value={dxfInput.y}
             onChange={(e) => handleDxfInputChange('y', e.target.value)}
-            className={`w-full bg-gray-700 ${quick.input} px-3 py-2 text-sm`}
+            className={`w-full ${colors.bg.secondary} ${quick.input} px-3 py-2 text-sm`}
             placeholder="0.00"
             step="0.01"
           />
         </div>
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Z (optional):</label>
+          <label className={`block text-sm ${colors.text.muted} mb-1`}>Z (optional):</label>
           <input
             type="number"
             value={dxfInput.z}
             onChange={(e) => handleDxfInputChange('z', e.target.value)}
-            className={`w-full bg-gray-700 ${quick.input} px-3 py-2 text-sm`}
+            className={`w-full ${colors.bg.secondary} ${quick.input} px-3 py-2 text-sm`}
             placeholder="0.00"
             step="0.01"
           />
@@ -254,7 +256,7 @@ export function CoordinatePicker({
         <div className="mt-3">
           <button
             onClick={fillFromSelectedPoint}
-            className={`text-sm bg-purple-600 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-white px-3 py-1 rounded transition-colors`}
+            className={`text-sm ${colors.bg.info} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-white px-3 py-1 rounded transition-colors`}
           >
             📋 Fill από Selected Point
           </button>
@@ -264,16 +266,16 @@ export function CoordinatePicker({
   );
 
   const renderGeoInputSection = () => (
-    <div className={`bg-gray-800 ${quick.card} p-4 mb-4`}>
+    <div className={`${colors.bg.primary} ${quick.card} p-4 mb-4`}>
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-lg font-semibold text-blue-400">
+        <h3 className={`text-lg font-semibold ${colors.text.accent}`}>
           🌍 Geographic Coordinates
         </h3>
         <div className="flex items-center space-x-2">
           <span className={`${iconSizes.xs} ${radius.full} ${
-            selectedGeoPoint ? 'bg-green-400' : 'bg-gray-400'
+            selectedGeoPoint ? colors.bg.success : colors.bg.hover
           }`} />
-          <span className="text-xs text-gray-400">
+          <span className={`text-xs ${colors.text.muted}`}>
             {selectedGeoPoint ? 'Point Selected' : 'Click on Map'}
           </span>
         </div>
@@ -281,42 +283,42 @@ export function CoordinatePicker({
 
       <div className="grid grid-cols-3 gap-3">
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Longitude:</label>
+          <label className={`block text-sm ${colors.text.muted} mb-1`}>Longitude:</label>
           <input
             type="number"
             value={geoInput.lng}
             onChange={(e) => handleGeoInputChange('lng', e.target.value)}
-            className={`w-full bg-gray-700 ${quick.input} px-3 py-2 text-sm`}
+            className={`w-full ${colors.bg.secondary} ${quick.input} px-3 py-2 text-sm`}
             placeholder={GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE.toString()}
             step="0.000001"
           />
         </div>
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Latitude:</label>
+          <label className={`block text-sm ${colors.text.muted} mb-1`}>Latitude:</label>
           <input
             type="number"
             value={geoInput.lat}
             onChange={(e) => handleGeoInputChange('lat', e.target.value)}
-            className={`w-full bg-gray-700 ${quick.input} px-3 py-2 text-sm`}
+            className={`w-full ${colors.bg.secondary} ${quick.input} px-3 py-2 text-sm`}
             placeholder={GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE.toString()}
             step="0.000001"
           />
         </div>
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Altitude (optional):</label>
+          <label className={`block text-sm ${colors.text.muted} mb-1`}>Altitude (optional):</label>
           <input
             type="number"
             value={geoInput.alt}
             onChange={(e) => handleGeoInputChange('alt', e.target.value)}
-            className={`w-full bg-gray-700 ${quick.input} px-3 py-2 text-sm`}
+            className={`w-full ${colors.bg.secondary} ${quick.input} px-3 py-2 text-sm`}
             placeholder="0.00"
             step="0.01"
           />
         </div>
       </div>
 
-      <div className={`mt-3 p-3 bg-blue-900/20 ${quick.info}`}>
-        <div className="text-sm text-blue-300">
+      <div className={`mt-3 p-3 ${colors.bg.info} ${quick.info}`}>
+        <div className={`text-sm ${colors.text.info}`}>
           💡 <strong>Tip:</strong> Click on the map για automatic coordinate selection
         </div>
       </div>
@@ -324,31 +326,31 @@ export function CoordinatePicker({
   );
 
   const renderMetadataSection = () => (
-    <div className={`bg-gray-800 ${quick.card} p-4 mb-4`}>
-      <h3 className="text-lg font-semibold mb-3 text-blue-400">
+    <div className={`${colors.bg.primary} ${quick.card} p-4 mb-4`}>
+      <h3 className={`text-lg font-semibold mb-3 ${colors.text.accent}`}>
         📊 Point Metadata
       </h3>
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Accuracy (meters):</label>
+          <label className={`block text-sm ${colors.text.muted} mb-1`}>Accuracy (meters):</label>
           <input
             type="number"
             value={accuracy}
             onChange={(e) => setAccuracy(e.target.value)}
-            className={`w-full bg-gray-700 ${quick.input} px-3 py-2 text-sm`}
+            className={`w-full ${colors.bg.secondary} ${quick.input} px-3 py-2 text-sm`}
             placeholder="1.0"
             step="0.1"
             min="0.1"
           />
         </div>
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Description:</label>
+          <label className={`block text-sm ${colors.text.muted} mb-1`}>Description:</label>
           <input
             type="text"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className={`w-full bg-gray-700 ${quick.input} px-3 py-2 text-sm`}
+            className={`w-full ${colors.bg.secondary} ${quick.input} px-3 py-2 text-sm`}
             placeholder="Optional description"
             maxLength={100}
           />
@@ -362,29 +364,29 @@ export function CoordinatePicker({
   // ========================================================================
 
   const renderStatusSection = () => (
-    <div className={`bg-gray-800 ${quick.card} p-4 mb-4`}>
-      <h3 className="text-lg font-semibold mb-3 text-blue-400">
+    <div className={`${colors.bg.primary} ${quick.card} p-4 mb-4`}>
+      <h3 className={`text-lg font-semibold mb-3 ${colors.text.accent}`}>
         📋 Status
       </h3>
 
       <div className="space-y-2 text-sm">
         <div className="flex items-center justify-between">
           <span>DXF Coordinates:</span>
-          <span className={dxfInput.x && dxfInput.y ? 'text-green-400' : 'text-gray-400'}>
+          <span className={dxfInput.x && dxfInput.y ? colors.text.success : colors.text.muted}>
             {dxfInput.x && dxfInput.y ? '✅ Ready' : '⭕ Pending'}
           </span>
         </div>
 
         <div className="flex items-center justify-between">
           <span>Geographic Coordinates:</span>
-          <span className={selectedGeoPoint ? 'text-green-400' : 'text-gray-400'}>
+          <span className={selectedGeoPoint ? colors.text.success : colors.text.muted}>
             {selectedGeoPoint ? '✅ Ready' : '⭕ Pending'}
           </span>
         </div>
 
         <div className="flex items-center justify-between">
           <span>Form Valid:</span>
-          <span className={isFormValid() ? 'text-green-400' : 'text-gray-400'}>
+          <span className={isFormValid() ? colors.text.success : colors.text.muted}>
             {isFormValid() ? '✅ Valid' : '⭕ Invalid'}
           </span>
         </div>
@@ -393,26 +395,26 @@ export function CoordinatePicker({
   );
 
   const renderActionButtons = () => (
-    <div className={`bg-gray-800 ${quick.card} p-4`}>
+    <div className={`${colors.bg.primary} ${quick.card} p-4`}>
       <div className="flex space-x-3">
         <button
           onClick={handleSubmitCoordinates}
           disabled={!isFormValid()}
-          className={`flex-1 bg-green-600 ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-3 px-4 ${radius.lg} font-medium transition-colors`}
+          className={`flex-1 ${colors.bg.success} ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} disabled:${colors.bg.hover} disabled:cursor-not-allowed text-white py-3 px-4 ${radius.lg} font-medium transition-colors`}
         >
           ✅ Add Control Point
         </button>
 
         <button
           onClick={resetForm}
-          className={`bg-yellow-600 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-white py-3 px-4 ${radius.lg} transition-colors`}
+          className={`${colors.bg.warning} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} text-white py-3 px-4 ${radius.lg} transition-colors`}
         >
           🔄 Reset
         </button>
 
         <button
           onClick={handleCancel}
-          className={`bg-red-600 ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} text-white py-3 px-4 ${radius.lg} transition-colors`}
+          className={`${colors.bg.error} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} text-white py-3 px-4 ${radius.lg} transition-colors`}
         >
           ✕ Cancel
         </button>
@@ -427,23 +429,23 @@ export function CoordinatePicker({
   return (
     <div className={`w-full max-w-md space-y-4 ${className}`}>
       {/* Header */}
-      <div className={`bg-gray-800 ${quick.card} p-4`}>
-        <h2 className="text-xl font-bold text-blue-400 mb-2">
+      <div className={`${colors.bg.primary} ${quick.card} p-4`}>
+        <h2 className={`text-xl font-bold ${colors.text.accent} mb-2`}>
           📍 Add Control Point
         </h2>
-        <p className="text-sm text-gray-400">
+        <p className={`text-sm ${colors.text.muted}`}>
           Combine DXF coordinates με geographic coordinates
         </p>
       </div>
 
       {/* Error Display */}
       {transformState.error && (
-        <div className={`bg-red-900 ${quick.error} p-4`}>
+        <div className={`${colors.bg.error} ${quick.error} p-4`}>
           <div className="flex items-center justify-between">
-            <span className="text-red-300">❌ {transformState.error}</span>
+            <span className={colors.text.error}>❌ {transformState.error}</span>
             <button
               onClick={transformActions.clearError}
-              className={`text-red-400 ${HOVER_TEXT_EFFECTS.LIGHTER}`}
+              className={`${colors.text.error} ${HOVER_TEXT_EFFECTS.LIGHTER}`}
             >
               ✕
             </button>
@@ -463,9 +465,9 @@ export function CoordinatePicker({
       {renderActionButtons()}
 
       {/* Instructions */}
-      <div className={`bg-blue-900/20 ${quick.info} p-4`}>
-        <h4 className="font-semibold text-blue-400 mb-2">📋 Instructions:</h4>
-        <ol className="text-sm text-blue-300 space-y-1">
+      <div className={`${colors.bg.info} ${quick.info} p-4`}>
+        <h4 className={`font-semibold ${colors.text.accent} mb-2`}>📋 Instructions:</h4>
+        <ol className={`text-sm ${colors.text.info} space-y-1`}>
           <li>1. Enter DXF coordinates (X, Y, optional Z)</li>
           <li>2. Click on map για geographic coordinates</li>
           <li>3. Set accuracy και optional description</li>

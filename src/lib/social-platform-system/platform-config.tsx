@@ -235,7 +235,7 @@ export const UNIFIED_SOCIAL_PLATFORMS: Record<SocialPlatformType, UnifiedSocialP
           designSystem.getStatusColor('success', 'bg'),
           SOCIAL_HOVER_EFFECTS.WHATSAPP
         ),
-        text: 'text-white'
+        text: designSystem.getStatusColor('foreground', 'text')
       },
       displayOrder: 1,
     },
@@ -264,7 +264,7 @@ export const UNIFIED_SOCIAL_PLATFORMS: Record<SocialPlatformType, UnifiedSocialP
           designSystem.getStatusColor('info', 'bg'),
           SOCIAL_HOVER_EFFECTS.FACEBOOK
         ),
-        text: 'text-white'
+        text: designSystem.getStatusColor('foreground', 'text')
       },
       displayOrder: 2,
     },
@@ -289,13 +289,13 @@ export const UNIFIED_SOCIAL_PLATFORMS: Record<SocialPlatformType, UnifiedSocialP
       name: 'Twitter',
       icon: TwitterIcon,
       colors: {
-        primary: 'bg-gray-900', // Dark για Twitter/X
+        primary: designSystem.getStatusColor('dark', 'bg'), // Dark για Twitter/X
         gradient: 'from-gray-700 via-gray-800 to-gray-900',
         hover: designSystem.cn(
-          'bg-gray-900',
+          designSystem.getStatusColor('dark', 'bg'),
           HOVER_SHADOWS.COLORED.GRAY
         ),
-        text: 'text-white'
+        text: designSystem.getStatusColor('foreground', 'text')
       },
       displayOrder: 3,
     },
@@ -320,13 +320,13 @@ export const UNIFIED_SOCIAL_PLATFORMS: Record<SocialPlatformType, UnifiedSocialP
       name: 'LinkedIn',
       icon: LinkedInIcon,
       colors: {
-        primary: 'bg-blue-700', // LinkedIn blue
+        primary: designSystem.getStatusColor('info', 'bg'), // LinkedIn blue
         gradient: 'from-blue-600 via-blue-700 to-blue-800',
         hover: designSystem.cn(
-          'bg-blue-700',
+          designSystem.getStatusColor('info', 'bg'),
           HOVER_SHADOWS.COLORED.BLUE
         ),
-        text: 'text-white'
+        text: designSystem.getStatusColor('foreground', 'text')
       },
       displayOrder: 4,
     },
@@ -351,13 +351,13 @@ export const UNIFIED_SOCIAL_PLATFORMS: Record<SocialPlatformType, UnifiedSocialP
       name: 'Telegram',
       icon: TelegramIcon,
       colors: {
-        primary: 'bg-sky-500', // Telegram sky blue
+        primary: designSystem.getStatusColor('info', 'bg'), // Telegram sky blue
         gradient: 'from-sky-400 via-sky-500 to-sky-600',
         hover: designSystem.cn(
-          'bg-sky-500',
+          designSystem.getStatusColor('info', 'bg'),
           HOVER_SHADOWS.COLORED.BLUE
         ),
-        text: 'text-white'
+        text: designSystem.getStatusColor('foreground', 'text')
       },
       displayOrder: 5,
     },
@@ -380,13 +380,13 @@ export const UNIFIED_SOCIAL_PLATFORMS: Record<SocialPlatformType, UnifiedSocialP
       name: 'Instagram',
       icon: InstagramIcon,
       colors: {
-        primary: 'bg-pink-500', // Instagram pink
+        primary: designSystem.getStatusColor('warning', 'bg'), // Instagram pink
         gradient: 'from-pink-400 via-red-500 to-yellow-500', // Instagram gradient
         hover: designSystem.cn(
-          'bg-pink-500',
+          designSystem.getStatusColor('warning', 'bg'),
           HOVER_SHADOWS.COLORED.PINK
         ),
-        text: 'text-white'
+        text: designSystem.getStatusColor('foreground', 'text')
       },
       displayOrder: 6,
     },
@@ -410,13 +410,13 @@ export const UNIFIED_SOCIAL_PLATFORMS: Record<SocialPlatformType, UnifiedSocialP
       name: 'YouTube',
       icon: YouTubeIcon,
       colors: {
-        primary: 'bg-red-600', // YouTube red
+        primary: designSystem.getStatusColor('error', 'bg'), // YouTube red
         gradient: 'from-red-500 via-red-600 to-red-700',
         hover: designSystem.cn(
-          'bg-red-600',
+          designSystem.getStatusColor('error', 'bg'),
           HOVER_SHADOWS.COLORED.RED
         ),
-        text: 'text-white'
+        text: designSystem.getStatusColor('foreground', 'text')
       },
       displayOrder: 7,
     },
@@ -440,13 +440,13 @@ export const UNIFIED_SOCIAL_PLATFORMS: Record<SocialPlatformType, UnifiedSocialP
       name: 'GitHub',
       icon: GitHubIcon,
       colors: {
-        primary: 'bg-gray-800', // GitHub dark
+        primary: designSystem.getStatusColor('muted', 'bg'), // GitHub dark
         gradient: 'from-gray-700 via-gray-800 to-gray-900',
         hover: designSystem.cn(
-          'bg-gray-800',
+          designSystem.getStatusColor('muted', 'bg'),
           HOVER_SHADOWS.COLORED.GRAY
         ),
-        text: 'text-white'
+        text: designSystem.getStatusColor('foreground', 'text')
       },
       displayOrder: 8,
     },
@@ -470,13 +470,13 @@ export const UNIFIED_SOCIAL_PLATFORMS: Record<SocialPlatformType, UnifiedSocialP
       name: 'TikTok',
       icon: TikTokIcon,
       colors: {
-        primary: 'bg-black', // TikTok black
+        primary: designSystem.getStatusColor('dark', 'bg'), // TikTok black
         gradient: 'from-gray-900 via-black to-gray-900',
         hover: designSystem.cn(
-          'bg-black',
+          designSystem.getStatusColor('dark', 'bg'),
           HOVER_SHADOWS.COLORED.GRAY
         ),
-        text: 'text-white'
+        text: designSystem.getStatusColor('foreground', 'text')
       },
       displayOrder: 9,
     },
@@ -500,13 +500,13 @@ export const UNIFIED_SOCIAL_PLATFORMS: Record<SocialPlatformType, UnifiedSocialP
       name: 'Email',
       icon: Mail,
       colors: {
-        primary: 'bg-gray-600', // Neutral για email
+        primary: designSystem.getStatusColor('muted', 'bg'), // Neutral για email
         gradient: 'from-gray-500 via-gray-600 to-gray-700',
         hover: designSystem.cn(
-          'bg-gray-600',
+          designSystem.getStatusColor('muted', 'bg'),
           HOVER_SHADOWS.COLORED.GRAY
         ),
-        text: 'text-white'
+        text: designSystem.getStatusColor('foreground', 'text')
       },
       displayOrder: 10,
     },

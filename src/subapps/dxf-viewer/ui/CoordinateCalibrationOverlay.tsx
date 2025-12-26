@@ -13,6 +13,7 @@ import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { portalComponents, layoutUtilities } from '@/styles/design-tokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/hooks/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
 import {
   getCalibrationOverlayContainerStyles,
   getCalibrationDebugPanelStyles,
@@ -47,6 +48,7 @@ export default function CoordinateCalibrationOverlay({
 }: CoordinateCalibrationOverlayProps) {
   const iconSizes = useIconSizes();
   const { getElementBorder, quick } = useBorderTokens();
+  const colors = useSemanticColors();  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
   const [clickTests, setClickTests] = useState<ClickTest[]>([]);
   const [showDetails, setShowDetails] = useState(true);
   const clickIdRef = useRef(0);
@@ -107,13 +109,13 @@ export default function CoordinateCalibrationOverlay({
         </div>
         <div className="space-y-3">
           {/* ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση CoordinateTransforms */}
-          <div className="bg-blue-900 p-2 rounded text-xs">
+          <div className={`${colors.bg.info} p-2 rounded text-xs`}>
             <div className="text-blue-300 font-semibold mb-1">✅ Coordinate System:</div>
             <div className="text-blue-200">Using centralized <strong>CoordinateTransforms</strong></div>
             <div className="text-green-300 text-xs">Single Source of Truth ✅</div>
           </div>
 
-          <div className="bg-gray-800 p-3 rounded text-sm">
+          <div className={`${colors.bg.secondary} p-3 rounded text-sm`}>
             <div className="text-cyan-300 font-semibold mb-2">📊 Κατάσταση Σκηνής:</div>
             <div className="flex justify-between items-center">
               <div>
@@ -126,13 +128,13 @@ export default function CoordinateCalibrationOverlay({
           </div>
 
           <div className="flex gap-2">
-            <button onClick={() => setShowDetails(!showDetails)} className={`px-3 py-1 rounded text-sm ${showDetails ? 'bg-cyan-600' : 'bg-gray-600'}`}>
+            <button onClick={() => setShowDetails(!showDetails)} className={`px-3 py-1 rounded text-sm ${showDetails ? colors.bg.hover : colors.bg.active}`}>
               {showDetails ? '📊 Απόκρυψη' : '📊 Εμφάνιση'}
             </button>
           </div>
 
           {showDetails && (
-            <div className="bg-gray-800 p-3 rounded text-sm">
+            <div className={`${colors.bg.secondary} p-3 rounded text-sm`}>
               <div className="text-cyan-300 font-semibold mb-2">📍 Συντεταγμένες:</div>
               {mousePos ? (
                 <>
@@ -149,10 +151,10 @@ export default function CoordinateCalibrationOverlay({
             </div>
           )}
 
-          <div className="bg-gray-800 p-3 rounded text-sm">
+          <div className={`${colors.bg.secondary} p-3 rounded text-sm`}>
             <div className="flex justify-between items-center mb-2">
               <span className="text-cyan-300 font-semibold">🎯 Τεστ Κλικ:</span>
-              <button onClick={() => setClickTests([])} className={`text-xs bg-red-600 ${INTERACTIVE_PATTERNS.BUTTON_DESTRUCTIVE_HOVER} px-2 py-1 rounded`}>Καθαρισμός</button>
+              <button onClick={() => setClickTests([])} className={`text-xs ${colors.bg.error} ${INTERACTIVE_PATTERNS.BUTTON_DESTRUCTIVE_HOVER} px-2 py-1 rounded`}>Καθαρισμός</button>
             </div>
             <div className={`p-2 ${quick.input} cursor-crosshair pointer-events-auto ${getElementBorder('input', 'focus')}`} onClick={handleCalibrationClick}>
               <div className="text-center text-xs text-cyan-300 mb-2">Κλικ εδώ για τεστ ακρίβειας</div>
@@ -175,7 +177,7 @@ export default function CoordinateCalibrationOverlay({
             </div>
           </div>
 
-          <div className="bg-blue-900 p-2 rounded text-xs">
+          <div className={`${colors.bg.info} p-2 rounded text-xs`}>
             <div className="text-blue-300 font-semibold mb-1">💡 Συμβουλές:</div>
             <ul className="text-blue-200 space-y-1">
               <li>• Round-trip σφάλμα &lt; 0.5px</li>

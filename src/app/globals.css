@@ -48,6 +48,24 @@
     --status-error: 0 72% 51%;        /* Red for error/sold */
     --status-purple: 271 76% 53%;     /* Purple for special states */
 
+    /* Enterprise Background Variables - SINGLE SOURCE OF TRUTH */
+    --bg-success: 142 45% 97%;        /* success background - green-50 */
+    --bg-error: 0 86% 97%;            /* error background - red-50 */
+    --bg-warning: 48 96% 95%;         /* warning background - yellow-50 */
+    --bg-info: 214 95% 97%;           /* info background - blue-50 */
+    --bg-primary: 0 0% 100%;          /* primary background - white */
+    --bg-secondary: 210 40% 96.1%;    /* secondary background - slate-50 */
+    --bg-hover: 220 14% 96%;          /* hover background - slate-100 */
+    --bg-active: 220 13% 91%;         /* active background - slate-200 */
+
+    /* Additional Enterprise Surface Variables */
+    --bg-elevated: 0 0% 98%;          /* elevated surface - gray-50 */
+    --bg-sunken: 220 14% 94%;         /* sunken surface - slate-200 */
+    --bg-overlay: 220 26% 14%;        /* overlay background - slate-800 */
+    --bg-modal: 0 0% 100%;            /* modal background - white */
+    --bg-disabled: 220 14% 96%;       /* disabled state - slate-100 */
+    --bg-selected: 214 95% 93%;       /* selected state - blue-100 */
+
     /* Sidebar Variables */
     --sidebar-background: 212 22% 95%;
     --sidebar-foreground: 222.2 47.4% 11.2%;
@@ -92,6 +110,22 @@
     --status-warning: 32 95% 44%;     /* Same orange works in dark */
     --status-error: 0 72% 51%;        /* Same red works in dark */
     --status-purple: 271 76% 53%;     /* Same purple works in dark */
+
+    /* Enterprise Background Variables - Dark Mode */
+    --bg-success: 142 45% 15%;        /* dark success background */
+    --bg-error: 0 86% 15%;            /* dark error background */
+    --bg-warning: 48 96% 15%;         /* dark warning background */
+    --bg-info: 214 95% 15%;           /* dark info background */
+    --bg-primary: 220 20% 11%;        /* dark primary background */
+    --bg-secondary: 217 33% 17%;      /* dark secondary background */
+    --bg-hover: 217 33% 20%;          /* dark hover background */
+    --bg-active: 217 33% 25%;         /* dark active background */
+    --bg-elevated: 217 33% 19%;       /* dark elevated surface */
+    --bg-sunken: 220 20% 8%;          /* dark sunken surface */
+    --bg-overlay: 220 26% 6%;         /* dark overlay background */
+    --bg-modal: 217 33% 17%;          /* dark modal background */
+    --bg-disabled: 217 33% 15%;       /* dark disabled state */
+    --bg-selected: 214 95% 25%;       /* dark selected state */
 
     /* Sidebar Variables - Dark Mode */
     --sidebar-background: 220 20% 11%;

@@ -29,6 +29,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import CreateTaskModal from './dialogs/CreateTaskModal';
 import type { CrmTask, Opportunity, FirestoreishTimestamp } from '@/types/crm';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 import type { CrmTaskType, CrmTaskPriority, CrmTaskStatus } from '@/types/crm-extra';
 import { HOVER_BACKGROUND_EFFECTS, HOVER_SHADOWS } from '@/components/ui/effects';
@@ -93,6 +95,8 @@ const createFormatDueDate = (t: (key: string) => string) => (dueDate?: Firestore
 
 export function TasksTab() {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
   const { t } = useTranslation('crm');
   const formatDueDate = useMemo(() => createFormatDueDate(t), [t]);
   const [tasks, setTasks] = useState<CrmTask[]>([]);
@@ -226,7 +230,7 @@ export function TasksTab() {
   }
 
   return (
-    <div className="bg-white dark:bg-card rounded-lg shadow space-y-6">
+    <div className={`${colors.bg.primary} rounded-lg shadow space-y-6`}>
       <div className="p-6 border-b">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">{t('tasks.title')}</h2>

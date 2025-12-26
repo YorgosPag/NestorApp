@@ -43,6 +43,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 
 // 🚫 MOCK DATA ΕΝΤΕΛΩΣ ΑΦΑΙΡΕΜΕΝΑ - Καθαρή εφαρμογή χωρίς seed functionality
 
@@ -50,6 +51,7 @@ export function ContactsPageContent() {
   // 🏢 ENTERPRISE: Centralized icon sizes
   const iconSizes = useIconSizes();
   const { getDirectionalBorder, getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
 
   // URL parameters
   const searchParams = useSearchParams();
@@ -563,7 +565,7 @@ export function ContactsPageContent() {
     if (filterParam) {
       const filterValue = decodeURIComponent(filterParam);
       return (
-        <div className={`px-4 py-2 bg-blue-50 ${getDirectionalBorder('info', 'bottom')}`}>
+        <div className={`px-4 py-2 ${colors.bg.info} ${getDirectionalBorder('info', 'bottom')}`}>
           <div className="flex items-center justify-between max-w-full">
             <div className="flex items-center space-x-2">
               <Filter className={`${iconSizes.sm} text-blue-600`} />

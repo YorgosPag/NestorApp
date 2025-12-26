@@ -7,6 +7,7 @@ import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { HOVER_BORDER_EFFECTS, HOVER_SHADOWS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 
 interface UserTypeSelectorProps {
   currentType?: UserType;
@@ -27,12 +28,13 @@ interface UserTypeSelectorProps {
 export function UserTypeSelector({ currentType, onSelect, disabled }: UserTypeSelectorProps) {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
   const { t, isLoading } = useTranslationLazy('geo-canvas');
 
   // ✅ ENTERPRISE: Return loading state while translations load
   if (isLoading) {
     return (
-      <div className={`bg-white rounded-lg shadow-sm ${quick.card} p-6`}>
+      <div className={`${colors.bg.primary} rounded-lg shadow-sm ${quick.card} p-6`}>
         <div className="animate-pulse">
           <div className={`${iconSizes.lg} bg-gray-200 rounded mb-4`}></div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -57,14 +59,14 @@ export function UserTypeSelector({ currentType, onSelect, disabled }: UserTypeSe
       label: t('userTypeSelector.types.citizen.title'),
       description: t('userTypeSelector.types.citizen.description'),
       icon: <Users className={iconSizes.lg} />,
-      color: 'bg-blue-500'
+      color: colors.bg.info
     },
     {
       type: 'professional',
       label: t('userTypeSelector.types.professional.title'),
       description: t('userTypeSelector.types.professional.description'),
       icon: <Briefcase className={iconSizes.lg} />,
-      color: 'bg-green-500'
+      color: colors.bg.success
     },
     {
       type: 'technical',
@@ -76,7 +78,7 @@ export function UserTypeSelector({ currentType, onSelect, disabled }: UserTypeSe
   ];
 
   return (
-    <div className={`bg-white rounded-lg shadow-sm ${quick.card} p-6`}>
+    <div className={`${colors.bg.primary} rounded-lg shadow-sm ${quick.card} p-6`}>
       <h3 className="text-lg font-semibold text-gray-900 mb-4">
         {t('userTypeSelector.title')}
       </h3>
@@ -126,7 +128,7 @@ export function UserTypeSelector({ currentType, onSelect, disabled }: UserTypeSe
 
       {/* Info message */}
       {currentType && (
-        <div className={`mt-4 p-3 bg-blue-50 ${quick.card}`}>
+        <div className={`mt-4 p-3 ${colors.bg.info} ${quick.card}`}>
           <p className="text-sm text-blue-700">
             <span className="font-medium">{t('userTypeSelector.currentType')}</span>{' '}
             {userTypes.find(ut => ut.type === currentType)?.label}

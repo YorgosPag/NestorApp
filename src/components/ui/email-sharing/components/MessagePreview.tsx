@@ -15,6 +15,7 @@ import { designSystem } from '@/lib/design-system';
 import { MessageCircle, Eye } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 
 // Types
 import type { MessagePreviewProps } from '../types';
@@ -41,6 +42,7 @@ export const MessagePreview: React.FC<MessagePreviewProps> = ({
 }) => {
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
 
   // Early return if hidden or no message
   if (!show || !message.trim()) return null;
@@ -63,7 +65,7 @@ export const MessagePreview: React.FC<MessagePreviewProps> = ({
       </header>
 
       {/* Preview Content */}
-      <main className={`p-4 bg-blue-50 dark:bg-blue-900/20 ${quick.card} ${quick.input} ${getStatusBorder('info')} dark:${getStatusBorder('info')}`} role="main">
+      <main className={`p-4 ${colors.bg.info} ${quick.card} ${quick.input} ${getStatusBorder('info')} dark:${getStatusBorder('info')}`} role="main">
         <blockquote className={designSystem.cn(
           designSystem.getTypographyClass('sm'),
           'text-blue-700 dark:text-blue-200 italic leading-relaxed'
@@ -92,6 +94,7 @@ export const CompactMessagePreview: React.FC<MessagePreviewProps & {
 }) => {
   const { quick } = useBorderTokens();
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
 
   if (!show || !message.trim()) return null;
 
@@ -100,7 +103,7 @@ export const CompactMessagePreview: React.FC<MessagePreviewProps & {
     : message;
 
   return (
-    <aside className={`p-2 bg-gray-50 dark:bg-gray-800 ${quick.rounded} ${quick.input} text-xs`} role="region" aria-label="Compact Message Preview">
+    <aside className={`p-2 ${colors.bg.secondary} ${quick.rounded} ${quick.input} text-xs`} role="region" aria-label="Compact Message Preview">
       <header className="flex items-center gap-1 text-muted-foreground mb-1" role="banner">
         <MessageCircle className={iconSizes.xs} />
         <span>Preview</span>

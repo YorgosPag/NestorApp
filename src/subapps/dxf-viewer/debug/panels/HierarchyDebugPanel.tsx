@@ -2,6 +2,7 @@
 import React from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/hooks/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
 import { Building, Building2, FolderIcon, Home, Package, ParkingCircle, Target } from 'lucide-react';
 import { CraneIcon } from '../../components/icons';
 import { useProjectHierarchy } from '../../contexts/ProjectHierarchyContext';
@@ -11,6 +12,7 @@ import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 export function HierarchyDebugPanel() {
   const iconSizes = useIconSizes();
   const { getStatusBorder, getDirectionalBorder } = useBorderTokens();
+  const colors = useSemanticColors();  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
   const { t } = useTranslation('dxf-viewer');
   const {
     companies,
@@ -34,7 +36,7 @@ export function HierarchyDebugPanel() {
 
   if (loading) {
     return (
-      <div className={`bg-gray-800 p-4 rounded-lg ${getStatusBorder('muted')}`}>
+      <div className={`${colors.bg.secondary} p-4 rounded-lg ${getStatusBorder('muted')}`}>
         <h3 className="text-white text-lg font-semibold mb-2 flex items-center space-x-2">
           <CraneIcon className={`${iconSizes.md} text-orange-500`} />
           <span>{t('panels.hierarchy.projectHierarchy')}</span>
@@ -46,12 +48,12 @@ export function HierarchyDebugPanel() {
 
   if (error) {
     return (
-      <div className={`bg-gray-800 p-4 rounded-lg ${getStatusBorder('error')}`}>
+      <div className={`${colors.bg.secondary} p-4 rounded-lg ${getStatusBorder('error')}`}>
         <h3 className="text-white text-lg font-semibold mb-2">{t('panels.hierarchy.error')}</h3>
         <p className="text-red-400">{error}</p>
         <button 
           onClick={loadCompanies}
-          className={`mt-2 px-3 py-1 bg-blue-600 text-white rounded ${HOVER_BACKGROUND_EFFECTS.BLUE_BUTTON}`}
+          className={`mt-2 px-3 py-1 ${colors.bg.info} text-white rounded ${HOVER_BACKGROUND_EFFECTS.BLUE_BUTTON}`}
         >
           {t('panels.hierarchy.retry')}
         </button>
@@ -60,7 +62,7 @@ export function HierarchyDebugPanel() {
   }
 
   return (
-    <div className={`bg-gray-800 p-4 rounded-lg ${getStatusBorder('muted')}`}>
+    <div className={`${colors.bg.secondary} p-4 rounded-lg ${getStatusBorder('muted')}`}>
       <h3 className="text-white text-lg font-semibold mb-4 flex items-center space-x-2">
         <CraneIcon className={`${iconSizes.md} text-orange-500`} />
         <span>{t('panels.hierarchy.projectHierarchy')}</span>
@@ -78,9 +80,9 @@ export function HierarchyDebugPanel() {
                 key={company.id}
                 onClick={() => selectCompany(company.id!)}
                 className={`w-full text-left px-2 py-1 rounded text-sm ${
-                  selectedCompany?.id === company.id 
-                    ? 'bg-orange-600 text-white' 
-                    : `bg-gray-700 text-gray-300 ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
+                  selectedCompany?.id === company.id
+                    ? `${colors.bg.warning} text-white`
+                    : `${colors.bg.hover} text-gray-300 ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
                 }`}
               >
                 <Building className={`${iconSizes.sm} inline mr-1`} />{company.companyName}
@@ -119,9 +121,9 @@ export function HierarchyDebugPanel() {
                     key={project.id}
                     onClick={() => selectProject(project.id)}
                     className={`w-full text-left px-2 py-1 rounded text-sm ${
-                      selectedProject?.id === project.id 
-                        ? 'bg-blue-600 text-white' 
-                        : `bg-gray-700 text-gray-300 ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
+                      selectedProject?.id === project.id
+                        ? `${colors.bg.info} text-white`
+                        : `${colors.bg.hover} text-gray-300 ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
                     }`}
                   >
                     <FolderIcon className={`${iconSizes.sm} inline mr-1`} />{project.name}
@@ -156,9 +158,9 @@ export function HierarchyDebugPanel() {
                     key={building.id}
                     onClick={() => selectBuilding(building.id)}
                     className={`w-full text-left px-2 py-1 rounded text-sm ${
-                      selectedBuilding?.id === building.id 
-                        ? 'bg-green-600 text-white' 
-                        : `bg-gray-700 text-gray-300 ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
+                      selectedBuilding?.id === building.id
+                        ? `${colors.bg.success} text-white`
+                        : `${colors.bg.hover} text-gray-300 ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
                     }`}
                   >
                     <Building2 className={`${iconSizes.sm} inline mr-1`} />{building.name}
@@ -201,9 +203,9 @@ export function HierarchyDebugPanel() {
                     key={floor.id}
                     onClick={() => selectFloor(floor.id)}
                     className={`w-full text-left px-2 py-1 rounded text-sm ${
-                      selectedFloor?.id === floor.id 
-                        ? 'bg-purple-600 text-white' 
-                        : `bg-gray-700 text-gray-300 ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
+                      selectedFloor?.id === floor.id
+                        ? `${colors.bg.info} text-white`
+                        : `${colors.bg.hover} text-gray-300 ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
                     }`}
                   >
                     <Home className={`${iconSizes.sm} inline mr-1`} />{floor.name}
@@ -243,11 +245,11 @@ export function HierarchyDebugPanel() {
                   <span>{unit.name}</span>
                 </span>
                 <span className={`px-1 rounded text-xs ${
-                  unit.status === 'forSale' ? 'bg-orange-800' :
-                  unit.status === 'sold' ? 'bg-red-800' :
-                  unit.status === 'forRent' ? 'bg-blue-800' :
-                  unit.status === 'reserved' ? 'bg-purple-800' :
-                  'bg-green-800'
+                  unit.status === 'forSale' ? colors.bg.warning :
+                  unit.status === 'sold' ? colors.bg.error :
+                  unit.status === 'forRent' ? colors.bg.info :
+                  unit.status === 'reserved' ? colors.bg.hover :
+                  colors.bg.success
                 }`}>
                   {unit.status}
                 </span>
@@ -270,12 +272,12 @@ export function HierarchyDebugPanel() {
             <div key={dest.id} className="text-gray-400 flex justify-between">
               <span>{dest.label}</span>
               <span className={`px-1 rounded ${
-                dest.type === 'project' ? 'bg-blue-800' :
-                dest.type === 'building' ? 'bg-green-800' :
-                dest.type === 'floor' ? 'bg-purple-800' :
-                dest.type === 'parking' ? 'bg-yellow-800' :
-                dest.type === 'storage' ? 'bg-orange-800' :
-                'bg-gray-800'
+                dest.type === 'project' ? colors.bg.info :
+                dest.type === 'building' ? colors.bg.success :
+                dest.type === 'floor' ? colors.bg.hover :
+                dest.type === 'parking' ? colors.bg.warning :
+                dest.type === 'storage' ? colors.bg.warning :
+                colors.bg.secondary
               }`}>
                 {dest.type}
               </span>

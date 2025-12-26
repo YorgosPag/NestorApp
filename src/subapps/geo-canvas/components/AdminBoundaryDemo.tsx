@@ -14,11 +14,13 @@ import { useAdministrativeBoundaries } from '../hooks/useAdministrativeBoundarie
 import type { AdminSearchResult } from '../types/administrative-types';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 
 export function AdminBoundaryDemo() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedResult, setSelectedResult] = useState<AdminSearchResult | null>(null);
   const { quick, radius } = useBorderTokens();
+  const colors = useSemanticColors();
 
   const {
     isLoading,
@@ -62,7 +64,7 @@ export function AdminBoundaryDemo() {
   const cacheStats = getCacheStats();
 
   return (
-    <div className={`p-6 max-w-4xl mx-auto bg-white ${quick.card} shadow-lg`}>
+    <div className={`p-6 max-w-4xl mx-auto ${colors.bg.primary} ${quick.card} shadow-lg`}>
       <h2 className="text-2xl font-bold mb-6 text-gray-800">
         🏛️ Administrative Boundaries Demo
       </h2>
@@ -117,7 +119,7 @@ export function AdminBoundaryDemo() {
       </div>
 
       {/* Status Section */}
-      <div className={`mb-6 p-4 bg-gray-50 ${quick.card}`}>
+      <div className={`mb-6 p-4 ${colors.bg.secondary} ${quick.card}`}>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
           <div>
             <strong>Status:</strong>{' '}
@@ -184,7 +186,7 @@ export function AdminBoundaryDemo() {
                   onClick={() => handleResultSelect(result)}
                   className={`p-3 cursor-pointer transition-all ${
                     selectedResult?.id === result.id
-                      ? `${quick.selected} bg-blue-50`
+                      ? `${quick.selected} ${colors.bg.info}`
                       : `${quick.card} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
                   }`}
                 >
@@ -227,7 +229,7 @@ export function AdminBoundaryDemo() {
           {currentBoundary ? (
             <div className="space-y-4">
               {/* Boundary Type */}
-              <div className={`p-4 bg-green-50 ${quick.success}`}>
+              <div className={`p-4 ${colors.bg.success} ${quick.success}`}>
                 <div className="font-medium text-green-800 mb-2">
                   ✅ Boundary Loaded
                 </div>
@@ -246,7 +248,7 @@ export function AdminBoundaryDemo() {
               </div>
 
               {/* Geometry Preview */}
-              <div className={`p-4 bg-gray-50 ${radius.lg}`}>
+              <div className={`p-4 ${colors.bg.secondary} ${radius.lg}`}>
                 <h4 className="font-medium text-gray-800 mb-2">Geometry Preview</h4>
                 <div className="text-xs font-mono text-gray-600 max-h-32 overflow-y-auto">
                   <pre>{JSON.stringify(currentBoundary, null, 2).slice(0, 500)}...</pre>
@@ -260,7 +262,7 @@ export function AdminBoundaryDemo() {
           )}
 
           {/* Cache Stats */}
-          <div className={`mt-6 p-4 bg-blue-50 ${quick.info}`}>
+          <div className={`mt-6 p-4 ${colors.bg.info} ${quick.info}`}>
             <h4 className="font-medium text-blue-800 mb-2">Cache Statistics</h4>
             <div className="text-sm text-blue-700 space-y-1">
               <div>Total Entries: {cacheStats.totalCacheEntries}</div>
@@ -274,7 +276,7 @@ export function AdminBoundaryDemo() {
 
       {/* Debug Section */}
       {process.env.NODE_ENV === 'development' && (
-        <div className={`mt-8 p-4 bg-yellow-50 ${quick.warning}`}>
+        <div className={`mt-8 p-4 ${colors.bg.warning} ${quick.warning}`}>
           <h3 className="font-medium text-yellow-800 mb-2">🐛 Debug Information</h3>
           <div className="text-xs font-mono text-yellow-700">
             <div>Search Query: "{searchQuery}"</div>

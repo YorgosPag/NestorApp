@@ -1,16 +1,18 @@
 'use client';
 import { Grid, List } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 
 export function ViewModeToggle({ value, onChange }: { value: 'grid'|'list'; onChange: (v:'grid'|'list')=>void; }) {
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
 
   return (
     <div className="flex bg-gray-100 dark:bg-muted/50 rounded-lg p-1">
       <button
         onClick={() => onChange('grid')}
         className={`px-3 py-1.5 rounded-md flex items-center gap-2 transition-colors ${
-          value === 'grid' ? 'bg-white dark:bg-card shadow-sm text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300'
+          value === 'grid' ? `${colors.bg.primary} dark:bg-card shadow-sm text-blue-600 dark:text-blue-400` : 'text-gray-600 dark:text-gray-300'
         }`}
       >
         <Grid className={iconSizes.sm} />
@@ -19,7 +21,7 @@ export function ViewModeToggle({ value, onChange }: { value: 'grid'|'list'; onCh
       <button
         onClick={() => onChange('list')}
         className={`px-3 py-1.5 rounded-md flex items-center gap-2 transition-colors ${
-          value === 'list' ? 'bg-white dark:bg-card shadow-sm text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300'
+          value === 'list' ? `${colors.bg.primary} dark:bg-card shadow-sm text-blue-600 dark:text-blue-400` : 'text-gray-600 dark:text-gray-300'
         }`}
       >
         <List className={iconSizes.sm} />

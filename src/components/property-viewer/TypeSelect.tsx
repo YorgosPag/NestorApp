@@ -8,7 +8,18 @@ import {
   SelectValue
 } from '@/components/ui/select';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { TYPE_OPTIONS } from '../constants';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
+
+// 🏢 ENTERPRISE: Property type options for PropertyGrid
+const TYPE_OPTIONS = [
+  { value: 'all', label: 'Όλοι οι τύποι' },
+  { value: 'studio', label: 'Στούντιο' },
+  { value: 'garsoniera', label: 'Γκαρσονιέρα' },
+  { value: 'apartment', label: 'Διαμέρισμα' },
+  { value: 'maisonette', label: 'Μεζονέτα' },
+  { value: 'warehouse', label: 'Αποθήκη' },
+  { value: 'parking', label: 'Parking' },
+] as const;
 
 // ============================================================================
 // PROPERTY GRID: PURE RADIX UI TYPE SELECT
@@ -34,10 +45,11 @@ export function TypeSelect({
   onChange: (v: string) => void;
 }) {
   const { quick, radius } = useBorderTokens();
+  const colors = useSemanticColors();
 
   return (
     <Select value={selected || 'all'} onValueChange={onChange}>
-      <SelectTrigger className={`px-4 py-2.5 ${quick.input} dark:bg-muted/30 ${radius.lg} focus:outline-none focus:ring-2 focus:ring-ring bg-white`}>
+      <SelectTrigger className={`px-4 py-2.5 ${quick.input} dark:bg-muted/30 ${radius.lg} focus:outline-none focus:ring-2 focus:ring-ring ${colors.bg.primary}`}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

@@ -5,6 +5,7 @@ import { Upload, FileImage, FileText, Layers, Building, Check, X, Bell, BarChart
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 import { useCentralizedPolygonSystem } from '../systems/polygon-system';
 import { FloorPlanUploadModal } from '../floor-plan-system/components/FloorPlanUploadModal';
 import { PropertyStatusManager } from './PropertyStatusManager';
@@ -47,6 +48,7 @@ export function ProfessionalDrawingInterface({
 }: ProfessionalDrawingInterfaceProps) {
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   const { t, isLoading } = useTranslationLazy('geo-canvas');
   const [selectedTool, setSelectedTool] = useState<'upload' | 'polygon' | 'auto-detect' | 'property-manager' | 'monitoring-dashboard' | null>(null);
   // ✅ ENTERPRISE: Combine local and centralized drawing state
@@ -284,13 +286,13 @@ export function ProfessionalDrawingInterface({
 
   return (
     <>
-      <div className={`bg-white ${quick.card} shadow-lg p-4`}>
+      <div className={`${colors.bg.primary} ${quick.card} shadow-lg p-4`}>
         {/* Header */}
         <div className="mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">
+          <h3 className={`text-lg font-semibold ${colors.text.foreground}`}>
             {t('drawingInterfaces.professional.title')}
           </h3>
-          <p className="text-sm text-gray-600">
+          <p className={`text-sm ${colors.text.muted}`}>
             {t('drawingInterfaces.professional.subtitle')}
           </p>
         </div>
@@ -305,15 +307,15 @@ export function ProfessionalDrawingInterface({
               flex flex-col items-center justify-center p-4 ${quick.card}
               transition-all duration-200 min-h-[100px]
               ${selectedTool === 'upload'
-                ? `${getStatusBorder('success')} bg-green-50`
-                : `border-border \${INTERACTIVE_PATTERNS.SUBTLE_HOVER} bg-white`
+                ? `${getStatusBorder('success')} ${colors.bg.success}`
+                : `border-border \${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${colors.bg.primary}`
               }
               ${isDrawing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.ENHANCED}'}
             `}
           >
-            <Upload className={`${iconSizes.lg} mb-2 text-green-600`} />
+            <Upload className={`${iconSizes.lg} mb-2 ${colors.text.success}`} />
             <span className="text-sm font-medium">{t('hardcodedTexts.ui.upload')}</span>
-            <span className="text-xs text-gray-500">Κάτοψη</span>
+            <span className={`text-xs ${colors.text.muted}`}>Κάτοψη</span>
           </button>
 
           {/* Precision Polygon */}
@@ -324,15 +326,15 @@ export function ProfessionalDrawingInterface({
               flex flex-col items-center justify-center p-4 ${quick.card}
               transition-all duration-200 min-h-[100px]
               ${selectedTool === 'polygon'
-                ? `${getStatusBorder('success')} bg-green-50`
-                : `border-border \${INTERACTIVE_PATTERNS.SUBTLE_HOVER} bg-white`
+                ? `${getStatusBorder('success')} ${colors.bg.success}`
+                : `border-border \${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${colors.bg.primary}`
               }
               ${actualIsDrawing && selectedTool !== 'polygon' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.ENHANCED}'}
             `}
           >
-            <Building className={`${iconSizes.lg} mb-2 text-blue-600`} />
+            <Building className={`${iconSizes.lg} mb-2 ${colors.text.info}`} />
             <span className="text-sm font-medium">{t('drawingInterfaces.professional.tools.property')}</span>
-            <span className="text-xs text-gray-500">{t('drawingInterfaces.professional.tools.propertyManual')}</span>
+            <span className={`text-xs ${colors.text.muted}`}>{t('drawingInterfaces.professional.tools.propertyManual')}</span>
           </button>
 
           {/* Auto-Detection */}
@@ -343,15 +345,15 @@ export function ProfessionalDrawingInterface({
               flex flex-col items-center justify-center p-4 ${quick.card}
               transition-all duration-200 min-h-[100px]
               ${selectedTool === 'auto-detect'
-                ? `${getStatusBorder('success')} bg-green-50`
-                : `border-border \${INTERACTIVE_PATTERNS.SUBTLE_HOVER} bg-white`
+                ? `${getStatusBorder('success')} ${colors.bg.success}`
+                : `border-border \${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${colors.bg.primary}`
               }
               ${(actualIsDrawing || !parserResult) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.ENHANCED}'}
             `}
           >
-            <Layers className={`${iconSizes.lg} mb-2 text-purple-600`} />
+            <Layers className={`${iconSizes.lg} mb-2 ${colors.text.accent}`} />
             <span className="text-sm font-medium">{t('hardcodedTexts.ui.autoDetect')}</span>
-            <span className="text-xs text-gray-500">{t('drawingInterfaces.professional.tools.autoDetectAuto')}</span>
+            <span className={`text-xs ${colors.text.muted}`}>{t('drawingInterfaces.professional.tools.autoDetectAuto')}</span>
           </button>
 
           {/* 🏠 Phase 2.5: Property Status Manager */}
@@ -362,15 +364,15 @@ export function ProfessionalDrawingInterface({
               flex flex-col items-center justify-center p-4 ${quick.card}
               transition-all duration-200 min-h-[100px]
               ${selectedTool === 'property-manager'
-                ? `${getStatusBorder('warning')} bg-orange-50`
-                : `border-border \${INTERACTIVE_PATTERNS.SUBTLE_HOVER} bg-white`
+                ? `${getStatusBorder('warning')} ${colors.bg.warning}`
+                : `border-border \${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${colors.bg.primary}`
               }
               ${isDrawing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.ENHANCED}'}
             `}
           >
-            <Building className={`${iconSizes.lg} mb-2 text-orange-600`} />
+            <Building className={`${iconSizes.lg} mb-2 ${colors.text.warning}`} />
             <span className="text-sm font-medium">{t('hardcodedTexts.ui.properties')}</span>
-            <span className="text-xs text-gray-500">{t('hardcodedTexts.ui.status')}</span>
+            <span className={`text-xs ${colors.text.muted}`}>{t('hardcodedTexts.ui.status')}</span>
           </button>
 
           {/* 🏠 Phase 2.5.3: Real Estate Monitoring Dashboard */}
@@ -381,15 +383,15 @@ export function ProfessionalDrawingInterface({
               flex flex-col items-center justify-center p-4 ${quick.card}
               transition-all duration-200 min-h-[100px]
               ${selectedTool === 'monitoring-dashboard'
-                ? `${getStatusBorder('info')} bg-blue-50`
-                : `border-border \${INTERACTIVE_PATTERNS.SUBTLE_HOVER} bg-white`
+                ? `${getStatusBorder('info')} ${colors.bg.info}`
+                : `border-border \${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${colors.bg.primary}`
               }
               ${isDrawing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer ${HOVER_SHADOWS.ENHANCED}'}
             `}
           >
-            <BarChart className={`${iconSizes.lg} mb-2 text-blue-600`} />
+            <BarChart className={`${iconSizes.lg} mb-2 ${colors.text.info}`} />
             <span className="text-sm font-medium">{t('hardcodedTexts.ui.monitor')}</span>
-            <span className="text-xs text-gray-500">{t('drawingInterfaces.professional.tools.monitoringMarket')}</span>
+            <span className={`text-xs ${colors.text.muted}`}>{t('drawingInterfaces.professional.tools.monitoringMarket')}</span>
           </button>
         </div>
 
@@ -398,7 +400,7 @@ export function ProfessionalDrawingInterface({
           <div className="flex gap-2 mb-4">
             <button
               onClick={handleComplete}
-              className={`flex-1 flex items-center justify-center gap-2 bg-green-500 text-white py-3 px-4 ${quick.card} ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} transition-colors`}
+              className={`flex-1 flex items-center justify-center gap-2 ${colors.bg.success} ${colors.text.foreground} py-3 px-4 ${quick.card} ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} transition-colors`}
             >
               <Check className={iconSizes.md} />
               <span className="font-medium">Ολοκλήρωση</span>
@@ -406,7 +408,7 @@ export function ProfessionalDrawingInterface({
 
             <button
               onClick={handleCancel}
-              className={`flex-1 flex items-center justify-center gap-2 bg-red-500 text-white py-3 px-4 ${quick.card} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} transition-colors`}
+              className={`flex-1 flex items-center justify-center gap-2 ${colors.bg.error} ${colors.text.foreground} py-3 px-4 ${quick.card} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} transition-colors`}
             >
               <X className={iconSizes.md} />
               <span className="font-medium">Ακύρωση</span>
@@ -419,7 +421,7 @@ export function ProfessionalDrawingInterface({
           <div className="mb-4">
             <button
               onClick={handleAutoDetect}
-              className={`w-full flex items-center justify-center gap-2 bg-purple-500 text-white py-3 px-4 ${quick.card} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} transition-colors`}
+              className={`w-full flex items-center justify-center gap-2 ${colors.bg.accent} ${colors.text.foreground} py-3 px-4 ${quick.card} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} transition-colors`}
             >
               <Layers className={iconSizes.md} />
               <span className="font-medium">Ανίχνευση Δωματίων</span>
@@ -429,12 +431,12 @@ export function ProfessionalDrawingInterface({
 
         {/* Floor Plan Status */}
         {parserResult && (
-          <div className={`mb-4 p-3 bg-green-50 ${quick.card} ${getStatusBorder('success')}`}>
-            <p className="text-sm text-green-700">
+          <div className={`mb-4 p-3 ${colors.bg.success} ${quick.card} ${getStatusBorder('success')}`}>
+            <p className={`text-sm ${colors.text.success}`}>
               <span className="font-medium">Κάτοψη:</span> {parserResult.metadata?.fileName || 'Uploaded'} ✅
             </p>
             {parserResult.metadata?.fileSize && (
-              <p className="text-xs text-green-600">
+              <p className={`text-xs ${colors.text.success}`}>
                 Μέγεθος: {(parserResult.metadata.fileSize / 1024 / 1024).toFixed(2)} MB
               </p>
             )}
@@ -443,8 +445,8 @@ export function ProfessionalDrawingInterface({
 
         {/* Instructions */}
         {selectedTool && (
-          <div className={`mt-4 p-3 bg-blue-50 ${quick.card} ${getStatusBorder('info')}`}>
-            <p className="text-sm text-blue-700">
+          <div className={`mt-4 p-3 ${colors.bg.info} ${quick.card} ${getStatusBorder('info')}`}>
+            <p className={`text-sm ${colors.text.info}`}>
               {selectedTool === 'upload' && t('drawingInterfaces.professional.uploadFloorPlan')}
               {selectedTool === 'polygon' && t('drawingInterfaces.professional.addPropertyPoints')}
               {selectedTool === 'auto-detect' && t('drawingInterfaces.professional.autoDetectRooms')}
@@ -456,15 +458,15 @@ export function ProfessionalDrawingInterface({
 
         {/* Statistics */}
         {(stats.totalPolygons > 0 || realEstateStats.totalAlerts > 0) && (
-          <div className="mt-4 p-3 bg-gray-50 rounded-md space-y-1">
+          <div className={`mt-4 p-3 ${colors.bg.secondary} rounded-md space-y-1`}>
             {stats.totalPolygons > 0 && (
-              <p className="text-xs text-gray-600">
+              <p className={`text-xs ${colors.text.muted}`}>
                 <span className="font-medium">Ακίνητα:</span> {stats.totalPolygons}
               </p>
             )}
 
             {realEstateStats.totalAlerts > 0 && (
-              <div className="text-xs text-blue-700">
+              <div className={`text-xs ${colors.text.info}`}>
                 <p>
                   <span className="font-medium">{t('hardcodedTexts.labels.monitoringZones')}</span> {realEstateStats.totalAlerts}
                 </p>
@@ -514,10 +516,10 @@ export function ProfessionalDrawingInterface({
 
       {/* 🏠 Phase 2.5.3: Real Estate Monitoring Dashboard */}
       {showMonitoringDashboard && (
-        <div className={`mt-4 bg-white rounded-lg shadow-lg ${quick.card} p-4`}>
+        <div className={`mt-4 ${colors.bg.primary} rounded-lg shadow-lg ${quick.card} p-4`}>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              <BarChart className={`${iconSizes.md} text-blue-600`} />
+            <h3 className={`text-lg font-semibold ${colors.text.foreground} flex items-center gap-2`}>
+              <BarChart className={`${iconSizes.md} ${colors.text.info}`} />
               {t('realEstateMonitoring.title')}
             </h3>
             <button
@@ -525,7 +527,7 @@ export function ProfessionalDrawingInterface({
                 setShowMonitoringDashboard(false);
                 setSelectedTool(null);
               }}
-              className="text-gray-500 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}"
+              className={`${colors.text.muted} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
             >
               <X className={iconSizes.md} />
             </button>
@@ -533,23 +535,23 @@ export function ProfessionalDrawingInterface({
 
           {/* Quick Stats */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-            <div className="bg-blue-50 p-3 rounded-md">
-              <p className="text-sm font-medium text-blue-900">{t('realEstateMonitoring.stats.monitoringZones')}</p>
-              <p className="text-2xl font-bold text-blue-600">{realEstateStats.totalAlerts}</p>
+            <div className={`${colors.bg.info} p-3 rounded-md`}>
+              <p className={`text-sm font-medium ${colors.text.info}`}>{t('realEstateMonitoring.stats.monitoringZones')}</p>
+              <p className={`text-2xl font-bold ${colors.text.info}`}>{realEstateStats.totalAlerts}</p>
             </div>
-            <div className="bg-green-50 p-3 rounded-md">
-              <p className="text-sm font-medium text-green-900">{t('realEstateMonitoring.stats.propertiesFound')}</p>
-              <p className="text-2xl font-bold text-green-600">{realEstateStats.totalMatches}</p>
+            <div className={`${colors.bg.success} p-3 rounded-md`}>
+              <p className={`text-sm font-medium ${colors.text.success}`}>{t('realEstateMonitoring.stats.propertiesFound')}</p>
+              <p className={`text-2xl font-bold ${colors.text.success}`}>{realEstateStats.totalMatches}</p>
             </div>
-            <div className="bg-orange-50 p-3 rounded-md">
-              <p className="text-sm font-medium text-orange-900">{t('realEstateMonitoring.stats.avgConfidence')}</p>
-              <p className="text-2xl font-bold text-orange-600">
+            <div className={`${colors.bg.warning} p-3 rounded-md`}>
+              <p className={`text-sm font-medium ${colors.text.warning}`}>{t('realEstateMonitoring.stats.avgConfidence')}</p>
+              <p className={`text-2xl font-bold ${colors.text.warning}`}>
                 {realEstateStats.averageConfidence ? `${Math.round(realEstateStats.averageConfidence * 100)}%` : '-'}
               </p>
             </div>
-            <div className="bg-purple-50 p-3 rounded-md">
-              <p className="text-sm font-medium text-purple-900">{t('realEstateMonitoring.stats.lastScan')}</p>
-              <p className="text-sm font-bold text-purple-600">
+            <div className={`${colors.bg.accent} p-3 rounded-md`}>
+              <p className={`text-sm font-medium ${colors.text.accent}`}>{t('realEstateMonitoring.stats.lastScan')}</p>
+              <p className={`text-sm font-bold ${colors.text.accent}`}>
                 {realEstateStats.lastCheck ? new Date(realEstateStats.lastCheck).toLocaleDateString('el-GR') : '-'}
               </p>
             </div>
@@ -561,8 +563,8 @@ export function ProfessionalDrawingInterface({
               onClick={() => setBatchMonitoringMode(!batchMonitoringMode)}
               className={`flex items-center justify-center gap-2 py-2 px-4 rounded-lg border transition-colors ${
                 batchMonitoringMode
-                  ? `bg-blue-100 ${getStatusBorder('info')} text-blue-700`
-                  : `bg-gray-50 border-border text-gray-700 \${HOVER_BACKGROUND_EFFECTS.LIGHT}`
+                  ? `${colors.bg.info} ${getStatusBorder('info')} ${colors.text.info}`
+                  : `${colors.bg.secondary} border-border ${colors.text.muted} \${HOVER_BACKGROUND_EFFECTS.LIGHT}`
               }`}
             >
               <Settings className={iconSizes.sm} />
@@ -576,7 +578,7 @@ export function ProfessionalDrawingInterface({
                 }
               }}
               disabled={polygons.length === 0}
-              className="flex items-center justify-center gap-2 bg-green-500 text-white py-2 px-4 rounded-lg ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} transition-colors disabled:opacity-50"
+              className={`flex items-center justify-center gap-2 ${colors.bg.success} ${colors.text.foreground} py-2 px-4 rounded-lg ${INTERACTIVE_PATTERNS.SUCCESS_HOVER} transition-colors disabled:opacity-50`}
             >
               <Bell className={iconSizes.sm} />
               <span className="text-sm font-medium">{t('realEstateMonitoring.actions.monitorAll', { count: polygons.length })}</span>
@@ -588,7 +590,7 @@ export function ProfessionalDrawingInterface({
                 console.log('📊 Professional: Exporting data to CSV');
               }}
               disabled={realEstateStats.totalMatches === 0}
-              className="flex items-center justify-center gap-2 bg-gray-500 text-white py-2 px-4 rounded-lg ${HOVER_BACKGROUND_EFFECTS.MUTED} transition-colors disabled:opacity-50"
+              className={`flex items-center justify-center gap-2 ${colors.bg.muted} ${colors.text.foreground} py-2 px-4 rounded-lg ${HOVER_BACKGROUND_EFFECTS.MUTED} transition-colors disabled:opacity-50`}
             >
               <FileText className={iconSizes.sm} />
               <span className="text-sm font-medium">{t('realEstateMonitoring.actions.exportCsv')}</span>
@@ -596,9 +598,9 @@ export function ProfessionalDrawingInterface({
           </div>
 
           {/* Professional Tips */}
-          <div className={`bg-blue-50 ${quick.info} p-3`}>
-            <h4 className="text-sm font-semibold text-blue-900 mb-2">{t('realEstateMonitoring.tips.title')}</h4>
-            <ul className="text-xs text-blue-700 space-y-1">
+          <div className={`${colors.bg.info} ${quick.info} p-3`}>
+            <h4 className={`text-sm font-semibold ${colors.text.info} mb-2`}>{t('realEstateMonitoring.tips.title')}</h4>
+            <ul className={`text-xs ${colors.text.info} space-y-1`}>
               <li>{t('realEstateMonitoring.tips.batchMode')}</li>
               <li>{t('realEstateMonitoring.tips.export')}</li>
               <li>{t('realEstateMonitoring.tips.realtime')}</li>

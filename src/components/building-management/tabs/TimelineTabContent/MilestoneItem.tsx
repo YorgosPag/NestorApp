@@ -7,10 +7,21 @@ import { CheckCircle, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
 import { formatDate } from '@/lib/intl-utils';
 
+// 🏢 ENTERPRISE: Proper type safety - Zero 'any' tolerance
+interface Milestone {
+    status: 'completed' | 'in-progress' | 'pending' | 'delayed';
+    title: string;
+    type: string;
+    date: string;
+    description?: string;
+    progress?: number;
+}
+
 interface MilestoneItemProps {
-    milestone: any;
+    milestone: Milestone;
     getStatusColor: (status: string) => string;
     getStatusText: (status: string) => string;
     getTypeIcon: (type: string) => string;
@@ -19,6 +30,7 @@ interface MilestoneItemProps {
 export function MilestoneItem({ milestone, getStatusColor, getStatusText, getTypeIcon }: MilestoneItemProps) {
     const iconSizes = useIconSizes();
     const { quick, getStatusBorder } = useBorderTokens();
+    const { bg } = useSemanticColors();
     return (
         <div className="relative flex items-start gap-4">
             <div className={cn(
@@ -47,9 +59,9 @@ export function MilestoneItem({ milestone, getStatusColor, getStatusText, getTyp
                           size="sm"
                           className={cn(
                             "text-xs",
-                            milestone.status === 'completed' ? `bg-green-50 text-green-700 ${quick.table}` :
-                            milestone.status === 'in-progress' ? `bg-blue-50 text-blue-700 ${quick.table}` :
-                            `bg-gray-50 text-gray-700 ${quick.table}`
+                            milestone.status === 'completed' ? `${bg.success} text-green-700 ${quick.table}` :
+                            milestone.status === 'in-progress' ? `${bg.info} text-blue-700 ${quick.table}` :
+                            `${bg.secondary} text-gray-700 ${quick.table}`
                           )}
                         />
                         <span className="text-sm text-muted-foreground">
@@ -70,7 +82,7 @@ export function MilestoneItem({ milestone, getStatusColor, getStatusText, getTyp
                 />
 
                 {milestone.status === 'in-progress' && (
-                    <div className={`mt-4 p-3 bg-blue-50 dark:bg-blue-950/30 ${quick.card} ${getStatusBorder('info')}`}>
+                    <div className={`mt-4 p-3 ${bg.info} dark:bg-blue-950/30 ${quick.card} ${getStatusBorder('info')}`}>
                         <div className="flex items-center gap-2 text-sm text-blue-800 dark:text-blue-200">
                             <Clock className={iconSizes.sm} />
                             <span className="font-medium">Επόμενα βήματα:</span>

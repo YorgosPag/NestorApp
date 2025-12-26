@@ -6,6 +6,7 @@ const DEBUG_ENHANCED_DXF_TOOLBAR = true;
 import React from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/hooks/useSemanticColors';  // ✅ ENTERPRISE: Background centralization
 import type { ToolType } from './types';
 import type { Point2D } from '../../rendering/types/Types';
 import { toolGroups, createActionButtons } from './toolDefinitions';
@@ -57,8 +58,10 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarProps> = ({
   mouseCoordinates,
   showCoordinates = false,
 }) => {
+  // 🏢 ENTERPRISE HOOKS: Design system integration
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder, radius } = useBorderTokens();
+  const colors = useSemanticColors();  // ✅ ENTERPRISE: Centralized background management
   const [showSimpleDialog, setShowSimpleDialog] = React.useState(false);
 
   // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Tool shortcuts (inline - local functionality)
@@ -225,24 +228,24 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarProps> = ({
   };
 
   return (
-    <div className={`border ${getStatusBorder('muted')} ${quick.card} bg-gray-800 shadow-lg ${className}`}>
+    <div className={`border ${getStatusBorder('muted')} ${quick.card} ${colors.bg.secondary} shadow-lg ${className}`}>  {/* ✅ ENTERPRISE: bg-gray-800 → CSS variable */}
       <div className="flex flex-wrap gap-1 p-2">
         <div className="flex gap-1 flex-1">
           <UploadDxfButton 
-            className={`${iconSizes.xl} p-0 ${radius.md} border transition-colors duration-150 flex items-center justify-center bg-gray-700 ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} text-gray-200 ${getStatusBorder('default')}`}
+            className={`${iconSizes.xl} p-0 ${radius.md} border transition-colors duration-150 flex items-center justify-center ${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} text-gray-200 ${getStatusBorder('default')}`}  // ✅ ENTERPRISE: bg-gray-700 → CSS variable
             title="Upload DXF File (Legacy)"
             onFileSelect={onSceneImported}
           />
 
           <button
             onClick={() => setShowSimpleDialog(true)}
-            className={`${iconSizes.xl} p-0 ${radius.md} border transition-colors duration-150 flex items-center justify-center bg-blue-700 ${HOVER_BACKGROUND_EFFECTS.PRIMARY} text-white ${getStatusBorder('info')}`}
+            className={`${iconSizes.xl} p-0 ${radius.md} border transition-colors duration-150 flex items-center justify-center ${colors.bg.info} ${HOVER_BACKGROUND_EFFECTS.PRIMARY} text-white ${getStatusBorder('info')}`}  // ✅ ENTERPRISE: bg-blue-700 → CSS variable
             title="Enhanced DXF Import with Project Management"
           >
             🔺
           </button>
           
-          <div className="w-px bg-gray-600 mx-1 my-1" />
+          <div className={`w-px ${colors.bg.active} mx-1 my-1`} />
 
           {toolGroups.map((group, groupIndex) => (
             <div key={group.name} className="flex gap-1">
@@ -257,12 +260,12 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarProps> = ({
                 />
               ))}
               {groupIndex < toolGroups.length - 1 && (
-                <div className="w-px bg-gray-600 mx-1 my-1" />
+                <div className={`w-px ${colors.bg.active} mx-1 my-1`} />
               )}
             </div>
           ))}
           
-          <div className="w-px bg-gray-600 mx-1 my-1" />
+          <div className={`w-px ${colors.bg.active} mx-1 my-1`} />
           
           <ZoomControls
             currentZoom={currentZoom}
@@ -271,7 +274,7 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarProps> = ({
             onSetZoom={handleSetZoom}
           />
 
-          <div className="w-px bg-gray-600 mx-1 my-1" />
+          <div className={`w-px ${colors.bg.active} mx-1 my-1`} />
           
           {actionButtons.map((action) => (
             <ActionButton key={action.id} action={action} />
@@ -279,7 +282,7 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarProps> = ({
         </div>
 
         <div className="flex-shrink-0">
-          <div className="w-px bg-gray-600 mx-2 my-1" />
+          <div className={`w-px ${colors.bg.active} mx-2 my-1`} />
           <ProSnapToolbar
             enabledModes={enabledModes}
             onToggleMode={toggleMode}

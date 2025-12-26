@@ -13,6 +13,7 @@ import {
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { AnimatedSpinner } from './modal/ModalLoadingStates';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/hooks/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
 import { useProjectHierarchy } from '../contexts/ProjectHierarchyContext';
 import { useDxfPipeline } from '../pipeline/useDxfPipeline';
 import { HierarchicalDestinationSelector } from './HierarchicalDestinationSelector';
@@ -31,6 +32,7 @@ type WizardStep = 'destination' | 'options' | 'processing' | 'complete';
 export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }: DestinationWizardProps) {
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder, radius, getDirectionalBorder } = useBorderTokens();
+  const colors = useSemanticColors();  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
   const [currentStep, setCurrentStep] = useState<WizardStep>('destination');
   const [selectedDestination, setSelectedDestination] = useState<DxfDestination | null>(null);
   const [processingOptions, setProcessingOptions] = useState<Omit<DxfProcessingOptions, 'destination'> & { destination: DxfDestination | null }>({
@@ -130,21 +132,22 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
     }
   };
 
+  // ✅ ENTERPRISE: Destination colors με CSS variables
   const getDestinationColor = (type: string) => {
     switch (type) {
-      case 'project': return `bg-blue-600 ${HOVER_BACKGROUND_EFFECTS.BLUE_BUTTON}`;
-      case 'building': return `bg-green-600 ${HOVER_BACKGROUND_EFFECTS.GREEN_BUTTON}`;
-      case 'floor': return `bg-purple-600 ${HOVER_BACKGROUND_EFFECTS.PURPLE_BUTTON}`;
-      case 'unit': return `bg-orange-600 ${HOVER_BACKGROUND_EFFECTS.ORANGE_BUTTON}`;
-      case 'storage': return `bg-yellow-600 ${HOVER_BACKGROUND_EFFECTS.YELLOW_BUTTON}`;
-      case 'parking': return `bg-indigo-600 ${HOVER_BACKGROUND_EFFECTS.INDIGO_BUTTON}`;
-      default: return `bg-gray-600 ${HOVER_BACKGROUND_EFFECTS.GRAY_BUTTON}`;
+      case 'project': return `${colors.bg.info} ${HOVER_BACKGROUND_EFFECTS.BLUE_BUTTON}`;
+      case 'building': return `${colors.bg.success} ${HOVER_BACKGROUND_EFFECTS.GREEN_BUTTON}`;
+      case 'floor': return `${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.PURPLE_BUTTON}`;
+      case 'unit': return `${colors.bg.warning} ${HOVER_BACKGROUND_EFFECTS.ORANGE_BUTTON}`;
+      case 'storage': return `${colors.bg.warning} ${HOVER_BACKGROUND_EFFECTS.YELLOW_BUTTON}`;
+      case 'parking': return `${colors.bg.info} ${HOVER_BACKGROUND_EFFECTS.INDIGO_BUTTON}`;
+      default: return `${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.GRAY_BUTTON}`;
     }
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+      <div className={`${colors.bg.secondary} rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto`}>
         
         {/* Header */}
         <div className={`flex justify-between items-center p-6 ${getDirectionalBorder('default', 'bottom')}`}>
@@ -168,15 +171,15 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
             {['destination', 'options', 'processing', 'complete'].map((step, index) => (
               <div key={step} className="flex items-center">
                 <div className={`${iconSizes.xl} rounded-full flex items-center justify-center text-sm font-medium ${
-                  currentStep === step ? 'bg-blue-600 text-white' :
-                  ['destination', 'options', 'processing', 'complete'].indexOf(currentStep) > index ? 'bg-green-600 text-white' :
-                  'bg-gray-600 text-gray-300'
+                  currentStep === step ? `${colors.bg.info} text-white` :
+                  ['destination', 'options', 'processing', 'complete'].indexOf(currentStep) > index ? `${colors.bg.success} text-white` :
+                  `${colors.bg.hover} text-gray-300`
                 }`}>
                   {index + 1}
                 </div>
                 {index < 3 && (
                   <div className={`${iconSizes['2xl']} h-1 mx-2 ${
-                    ['destination', 'options', 'processing', 'complete'].indexOf(currentStep) > index ? 'bg-green-600' : 'bg-gray-600'
+                    ['destination', 'options', 'processing', 'complete'].indexOf(currentStep) > index ? colors.bg.success : colors.bg.hover
                   }`} />
                 )}
               </div>
@@ -201,7 +204,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
               <h3 className="text-lg font-medium text-white mb-4">
                 Επιλογές επεξεργασίας
               </h3>
-              <div className="bg-gray-700 p-4 rounded-lg mb-6">
+              <div className={`${colors.bg.hover} p-4 rounded-lg mb-6`}>
                 <div className="flex items-center space-x-3">
                   {React.createElement(getDestinationIcon(selectedDestination.type), {
                     className: `${iconSizes.lg} text-blue-400`
@@ -223,7 +226,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
                     type="checkbox"
                     checked={processingOptions.processLayers}
                     onChange={(e) => setProcessingOptions(prev => ({ ...prev, processLayers: e.target.checked }))}
-                    className={`${iconSizes.md} text-blue-600 bg-gray-700 ${quick.checkbox} focus:ring-hsl(var(--border-info))`}
+                    className={`${iconSizes.md} text-blue-600 ${colors.bg.hover} ${quick.checkbox} focus:ring-hsl(var(--border-info))`}
                   />
                 </div>
 
@@ -236,7 +239,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
                     type="checkbox"
                     checked={processingOptions.preserveGrid}
                     onChange={(e) => setProcessingOptions(prev => ({ ...prev, preserveGrid: e.target.checked }))}
-                    className={`${iconSizes.md} text-blue-600 bg-gray-700 ${quick.checkbox} focus:ring-hsl(var(--border-info))`}
+                    className={`${iconSizes.md} text-blue-600 ${colors.bg.hover} ${quick.checkbox} focus:ring-hsl(var(--border-info))`}
                   />
                 </div>
 
@@ -249,7 +252,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
                     type="checkbox"
                     checked={processingOptions.preserveRulers}
                     onChange={(e) => setProcessingOptions(prev => ({ ...prev, preserveRulers: e.target.checked }))}
-                    className={`${iconSizes.md} text-blue-600 bg-gray-700 ${quick.checkbox} focus:ring-hsl(var(--border-info))`}
+                    className={`${iconSizes.md} text-blue-600 ${colors.bg.hover} ${quick.checkbox} focus:ring-hsl(var(--border-info))`}
                   />
                 </div>
 
@@ -262,7 +265,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
                     type="checkbox"
                     checked={processingOptions.autoScale}
                     onChange={(e) => setProcessingOptions(prev => ({ ...prev, autoScale: e.target.checked }))}
-                    className={`${iconSizes.md} text-blue-600 bg-gray-700 ${quick.checkbox} focus:ring-hsl(var(--border-info))`}
+                    className={`${iconSizes.md} text-blue-600 ${colors.bg.hover} ${quick.checkbox} focus:ring-hsl(var(--border-info))`}
                   />
                 </div>
               </div>
@@ -285,7 +288,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
           {/* Step 4: Complete */}
           {currentStep === 'complete' && (
             <div className="text-center">
-              <div className={`${iconSizes['2xl']} bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4`}>
+              <div className={`${iconSizes['2xl']} ${colors.bg.success} rounded-full flex items-center justify-center mx-auto mb-4`}>
                 <svg className={`${iconSizes.lg} text-white`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
@@ -297,7 +300,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
                 Η κάτοψη αποθηκεύτηκε επιτυχώς στον επιλεγμένο προορισμό.
               </p>
               {selectedDestination && (
-                <div className="bg-gray-700 p-3 rounded-lg inline-block">
+                <div className={`${colors.bg.hover} p-3 rounded-lg inline-block`}>
                   <div className="flex items-center space-x-2">
                     {React.createElement(getDestinationIcon(selectedDestination.type), {
                       className: `${iconSizes.md} text-green-400`
@@ -324,7 +327,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
             {currentStep === 'complete' ? (
               <button
                 onClick={handleClose}
-                className={`px-6 py-2 bg-green-600 ${HOVER_BACKGROUND_EFFECTS.GREEN_BUTTON} text-white rounded-lg font-medium`}
+                className={`px-6 py-2 ${colors.bg.success} ${HOVER_BACKGROUND_EFFECTS.GREEN_BUTTON} text-white rounded-lg font-medium`}
               >
                 Ολοκλήρωση
               </button>
@@ -336,7 +339,7 @@ export function DestinationWizard({ isOpen, onClose, selectedFile, onComplete }:
                   currentStep === 'processing' ||
                   busy
                 }
-                className={`px-6 py-2 bg-blue-600 ${HOVER_BACKGROUND_EFFECTS.BLUE_BUTTON} disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg font-medium`}
+                className={`px-6 py-2 ${colors.bg.info} ${HOVER_BACKGROUND_EFFECTS.BLUE_BUTTON} disabled:${colors.bg.hover} disabled:cursor-not-allowed text-white rounded-lg font-medium`}
               >
                 {currentStep === 'options' ? 'Ξεκίνημα επεξεργασίας' : 'Επόμενο →'}
               </button>

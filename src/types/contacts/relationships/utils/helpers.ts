@@ -73,9 +73,23 @@ export function getRelationshipDisplayLabel(relationship: ContactRelationship): 
 }
 
 /**
- * 🎨 Get relationship type badge color
+ * ✅ ENTERPRISE: DEPRECATED - Use useSemanticColors().getRelationshipBadgeClass() instead
+ *
+ * Migration path:
+ * ```typescript
+ * // OLD (DEPRECATED):
+ * className={getRelationshipBadgeColor(relationship)}
+ *
+ * // NEW (CENTRALIZED):
+ * import { useSemanticColors } from '@/hooks/useSemanticColors';
+ * const colors = useSemanticColors();
+ * className={colors.getRelationshipBadgeClass(relationship.relationshipType)}
+ * ```
+ *
+ * @deprecated Use colors.getRelationshipBadgeClass(relationshipType) from useSemanticColors hook
  */
 export function getRelationshipBadgeColor(relationship: ContactRelationship): string {
+  // Fallback implementation that now uses hardcoded values (for backward compatibility)
   const colorMap = {
     'employee': 'bg-blue-100 text-blue-800',
     'manager': 'bg-purple-100 text-purple-800',
